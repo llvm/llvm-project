@@ -5,7 +5,7 @@
 ; of individual register def operands.
 
 ; ASM: main: # @main
-; ASM: #DEBUG_VALUE: main:argc <- %ecx
+; ASM: #DEBUG_VALUE: main:argc <- $ecx
 ; ASM: movl $1, x(%rip)
 ; ASM: callq clobber
 ; ASM-NEXT: [[argc_range_end:.Ltmp[0-9]+]]:

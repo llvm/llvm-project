@@ -86,7 +86,6 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   case X86::TEST16mr:
   case X86::TEST32mr:
   case X86::TEST64mr:
-  case X86::TEST8ri_NOREX:
   case X86::AND16i16:
   case X86::AND16ri:
   case X86::AND16ri8:

@@ -22,8 +22,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '%x0' }
-  - { reg: '%x3' }
+  - { reg: '$x0' }
+  - { reg: '$x3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -40,18 +40,18 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: %x0, %x3
+    liveins: $x0, $x3
 
-    %r5 = ADDI %r3, 1
-    %cr0 = CMPWI %r3, 0
-    %r0 = ISEL %zero, %r0, %cr0gt
+    $r5 = ADDI $r3, 1
+    $cr0 = CMPWI $r3, 0
+    $r0 = ISEL $zero, $r0, $cr0gt
     ; CHECK-LABEL: testExpandISEL
-    ; CHECK: BC %cr0gt, %[[TRUE:bb.[0-9]+]]
+    ; CHECK: BC $cr0gt, %[[TRUE:bb.[0-9]+]]
     ; CHECK-NEXT: B %[[SUCCESSOR:bb.[0-9]+]]
     ; CHECK: [[TRUE]]
-    ; CHECK: %r0 = ADDI %zero, 0
+    ; CHECK: $r0 = ADDI $zero, 0
 
-    %x3 = EXTSW_32_64 %r0
+    $x3 = EXTSW_32_64 $r0
 
 ...
 

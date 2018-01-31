@@ -15,13 +15,13 @@
 name:            volatile_inc
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rdi' }
+  - { reg: '$rdi' }
 body: |
   bb.0.entry:
-    liveins: %rdi
+    liveins: $rdi
   ; CHECK: [[@LINE+1]]:50: duplicate 'volatile' memory operand flag
-    %eax = MOV32rm %rdi, 1, _, 0, _ :: (volatile volatile load 4 from %ir.x)
-    %eax = INC32r killed %eax, implicit-def dead %eflags
-    MOV32mr killed %rdi, 1, _, 0, _, %eax :: (volatile store 4 into %ir.x)
-    RETQ %eax
+    $eax = MOV32rm $rdi, 1, _, 0, _ :: (volatile volatile load 4 from %ir.x)
+    $eax = INC32r killed $eax, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, _, 0, _, $eax :: (volatile store 4 into %ir.x)
+    RETQ $eax
 ...

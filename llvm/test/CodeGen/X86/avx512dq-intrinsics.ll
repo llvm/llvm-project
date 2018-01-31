@@ -351,7 +351,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_pd_512(<8 x double> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclasspd $4, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    addb %cl, %al
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
     %res = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 2, i8 %x1)
     %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 4, i8 -1)
@@ -369,7 +369,7 @@ define i16@test_int_x86_avx512_mask_fpclass_ps_512(<16 x float> %x0, i16 %x1) {
 ; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
     %res = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 %x1)
     %res1 = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 -1)
@@ -388,7 +388,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    addb %cl, %al
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double> %x0, i32 2, i8 %x1)
   %res1 = call i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double> %x0, i32 4, i8 -1)
@@ -401,7 +401,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd_load(<2 x double>* %x0ptr) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfpclasssd $4, (%rdi), %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %x0 = load <2 x double>, <2 x double>* %x0ptr
   %res = call i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double> %x0, i32 4, i8 -1)
@@ -419,7 +419,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclassss $4, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    addb %cl, %al
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float> %x0, i32 4, i8 %x1)
   %res1 = call i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float> %x0, i32 4, i8 -1)
@@ -432,7 +432,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss_load(<4 x float>* %x0ptr, i8 %x1)
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfpclassss $4, (%rdi), %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %x0 = load <4 x float>, <4 x float>* %x0ptr
   %res = call i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float> %x0, i32 4, i8 -1)

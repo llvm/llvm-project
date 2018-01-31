@@ -10,9 +10,9 @@ name: func
 tracksRegLiveness: true
 body: |
   bb.0:
-    undef %5.sub1 = V_MOV_B32_e32 0, implicit %exec
+    undef %5.sub1 = V_MOV_B32_e32 0, implicit $exec
     %6 = COPY %5
-    S_CBRANCH_VCCZ %bb.2, implicit undef %vcc
+    S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
 
   bb.1:
     %1 : sreg_32_xm0 = S_MOV_B32 0
@@ -23,9 +23,9 @@ body: |
     %6 : vreg_64 = COPY killed %4
 
   bb.2:
-    %2 : vgpr_32 = V_CVT_F32_I32_e32 killed %5.sub1, implicit %exec
+    %2 : vgpr_32 = V_CVT_F32_I32_e32 killed %5.sub1, implicit $exec
 
   bb.3:
-    %3 : vgpr_32 = V_CVT_F32_I32_e32 killed %6.sub1, implicit %exec
+    %3 : vgpr_32 = V_CVT_F32_I32_e32 killed %6.sub1, implicit $exec
     S_ENDPGM
 ...

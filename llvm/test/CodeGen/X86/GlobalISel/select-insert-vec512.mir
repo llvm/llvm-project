@@ -46,19 +46,19 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %zmm0, %ymm1
+    liveins: $zmm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_128_idx0
-    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]]:vr128x = COPY %xmm1
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr128x = COPY $xmm1
     ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[COPY]], [[COPY1]], 0
-    ; ALL: %zmm0 = COPY [[VINSERTF32x4Zrr]]
-    ; ALL: RET 0, implicit %ymm0
-    %0(<16 x s32>) = COPY %zmm0
-    %1(<4 x s32>) = COPY %xmm1
+    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr]]
+    ; ALL: RET 0, implicit $ymm0
+    %0(<16 x s32>) = COPY $zmm0
+    %1(<4 x s32>) = COPY $xmm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -72,18 +72,18 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_128_idx0_undef
-    ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY %xmm1
+    ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
     ; ALL: undef %2.sub_xmm:vr512 = COPY [[COPY]]
-    ; ALL: %zmm0 = COPY %2
-    ; ALL: RET 0, implicit %ymm0
+    ; ALL: $zmm0 = COPY %2
+    ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<4 x s32>) = COPY %xmm1
+    %1(<4 x s32>) = COPY $xmm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -97,19 +97,19 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_128_idx1
-    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]]:vr128x = COPY %xmm1
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr128x = COPY $xmm1
     ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[COPY]], [[COPY1]], 1
-    ; ALL: %zmm0 = COPY [[VINSERTF32x4Zrr]]
-    ; ALL: RET 0, implicit %ymm0
-    %0(<16 x s32>) = COPY %zmm0
-    %1(<4 x s32>) = COPY %xmm1
+    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr]]
+    ; ALL: RET 0, implicit $ymm0
+    %0(<16 x s32>) = COPY $zmm0
+    %1(<4 x s32>) = COPY $xmm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 ...
 ---
 name:            test_insert_128_idx1_undef
@@ -122,19 +122,19 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_128_idx1_undef
     ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
-    ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY %xmm1
+    ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
     ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[DEF]], [[COPY]], 1
-    ; ALL: %zmm0 = COPY [[VINSERTF32x4Zrr]]
-    ; ALL: RET 0, implicit %ymm0
+    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr]]
+    ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<4 x s32>) = COPY %xmm1
+    %1(<4 x s32>) = COPY $xmm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 ...
 ---
 name:            test_insert_256_idx0
@@ -147,19 +147,19 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %zmm0, %ymm1
+    liveins: $zmm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_256_idx0
-    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]]:vr256x = COPY %ymm1
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr256x = COPY $ymm1
     ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr [[COPY]], [[COPY1]], 0
-    ; ALL: %zmm0 = COPY [[VINSERTF64x4Zrr]]
-    ; ALL: RET 0, implicit %ymm0
-    %0(<16 x s32>) = COPY %zmm0
-    %1(<8 x s32>) = COPY %ymm1
+    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: RET 0, implicit $ymm0
+    %0(<16 x s32>) = COPY $zmm0
+    %1(<8 x s32>) = COPY $ymm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -173,18 +173,18 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_256_idx0_undef
-    ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY %ymm1
+    ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY $ymm1
     ; ALL: undef %2.sub_ymm:vr512 = COPY [[COPY]]
-    ; ALL: %zmm0 = COPY %2
-    ; ALL: RET 0, implicit %ymm0
+    ; ALL: $zmm0 = COPY %2
+    ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = COPY %ymm1
+    %1(<8 x s32>) = COPY $ymm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -198,19 +198,19 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_256_idx1
-    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]]:vr256x = COPY %ymm1
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr256x = COPY $ymm1
     ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr [[COPY]], [[COPY1]], 1
-    ; ALL: %zmm0 = COPY [[VINSERTF64x4Zrr]]
-    ; ALL: RET 0, implicit %ymm0
-    %0(<16 x s32>) = COPY %zmm0
-    %1(<8 x s32>) = COPY %ymm1
+    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: RET 0, implicit $ymm0
+    %0(<16 x s32>) = COPY $zmm0
+    %1(<8 x s32>) = COPY $ymm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 ...
 ---
 name:            test_insert_256_idx1_undef
@@ -223,17 +223,17 @@ registers:
   - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
     ; ALL-LABEL: name: test_insert_256_idx1_undef
     ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
-    ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY %ymm1
+    ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY $ymm1
     ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr [[DEF]], [[COPY]], 1
-    ; ALL: %zmm0 = COPY [[VINSERTF64x4Zrr]]
-    ; ALL: RET 0, implicit %ymm0
+    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = COPY %ymm1
+    %1(<8 x s32>) = COPY $ymm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
-    %zmm0 = COPY %2(<16 x s32>)
-    RET 0, implicit %ymm0
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $ymm0
 ...

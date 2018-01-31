@@ -97,7 +97,7 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "  TYPE_B = 2;\n"
                "};");
   verifyFormat("enum Type {\n"
-               "  UNKNOWN = 0 [(some_options) = {a: aa, b: bb}];\n"
+               "  UNKNOWN = 0 [(some_options) = { a: aa, b: bb }];\n"
                "};");
   verifyFormat("enum Type {\n"
                "  UNKNOWN = 0 [(some_options) = {\n"
@@ -121,7 +121,7 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
   verifyFormat("optional LongMessageType long_proto_field = 1\n"
                "    [default = REALLY_REALLY_LONG_CONSTANT_VALUE];");
   verifyFormat("repeated double value = 1\n"
-               "    [(aaaaaaa.aaaaaaaaa) = {aaaaaaaaaaaaaaaaa: AAAAAAAA}];");
+               "    [(aaaaaaa.aaaaaaaaa) = { aaaaaaaaaaaaaaaaa: AAAAAAAA }];");
   verifyFormat("repeated double value = 1 [(aaaaaaa.aaaaaaaaa) = {\n"
                "  aaaaaaaaaaaaaaaa: AAAAAAAAAA,\n"
                "  bbbbbbbbbbbbbbbb: BBBBBBBBBB\n"
@@ -183,27 +183,27 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  field_a: OK\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
-               "  msg_field: {field_d: 123}\n"
+               "  msg_field: { field_d: 123 }\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
-               "  msg_field: {field_d: 123 field_e: OK}\n"
+               "  msg_field: { field_d: 123 field_e: OK }\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK  // Comment\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
-               "  msg_field: {field_d: 123}\n"
+               "  msg_field: { field_d: 123 }\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_c: \"OK\"\n"
-               "  msg_field {field_d: 123}\n"
+               "  msg_field { field_d: 123 }\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK\n"
-               "  field_b {field_c: OK}\n"
+               "  field_b { field_c: OK }\n"
                "  field_d: OKOKOK\n"
                "  field_e: OK\n"
                "}");
@@ -247,7 +247,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = <\n"
                "  field_a: \"OK\"\n"
-               "  msg_field: {field_b: OK}\n"
+               "  msg_field: { field_b: OK }\n"
                "  field_g: OK\n"
                "  field_g: OK\n"
                "  field_g: OK\n"
@@ -359,7 +359,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = <\n"
                "  data1 <key1: value1>\n"
-               "  data2 {key2: value2}\n"
+               "  data2 { key2: value2 }\n"
                ">;");
 
   verifyFormat("option (MyProto.options) = <\n"
@@ -372,7 +372,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  app_id: 'com.javax.swing.salsa.latino'\n"
                "  head_id: 1\n"
                "  headheadheadheadheadhead_id: 1\n"
-               "  product_data {product {1}}\n"
+               "  product_data { product { 1 } }\n"
                "};");
 }
 

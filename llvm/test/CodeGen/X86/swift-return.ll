@@ -13,10 +13,10 @@ define i16 @test(i32 %key) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq gen
-; CHECK-NEXT:    # kill: def %ax killed %ax def %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
 ; CHECK-NEXT:    movsbl %dl, %ecx
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ;

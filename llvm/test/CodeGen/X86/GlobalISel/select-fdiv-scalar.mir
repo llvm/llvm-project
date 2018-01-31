@@ -34,37 +34,37 @@ constants:
 #
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
     ; SSE-LABEL: name: test_fdiv_float
-    ; SSE: [[COPY:%[0-9]+]]:fr32 = COPY %xmm0
-    ; SSE: [[COPY1:%[0-9]+]]:fr32 = COPY %xmm1
+    ; SSE: [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
+    ; SSE: [[COPY1:%[0-9]+]]:fr32 = COPY $xmm1
     ; SSE: [[DIVSSrr:%[0-9]+]]:fr32 = DIVSSrr [[COPY]], [[COPY1]]
-    ; SSE: %xmm0 = COPY [[DIVSSrr]]
-    ; SSE: RET 0, implicit %xmm0
+    ; SSE: $xmm0 = COPY [[DIVSSrr]]
+    ; SSE: RET 0, implicit $xmm0
     ; AVX-LABEL: name: test_fdiv_float
-    ; AVX: [[COPY:%[0-9]+]]:fr32 = COPY %xmm0
-    ; AVX: [[COPY1:%[0-9]+]]:fr32 = COPY %xmm1
+    ; AVX: [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
+    ; AVX: [[COPY1:%[0-9]+]]:fr32 = COPY $xmm1
     ; AVX: [[VDIVSSrr:%[0-9]+]]:fr32 = VDIVSSrr [[COPY]], [[COPY1]]
-    ; AVX: %xmm0 = COPY [[VDIVSSrr]]
-    ; AVX: RET 0, implicit %xmm0
+    ; AVX: $xmm0 = COPY [[VDIVSSrr]]
+    ; AVX: RET 0, implicit $xmm0
     ; AVX512F-LABEL: name: test_fdiv_float
-    ; AVX512F: [[COPY:%[0-9]+]]:fr32x = COPY %xmm0
-    ; AVX512F: [[COPY1:%[0-9]+]]:fr32x = COPY %xmm1
+    ; AVX512F: [[COPY:%[0-9]+]]:fr32x = COPY $xmm0
+    ; AVX512F: [[COPY1:%[0-9]+]]:fr32x = COPY $xmm1
     ; AVX512F: [[VDIVSSZrr:%[0-9]+]]:fr32x = VDIVSSZrr [[COPY]], [[COPY1]]
-    ; AVX512F: %xmm0 = COPY [[VDIVSSZrr]]
-    ; AVX512F: RET 0, implicit %xmm0
+    ; AVX512F: $xmm0 = COPY [[VDIVSSZrr]]
+    ; AVX512F: RET 0, implicit $xmm0
     ; AVX512VL-LABEL: name: test_fdiv_float
-    ; AVX512VL: [[COPY:%[0-9]+]]:fr32x = COPY %xmm0
-    ; AVX512VL: [[COPY1:%[0-9]+]]:fr32x = COPY %xmm1
+    ; AVX512VL: [[COPY:%[0-9]+]]:fr32x = COPY $xmm0
+    ; AVX512VL: [[COPY1:%[0-9]+]]:fr32x = COPY $xmm1
     ; AVX512VL: [[VDIVSSZrr:%[0-9]+]]:fr32x = VDIVSSZrr [[COPY]], [[COPY1]]
-    ; AVX512VL: %xmm0 = COPY [[VDIVSSZrr]]
-    ; AVX512VL: RET 0, implicit %xmm0
-    %0(s32) = COPY %xmm0
-    %1(s32) = COPY %xmm1
+    ; AVX512VL: $xmm0 = COPY [[VDIVSSZrr]]
+    ; AVX512VL: RET 0, implicit $xmm0
+    %0(s32) = COPY $xmm0
+    %1(s32) = COPY $xmm1
     %2(s32) = G_FDIV %0, %1
-    %xmm0 = COPY %2(s32)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(s32)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -85,36 +85,36 @@ constants:
 #
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
     ; SSE-LABEL: name: test_fdiv_double
-    ; SSE: [[COPY:%[0-9]+]]:fr64 = COPY %xmm0
-    ; SSE: [[COPY1:%[0-9]+]]:fr64 = COPY %xmm1
+    ; SSE: [[COPY:%[0-9]+]]:fr64 = COPY $xmm0
+    ; SSE: [[COPY1:%[0-9]+]]:fr64 = COPY $xmm1
     ; SSE: [[DIVSDrr:%[0-9]+]]:fr64 = DIVSDrr [[COPY]], [[COPY1]]
-    ; SSE: %xmm0 = COPY [[DIVSDrr]]
-    ; SSE: RET 0, implicit %xmm0
+    ; SSE: $xmm0 = COPY [[DIVSDrr]]
+    ; SSE: RET 0, implicit $xmm0
     ; AVX-LABEL: name: test_fdiv_double
-    ; AVX: [[COPY:%[0-9]+]]:fr64 = COPY %xmm0
-    ; AVX: [[COPY1:%[0-9]+]]:fr64 = COPY %xmm1
+    ; AVX: [[COPY:%[0-9]+]]:fr64 = COPY $xmm0
+    ; AVX: [[COPY1:%[0-9]+]]:fr64 = COPY $xmm1
     ; AVX: [[VDIVSDrr:%[0-9]+]]:fr64 = VDIVSDrr [[COPY]], [[COPY1]]
-    ; AVX: %xmm0 = COPY [[VDIVSDrr]]
-    ; AVX: RET 0, implicit %xmm0
+    ; AVX: $xmm0 = COPY [[VDIVSDrr]]
+    ; AVX: RET 0, implicit $xmm0
     ; AVX512F-LABEL: name: test_fdiv_double
-    ; AVX512F: [[COPY:%[0-9]+]]:fr64x = COPY %xmm0
-    ; AVX512F: [[COPY1:%[0-9]+]]:fr64x = COPY %xmm1
+    ; AVX512F: [[COPY:%[0-9]+]]:fr64x = COPY $xmm0
+    ; AVX512F: [[COPY1:%[0-9]+]]:fr64x = COPY $xmm1
     ; AVX512F: [[VDIVSDZrr:%[0-9]+]]:fr64x = VDIVSDZrr [[COPY]], [[COPY1]]
-    ; AVX512F: %xmm0 = COPY [[VDIVSDZrr]]
-    ; AVX512F: RET 0, implicit %xmm0
+    ; AVX512F: $xmm0 = COPY [[VDIVSDZrr]]
+    ; AVX512F: RET 0, implicit $xmm0
     ; AVX512VL-LABEL: name: test_fdiv_double
-    ; AVX512VL: [[COPY:%[0-9]+]]:fr64x = COPY %xmm0
-    ; AVX512VL: [[COPY1:%[0-9]+]]:fr64x = COPY %xmm1
+    ; AVX512VL: [[COPY:%[0-9]+]]:fr64x = COPY $xmm0
+    ; AVX512VL: [[COPY1:%[0-9]+]]:fr64x = COPY $xmm1
     ; AVX512VL: [[VDIVSDZrr:%[0-9]+]]:fr64x = VDIVSDZrr [[COPY]], [[COPY1]]
-    ; AVX512VL: %xmm0 = COPY [[VDIVSDZrr]]
-    ; AVX512VL: RET 0, implicit %xmm0
-    %0(s64) = COPY %xmm0
-    %1(s64) = COPY %xmm1
+    ; AVX512VL: $xmm0 = COPY [[VDIVSDZrr]]
+    ; AVX512VL: RET 0, implicit $xmm0
+    %0(s64) = COPY $xmm0
+    %1(s64) = COPY $xmm1
     %2(s64) = G_FDIV %0, %1
-    %xmm0 = COPY %2(s64)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(s64)
+    RET 0, implicit $xmm0
 
 ...

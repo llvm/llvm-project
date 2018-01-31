@@ -48,29 +48,29 @@ registers:
   - { id: 19, class: vreg_64 }
   - { id: 20, class: vreg_64 }
 liveins:
-  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
-  - { reg: '%vgpr0', virtual-reg: '%3' }
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: %sgpr0_sgpr1, %vgpr0
+    liveins: $sgpr0_sgpr1, $vgpr0
 
-    %3 = COPY killed %vgpr0
-    %0 = COPY killed %sgpr0_sgpr1
+    %3 = COPY killed $vgpr0
+    %0 = COPY killed $sgpr0_sgpr1
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
     %5 = S_LOAD_DWORD_IMM killed %0, 13, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
-    %18 = V_ASHRREV_I32_e32 31, %3, implicit %exec
+    %18 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     undef %19.sub0 = COPY killed %3
     %19.sub1 = COPY killed %18
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    DBG_VALUE debug-use %11, debug-use %noreg, !1, !8, debug-location !9
+    DBG_VALUE debug-use %11, debug-use $noreg, !1, !8, debug-location !9
     undef %12.sub0 = COPY killed %11
     %12.sub1 = COPY killed %10
     undef %13.sub0_sub1 = COPY killed %4
     %13.sub2_sub3 = COPY killed %12
-    %20 = V_LSHL_B64 killed %19, 2, implicit %exec
+    %20 = V_LSHL_B64 killed %19, 2, implicit $exec
     %16 = COPY killed %5
-    BUFFER_STORE_DWORD_ADDR64 killed %16, killed %20, killed %13, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into %ir.out)
+    BUFFER_STORE_DWORD_ADDR64 killed %16, killed %20, killed %13, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out)
     S_ENDPGM
 
 ...

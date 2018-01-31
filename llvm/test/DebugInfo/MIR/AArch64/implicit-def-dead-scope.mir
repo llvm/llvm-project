@@ -152,7 +152,7 @@ selected:        false
 tracksRegLiveness: true
 registers:       
 liveins:         
-  - { reg: '%x0', virtual-reg: '' }
+  - { reg: '$x0', virtual-reg: '' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -179,71 +179,71 @@ stack:
       callee-saved-register: '', local-offset: -32, di-variable: '', di-expression: '', 
       di-location: '' }
   - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
-      callee-saved-register: '%lr', di-variable: '', di-expression: '', 
+      callee-saved-register: '$lr', di-variable: '', di-expression: '', 
       di-location: '' }
 constants:       
 body:             |
   bb.0.entry:
     successors: %bb.3.sw.bb2(0x2aaaaaab), %bb.1.entry(0x55555555)
-    liveins: %x0, %lr
+    liveins: $x0, $lr
   
-    %sp = frame-setup SUBXri %sp, 48, 0
-    frame-setup STRXui killed %lr, %sp, 4 :: (store 8 into %stack.2)
+    $sp = frame-setup SUBXri $sp, 48, 0
+    frame-setup STRXui killed $lr, $sp, 4 :: (store 8 into %stack.2)
     frame-setup CFI_INSTRUCTION def_cfa_offset 48
-    frame-setup CFI_INSTRUCTION offset %w30, -16
-    %w8 = LDRSBWui %x0, 4 :: (load 1 from %ir.ap, align 4)
-    CBZW %w8, %bb.3.sw.bb2
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    $w8 = LDRSBWui $x0, 4 :: (load 1 from %ir.ap, align 4)
+    CBZW $w8, %bb.3.sw.bb2
   
   bb.1.entry:
     successors: %bb.2._ZN1jILi6EN1a1fEE1mEj.exit(0x40000001), %bb.4(0x3fffffff)
-    liveins: %w8, %x0
+    liveins: $w8, $x0
   
-    dead %wzr = SUBSWri killed %w8, 1, 0, implicit-def %nzcv
-    Bcc 1, %bb.4, implicit %nzcv
+    dead $wzr = SUBSWri killed $w8, 1, 0, implicit-def $nzcv
+    Bcc 1, %bb.4, implicit $nzcv
   
   bb.2._ZN1jILi6EN1a1fEE1mEj.exit:
     successors: %bb.5.sw.epilog(0x80000000)
-    liveins: %x0
+    liveins: $x0
   
-    %w2 = ORRWri %wzr, 0, implicit-def %x2
-    %x3 = IMPLICIT_DEF debug-location !32
-    %x1 = IMPLICIT_DEF
-    STRXui %x2, %sp, 2 :: (store 8 into %ir.2)
+    $w2 = ORRWri $wzr, 0, implicit-def $x2
+    $x3 = IMPLICIT_DEF debug-location !32
+    $x1 = IMPLICIT_DEF
+    STRXui $x2, $sp, 2 :: (store 8 into %ir.2)
     DBG_VALUE 0, 0, !18, !23, debug-location !24
-    STRXui %x2, %sp, 0, debug-location !27 :: (store 8 into %ir.1)
-    %w4 = ORRWri %wzr, 0, implicit-def %x4
+    STRXui $x2, $sp, 0, debug-location !27 :: (store 8 into %ir.1)
+    $w4 = ORRWri $wzr, 0, implicit-def $x4
     B %bb.5.sw.epilog
   
   bb.3.sw.bb2:
     successors: %bb.5.sw.epilog(0x80000000)
-    liveins: %x0
+    liveins: $x0
   
-    %x4, %x3 = LDPXi %sp, 0 :: (dereferenceable load 8 from %ir.3), (dereferenceable load 8 from %ir..phi.trans.insert26)
-    %x2, %x1 = LDPXi %sp, 2 :: (dereferenceable load 8 from %ir..phi.trans.insert), (dereferenceable load 8 from %ir.4)
+    $x4, $x3 = LDPXi $sp, 0 :: (dereferenceable load 8 from %ir.3), (dereferenceable load 8 from %ir..phi.trans.insert26)
+    $x2, $x1 = LDPXi $sp, 2 :: (dereferenceable load 8 from %ir..phi.trans.insert), (dereferenceable load 8 from %ir.4)
     B %bb.5.sw.epilog
   
   bb.4:
     successors: %bb.5.sw.epilog(0x80000000)
-    liveins: %x0
+    liveins: $x0
   
-    %x2 = ORRXrs %xzr, %xzr, 0
-    %x4 = ORRXrs %xzr, %xzr, 0
-    %x3 = IMPLICIT_DEF debug-location !32
-    %x1 = IMPLICIT_DEF
+    $x2 = ORRXrs $xzr, $xzr, 0
+    $x4 = ORRXrs $xzr, $xzr, 0
+    $x3 = IMPLICIT_DEF debug-location !32
+    $x1 = IMPLICIT_DEF
   
   bb.5.sw.epilog:
-    liveins: %x0, %x1, %x2, %x3, %x4
+    liveins: $x0, $x1, $x2, $x3, $x4
   
-    %w8 = LDRBBui %x0, 5 :: (load 1 from %ir.bx)
-    %w0 = LDRWui killed %x0, 0 :: (load 4 from %ir.bw1)
-    %x7 = ADRP target-flags(aarch64-page) @bt
-    %x7 = ADDXri killed %x7, target-flags(aarch64-pageoff, aarch64-nc) @bt, 0
-    dead %wzr = SUBSWri killed %w8, 0, 0, implicit-def %nzcv
-    %w5 = CSINCWr %wzr, %wzr, 0, implicit killed %nzcv
-    %w6 = ORRWrs %wzr, %wzr, 0
-    BL @_Z2byi1LS_bbPi, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit killed %w0, implicit killed %x1, implicit killed %x2, implicit killed %x3, implicit killed %x4, implicit killed %w5, implicit killed %w6, implicit killed %x7, implicit-def %sp
-    %lr = LDRXui %sp, 4 :: (load 8 from %stack.2)
-    %sp = ADDXri %sp, 48, 0
-    RET undef %lr
+    $w8 = LDRBBui $x0, 5 :: (load 1 from %ir.bx)
+    $w0 = LDRWui killed $x0, 0 :: (load 4 from %ir.bw1)
+    $x7 = ADRP target-flags(aarch64-page) @bt
+    $x7 = ADDXri killed $x7, target-flags(aarch64-pageoff, aarch64-nc) @bt, 0
+    dead $wzr = SUBSWri killed $w8, 0, 0, implicit-def $nzcv
+    $w5 = CSINCWr $wzr, $wzr, 0, implicit killed $nzcv
+    $w6 = ORRWrs $wzr, $wzr, 0
+    BL @_Z2byi1LS_bbPi, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $x1, implicit killed $x2, implicit killed $x3, implicit killed $x4, implicit killed $w5, implicit killed $w6, implicit killed $x7, implicit-def $sp
+    $lr = LDRXui $sp, 4 :: (load 8 from %stack.2)
+    $sp = ADDXri $sp, 48, 0
+    RET undef $lr
 
 ...

@@ -29,7 +29,7 @@ void MemIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
 }
 
 bool MemIndex::fuzzyFind(
-    const Context &Ctx, const FuzzyFindRequest &Req,
+    const FuzzyFindRequest &Req,
     llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");

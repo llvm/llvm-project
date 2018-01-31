@@ -12,12 +12,12 @@ registers:
   - { id: 0, class: gr32 }
 liveins:
 # CHECK: [[@LINE+1]]:13: unknown register name 'register'
-  - { reg: '%register', virtual-reg: '%0' }
+  - { reg: '$register', virtual-reg: '%0' }
 body: |
   bb.0.body:
-    liveins: %edi
+    liveins: $edi
 
-    %0 = COPY %edi
-    %eax = COPY %0
-    RETQ %eax
+    %0 = COPY $edi
+    $eax = COPY %0
+    RETQ $eax
 ...

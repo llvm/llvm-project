@@ -130,32 +130,32 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    DBG_VALUE debug-use %edi, debug-use _, !21, !DIExpression(), debug-location !25
-    DBG_VALUE debug-use %rsi, debug-use _, !22, !DIExpression(), debug-location !26
-    %2 = MOV32rm %rip, 1, _, @bar, _, debug-location !27 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0)`, !tbaa !28)
+    DBG_VALUE debug-use $edi, debug-use _, !21, !DIExpression(), debug-location !25
+    DBG_VALUE debug-use $rsi, debug-use _, !22, !DIExpression(), debug-location !26
+    %2 = MOV32rm $rip, 1, _, @bar, _, debug-location !27 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0)`, !tbaa !28)
     DBG_VALUE debug-use %2, debug-use _, !23, !DIExpression(), debug-location !32
-    %3 = MOV32rm %rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
+    %3 = MOV32rm $rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
     DBG_VALUE debug-use %3, debug-use _, !24, !DIExpression(), debug-location !34
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !35
-    %edi = COPY %2, debug-location !35
-    %esi = COPY %3, debug-location !35
-    CALL64pcrel32 @foo, csr_64, implicit %rsp, implicit %ssp, implicit killed %edi, implicit killed %esi, implicit-def %rsp, debug-location !35
-    ADJCALLSTACKUP64 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !35
-    %eax = MOV32r0 implicit-def dead %eflags, debug-location !36
-    RET 0, killed %eax, debug-location !36
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !35
+    $edi = COPY %2, debug-location !35
+    $esi = COPY %3, debug-location !35
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit killed $esi, implicit-def $rsp, debug-location !35
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !35
+    $eax = MOV32r0 implicit-def dead $eflags, debug-location !36
+    RET 0, killed $eax, debug-location !36
 
 ...
 
 # Let's verify that the slot index ranges for the unused variables argc/argv,
-# connected to physical regs %edi and %rsi, does not overlap with the ranges
+# connected to physical regs $edi and $rsi, does not overlap with the ranges
 # for %2 and %3. The register allocator is actually allocating the
-# virtual registers # to %edi and %esi, so the ranges for argc/argv should
+# virtual registers # to $edi and $esi, so the ranges for argc/argv should
 # not cover the whole BB.
 #
 # CHECKDBG-LABEL: ********** EMITTING LIVE DEBUG VARIABLES **********
-# CHECKDBG-NEXT: !"argc,5"        [0B;0e):0 Loc0=debug-use %edi
+# CHECKDBG-NEXT: !"argc,5"        [0B;0e):0 Loc0=debug-use $edi
 # CHECKDBG-NEXT:         [0B;0e):0 %bb.0-160B
-# CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=debug-use %rsi
+# CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=debug-use $rsi
 # CHECKDBG-NEXT:         [0B;0e):0 %bb.0-160B
 # CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=debug-use %2
 # CHECKDBG-NEXT:         [16r;64r):0 %bb.0-160B

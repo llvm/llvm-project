@@ -323,9 +323,9 @@ void Lint::visitCallSite(CallSite CS) {
       MemCpyInst *MCI = cast<MemCpyInst>(&I);
       // TODO: If the size is known, use it.
       visitMemoryReference(I, MCI->getDest(), MemoryLocation::UnknownSize,
-                           MCI->getAlignment(), nullptr, MemRef::Write);
+                           MCI->getDestAlignment(), nullptr, MemRef::Write);
       visitMemoryReference(I, MCI->getSource(), MemoryLocation::UnknownSize,
-                           MCI->getAlignment(), nullptr, MemRef::Read);
+                           MCI->getSourceAlignment(), nullptr, MemRef::Read);
 
       // Check that the memcpy arguments don't overlap. The AliasAnalysis API
       // isn't expressive enough for what we really want to do. Known partial
@@ -345,16 +345,16 @@ void Lint::visitCallSite(CallSite CS) {
       MemMoveInst *MMI = cast<MemMoveInst>(&I);
       // TODO: If the size is known, use it.
       visitMemoryReference(I, MMI->getDest(), MemoryLocation::UnknownSize,
-                           MMI->getAlignment(), nullptr, MemRef::Write);
+                           MMI->getDestAlignment(), nullptr, MemRef::Write);
       visitMemoryReference(I, MMI->getSource(), MemoryLocation::UnknownSize,
-                           MMI->getAlignment(), nullptr, MemRef::Read);
+                           MMI->getSourceAlignment(), nullptr, MemRef::Read);
       break;
     }
     case Intrinsic::memset: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
       // TODO: If the size is known, use it.
       visitMemoryReference(I, MSI->getDest(), MemoryLocation::UnknownSize,
-                           MSI->getAlignment(), nullptr, MemRef::Write);
+                           MSI->getDestAlignment(), nullptr, MemRef::Write);
       break;
     }
 

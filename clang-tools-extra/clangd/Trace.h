@@ -39,12 +39,10 @@ public:
   /// Usually implementations will store an object in the returned context
   /// whose destructor records the end of the event.
   /// The args are *Args, only complete when the event ends.
-  virtual Context beginSpan(const Context &Ctx, llvm::StringRef Name,
-                            json::obj *Args) = 0;
+  virtual Context beginSpan(llvm::StringRef Name, json::obj *Args) = 0;
 
   /// Called for instant events.
-  virtual void instant(const Context &Ctx, llvm::StringRef Name,
-                       json::obj &&Args) = 0;
+  virtual void instant(llvm::StringRef Name, json::obj &&Args) = 0;
 };
 
 /// Sets up a global EventTracer that consumes events produced by Span and
@@ -65,7 +63,7 @@ std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
                                               bool Pretty = false);
 
 /// Records a single instant event, associated with the current thread.
-void log(const Context &Ctx, const llvm::Twine &Name);
+void log(const llvm::Twine &Name);
 
 /// Records an event whose duration is the lifetime of the Span object.
 /// This lifetime is extended when the span's context is reused.
@@ -78,18 +76,19 @@ void log(const Context &Ctx, const llvm::Twine &Name);
 /// SomeJSONExpr is evaluated and copied only if actually needed.
 class Span {
 public:
-  Span(const Context &Ctx, llvm::StringRef Name);
+  Span(llvm::StringRef Name);
 
   /// Mutable metadata, if this span is interested.
   /// Prefer to use SPAN_ATTACH rather than accessing this directly.
   json::obj *const Args;
-  /// Propagating this context will keep the span alive.
-  const Context Ctx;
+
+private:
+  WithContext RestoreCtx;
 };
 
 /// Returns mutable span metadata if this span is interested.
 /// Prefer to use SPAN_ATTACH rather than accessing this directly.
-json::obj *spanArgs(const Context &Ctx);
+json::obj *spanArgs();
 
 /// Attach a key-value pair to a Span event.
 /// This is not threadsafe when used with the same Span.

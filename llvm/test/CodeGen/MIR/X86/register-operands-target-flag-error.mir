@@ -17,8 +17,8 @@ name: inc
 body: |
   bb.0.entry:
   ; CHECK: [[@LINE+1]]:42: register operands can't have target flags
-    %rax = MOV64rm target-flags(x86-got) %rip, 1, _, @G, _
-    %eax = MOV32rm killed %rax, 1, _, 0, _
-    %eax = INC32r killed %eax, implicit-def dead %eflags
-    RETQ %eax
+    $rax = MOV64rm target-flags(x86-got) $rip, 1, _, @G, _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    $eax = INC32r killed $eax, implicit-def dead $eflags
+    RETQ $eax
 ...

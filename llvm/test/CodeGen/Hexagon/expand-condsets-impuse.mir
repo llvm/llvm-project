@@ -28,17 +28,17 @@ registers:
   - { id: 14, class: intregs }
   - { id: 99, class: intregs }
 liveins:
-  - { reg: '%r0', virtual-reg: '%99' }
+  - { reg: '$r0', virtual-reg: '%99' }
 
 body: |
   bb.0:
-    liveins: %r0
+    liveins: $r0
     successors: %bb.298, %bb.301
-        %99 = COPY %r0
-        J2_jumpr %99, implicit-def %pc
+        %99 = COPY $r0
+        J2_jumpr %99, implicit-def $pc
 
   bb.298:
-    liveins: %r0
+    liveins: $r0
     successors: %bb.299, %bb.301, %bb.309
         %0 = A2_tfrsi 123
         %1 = A2_tfrsi -1
@@ -46,7 +46,7 @@ body: |
         %4 = C2_cmpeqi %3, 33
         %5 = A2_tfrsi -2
         %6 = C2_mux %4, %5, %1
-        J2_jumpr %6, implicit-def %pc
+        J2_jumpr %6, implicit-def $pc
 
   bb.299:
     successors: %bb.300, %bb.309
@@ -55,12 +55,12 @@ body: |
         %9 = A2_tfrsi -999
         ; CHECK: %10:intregs = C2_cmoveit killed %8, -999, implicit %10
         %10 = C2_mux %8, %9, %1
-        J2_jumpr %10, implicit-def %pc
+        J2_jumpr %10, implicit-def $pc
 
   bb.300:
     successors: %bb.309
         S2_storeri_io %99, 0, %0
-        J2_jump %bb.309, implicit-def %pc
+        J2_jump %bb.309, implicit-def $pc
 
   bb.301:
     successors: %bb.299, %bb.309
@@ -70,7 +70,7 @@ body: |
         %12 = C2_cmpeqi %11, 33
         %13 = A2_tfrsi -2
         %14 = C2_mux %12, %13, %1
-        J2_jumpr %14, implicit-def %pc
+        J2_jumpr %14, implicit-def $pc
 
   bb.309:
 

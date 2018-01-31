@@ -51,11 +51,11 @@ liveins:
 body:             |
   bb.1.entry:
     successors: %bb.2.case1(0x40000000), %bb.3.case2(0x40000000)
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_phi
     ; CHECK: [[RES:%.*]]:gpr32 = PHI
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %1(s32) = G_CONSTANT i32 0
     %3(s32) = G_CONSTANT i32 1
     %5(s32) = G_CONSTANT i32 2
@@ -77,8 +77,8 @@ body:             |
 
   bb.4.return:
     %7(s32) = G_PHI %4(s32), %bb.2.case1, %6(s32), %bb.3.case2
-    %w0 = COPY %7(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %7(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 
@@ -101,12 +101,12 @@ liveins:
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: %w2, %x0, %x1
+    liveins: $w2, $x0, $x1
     ; CHECK-LABEL: name: test_phi_ptr
 
-    %0(p0) = COPY %x0
-    %1(p0) = COPY %x1
-    %6:gpr(s32) = COPY %w2
+    %0(p0) = COPY $x0
+    %1(p0) = COPY $x1
+    %6:gpr(s32) = COPY $w2
     %2(s1) = G_TRUNC %6
     G_BRCOND %2(s1), %bb.1
     G_BR %bb.2
@@ -118,7 +118,7 @@ body:             |
   bb.2:
     ; CHECK: %{{[0-9]+}}:gpr64 = PHI %{{[0-9]+}}, %bb.0, %{{[0-9]+}}, %bb.1
     %3(p0) = G_PHI %0(p0), %bb.0, %1(p0), %bb.1
-    %x0 = COPY %3(p0)
-    RET_ReallyLR implicit %x0
+    $x0 = COPY %3(p0)
+    RET_ReallyLR implicit $x0
 
 ...

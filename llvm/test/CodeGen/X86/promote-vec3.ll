@@ -17,9 +17,9 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE3-NEXT:    pextrw $0, %xmm0, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm0, %edx
 ; SSE3-NEXT:    pextrw $2, %xmm0, %ecx
-; SSE3-NEXT:    # kill: def %ax killed %ax killed %eax
-; SSE3-NEXT:    # kill: def %dx killed %dx killed %edx
-; SSE3-NEXT:    # kill: def %cx killed %cx killed %ecx
+; SSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE3-NEXT:    # kill: def $dx killed $dx killed $edx
+; SSE3-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; SSE3-NEXT:    retl
 ;
 ; SSE41-LABEL: zext_i8:
@@ -31,9 +31,9 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    pextrw $2, %xmm0, %edx
 ; SSE41-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE41-NEXT:    # kill: def %ax killed %ax killed %eax
-; SSE41-NEXT:    # kill: def %dx killed %dx killed %edx
-; SSE41-NEXT:    # kill: def %cx killed %cx killed %ecx
+; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE41-NEXT:    # kill: def $dx killed $dx killed $edx
+; SSE41-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; SSE41-NEXT:    retl
 ;
 ; AVX-32-LABEL: zext_i8:
@@ -45,9 +45,9 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; AVX-32-NEXT:    vmovd %xmm0, %eax
 ; AVX-32-NEXT:    vpextrw $2, %xmm0, %edx
 ; AVX-32-NEXT:    vpextrw $4, %xmm0, %ecx
-; AVX-32-NEXT:    # kill: def %ax killed %ax killed %eax
-; AVX-32-NEXT:    # kill: def %dx killed %dx killed %edx
-; AVX-32-NEXT:    # kill: def %cx killed %cx killed %ecx
+; AVX-32-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX-32-NEXT:    # kill: def $dx killed $dx killed $edx
+; AVX-32-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: zext_i8:
@@ -59,9 +59,9 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; AVX-64-NEXT:    vmovd %xmm0, %eax
 ; AVX-64-NEXT:    vpextrw $2, %xmm0, %edx
 ; AVX-64-NEXT:    vpextrw $4, %xmm0, %ecx
-; AVX-64-NEXT:    # kill: def %ax killed %ax killed %eax
-; AVX-64-NEXT:    # kill: def %dx killed %dx killed %edx
-; AVX-64-NEXT:    # kill: def %cx killed %cx killed %ecx
+; AVX-64-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX-64-NEXT:    # kill: def $dx killed $dx killed $edx
+; AVX-64-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; AVX-64-NEXT:    retq
   %2 = zext <3 x i8> %0 to <3 x i16>
   ret <3 x i16> %2
@@ -83,9 +83,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    pextrw $2, %xmm0, %edx
 ; SSE3-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE3-NEXT:    # kill: def %ax killed %ax killed %eax
-; SSE3-NEXT:    # kill: def %dx killed %dx killed %edx
-; SSE3-NEXT:    # kill: def %cx killed %cx killed %ecx
+; SSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE3-NEXT:    # kill: def $dx killed $dx killed $edx
+; SSE3-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; SSE3-NEXT:    retl
 ;
 ; SSE41-LABEL: sext_i8:
@@ -98,9 +98,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    pextrw $2, %xmm0, %edx
 ; SSE41-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE41-NEXT:    # kill: def %ax killed %ax killed %eax
-; SSE41-NEXT:    # kill: def %dx killed %dx killed %edx
-; SSE41-NEXT:    # kill: def %cx killed %cx killed %ecx
+; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE41-NEXT:    # kill: def $dx killed $dx killed $edx
+; SSE41-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; SSE41-NEXT:    retl
 ;
 ; AVX-32-LABEL: sext_i8:
@@ -113,9 +113,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; AVX-32-NEXT:    vmovd %xmm0, %eax
 ; AVX-32-NEXT:    vpextrw $2, %xmm0, %edx
 ; AVX-32-NEXT:    vpextrw $4, %xmm0, %ecx
-; AVX-32-NEXT:    # kill: def %ax killed %ax killed %eax
-; AVX-32-NEXT:    # kill: def %dx killed %dx killed %edx
-; AVX-32-NEXT:    # kill: def %cx killed %cx killed %ecx
+; AVX-32-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX-32-NEXT:    # kill: def $dx killed $dx killed $edx
+; AVX-32-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: sext_i8:
@@ -128,9 +128,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; AVX-64-NEXT:    vmovd %xmm0, %eax
 ; AVX-64-NEXT:    vpextrw $2, %xmm0, %edx
 ; AVX-64-NEXT:    vpextrw $4, %xmm0, %ecx
-; AVX-64-NEXT:    # kill: def %ax killed %ax killed %eax
-; AVX-64-NEXT:    # kill: def %dx killed %dx killed %edx
-; AVX-64-NEXT:    # kill: def %cx killed %cx killed %ecx
+; AVX-64-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX-64-NEXT:    # kill: def $dx killed $dx killed $edx
+; AVX-64-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; AVX-64-NEXT:    retq
   %2 = sext <3 x i8> %0 to <3 x i16>
   ret <3 x i16> %2

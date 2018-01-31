@@ -30,7 +30,7 @@ define <8 x i16> @testv8i1_sext_v8i16(<8 x i32>* %p) {
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpeqd (%rdi), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
   %in = load <8 x i32>, <8 x i32>* %p

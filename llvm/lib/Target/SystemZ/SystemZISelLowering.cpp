@@ -634,7 +634,8 @@ supportedAddressingMode(Instruction *I, bool HasVector) {
     if (SingleUser->getParent() == I->getParent()) {
       if (isa<ICmpInst>(SingleUser)) {
         if (auto *C = dyn_cast<ConstantInt>(SingleUser->getOperand(1)))
-          if (isInt<16>(C->getSExtValue()) || isUInt<16>(C->getZExtValue()))
+          if (C->getBitWidth() <= 64 &&
+              (isInt<16>(C->getSExtValue()) || isUInt<16>(C->getZExtValue())))
             // Comparison of memory with 16 bit signed / unsigned immediate
             return AddressingMode(false/*LongDispl*/, false/*IdxReg*/);
       } else if (isa<StoreInst>(SingleUser))

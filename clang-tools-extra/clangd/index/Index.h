@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
-#include "../Context.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -244,7 +243,7 @@ public:
   /// Returns true if the result list is complete, false if it was truncated due
   /// to MaxCandidateCount
   virtual bool
-  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+  fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const = 0;
 
   // FIXME: add interfaces for more index use cases:

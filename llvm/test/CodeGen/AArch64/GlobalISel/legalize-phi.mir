@@ -66,8 +66,8 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: %w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+  ; CHECK:   liveins: $w0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
@@ -89,17 +89,17 @@ body:             |
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
-  ; CHECK:   %w0 = COPY [[AND]](s32)
-  ; CHECK:   RET_ReallyLR implicit %w0
+  ; CHECK:   $w0 = COPY [[AND]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
   bb.0:
    ; Test that we insert legalization artifacts(Truncs here) into the correct BBs
    ; while legalizing the G_PHI to s16.
 
 
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: %w0
+    liveins: $w0
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %1(s32) = G_CONSTANT i32 0
     %3(s32) = G_CONSTANT i32 1
     %6(s32) = G_CONSTANT i32 2
@@ -123,8 +123,8 @@ body:             |
   bb.3:
     %9(s1) = G_PHI %5(s1), %bb.1, %8(s1), %bb.2
     %10(s32) = G_ZEXT %9(s1)
-    %w0 = COPY %10(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %10(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 ---
@@ -147,10 +147,10 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi_ptr
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: %w2, %x0, %x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY %x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY %x1
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY %w2
+  ; CHECK:   liveins: $w2, $x0, $x1
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
   ; CHECK:   G_BR %bb.2
@@ -158,16 +158,16 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[COPY1]](p0), %bb.1
-  ; CHECK:   %x0 = COPY [[PHI]](p0)
-  ; CHECK:   RET_ReallyLR implicit %x0
+  ; CHECK:   $x0 = COPY [[PHI]](p0)
+  ; CHECK:   RET_ReallyLR implicit $x0
   bb.1:
 
     successors: %bb.2, %bb.3
-    liveins: %w2, %x0, %x1
+    liveins: $w2, $x0, $x1
 
-    %0(p0) = COPY %x0
-    %1(p0) = COPY %x1
-    %4(s32) = COPY %w2
+    %0(p0) = COPY $x0
+    %1(p0) = COPY $x1
+    %4(s32) = COPY $w2
     %2(s1) = G_TRUNC %4(s32)
     G_BRCOND %2(s1), %bb.2
     G_BR %bb.3
@@ -177,8 +177,8 @@ body:             |
 
   bb.3:
     %3(p0) = G_PHI %0(p0), %bb.1, %1(p0), %bb.2
-    %x0 = COPY %3(p0)
-    RET_ReallyLR implicit %x0
+    $x0 = COPY %3(p0)
+    RET_ReallyLR implicit $x0
 
 ...
 ---
@@ -206,8 +206,8 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi_empty
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: %w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+  ; CHECK:   liveins: $w0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -229,17 +229,17 @@ body:             |
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
   ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
-  ; CHECK:   %w0 = COPY [[AND]](s32)
-  ; CHECK:   RET_ReallyLR implicit %w0
+  ; CHECK:   $w0 = COPY [[AND]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: %w0
+    liveins: $w0
    ; Test that we properly legalize a phi with a predecessor that's empty
 
 
 
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %1(s32) = G_CONSTANT i32 0
     %3(s32) = G_CONSTANT i32 3
     %6(s32) = G_CONSTANT i32 1
@@ -263,8 +263,8 @@ body:             |
   bb.3:
     %9(s1) = G_PHI %8(s1), %bb.1, %5(s1), %bb.2
     %10(s32) = G_ZEXT %9(s1)
-    %w0 = COPY %10(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %10(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 ---
@@ -289,8 +289,8 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi_loop
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: %w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+  ; CHECK:   liveins: $w0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C1]](s32)
@@ -312,14 +312,14 @@ body:             |
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
   ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C3]]
-  ; CHECK:   %w0 = COPY [[AND1]](s32)
-  ; CHECK:   RET_ReallyLR implicit %w0
+  ; CHECK:   $w0 = COPY [[AND1]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: %w0
+    liveins: $w0
    ; Test that we properly legalize a phi that uses a value from the same BB
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %2(s8) = G_CONSTANT i8 1
     %7(s8) = G_CONSTANT i8 0
 
@@ -334,8 +334,8 @@ body:             |
 
   bb.3:
     %6(s32) = G_ZEXT %3(s8)
-    %w0 = COPY %6(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %6(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 ---
@@ -357,8 +357,8 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi_cycle
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: %w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+  ; CHECK:   liveins: $w0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
   ; CHECK: bb.1:
@@ -373,15 +373,15 @@ body:             |
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s16) = COPY [[PHI]](s16)
   ; CHECK:   G_BRCOND [[TRUNC2]](s1), %bb.1
   ; CHECK: bb.2:
-  ; CHECK:   %w0 = COPY [[AND]](s32)
-  ; CHECK:   RET_ReallyLR implicit %w0
+  ; CHECK:   $w0 = COPY [[AND]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: %w0
+    liveins: $w0
    ; Test that we properly legalize a phi that uses itself
 
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %4(s8) = G_CONSTANT i8 0
 
   bb.1:
@@ -393,8 +393,8 @@ body:             |
     G_BRCOND %3(s1), %bb.1
 
   bb.3:
-    %w0 = COPY %2(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %2(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 ---
@@ -426,8 +426,8 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi_same_bb
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: %w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+  ; CHECK:   liveins: $w0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -457,18 +457,18 @@ body:             |
   ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
   ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C5]]
   ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[C]]1, [[C]]2
-  ; CHECK:   %w0 = COPY [[C]]3(s32)
-  ; CHECK:   RET_ReallyLR implicit %w0
+  ; CHECK:   $w0 = COPY [[C]]3(s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: %w0
+    liveins: $w0
    ; Make sure that we correctly insert the new legalized G_PHI at the
    ; correct location (ie make sure G_PHIs are the first insts in the BB).
 
 
 
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %1(s32) = G_CONSTANT i32 0
     %3(s32) = G_CONSTANT i32 3
     %6(s32) = G_CONSTANT i32 1
@@ -496,8 +496,8 @@ body:             |
     %11(s32) = G_ZEXT %9(s8)
     %12(s32) = G_ZEXT %10(s8)
     %13(s32) = G_ADD %11, %12
-    %w0 = COPY %13(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %13(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 ---
@@ -530,8 +530,8 @@ body:             |
   ; CHECK-LABEL: name: legalize_phi_diff_bb
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: %w0, %w1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+  ; CHECK:   liveins: $w0, $w1
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -563,18 +563,18 @@ body:             |
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
   ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[C]]8, [[C]]7
-  ; CHECK:   %w0 = COPY [[AND1]](s32)
-  ; CHECK:   RET_ReallyLR implicit %w0
+  ; CHECK:   $w0 = COPY [[AND1]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
-    liveins: %w0, %w1
+    liveins: $w0, $w1
    ; Make sure that we correctly legalize PHIs sharing common defs
    ; in different BBs.
 
 
 
-    %0(s32) = COPY %w0
-    %1(s32) = COPY %w1
+    %0(s32) = COPY $w0
+    %1(s32) = COPY $w1
     %2(s32) = G_CONSTANT i32 0
     %4(s32) = G_CONSTANT i32 3
     %9(s32) = G_CONSTANT i32 1
@@ -599,7 +599,7 @@ body:             |
   bb.3:
     %13(s8) = G_PHI %7(s8), %bb.1, %6(s8), %bb.0
     %14(s32) = G_ZEXT %13(s8)
-    %w0 = COPY %14(s32)
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %14(s32)
+    RET_ReallyLR implicit $w0
 
 ...

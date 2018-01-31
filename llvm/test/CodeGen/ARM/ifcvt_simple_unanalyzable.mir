@@ -3,7 +3,7 @@
 name:            foo
 body:             |
   bb.0:
-    Bcc %bb.2, 0, %cpsr
+    Bcc %bb.2, 0, $cpsr
 
   bb.1:
   successors:
@@ -11,7 +11,7 @@ body:             |
 
   bb.2:
   successors:
-    %sp = tADDspi %sp, 2, 14, _
+    $sp = tADDspi $sp, 2, 14, _
     BX_RET 14, _
 ...
 
@@ -19,7 +19,7 @@ body:             |
 
 # CHECK: body:             |
 # CHECK:   bb.0:
-# CHECK:     %sp = tADDspi %sp, 2, 0, %cpsr
-# CHECK:     BX_RET 0, %cpsr
-# CHECK:     BX_RET 14, %noreg
+# CHECK:     $sp = tADDspi $sp, 2, 0, $cpsr
+# CHECK:     BX_RET 0, $cpsr
+# CHECK:     BX_RET 14, $noreg
 

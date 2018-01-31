@@ -13,11 +13,11 @@
 name:            test
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rdi' }
+  - { reg: '$rdi' }
 body: |
   bb.0.entry:
-    liveins: %rdi
+    liveins: $rdi
   ; CHECK: [[@LINE+1]]:48: expected 'load' or 'store' memory operation
-    %eax = MOV32rm killed %rdi, 1, _, 0, _ :: (4 from %ir.a)
-    RETQ %eax
+    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (4 from %ir.a)
+    RETQ $eax
 ...

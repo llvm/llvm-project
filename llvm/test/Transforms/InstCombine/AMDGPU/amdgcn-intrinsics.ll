@@ -723,6 +723,114 @@ define <2 x half> @constant_rtz_pkrtz() {
 }
 
 ; --------------------------------------------------------------------
+; llvm.amdgcn.cvt.pknorm.i16
+; --------------------------------------------------------------------
+
+declare <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float, float) nounwind readnone
+
+; CHECK-LABEL: @undef_lhs_cvt_pknorm_i16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float undef, float %y)
+define <2 x i16> @undef_lhs_cvt_pknorm_i16(float %y) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float undef, float %y)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_rhs_cvt_pknorm_i16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float %x, float undef)
+define <2 x i16> @undef_rhs_cvt_pknorm_i16(float %x) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float %x, float undef)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_cvt_pknorm_i16(
+; CHECK: ret <2 x i16> undef
+define <2 x i16> @undef_cvt_pknorm_i16() {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float undef, float undef)
+  ret <2 x i16> %cvt
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.cvt.pknorm.u16
+; --------------------------------------------------------------------
+
+declare <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float, float) nounwind readnone
+
+; CHECK-LABEL: @undef_lhs_cvt_pknorm_u16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float undef, float %y)
+define <2 x i16> @undef_lhs_cvt_pknorm_u16(float %y) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float undef, float %y)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_rhs_cvt_pknorm_u16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %x, float undef)
+define <2 x i16> @undef_rhs_cvt_pknorm_u16(float %x) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %x, float undef)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_cvt_pknorm_u16(
+; CHECK: ret <2 x i16> undef
+define <2 x i16> @undef_cvt_pknorm_u16() {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float undef, float undef)
+  ret <2 x i16> %cvt
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.cvt.pk.i16
+; --------------------------------------------------------------------
+
+declare <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32, i32) nounwind readnone
+
+; CHECK-LABEL: @undef_lhs_cvt_pk_i16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 undef, i32 %y)
+define <2 x i16> @undef_lhs_cvt_pk_i16(i32 %y) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 undef, i32 %y)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_rhs_cvt_pk_i16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 %x, i32 undef)
+define <2 x i16> @undef_rhs_cvt_pk_i16(i32 %x) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 %x, i32 undef)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_cvt_pk_i16(
+; CHECK: ret <2 x i16> undef
+define <2 x i16> @undef_cvt_pk_i16() {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 undef, i32 undef)
+  ret <2 x i16> %cvt
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.cvt.pk.u16
+; --------------------------------------------------------------------
+
+declare <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32, i32) nounwind readnone
+
+; CHECK-LABEL: @undef_lhs_cvt_pk_u16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 undef, i32 %y)
+define <2 x i16> @undef_lhs_cvt_pk_u16(i32 %y) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 undef, i32 %y)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_rhs_cvt_pk_u16(
+; CHECK: %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 %x, i32 undef)
+define <2 x i16> @undef_rhs_cvt_pk_u16(i32 %x) {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 %x, i32 undef)
+  ret <2 x i16> %cvt
+}
+
+; CHECK-LABEL: @undef_cvt_pk_u16(
+; CHECK: ret <2 x i16> undef
+define <2 x i16> @undef_cvt_pk_u16() {
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 undef, i32 undef)
+  ret <2 x i16> %cvt
+}
+
+; --------------------------------------------------------------------
 ; llvm.amdgcn.ubfe
 ; --------------------------------------------------------------------
 

@@ -151,7 +151,7 @@ declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float>, <16 x
 define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512(<8 x float> %x0, <16 x float> %x2, i16 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x8_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
+; CHECK-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinsertf32x8 $1, %ymm0, %zmm0, %zmm1 {%k1}
@@ -185,7 +185,7 @@ declare <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double>, <8 x
 define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512(<2 x double> %x0, <8 x double> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; CHECK-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -220,7 +220,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32>, <16 x i32
 define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512(<8 x i32> %x0, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x8_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
+; CHECK-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinserti32x8 $1, %ymm0, %zmm0, %zmm1 {%k1}
@@ -254,7 +254,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64>, <8 x i64>,
 define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512(<2 x i64> %x0, <8 x i64> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; CHECK-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -289,7 +289,7 @@ declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float>, <16 x
 define <16 x float>@test_int_x86_avx512_mask_broadcastf32x2_512(<4 x float> %x0, <16 x float> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x2_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; CHECK-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -311,7 +311,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32>, <16 x i32
 define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x2_512(<4 x i32> %x0, <16 x i32> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x2_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; CHECK-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -335,7 +335,7 @@ define i16@test_int_x86_avx512_cvtd2mask_512(<16 x i32> %x0) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovd2m %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.cvtd2mask.512(<16 x i32> %x0)
   ret i16 %res
@@ -348,7 +348,7 @@ define i8@test_int_x86_avx512_cvtq2mask_512(<8 x i64> %x0) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovq2m %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.cvtq2mask.512(<8 x i64> %x0)
   ret i8 %res

@@ -30,7 +30,7 @@
 ; DBG_VALUE for variable "n" is extended into %bb.5 from its predecessors %bb.3
 ; and %bb.4.
 ; CHECK:       .LBB0_5:
-; CHECK-NEXT:  #DEBUG_VALUE: main:n <- %ebx
+; CHECK-NEXT:  #DEBUG_VALUE: main:n <- $ebx
 ;   Other register values have been clobbered.
 ; CHECK-NOT:   #DEBUG_VALUE:
 ; CHECK:         movl    %ecx, m(%rip)

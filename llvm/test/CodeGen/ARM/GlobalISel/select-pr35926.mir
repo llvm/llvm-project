@@ -24,17 +24,17 @@ regBankSelected: true
 selected:        false
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %d0, %d1, %d2
+    liveins: $d0, $d1, $d2
   
-    %0:fprb(s64) = COPY %d0
-    %1:fprb(s64) = COPY %d1
-    %2:fprb(s64) = COPY %d2
+    %0:fprb(s64) = COPY $d0
+    %1:fprb(s64) = COPY $d1
+    %2:fprb(s64) = COPY $d2
     %3:fprb(s64) = G_FNEG %1
     %4:fprb(s64) = G_FMA %0, %3, %2
     %5:fprb(s64) = G_FNEG %4
-    %d0 = COPY %5(s64)
-    MOVPCLR 14, %noreg, implicit %d0
+    $d0 = COPY %5(s64)
+    MOVPCLR 14, $noreg, implicit $d0
 
-# CHECK: %{{[0-9]+}}:dpr = VFNMSD %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 14, %noreg
+# CHECK: %{{[0-9]+}}:dpr = VFNMSD %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 14, $noreg
 
 ...

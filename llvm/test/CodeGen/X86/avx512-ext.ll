@@ -302,7 +302,7 @@ define <4 x i32> @zext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x8mem_to_4x32:
@@ -324,7 +324,7 @@ define <4 x i32> @sext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxbd (%rdi), %xmm0
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x8mem_to_4x32:
@@ -347,7 +347,7 @@ define <8 x i32> @zext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x8mem_to_8x32:
@@ -370,7 +370,7 @@ define <8 x i32> @sext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxbd (%rdi), %ymm0
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x8mem_to_8x32:
@@ -492,7 +492,7 @@ define <2 x i64> @zext_2x8mem_to_2x64(<2 x i8> *%i , <2 x i1> %mask) nounwind re
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2x8mem_to_2x64:
@@ -513,7 +513,7 @@ define <2 x i64> @sext_2x8mem_to_2x64mask(<2 x i8> *%i , <2 x i1> %mask) nounwin
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxbq (%rdi), %xmm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_2x8mem_to_2x64mask:
@@ -544,7 +544,7 @@ define <4 x i64> @zext_4x8mem_to_4x64(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x8mem_to_4x64:
@@ -566,7 +566,7 @@ define <4 x i64> @sext_4x8mem_to_4x64mask(<4 x i8> *%i , <4 x i1> %mask) nounwin
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxbq (%rdi), %ymm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x8mem_to_4x64mask:
@@ -650,7 +650,7 @@ define <4 x i32> @zext_4x16mem_to_4x32(<4 x i16> *%i , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x16mem_to_4x32:
@@ -672,7 +672,7 @@ define <4 x i32> @sext_4x16mem_to_4x32mask(<4 x i16> *%i , <4 x i1> %mask) nounw
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxwd (%rdi), %xmm0
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x16mem_to_4x32mask:
@@ -706,7 +706,7 @@ define <8 x i32> @zext_8x16mem_to_8x32(<8 x i16> *%i , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x16mem_to_8x32:
@@ -729,7 +729,7 @@ define <8 x i32> @sext_8x16mem_to_8x32mask(<8 x i16> *%i , <8 x i1> %mask) nounw
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxwd (%rdi), %ymm0
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x16mem_to_8x32mask:
@@ -762,7 +762,7 @@ define <8 x i32> @zext_8x16_to_8x32mask(<8 x i16> %a , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x16_to_8x32mask:
@@ -872,7 +872,7 @@ define <2 x i64> @zext_2x16mem_to_2x64(<2 x i16> *%i , <2 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2x16mem_to_2x64:
@@ -894,7 +894,7 @@ define <2 x i64> @sext_2x16mem_to_2x64mask(<2 x i16> *%i , <2 x i1> %mask) nounw
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxwq (%rdi), %xmm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_2x16mem_to_2x64mask:
@@ -926,7 +926,7 @@ define <4 x i64> @zext_4x16mem_to_4x64(<4 x i16> *%i , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxwq {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x16mem_to_4x64:
@@ -948,7 +948,7 @@ define <4 x i64> @sext_4x16mem_to_4x64mask(<4 x i16> *%i , <4 x i1> %mask) nounw
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxwq (%rdi), %ymm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x16mem_to_4x64mask:
@@ -1061,7 +1061,7 @@ define <2 x i64> @zext_2x32mem_to_2x64(<2 x i32> *%i , <2 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2x32mem_to_2x64:
@@ -1083,7 +1083,7 @@ define <2 x i64> @sext_2x32mem_to_2x64mask(<2 x i32> *%i , <2 x i1> %mask) nounw
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxdq (%rdi), %xmm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_2x32mem_to_2x64mask:
@@ -1115,7 +1115,7 @@ define <4 x i64> @zext_4x32mem_to_4x64(<4 x i32> *%i , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x32mem_to_4x64:
@@ -1137,7 +1137,7 @@ define <4 x i64> @sext_4x32mem_to_4x64mask(<4 x i32> *%i , <4 x i1> %mask) nounw
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpmovsxdq (%rdi), %ymm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x32mem_to_4x64mask:
@@ -1178,7 +1178,7 @@ define <4 x i64> @zext_4x32_to_4x64mask(<4 x i32> %a , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x32_to_4x64mask:
@@ -1331,7 +1331,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    # kill: def %ax killed %ax killed %eax
+; KNL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_16i8_to_16i1:
@@ -1339,7 +1339,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq
   %mask_b = trunc <16 x i8>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
@@ -1352,7 +1352,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    # kill: def %ax killed %ax killed %eax
+; KNL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_16i32_to_16i1:
@@ -1360,7 +1360,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; SKX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; SKX-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %mask_b = trunc <16 x i32>%a to <16 x i1>
@@ -1390,7 +1390,7 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    # kill: def %al killed %al killed %eax
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_8i16_to_8i1:
@@ -1398,7 +1398,7 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    # kill: def %al killed %al killed %eax
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq
   %mask_b = trunc <8 x i16>%a to <8 x i1>
   %mask = bitcast <8 x i1> %mask_b to i8
@@ -1410,7 +1410,7 @@ define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i32:
@@ -1436,7 +1436,7 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    # kill: def %ax killed %ax killed %eax
+; KNL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_i32_to_i1:
@@ -1449,7 +1449,7 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; SKX-NEXT:    kmovw %edi, %k1
 ; SKX-NEXT:    korw %k1, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq
   %a_i = trunc i32 %a to i1
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %a_i, i32 0
@@ -1462,7 +1462,7 @@ define <8 x i16> @sext_8i1_8i16(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i16:

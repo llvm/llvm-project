@@ -43,10 +43,10 @@ name:            f
 alignment:       4
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rdi' }
-  - { reg: '%esi' }
+  - { reg: '$rdi' }
+  - { reg: '$esi' }
 
-# CHECK: %eax = FAULTING_OP 1, %bb.3, 1684, killed %rdi, 1, %noreg, 0, %noreg :: (load 4 from %ir.ptr)
+# CHECK: $eax = FAULTING_OP 1, %bb.3, 1684, killed $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr)
 # CHECK-NEXT: JMP_1 %bb.2
 # CHECK: bb.3.null:
 # CHECK:  bb.4.right:
@@ -55,33 +55,33 @@ liveins:
 body:             |
   bb.0.entry:
     successors: %bb.1(0x7ffff800), %bb.3(0x00000800)
-    liveins: %esi, %rdi
+    liveins: $esi, $rdi
   
-    frame-setup PUSH64r undef %rax, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    TEST8ri %sil, 1, implicit-def %eflags, implicit killed %esi
-    JE_1 %bb.3, implicit killed %eflags
+    TEST8ri $sil, 1, implicit-def $eflags, implicit killed $esi
+    JE_1 %bb.3, implicit killed $eflags
   
   bb.1.left:
     successors: %bb.2(0x7ffff800), %bb.4(0x00000800)
-    liveins: %rdi
+    liveins: $rdi
   
-    %eax = FAULTING_OP 1, %bb.2, 1684, killed %rdi, 1, %noreg, 0, %noreg :: (load 4 from %ir.ptr)
+    $eax = FAULTING_OP 1, %bb.2, 1684, killed $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr)
     JMP_1 %bb.4
   
   bb.4.not_null:
-    liveins: %rdi, %eax
+    liveins: $rdi, $eax
   
-    %rcx = POP64r implicit-def %rsp, implicit %rsp
-    RETQ %eax
+    $rcx = POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
 
   bb.2.null:
-    liveins: %rdi
+    liveins: $rdi
   
-    CALL64pcrel32 @stub, csr_64, implicit %rsp, implicit %rdi, implicit-def %rsp
+    CALL64pcrel32 @stub, csr_64, implicit $rsp, implicit $rdi, implicit-def $rsp
   
   bb.3.right:
-    dead %edi = XOR32rr undef %edi, undef %edi, implicit-def dead %eflags, implicit-def %rdi
-    CALL64pcrel32 @stub, csr_64, implicit %rsp, implicit %rdi, implicit-def %rsp
+    dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
+    CALL64pcrel32 @stub, csr_64, implicit $rsp, implicit $rdi, implicit-def $rsp
   
 ...

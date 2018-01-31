@@ -11,8 +11,8 @@
 # CHECK:  - { id: 8, class: vreg_128, preferred-register: '' }
 # No more registers shall be defined
 # CHECK-NEXT: liveins:
-# CHECK:    FLAT_STORE_DWORDX2 %vgpr0_vgpr1, %4,
-# CHECK:    FLAT_STORE_DWORDX3 %vgpr0_vgpr1, %6,
+# CHECK:    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %4,
+# CHECK:    FLAT_STORE_DWORDX3 $vgpr0_vgpr1, %6,
 
 ---
 name:            main
@@ -33,7 +33,7 @@ registers:
   - { id: 8, class: vreg_128 }
   - { id: 9, class: vreg_128 }
 liveins:
-  - { reg: '%sgpr6', virtual-reg: '%1' }
+  - { reg: '$sgpr6', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -50,22 +50,22 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: %sgpr0, %vgpr0_vgpr1
+    liveins: $sgpr0, $vgpr0_vgpr1
 
     %3 = IMPLICIT_DEF
-    undef %4.sub0 = COPY %sgpr0
+    undef %4.sub0 = COPY $sgpr0
     %4.sub1 = COPY %3.sub0
     undef %5.sub0 = COPY %4.sub1
     %5.sub1 = COPY %4.sub0
-    FLAT_STORE_DWORDX2 %vgpr0_vgpr1, killed %5, 0, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, killed %5, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %6 = IMPLICIT_DEF
     undef %7.sub0_sub1 = COPY %6
     %7.sub2 = COPY %3.sub0
-    FLAT_STORE_DWORDX3 %vgpr0_vgpr1, killed %7, 0, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_STORE_DWORDX3 $vgpr0_vgpr1, killed %7, 0, 0, 0, implicit $exec, implicit $flat_scr
 
     %8 = IMPLICIT_DEF
     undef %9.sub0_sub1_sub2 = COPY %8
     %9.sub3 = COPY %3.sub0
-    FLAT_STORE_DWORDX4 %vgpr0_vgpr1, killed %9, 0, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_STORE_DWORDX4 $vgpr0_vgpr1, killed %9, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...

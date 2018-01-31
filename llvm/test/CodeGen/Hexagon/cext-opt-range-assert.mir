@@ -22,12 +22,12 @@ body: |
     %6:intregs = A2_tfrsi @G
     %7:intregs = A2_addi killed %6, 2
     %8:intregs = A2_tfrsi 127
-    ADJCALLSTACKDOWN 0, 0, implicit-def %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
-    %r0 = COPY %7
-    %r1 = COPY %8
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %7
+    $r1 = COPY %8
     %9:intregs = IMPLICIT_DEF
-    J2_callr killed %9, implicit-def dead %pc, implicit-def dead %r31, implicit %r29, implicit %r0, implicit %r1, implicit-def %r29
-    ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
+    J2_callr killed %9, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit $r1, implicit-def $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
     %5:intregs = A2_tfrsi 8
     %10:intregs = A2_tfrsi @G + 8
     %4:intregs = A2_addi killed %10, 2
@@ -39,16 +39,16 @@ body: |
     %11:predregs = C2_cmpgtui %1, 127
     %2:intregs = A2_addi %1, 8
     %3:intregs = A2_addi %0, 16
-    J2_jumpf %11, %bb.1, implicit-def %pc
+    J2_jumpf %11, %bb.1, implicit-def $pc
 
   bb.2:
     %13:intregs = A2_tfrsi @G
     %14:intregs = A2_addi killed %13, 2
     %15:intregs = A2_tfrsi 127
-    ADJCALLSTACKDOWN 0, 0, implicit-def %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
-    %r0 = COPY %14
-    %r1 = COPY %15
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %14
+    $r1 = COPY %15
     %16:intregs = IMPLICIT_DEF
-    PS_callr_nr killed %16, implicit %r0, implicit %r1, implicit-def %r29
-    ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
+    PS_callr_nr killed %16, implicit $r0, implicit $r1, implicit-def $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
 ...

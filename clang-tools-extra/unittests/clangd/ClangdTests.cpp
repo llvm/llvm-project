@@ -9,7 +9,6 @@
 
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
-#include "Context.h"
 #include "TestFS.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
@@ -58,7 +57,7 @@ static bool diagsContainErrors(ArrayRef<DiagWithFixIts> Diagnostics) {
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
   void
-  onDiagnosticsReady(const Context &Ctx, PathRef File,
+  onDiagnosticsReady(PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics.Value);
 
@@ -143,8 +142,7 @@ protected:
 
     // Have to sync reparses because requests are processed on the calling
     // thread.
-    auto AddDocFuture =
-        Server.addDocument(Context::empty(), SourceFilename, SourceContents);
+    auto AddDocFuture = Server.addDocument(SourceFilename, SourceContents);
 
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
 
@@ -211,21 +209,21 @@ int b = a;
   FS.ExpectedFile = FooCpp;
 
   // To sync reparses before checking for errors.
-  std::future<Context> ParseFuture;
+  std::future<void> ParseFuture;
 
-  ParseFuture = Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  ParseFuture = Server.addDocument(Context::empty(), FooCpp, "");
+  ParseFuture = Server.addDocument(FooCpp, "");
   auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  ParseFuture = Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(FooCpp, SourceContents);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
@@ -256,23 +254,23 @@ int b = a;
   FS.ExpectedFile = FooCpp;
 
   // To sync reparses before checking for errors.
-  std::future<Context> ParseFuture;
+  std::future<void> ParseFuture;
 
-  ParseFuture = Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "";
-  ParseFuture = Server.forceReparse(Context::empty(), FooCpp);
+  ParseFuture = Server.forceReparse(FooCpp);
   auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "int a;";
-  ParseFuture = Server.forceReparse(Context::empty(), FooCpp);
+  ParseFuture = Server.forceReparse(FooCpp);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
@@ -302,22 +300,16 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   // No need to sync reparses, because requests are processed on the calling
   // thread.
   FS.Tag = "123";
-  Server.addDocument(Context::empty(), FooCpp, SourceContents);
-  EXPECT_EQ(
-      Server.codeComplete(Context::empty(), FooCpp, Position{0, 0}, CCOpts)
-          .get()
-          .second.Tag,
-      FS.Tag);
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
+            FS.Tag);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
-  Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(
-      Server.codeComplete(Context::empty(), FooCpp, Position{0, 0}, CCOpts)
-          .get()
-          .second.Tag,
-      FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
+            FS.Tag);
 }
 
 // Only enable this test on Unix
@@ -365,14 +357,14 @@ mock_string x;
 
   // No need to sync reparses, because requests are processed on the calling
   // thread.
-  Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  Server.addDocument(FooCpp, SourceContents);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   const auto SourceContentsWithError = R"cpp(
 #include <string>
 std::string x;
 )cpp";
-  Server.addDocument(Context::empty(), FooCpp, SourceContentsWithError);
+  Server.addDocument(FooCpp, SourceContentsWithError);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 }
 #endif // LLVM_ON_UNIX
@@ -402,26 +394,26 @@ struct bar { T x; };
 
   // First parse files in C mode and check they produce errors.
   CDB.ExtraClangFlags = {"-xc"};
-  Server.addDocument(Context::empty(), FooCpp, SourceContents1);
+  Server.addDocument(FooCpp, SourceContents1);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  Server.addDocument(Context::empty(), FooCpp, SourceContents2);
+  Server.addDocument(FooCpp, SourceContents2);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   // Now switch to C++ mode.
   CDB.ExtraClangFlags = {"-xc++"};
   // Currently, addDocument never checks if CompileCommand has changed, so we
   // expect to see the errors.
-  Server.addDocument(Context::empty(), FooCpp, SourceContents1);
+  Server.addDocument(FooCpp, SourceContents1);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  Server.addDocument(Context::empty(), FooCpp, SourceContents2);
+  Server.addDocument(FooCpp, SourceContents2);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
   // But forceReparse should reparse the file with proper flags.
-  Server.forceReparse(Context::empty(), FooCpp);
+  Server.forceReparse(FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument calls should finish without errors too.
-  Server.addDocument(Context::empty(), FooCpp, SourceContents1);
+  Server.addDocument(FooCpp, SourceContents1);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
-  Server.addDocument(Context::empty(), FooCpp, SourceContents2);
+  Server.addDocument(FooCpp, SourceContents2);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 }
 
@@ -448,16 +440,16 @@ struct Something {
 
   EXPECT_THAT(Server.getUsedBytesPerFile(), IsEmpty());
 
-  Server.addDocument(Context::empty(), FooCpp, SourceContents);
-  Server.addDocument(Context::empty(), BarCpp, SourceContents);
+  Server.addDocument(FooCpp, SourceContents);
+  Server.addDocument(BarCpp, SourceContents);
 
   EXPECT_THAT(Server.getUsedBytesPerFile(),
               UnorderedElementsAre(Pair(FooCpp, Gt(0u)), Pair(BarCpp, Gt(0u))));
 
-  Server.removeDocument(Context::empty(), FooCpp);
+  Server.removeDocument(FooCpp);
   EXPECT_THAT(Server.getUsedBytesPerFile(), ElementsAre(Pair(BarCpp, Gt(0u))));
 
-  Server.removeDocument(Context::empty(), BarCpp);
+  Server.removeDocument(BarCpp);
   EXPECT_THAT(Server.getUsedBytesPerFile(), IsEmpty());
 }
 
@@ -515,7 +507,7 @@ int d;
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
     void onDiagnosticsReady(
-        const Context &Ctx, PathRef File,
+        PathRef File,
         Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
       StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
@@ -547,7 +539,7 @@ int d;
     unsigned RequestsWithErrors = 0;
     bool LastContentsHadErrors = false;
     bool FileIsRemoved = true;
-    std::future<Context> LastRequestFuture;
+    std::future<void> LastRequestFuture;
   };
 
   std::vector<RequestStats> ReqStats;
@@ -574,7 +566,7 @@ int d;
 
     // Some helpers.
     auto UpdateStatsOnAddDocument = [&](unsigned FileIndex, bool HadErrors,
-                                        std::future<Context> Future) {
+                                        std::future<void> Future) {
       auto &Stats = ReqStats[FileIndex];
 
       if (HadErrors)
@@ -587,7 +579,7 @@ int d;
     };
 
     auto UpdateStatsOnRemoveDocument = [&](unsigned FileIndex,
-                                           std::future<Context> Future) {
+                                           std::future<void> Future) {
       auto &Stats = ReqStats[FileIndex];
 
       Stats.FileIsRemoved = true;
@@ -595,7 +587,7 @@ int d;
     };
 
     auto UpdateStatsOnForceReparse = [&](unsigned FileIndex,
-                                         std::future<Context> Future) {
+                                         std::future<void> Future) {
       auto &Stats = ReqStats[FileIndex];
 
       Stats.LastRequestFuture = std::move(Future);
@@ -607,10 +599,9 @@ int d;
 
     auto AddDocument = [&](unsigned FileIndex) {
       bool ShouldHaveErrors = ShouldHaveErrorsDist(RandGen);
-      auto Future =
-          Server.addDocument(Context::empty(), FilePaths[FileIndex],
-                             ShouldHaveErrors ? SourceContentsWithErrors
-                                              : SourceContentsWithoutErrors);
+      auto Future = Server.addDocument(
+          FilePaths[FileIndex], ShouldHaveErrors ? SourceContentsWithErrors
+                                                 : SourceContentsWithoutErrors);
       UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors, std::move(Future));
     };
 
@@ -626,7 +617,7 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      auto Future = Server.forceReparse(Context::empty(), FilePaths[FileIndex]);
+      auto Future = Server.forceReparse(FilePaths[FileIndex]);
       UpdateStatsOnForceReparse(FileIndex, std::move(Future));
     };
 
@@ -636,8 +627,7 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      auto Future =
-          Server.removeDocument(Context::empty(), FilePaths[FileIndex]);
+      auto Future = Server.removeDocument(FilePaths[FileIndex]);
       UpdateStatsOnRemoveDocument(FileIndex, std::move(Future));
     };
 
@@ -655,7 +645,7 @@ int d;
       // cancelled by any subsequent AddDocument/RemoveDocument request to the
       // same file.
       Server
-          .codeComplete(Context::empty(), FilePaths[FileIndex], Pos,
+          .codeComplete(FilePaths[FileIndex], Pos,
                         clangd::CodeCompleteOptions())
           .wait();
     };
@@ -667,8 +657,7 @@ int d;
         AddDocument(FileIndex);
 
       Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
-      ASSERT_TRUE(!!Server.findDefinitions(Context::empty(),
-                                           FilePaths[FileIndex], Pos));
+      ASSERT_TRUE(!!Server.findDefinitions(FilePaths[FileIndex], Pos));
     };
 
     std::vector<std::function<void()>> AsyncRequests = {
@@ -803,7 +792,7 @@ TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
         : StartSecondReparse(std::move(StartSecondReparse)) {}
 
     void onDiagnosticsReady(
-        const Context &Ctx, PathRef File,
+        PathRef File,
         Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
 
       std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
@@ -851,11 +840,10 @@ int d;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, 4,
                       /*StorePreamblesInMemory=*/true);
-  Server.addDocument(Context::empty(), FooCpp, SourceContentsWithErrors);
+  Server.addDocument(FooCpp, SourceContentsWithErrors);
   StartSecondReparse.wait();
 
-  auto Future =
-      Server.addDocument(Context::empty(), FooCpp, SourceContentsWithoutErrors);
+  auto Future = Server.addDocument(FooCpp, SourceContentsWithoutErrors);
   Future.wait();
 }
 

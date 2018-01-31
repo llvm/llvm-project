@@ -62,6 +62,7 @@ private:
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
+  void checkNoOverlappingSections();
   void fixSectionAlignments();
   void openFile();
   void writeTrapInstr();
@@ -453,6 +454,8 @@ template <class ELFT> void Writer<ELFT>::run() {
     for (OutputSection *Sec : OutputSections)
       Sec->Addr = 0;
   }
+
+  checkNoOverlappingSections();
 
   // It does not make sense try to open the file if we have error already.
   if (errorCount())
@@ -1901,6 +1904,103 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
         P->p_memsz = alignTo(P->p_memsz, P->p_align);
     }
   }
+}
+
+static std::string rangeToString(uint64_t Addr, uint64_t Len) {
+  if (Len == 0)
+    return "<emtpy range at 0x" + utohexstr(Addr) + ">";
+  return "[0x" + utohexstr(Addr) + " -> 0x" +
+         utohexstr(Addr + Len - 1) + "]";
+}
+
+// Check whether sections overlap for a specific address range (file offsets,
+// load and virtual adresses).
+//
+// This is a helper function called by Writer::checkNoOverlappingSections().
+template <typename Getter, typename Predicate>
+static void checkForSectionOverlap(ArrayRef<OutputSection *> AllSections,
+                                   StringRef Kind, Getter GetStart,
+                                   Predicate ShouldSkip) {
+  std::vector<OutputSection *> Sections;
+  // By removing all zero-size sections we can simplify the check for overlap to
+  // just checking whether the section range contains the other section's start
+  // address. Additionally, it also slightly speeds up the checking since we
+  // don't bother checking for overlap with sections that can never overlap.
+  for (OutputSection *Sec : AllSections)
+    if (Sec->Size > 0 && !ShouldSkip(Sec))
+      Sections.push_back(Sec);
+
+  // Instead of comparing every OutputSection with every other output section
+  // we sort the sections by address (file offset or load/virtual address). This
+  // way we find all overlapping sections but only need one comparision with the
+  // next section in the common non-overlapping case. The only time we end up
+  // doing more than one iteration of the following nested loop is if there are
+  // overlapping sections.
+  std::sort(Sections.begin(), Sections.end(),
+            [=](const OutputSection *A, const OutputSection *B) {
+              return GetStart(A) < GetStart(B);
+            });
+  for (size_t i = 0; i < Sections.size(); ++i) {
+    OutputSection *Sec = Sections[i];
+    uint64_t Start = GetStart(Sec);
+    for (auto *Other : ArrayRef<OutputSection *>(Sections).slice(i + 1)) {
+      // Since the sections are storted by start address we only need to check
+      // whether the other sections starts before the end of Sec. If this is
+      // not the case we can break out of this loop since all following sections
+      // will also start after the end of Sec.
+      if (Start + Sec->Size <= GetStart(Other))
+        break;
+      errorOrWarn("section " + Sec->Name + " " + Kind +
+                  " range overlaps with " + Other->Name + "\n>>> " + Sec->Name +
+                  " range is " + rangeToString(Start, Sec->Size) + "\n>>> " +
+                  Other->Name + " range is " +
+                  rangeToString(GetStart(Other), Other->Size));
+    }
+  }
+}
+
+// Check for overlapping sections
+//
+// In this function we check that none of the output sections have overlapping
+// file offsets. For SHF_ALLOC sections we also check that the load address
+// ranges and the virtual address ranges don't overlap
+template <class ELFT> void Writer<ELFT>::checkNoOverlappingSections() {
+  // First check for overlapping file offsets. In this case we need to skip
+  // Any section marked as SHT_NOBITS. These sections don't actually occupy
+  // space in the file so Sec->Offset + Sec->Size can overlap with others.
+  // If --oformat binary is specified only add SHF_ALLOC sections are added to
+  // the output file so we skip any non-allocated sections in that case.
+  checkForSectionOverlap(
+      OutputSections, "file", [](const OutputSection *Sec) { return Sec->Offset; },
+      [](const OutputSection *Sec) {
+        return Sec->Type == SHT_NOBITS ||
+               (Config->OFormatBinary && (Sec->Flags & SHF_ALLOC) == 0);
+      });
+
+  // When linking with -r there is no need to check for overlapping virtual/load
+  // addresses since those addresses will only be assigned when the final
+  // executable/shared object is created.
+  if (Config->Relocatable)
+    return;
+
+  // Checking for overlapping virtual and load addresses only needs to take
+  // into account SHF_ALLOC sections since since others will not be loaded.
+  // Furthermore, we also need to skip SHF_TLS sections since these will be
+  // mapped to other addresses at runtime and can therefore have overlapping
+  // ranges in the file.
+  auto SkipNonAllocSections = [](const OutputSection *Sec) {
+    return (Sec->Flags & SHF_ALLOC) == 0 || (Sec->Flags & SHF_TLS);
+  };
+  checkForSectionOverlap(OutputSections, "virtual address",
+                         [](const OutputSection *Sec) { return Sec->Addr; },
+                         SkipNonAllocSections);
+
+  // Finally, check that the load addresses don't overlap. This will usually be
+  // the same as the virtual addresses but can be different when using a linker
+  // script with AT().
+  checkForSectionOverlap(OutputSections, "load address",
+                         [](const OutputSection *Sec) { return Sec->getLMA(); },
+                         SkipNonAllocSections);
 }
 
 // The entry point address is chosen in the following ways.
