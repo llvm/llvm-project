@@ -203,7 +203,7 @@ template<class T>    complex<T>           proj(const complex<T>&);
 template<Integral T> complex<double>      proj(T);
                      complex<float>       proj(float);
 
-template<class T> complex<T> polar(const T&, const T& = 0);
+template<class T> complex<T> polar(const T&, const T& = T());
 
 // 26.3.8 transcendentals:
 template<class T> complex<T> acos(const complex<T>&);
@@ -991,7 +991,7 @@ proj(_Tp __re)
 
 template<class _Tp>
 complex<_Tp>
-polar(const _Tp& __rho, const _Tp& __theta = _Tp(0))
+polar(const _Tp& __rho, const _Tp& __theta = _Tp())
 {
     if (__libcpp_isnan_or_builtin(__rho) || signbit(__rho))
         return complex<_Tp>(_Tp(NAN), _Tp(NAN));
