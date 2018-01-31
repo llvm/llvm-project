@@ -15,6 +15,7 @@
 #ifndef LLD_WASM_INPUT_CHUNKS_H
 #define LLD_WASM_INPUT_CHUNKS_H
 
+#include "Config.h"
 #include "InputFiles.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
@@ -58,9 +59,15 @@ public:
 
   bool Discarded = false;
   std::vector<OutputRelocation> OutRelocations;
+  const ObjFile *File;
+
+  // The garbage collector sets sections' Live bits.
+  // If GC is disabled, all sections are considered live by default.
+  unsigned Live : 1;
 
 protected:
-  InputChunk(const ObjFile *F, Kind K) : File(F), SectionKind(K) {}
+  InputChunk(const ObjFile *F, Kind K)
+      : File(F), Live(!Config->GcSections), SectionKind(K) {}
   virtual ~InputChunk() = default;
   void calcRelocations();
   virtual ArrayRef<uint8_t> data() const = 0;
@@ -68,7 +75,6 @@ protected:
 
   std::vector<WasmRelocation> Relocations;
   int32_t OutputOffset = 0;
-  const ObjFile *File;
   Kind SectionKind;
 };
 

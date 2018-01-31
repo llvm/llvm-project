@@ -110,6 +110,8 @@ public:
     return FunctionSymbols[Index];
   }
 
+  Symbol *getGlobalSymbol(uint32_t Index) const { return GlobalSymbols[Index]; }
+
 private:
   uint32_t relocateVirtualAddress(uint32_t Index) const;
   uint32_t relocateTypeIndex(uint32_t Original) const;
