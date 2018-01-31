@@ -6632,6 +6632,98 @@ INTERCEPTOR(int, getgroupmembership, const char *name, u32 basegid, u32 *groups,
 #define INIT_GETGROUPLIST
 #endif
 
+#if SANITIZER_INTERCEPT_READLINK
+INTERCEPTOR(SSIZE_T, readlink, const char *path, char *buf, SIZE_T bufsiz) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, readlink, path, buf, bufsiz);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  SSIZE_T res = REAL(readlink)(path, buf, bufsiz);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, res);
+  return res;
+}
+
+#define INIT_READLINK COMMON_INTERCEPT_FUNCTION(readlink)
+#else
+#define INIT_READLINK
+#endif
+
+#if SANITIZER_INTERCEPT_READLINKAT
+INTERCEPTOR(SSIZE_T, readlinkat, int dirfd, const char *path, char *buf,
+            SIZE_T bufsiz) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, readlinkat, dirfd, path, buf, bufsiz);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  SSIZE_T res = REAL(readlinkat)(dirfd, path, buf, bufsiz);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, res);
+  return res;
+}
+
+#define INIT_READLINKAT COMMON_INTERCEPT_FUNCTION(readlinkat)
+#else
+#define INIT_READLINKAT
+#endif
+
+#if SANITIZER_INTERCEPT_NAME_TO_HANDLE_AT
+INTERCEPTOR(int, name_to_handle_at, int dirfd, const char *pathname,
+            struct file_handle *handle, int *mount_id, int flags) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, name_to_handle_at, dirfd, pathname, handle,
+                           mount_id, flags);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, pathname, REAL(strlen)(pathname) + 1);
+
+  __sanitizer_file_handle *sanitizer_handle =
+      reinterpret_cast<__sanitizer_file_handle*>(handle);
+  COMMON_INTERCEPTOR_READ_RANGE(
+      ctx, &sanitizer_handle->handle_bytes,
+      sizeof(sanitizer_handle->handle_bytes));
+
+  int res = REAL(name_to_handle_at)(dirfd, pathname, handle, mount_id, flags);
+  if (!res) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(
+        ctx, &sanitizer_handle->handle_bytes,
+        sizeof(sanitizer_handle->handle_bytes));
+    COMMON_INTERCEPTOR_WRITE_RANGE(
+        ctx, &sanitizer_handle->handle_type,
+        sizeof(sanitizer_handle->handle_type));
+    COMMON_INTERCEPTOR_WRITE_RANGE(
+        ctx, &sanitizer_handle->f_handle, sanitizer_handle->handle_bytes);
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mount_id, sizeof(*mount_id));
+  }
+  return res;
+}
+
+#define INIT_NAME_TO_HANDLE_AT COMMON_INTERCEPT_FUNCTION(name_to_handle_at)
+#else
+#define INIT_NAME_TO_HANDLE_AT
+#endif
+
+#if SANITIZER_INTERCEPT_OPEN_BY_HANDLE_AT
+INTERCEPTOR(int, open_by_handle_at, int mount_fd, struct file_handle* handle,
+            int flags) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, open_by_handle_at, mount_fd, handle, flags);
+
+  __sanitizer_file_handle *sanitizer_handle =
+      reinterpret_cast<__sanitizer_file_handle*>(handle);
+  COMMON_INTERCEPTOR_READ_RANGE(
+      ctx, &sanitizer_handle->handle_bytes,
+      sizeof(sanitizer_handle->handle_bytes));
+  COMMON_INTERCEPTOR_READ_RANGE(
+      ctx, &sanitizer_handle->handle_type,
+      sizeof(sanitizer_handle->handle_type));
+  COMMON_INTERCEPTOR_READ_RANGE(
+      ctx, &sanitizer_handle->f_handle, sanitizer_handle->handle_bytes);
+
+  return REAL(open_by_handle_at)(mount_fd, handle, flags);
+}
+
+#define INIT_OPEN_BY_HANDLE_AT COMMON_INTERCEPT_FUNCTION(open_by_handle_at)
+#else
+#define INIT_OPEN_BY_HANDLE_AT
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -6852,6 +6944,11 @@ static void InitializeCommonInterceptors() {
   INIT_ACCESS;
   INIT_FACCESSAT;
   INIT_GETGROUPLIST;
+  INIT_READLINK;
+  INIT_READLINKAT;
+
+  INIT_NAME_TO_HANDLE_AT;
+  INIT_OPEN_BY_HANDLE_AT;
 
 #if SANITIZER_NETBSD
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);

@@ -30,12 +30,13 @@ class BadAddressBreakpointTestCase(TestBase):
 
     def address_breakpoints(self):
         """Test that breakpoints set on a bad address say they are bad."""
+        target, process, thread, bkpt = \
+            lldbutil.run_to_source_breakpoint(self, 
+                                              "Set a breakpoint here",
+                                              lldb.SBFileSpec("main.c"))
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
-                "Set a breakpoint here", lldb.SBFileSpec("main.c"))
-
-        # Now see if we can read from 0.  If I can't do that, I don't have a good way to know
-        # what an illegal address is...
+        # Now see if we can read from 0.  If I can't do that, I don't
+        # have a good way to know what an illegal address is...
         error = lldb.SBError()
 
         ptr = process.ReadPointerFromMemory(0x0, error)

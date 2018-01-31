@@ -17,6 +17,8 @@ class CommandLineCompletionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     @classmethod
     def classCleanup(cls):
         """Cleanup the test byproducts."""
@@ -69,10 +71,10 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_command_space(self):
-        """Test that 'watchpoint command ' completes to ['Available completions:', 'add', 'delete', 'list']."""
+        """Test that 'watchpoint command ' completes to ['add', 'delete', 'list']."""
         self.complete_from_to(
             'watchpoint command ', [
-                'Available completions:', 'add', 'delete', 'list'])
+                'add', 'delete', 'list'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
@@ -96,9 +98,9 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_set_variable_dash_w_space(self):
-        """Test that 'watchpoint set variable -w ' completes to ['Available completions:', 'read', 'write', 'read_write']."""
+        """Test that 'watchpoint set variable -w ' completes to ['read', 'write', 'read_write']."""
         self.complete_from_to('watchpoint set variable -w ',
-                              ['Available completions:', 'read', 'write', 'read_write'])
+                              ['read', 'write', 'read_write'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
@@ -129,10 +131,10 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_help_fi(self):
-        """Test that 'help fi' completes to ['Available completions:', 'file', 'finish']."""
+        """Test that 'help fi' completes to ['file', 'finish']."""
         self.complete_from_to(
             'help fi', [
-                'Available completions:', 'file', 'finish'])
+                'file', 'finish'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
@@ -181,10 +183,10 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_s(self):
-        """Test that 'settings s' completes to ['Available completions:', 'set', 'show']."""
+        """Test that 'settings s' completes to ['set', 'show']."""
         self.complete_from_to(
             'settings s', [
-                'Available completions:', 'set', 'show'])
+                'set', 'show'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
@@ -231,11 +233,10 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_pr(self):
-        """Test that 'settings set target.pr' completes to ['Available completions:',
+        """Test that 'settings set target.pr' completes to [
         'target.prefer-dynamic-value', 'target.process.']."""
         self.complete_from_to('settings set target.pr',
-                              ['Available completions:',
-                               'target.prefer-dynamic-value',
+                              ['target.prefer-dynamic-value',
                                'target.process.'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
@@ -260,22 +261,20 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_process_thread_dot(self):
-        """Test that 'settings set target.process.thread.' completes to ['Available completions:',
+        """Test that 'settings set target.process.thread.' completes to [
         'target.process.thread.step-avoid-regexp', 'target.process.thread.trace-thread']."""
         self.complete_from_to('settings set target.process.thread.',
-                              ['Available completions:',
-                               'target.process.thread.step-avoid-regexp',
+                              ['target.process.thread.step-avoid-regexp',
                                'target.process.thread.trace-thread'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_target_space(self):
-        """Test that 'target ' completes to ['Available completions:', 'create', 'delete', 'list',
+        """Test that 'target ' completes to ['create', 'delete', 'list',
         'modules', 'select', 'stop-hook', 'variable']."""
         self.complete_from_to('target ',
-                              ['Available completions:',
-                               'create',
+                              ['create',
                                'delete',
                                'list',
                                'modules',
@@ -300,9 +299,8 @@ class CommandLineCompletionTestCase(TestBase):
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     def test_symbol_name(self):
         self.build()
-        self.complete_from_to('''file %s
-                                 breakpoint set -n Fo''' %
-                              self.getBuildArtifact("a.out"),
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.complete_from_to('breakpoint set -n Fo',
                               'breakpoint set -n Foo::Bar(int,\\ int)',
                               turn_off_re_match=True)
 
@@ -319,53 +317,26 @@ class CommandLineCompletionTestCase(TestBase):
         if not isinstance(patterns, list):
             patterns = [patterns]
 
-        # The default lldb prompt.
-        prompt = "(lldb) "
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        num_matches = interp.HandleCompletion(str_input, len(str_input), 0, -1, match_strings)
+        common_match = match_strings.GetStringAtIndex(0)
+        if num_matches == 0:
+            compare_string = str_input
+        else: 
+            if common_match != None and len(common_match) > 0:
+                compare_string = str_input + common_match
+            else:
+                compare_string = ""
+                for idx in range(1, num_matches+1):
+                    compare_string += match_strings.GetStringAtIndex(idx) + "\n"
 
-        # So that the child gets torn down after the test.
-        self.child = pexpect.spawn(lldbtest_config.lldbExec,
-                                   [self.lldbOption] + ['--no-use-colors'])
-        child = self.child
-        # Turn on logging for input/output to/from the child.
-        with open('child_send.txt', 'w') as f_send:
-            with open('child_read.txt', 'w') as f_read:
-                child.logfile_send = f_send
-                child.logfile_read = f_read
-
-                child.expect_exact(prompt)
-                child.setecho(True)
-                # Sends str_input and a Tab to invoke the completion machinery.
-                child.send("%s\t" % str_input)
-                child.sendline('')
-                child.expect_exact(prompt)
-                child.sendline('')
-                child.expect_exact(prompt)
-
-        # Now that the necessary logging is done, restore logfile to None to
-        # stop further logging.
-        child.logfile_send = None
-        child.logfile_read = None
-
-        with open('child_send.txt', 'r') as fs:
-            if self.TraceOn():
-                print("\n\nContents of child_send.txt:")
-                print(fs.read())
-        with open('child_read.txt', 'r') as fr:
-            from_child = fr.read()
-            if self.TraceOn():
-                print("\n\nContents of child_read.txt:")
-                print(from_child)
-
-            # The matching could be verbatim or using generic re pattern.
-            for p in patterns:
-                # Test that str_input completes to our patterns or substrings.
-                # If each pattern/substring matches from_child, the completion
-                # mechanism works!
-                if turn_off_re_match:
-                    self.expect(
-                        from_child, msg=COMPLETION_MSG(
-                            str_input, p), exe=False, substrs=[p])
-                else:
-                    self.expect(
-                        from_child, msg=COMPLETION_MSG(
-                            str_input, p), exe=False, patterns=[p])
+        for p in patterns:
+            if turn_off_re_match:
+                self.expect(
+                    compare_string, msg=COMPLETION_MSG(
+                        str_input, p), exe=False, substrs=[p])
+            else:
+                self.expect(
+                    compare_string, msg=COMPLETION_MSG(
+                        str_input, p), exe=False, patterns=[p])

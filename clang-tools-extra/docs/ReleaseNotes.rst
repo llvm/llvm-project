@@ -57,6 +57,12 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-incorrect-roundings' check was renamed to `bugprone-incorrect-roundings
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-incorrect-roundings.html>`_
+
+- The 'misc-string-compare' check was renamed to `readability-string-compare
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-string-compare.html>`_
+
 - New `cppcoreguidelines-avoid-goto
   <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html>`_ check
 

@@ -240,6 +240,23 @@ TEST_F(LogChannelEnabledTest, log_options) {
             logAndTakeOutput("Hello World"));
 }
 
+TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {
+  LLDB_LOG_ERROR(getLog(), llvm::Error::success(), "Foo failed: {0}");
+  ASSERT_EQ("", takeOutput());
+
+  LLDB_LOG_ERROR(getLog(),
+                 llvm::make_error<llvm::StringError>(
+                     "My Error", llvm::inconvertibleErrorCode()),
+                 "Foo failed: {0}");
+  ASSERT_EQ("Foo failed: My Error\n", takeOutput());
+
+  // Doesn't log, but doesn't assert either
+  LLDB_LOG_ERROR(nullptr,
+                 llvm::make_error<llvm::StringError>(
+                     "My Error", llvm::inconvertibleErrorCode()),
+                 "Foo failed: {0}");
+}
+
 TEST_F(LogChannelEnabledTest, LogThread) {
   // Test that we are able to concurrently write to a log channel and disable
   // it.

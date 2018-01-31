@@ -159,6 +159,12 @@ def create_parser():
         metavar='Codesigning identity',
         default='lldb_codesign',
         help='The codesigning identity to use')
+    group.add_argument(
+        '--build-dir',
+        dest='test_build_dir',
+        metavar='Test build directory',
+        default='lldb-test-build',
+        help='The root build directory for the tests. It will be removed before running.')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')

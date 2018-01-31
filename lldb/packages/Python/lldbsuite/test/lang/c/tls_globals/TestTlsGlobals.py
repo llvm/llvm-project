@@ -29,10 +29,10 @@ class TlsGlobalTestCase(TestBase):
                     "=" +
                     os.environ["LD_LIBRARY_PATH"] +
                     ":" +
-                    os.getcwd())
+                    self.getBuildDir())
             else:
                 self.runCmd("settings set target.env-vars " +
-                            self.dylibPath + "=" + os.getcwd())
+                            self.dylibPath + "=" + self.getBuildDir())
             self.addTearDownHook(
                 lambda: self.runCmd(
                     "settings remove target.env-vars " +

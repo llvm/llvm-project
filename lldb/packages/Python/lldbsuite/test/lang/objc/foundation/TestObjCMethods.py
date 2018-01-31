@@ -296,7 +296,7 @@ class FoundationTestCase(TestBase):
         # Log any DWARF lookups
         ++file_index
         logfile = os.path.join(
-            os.getcwd(),
+            self.getBuildDir(),
             "dwarf-lookups-" +
             self.getArchitecture() +
             "-" +

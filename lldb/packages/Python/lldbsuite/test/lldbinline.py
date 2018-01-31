@@ -97,12 +97,14 @@ class InlineTest(TestBase):
             return "-N dsym %s" % (self.mydir)
 
     def BuildMakefile(self):
-        if os.path.exists("Makefile"):
+        self.makeBuildDir()
+        makefilePath = self.getBuildArtifact("Makefile")
+        if os.path.exists(makefilePath):
             return
 
         categories = {}
 
-        for f in os.listdir(os.getcwd()):
+        for f in os.listdir(self.getSourceDir()):
             t = source_type(f)
             if t:
                 if t in list(categories.keys()):
@@ -110,7 +112,7 @@ class InlineTest(TestBase):
                 else:
                     categories[t] = [f]
 
-        makefile = open("Makefile", 'w+')
+        makefile = open(makefilePath, 'w+')
 
         level = os.sep.join(
             [".."] * len(self.mydir.split(os.sep))) + os.sep + "make"
@@ -137,29 +139,33 @@ class InlineTest(TestBase):
     @add_test_categories(["dsym"])
     def __test_with_dsym(self):
         self.using_dsym = True
+        self.debug_info = "dsym"
         self.BuildMakefile()
-        self.buildDsym()
+        self.build()
         self.do_test()
 
     @add_test_categories(["dwarf"])
     def __test_with_dwarf(self):
         self.using_dsym = False
+        self.debug_info = "dwarf"
         self.BuildMakefile()
-        self.buildDwarf()
+        self.build()
         self.do_test()
 
     @add_test_categories(["dwo"])
     def __test_with_dwo(self):
         self.using_dsym = False
+        self.debug_info = "dwo"
         self.BuildMakefile()
-        self.buildDwo()
+        self.build()
         self.do_test()
 
     @add_test_categories(["gmodules"])
     def __test_with_gmodules(self):
         self.using_dsym = False
+        self.debug_info = "gmodules"
         self.BuildMakefile()
-        self.buildGModules()
+        self.build()
         self.do_test()
 
     def execute_user_command(self, __command):
@@ -167,14 +173,15 @@ class InlineTest(TestBase):
 
     def do_test(self):
         exe = self.getBuildArtifact("a.out")
-        source_files = [f for f in os.listdir(os.getcwd()) if source_type(f)]
+        source_files = [f for f in os.listdir(self.getSourceDir())
+                        if source_type(f)]
         target = self.dbg.CreateTarget(exe)
 
         parser = CommandParser()
         parser.parse_source_files(source_files)
         parser.set_breakpoints(target)
 
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple(None, None, self.getBuildDir())
 
         while lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint):
             thread = lldbutil.get_stopped_thread(

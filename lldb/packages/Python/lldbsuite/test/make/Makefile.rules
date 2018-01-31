@@ -6,6 +6,7 @@
 # OBJC_SOURCES :=
 # OBJCXX_SOURCES :=
 # DYLIB_C_SOURCES :=
+# DYLIB_OBJC_SOURCES :=
 # DYLIB_CXX_SOURCES :=
 #
 # Specifying DYLIB_ONLY has the effect of building dylib only, skipping
@@ -27,7 +28,8 @@
 # Uncomment line below for debugging shell commands
 # SHELL = /bin/sh -x
 
-THIS_FILE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
+SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))/
+THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
 LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 
@@ -223,7 +225,7 @@ else
 	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 endif
 
-CFLAGS += -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
+CFLAGS += -I$(SRCDIR) -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 
 # Use this one if you want to build one part of the result without debug information:
@@ -494,23 +496,6 @@ endif
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
-# Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
-#----------------------------------------------------------------------
-ifneq "$(DYLIB_ONLY)" "YES"
-$(DSYM) : $(EXE)
-ifeq "$(OS)" "Darwin"
-ifneq "$(MAKE_DSYM)" "NO"
-	"$(DS)" $(DSFLAGS) -o "$(DSYM)" "$(EXE)"
-endif
-else
-ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
-	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
-endif
-endif
-endif
-
-#----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 ifneq "$(DYLIB_NAME)" ""
@@ -523,6 +508,22 @@ endif
 else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
 	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+endif
+
+#----------------------------------------------------------------------
+# Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
+#----------------------------------------------------------------------
+$(DSYM) : $(EXE)
+ifeq "$(OS)" "Darwin"
+ifneq "$(MAKE_DSYM)" "NO"
+	"$(DS)" $(DSFLAGS) -o "$(DSYM)" "$(EXE)"
+else
+endif
+else
+ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
+	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
+endif
 endif
 
 #----------------------------------------------------------------------
@@ -565,7 +566,7 @@ endif
 
 #ifneq "$(PCH_OUTPUT)" ""
 $(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
-	$(CXX) $(CXXFLAGS) -x c++-header -o $(PCH_OUTPUT) $(PCH_CXX_SOURCE)
+	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
 %.o : %.cpp $(PCH_OUTPUT)
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -c -o $@ $<
 #endif

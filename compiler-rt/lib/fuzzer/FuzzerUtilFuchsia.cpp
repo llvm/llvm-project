@@ -56,7 +56,7 @@ void InterruptHandler() {
 void CrashHandler(zx::port *Port) {
   std::unique_ptr<zx::port> ExceptionPort(Port);
   zx_port_packet_t Packet;
-  ExceptionPort->wait(ZX_TIME_INFINITE, &Packet, 0);
+  ExceptionPort->wait(zx::time::infinite(), &Packet, 0);
   // Unbind as soon as possible so we don't receive exceptions from this thread.
   if (zx_task_bind_exception_port(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID,
                                   kFuzzingCrash, 0) != ZX_OK) {
@@ -117,7 +117,7 @@ void SetSignalHandler(const FuzzingOptions &Options) {
 }
 
 void SleepSeconds(int Seconds) {
-  zx::nanosleep(zx::deadline_after(ZX_SEC(Seconds)));
+  zx::nanosleep(zx::deadline_after(zx::sec(Seconds)));
 }
 
 unsigned long GetPid() {
@@ -200,7 +200,7 @@ int ExecuteCommand(const Command &Cmd) {
   zx::process Process(ProcessHandle);
 
   // Now join the process and return the exit status.
-  if ((rc = Process.wait_one(ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE,
+  if ((rc = Process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
                              nullptr)) != ZX_OK) {
     Printf("libFuzzer: failed to join '%s': %s\n", Argv[0],
            zx_status_get_string(rc));

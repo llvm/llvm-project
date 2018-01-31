@@ -14,6 +14,10 @@
 # AFTER:      Contents of section .foo:
 # AFTER-NEXT: 2211
 
+# RUN: echo "SECTIONS { .text : { *(.text) } }" > %t2.script
+# RUN: ld.lld --symbol-ordering-file %t.ord %t.o --script %t2.script -o %t3.out
+# RUN: llvm-objdump -s %t3.out| FileCheck %s --check-prefix=AFTER
+
 .section .foo,"ax",@progbits,unique,1
 _foo1:
  .byte 0x11

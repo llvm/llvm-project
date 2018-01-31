@@ -87,6 +87,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.DisableVerify = Config->DisableVerify;
   Conf.DiagHandler = diagnosticHandler;
   Conf.OptLevel = Config->LTOO;
+  Conf.CPU = GetCPUStr();
 
   // Set up a custom pipeline if we've been asked to.
   Conf.OptPipeline = Config->LTONewPmPasses;
