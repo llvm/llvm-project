@@ -56,6 +56,23 @@ def D128: S<128>;
 // CHECK: def D8
 // CHECK-NEXT: bits<2> val = { 0, 0 };
 
+// Make sure !if gets propagated across multiple layers of inheritance.
+class getInt<int c> {
+  int ret = !if(c, 0, 1);
+}
+class I1<int c> {
+  int i = getInt<c>.ret;
+}
+class I2<int c> : I1<c>;
+
+// CHECK: def DI1 {     // I1
+// CHECK-NEXT: int i = 0;
+def DI1: I1<1>;
+
+// CHECK: def DI2 {     // I1 I2
+// CHECK-NEXT: int i = 0;
+def DI2: I2<1>;
+
 // CHECK:      def One
 // CHECK-NEXT: list<int> first = [1, 2, 3];
 // CHECK-NEXT: list<int> rest = [1, 2, 3];

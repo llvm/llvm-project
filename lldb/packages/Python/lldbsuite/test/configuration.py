@@ -107,6 +107,9 @@ lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
 
+# The base directory in which the tests are being built.
+test_build_dir = None
+
 # Parallel execution settings
 is_inferior_test_runner = False
 multiprocess_test_subdir = None

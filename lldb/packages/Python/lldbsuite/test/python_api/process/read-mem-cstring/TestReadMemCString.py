@@ -20,8 +20,10 @@ class TestReadMemCString(TestBase):
 	self.dbg.SetAsync(False)
 
         self.main_source = "main.c"
-	self.main_source_spec = lldb.SBFileSpec(self.main_source)
-	self.exe = os.path.join(os.getcwd(), "read-mem-cstring")
+        self.main_source_path = os.path.join(self.getSourceDir(),
+                                             self.main_source)
+	self.main_source_spec = lldb.SBFileSpec(self.main_source_path)
+	self.exe = self.getBuildArtifact("read-mem-cstring")
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, 'breakpoint here', self.main_source_spec, None, self.exe)

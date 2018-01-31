@@ -93,6 +93,24 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 
 void TargetLoweringObjectFileELF::emitModuleMetadata(
     MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
+  auto &C = getContext();
+
+  if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
+    auto *S = C.getELFSection(".linker-options", ELF::SHT_LLVM_LINKER_OPTIONS,
+                              ELF::SHF_EXCLUDE);
+
+    Streamer.SwitchSection(S);
+
+    for (const auto &Operand : LinkerOptions->operands()) {
+      if (cast<MDNode>(Operand)->getNumOperands() != 2)
+        report_fatal_error("invalid llvm.linker.options");
+      for (const auto &Option : cast<MDNode>(Operand)->operands()) {
+        Streamer.EmitBytes(cast<MDString>(Option)->getString());
+        Streamer.EmitIntValue(0, 1);
+      }
+    }
+  }
+
   unsigned Version = 0;
   unsigned Flags = 0;
   StringRef Section;
@@ -101,7 +119,6 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(
   if (Section.empty())
     return;
 
-  auto &C = getContext();
   auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
   Streamer.SwitchSection(S);
   Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));

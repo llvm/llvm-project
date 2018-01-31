@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h" // for StringMap
 #include "llvm/ADT/StringRef.h" // for StringRef, StringLiteral
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
@@ -140,6 +141,15 @@ public:
     Format(file, function, llvm::formatv(format, std::forward<Args>(args)...));
   }
 
+  template <typename... Args>
+  void FormatError(llvm::Error error, llvm::StringRef file,
+                   llvm::StringRef function, const char *format,
+                   Args &&... args) {
+    Format(file, function,
+           llvm::formatv(format, llvm::toString(std::move(error)),
+                         std::forward<Args>(args)...));
+  }
+
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   void VAPrintf(const char *format, va_list args);
@@ -216,6 +226,19 @@ private:
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private && log_private->GetVerbose())                              \
       log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
+// Write message to log, if error is set. In the log message refer to the error
+// with {0}. Error is cleared regardless of whether logging is enabled.
+#define LLDB_LOG_ERROR(log, error, ...)                                        \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    ::llvm::Error error_private = (error);                                     \
+    if (log_private && error_private) {                                        \
+      log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
+                               __VA_ARGS__);                                   \
+    } else                                                                     \
+      ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
 
 #endif // LLDB_UTILITY_LOG_H

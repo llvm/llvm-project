@@ -150,6 +150,39 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
               SecondMI.getOperand(3).getImm() == 48);
     }
 
+  if (ST.hasFuseAddress()) {
+    // Fuse address generation and loads and stores.
+    if ((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
+         FirstOpcode == AArch64::ADR ||
+         FirstOpcode == AArch64::ADRP) &&
+        ((SecondOpcode == AArch64::STRBBui ||
+          SecondOpcode == AArch64::STRBui ||
+          SecondOpcode == AArch64::STRDui ||
+          SecondOpcode == AArch64::STRHHui ||
+          SecondOpcode == AArch64::STRHui ||
+          SecondOpcode == AArch64::STRQui ||
+          SecondOpcode == AArch64::STRSui ||
+          SecondOpcode == AArch64::STRWui ||
+          SecondOpcode == AArch64::STRXui ||
+          SecondOpcode == AArch64::LDRBBui ||
+          SecondOpcode == AArch64::LDRBui ||
+          SecondOpcode == AArch64::LDRDui ||
+          SecondOpcode == AArch64::LDRHHui ||
+          SecondOpcode == AArch64::LDRHui ||
+          SecondOpcode == AArch64::LDRQui ||
+          SecondOpcode == AArch64::LDRSBWui ||
+          SecondOpcode == AArch64::LDRSBXui ||
+          SecondOpcode == AArch64::LDRSHWui ||
+          SecondOpcode == AArch64::LDRSHXui ||
+          SecondOpcode == AArch64::LDRSWui ||
+          SecondOpcode == AArch64::LDRSui ||
+          SecondOpcode == AArch64::LDRWui ||
+          SecondOpcode == AArch64::LDRXui) &&
+         (FirstOpcode != AArch64::ADR ||
+          SecondMI.getOperand(2).getImm() == 0)))
+      return true;
+  }
+
   return false;
 }
 

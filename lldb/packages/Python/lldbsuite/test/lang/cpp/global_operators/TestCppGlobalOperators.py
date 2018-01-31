@@ -20,7 +20,6 @@ class TestCppGlobalOperators(TestBase):
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
         # Get the path of the executable
-        cwd = os.getcwd()
         exe_path = self.getBuildArtifact("a.out")
 
         # Load the executable

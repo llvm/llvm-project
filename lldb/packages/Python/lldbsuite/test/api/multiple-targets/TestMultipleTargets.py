@@ -26,7 +26,7 @@ class TestMultipleTargets(TestBase):
     def test_multiple_targets(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
-        self.driver_exe = os.path.join(os.getcwd(), "multi-target")
+        self.driver_exe = self.getBuildArtifact("multi-target")
         self.buildDriver('main.cpp', self.driver_exe)
         self.addTearDownHook(lambda: os.remove(self.driver_exe))
         self.signBinary(self.driver_exe)

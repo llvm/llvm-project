@@ -6,8 +6,9 @@
 define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-LABEL: check_flag:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl $512, %edi # imm = 0x200
+; CHECK-NEXT:    testb $2, %ch
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movl $1, %eax

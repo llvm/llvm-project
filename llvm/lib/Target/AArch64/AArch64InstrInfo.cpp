@@ -675,9 +675,13 @@ static bool canBeExpandedToORR(const MachineInstr &MI, unsigned BitSize) {
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   if (!Subtarget.hasCustomCheapAsMoveHandling())
     return MI.isAsCheapAsAMove();
-  if (Subtarget.getProcFamily() == AArch64Subtarget::ExynosM1 &&
-      isExynosShiftLeftFast(MI))
-    return true;
+
+  if (Subtarget.hasExynosCheapAsMoveHandling()) {
+    if (isExynosResetFast(MI) || isExynosShiftLeftFast(MI))
+      return true;
+    else
+      return MI.isAsCheapAsAMove();
+  }
 
   switch (MI.getOpcode()) {
   default:
@@ -734,6 +738,35 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   }
 
   llvm_unreachable("Unknown opcode to check as cheap as a move!");
+}
+
+bool AArch64InstrInfo::isExynosResetFast(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+
+  case AArch64::ADR:
+  case AArch64::ADRP:
+
+  case AArch64::MOVNWi:
+  case AArch64::MOVNXi:
+  case AArch64::MOVZWi:
+  case AArch64::MOVZXi:
+    return true;
+
+  case AArch64::MOVID:
+  case AArch64::MOVIv2d_ns:
+  case AArch64::MOVIv8b_ns:
+  case AArch64::MOVIv16b_ns:
+    return (MI.getOperand(1).getImm() == 0);
+
+  case AArch64::MOVIv2i32:
+  case AArch64::MOVIv4i32:
+  case AArch64::MOVIv4i16:
+  case AArch64::MOVIv8i16:
+    return (MI.getOperand(1).getImm() == 0 &&
+            MI.getOperand(2).getImm() == 0);
+  }
 }
 
 bool AArch64InstrInfo::isExynosShiftLeftFast(const MachineInstr &MI) const {

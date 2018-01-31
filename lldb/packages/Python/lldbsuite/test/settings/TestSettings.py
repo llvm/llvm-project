@@ -155,7 +155,7 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("breakpoint set -n main")
         self.runCmd("run")
         self.expect("thread backtrace",
-                    substrs=["`main", os.getcwd()])
+                    substrs=["`main", self.getSourceDir()])
 
     def test_set_auto_confirm(self):
         """Test that after 'set auto-confirm true', manual confirmation should not kick in."""
@@ -421,8 +421,8 @@ class SettingsCommandTestCase(TestBase):
                     startstr='target.arg0 (string) = "cde"')
         self.runCmd("settings clear target.arg0", check=False)
         # file
-        path1 = os.path.join(os.getcwd(), "path1.txt")
-        path2 = os.path.join(os.getcwd(), "path2.txt")
+        path1 = self.getBuildArtifact("path1.txt")
+        path2 = self.getBuildArtifact("path2.txt")
         self.runCmd(
             "settings set target.output-path %s" %
             path1)   # Set to known value

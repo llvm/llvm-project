@@ -115,10 +115,37 @@ mark_as_advanced(
 find_package(CUDA QUIET)
 
 set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDA_FOUND})
-set(LIBOMPTARGET_DEP_CUDA_LIBRARIES ${CUDA_LIBRARIES})
 set(LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS ${CUDA_INCLUDE_DIRS})
 
 mark_as_advanced(
   LIBOMPTARGET_DEP_CUDA_FOUND 
-  LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS
-  LIBOMPTARGET_DEP_CUDA_LIBRARIES)
+  LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS)
+
+################################################################################
+# Looking for CUDA Driver API... (needed for CUDA plugin)
+################################################################################
+
+find_library (
+    LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES
+  NAMES
+    cuda
+  PATHS
+    /lib64)
+
+# There is a libcuda.so in lib64/stubs that can be used for linking.
+if (NOT LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES AND CUDA_FOUND)
+  get_filename_component(CUDA_LIBDIR ${CUDA_LIBRARIES} DIRECTORY)
+  find_library (
+      LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES
+    NAMES
+      cuda
+    HINTS
+      "${CUDA_LIBDIR}/stubs")
+endif()
+
+find_package_handle_standard_args(
+  LIBOMPTARGET_DEP_CUDA_DRIVER
+  DEFAULT_MSG
+  LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
+
+mark_as_advanced(LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)

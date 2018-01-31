@@ -48,6 +48,7 @@ public:
     CortexA75,
     Cyclone,
     ExynosM1,
+    ExynosM3,
     Falkor,
     Kryo,
     Saphira,
@@ -102,6 +103,7 @@ protected:
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
   bool CustomAsCheapAsMove = false;
+  bool ExynosAsCheapAsMove = false;
   bool UsePostRAScheduler = false;
   bool Misaligned128StoreIsSlow = false;
   bool Paired128IsSlow = false;
@@ -109,6 +111,7 @@ protected:
   bool UseAlternateSExtLoadCVTF32Pattern = false;
   bool HasArithmeticBccFusion = false;
   bool HasArithmeticCbzFusion = false;
+  bool HasFuseAddress = false;
   bool HasFuseAES = false;
   bool HasFuseLiterals = false;
   bool DisableLatencySchedHeuristic = false;
@@ -225,6 +228,7 @@ public:
     return PredictableSelectIsExpensive;
   }
   bool hasCustomCheapAsMoveHandling() const { return CustomAsCheapAsMove; }
+  bool hasExynosCheapAsMoveHandling() const { return ExynosAsCheapAsMove; }
   bool isMisaligned128StoreSlow() const { return Misaligned128StoreIsSlow; }
   bool isPaired128Slow() const { return Paired128IsSlow; }
   bool isSTRQroSlow() const { return STRQroIsSlow; }
@@ -233,6 +237,7 @@ public:
   }
   bool hasArithmeticBccFusion() const { return HasArithmeticBccFusion; }
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
+  bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
 

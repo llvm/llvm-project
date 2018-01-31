@@ -45,8 +45,7 @@ define <8 x i16> @test_16bit(<8 x i16> %lhs, <8 x i16> %tmp, i1 %tst) {
 ; CHECK-XOP:       if_true:
 ; CHECK-XOP-NEXT:    ret <8 x i16> [[MASK]]
 ; CHECK-XOP:       if_false:
-; CHECK-XOP-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP]], <8 x i16> undef, <8 x i32> zeroinitializer
-; CHECK-XOP-NEXT:    [[RES:%.*]] = shl <8 x i16> [[LHS:%.*]], [[TMP1]]
+; CHECK-XOP-NEXT:    [[RES:%.*]] = shl <8 x i16> [[LHS:%.*]], [[MASK]]
 ; CHECK-XOP-NEXT:    ret <8 x i16> [[RES]]
 ;
 ; CHECK-AVX2-LABEL: @test_16bit(
@@ -117,8 +116,7 @@ define <4 x i32> @test_32bit(<4 x i32> %lhs, <4 x i32> %tmp, i1 %tst) {
 ; CHECK-XOP:       if_true:
 ; CHECK-XOP-NEXT:    ret <4 x i32> [[MASK]]
 ; CHECK-XOP:       if_false:
-; CHECK-XOP-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP]], <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
-; CHECK-XOP-NEXT:    [[RES:%.*]] = ashr <4 x i32> [[LHS:%.*]], [[TMP1]]
+; CHECK-XOP-NEXT:    [[RES:%.*]] = ashr <4 x i32> [[LHS:%.*]], [[MASK]]
 ; CHECK-XOP-NEXT:    ret <4 x i32> [[RES]]
 ;
 ; CHECK-AVX-LABEL: @test_32bit(
@@ -158,8 +156,7 @@ define <2 x i64> @test_64bit(<2 x i64> %lhs, <2 x i64> %tmp, i1 %tst) {
 ; CHECK-XOP:       if_true:
 ; CHECK-XOP-NEXT:    ret <2 x i64> [[MASK]]
 ; CHECK-XOP:       if_false:
-; CHECK-XOP-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-XOP-NEXT:    [[RES:%.*]] = lshr <2 x i64> [[LHS:%.*]], [[TMP1]]
+; CHECK-XOP-NEXT:    [[RES:%.*]] = lshr <2 x i64> [[LHS:%.*]], [[MASK]]
 ; CHECK-XOP-NEXT:    ret <2 x i64> [[RES]]
 ;
 ; CHECK-AVX-LABEL: @test_64bit(

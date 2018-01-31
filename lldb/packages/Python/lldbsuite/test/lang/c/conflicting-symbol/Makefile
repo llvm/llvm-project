@@ -1,9 +1,7 @@
 LEVEL := ../../../make
 
-LD_EXTRAS := -L. -l$(LIB_PREFIX)One -l$(LIB_PREFIX)Two
+LD_EXTRAS := -L. -LOne -l$(LIB_PREFIX)One -LTwo -l$(LIB_PREFIX)Two
 C_SOURCES := main.c
-
-main.o : CFLAGS_EXTRAS += -g -O0
 
 include $(LEVEL)/Makefile.rules
 
@@ -11,8 +9,8 @@ include $(LEVEL)/Makefile.rules
 a.out: lib_One lib_Two
 
 lib_%:
-	$(MAKE) -f $*.mk
+	$(MAKE) VPATH=$(SRCDIR)/$* -I $(SRCDIR) -f $(SRCDIR)/$*.mk
 
 clean::
-	$(MAKE) -f One.mk clean
-	$(MAKE) -f Two.mk clean
+	$(MAKE) -f $(SRCDIR)/One.mk clean
+	$(MAKE) -f $(SRCDIR)/Two.mk clean

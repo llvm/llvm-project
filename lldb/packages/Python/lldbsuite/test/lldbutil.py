@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 # System modules
 import collections
+import errno
 import os
 import re
 import sys
@@ -44,6 +45,14 @@ def which(program):
                 return exe_file
     return None
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    if not os.path.isdir(path):
+        raise OSError(errno.ENOTDIR, "%s is not a directory"%path)
 # ===================================================
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================
@@ -757,7 +766,7 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     breakpoint = target.BreakpointCreateBySourceRegex(
             bkpt_pattern, source_spec)
     test.assertTrue(breakpoint.GetNumLocations() > 0, 
-                    'No locations found for source breakpoint: "%s"'%(bkpt_pattern))
+                    'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'%(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
 
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
