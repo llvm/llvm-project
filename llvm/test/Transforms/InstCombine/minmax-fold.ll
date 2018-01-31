@@ -899,3 +899,24 @@ define i32 @common_factor_umax_extra_use_both(i32 %a, i32 %b, i32 %c) {
   ret i32 %max_abc
 }
 
+; This would assert. Don't assume that earlier min/max types match a possible later min/max.
+
+define float @not_min_of_min(i8 %i, float %x) {
+; CHECK-LABEL: @not_min_of_min(
+; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp fast oge float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast oge float [[X]], 2.000000e+00
+; CHECK-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2_INV]], float 2.000000e+00, float [[X]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[I:%.*]], 16
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP3]], float [[MIN1]], float [[MIN2]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %cmp1 = fcmp fast ult float %x, 1.0
+  %min1 = select i1 %cmp1, float %x, float 1.0
+  %cmp2 = fcmp fast ult float %x, 2.0
+  %min2 = select i1 %cmp2, float %x, float 2.0
+  %cmp3 = icmp ult i8 %i, 16
+  %r = select i1 %cmp3, float %min1, float %min2
+  ret float %r
+}
+
