@@ -266,7 +266,8 @@ Function *llvm::CreateHelper(const ValueSet &Inputs,
     if (Inputs.count(&OldArg) || Outputs.count(&OldArg)) {
       Argument *NewArg = dyn_cast<Argument>(VMap[&OldArg]);
       NewArgAttrs[NewArg->getArgNo()] =
-          OldAttrs.getParamAttributes(OldArg.getArgNo());
+          OldAttrs.getParamAttributes(OldArg.getArgNo())
+          .removeAttribute(NewFunc->getContext(), Attribute::Returned);
     }
   }
 
