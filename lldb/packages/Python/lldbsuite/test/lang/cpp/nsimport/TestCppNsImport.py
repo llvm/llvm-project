@@ -16,12 +16,11 @@ class TestCppNsImport(TestBase):
         self.build()
 
         # Get main source file
-        src_file = "main.cpp"
+        src_file = os.path.join(self.getSourceDir(), "main.cpp")
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
         # Get the path of the executable
-        cwd = os.getcwd()
         exe_path = self.getBuildArtifact("a.out")
 
         # Load the executable

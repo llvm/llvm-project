@@ -15,7 +15,6 @@ class BreakpointSetRestart(TestBase):
     def test_breakpoint_set_restart(self):
         self.build()
 
-        cwd = os.getcwd()
         exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
@@ -33,9 +32,7 @@ class BreakpointSetRestart(TestBase):
                 break
 
         bp = target.BreakpointCreateBySourceRegex(
-            self.BREAKPOINT_TEXT, lldb.SBFileSpec(
-                os.path.join(
-                    cwd, 'main.cpp')))
+            self.BREAKPOINT_TEXT, lldb.SBFileSpec('main.cpp'))
         self.assertTrue(
             bp.IsValid() and bp.GetNumLocations() == 1,
             VALID_BREAKPOINT)

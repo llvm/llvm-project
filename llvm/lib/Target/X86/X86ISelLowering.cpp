@@ -25593,6 +25593,11 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   if (Bits == 8)
     return false;
 
+  // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
+  if (Subtarget.hasXOP() && Ty->getPrimitiveSizeInBits() == 128 &&
+      (Bits == 8 || Bits == 16 || Bits == 32 || Bits == 64))
+    return false;
+
   // AVX2 has vpsllv[dq] instructions (and other shifts) that make variable
   // shifts just as cheap as scalar ones.
   if (Subtarget.hasAVX2() && (Bits == 32 || Bits == 64))

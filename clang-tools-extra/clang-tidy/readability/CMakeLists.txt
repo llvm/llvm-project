@@ -27,6 +27,7 @@ add_clang_library(clangTidyReadabilityModule
   SimplifyBooleanExprCheck.cpp
   StaticAccessedThroughInstanceCheck.cpp
   StaticDefinitionInAnonymousNamespaceCheck.cpp
+  StringCompareCheck.cpp
   UniqueptrDeleteReleaseCheck.cpp
 
   LINK_LIBS

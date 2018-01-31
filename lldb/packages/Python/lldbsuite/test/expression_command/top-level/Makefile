@@ -7,7 +7,7 @@ include $(LEVEL)/Makefile.rules
 a.out: dummy
 
 dummy:
-	$(MAKE) -f dummy.mk
+	$(MAKE) VPATH=$(VPATH) -I $(SRCDIR) -f $(SRCDIR)/dummy.mk
 
 clean::
-	$(MAKE) -f dummy.mk clean
+	$(MAKE) VPATH=$(VPATH) -I $(SRCDIR) -f $(SRCDIR)/dummy.mk clean

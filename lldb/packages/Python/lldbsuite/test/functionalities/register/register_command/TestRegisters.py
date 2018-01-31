@@ -149,7 +149,7 @@ class RegisterCommandsTestCase(TestBase):
             self.platform = "posix"
 
         if self.platform != "":
-            self.log_file = os.path.join(os.getcwd(), 'TestRegisters.log')
+            self.log_file = self.getBuildArtifact('TestRegisters.log')
             self.runCmd(
                 "log enable " +
                 self.platform +

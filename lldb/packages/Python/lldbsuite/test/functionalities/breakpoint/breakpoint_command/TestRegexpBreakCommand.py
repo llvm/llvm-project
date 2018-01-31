@@ -54,7 +54,7 @@ class RegexpBreakCommandTestCase(TestBase):
             num_locations=1)
 
         # Check breakpoint with full file path.
-        full_path = os.path.join(os.getcwd(), self.source)
+        full_path = os.path.join(self.getSourceDir(), self.source)
         break_results = lldbutil.run_break_set_command(
             self, "b %s:%d" % (full_path, self.line))
         lldbutil.check_breakpoint_result(

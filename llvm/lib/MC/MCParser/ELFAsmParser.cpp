@@ -608,6 +608,8 @@ EndStmt:
       Type = ELF::SHT_X86_64_UNWIND;
     else if (TypeName == "llvm_odrtab")
       Type = ELF::SHT_LLVM_ODRTAB;
+    else if (TypeName == "llvm_linker_options")
+      Type = ELF::SHT_LLVM_LINKER_OPTIONS;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }

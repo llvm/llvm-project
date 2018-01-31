@@ -40,9 +40,7 @@ class TestUnionMembers(TestBase):
     def _load_exe(self):
         self.build()
 
-        cwd = os.getcwd()
-
-        src_file = os.path.join(cwd, "main.c")
+        src_file = os.path.join(self.getSourceDir(), "main.c")
         self.src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(self.src_file_spec.IsValid(), "breakpoint file")
 

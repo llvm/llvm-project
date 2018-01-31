@@ -19,16 +19,16 @@ nolimit: main.o length_nolimit.o a.o
 	$(CXX) main.o length_nolimit.o a.o -o nolimit $(LDFLAGS)
 
 main.o: main.cpp
-	$(CXX) $(CFLAGS_LIMIT) main.cpp -o main.o
+	$(CXX) $(CFLAGS_LIMIT) $(SRCDIR)/main.cpp -o main.o
 
 length_limit.o: length.cpp
-	$(CXX) $(CFLAGS_LIMIT) length.cpp -o length_limit.o
+	$(CXX) $(CFLAGS_LIMIT) $(SRCDIR)/length.cpp -o length_limit.o
 
 length_nolimit.o: length.cpp
-	$(CXX) $(CFLAGS_NO_LIMIT) length.cpp -o length_nolimit.o
+	$(CXX) $(CFLAGS_NO_LIMIT) $(SRCDIR)/length.cpp -o length_nolimit.o
 
 a.o: a.cpp
-	$(CXX) $(CFLAGS_NO_DEBUG) -c a.cpp -o a.o
+	$(CXX) $(CFLAGS_NO_DEBUG) -c $(SRCDIR)/a.cpp -o a.o
 
 clean: OBJECTS += limit nolimit length_limit.o length_nolimit.o length_limit.dwo length_nolimit.dwo
 

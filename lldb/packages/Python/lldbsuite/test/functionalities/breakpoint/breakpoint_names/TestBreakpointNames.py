@@ -63,7 +63,7 @@ class BreakpointNames(TestBase):
         # Create a targets we are making breakpoint in and copying to:
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
-        self.main_file_spec = lldb.SBFileSpec(os.path.join(os.getcwd(), "main.c"))
+        self.main_file_spec = lldb.SBFileSpec(os.path.join(self.getSourceDir(), "main.c"))
         
     def check_name_in_target(self, bkpt_name):
         name_list = lldb.SBStringList()

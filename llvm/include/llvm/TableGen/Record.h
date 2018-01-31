@@ -905,7 +905,9 @@ public:
   // possible to fold.
   Init *Fold(Record *CurRec, MultiClass *CurMultiClass) const override;
 
-  bool isComplete() const override { return false; }
+  bool isComplete() const override {
+    return LHS->isComplete() && MHS->isComplete() && RHS->isComplete();
+  }
 
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 

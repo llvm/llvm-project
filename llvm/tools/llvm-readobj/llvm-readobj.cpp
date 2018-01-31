@@ -229,6 +229,11 @@ namespace opts {
   COFFLoadConfig("coff-load-config",
                  cl::desc("Display the PE/COFF load config"));
 
+  // -elf-linker-options
+  cl::opt<bool>
+  ELFLinkerOptions("elf-linker-options",
+                   cl::desc("Display the ELF .linker-options section"));
+
   // -macho-data-in-code
   cl::opt<bool>
   MachODataInCode("macho-data-in-code",
@@ -419,6 +424,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
   if (Obj->isELF()) {
+    if (opts::ELFLinkerOptions)
+      Dumper->printELFLinkerOptions();
     if (Obj->getArch() == llvm::Triple::arm)
       if (opts::ARMAttributes)
         Dumper->printAttributes();

@@ -84,10 +84,12 @@ class HiddenIvarsTestCase(TestBase):
 
         if strip:
             self.assertTrue(subprocess.call(
-                ['/usr/bin/strip', '-Sx', 'libInternalDefiner.dylib']) == 0, 'stripping dylib succeeded')
-            self.assertTrue(subprocess.call(['/bin/rm',
-                                             '-rf',
-                                             'libInternalDefiner.dylib.dSYM']) == 0,
+                ['/usr/bin/strip', '-Sx',
+                 self.getBuildArtifact('libInternalDefiner.dylib')]) == 0,
+                            'stripping dylib succeeded')
+            self.assertTrue(subprocess.call(
+                ['/bin/rm', '-rf',
+                 self.getBuildArtifact('libInternalDefiner.dylib.dSYM')]) == 0,
                             'remove dylib dSYM file succeeded')
             self.assertTrue(subprocess.call(['/usr/bin/strip', '-Sx',
                                              self.getBuildArtifact("a.out")

@@ -20,6 +20,9 @@ using __sanitizer::uptr;
 using __sanitizer::s32;
 
 extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+const char* __scudo_default_options();
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void __scudo_set_rss_limit(uptr LimitMb, s32 HardLimit);
 }  // extern "C"

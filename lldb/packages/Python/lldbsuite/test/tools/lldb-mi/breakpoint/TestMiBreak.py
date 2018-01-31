@@ -200,7 +200,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\*stopped,reason=\"breakpoint-hit\"")
 
         import os
-        path = os.path.join(os.getcwd(), "main.cpp")
+        path = os.path.join(self.getSourceDir(), "main.cpp")
         line = line_number('main.cpp', '// BP_return')
         self.runCmd("-break-insert %s:%d" % (path, line))
         self.expect("\^done,bkpt={number=\"2\"")

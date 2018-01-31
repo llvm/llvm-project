@@ -3507,10 +3507,9 @@ MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
 
 bool
 MipsTargetLowering::shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
-  if (Subtarget.hasMips3() && Subtarget.useSoftFloat()) {
-    if (Type == MVT::i32)
+  if ((ABI.IsN32() || ABI.IsN64()) && Type == MVT::i32)
       return true;
-  }
+
   return IsSigned;
 }
 
