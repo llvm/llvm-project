@@ -142,10 +142,11 @@ recordConditions(const CallSite &CS, BasicBlock *Pred,
   recordCondition(CS, Pred, CS.getInstruction()->getParent(), Conditions);
   BasicBlock *From = Pred;
   BasicBlock *To = Pred;
-  SmallPtrSet<BasicBlock *, 4> Visited = {From};
+  SmallPtrSet<BasicBlock *, 4> Visited;
   while (!Visited.count(From->getSinglePredecessor()) &&
          (From = From->getSinglePredecessor())) {
     recordCondition(CS, From, To, Conditions);
+    Visited.insert(From);
     To = From;
   }
 }

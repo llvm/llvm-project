@@ -422,14 +422,21 @@ class MCFillFragment : public MCFragment {
   uint8_t Value;
 
   /// The number of bytes to insert.
-  uint64_t Size;
+  const MCExpr &Size;
+
+  /// Source location of the directive that this fragment was created for.
+  SMLoc Loc;
 
 public:
-  MCFillFragment(uint8_t Value, uint64_t Size, MCSection *Sec = nullptr)
-      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), Size(Size) {}
+  MCFillFragment(uint8_t Value, const MCExpr &Size, SMLoc Loc,
+                 MCSection *Sec = nullptr)
+      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), Size(Size), Loc(Loc) {
+  }
 
   uint8_t getValue() const { return Value; }
-  uint64_t getSize() const { return Size; }
+  const MCExpr &getSize() const { return Size; }
+
+  SMLoc getLoc() const { return Loc; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Fill;

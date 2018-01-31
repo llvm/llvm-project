@@ -508,7 +508,8 @@ class Value;
   /// -> LHS = %a, RHS = i32 4, *CastOp = Instruction::SExt
   ///
   SelectPatternResult matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
-                                         Instruction::CastOps *CastOp = nullptr);
+                                         Instruction::CastOps *CastOp = nullptr,
+                                         unsigned Depth = 0);
   inline SelectPatternResult
   matchSelectPattern(const Value *V, const Value *&LHS, const Value *&RHS,
                      Instruction::CastOps *CastOp = nullptr) {

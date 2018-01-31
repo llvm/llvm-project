@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPass.h"
@@ -176,8 +177,9 @@ class StructurizeCFG : public RegionPass {
   Region *ParentRegion;
 
   DominatorTree *DT;
+  LoopInfo *LI;
 
-  std::deque<RegionNode *> Order;
+  SmallVector<RegionNode *, 8> Order;
   BBSet Visited;
 
   BBPhiMap DeletedPhis;
@@ -202,7 +204,7 @@ class StructurizeCFG : public RegionPass {
 
   void gatherPredicates(RegionNode *N);
 
-  void analyzeNode(RegionNode *N);
+  void collectInfos();
 
   void insertConditions(bool Loops);
 
@@ -256,6 +258,7 @@ public:
       AU.addRequired<DivergenceAnalysis>();
     AU.addRequiredID(LowerSwitchID);
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
     RegionPass::getAnalysisUsage(AU);
@@ -289,17 +292,55 @@ bool StructurizeCFG::doInitialization(Region *R, RGPassManager &RGM) {
 
 /// \brief Build up the general order of nodes
 void StructurizeCFG::orderNodes() {
-  assert(Visited.empty());
-  assert(Predicates.empty());
-  assert(Loops.empty());
-  assert(LoopPreds.empty());
+  ReversePostOrderTraversal<Region*> RPOT(ParentRegion);
+  SmallDenseMap<Loop*, unsigned, 8> LoopBlocks;
 
-  // This must be RPO order for the back edge detection to work
-  for (RegionNode *RN : ReversePostOrderTraversal<Region*>(ParentRegion)) {
-    // FIXME: Is there a better order to use for structurization?
-    Order.push_back(RN);
-    analyzeNode(RN);
+  // The reverse post-order traversal of the list gives us an ordering close
+  // to what we want.  The only problem with it is that sometimes backedges
+  // for outer loops will be visited before backedges for inner loops.
+  for (RegionNode *RN : RPOT) {
+    BasicBlock *BB = RN->getEntry();
+    Loop *Loop = LI->getLoopFor(BB);
+    ++LoopBlocks[Loop];
   }
+
+  unsigned CurrentLoopDepth = 0;
+  Loop *CurrentLoop = nullptr;
+  for (auto I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
+    BasicBlock *BB = (*I)->getEntry();
+    unsigned LoopDepth = LI->getLoopDepth(BB);
+
+    if (is_contained(Order, *I))
+      continue;
+
+    if (LoopDepth < CurrentLoopDepth) {
+      // Make sure we have visited all blocks in this loop before moving back to
+      // the outer loop.
+
+      auto LoopI = I;
+      while (unsigned &BlockCount = LoopBlocks[CurrentLoop]) {
+        LoopI++;
+        BasicBlock *LoopBB = (*LoopI)->getEntry();
+        if (LI->getLoopFor(LoopBB) == CurrentLoop) {
+          --BlockCount;
+          Order.push_back(*LoopI);
+        }
+      }
+    }
+
+    CurrentLoop = LI->getLoopFor(BB);
+    if (CurrentLoop)
+      LoopBlocks[CurrentLoop]--;
+
+    CurrentLoopDepth = LoopDepth;
+    Order.push_back(*I);
+  }
+
+  // This pass originally used a post-order traversal and then operated on
+  // the list in reverse. Now that we are using a reverse post-order traversal
+  // rather than re-working the whole pass to operate on the list in order,
+  // we just reverse the list and continue to operate on it in reverse.
+  std::reverse(Order.begin(), Order.end());
 }
 
 /// \brief Determine the end of the loops
@@ -425,19 +466,32 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
 }
 
 /// \brief Collect various loop and predicate infos
-void StructurizeCFG::analyzeNode(RegionNode *RN) {
-  DEBUG(dbgs() << "Visiting: "
-        << (RN->isSubRegion() ? "SubRegion with entry: " : "")
-        << RN->getEntry()->getName() << '\n');
+void StructurizeCFG::collectInfos() {
+  // Reset predicate
+  Predicates.clear();
 
-  // Analyze all the conditions leading to a node
-  gatherPredicates(RN);
+  // and loop infos
+  Loops.clear();
+  LoopPreds.clear();
 
-  // Remember that we've seen this node
-  Visited.insert(RN->getEntry());
+  // Reset the visited nodes
+  Visited.clear();
 
-  // Find the last back edges
-  analyzeLoops(RN);
+  for (RegionNode *RN : reverse(Order)) {
+    DEBUG(dbgs() << "Visiting: "
+                 << (RN->isSubRegion() ? "SubRegion with entry: " : "")
+                 << RN->getEntry()->getName() << " Loop Depth: "
+                 << LI->getLoopDepth(RN->getEntry()) << "\n");
+
+    // Analyze all the conditions leading to a node
+    gatherPredicates(RN);
+
+    // Remember that we've seen this node
+    Visited.insert(RN->getEntry());
+
+    // Find the last back edges
+    analyzeLoops(RN);
+  }
 }
 
 /// \brief Insert the missing branch conditions
@@ -610,7 +664,7 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
 BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
   LLVMContext &Context = Func->getContext();
   BasicBlock *Insert = Order.empty() ? ParentRegion->getExit() :
-                       Order.front()->getEntry();
+                       Order.back()->getEntry();
   BasicBlock *Flow = BasicBlock::Create(Context, FlowBlockName,
                                         Func, Insert);
   DT->addNewBlock(Flow, Dominator);
@@ -690,8 +744,7 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
 /// Take one node from the order vector and wire it up
 void StructurizeCFG::wireFlow(bool ExitUseAllowed,
                               BasicBlock *LoopEnd) {
-  RegionNode *Node = Order.front();
-  Order.pop_front();
+  RegionNode *Node = Order.pop_back_val();
   Visited.insert(Node->getEntry());
 
   if (isPredictableTrue(Node)) {
@@ -715,7 +768,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
     PrevNode = Node;
     while (!Order.empty() && !Visited.count(LoopEnd) &&
-           dominatesPredicates(Entry, Order.front())) {
+           dominatesPredicates(Entry, Order.back())) {
       handleLoops(false, LoopEnd);
     }
 
@@ -726,7 +779,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
 void StructurizeCFG::handleLoops(bool ExitUseAllowed,
                                  BasicBlock *LoopEnd) {
-  RegionNode *Node = Order.front();
+  RegionNode *Node = Order.back();
   BasicBlock *LoopStart = Node->getEntry();
 
   if (!Loops.count(LoopStart)) {
@@ -871,9 +924,10 @@ bool StructurizeCFG::runOnRegion(Region *R, RGPassManager &RGM) {
   ParentRegion = R;
 
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   orderNodes();
-
+  collectInfos();
   createFlow();
   insertConditions(false);
   insertConditions(true);

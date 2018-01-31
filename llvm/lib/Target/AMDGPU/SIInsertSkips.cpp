@@ -210,65 +210,73 @@ void SIInsertSkips::kill(MachineInstr &MI) {
     switch (MI.getOperand(2).getImm()) {
     case ISD::SETOEQ:
     case ISD::SETEQ:
-      Opcode = AMDGPU::V_CMPX_EQ_F32_e32;
+      Opcode = AMDGPU::V_CMPX_EQ_F32_e64;
       break;
     case ISD::SETOGT:
     case ISD::SETGT:
-      Opcode = AMDGPU::V_CMPX_LT_F32_e32;
+      Opcode = AMDGPU::V_CMPX_LT_F32_e64;
       break;
     case ISD::SETOGE:
     case ISD::SETGE:
-      Opcode = AMDGPU::V_CMPX_LE_F32_e32;
+      Opcode = AMDGPU::V_CMPX_LE_F32_e64;
       break;
     case ISD::SETOLT:
     case ISD::SETLT:
-      Opcode = AMDGPU::V_CMPX_GT_F32_e32;
+      Opcode = AMDGPU::V_CMPX_GT_F32_e64;
       break;
     case ISD::SETOLE:
     case ISD::SETLE:
-      Opcode = AMDGPU::V_CMPX_GE_F32_e32;
+      Opcode = AMDGPU::V_CMPX_GE_F32_e64;
       break;
     case ISD::SETONE:
     case ISD::SETNE:
-      Opcode = AMDGPU::V_CMPX_LG_F32_e32;
+      Opcode = AMDGPU::V_CMPX_LG_F32_e64;
       break;
     case ISD::SETO:
-      Opcode = AMDGPU::V_CMPX_O_F32_e32;
+      Opcode = AMDGPU::V_CMPX_O_F32_e64;
       break;
     case ISD::SETUO:
-      Opcode = AMDGPU::V_CMPX_U_F32_e32;
+      Opcode = AMDGPU::V_CMPX_U_F32_e64;
       break;
     case ISD::SETUEQ:
-      Opcode = AMDGPU::V_CMPX_NLG_F32_e32;
+      Opcode = AMDGPU::V_CMPX_NLG_F32_e64;
       break;
     case ISD::SETUGT:
-      Opcode = AMDGPU::V_CMPX_NGE_F32_e32;
+      Opcode = AMDGPU::V_CMPX_NGE_F32_e64;
       break;
     case ISD::SETUGE:
-      Opcode = AMDGPU::V_CMPX_NGT_F32_e32;
+      Opcode = AMDGPU::V_CMPX_NGT_F32_e64;
       break;
     case ISD::SETULT:
-      Opcode = AMDGPU::V_CMPX_NLE_F32_e32;
+      Opcode = AMDGPU::V_CMPX_NLE_F32_e64;
       break;
     case ISD::SETULE:
-      Opcode = AMDGPU::V_CMPX_NLT_F32_e32;
+      Opcode = AMDGPU::V_CMPX_NLT_F32_e64;
       break;
     case ISD::SETUNE:
-      Opcode = AMDGPU::V_CMPX_NEQ_F32_e32;
+      Opcode = AMDGPU::V_CMPX_NEQ_F32_e64;
       break;
     default:
       llvm_unreachable("invalid ISD:SET cond code");
     }
 
-    // TODO: Allow this:
-    if (!MI.getOperand(0).isReg() ||
-        !TRI->isVGPR(MBB.getParent()->getRegInfo(),
-                     MI.getOperand(0).getReg()))
-      llvm_unreachable("SI_KILL operand should be a VGPR");
+    assert(MI.getOperand(0).isReg());
 
-    BuildMI(MBB, &MI, DL, TII->get(Opcode))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(0));
+    if (TRI->isVGPR(MBB.getParent()->getRegInfo(),
+                    MI.getOperand(0).getReg())) {
+      Opcode = AMDGPU::getVOPe32(Opcode);
+      BuildMI(MBB, &MI, DL, TII->get(Opcode))
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(0));
+    } else {
+      BuildMI(MBB, &MI, DL, TII->get(Opcode))
+          .addReg(AMDGPU::VCC, RegState::Define)
+          .addImm(0)  // src0 modifiers
+          .add(MI.getOperand(1))
+          .addImm(0)  // src1 modifiers
+          .add(MI.getOperand(0))
+          .addImm(0);  // omod
+    }
     break;
   }
   case AMDGPU::SI_KILL_I1_TERMINATOR: {
