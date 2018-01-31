@@ -460,6 +460,12 @@ namespace __sanitizer {
     int mnt_freq;
     int mnt_passno;
   };
+
+  struct __sanitizer_file_handle {
+    unsigned int handle_bytes;
+    int handle_type;
+    unsigned char f_handle[1];  // variable sized
+  };
 #endif
 
 #if SANITIZER_MAC || SANITIZER_FREEBSD

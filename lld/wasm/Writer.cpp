@@ -653,6 +653,9 @@ void Writer::calculateExports() {
 
       if ((Sym->isHidden() || Sym->isLocal()) && !ExportHidden)
         continue;
+
+      // We should never be exporting a non-live symbol
+      assert(Sym->getChunk()->Live);
       ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
     }
   }
@@ -735,7 +738,7 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
     for (InputFunction *Func : File->Functions) {
-      if (Func->Discarded)
+      if (Func->Discarded || !Func->Live)
         continue;
       DefinedFunctions.emplace_back(Func);
       Func->setOutputIndex(FunctionIndex++);
@@ -784,7 +787,7 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
 void Writer::createOutputSegments() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     for (InputSegment *Segment : File->Segments) {
-      if (Segment->Discarded)
+      if (Segment->Discarded || !Segment->Live)
         continue;
       StringRef Name = getOutputDataSegmentName(Segment->getName());
       OutputSegment *&S = SegmentMap[Name];

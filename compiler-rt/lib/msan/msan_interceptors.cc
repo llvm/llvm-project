@@ -138,15 +138,6 @@ INTERCEPTOR(SIZE_T, fread_unlocked, void *ptr, SIZE_T size, SIZE_T nmemb,
 #define MSAN_MAYBE_INTERCEPT_FREAD_UNLOCKED
 #endif
 
-INTERCEPTOR(SSIZE_T, readlink, const char *path, char *buf, SIZE_T bufsiz) {
-  ENSURE_MSAN_INITED();
-  CHECK_UNPOISONED_STRING(path, 0);
-  SSIZE_T res = REAL(readlink)(path, buf, bufsiz);
-  if (res > 0)
-    __msan_unpoison(buf, res);
-  return res;
-}
-
 #if !SANITIZER_NETBSD
 INTERCEPTOR(void *, mempcpy, void *dest, const void *src, SIZE_T n) {
   return (char *)__msan_memcpy(dest, src, n) + n;
@@ -1587,7 +1578,6 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_MALLOC_STATS;
   INTERCEPT_FUNCTION(fread);
   MSAN_MAYBE_INTERCEPT_FREAD_UNLOCKED;
-  INTERCEPT_FUNCTION(readlink);
   INTERCEPT_FUNCTION(memccpy);
   MSAN_MAYBE_INTERCEPT_MEMPCPY;
   INTERCEPT_FUNCTION(bcopy);

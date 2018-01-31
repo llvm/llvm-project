@@ -219,6 +219,10 @@ struct MCDwarfLineTableHeader {
   std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
        ArrayRef<char> SpecialOpcodeLengths) const;
+
+private:
+  void emitV2FileDirTables(MCStreamer *MCOS) const;
+  void emitV5FileDirTables(MCStreamer *MCOS) const;
 };
 
 class MCDwarfDwoLineTable {
