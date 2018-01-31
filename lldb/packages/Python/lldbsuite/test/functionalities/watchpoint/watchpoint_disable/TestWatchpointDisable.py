@@ -41,8 +41,6 @@ class TestWatchpointSetEnable(TestBase):
         # Create a target by the debugger.
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
-        cwd = os.getcwd()
-        
 
         bkpt_before = self.target.BreakpointCreateBySourceRegex("Set a breakpoint here", main_file_spec)
         self.assertEqual(bkpt_before.GetNumLocations(),  1, "Failed setting the before breakpoint.")

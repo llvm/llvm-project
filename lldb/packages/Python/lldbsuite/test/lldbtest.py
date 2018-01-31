@@ -554,6 +554,7 @@ class Base(unittest2.TestCase):
                 print("Change dir to:", full_dir, file=sys.stderr)
             os.chdir(os.path.join(os.environ["LLDB_TEST"], cls.mydir))
 
+        # TODO: Obsolete this by creating one working dir per configuration.
         if debug_confirm_directory_exclusivity:
             import lock
             cls.dir_lock = lock.Lock(os.path.join(full_dir, ".dirlock"))
@@ -718,9 +719,28 @@ class Base(unittest2.TestCase):
             lldb.remote_platform.Run(shell_cmd)
         self.addTearDownHook(clean_working_directory)
 
+    def getSourceDir(self):
+        """Return the full path to the current test."""
+        return os.path.join(os.environ["LLDB_TEST"], self.mydir)
+
+    def getBuildDir(self):
+        """Return the full path to the current test."""
+        return os.path.join(os.environ["LLDB_BUILD"], self.mydir)
+    
+     
+    def makeBuildDir(self):
+        """Create the test-specific working directory."""
+        # See also dotest.py which sets up ${LLDB_BUILD}.
+        try: os.makedirs(self.getBuildDir())
+        except: pass
+ 
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
-        return os.path.join(os.getcwd(), name)
+        return os.path.join(self.getBuildDir(), name)
+ 
+    def getSourcePath(self, name):
+        """Return absolute path to a file in the test's source directory."""
+        return os.path.join(self.getSourceDir(), name)
 
     def setUp(self):
         """Fixture for unittest test case setup.
@@ -855,6 +875,7 @@ class Base(unittest2.TestCase):
                 self.framework_dir = None
                 self.dsym = None
                 self.darwinWithFramework = False
+        self.makeBuildDir()
 
     def setAsync(self, value):
         """ Sets async mode to True/False and ensures it is reset after the testcase completes."""
@@ -1407,7 +1428,6 @@ class Base(unittest2.TestCase):
         """ Platform-specific way to build a program that links with LLDB (via the liblldb.so
             or LLDB.framework).
         """
-
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
 
@@ -1495,16 +1515,18 @@ class Base(unittest2.TestCase):
             architecture=None,
             compiler=None,
             dictionary=None,
-            clean=True):
+            clean=True,
+            testdir=None):
         """Platform specific way to build the default binaries."""
+        if not testdir:
+            testdir = self.mydir
+        if self.debug_info:
+            raise Exception("buildDefault tests must set NO_DEBUG_INFO_TESTCASE")
         module = builder_module()
+        self.makeBuildDir()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDefault(
-                self,
-                architecture,
-                compiler,
-                dictionary,
-                clean):
+        if not module.buildDefault(self, architecture, compiler,
+                                   dictionary, clean, testdir):
             raise Exception("Don't know how to build default binary")
 
     def buildDsym(
@@ -1512,16 +1534,18 @@ class Base(unittest2.TestCase):
             architecture=None,
             compiler=None,
             dictionary=None,
-            clean=True):
+            clean=True,
+            testdir=None):
         """Platform specific way to build binaries with dsym info."""
+        if not testdir:
+            testdir = self.mydir
+        if self.debug_info <> "dsym":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDsym(
-                self,
-                architecture,
-                compiler,
-                dictionary,
-                clean):
+        if not module.buildDsym(self, architecture, compiler,
+                                dictionary, clean, testdir):
             raise Exception("Don't know how to build binary with dsym")
 
     def buildDwarf(
@@ -1529,16 +1553,18 @@ class Base(unittest2.TestCase):
             architecture=None,
             compiler=None,
             dictionary=None,
-            clean=True):
+            clean=True,
+            testdir=None):
         """Platform specific way to build binaries with dwarf maps."""
+        if not testdir:
+            testdir = self.mydir
+        if self.debug_info <> "dwarf":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDwarf(
-                self,
-                architecture,
-                compiler,
-                dictionary,
-                clean):
+        if not module.buildDwarf(self, architecture, compiler,
+                                   dictionary, clean, testdir):
             raise Exception("Don't know how to build binary with dwarf")
 
     def buildDwo(
@@ -1546,16 +1572,18 @@ class Base(unittest2.TestCase):
             architecture=None,
             compiler=None,
             dictionary=None,
-            clean=True):
+            clean=True,
+            testdir=None):
         """Platform specific way to build binaries with dwarf maps."""
+        if not testdir:
+            testdir = self.mydir
+        if self.debug_info <> "dwo":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDwo(
-                self,
-                architecture,
-                compiler,
-                dictionary,
-                clean):
+        if not module.buildDwo(self, architecture, compiler,
+                                   dictionary, clean, testdir):
             raise Exception("Don't know how to build binary with dwo")
 
     def buildGModules(
@@ -1563,16 +1591,18 @@ class Base(unittest2.TestCase):
             architecture=None,
             compiler=None,
             dictionary=None,
-            clean=True):
+            clean=True,
+            testdir=None):
         """Platform specific way to build binaries with gmodules info."""
+        if not testdir:
+            testdir = self.mydir
+        if self.debug_info <> "gmodules":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildGModules(
-                self,
-                architecture,
-                compiler,
-                dictionary,
-                clean):
+        if not module.buildGModules(self, architecture, compiler,
+                                   dictionary, clean, testdir):
             raise Exception("Don't know how to build binary with gmodules")
 
     def buildGo(self):
@@ -1603,8 +1633,9 @@ class Base(unittest2.TestCase):
                 return path
 
         # Tries to find clang at the same folder as the lldb
-        path = os.path.join(os.path.dirname(lldbtest_config.lldbExec), "clang")
-        if os.path.exists(path):
+        lldb_dir = os.path.dirname(lldbtest_config.lldbExec)
+        path = distutils.spawn.find_executable("clang", lldb_dir)
+        if path is not None:
             return path
 
         return os.environ["CC"]
@@ -1866,8 +1897,9 @@ class TestBase(Base):
     timeWaitNextLaunch = 1.0
 
     def generateSource(self, source):
+        self.makeBuildDir()
         template = source + '.template'
-        temp = os.path.join(os.getcwd(), template)
+        temp = os.path.join(self.getSourceDir(), template)
         with open(temp, 'r') as f:
             content = f.read()
             
@@ -1886,7 +1918,7 @@ class TestBase(Base):
             header.startswith("SB") and header.endswith(".h"))]
         includes = '\n'.join(list)
         new_content = content.replace('%include_SB_APIs%', includes)
-        src = os.path.join(os.getcwd(), source)
+        src = os.path.join(self.getBuildDir(), source)
         with open(src, 'w') as f:
             f.write(new_content)
 
@@ -1947,12 +1979,12 @@ class TestBase(Base):
             else:
                 # Check relative names
                 local_shlib_path = os.path.join(
-                    os.getcwd(), shlib_prefix + name + shlib_extension)
+                    self.getBuildDir(), shlib_prefix + name + shlib_extension)
                 if not os.path.exists(local_shlib_path):
                     local_shlib_path = os.path.join(
-                        os.getcwd(), name + shlib_extension)
+                        self.getBuildDir(), name + shlib_extension)
                     if not os.path.exists(local_shlib_path):
-                        local_shlib_path = os.path.join(os.getcwd(), name)
+                        local_shlib_path = os.path.join(self.getBuildDir(), name)
 
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
@@ -1999,7 +2031,7 @@ class TestBase(Base):
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory
-            return os.getcwd()
+            return self.getBuildDir()
 
     def tearDown(self):
         #import traceback
@@ -2284,18 +2316,24 @@ class TestBase(Base):
             clean=True):
         """Platform specific way to build the default binaries."""
         module = builder_module()
+        self.makeBuildDir()
+
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if self.debug_info is None:
-            return self.buildDefault(architecture, compiler, dictionary, clean)
+            return self.buildDefault(architecture, compiler, dictionary,
+                                     clean, self.mydir)
         elif self.debug_info == "dsym":
-            return self.buildDsym(architecture, compiler, dictionary, clean)
+            return self.buildDsym(architecture, compiler, dictionary,
+                                  clean, self.mydir)
         elif self.debug_info == "dwarf":
-            return self.buildDwarf(architecture, compiler, dictionary, clean)
+            return self.buildDwarf(architecture, compiler, dictionary,
+                                   clean, self.mydir)
         elif self.debug_info == "dwo":
-            return self.buildDwo(architecture, compiler, dictionary, clean)
+            return self.buildDwo(architecture, compiler, dictionary,
+                                 clean, self.mydir)
         elif self.debug_info == "gmodules":
-            return self.buildGModules(
-                architecture, compiler, dictionary, clean)
+            return self.buildGModules(architecture, compiler, dictionary,
+                                      clean, self.mydir)
         else:
             self.fail("Can't build for debug info: %s" % self.debug_info)
 

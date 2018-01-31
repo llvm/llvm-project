@@ -13,10 +13,10 @@ ifeq "$(OS)" "Darwin"
 	CFLAGS += -arch $(ARCH)
 endif
 
-all: clean
+all: main.c clean
 	mkdir hide.app
 	mkdir hide.app/Contents
-	$(CC) $(CFLAGS) -g main.c
+	$(CC) $(CFLAGS) -g $<
 	mv a.out.dSYM hide.app/Contents
 	strip -x a.out
 

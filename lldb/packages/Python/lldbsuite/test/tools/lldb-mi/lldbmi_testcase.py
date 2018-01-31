@@ -13,6 +13,7 @@ class MiTestCaseBase(Base):
     mydir = None
     myexe = None
     mylog = None
+    NO_DEBUG_INFO_TESTCASE = True
 
     @classmethod
     def classCleanup(cls):
@@ -22,7 +23,11 @@ class MiTestCaseBase(Base):
             TestBase.RemoveTempFile(cls.mylog)
 
     def setUp(self):
+        if not self.mydir:
+            raise("mydir is empty")
+
         Base.setUp(self)
+        self.makeBuildDir()
         self.buildDefault()
         self.child_prompt = "(gdb)"
         self.myexe = self.getBuildArtifact("a.out")

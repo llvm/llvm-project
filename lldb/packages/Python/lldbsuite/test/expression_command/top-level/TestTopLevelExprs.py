@@ -45,7 +45,8 @@ class TopLevelExpressionsTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
     def run_dummy(self):
-        self.runCmd("file dummy", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("dummy"),
+                    CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,

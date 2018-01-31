@@ -51,8 +51,7 @@ class TestCppIncompleteTypes(TestBase):
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
         # Get the path of the executable
-        cwd = os.getcwd()
-        exe_path = os.path.join(cwd, exe)
+        exe_path = self.getBuildArtifact(exe)
 
         # Load the executable
         target = self.dbg.CreateTarget(exe_path)

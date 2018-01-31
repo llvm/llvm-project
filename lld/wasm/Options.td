@@ -27,6 +27,9 @@ def error_limit: J<"error-limit=">,
 def fatal_warnings: F<"fatal-warnings">,
   HelpText<"Treat warnings as errors">;
 
+def gc_sections: F<"gc-sections">,
+  HelpText<"Enable garbage collection of unused sections">;
+
 def help: F<"help">, HelpText<"Print option help">;
 
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
@@ -45,8 +48,17 @@ def no_color_diagnostics: F<"no-color-diagnostics">,
 
 def no_fatal_warnings: F<"no-fatal-warnings">;
 
+def no_gc_sections: F<"no-gc-sections">,
+  HelpText<"Disable garbage collection of unused sections">;
+
+def no_print_gc_sections: F<"no-print-gc-sections">,
+  HelpText<"Do not list removed unused sections">;
+
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
+
+def print_gc_sections: F<"print-gc-sections">,
+  HelpText<"List removed unused sections">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 

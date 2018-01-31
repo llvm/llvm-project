@@ -27,7 +27,7 @@ class ProcessAttachTestCase(TestBase):
     def test_attach_to_process_by_id(self):
         """Test attach by process id"""
         self.build()
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
@@ -43,13 +43,13 @@ class ProcessAttachTestCase(TestBase):
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""
+        newdir = self.getBuildArtifact("newdir")
         try:
-            os.mkdir(os.path.join(os.getcwd(),'newdir'))
+            os.mkdir(newdir)
         except OSError, e:
             if e.errno != os.errno.EEXIST:
                 raise
-        testdir = os.getcwd()
-        newdir = os.path.join(testdir,'newdir')
+        testdir = self.getBuildDir()
         exe = os.path.join(newdir, 'proc_attach')
         self.buildProgram('main.cpp', exe)
         self.addTearDownHook(lambda: shutil.rmtree(newdir))
@@ -58,7 +58,7 @@ class ProcessAttachTestCase(TestBase):
         popen = self.spawnSubprocess(exe)
         self.addTearDownHook(self.cleanupSubprocesses)
 
-        os.chdir('newdir')
+        os.chdir(newdir)
         self.addTearDownHook(lambda: os.chdir(testdir))
         self.runCmd("process attach -p " + str(popen.pid))
 
@@ -71,7 +71,7 @@ class ProcessAttachTestCase(TestBase):
     def test_attach_to_process_by_name(self):
         """Test attach by process name"""
         self.build()
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)

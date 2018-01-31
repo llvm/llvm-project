@@ -140,10 +140,12 @@ class SourceManagerTestCase(TestBase):
 
         # Set target.source-map settings.
         self.runCmd("settings set target.source-map %s %s" %
-                    (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
+                    (self.getSourceDir(),
+                     os.path.join(self.getSourceDir(), "hidden")))
         # And verify that the settings work.
         self.expect("settings show target.source-map",
-                    substrs=[os.getcwd(), os.path.join(os.getcwd(), "hidden")])
+                    substrs=[self.getSourceDir(),
+                             os.path.join(self.getSourceDir(), "hidden")])
 
         # Display main() and verify that the source mapping has been kicked in.
         self.expect("source list -n main", SOURCE_DISPLAYED_CORRECTLY,
@@ -235,10 +237,11 @@ class SourceManagerTestCase(TestBase):
     def test_set_breakpoint_with_absolute_path(self):
         self.build()
         self.runCmd("settings set target.source-map %s %s" %
-                    (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
+                    (self.getSourceDir(),
+                     os.path.join(self.getSourceDir(), "hidden")))
 
         exe = self.getBuildArtifact("a.out")
-        main = os.path.join(os.getcwd(), "hidden", "main.c")
+        main = os.path.join(self.getSourceDir(), "hidden", "main.c")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(

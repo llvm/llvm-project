@@ -16,6 +16,11 @@ class TestConflictingSymbols(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    def setUp(self):
+        TestBase.setUp(self)
+        lldbutil.mkdir_p(self.getBuildArtifact("One"))
+        lldbutil.mkdir_p(self.getBuildArtifact("Two"))
+
     def test_conflicting_symbols(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
