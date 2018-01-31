@@ -27,18 +27,19 @@ class CppFileCollection {
 public:
   /// \p ASTCallback is called when a file is parsed synchronously. This should
   /// not be expensive since it blocks diagnostics.
-  explicit CppFileCollection(ASTParsedCallback ASTCallback)
-      : ASTCallback(std::move(ASTCallback)) {}
+  explicit CppFileCollection(bool StorePreamblesInMemory,
+                             std::shared_ptr<PCHContainerOperations> PCHs,
+                             ASTParsedCallback ASTCallback)
+      : ASTCallback(std::move(ASTCallback)), PCHs(std::move(PCHs)),
+        StorePreamblesInMemory(StorePreamblesInMemory) {}
 
-  std::shared_ptr<CppFile>
-  getOrCreateFile(PathRef File, bool StorePreamblesInMemory,
-                  std::shared_ptr<PCHContainerOperations> PCHs) {
+  std::shared_ptr<CppFile> getOrCreateFile(PathRef File) {
     std::lock_guard<std::mutex> Lock(Mutex);
     auto It = OpenedFiles.find(File);
     if (It == OpenedFiles.end()) {
       It = OpenedFiles
                .try_emplace(File, CppFile::Create(File, StorePreamblesInMemory,
-                                                  std::move(PCHs), ASTCallback))
+                                                  PCHs, ASTCallback))
                .first;
     }
     return It->second;
@@ -46,7 +47,6 @@ public:
 
   std::shared_ptr<CppFile> getFile(PathRef File) const {
     std::lock_guard<std::mutex> Lock(Mutex);
-
     auto It = OpenedFiles.find(File);
     if (It == OpenedFiles.end())
       return nullptr;
@@ -64,6 +64,8 @@ private:
   mutable std::mutex Mutex;
   llvm::StringMap<std::shared_ptr<CppFile>> OpenedFiles;
   ASTParsedCallback ASTCallback;
+  std::shared_ptr<PCHContainerOperations> PCHs;
+  bool StorePreamblesInMemory;
 };
 } // namespace clangd
 } // namespace clang

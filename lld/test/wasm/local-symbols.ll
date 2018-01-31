@@ -9,11 +9,13 @@ target triple = "wasm32-unknown-unknown-wasm"
 
 define internal i32 @baz() local_unnamed_addr {
 entry:
-  ret i32 2
+  %0 = load i32, i32* @bar, align 4
+  ret i32 %0
 }
 
 define i32 @_start() local_unnamed_addr {
 entry:
+  call i32 @baz()
   ret i32 1
 }
 
@@ -70,10 +72,10 @@ entry:
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            41020B
+; CHECK-NEXT:         Body:            4100280284888080000B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            41010B
+; CHECK-NEXT:         Body:            1080808080001A41010B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B

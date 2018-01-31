@@ -18,17 +18,15 @@
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
+#include "TUScheduler.h"
 #include "index/FileIndex.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-#include <condition_variable>
 #include <functional>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -99,71 +97,6 @@ public:
 
 class ClangdServer;
 
-/// Returns a number of a default async threads to use for ClangdScheduler.
-/// Returned value is always >= 1 (i.e. will not cause requests to be processed
-/// synchronously).
-unsigned getDefaultAsyncThreadsCount();
-
-/// Handles running WorkerRequests of ClangdServer on a number of worker
-/// threads.
-class ClangdScheduler {
-public:
-  /// If \p AsyncThreadsCount is 0, requests added using addToFront and addToEnd
-  /// will be processed synchronously on the calling thread.
-  // Otherwise, \p AsyncThreadsCount threads will be created to schedule the
-  // requests.
-  ClangdScheduler(unsigned AsyncThreadsCount);
-  ~ClangdScheduler();
-
-  /// Add a new request to run function \p F with args \p As to the start of the
-  /// queue. The request will be run on a separate thread.
-  template <class Func, class... Args>
-  void addToFront(Func &&F, Args &&... As) {
-    if (RunSynchronously) {
-      std::forward<Func>(F)(std::forward<Args>(As)...);
-      return;
-    }
-
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_front(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
-    }
-    RequestCV.notify_one();
-  }
-
-  /// Add a new request to run function \p F with args \p As to the end of the
-  /// queue. The request will be run on a separate thread.
-  template <class Func, class... Args> void addToEnd(Func &&F, Args &&... As) {
-    if (RunSynchronously) {
-      std::forward<Func>(F)(std::forward<Args>(As)...);
-      return;
-    }
-
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_back(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
-    }
-    RequestCV.notify_one();
-  }
-
-private:
-  bool RunSynchronously;
-  std::mutex Mutex;
-  /// We run some tasks on separate threads(parsing, CppFile cleanup).
-  /// These threads looks into RequestQueue to find requests to handle and
-  /// terminate when Done is set to true.
-  std::vector<std::thread> Workers;
-  /// Setting Done to true will make the worker threads terminate.
-  bool Done = false;
-  /// A queue of requests. Elements of this vector are async computations (i.e.
-  /// results of calling std::async(std::launch::deferred, ...)).
-  std::deque<UniqueFunction<void()>> RequestQueue;
-  /// Condition variable to wake up worker threads.
-  std::condition_variable RequestCV;
-};
-
 /// Provides API to manage ASTs for a collection of C++ files and request
 /// various language features.
 /// Currently supports async diagnostics, code completion, formatting and goto
@@ -221,17 +154,23 @@ public:
   /// constructor will receive onDiagnosticsReady callback.
   /// \return A future that will become ready when the rebuild (including
   /// diagnostics) is finished.
+  /// FIXME: don't return futures here, LSP does not require a response for this
+  /// request.
   std::future<Context> addDocument(Context Ctx, PathRef File,
                                    StringRef Contents);
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
   /// \return A future that will become ready when the file is removed and all
   /// associated resources are freed.
+  /// FIXME: don't return futures here, LSP does not require a response for this
+  /// request.
   std::future<Context> removeDocument(Context Ctx, PathRef File);
   /// Force \p File to be reparsed using the latest contents.
   /// Will also check if CompileCommand, provided by GlobalCompilationDatabase
   /// for \p File has changed. If it has, will remove currently stored Preamble
   /// and AST and rebuild them from scratch.
+  /// FIXME: don't return futures here, LSP does not require a response for this
+  /// request.
   std::future<Context> forceReparse(Context Ctx, PathRef File);
 
   /// DEPRECATED. Please use a callback-based version, this API is deprecated
@@ -340,11 +279,7 @@ private:
 
   std::future<Context>
   scheduleReparseAndDiags(Context Ctx, PathRef File, VersionedDraft Contents,
-                          std::shared_ptr<CppFile> Resources,
                           Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
-
-  std::future<Context>
-  scheduleCancelRebuild(Context Ctx, std::shared_ptr<CppFile> Resources);
 
   CompileArgsCache CompileArgs;
   DiagnosticsConsumer &DiagConsumer;
@@ -360,11 +295,9 @@ private:
   std::unique_ptr<FileIndex> FileIdx;
   // If present, a merged view of FileIdx and an external index. Read via Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
-  CppFileCollection Units;
   // If set, this represents the workspace path.
   llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;
-  bool StorePreamblesInMemory;
   /// Used to serialize diagnostic callbacks.
   /// FIXME(ibiryukov): get rid of an extra map and put all version counters
   /// into CppFile.
@@ -373,8 +306,8 @@ private:
   llvm::StringMap<DocVersion> ReportedDiagnosticVersions;
   // WorkScheduler has to be the last member, because its destructor has to be
   // called before all other members to stop the worker thread that references
-  // ClangdServer
-  ClangdScheduler WorkScheduler;
+  // ClangdServer.
+  TUScheduler WorkScheduler;
 };
 
 } // namespace clangd

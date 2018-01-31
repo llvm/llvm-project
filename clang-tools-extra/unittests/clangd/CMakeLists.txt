@@ -22,6 +22,7 @@ add_extra_unittest(ClangdTests
   URITests.cpp
   TestFS.cpp
   TraceTests.cpp
+  TUSchedulerTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
   XRefsTests.cpp
