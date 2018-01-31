@@ -213,7 +213,49 @@ Objective-C Language Changes in Clang
 OpenCL C Language Changes in Clang
 ----------------------------------
 
-...
+
+- Added subgroup builtins to enqueue kernel support.
+
+- Added CL2.0 atomics as Clang builtins that now accept
+  an additional memory scope parameter propagated to atomic IR instructions
+  (this is to align with the corresponding change in LLVM IR) (see `spec s6.13.11.4
+  <https://www.khronos.org/registry/OpenCL/specs/opencl-2.0-openclc.pdf#107>`_).
+
+- Miscellaneous fixes in the CL header.
+
+- Allow per target selection of address space during CodeGen of certain OpenCL types.
+  Default target implementation is provided mimicking old behavior.
+
+- Macro ``__IMAGE_SUPPORT__`` is now automatically added (as per `spec s6.10
+  <https://www.khronos.org/registry/OpenCL/specs/opencl-2.0-openclc.pdf#55>`_).
+
+- Added ``cl_intel_subgroups`` and ``cl_intel_subgroups_short`` extensions.
+
+- All function calls are marked by `the convergent attribute
+  <https://clang.llvm.org/docs/AttributeReference.html#convergent-clang-convergent>`_
+  to prevent optimizations that break SPMD program semantics. This will be removed
+  by LLVM passes if it can be proved that the function does not use convergent
+  operations.
+
+- Create a kernel wrapper for enqueued blocks, which simplifies enqueue support by
+  providing common functionality.
+
+- Added private address space explicitly in AST and refactored address space support
+  with several simplifications and bug fixes (`PR33419 <https://llvm.org/pr33419>`_
+  and `PR33420 <https://llvm.org/pr33420>`_).
+
+- OpenCL now allows functions with empty parameters to be treated as if they had a
+  void parameter list (inspired from C++ support). OpenCL C spec update to follow.
+
+- General miscellaneous refactoring and cleanup of blocks support for OpenCL to
+  remove unused parts inherited from Objective C implementation.
+
+- Miscellaneous improvements in vector diagnostics.
+
+- Added half float load and store builtins without enabling half as a legal type
+  (``__builtin_store_half for double``, ``__builtin_store_halff`` for double,
+  ``__builtin_load_half for double``, ``__builtin_load_halff`` for float).
+
 
 OpenMP Support in Clang
 ----------------------------------
