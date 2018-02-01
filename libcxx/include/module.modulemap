@@ -538,10 +538,6 @@ module std [system] {
       header "experimental/memory_resource"
       export *
     }
-    module numeric {
-      header "experimental/numeric"
-      export *
-    }
     module propagate_const {
       header "experimental/propagate_const"
       export *

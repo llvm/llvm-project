@@ -257,8 +257,6 @@ TEST_MACROS();
 TEST_MACROS();
 #include <experimental/memory_resource>
 TEST_MACROS();
-#include <experimental/numeric>
-TEST_MACROS();
 #include <experimental/propagate_const>
 TEST_MACROS();
 #include <experimental/ratio>
