@@ -39,13 +39,6 @@ bool Character_SummaryProvider(ValueObject &valobj, Stream &stream,
 bool UnicodeScalar_SummaryProvider(ValueObject &valobj, Stream &stream,
                                    const TypeSummaryOptions &options);
 
-bool StringCore_SummaryProvider(ValueObject &valobj, Stream &stream,
-                                const TypeSummaryOptions &options);
-
-bool StringCore_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &,
-    StringPrinter::ReadStringAndDumpToStreamOptions);
-
 bool StringGuts_SummaryProvider(ValueObject &valobj, Stream &stream,
                                 const TypeSummaryOptions &options);
 

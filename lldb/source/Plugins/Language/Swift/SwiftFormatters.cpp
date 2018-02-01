@@ -166,89 +166,6 @@ static bool invokeNSStringFormatter(Process &process, ValueObject &valobj,
   return false;
 }
 
-bool lldb_private::formatters::swift::StringCore_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  return StringCore_SummaryProvider(
-      valobj, stream, options,
-      StringPrinter::ReadStringAndDumpToStreamOptions());
-}
-
-bool lldb_private::formatters::swift::StringCore_SummaryProvider(
-    ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &summary_options,
-    StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
-  static ConstString g_some("some");
-  static ConstString g__baseAddress("_baseAddress");
-  static ConstString g__countAndFlags("_countAndFlags");
-  static ConstString g_value("_value");
-  static ConstString g__rawValue("_rawValue");
-
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
-    return false;
-  ValueObjectSP baseAddress_sp(
-      valobj.GetChildAtNamePath({g__baseAddress, g_some, g__rawValue}));
-  ValueObjectSP _countAndFlags_sp(
-      valobj.GetChildAtNamePath({g__countAndFlags, g_value}));
-
-  if (!_countAndFlags_sp)
-    return false;
-
-  lldb::addr_t baseAddress =
-      baseAddress_sp ? baseAddress_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS)
-                     : 0;
-  InferiorSizedWord _countAndFlags = InferiorSizedWord(
-      _countAndFlags_sp->GetValueAsUnsigned(0), *process_sp.get());
-
-  if (baseAddress == LLDB_INVALID_ADDRESS)
-    return false;
-
-  bool hasCocoaBuffer = (_countAndFlags << 1).IsNegative();
-
-  if (baseAddress == 0) {
-    if (hasCocoaBuffer) {
-      return invokeNSStringFormatter(*process_sp.get(), valobj, stream,
-                                     summary_options);
-    } else {
-      stream.Printf("\"\"");
-      return true;
-    }
-  }
-
-  const InferiorSizedWord _countMask =
-      InferiorSizedWord::GetMaximum(*process_sp.get()) >> 2;
-
-  uint64_t count = (_countAndFlags & _countMask).GetValue();
-
-  bool isASCII =
-      ((_countAndFlags >> (_countMask.GetBitSize() - 1)).SignExtend() << 8)
-          .IsZero();
-
-  if (count == 0) {
-    stream.Printf("\"\"");
-    return true;
-  }
-
-  read_options.SetLocation(baseAddress);
-  read_options.SetProcessSP(process_sp);
-  read_options.SetStream(&stream);
-  read_options.SetSourceSize(count);
-  read_options.SetNeedsZeroTermination(false);
-  read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
-                                  lldb::eTypeSummaryUncapped);
-  read_options.SetBinaryZeroIsTerminator(false);
-  read_options.SetLanguage(summary_options.GetLanguage());
-  if (summary_options.GetLanguage() == lldb::eLanguageTypeObjC)
-    read_options.SetPrefixToken("@");
-
-  if (isASCII)
-    return StringPrinter::ReadStringAndDumpToStream<
-        StringPrinter::StringElementType::UTF8>(read_options);
-  else
-    return StringPrinter::ReadStringAndDumpToStream<
-        StringPrinter::StringElementType::UTF16>(read_options);
-}
-
 bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   return StringGuts_SummaryProvider(
@@ -377,13 +294,6 @@ bool lldb_private::formatters::swift::String_SummaryProvider(
   if (guts_sp)
     return StringGuts_SummaryProvider(*guts_sp, stream, summary_options,
                                       read_options);
-
-  static ConstString g_core("_core");
-  ValueObjectSP core_sp = valobj.GetChildMemberWithName(g_core, true);
-  if (core_sp)
-    return StringCore_SummaryProvider(*core_sp, stream, summary_options,
-                                      read_options);
-
   return false;
 }
 
