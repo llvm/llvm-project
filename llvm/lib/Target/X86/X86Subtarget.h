@@ -297,6 +297,14 @@ protected:
   /// Processor supports Cache Line Write Back instruction
   bool HasCLWB;
 
+  /// Use a retpoline thunk rather than indirect calls to block speculative
+  /// execution.
+  bool UseRetpoline;
+
+  /// When using a retpoline thunk, call an externally provided thunk rather
+  /// than emitting one inside the compiler.
+  bool UseRetpolineExternalThunk;
+
   /// Use software floating point for code generation.
   bool UseSoftFloat;
 
@@ -506,6 +514,8 @@ public:
   bool hasPKU() const { return HasPKU; }
   bool hasMPX() const { return HasMPX; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
+  bool useRetpoline() const { return UseRetpoline; }
+  bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 
   bool isXRaySupported() const override { return is64Bit(); }
 
@@ -638,6 +648,10 @@ public:
   /// This function returns true if the target has sincos() routine in its
   /// compiler runtime or math libraries.
   bool hasSinCos() const;
+
+  /// If we are using retpolines, we need to expand indirectbr to avoid it
+  /// lowering to an actual indirect jump.
+  bool enableIndirectBrExpand() const override { return useRetpoline(); }
 
   /// Enable the MachineScheduler pass for all X86 subtargets.
   bool enableMachineScheduler() const override { return true; }
