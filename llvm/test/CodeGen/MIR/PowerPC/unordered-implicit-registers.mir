@@ -28,17 +28,17 @@ registers:
   - { id: 3, class: gprc }
   - { id: 4, class: g8rc }
 liveins:
-  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '$x3', virtual-reg: '%0' }
 body: |
   bb.0.entry:
-    liveins: %x3
+    liveins: $x3
 
-    %0 = COPY %x3
+    %0 = COPY $x3
     %1 = LWZ 0, %0 :: (load 4 from %ir.p)
     %2 = LI 0
     %3 = RLWIMI %2, killed %1, 0, 0, 31
     %4 = EXTSW_32_64 killed %3
-    %x3 = COPY %4
-  ; CHECK: BLR8 implicit %lr8, implicit %rm, implicit %x3
-    BLR8 implicit %lr8, implicit %rm, implicit %x3
+    $x3 = COPY %4
+  ; CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...

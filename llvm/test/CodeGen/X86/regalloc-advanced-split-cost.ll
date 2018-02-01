@@ -15,15 +15,15 @@
 
 ; Make sure the split behaves as expected
 ; CHECK: RS_Split Cascade 1
-; CHECK-NOT: %eax	static = 
-; CHECK: %eax	no positive bundles
-; CHECK-NEXT: %ecx	no positive bundles
-; CHECK-NEXT: %edx	no positive bundles
-; CHECK-NEXT: %esi	static = 
-; CHECK-NEXT: %edi	no positive bundles
-; CHECK-NEXT: %ebx	no positive bundles
-; CHECK-NEXT: %ebp	static = 
-; CHECK: Split for %ebp
+; CHECK-NOT: $eax	static = 
+; CHECK: $eax	no positive bundles
+; CHECK-NEXT: $ecx	no positive bundles
+; CHECK-NEXT: $edx	no positive bundles
+; CHECK-NEXT: $esi	static = 
+; CHECK-NEXT: $edi	no positive bundles
+; CHECK-NEXT: $ebx	no positive bundles
+; CHECK-NEXT: $ebp	static = 
+; CHECK: Split for $ebp
 
 ; Function Attrs: nounwind
 define i32 @foo(i32* %array, i32 %cond1, i32 %val) local_unnamed_addr #0 {

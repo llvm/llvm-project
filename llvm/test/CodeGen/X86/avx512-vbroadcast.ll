@@ -120,7 +120,7 @@ define   <8 x double> @_inreg8xdouble(double %a) {
 define   <8 x double> @_sd8xdouble_mask(double %a, <8 x double> %i, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_mask:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; ALL-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; ALL-NEXT:    vptestmd %zmm2, %zmm2, %k1
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm1 {%k1}
 ; ALL-NEXT:    vmovapd %zmm1, %zmm0
@@ -135,7 +135,7 @@ define   <8 x double> @_sd8xdouble_mask(double %a, <8 x double> %i, <8 x i32> %m
 define   <8 x double> @_sd8xdouble_maskz(double %a, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_maskz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; ALL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; ALL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
@@ -160,7 +160,7 @@ define   <8 x double> @_sd8xdouble_load(double* %a.ptr) {
 define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_mask_load:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; ALL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; ALL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; ALL-NEXT:    retq
@@ -175,7 +175,7 @@ define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8
 define   <8 x double> @_sd8xdouble_maskz_load(double* %a.ptr, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_maskz_load:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; ALL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq

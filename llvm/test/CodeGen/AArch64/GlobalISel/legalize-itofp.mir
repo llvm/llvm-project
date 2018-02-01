@@ -29,104 +29,104 @@
 name:            test_sitofp_s32_s32
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s32) = G_SITOFP %0
-    %w0 = COPY %1
+    $w0 = COPY %1
 ...
 
 ---
 name:            test_uitofp_s32_s32
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s32) = G_UITOFP %0
-    %w0 = COPY %1
+    $w0 = COPY %1
 ...
 
 ---
 name:            test_sitofp_s32_s64
 body: |
   bb.0:
-    liveins: %x0
+    liveins: $x0
     ; CHECK-LABEL: name: test_sitofp_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s64)
-    %0:_(s64) = COPY %x0
+    %0:_(s64) = COPY $x0
     %1:_(s32) = G_SITOFP %0
-    %w0 = COPY %1
+    $w0 = COPY %1
 ...
 
 ---
 name:            test_uitofp_s32_s64
 body: |
   bb.0:
-    liveins: %x0
+    liveins: $x0
     ; CHECK-LABEL: name: test_uitofp_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
-    %0:_(s64) = COPY %x0
+    %0:_(s64) = COPY $x0
     %1:_(s32) = G_UITOFP %0
-    %w0 = COPY %1
+    $w0 = COPY %1
 ...
 
 ---
 name:            test_sitofp_s64_s32
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s64) = G_SITOFP %0
-    %w0 = COPY %1
+    $w0 = COPY %1
 ...
 
 ---
 name:            test_uitofp_s64_s32
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s64) = G_UITOFP %0
-    %x0 = COPY %1
+    $x0 = COPY %1
 ...
 
 ---
 name:            test_sitofp_s64_s64
 body: |
   bb.0:
-    liveins: %x0
+    liveins: $x0
     ; CHECK-LABEL: name: test_sitofp_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s64)
-    %0:_(s64) = COPY %x0
+    %0:_(s64) = COPY $x0
     %1:_(s64) = G_SITOFP %0
-    %x0 = COPY %1
+    $x0 = COPY %1
 ...
 
 ---
 name:            test_uitofp_s64_s64
 body: |
   bb.0:
-    liveins: %x0
+    liveins: $x0
     ; CHECK-LABEL: name: test_uitofp_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s64)
-    %0:_(s64) = COPY %x0
+    %0:_(s64) = COPY $x0
     %1:_(s64) = G_UITOFP %0
-    %x0 = COPY %1
+    $x0 = COPY %1
 ...
 
 
@@ -134,103 +134,103 @@ body: |
 name:            test_sitofp_s32_s1
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s32_s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]]
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_SITOFP %1
-    %w0 = COPY %2
+    $w0 = COPY %2
 ...
 
 ---
 name:            test_uitofp_s32_s1
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s32_s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_UITOFP %1
-    %w0 = COPY %2
+    $w0 = COPY %2
 ...
 
 ---
 name:            test_sitofp_s64_s8
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s64_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]]
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s8) = G_TRUNC %0
     %2:_(s64) = G_SITOFP %1
-    %x0 = COPY %2
+    $x0 = COPY %2
 ...
 
 ---
 name:            test_uitofp_s64_s8
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s64_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s8) = G_TRUNC %0
     %2:_(s64) = G_UITOFP %1
-    %x0 = COPY %2
+    $x0 = COPY %2
 ...
 
 ---
 name:            test_sitofp_s32_s16
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_sitofp_s32_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]]
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s16) = G_TRUNC %0
     %2:_(s32) = G_SITOFP %1
-    %w0 = COPY %2
+    $w0 = COPY %2
 ...
 
 ---
 name:            test_uitofp_s32_s16
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
     ; CHECK-LABEL: name: test_uitofp_s32_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
-    %0:_(s32) = COPY %w0
+    %0:_(s32) = COPY $w0
     %1:_(s16) = G_TRUNC %0
     %2:_(s32) = G_UITOFP %1
-    %w0 = COPY %2
+    $w0 = COPY %2
 ...

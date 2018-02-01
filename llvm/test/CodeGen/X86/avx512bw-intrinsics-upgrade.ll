@@ -1967,7 +1967,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    kmovd %edx, %k7
 ; AVX512F-32-NEXT:    movl %ebp, %edx
 ; AVX512F-32-NEXT:    shrl $24, %edx
-; AVX512F-32-NEXT:    # kill: def %al killed %al killed %eax def %eax
+; AVX512F-32-NEXT:    # kill: def $al killed $al killed $eax def $eax
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $47, %k4, %k4
@@ -1982,7 +1982,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    kshiftrq $18, %k4, %k3
 ; AVX512F-32-NEXT:    kxorq %k6, %k3, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
-; AVX512F-32-NEXT:    # kill: def %dl killed %dl killed %edx def %edx
+; AVX512F-32-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
 ; AVX512F-32-NEXT:    andb $15, %dl
 ; AVX512F-32-NEXT:    andb $2, %al
 ; AVX512F-32-NEXT:    shrb %al
@@ -2232,7 +2232,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    kmovd %ecx, %k5
 ; AVX512F-32-NEXT:    movl %ebx, %edx
 ; AVX512F-32-NEXT:    shrl $24, %edx
-; AVX512F-32-NEXT:    # kill: def %al killed %al killed %eax def %eax
+; AVX512F-32-NEXT:    # kill: def $al killed $al killed $eax def $eax
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $15, %k6, %k6
@@ -2248,7 +2248,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k7 # 8-byte Reload
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k1
-; AVX512F-32-NEXT:    # kill: def %dl killed %dl killed %edx def %edx
+; AVX512F-32-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
 ; AVX512F-32-NEXT:    andb $15, %dl
 ; AVX512F-32-NEXT:    andb $2, %al
 ; AVX512F-32-NEXT:    shrb %al
@@ -2667,7 +2667,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    kmovd %edx, %k7
 ; AVX512F-32-NEXT:    movl %ebp, %edx
 ; AVX512F-32-NEXT:    shrl $24, %edx
-; AVX512F-32-NEXT:    # kill: def %al killed %al killed %eax def %eax
+; AVX512F-32-NEXT:    # kill: def $al killed $al killed $eax def $eax
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $47, %k4, %k4
@@ -2682,7 +2682,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    kshiftrq $18, %k4, %k3
 ; AVX512F-32-NEXT:    kxorq %k6, %k3, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
-; AVX512F-32-NEXT:    # kill: def %dl killed %dl killed %edx def %edx
+; AVX512F-32-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
 ; AVX512F-32-NEXT:    andb $15, %dl
 ; AVX512F-32-NEXT:    andb $2, %al
 ; AVX512F-32-NEXT:    shrb %al
@@ -2932,7 +2932,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    kmovd %ecx, %k5
 ; AVX512F-32-NEXT:    movl %ebx, %edx
 ; AVX512F-32-NEXT:    shrl $24, %edx
-; AVX512F-32-NEXT:    # kill: def %al killed %al killed %eax def %eax
+; AVX512F-32-NEXT:    # kill: def $al killed $al killed $eax def $eax
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $15, %k6, %k6
@@ -2948,7 +2948,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k7 # 8-byte Reload
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k1
-; AVX512F-32-NEXT:    # kill: def %dl killed %dl killed %edx def %edx
+; AVX512F-32-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
 ; AVX512F-32-NEXT:    andb $15, %dl
 ; AVX512F-32-NEXT:    andb $2, %al
 ; AVX512F-32-NEXT:    shrb %al

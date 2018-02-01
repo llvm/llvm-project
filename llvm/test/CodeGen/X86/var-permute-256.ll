@@ -1340,13 +1340,13 @@ define <4 x i64> @var_shuffle_v4i64_from_v2i64(<2 x i64> %v, <4 x i64> %indices)
 ;
 ; AVX512VL-LABEL: var_shuffle_v4i64_from_v2i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VL-NEXT:    vpermpd %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v4i64_from_v2i64:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VLBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLBW-NEXT:    vpermpd %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
   %index0 = extractelement <4 x i64> %indices, i32 0
@@ -1398,7 +1398,7 @@ define <8 x i32> @var_shuffle_v8i32_from_v4i32(<4 x i32> %v, <8 x i32> %indices)
 ;
 ; INT256-LABEL: var_shuffle_v8i32_from_v4i32:
 ; INT256:       # %bb.0: # %entry
-; INT256-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; INT256-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; INT256-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; INT256-NEXT:    retq
 entry:
@@ -1660,7 +1660,7 @@ define <16 x i16> @var_shuffle_v16i16_from_v8i16(<8 x i16> %v, <16 x i16> %indic
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v16i16_from_v8i16:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VLBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLBW-NEXT:    vpermw %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
   %index0 = extractelement <16 x i16> %indices, i32 0
@@ -2201,7 +2201,7 @@ define <32 x i8> @var_shuffle_v32i8_from_v16i8(<16 x i8> %v, <32 x i8> %indices)
 ;
 ; VBMI-LABEL: var_shuffle_v32i8_from_v16i8:
 ; VBMI:       # %bb.0:
-; VBMI-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; VBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; VBMI-NEXT:    retq
   %index0 = extractelement <32 x i8> %indices, i32 0
@@ -2363,13 +2363,13 @@ define <4 x double> @var_shuffle_v4f64_from_v2f64(<2 x double> %v, <4 x i64> %in
 ;
 ; AVX512VL-LABEL: var_shuffle_v4f64_from_v2f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VL-NEXT:    vpermpd %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v4f64_from_v2f64:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VLBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLBW-NEXT:    vpermpd %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
   %index0 = extractelement <4 x i64> %indices, i32 0
@@ -2421,7 +2421,7 @@ define <8 x float> @var_shuffle_v8f32_from_v4f32(<4 x float> %v, <8 x i32> %indi
 ;
 ; INT256-LABEL: var_shuffle_v8f32_from_v4f32:
 ; INT256:       # %bb.0: # %entry
-; INT256-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; INT256-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; INT256-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; INT256-NEXT:    retq
 entry:

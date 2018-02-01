@@ -45,9 +45,9 @@ registers:
   - { id: 11, class: gpr32, preferred-register: '' }
   - { id: 12, class: gpr32, preferred-register: '' }
 liveins:
-  - { reg: '%a0', virtual-reg: '%0' }
-  - { reg: '%t9', virtual-reg: '' }
-  - { reg: '%v0', virtual-reg: '' }
+  - { reg: '$a0', virtual-reg: '%0' }
+  - { reg: '$t9', virtual-reg: '' }
+  - { reg: '$v0', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -70,17 +70,17 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: %a0, %t9, %v0
+    liveins: $a0, $t9, $v0
 
-    %1 = ADDu %v0, %t9
-    %0 = COPY %a0
-    ADJCALLSTACKDOWN 16, 0, implicit-def dead %sp, implicit %sp
+    %1 = ADDu $v0, $t9
+    %0 = COPY $a0
+    ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
     %2 = LW %1, target-flags(mips-got-call) @_Z1gi :: (load 4 from call-entry @_Z1gi)
-    %a0 = COPY %0
-    %gp = COPY %1
-    JALRPseudo killed %2, csr_o32_fpxx, implicit-def dead %ra, implicit %a0, implicit %gp, implicit-def %sp, implicit-def %v0
-    ADJCALLSTACKUP 16, 0, implicit-def dead %sp, implicit %sp
-    %3 = COPY %v0
+    $a0 = COPY %0
+    $gp = COPY %1
+    JALRPseudo killed %2, csr_o32_fpxx, implicit-def dead $ra, implicit $a0, implicit $gp, implicit-def $sp, implicit-def $v0
+    ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
+    %3 = COPY $v0
     %4 = ADDu %3, %0
     %5 = LW %1, target-flags(mips-got) @v :: (load 4 from got)
     %6 = LW killed %5, 0 :: (dereferenceable load 4 from @v)
@@ -88,8 +88,8 @@ body:             |
     %8 = LW %1, target-flags(mips-got) @j :: (load 4 from got)
     %9 = LW killed %8, 0 :: (dereferenceable load 4 from @j)
     %10 = ADDu killed %7, killed %9
-    %v0 = COPY %10
-    RetRA implicit %v0
+    $v0 = COPY %10
+    RetRA implicit $v0
 
 ...
 

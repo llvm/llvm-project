@@ -30,7 +30,7 @@ registers:
   - { id: 10, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %rdi
+    liveins: $rdi
 
     ; X64-LABEL: name: test_memop_s8tos32
     ; X64: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
@@ -88,7 +88,7 @@ liveins:
 #
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %rdi
+    liveins: $rdi
 
     ; X64-LABEL: name: test_memop_s64
     ; X64: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF

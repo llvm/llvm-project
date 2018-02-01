@@ -24,9 +24,9 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: const_s32
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
-    ; CHECK: %w0 = COPY [[MOVi32imm]]
+    ; CHECK: $w0 = COPY [[MOVi32imm]]
     %0(s32) = G_CONSTANT i32 42
-    %w0 = COPY %0(s32)
+    $w0 = COPY %0(s32)
 ...
 
 ---
@@ -40,9 +40,9 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: const_s64
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 1234567890123
-    ; CHECK: %x0 = COPY [[MOVi64imm]]
+    ; CHECK: $x0 = COPY [[MOVi64imm]]
     %0(s64) = G_CONSTANT i64 1234567890123
-    %x0 = COPY %0(s64)
+    $x0 = COPY %0(s64)
 ...
 
 ---
@@ -57,9 +57,9 @@ body:             |
     ; CHECK-LABEL: name: fconst_s32
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1080033280
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
-    ; CHECK: %s0 = COPY [[COPY]]
+    ; CHECK: $s0 = COPY [[COPY]]
     %0(s32) = G_FCONSTANT float 3.5
-    %s0 = COPY %0(s32)
+    $s0 = COPY %0(s32)
 ...
 
 ---
@@ -74,9 +74,9 @@ body:             |
     ; CHECK-LABEL: name: fconst_s64
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 4607182418800017408
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY [[MOVi64imm]]
-    ; CHECK: %d0 = COPY [[COPY]]
+    ; CHECK: $d0 = COPY [[COPY]]
     %0(s64) = G_FCONSTANT double 1.0
-    %d0 = COPY %0(s64)
+    $d0 = COPY %0(s64)
 ...
 
 ---
@@ -90,9 +90,9 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s32_0
     ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
-    ; CHECK: %s0 = COPY [[FMOVS0_]]
+    ; CHECK: $s0 = COPY [[FMOVS0_]]
     %0(s32) = G_FCONSTANT float 0.0
-    %s0 = COPY %0(s32)
+    $s0 = COPY %0(s32)
 ...
 
 ---
@@ -106,7 +106,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s64_0
     ; CHECK: [[FMOVD0_:%[0-9]+]]:fpr64 = FMOVD0
-    ; CHECK: %x0 = COPY [[FMOVD0_]]
+    ; CHECK: $x0 = COPY [[FMOVD0_]]
     %0(s64) = G_FCONSTANT double 0.0
-    %x0 = COPY %0(s64)
+    $x0 = COPY %0(s64)
 ...

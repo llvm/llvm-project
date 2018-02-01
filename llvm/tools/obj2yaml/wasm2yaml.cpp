@@ -201,8 +201,8 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       for (auto &Global : Obj.globals()) {
         WasmYAML::Global G;
         G.Index = Global.Index;
-        G.Type = Global.Type;
-        G.Mutable = Global.Mutable;
+        G.Type = Global.Type.Type;
+        G.Mutable = Global.Type.Mutable;
         G.InitExpr = Global.InitExpr;
         GlobalSec->Globals.push_back(G);
       }

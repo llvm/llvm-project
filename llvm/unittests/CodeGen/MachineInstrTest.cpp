@@ -264,7 +264,7 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   raw_string_ostream OS(str);
   MI->print(OS);
   ASSERT_TRUE(
-      StringRef(OS.str()).startswith("%noreg = UNKNOWN debug-location "));
+      StringRef(OS.str()).startswith("$noreg = UNKNOWN debug-location "));
 }
 
 } // end namespace

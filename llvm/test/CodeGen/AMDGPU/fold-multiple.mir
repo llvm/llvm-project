@@ -14,8 +14,8 @@
 # being processed twice.
 
 # CHECK-LABEL: name: test
-# CHECK: %2:vgpr_32 = V_LSHLREV_B32_e32 2, killed %0, implicit %exec
-# CHECK: %4:vgpr_32 = V_AND_B32_e32 8, killed %2, implicit %exec
+# CHECK: %2:vgpr_32 = V_LSHLREV_B32_e32 2, killed %0, implicit $exec
+# CHECK: %4:vgpr_32 = V_AND_B32_e32 8, killed %2, implicit $exec
 
 name:            test
 tracksRegLiveness: true
@@ -30,11 +30,11 @@ body:             |
   bb.0 (%ir-block.0):
     %0 = IMPLICIT_DEF
     %1 = S_MOV_B32 2
-    %2 = V_LSHLREV_B32_e64 %1, killed %0, implicit %exec
-    %3 = S_LSHL_B32 %1, killed %1, implicit-def dead %scc
-    %4 = V_AND_B32_e64 killed %2, killed %3, implicit %exec
+    %2 = V_LSHLREV_B32_e64 %1, killed %0, implicit $exec
+    %3 = S_LSHL_B32 %1, killed %1, implicit-def dead $scc
+    %4 = V_AND_B32_e64 killed %2, killed %3, implicit $exec
     %5 = IMPLICIT_DEF
-    BUFFER_STORE_DWORD_OFFSET killed %4, killed %5, 0, 0, 0, 0, 0, implicit %exec
+    BUFFER_STORE_DWORD_OFFSET killed %4, killed %5, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...

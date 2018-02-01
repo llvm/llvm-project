@@ -8,5 +8,5 @@ name: t
 body: |
   bb.0:
     ; CHECK: [[@LINE+1]]:19: subregister index expects a virtual register
-    %eax.sub_8bit = COPY %bl
+    $eax.sub_8bit = COPY $bl
 ...

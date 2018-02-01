@@ -34,8 +34,8 @@ define i32 @reassociate_muls_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-NEXT:    retq
 
 ; DEAD:       ADD32rr
-; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead %eflags
-; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead %eflags
+; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead $eflags
+; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead $eflags
 
   %t0 = add i32 %x0, %x1
   %t1 = mul i32 %x2, %t0

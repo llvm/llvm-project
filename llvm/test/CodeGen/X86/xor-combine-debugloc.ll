@@ -1,16 +1,16 @@
 ; RUN: llc -stop-after=expand-isel-pseudos < %s | FileCheck %s
 ;
 ; Make sure that when the entry block of IR below is lowered, an instruction
-; that implictly defines %eflags has a same debug location with the icmp
+; that implictly defines $eflags has a same debug location with the icmp
 ; instruction, and the branch instructions have a same debug location with the
 ; br instruction.
 ;
 ; CHECK:      [[DLOC1:![0-9]+]] = !DILocation(line: 5, column: 9, scope: !{{[0-9]+}})
 ; CHECK:      [[DLOC2:![0-9]+]] = !DILocation(line: 5, column: 7, scope: !{{[0-9]+}})
-; CHECK-DAG:  [[VREG1:%[^ ]+]]:gr32 = COPY %esi
-; CHECK-DAG:  [[VREG2:%[^ ]+]]:gr32 = COPY %edi
-; CHECK:      SUB32rr [[VREG2]], [[VREG1]], implicit-def %eflags, debug-location [[DLOC1]]
-; CHECK-NEXT: JE_1{{.*}} implicit %eflags, debug-location [[DLOC2]]
+; CHECK-DAG:  [[VREG1:%[^ ]+]]:gr32 = COPY $esi
+; CHECK-DAG:  [[VREG2:%[^ ]+]]:gr32 = COPY $edi
+; CHECK:      SUB32rr [[VREG2]], [[VREG1]], implicit-def $eflags, debug-location [[DLOC1]]
+; CHECK-NEXT: JE_1{{.*}} implicit $eflags, debug-location [[DLOC2]]
 ; CHECK-NEXT: JMP_1{{.*}} debug-location [[DLOC2]]
 
 target triple = "x86_64-unknown-linux-gnu"

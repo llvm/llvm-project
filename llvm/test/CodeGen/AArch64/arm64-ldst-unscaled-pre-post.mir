@@ -1,115 +1,115 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
 ---
 # CHECK-LABEL: name: test_LDURSi_post
-# CHECK: LDRSpost %x0, -4
+# CHECK: LDRSpost $x0, -4
 name: test_LDURSi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %s0 = LDURSi %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $s0 = LDURSi $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_LDURDi_post
-# CHECK: LDRDpost %x0, -4
+# CHECK: LDRDpost $x0, -4
 name: test_LDURDi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %d0 = LDURDi %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $d0 = LDURDi $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_LDURQi_post
-# CHECK: LDRQpost %x0, -4
+# CHECK: LDRQpost $x0, -4
 name: test_LDURQi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %q0 = LDURQi  %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $q0 = LDURQi  $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_LDURWi_post
-# CHECK: LDRWpost %x0, -4
+# CHECK: LDRWpost $x0, -4
 name: test_LDURWi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %w1 = LDURWi %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $w1 = LDURWi $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_LDURXi_post
-# CHECK: %x1 = LDRXpost %x0, -4
+# CHECK: $x1 = LDRXpost $x0, -4
 name: test_LDURXi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %x1 = LDURXi %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $x1 = LDURXi $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_STURSi_post
-# CHECK: STRSpost %s0, %x0, -4
+# CHECK: STRSpost $s0, $x0, -4
 name: test_STURSi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %s0 = FMOVS0
-    STURSi %s0, %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $s0 = FMOVS0
+    STURSi $s0, $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_STURDi_post
-# CHECK: STRDpost %d0, %x0, -4
+# CHECK: STRDpost $d0, $x0, -4
 name: test_STURDi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %d0 = FMOVD0
-    STURDi %d0, %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $d0 = FMOVD0
+    STURDi $d0, $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_STURQi_post
-# CHECK: STRQpost %q0, %x0, -4
+# CHECK: STRQpost $q0, $x0, -4
 name: test_STURQi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    %q0 = MOVIv4i32 0, 0
-    STURQi %q0, %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    $q0 = MOVIv4i32 0, 0
+    STURQi $q0, $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_STURWi_post
-# CHECK: STRWpost %wzr, %x0, -4
+# CHECK: STRWpost $wzr, $x0, -4
 name: test_STURWi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    STURWi %wzr, %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    STURWi $wzr, $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...
 # CHECK-LABEL: name: test_STURXi_post
-# CHECK: STRXpost %xzr, %x0, -4
+# CHECK: STRXpost $xzr, $x0, -4
 name: test_STURXi_post
 body: |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
-    STURXi %xzr, %x0, 0
-    %x0 = SUBXri %x0, 4, 0
-    RET_ReallyLR implicit %x0
+    STURXi $xzr, $x0, 0
+    $x0 = SUBXri $x0, 4, 0
+    RET_ReallyLR implicit $x0
 ...

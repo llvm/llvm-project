@@ -176,10 +176,10 @@ define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
 ;
 ; AVX512DQ-LABEL: imulq256:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512DQ-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: imulq256:
@@ -229,10 +229,10 @@ define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ;
 ; AVX512DQ-LABEL: imulq128:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -708,7 +708,7 @@ define <16 x float> @test_mask_vminps(<16 x float> %dst, <16 x float> %i,
 define <8 x double> @test_mask_vminpd(<8 x double> %dst, <8 x double> %i,
 ; AVX512F-LABEL: test_mask_vminpd:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; AVX512F-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
 ; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512F-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
@@ -721,14 +721,14 @@ define <8 x double> @test_mask_vminpd(<8 x double> %dst, <8 x double> %i,
 ;
 ; AVX512BW-LABEL: test_mask_vminpd:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; AVX512BW-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
 ; AVX512BW-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512BW-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_mask_vminpd:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; AVX512DQ-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
 ; AVX512DQ-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512DQ-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512DQ-NEXT:    retq
@@ -765,7 +765,7 @@ define <16 x float> @test_mask_vmaxps(<16 x float> %dst, <16 x float> %i,
 define <8 x double> @test_mask_vmaxpd(<8 x double> %dst, <8 x double> %i,
 ; AVX512F-LABEL: test_mask_vmaxpd:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; AVX512F-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
 ; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512F-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
@@ -778,14 +778,14 @@ define <8 x double> @test_mask_vmaxpd(<8 x double> %dst, <8 x double> %i,
 ;
 ; AVX512BW-LABEL: test_mask_vmaxpd:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; AVX512BW-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
 ; AVX512BW-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512BW-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_mask_vmaxpd:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; AVX512DQ-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
 ; AVX512DQ-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512DQ-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512DQ-NEXT:    retq

@@ -149,52 +149,52 @@ body:             |
     %11 = VGBM 0
     %43 = LHIMux 0
     %44 = LARL %const.0
-    %45 = VL64 %44, 0, %noreg :: (load 8 from constant-pool)
+    %45 = VL64 %44, 0, $noreg :: (load 8 from constant-pool)
   
   bb.1:
     ADJCALLSTACKDOWN 0, 0
     %12 = LZDR
-    %f0d = COPY %12
-    CallBRASL &fmod, killed %f0d, undef %f2d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc, implicit-def %f0d
+    $f0d = COPY %12
+    CallBRASL &fmod, killed $f0d, undef $f2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $f0d
     ADJCALLSTACKUP 0, 0
-    KILL killed %f0d
+    KILL killed $f0d
   
   bb.2:
-    %17 = VLGVH %11, %noreg, 0
+    %17 = VLGVH %11, $noreg, 0
     %19 = LHR %17.subreg_l32
     undef %20.subreg_l64 = LGHI 0
     %20 = DSGFR %20, %19
-    %22 = VLGVH %11, %noreg, 3
+    %22 = VLGVH %11, $noreg, 3
     %24 = LHR %22.subreg_l32
     undef %25.subreg_l64 = LGHI 0
     %25 = DSGFR %25, %24
-    %31 = VLGVH %11, %noreg, 1
+    %31 = VLGVH %11, $noreg, 1
     %33 = LHR %31.subreg_l32
     undef %34.subreg_l64 = LGHI 0
     %34 = DSGFR %34, %33
-    %37 = VLGVH %11, %noreg, 2
+    %37 = VLGVH %11, $noreg, 2
     %39 = LHR %37.subreg_l32
     undef %40.subreg_l64 = LGHI 0
     %40 = DSGFR %40, %39
-    CHIMux %43, 0, implicit-def %cc
-    BRC 14, 6, %bb.2, implicit killed %cc
+    CHIMux %43, 0, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit killed $cc
     J %bb.3
   
   bb.3:
-    WFCDB undef %46, %45, implicit-def %cc
-    %48 = IPM implicit killed %cc
-    %48 = AFIMux %48, 268435456, implicit-def dead %cc
+    WFCDB undef %46, %45, implicit-def $cc
+    %48 = IPM implicit killed $cc
+    %48 = AFIMux %48, 268435456, implicit-def dead $cc
     %6 = RISBMux undef %6, %48, 31, 159, 35
-    WFCDB undef %50, %45, implicit-def %cc
-    BRC 15, 6, %bb.1, implicit killed %cc
+    WFCDB undef %50, %45, implicit-def $cc
+    BRC 15, 6, %bb.1, implicit killed $cc
     J %bb.4
   
   bb.4:
     %36 = VLVGP %25.subreg_l64, %25.subreg_l64
-    %36 = VLVGH %36, %20.subreg_l32, %noreg, 0
-    %36 = VLVGH %36, %34.subreg_l32, %noreg, 1
-    dead %36 = VLVGH %36, %40.subreg_l32, %noreg, 2
-    %4 = LG undef %42, 0, %noreg :: (load 8 from `i64* undef`)
+    %36 = VLVGH %36, %20.subreg_l32, $noreg, 0
+    %36 = VLVGH %36, %34.subreg_l32, $noreg, 1
+    dead %36 = VLVGH %36, %40.subreg_l32, $noreg, 2
+    %4 = LG undef %42, 0, $noreg :: (load 8 from `i64* undef`)
     undef %57.subreg_h64 = LLILL 0
     undef %66.subreg_h64 = LLILL 0
     undef %79.subreg_h64 = LLILL 0
@@ -204,61 +204,61 @@ body:             |
   bb.5:
   
   bb.6:
-    %51 = VLGVH undef %7, %noreg, 0
+    %51 = VLGVH undef %7, $noreg, 0
     %53 = LLHRMux %51.subreg_l32
-    %54 = VLGVH undef %1, %noreg, 0
+    %54 = VLGVH undef %1, $noreg, 0
     %57.subreg_l32 = LLHRMux %54.subreg_l32
     %58 = COPY %57
     %58 = DLR %58, %53
-    %60 = VLGVH undef %7, %noreg, 3
+    %60 = VLGVH undef %7, $noreg, 3
     %62 = LLHRMux %60.subreg_l32
-    %63 = VLGVH undef %1, %noreg, 3
+    %63 = VLGVH undef %1, $noreg, 3
     %66.subreg_l32 = LLHRMux %63.subreg_l32
     %67 = COPY %66
     %67 = DLR %67, %62
-    %73 = VLGVH undef %7, %noreg, 1
+    %73 = VLGVH undef %7, $noreg, 1
     %75 = LLHRMux %73.subreg_l32
-    %76 = VLGVH undef %1, %noreg, 1
+    %76 = VLGVH undef %1, $noreg, 1
     %79.subreg_l32 = LLHRMux %76.subreg_l32
     %80 = COPY %79
     %80 = DLR %80, %75
-    %83 = VLGVH undef %7, %noreg, 2
+    %83 = VLGVH undef %7, $noreg, 2
     %85 = LLHRMux %83.subreg_l32
-    %86 = VLGVH undef %1, %noreg, 2
+    %86 = VLGVH undef %1, $noreg, 2
     %89.subreg_l32 = LLHRMux %86.subreg_l32
     %90 = COPY %89
     %90 = DLR %90, %85
-    CHIMux %92, 0, implicit-def %cc
-    BRC 14, 6, %bb.7, implicit killed %cc
+    CHIMux %92, 0, implicit-def $cc
+    BRC 14, 6, %bb.7, implicit killed $cc
     J %bb.6
   
   bb.7:
-    CGHI undef %93, 0, implicit-def %cc
-    %96 = IPM implicit killed %cc
-    CGHI undef %97, 0, implicit-def %cc
-    BRC 14, 6, %bb.6, implicit killed %cc
+    CGHI undef %93, 0, implicit-def $cc
+    %96 = IPM implicit killed $cc
+    CGHI undef %97, 0, implicit-def $cc
+    BRC 14, 6, %bb.6, implicit killed $cc
   
   bb.8:
-    CHIMux %6, 0, implicit-def %cc
+    CHIMux %6, 0, implicit-def $cc
     %10 = LLILL 41639
-    dead %10 = LOCGR %10, %4, 14, 6, implicit killed %cc
-    CHIMux %92, 0, implicit-def %cc
-    BRC 14, 6, %bb.5, implicit killed %cc
+    dead %10 = LOCGR %10, %4, 14, 6, implicit killed $cc
+    CHIMux %92, 0, implicit-def $cc
+    BRC 14, 6, %bb.5, implicit killed $cc
     J %bb.9
   
   bb.9:
     %82 = VLVGP %67.subreg_h64, %67.subreg_h64
-    %82 = VLVGH %82, %58.subreg_hl32, %noreg, 0
-    %82 = VLVGH %82, %80.subreg_hl32, %noreg, 1
-    dead %82 = VLVGH %82, %90.subreg_hl32, %noreg, 2
-    %96 = AFIMux %96, 1879048192, implicit-def dead %cc
-    %96 = SRL %96, %noreg, 31
-    dead %11 = VLVGF %11, %96, %noreg, 1
+    %82 = VLVGH %82, %58.subreg_hl32, $noreg, 0
+    %82 = VLVGH %82, %80.subreg_hl32, $noreg, 1
+    dead %82 = VLVGH %82, %90.subreg_hl32, $noreg, 2
+    %96 = AFIMux %96, 1879048192, implicit-def dead $cc
+    %96 = SRL %96, $noreg, 31
+    dead %11 = VLVGF %11, %96, $noreg, 1
     %100 = LHIMux 0
   
   bb.10:
-    CHIMux %100, 0, implicit-def %cc
-    BRC 14, 6, %bb.10, implicit killed %cc
+    CHIMux %100, 0, implicit-def $cc
+    BRC 14, 6, %bb.10, implicit killed $cc
     J %bb.11
   
   bb.11:

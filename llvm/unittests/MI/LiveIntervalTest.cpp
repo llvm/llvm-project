@@ -313,7 +313,7 @@ TEST(LiveIntervalTest, MoveUpValNos) {
   liveIntervalTest(R"MIR(
     successors: %bb.1, %bb.2
     %0 = IMPLICIT_DEF
-    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
     S_BRANCH %bb.1
   bb.2:
     S_NOP 0, implicit %0
@@ -343,10 +343,10 @@ TEST(LiveIntervalTest, MoveOverUndefUse0) {
 TEST(LiveIntervalTest, MoveOverUndefUse1) {
   // findLastUseBefore() used by handleMoveUp() must ignore undef operands.
   liveIntervalTest(R"MIR(
-    %sgpr0 = IMPLICIT_DEF
+    $sgpr0 = IMPLICIT_DEF
     S_NOP 0
-    S_NOP 0, implicit undef %sgpr0
-    %sgpr0 = IMPLICIT_DEF implicit %sgpr0(tied-def 0)
+    S_NOP 0, implicit undef $sgpr0
+    $sgpr0 = IMPLICIT_DEF implicit $sgpr0(tied-def 0)
 )MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
     testHandleMove(MF, LIS, 3, 1);
   });
@@ -358,7 +358,7 @@ TEST(LiveIntervalTest, SubRegMoveDown) {
   liveIntervalTest(R"MIR(
     successors: %bb.1, %bb.2
     %0 = IMPLICIT_DEF
-    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
     S_BRANCH %bb.1
   bb.2:
     successors: %bb.1
@@ -384,7 +384,7 @@ TEST(LiveIntervalTest, SubRegMoveUp) {
     successors: %bb.1, %bb.2
     undef %0.sub0 = IMPLICIT_DEF
     %0.sub1 = IMPLICIT_DEF
-    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
     S_BRANCH %bb.1
   bb.1:
     S_NOP 0, implicit %0.sub1

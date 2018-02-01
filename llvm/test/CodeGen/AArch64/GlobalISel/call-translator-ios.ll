@@ -11,7 +11,7 @@
 ; CHECK: [[RHS:%[0-9]+]]:_(s8) = G_LOAD [[RHS_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK8]], align 0)
 ; CHECK: [[SUM:%[0-9]+]]:_(s8) = G_ADD [[LHS]], [[RHS]]
 ; CHECK: [[SUM32:%[0-9]+]]:_(s32) = G_SEXT [[SUM]](s8)
-; CHECK: %w0 = COPY [[SUM32]](s32)
+; CHECK: $w0 = COPY [[SUM32]](s32)
 define signext i8 @test_stack_slots([8 x i64], i8 signext %lhs, i8 signext %rhs) {
   %sum = add i8 %lhs, %rhs
   ret i8 %sum
@@ -20,11 +20,11 @@ define signext i8 @test_stack_slots([8 x i64], i8 signext %lhs, i8 signext %rhs)
 ; CHECK-LABEL: name: test_call_stack
 ; CHECK: [[C42:%[0-9]+]]:_(s8) = G_CONSTANT i8 42
 ; CHECK: [[C12:%[0-9]+]]:_(s8) = G_CONSTANT i8 12
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY %sp
+; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[C42_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
 ; CHECK: [[C42_LOC:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[C42_OFFS]](s64)
 ; CHECK: G_STORE [[C42]](s8), [[C42_LOC]](p0) :: (store 1 into stack, align 0)
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY %sp
+; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[C12_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
 ; CHECK: [[C12_LOC:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[C12_OFFS]](s64)
 ; CHECK: G_STORE [[C12]](s8), [[C12_LOC]](p0) :: (store 1 into stack + 1, align 0)
@@ -35,9 +35,9 @@ define void @test_call_stack() {
 }
 
 ; CHECK-LABEL: name: test_128bit_struct
-; CHECK: %x0 = COPY
-; CHECK: %x1 = COPY
-; CHECK: %x2 = COPY
+; CHECK: $x0 = COPY
+; CHECK: $x1 = COPY
+; CHECK: $x2 = COPY
 ; CHECK: BL @take_128bit_struct
 define void @test_128bit_struct([2 x i64]* %ptr) {
   %struct = load [2 x i64], [2 x i64]* %ptr
@@ -46,9 +46,9 @@ define void @test_128bit_struct([2 x i64]* %ptr) {
 }
 
 ; CHECK-LABEL: name: take_128bit_struct
-; CHECK: {{%.*}}:_(p0) = COPY %x0
-; CHECK: {{%.*}}:_(s64) = COPY %x1
-; CHECK: {{%.*}}:_(s64) = COPY %x2
+; CHECK: {{%.*}}:_(p0) = COPY $x0
+; CHECK: {{%.*}}:_(s64) = COPY $x1
+; CHECK: {{%.*}}:_(s64) = COPY $x2
 define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
   store [2 x i64] %in, [2 x i64]* %ptr
   ret void
@@ -59,12 +59,12 @@ define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
 ; CHECK: [[LO:%[0-9]+]]:_(s64) = G_EXTRACT [[STRUCT]](s128), 0
 ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_EXTRACT [[STRUCT]](s128), 64
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY %sp
+; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]]
 ; CHECK: G_STORE [[LO]](s64), [[ADDR]](p0) :: (store 8 into stack, align 0)
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY %sp
+; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]]
 ; CHECK: G_STORE [[HI]](s64), [[ADDR]](p0) :: (store 8 into stack + 8, align 0)

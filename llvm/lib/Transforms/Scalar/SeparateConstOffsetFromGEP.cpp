@@ -1071,6 +1071,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     NewGEP = GetElementPtrInst::Create(GEP->getResultElementType(), NewGEP,
                                        ConstantInt::get(IntPtrTy, Index, true),
                                        GEP->getName(), GEP);
+    NewGEP->copyMetadata(*GEP);
     // Inherit the inbounds attribute of the original GEP.
     cast<GetElementPtrInst>(NewGEP)->setIsInBounds(GEPWasInBounds);
   } else {
@@ -1095,6 +1096,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
         Type::getInt8Ty(GEP->getContext()), NewGEP,
         ConstantInt::get(IntPtrTy, AccumulativeByteOffset, true), "uglygep",
         GEP);
+    NewGEP->copyMetadata(*GEP);
     // Inherit the inbounds attribute of the original GEP.
     cast<GetElementPtrInst>(NewGEP)->setIsInBounds(GEPWasInBounds);
     if (GEP->getType() != I8PtrTy)

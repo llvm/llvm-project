@@ -15,12 +15,12 @@ registers:
   - { id: 0, class: gr32 }
 liveins:
   # CHECK: [[@LINE+1]]:34: expected a virtual register
-  - { reg: '%edi', virtual-reg: '%edi' }
+  - { reg: '$edi', virtual-reg: '$edi' }
 body: |
   bb.0.body:
-    liveins: %edi
+    liveins: $edi
 
-    %0 = COPY %edi
-    %eax = COPY %0
-    RETQ %eax
+    %0 = COPY $edi
+    $eax = COPY %0
+    RETQ $eax
 ...

@@ -15,16 +15,16 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
   # CHECK: - { id: 1, class: gr32, preferred-register: '%0' }
-  # CHECK: - { id: 2, class: gr32, preferred-register: '%edi' }
+  # CHECK: - { id: 2, class: gr32, preferred-register: '$edi' }
   - { id: 1, class: gr32, preferred-register: '%0' }
-  - { id: 2, class: gr32, preferred-register: '%edi' }
+  - { id: 2, class: gr32, preferred-register: '$edi' }
 body: |
   bb.0.body:
-    liveins: %edi, %esi
+    liveins: $edi, $esi
 
-    %1 = COPY %esi
-    %2 = COPY %edi
-    %2 = IMUL32rr %2, %1, implicit-def dead %eflags
-    %eax = COPY %2
-    RETQ killed %eax
+    %1 = COPY $esi
+    %2 = COPY $edi
+    %2 = IMUL32rr %2, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RETQ killed $eax
 ...

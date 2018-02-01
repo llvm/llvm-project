@@ -10,7 +10,7 @@ define i16 @test1(i16 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %y = lshr i16 %x, 1
   ret i16 %y
@@ -43,7 +43,7 @@ define i16 @test4(i16 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %y = and i16 %x, 255
   %z = lshr i16 %y, 1
@@ -55,7 +55,7 @@ define i16 @test5(i16 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    shrl $9, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %y = lshr i16 %x, 9
   ret i16 %y
@@ -76,7 +76,7 @@ define i32 @test6(i32 %x) {
 define i32 @test7(i32 %x) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $65534, %edi # imm = 0xFFFE
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    retq

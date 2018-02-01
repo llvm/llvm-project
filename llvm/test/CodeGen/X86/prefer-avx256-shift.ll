@@ -83,10 +83,10 @@ define <16 x i16> @var_shl_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX512BWNOVL-LABEL: var_shl_v16i16:
 ; AVX512BWNOVL:       # %bb.0:
-; AVX512BWNOVL-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
-; AVX512BWNOVL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512BWNOVL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512BWNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BWNOVL-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
-; AVX512BWNOVL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512BWNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BWNOVL-NEXT:    retq
   %shift = shl <16 x i16> %a, %b
   ret <16 x i16> %shift
@@ -141,7 +141,7 @@ define <16 x i8> @var_shl_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512BWNOVL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX512BWNOVL-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
 ; AVX512BWNOVL-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512BWNOVL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BWNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BWNOVL-NEXT:    vzeroupper
 ; AVX512BWNOVL-NEXT:    retq
   %shift = shl <16 x i8> %a, %b
@@ -227,10 +227,10 @@ define <16 x i16> @var_lshr_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX512BWNOVL-LABEL: var_lshr_v16i16:
 ; AVX512BWNOVL:       # %bb.0:
-; AVX512BWNOVL-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
-; AVX512BWNOVL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512BWNOVL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512BWNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BWNOVL-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
-; AVX512BWNOVL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512BWNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BWNOVL-NEXT:    retq
   %shift = lshr <16 x i16> %a, %b
   ret <16 x i16> %shift
@@ -286,7 +286,7 @@ define <16 x i8> @var_lshr_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512BWNOVL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX512BWNOVL-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
 ; AVX512BWNOVL-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512BWNOVL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BWNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BWNOVL-NEXT:    vzeroupper
 ; AVX512BWNOVL-NEXT:    retq
   %shift = lshr <16 x i8> %a, %b
@@ -396,10 +396,10 @@ define <16 x i16> @var_ashr_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX512BWNOVL-LABEL: var_ashr_v16i16:
 ; AVX512BWNOVL:       # %bb.0:
-; AVX512BWNOVL-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
-; AVX512BWNOVL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512BWNOVL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512BWNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BWNOVL-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
-; AVX512BWNOVL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512BWNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BWNOVL-NEXT:    retq
   %shift = ashr <16 x i16> %a, %b
   ret <16 x i16> %shift
@@ -467,7 +467,7 @@ define <16 x i8> @var_ashr_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512BWNOVL-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; AVX512BWNOVL-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
 ; AVX512BWNOVL-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512BWNOVL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BWNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BWNOVL-NEXT:    vzeroupper
 ; AVX512BWNOVL-NEXT:    retq
   %shift = ashr <16 x i8> %a, %b

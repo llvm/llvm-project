@@ -317,6 +317,7 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
       // just return the source.  There's no need to insert it because it is not
       // new.
       if (I->getOperand(0)->getType() == Ty) {
+        assert(!isa<TruncInst>(I) && "Cannot reach here with TruncInst");
         NodeInfo.NewValue = I->getOperand(0);
         continue;
       }
@@ -326,11 +327,18 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
                                   Opc == Instruction::SExt);
 
       // Update Worklist entries with new value if needed.
-      if (auto *NewCI = dyn_cast<TruncInst>(Res)) {
-        auto Entry = find(Worklist, I);
-        if (Entry != Worklist.end())
+      // There are three possible changes to the Worklist:
+      // 1. Update Old-TruncInst -> New-TruncInst.
+      // 2. Remove Old-TruncInst (if New node is not TruncInst).
+      // 3. Add New-TruncInst (if Old node was not TruncInst).
+      auto Entry = find(Worklist, I);
+      if (Entry != Worklist.end()) {
+        if (auto *NewCI = dyn_cast<TruncInst>(Res))
           *Entry = NewCI;
-      }
+        else
+          Worklist.erase(Entry);
+      } else if (auto *NewCI = dyn_cast<TruncInst>(Res))
+          Worklist.push_back(NewCI);
       break;
     }
     case Instruction::Add:

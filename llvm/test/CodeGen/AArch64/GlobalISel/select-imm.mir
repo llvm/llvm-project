@@ -20,13 +20,13 @@ registers:
 
 body:             |
   bb.0:
-    liveins: %w0, %w1
+    liveins: $w0, $w1
 
     ; CHECK-LABEL: name: imm_s32_gpr
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm -1234
-    ; CHECK: %w0 = COPY [[MOVi32imm]]
+    ; CHECK: $w0 = COPY [[MOVi32imm]]
     %0(s32) = G_CONSTANT i32 -1234
-    %w0 = COPY %0(s32)
+    $w0 = COPY %0(s32)
 ...
 
 ---
@@ -40,11 +40,11 @@ registers:
 
 body:             |
   bb.0:
-    liveins: %w0, %w1
+    liveins: $w0, $w1
 
     ; CHECK-LABEL: name: imm_s64_gpr
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 1234
-    ; CHECK: %x0 = COPY [[MOVi64imm]]
+    ; CHECK: $x0 = COPY [[MOVi64imm]]
     %0(s64) = G_CONSTANT i64 1234
-    %x0 = COPY %0(s64)
+    $x0 = COPY %0(s64)
 ...

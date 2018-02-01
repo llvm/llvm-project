@@ -15,9 +15,9 @@
 name: foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi'}
+  - { reg: '$edi'}
 body:            |
   bb.0.entry:
-    liveins: %edi
+    liveins: $edi
     ; CHECK-NOT: PATCHABLE_FUNCTION_ENTER
 ...

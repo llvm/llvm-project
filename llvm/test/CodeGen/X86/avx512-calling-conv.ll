@@ -67,7 +67,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-NEXT:    callq _func8xi1
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -95,7 +95,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    .cfi_def_cfa_offset 16
 ; KNL_X32-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; KNL_X32-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
 ; KNL_X32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL_X32-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -195,7 +195,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-NEXT:    callq _func8xi1
 ; KNL-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    popq %rax
@@ -219,7 +219,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    .cfi_def_cfa_offset 16
 ; KNL_X32-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; KNL_X32-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
 ; KNL_X32-NEXT:    vandps LCPI7_0, %xmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
@@ -378,21 +378,21 @@ define <1 x i1> @test13(<1 x i1>* %foo) {
 ; KNL-LABEL: test13:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movzbl (%rdi), %eax
-; KNL-NEXT:    ## kill: def %al killed %al killed %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test13:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovb (%rdi), %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: def %al killed %al killed %eax
+; SKX-NEXT:    ## kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test13:
 ; KNL_X32:       ## %bb.0:
 ; KNL_X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_X32-NEXT:    movzbl (%eax), %eax
-; KNL_X32-NEXT:    ## kill: def %al killed %al killed %eax
+; KNL_X32-NEXT:    ## kill: def $al killed $al killed $eax
 ; KNL_X32-NEXT:    retl
   %bar = load <1 x i1>, <1 x i1>* %foo
   ret <1 x i1> %bar

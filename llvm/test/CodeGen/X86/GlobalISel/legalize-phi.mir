@@ -144,10 +144,10 @@ body:             |
   ; ALL-LABEL: name: test_i1
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY $edx
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
@@ -158,16 +158,16 @@ body:             |
   ; ALL: bb.2.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s8) = G_PHI [[TRUNC1]](s8), %bb.1, [[TRUNC]](s8), %bb.0
   ; ALL:   [[COPY3:%[0-9]+]]:_(s8) = COPY [[PHI]](s8)
-  ; ALL:   %al = COPY [[COPY3]](s8)
-  ; ALL:   RET 0, implicit %al
+  ; ALL:   $al = COPY [[COPY3]](s8)
+  ; ALL:   RET 0, implicit $al
   bb.1.entry:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0:_(s32) = COPY %edi
-    %3:_(s32) = COPY %esi
+    %0:_(s32) = COPY $edi
+    %3:_(s32) = COPY $esi
     %1:_(s1) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY %edx
+    %4:_(s32) = COPY $edx
     %2:_(s1) = G_TRUNC %4(s32)
     %5:_(s32) = G_CONSTANT i32 0
     %6:_(s1) = G_ICMP intpred(sgt), %0(s32), %5
@@ -180,8 +180,8 @@ body:             |
   bb.3.cond.end:
     %7:_(s1) = G_PHI %2(s1), %bb.2, %1(s1), %bb.1
     %8:_(s8) = G_ANYEXT %7(s1)
-    %al = COPY %8(s8)
-    RET 0, implicit %al
+    $al = COPY %8(s8)
+    RET 0, implicit $al
 
 ...
 ---
@@ -210,11 +210,11 @@ body:             |
   ; ALL-LABEL: name: test_i8
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
   ; ALL:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY $edx
   ; ALL:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
@@ -223,16 +223,16 @@ body:             |
   ; ALL:   successors: %bb.2(0x80000000)
   ; ALL: bb.2.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s8) = G_PHI [[TRUNC1]](s8), %bb.1, [[TRUNC]](s8), %bb.0
-  ; ALL:   %al = COPY [[PHI]](s8)
-  ; ALL:   RET 0, implicit %al
+  ; ALL:   $al = COPY [[PHI]](s8)
+  ; ALL:   RET 0, implicit $al
   bb.1.entry:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0:_(s32) = COPY %edi
-    %3:_(s32) = COPY %esi
+    %0:_(s32) = COPY $edi
+    %3:_(s32) = COPY $esi
     %1:_(s8) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY %edx
+    %4:_(s32) = COPY $edx
     %2:_(s8) = G_TRUNC %4(s32)
     %5:_(s32) = G_CONSTANT i32 0
     %6:_(s1) = G_ICMP intpred(sgt), %0(s32), %5
@@ -244,8 +244,8 @@ body:             |
 
   bb.3.cond.end:
     %7:_(s8) = G_PHI %2(s8), %bb.2, %1(s8), %bb.1
-    %al = COPY %7(s8)
-    RET 0, implicit %al
+    $al = COPY %7(s8)
+    RET 0, implicit $al
 
 ...
 ---
@@ -274,11 +274,11 @@ body:             |
   ; ALL-LABEL: name: test_i16
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
   ; ALL:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY $edx
   ; ALL:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
@@ -287,16 +287,16 @@ body:             |
   ; ALL:   successors: %bb.2(0x80000000)
   ; ALL: bb.2.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[TRUNC1]](s16), %bb.1, [[TRUNC]](s16), %bb.0
-  ; ALL:   %ax = COPY [[PHI]](s16)
-  ; ALL:   RET 0, implicit %ax
+  ; ALL:   $ax = COPY [[PHI]](s16)
+  ; ALL:   RET 0, implicit $ax
   bb.1.entry:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0:_(s32) = COPY %edi
-    %3:_(s32) = COPY %esi
+    %0:_(s32) = COPY $edi
+    %3:_(s32) = COPY $esi
     %1:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY %edx
+    %4:_(s32) = COPY $edx
     %2:_(s16) = G_TRUNC %4(s32)
     %5:_(s32) = G_CONSTANT i32 0
     %6:_(s1) = G_ICMP intpred(sgt), %0(s32), %5
@@ -308,8 +308,8 @@ body:             |
 
   bb.3.cond.end:
     %7:_(s16) = G_PHI %2(s16), %bb.2, %1(s16), %bb.1
-    %ax = COPY %7(s16)
-    RET 0, implicit %ax
+    $ax = COPY %7(s16)
+    RET 0, implicit $ax
 
 ...
 ---
@@ -336,10 +336,10 @@ body:             |
   ; ALL-LABEL: name: test_i32
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY $edx
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1
@@ -351,15 +351,15 @@ body:             |
   ; ALL:   successors: %bb.3(0x80000000)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY1]](s32), %bb.1, [[COPY2]](s32), %bb.2
-  ; ALL:   %eax = COPY [[PHI]](s32)
-  ; ALL:   RET 0, implicit %eax
+  ; ALL:   $eax = COPY [[PHI]](s32)
+  ; ALL:   RET 0, implicit $eax
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0(s32) = COPY %edi
-    %1(s32) = COPY %esi
-    %2(s32) = COPY %edx
+    %0(s32) = COPY $edi
+    %1(s32) = COPY $esi
+    %2(s32) = COPY $edx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -376,8 +376,8 @@ body:             |
 
   bb.4.cond.end:
     %5(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
-    %eax = COPY %5(s32)
-    RET 0, implicit %eax
+    $eax = COPY %5(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -404,10 +404,10 @@ body:             |
   ; ALL-LABEL: name: test_i64
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; ALL:   liveins: %edi, %rdx, %rsi
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY %rsi
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s64) = COPY %rdx
+  ; ALL:   liveins: $edi, $rdx, $rsi
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s64) = COPY $rdx
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1
@@ -419,15 +419,15 @@ body:             |
   ; ALL:   successors: %bb.3(0x80000000)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY1]](s64), %bb.1, [[COPY2]](s64), %bb.2
-  ; ALL:   %rax = COPY [[PHI]](s64)
-  ; ALL:   RET 0, implicit %rax
+  ; ALL:   $rax = COPY [[PHI]](s64)
+  ; ALL:   RET 0, implicit $rax
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %rdx, %rsi
+    liveins: $edi, $rdx, $rsi
 
-    %0(s32) = COPY %edi
-    %1(s64) = COPY %rsi
-    %2(s64) = COPY %rdx
+    %0(s32) = COPY $edi
+    %1(s64) = COPY $rsi
+    %2(s64) = COPY $rdx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -444,8 +444,8 @@ body:             |
 
   bb.4.cond.end:
     %5(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
-    %rax = COPY %5(s64)
-    RET 0, implicit %rax
+    $rax = COPY %5(s64)
+    RET 0, implicit $rax
 
 ...
 ---
@@ -475,10 +475,10 @@ body:             |
   ; ALL-LABEL: name: test_float
   ; ALL: bb.0.{{[a-zA-Z0-9]+}}:
   ; ALL:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; ALL:   liveins: %edi, %xmm0, %xmm1
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %xmm0
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %xmm1
+  ; ALL:   liveins: $edi, $xmm0, $xmm1
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY $xmm0
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY $xmm1
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1
@@ -490,15 +490,15 @@ body:             |
   ; ALL:   successors: %bb.3(0x80000000)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY1]](s32), %bb.1, [[COPY2]](s32), %bb.2
-  ; ALL:   %xmm0 = COPY [[PHI]](s32)
-  ; ALL:   RET 0, implicit %xmm0
+  ; ALL:   $xmm0 = COPY [[PHI]](s32)
+  ; ALL:   RET 0, implicit $xmm0
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %xmm0, %xmm1
+    liveins: $edi, $xmm0, $xmm1
 
-    %0(s32) = COPY %edi
-    %1(s32) = COPY %xmm0
-    %2(s32) = COPY %xmm1
+    %0(s32) = COPY $edi
+    %1(s32) = COPY $xmm0
+    %2(s32) = COPY $xmm1
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -515,8 +515,8 @@ body:             |
 
   bb.4.cond.end:
     %5(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
-    %xmm0 = COPY %5(s32)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %5(s32)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -543,10 +543,10 @@ body:             |
   ; ALL-LABEL: name: test_double
   ; ALL: bb.0.{{[a-zA-Z0-9]+}}:
   ; ALL:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; ALL:   liveins: %edi, %xmm0, %xmm1
-  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY %xmm0
-  ; ALL:   [[COPY2:%[0-9]+]]:_(s64) = COPY %xmm1
+  ; ALL:   liveins: $edi, $xmm0, $xmm1
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s64) = COPY $xmm1
   ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1
@@ -558,15 +558,15 @@ body:             |
   ; ALL:   successors: %bb.3(0x80000000)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY1]](s64), %bb.1, [[COPY2]](s64), %bb.2
-  ; ALL:   %xmm0 = COPY [[PHI]](s64)
-  ; ALL:   RET 0, implicit %xmm0
+  ; ALL:   $xmm0 = COPY [[PHI]](s64)
+  ; ALL:   RET 0, implicit $xmm0
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %xmm0, %xmm1
+    liveins: $edi, $xmm0, $xmm1
 
-    %0(s32) = COPY %edi
-    %1(s64) = COPY %xmm0
-    %2(s64) = COPY %xmm1
+    %0(s32) = COPY $edi
+    %1(s64) = COPY $xmm0
+    %2(s64) = COPY $xmm1
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -583,7 +583,7 @@ body:             |
 
   bb.4.cond.end:
     %5(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
-    %xmm0 = COPY %5(s64)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %5(s64)
+    RET 0, implicit $xmm0
 
 ...

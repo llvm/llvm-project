@@ -51,8 +51,7 @@ define void @fail(i16 %a, <2 x i8> %b) {
 ; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    cmpb $123, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    sete %al
-; CHECK-X86-NEXT:    andl $263, %ecx ## imm = 0x107
-; CHECK-X86-NEXT:    testw %cx, %cx
+; CHECK-X86-NEXT:    testl $263, %ecx ## imm = 0x107
 ; CHECK-X86-NEXT:    je LBB1_2
 ; CHECK-X86-NEXT:  ## %bb.1:
 ; CHECK-X86-NEXT:    testb %al, %al

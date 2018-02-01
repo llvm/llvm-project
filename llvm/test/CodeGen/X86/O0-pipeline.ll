@@ -59,8 +59,7 @@
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
-; CHECK-NEXT:     X86 Retpoline Thunks
-; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       X86 Retpoline Thunks
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       MachineDominator Tree Construction

@@ -16,10 +16,10 @@
 name: foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi'}
+  - { reg: '$edi'}
 body:            |
   bb.0:
-    liveins: %edi
+    liveins: $edi
     ; CHECK: PATCHABLE_FUNCTION_ENTER
     RETQ
     ; CHECK-NEXT: PATCHABLE_RET

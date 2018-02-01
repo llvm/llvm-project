@@ -33,13 +33,13 @@
 ; ASM:         callq   vardef
 ; ASM:         movl    %eax, %esi
 ; ASM: [[p_b1:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: p <- %esi
+; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   barrier
 ; ASM:         movl    %esi, %ecx
 ; ASM:         testl   %eax, %eax
 ; ASM:         jne     .LBB0_5
 ; ASM: # %bb.2:                                 # %if.end
-; ASM:         #DEBUG_VALUE: p <- %esi
+; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   use
 ; ASM:         jmp     .LBB0_4
 ; ASM: [[p_e1:\.Ltmp[0-9]+]]:
@@ -52,7 +52,7 @@
 ; ASM:         retq
 ; ASM: .LBB0_5:                                # %if.then4
 ; ASM: [[p_b2:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: p <- %esi
+; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   call_noreturn
 ; ASM:         ud2
 ; ASM: .Lfunc_end0:

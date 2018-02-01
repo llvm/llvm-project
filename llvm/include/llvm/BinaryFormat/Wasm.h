@@ -65,10 +65,14 @@ struct WasmInitExpr {
   } Value;
 };
 
-struct WasmGlobal {
-  uint32_t Index;
+struct WasmGlobalType {
   int32_t Type;
   bool Mutable;
+};
+
+struct WasmGlobal {
+  uint32_t Index;
+  WasmGlobalType Type;
   WasmInitExpr InitExpr;
 };
 
@@ -78,7 +82,7 @@ struct WasmImport {
   uint32_t Kind;
   union {
     uint32_t SigIndex;
-    WasmGlobal Global;
+    WasmGlobalType Global;
     WasmTable Table;
     WasmLimits Memory;
   };

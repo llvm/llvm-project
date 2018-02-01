@@ -12,7 +12,7 @@ name:            test_vaarg
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_vaarg
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY %x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[LOAD]], [[C]](s64)
@@ -28,7 +28,7 @@ body: |
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_GEP [[PTR_MASK]], [[C3]](s64)
     ; CHECK: G_STORE [[GEP3]](p0), [[COPY]](p0) :: (store 8)
-    %0:_(p0) = COPY %x0
+    %0:_(p0) = COPY $x0
 
     %1:_(s8) = G_VAARG %0(p0), 1
 

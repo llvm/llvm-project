@@ -713,8 +713,8 @@ Error WasmObjectFile::parseGlobalSection(const uint8_t *Ptr, const uint8_t *End)
   while (Count--) {
     wasm::WasmGlobal Global;
     Global.Index = NumImportedGlobals + Globals.size();
-    Global.Type = readVarint7(Ptr);
-    Global.Mutable = readVaruint1(Ptr);
+    Global.Type.Type = readVarint7(Ptr);
+    Global.Type.Mutable = readVaruint1(Ptr);
     if (Error Err = readInitExpr(Global.InitExpr, Ptr))
       return Err;
     Globals.push_back(Global);
@@ -883,9 +883,9 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   const WasmSymbol &Sym = getWasmSymbol(Symb);
 
   DEBUG(dbgs() << "getSymbolFlags: ptr=" << &Sym << " " << Sym << "\n");
-  if (Sym.isWeak())
+  if (Sym.isBindingWeak())
     Result |= SymbolRef::SF_Weak;
-  if (!Sym.isLocal())
+  if (!Sym.isBindingLocal())
     Result |= SymbolRef::SF_Global;
   if (Sym.isHidden())
     Result |= SymbolRef::SF_Hidden;

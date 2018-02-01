@@ -186,6 +186,7 @@ def S_XOR_B64_term : PseudoInstSI<(outs SReg_64:$dst),
   let SALU = 1;
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
+  let Defs = [SCC];
 }
 
 def S_ANDN2_B64_term : PseudoInstSI<(outs SReg_64:$dst),

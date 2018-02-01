@@ -5,16 +5,16 @@ body:             |
   bb.0:
 
   bb.1:
-    Bcc %bb.3, 0, %cpsr
+    Bcc %bb.3, 0, $cpsr
 
   bb.2:
 
   bb.3:
-    Bcc %bb.1, 0, %cpsr
+    Bcc %bb.1, 0, $cpsr
 
   bb.4:
   successors: %bb.1
-    tBRIND %r1, 14, _
+    tBRIND $r1, 14, _
 ...
 
 # We should only get bb.1 as successor to bb.1. No zero percent probability
@@ -27,7 +27,7 @@ body:             |
 # CHECK:   bb.1:
 # CHECK:     successors: %bb.1(0x80000000)
 # CHECK-NOT: %bb.2(0x00000000)
-# CHECK:     tBRIND %r1, 1, %cpsr
+# CHECK:     tBRIND $r1, 1, $cpsr
 # CHECK:     B %bb.1
 
 #CHECK-NOT: bb.2:
