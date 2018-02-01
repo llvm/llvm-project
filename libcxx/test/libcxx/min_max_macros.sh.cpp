@@ -237,8 +237,6 @@ TEST_MACROS();
 #if __cplusplus >= 201103L
 #include <experimental/algorithm>
 TEST_MACROS();
-#include <experimental/any>
-TEST_MACROS();
 #include <experimental/chrono>
 TEST_MACROS();
 #include <experimental/deque>

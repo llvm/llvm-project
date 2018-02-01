@@ -493,10 +493,6 @@ module std [system] {
       header "experimental/algorithm"
       export *
     }
-    module any {
-      header "experimental/any"
-      export *
-    }
     module chrono {
       header "experimental/chrono"
       export *
