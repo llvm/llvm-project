@@ -22,7 +22,6 @@
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -967,6 +966,13 @@ void RedundantExpressionCheck::checkRelationalExpr(
   }
 }
 
+unsigned intLog2(uint64_t X) {
+  unsigned Result = 0;
+  while (X >>= 1)
+    ++Result;
+  return Result;
+}
+
 void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binary")) {
     // If the expression's constants are macros, check whether they are
@@ -1043,11 +1049,11 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     // If ShiftingConst is shifted left with more bits than the position of the
     // leftmost 1 in the bit representation of AndValue, AndConstant is
     // ineffective.
-    if (floor(log2(AndValue.getExtValue())) >= ShiftingValue)
+    if (intLog2(AndValue.getExtValue()) >= ShiftingValue)
       return;
 
     auto Diag = diag(BinaryAndExpr->getOperatorLoc(),
-                     "ineffective bitwise and operation.");
+                     "ineffective bitwise and operation");
   }
 
   // Check for the following bound expressions:

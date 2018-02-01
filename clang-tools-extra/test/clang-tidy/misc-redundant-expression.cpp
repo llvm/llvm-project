@@ -674,7 +674,7 @@ int operatorConfusion(int X, int Y, long Z)
 {
   // Ineffective & expressions.
   Y = (Y << 8) & 0xff;
-  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: ineffective bitwise and operation.
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: ineffective bitwise and operation
   Y = (Y << 12) & 0xfff;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: ineffective bitwise and
   Y = (Y << 12) & 0xff;
@@ -686,13 +686,18 @@ int operatorConfusion(int X, int Y, long Z)
 
   // Tests for unmatched types
   Z = (Z << 8) & 0xff;
-  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: ineffective bitwise and operation.
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: ineffective bitwise and operation
   Y = (Y << 12) & 0xfffL;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: ineffective bitwise and
   Z = (Y << 12) & 0xffLL;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: ineffective bitwise and
   Y = (Z << 8L) & 0x77L;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: ineffective bitwise and
+
+  Y = (Y << 8) & 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: ineffective bitwise and
+
+  Y = (Y << 8) & -1;
 
   // Effective expressions. Do not check.
   Y = (Y << 4) & 0x15;
