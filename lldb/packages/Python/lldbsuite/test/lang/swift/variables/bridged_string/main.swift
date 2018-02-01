@@ -13,12 +13,12 @@ import Foundation
 
 func main()
 {
-	var s1 = "Hello world"
-	var s2 = "ΞΕΛΛΘ"
-	var s3 = s1 as NSString
-	var s4 = s2 as NSString
-	var s5 = "abc" as NSString
-	var s6 = String(s5)
+	let s1 = "Hello world"
+	let s2 = "ΞΕΛΛΘ"
+	let s3 = s1 as NSString
+	let s4 = s2 as NSString
+	let s5 = "abc" as NSString
+	let s6 = String(s5)
 	print(s1) // Set breakpoint here
 }
 
