@@ -129,12 +129,11 @@ entry:
 	store i32 %9, i32* %old
 	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
-  ; CHECK: bic
-  ; CHECK-NOT: cmp
+  ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_max_4
   ; CHECK-T1-M0: bl ___sync_fetch_and_max_4
-  ; CHECK-BAREMETAL: bic
+  ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %10 = atomicrmw max i32* %val2, i32 0 monotonic
 	store i32 %10, i32* %old

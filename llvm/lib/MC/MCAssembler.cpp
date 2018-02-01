@@ -868,10 +868,14 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
   SmallString<8> &Data = LF.getContents();
   Data.clear();
   raw_svector_ostream OSE(Data);
+  // The compiler can generate EH table assembly that is impossible to assemble
+  // without either adding padding to an LEB fragment or adding extra padding
+  // to a later alignment fragment. To accommodate such tables, relaxation can
+  // only increase an LEB fragment size here, not decrease it. See PR35809.
   if (LF.isSigned())
-    encodeSLEB128(Value, OSE);
+    encodeSLEB128(Value, OSE, OldSize);
   else
-    encodeULEB128(Value, OSE);
+    encodeULEB128(Value, OSE, OldSize);
   return OldSize != LF.getContents().size();
 }
 

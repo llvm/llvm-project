@@ -1,7 +1,0 @@
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
-# RUN: lld-link -out:%t.dll -dll %t.obj
-# RUN: touch -t 198002011200.00 %t.lib
-# RUN: lld-link -out:%t.dll -dll %t.obj
-# RUN: ls -l %t.lib | FileCheck --check-prefix=CHECK %s
-
-# CHECK: {{Feb 1 1980|1980-02-01}}

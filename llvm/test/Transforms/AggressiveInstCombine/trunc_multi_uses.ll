@@ -212,3 +212,59 @@ define void @multi_use_vec_sub(<2 x i32> %X, <2 x i32> %Y) {
   call <2 x i32> @use64_vec(<2 x i64> %A2)
   ret void
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; These tests check cases where expression dag post-dominated by TruncInst
+;; contains TruncInst leaf or ZEXT/SEXT leafs which turn into TruncInst leaves.
+;; Check that both expressions are reduced and no TruncInst remains or (was
+;; generated).
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Notice that there are two expression patterns below:
+; 1. %T2->%C2->(%B2->(%T1, 15), %B2->(%T1, 15))
+; 2. %T1`->%C1->(%B1->(%A1, 15), %B1->(%A1, 15))
+;    (where %T1` is the reduced node of %T1 into trunc instruction)
+define void @trunc_as_a_leaf(i32 %X) {
+; CHECK-LABEL: @trunc_as_a_leaf(
+; CHECK-NEXT:    [[B1:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[C1:%.*]] = mul i32 [[B1]], [[B1]]
+; CHECK-NEXT:    [[B2:%.*]] = add i32 [[C1]], 15
+; CHECK-NEXT:    [[C2:%.*]] = mul i32 [[B2]], [[B2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use32(i32 [[C2]])
+; CHECK-NEXT:    ret void
+;
+  %A1 = zext i32 %X to i64
+  %B1 = add i64 %A1, 15
+  %C1 = mul i64 %B1, %B1
+  %T1 = trunc i64 %C1 to i48 ; leaf trunc
+  %B2 = add i48 %T1, 15
+  %C2 = mul i48 %B2, %B2
+  %T2 = trunc i48 %C2 to i32
+  call i32 @use32(i32 %T2)
+  ret void
+}
+
+; Notice that there are two expression patterns below:
+; 1. %T2->%C2->(%B2->(%T1, 15), %B2->(%T1, 15))
+; 2. %T1`->%C1->(%B1->(%A1, 15), %B1->(%A1, 15))
+;    (where %T1` is the reduced node of %T1 into trunc instruction)
+define void @zext_as_a_leaf(i16 %X) {
+; CHECK-LABEL: @zext_as_a_leaf(
+; CHECK-NEXT:    [[A1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[B1:%.*]] = add i32 [[A1]], 15
+; CHECK-NEXT:    [[C1:%.*]] = mul i32 [[B1]], [[B1]]
+; CHECK-NEXT:    [[B2:%.*]] = add i32 [[C1]], 15
+; CHECK-NEXT:    [[C2:%.*]] = mul i32 [[B2]], [[B2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use32(i32 [[C2]])
+; CHECK-NEXT:    ret void
+;
+  %A1 = zext i16 %X to i48
+  %B1 = add i48 %A1, 15
+  %C1 = mul i48 %B1, %B1
+  %T1 = zext i48 %C1 to i64 ; leaf zext, which will turn into trunc
+  %B2 = add i64 %T1, 15
+  %C2 = mul i64 %B2, %B2
+  %T2 = trunc i64 %C2 to i32
+  call i32 @use32(i32 %T2)
+  ret void
+}
