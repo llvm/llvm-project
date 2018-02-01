@@ -4,8 +4,8 @@
 # RUN: ld.lld %t -o %t2 --icf=all --verbose 2>&1 | FileCheck %s
 # RUN: llvm-objdump -t %t2 | FileCheck -check-prefix=ALIGN %s
 
-# CHECK: selected .text.f1
-# CHECK:   removed .text.f2
+# CHECK: selected section '.text.f1' from file [[T:'.*']]
+# CHECK:   removing identical section '.text.f2' from file [[T]]
 
 # ALIGN: 0000000000201000 .text 00000000 _start
 # ALIGN: 0000000000201100 .text 00000000 f1

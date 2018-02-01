@@ -179,6 +179,7 @@ struct Configuration {
   bool AppContainer = false;
   bool MinGW = false;
   bool WarnLocallyDefinedImported = true;
+  bool Incremental = true;
 };
 
 extern Configuration *Config;

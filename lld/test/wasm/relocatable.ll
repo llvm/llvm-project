@@ -38,34 +38,34 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
-; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           puts
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:         SigIndex:        0
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           foo_import
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         SigIndex:        2
+; CHECK-NEXT:         SigIndex:        1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           bar_import
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         SigIndex:        2
+; CHECK-NEXT:         SigIndex:        1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           data_import
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 2, 2 ]
+; CHECK-NEXT:     FunctionTypes:   [ 2, 1, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC

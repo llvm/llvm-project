@@ -31,7 +31,7 @@
 #define PNOR 0x100
 #define PINF 0x200
 
-#if (defined __AMDGCN__ | defined __R600__) & !defined __HAS_FMAF__
+#if (defined __AMDGCN__ || defined __R600__) && !defined __HAS_FMAF__
 #define HAVE_HW_FMA32() (0)
 #else
 #define HAVE_HW_FMA32() (1)
