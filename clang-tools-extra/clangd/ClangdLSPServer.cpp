@@ -44,7 +44,8 @@ public:
     llvm::SmallVector<char, 16> Path(Body.begin(), Body.end());
     path::native(Path);
     auto Err = fs::make_absolute(TestDir, Path);
-    assert(!Err);
+    if (Err)
+      llvm_unreachable("Failed to make absolute path in test scheme.");
     return std::string(Path.begin(), Path.end());
   }
 

@@ -200,7 +200,6 @@ class MockGDBServer:
     _receivedData = None
     _receivedDataOffset = None
     _shouldSendAck = True
-    _isExpectingAck = False
 
     def __init__(self, port = 0):
         self.responder = MockGDBServerResponder()
@@ -237,7 +236,6 @@ class MockGDBServer:
         except:
             return
         self._shouldSendAck = True
-        self._isExpectingAck = False
         self._receivedData = ""
         self._receivedDataOffset = 0
         data = None
@@ -329,21 +327,15 @@ class MockGDBServer:
 
     def _handlePacket(self, packet):
         if packet is self.PACKET_ACK:
-            # If we are expecting an ack, we'll just ignore it because there's
-            # nothing else we're supposed to do.
-            #
-            # However, if we aren't expecting an ack, it's likely the initial
-            # ack that lldb client sends, and observations of real servers
-            # suggest we're supposed to ack back.
-            if not self._isExpectingAck:
-                self._client.sendall('+')
+            # Ignore ACKs from the client. For the future, we can consider
+            # adding validation code to make sure the client only sends ACKs
+            # when it's supposed to.
             return
         response = ""
         # We'll handle the ack stuff here since it's not something any of the
         # tests will be concerned about, and it'll get turned off quicly anyway.
         if self._shouldSendAck:
             self._client.sendall('+')
-            self._isExpectingAck = True
         if packet == "QStartNoAckMode":
             self._shouldSendAck = False
             response = "OK"

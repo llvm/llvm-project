@@ -222,6 +222,9 @@ def no_omagic: Flag<["--"], "no-omagic">, MetaVarName<"<magic>">,
 def no_print_gc_sections: F<"no-print-gc-sections">,
   HelpText<"Do not list removed unused sections">;
 
+def no_print_icf_sections: F<"no-print-icf-sections">,
+  HelpText<"Do not list identical folded sections">;
+
 def no_rosegment: F<"no-rosegment">,
   HelpText<"Do not put read-only non-executable sections in their own segment">;
 
@@ -250,6 +253,9 @@ def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,
   HelpText<"List removed unused sections">;
+
+def print_icf_sections: F<"print-icf-sections">,
+  HelpText<"List identical folded sections">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;

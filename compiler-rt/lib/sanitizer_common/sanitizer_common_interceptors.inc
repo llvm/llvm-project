@@ -6724,6 +6724,41 @@ INTERCEPTOR(int, open_by_handle_at, int mount_fd, struct file_handle* handle,
 #define INIT_OPEN_BY_HANDLE_AT
 #endif
 
+#if SANITIZER_INTERCEPT_STRLCPY
+INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
+  void *ctx;
+  SIZE_T res;
+  COMMON_INTERCEPTOR_ENTER(ctx, strlcpy, dst, src, size);
+  if (src) {
+    // Keep strnlen as macro argument, as macro may ignore it.
+    COMMON_INTERCEPTOR_READ_STRING(ctx, src,
+      Min(REAL(strnlen)(src, size), size - 1) + 1);
+  }
+  res = REAL(strlcpy)(dst, src, size);
+  COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, REAL(strlen)(dst) + 1);
+  return res;
+}
+
+INTERCEPTOR(SIZE_T, strlcat, char *dst, char *src, SIZE_T size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, strlcat, dst, src, size);
+  // src is checked in the strlcpy() interceptor
+  if (dst) {
+    SIZE_T len = REAL(strnlen)(dst, size);
+    COMMON_INTERCEPTOR_READ_STRING(ctx, dst, Min(len, size - 1) + 1);
+    // Reuse the rest of the code in the strlcpy() interceptor
+    dst += len;
+    size -= len;
+  }
+  return WRAP(strlcpy)(dst, src, size);
+}
+#define INIT_STRLCPY \
+  COMMON_INTERCEPT_FUNCTION(strlcpy); \
+  COMMON_INTERCEPT_FUNCTION(strlcat);
+#else
+#define INIT_STRLCPY
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -6946,9 +6981,9 @@ static void InitializeCommonInterceptors() {
   INIT_GETGROUPLIST;
   INIT_READLINK;
   INIT_READLINKAT;
-
   INIT_NAME_TO_HANDLE_AT;
   INIT_OPEN_BY_HANDLE_AT;
+  INIT_STRLCPY;
 
 #if SANITIZER_NETBSD
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);

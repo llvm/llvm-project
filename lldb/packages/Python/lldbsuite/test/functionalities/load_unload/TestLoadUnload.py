@@ -217,8 +217,6 @@ class LoadUnloadTestCase(TestBase):
     @expectedFailureAll(
         bugnumber="llvm.org/pr25805",
         hostoslist=["windows"],
-        compiler="gcc",
-        archs=["i386"],
         triple='.*-android')
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
