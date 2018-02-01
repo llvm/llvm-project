@@ -26,6 +26,7 @@ class TestSwiftCGImportedTypes(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_cg_imported_types(self):
         """Test that we are able to deal with ObjC-imported types"""
         self.build()

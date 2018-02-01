@@ -25,6 +25,7 @@ class TestSwiftTuple(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_tuples(self):
         """Test that LLDB understands tuple lowering"""
         self.build()
