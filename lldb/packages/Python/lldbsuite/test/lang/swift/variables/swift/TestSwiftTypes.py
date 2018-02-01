@@ -24,6 +24,7 @@ class TestSwiftTypes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_types(self):
         """Test that we can inspect basic Swift types"""
         self.build()

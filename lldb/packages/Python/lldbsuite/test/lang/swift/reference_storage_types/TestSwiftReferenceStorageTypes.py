@@ -25,6 +25,7 @@ class TestSwiftReferenceStorageTypes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_reference_storage_types(self):
         """Test weak, unowned and unmanaged types"""
         self.build()

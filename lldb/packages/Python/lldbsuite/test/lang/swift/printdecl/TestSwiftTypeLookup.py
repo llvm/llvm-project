@@ -26,6 +26,7 @@ class TestSwiftTypeLookup(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_type_lookup(self):
         """Test the ability to look for type definitions at the command line"""
         self.build()
