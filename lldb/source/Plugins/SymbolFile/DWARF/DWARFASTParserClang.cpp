@@ -25,7 +25,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/ClangUtil.h"
@@ -2083,7 +2082,6 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
   if (!parent_die)
     return false;
 
-  Args template_parameter_names;
   for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
        die = die.GetSibling()) {
     const dw_tag_t tag = die.Tag();

@@ -4,9 +4,9 @@
 # RUN: llvm-mc -filetype=obj -triple=i386-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2 --icf=all --verbose 2>&1 | FileCheck %s
 
-# CHECK:     selected .text.f1
-# CHECK:       removed .text.f2
-# CHECK-NOT:   removed .text.f3
+# CHECK:     selected section '.text.f1' from file [[T:'.*']]
+# CHECK:       removing identical section '.text.f2' from file [[T]]
+# CHECK-NOT:   removing identical section '.text.f3' from file [[T]]
 
 .globl _start, f1, f2, f3
 _start:
