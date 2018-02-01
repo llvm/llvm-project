@@ -438,7 +438,7 @@ void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 }
 
 RetpolineNoPic::RetpolineNoPic() {
-  PltHeaderSize = 64;
+  PltHeaderSize = 48;
   PltEntrySize = 32;
 }
 
@@ -464,10 +464,6 @@ void RetpolineNoPic::writePltHeader(uint8_t *Buf) const {
       0x59,                            // 2d:   pop %ecx
       0xc3,                            // 2e:   ret
       0xcc,                            // 2f:   int3
-      0xcc, 0xcc, 0xcc, 0xcc,
-      0xcc, 0xcc, 0xcc, 0xcc, 
-      0xcc, 0xcc, 0xcc, 0xcc, 
-      0xcc, 0xcc, 0xcc, 0xcc, 
   };
   memcpy(Buf, PltData, sizeof(PltData));
   assert(sizeof(PltData) == TargetInfo::PltHeaderSize);
