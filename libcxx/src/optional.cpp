@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "optional"
-#include "experimental/optional"
 
 namespace std
 {
@@ -21,8 +20,3 @@ const char* bad_optional_access::what() const _NOEXCEPT {
 
 } // std
 
-_LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
-
-bad_optional_access::~bad_optional_access() _NOEXCEPT = default;
-
-_LIBCPP_END_NAMESPACE_EXPERIMENTAL

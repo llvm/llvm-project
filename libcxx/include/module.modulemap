@@ -546,10 +546,6 @@ module std [system] {
       header "experimental/numeric"
       export *
     }
-    module optional {
-      header "experimental/optional"
-      export *
-    }
     module propagate_const {
       header "experimental/propagate_const"
       export *
