@@ -29,7 +29,6 @@ class TestSwiftBridgedStringVariables(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll # rdar://36744510
     def test_swift_bridged_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()
