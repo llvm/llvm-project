@@ -126,9 +126,9 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
                   getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
             if (CNE->isArray()) {
-              // TODO: This code exists only to trigger the suppression for
-              // array constructors. In fact, we need to call the constructor
-              // for every allocated element, not just the first one!
+              // TODO: In fact, we need to call the constructor for every
+              // allocated element, not just the first one!
+              CallOpts.IsArrayConstructorOrDestructor = true;
               return getStoreManager().GetElementZeroRegion(
                   MR, CNE->getType()->getPointeeType());
             }
@@ -140,7 +140,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
             SVal LValue = State->getLValue(Var, LCtx);
             QualType Ty = Var->getType();
-            LValue = makeZeroElementRegion(State, LValue, Ty);
+            LValue = makeZeroElementRegion(
+                State, LValue, Ty, CallOpts.IsArrayConstructorOrDestructor);
             return LValue.getAsRegion();
           }
         }
