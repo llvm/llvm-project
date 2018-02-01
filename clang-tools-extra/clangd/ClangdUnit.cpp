@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <chrono>
 
@@ -178,15 +179,30 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 llvm::Optional<DiagWithFixIts> toClangdDiag(const clang::Diagnostic &D,
                                             DiagnosticsEngine::Level Level,
                                             const LangOptions &LangOpts) {
+  SmallString<64> Message;
+  D.FormatDiagnostic(Message);
+
   if (!D.hasSourceManager() || !D.getLocation().isValid() ||
-      !D.getSourceManager().isInMainFile(D.getLocation()))
+      !D.getSourceManager().isInMainFile(D.getLocation())) {
+
+    SmallString<64> Location;
+    if (D.hasSourceManager() && D.getLocation().isValid()) {
+      auto &SourceMgr = D.getSourceManager();
+      auto Loc = SourceMgr.getFileLoc(D.getLocation());
+      llvm::raw_svector_ostream OS(Location);
+      Loc.print(OS, SourceMgr);
+    } else {
+      Location = "<no-loc>";
+    }
+
+    log(llvm::formatv("Ignored diagnostic outside main file. {0}: {1}",
+                      Location, Message));
     return llvm::None;
+  }
 
   DiagWithFixIts Result;
   Result.Diag.range = diagnosticRange(D, LangOpts);
   Result.Diag.severity = getSeverity(Level);
-  SmallString<64> Message;
-  D.FormatDiagnostic(Message);
   Result.Diag.message = Message.str();
   for (const FixItHint &Fix : D.getFixItHints())
     Result.FixIts.push_back(toTextEdit(Fix, D.getSourceManager(), LangOpts));
