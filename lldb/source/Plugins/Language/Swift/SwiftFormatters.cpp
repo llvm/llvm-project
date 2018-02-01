@@ -242,8 +242,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     bool is_utf_16 = objectAddr & (1ULL << 60);
     uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
 
-    if (!is_opaque && ((is_a_value && !is_Cocoa_or_small) ||
-                       (!is_a_value && !is_Cocoa_or_small))) {
+    if (!is_opaque && !is_Cocoa_or_small) {
       uint64_t count = otherBits_sp->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
       if (count == 0) {
         stream.Printf("\"\"");
@@ -269,8 +268,19 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       else
         return StringPrinter::ReadStringAndDumpToStream<
             StringPrinter::StringElementType::UTF16>(read_options);
-    } else if (is_Cocoa_or_small) {
-      // TODO:
+    } else if (is_Cocoa_or_small && !is_a_value) {
+      CompilerType id_type =
+          process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(
+              lldb::eBasicTypeObjCID);
+      ValueObjectSP nsstringhere_sp = ValueObject::CreateValueObjectFromAddress(
+          "nsstringhere", payloadAddr, valobj.GetExecutionContextRef(),
+          id_type);
+      if (nsstringhere_sp)
+        return NSStringSummaryProvider(*nsstringhere_sp.get(), stream,
+                                       summary_options);
+    } else if (is_Cocoa_or_small && is_a_value) {
+      return NSStringSummaryProvider(*otherBits_sp.get(), stream,
+                                     summary_options);
     }
   } else {
     // TODO:
@@ -364,33 +374,30 @@ bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
   if (guts_sp)
     return StringGuts_SummaryProvider(*guts_sp, stream, options);
 
-  static ConstString g_StringCoreType(SwiftLanguageRuntime::GetCurrentMangledName("_TtVs11_StringCore"));
-  lldb::addr_t core_location = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  if (core_location == LLDB_INVALID_ADDRESS)
+  static ConstString g_StringGutsType(
+      SwiftLanguageRuntime::GetCurrentMangledName("$Ss11_StringGutsVD"));
+  lldb::addr_t guts_location = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (guts_location == LLDB_INVALID_ADDRESS)
     return false;
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
   size_t ptr_size = process_sp->GetAddressByteSize();
-  core_location += 2 * ptr_size;
+  guts_location += 2 * ptr_size;
 
   Status error;
 
   InferiorSizedWord isw_1(
-      process_sp->ReadPointerFromMemory(core_location, error), *process_sp);
+      process_sp->ReadPointerFromMemory(guts_location, error), *process_sp);
   InferiorSizedWord isw_2(
-      process_sp->ReadPointerFromMemory(core_location + ptr_size, error),
+      process_sp->ReadPointerFromMemory(guts_location + ptr_size, error),
       *process_sp);
-  InferiorSizedWord isw_3(process_sp->ReadPointerFromMemory(
-                              core_location + ptr_size + ptr_size, error),
-                          *process_sp);
 
-  DataBufferSP buffer_sp(new DataBufferHeap(3 * ptr_size, 0));
+  DataBufferSP buffer_sp(new DataBufferHeap(2 * ptr_size, 0));
   uint8_t *buffer = buffer_sp->GetBytes();
 
   buffer = isw_1.CopyToBuffer(buffer);
   buffer = isw_2.CopyToBuffer(buffer);
-  buffer = isw_3.CopyToBuffer(buffer);
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
 
@@ -398,15 +405,15 @@ bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
       process_sp->GetTarget().GetScratchSwiftASTContext(error);
   if (!lldb_swift_ast)
     return false;
-  CompilerType string_core_type = lldb_swift_ast->GetTypeFromMangledTypename(
-      g_StringCoreType.GetCString(), error);
-  if (string_core_type.IsValid() == false)
+  CompilerType string_guts_type = lldb_swift_ast->GetTypeFromMangledTypename(
+      g_StringGutsType.GetCString(), error);
+  if (string_guts_type.IsValid() == false)
     return false;
 
-  ValueObjectSP string_core_sp = ValueObject::CreateValueObjectFromData(
-      "stringcore", data, valobj.GetExecutionContextRef(), string_core_type);
-  if (string_core_sp)
-    return StringCore_SummaryProvider(*string_core_sp, stream, options);
+  ValueObjectSP string_guts_sp = ValueObject::CreateValueObjectFromData(
+      "stringguts", data, valobj.GetExecutionContextRef(), string_guts_type);
+  if (string_guts_sp)
+    return StringGuts_SummaryProvider(*string_guts_sp, stream, options);
   return false;
 }
 
