@@ -2691,6 +2691,8 @@ class X86TargetInfo : public TargetInfo {
   bool HasCLWB = false;
   bool HasMOVBE = false;
   bool HasPREFETCHWT1 = false;
+  bool HasRetpoline = false;
+  bool HasRetpolineExternalThunk = false;
 
   /// \brief Enumeration of all of the X86 CPUs supported by Clang.
   ///
@@ -3821,6 +3823,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPREFETCHWT1 = true;
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
+    } else if (Feature == "+retpoline") {
+      HasRetpoline = true;
+    } else if (Feature == "+retpoline-external-thunk") {
+      HasRetpolineExternalThunk = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -4285,6 +4291,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)
       .Case("rtm", HasRTM)
+      .Case("retpoline", HasRetpoline)
+      .Case("retpoline-external-thunk", HasRetpolineExternalThunk)
       .Case("sgx", HasSGX)
       .Case("sha", HasSHA)
       .Case("sse", SSELevel >= SSE1)

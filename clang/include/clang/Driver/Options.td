@@ -2422,6 +2422,11 @@ def mhexagon_hvx_double : Flag<["-"], "mhvx-double">, Group<m_hexagon_Features_G
 def mno_hexagon_hvx_double : Flag<["-"], "mno-hvx-double">, Group<m_hexagon_Features_Group>,
     Flags<[CC1Option]>, HelpText<"Disable Hexagon Double Vector eXtensions">;
 
+def mretpoline : Flag<["-"], "mretpoline">, Group<m_x86_Features_Group>;
+def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_x86_Features_Group>;
+def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<m_x86_Features_Group>;
+def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
+
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag
 // style of double-dash and equals-joined flags.
