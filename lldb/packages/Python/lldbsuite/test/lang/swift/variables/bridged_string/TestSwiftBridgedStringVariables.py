@@ -67,11 +67,15 @@ class TestSwiftBridgedStringVariables(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
+        s1 = self.frame.FindVariable("s1")
+        s2 = self.frame.FindVariable("s2")
         s3 = self.frame.FindVariable("s3")
         s4 = self.frame.FindVariable("s4")
         s5 = self.frame.FindVariable("s5")
         s6 = self.frame.FindVariable("s6")
 
+        lldbutil.check_variable(self, s1, summary='"Hello world"')
+        lldbutil.check_variable(self, s2, summary='"ΞΕΛΛΘ"')
         lldbutil.check_variable(self, s3, summary='"Hello world"')
         lldbutil.check_variable(self, s4, summary='"ΞΕΛΛΘ"')
         lldbutil.check_variable(self, s5, use_dynamic=True, summary='"abc"')
