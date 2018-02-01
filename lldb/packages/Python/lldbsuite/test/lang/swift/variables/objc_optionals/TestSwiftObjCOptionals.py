@@ -26,6 +26,7 @@ class TestSwiftObjCOptionalType(TestBase):
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_objc_optional_type(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         self.buildDsym()
