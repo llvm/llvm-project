@@ -243,12 +243,14 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
 
     if (!is_opaque && !is_Cocoa_or_small) {
+      // Handle native Swift strings.
       uint64_t count = otherBits_sp->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
       if (count == 0) {
         stream.Printf("\"\"");
         return true;
       }
 
+      // The character buffer for wrapped strings is offset by 4 words.
       if (!is_a_value)
         payloadAddr += 32;
 
@@ -269,6 +271,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
         return StringPrinter::ReadStringAndDumpToStream<
             StringPrinter::StringElementType::UTF16>(read_options);
     } else if (is_Cocoa_or_small && !is_a_value) {
+      // Handle strings which point to NSStrings.
       CompilerType id_type =
           process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(
               lldb::eBasicTypeObjCID);
@@ -279,6 +282,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
         return NSStringSummaryProvider(*nsstringhere_sp.get(), stream,
                                        summary_options);
     } else if (is_Cocoa_or_small && is_a_value) {
+      // Handle strings which contain an NSString inline.
       return NSStringSummaryProvider(*otherBits_sp.get(), stream,
                                      summary_options);
     }
