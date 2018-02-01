@@ -15,28 +15,25 @@ define void @foo(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8* %maxarray)
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[T1:%.*]] = sext i32 [[NSTEPS:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[T0]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to i8*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[FOR_INC:%.*]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT3:%.*]], [[FOR_INC]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV13:%.*]] = inttoptr i64 [[LSR_IV1]] to i8*
 ; CHECK-NEXT:    br i1 [[CMP215]], label [[FOR_BODY2_PREHEADER:%.*]], label [[FOR_INC]]
 ; CHECK:       for.body2.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
-; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[FOR_BODY2]] ], [ [[MAXARRAY:%.*]], [[FOR_BODY2_PREHEADER]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[FOR_BODY2]] ], [ [[MAXARRAY:%.*]], [[FOR_BODY2_PREHEADER]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY2]] ], [ [[TMP0]], [[FOR_BODY2_PREHEADER]] ]
-; CHECK-NEXT:    [[LSR_IV45:%.*]] = ptrtoint i8* [[LSR_IV4]] to i64
-; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, i8* [[LSR_IV4]], i64 1
-; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[SCEVGEP8]], align 1
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, i8* [[TMP1]], i64 [[LSR_IV45]]
-; CHECK-NEXT:    [[V2:%.*]] = load i8, i8* [[SCEVGEP7]], align 1
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[SCEVGEP6]], align 1
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 [[TMP0]]
+; CHECK-NEXT:    [[V2:%.*]] = load i8, i8* [[SCEVGEP5]], align 1
 ; CHECK-NEXT:    [[TMPV:%.*]] = xor i8 [[V1]], [[V2]]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, i8* [[LSR_IV13]], i64 [[LSR_IV45]]
-; CHECK-NEXT:    store i8 [[TMPV]], i8* [[SCEVGEP6]], align 1
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 [[LSR_IV1]]
+; CHECK-NEXT:    store i8 [[TMPV]], i8* [[SCEVGEP4]], align 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV4]], i64 1
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV3]], i64 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY2]], label [[FOR_INC_LOOPEXIT:%.*]]
 ; CHECK:       for.inc.loopexit:
@@ -94,4 +91,3 @@ for.inc:                                          ; preds = %for.inc.loopexit, %
 for.end.loopexit:                                 ; preds = %for.inc
   ret void
 }
-

@@ -742,3 +742,10 @@ foo2:
         adds r0
 @ CHECK-ERRORS: error: too few operands for instruction
 @ CHECK-ERRORS: error: too few operands for instruction
+
+        @ Using pc for MVN
+	mvn pc, r6, lsl r7
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r14]
+@ CHECK-ERRORS:         mvn pc, r6, lsl r7
+@ CHECK-ERRORS:             ^

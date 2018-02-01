@@ -4993,7 +4993,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
       // Unless the addressing mode will not be folded.
       if (!Ops.empty() && LU.Kind == LSRUse::Address &&
           isAMCompletelyFolded(TTI, LU, F)) {
-        Value *FullV = Rewriter.expandCodeFor(SE.getAddExpr(Ops), Ty);
+        Value *FullV = Rewriter.expandCodeFor(SE.getAddExpr(Ops), nullptr);
         Ops.clear();
         Ops.push_back(SE.getUnknown(FullV));
       }

@@ -254,17 +254,22 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True):
 
     diff = compareResults(resultsA, resultsB)
     foundDiffs = 0
+    totalAdded = 0
+    totalRemoved = 0
+    totalChanged = 0
     for res in diff:
         a, b, confidence = res
         if a is None:
             print "ADDED: %r" % b.getReadableName()
             foundDiffs += 1
+            totalAdded += 1
             if auxLog:
                 print >>auxLog, ("('ADDED', %r, %r)" % (b.getReadableName(),
                                                         b.getReport()))
         elif b is None:
             print "REMOVED: %r" % a.getReadableName()
             foundDiffs += 1
+            totalRemoved += 1
             if auxLog:
                 print >>auxLog, ("('REMOVED', %r, %r)" % (a.getReadableName(),
                                                           a.getReport()))
@@ -272,6 +277,7 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True):
             print "CHANGED: %r to %r" % (a.getReadableName(),
                                          b.getReadableName())
             foundDiffs += 1
+            totalChanged += 1
             if auxLog:
                 print >>auxLog, ("('CHANGED', %r, %r, %r, %r)"
                                  % (a.getReadableName(),
@@ -284,6 +290,9 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True):
     TotalReports = len(resultsB.diagnostics)
     print "TOTAL REPORTS: %r" % TotalReports
     print "TOTAL DIFFERENCES: %r" % foundDiffs
+    print "TOTAL ADDED: %r" % totalAdded
+    print "TOTAL REMOVED: %r" % totalRemoved
+    print "TOTAL CHANGED: %r" % totalChanged
     if auxLog:
         print >>auxLog, "('TOTAL NEW REPORTS', %r)" % TotalReports
         print >>auxLog, "('TOTAL DIFFERENCES', %r)" % foundDiffs

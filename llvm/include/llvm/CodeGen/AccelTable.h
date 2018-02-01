@@ -66,7 +66,7 @@
 /// If we have a match we look at that same entry in the offsets table and grab
 /// the offset in the data for our final match.
 ///
-/// The DWARFv5 accelerator table consists of zero or more name indices that
+/// The DWARF v5 accelerator table consists of zero or more name indices that
 /// are output into an on-disk format that looks like this:
 ///
 /// .------------------.

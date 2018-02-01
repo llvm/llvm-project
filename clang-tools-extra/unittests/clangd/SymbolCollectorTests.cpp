@@ -53,9 +53,6 @@ MATCHER_P(LocationOffsets, Offsets, "") {
   return arg.CanonicalDeclaration.StartOffset == Offsets.first &&
       arg.CanonicalDeclaration.EndOffset == Offsets.second - 1;
 }
-//MATCHER_P(FilePath, P, "") {
-  //return arg.CanonicalDeclaration.FilePath.contains(P);
-//}
 
 namespace clang {
 namespace clangd {

@@ -699,7 +699,7 @@ class LL_FM_MM<bits<4> funct> : MMArch {
   let Inst{11-0}  = addr{11-0};
 }
 
-class LLE_FM_MM<bits<4> funct> {
+class LLE_FM_MM<bits<4> funct> : MMArch {
   bits<5> rt;
   bits<21> addr;
   bits<5> base = addr{20-16};
