@@ -78,6 +78,7 @@
 #include <clc/math/half_log.h>
 #include <clc/math/half_log10.h>
 #include <clc/math/half_log2.h>
+#include <clc/math/half_powr.h>
 #include <clc/math/half_recip.h>
 #include <clc/math/half_rsqrt.h>
 #include <clc/math/half_sin.h>

@@ -1,0 +1,66 @@
+# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: lld-link -out:%t.dll -dll %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -incremental %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=WARN-REF %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -incremental %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -debug %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -debug %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=KEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -debug -incremental:no %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -debug -incremental:no %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -opt:icf %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -opt:icf %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -incremental -opt:noref,icf %t.obj 2>&1 \
+# RUN:   | FileCheck -check-prefix=WARN-ICF %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -incremental -opt:noref,icf %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -debug -opt:icf %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -debug -opt:icf %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -opt:ref %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -opt:ref %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -incremental -opt:ref %t.obj 2>&1 \
+# RUN:   | FileCheck -check-prefix=WARN-REF %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -incremental -opt:ref %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# RUN: lld-link -out:%t.dll -dll -debug -opt:ref %t.obj 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: touch -t 198002011200.00 %t.lib
+# RUN: lld-link -out:%t.dll -dll -debug -opt:ref %t.obj
+# RUN: ls -l %t.lib | FileCheck -check-prefix=NOKEEP %s
+
+# NOWARN-NOT: ignoring '/INCREMENTAL'
+# WARN-ICF: ignoring '/INCREMENTAL' because ICF is enabled; use '/OPT:NOICF' to disable
+# WARN-REF: ignoring '/INCREMENTAL' because REF is enabled; use '/OPT:NOREF' to disable
+# KEEP: {{Feb 1 1980|1980-02-01}}
+# NOKEEP-NOT: {{Feb 1 1980|1980-02-01}}
