@@ -58,26 +58,22 @@ AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
 AnalyzerOptions::ExplorationStrategyKind
 AnalyzerOptions::getExplorationStrategy() {
   if (ExplorationStrategy == ExplorationStrategyKind::NotSet) {
-    StringRef StratStr =
-        Config
-            .insert(std::make_pair("exploration_strategy", "dfs"))
-            .first->second;
-    ExplorationStrategy =
-        llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
-            .Case("dfs", ExplorationStrategyKind::DFS)
-            .Case("bfs", ExplorationStrategyKind::BFS)
-            .Case("unexplored_first",
-                  ExplorationStrategyKind::UnexploredFirst)
-            .Case("unexplored_first_queue",
-                  ExplorationStrategyKind::UnexploredFirstQueue)
-            .Case("bfs_block_dfs_contents",
-                  ExplorationStrategyKind::BFSBlockDFSContents)
-            .Default(ExplorationStrategyKind::NotSet);
-    assert(ExplorationStrategy != ExplorationStrategyKind::NotSet &&
-           "User mode is invalid.");
+    StringRef StratStr = Config.insert(
+            std::make_pair("exploration_strategy", "dfs")).first->second;
+    ExplorationStrategy = llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
+      .Case("dfs", ExplorationStrategyKind::DFS)
+      .Case("bfs", ExplorationStrategyKind::BFS)
+      .Case("loopstack_priority", ExplorationStrategyKind::LoopstackPriority)
+      .Case("bfs_block_dfs_contents", ExplorationStrategyKind::BFSBlockDFSContents)
+      .Default(ExplorationStrategyKind::NotSet);
+    assert(ExplorationStrategy != ExplorationStrategyKind::NotSet
+        && "User mode is invalid.");
   }
   return ExplorationStrategy;
+
 }
+
+
 
 IPAKind AnalyzerOptions::getIPAMode() {
   if (IPAMode == IPAK_NotSet) {
