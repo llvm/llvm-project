@@ -37,7 +37,9 @@ class AnalysisOrderChecker
                      check::PostCall,
                      check::NewAllocator,
                      check::Bind,
-                     check::RegionChanges> {
+                     check::RegionChanges,
+                     check::LiveSymbols> {
+
   bool isCallbackEnabled(AnalyzerOptions &Opts, StringRef CallbackName) const {
     return Opts.getBooleanOption("*", false, this) ||
         Opts.getBooleanOption(CallbackName, false, this);
@@ -116,6 +118,11 @@ public:
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
     if (isCallbackEnabled(C, "Bind"))
       llvm::errs() << "Bind\n";
+  }
+
+  void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SymReaper) const {
+    if (isCallbackEnabled(State, "LiveSymbols"))
+      llvm::errs() << "LiveSymbols\n";
   }
 
   ProgramStateRef
