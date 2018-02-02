@@ -2566,6 +2566,7 @@ static_assert(!has_unique_object_representations<const int &>::value, "No refere
 static_assert(!has_unique_object_representations<volatile int &>::value, "No references!");
 static_assert(!has_unique_object_representations<const volatile int &>::value, "No references!");
 static_assert(!has_unique_object_representations<Empty>::value, "No empty types!");
+static_assert(!has_unique_object_representations<EmptyUnion>::value, "No empty types!");
 
 class Compressed : Empty {
   int x;

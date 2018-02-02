@@ -1222,9 +1222,20 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         Current.MatchingParen->getPreviousNonComment() &&
         Current.MatchingParen->getPreviousNonComment()->is(tok::comma);
 
+    // If ObjCBinPackProtocolList is unspecified, fall back to BinPackParameters
+    // for backwards compatibility.
+    bool ObjCBinPackProtocolList =
+        (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
+         Style.BinPackParameters) ||
+        Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
+
+    bool BinPackDeclaration =
+        (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
+        (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
+
     AvoidBinPacking =
         (Style.Language == FormatStyle::LK_JavaScript && EndsInComma) ||
-        (State.Line->MustBeDeclaration && !Style.BinPackParameters) ||
+        (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
         (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||
         (Style.ExperimentalAutoDetectBinPacking &&
          (Current.PackingKind == PPK_OnePerLine ||
