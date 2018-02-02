@@ -39,8 +39,8 @@ body:             |
     ; CHECK-LABEL: name: implicit_def_copy
     ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY [[DEF]]
-    ; CHECK: %w0 = COPY [[COPY]]
+    ; CHECK: $w0 = COPY [[COPY]]
     %0(s32) = G_IMPLICIT_DEF
     %1(s32) = COPY %0(s32)
-    %w0 = COPY %1(s32)
+    $w0 = COPY %1(s32)
 ...

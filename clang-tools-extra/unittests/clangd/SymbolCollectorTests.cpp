@@ -198,8 +198,7 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
   runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Red"), QName("Color"),
                                             QName("Green"), QName("Color2"),
-                                            QName("ns"),
-                                            QName("ns::Black")));
+                                            QName("ns"), QName("ns::Black")));
 }
 
 TEST_F(SymbolCollectorTest, IgnoreNamelessSymbols) {
@@ -319,6 +318,53 @@ TEST_F(SymbolCollectorTest, IgnoreClassMembers) {
   )";
   runSymbolCollector(Header, Main);
   EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo")));
+}
+
+TEST_F(SymbolCollectorTest, Scopes) {
+  const std::string Header = R"(
+    namespace na {
+    class Foo {};
+    namespace nb {
+    class Bar {};
+    }
+    }
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(QName("na"), QName("na::nb"),
+                                   QName("na::Foo"), QName("na::nb::Bar")));
+}
+
+TEST_F(SymbolCollectorTest, ExternC) {
+  const std::string Header = R"(
+    extern "C" { class Foo {}; }
+    namespace na {
+    extern "C" { class Bar {}; }
+    }
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(QName("na"), QName("Foo"), QName("Bar")));
+}
+
+TEST_F(SymbolCollectorTest, SkipInlineNamespace) {
+  const std::string Header = R"(
+    namespace na {
+    inline namespace nb {
+    class Foo {};
+    }
+    }
+    namespace na {
+    // This is still inlined.
+    namespace nb {
+    class Bar {};
+    }
+    }
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(QName("na"), QName("na::nb"),
+                                   QName("na::Foo"), QName("na::Bar")));
 }
 
 TEST_F(SymbolCollectorTest, SymbolWithDocumentation) {
