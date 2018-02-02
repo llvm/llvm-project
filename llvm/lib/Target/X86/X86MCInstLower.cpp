@@ -874,6 +874,10 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
       // address is to far away. (TODO: support non-relative addressing)
       break;
     case MachineOperand::MO_Register:
+      // FIXME: Add retpoline support and remove this.
+      if (Subtarget->useRetpoline())
+        report_fatal_error("Lowering register statepoints with retpoline not "
+                           "yet implemented.");
       CallTargetMCOp = MCOperand::createReg(CallTarget.getReg());
       CallOpcode = X86::CALL64r;
       break;
@@ -1028,6 +1032,10 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
     EmitAndCountInstruction(
         MCInstBuilder(X86::MOV64ri).addReg(ScratchReg).addOperand(CalleeMCOp));
+    // FIXME: Add retpoline support and remove this.
+    if (Subtarget->useRetpoline())
+      report_fatal_error(
+          "Lowering patchpoint with retpoline not yet implemented.");
     EmitAndCountInstruction(MCInstBuilder(X86::CALL64r).addReg(ScratchReg));
   }
 

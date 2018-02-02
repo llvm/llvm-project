@@ -950,6 +950,10 @@ public:
   /// Return true when a target supports MachineCombiner.
   virtual bool useMachineCombiner() const { return false; }
 
+  /// Return true if the given SDNode can be copied during scheduling
+  /// even if it has glue.
+  virtual bool canCopyGluedNodeDuringSchedule(SDNode *N) const { return false; }
+
 protected:
   /// Target-dependent implementation for foldMemoryOperand.
   /// Target-independent code in foldMemoryOperand will

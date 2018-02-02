@@ -22,6 +22,7 @@ namespace llvm {
 class FunctionPass;
 class ImmutablePass;
 class InstructionSelector;
+class ModulePass;
 class PassRegistry;
 class X86RegisterBankInfo;
 class X86Subtarget;
@@ -101,6 +102,9 @@ void initializeFixupBWInstPassPass(PassRegistry &);
 /// This pass replaces EVEX encoded of AVX-512 instructiosn by VEX
 /// encoding when possible in order to reduce code size.
 FunctionPass *createX86EvexToVexInsts();
+
+/// This pass creates the thunks for the retpoline feature.
+FunctionPass *createX86RetpolineThunksPass();
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   X86Subtarget &,

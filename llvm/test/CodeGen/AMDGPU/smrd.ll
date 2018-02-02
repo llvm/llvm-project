@@ -194,11 +194,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}smrd_vgpr_offset_imm:
 ; GCN-NEXT: %bb.
-
-; SICIVI-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 0 offen offset:4095 ;
-
-; GFX9-NEXT: v_add_u32_e32 [[ADD:v[0-9]+]], 0xfff, v0
-; GFX9-NEXT: buffer_load_dword v{{[0-9]}}, [[ADD]], s[0:3], 0 offen ;
+; GCN-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 0 offen offset:4095 ;
 define amdgpu_ps float @smrd_vgpr_offset_imm(<4 x i32> inreg %desc, i32 %offset) #0 {
 main_body:
   %off = add i32 %offset, 4095
@@ -244,16 +240,8 @@ main_body:
 
 ; GCN-LABEL: {{^}}smrd_vgpr_merged:
 ; GCN-NEXT: %bb.
-
-; SICIVI-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
-; SICIVI-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
-
-; GFX9: buffer_load_dword
-; GFX9: buffer_load_dword
-; GFX9: buffer_load_dword
-; GFX9: buffer_load_dword
-; GFX9: buffer_load_dword
-; GFX9: buffer_load_dword
+; GCN-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
+; GCN-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
 define amdgpu_ps void @smrd_vgpr_merged(<4 x i32> inreg %desc, i32 %a) #0 {
 main_body:
   %a1 = add i32 %a, 4
