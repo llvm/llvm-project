@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: lld -flavor wasm -o %t.wasm %t.o
+; RUN: lld -flavor wasm --check-signatures -o %t.wasm %t.o
 ; RUN: llvm-readobj -file-headers %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"
