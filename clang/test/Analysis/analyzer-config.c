@@ -16,6 +16,7 @@ void foo() {
 // CHECK-NEXT: cfg-lifetime = false
 // CHECK-NEXT: cfg-loopexit = false
 // CHECK-NEXT: cfg-temporary-dtors = false
+// CHECK-NEXT: exploration_strategy = dfs
 // CHECK-NEXT: faux-bodies = true
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: inline-lambdas = true
@@ -31,4 +32,4 @@ void foo() {
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 19
+// CHECK-NEXT: num-entries = 20
