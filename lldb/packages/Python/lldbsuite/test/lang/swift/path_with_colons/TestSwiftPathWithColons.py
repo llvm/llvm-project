@@ -31,6 +31,7 @@ class TestSwiftPathWithColon(TestBase):
     @decorators.skipUnlessDarwin
     @decorators.skipIfiOSSimulator
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_path_with_colon(self):
         """Test that LLDB correctly handles paths with colons"""
         self.do_test()

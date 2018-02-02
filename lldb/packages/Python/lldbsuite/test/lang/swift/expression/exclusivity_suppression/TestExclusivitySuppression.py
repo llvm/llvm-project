@@ -31,6 +31,7 @@ class TestExclusivitySuppression(TestBase):
     # Test that we can evaluate w.s.i at Breakpoint 1 without triggering
     # a failure due to exclusivity
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_basic_exclusivity_suppression(self):
         """Test that exclusively owned values can still be accessed"""
 
@@ -66,6 +67,7 @@ class TestExclusivitySuppression(TestBase):
     # (5) Evaluating w.s.i again to check that finishing the nested expression
     #     did not prematurely re-enable exclusivity checks.
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_exclusivity_suppression_for_concurrent_expressions(self):
         """Test that exclusivity suppression works with concurrent expressions"""
         self.buildAll()

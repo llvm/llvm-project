@@ -4087,6 +4087,13 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                      .getPointer();
 
     if (found_type) {
+      // If we have an inout type at the top level, turn it into an lvalue type.
+      // Function parameters that are inout are treated the same as mutable vars
+      // here.
+      if (auto *inout_type = found_type->getAs<swift::InOutType>()) {
+        found_type = swift::LValueType::get(inout_type->getObjectType());
+      }
+
       CacheDemangledType(mangled_name.GetCString(), found_type);
       CompilerType result_type(ast_ctx, found_type);
       if (log)
@@ -6887,7 +6894,7 @@ static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
 
       if (the_value_decl) {
         swift::irgen::IRGenMangler mangler;
-        std::string buffer = mangler.mangleFieldOffsetFull(the_value_decl, false);
+        std::string buffer = mangler.mangleFieldOffset(the_value_decl);
 
         StreamString symbol_name;
         symbol_name.Printf("%s", buffer.c_str());
@@ -6934,7 +6941,12 @@ static int64_t GetInstanceVariableOffset_Metadata(
       if (auto resolver_sp = runtime->GetMemberVariableOffsetResolver(type)) {
         Status error;
         if (auto result = resolver_sp->ResolveOffset(valobj, ivar_name, &error))
+        {
+          if (log)
+            log->Printf("[GetInstanceVariableOffset_Metadata] for %s: %llu",
+                        ivar_name.AsCString(), result.getValue());
           return result.getValue();
+        }
         else if (log)
           log->Printf(
               "[GetInstanceVariableOffset_Metadata] resolver failure: %s",

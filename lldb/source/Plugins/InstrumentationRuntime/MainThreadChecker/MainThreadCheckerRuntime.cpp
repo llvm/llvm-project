@@ -128,8 +128,8 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
           nominal->loadAllMembers();
         }
 
-        if (func->isAccessor()) {
-          result = func->getAccessorStorageDecl()->getFullName();
+        if (auto accessor = llvm::dyn_cast<swift::AccessorDecl>(func)) {
+          result = accessor->getStorage()->getFullName();
           return;
         }
       }

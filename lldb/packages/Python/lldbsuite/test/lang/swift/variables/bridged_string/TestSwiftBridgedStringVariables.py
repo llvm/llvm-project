@@ -29,6 +29,7 @@ class TestSwiftBridgedStringVariables(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_bridged_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()
@@ -41,37 +42,20 @@ class TestSwiftBridgedStringVariables(TestBase):
 
     def do_test(self):
         """Test that Swift.String formats properly"""
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,
+                "Set breakpoint here", self.main_source_spec)
+        self.frame = thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
+        s1 = self.frame.FindVariable("s1")
+        s2 = self.frame.FindVariable("s2")
         s3 = self.frame.FindVariable("s3")
         s4 = self.frame.FindVariable("s4")
         s5 = self.frame.FindVariable("s5")
         s6 = self.frame.FindVariable("s6")
 
+        lldbutil.check_variable(self, s1, summary='"Hello world"')
+        lldbutil.check_variable(self, s2, summary='"ΞΕΛΛΘ"')
         lldbutil.check_variable(self, s3, summary='"Hello world"')
         lldbutil.check_variable(self, s4, summary='"ΞΕΛΛΘ"')
         lldbutil.check_variable(self, s5, use_dynamic=True, summary='"abc"')

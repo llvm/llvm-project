@@ -333,28 +333,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     std::string DBGBuildSourcePath;
     std::string DBGSourcePath;
 
-    cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
-                                               CFSTR("DBGBuildSourcePath"));
-    if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
-      CFCString::FileSystemRepresentation(cf_str, DBGBuildSourcePath);
-    }
-
-    cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
-                                               CFSTR("DBGSourcePath"));
-    if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
-      CFCString::FileSystemRepresentation(cf_str, DBGSourcePath);
-    }
-
-    if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
-      if (DBGSourcePath[0] == '~') {
-        FileSpec resolved_source_path(DBGSourcePath.c_str(), true);
-        DBGSourcePath = resolved_source_path.GetPath();
-      }
-      module_spec.GetSourceMappingList().Append(
-          ConstString(DBGBuildSourcePath.c_str()),
-          ConstString(DBGSourcePath.c_str()), true);
-    }
-
+    // If DBGVersion value 2 or higher, look for
+    // DBGSourcePathRemapping dictionary and append the key-value pairs
+    // to our remappings.
     cf_dict = (CFDictionaryRef)CFDictionaryGetValue(
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSourcePathRemapping"));
     if (cf_dict && CFGetTypeID(cf_dict) == CFDictionaryGetTypeID()) {
@@ -438,6 +419,32 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         if (values)
           free(values);
       }
+    }
+
+
+    // If we have a DBGBuildSourcePath + DBGSourcePath pair,
+    // append them to the source remappings list.
+
+    cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
+                                               CFSTR("DBGBuildSourcePath"));
+    if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
+      CFCString::FileSystemRepresentation(cf_str, DBGBuildSourcePath);
+    }
+
+    cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
+                                               CFSTR("DBGSourcePath"));
+    if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
+      CFCString::FileSystemRepresentation(cf_str, DBGSourcePath);
+    }
+
+    if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
+      if (DBGSourcePath[0] == '~') {
+        FileSpec resolved_source_path(DBGSourcePath.c_str(), true);
+        DBGSourcePath = resolved_source_path.GetPath();
+      }
+      module_spec.GetSourceMappingList().Append(
+          ConstString(DBGBuildSourcePath.c_str()),
+          ConstString(DBGSourcePath.c_str()), true);
     }
   }
   return success;

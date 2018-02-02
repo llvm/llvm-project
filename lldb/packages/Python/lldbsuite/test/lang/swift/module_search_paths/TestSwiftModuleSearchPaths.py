@@ -33,6 +33,7 @@ class TestSwiftModuleSearchPaths(TestBase):
 
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_module_search_paths(self):
         """
         Tests that we can import modules located using

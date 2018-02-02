@@ -24,6 +24,7 @@ class TestSwiftFixIts(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_fixits(self):
         """Test applying fixits to expressions"""
         self.build()
