@@ -241,7 +241,7 @@ uint8_t Symbol::computeBinding() const {
     return STB_LOCAL;
   if (VersionId == VER_NDX_LOCAL && isDefined())
     return STB_LOCAL;
-  if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
+  if (!Config->GnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
   return Binding;
 }

@@ -700,7 +700,7 @@ void SymbolTable::assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
   // Get a list of symbols which we need to assign the version to.
   std::vector<Symbol *> Syms = findByVersion(Ver);
   if (Syms.empty()) {
-    if (Config->NoUndefinedVersion)
+    if (!Config->UndefinedVersion)
       error("version script assignment of '" + VersionName + "' to symbol '" +
             Ver.Name + "' failed: symbol not defined");
     return;
