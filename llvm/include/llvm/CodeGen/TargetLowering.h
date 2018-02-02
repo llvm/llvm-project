@@ -800,7 +800,7 @@ public:
   }
 
   /// Return true if lowering to a jump table is allowed.
-  bool areJTsAllowed(const Function *Fn) const {
+  virtual bool areJTsAllowed(const Function *Fn) const {
     if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
       return false;
 
