@@ -279,10 +279,10 @@ STATISTIC(ScopsOptimized, "Number of scops optimized");
 STATISTIC(NumAffineLoopsOptimized, "Number of affine loops optimized");
 STATISTIC(NumBoxedLoopsOptimized, "Number of boxed loops optimized");
 
-#define THREE_STATISTICS(VARNAME, DESC)                                    \
-  static Statistic VARNAME[3] = {                                          \
-      {DEBUG_TYPE, #VARNAME "0", DESC " (original)", {0}, {false}},        \
-      {DEBUG_TYPE, #VARNAME "1", DESC " (after scheduler)", {0}, {false}}, \
+#define THREE_STATISTICS(VARNAME, DESC)                                        \
+  static Statistic VARNAME[3] = {                                              \
+      {DEBUG_TYPE, #VARNAME "0", DESC " (original)", {0}, {false}},            \
+      {DEBUG_TYPE, #VARNAME "1", DESC " (after scheduler)", {0}, {false}},     \
       {DEBUG_TYPE, #VARNAME "2", DESC " (after optimizer)", {0}, {false}}}
 
 THREE_STATISTICS(NumBands, "Number of bands");
