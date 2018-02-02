@@ -32,10 +32,8 @@ using namespace clang::tidy::matchers;
 namespace clang {
 namespace tidy {
 namespace misc {
-
 namespace {
 using llvm::APSInt;
-} // namespace
 
 static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
     "EAGAIN",
@@ -629,6 +627,7 @@ static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
 
   return LhsLoc.isMacroID() != RhsLoc.isMacroID();
 }
+} // namespace
 
 void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto AnyLiteralExpr = ignoringParenImpCasts(
