@@ -3,27 +3,27 @@
 --- |
   ; ModuleID = 'memory-legalizer-multiple-mem-operands.ll'
   source_filename = "memory-legalizer-multiple-mem-operands.ll"
-  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5"
 
   define amdgpu_kernel void @multiple_mem_operands(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) #0 {
   entry:
-    %scratch0 = alloca [8192 x i32]
-    %scratch1 = alloca [8192 x i32]
-    %scratchptr01 = bitcast [8192 x i32]* %scratch0 to i32*
-    store i32 1, i32* %scratchptr01
-    %scratchptr12 = bitcast [8192 x i32]* %scratch1 to i32*
-    store i32 2, i32* %scratchptr12
+    %scratch0 = alloca [8192 x i32], addrspace(5)
+    %scratch1 = alloca [8192 x i32], addrspace(5)
+    %scratchptr01 = bitcast [8192 x i32] addrspace(5)* %scratch0 to i32 addrspace(5)*
+    store i32 1, i32 addrspace(5)* %scratchptr01
+    %scratchptr12 = bitcast [8192 x i32] addrspace(5)* %scratch1 to i32 addrspace(5)*
+    store i32 2, i32 addrspace(5)* %scratchptr12
     %cmp = icmp eq i32 %cond, 0
     br i1 %cmp, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
 
   if:                                               ; preds = %entry
-    %if_ptr = getelementptr [8192 x i32], [8192 x i32]* %scratch0, i32 0, i32 %if_offset, !amdgpu.uniform !0
-    %if_value = load i32, i32* %if_ptr, align 4, !nontemporal !1
+    %if_ptr = getelementptr [8192 x i32], [8192 x i32] addrspace(5)* %scratch0, i32 0, i32 %if_offset, !amdgpu.uniform !0
+    %if_value = load i32, i32 addrspace(5)* %if_ptr, align 4, !nontemporal !1
     br label %done, !structurizecfg.uniform !0
 
   else:                                             ; preds = %entry
-    %else_ptr = getelementptr [8192 x i32], [8192 x i32]* %scratch1, i32 0, i32 %else_offset, !amdgpu.uniform !0
-    %else_value = load i32, i32* %else_ptr, align 4
+    %else_ptr = getelementptr [8192 x i32], [8192 x i32] addrspace(5)* %scratch1, i32 0, i32 %else_offset, !amdgpu.uniform !0
+    %else_value = load i32, i32 addrspace(5)* %else_ptr, align 4
     br label %done, !structurizecfg.uniform !0
 
   done:                                             ; preds = %else, %if

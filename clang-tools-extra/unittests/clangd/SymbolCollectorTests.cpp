@@ -343,8 +343,8 @@ TEST_F(SymbolCollectorTest, ExternC) {
     }
   )";
   runSymbolCollector(Header, /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(QName("na"), QName("Foo"), QName("Bar")));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("na"), QName("Foo"),
+                                            QName("na::Bar")));
 }
 
 TEST_F(SymbolCollectorTest, SkipInlineNamespace) {

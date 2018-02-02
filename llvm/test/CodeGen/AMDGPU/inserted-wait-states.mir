@@ -17,9 +17,9 @@
 
   define amdgpu_kernel void @mov_fed_hazard_crash_on_dbg_value(i32 addrspace(1)* %A) {
   entry:
-    %A.addr = alloca i32 addrspace(1)*, align 4
-    store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4
-    call void @llvm.dbg.declare(metadata i32 addrspace(1)** %A.addr, metadata !5, metadata !11), !dbg !12
+    %A.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+    store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 4
+    call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %A.addr, metadata !5, metadata !11), !dbg !12
     ret void
   }
 

@@ -1,8 +1,8 @@
-// RUN: llvm-mc -triple x86_64-- -mattr=+mpx --show-encoding %s |\
+// RUN: llvm-mc -triple x86_64-- --show-encoding %s |\
 // RUN:   FileCheck %s --check-prefixes=CHECK,ENCODING
 
-// RUN: llvm-mc -triple x86_64-- -mattr=+mpx -filetype=obj %s |\
-// RUN:   llvm-objdump -d - -mattr=+mpx | FileCheck %s
+// RUN: llvm-mc -triple x86_64-- -filetype=obj %s |\
+// RUN:   llvm-objdump -d - | FileCheck %s
 
 // CHECK: bndmk (%rax), %bnd0
 // ENCODING:  encoding: [0xf3,0x48,0x0f,0x1b,0x00]

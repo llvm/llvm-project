@@ -1039,7 +1039,9 @@ define <2 x double> @stack_fold_shufpd(<2 x double> %a0, <2 x double> %a1) {
   ;CHECK:       shufpd $1, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 1, i32 2>
-  ret <2 x double> %2
+  ; fadd forces execution domain
+  %3 = fadd <2 x double> %2, <double 0x0, double 0x0>
+  ret <2 x double> %3
 }
 
 define <4 x float> @stack_fold_shufps(<4 x float> %a0, <4 x float> %a1) {

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=skx --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vaddpd 4096(%rdx,%rax,4), %zmm19, %zmm19 
 // CHECK: encoding: [0x62,0xe1,0xe5,0x40,0x58,0x5c,0x82,0x40]      

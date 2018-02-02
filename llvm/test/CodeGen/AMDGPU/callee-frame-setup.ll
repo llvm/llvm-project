@@ -28,8 +28,8 @@ define void @callee_no_stack_no_fp_elim() #1 {
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack() #0 {
-  %alloca = alloca i32
-  store volatile i32 0, i32* %alloca
+  %alloca = alloca i32, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
   ret void
 }
 
@@ -57,8 +57,8 @@ define void @callee_with_stack() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_and_call() #0 {
-  %alloca = alloca i32
-  store volatile i32 0, i32* %alloca
+  %alloca = alloca i32, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
   call void @external_void_func_void()
   ret void
 }

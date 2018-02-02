@@ -3884,21 +3884,20 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth) {
   }
 }
 
-/// \brief Check if the order of \p Op0 and \p Op1 as operand in an ICmpInst
+/// Check if the order of \p Op0 and \p Op1 as operands in an ICmpInst
 /// should be swapped.
 /// The decision is based on how many times these two operands are reused
 /// as subtract operands and their positions in those instructions.
-/// The rational is that several architectures use the same instruction for
-/// both subtract and cmp, thus it is better if the order of those operands
+/// The rationale is that several architectures use the same instruction for
+/// both subtract and cmp. Thus, it is better if the order of those operands
 /// match.
 /// \return true if Op0 and Op1 should be swapped.
-static bool swapMayExposeCSEOpportunities(const Value * Op0,
-                                          const Value * Op1) {
-  // Filter out pointer value as those cannot appears directly in subtract.
+static bool swapMayExposeCSEOpportunities(const Value *Op0, const Value *Op1) {
+  // Filter out pointer values as those cannot appear directly in subtract.
   // FIXME: we may want to go through inttoptrs or bitcasts.
   if (Op0->getType()->isPointerTy())
     return false;
-  // Count every uses of both Op0 and Op1 in a subtract.
+  // Count all uses of both Op0 and Op1 in a subtract.
   // Each time Op0 is the first operand, count -1: swapping is bad, the
   // subtract has already the same layout as the compare.
   // Each time Op0 is the second operand, count +1: swapping is good, the

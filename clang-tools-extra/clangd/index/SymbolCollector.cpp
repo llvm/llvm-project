@@ -9,7 +9,6 @@
 
 #include "SymbolCollector.h"
 #include "../CodeCompletionStrings.h"
-#include "Logger.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"

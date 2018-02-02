@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl,+avx512vbmi -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK:  vpmultishiftqb xmm1, xmm2, qword ptr [rcx]{1to2}
 // CHECK:  encoding: [0x62,0xf2,0xed,0x18,0x83,0x09]

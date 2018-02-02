@@ -1055,11 +1055,6 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
       return Error(StartLoc, "register %"
                    + Tok.getString() + " is only available in 64-bit mode",
                    SMRange(StartLoc, EndLoc));
-  } else if (!getSTI().getFeatureBits()[X86::FeatureAVX512]) {
-    if (X86II::is32ExtendedReg(RegNo))
-      return Error(StartLoc, "register %"
-                   + Tok.getString() + " is only available with AVX512",
-                   SMRange(StartLoc, EndLoc));
   }
 
   // Parse "%st" as "%st(0)" and "%st(1)", which is multiple tokens.
@@ -1793,8 +1788,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   Start = Tok.getLoc();
 
   // Rounding mode operand.
-  if (getSTI().getFeatureBits()[X86::FeatureAVX512] &&
-      getLexer().is(AsmToken::LCurly))
+  if (getLexer().is(AsmToken::LCurly))
     return ParseRoundingModeOp(Start);
 
   // Register operand.
@@ -1897,9 +1891,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
   }
   case AsmToken::LCurly:{
     SMLoc Start = Parser.getTok().getLoc();
-    if (getSTI().getFeatureBits()[X86::FeatureAVX512])
-      return ParseRoundingModeOp(Start);
-    return ErrorOperand(Start, "Unexpected '{' in expression");
+    return ParseRoundingModeOp(Start);
   }
   }
 }
@@ -1929,82 +1921,80 @@ bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
 bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
                                        const MCParsedAsmOperand &Op) {
   MCAsmParser &Parser = getParser();
-  if(getSTI().getFeatureBits()[X86::FeatureAVX512]) {
-    if (getLexer().is(AsmToken::LCurly)) {
-      // Eat "{" and mark the current place.
-      const SMLoc consumedToken = consumeToken();
-      // Distinguish {1to<NUM>} from {%k<NUM>}.
-      if(getLexer().is(AsmToken::Integer)) {
-        // Parse memory broadcasting ({1to<NUM>}).
-        if (getLexer().getTok().getIntVal() != 1)
-          return TokError("Expected 1to<NUM> at this point");
-        Parser.Lex();  // Eat "1" of 1to8
-        if (!getLexer().is(AsmToken::Identifier) ||
-            !getLexer().getTok().getIdentifier().startswith("to"))
-          return TokError("Expected 1to<NUM> at this point");
-        // Recognize only reasonable suffixes.
-        const char *BroadcastPrimitive =
-          StringSwitch<const char*>(getLexer().getTok().getIdentifier())
-            .Case("to2",  "{1to2}")
-            .Case("to4",  "{1to4}")
-            .Case("to8",  "{1to8}")
-            .Case("to16", "{1to16}")
-            .Default(nullptr);
-        if (!BroadcastPrimitive)
-          return TokError("Invalid memory broadcast primitive.");
-        Parser.Lex();  // Eat "toN" of 1toN
-        if (!getLexer().is(AsmToken::RCurly))
-          return TokError("Expected } at this point");
-        Parser.Lex();  // Eat "}"
-        Operands.push_back(X86Operand::CreateToken(BroadcastPrimitive,
-                                                   consumedToken));
-        // No AVX512 specific primitives can pass
-        // after memory broadcasting, so return.
-        return false;
-      } else {
-        // Parse either {k}{z}, {z}{k}, {k} or {z}
-        // last one have no meaning, but GCC accepts it
-        // Currently, we're just pass a '{' mark
-        std::unique_ptr<X86Operand> Z;
-        if (ParseZ(Z, consumedToken))
-          return true;
-        // Reaching here means that parsing of the allegadly '{z}' mark yielded
-        // no errors.
-        // Query for the need of further parsing for a {%k<NUM>} mark
-        if (!Z || getLexer().is(AsmToken::LCurly)) {
-          SMLoc StartLoc = Z ? consumeToken() : consumedToken;
-          // Parse an op-mask register mark ({%k<NUM>}), which is now to be
-          // expected
-          unsigned RegNo;
-          SMLoc RegLoc;
-          if (!ParseRegister(RegNo, RegLoc, StartLoc) &&
-              X86MCRegisterClasses[X86::VK1RegClassID].contains(RegNo)) {
-            if (RegNo == X86::K0)
-              return Error(RegLoc, "Register k0 can't be used as write mask");
-            if (!getLexer().is(AsmToken::RCurly))
-              return Error(getLexer().getLoc(), "Expected } at this point");
-            Operands.push_back(X86Operand::CreateToken("{", StartLoc));
-            Operands.push_back(
-                X86Operand::CreateReg(RegNo, StartLoc, StartLoc));
-            Operands.push_back(X86Operand::CreateToken("}", consumeToken()));
-          } else
+  if (getLexer().is(AsmToken::LCurly)) {
+    // Eat "{" and mark the current place.
+    const SMLoc consumedToken = consumeToken();
+    // Distinguish {1to<NUM>} from {%k<NUM>}.
+    if(getLexer().is(AsmToken::Integer)) {
+      // Parse memory broadcasting ({1to<NUM>}).
+      if (getLexer().getTok().getIntVal() != 1)
+        return TokError("Expected 1to<NUM> at this point");
+      Parser.Lex();  // Eat "1" of 1to8
+      if (!getLexer().is(AsmToken::Identifier) ||
+          !getLexer().getTok().getIdentifier().startswith("to"))
+        return TokError("Expected 1to<NUM> at this point");
+      // Recognize only reasonable suffixes.
+      const char *BroadcastPrimitive =
+        StringSwitch<const char*>(getLexer().getTok().getIdentifier())
+          .Case("to2",  "{1to2}")
+          .Case("to4",  "{1to4}")
+          .Case("to8",  "{1to8}")
+          .Case("to16", "{1to16}")
+          .Default(nullptr);
+      if (!BroadcastPrimitive)
+        return TokError("Invalid memory broadcast primitive.");
+      Parser.Lex();  // Eat "toN" of 1toN
+      if (!getLexer().is(AsmToken::RCurly))
+        return TokError("Expected } at this point");
+      Parser.Lex();  // Eat "}"
+      Operands.push_back(X86Operand::CreateToken(BroadcastPrimitive,
+                                                 consumedToken));
+      // No AVX512 specific primitives can pass
+      // after memory broadcasting, so return.
+      return false;
+    } else {
+      // Parse either {k}{z}, {z}{k}, {k} or {z}
+      // last one have no meaning, but GCC accepts it
+      // Currently, we're just pass a '{' mark
+      std::unique_ptr<X86Operand> Z;
+      if (ParseZ(Z, consumedToken))
+        return true;
+      // Reaching here means that parsing of the allegadly '{z}' mark yielded
+      // no errors.
+      // Query for the need of further parsing for a {%k<NUM>} mark
+      if (!Z || getLexer().is(AsmToken::LCurly)) {
+        SMLoc StartLoc = Z ? consumeToken() : consumedToken;
+        // Parse an op-mask register mark ({%k<NUM>}), which is now to be
+        // expected
+        unsigned RegNo;
+        SMLoc RegLoc;
+        if (!ParseRegister(RegNo, RegLoc, StartLoc) &&
+            X86MCRegisterClasses[X86::VK1RegClassID].contains(RegNo)) {
+          if (RegNo == X86::K0)
+            return Error(RegLoc, "Register k0 can't be used as write mask");
+          if (!getLexer().is(AsmToken::RCurly))
+            return Error(getLexer().getLoc(), "Expected } at this point");
+          Operands.push_back(X86Operand::CreateToken("{", StartLoc));
+          Operands.push_back(
+              X86Operand::CreateReg(RegNo, StartLoc, StartLoc));
+          Operands.push_back(X86Operand::CreateToken("}", consumeToken()));
+        } else
+          return Error(getLexer().getLoc(),
+                        "Expected an op-mask register at this point");
+        // {%k<NUM>} mark is found, inquire for {z}
+        if (getLexer().is(AsmToken::LCurly) && !Z) {
+          // Have we've found a parsing error, or found no (expected) {z} mark
+          // - report an error
+          if (ParseZ(Z, consumeToken()) || !Z)
             return Error(getLexer().getLoc(),
-                          "Expected an op-mask register at this point");
-          // {%k<NUM>} mark is found, inquire for {z}
-          if (getLexer().is(AsmToken::LCurly) && !Z) {
-            // Have we've found a parsing error, or found no (expected) {z} mark
-            // - report an error
-            if (ParseZ(Z, consumeToken()) || !Z)
-              return Error(getLexer().getLoc(),
-                           "Expected a {z} mark at this point");
+                         "Expected a {z} mark at this point");
 
-          }
-          // '{z}' on its own is meaningless, hence should be ignored.
-          // on the contrary - have it been accompanied by a K register,
-          // allow it.
-          if (Z)
-            Operands.push_back(std::move(Z));
         }
+        // '{z}' on its own is meaningless, hence should be ignored.
+        // on the contrary - have it been accompanied by a K register,
+        // allow it.
+        if (Z)
+          Operands.push_back(std::move(Z));
       }
     }
   }

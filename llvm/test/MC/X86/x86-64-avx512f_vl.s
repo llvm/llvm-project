@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vaddpd %xmm19, %xmm29, %xmm20
 // CHECK:  encoding: [0x62,0xa1,0x95,0x00,0x58,0xe3]

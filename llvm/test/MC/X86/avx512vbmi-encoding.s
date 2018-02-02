@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=skx -mattr=+avx512vl -mattr=+avx512vbmi --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
      vpermb %xmm28, %xmm29, %xmm30 {%k7}
 //CHECK: vpermb %xmm28, %xmm29, %xmm30 {%k7}

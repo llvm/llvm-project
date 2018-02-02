@@ -43,8 +43,8 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
 define void @use_queue_ptr_addrspacecast() #1 {
-  %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32 addrspace(4)*
-  store volatile i32 0, i32 addrspace(4)* %asc
+  %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32*
+  store volatile i32 0, i32* %asc
   ret void
 }
 
@@ -113,8 +113,8 @@ define void @use_workgroup_id_x() #1 {
 ; GCN: ; use s6
 ; GCN: s_setpc_b64
 define void @use_stack_workgroup_id_x() #1 {
-  %alloca = alloca i32
-  store volatile i32 0, i32* %alloca
+  %alloca = alloca i32, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
@@ -432,8 +432,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
 ; GCN: ; use s15
 ; GCN: ; use s16
 define void @use_every_sgpr_input() #1 {
-  %alloca = alloca i32, align 4
-  store volatile i32 0, i32* %alloca
+  %alloca = alloca i32, align 4, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
 
   %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
   %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
@@ -512,8 +512,8 @@ define void @func_indirect_use_every_sgpr_input() #1 {
 ; GCN-DAG: s_mov_b32 s8, s16
 ; GCN: s_swappc_b64
 define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
-  %alloca = alloca i32, align 4
-  store volatile i32 0, i32* %alloca
+  %alloca = alloca i32, align 4, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
 
   %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
   %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
@@ -568,10 +568,10 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 ; GCN: ; use [[SAVE_Y]]
 ; GCN: ; use [[SAVE_Z]]
 define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
-  %alloca = alloca i32, align 4
+  %alloca = alloca i32, align 4, addrspace(5)
   call void @use_workgroup_id_xyz()
 
-  store volatile i32 0, i32* %alloca
+  store volatile i32 0, i32 addrspace(5)* %alloca
 
   %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
   %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
