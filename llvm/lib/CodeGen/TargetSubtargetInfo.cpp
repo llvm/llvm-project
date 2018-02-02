@@ -38,6 +38,10 @@ bool TargetSubtargetInfo::enableAtomicExpand() const {
   return true;
 }
 
+bool TargetSubtargetInfo::enableIndirectBrExpand() const {
+  return false;
+}
+
 bool TargetSubtargetInfo::enableMachineScheduler() const {
   return false;
 }

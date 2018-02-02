@@ -38,6 +38,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeGCModuleInfoPass(Registry);
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
+  initializeIndirectBrExpandPassPass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeLiveDebugValuesPass(Registry);
   initializeLiveDebugVariablesPass(Registry);

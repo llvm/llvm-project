@@ -417,6 +417,9 @@ namespace llvm {
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();
 
+  // This pass expands indirectbr instructions.
+  FunctionPass *createIndirectBrExpandPass();
+
 } // End llvm namespace
 
 #endif
