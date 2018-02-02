@@ -112,6 +112,7 @@ struct Configuration {
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
+  bool CheckSections;
   bool CompressDebugSections;
   bool DefineCommon;
   bool Demangle = true;
@@ -124,6 +125,7 @@ struct Configuration {
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;
+  bool GnuUnique;
   bool HasDynamicList = false;
   bool HasDynSymTab;
   bool ICF;
@@ -131,8 +133,6 @@ struct Configuration {
   bool IgnoreFunctionAddressEquality;
   bool MergeArmExidx;
   bool MipsN32Abi = false;
-  bool NoGnuUnique;
-  bool NoUndefinedVersion;
   bool NoinhibitExec;
   bool Nostdlib;
   bool OFormatBinary;
@@ -149,6 +149,7 @@ struct Configuration {
   bool SysvHash = false;
   bool Target1Rel;
   bool Trace;
+  bool UndefinedVersion;
   bool Verbose;
   bool WarnCommon;
   bool WarnMissingEntry;

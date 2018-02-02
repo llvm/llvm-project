@@ -66,8 +66,10 @@
 # LMA-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000 -> 0x80FF]
 # LMA-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8080 -> 0x817F]
 
-# check that we create the expected binary with --noinhibit-exec:
+# Check that we create the expected binary with --noinhibit-exec or --no-check-sections:
 # RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --noinhibit-exec
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-check-sections
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --check-sections --no-check-sections
 
 # Verify that the .sec2 was indeed placed in a PT_LOAD where the PhysAddr
 # overlaps with where .sec1 is loaded:

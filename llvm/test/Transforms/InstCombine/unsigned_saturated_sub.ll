@@ -6,138 +6,158 @@
 ; select operands are the same), so that is recognized by the backend.
 ; The backend recognition is tested in test/CodeGen/X86/psubus.ll.
 
+declare void @use(i64)
+
 ; (a > b) ? a - b : 0 -> ((a > b) ? a : b) - b)
 
-define i64 @max_sub_ugt(i64 %lhs, i64 %rhs) {
+define i64 @max_sub_ugt(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[LHS:%.*]], [[RHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 [[SUB]], i64 0
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ugt i64 %lhs, %rhs
-  %sub = sub i64 %lhs, %rhs
+  %cmp = icmp ugt i64 %a, %b
+  %sub = sub i64 %a, %b
   %sel = select i1 %cmp, i64 %sub ,i64 0
   ret i64 %sel
 }
 
-; (a >= b) ? a - b : 0 -> ((a >= b) ? a : b) - b)
+; Again, with vectors:
+; (a > b) ? a - b : 0 -> ((a > b) ? a : b) - b)
 
-define <4 x i32> @max_sub_uge_128(<4 x i32> %lhs, <4 x i32> %rhs) {
-; CHECK-LABEL: @max_sub_uge_128(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[LHS:%.*]], [[RHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[LHS]], [[RHS]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i32> zeroinitializer, <4 x i32> [[SUB]]
+define <4 x i32> @max_sub_ugt_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @max_sub_ugt_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SUB]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
-  %cmp = icmp uge <4 x i32> %lhs, %rhs
-  %sub = sub <4 x i32> %lhs, %rhs
+  %cmp = icmp ugt <4 x i32> %a, %b
+  %sub = sub <4 x i32> %a, %b
   %sel = select <4 x i1> %cmp, <4 x i32> %sub, <4 x i32> zeroinitializer
   ret <4 x i32> %sel
 }
 
+; Use extra ops to thwart icmp swapping canonicalization.
 ; (b < a) ? a - b : 0 -> ((a > b) ? a : b) - b)
 
-define i64 @max_sub_ult(i64 %lhs, i64 %rhs) {
+define i64 @max_sub_ult(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ult(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[LHS:%.*]], [[RHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 [[SUB]], i64 0
+; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[B]], [[A]]
+; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ult i64 %rhs, %lhs
-  %sub = sub i64 %lhs, %rhs
+  %cmp = icmp ult i64 %b, %a
+  %sub = sub i64 %a, %b
   %sel = select i1 %cmp, i64 %sub ,i64 0
+  %extrasub = sub i64 %b, %a
+  call void @use(i64 %extrasub)
   ret i64 %sel
 }
 
 ; (b > a) ? 0 : a - b -> ((a > b) ? a : b) - b)
 
-define i64 @max_sub_ugt_sel_swapped(i64 %lhs, i64 %rhs) {
+define i64 @max_sub_ugt_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ugt_sel_swapped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[LHS:%.*]], [[RHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 0, i64 [[SUB]]
+; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[B]], [[A]]
+; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ugt i64 %rhs, %lhs
-  %sub = sub i64 %lhs, %rhs
+  %cmp = icmp ugt i64 %b, %a
+  %sub = sub i64 %a, %b
   %sel = select i1 %cmp, i64 0 ,i64 %sub
+  %extrasub = sub i64 %b, %a
+  call void @use(i64 %extrasub)
   ret i64 %sel
 }
 
 ; (a < b) ? 0 : a - b -> ((a > b) ? a : b) - b)
 
-define i64 @max_sub_ult_sel_swapped(i64 %lhs, i64 %rhs) {
+define i64 @max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @max_sub_ult_sel_swapped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[LHS:%.*]], [[RHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 0, i64 [[SUB]]
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ult i64 %lhs, %rhs
-  %sub = sub i64 %lhs, %rhs
+  %cmp = icmp ult i64 %a, %b
+  %sub = sub i64 %a, %b
   %sel = select i1 %cmp, i64 0 ,i64 %sub
   ret i64 %sel
 }
 
 ; ((a > b) ? b - a : 0) -> (b - ((a > b) ? a : b))
 
-define i64 @neg_max_sub_ugt(i64 %lhs, i64 %rhs) {
+define i64 @neg_max_sub_ugt(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[RHS:%.*]], [[LHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[RHS]], [[LHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 [[SUB]], i64 0
+; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ugt i64 %lhs, %rhs
-  %sub = sub i64 %rhs, %lhs
+  %cmp = icmp ugt i64 %a, %b
+  %sub = sub i64 %b, %a
   %sel = select i1 %cmp, i64 %sub ,i64 0
+  %extrasub = sub i64 %a, %b
+  call void @use(i64 %extrasub)
   ret i64 %sel
 }
 
 ; ((b < a) ? b - a : 0) -> - ((a > b) ? a : b) - b)
 
-define i64 @neg_max_sub_ult(i64 %lhs, i64 %rhs) {
+define i64 @neg_max_sub_ult(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ult(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[RHS:%.*]], [[LHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[RHS]], [[LHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 [[SUB]], i64 0
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ult i64 %rhs, %lhs
-  %sub = sub i64 %rhs, %lhs
+  %cmp = icmp ult i64 %b, %a
+  %sub = sub i64 %b, %a
   %sel = select i1 %cmp, i64 %sub ,i64 0
   ret i64 %sel
 }
 
 ; ((b > a) ? 0 : b - a) -> - ((a > b) ? a : b) - b)
 
-define i64 @neg_max_sub_ugt_sel_swapped(i64 %lhs, i64 %rhs) {
+define i64 @neg_max_sub_ugt_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ugt_sel_swapped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[RHS:%.*]], [[LHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[RHS]], [[LHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 0, i64 [[SUB]]
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ugt i64 %rhs, %lhs
-  %sub = sub i64 %rhs, %lhs
+  %cmp = icmp ugt i64 %b, %a
+  %sub = sub i64 %b, %a
   %sel = select i1 %cmp, i64 0 ,i64 %sub
   ret i64 %sel
 }
 
 ; ((a < b) ? 0 : b - a) -> - ((a > b) ? a : b) - b)
 
-define i64 @neg_max_sub_ult_sel_swapped(i64 %lhs, i64 %rhs) {
+define i64 @neg_max_sub_ult_sel_swapped(i64 %a, i64 %b) {
 ; CHECK-LABEL: @neg_max_sub_ult_sel_swapped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[RHS:%.*]], [[LHS:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[RHS]], [[LHS]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 0, i64 [[SUB]]
+; CHECK-NEXT:    [[EXTRASUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @use(i64 [[EXTRASUB]])
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
-  %cmp = icmp ult i64 %lhs, %rhs
-  %sub = sub i64 %rhs, %lhs
+  %cmp = icmp ult i64 %a, %b
+  %sub = sub i64 %b, %a
   %sel = select i1 %cmp, i64 0 ,i64 %sub
+  %extrasub = sub i64 %a, %b
+  call void @use(i64 %extrasub)
   ret i64 %sel
 }
 

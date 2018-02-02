@@ -455,7 +455,8 @@ template <class ELFT> void Writer<ELFT>::run() {
       Sec->Addr = 0;
   }
 
-  checkNoOverlappingSections();
+  if (Config->CheckSections)
+    checkNoOverlappingSections();
 
   // It does not make sense try to open the file if we have error already.
   if (errorCount())
