@@ -317,9 +317,9 @@ TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_32) {
   llvm::ArrayRef<uint8_t> registers(parser->GetThreadContext(thread));
 
   ArchSpec arch = parser->GetArchitecture();
-  RegisterInfoInterface *reg_interface = new RegisterContextLinux_i386(arch);
+  auto reg_interface = llvm::make_unique<RegisterContextLinux_i386>(arch);
   lldb::DataBufferSP buf =
-      ConvertMinidumpContext_x86_32(registers, reg_interface);
+      ConvertMinidumpContext_x86_32(registers, reg_interface.get());
   ASSERT_EQ(reg_interface->GetGPRSize(), buf->GetByteSize());
 
   const RegisterInfo *reg_info = reg_interface->GetRegisterInfo();
@@ -359,9 +359,9 @@ TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_64) {
   llvm::ArrayRef<uint8_t> registers(parser->GetThreadContext(thread));
 
   ArchSpec arch = parser->GetArchitecture();
-  RegisterInfoInterface *reg_interface = new RegisterContextLinux_x86_64(arch);
+  auto reg_interface = llvm::make_unique<RegisterContextLinux_x86_64>(arch);
   lldb::DataBufferSP buf =
-      ConvertMinidumpContext_x86_64(registers, reg_interface);
+      ConvertMinidumpContext_x86_64(registers, reg_interface.get());
   ASSERT_EQ(reg_interface->GetGPRSize(), buf->GetByteSize());
 
   const RegisterInfo *reg_info = reg_interface->GetRegisterInfo();
@@ -409,9 +409,9 @@ TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_32_wow64) {
   llvm::ArrayRef<uint8_t> registers(parser->GetThreadContextWow64(thread));
 
   ArchSpec arch = parser->GetArchitecture();
-  RegisterInfoInterface *reg_interface = new RegisterContextLinux_i386(arch);
+  auto reg_interface = llvm::make_unique<RegisterContextLinux_i386>(arch);
   lldb::DataBufferSP buf =
-      ConvertMinidumpContext_x86_32(registers, reg_interface);
+      ConvertMinidumpContext_x86_32(registers, reg_interface.get());
   ASSERT_EQ(reg_interface->GetGPRSize(), buf->GetByteSize());
 
   const RegisterInfo *reg_info = reg_interface->GetRegisterInfo();
