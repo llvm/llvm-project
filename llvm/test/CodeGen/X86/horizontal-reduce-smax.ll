@@ -40,7 +40,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X86-SSE42-LABEL: test_reduce_v2i64:
 ; X86-SSE42:       ## %bb.0:
 ; X86-SSE42-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; X86-SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
 ; X86-SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; X86-SSE42-NEXT:    movd %xmm2, %eax
@@ -80,7 +80,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X64-SSE42-LABEL: test_reduce_v2i64:
 ; X64-SSE42:       ## %bb.0:
 ; X64-SSE42-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; X64-SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
 ; X64-SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; X64-SSE42-NEXT:    movq %xmm2, %rax
@@ -1061,7 +1061,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-SSE2-NEXT:    subl $28, %esp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 32
 ; X86-SSE2-NEXT:    movdqa %xmm3, %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm5, (%esp) ## 16-byte Spill
+; X86-SSE2-NEXT:    movdqa %xmm3, (%esp) ## 16-byte Spill
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -1079,7 +1079,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-SSE2-NEXT:    por %xmm6, %xmm5
 ; X86-SSE2-NEXT:    movdqa %xmm3, %xmm6
 ; X86-SSE2-NEXT:    pxor %xmm4, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm7
 ; X86-SSE2-NEXT:    pxor %xmm4, %xmm7
 ; X86-SSE2-NEXT:    movdqa %xmm7, %xmm0
 ; X86-SSE2-NEXT:    pcmpgtd %xmm6, %xmm0
@@ -1134,7 +1134,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-SSE42-LABEL: test_reduce_v8i64:
 ; X86-SSE42:       ## %bb.0:
 ; X86-SSE42-NEXT:    movdqa %xmm0, %xmm4
-; X86-SSE42-NEXT:    movdqa %xmm4, %xmm5
+; X86-SSE42-NEXT:    movdqa %xmm0, %xmm5
 ; X86-SSE42-NEXT:    pcmpgtq %xmm2, %xmm5
 ; X86-SSE42-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE42-NEXT:    pcmpgtq %xmm3, %xmm0
@@ -1260,7 +1260,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X64-SSE42-LABEL: test_reduce_v8i64:
 ; X64-SSE42:       ## %bb.0:
 ; X64-SSE42-NEXT:    movdqa %xmm0, %xmm4
-; X64-SSE42-NEXT:    movdqa %xmm4, %xmm5
+; X64-SSE42-NEXT:    movdqa %xmm0, %xmm5
 ; X64-SSE42-NEXT:    pcmpgtq %xmm2, %xmm5
 ; X64-SSE42-NEXT:    movdqa %xmm1, %xmm0
 ; X64-SSE42-NEXT:    pcmpgtq %xmm3, %xmm0

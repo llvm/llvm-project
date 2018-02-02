@@ -205,6 +205,8 @@ def no_gnu_unique: F<"no-gnu-unique">,
 def no_merge_exidx_entries: F<"no-merge-exidx-entries">,
   HelpText<"Disable merging .ARM.exidx entries">;
 
+def no_pie: F<"no-pie">, HelpText<"Do not create a position independent executable">;
+
 def no_threads: F<"no-threads">,
   HelpText<"Do not run the linker multi-threaded">;
 
@@ -214,13 +216,14 @@ def no_whole_archive: F<"no-whole-archive">,
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
-def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
-
 def no_omagic: Flag<["--"], "no-omagic">, MetaVarName<"<magic>">,
   HelpText<"Do not set the text data sections to be writable">;
 
 def no_print_gc_sections: F<"no-print-gc-sections">,
   HelpText<"Do not list removed unused sections">;
+
+def no_print_icf_sections: F<"no-print-icf-sections">,
+  HelpText<"Do not list identical folded sections">;
 
 def no_rosegment: F<"no-rosegment">,
   HelpText<"Do not put read-only non-executable sections in their own segment">;
@@ -250,6 +253,9 @@ def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,
   HelpText<"List removed unused sections">;
+
+def print_icf_sections: F<"print-icf-sections">,
+  HelpText<"List identical folded sections">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;

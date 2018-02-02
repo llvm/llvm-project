@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: lld -flavor wasm -no-gc-sections -o %t.wasm %t2.o %t.o
+; RUN: lld -flavor wasm -no-gc-sections --check-signatures -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; bitcode generated from the following C code:
@@ -19,11 +19,11 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define i32 @_start() local_unnamed_addr #1 {
+define void @_start() local_unnamed_addr #1 {
 entry:
   %0 = load i32 ()*, i32 ()** @indirect_func, align 4
   %call = call i32 %0() #2
-  ret i32 0
+  ret void
 }
 
 ; Indirect function call where no function actually has this type.
@@ -43,21 +43,21 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         ReturnType:      I64
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:           - I32
-; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         ReturnType:      I64
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I64
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:           - I32
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 2, 2, 3, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 3, 1, 3, 4, 3 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -120,16 +120,16 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:            - Type:            I32
 ; CHECK-NEXT:              Count:           1
-; CHECK-NEXT:          Body:            4100280284888080002100410028028088808000118080808000001A2000118280808000001A0B
+; CHECK-NEXT:          Body:            4100280284888080002100410028028088808000118080808000001A2000118180808000001A0B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            410028028888808000118280808000001A41000B
+; CHECK-NEXT:         Body:            410028028888808000118180808000001A0B
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            42012000118480808000001A0B
+; CHECK-NEXT:         Body:            42012000118280808000001A0B
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B

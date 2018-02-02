@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple riscv32 -mattr=+c -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-FIXUP %s
 # RUN: llvm-mc -triple riscv32 -filetype=obj -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -d - | FileCheck -check-prefix=CHECK-INSTR %s
+# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=CHECK-INSTR %s
 
 .LBB0_2:
 # CHECK-FIXUP:   fixup A - offset: 0, value: .LBB0_2, kind: fixup_riscv_rvc_jump

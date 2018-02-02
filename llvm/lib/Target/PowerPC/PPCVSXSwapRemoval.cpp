@@ -519,6 +519,8 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
       // permute control vectors (for shift values 1, 2, 3).  However,
       // VPERM has a more restrictive register class.
       case PPC::XXSLDWI:
+      case PPC::XSCVDPSPN:
+      case PPC::XSCVSPDPN:
         break;
       }
     }

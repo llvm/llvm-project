@@ -49,7 +49,7 @@ public:
   }
 };
 
-const char *TestScheme::Scheme = "test";
+const char *TestScheme::Scheme = "unittest";
 const char *TestScheme::TestRoot = "/test-root/";
 
 static URISchemeRegistry::Add<TestScheme> X(TestScheme::Scheme, "Test schema");
@@ -166,7 +166,7 @@ TEST(URITest, Resolve) {
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");
   EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "/a/b/c");
-  EXPECT_EQ(resolveOrDie(parseOrDie("test:a/b/c"), "/dir/test-root/x/y/z"),
+  EXPECT_EQ(resolveOrDie(parseOrDie("unittest:a/b/c"), "/dir/test-root/x/y/z"),
             "/dir/test-root/a/b/c");
   EXPECT_THAT(resolveOrDie(parseOrDie("file://au%3dth/%28x%29/y/%20z")),
               "/(x)/y/ z");

@@ -16465,7 +16465,9 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       N1.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(0).getOperand(1) == N2 &&
       N1.getOperand(0).getOperand(0).getValueType().getVectorNumElements() ==
-          VT.getVectorNumElements()) {
+          VT.getVectorNumElements() &&
+      N1.getOperand(0).getOperand(0).getValueType().getSizeInBits() ==
+          VT.getSizeInBits()) {
     return DAG.getBitcast(VT, N1.getOperand(0).getOperand(0));
   }
 
@@ -17454,19 +17456,34 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
             : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
 
       if (!Reciprocal) {
-        // Unfortunately, Est is now NaN if the input was exactly 0.0.
-        // Select out this case and force the answer to 0.0.
+        // The estimate is now completely wrong if the input was exactly 0.0 or
+        // possibly a denormal. Force the answer to 0.0 for those cases.
         EVT VT = Op.getValueType();
         SDLoc DL(Op);
-
-        SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
         EVT CCVT = getSetCCResultType(VT);
-        SDValue ZeroCmp = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
-        AddToWorklist(ZeroCmp.getNode());
-
-        Est = DAG.getNode(VT.isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
-                          ZeroCmp, FPZero, Est);
-        AddToWorklist(Est.getNode());
+        ISD::NodeType SelOpcode = VT.isVector() ? ISD::VSELECT : ISD::SELECT;
+        const Function &F = DAG.getMachineFunction().getFunction();
+        Attribute Denorms = F.getFnAttribute("denormal-fp-math");
+        if (Denorms.getValueAsString().equals("ieee")) {
+          // fabs(X) < SmallestNormal ? 0.0 : Est
+          const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+          APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
+          SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
+          SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
+          SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
+          SDValue IsDenorm = DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
+          Est = DAG.getNode(SelOpcode, DL, VT, IsDenorm, FPZero, Est);
+          AddToWorklist(Fabs.getNode());
+          AddToWorklist(IsDenorm.getNode());
+          AddToWorklist(Est.getNode());
+        } else {
+          // X == 0.0 ? 0.0 : Est
+          SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
+          SDValue IsZero = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
+          Est = DAG.getNode(SelOpcode, DL, VT, IsZero, FPZero, Est);
+          AddToWorklist(IsZero.getNode());
+          AddToWorklist(Est.getNode());
+        }
       }
     }
     return Est;

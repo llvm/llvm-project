@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj -o %t.o %s
 ; RUN: llc -filetype=obj %S/Inputs/hidden.ll -o %t2.o
 ; RUN: llvm-ar rcs %t2.a %t2.o
-; RUN: lld -flavor wasm %t.o %t2.a -o %t.wasm
+; RUN: lld -flavor wasm --check-signatures %t.o %t2.a -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that hidden symbols are not exported, whether pulled in from an archive
@@ -22,13 +22,13 @@ entry:
 declare i32 @archiveHidden()
 declare i32 @archiveDefault()
 
-define i32 @_start() {
+define void @_start() {
 entry:
   %call1 = call i32 @objectHidden()
   %call2 = call i32 @objectDefault()
   %call3 = call i32 @archiveHidden()
   %call4 = call i32 @archiveDefault()
-  ret i32 0
+  ret void
 }
 
 ; CHECK:        - Type:            EXPORT

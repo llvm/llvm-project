@@ -59,14 +59,14 @@ public:
 
   bool Discarded = false;
   std::vector<OutputRelocation> OutRelocations;
-  const ObjFile *File;
+  ObjFile *File;
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
   unsigned Live : 1;
 
 protected:
-  InputChunk(const ObjFile *F, Kind K)
+  InputChunk(ObjFile *F, Kind K)
       : File(F), Live(!Config->GcSections), SectionKind(K) {}
   virtual ~InputChunk() = default;
   void calcRelocations();
@@ -88,7 +88,7 @@ protected:
 // each global variable.
 class InputSegment : public InputChunk {
 public:
-  InputSegment(const WasmSegment &Seg, const ObjFile *F)
+  InputSegment(const WasmSegment &Seg, ObjFile *F)
       : InputChunk(F, InputChunk::DataSegment), Segment(Seg) {}
 
   static bool classof(const InputChunk *C) { return C->kind() == DataSegment; }
@@ -127,7 +127,7 @@ protected:
 class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &S, const WasmFunction *Func,
-                const ObjFile *F)
+                ObjFile *F)
       : InputChunk(F, InputChunk::Function), Signature(S), Function(Func) {}
 
   static bool classof(const InputChunk *C) {

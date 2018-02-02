@@ -185,8 +185,14 @@ Value *InstCombiner::EvaluateInDifferentType(Value *V, Type *Ty,
   case Instruction::Shl:
   case Instruction::UDiv:
   case Instruction::URem: {
-    Value *LHS = EvaluateInDifferentType(I->getOperand(0), Ty, isSigned);
-    Value *RHS = EvaluateInDifferentType(I->getOperand(1), Ty, isSigned);
+    Value *LHS, *RHS;
+    if (I->getOperand(0) == I->getOperand(1)) {
+      // Don't create an unnecessary value if the operands are repeated.
+      LHS = RHS = EvaluateInDifferentType(I->getOperand(0), Ty, isSigned);
+    } else {
+      LHS = EvaluateInDifferentType(I->getOperand(0), Ty, isSigned);
+      RHS = EvaluateInDifferentType(I->getOperand(1), Ty, isSigned);
+    }
     Res = BinaryOperator::Create((Instruction::BinaryOps)Opc, LHS, RHS);
     break;
   }
@@ -320,10 +326,12 @@ static bool canNotEvaluateInType(Value *V, Type *Ty) {
   assert(!isa<Constant>(V) && "Constant should already be handled.");
   if (!isa<Instruction>(V))
     return true;
-  // We can't extend or shrink something that has multiple uses: doing so would
-  // require duplicating the instruction in general, which isn't profitable.
+  // We can't extend or shrink something that has multiple uses -- unless those
+  // multiple uses are all in the same instruction -- doing so would require
+  // duplicating the instruction which isn't profitable.
   if (!V->hasOneUse())
-    return true;
+    if (any_of(V->users(), [&](User *U) { return U != V->user_back(); }))
+      return true;
 
   return false;
 }

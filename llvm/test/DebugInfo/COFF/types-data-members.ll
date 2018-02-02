@@ -298,7 +298,7 @@
 ; CHECK:   }
 ; CHECK:   Struct (0x1016) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHECK:     MemberCount: 2
+; CHECK:     MemberCount: 4
 ; CHECK:     Properties [ (0x200)
 ; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]

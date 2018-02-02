@@ -132,7 +132,8 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " This limit does not affect memory allocations other than"
             " malloc/new.")
 COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
-COMMON_FLAG(s32, allocator_release_to_os_interval_ms, 5000,
+COMMON_FLAG(s32, allocator_release_to_os_interval_ms,
+            (SANITIZER_FUCHSIA || SANITIZER_WINDOWS) ? -1 : 5000,
             "Only affects a 64-bit allocator. If set, tries to release unused "
             "memory to the OS, but not more often than this interval (in "
             "milliseconds). Negative values mean do not attempt to release "

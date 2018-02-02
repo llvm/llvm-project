@@ -46,7 +46,7 @@ using namespace llvm;
 #define DEBUG_TYPE "polly-detect"
 
 #define SCOP_STAT(NAME, DESC)                                                  \
-  { "polly-detect", "NAME", "Number of rejected regions: " DESC, {0}, false }
+  { "polly-detect", "NAME", "Number of rejected regions: " DESC, {0}, {false} }
 
 Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),

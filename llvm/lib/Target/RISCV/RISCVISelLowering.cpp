@@ -116,6 +116,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setMinimumJumpTableEntries(INT_MAX);
 }
 
+EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
+                                            EVT VT) const {
+  if (!VT.isVector())
+    return getPointerTy(DL);
+  return VT.changeVectorElementTypeToInteger();
+}
+
 // Changes the condition code and swaps operands if necessary, so the SetCC
 // operation matches one of the comparisons supported directly in the RISC-V
 // ISA.

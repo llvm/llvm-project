@@ -16,27 +16,25 @@ target triple = "x86_64-unknown-unknown"
 define void @maxArray(double* noalias nocapture %x, double* noalias nocapture readonly %y) {
 ; JAG-LABEL: @maxArray(
 ; JAG-NEXT:  entry:
-; JAG-NEXT:    [[Y1:%.*]] = bitcast double* [[Y:%.*]] to <2 x double>*
-; JAG-NEXT:    [[X4:%.*]] = bitcast double* [[X:%.*]] to <2 x double>*
-; JAG-NEXT:    [[X45:%.*]] = bitcast <2 x double>* [[X4]] to i8*
-; JAG-NEXT:    [[Y12:%.*]] = bitcast <2 x double>* [[Y1]] to i8*
+; JAG-NEXT:    [[Y1:%.*]] = bitcast double* [[Y:%.*]] to i8*
+; JAG-NEXT:    [[X3:%.*]] = bitcast double* [[X:%.*]] to i8*
 ; JAG-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; JAG:       vector.body:
 ; JAG-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ -524288, [[ENTRY:%.*]] ]
-; JAG-NEXT:    [[UGLYGEP9:%.*]] = getelementptr i8, i8* [[X45]], i64 [[LSR_IV]]
-; JAG-NEXT:    [[UGLYGEP910:%.*]] = bitcast i8* [[UGLYGEP9]] to <2 x double>*
-; JAG-NEXT:    [[SCEVGEP11:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP910]], i64 32768
-; JAG-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[Y12]], i64 [[LSR_IV]]
-; JAG-NEXT:    [[UGLYGEP3:%.*]] = bitcast i8* [[UGLYGEP]] to <2 x double>*
-; JAG-NEXT:    [[SCEVGEP:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP3]], i64 32768
-; JAG-NEXT:    [[XVAL:%.*]] = load <2 x double>, <2 x double>* [[SCEVGEP11]], align 8
+; JAG-NEXT:    [[UGLYGEP7:%.*]] = getelementptr i8, i8* [[X3]], i64 [[LSR_IV]]
+; JAG-NEXT:    [[UGLYGEP78:%.*]] = bitcast i8* [[UGLYGEP7]] to <2 x double>*
+; JAG-NEXT:    [[SCEVGEP9:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP78]], i64 32768
+; JAG-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[Y1]], i64 [[LSR_IV]]
+; JAG-NEXT:    [[UGLYGEP2:%.*]] = bitcast i8* [[UGLYGEP]] to <2 x double>*
+; JAG-NEXT:    [[SCEVGEP:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP2]], i64 32768
+; JAG-NEXT:    [[XVAL:%.*]] = load <2 x double>, <2 x double>* [[SCEVGEP9]], align 8
 ; JAG-NEXT:    [[YVAL:%.*]] = load <2 x double>, <2 x double>* [[SCEVGEP]], align 8
 ; JAG-NEXT:    [[CMP:%.*]] = fcmp ogt <2 x double> [[YVAL]], [[XVAL]]
 ; JAG-NEXT:    [[MAX:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[YVAL]], <2 x double> [[XVAL]]
-; JAG-NEXT:    [[UGLYGEP6:%.*]] = getelementptr i8, i8* [[X45]], i64 [[LSR_IV]]
-; JAG-NEXT:    [[UGLYGEP67:%.*]] = bitcast i8* [[UGLYGEP6]] to <2 x double>*
-; JAG-NEXT:    [[SCEVGEP8:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP67]], i64 32768
-; JAG-NEXT:    store <2 x double> [[MAX]], <2 x double>* [[SCEVGEP8]], align 8
+; JAG-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, i8* [[X3]], i64 [[LSR_IV]]
+; JAG-NEXT:    [[UGLYGEP45:%.*]] = bitcast i8* [[UGLYGEP4]] to <2 x double>*
+; JAG-NEXT:    [[SCEVGEP6:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP45]], i64 32768
+; JAG-NEXT:    store <2 x double> [[MAX]], <2 x double>* [[SCEVGEP6]], align 8
 ; JAG-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 16
 ; JAG-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; JAG-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
@@ -45,27 +43,25 @@ define void @maxArray(double* noalias nocapture %x, double* noalias nocapture re
 ;
 ; HSW-LABEL: @maxArray(
 ; HSW-NEXT:  entry:
-; HSW-NEXT:    [[Y1:%.*]] = bitcast double* [[Y:%.*]] to <2 x double>*
-; HSW-NEXT:    [[X4:%.*]] = bitcast double* [[X:%.*]] to <2 x double>*
-; HSW-NEXT:    [[X45:%.*]] = bitcast <2 x double>* [[X4]] to i8*
-; HSW-NEXT:    [[Y12:%.*]] = bitcast <2 x double>* [[Y1]] to i8*
+; HSW-NEXT:    [[Y1:%.*]] = bitcast double* [[Y:%.*]] to i8*
+; HSW-NEXT:    [[X3:%.*]] = bitcast double* [[X:%.*]] to i8*
 ; HSW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; HSW:       vector.body:
 ; HSW-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ -524288, [[ENTRY:%.*]] ]
-; HSW-NEXT:    [[UGLYGEP9:%.*]] = getelementptr i8, i8* [[X45]], i64 [[LSR_IV]]
-; HSW-NEXT:    [[UGLYGEP910:%.*]] = bitcast i8* [[UGLYGEP9]] to <2 x double>*
-; HSW-NEXT:    [[SCEVGEP11:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP910]], i64 32768
-; HSW-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[Y12]], i64 [[LSR_IV]]
-; HSW-NEXT:    [[UGLYGEP3:%.*]] = bitcast i8* [[UGLYGEP]] to <2 x double>*
-; HSW-NEXT:    [[SCEVGEP:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP3]], i64 32768
-; HSW-NEXT:    [[XVAL:%.*]] = load <2 x double>, <2 x double>* [[SCEVGEP11]], align 8
+; HSW-NEXT:    [[UGLYGEP7:%.*]] = getelementptr i8, i8* [[X3]], i64 [[LSR_IV]]
+; HSW-NEXT:    [[UGLYGEP78:%.*]] = bitcast i8* [[UGLYGEP7]] to <2 x double>*
+; HSW-NEXT:    [[SCEVGEP9:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP78]], i64 32768
+; HSW-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[Y1]], i64 [[LSR_IV]]
+; HSW-NEXT:    [[UGLYGEP2:%.*]] = bitcast i8* [[UGLYGEP]] to <2 x double>*
+; HSW-NEXT:    [[SCEVGEP:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP2]], i64 32768
+; HSW-NEXT:    [[XVAL:%.*]] = load <2 x double>, <2 x double>* [[SCEVGEP9]], align 8
 ; HSW-NEXT:    [[YVAL:%.*]] = load <2 x double>, <2 x double>* [[SCEVGEP]], align 8
 ; HSW-NEXT:    [[CMP:%.*]] = fcmp ogt <2 x double> [[YVAL]], [[XVAL]]
 ; HSW-NEXT:    [[MAX:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[YVAL]], <2 x double> [[XVAL]]
-; HSW-NEXT:    [[UGLYGEP6:%.*]] = getelementptr i8, i8* [[X45]], i64 [[LSR_IV]]
-; HSW-NEXT:    [[UGLYGEP67:%.*]] = bitcast i8* [[UGLYGEP6]] to <2 x double>*
-; HSW-NEXT:    [[SCEVGEP8:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP67]], i64 32768
-; HSW-NEXT:    store <2 x double> [[MAX]], <2 x double>* [[SCEVGEP8]], align 8
+; HSW-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, i8* [[X3]], i64 [[LSR_IV]]
+; HSW-NEXT:    [[UGLYGEP45:%.*]] = bitcast i8* [[UGLYGEP4]] to <2 x double>*
+; HSW-NEXT:    [[SCEVGEP6:%.*]] = getelementptr <2 x double>, <2 x double>* [[UGLYGEP45]], i64 32768
+; HSW-NEXT:    store <2 x double> [[MAX]], <2 x double>* [[SCEVGEP6]], align 8
 ; HSW-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 16
 ; HSW-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; HSW-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]

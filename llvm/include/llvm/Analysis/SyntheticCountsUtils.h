@@ -31,7 +31,7 @@ class Function;
 template <typename CallGraphType> class SyntheticCountsUtils {
 public:
   using Scaled64 = ScaledNumber<uint64_t>;
-  using CGT = CallGraphTraits<CallGraphType>;
+  using CGT = GraphTraits<CallGraphType>;
   using NodeRef = typename CGT::NodeRef;
   using EdgeRef = typename CGT::EdgeRef;
   using SccTy = std::vector<NodeRef>;

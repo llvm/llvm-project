@@ -2,7 +2,7 @@
 # RUN:         -triple x86_64-linux-elf -o %t.o
 # RUN: llvm-cfi-verify %t.o | FileCheck %s
 
-# CHECK-LABEL: P
+# CHECK-LABEL: {{^Instruction: .* \(PROTECTED\)}}
 # CHECK-NEXT: tiny.cc:11
 
 # CHECK: Expected Protected: 1 (100.00%)

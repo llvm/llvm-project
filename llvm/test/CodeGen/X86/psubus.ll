@@ -683,7 +683,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; SSE41-LABEL: test14:
 ; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movdqa %xmm0, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm8 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[2,3,0,1]
@@ -1247,7 +1247,7 @@ define <32 x i16> @psubus_32i16_max(<32 x i16> %x, <32 x i16> %y) nounwind {
 ; SSE2-NEXT:    movdqa %xmm1, %xmm9
 ; SSE2-NEXT:    movdqa %xmm0, %xmm8
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    movdqa %xmm8, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm3, %xmm1
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
 ; SSE2-NEXT:    pxor %xmm3, %xmm0
@@ -1295,7 +1295,7 @@ define <32 x i16> @psubus_32i16_max(<32 x i16> %x, <32 x i16> %y) nounwind {
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm9
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm8
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    movdqa %xmm8, %xmm1
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-NEXT:    pxor %xmm3, %xmm1
 ; SSSE3-NEXT:    movdqa %xmm4, %xmm0
 ; SSSE3-NEXT:    pxor %xmm3, %xmm0
@@ -1950,7 +1950,7 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ; SSE2-NEXT:    movdqa %xmm9, %xmm11
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm11 = xmm11[4],xmm0[4],xmm11[5],xmm0[5],xmm11[6],xmm0[6],xmm11[7],xmm0[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm9 = xmm9[0],xmm0[0],xmm9[1],xmm0[1],xmm9[2],xmm0[2],xmm9[3],xmm0[3]
-; SSE2-NEXT:    movdqa %xmm8, %xmm10
+; SSE2-NEXT:    movdqa %xmm1, %xmm10
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4],xmm0[4],xmm10[5],xmm0[5],xmm10[6],xmm0[6],xmm10[7],xmm0[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm0[0],xmm8[1],xmm0[1],xmm8[2],xmm0[2],xmm8[3],xmm0[3]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
@@ -2013,7 +2013,7 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ; SSSE3-NEXT:    movdqa %xmm9, %xmm11
 ; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm11 = xmm11[4],xmm0[4],xmm11[5],xmm0[5],xmm11[6],xmm0[6],xmm11[7],xmm0[7]
 ; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm9 = xmm9[0],xmm0[0],xmm9[1],xmm0[1],xmm9[2],xmm0[2],xmm9[3],xmm0[3]
-; SSSE3-NEXT:    movdqa %xmm8, %xmm10
+; SSSE3-NEXT:    movdqa %xmm1, %xmm10
 ; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4],xmm0[4],xmm10[5],xmm0[5],xmm10[6],xmm0[6],xmm10[7],xmm0[7]
 ; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm0[0],xmm8[1],xmm0[1],xmm8[2],xmm0[2],xmm8[3],xmm0[3]
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]

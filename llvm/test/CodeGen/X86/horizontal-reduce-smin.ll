@@ -40,7 +40,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X86-SSE42-LABEL: test_reduce_v2i64:
 ; X86-SSE42:       ## %bb.0:
 ; X86-SSE42-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; X86-SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; X86-SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
@@ -81,7 +81,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X64-SSE42-LABEL: test_reduce_v2i64:
 ; X64-SSE42:       ## %bb.0:
 ; X64-SSE42-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; X64-SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; X64-SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; X64-SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
@@ -1065,10 +1065,10 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-SSE2-NEXT:    subl $28, %esp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 32
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm6, (%esp) ## 16-byte Spill
+; X86-SSE2-NEXT:    movdqa %xmm2, (%esp) ## 16-byte Spill
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm5
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; X86-SSE2-NEXT:    pxor %xmm4, %xmm5
 ; X86-SSE2-NEXT:    pxor %xmm4, %xmm6
 ; X86-SSE2-NEXT:    movdqa %xmm6, %xmm7
