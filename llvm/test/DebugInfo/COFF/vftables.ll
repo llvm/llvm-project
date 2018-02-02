@@ -117,11 +117,9 @@
 ; CHECK-NEXT:    }
 ; CHECK-NOT:     VFPtr
 
-; FIXME: Is the MemberCount correct?
-
 ; CHECK:        Struct ({{.*}}) {
 ; CHECK-NEXT:     TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHECK-NEXT:     MemberCount: 3
+; CHECK-NEXT:     MemberCount: 5
 ; CHECK-NEXT:     Properties [ (0x200)
 ; CHECK-NEXT:       HasUniqueName (0x200)
 ; CHECK-NEXT:     ]
@@ -145,7 +143,7 @@
 
 ; CHECK:        Struct ({{.*}}) {
 ; CHECK-NEXT:     TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHECK-NEXT:     MemberCount: 3
+; CHECK-NEXT:     MemberCount: 4
 ; CHECK-NEXT:     Properties [ (0x200)
 ; CHECK-NEXT:       HasUniqueName (0x200)
 ; CHECK-NEXT:     ]

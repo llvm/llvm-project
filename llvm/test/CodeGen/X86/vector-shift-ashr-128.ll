@@ -273,7 +273,7 @@ define <8 x i16> @var_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE41-NEXT:    psllw $4, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
-; SSE41-NEXT:    paddw %xmm3, %xmm3
+; SSE41-NEXT:    paddw %xmm1, %xmm3
 ; SSE41-NEXT:    movdqa %xmm2, %xmm4
 ; SSE41-NEXT:    psraw $8, %xmm4
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0

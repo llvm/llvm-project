@@ -650,7 +650,7 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 ; X32-NEXT:    subl $24, %esp
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
 ; X32-NEXT:    vmovdqa %xmm0, %xmm4
-; X32-NEXT:    vmovdqa %xmm4, %xmm1
+; X32-NEXT:    vmovdqa %xmm0, %xmm1
 ; X32-NEXT:    calll _test_argRet128Vector
 ; X32-NEXT:    vmovdqa32 %xmm4, %xmm0 {%k1}
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
@@ -668,7 +668,7 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 ; WIN64-NEXT:    .seh_savexmm 8, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovdqa %xmm0, %xmm8
-; WIN64-NEXT:    vmovdqa %xmm8, %xmm1
+; WIN64-NEXT:    vmovdqa %xmm0, %xmm1
 ; WIN64-NEXT:    callq test_argRet128Vector
 ; WIN64-NEXT:    vmovdqa32 %xmm8, %xmm0 {%k1}
 ; WIN64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -689,7 +689,7 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
 ; LINUXOSX64-NEXT:    .cfi_offset %xmm8, -32
 ; LINUXOSX64-NEXT:    vmovdqa %xmm0, %xmm8
-; LINUXOSX64-NEXT:    vmovdqa %xmm8, %xmm1
+; LINUXOSX64-NEXT:    vmovdqa %xmm0, %xmm1
 ; LINUXOSX64-NEXT:    callq test_argRet128Vector
 ; LINUXOSX64-NEXT:    vmovdqa32 %xmm8, %xmm0 {%k1}
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -908,12 +908,12 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; X32-NEXT:    subl $20, %esp
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edi, %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, %ebx
-; X32-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %eax, %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    subl %ecx, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl %edi, %ebp

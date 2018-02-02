@@ -7,46 +7,30 @@
 define x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, <64 x i1> %x2, <64 x i1> %x3, <64 x i1> %x4, <64 x i1> %x5, <64 x i1> %x6, <64 x i1> %x7, <64 x i1> %x8, <64 x i1> %x9, <64 x i1> %x10, <64 x i1> %x11, <64 x i1> %x12)  {
 ; X32-LABEL: test_argv64i1:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    kmovd %edi, %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k0
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    kmovd %ecx, %k2
-; X32-NEXT:    kunpckdq %k1, %k2, %k1
-; X32-NEXT:    kmovq %k1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    kmovq %k0, (%esp)
-; X32-NEXT:    addl (%esp), %eax
+; X32-NEXT:    addl %edx, %eax
+; X32-NEXT:    adcl %edi, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    addl 8(%ebp), %eax
-; X32-NEXT:    adcl 12(%ebp), %ecx
-; X32-NEXT:    addl 16(%ebp), %eax
-; X32-NEXT:    adcl 20(%ebp), %ecx
-; X32-NEXT:    addl 24(%ebp), %eax
-; X32-NEXT:    adcl 28(%ebp), %ecx
-; X32-NEXT:    addl 32(%ebp), %eax
-; X32-NEXT:    adcl 36(%ebp), %ecx
-; X32-NEXT:    addl 40(%ebp), %eax
-; X32-NEXT:    adcl 44(%ebp), %ecx
-; X32-NEXT:    addl 48(%ebp), %eax
-; X32-NEXT:    adcl 52(%ebp), %ecx
-; X32-NEXT:    addl 56(%ebp), %eax
-; X32-NEXT:    adcl 60(%ebp), %ecx
-; X32-NEXT:    addl 64(%ebp), %eax
-; X32-NEXT:    adcl 68(%ebp), %ecx
-; X32-NEXT:    addl 72(%ebp), %eax
-; X32-NEXT:    adcl 76(%ebp), %ecx
-; X32-NEXT:    addl 80(%ebp), %eax
-; X32-NEXT:    adcl 84(%ebp), %ecx
-; X32-NEXT:    addl 88(%ebp), %eax
-; X32-NEXT:    adcl 92(%ebp), %ecx
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argv64i1:

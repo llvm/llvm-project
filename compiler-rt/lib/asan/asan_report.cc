@@ -343,7 +343,11 @@ static bool IsInvalidPointerPair(uptr a1, uptr a2) {
 }
 
 static INLINE void CheckForInvalidPointerPair(void *p1, void *p2) {
-  if (!flags()->detect_invalid_pointer_pairs) return;
+  switch (flags()->detect_invalid_pointer_pairs) {
+    case 0 : return;
+    case 1 : if (p1 == nullptr || p2 == nullptr) return; break;
+  }
+
   uptr a1 = reinterpret_cast<uptr>(p1);
   uptr a2 = reinterpret_cast<uptr>(p2);
 

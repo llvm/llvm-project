@@ -103,7 +103,7 @@ define <2 x double> @test5_undef(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test5_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; SSE-NEXT:    addsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -168,7 +168,7 @@ define <4 x float> @test8_undef(<4 x float> %a, <4 x float> %b) {
 ; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    addss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; SSE-NEXT:    addss %xmm2, %xmm0
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]

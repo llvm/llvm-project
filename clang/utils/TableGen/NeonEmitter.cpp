@@ -948,7 +948,7 @@ void Type::applyModifier(char Mod) {
     break;
   case 'c':
     Constant = true;
-  // Fall through
+    LLVM_FALLTHROUGH;
   case 'p':
     Pointer = true;
     Bitwidth = ElementBitwidth;

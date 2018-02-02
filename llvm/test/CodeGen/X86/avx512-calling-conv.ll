@@ -355,7 +355,7 @@ define i32 @test12(i32 %a1, i32 %a2, i32 %b1) {
 ; KNL_X32-NEXT:    movl %edi, (%esp)
 ; KNL_X32-NEXT:    calll _test11
 ; KNL_X32-NEXT:    movl %eax, %ebx
-; KNL_X32-NEXT:    movzbl %bl, %eax
+; KNL_X32-NEXT:    movzbl %al, %eax
 ; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; KNL_X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; KNL_X32-NEXT:    movl %edi, (%esp)

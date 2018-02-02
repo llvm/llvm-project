@@ -1,0 +1,104 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass machine-cp -o - %s | FileCheck %s
+# Tests for MachineCopyPropagation copy forwarding.
+---
+# Simple forwarding.
+# CHECK-LABEL: name: test1
+# CHECK: $x0 = SUBXri $x0, 1, 0
+name:            test1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    renamable $x1 = COPY $x0
+    $x0 = SUBXri renamable $x1, 1, 0
+...
+---
+# Don't forward if not renamable.
+# CHECK-LABEL: name: test2
+# CHECK: $x0 = SUBXri $x1, 1, 0
+name:            test2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    $x1 = COPY $x0
+    $x0 = SUBXri $x1, 1, 0
+...
+---
+# Don't forward reserved non-constant reg values.
+# CHECK-LABEL: name: test4
+# CHECK: $x0 = SUBXri renamable $x1, 1, 0
+name:            test4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    $sp = SUBXri $sp, 16, 0
+    renamable $x1 = COPY $sp
+    $x0 = SUBXri renamable $x1, 1, 0
+    $sp = ADDXri $sp, 16, 0
+...
+---
+# Don't violate opcode constraints when forwarding.
+# CHECK-LABEL: name: test5
+# CHECK: $x0 = SUBXri renamable $x1, 1, 0
+name:            test5
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    renamable $x1 = COPY $xzr
+    $x0 = SUBXri renamable $x1, 1, 0
+...
+---
+# Test cross-class COPY forwarding.
+# CHECK-LABEL: name: test6
+# CHECK: $x2 = COPY $x0
+name:            test6
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    renamable $d1 = COPY $x0
+    $x2 = COPY renamable $d1
+    RET_ReallyLR implicit $x2
+...
+---
+# Don't forward if there are overlapping implicit operands.
+# CHECK-LABEL: name: test7
+# CHECK: $w0 = SUBWri killed renamable $w1, 1, 0
+name:            test7
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    renamable $w1 = COPY $w0
+    $w0 = SUBWri killed renamable $w1, 1, 0, implicit killed $x1
+...
+---
+# Check that kill flags are cleared.
+# CHECK-LABEL: name: test8
+# CHECK: $x2 = ADDXri $x0, 1, 0
+# CHECK: $x0 = SUBXri $x0, 1, 0
+name:            test8
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    renamable $x1 = COPY $x0
+    $x2 = ADDXri killed $x0, 1, 0
+    $x0 = SUBXri renamable $x1, 1, 0
+...
+---
+# Don't forward if value is clobbered.
+# CHECK-LABEL: name: test9
+# CHECK: $x2 = SUBXri renamable $x1, 1, 0
+name:            test9
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    renamable $x1 = COPY $x0
+    $x0 = ADDXri $x0, 1, 0
+    $x2 = SUBXri renamable $x1, 1, 0
+...

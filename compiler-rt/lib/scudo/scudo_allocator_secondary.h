@@ -41,7 +41,7 @@ class ScudoLargeMmapAllocator {
 
     ReservedAddressRange AddressRange;
     uptr MapBeg = AddressRange.Init(MapSize);
-    if (MapBeg == ~static_cast<uptr>(0))
+    if (UNLIKELY(MapBeg == ~static_cast<uptr>(0)))
       return ReturnNullOrDieOnFailure::OnOOM();
     // A page-aligned pointer is assumed after that, so check it now.
     CHECK(IsAligned(MapBeg, PageSize));
@@ -58,17 +58,17 @@ class ScudoLargeMmapAllocator {
     if (Alignment > MinAlignment) {
       if (!IsAligned(UserBeg, Alignment)) {
         UserBeg = RoundUpTo(UserBeg, Alignment);
-        CHECK_GE(UserBeg, MapBeg);
-        uptr NewMapBeg = RoundDownTo(UserBeg - HeadersSize, PageSize) -
+        DCHECK_GE(UserBeg, MapBeg);
+        const uptr NewMapBeg = RoundDownTo(UserBeg - HeadersSize, PageSize) -
             PageSize;
-        CHECK_GE(NewMapBeg, MapBeg);
+        DCHECK_GE(NewMapBeg, MapBeg);
         if (NewMapBeg != MapBeg) {
           AddressRange.Unmap(MapBeg, NewMapBeg - MapBeg);
           MapBeg = NewMapBeg;
         }
         UserEnd = UserBeg + UserSize;
       }
-      uptr NewMapEnd = RoundUpTo(UserEnd, PageSize) + PageSize;
+      const uptr NewMapEnd = RoundUpTo(UserEnd, PageSize) + PageSize;
       if (NewMapEnd != MapEnd) {
         AddressRange.Unmap(NewMapEnd, MapEnd - NewMapEnd);
         MapEnd = NewMapEnd;
@@ -76,7 +76,7 @@ class ScudoLargeMmapAllocator {
       MapSize = MapEnd - MapBeg;
     }
 
-    CHECK_LE(UserEnd, MapEnd - PageSize);
+    DCHECK_LE(UserEnd, MapEnd - PageSize);
     // Actually mmap the memory, preserving the guard pages on either side
     CHECK_EQ(MapBeg + PageSize,
              AddressRange.Map(MapBeg + PageSize, MapSize - 2 * PageSize));
@@ -111,10 +111,10 @@ class ScudoLargeMmapAllocator {
   }
 
   uptr GetActuallyAllocatedSize(void *Ptr) {
-    ReservedAddressRange *StoredRange = getReservedAddressRange(Ptr);
+    const ReservedAddressRange *StoredRange = getReservedAddressRange(Ptr);
     // Deduct PageSize as ReservedAddressRange size includes the trailing guard
     // page.
-    uptr MapEnd = reinterpret_cast<uptr>(StoredRange->base()) +
+    const uptr MapEnd = reinterpret_cast<uptr>(StoredRange->base()) +
         StoredRange->size() - PageSizeCached;
     return MapEnd - reinterpret_cast<uptr>(Ptr);
   }

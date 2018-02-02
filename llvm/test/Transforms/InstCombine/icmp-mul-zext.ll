@@ -55,13 +55,12 @@ lor.end:
 
 define void @PR33765(i8 %beth) {
 ; CHECK-LABEL: @PR33765(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i16
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN9:%.*]], label [[IF_THEN9]]
 ; CHECK:       if.then9:
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[TINKY:%.*]] = load i16, i16* @glob, align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[MUL]] to i16
-; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[TINKY]], [[TMP1]]
+; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[TINKY]], [[MUL]]
 ; CHECK-NEXT:    store i16 [[CONV14]], i16* @glob, align 2
 ; CHECK-NEXT:    ret void
 ;

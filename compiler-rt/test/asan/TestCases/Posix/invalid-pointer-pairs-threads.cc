@@ -1,7 +1,7 @@
 // RUN: %clangxx_asan -O0 %s -pthread -o %t -mllvm -asan-detect-invalid-pointer-pair
 
-// RUN: %env_asan_opts=detect_invalid_pointer_pairs=1 %run %t a 2>&1 | FileCheck %s -check-prefix=OK -allow-empty
-// RUN: %env_asan_opts=detect_invalid_pointer_pairs=1 not %run %t b 2>&1 | FileCheck %s -check-prefix=B
+// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2 %run %t a 2>&1 | FileCheck %s -check-prefix=OK -allow-empty
+// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2 not %run %t b 2>&1 | FileCheck %s -check-prefix=B
 
 // pthread barriers are not available on OS X
 // UNSUPPORTED: darwin

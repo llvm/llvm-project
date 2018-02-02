@@ -46,12 +46,12 @@ define <4 x float> @f5(<4 x float> %val1, <4 x float> %val2) {
 ; CHECK-LABEL: f5:
 ; CHECK-DAG: vlr %v[[A1:[0-5]]], %v24
 ; CHECK-DAG: vlr %v[[A2:[0-5]]], %v26
-; CHECK-DAG: vrepf %v[[B1:[0-5]]], %v[[A1]], 1
-; CHECK-DAG: vrepf %v[[B2:[0-5]]], %v[[A2]], 1
-; CHECK-DAG: vrepf %v[[C1:[0-5]]], %v[[A1]], 2
-; CHECK-DAG: vrepf %v[[C2:[0-5]]], %v[[A2]], 2
-; CHECK-DAG: vrepf %v[[D1:[0-5]]], %v[[A1]], 3
-; CHECK-DAG: vrepf %v[[D2:[0-5]]], %v[[A2]], 3
+; CHECK-DAG: vrepf %v[[B1:[0-5]]], %v24, 1
+; CHECK-DAG: vrepf %v[[B2:[0-5]]], %v26, 1
+; CHECK-DAG: vrepf %v[[C1:[0-5]]], %v24, 2
+; CHECK-DAG: vrepf %v[[C2:[0-5]]], %v26, 2
+; CHECK-DAG: vrepf %v[[D1:[0-5]]], %v24, 3
+; CHECK-DAG: vrepf %v[[D2:[0-5]]], %v26, 3
 ; CHECK-DAG: sebr %f[[A1]], %f[[A2]]
 ; CHECK-DAG: sebr %f[[B1]], %f[[B2]]
 ; CHECK-DAG: sebr %f[[C1]], %f[[C2]]

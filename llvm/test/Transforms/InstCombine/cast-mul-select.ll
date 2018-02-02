@@ -49,11 +49,9 @@ define i8 @select2(i1 %cond, i8 %x, i8 %y, i8 %z) {
 
 define i32 @eval_trunc_multi_use_in_one_inst(i32 %x) {
 ; CHECK-LABEL: @eval_trunc_multi_use_in_one_inst(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i64 [[Z]], 15
-; CHECK-NEXT:    [[M:%.*]] = mul i64 [[A]], [[A]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[M]] to i32
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[M]]
 ;
   %z = zext i32 %x to i64
   %a = add nsw nuw i64 %z, 15
@@ -64,11 +62,9 @@ define i32 @eval_trunc_multi_use_in_one_inst(i32 %x) {
 
 define i32 @eval_zext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-LABEL: @eval_zext_multi_use_in_one_inst(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 5
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[R:%.*]] = zext i16 [[M]] to i32
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[M]]
 ;
   %t = trunc i32 %x to i16
   %a = and i16 %t, 5
@@ -79,12 +75,10 @@ define i32 @eval_zext_multi_use_in_one_inst(i32 %x) {
 
 define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-LABEL: @eval_sext_multi_use_in_one_inst(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 14
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[O:%.*]] = or i16 [[M]], -32768
-; CHECK-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], 14
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[A]], [[A]]
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[M]], -32768
+; CHECK-NEXT:    ret i32 [[O]]
 ;
   %t = trunc i32 %x to i16
   %a = and i16 %t, 14

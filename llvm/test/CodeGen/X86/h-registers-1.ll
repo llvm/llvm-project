@@ -32,8 +32,7 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebx
 ; CHECK-NEXT:    movzbl %bh, %edi
-; CHECK-NEXT:    movq %r10, %r8
-; CHECK-NEXT:    addq %r8, %rsi
+; CHECK-NEXT:    addq %r10, %rsi
 ; CHECK-NEXT:    addq %r11, %rdx
 ; CHECK-NEXT:    addq %rsi, %rdx
 ; CHECK-NEXT:    addq %rbp, %rcx
@@ -68,8 +67,7 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; GNUX32-NEXT:    movzbl %ah, %eax
 ; GNUX32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; GNUX32-NEXT:    movzbl %bh, %edi
-; GNUX32-NEXT:    movq %r10, %r8
-; GNUX32-NEXT:    addq %r8, %rsi
+; GNUX32-NEXT:    addq %r10, %rsi
 ; GNUX32-NEXT:    addq %r11, %rdx
 ; GNUX32-NEXT:    addq %rsi, %rdx
 ; GNUX32-NEXT:    addq %rbp, %rcx

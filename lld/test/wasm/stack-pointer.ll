@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: lld -flavor wasm --relocatable -o %t.wasm %t.o
+; RUN: lld -flavor wasm --check-signatures --relocatable -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"
