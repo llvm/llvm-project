@@ -24,7 +24,7 @@ define void @bar(i32 %X) {
   call void @foo()
   ; CHECK-LABEL: bar:
   ; CHECK: callq foo
-  ; CHECK-NEXT: movl  %eax, %r15d
+  ; CHECK-NEXT: movl  %edi, %r15d
   call void asm sideeffect "movl  $0, %r12d", "{r15}~{r12}"(i32 %X)
   ret void
 }

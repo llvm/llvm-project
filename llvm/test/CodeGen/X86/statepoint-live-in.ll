@@ -114,7 +114,7 @@ define void @test6(i32 %a) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    movl %ebx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq _baz
 ; CHECK-NEXT:  Ltmp6:
 ; CHECK-NEXT:    callq _bar

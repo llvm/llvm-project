@@ -402,8 +402,7 @@ define i32 @func_test1(i32 %p1) nounwind uwtable {
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movl a, %eax
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andb %cl, %dl
+; CHECK-NEXT:    testb %al, %cl
 ; CHECK-NEXT:    je .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    decl %eax

@@ -493,7 +493,7 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(<8 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm11 = [2147483648,0,2147483648,0]
-; SSE41-NEXT:    movdqa %xmm8, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
 ; SSE41-NEXT:    pxor %xmm11, %xmm5
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483647,2147483647]
 ; SSE41-NEXT:    movdqa %xmm0, %xmm6
@@ -1873,9 +1873,9 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm6, %xmm10
-; SSE2-NEXT:    movdqa %xmm10, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm5, %xmm11
-; SSE2-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm4, %xmm6
 ; SSE2-NEXT:    movdqa %xmm3, %xmm5
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
@@ -2103,9 +2103,9 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm6, %xmm10
-; SSSE3-NEXT:    movdqa %xmm10, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm11
-; SSSE3-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm4, %xmm6
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm5
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm3
@@ -2332,7 +2332,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-LABEL: trunc_packus_v16i64_v16i8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm7, %xmm8
-; SSE41-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm6, %xmm7
 ; SSE41-NEXT:    movdqa %xmm5, %xmm6
 ; SSE41-NEXT:    movdqa %xmm4, %xmm5

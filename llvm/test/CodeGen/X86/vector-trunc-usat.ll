@@ -869,7 +869,7 @@ define <16 x i16> @trunc_usat_v16i32_v16i16(<16 x i32> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm8
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm8, %xmm5
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-NEXT:    pxor %xmm7, %xmm5
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147549183,2147549183,2147549183,2147549183]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm6
@@ -913,7 +913,7 @@ define <16 x i16> @trunc_usat_v16i32_v16i16(<16 x i32> %a0) {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm8
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
-; SSSE3-NEXT:    movdqa %xmm8, %xmm5
+; SSSE3-NEXT:    movdqa %xmm1, %xmm5
 ; SSSE3-NEXT:    pxor %xmm7, %xmm5
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm6
@@ -1301,7 +1301,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm4, %xmm12
-; SSE2-NEXT:    movdqa %xmm12, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -1440,7 +1440,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm4, %xmm12
-; SSSE3-NEXT:    movdqa %xmm12, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm2
@@ -1577,11 +1577,11 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm6, %xmm11
-; SSE41-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm5, %xmm12
-; SSE41-NEXT:    movdqa %xmm12, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm4, %xmm13
-; SSE41-NEXT:    movdqa %xmm13, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm3, %xmm6
 ; SSE41-NEXT:    movdqa %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm4
@@ -1592,13 +1592,13 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-NEXT:    pxor %xmm9, %xmm11
 ; SSE41-NEXT:    pxor %xmm9, %xmm12
 ; SSE41-NEXT:    pxor %xmm9, %xmm13
-; SSE41-NEXT:    movdqa %xmm6, %xmm14
+; SSE41-NEXT:    movdqa %xmm3, %xmm14
 ; SSE41-NEXT:    pxor %xmm9, %xmm14
-; SSE41-NEXT:    movdqa %xmm5, %xmm3
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
 ; SSE41-NEXT:    pxor %xmm9, %xmm3
-; SSE41-NEXT:    movdqa %xmm4, %xmm2
+; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    pxor %xmm9, %xmm2
-; SSE41-NEXT:    pxor %xmm8, %xmm9
+; SSE41-NEXT:    pxor %xmm0, %xmm9
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259711,9223372039002259711]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpgtd %xmm9, %xmm0

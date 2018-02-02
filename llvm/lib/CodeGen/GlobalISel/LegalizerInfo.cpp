@@ -58,7 +58,9 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
       std::pair<unsigned, LLT> Mutation = Rule.determineMutation(Query);
       DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
                    << Mutation.first << ", " << Mutation.second << "\n");
-      assert(Query.Types[Mutation.first] != Mutation.second &&
+      assert((Query.Types[Mutation.first] != Mutation.second ||
+              Rule.getAction() == MoreElements ||
+              Rule.getAction() == FewerElements) &&
              "Simple loop detected");
       return {Rule.getAction(), Mutation.first, Mutation.second};
     } else

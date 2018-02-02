@@ -26,7 +26,6 @@
 #ifndef LLVM_ADT_STATISTIC_H
 #define LLVM_ADT_STATISTIC_H
 
-#include "llvm/Support/Atomic.h"
 #include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <memory>
@@ -42,7 +41,7 @@ public:
   const char *Name;
   const char *Desc;
   std::atomic<unsigned> Value;
-  bool Initialized;
+  std::atomic<bool> Initialized;
 
   unsigned getValue() const { return Value.load(std::memory_order_relaxed); }
   const char *getDebugType() const { return DebugType; }
@@ -147,10 +146,8 @@ public:
 
 protected:
   Statistic &init() {
-    bool tmp = Initialized;
-    sys::MemoryFence();
-    if (!tmp) RegisterStatistic();
-    TsanHappensAfter(this);
+    if (!Initialized.load(std::memory_order_acquire))
+      RegisterStatistic();
     return *this;
   }
 
@@ -160,7 +157,7 @@ protected:
 // STATISTIC - A macro to make definition of statistics really simple.  This
 // automatically passes the DEBUG_TYPE of the file into the statistic.
 #define STATISTIC(VARNAME, DESC)                                               \
-  static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC, {0}, false}
+  static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC, {0}, {false}}
 
 /// \brief Enable the collection and printing of statistics.
 void EnableStatistics(bool PrintOnExit = true);

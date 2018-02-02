@@ -1876,7 +1876,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    kshiftrq $5, %k7, %k0
 ; AVX512F-32-NEXT:    kxorq %k4, %k0, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
-; AVX512F-32-NEXT:    movl %ebp, %ecx
+; AVX512F-32-NEXT:    movl %ebx, %ecx
 ; AVX512F-32-NEXT:    shrl $13, %ecx
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
@@ -2576,7 +2576,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    kshiftrq $5, %k7, %k0
 ; AVX512F-32-NEXT:    kxorq %k4, %k0, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
-; AVX512F-32-NEXT:    movl %ebp, %ecx
+; AVX512F-32-NEXT:    movl %ebx, %ecx
 ; AVX512F-32-NEXT:    shrl $13, %ecx
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4

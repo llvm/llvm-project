@@ -625,6 +625,17 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
        E = CurDAG->allnodes_end(); I != E; ) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
+    // If this is a target specific AND node with no flag usages, turn it back
+    // into ISD::AND to enable test instruction matching.
+    if (N->getOpcode() == X86ISD::AND && !N->hasAnyUseOfValue(1)) {
+      SDValue Res = CurDAG->getNode(ISD::AND, SDLoc(N), N->getValueType(0),
+                                    N->getOperand(0), N->getOperand(1));
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      ++I;
+      CurDAG->DeleteNode(N);
+    }
+
     if (OptLevel != CodeGenOpt::None &&
         // Only do this when the target can fold the load into the call or
         // jmp.

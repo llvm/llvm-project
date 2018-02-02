@@ -3912,6 +3912,8 @@ def  MVNr  : AsI1<0b1111, (outs GPR:$Rd), (ins GPR:$Rm), DPFrm, IIC_iMVNr,
   let Inst{11-4} = 0b00000000;
   let Inst{15-12} = Rd;
   let Inst{3-0} = Rm;
+
+  let Unpredictable{19-16} = 0b1111;
 }
 def  MVNsi  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_imm:$shift),
                   DPSoRegImmFrm, IIC_iMVNsr, "mvn", "\t$Rd, $shift",
@@ -3925,10 +3927,12 @@ def  MVNsi  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_imm:$shift),
   let Inst{11-5} = shift{11-5};
   let Inst{4} = 0;
   let Inst{3-0} = shift{3-0};
+
+  let Unpredictable{19-16} = 0b1111;
 }
-def  MVNsr  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_reg:$shift),
+def  MVNsr  : AsI1<0b1111, (outs GPRnopc:$Rd), (ins so_reg_reg:$shift),
                   DPSoRegRegFrm, IIC_iMVNsr, "mvn", "\t$Rd, $shift",
-                  [(set GPR:$Rd, (not so_reg_reg:$shift))]>, UnaryDP,
+                  [(set GPRnopc:$Rd, (not so_reg_reg:$shift))]>, UnaryDP,
                   Sched<[WriteALU]> {
   bits<4> Rd;
   bits<12> shift;
@@ -3940,6 +3944,8 @@ def  MVNsr  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_reg:$shift),
   let Inst{6-5} = shift{6-5};
   let Inst{4} = 1;
   let Inst{3-0} = shift{3-0};
+
+  let Unpredictable{19-16} = 0b1111;
 }
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in
 def  MVNi  : AsI1<0b1111, (outs GPR:$Rd), (ins mod_imm:$imm), DPFrm,

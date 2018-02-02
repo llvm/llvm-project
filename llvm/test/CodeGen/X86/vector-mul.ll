@@ -178,7 +178,7 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; X86-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    movdqa %xmm1, %xmm2
+; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    psllw $4, %xmm2
 ; X86-NEXT:    pand {{\.LCPI.*}}, %xmm2
 ; X86-NEXT:    movdqa {{.*#+}} xmm0 = [8192,24640,8192,24640,8192,24640,8192,24640]
@@ -189,7 +189,7 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm2
-; X86-NEXT:    paddb %xmm2, %xmm2
+; X86-NEXT:    paddb %xmm1, %xmm2
 ; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm0
@@ -198,7 +198,7 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; X64-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    movdqa %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    psllw $4, %xmm2
 ; X64-NEXT:    pand {{.*}}(%rip), %xmm2
 ; X64-NEXT:    movdqa {{.*#+}} xmm0 = [8192,24640,8192,24640,8192,24640,8192,24640]
@@ -209,7 +209,7 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ; X64-NEXT:    paddb %xmm0, %xmm0
 ; X64-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm2
-; X64-NEXT:    paddb %xmm2, %xmm2
+; X64-NEXT:    paddb %xmm1, %xmm2
 ; X64-NEXT:    paddb %xmm0, %xmm0
 ; X64-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0

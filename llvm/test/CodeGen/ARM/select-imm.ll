@@ -197,9 +197,9 @@ entry:
 
 ; ARMT2-LABEL: t8:
 ; ARMT2: mov     r1, r0
+; ARMT2: cmp     r0, #5
 ; ARMT2: mov     r0, #9
 ; ARMT2: mov     r4, #0
-; ARMT2: cmp     r1, #5
 ; ARMT2: movweq  r4, #1
 ; ARMT2: bl      t7
 
@@ -213,8 +213,8 @@ entry:
 
 ; THUMB2-LABEL: t8:
 ; THUMB2: mov     r1, r0
-; THUMB2: movs    r4, #0
-; THUMB2: cmp     r1, #5
+; THUMB2: cmp     r0, #5
+; THUMB2: mov.w   r4, #0
 ; THUMB2: it      eq
 ; THUMB2: moveq   r4, #1
   %cmp = icmp eq i32 %a, 5

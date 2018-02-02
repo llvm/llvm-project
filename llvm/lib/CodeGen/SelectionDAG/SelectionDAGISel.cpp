@@ -2365,7 +2365,8 @@ void SelectionDAGISel::UpdateChains(
             std::replace(ChainNodesMatched.begin(), ChainNodesMatched.end(), N,
                          static_cast<SDNode *>(nullptr));
           });
-      CurDAG->ReplaceAllUsesOfValueWith(ChainVal, InputChain);
+      if (ChainNode->getOpcode() != ISD::TokenFactor)
+        CurDAG->ReplaceAllUsesOfValueWith(ChainVal, InputChain);
 
       // If the node became dead and we haven't already seen it, delete it.
       if (ChainNode != NodeToMatch && ChainNode->use_empty() &&

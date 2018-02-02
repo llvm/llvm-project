@@ -426,12 +426,14 @@ template <> struct GraphTraits<CallGraphNode *> {
 template <> struct GraphTraits<const CallGraphNode *> {
   using NodeRef = const CallGraphNode *;
   using CGNPairTy = CallGraphNode::CallRecord;
+  using EdgeRef = const CallGraphNode::CallRecord &;
 
   static NodeRef getEntryNode(const CallGraphNode *CGN) { return CGN; }
   static const CallGraphNode *CGNGetValue(CGNPairTy P) { return P.second; }
 
   using ChildIteratorType =
       mapped_iterator<CallGraphNode::const_iterator, decltype(&CGNGetValue)>;
+  using ChildEdgeIteratorType = CallGraphNode::const_iterator;
 
   static ChildIteratorType child_begin(NodeRef N) {
     return ChildIteratorType(N->begin(), &CGNGetValue);
@@ -440,6 +442,13 @@ template <> struct GraphTraits<const CallGraphNode *> {
   static ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType(N->end(), &CGNGetValue);
   }
+
+  static ChildEdgeIteratorType child_edge_begin(NodeRef N) {
+    return N->begin();
+  }
+  static ChildEdgeIteratorType child_edge_end(NodeRef N) { return N->end(); }
+
+  static NodeRef edge_dest(EdgeRef E) { return E.second; }
 };
 
 template <>
@@ -493,56 +502,6 @@ struct GraphTraits<const CallGraph *> : public GraphTraits<
   static nodes_iterator nodes_end(const CallGraph *CG) {
     return nodes_iterator(CG->end(), &CGGetValuePtr);
   }
-};
-
-// FIXME: The traits here are not limited to callgraphs and can be moved
-// elsewhere including GraphTraits. They are left here because only algorithms
-// that operate on Callgraphs currently use them. If other algorithms operating
-// on a general graph need edge traversals, these can be moved.
-template <class CallGraphType>
-struct CallGraphTraits : public GraphTraits<CallGraphType> {
-  // Elements to provide:
-
-  // typedef EdgeRef           - Type of Edge token in the graph, which should
-  //                             be cheap to copy.
-  // typedef CallEdgeIteratorType - Type used to iterate over children edges in
-  //                             graph, dereference to a EdgeRef.
-
-  // static CallEdgeIteratorType call_edge_begin(NodeRef)
-  // static CallEdgeIteratorType call_edge_end  (NodeRef)
-  //     Return iterators that point to the beginning and ending of the call
-  //     edges list for the given callgraph node.
-  //
-  // static NodeRef edge_dest(EdgeRef)
-  //     Return the destination node of an edge.
-
-  // If anyone tries to use this class without having an appropriate
-  // specialization, make an error.  If you get this error, it's because you
-  // need to include the appropriate specialization of GraphTraits<> for your
-  // graph, or you need to define it for a new graph type. Either that or
-  // your argument to XXX_begin(...) is unknown or needs to have the proper .h
-  // file #include'd.
-  using CallEdgeIteratorType =
-      typename CallGraphType::UnknownCallGraphTypeError;
-};
-
-template <class GraphType>
-iterator_range<typename CallGraphTraits<GraphType>::CallEdgeIteratorType>
-call_edges(const typename CallGraphTraits<GraphType>::NodeRef &G) {
-  return make_range(CallGraphTraits<GraphType>::call_edge_begin(G),
-                    CallGraphTraits<GraphType>::call_edge_end(G));
-}
-
-template <>
-struct CallGraphTraits<const CallGraph *>
-    : public GraphTraits<const CallGraph *> {
-  using EdgeRef = const CallGraphNode::CallRecord &;
-  using CallEdgeIteratorType = CallGraphNode::const_iterator;
-
-  static CallEdgeIteratorType call_edge_begin(NodeRef N) { return N->begin(); }
-  static CallEdgeIteratorType call_edge_end(NodeRef N) { return N->end(); }
-
-  static NodeRef edge_dest(EdgeRef E) { return E.second; }
 };
 
 } // end namespace llvm

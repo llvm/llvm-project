@@ -808,8 +808,8 @@ As a rule of thumb, use ``auto &`` unless you need to copy the result, and use
   for (auto Val : Container) { Val.change(); saveSomewhere(Val); }
 
   // Copy pointers, but make it clear that they're pointers.
-  for (const auto *Ptr : Container) { observe(*Ptr); }
-  for (auto *Ptr : Container) { Ptr->change(); }
+  for (const auto \*Ptr : Container) { observe(\*Ptr); }
+  for (auto \*Ptr : Container) { Ptr->change(); }
 
 Beware of non-determinism due to ordering of pointers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -832,27 +832,54 @@ Style Issues
 The High-Level Issues
 ---------------------
 
-A Public Header File **is** a Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Self-contained Headers
+^^^^^^^^^^^^^^^^^^^^^^
 
-C++ doesn't do too well in the modularity department.  There is no real
-encapsulation or data hiding (unless you use expensive protocol classes), but it
-is what we have to work with.  When you write a public header file (in the LLVM
-source tree, they live in the top level "``include``" directory), you are
-defining a module of functionality.
+Header files should be self-contained (compile on their own) and end in .h.
+Non-header files that are meant for inclusion should end in .inc and be used
+sparingly.
 
-Ideally, modules should be completely independent of each other, and their
-header files should only ``#include`` the absolute minimum number of headers
-possible. A module is not just a class, a function, or a namespace: it's a
-collection of these that defines an interface.  This interface may be several
-functions, classes, or data structures, but the important issue is how they work
-together.
+All header files should be self-contained. Users and refactoring tools should
+not have to adhere to special conditions to include the header. Specifically, a
+header should have header guards and include all other headers it needs.
 
-In general, a module should be implemented by one or more ``.cpp`` files.  Each
+There are rare cases where a file designed to be included is not
+self-contained. These are typically intended to be included at unusual
+locations, such as the middle of another file. They might not use header
+guards, and might not include their prerequisites. Name such files with the
+.inc extension. Use sparingly, and prefer self-contained headers when possible.
+
+In general, a header should be implemented by one or more ``.cpp`` files.  Each
 of these ``.cpp`` files should include the header that defines their interface
-first.  This ensures that all of the dependences of the module header have been
-properly added to the module header itself, and are not implicit.  System
-headers should be included after user headers for a translation unit.
+first.  This ensures that all of the dependences of the header have been
+properly added to the header itself, and are not implicit.  System headers
+should be included after user headers for a translation unit.
+
+Library Layering
+^^^^^^^^^^^^^^^^
+
+A directory of header files (for example ``include/llvm/Foo``) defines a
+library (``Foo``). Dependencies between libraries are defined by the
+``LLVMBuild.txt`` file in their implementation (``lib/Foo``). One library (both
+its headers and implementation) should only use things from the libraries
+listed in its dependencies.
+
+Some of this constraint can be enforced by classic Unix linkers (Mac & Windows
+linkers, as well as lld, do not enforce this constraint). A Unix linker
+searches left to right through the libraries specified on its command line and
+never revisits a library. In this way, no circular dependencies between
+libraries can exist.
+
+This doesn't fully enforce all inter-library dependencies, and importantly
+doesn't enforce header file circular dependencies created by inline functions.
+A good way to answer the "is this layered correctly" would be to consider
+whether a Unix linker would succeed at linking the program if all inline
+functions were defined out-of-line. (& for all valid orderings of dependencies
+- since linking resolution is linear, it's possible that some implicit
+dependencies can sneak through: A depends on B and C, so valid orderings are
+"C B A" or "B C A", in both cases the explicit dependencies come before their
+use. But in the first case, B could still link successfully if it implicitly
+depended on C, or the opposite in the second case)
 
 .. _minimal list of #includes:
 

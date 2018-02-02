@@ -202,7 +202,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    shrl $12, %ecx
 ; X32-NEXT:    kmovd %ecx, %k3
-; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
 ; X32-NEXT:    kmovd %ecx, %k4
@@ -340,7 +340,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $28, %k0, %k1
 ; X32-NEXT:    movl %esi, %ecx
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $28, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -348,7 +348,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    kshiftrq $35, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $29, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $29, %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    kmovd %eax, %k2
@@ -357,7 +357,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    kshiftrq $34, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $30, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $30, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -751,7 +751,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    shrl $12, %ecx
 ; X32-NEXT:    kmovd %ecx, %k3
-; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
 ; X32-NEXT:    kmovd %ecx, %k4
@@ -889,7 +889,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $28, %k0, %k1
 ; X32-NEXT:    movl %esi, %ecx
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $28, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -897,7 +897,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    kshiftrq $35, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $29, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $29, %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    kmovd %eax, %k2
@@ -906,7 +906,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    kshiftrq $34, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $30, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $30, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -1781,7 +1781,7 @@ define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %
 ; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    shrl $12, %ecx
 ; X32-NEXT:    kmovd %ecx, %k3
-; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
 ; X32-NEXT:    kmovd %ecx, %k4
@@ -1919,7 +1919,7 @@ define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $28, %k0, %k1
 ; X32-NEXT:    movl %esi, %ecx
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $28, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -1927,7 +1927,7 @@ define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %
 ; X32-NEXT:    kshiftrq $35, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $29, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $29, %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    kmovd %eax, %k2
@@ -1936,7 +1936,7 @@ define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %
 ; X32-NEXT:    kshiftrq $34, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $30, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $30, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -2423,7 +2423,7 @@ define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    shrl $12, %ecx
 ; X32-NEXT:    kmovd %ecx, %k3
-; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
 ; X32-NEXT:    kmovd %ecx, %k4
@@ -2561,7 +2561,7 @@ define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $28, %k0, %k1
 ; X32-NEXT:    movl %esi, %ecx
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $28, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1
@@ -2569,7 +2569,7 @@ define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    kshiftrq $35, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $29, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $29, %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    kmovd %eax, %k2
@@ -2578,7 +2578,7 @@ define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    kshiftrq $34, %k1, %k1
 ; X32-NEXT:    kxorq %k1, %k0, %k0
 ; X32-NEXT:    kshiftrq $30, %k0, %k1
-; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    shrl $30, %eax
 ; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    kxorq %k2, %k1, %k1

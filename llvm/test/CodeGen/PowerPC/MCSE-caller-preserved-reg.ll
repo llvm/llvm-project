@@ -20,9 +20,9 @@ define noalias i8* @_ZN2CC3funEv(%class.CC* %this) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    ld 12, 0(3)
 ; CHECK-NEXT:    std 30, 32(1)
 ; CHECK-NEXT:    mr 30, 3
-; CHECK-NEXT:    ld 12, 0(30)
 ; CHECK-NEXT:    std 2, 24(1)
 ; CHECK-NEXT:    mtctr 12
 ; CHECK-NEXT:    bctrl

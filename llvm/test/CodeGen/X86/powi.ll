@@ -5,7 +5,7 @@ define double @pow_wrapper(double %a) nounwind readonly ssp noredzone {
 ; CHECK-LABEL: pow_wrapper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
-; CHECK-NEXT:    mulsd %xmm1, %xmm1
+; CHECK-NEXT:    mulsd %xmm0, %xmm1
 ; CHECK-NEXT:    mulsd %xmm1, %xmm0
 ; CHECK-NEXT:    mulsd %xmm1, %xmm1
 ; CHECK-NEXT:    mulsd %xmm1, %xmm0

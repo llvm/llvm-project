@@ -2491,12 +2491,12 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       // t11 f16 = fadd ...
       // t12: i16 = bitcast t11
       //   t13: i32 = zero_extend t12
-      // t14: f32 = bitcast t13
+      // t14: f32 = bitcast t13  <~~~~~~~ Arg
       //
       // to avoid code generation for bitcasts, we simply set Arg to the node
       // that produces the f16 value, t11 in this case.
       //
-      if (Arg.getValueType() == MVT::f32) {
+      if (Arg.getValueType() == MVT::f32 && Arg.getOpcode() == ISD::BITCAST) {
         SDValue ZE = Arg.getOperand(0);
         if (ZE.getOpcode() == ISD::ZERO_EXTEND && ZE.getValueType() == MVT::i32) {
           SDValue BC = ZE.getOperand(0);

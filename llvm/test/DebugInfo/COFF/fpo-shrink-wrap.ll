@@ -15,7 +15,7 @@
 ; ASM:         .cv_fpo_proc    @shrink_wrap_basic@16 8
 ; ASM:         .cv_loc 0 1 3 9                 # t.c:3:9
 ; ASM:         movl    %ecx, %eax
-; ASM:         cmpl    %edx, %eax
+; ASM:         cmpl    %edx, %ecx
 ; ASM:         jl      [[EPILOGUE:LBB0_[0-9]+]]
 
 ; ASM:         pushl   %ebx

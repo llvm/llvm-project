@@ -23,7 +23,7 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    imull %ecx
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    sarl $5, %ecx
 ; CHECK-NEXT:    addl %eax, %ecx
@@ -31,7 +31,7 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    imull %edx
 ; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    sarl $7, %edi
 ; CHECK-NEXT:    addl %eax, %edi
