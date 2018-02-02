@@ -44,7 +44,7 @@ entry:
   { i32, void ()*, i8* } { i32 101, void ()* @func4, i8* null }
 ]
 
-; RUN: lld -flavor wasm %t.o %t.global-ctor-dtor.o -o %t.wasm
+; RUN: lld -flavor wasm --check-signatures %t.o %t.global-ctor-dtor.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            ELEM
@@ -104,7 +104,7 @@ entry:
 ; CHECK-NEXT: ...
 
 
-; RUN: lld -flavor wasm -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
+; RUN: lld -flavor wasm --check-signatures -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
 ; RUN: obj2yaml %t.reloc.wasm | FileCheck -check-prefix=RELOC %s
 
 ; RELOC:          Name:            linking
