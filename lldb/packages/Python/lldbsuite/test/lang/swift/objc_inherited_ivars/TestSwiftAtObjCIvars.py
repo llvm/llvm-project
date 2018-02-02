@@ -26,6 +26,7 @@ class TestSwiftAtObjCIvars(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_swift_at_objc_ivars(self):
         """Check that we correctly find offsets for ivars of Swift @objc types"""
         self.build()
