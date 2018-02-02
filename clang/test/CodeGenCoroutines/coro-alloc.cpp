@@ -173,6 +173,7 @@ struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
 // CHECK-LABEL: f4(
 extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[RetVal:.+]] = alloca i32
+  // CHECK: %[[Gro:.+]] = alloca i32
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: %[[MEM:.+]] = call i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* dereferenceable(1) @_ZStL7nothrow)
@@ -186,7 +187,11 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
 
   // CHECK: [[OKBB]]:
   // CHECK:   %[[OkRet:.+]] = call i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type17get_return_objectEv(
-  // CHECK:   store i32 %[[OkRet]], i32* %[[RetVal]]
+  // CHECK:   store i32 %[[OkRet]], i32* %[[Gro]]
+
+  // CHECK: %[[Tmp1:.*]] = load i32, i32* %[[Gro]]
+  // CHECK-NEXT: store i32 %[[Tmp1]], i32* %[[RetVal]]
+  // CHECK-NEXT: br label %[[RetBB]]
 
   // CHECK: [[RetBB]]:
   // CHECK:   %[[LoadRet:.+]] = load i32, i32* %[[RetVal]], align 4

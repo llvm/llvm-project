@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -o %t.o %s
-; RUN: lld -flavor wasm -strip-debug %t.o -o %t.wasm
+; RUN: lld -flavor wasm --check-signatures -strip-debug %t.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that undefined weak externals (global_var) and (foo) don't cause
@@ -20,10 +20,10 @@ define i32* @get_address_of_global_var() #0 {
   ret i32* @global_var
 }
 
-define i32 @_start() #0 {
+define void @_start() #0 {
 entry:
-    %0 = load i32, i32* @global_var, align 4
-    ret i32 %0
+    %call = call i32* @get_address_of_global_var()
+    ret void
 }
 
 ; CHECK:      --- !WASM
@@ -39,7 +39,7 @@ entry:
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 1, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -91,7 +91,7 @@ entry:
 ; CHECK-NEXT:         Body:            4180808080000B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4100280280808080000B
+; CHECK-NEXT:         Body:            1081808080001A0B
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B

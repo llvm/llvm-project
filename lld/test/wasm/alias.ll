@@ -1,15 +1,15 @@
 ; RUN: llc -filetype=obj -o %t.o %s
-; RUN: lld -flavor wasm %t.o -o %t.wasm
+; RUN: lld -flavor wasm --check-signatures %t.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"
 
-@start_alias = alias i32 (), i32 ()* @_start
+@start_alias = alias void (), void ()* @_start
 
 ; Function Attrs: nounwind uwtable
-define i32 @_start() local_unnamed_addr #1 {
+define void @_start() local_unnamed_addr #1 {
 entry:
-  ret i32 0
+  ret void
 }
 
 ; CHECK:      --- !WASM
@@ -19,13 +19,10 @@ entry:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:      - Index:           1
-; CHECK-NEXT:        ReturnType:      NORESULT
-; CHECK-NEXT:        ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 0 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -68,7 +65,7 @@ entry:
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            41000B
+; CHECK-NEXT:         Body:            0B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B

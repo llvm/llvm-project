@@ -1233,6 +1233,9 @@ ScriptParser::readSymbols() {
 
 // Reads an "extern C++" directive, e.g.,
 // "extern "C++" { ns::*; "f(int, double)"; };"
+//
+// The last semicolon is optional. E.g. this is OK:
+// "extern "C++" { ns::*; "f(int, double)" };"
 std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   StringRef Tok = next();
   bool IsCXX = Tok == "\"C++\"";
@@ -1245,6 +1248,8 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
     StringRef Tok = next();
     bool HasWildcard = !Tok.startswith("\"") && hasWildcard(Tok);
     Ret.push_back({unquote(Tok), IsCXX, HasWildcard});
+    if (consume("}"))
+      return Ret;
     expect(";");
   }
 
