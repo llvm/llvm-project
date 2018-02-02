@@ -39,7 +39,7 @@ define i32 @sadd_overflow(i32 %a, i32 %b) #0 {
   ; ARM: mov pc, lr
 
   ; THUMBV6: mov  r[[R2:[0-9]+]], r[[R0:[0-9]+]]
-  ; THUMBV6: adds r[[R3:[0-9]+]], r[[R2]], r[[R1:[0-9]+]]
+  ; THUMBV6: adds r[[R3:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
   ; THUMBV6: movs r[[R0]], #0
   ; THUMBV6: movs r[[R1]], #1
   ; THUMBV6: cmp  r[[R3]], r[[R2]]

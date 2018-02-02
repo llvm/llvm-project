@@ -46,6 +46,37 @@ define void @const_expression_trunc() {
   ret void
 }
 
+; Check that we handle constant expression trunc instruction, when it is a leaf
+; of other trunc expression pattern:
+; 1. %T1 is the constant expression trunc instruction.
+; 2. %T2->%T1 is the trunc expression pattern we want to reduce.
+define void @const_expression_trunc_leaf() {
+; CHECK-LABEL: @const_expression_trunc_leaf(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use32(i32 44)
+; CHECK-NEXT:    ret void
+;
+  %T1 = trunc i64 44 to i48
+  %T2 = trunc i48 %T1 to i32
+  call i32 @use32(i32 %T2)
+  ret void
+}
+
+; Check that we handle zext instruction, which turns into trunc instruction.
+; Notice that there are two expression patterns below:
+; 1. %T2->%T1
+; 2. %T1`->%A (where %T1` is the reduced node of %T1 into trunc instruction)
+define void @const_expression_zext_to_trunc() {
+; CHECK-LABEL: @const_expression_zext_to_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use32(i32 44)
+; CHECK-NEXT:    ret void
+;
+  %A = add i64 11, 33
+  %T1 = zext i64 %A to i128
+  %T2 = trunc i128 %T1 to i32
+  call i32 @use32(i32 %T2)
+  ret void
+}
+
 define void @const_expression_mul_vec() {
 ; CHECK-LABEL: @const_expression_mul_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @use32_vec(<2 x i32> <i32 24531, i32 24864>)

@@ -2382,6 +2382,131 @@ static void CommitValueTo(Constant *Val, Constant *Addr) {
   GV->setInitializer(EvaluateStoreInto(GV->getInitializer(), Val, CE, 2));
 }
 
+/// Given a map of address -> value, where addresses are expected to be some form
+/// of either a global or a constant GEP, set the initializer for the address to
+/// be the value. This performs mostly the same function as CommitValueTo()
+/// and EvaluateStoreInto() but is optimized to be more efficient for the common
+/// case where the set of addresses are GEPs sharing the same underlying global,
+/// processing the GEPs in batches rather than individually.
+///
+/// To give an example, consider the following C++ code adapted from the clang
+/// regression tests:
+/// struct S {
+///  int n = 10;
+///  int m = 2 * n;
+///  S(int a) : n(a) {}
+/// };
+///
+/// template<typename T>
+/// struct U {
+///  T *r = &q;
+///  T q = 42;
+///  U *p = this;
+/// };
+///
+/// U<S> e;
+///
+/// The global static constructor for 'e' will need to initialize 'r' and 'p' of
+/// the outer struct, while also initializing the inner 'q' structs 'n' and 'm'
+/// members. This batch algorithm will simply use general CommitValueTo() method
+/// to handle the complex nested S struct initialization of 'q', before
+/// processing the outermost members in a single batch. Using CommitValueTo() to
+/// handle member in the outer struct is inefficient when the struct/array is
+/// very large as we end up creating and destroy constant arrays for each
+/// initialization.
+/// For the above case, we expect the following IR to be generated:
+///
+/// %struct.U = type { %struct.S*, %struct.S, %struct.U* }
+/// %struct.S = type { i32, i32 }
+/// @e = global %struct.U { %struct.S* gep inbounds (%struct.U, %struct.U* @e,
+///                                                  i64 0, i32 1),
+///                         %struct.S { i32 42, i32 84 }, %struct.U* @e }
+/// The %struct.S { i32 42, i32 84 } inner initializer is treated as a complex
+/// constant expression, while the other two elements of @e are "simple".
+static void BatchCommitValueTo(const DenseMap<Constant*, Constant*> &Mem) {
+  SmallVector<std::pair<GlobalVariable*, Constant*>, 32> GVs;
+  SmallVector<std::pair<ConstantExpr*, Constant*>, 32> ComplexCEs;
+  SmallVector<std::pair<ConstantExpr*, Constant*>, 32> SimpleCEs;
+  SimpleCEs.reserve(Mem.size());
+
+  for (const auto &I : Mem) {
+    if (auto *GV = dyn_cast<GlobalVariable>(I.first)) {
+      GVs.push_back(std::make_pair(GV, I.second));
+    } else {
+      ConstantExpr *GEP = cast<ConstantExpr>(I.first);
+      // We don't handle the deeply recursive case using the batch method.
+      if (GEP->getNumOperands() > 3)
+        ComplexCEs.push_back(std::make_pair(GEP, I.second));
+      else
+        SimpleCEs.push_back(std::make_pair(GEP, I.second));
+    }
+  }
+
+  // The algorithm below doesn't handle cases like nested structs, so use the
+  // slower fully general method if we have to.
+  for (auto ComplexCE : ComplexCEs)
+    CommitValueTo(ComplexCE.second, ComplexCE.first);
+
+  for (auto GVPair : GVs) {
+    assert(GVPair.first->hasInitializer());
+    GVPair.first->setInitializer(GVPair.second);
+  }
+
+  if (SimpleCEs.empty())
+    return;
+
+  // We cache a single global's initializer elements in the case where the
+  // subsequent address/val pair uses the same one. This avoids throwing away and
+  // rebuilding the constant struct/vector/array just because one element is
+  // modified at a time.
+  SmallVector<Constant *, 32> Elts;
+  Elts.reserve(SimpleCEs.size());
+  GlobalVariable *CurrentGV = nullptr;
+
+  auto commitAndSetupCache = [&](GlobalVariable *GV, bool Update) {
+    Constant *Init = GV->getInitializer();
+    Type *Ty = Init->getType();
+    if (Update) {
+      if (CurrentGV) {
+        assert(CurrentGV && "Expected a GV to commit to!");
+        Type *CurrentInitTy = CurrentGV->getInitializer()->getType();
+        // We have a valid cache that needs to be committed.
+        if (StructType *STy = dyn_cast<StructType>(CurrentInitTy))
+          CurrentGV->setInitializer(ConstantStruct::get(STy, Elts));
+        else if (ArrayType *ArrTy = dyn_cast<ArrayType>(CurrentInitTy))
+          CurrentGV->setInitializer(ConstantArray::get(ArrTy, Elts));
+        else
+          CurrentGV->setInitializer(ConstantVector::get(Elts));
+      }
+      if (CurrentGV == GV)
+        return;
+      // Need to clear and set up cache for new initializer.
+      CurrentGV = GV;
+      Elts.clear();
+      unsigned NumElts;
+      if (auto *STy = dyn_cast<StructType>(Ty))
+        NumElts = STy->getNumElements();
+      else
+        NumElts = cast<SequentialType>(Ty)->getNumElements();
+      for (unsigned i = 0, e = NumElts; i != e; ++i)
+        Elts.push_back(Init->getAggregateElement(i));
+    }
+  };
+
+  for (auto CEPair : SimpleCEs) {
+    ConstantExpr *GEP = CEPair.first;
+    Constant *Val = CEPair.second;
+
+    GlobalVariable *GV = cast<GlobalVariable>(GEP->getOperand(0));
+    commitAndSetupCache(GV, GV != CurrentGV);
+    ConstantInt *CI = cast<ConstantInt>(GEP->getOperand(2));
+    Elts[CI->getZExtValue()] = Val;
+  }
+  // The last initializer in the list needs to be committed, others
+  // will be committed on a new initializer being processed.
+  commitAndSetupCache(CurrentGV, true);
+}
+
 /// Evaluate static constructors in the function, if we can.  Return true if we
 /// can, false otherwise.
 static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
@@ -2399,8 +2524,7 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
     DEBUG(dbgs() << "FULLY EVALUATED GLOBAL CTOR FUNCTION '"
           << F->getName() << "' to " << Eval.getMutatedMemory().size()
           << " stores.\n");
-    for (const auto &I : Eval.getMutatedMemory())
-      CommitValueTo(I.second, I.first);
+    BatchCommitValueTo(Eval.getMutatedMemory());
     for (GlobalVariable *GV : Eval.getInvariants())
       GV->setConstant(true);
   }

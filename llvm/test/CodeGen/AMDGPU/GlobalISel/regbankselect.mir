@@ -29,8 +29,8 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: %sgpr0_sgpr1
-    %0:_(p2) = COPY %sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1
+    %0:_(p2) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr0)
 ...
 
@@ -45,8 +45,8 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: %sgpr0_sgpr1
-    %0:_(p1) = COPY %sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr1)
 ...
 
@@ -63,7 +63,7 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: %sgpr0_sgpr1
-    %0:_(p1) = COPY %sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.tmp1)
 ...

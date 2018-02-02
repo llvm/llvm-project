@@ -228,11 +228,15 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     Files.push_back(
         createSharedFile(MBRef, WithLOption ? path::filename(Path) : Path));
     return;
-  default:
+  case file_magic::bitcode:
+  case file_magic::elf_relocatable:
     if (InLib)
       Files.push_back(make<LazyObjFile>(MBRef, "", 0));
     else
       Files.push_back(createObjectFile(MBRef));
+    break;
+  default:
+    error(Path + ": unknown file type");
   }
 }
 
@@ -642,7 +646,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Optimize = args::getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
-  Config->Pie = Args.hasFlag(OPT_pie, OPT_nopie, false);
+  Config->Pie = Args.hasFlag(OPT_pie, OPT_no_pie, false);
+  Config->PrintIcfSections =
+      Args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
   Config->PrintGcSections =
       Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->Rpath = getRpath(Args);

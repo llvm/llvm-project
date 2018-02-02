@@ -102,8 +102,8 @@ selected:        false
 tracksRegLiveness: true
 registers:       
 liveins:         
-  - { reg: '%ecx', virtual-reg: '' }
-  - { reg: '%edx', virtual-reg: '' }
+  - { reg: '$ecx', virtual-reg: '' }
+  - { reg: '$edx', virtual-reg: '' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -134,49 +134,49 @@ constants:
 body:             |
   bb.0.entry:
     successors: %bb.4(0x40000000), %bb.1(0x40000000)
-    liveins: %ecx, %edx
+    liveins: $ecx, $edx
   
-    DBG_VALUE debug-use %edx, debug-use %noreg, !15, !DIExpression(), debug-location !25
-    DBG_VALUE debug-use %ecx, debug-use %noreg, !16, !DIExpression(), debug-location !26
-    %eax = COPY %ecx
+    DBG_VALUE debug-use $edx, debug-use $noreg, !15, !DIExpression(), debug-location !25
+    DBG_VALUE debug-use $ecx, debug-use $noreg, !16, !DIExpression(), debug-location !26
+    $eax = COPY $ecx
     DBG_VALUE %fixed-stack.0, 0, !16, !DIExpression(), debug-location !26
     DBG_VALUE %fixed-stack.1, 0, !15, !DIExpression(), debug-location !25
-    CMP32rr %eax, killed %edx, implicit-def %eflags, debug-location !27
-    JL_1 %bb.4, implicit killed %eflags, debug-location !29
+    CMP32rr $eax, killed $edx, implicit-def $eflags, debug-location !27
+    JL_1 %bb.4, implicit killed $eflags, debug-location !29
     JMP_1 %bb.1, debug-location !29
   
   bb.1.for.cond.preheader:
     successors: %bb.2(0x80000000)
   
-    %esi = MOV32rm %fixed-stack.0, 1, %noreg, 0, %noreg :: (load 4 from %fixed-stack.0)
-    DBG_VALUE debug-use %esi, debug-use %noreg, !13, !DIExpression(), debug-location !19
-    %edi = MOV32rm %fixed-stack.1, 1, %noreg, 0, %noreg :: (load 4 from %fixed-stack.1)
-    DBG_VALUE debug-use %edi, debug-use %noreg, !14, !DIExpression(), debug-location !20
-    %edi = DEC32r killed %edi, implicit-def dead %eflags, debug-location !30
-    %ebx = LEA32r %fixed-stack.1, 1, %noreg, 0, %noreg
+    $esi = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
+    DBG_VALUE debug-use $esi, debug-use $noreg, !13, !DIExpression(), debug-location !19
+    $edi = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1)
+    DBG_VALUE debug-use $edi, debug-use $noreg, !14, !DIExpression(), debug-location !20
+    $edi = DEC32r killed $edi, implicit-def dead $eflags, debug-location !30
+    $ebx = LEA32r %fixed-stack.1, 1, $noreg, 0, $noreg
   
   bb.2.for.cond:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-    liveins: %ebx, %edi, %esi
+    liveins: $ebx, $edi, $esi
   
-    ADJCALLSTACKDOWN32 4, 0, 4, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp, debug-location !33
+    ADJCALLSTACKDOWN32 4, 0, 4, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !33
     DBG_VALUE %fixed-stack.1, 0, !14, !DIExpression(), debug-location !20
-    PUSH32r %ebx, implicit-def %esp, implicit %esp, debug-location !33
+    PUSH32r $ebx, implicit-def $esp, implicit $esp, debug-location !33
     CFI_INSTRUCTION adjust_cfa_offset 4, debug-location !33
-    CALLpcrel32 @doSomething, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp, implicit-def %eax, debug-location !33
-    ADJCALLSTACKUP32 4, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp, debug-location !33
-    %edi = INC32r killed %edi, implicit-def dead %eflags, debug-location !30
-    CMP32rr %edi, %esi, implicit-def %eflags, debug-location !30
-    JL_1 %bb.2, implicit killed %eflags, debug-location !34
+    CALLpcrel32 @doSomething, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, implicit-def $eax, debug-location !33
+    ADJCALLSTACKUP32 4, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !33
+    $edi = INC32r killed $edi, implicit-def dead $eflags, debug-location !30
+    CMP32rr $edi, $esi, implicit-def $eflags, debug-location !30
+    JL_1 %bb.2, implicit killed $eflags, debug-location !34
   
   bb.3:
     successors: %bb.4(0x80000000)
-    liveins: %eax
+    liveins: $eax
   
   
   bb.4.return:
-    liveins: %eax
+    liveins: $eax
   
-    RET 8, %eax, debug-location !37
+    RET 8, $eax, debug-location !37
 
 ...

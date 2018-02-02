@@ -31,7 +31,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; X32-NEXT:    adcl %ecx, %ebx
 ; X32-NEXT:    movl %ecx, %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    setb %cl
 ; X32-NEXT:    addl %eax, %ebx
 ; X32-NEXT:    movzbl %cl, %ecx
@@ -55,7 +55,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    mull %ebx
 ; X32-NEXT:    movl %eax, %ebp
 ; X32-NEXT:    movl %edx, %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl 4(%ecx), %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %ecx, %esi
@@ -92,14 +92,13 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    adcl %edi, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, %eax
-; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl (%ecx), %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    xorl %ebp, %ebp
 ; X32-NEXT:    mull %ebp
 ; X32-NEXT:    movl %edx, %ebx
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    addl %esi, %edx
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %ebx, %eax
@@ -113,7 +112,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %ecx, %edi
 ; X32-NEXT:    movl %ecx, %ebp
-; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    addl %eax, %edi
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    adcl %edx, %eax
@@ -143,7 +142,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    adcl %ebx, %ecx
 ; X32-NEXT:    movl %ebx, %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    setb %bl
 ; X32-NEXT:    addl %eax, %ecx
 ; X32-NEXT:    movzbl %bl, %ebx
@@ -278,7 +277,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    adcl %ebx, %ecx
 ; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
 ; X32-NEXT:    movl %edi, %ebp
-; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl %edi, %eax
 ; X32-NEXT:    mull %esi
 ; X32-NEXT:    movl %edx, %edi
 ; X32-NEXT:    movl %eax, %ebx
@@ -433,7 +432,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    adcl %edi, %ecx
 ; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
 ; X32-NEXT:    movl %ebx, %edi
-; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    mull %esi
 ; X32-NEXT:    movl %eax, %ebp
 ; X32-NEXT:    addl %ecx, %ebp
@@ -899,7 +898,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %esi
 ; X32-NEXT:    movl %esi, %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, %esi
 ; X32-NEXT:    addl %ebx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
@@ -929,7 +928,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    movl %ebx, %esi
-; X32-NEXT:    mull %esi
+; X32-NEXT:    mull %ebx
 ; X32-NEXT:    movl %edx, %edi
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
@@ -1077,7 +1076,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    addl %esi, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
 ; X32-NEXT:    movl %edi, %eax
-; X32-NEXT:    imull %eax, %esi
+; X32-NEXT:    imull %edi, %esi
 ; X32-NEXT:    addl %edx, %esi
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
@@ -1177,7 +1176,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, %ecx
-; X32-NEXT:    movl 40(%ecx), %ebx
+; X32-NEXT:    movl 40(%esi), %ebx
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
@@ -1374,7 +1373,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    addl %edi, %edx
 ; X32-NEXT:    movl 60(%ebx), %ebx
 ; X32-NEXT:    movl %ecx, %eax
-; X32-NEXT:    imull %eax, %ebx
+; X32-NEXT:    imull %ecx, %ebx
 ; X32-NEXT:    addl %edx, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
 ; X32-NEXT:    addl %ecx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
@@ -1546,7 +1545,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    movq 8(%rsi), %rbp
 ; X64-NEXT:    movq %r15, %rax
 ; X64-NEXT:    movq %rdx, %rsi
-; X64-NEXT:    mulq %rsi
+; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    movq %rdx, %r9
 ; X64-NEXT:    movq %rax, %r8
 ; X64-NEXT:    movq %r11, %rax
@@ -1569,15 +1568,15 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    movq %r11, %rax
 ; X64-NEXT:    mulq %rbp
 ; X64-NEXT:    movq %rbp, %r14
-; X64-NEXT:    movq %r14, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movq %rax, %rbp
 ; X64-NEXT:    addq %rcx, %rbp
 ; X64-NEXT:    adcq %rbx, %rsi
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movq %r10, %rbx
-; X64-NEXT:    movq %rbx, -{{[0-9]+}}(%rsp) # 8-byte Spill
-; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    movq %r10, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %r10, %rax
 ; X64-NEXT:    mulq %rcx
 ; X64-NEXT:    movq %rdx, %r13
 ; X64-NEXT:    movq %rax, %r10
@@ -1585,7 +1584,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    mulq %rcx
 ; X64-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %rax, %r15
-; X64-NEXT:    movq %r15, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    addq %r10, %r15
 ; X64-NEXT:    adcq %r13, %rdx
 ; X64-NEXT:    addq %rbp, %r15
@@ -1624,8 +1623,8 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    movq %rdx, %r14
 ; X64-NEXT:    movq %rax, %r11
-; X64-NEXT:    addq %r11, %r10
-; X64-NEXT:    adcq %r14, %r13
+; X64-NEXT:    addq %rax, %r10
+; X64-NEXT:    adcq %rdx, %r13
 ; X64-NEXT:    addq %rbp, %r10
 ; X64-NEXT:    adcq %rsi, %r13
 ; X64-NEXT:    addq %r8, %r10
@@ -1637,7 +1636,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    movq 16(%rsi), %r8
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    movq %rcx, %r9
-; X64-NEXT:    movq %r9, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    mulq %r8
 ; X64-NEXT:    movq %rdx, %rdi
 ; X64-NEXT:    movq %rax, %r12
@@ -1668,7 +1667,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    mulq %rcx
 ; X64-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %rax, %rbp
-; X64-NEXT:    addq %rbp, %r11
+; X64-NEXT:    addq %rax, %r11
 ; X64-NEXT:    adcq %rdx, %r14
 ; X64-NEXT:    addq %r9, %r11
 ; X64-NEXT:    adcq %rbx, %r14

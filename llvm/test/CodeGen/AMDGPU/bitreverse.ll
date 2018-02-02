@@ -15,7 +15,7 @@ declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) #1
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #1
 
 ; FUNC-LABEL: {{^}}s_brev_i16:
-; SI: s_brev_b32 
+; SI: s_brev_b32
 define amdgpu_kernel void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) #0 {
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
   store i16 %brev, i16 addrspace(1)* %out
@@ -111,6 +111,17 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
   store <2 x i64> %brev, <2 x i64> addrspace(1)* %out
   ret void
+}
+
+; FUNC-LABEL: {{^}}missing_truncate_promote_bitreverse:
+; VI: v_bfrev_b32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+define float @missing_truncate_promote_bitreverse(i32 %arg) {
+bb:
+  %tmp = trunc i32 %arg to i16
+  %tmp1 = call i16 @llvm.bitreverse.i16(i16 %tmp)
+  %tmp2 = bitcast i16 %tmp1 to half
+  %tmp3 = fpext half %tmp2 to float
+  ret float %tmp3
 }
 
 attributes #0 = { nounwind }

@@ -101,6 +101,7 @@ public:
   const WasmSection *DataSection = nullptr;
 
   std::vector<uint32_t> TypeMap;
+  std::vector<bool> TypeIsUsed;
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
 

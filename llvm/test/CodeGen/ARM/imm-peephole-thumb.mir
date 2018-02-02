@@ -1,6 +1,6 @@
 # RUN: llc -run-pass=peephole-opt %s -o - | FileCheck %s
 
-# CHECK: [[IN:%.*]]:gprnopc = COPY %r0
+# CHECK: [[IN:%.*]]:gprnopc = COPY $r0
 # CHECK: [[SUM1TMP:%.*]]:rgpr = t2ADDri [[IN]], 25600
 # CHECK: [[SUM1:%.*]]:rgpr = t2ADDri killed [[SUM1TMP]], 133
 
@@ -35,24 +35,24 @@ registers:
   - { id: 7, class: rgpr }
   - { id: 8, class: rgpr }
 liveins:
-  - { reg: '%r0', virtual-reg: '%0' }
+  - { reg: '$r0', virtual-reg: '%0' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %r0
-    %0 = COPY %r0
+    liveins: $r0
+    %0 = COPY $r0
     %1 = t2MOVi32imm -25733
-    %2 = t2SUBrr %0, killed %1, 14, %noreg, %noreg
+    %2 = t2SUBrr %0, killed %1, 14, $noreg, $noreg
 
     %3 = t2MOVi32imm 25733
-    %4 = t2SUBrr %0, killed %3, 14, %noreg, %noreg
+    %4 = t2SUBrr %0, killed %3, 14, $noreg, $noreg
 
     %5 = t2MOVi32imm -25733
-    %6= t2ADDrr %0, killed %5, 14, %noreg, %noreg
+    %6= t2ADDrr %0, killed %5, 14, $noreg, $noreg
 
     %7 = t2MOVi32imm 25733
-    %8 = t2ADDrr killed %0, killed %7, 14, %noreg, %noreg
+    %8 = t2ADDrr killed %0, killed %7, 14, $noreg, $noreg
 
-    %r0 = COPY killed %8
-    tBX_RET 14, %noreg, implicit %r0
+    $r0 = COPY killed %8
+    tBX_RET 14, $noreg, implicit $r0
 
 ...

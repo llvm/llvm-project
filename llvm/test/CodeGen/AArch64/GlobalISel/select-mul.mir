@@ -13,22 +13,22 @@ registers:
 
 body:             |
   bb.0:
-    liveins: %w0
+    liveins: $w0
 
     ; Make sure InstructionSelector is able to match a pattern
     ; with an SDNodeXForm, trunc_imm.
     ; def : Pat<(i64 (mul (sext GPR32:$Rn), (s64imm_32bit:$C))),
     ;             (SMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), XZR)>;
     ; CHECK-LABEL: name: mul_i64_sext_imm32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 3
-    ; CHECK: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY]], [[MOVi32imm]], %xzr
-    ; CHECK: %x0 = COPY [[SMADDLrrr]]
-    %0:gpr(s32) = COPY %w0
+    ; CHECK: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY]], [[MOVi32imm]], $xzr
+    ; CHECK: $x0 = COPY [[SMADDLrrr]]
+    %0:gpr(s32) = COPY $w0
     %1:gpr(s64) = G_SEXT %0(s32)
     %2:gpr(s64) = G_CONSTANT i64 3
     %3:gpr(s64) = G_MUL %1, %2
-    %x0 = COPY %3(s64)
+    $x0 = COPY %3(s64)
 ...
 
 

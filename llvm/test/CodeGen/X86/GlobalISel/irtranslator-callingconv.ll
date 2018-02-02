@@ -31,22 +31,22 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
   ; X32:   G_STORE [[LOAD]](s8), [[GV]](p0) :: (store 1 into @a1_8bit)
   ; X32:   G_STORE [[LOAD6]](s8), [[GV1]](p0) :: (store 1 into @a7_8bit)
   ; X32:   G_STORE [[LOAD7]](s8), [[GV2]](p0) :: (store 1 into @a8_8bit)
-  ; X32:   %al = COPY [[LOAD]](s8)
-  ; X32:   RET 0, implicit %al
+  ; X32:   $al = COPY [[LOAD]](s8)
+  ; X32:   RET 0, implicit $al
   ; X64-LABEL: name: test_i8_args_8
   ; X64: bb.1.entry:
-  ; X64:   liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d
-  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; X64:   liveins: $ecx, $edi, $edx, $esi, $r8d, $r9d
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
   ; X64:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
+  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
   ; X64:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-  ; X64:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
+  ; X64:   [[COPY2:%[0-9]+]]:_(s32) = COPY $edx
   ; X64:   [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
-  ; X64:   [[COPY3:%[0-9]+]]:_(s32) = COPY %ecx
+  ; X64:   [[COPY3:%[0-9]+]]:_(s32) = COPY $ecx
   ; X64:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[COPY3]](s32)
-  ; X64:   [[COPY4:%[0-9]+]]:_(s32) = COPY %r8d
+  ; X64:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r8d
   ; X64:   [[TRUNC4:%[0-9]+]]:_(s8) = G_TRUNC [[COPY4]](s32)
-  ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY %r9d
+  ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r9d
   ; X64:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; X64:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.1, align 0)
@@ -58,8 +58,8 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
   ; X64:   G_STORE [[TRUNC]](s8), [[GV]](p0) :: (store 1 into @a1_8bit)
   ; X64:   G_STORE [[LOAD]](s8), [[GV1]](p0) :: (store 1 into @a7_8bit)
   ; X64:   G_STORE [[LOAD1]](s8), [[GV2]](p0) :: (store 1 into @a8_8bit)
-  ; X64:   %al = COPY [[TRUNC]](s8)
-  ; X64:   RET 0, implicit %al
+  ; X64:   $al = COPY [[TRUNC]](s8)
+  ; X64:   RET 0, implicit $al
 		                      i8 %arg5, i8 %arg6, i8 %arg7, i8 %arg8) {
 entry:
   store i8 %arg1, i8* @a1_8bit
@@ -97,17 +97,17 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
   ; X32:   G_STORE [[LOAD]](s32), [[GV]](p0) :: (store 4 into @a1_32bit)
   ; X32:   G_STORE [[LOAD6]](s32), [[GV1]](p0) :: (store 4 into @a7_32bit)
   ; X32:   G_STORE [[LOAD7]](s32), [[GV2]](p0) :: (store 4 into @a8_32bit)
-  ; X32:   %eax = COPY [[LOAD]](s32)
-  ; X32:   RET 0, implicit %eax
+  ; X32:   $eax = COPY [[LOAD]](s32)
+  ; X32:   RET 0, implicit $eax
   ; X64-LABEL: name: test_i32_args_8
   ; X64: bb.1.entry:
-  ; X64:   liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d
-  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
-  ; X64:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
-  ; X64:   [[COPY3:%[0-9]+]]:_(s32) = COPY %ecx
-  ; X64:   [[COPY4:%[0-9]+]]:_(s32) = COPY %r8d
-  ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY %r9d
+  ; X64:   liveins: $ecx, $edi, $edx, $esi, $r8d, $r9d
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; X64:   [[COPY2:%[0-9]+]]:_(s32) = COPY $edx
+  ; X64:   [[COPY3:%[0-9]+]]:_(s32) = COPY $ecx
+  ; X64:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r8d
+  ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r9d
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; X64:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 0)
   ; X64:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -118,8 +118,8 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
   ; X64:   G_STORE [[COPY]](s32), [[GV]](p0) :: (store 4 into @a1_32bit)
   ; X64:   G_STORE [[LOAD]](s32), [[GV1]](p0) :: (store 4 into @a7_32bit)
   ; X64:   G_STORE [[LOAD1]](s32), [[GV2]](p0) :: (store 4 into @a8_32bit)
-  ; X64:   %eax = COPY [[COPY]](s32)
-  ; X64:   RET 0, implicit %eax
+  ; X64:   $eax = COPY [[COPY]](s32)
+  ; X64:   RET 0, implicit $eax
 		                        i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8) {
 entry:
   store i32 %arg1, i32* @a1_32bit
@@ -182,18 +182,18 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
   ; X32:   G_STORE [[MV6]](s64), [[GV1]](p0) :: (store 8 into @a7_64bit, align 4)
   ; X32:   G_STORE [[MV7]](s64), [[GV2]](p0) :: (store 8 into @a8_64bit, align 4)
   ; X32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-  ; X32:   %eax = COPY [[UV]](s32)
-  ; X32:   %edx = COPY [[UV1]](s32)
-  ; X32:   RET 0, implicit %eax, implicit %edx
+  ; X32:   $eax = COPY [[UV]](s32)
+  ; X32:   $edx = COPY [[UV1]](s32)
+  ; X32:   RET 0, implicit $eax, implicit $edx
   ; X64-LABEL: name: test_i64_args_8
   ; X64: bb.1.entry:
-  ; X64:   liveins: %rcx, %rdi, %rdx, %rsi, %r8, %r9
-  ; X64:   [[COPY:%[0-9]+]]:_(s64) = COPY %rdi
-  ; X64:   [[COPY1:%[0-9]+]]:_(s64) = COPY %rsi
-  ; X64:   [[COPY2:%[0-9]+]]:_(s64) = COPY %rdx
-  ; X64:   [[COPY3:%[0-9]+]]:_(s64) = COPY %rcx
-  ; X64:   [[COPY4:%[0-9]+]]:_(s64) = COPY %r8
-  ; X64:   [[COPY5:%[0-9]+]]:_(s64) = COPY %r9
+  ; X64:   liveins: $rcx, $rdi, $rdx, $rsi, $r8, $r9
+  ; X64:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X64:   [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+  ; X64:   [[COPY2:%[0-9]+]]:_(s64) = COPY $rdx
+  ; X64:   [[COPY3:%[0-9]+]]:_(s64) = COPY $rcx
+  ; X64:   [[COPY4:%[0-9]+]]:_(s64) = COPY $r8
+  ; X64:   [[COPY5:%[0-9]+]]:_(s64) = COPY $r9
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; X64:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 0)
   ; X64:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -204,8 +204,8 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
   ; X64:   G_STORE [[COPY]](s64), [[GV]](p0) :: (store 8 into @a1_64bit)
   ; X64:   G_STORE [[LOAD]](s64), [[GV1]](p0) :: (store 8 into @a7_64bit)
   ; X64:   G_STORE [[LOAD1]](s64), [[GV2]](p0) :: (store 8 into @a8_64bit)
-  ; X64:   %rax = COPY [[COPY]](s64)
-  ; X64:   RET 0, implicit %rax
+  ; X64:   $rax = COPY [[COPY]](s64)
+  ; X64:   RET 0, implicit $rax
                             i64 %arg5, i64 %arg6, i64 %arg7, i64 %arg8) {
 ; ... a bunch more that we don't track ...
 entry:
@@ -222,15 +222,15 @@ define float @test_float_args(float %arg1, float %arg2) {
   ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 0)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
-  ; X32:   %fp0 = COPY [[LOAD1]](s32)
-  ; X32:   RET 0, implicit %fp0
+  ; X32:   $fp0 = COPY [[LOAD1]](s32)
+  ; X32:   RET 0, implicit $fp0
   ; X64-LABEL: name: test_float_args
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %xmm0, %xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY %xmm0
-  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY %xmm1
-  ; X64:   %xmm0 = COPY [[COPY1]](s32)
-  ; X64:   RET 0, implicit %xmm0
+  ; X64:   liveins: $xmm0, $xmm1
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](s32)
+  ; X64:   RET 0, implicit $xmm0
   ret float %arg2
 }
 
@@ -241,57 +241,57 @@ define double @test_double_args(double %arg1, double %arg2) {
   ; X32:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 0)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0, align 0)
-  ; X32:   %fp0 = COPY [[LOAD1]](s64)
-  ; X32:   RET 0, implicit %fp0
+  ; X32:   $fp0 = COPY [[LOAD1]](s64)
+  ; X32:   RET 0, implicit $fp0
   ; X64-LABEL: name: test_double_args
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %xmm0, %xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(s64) = COPY %xmm0
-  ; X64:   [[COPY1:%[0-9]+]]:_(s64) = COPY %xmm1
-  ; X64:   %xmm0 = COPY [[COPY1]](s64)
-  ; X64:   RET 0, implicit %xmm0
+  ; X64:   liveins: $xmm0, $xmm1
+  ; X64:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(s64) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](s64)
+  ; X64:   RET 0, implicit $xmm0
   ret double %arg2
 }
 
 define <4 x i32> @test_v4i32_args(<4 x i32> %arg1, <4 x i32> %arg2) {
   ; X32-LABEL: name: test_v4i32_args
   ; X32: bb.1 (%ir-block.0):
-  ; X32:   liveins: %xmm0, %xmm1
-  ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
-  ; X32:   %xmm0 = COPY [[COPY1]](<4 x s32>)
-  ; X32:   RET 0, implicit %xmm0
+  ; X32:   liveins: $xmm0, $xmm1
+  ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X32:   $xmm0 = COPY [[COPY1]](<4 x s32>)
+  ; X32:   RET 0, implicit $xmm0
   ; X64-LABEL: name: test_v4i32_args
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %xmm0, %xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
-  ; X64:   %xmm0 = COPY [[COPY1]](<4 x s32>)
-  ; X64:   RET 0, implicit %xmm0
+  ; X64:   liveins: $xmm0, $xmm1
+  ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](<4 x s32>)
+  ; X64:   RET 0, implicit $xmm0
   ret <4 x i32> %arg2
 }
 
 define <8 x i32> @test_v8i32_args(<8 x i32> %arg1) {
   ; X32-LABEL: name: test_v8i32_args
   ; X32: bb.1 (%ir-block.0):
-  ; X32:   liveins: %xmm0, %xmm1
-  ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
+  ; X32:   liveins: $xmm0, $xmm1
+  ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
   ; X32:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X32:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV]](<8 x s32>)
-  ; X32:   %xmm0 = COPY [[UV]](<4 x s32>)
-  ; X32:   %xmm1 = COPY [[UV1]](<4 x s32>)
-  ; X32:   RET 0, implicit %xmm0, implicit %xmm1
+  ; X32:   $xmm0 = COPY [[UV]](<4 x s32>)
+  ; X32:   $xmm1 = COPY [[UV1]](<4 x s32>)
+  ; X32:   RET 0, implicit $xmm0, implicit $xmm1
   ; X64-LABEL: name: test_v8i32_args
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %xmm0, %xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
+  ; X64:   liveins: $xmm0, $xmm1
+  ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
   ; X64:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV]](<8 x s32>)
-  ; X64:   %xmm0 = COPY [[UV]](<4 x s32>)
-  ; X64:   %xmm1 = COPY [[UV1]](<4 x s32>)
-  ; X64:   RET 0, implicit %xmm0, implicit %xmm1
+  ; X64:   $xmm0 = COPY [[UV]](<4 x s32>)
+  ; X64:   $xmm1 = COPY [[UV1]](<4 x s32>)
+  ; X64:   RET 0, implicit $xmm0, implicit $xmm1
   ret <8 x i32> %arg1
 }
 
@@ -307,19 +307,19 @@ entry:
 }
 
 define i32 * @test_memop_i32(i32 * %p1) {
-;X64    liveins: %rdi
+;X64    liveins: $rdi
   ; X32-LABEL: name: test_memop_i32
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
-  ; X32:   %eax = COPY [[LOAD]](p0)
-  ; X32:   RET 0, implicit %eax
+  ; X32:   $eax = COPY [[LOAD]](p0)
+  ; X32:   RET 0, implicit $eax
   ; X64-LABEL: name: test_memop_i32
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %rdi
-  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY %rdi
-  ; X64:   %rax = COPY [[COPY]](p0)
-  ; X64:   RET 0, implicit %rax
+  ; X64:   liveins: $rdi
+  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X64:   $rax = COPY [[COPY]](p0)
+  ; X64:   RET 0, implicit $rax
   ret i32 * %p1;
 }
 
@@ -327,15 +327,15 @@ declare void @trivial_callee()
 define void @test_trivial_call() {
   ; X32-LABEL: name: test_trivial_call
   ; X32: bb.1 (%ir-block.0):
-  ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   CALLpcrel32 @trivial_callee, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   CALLpcrel32 @trivial_callee, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_trivial_call
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   CALL64pcrel32 @trivial_callee, csr_64, implicit %rsp, implicit %ssp
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   CALL64pcrel32 @trivial_callee, csr_64, implicit $rsp, implicit $ssp
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   call void @trivial_callee()
   ret void
@@ -349,28 +349,28 @@ define void @test_simple_arg(i32 %in0, i32 %in1) {
   ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 0)
   ; X32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
-  ; X32:   ADJCALLSTACKDOWN32 8, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   ADJCALLSTACKDOWN32 8, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s32)
   ; X32:   G_STORE [[LOAD1]](s32), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP1]](p0) :: (store 4 into stack + 4, align 0)
-  ; X32:   CALLpcrel32 @simple_arg_callee, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 8, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   CALLpcrel32 @simple_arg_callee, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 8, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_simple_arg
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %edi, %esi
-  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   %edi = COPY [[COPY1]](s32)
-  ; X64:   %esi = COPY [[COPY]](s32)
-  ; X64:   CALL64pcrel32 @simple_arg_callee, csr_64, implicit %rsp, implicit %ssp, implicit %edi, implicit %esi
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   liveins: $edi, $esi
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   $edi = COPY [[COPY1]](s32)
+  ; X64:   $esi = COPY [[COPY]](s32)
+  ; X64:   CALL64pcrel32 @simple_arg_callee, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   call void @simple_arg_callee(i32 %in1, i32 %in0)
   ret void
@@ -382,63 +382,63 @@ define void @test_simple_arg8_call(i32 %in0) {
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
-  ; X32:   ADJCALLSTACKDOWN32 32, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   ADJCALLSTACKDOWN32 32, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP1]](p0) :: (store 4 into stack + 4, align 0)
-  ; X32:   [[COPY2:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY2:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; X32:   [[GEP2:%[0-9]+]]:_(p0) = G_GEP [[COPY2]], [[C2]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP2]](p0) :: (store 4 into stack + 8, align 0)
-  ; X32:   [[COPY3:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY3:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; X32:   [[GEP3:%[0-9]+]]:_(p0) = G_GEP [[COPY3]], [[C3]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP3]](p0) :: (store 4 into stack + 12, align 0)
-  ; X32:   [[COPY4:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; X32:   [[GEP4:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C4]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP4]](p0) :: (store 4 into stack + 16, align 0)
-  ; X32:   [[COPY5:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY5:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; X32:   [[GEP5:%[0-9]+]]:_(p0) = G_GEP [[COPY5]], [[C5]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP5]](p0) :: (store 4 into stack + 20, align 0)
-  ; X32:   [[COPY6:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY6:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
   ; X32:   [[GEP6:%[0-9]+]]:_(p0) = G_GEP [[COPY6]], [[C6]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP6]](p0) :: (store 4 into stack + 24, align 0)
-  ; X32:   [[COPY7:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY7:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
   ; X32:   [[GEP7:%[0-9]+]]:_(p0) = G_GEP [[COPY7]], [[C7]](s32)
   ; X32:   G_STORE [[LOAD]](s32), [[GEP7]](p0) :: (store 4 into stack + 28, align 0)
-  ; X32:   CALLpcrel32 @simple_arg8_callee, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 32, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   CALLpcrel32 @simple_arg8_callee, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 32, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_simple_arg8_call
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %edi
-  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
-  ; X64:   ADJCALLSTACKDOWN64 16, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   %edi = COPY [[COPY]](s32)
-  ; X64:   %esi = COPY [[COPY]](s32)
-  ; X64:   %edx = COPY [[COPY]](s32)
-  ; X64:   %ecx = COPY [[COPY]](s32)
-  ; X64:   %r8d = COPY [[COPY]](s32)
-  ; X64:   %r9d = COPY [[COPY]](s32)
-  ; X64:   [[COPY1:%[0-9]+]]:_(p0) = COPY %rsp
+  ; X64:   liveins: $edi
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; X64:   ADJCALLSTACKDOWN64 16, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   $edi = COPY [[COPY]](s32)
+  ; X64:   $esi = COPY [[COPY]](s32)
+  ; X64:   $edx = COPY [[COPY]](s32)
+  ; X64:   $ecx = COPY [[COPY]](s32)
+  ; X64:   $r8d = COPY [[COPY]](s32)
+  ; X64:   $r9d = COPY [[COPY]](s32)
+  ; X64:   [[COPY1:%[0-9]+]]:_(p0) = COPY $rsp
   ; X64:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; X64:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C]](s64)
   ; X64:   G_STORE [[COPY]](s32), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X64:   [[COPY2:%[0-9]+]]:_(p0) = COPY %rsp
+  ; X64:   [[COPY2:%[0-9]+]]:_(p0) = COPY $rsp
   ; X64:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; X64:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY2]], [[C1]](s64)
   ; X64:   G_STORE [[COPY]](s32), [[GEP1]](p0) :: (store 4 into stack + 8, align 0)
-  ; X64:   CALL64pcrel32 @simple_arg8_callee, csr_64, implicit %rsp, implicit %ssp, implicit %edi, implicit %esi, implicit %edx, implicit %ecx, implicit %r8d, implicit %r9d
-  ; X64:   ADJCALLSTACKUP64 16, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   CALL64pcrel32 @simple_arg8_callee, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $edx, implicit $ecx, implicit $r8d, implicit $r9d
+  ; X64:   ADJCALLSTACKUP64 16, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   call void @simple_arg8_callee(i32 %in0, i32 %in0, i32 %in0, i32 %in0,i32 %in0, i32 %in0, i32 %in0, i32 %in0)
   ret void
@@ -449,28 +449,28 @@ define i32 @test_simple_return_callee() {
   ; X32-LABEL: name: test_simple_return_callee
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C1]](s32)
   ; X32:   G_STORE [[C]](s32), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X32:   CALLpcrel32 @simple_return_callee, csr_32, implicit %esp, implicit %ssp, implicit-def %eax
-  ; X32:   [[COPY1:%[0-9]+]]:_(s32) = COPY %eax
-  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   CALLpcrel32 @simple_return_callee, csr_32, implicit $esp, implicit $ssp, implicit-def $eax
+  ; X32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $eax
+  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY1]]
-  ; X32:   %eax = COPY [[ADD]](s32)
-  ; X32:   RET 0, implicit %eax
+  ; X32:   $eax = COPY [[ADD]](s32)
+  ; X32:   RET 0, implicit $eax
   ; X64-LABEL: name: test_simple_return_callee
   ; X64: bb.1 (%ir-block.0):
   ; X64:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   %edi = COPY [[C]](s32)
-  ; X64:   CALL64pcrel32 @simple_return_callee, csr_64, implicit %rsp, implicit %ssp, implicit %edi, implicit-def %eax
-  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY %eax
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   $edi = COPY [[C]](s32)
+  ; X64:   CALL64pcrel32 @simple_return_callee, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $eax
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $eax
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
-  ; X64:   %eax = COPY [[ADD]](s32)
-  ; X64:   RET 0, implicit %eax
+  ; X64:   $eax = COPY [[ADD]](s32)
+  ; X64:   RET 0, implicit $eax
   %call = call i32 @simple_return_callee(i32 5)
   %r = add i32 %call, %call
   ret i32 %r
@@ -480,51 +480,51 @@ declare <8 x i32> @split_return_callee(<8 x i32> %in0)
 define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X32-LABEL: name: test_split_return_callee
   ; X32: bb.1 (%ir-block.0):
-  ; X32:   liveins: %xmm0, %xmm1, %xmm2
-  ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
-  ; X32:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY %xmm2
+  ; X32:   liveins: $xmm0, $xmm1, $xmm2
+  ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X32:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 16 from %fixed-stack.0, align 0)
   ; X32:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X32:   [[MV1:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
-  ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV1]](<8 x s32>)
-  ; X32:   %xmm0 = COPY [[UV]](<4 x s32>)
-  ; X32:   %xmm1 = COPY [[UV1]](<4 x s32>)
-  ; X32:   CALLpcrel32 @split_return_callee, csr_32, implicit %esp, implicit %ssp, implicit %xmm0, implicit %xmm1, implicit-def %xmm0, implicit-def %xmm1
-  ; X32:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X32:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
+  ; X32:   $xmm0 = COPY [[UV]](<4 x s32>)
+  ; X32:   $xmm1 = COPY [[UV1]](<4 x s32>)
+  ; X32:   CALLpcrel32 @split_return_callee, csr_32, implicit $esp, implicit $ssp, implicit $xmm0, implicit $xmm1, implicit-def $xmm0, implicit-def $xmm1
+  ; X32:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X32:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
   ; X32:   [[MV2:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY3]](<4 x s32>), [[COPY4]](<4 x s32>)
-  ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[ADD:%[0-9]+]]:_(<8 x s32>) = G_ADD [[MV]], [[MV2]]
   ; X32:   [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[ADD]](<8 x s32>)
-  ; X32:   %xmm0 = COPY [[UV2]](<4 x s32>)
-  ; X32:   %xmm1 = COPY [[UV3]](<4 x s32>)
-  ; X32:   RET 0, implicit %xmm0, implicit %xmm1
+  ; X32:   $xmm0 = COPY [[UV2]](<4 x s32>)
+  ; X32:   $xmm1 = COPY [[UV3]](<4 x s32>)
+  ; X32:   RET 0, implicit $xmm0, implicit $xmm1
   ; X64-LABEL: name: test_split_return_callee
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %xmm0, %xmm1, %xmm2, %xmm3
-  ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
-  ; X64:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY %xmm2
-  ; X64:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY %xmm3
+  ; X64:   liveins: $xmm0, $xmm1, $xmm2, $xmm3
+  ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X64:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
+  ; X64:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $xmm3
   ; X64:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[MV1:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY2]](<4 x s32>), [[COPY3]](<4 x s32>)
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV1]](<8 x s32>)
-  ; X64:   %xmm0 = COPY [[UV]](<4 x s32>)
-  ; X64:   %xmm1 = COPY [[UV1]](<4 x s32>)
-  ; X64:   CALL64pcrel32 @split_return_callee, csr_64, implicit %rsp, implicit %ssp, implicit %xmm0, implicit %xmm1, implicit-def %xmm0, implicit-def %xmm1
-  ; X64:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY %xmm0
-  ; X64:   [[COPY5:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
+  ; X64:   $xmm0 = COPY [[UV]](<4 x s32>)
+  ; X64:   $xmm1 = COPY [[UV1]](<4 x s32>)
+  ; X64:   CALL64pcrel32 @split_return_callee, csr_64, implicit $rsp, implicit $ssp, implicit $xmm0, implicit $xmm1, implicit-def $xmm0, implicit-def $xmm1
+  ; X64:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X64:   [[COPY5:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
   ; X64:   [[MV2:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY4]](<4 x s32>), [[COPY5]](<4 x s32>)
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[ADD:%[0-9]+]]:_(<8 x s32>) = G_ADD [[MV]], [[MV2]]
   ; X64:   [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[ADD]](<8 x s32>)
-  ; X64:   %xmm0 = COPY [[UV2]](<4 x s32>)
-  ; X64:   %xmm1 = COPY [[UV3]](<4 x s32>)
-  ; X64:   RET 0, implicit %xmm0, implicit %xmm1
+  ; X64:   $xmm0 = COPY [[UV2]](<4 x s32>)
+  ; X64:   $xmm1 = COPY [[UV3]](<4 x s32>)
+  ; X64:   RET 0, implicit $xmm0, implicit $xmm1
   %call = call <8 x i32> @split_return_callee(<8 x i32> %arg2)
   %r = add <8 x i32> %arg1, %call
   ret  <8 x i32> %r
@@ -535,17 +535,17 @@ define void @test_indirect_call(void()* %func) {
   ; X32: bb.1 (%ir-block.0):
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD:%[0-9]+]]:gr32(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
-  ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   CALL32r [[LOAD]](p0), csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   CALL32r [[LOAD]](p0), csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_indirect_call
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %rdi
-  ; X64:   [[COPY:%[0-9]+]]:gr64(p0) = COPY %rdi
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   CALL64r [[COPY]](p0), csr_64, implicit %rsp, implicit %ssp
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   liveins: $rdi
+  ; X64:   [[COPY:%[0-9]+]]:gr64(p0) = COPY $rdi
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   CALL64r [[COPY]](p0), csr_64, implicit $rsp, implicit $ssp
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   call void %func()
   ret void
@@ -559,51 +559,51 @@ define void @test_abi_exts_call(i8* %addr) {
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
   ; X32:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p0) :: (load 1 from %ir.addr)
-  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s32)
   ; X32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD1]](s8)
   ; X32:   G_STORE [[ANYEXT]](s32), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X32:   CALLpcrel32 @take_char, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s32)
   ; X32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s8)
   ; X32:   G_STORE [[SEXT]](s32), [[GEP1]](p0) :: (store 4 into stack, align 0)
-  ; X32:   CALLpcrel32 @take_char, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY2:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY2:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP2:%[0-9]+]]:_(p0) = G_GEP [[COPY2]], [[C2]](s32)
   ; X32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
   ; X32:   G_STORE [[ZEXT]](s32), [[GEP2]](p0) :: (store 4 into stack, align 0)
-  ; X32:   CALLpcrel32 @take_char, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_abi_exts_call
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %rdi
-  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY %rdi
+  ; X64:   liveins: $rdi
+  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
   ; X64:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.addr)
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s8)
-  ; X64:   %edi = COPY [[ANYEXT]](s32)
-  ; X64:   CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %ssp, implicit %edi
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   $edi = COPY [[ANYEXT]](s32)
+  ; X64:   CALL64pcrel32 @take_char, csr_64, implicit $rsp, implicit $ssp, implicit $edi
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s8)
-  ; X64:   %edi = COPY [[SEXT]](s32)
-  ; X64:   CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %ssp, implicit %edi
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   $edi = COPY [[SEXT]](s32)
+  ; X64:   CALL64pcrel32 @take_char, csr_64, implicit $rsp, implicit $ssp, implicit $edi
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s8)
-  ; X64:   %edi = COPY [[ZEXT]](s32)
-  ; X64:   CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %ssp, implicit %edi
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   $edi = COPY [[ZEXT]](s32)
+  ; X64:   CALL64pcrel32 @take_char, csr_64, implicit $rsp, implicit $ssp, implicit $edi
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   %val = load i8, i8* %addr
   call void @take_char(i8 %val)
@@ -622,31 +622,31 @@ define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
   ; X32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
   ; X32:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.addr_ptr)
   ; X32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[LOAD1]](p0) :: (load 4 from %ir.val_ptr)
-  ; X32:   ADJCALLSTACKDOWN32 8, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   ADJCALLSTACKDOWN32 8, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s32)
   ; X32:   G_STORE [[LOAD2]](p0), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s32)
   ; X32:   G_STORE [[LOAD3]](s32), [[GEP1]](p0) :: (store 4 into stack + 4, align 0)
-  ; X32:   CALLpcrel32 @variadic_callee, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 8, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   CALLpcrel32 @variadic_callee, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 8, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_variadic_call_1
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %rdi, %rsi
-  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY %rdi
-  ; X64:   [[COPY1:%[0-9]+]]:_(p0) = COPY %rsi
+  ; X64:   liveins: $rdi, $rsi
+  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X64:   [[COPY1:%[0-9]+]]:_(p0) = COPY $rsi
   ; X64:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.addr_ptr)
   ; X64:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p0) :: (load 4 from %ir.val_ptr)
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   %rdi = COPY [[LOAD]](p0)
-  ; X64:   %esi = COPY [[LOAD1]](s32)
-  ; X64:   %al = MOV8ri 0
-  ; X64:   CALL64pcrel32 @variadic_callee, csr_64, implicit %rsp, implicit %ssp, implicit %rdi, implicit %esi, implicit %al
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   $rdi = COPY [[LOAD]](p0)
+  ; X64:   $esi = COPY [[LOAD1]](s32)
+  ; X64:   $al = MOV8ri 0
+  ; X64:   CALL64pcrel32 @variadic_callee, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit $al
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   %addr = load i8*, i8** %addr_ptr
   %val = load i32, i32* %val_ptr
@@ -663,31 +663,31 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
   ; X32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0, align 0)
   ; X32:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.addr_ptr)
   ; X32:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[LOAD1]](p0) :: (load 8 from %ir.val_ptr, align 4)
-  ; X32:   ADJCALLSTACKDOWN32 12, 0, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
-  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   ADJCALLSTACKDOWN32 12, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X32:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s32)
   ; X32:   G_STORE [[LOAD2]](p0), [[GEP]](p0) :: (store 4 into stack, align 0)
-  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY %esp
+  ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
   ; X32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s32)
   ; X32:   G_STORE [[LOAD3]](s64), [[GEP1]](p0) :: (store 8 into stack + 4, align 0)
-  ; X32:   CALLpcrel32 @variadic_callee, csr_32, implicit %esp, implicit %ssp
-  ; X32:   ADJCALLSTACKUP32 12, 0, implicit-def %esp, implicit-def %eflags, implicit-def %ssp, implicit %esp, implicit %ssp
+  ; X32:   CALLpcrel32 @variadic_callee, csr_32, implicit $esp, implicit $ssp
+  ; X32:   ADJCALLSTACKUP32 12, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   RET 0
   ; X64-LABEL: name: test_variadic_call_2
   ; X64: bb.1 (%ir-block.0):
-  ; X64:   liveins: %rdi, %rsi
-  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY %rdi
-  ; X64:   [[COPY1:%[0-9]+]]:_(p0) = COPY %rsi
+  ; X64:   liveins: $rdi, $rsi
+  ; X64:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X64:   [[COPY1:%[0-9]+]]:_(p0) = COPY $rsi
   ; X64:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.addr_ptr)
   ; X64:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p0) :: (load 8 from %ir.val_ptr)
-  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
-  ; X64:   %rdi = COPY [[LOAD]](p0)
-  ; X64:   %xmm0 = COPY [[LOAD1]](s64)
-  ; X64:   %al = MOV8ri 1
-  ; X64:   CALL64pcrel32 @variadic_callee, csr_64, implicit %rsp, implicit %ssp, implicit %rdi, implicit %xmm0, implicit %al
-  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit-def %ssp, implicit %rsp, implicit %ssp
+  ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64:   $rdi = COPY [[LOAD]](p0)
+  ; X64:   $xmm0 = COPY [[LOAD1]](s64)
+  ; X64:   $al = MOV8ri 1
+  ; X64:   CALL64pcrel32 @variadic_callee, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $xmm0, implicit $al
+  ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   RET 0
   %addr = load i8*, i8** %addr_ptr
   %val = load double, double* %val_ptr

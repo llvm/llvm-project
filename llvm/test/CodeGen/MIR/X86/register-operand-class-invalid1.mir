@@ -8,7 +8,7 @@
 name: t
 body: |
   bb.0:
-    %0 : gr32 = COPY %rdx
+    %0 : gr32 = COPY $rdx
     ; CHECK: [[@LINE+1]]:24: conflicting register classes, previously: GR32
     NOOP implicit %0 : gr32_abcd
 ...

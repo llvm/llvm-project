@@ -410,17 +410,26 @@ static bool isRegisterChar(char C) {
   return isIdentifierChar(C) && C != '.';
 }
 
-static Cursor maybeLexRegister(Cursor C, MIToken &Token) {
-  if (C.peek() != '%')
+static Cursor maybeLexRegister(Cursor C, MIToken &Token,
+                               ErrorCallbackType ErrorCallback) {
+  if (C.peek() != '%' && C.peek() != '$')
     return None;
-  if (isdigit(C.peek(1)))
-    return lexVirtualRegister(C, Token);
+
+  if (C.peek() == '%') {
+    if (isdigit(C.peek(1)))
+      return lexVirtualRegister(C, Token);
+
+    // ErrorCallback(Token.location(), "Named vregs are not yet supported.");
+    return None;
+  }
+
+  assert(C.peek() == '$');
   auto Range = C;
-  C.advance(); // Skip '%'
+  C.advance(); // Skip '$'
   while (isRegisterChar(C.peek()))
     C.advance();
   Token.reset(MIToken::NamedRegister, Range.upto(C))
-      .setStringValue(Range.upto(C).drop_front(1)); // Drop the '%'
+      .setStringValue(Range.upto(C).drop_front(1)); // Drop the '$'
   return C;
 }
 
@@ -642,7 +651,7 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
     return R.remaining();
   if (Cursor R = maybeLexIRValue(C, Token, ErrorCallback))
     return R.remaining();
-  if (Cursor R = maybeLexRegister(C, Token))
+  if (Cursor R = maybeLexRegister(C, Token, ErrorCallback))
     return R.remaining();
   if (Cursor R = maybeLexGlobalValue(C, Token, ErrorCallback))
     return R.remaining();

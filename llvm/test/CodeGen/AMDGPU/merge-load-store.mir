@@ -34,7 +34,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '%vgpr0', virtual-reg: '%1' }
+  - { reg: '$vgpr0', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -51,20 +51,20 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0:
-    liveins: %vgpr0
+    liveins: $vgpr0
 
-    %1:vgpr_32 = COPY %vgpr0
-    %m0 = S_MOV_B32 -1
-    %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit %m0, implicit %exec :: (load 4 from %ir.ptr.0)
-    DS_WRITE_B32 %1, killed %2, 64, 0, implicit %m0, implicit %exec :: (store 4 into %ir.ptr.64)
+    %1:vgpr_32 = COPY $vgpr0
+    $m0 = S_MOV_B32 -1
+    %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.0)
+    DS_WRITE_B32 %1, killed %2, 64, 0, implicit $m0, implicit $exec :: (store 4 into %ir.ptr.64)
 
     ; Make this load unmergeable, to tempt SILoadStoreOptimizer into merging the
     ; other two loads.
-    %6:vreg_64 = DS_READ2_B32 %1, 16, 17, 0, implicit %m0, implicit %exec :: (load 8 from %ir.ptr.64, align 4)
+    %6:vreg_64 = DS_READ2_B32 %1, 16, 17, 0, implicit $m0, implicit $exec :: (load 8 from %ir.ptr.64, align 4)
     %3:vgpr_32 = COPY %6.sub0
-    %4:vgpr_32 = DS_READ_B32 %1, 4, 0, implicit %m0, implicit %exec :: (load 4 from %ir.ptr.4)
-    %5:vgpr_32 = V_ADD_I32_e32 killed %3, killed %4, implicit-def %vcc, implicit %exec
-    DS_WRITE_B32 killed %1, %5, 0, 0, implicit killed %m0, implicit %exec :: (store 4 into %ir.ptr.0)
+    %4:vgpr_32 = DS_READ_B32 %1, 4, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.4)
+    %5:vgpr_32 = V_ADD_I32_e32 killed %3, killed %4, implicit-def $vcc, implicit $exec
+    DS_WRITE_B32 killed %1, %5, 0, 0, implicit killed $m0, implicit $exec :: (store 4 into %ir.ptr.0)
     S_ENDPGM
 
 ...

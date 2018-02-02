@@ -21,11 +21,11 @@
 name:            foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0.entry:
-    liveins: %edi
-    NOOP implicit-def %al
+    liveins: $edi
+    NOOP implicit-def $al
 
     ; The bug was triggered only when LivePhysReg is used, which
     ; happens only when the heuristic for the liveness computation
@@ -46,19 +46,19 @@ body:             |
     NOOP
     NOOP
     ; Save AL.
-    ; CHECK: PUSH32r killed %eax
+    ; CHECK: PUSH32r killed $eax
 
     ; Copy edi into EFLAGS
-    ; CHECK-NEXT: %eax = MOV32rr %edi
-    ; CHECK-NEXT: %al = ADD8ri %al, 127, implicit-def %eflags
-    ; CHECK-NEXT: SAHF implicit-def %eflags, implicit %ah
-    %eflags = COPY %edi
+    ; CHECK-NEXT: $eax = MOV32rr $edi
+    ; CHECK-NEXT: $al = ADD8ri $al, 127, implicit-def $eflags
+    ; CHECK-NEXT: SAHF implicit-def $eflags, implicit $ah
+    $eflags = COPY $edi
 
     ; Restore AL.
-    ; CHECK-NEXT: %eax = POP32r
+    ; CHECK-NEXT: $eax = POP32r
   bb.1.false:
-    liveins: %al
-    NOOP implicit %al
+    liveins: $al
+    NOOP implicit $al
     RETQ
 
 ...

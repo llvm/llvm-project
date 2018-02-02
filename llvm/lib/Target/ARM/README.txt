@@ -502,7 +502,7 @@ those operations and the ARMv6 scalar versions.
 //===---------------------------------------------------------------------===//
 
 Split out LDR (literal) from normal ARM LDR instruction. Also consider spliting
-LDR into imm12 and so_reg forms. This allows us to clean up some code. e.g.
+LDR into imm12 and so_reg forms.  This allows us to clean up some code. e.g.
 ARMLoadStoreOptimizer does not need to look at LDR (literal) and LDR (so_reg)
 while ARMConstantIslandPass only need to worry about LDR (literal).
 

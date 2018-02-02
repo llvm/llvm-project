@@ -14,17 +14,17 @@
 ...
 ---
 # CHECK-LABEL: name: ldr_str_aa
-# CHECK: %w8, %w9 = LDPWi %x1, 0
-# CHECK: STPWi %w8, %w9, %x0, 0
+# CHECK: $w8, $w9 = LDPWi $x1, 0
+# CHECK: STPWi $w8, $w9, $x0, 0
 name:            ldr_str_aa
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: %x0, %x1
+    liveins: $x0, $x1
 
-    %w8 = LDRWui %x1, 0 :: (load 4 from %ir.y)
-    STRWui killed %w8, %x0, 0 :: (store 4 into %ir.x)
-    %w9 = LDRWui killed %x1, 1 :: (load 4 from %ir.arrayidx2)
-    STRWui killed %w9, killed %x0, 1 :: (store 4 into %ir.arrayidx3)
-    RET undef %lr
+    $w8 = LDRWui $x1, 0 :: (load 4 from %ir.y)
+    STRWui killed $w8, $x0, 0 :: (store 4 into %ir.x)
+    $w9 = LDRWui killed $x1, 1 :: (load 4 from %ir.arrayidx2)
+    STRWui killed $w9, killed $x0, 1 :: (store 4 into %ir.arrayidx3)
+    RET undef $lr
 

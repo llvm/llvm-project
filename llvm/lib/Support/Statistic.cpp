@@ -82,16 +82,12 @@ void Statistic::RegisterStatistic() {
   // If stats are enabled, inform StatInfo that this statistic should be
   // printed.
   sys::SmartScopedLock<true> Writer(*StatLock);
-  if (!Initialized) {
+  if (!Initialized.load(std::memory_order_relaxed)) {
     if (Stats || Enabled)
       StatInfo->addStatistic(this);
 
-    TsanHappensBefore(this);
-    sys::MemoryFence();
     // Remember we have been registered.
-    TsanIgnoreWritesBegin();
-    Initialized = true;
-    TsanIgnoreWritesEnd();
+    Initialized.store(true, std::memory_order_release);
   }
 }
 

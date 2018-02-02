@@ -41,27 +41,9 @@ class ReturnValueTestCase(TestBase):
         """Test getting return values from stepping out."""
         self.build()
         exe = self.getBuildArtifact("a.out")
+        (self.target, self.process, thread, inner_sint_bkpt) = lldbutil.run_to_name_breakpoint(self, "inner_sint", exe_name = exe)
+
         error = lldb.SBError()
-
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        inner_sint_bkpt = self.target.BreakpointCreateByName("inner_sint", exe)
-        self.assertTrue(inner_sint_bkpt, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
-
-        # Now finish, and make sure the return value is correct.
-        thread = lldbutil.get_stopped_thread(
-            self.process, lldb.eStopReasonBreakpoint)
 
         # inner_sint returns the variable value, so capture that here:
         in_int = thread.GetFrameAtIndex(0).FindVariable(
@@ -86,10 +68,8 @@ class ReturnValueTestCase(TestBase):
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
         # Then test stepping out two frames at once:
-
-        self.process.Continue()
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, inner_sint_bkpt)
+        
+        thread_list = lldbutil.continue_to_breakpoint(self.process, inner_sint_bkpt)
         self.assertTrue(len(thread_list) == 1)
         thread = thread_list[0]
 

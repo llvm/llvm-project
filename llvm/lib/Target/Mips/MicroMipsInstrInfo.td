@@ -273,6 +273,7 @@ class LLEBaseMM<string opstr, RegisterOperand RO> :
   InstSE<(outs RO:$rt), (ins mem_simm9:$addr),
          !strconcat(opstr, "\t$rt, $addr"), [], II_LLE, FrmI> {
   let DecoderMethod = "DecodeMemMMImm9";
+  string BaseOpcode = opstr;
   let mayLoad = 1;
 }
 
@@ -288,6 +289,7 @@ class SCEBaseMM<string opstr, RegisterOperand RO> :
   InstSE<(outs RO:$dst), (ins RO:$rt, mem_simm9:$addr),
          !strconcat(opstr, "\t$rt, $addr"), [], II_SCE, FrmI> {
   let DecoderMethod = "DecodeMemMMImm9";
+  string BaseOpcode = opstr;
   let mayStore = 1;
   let Constraints = "$rt = $dst";
 }
@@ -777,21 +779,27 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   }
 
   let DecoderMethod = "DecodeMemMMImm9" in {
-    def LBE_MM  : Load<"lbe", GPR32Opnd, null_frag, II_LBE>,
+    def LBE_MM  : MMRel, Load<"lbe", GPR32Opnd, null_frag, II_LBE>,
                   POOL32C_LHUE_FM_MM<0x18, 0x6, 0x4>;
-    def LBuE_MM : Load<"lbue", GPR32Opnd, null_frag, II_LBUE>,
+    def LBuE_MM : MMRel, Load<"lbue", GPR32Opnd, null_frag, II_LBUE>,
                   POOL32C_LHUE_FM_MM<0x18, 0x6, 0x0>;
-    def LHE_MM  : LoadMemory<"lhe", GPR32Opnd, mem_simm9, null_frag, II_LHE>,
+    def LHE_MM  : MMRel, LoadMemory<"lhe", GPR32Opnd, mem_simm9,
+                                    null_frag, II_LHE>,
                   POOL32C_LHUE_FM_MM<0x18, 0x6, 0x5>;
-    def LHuE_MM : LoadMemory<"lhue", GPR32Opnd, mem_simm9, null_frag, II_LHUE>,
+    def LHuE_MM : MMRel, LoadMemory<"lhue", GPR32Opnd, mem_simm9,
+                                    null_frag, II_LHUE>,
                   POOL32C_LHUE_FM_MM<0x18, 0x6, 0x1>;
-    def LWE_MM  : LoadMemory<"lwe", GPR32Opnd, mem_simm9, null_frag, II_LWE>,
+    def LWE_MM  : MMRel, LoadMemory<"lwe", GPR32Opnd, mem_simm9,
+                                     null_frag, II_LWE>,
                   POOL32C_LHUE_FM_MM<0x18, 0x6, 0x7>;
-    def SBE_MM  : StoreMemory<"sbe", GPR32Opnd, mem_simm9, null_frag, II_SBE>,
+    def SBE_MM  : MMRel, StoreMemory<"sbe", GPR32Opnd, mem_simm9,
+                                     null_frag, II_SBE>,
                   POOL32C_LHUE_FM_MM<0x18, 0xa, 0x4>;
-    def SHE_MM  : StoreMemory<"she", GPR32Opnd, mem_simm9, null_frag, II_SHE>,
+    def SHE_MM  : MMRel, StoreMemory<"she", GPR32Opnd, mem_simm9,
+                                     null_frag, II_SHE>,
                   POOL32C_LHUE_FM_MM<0x18, 0xa, 0x5>;
-    def SWE_MM  : StoreMemory<"swe", GPR32Opnd, mem_simm9, null_frag, II_SWE>,
+    def SWE_MM  : MMRel, StoreMemory<"swe", GPR32Opnd, mem_simm9,
+                                     null_frag, II_SWE>,
                   POOL32C_LHUE_FM_MM<0x18, 0xa, 0x7>;
   }
 
@@ -971,8 +979,8 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   def LL_MM : LLBaseMM<"ll", GPR32Opnd>, LL_FM_MM<0x3>;
   def SC_MM : SCBaseMM<"sc", GPR32Opnd>, LL_FM_MM<0xb>;
 
-  def LLE_MM : LLEBaseMM<"lle", GPR32Opnd>, LLE_FM_MM<0x6>;
-  def SCE_MM : SCEBaseMM<"sce", GPR32Opnd>, LLE_FM_MM<0xA>;
+  def LLE_MM : MMRel, LLEBaseMM<"lle", GPR32Opnd>, LLE_FM_MM<0x6>;
+  def SCE_MM : MMRel, SCEBaseMM<"sce", GPR32Opnd>, LLE_FM_MM<0xA>;
 
   let DecoderMethod = "DecodeCacheOpMM" in {
   def CACHE_MM : MMRel, CacheOp<"cache", mem_mm_12, II_CACHE>,

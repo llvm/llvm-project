@@ -4300,7 +4300,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         ISD::SRL, dl, NVT, Tmp1,
         DAG.getConstant(DiffBits, dl,
                         TLI.getShiftAmountTy(NVT, DAG.getDataLayout())));
-    Results.push_back(Tmp1);
+
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::FP_TO_UINT:

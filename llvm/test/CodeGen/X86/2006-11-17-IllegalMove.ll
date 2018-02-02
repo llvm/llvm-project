@@ -11,7 +11,7 @@ define void @handle_vector_size_attribute() nounwind {
 ; CHECK-NEXT:  # %bb.1: # %cond_next129
 ; CHECK-NEXT:    movb 0, %al
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def %eax killed %eax def %ax
+; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    cmpq %rax, %rax

@@ -3444,7 +3444,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
     reportWarning("line table parameters mismatch. Cannot emit.");
   else {
     uint32_t PrologueEnd = *StmtList + 10 + LineTable.Prologue.PrologueLength;
-    // DWARFv5 has an extra 2 bytes of information before the header_length
+    // DWARF v5 has an extra 2 bytes of information before the header_length
     // field.
     if (LineTable.Prologue.getVersion() == 5)
       PrologueEnd += 2;

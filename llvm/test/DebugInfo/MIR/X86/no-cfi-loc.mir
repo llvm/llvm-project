@@ -48,10 +48,10 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-calleeSavedRegisters: [ '%bh', '%bl', '%bp', '%bpl', '%bx', '%ebp', '%ebx', 
-                        '%rbp', '%rbx', '%r12', '%r13', '%r14', '%r15', 
-                        '%r12b', '%r13b', '%r14b', '%r15b', '%r12d', '%r13d', 
-                        '%r14d', '%r15d', '%r12w', '%r13w', '%r14w', '%r15w' ]
+calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx', 
+                        '$rbp', '$rbx', '$r12', '$r13', '$r14', '$r15', 
+                        '$r12b', '$r13b', '$r14b', '$r15b', '$r12d', '$r13d', 
+                        '$r14d', '$r15d', '$r12w', '$r13w', '$r14w', '$r15w' ]
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -68,10 +68,10 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    frame-setup PUSH64r undef %rax, implicit-def %rsp, implicit %rsp, debug-location !8
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp, debug-location !8
     CFI_INSTRUCTION def_cfa_offset 16
-    CALL64pcrel32 @bar, csr_64, implicit %rsp, implicit-def %rsp, debug-location !8
-    %rax = POP64r implicit-def %rsp, implicit %rsp, debug-location !9
+    CALL64pcrel32 @bar, csr_64, implicit $rsp, implicit-def $rsp, debug-location !8
+    $rax = POP64r implicit-def $rsp, implicit $rsp, debug-location !9
     RET 0, debug-location !9
 
 ...

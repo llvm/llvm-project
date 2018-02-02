@@ -431,7 +431,7 @@ define <8 x i16> @shl_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X32-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; X32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -442,7 +442,7 @@ define <8 x i16> @shl_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X64-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X64-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %shl = shl <8 x i16> %r, %a
@@ -639,7 +639,7 @@ define <8 x i16> @lshr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X32-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; X32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -650,7 +650,7 @@ define <8 x i16> @lshr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X64-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X64-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %lshr = lshr <8 x i16> %r, %a

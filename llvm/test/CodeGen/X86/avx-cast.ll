@@ -9,7 +9,7 @@
 define <8 x float> @castA(<4 x float> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castA:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX-NEXT:    retq
@@ -20,7 +20,7 @@ define <8 x float> @castA(<4 x float> %m) nounwind uwtable readnone ssp {
 define <4 x double> @castB(<2 x double> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castB:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX-NEXT:    retq
@@ -33,7 +33,7 @@ define <4 x double> @castB(<2 x double> %m) nounwind uwtable readnone ssp {
 define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castC:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    ## kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX-NEXT:    retq
@@ -47,7 +47,7 @@ define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 define <4 x float> @castD(<8 x float> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castD:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %shuffle.i = shufflevector <8 x float> %m, <8 x float> %m, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -57,7 +57,7 @@ define <4 x float> @castD(<8 x float> %m) nounwind uwtable readnone ssp {
 define <2 x i64> @castE(<4 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castE:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %shuffle.i = shufflevector <4 x i64> %m, <4 x i64> %m, <2 x i32> <i32 0, i32 1>
@@ -67,7 +67,7 @@ define <2 x i64> @castE(<4 x i64> %m) nounwind uwtable readnone ssp {
 define <2 x double> @castF(<4 x double> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castF:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %shuffle.i = shufflevector <4 x double> %m, <4 x double> %m, <2 x i32> <i32 0, i32 1>

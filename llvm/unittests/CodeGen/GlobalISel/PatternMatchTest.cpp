@@ -91,9 +91,9 @@ registers:
   - { id: 3, class: _ }
 body: |
   bb.1:
-    %0(s64) = COPY %x0
-    %1(s64) = COPY %x1
-    %2(s64) = COPY %x2
+    %0(s64) = COPY $x0
+    %1(s64) = COPY $x1
+    %2(s64) = COPY $x2
 )MIR") + Twine(MIRFunc) + Twine("...\n"))
                             .toNullTerminatedStringRef(S);
   std::unique_ptr<MIRParser> MIR;

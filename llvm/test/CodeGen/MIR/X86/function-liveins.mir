@@ -19,18 +19,18 @@ registers:
   - { id: 1, class: gr32 }
   - { id: 2, class: gr32 }
 # CHECK: liveins:
-# CHECK-NEXT: - { reg: '%edi', virtual-reg: '%0' }
-# CHECK-NEXT: - { reg: '%esi', virtual-reg: '%1' }
+# CHECK-NEXT: - { reg: '$edi', virtual-reg: '%0' }
+# CHECK-NEXT: - { reg: '$esi', virtual-reg: '%1' }
 liveins:
-  - { reg: '%edi', virtual-reg: '%0' }
-  - { reg: '%esi', virtual-reg: '%1' }
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
 body: |
   bb.0.body:
-    liveins: %edi, %esi
+    liveins: $edi, $esi
 
-    %1 = COPY %esi
-    %0 = COPY %edi
-    %2 = ADD32rr %0, %1, implicit-def dead %eflags
-    %eax = COPY %2
-    RETQ %eax
+    %1 = COPY $esi
+    %0 = COPY $edi
+    %2 = ADD32rr %0, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RETQ $eax
 ...

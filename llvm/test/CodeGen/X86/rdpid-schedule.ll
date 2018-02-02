@@ -6,13 +6,13 @@ define i32 @test_rdpid() {
 ; GENERIC-LABEL: test_rdpid:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    rdpid %rax # sched: [100:0.33]
-; GENERIC-NEXT:    # kill: def %eax killed %eax killed %rax
+; GENERIC-NEXT:    # kill: def $eax killed $eax killed $rax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ICELAKE-LABEL: test_rdpid:
 ; ICELAKE:       # %bb.0:
 ; ICELAKE-NEXT:    rdpid %rax # sched: [100:0.25]
-; ICELAKE-NEXT:    # kill: def %eax killed %eax killed %rax
+; ICELAKE-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ICELAKE-NEXT:    retq # sched: [7:1.00]
   %1 = tail call i32 @llvm.x86.rdpid()
   ret i32 %1

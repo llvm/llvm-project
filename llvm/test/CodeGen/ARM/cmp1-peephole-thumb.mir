@@ -32,8 +32,8 @@ registers:
   - { id: 4, class: tgpr }
   - { id: 5, class: tgpr }
 liveins:
-  - { reg: '%r0', virtual-reg: '%0' }
-  - { reg: '%r1', virtual-reg: '%1' }
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -49,27 +49,27 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 
-# CHECK:  tMOVi8 1, 14, %noreg
-# CHECK:  tMOVi8 0, 14, %noreg
-# CHECK:  tMUL %1, %0, 14, %noreg
+# CHECK:  tMOVi8 1, 14, $noreg
+# CHECK:  tMOVi8 0, 14, $noreg
+# CHECK:  tMUL %1, %0, 14, $noreg
 # CHECK-NOT: tCMPi8
 body:             |
   bb.0.entry:
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    %1 = COPY %r1
-    %0 = COPY %r0
-    %2, %cpsr = tMUL %1, %0, 14, %noreg
-    %3, %cpsr = tMOVi8 1, 14, %noreg
-    %4, %cpsr = tMOVi8 0, 14, %noreg
-    tCMPi8 killed %2, 0, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.2.entry, 0, %cpsr
+    %1 = COPY $r1
+    %0 = COPY $r0
+    %2, $cpsr = tMUL %1, %0, 14, $noreg
+    %3, $cpsr = tMOVi8 1, 14, $noreg
+    %4, $cpsr = tMOVi8 0, 14, $noreg
+    tCMPi8 killed %2, 0, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.2.entry, 0, $cpsr
 
   bb.1.entry:
 
   bb.2.entry:
     %5 = PHI %4, %bb.1.entry, %3, %bb.0.entry
-    %r0 = COPY %5
-    tBX_RET 14, %noreg, implicit %r0
+    $r0 = COPY %5
+    tBX_RET 14, $noreg, implicit $r0
 
 ...

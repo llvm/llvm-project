@@ -16,7 +16,7 @@ name:            test
 body: |
   bb.0.entry:
     ; CHECK: [[@LINE+1]]:48: end of machine instruction reached before the closing '"'
-    %rax = MOV64rm %rip, 1, _, @"quoted name, _
-    %eax = MOV32rm killed %rax, 1, _, 0, _
-    RETQ %eax
+    $rax = MOV64rm $rip, 1, _, @"quoted name, _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    RETQ $eax
 ...

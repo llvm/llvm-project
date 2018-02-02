@@ -185,8 +185,8 @@ define void @extrastride(i8* nocapture %main, i32 %main_stride, i32* nocapture %
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    pushq %r14
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    testl %r9d, %r9d
 ; X64-NEXT:    je .LBB2_3
 ; X64-NEXT:  # %bb.1: # %for.body.lr.ph

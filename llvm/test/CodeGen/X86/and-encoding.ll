@@ -110,7 +110,7 @@ define i32 @shrinkAndKnownBits(i32 %x) {
 ; CHECK-NEXT:    imulq %rcx, %rax # encoding: [0x48,0x0f,0xaf,0xc1]
 ; CHECK-NEXT:    shrq $36, %rax # encoding: [0x48,0xc1,0xe8,0x24]
 ; CHECK-NEXT:    andl $-128, %eax # encoding: [0x83,0xe0,0x80]
-; CHECK-NEXT:    # kill: def %eax killed %eax killed %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %div = udiv i32 %x, 17
   %and = and i32 %div, 268435328

@@ -21,7 +21,7 @@
 #
 # Check that last bundled instruction of block gets recognized as end of basic block.
 # CHECK: bb.2.if.end
-# CHECK-NEXT: DBG_VALUE debug-use %s0, debug-use %noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: DBG_VALUE debug-use $s0, debug-use $noreg, !12, !DIExpression(), debug-location !17
 
 --- |
   ; ModuleID = '<stdin>'
@@ -118,7 +118,7 @@ selected:        false
 tracksRegLiveness: false
 registers:
 liveins:
-  - { reg: '%a0', virtual-reg: '' }
+  - { reg: '$a0', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -142,47 +142,47 @@ stack:
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
       di-variable: '', di-expression: '', di-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '%ra', callee-saved-restored: true,
+      stack-id: 0, callee-saved-register: '$ra', callee-saved-restored: true,
       di-variable: '', di-expression: '', di-location: '' }
   - { id: 2, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
-      stack-id: 0, callee-saved-register: '%s0', callee-saved-restored: true,
+      stack-id: 0, callee-saved-register: '$s0', callee-saved-restored: true,
       di-variable: '', di-expression: '', di-location: '' }
 constants:
 body:             |
   bb.0.entry:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
 
-    %sp = ADDiu %sp, -32
+    $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed %ra, %sp, 28 :: (store 4 into %stack.1)
-    SW killed %s0, %sp, 24 :: (store 4 into %stack.2)
-    CFI_INSTRUCTION offset %ra_64, -4
-    CFI_INSTRUCTION offset %s0_64, -8
-    DBG_VALUE debug-use %a0, debug-use %noreg, !12, !DIExpression(), debug-location !17
-    %s0 = OR %a0, %zero
-    DBG_VALUE debug-use %s0, debug-use %noreg, !12, !DIExpression(), debug-location !17
-    DBG_VALUE %sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
-    JAL @set_cond, csr_o32, implicit-def dead %ra, implicit %a0, implicit %a1, implicit-def %sp, debug-location !20 {
-      renamable %a1 = LEA_ADDiu %sp, 20
+    SW killed $ra, $sp, 28 :: (store 4 into %stack.1)
+    SW killed $s0, $sp, 24 :: (store 4 into %stack.2)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s0_64, -8
+    DBG_VALUE debug-use $a0, debug-use $noreg, !12, !DIExpression(), debug-location !17
+    $s0 = OR $a0, $zero
+    DBG_VALUE debug-use $s0, debug-use $noreg, !12, !DIExpression(), debug-location !17
+    DBG_VALUE $sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
+    JAL @set_cond, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, debug-location !20 {
+      renamable $a1 = LEA_ADDiu $sp, 20
     }
-    renamable %at = LW %sp, 20, debug-location !21 :: (dereferenceable load 4 from %ir.condition, !tbaa !23)
-    DBG_VALUE debug-use %at, debug-use %noreg, !13, !DIExpression(), debug-location !19
-    BEQ killed renamable %at, %zero, %bb.2, implicit-def %at, debug-location !27 {
+    renamable $at = LW $sp, 20, debug-location !21 :: (dereferenceable load 4 from %ir.condition, !tbaa !23)
+    DBG_VALUE debug-use $at, debug-use $noreg, !13, !DIExpression(), debug-location !19
+    BEQ killed renamable $at, $zero, %bb.2, implicit-def $at, debug-location !27 {
       NOP debug-location !27
     }
 
   bb.1.if.then:
     successors: %bb.2(0x80000000)
 
-    JAL @do_something, csr_o32, implicit-def dead %ra, implicit undef %a0, implicit %a1, implicit-def %sp, debug-location !28 {
-      %a1 = OR killed %s0, %zero, debug-location !28
+    JAL @do_something, csr_o32, implicit-def dead $ra, implicit undef $a0, implicit $a1, implicit-def $sp, debug-location !28 {
+      $a1 = OR killed $s0, $zero, debug-location !28
     }
 
   bb.2.if.end:
-    %s0 = LW %sp, 24, debug-location !29 :: (load 4 from %stack.2)
-    %ra = LW %sp, 28, debug-location !29 :: (load 4 from %stack.1)
-    PseudoReturn undef %ra, debug-location !29 {
-      %sp = ADDiu %sp, 32
+    $s0 = LW $sp, 24, debug-location !29 :: (load 4 from %stack.2)
+    $ra = LW $sp, 28, debug-location !29 :: (load 4 from %stack.1)
+    PseudoReturn undef $ra, debug-location !29 {
+      $sp = ADDiu $sp, 32
     }
 
 ...

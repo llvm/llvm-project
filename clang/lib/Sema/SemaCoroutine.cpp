@@ -1316,10 +1316,6 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   if (Res.isInvalid())
     return false;
 
-  if (GroType == FnRetType) {
-    GroDecl->setNRVOVariable(true);
-  }
-
   S.AddInitializerToDecl(GroDecl, Res.get(),
                          /*DirectInit=*/false);
 
@@ -1343,6 +1339,8 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     noteMemberDeclaredHere(S, ReturnValue, Fn);
     return false;
   }
+  if (cast<clang::ReturnStmt>(ReturnStmt.get())->getNRVOCandidate() == GroDecl)
+    GroDecl->setNRVOVariable(true);
 
   this->ReturnStmt = ReturnStmt.get();
   return true;

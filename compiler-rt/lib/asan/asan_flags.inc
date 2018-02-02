@@ -136,9 +136,9 @@ ASAN_FLAG(
     "Android. ")
 ASAN_FLAG(
     int, detect_invalid_pointer_pairs, 0,
-    "If non-zero, try to detect operations like <, <=, >, >= and - on "
-    "invalid pointer pairs (e.g. when pointers belong to different objects). "
-    "The bigger the value the harder we try.")
+    "If >= 2, detect operations like <, <=, >, >= and - on invalid pointer "
+    "pairs (e.g. when pointers belong to different objects); "
+    "If == 1, detect invalid operations only when both pointers are non-null.")
 ASAN_FLAG(
     bool, detect_container_overflow, true,
     "If true, honor the container overflow annotations. See "

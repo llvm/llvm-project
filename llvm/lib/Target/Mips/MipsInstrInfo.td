@@ -1333,6 +1333,7 @@ class LoadMemory<string opstr, DAGOperand RO, DAGOperand MO,
          [(set RO:$rt, (OpNode Addr:$addr))], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMem";
   let canFoldAsLoad = 1;
+  string BaseOpcode = opstr;
   let mayLoad = 1;
 }
 
@@ -1346,6 +1347,7 @@ class StoreMemory<string opstr, DAGOperand RO, DAGOperand MO,
   InstSE<(outs), (ins RO:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
          [(OpNode RO:$rt, Addr:$addr)], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMem";
+  string BaseOpcode = opstr;
   let mayStore = 1;
 }
 

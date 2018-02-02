@@ -10,9 +10,9 @@ declare %struct.ShapeData addrspace(1)* @Scene_getSubShapeData(i32, i8 addrspace
 
 define <4 x float> @Scene_transformT(i32 %subshapeIdx, <4 x float> %v, float %time, i8 addrspace(1)* %gScene, i32 addrspace(1)* %gSceneOffsets) local_unnamed_addr !dbg !110 {
 entry:
-; CHECK: ;DEBUG_VALUE: Scene_transformT:gScene <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] %vgpr6_vgpr7
+; CHECK: ;DEBUG_VALUE: Scene_transformT:gScene <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] $vgpr6_vgpr7
   call void @llvm.dbg.value(metadata i8 addrspace(1)* %gScene, metadata !120, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !154
-; CHECK: ;DEBUG_VALUE: Scene_transformT:gSceneOffsets <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] %vgpr8_vgpr9
+; CHECK: ;DEBUG_VALUE: Scene_transformT:gSceneOffsets <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] $vgpr8_vgpr9
   call void @llvm.dbg.value(metadata i32 addrspace(1)* %gSceneOffsets, metadata !121, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !155
   %call = tail call %struct.ShapeData addrspace(1)* @Scene_getSubShapeData(i32 %subshapeIdx, i8 addrspace(1)* %gScene, i32 addrspace(1)* %gSceneOffsets)
   %m_linearMotion = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 2

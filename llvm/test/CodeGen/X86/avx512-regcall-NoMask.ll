@@ -8,19 +8,19 @@ define x86_regcallcc i1 @test_argReti1(i1 %a)  {
 ; X32-LABEL: test_argReti1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    incb %al
-; X32-NEXT:    # kill: def %al killed %al killed %eax
+; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti1:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    incb %al
-; WIN64-NEXT:    # kill: def %al killed %al killed %eax
+; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argReti1:
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    incb %al
-; LINUXOSX64-NEXT:    # kill: def %al killed %al killed %eax
+; LINUXOSX64-NEXT:    # kill: def $al killed $al killed $eax
 ; LINUXOSX64-NEXT:    retq
   %add = add i1 %a, 1
   ret i1 %add
@@ -75,19 +75,19 @@ define x86_regcallcc i8 @test_argReti8(i8 %a)  {
 ; X32-LABEL: test_argReti8:
 ; X32:       # %bb.0:
 ; X32-NEXT:    incb %al
-; X32-NEXT:    # kill: def %al killed %al killed %eax
+; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti8:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    incb %al
-; WIN64-NEXT:    # kill: def %al killed %al killed %eax
+; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argReti8:
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    incb %al
-; LINUXOSX64-NEXT:    # kill: def %al killed %al killed %eax
+; LINUXOSX64-NEXT:    # kill: def $al killed $al killed $eax
 ; LINUXOSX64-NEXT:    retq
   %add = add i8 %a, 1
   ret i8 %add
@@ -142,19 +142,19 @@ define x86_regcallcc i16 @test_argReti16(i16 %a)  {
 ; X32-LABEL: test_argReti16:
 ; X32:       # %bb.0:
 ; X32-NEXT:    incl %eax
-; X32-NEXT:    # kill: def %ax killed %ax killed %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti16:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    incl %eax
-; WIN64-NEXT:    # kill: def %ax killed %ax killed %eax
+; WIN64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argReti16:
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    incl %eax
-; LINUXOSX64-NEXT:    # kill: def %ax killed %ax killed %eax
+; LINUXOSX64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; LINUXOSX64-NEXT:    retq
   %add = add i16 %a, 1
   ret i16 %add
@@ -167,9 +167,9 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; X32-NEXT:    pushl %esp
 ; X32-NEXT:    incl %eax
 ; X32-NEXT:    calll _test_argReti16
-; X32-NEXT:    # kill: def %ax killed %ax def %eax
+; X32-NEXT:    # kill: def $ax killed $ax def $eax
 ; X32-NEXT:    incl %eax
-; X32-NEXT:    # kill: def %ax killed %ax killed %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    popl %esp
 ; X32-NEXT:    retl
 ;
@@ -180,9 +180,9 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    callq test_argReti16
-; WIN64-NEXT:    # kill: def %ax killed %ax def %eax
+; WIN64-NEXT:    # kill: def $ax killed $ax def $eax
 ; WIN64-NEXT:    incl %eax
-; WIN64-NEXT:    # kill: def %ax killed %ax killed %eax
+; WIN64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_handlerdata
@@ -196,9 +196,9 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
 ; LINUXOSX64-NEXT:    incl %eax
 ; LINUXOSX64-NEXT:    callq test_argReti16
-; LINUXOSX64-NEXT:    # kill: def %ax killed %ax def %eax
+; LINUXOSX64-NEXT:    # kill: def $ax killed $ax def $eax
 ; LINUXOSX64-NEXT:    incl %eax
-; LINUXOSX64-NEXT:    # kill: def %ax killed %ax killed %eax
+; LINUXOSX64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; LINUXOSX64-NEXT:    popq %rsp
 ; LINUXOSX64-NEXT:    retq
   %b = add i16 %a, 1
@@ -650,7 +650,7 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 ; X32-NEXT:    subl $24, %esp
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
 ; X32-NEXT:    vmovdqa %xmm0, %xmm4
-; X32-NEXT:    vmovdqa %xmm4, %xmm1
+; X32-NEXT:    vmovdqa %xmm0, %xmm1
 ; X32-NEXT:    calll _test_argRet128Vector
 ; X32-NEXT:    vmovdqa32 %xmm4, %xmm0 {%k1}
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
@@ -668,7 +668,7 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 ; WIN64-NEXT:    .seh_savexmm 8, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovdqa %xmm0, %xmm8
-; WIN64-NEXT:    vmovdqa %xmm8, %xmm1
+; WIN64-NEXT:    vmovdqa %xmm0, %xmm1
 ; WIN64-NEXT:    callq test_argRet128Vector
 ; WIN64-NEXT:    vmovdqa32 %xmm8, %xmm0 {%k1}
 ; WIN64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -689,7 +689,7 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
 ; LINUXOSX64-NEXT:    .cfi_offset %xmm8, -32
 ; LINUXOSX64-NEXT:    vmovdqa %xmm0, %xmm8
-; LINUXOSX64-NEXT:    vmovdqa %xmm8, %xmm1
+; LINUXOSX64-NEXT:    vmovdqa %xmm0, %xmm1
 ; LINUXOSX64-NEXT:    callq test_argRet128Vector
 ; LINUXOSX64-NEXT:    vmovdqa32 %xmm8, %xmm0 {%k1}
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -908,12 +908,12 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; X32-NEXT:    subl $20, %esp
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edi, %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, %ebx
-; X32-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %eax, %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    subl %ecx, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl %edi, %ebp

@@ -65,6 +65,16 @@ false:
 
 }
 
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s24) = G_LOAD %1:_(p0); mem:LD3[undef](align=1) (in function: odd_type_load)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_type_load
+; FALLBACK-WITH-REPORT-OUT-LABEL: odd_type_load
+define i32 @odd_type_load() {
+entry:
+  %ld = load i24, i24* undef, align 1
+  %cst = zext i24 %ld to i32
+  ret i32 %cst
+}
+
   ; General legalizer inability to handle types whose size wasn't a power of 2.
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %1:_(s42), %0:_(p0); mem:ST6[%addr](align=8) (in function: odd_type)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_type

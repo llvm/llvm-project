@@ -100,7 +100,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
   EXPECT_EQ(3U, BB->size());
 }
 
-std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
   if (!Mod)

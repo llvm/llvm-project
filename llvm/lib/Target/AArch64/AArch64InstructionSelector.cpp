@@ -1407,6 +1407,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
                                 : selectVaStartAAPCS(I, MF, MRI);
   case TargetOpcode::G_IMPLICIT_DEF:
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+    const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    const unsigned DstReg = I.getOperand(0).getReg();
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    const TargetRegisterClass *DstRC =
+        getRegClassForTypeOnBank(DstTy, DstRB, RBI);
+    RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
     return true;
   }
 

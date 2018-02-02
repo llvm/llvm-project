@@ -23,7 +23,7 @@ target triple = "x86_64-apple-macosx"
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; CHECK: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; CHECK-NEXT: cmpl %esi, [[ARG0CPY]]
+; CHECK-NEXT: cmpl %esi, %edi
 ; CHECK-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Store %a in the alloca.
@@ -69,7 +69,7 @@ attributes #0 = { "no-frame-pointer-elim"="false" }
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; CHECK: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; CHECK-NEXT: cmpl %esi, [[ARG0CPY]]
+; CHECK-NEXT: cmpl %esi, %edi
 ; CHECK-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -115,7 +115,7 @@ attributes #1 = { "no-frame-pointer-elim"="true" }
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; CHECK: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; CHECK-NEXT: cmpl %esi, [[ARG0CPY]]
+; CHECK-NEXT: cmpl %esi, %edi
 ; CHECK-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.

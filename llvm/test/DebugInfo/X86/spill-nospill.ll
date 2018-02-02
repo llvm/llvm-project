@@ -24,20 +24,20 @@
 ; CHECK-LABEL: f: # @f
 ; CHECK: callq   g
 ; CHECK: movl    %eax, [[X_OFFS:[0-9]+]](%rsp)          # 4-byte Spill
-; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]]] [%rsp+0]
+; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]]] [$rsp+0]
 ; CHECK: #APP
 ; CHECK: #NO_APP
 ; CHECK: callq   g
 ; CHECK: movl    %eax, %[[CSR:[^ ]*]]
-; CHECK: #DEBUG_VALUE: f:y <- %esi
-; CHECK: movl    %[[CSR]], %ecx
+; CHECK: #DEBUG_VALUE: f:y <- $esi
+; CHECK: movl    %eax, %ecx
 ; CHECK: callq   g
 ; CHECK: movl    %[[CSR]], %ecx
 ; CHECK: callq   g
 ; CHECK: movl    %[[CSR]], %ecx
 ; CHECK: callq   g
 ; CHECK: movl    [[X_OFFS]](%rsp), %eax          # 4-byte Reload
-; CHECK: #DEBUG_VALUE: f:x <- %eax
+; CHECK: #DEBUG_VALUE: f:x <- $eax
 ; CHECK: addl    %[[CSR]], %eax
 
 ; DWARF:      DW_TAG_variable

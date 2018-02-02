@@ -5,7 +5,7 @@
 define i32 @test1(i32 %x) nounwind ssp {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    shll $5, %edi
 ; CHECK-NEXT:    leal 3(%rdi), %eax
 ; CHECK-NEXT:    retq
@@ -20,7 +20,7 @@ define i32 @test1(i32 %x) nounwind ssp {
 define i64 @test2(i8 %A, i8 %B) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    andl $48, %edi
 ; CHECK-NEXT:    movzbl %sil, %eax
@@ -55,8 +55,8 @@ define void @test3(i32 %x, i32* %P) nounwind readnone ssp {
 define i32 @test4(i32 %a, i32 %b) nounwind readnone ssp {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def %esi killed %esi def %rsi
-; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $6, %edi
 ; CHECK-NEXT:    andl $16, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi), %eax

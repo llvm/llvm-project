@@ -824,7 +824,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -834,7 +834,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512F-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -844,7 +844,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; AVX512VL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -854,7 +854,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512BW-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512BW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -865,7 +865,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512BWVL-NEXT:    kmovd %eax, %k1
 ; AVX512BWVL-NEXT:    vmovdqu8 %ymm1, %ymm0 {%k1}
 ; AVX512BWVL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; AVX512BWVL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BWVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
 ;
@@ -873,7 +873,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512VBMIVL:       # %bb.0:
 ; AVX512VBMIVL-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,48,18,20,22,24,26,28,30,16,18,20,22,24,26,28,30]
 ; AVX512VBMIVL-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0
-; AVX512VBMIVL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512VBMIVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512VBMIVL-NEXT:    vzeroupper
 ; AVX512VBMIVL-NEXT:    retq
   %strided.vec = shufflevector <32 x i8> %v, <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>

@@ -11,7 +11,7 @@ entry:
 ; A53: mov [[DATA:w[0-9]+]], w1
 ; A53: str q{{[0-9]+}}, {{.*}}
 ; A53: str q{{[0-9]+}}, {{.*}}
-; A53: str [[DATA]], {{.*}}
+; A53: str w1, {{.*}}
 
   %0 = bitcast %struct1* %fde to i8*
   tail call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 40, i1 false)

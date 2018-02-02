@@ -29,29 +29,29 @@ registers:
 body:             |
   bb.1.entry:
     ; CHECK_NOPIC64-LABEL: name: test_float
-    ; CHECK_NOPIC64: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm %rip, 1, %noreg, %const.0, %noreg
-    ; CHECK_NOPIC64: %xmm0 = COPY [[MOVSSrm]]
-    ; CHECK_NOPIC64: RET 0, implicit %xmm0
+    ; CHECK_NOPIC64: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm $rip, 1, $noreg, %const.0, $noreg
+    ; CHECK_NOPIC64: $xmm0 = COPY [[MOVSSrm]]
+    ; CHECK_NOPIC64: RET 0, implicit $xmm0
     ; CHECK_LARGE64-LABEL: name: test_float
     ; CHECK_LARGE64: [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri %const.0
-    ; CHECK_LARGE64: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm [[MOV64ri]], 1, %noreg, 0, %noreg :: (load 8 from constant-pool, align 32)
-    ; CHECK_LARGE64: %xmm0 = COPY [[MOVSSrm]]
-    ; CHECK_LARGE64: RET 0, implicit %xmm0
+    ; CHECK_LARGE64: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm [[MOV64ri]], 1, $noreg, 0, $noreg :: (load 8 from constant-pool, align 32)
+    ; CHECK_LARGE64: $xmm0 = COPY [[MOVSSrm]]
+    ; CHECK_LARGE64: RET 0, implicit $xmm0
     ; CHECK_SMALL32-LABEL: name: test_float
-    ; CHECK_SMALL32: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm %noreg, 1, %noreg, %const.0, %noreg
-    ; CHECK_SMALL32: %xmm0 = COPY [[MOVSSrm]]
-    ; CHECK_SMALL32: RET 0, implicit %xmm0
+    ; CHECK_SMALL32: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm $noreg, 1, $noreg, %const.0, $noreg
+    ; CHECK_SMALL32: $xmm0 = COPY [[MOVSSrm]]
+    ; CHECK_SMALL32: RET 0, implicit $xmm0
     ; CHECK_LARGE32-LABEL: name: test_float
-    ; CHECK_LARGE32: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm %noreg, 1, %noreg, %const.0, %noreg
-    ; CHECK_LARGE32: %xmm0 = COPY [[MOVSSrm]]
-    ; CHECK_LARGE32: RET 0, implicit %xmm0
+    ; CHECK_LARGE32: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm $noreg, 1, $noreg, %const.0, $noreg
+    ; CHECK_LARGE32: $xmm0 = COPY [[MOVSSrm]]
+    ; CHECK_LARGE32: RET 0, implicit $xmm0
     ; CHECK_PIC64-LABEL: name: test_float
-    ; CHECK_PIC64: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm %rip, 1, %noreg, %const.0, %noreg
-    ; CHECK_PIC64: %xmm0 = COPY [[MOVSSrm]]
-    ; CHECK_PIC64: RET 0, implicit %xmm0
+    ; CHECK_PIC64: [[MOVSSrm:%[0-9]+]]:fr32 = MOVSSrm $rip, 1, $noreg, %const.0, $noreg
+    ; CHECK_PIC64: $xmm0 = COPY [[MOVSSrm]]
+    ; CHECK_PIC64: RET 0, implicit $xmm0
     %0(s32) = G_FCONSTANT float 5.500000e+00
-    %xmm0 = COPY %0(s32)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %0(s32)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -70,28 +70,28 @@ registers:
 body:             |
   bb.1.entry:
     ; CHECK_NOPIC64-LABEL: name: test_double
-    ; CHECK_NOPIC64: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm %rip, 1, %noreg, %const.0, %noreg
-    ; CHECK_NOPIC64: %xmm0 = COPY [[MOVSDrm]]
-    ; CHECK_NOPIC64: RET 0, implicit %xmm0
+    ; CHECK_NOPIC64: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm $rip, 1, $noreg, %const.0, $noreg
+    ; CHECK_NOPIC64: $xmm0 = COPY [[MOVSDrm]]
+    ; CHECK_NOPIC64: RET 0, implicit $xmm0
     ; CHECK_LARGE64-LABEL: name: test_double
     ; CHECK_LARGE64: [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri %const.0
-    ; CHECK_LARGE64: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm [[MOV64ri]], 1, %noreg, 0, %noreg :: (load 8 from constant-pool, align 64)
-    ; CHECK_LARGE64: %xmm0 = COPY [[MOVSDrm]]
-    ; CHECK_LARGE64: RET 0, implicit %xmm0
+    ; CHECK_LARGE64: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm [[MOV64ri]], 1, $noreg, 0, $noreg :: (load 8 from constant-pool, align 64)
+    ; CHECK_LARGE64: $xmm0 = COPY [[MOVSDrm]]
+    ; CHECK_LARGE64: RET 0, implicit $xmm0
     ; CHECK_SMALL32-LABEL: name: test_double
-    ; CHECK_SMALL32: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm %noreg, 1, %noreg, %const.0, %noreg
-    ; CHECK_SMALL32: %xmm0 = COPY [[MOVSDrm]]
-    ; CHECK_SMALL32: RET 0, implicit %xmm0
+    ; CHECK_SMALL32: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm $noreg, 1, $noreg, %const.0, $noreg
+    ; CHECK_SMALL32: $xmm0 = COPY [[MOVSDrm]]
+    ; CHECK_SMALL32: RET 0, implicit $xmm0
     ; CHECK_LARGE32-LABEL: name: test_double
-    ; CHECK_LARGE32: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm %noreg, 1, %noreg, %const.0, %noreg
-    ; CHECK_LARGE32: %xmm0 = COPY [[MOVSDrm]]
-    ; CHECK_LARGE32: RET 0, implicit %xmm0
+    ; CHECK_LARGE32: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm $noreg, 1, $noreg, %const.0, $noreg
+    ; CHECK_LARGE32: $xmm0 = COPY [[MOVSDrm]]
+    ; CHECK_LARGE32: RET 0, implicit $xmm0
     ; CHECK_PIC64-LABEL: name: test_double
-    ; CHECK_PIC64: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm %rip, 1, %noreg, %const.0, %noreg
-    ; CHECK_PIC64: %xmm0 = COPY [[MOVSDrm]]
-    ; CHECK_PIC64: RET 0, implicit %xmm0
+    ; CHECK_PIC64: [[MOVSDrm:%[0-9]+]]:fr64 = MOVSDrm $rip, 1, $noreg, %const.0, $noreg
+    ; CHECK_PIC64: $xmm0 = COPY [[MOVSDrm]]
+    ; CHECK_PIC64: RET 0, implicit $xmm0
     %0(s64) = G_FCONSTANT double 5.500000e+00
-    %xmm0 = COPY %0(s64)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %0(s64)
+    RET 0, implicit $xmm0
 
 ...

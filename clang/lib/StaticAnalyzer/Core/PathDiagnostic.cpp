@@ -742,6 +742,8 @@ const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
     return CEE->getCalleeContext()->getCallSite();
   if (Optional<PostInitializer> PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
+  if (Optional<CallExitBegin> CEB = P.getAs<CallExitBegin>())
+    return CEB->getReturnStmt();
 
   return nullptr;
 }

@@ -27,20 +27,20 @@ regBankSelected: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
-# AVX:               %0:vr256 = COPY %ymm1
+# AVX:               %0:vr256 = COPY $ymm1
 # AVX-NEXT:          %1:vr128 = COPY %0.sub_xmm
-# AVX512VL:          %0:vr256x = COPY %ymm1
+# AVX512VL:          %0:vr256x = COPY $ymm1
 # AVX512VL-NEXT:     %1:vr128x = COPY %0.sub_xmm
-# ALL-NEXT:          %xmm0 = COPY %1
-# ALL-NEXT:          RET 0, implicit %xmm0
+# ALL-NEXT:          $xmm0 = COPY %1
+# ALL-NEXT:          RET 0, implicit $xmm0
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm1
+    liveins: $ymm1
 
-    %0(<8 x s32>) = COPY %ymm1
+    %0(<8 x s32>) = COPY $ymm1
     %1(<4 x s32>) = G_EXTRACT %0(<8 x s32>), 0
-    %xmm0 = COPY %1(<4 x s32>)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -59,22 +59,22 @@ regBankSelected: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
-# AVX:               %0:vr256 = COPY %ymm1
+# AVX:               %0:vr256 = COPY $ymm1
 # AVX-NEXT:          %1:vr128 = VEXTRACTF128rr %0, 1
-# AVX-NEXT:          %xmm0 = COPY %1
-# AVX-NEXT:          RET 0, implicit %xmm0
+# AVX-NEXT:          $xmm0 = COPY %1
+# AVX-NEXT:          RET 0, implicit $xmm0
 #
-# AVX512VL:          %0:vr256x = COPY %ymm1
+# AVX512VL:          %0:vr256x = COPY $ymm1
 # AVX512VL-NEXT:     %1:vr128x = VEXTRACTF32x4Z256rr %0, 1
-# AVX512VL-NEXT:     %xmm0 = COPY %1
-# AVX512VL-NEXT:     RET 0, implicit %xmm0
+# AVX512VL-NEXT:     $xmm0 = COPY %1
+# AVX512VL-NEXT:     RET 0, implicit $xmm0
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm1
+    liveins: $ymm1
 
-    %0(<8 x s32>) = COPY %ymm1
+    %0(<8 x s32>) = COPY $ymm1
     %1(<4 x s32>) = G_EXTRACT %0(<8 x s32>), 128
-    %xmm0 = COPY %1(<4 x s32>)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
 
 ...

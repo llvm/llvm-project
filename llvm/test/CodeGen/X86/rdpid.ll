@@ -6,7 +6,7 @@ define i32 @test_builtin_rdpid() {
 ; X86-64-LABEL: test_builtin_rdpid:
 ; X86-64:       # %bb.0:
 ; X86-64-NEXT:    rdpid %rax
-; X86-64-NEXT:    # kill: def %eax killed %eax killed %rax
+; X86-64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X86-64-NEXT:    retq
 ;
 ; X86-LABEL: test_builtin_rdpid:
