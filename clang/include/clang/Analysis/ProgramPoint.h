@@ -641,6 +641,10 @@ public:
   CallExitBegin(const StackFrameContext *L, const ReturnStmt *RS)
     : ProgramPoint(RS, CallExitBeginKind, L, nullptr) { }
 
+  const ReturnStmt *getReturnStmt() const {
+    return static_cast<const ReturnStmt *>(getData1());
+  }
+
 private:
   friend class ProgramPoint;
   CallExitBegin() = default;
