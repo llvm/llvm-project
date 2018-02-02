@@ -13,13 +13,13 @@
 name:            inc
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rdi' }
+  - { reg: '$rdi' }
 body: |
   bb.0.entry:
-    liveins: %rdi
+    liveins: $rdi
   ; CHECK: [[@LINE+1]]:60: use of unknown metadata keyword '!tba'
-    %eax = MOV32rm %rdi, 1, _, 0, _ :: (load 4 from %ir.x, !tba !0)
-    %eax = INC32r killed %eax, implicit-def dead %eflags
-    MOV32mr killed %rdi, 1, _, 0, _, %eax :: (store 4 into %ir.x)
-    RETQ %eax
+    $eax = MOV32rm $rdi, 1, _, 0, _ :: (load 4 from %ir.x, !tba !0)
+    $eax = INC32r killed $eax, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, _, 0, _, $eax :: (store 4 into %ir.x)
+    RETQ $eax
 ...

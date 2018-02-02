@@ -139,7 +139,7 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ; AVX2-SLOW-NEXT:    vblendvpd %ymm1, %ymm0, %ymm2, %ymm0
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
 ; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-SLOW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -153,19 +153,19 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ; AVX2-FAST-NEXT:    vblendvpd %ymm1, %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vmovapd {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_usat_v4i64_v4i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
 ; AVX512F-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,429496729]
 ; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vpmovqd %zmm1, %ymm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -180,13 +180,13 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ;
 ; AVX512BW-LABEL: trunc_usat_v4i64_v4i32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
 ; AVX512BW-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,429496729]
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; AVX512BW-NEXT:    vpmovqd %zmm1, %ymm0
-; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -718,7 +718,7 @@ define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64> %a0) {
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-SLOW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -739,7 +739,7 @@ define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64> %a0) {
 ; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-FAST-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
 ;
@@ -834,7 +834,7 @@ define <8 x i16> @trunc_usat_v8i32_v8i16(<8 x i32> %a0) {
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; AVX512F-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -849,7 +849,7 @@ define <8 x i16> @trunc_usat_v8i32_v8i16(<8 x i32> %a0) {
 ; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; AVX512BW-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -869,7 +869,7 @@ define <16 x i16> @trunc_usat_v16i32_v16i16(<16 x i32> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm8
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm8, %xmm5
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-NEXT:    pxor %xmm7, %xmm5
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147549183,2147549183,2147549183,2147549183]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm6
@@ -913,7 +913,7 @@ define <16 x i16> @trunc_usat_v16i32_v16i16(<16 x i32> %a0) {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm8
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
-; SSSE3-NEXT:    movdqa %xmm8, %xmm5
+; SSSE3-NEXT:    movdqa %xmm1, %xmm5
 ; SSSE3-NEXT:    pxor %xmm7, %xmm5
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm6
@@ -1257,7 +1257,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-SLOW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -1278,7 +1278,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-FAST-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
 ;
@@ -1301,7 +1301,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm4, %xmm12
-; SSE2-NEXT:    movdqa %xmm12, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -1440,7 +1440,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm4, %xmm12
-; SSSE3-NEXT:    movdqa %xmm12, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm2
@@ -1577,11 +1577,11 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm6, %xmm11
-; SSE41-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm5, %xmm12
-; SSE41-NEXT:    movdqa %xmm12, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm4, %xmm13
-; SSE41-NEXT:    movdqa %xmm13, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE41-NEXT:    movdqa %xmm3, %xmm6
 ; SSE41-NEXT:    movdqa %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm4
@@ -1592,13 +1592,13 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-NEXT:    pxor %xmm9, %xmm11
 ; SSE41-NEXT:    pxor %xmm9, %xmm12
 ; SSE41-NEXT:    pxor %xmm9, %xmm13
-; SSE41-NEXT:    movdqa %xmm6, %xmm14
+; SSE41-NEXT:    movdqa %xmm3, %xmm14
 ; SSE41-NEXT:    pxor %xmm9, %xmm14
-; SSE41-NEXT:    movdqa %xmm5, %xmm3
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
 ; SSE41-NEXT:    pxor %xmm9, %xmm3
-; SSE41-NEXT:    movdqa %xmm4, %xmm2
+; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    pxor %xmm9, %xmm2
-; SSE41-NEXT:    pxor %xmm8, %xmm9
+; SSE41-NEXT:    pxor %xmm0, %xmm9
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259711,9223372039002259711]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpgtd %xmm9, %xmm0
@@ -1927,7 +1927,7 @@ define <8 x i8> @trunc_usat_v8i32_v8i8(<8 x i32> %a0) {
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
 ; AVX512F-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -1943,7 +1943,7 @@ define <8 x i8> @trunc_usat_v8i32_v8i8(<8 x i32> %a0) {
 ; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
 ; AVX512BW-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -2184,7 +2184,7 @@ define <16 x i8> @trunc_usat_v16i16_v16i8(<16 x i16> %a0) {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpminuw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;

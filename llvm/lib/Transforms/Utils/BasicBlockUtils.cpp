@@ -319,8 +319,15 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       DominatorTree *DT, LoopInfo *LI,
                                       bool PreserveLCSSA, bool &HasLoopExit) {
   // Update dominator tree if available.
-  if (DT)
-    DT->splitBlock(NewBB);
+  if (DT) {
+    if (OldBB == DT->getRootNode()->getBlock()) {
+      assert(NewBB == &NewBB->getParent()->getEntryBlock());
+      DT->setNewRoot(NewBB);
+    } else {
+      // Split block expects NewBB to have a non-empty set of predecessors.
+      DT->splitBlock(NewBB);
+    }
+  }
 
   // The rest of the logic is only relevant for updating the loop structures.
   if (!LI)
@@ -504,7 +511,6 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
     // Insert dummy values as the incoming value.
     for (BasicBlock::iterator I = BB->begin(); isa<PHINode>(I); ++I)
       cast<PHINode>(I)->addIncoming(UndefValue::get(I->getType()), NewBB);
-    return NewBB;
   }
 
   // Update DominatorTree, LoopInfo, and LCCSA analysis information.
@@ -512,8 +518,11 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
   UpdateAnalysisInformation(BB, NewBB, Preds, DT, LI, PreserveLCSSA,
                             HasLoopExit);
 
-  // Update the PHI nodes in BB with the values coming from NewBB.
-  UpdatePHINodes(BB, NewBB, Preds, BI, HasLoopExit);
+  if (!Preds.empty()) {
+    // Update the PHI nodes in BB with the values coming from NewBB.
+    UpdatePHINodes(BB, NewBB, Preds, BI, HasLoopExit);
+  }
+
   return NewBB;
 }
 

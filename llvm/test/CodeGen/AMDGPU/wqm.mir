@@ -28,23 +28,23 @@ registers:
   - { id: 11, class: vgpr_32, preferred-register: '' }
   - { id: 12, class: vgpr_32, preferred-register: '' }
 liveins:         
-  - { reg: '%sgpr0', virtual-reg: '%0' }
-  - { reg: '%sgpr1', virtual-reg: '%1' }
-  - { reg: '%sgpr2', virtual-reg: '%2' }
-  - { reg: '%vgpr0', virtual-reg: '%3' }
+  - { reg: '$sgpr0', virtual-reg: '%0' }
+  - { reg: '$sgpr1', virtual-reg: '%1' }
+  - { reg: '$sgpr2', virtual-reg: '%2' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: %sgpr0, %sgpr1, %sgpr2, %vgpr0
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
   
-    %3 = COPY %vgpr0
-    %2 = COPY %sgpr2
-    %1 = COPY %sgpr1
-    %0 = COPY %sgpr0
-    S_CMP_LT_I32 0, %0, implicit-def %scc
-    %12 = V_ADD_I32_e32 %3, %3, implicit-def %vcc, implicit %exec
-    %5 = S_CSELECT_B32 %2, %1, implicit %scc
-    %11 = V_ADD_I32_e32 %5, %12, implicit-def %vcc, implicit %exec
-    %vgpr0 = WWM %11, implicit %exec
-    SI_RETURN_TO_EPILOG %vgpr0
+    %3 = COPY $vgpr0
+    %2 = COPY $sgpr2
+    %1 = COPY $sgpr1
+    %0 = COPY $sgpr0
+    S_CMP_LT_I32 0, %0, implicit-def $scc
+    %12 = V_ADD_I32_e32 %3, %3, implicit-def $vcc, implicit $exec
+    %5 = S_CSELECT_B32 %2, %1, implicit $scc
+    %11 = V_ADD_I32_e32 %5, %12, implicit-def $vcc, implicit $exec
+    $vgpr0 = WWM %11, implicit $exec
+    SI_RETURN_TO_EPILOG $vgpr0
 
 ...

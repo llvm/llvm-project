@@ -18,7 +18,7 @@ registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
   - { id: 2, class: _, preferred-register: '' }
-# CHECK:          %0(s32) = COPY %edx
+# CHECK:          %0(s32) = COPY $edx
 # CHECK-NEXT:     %3(s8) = G_TRUNC %0(s32)
 # CHECK-NEXT:     %4(s8) = G_TRUNC %0(s32)
 # CHECK-NEXT:     %5(s8) = G_ADD %3, %4
@@ -27,26 +27,26 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; X64-LABEL: name: test_add_i1
-    ; X64: [[COPY:%[0-9]+]]:_(s32) = COPY %edx
+    ; X64: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; X64: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; X64: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; X64: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[TRUNC]], [[TRUNC1]]
     ; X64: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD]](s8)
-    ; X64: %eax = COPY [[ANYEXT]](s32)
+    ; X64: $eax = COPY [[ANYEXT]](s32)
     ; X64: RET 0
     ; X32-LABEL: name: test_add_i1
-    ; X32: [[COPY:%[0-9]+]]:_(s32) = COPY %edx
+    ; X32: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; X32: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; X32: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; X32: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[TRUNC]], [[TRUNC1]]
     ; X32: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD]](s8)
-    ; X32: %eax = COPY [[ANYEXT]](s32)
+    ; X32: $eax = COPY [[ANYEXT]](s32)
     ; X32: RET 0
-    %0(s32) = COPY %edx
+    %0(s32) = COPY $edx
     %1(s1) = G_TRUNC %0(s32)
     %2(s1) = G_ADD %1, %1
     %3:_(s32) = G_ANYEXT %2
-    %eax = COPY %3
+    $eax = COPY %3
     RET 0
 ...
 ---
@@ -64,18 +64,18 @@ body:             |
     ; X64: [[DEF:%[0-9]+]]:_(s32) = IMPLICIT_DEF
     ; X64: [[DEF1:%[0-9]+]]:_(s32) = IMPLICIT_DEF
     ; X64: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF1]]
-    ; X64: %eax = COPY [[ADD]](s32)
+    ; X64: $eax = COPY [[ADD]](s32)
     ; X64: RET 0
     ; X32-LABEL: name: test_add_i32
     ; X32: [[DEF:%[0-9]+]]:_(s32) = IMPLICIT_DEF
     ; X32: [[DEF1:%[0-9]+]]:_(s32) = IMPLICIT_DEF
     ; X32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF1]]
-    ; X32: %eax = COPY [[ADD]](s32)
+    ; X32: $eax = COPY [[ADD]](s32)
     ; X32: RET 0
     %0(s32) = IMPLICIT_DEF
     %1(s32) = IMPLICIT_DEF
     %2(s32) = G_ADD %0, %1
-    %eax = COPY %2
+    $eax = COPY %2
     RET 0
 
 ...
@@ -94,7 +94,7 @@ body:             |
     ; X64: [[DEF:%[0-9]+]]:_(s64) = IMPLICIT_DEF
     ; X64: [[DEF1:%[0-9]+]]:_(s64) = IMPLICIT_DEF
     ; X64: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[DEF]], [[DEF1]]
-    ; X64: %rax = COPY [[ADD]](s64)
+    ; X64: $rax = COPY [[ADD]](s64)
     ; X64: RET 0
     ; X32-LABEL: name: test_add_i64
     ; X32: [[DEF:%[0-9]+]]:_(s64) = IMPLICIT_DEF
@@ -106,12 +106,12 @@ body:             |
     ; X32: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV]], [[UV2]], [[TRUNC]]
     ; X32: [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV3]], [[UADDE1]]
     ; X32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE]](s32), [[UADDE2]](s32)
-    ; X32: %rax = COPY [[MV]](s64)
+    ; X32: $rax = COPY [[MV]](s64)
     ; X32: RET 0
     %0(s64) = IMPLICIT_DEF
     %1(s64) = IMPLICIT_DEF
     %2(s64) = G_ADD %0, %1
-    %rax = COPY %2
+    $rax = COPY %2
     RET 0
 
 ...

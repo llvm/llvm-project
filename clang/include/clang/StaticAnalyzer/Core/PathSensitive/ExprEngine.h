@@ -567,6 +567,13 @@ public:
                                   const LocationContext *LCtx,
                                   ProgramStateRef State);
 
+  struct EvalCallOptions {
+    bool IsConstructorWithImproperlyModeledTargetRegion = false;
+    bool IsArrayConstructorOrDestructor = false;
+
+    EvalCallOptions() {}
+  };
+
   /// Evaluate a call, running pre- and post-call checks and allowing checkers
   /// to be responsible for handling the evaluation of the call itself.
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -574,7 +581,9 @@ public:
 
   /// \brief Default implementation of call evaluation.
   void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
-                       const CallEvent &Call);
+                       const CallEvent &Call,
+                       const EvalCallOptions &CallOpts = {});
+
 private:
   void evalLoadCommon(ExplodedNodeSet &Dst,
                       const Expr *NodeEx,  /* Eventually will be a CFGStmt */
@@ -598,9 +607,23 @@ private:
   void examineStackFrames(const Decl *D, const LocationContext *LCtx,
                           bool &IsRecursive, unsigned &StackDepth);
 
+  enum CallInlinePolicy {
+    CIP_Allowed,
+    CIP_DisallowedOnce,
+    CIP_DisallowedAlways
+  };
+
+  /// \brief See if a particular call should be inlined, by only looking
+  /// at the call event and the current state of analysis.
+  CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
+                                     const ExplodedNode *Pred,
+                                     AnalyzerOptions &Opts,
+                                     const EvalCallOptions &CallOpts);
+
   /// Checks our policies and decides weither the given call should be inlined.
   bool shouldInlineCall(const CallEvent &Call, const Decl *D,
-                        const ExplodedNode *Pred);
+                        const ExplodedNode *Pred,
+                        const EvalCallOptions &CallOpts = {});
 
   bool inlineCall(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
                   ExplodedNode *Pred, ProgramStateRef State);
@@ -650,11 +673,11 @@ private:
 
   /// For a given constructor, look forward in the current CFG block to
   /// determine the region into which an object will be constructed by \p CE.
-  /// Returns either a field or local variable region if the object will be
-  /// directly constructed in an existing region or a temporary object region
-  /// if not.
+  /// When the lookahead fails, a temporary region is returned, and the
+  /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred);
+                                                 ExplodedNode *Pred,
+                                                 EvalCallOptions &CallOpts);
 
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be

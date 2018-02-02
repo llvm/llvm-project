@@ -406,9 +406,9 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    subss %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm0[1],xmm3[1]
 ; SSE-NEXT:    movaps %xmm1, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm1[1],xmm4[1]
 ; SSE-NEXT:    subss %xmm4, %xmm3
 ; SSE-NEXT:    movshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; SSE-NEXT:    addss %xmm0, %xmm4

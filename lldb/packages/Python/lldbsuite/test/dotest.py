@@ -1196,8 +1196,17 @@ def run_suite():
 
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
-    try: os.makedirs(configuration.test_build_dir)
-    except: pass
+    import lldbsuite.test.lldbutil as lldbutil
+    build_dir = configuration.test_build_dir
+    lldbutil.mkdir_p(build_dir)
+
+    # Create a marker for Spotlight to never index $BUILD_DIR.  LLDB
+    # queries Spotlight to locate .dSYM bundles based on the UUID
+    # embedded in a binary, and because the UUID is a hash of filename
+    # and .text section, there *will* be conflicts inside $BUILD_DIR.
+    if platform.system() == "Darwin":
+        with open(os.path.join(build_dir, '.metadata_never_index'), 'w+'):
+            pass
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
 

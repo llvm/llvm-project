@@ -85,19 +85,22 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
 
 
 /// Returns a region representing the first element of a (possibly
-/// multi-dimensional) array.
+/// multi-dimensional) array, for the purposes of element construction or
+/// destruction.
 ///
 /// On return, \p Ty will be set to the base type of the array.
 ///
 /// If the type is not an array type at all, the original value is returned.
+/// Otherwise the "IsArray" flag is set.
 static SVal makeZeroElementRegion(ProgramStateRef State, SVal LValue,
-                                  QualType &Ty) {
+                                  QualType &Ty, bool &IsArray) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   ASTContext &Ctx = SVB.getContext();
 
   while (const ArrayType *AT = Ctx.getAsArrayType(Ty)) {
     Ty = AT->getElementType();
     LValue = State->getLValue(Ty, SVB.makeZeroArrayIndex(), LValue);
+    IsArray = true;
   }
 
   return LValue;
@@ -106,7 +109,8 @@ static SVal makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 
 const MemRegion *
 ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                          ExplodedNode *Pred) {
+                                          ExplodedNode *Pred,
+                                          EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
@@ -122,9 +126,9 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
                   getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
             if (CNE->isArray()) {
-              // TODO: This code exists only to trigger the suppression for
-              // array constructors. In fact, we need to call the constructor
-              // for every allocated element, not just the first one!
+              // TODO: In fact, we need to call the constructor for every
+              // allocated element, not just the first one!
+              CallOpts.IsArrayConstructorOrDestructor = true;
               return getStoreManager().GetElementZeroRegion(
                   MR, CNE->getType()->getPointeeType());
             }
@@ -136,7 +140,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
             SVal LValue = State->getLValue(Var, LCtx);
             QualType Ty = Var->getType();
-            LValue = makeZeroElementRegion(State, LValue, Ty);
+            LValue = makeZeroElementRegion(
+                State, LValue, Ty, CallOpts.IsArrayConstructorOrDestructor);
             return LValue.getAsRegion();
           }
         }
@@ -162,7 +167,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       }
 
       QualType Ty = Field->getType();
-      FieldVal = makeZeroElementRegion(State, FieldVal, Ty);
+      FieldVal = makeZeroElementRegion(State, FieldVal, Ty,
+                                       CallOpts.IsArrayConstructorOrDestructor);
       return FieldVal.getAsRegion();
     }
 
@@ -171,7 +177,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
     // ExprEngine::VisitCXXConstructExpr.
   }
   // If we couldn't find an existing region to construct into, assume we're
-  // constructing a temporary.
+  // constructing a temporary. Notify the caller of our failure.
+  CallOpts.IsConstructorWithImproperlyModeledTargetRegion = true;
   MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
   return MRMgr.getCXXTempObjectRegion(CE, LCtx);
 }
@@ -265,9 +272,11 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   // For now, we just run the first constructor (which should still invalidate
   // the entire array).
 
+  EvalCallOptions CallOpts;
+
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    Target = getRegionForConstructedObject(CE, Pred);
+    Target = getRegionForConstructedObject(CE, Pred, CallOpts);
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -304,6 +313,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(CE))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
       Target = MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      CallOpts.IsConstructorWithImproperlyModeledTargetRegion = true;
       break;
     }
     // FALLTHROUGH
@@ -371,10 +381,9 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   ExplodedNodeSet DstEvaluated;
   StmtNodeBuilder Bldr(DstPreCall, DstEvaluated, *currBldrCtx);
 
-  bool IsArray = isa<ElementRegion>(Target);
   if (CE->getConstructor()->isTrivial() &&
       CE->getConstructor()->isCopyOrMoveConstructor() &&
-      !IsArray) {
+      !CallOpts.IsArrayConstructorOrDestructor) {
     // FIXME: Handle other kinds of trivial constructors as well.
     for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
          I != E; ++I)
@@ -383,7 +392,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   } else {
     for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
          I != E; ++I)
-      defaultEvalCall(Bldr, *I, *Call);
+      defaultEvalCall(Bldr, *I, *Call, CallOpts);
   }
 
   // If the CFG was contructed without elements for temporary destructors
@@ -431,7 +440,11 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
   SVal DestVal = UnknownVal();
   if (Dest)
     DestVal = loc::MemRegionVal(Dest);
-  DestVal = makeZeroElementRegion(State, DestVal, ObjectType);
+
+  EvalCallOptions CallOpts;
+  DestVal = makeZeroElementRegion(State, DestVal, ObjectType,
+                                  CallOpts.IsArrayConstructorOrDestructor);
+
   Dest = DestVal.getAsRegion();
 
   const CXXRecordDecl *RecordDecl = ObjectType->getAsCXXRecordDecl();
@@ -454,7 +467,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
   StmtNodeBuilder Bldr(DstPreCall, DstInvalidated, *currBldrCtx);
   for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
        I != E; ++I)
-    defaultEvalCall(Bldr, *I, *Call);
+    defaultEvalCall(Bldr, *I, *Call, CallOpts);
 
   ExplodedNodeSet DstPostCall;
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,

@@ -32,6 +32,8 @@ def ExynosM1Model : SchedMachineModel {
 // Define each kind of processor resource and number available on the Exynos-M1,
 // which has 9 pipelines, each with its own queue with out-of-order dispatch.
 
+let SchedModel = ExynosM1Model in {
+
 def M1UnitA  : ProcResource<2>; // Simple integer
 def M1UnitC  : ProcResource<1>; // Simple and complex integer
 def M1UnitD  : ProcResource<1>; // Integer division (inside C, serialized)
@@ -54,14 +56,10 @@ let Super = M1PipeF1 in {
   def M1UnitFST  : ProcResource<1>; // FP store
 }
 
-let SchedModel = ExynosM1Model in {
-  def M1UnitALU  : ProcResGroup<[M1UnitA,
-                                 M1UnitC]>;    // All integer
-  def M1UnitNALU : ProcResGroup<[M1UnitNAL0,
-                                 M1UnitNAL1]>; // All simple vector
-}
-
-let SchedModel = ExynosM1Model in {
+def M1UnitALU  : ProcResGroup<[M1UnitA,
+                               M1UnitC]>;    // All integer
+def M1UnitNALU : ProcResGroup<[M1UnitNAL0,
+                               M1UnitNAL1]>; // All simple vector
 
 //===----------------------------------------------------------------------===//
 // Predicates.

@@ -62,7 +62,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -81,17 +81,17 @@ fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
 body:             |
   bb.0.entry:
-    liveins: %edi, %rbp
+    liveins: $edi, $rbp
   
-    frame-setup PUSH64r killed %rbp, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    CFI_INSTRUCTION offset %rbp, -16
-    %rbp = frame-setup MOV64rr %rsp
-    CFI_INSTRUCTION def_cfa_register %rbp
-    DBG_VALUE debug-use %dh, debug-use _, !14, !15, debug-location !16
-    %edi = SHR32ri killed %edi, 8, implicit-def dead %eflags, debug-location !17
-    %eax = MOVSX32rr8 %dil, implicit killed %edi, debug-location !20
-    %rbp = POP64r implicit-def %rsp, implicit %rsp, debug-location !20
-    RETQ %eax, debug-location !20
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    DBG_VALUE debug-use $dh, debug-use _, !14, !15, debug-location !16
+    $edi = SHR32ri killed $edi, 8, implicit-def dead $eflags, debug-location !17
+    $eax = MOVSX32rr8 $dil, implicit killed $edi, debug-location !20
+    $rbp = POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    RETQ $eax, debug-location !20
 
 ...

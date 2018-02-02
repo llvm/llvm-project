@@ -316,8 +316,8 @@ namespace HexagonISD {
         return Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
       return Op.getOpcode() == ISD::UNDEF;
     }
-    SDValue getNode(unsigned MachineOpc, const SDLoc &dl, MVT Ty,
-                    ArrayRef<SDValue> Ops, SelectionDAG &DAG) const {
+    SDValue getInstr(unsigned MachineOpc, const SDLoc &dl, MVT Ty,
+                     ArrayRef<SDValue> Ops, SelectionDAG &DAG) const {
       SDNode *N = DAG.getMachineNode(MachineOpc, dl, Ty, Ops);
       return SDValue(N, 0);
     }
@@ -402,6 +402,7 @@ namespace HexagonISD {
     SDValue LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
 
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)

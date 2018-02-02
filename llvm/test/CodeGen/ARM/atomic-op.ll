@@ -129,12 +129,11 @@ entry:
 	store i32 %9, i32* %old
 	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
-  ; CHECK: bic
-  ; CHECK-NOT: cmp
+  ; CHECK: cmp
   ; CHECK: strex
   ; CHECK-T1: bl ___sync_fetch_and_max_4
   ; CHECK-T1-M0: bl ___sync_fetch_and_max_4
-  ; CHECK-BAREMETAL: bic
+  ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
   %10 = atomicrmw max i32* %val2, i32 0 monotonic
 	store i32 %10, i32* %old
@@ -288,7 +287,8 @@ define i32 @test_cmpxchg_fail_order(i32 *%addr, i32 %desired, i32 %new) {
 
   %pair = cmpxchg i32* %addr, i32 %desired, i32 %new seq_cst monotonic
   %oldval = extractvalue { i32, i1 } %pair, 0
-; CHECK-ARMV7:     ldrex   [[OLDVAL:r[0-9]+]], [r[[ADDR:[0-9]+]]]
+; CHECK-ARMV7:     mov     r[[ADDR:[0-9]+]], r0
+; CHECK-ARMV7:     ldrex   [[OLDVAL:r[0-9]+]], [r0]
 ; CHECK-ARMV7:     cmp     [[OLDVAL]], r1
 ; CHECK-ARMV7:     bne     [[FAIL_BB:\.?LBB[0-9]+_[0-9]+]]
 ; CHECK-ARMV7:     dmb ish
@@ -306,7 +306,8 @@ define i32 @test_cmpxchg_fail_order(i32 *%addr, i32 %desired, i32 %new) {
 ; CHECK-ARMV7:     dmb     ish
 ; CHECK-ARMV7:     bx      lr
 
-; CHECK-T2:     ldrex   [[OLDVAL:r[0-9]+]], [r[[ADDR:[0-9]+]]]
+; CHECK-T2:     mov     r[[ADDR:[0-9]+]], r0
+; CHECK-T2:     ldrex   [[OLDVAL:r[0-9]+]], [r0]
 ; CHECK-T2:     cmp     [[OLDVAL]], r1
 ; CHECK-T2:     bne     [[FAIL_BB:\.?LBB.*]]
 ; CHECK-T2:     dmb ish

@@ -38,18 +38,27 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-retpoline-thunks"
 
+static const char ThunkNamePrefix[] = "__llvm_retpoline_";
+static const char R11ThunkName[]    = "__llvm_retpoline_r11";
+static const char EAXThunkName[]    = "__llvm_retpoline_eax";
+static const char ECXThunkName[]    = "__llvm_retpoline_ecx";
+static const char EDXThunkName[]    = "__llvm_retpoline_edx";
+static const char PushThunkName[]   = "__llvm_retpoline_push";
+
 namespace {
-class X86RetpolineThunks : public ModulePass {
+class X86RetpolineThunks : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86RetpolineThunks() : ModulePass(ID) {}
+  X86RetpolineThunks() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Retpoline Thunks"; }
 
-  bool runOnModule(Module &M) override;
+  bool doInitialization(Module &M) override;
+  bool runOnMachineFunction(MachineFunction &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineModuleInfo>();
     AU.addPreserved<MachineModuleInfo>();
   }
@@ -61,51 +70,74 @@ private:
   const X86Subtarget *STI;
   const X86InstrInfo *TII;
 
-  Function *createThunkFunction(Module &M, StringRef Name);
+  bool InsertedThunks;
+
+  void createThunkFunction(Module &M, StringRef Name);
   void insertRegReturnAddrClobber(MachineBasicBlock &MBB, unsigned Reg);
   void insert32BitPushReturnAddrClobber(MachineBasicBlock &MBB);
-  void createThunk(Module &M, StringRef NameSuffix,
-                   Optional<unsigned> Reg = None);
+  void populateThunk(MachineFunction &MF, Optional<unsigned> Reg = None);
 };
 
 } // end anonymous namespace
 
-ModulePass *llvm::createX86RetpolineThunksPass() {
+FunctionPass *llvm::createX86RetpolineThunksPass() {
   return new X86RetpolineThunks();
 }
 
 char X86RetpolineThunks::ID = 0;
 
-bool X86RetpolineThunks::runOnModule(Module &M) {
+bool X86RetpolineThunks::doInitialization(Module &M) {
+  InsertedThunks = false;
+  return false;
+}
+
+bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << getPassName() << '\n');
 
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  assert(TPC && "X86-specific target pass should not be run without a target "
-                "pass config!");
-
-  MMI = &getAnalysis<MachineModuleInfo>();
-  TM = &TPC->getTM<TargetMachine>();
+  TM = &MF.getTarget();;
+  STI = &MF.getSubtarget<X86Subtarget>();
+  TII = STI->getInstrInfo();
   Is64Bit = TM->getTargetTriple().getArch() == Triple::x86_64;
 
-  // Only add a thunk if we have at least one function that has the retpoline
-  // feature enabled in its subtarget.
-  // FIXME: Conditionalize on indirect calls so we don't emit a thunk when
-  // nothing will end up calling it.
-  // FIXME: It's a little silly to look at every function just to enumerate
-  // the subtargets, but eventually we'll want to look at them for indirect
-  // calls, so maybe this is OK.
-  if (!llvm::any_of(M, [&](const Function &F) {
-        // Save the subtarget we find for use in emitting the subsequent
-        // thunk.
-        STI = &TM->getSubtarget<X86Subtarget>(F);
-        return STI->useRetpoline() && !STI->useRetpolineExternalThunk();
-      }))
-    return false;
+  MMI = &getAnalysis<MachineModuleInfo>();
+  Module &M = const_cast<Module &>(*MMI->getModule());
 
-  // If we have a relevant subtarget, get the instr info as well.
-  TII = STI->getInstrInfo();
+  // If this function is not a thunk, check to see if we need to insert
+  // a thunk.
+  if (!MF.getName().startswith(ThunkNamePrefix)) {
+    // If we've already inserted a thunk, nothing else to do.
+    if (InsertedThunks)
+      return false;
 
+    // Only add a thunk if one of the functions has the retpoline feature
+    // enabled in its subtarget, and doesn't enable external thunks.
+    // FIXME: Conditionalize on indirect calls so we don't emit a thunk when
+    // nothing will end up calling it.
+    // FIXME: It's a little silly to look at every function just to enumerate
+    // the subtargets, but eventually we'll want to look at them for indirect
+    // calls, so maybe this is OK.
+    if (!STI->useRetpoline() || STI->useRetpolineExternalThunk())
+      return false;
+
+    // Otherwise, we need to insert the thunk.
+    // WARNING: This is not really a well behaving thing to do in a function
+    // pass. We extract the module and insert a new function (and machine
+    // function) directly into the module.
+    if (Is64Bit)
+      createThunkFunction(M, R11ThunkName);
+    else
+      for (StringRef Name :
+           {EAXThunkName, ECXThunkName, EDXThunkName, PushThunkName})
+        createThunkFunction(M, Name);
+    InsertedThunks = true;
+    return true;
+  }
+
+  // If this *is* a thunk function, we need to populate it with the correct MI.
   if (Is64Bit) {
+    assert(MF.getName() == "__llvm_retpoline_r11" &&
+           "Should only have an r11 thunk on 64-bit targets");
+
     // __llvm_retpoline_r11:
     //   callq .Lr11_call_target
     // .Lr11_capture_spec:
@@ -116,8 +148,7 @@ bool X86RetpolineThunks::runOnModule(Module &M) {
     // .Lr11_call_target:
     //   movq %r11, (%rsp)
     //   retq
-
-    createThunk(M, "r11", X86::R11);
+    populateThunk(MF, X86::R11);
   } else {
     // For 32-bit targets we need to emit a collection of thunks for various
     // possible scratch registers as well as a fallback that is used when
@@ -161,16 +192,25 @@ bool X86RetpolineThunks::runOnModule(Module &M) {
     //         popl 8(%esp)   # Pop RA to final RA
     //         popl (%esp)    # Pop callee to next top of stack
     //         retl           # Ret to callee
-    createThunk(M, "eax", X86::EAX);
-    createThunk(M, "ecx", X86::ECX);
-    createThunk(M, "edx", X86::EDX);
-    createThunk(M, "push");
+    if (MF.getName() == EAXThunkName)
+      populateThunk(MF, X86::EAX);
+    else if (MF.getName() == ECXThunkName)
+      populateThunk(MF, X86::ECX);
+    else if (MF.getName() == EDXThunkName)
+      populateThunk(MF, X86::EDX);
+    else if (MF.getName() == PushThunkName)
+      populateThunk(MF);
+    else
+      llvm_unreachable("Invalid thunk name on x86-32!");
   }
 
   return true;
 }
 
-Function *X86RetpolineThunks::createThunkFunction(Module &M, StringRef Name) {
+void X86RetpolineThunks::createThunkFunction(Module &M, StringRef Name) {
+  assert(Name.startswith(ThunkNamePrefix) &&
+         "Created a thunk with an unexpected prefix!");
+
   LLVMContext &Ctx = M.getContext();
   auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
   Function *F =
@@ -190,7 +230,6 @@ Function *X86RetpolineThunks::createThunkFunction(Module &M, StringRef Name) {
   IRBuilder<> Builder(Entry);
 
   Builder.CreateRetVoid();
-  return F;
 }
 
 void X86RetpolineThunks::insertRegReturnAddrClobber(MachineBasicBlock &MBB,
@@ -200,6 +239,7 @@ void X86RetpolineThunks::insertRegReturnAddrClobber(MachineBasicBlock &MBB,
   addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(MovOpc)), SPReg, false, 0)
       .addReg(Reg);
 }
+
 void X86RetpolineThunks::insert32BitPushReturnAddrClobber(
     MachineBasicBlock &MBB) {
   // The instruction sequence we use to replace the return address without
@@ -225,21 +265,16 @@ void X86RetpolineThunks::insert32BitPushReturnAddrClobber(
                false, 0);
 }
 
-void X86RetpolineThunks::createThunk(Module &M, StringRef NameSuffix,
-                                     Optional<unsigned> Reg) {
-  Function &F =
-      *createThunkFunction(M, (Twine("__llvm_retpoline_") + NameSuffix).str());
-  MachineFunction &MF = MMI->getOrCreateMachineFunction(F);
-
+void X86RetpolineThunks::populateThunk(MachineFunction &MF,
+                                       Optional<unsigned> Reg) {
   // Set MF properties. We never use vregs...
   MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
 
-  BasicBlock &OrigEntryBB = F.getEntryBlock();
-  MachineBasicBlock *Entry = MF.CreateMachineBasicBlock(&OrigEntryBB);
-  MachineBasicBlock *CaptureSpec = MF.CreateMachineBasicBlock(&OrigEntryBB);
-  MachineBasicBlock *CallTarget = MF.CreateMachineBasicBlock(&OrigEntryBB);
+  MachineBasicBlock *Entry = &MF.front();
+  Entry->clear();
 
-  MF.push_back(Entry);
+  MachineBasicBlock *CaptureSpec = MF.CreateMachineBasicBlock(Entry->getBasicBlock());
+  MachineBasicBlock *CallTarget = MF.CreateMachineBasicBlock(Entry->getBasicBlock());
   MF.push_back(CaptureSpec);
   MF.push_back(CallTarget);
 

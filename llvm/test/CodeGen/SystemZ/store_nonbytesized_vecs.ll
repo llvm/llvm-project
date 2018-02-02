@@ -80,7 +80,7 @@ define void @fun2(<8 x i32> %src, <8 x i31>* %p)
 ; CHECK-NEXT:    vlgvf %r1, %v24, 0
 ; CHECK-NEXT:    stc %r1, 30(%r2)
 ; CHECK-NEXT:    llgtr %r0, %r1
-; CHECK-NEXT:    # kill: def %r1l killed %r1l killed %r1d def %r1d
+; CHECK-NEXT:    # kill: def $r1l killed $r1l killed $r1d def $r1d
 ; CHECK-NEXT:    srl %r1, 8
 ; CHECK-NEXT:    sth %r1, 28(%r2)
 ; CHECK-NEXT:    vlgvf %r1, %v24, 1

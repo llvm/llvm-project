@@ -9,11 +9,11 @@
 # CHECK: - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
 # CHECK-NEXT: stack-id: 1,
 
-# CHECK: SI_SPILL_V32_SAVE killed %vgpr0, %stack.0, %sgpr0_sgpr1_sgpr2_sgpr3, %sgpr5, 0, implicit %exec :: (store 4 into %stack.0)
-# CHECK: %vgpr0 = SI_SPILL_V32_RESTORE %stack.0, %sgpr0_sgpr1_sgpr2_sgpr3, %sgpr5, 0, implicit %exec :: (load 4 from %stack.0)
+# CHECK: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, implicit $exec :: (store 4 into %stack.0)
+# CHECK: $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, implicit $exec :: (load 4 from %stack.0)
 
-# CHECK: SI_SPILL_S32_SAVE killed renamable %sgpr6, %stack.1, implicit %exec, implicit %sgpr0_sgpr1_sgpr2_sgpr3, implicit %sgpr5, implicit-def dead %m0 :: (store 4 into %stack.1)
-# CHECK: %sgpr6 = SI_SPILL_S32_RESTORE %stack.1, implicit %exec, implicit %sgpr0_sgpr1_sgpr2_sgpr3, implicit %sgpr5, implicit-def dead %m0 :: (load 4 from %stack.1)
+# CHECK: SI_SPILL_S32_SAVE killed renamable $sgpr6, %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr5, implicit-def dead $m0 :: (store 4 into %stack.1)
+# CHECK: $sgpr6 = SI_SPILL_S32_RESTORE %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr5, implicit-def dead $m0 :: (load 4 from %stack.1)
 
 name: no_merge_sgpr_vgpr_spill_slot
 tracksRegLiveness: true
@@ -25,10 +25,10 @@ registers:
 
 body: |
   bb.0:
-    %0 = FLAT_LOAD_DWORD undef %vgpr0_vgpr1, 0, 0, 0, implicit %flat_scr, implicit %exec
-    %2 = FLAT_LOAD_DWORD undef %vgpr0_vgpr1, 0, 0, 0, implicit %flat_scr, implicit %exec
+    %0 = FLAT_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, 0, implicit $flat_scr, implicit $exec
+    %2 = FLAT_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, 0, implicit $flat_scr, implicit $exec
     S_NOP 0, implicit %0
-    %1 = S_LOAD_DWORD_IMM undef %sgpr0_sgpr1, 0, 0
-    %3 = S_LOAD_DWORD_IMM undef %sgpr0_sgpr1, 0, 0
+    %1 = S_LOAD_DWORD_IMM undef $sgpr0_sgpr1, 0, 0
+    %3 = S_LOAD_DWORD_IMM undef $sgpr0_sgpr1, 0, 0
     S_NOP 0, implicit %1
 ...

@@ -29,6 +29,8 @@ def ThunderX2T99Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
+let SchedModel = ThunderX2T99Model in {
+
 // Define the issue ports.
 
 // Port 0: ALU, FP/SIMD.
@@ -48,8 +50,6 @@ def THX2T99P4 : ProcResource<1>;
 
 // Port 5: Load/store.
 def THX2T99P5 : ProcResource<1>;
-
-let SchedModel = ThunderX2T99Model in {
 
 // Define groups for the functional units on each issue port.  Each group
 // created will be used by a WriteRes later on.
@@ -359,12 +359,9 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
-}
 
 //===----------------------------------------------------------------------===//
 // 3. Instruction Tables.
-
-let SchedModel = ThunderX2T99Model in {
 
 //---
 // 3.1 Branch Instructions

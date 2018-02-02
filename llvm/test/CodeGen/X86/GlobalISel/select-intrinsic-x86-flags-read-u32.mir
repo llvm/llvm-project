@@ -9,8 +9,8 @@
   define void @read_flags() { ret void }
   ; CHECK-LABEL: name: read_flags
   ; CHECK: bb.0:
-  ; CHECK:   [[RDFLAGS32_:%[0-9]+]]:gr32 = RDFLAGS32 implicit-def %esp, implicit %esp
-  ; CHECK:   %eax = COPY [[RDFLAGS32_]]
+  ; CHECK:   [[RDFLAGS32_:%[0-9]+]]:gr32 = RDFLAGS32 implicit-def $esp, implicit $esp
+  ; CHECK:   $eax = COPY [[RDFLAGS32_]]
 ...
 
 ---
@@ -24,5 +24,5 @@ registers:
 body:             |
   bb.0:
     %0(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.flags.read.u32)
-    %eax = COPY %0(s32)
+    $eax = COPY %0(s32)
 ...

@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj -o %t.o %s
 ; RUN: llc -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
-; RUN: lld -flavor wasm %t.o %t2.o -o %t.wasm
+; RUN: lld -flavor wasm --check-signatures %t.o %t2.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that weak aliases (alias_fn is a weak alias of direct_fn) are linked correctly
@@ -10,10 +10,10 @@ target triple = "wasm32-unknown-unknown-wasm"
 declare i32 @alias_fn() local_unnamed_addr #1
 
 ; Function Attrs: nounwind uwtable
-define i32 @_start() local_unnamed_addr #1 {
+define void @_start() local_unnamed_addr #1 {
 entry:
   %call = tail call i32 @alias_fn() #2
-  ret i32 %call
+  ret void
 }
 
 ; CHECK:      --- !WASM
@@ -23,13 +23,13 @@ entry:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ReturnType:      I32
-; CHECK-NEXT:         ParamTypes:
-; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 1, 1, 1, 1, 0 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -93,7 +93,7 @@ entry:
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            1081808080000B
+; CHECK-NEXT:         Body:            1081808080001A0B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41000B
@@ -138,7 +138,7 @@ entry:
 ; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...
 
-; RUN: lld -flavor wasm --relocatable %t.o %t2.o -o %t.reloc.o
+; RUN: lld -flavor wasm --check-signatures --relocatable %t.o %t2.o -o %t.reloc.o
 ; RUN: obj2yaml %t.reloc.o | FileCheck %s -check-prefix=RELOC
 
 ; RELOC:      --- !WASM
@@ -148,6 +148,9 @@ entry:
 ; RELOC-NEXT:   - Type:            TYPE
 ; RELOC-NEXT:     Signatures:
 ; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         ReturnType:      NORESULT
+; RELOC-NEXT:         ParamTypes:
+; RELOC-NEXT:       - Index:           1
 ; RELOC-NEXT:         ReturnType:      I32
 ; RELOC-NEXT:         ParamTypes:
 ; RELOC-NEXT:   - Type:            IMPORT
@@ -158,7 +161,7 @@ entry:
 ; RELOC-NEXT:         GlobalType:      I32
 ; RELOC-NEXT:         GlobalMutable:   false
 ; RELOC-NEXT:   - Type:            FUNCTION
-; RELOC-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0 ]
+; RELOC-NEXT:     FunctionTypes:   [ 0, 1, 1, 1, 1, 1 ]
 ; RELOC-NEXT:   - Type:            TABLE
 ; RELOC-NEXT:     Tables:
 ; RELOC-NEXT:       - ElemType:        ANYFUNC
@@ -205,44 +208,44 @@ entry:
 ; RELOC-NEXT:         Offset:          0x00000004
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x00000012
+; RELOC-NEXT:         Offset:          0x00000013
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x0000001B
+; RELOC-NEXT:         Offset:          0x0000001C
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x00000026
+; RELOC-NEXT:         Offset:          0x00000027
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x00000031
+; RELOC-NEXT:         Offset:          0x00000032
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x00000039
+; RELOC-NEXT:         Offset:          0x0000003A
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x00000042
+; RELOC-NEXT:         Offset:          0x00000043
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x0000004F
+; RELOC-NEXT:         Offset:          0x00000050
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x0000005C
+; RELOC-NEXT:         Offset:          0x0000005D
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x00000067
+; RELOC-NEXT:         Offset:          0x00000068
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x0000006F
+; RELOC-NEXT:         Offset:          0x00000070
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x00000078
+; RELOC-NEXT:         Offset:          0x00000079
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x00000085
+; RELOC-NEXT:         Offset:          0x00000086
 ; RELOC-NEXT:     Functions:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Locals:
-; RELOC-NEXT:         Body:            1081808080000B
+; RELOC-NEXT:         Body:            1081808080001A0B
 ; RELOC-NEXT:       - Index:           1
 ; RELOC-NEXT:         Locals:
 ; RELOC-NEXT:         Body:            41000B

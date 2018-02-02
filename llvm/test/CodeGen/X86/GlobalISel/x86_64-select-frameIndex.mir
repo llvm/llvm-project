@@ -24,11 +24,11 @@ stack:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: allocai32
-    ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0.ptr1, 1, %noreg, 0, %noreg
-    ; CHECK: %rax = COPY [[LEA64r]]
-    ; CHECK: RET 0, implicit %rax
+    ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0.ptr1, 1, $noreg, 0, $noreg
+    ; CHECK: $rax = COPY [[LEA64r]]
+    ; CHECK: RET 0, implicit $rax
     %0:gpr(p0) = G_FRAME_INDEX %stack.0.ptr1
-    %rax = COPY %0(p0)
-    RET 0, implicit %rax
+    $rax = COPY %0(p0)
+    RET 0, implicit $rax
 
 ...

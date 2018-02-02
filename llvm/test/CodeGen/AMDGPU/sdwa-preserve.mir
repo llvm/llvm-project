@@ -31,26 +31,26 @@ registers:
   - { id: 13, class: vgpr_32 }
 body:             |
   bb.0:
-    liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
   
-    %2 = COPY %sgpr30_sgpr31
-    %1 = COPY %vgpr2_vgpr3
-    %0 = COPY %vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4)
-    %4 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4)
+    %2 = COPY $sgpr30_sgpr31
+    %1 = COPY $vgpr2_vgpr3
+    %0 = COPY $vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %4 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
 
-    %5 = V_AND_B32_e32 65535, %3, implicit %exec
-    %6 = V_LSHRREV_B32_e64 16, %4, implicit %exec
-    %7 = V_BFE_U32 %3, 8, 8, implicit %exec
-    %8 = V_LSHRREV_B32_e32 24, %4, implicit %exec
+    %5 = V_AND_B32_e32 65535, %3, implicit $exec
+    %6 = V_LSHRREV_B32_e64 16, %4, implicit $exec
+    %7 = V_BFE_U32 %3, 8, 8, implicit $exec
+    %8 = V_LSHRREV_B32_e32 24, %4, implicit $exec
 
-    %9 = V_ADD_F16_e64 0, %5, 0, %6, 0, 0, implicit %exec
-    %10 = V_LSHLREV_B16_e64 8, %9, implicit %exec
-    %11 = V_MUL_F32_e64 0, %7, 0, %8, 0, 0, implicit %exec
-    %12 = V_LSHLREV_B32_e64 16, %11, implicit %exec
+    %9 = V_ADD_F16_e64 0, %5, 0, %6, 0, 0, implicit $exec
+    %10 = V_LSHLREV_B16_e64 8, %9, implicit $exec
+    %11 = V_MUL_F32_e64 0, %7, 0, %8, 0, 0, implicit $exec
+    %12 = V_LSHLREV_B32_e64 16, %11, implicit $exec
 
-    %13 = V_OR_B32_e64 %10, %12, implicit %exec
+    %13 = V_OR_B32_e64 %10, %12, implicit $exec
 
-    FLAT_STORE_DWORD %0, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4)
-    %sgpr30_sgpr31 = COPY %2
-    S_SETPC_B64_return %sgpr30_sgpr31
+    FLAT_STORE_DWORD %0, %13, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    $sgpr30_sgpr31 = COPY %2
+    S_SETPC_B64_return $sgpr30_sgpr31

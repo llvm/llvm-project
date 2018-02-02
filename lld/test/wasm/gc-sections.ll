@@ -7,12 +7,12 @@
 
 target triple = "wasm32-unknown-unknown-wasm"
 
-@unused_data = hidden global i32 1, align 4
+@unused_data = hidden global i64 1, align 4
 @used_data = hidden global i32 2, align 4
 
-define hidden i32 @unused_function() {
-  %1 = load i32, i32* @unused_data, align 4
-  ret i32 %1
+define hidden i64 @unused_function() {
+  %1 = load i64, i64* @unused_data, align 4
+  ret i64 %1
 }
 
 define hidden i32 @used_function() {
@@ -27,6 +27,17 @@ entry:
 }
 
 ; RUN: obj2yaml %t1.wasm | FileCheck %s
+
+; CHECK:        - Type:            TYPE
+; CHECK-NEXT:     Signatures:      
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:   - Type:            FUNCTION
+
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - SectionOffset:   7
@@ -51,6 +62,20 @@ entry:
 
 ; RUN: lld -flavor wasm -print-gc-sections --no-gc-sections -o %t1.no-gc.wasm %t.o
 ; RUN: obj2yaml %t1.no-gc.wasm | FileCheck %s -check-prefix=NO-GC
+
+; NO-GC:        - Type:            TYPE
+; NO-GC-NEXT:     Signatures:      
+; NO-GC-NEXT:       - Index:           0
+; NO-GC-NEXT:         ReturnType:      I64
+; NO-GC-NEXT:         ParamTypes:      
+; NO-GC-NEXT:       - Index:           1
+; NO-GC-NEXT:         ReturnType:      I32
+; NO-GC-NEXT:         ParamTypes:      
+; NO-GC-NEXT:       - Index:           2
+; NO-GC-NEXT:         ReturnType:      NORESULT
+; NO-GC-NEXT:         ParamTypes:      
+; NO-GC-NEXT:   - Type:            FUNCTION
+
 ; NO-GC:        - Type:            DATA
 ; NO-GC-NEXT:     Segments:        
 ; NO-GC-NEXT:       - SectionOffset:   7
@@ -58,10 +83,10 @@ entry:
 ; NO-GC-NEXT:         Offset:          
 ; NO-GC-NEXT:           Opcode:          I32_CONST
 ; NO-GC-NEXT:           Value:           1024
-; NO-GC-NEXT:         Content:         '0100000002000000'
+; NO-GC-NEXT:         Content:         '010000000000000002000000'
 ; NO-GC-NEXT:   - Type:            CUSTOM
 ; NO-GC-NEXT:     Name:            linking
-; NO-GC-NEXT:     DataSize:        8
+; NO-GC-NEXT:     DataSize:        12
 ; NO-GC-NEXT:   - Type:            CUSTOM
 ; NO-GC-NEXT:     Name:            name
 ; NO-GC-NEXT:     FunctionNames:   

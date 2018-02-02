@@ -62,7 +62,7 @@ entry:
 
 define double @f7(double %a, double %b) {
 ;CHECK-LABEL: f7:
-;CHECK: bic
+;CHECK: movlt
 ;CHECK: movge
 ;CHECK-VFP-LABEL: f7:
 ;CHECK-VFP: vmovmi

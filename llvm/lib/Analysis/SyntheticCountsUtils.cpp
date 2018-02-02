@@ -38,7 +38,7 @@ void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
   // Partition the edges coming out of the SCC into those whose destination is
   // in the SCC and the rest.
   for (const auto &Node : SCCNodes) {
-    for (auto &E : call_edges<CallGraphType>(Node)) {
+    for (auto &E : children_edges<CallGraphType>(Node)) {
       if (SCCNodes.count(CGT::edge_dest(E)))
         SCCEdges.emplace_back(Node, E);
       else
@@ -89,7 +89,7 @@ void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
 /// This performs a reverse post-order traversal of the callgraph SCC. For each
 /// SCC, it first propagates the entry counts to the nodes within the SCC
 /// through call edges and updates them in one shot. Then the entry counts are
-/// propagated to nodes outside the SCC. This requires \p CallGraphTraits
+/// propagated to nodes outside the SCC. This requires \p GraphTraits
 /// to have a specialization for \p CallGraphType.
 
 template <typename CallGraphType>

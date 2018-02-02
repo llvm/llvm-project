@@ -40,11 +40,11 @@ registers:
   - { id: 8, class: predregs }
 body: |
   bb.0.b0:
-    liveins: %r0
+    liveins: $r0
     successors: %bb.1
     %0 = A2_tfrsi 0
     %1 = A2_tfrsi 0
-    %2 = COPY %r0
+    %2 = COPY $r0
 
   bb.1.b1:
     successors: %bb.1, %bb.2
@@ -56,8 +56,8 @@ body: |
     ; This definition of %7 should not prevent conversion to hardware loop.
     %7 = A2_tfrsi 3840
     %8 = C2_cmpeq %5, %7
-    J2_jumpf %8, %bb.1, implicit-def %pc
-    J2_jump %bb.2, implicit-def %pc
+    J2_jumpf %8, %bb.1, implicit-def $pc
+    J2_jump %bb.2, implicit-def $pc
 
   bb.2.b2:
 ...

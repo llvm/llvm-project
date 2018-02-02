@@ -63,6 +63,7 @@ uint32_t ObjFile::relocateFunctionIndex(uint32_t Original) const {
 }
 
 uint32_t ObjFile::relocateTypeIndex(uint32_t Original) const {
+  assert(TypeIsUsed[Original]);
   return TypeMap[Original];
 }
 
@@ -148,6 +149,9 @@ void ObjFile::parse() {
     else if (Section.Type == WASM_SEC_DATA)
       DataSection = &Section;
   }
+
+  TypeMap.resize(getWasmObj()->types().size());
+  TypeIsUsed.resize(getWasmObj()->types().size(), false);
 
   initializeSymbols();
 }

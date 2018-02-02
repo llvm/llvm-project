@@ -160,9 +160,9 @@ bool OutputSection::classof(const BaseCommand *C) {
 
 void OutputSection::sort(std::function<int(InputSectionBase *S)> Order) {
   assert(Live);
-  assert(SectionCommands.size() == 1);
-  sortByOrder(cast<InputSectionDescription>(SectionCommands[0])->Sections,
-              Order);
+  for (BaseCommand *B : SectionCommands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(B))
+      sortByOrder(ISD->Sections, Order);
 }
 
 // Fill [Buf, Buf + Size) with Filler.

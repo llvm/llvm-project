@@ -80,7 +80,7 @@ TEST(MachineOperandTest, PrintSubReg) {
   std::string str;
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-  ASSERT_TRUE(OS.str() == "%physreg1.subreg5");
+  ASSERT_TRUE(OS.str() == "$physreg1.subreg5");
 }
 
 TEST(MachineOperandTest, PrintCImm) {

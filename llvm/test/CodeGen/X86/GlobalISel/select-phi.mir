@@ -119,31 +119,31 @@ body:             |
   ; ALL-LABEL: name: test_i8
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:gr32 = COPY %esi
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
   ; ALL:   [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
-  ; ALL:   [[COPY3:%[0-9]+]]:gr32 = COPY %edx
+  ; ALL:   [[COPY3:%[0-9]+]]:gr32 = COPY $edx
   ; ALL:   [[COPY4:%[0-9]+]]:gr8 = COPY [[COPY3]].sub_8bit
-  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def %eflags
-  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def %eflags
-  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit %eflags
-  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def %eflags
-  ; ALL:   JNE_1 %bb.2, implicit %eflags
+  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
+  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit $eflags
+  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def $eflags
+  ; ALL:   JNE_1 %bb.2, implicit $eflags
   ; ALL: bb.1.cond.false:
   ; ALL:   successors: %bb.2(0x80000000)
   ; ALL: bb.2.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:gr8 = PHI [[COPY4]], %bb.1, [[COPY2]], %bb.0
-  ; ALL:   %al = COPY [[PHI]]
-  ; ALL:   RET 0, implicit %al
+  ; ALL:   $al = COPY [[PHI]]
+  ; ALL:   RET 0, implicit $al
   bb.1.entry:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0:gpr(s32) = COPY %edi
-    %3:gpr(s32) = COPY %esi
+    %0:gpr(s32) = COPY $edi
+    %3:gpr(s32) = COPY $esi
     %1:gpr(s8) = G_TRUNC %3(s32)
-    %4:gpr(s32) = COPY %edx
+    %4:gpr(s32) = COPY $edx
     %2:gpr(s8) = G_TRUNC %4(s32)
     %5:gpr(s32) = G_CONSTANT i32 0
     %6:gpr(s1) = G_ICMP intpred(sgt), %0(s32), %5
@@ -155,8 +155,8 @@ body:             |
 
   bb.3.cond.end:
     %7:gpr(s8) = G_PHI %2(s8), %bb.2, %1(s8), %bb.1
-    %al = COPY %7(s8)
-    RET 0, implicit %al
+    $al = COPY %7(s8)
+    RET 0, implicit $al
 
 ...
 ---
@@ -178,31 +178,31 @@ body:             |
   ; ALL-LABEL: name: test_i16
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:gr32 = COPY %esi
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
   ; ALL:   [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY1]].sub_16bit
-  ; ALL:   [[COPY3:%[0-9]+]]:gr32 = COPY %edx
+  ; ALL:   [[COPY3:%[0-9]+]]:gr32 = COPY $edx
   ; ALL:   [[COPY4:%[0-9]+]]:gr16 = COPY [[COPY3]].sub_16bit
-  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def %eflags
-  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def %eflags
-  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit %eflags
-  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def %eflags
-  ; ALL:   JNE_1 %bb.2, implicit %eflags
+  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
+  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit $eflags
+  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def $eflags
+  ; ALL:   JNE_1 %bb.2, implicit $eflags
   ; ALL: bb.1.cond.false:
   ; ALL:   successors: %bb.2(0x80000000)
   ; ALL: bb.2.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:gr16 = PHI [[COPY4]], %bb.1, [[COPY2]], %bb.0
-  ; ALL:   %ax = COPY [[PHI]]
-  ; ALL:   RET 0, implicit %ax
+  ; ALL:   $ax = COPY [[PHI]]
+  ; ALL:   RET 0, implicit $ax
   bb.1.entry:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0:gpr(s32) = COPY %edi
-    %3:gpr(s32) = COPY %esi
+    %0:gpr(s32) = COPY $edi
+    %3:gpr(s32) = COPY $esi
     %1:gpr(s16) = G_TRUNC %3(s32)
-    %4:gpr(s32) = COPY %edx
+    %4:gpr(s32) = COPY $edx
     %2:gpr(s16) = G_TRUNC %4(s32)
     %5:gpr(s32) = G_CONSTANT i32 0
     %6:gpr(s1) = G_ICMP intpred(sgt), %0(s32), %5
@@ -214,8 +214,8 @@ body:             |
 
   bb.3.cond.end:
     %7:gpr(s16) = G_PHI %2(s16), %bb.2, %1(s16), %bb.1
-    %ax = COPY %7(s16)
-    RET 0, implicit %ax
+    $ax = COPY %7(s16)
+    RET 0, implicit $ax
 
 ...
 ---
@@ -235,15 +235,15 @@ body:             |
   ; ALL-LABEL: name: test_i32
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:gr32 = COPY %esi
-  ; ALL:   [[COPY2:%[0-9]+]]:gr32 = COPY %edx
-  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def %eflags
-  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def %eflags
-  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit %eflags
-  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def %eflags
-  ; ALL:   JNE_1 %bb.1, implicit %eflags
+  ; ALL:   liveins: $edi, $edx, $esi
+  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; ALL:   [[COPY2:%[0-9]+]]:gr32 = COPY $edx
+  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
+  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit $eflags
+  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def $eflags
+  ; ALL:   JNE_1 %bb.1, implicit $eflags
   ; ALL:   JMP_1 %bb.2
   ; ALL: bb.1.cond.true:
   ; ALL:   successors: %bb.3(0x80000000)
@@ -252,15 +252,15 @@ body:             |
   ; ALL:   successors: %bb.3(0x80000000)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:gr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; ALL:   %eax = COPY [[PHI]]
-  ; ALL:   RET 0, implicit %eax
+  ; ALL:   $eax = COPY [[PHI]]
+  ; ALL:   RET 0, implicit $eax
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %edx, %esi
+    liveins: $edi, $edx, $esi
 
-    %0(s32) = COPY %edi
-    %1(s32) = COPY %esi
-    %2(s32) = COPY %edx
+    %0(s32) = COPY $edi
+    %1(s32) = COPY $esi
+    %2(s32) = COPY $edx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -277,8 +277,8 @@ body:             |
 
   bb.4.cond.end:
     %5(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
-    %eax = COPY %5(s32)
-    RET 0, implicit %eax
+    $eax = COPY %5(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -298,15 +298,15 @@ body:             |
   ; ALL-LABEL: name: test_i64
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; ALL:   liveins: %edi, %rdx, %rsi
-  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]]:gr64 = COPY %rsi
-  ; ALL:   [[COPY2:%[0-9]+]]:gr64 = COPY %rdx
-  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def %eflags
-  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def %eflags
-  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit %eflags
-  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def %eflags
-  ; ALL:   JNE_1 %bb.1, implicit %eflags
+  ; ALL:   liveins: $edi, $rdx, $rsi
+  ; ALL:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; ALL:   [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+  ; ALL:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdx
+  ; ALL:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; ALL:   CMP32rr [[COPY]], [[MOV32r0_]], implicit-def $eflags
+  ; ALL:   [[SETGr:%[0-9]+]]:gr8 = SETGr implicit $eflags
+  ; ALL:   TEST8ri [[SETGr]], 1, implicit-def $eflags
+  ; ALL:   JNE_1 %bb.1, implicit $eflags
   ; ALL:   JMP_1 %bb.2
   ; ALL: bb.1.cond.true:
   ; ALL:   successors: %bb.3(0x80000000)
@@ -315,15 +315,15 @@ body:             |
   ; ALL:   successors: %bb.3(0x80000000)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; ALL:   %rax = COPY [[PHI]]
-  ; ALL:   RET 0, implicit %rax
+  ; ALL:   $rax = COPY [[PHI]]
+  ; ALL:   RET 0, implicit $rax
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %rdx, %rsi
+    liveins: $edi, $rdx, $rsi
 
-    %0(s32) = COPY %edi
-    %1(s64) = COPY %rsi
-    %2(s64) = COPY %rdx
+    %0(s32) = COPY $edi
+    %1(s64) = COPY $rsi
+    %2(s64) = COPY $rdx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -340,8 +340,8 @@ body:             |
 
   bb.4.cond.end:
     %5(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
-    %rax = COPY %5(s64)
-    RET 0, implicit %rax
+    $rax = COPY %5(s64)
+    RET 0, implicit $rax
 
 ...
 ---
@@ -371,16 +371,16 @@ stack:
 constants:
 # ALL-LABEL: bb.3.cond.end:
 # ALL:          %5:fr32 = PHI %1, %bb.1, %2, %bb.2
-# ALL-NEXT:     %xmm0 = COPY %5
-# ALL-NEXT:     RET 0, implicit %xmm0
+# ALL-NEXT:     $xmm0 = COPY %5
+# ALL-NEXT:     RET 0, implicit $xmm0
 body:             |
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %xmm0, %xmm1
+    liveins: $edi, $xmm0, $xmm1
 
-    %0(s32) = COPY %edi
-    %1(s32) = COPY %xmm0
-    %2(s32) = COPY %xmm1
+    %0(s32) = COPY $edi
+    %1(s32) = COPY $xmm0
+    %2(s32) = COPY $xmm1
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -397,8 +397,8 @@ body:             |
 
   bb.4.cond.end:
     %5(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
-    %xmm0 = COPY %5(s32)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %5(s32)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -424,16 +424,16 @@ registers:
   - { id: 5, class: vecr, preferred-register: '' }
 # ALL-LABEL: bb.3.cond.end:
 # ALL:          %5:fr64 = PHI %1, %bb.1, %2, %bb.2
-# ALL-NEXT:     %xmm0 = COPY %5
-# ALL-NEXT:     RET 0, implicit %xmm0
+# ALL-NEXT:     $xmm0 = COPY %5
+# ALL-NEXT:     RET 0, implicit $xmm0
 body:             |
   bb.1.entry:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    liveins: %edi, %xmm0, %xmm1
+    liveins: $edi, $xmm0, $xmm1
 
-    %0(s32) = COPY %edi
-    %1(s64) = COPY %xmm0
-    %2(s64) = COPY %xmm1
+    %0(s32) = COPY $edi
+    %1(s64) = COPY $xmm0
+    %2(s64) = COPY $xmm1
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
@@ -450,7 +450,7 @@ body:             |
 
   bb.4.cond.end:
     %5(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
-    %xmm0 = COPY %5(s64)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %5(s64)
+    RET 0, implicit $xmm0
 
 ...

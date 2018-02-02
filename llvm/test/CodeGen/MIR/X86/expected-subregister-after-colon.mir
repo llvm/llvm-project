@@ -17,10 +17,10 @@ registers:
   - { id: 2, class: gr8 }
 body: |
   bb.0.entry:
-    %0 = COPY %edi
+    %0 = COPY $edi
     ; CHECK: [[@LINE+1]]:20: expected a subregister index after '.'
     %1 = COPY %0 . 42
-    %2 = AND8ri %1, 1, implicit-def %eflags
-    %al = COPY %2
-    RETQ %al
+    %2 = AND8ri %1, 1, implicit-def $eflags
+    $al = COPY %2
+    RETQ $al
 ...

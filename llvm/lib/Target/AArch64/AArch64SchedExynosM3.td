@@ -32,6 +32,8 @@ def ExynosM3Model : SchedMachineModel {
 // Define each kind of processor resource and number available on the Exynos-M3,
 // which has 12 pipelines, each with its own queue with out-of-order dispatch.
 
+let SchedModel = ExynosM3Model in {
+
 def M3UnitA  : ProcResource<2>; // Simple integer
 def M3UnitC  : ProcResource<2>; // Simple and complex integer
 def M3UnitD  : ProcResource<2>; // Integer division (inside C, serialized)
@@ -74,36 +76,32 @@ let Super = M3PipeF2 in {
   def M3UnitNSHF2 : ProcResource<1>; // Vector shuffling
 }
 
-let SchedModel = ExynosM3Model in {
 
-  def M3UnitALU  : ProcResGroup<[M3UnitA,
-                                 M3UnitC]>;
-  def M3UnitFMAC : ProcResGroup<[M3UnitFMAC0,
-                                 M3UnitFMAC1,
-                                 M3UnitFMAC2]>;
-  def M3UnitFADD : ProcResGroup<[M3UnitFADD0,
-                                 M3UnitFADD1,
-                                 M3UnitFADD2]>;
-  def M3UnitFDIV : ProcResGroup<[M3UnitFDIV0,
-                                 M3UnitFDIV1]>;
-  def M3UnitFCVT : ProcResGroup<[M3UnitFCVT0,
-                                 M3UnitFCVT1]>;
-  def M3UnitFST  : ProcResGroup<[M3UnitFST0,
-                                 M3UnitFST1]>;
-  def M3UnitNALU : ProcResGroup<[M3UnitNALU0,
-                                 M3UnitNALU1,
-                                 M3UnitNALU2]>;
-  def M3UnitNCRY : ProcResGroup<[M3UnitNCRY0,
-                                 M3UnitNCRY1]>;
-  def M3UnitNSHT : ProcResGroup<[M3UnitNSHT0,
-                                 M3UnitNSHT1,
-                                 M3UnitNSHT2]>;
-  def M3UnitNSHF : ProcResGroup<[M3UnitNSHF0,
-                                 M3UnitNSHF1,
-                                 M3UnitNSHF2]>;
-}
-
-let SchedModel = ExynosM3Model in {
+def M3UnitALU  : ProcResGroup<[M3UnitA,
+                               M3UnitC]>;
+def M3UnitFMAC : ProcResGroup<[M3UnitFMAC0,
+                               M3UnitFMAC1,
+                               M3UnitFMAC2]>;
+def M3UnitFADD : ProcResGroup<[M3UnitFADD0,
+                               M3UnitFADD1,
+                               M3UnitFADD2]>;
+def M3UnitFDIV : ProcResGroup<[M3UnitFDIV0,
+                               M3UnitFDIV1]>;
+def M3UnitFCVT : ProcResGroup<[M3UnitFCVT0,
+                               M3UnitFCVT1]>;
+def M3UnitFST  : ProcResGroup<[M3UnitFST0,
+                               M3UnitFST1]>;
+def M3UnitNALU : ProcResGroup<[M3UnitNALU0,
+                               M3UnitNALU1,
+                               M3UnitNALU2]>;
+def M3UnitNCRY : ProcResGroup<[M3UnitNCRY0,
+                               M3UnitNCRY1]>;
+def M3UnitNSHT : ProcResGroup<[M3UnitNSHT0,
+                               M3UnitNSHT1,
+                               M3UnitNSHT2]>;
+def M3UnitNSHF : ProcResGroup<[M3UnitNSHF0,
+                               M3UnitNSHF1,
+                               M3UnitNSHF2]>;
 
 //===----------------------------------------------------------------------===//
 // Predicates.

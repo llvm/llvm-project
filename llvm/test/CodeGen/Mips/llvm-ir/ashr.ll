@@ -800,7 +800,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    sw $5, 36($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    lw $16, 76($sp)
-; MMR3-NEXT:    srlv $4, $8, $16
+; MMR3-NEXT:    srlv $4, $7, $16
 ; MMR3-NEXT:    not16 $3, $16
 ; MMR3-NEXT:    sw $3, 24($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    sll16 $2, $6, 1
@@ -890,7 +890,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR6-NEXT:    lw $3, 68($sp)
 ; MMR6-NEXT:    li16 $2, 64
 ; MMR6-NEXT:    subu16 $7, $2, $3
-; MMR6-NEXT:    sllv $8, $6, $7
+; MMR6-NEXT:    sllv $8, $5, $7
 ; MMR6-NEXT:    andi16 $5, $7, 32
 ; MMR6-NEXT:    selnez $9, $8, $5
 ; MMR6-NEXT:    sllv $16, $4, $7

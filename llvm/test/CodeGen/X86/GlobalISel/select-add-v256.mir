@@ -54,13 +54,13 @@ registers:
 # AVX512BWVL:          %2:vr256x = VPADDBZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
-    %0(<32 x s8>) = COPY %ymm0
-    %1(<32 x s8>) = COPY %ymm1
+    %0(<32 x s8>) = COPY $ymm0
+    %1(<32 x s8>) = COPY $ymm1
     %2(<32 x s8>) = G_ADD %0, %1
-    %ymm0 = COPY %2(<32 x s8>)
-    RET 0, implicit %ymm0
+    $ymm0 = COPY %2(<32 x s8>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -94,13 +94,13 @@ registers:
 # AVX512BWVL:          %2:vr256x = VPADDWZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
-    %0(<16 x s16>) = COPY %ymm0
-    %1(<16 x s16>) = COPY %ymm1
+    %0(<16 x s16>) = COPY $ymm0
+    %1(<16 x s16>) = COPY $ymm1
     %2(<16 x s16>) = G_ADD %0, %1
-    %ymm0 = COPY %2(<16 x s16>)
-    RET 0, implicit %ymm0
+    $ymm0 = COPY %2(<16 x s16>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -134,13 +134,13 @@ registers:
 # AVX512BWVL:          %2:vr256x = VPADDDZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
-    %0(<8 x s32>) = COPY %ymm0
-    %1(<8 x s32>) = COPY %ymm1
+    %0(<8 x s32>) = COPY $ymm0
+    %1(<8 x s32>) = COPY $ymm1
     %2(<8 x s32>) = G_ADD %0, %1
-    %ymm0 = COPY %2(<8 x s32>)
-    RET 0, implicit %ymm0
+    $ymm0 = COPY %2(<8 x s32>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -174,12 +174,12 @@ registers:
 # AVX512BWVL:          %2:vr256x = VPADDQZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %ymm0, %ymm1
+    liveins: $ymm0, $ymm1
 
-    %0(<4 x s64>) = COPY %ymm0
-    %1(<4 x s64>) = COPY %ymm1
+    %0(<4 x s64>) = COPY $ymm0
+    %1(<4 x s64>) = COPY $ymm1
     %2(<4 x s64>) = G_ADD %0, %1
-    %ymm0 = COPY %2(<4 x s64>)
-    RET 0, implicit %ymm0
+    $ymm0 = COPY %2(<4 x s64>)
+    RET 0, implicit $ymm0
 
 ...

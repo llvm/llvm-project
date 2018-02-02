@@ -99,99 +99,6 @@ nub_bool_t MachVMMemory::GetMemoryRegionInfo(task_t task, nub_addr_t address,
   return true;
 }
 
-// For integrated graphics chip, this makes the accounting info for 'wired'
-// memory more like top.
-uint64_t MachVMMemory::GetStolenPages(task_t task) {
-  static uint64_t stolenPages = 0;
-  static bool calculated = false;
-  if (calculated)
-    return stolenPages;
-
-  static int mib_reserved[CTL_MAXNAME];
-  static int mib_unusable[CTL_MAXNAME];
-  static int mib_other[CTL_MAXNAME];
-  static size_t mib_reserved_len = 0;
-  static size_t mib_unusable_len = 0;
-  static size_t mib_other_len = 0;
-  int r;
-
-  /* This can be used for testing: */
-  // tsamp->pages_stolen = (256 * 1024 * 1024ULL) / tsamp->pagesize;
-
-  if (0 == mib_reserved_len) {
-    mib_reserved_len = CTL_MAXNAME;
-
-    r = sysctlnametomib("machdep.memmap.Reserved", mib_reserved,
-                        &mib_reserved_len);
-
-    if (-1 == r) {
-      mib_reserved_len = 0;
-      return 0;
-    }
-
-    mib_unusable_len = CTL_MAXNAME;
-
-    r = sysctlnametomib("machdep.memmap.Unusable", mib_unusable,
-                        &mib_unusable_len);
-
-    if (-1 == r) {
-      mib_reserved_len = 0;
-      return 0;
-    }
-
-    mib_other_len = CTL_MAXNAME;
-
-    r = sysctlnametomib("machdep.memmap.Other", mib_other, &mib_other_len);
-
-    if (-1 == r) {
-      mib_reserved_len = 0;
-      return 0;
-    }
-  }
-
-  if (mib_reserved_len > 0 && mib_unusable_len > 0 && mib_other_len > 0) {
-    uint64_t reserved = 0, unusable = 0, other = 0;
-    size_t reserved_len;
-    size_t unusable_len;
-    size_t other_len;
-
-    reserved_len = sizeof(reserved);
-    unusable_len = sizeof(unusable);
-    other_len = sizeof(other);
-
-    /* These are all declared as QUAD/uint64_t sysctls in the kernel. */
-
-    if (sysctl(mib_reserved, static_cast<u_int>(mib_reserved_len), &reserved,
-               &reserved_len, NULL, 0)) {
-      return 0;
-    }
-
-    if (sysctl(mib_unusable, static_cast<u_int>(mib_unusable_len), &unusable,
-               &unusable_len, NULL, 0)) {
-      return 0;
-    }
-
-    if (sysctl(mib_other, static_cast<u_int>(mib_other_len), &other, &other_len,
-               NULL, 0)) {
-      return 0;
-    }
-
-    if (reserved_len == sizeof(reserved) && unusable_len == sizeof(unusable) &&
-        other_len == sizeof(other)) {
-      uint64_t stolen = reserved + unusable + other;
-      uint64_t mb128 = 128 * 1024 * 1024ULL;
-
-      if (stolen >= mb128) {
-        stolen = (stolen & ~((128 * 1024 * 1024ULL) - 1)); // rounding down
-        stolenPages = stolen / PageSize(task);
-      }
-    }
-  }
-
-  calculated = true;
-  return stolenPages;
-}
-
 static uint64_t GetPhysicalMemory() {
   // This doesn't change often at all. No need to poll each time.
   static uint64_t physical_memory = 0;
@@ -204,26 +111,6 @@ static uint64_t GetPhysicalMemory() {
 
   calculated = true;
   return physical_memory;
-}
-
-// rsize and dirty_size is not adjusted for dyld shared cache and multiple
-// __LINKEDIT segment, as in vmmap. In practice, dirty_size doesn't differ much
-// but rsize may. There is performance penalty for the adjustment. Right now,
-// only use the dirty_size.
-void MachVMMemory::GetRegionSizes(task_t task, mach_vm_size_t &rsize,
-                                  mach_vm_size_t &dirty_size) {
-#if defined(TASK_VM_INFO) && TASK_VM_INFO >= 22
-
-  task_vm_info_data_t vm_info;
-  mach_msg_type_number_t info_count;
-  kern_return_t kr;
-
-  info_count = TASK_VM_INFO_COUNT;
-  kr = task_info(task, TASK_VM_INFO_PURGEABLE, (task_info_t)&vm_info,
-                 &info_count);
-  if (kr == KERN_SUCCESS)
-    dirty_size = vm_info.internal;
-#endif
 }
 
 // Test whether the virtual address is within the architecture's shared region.
@@ -262,173 +149,32 @@ static bool InSharedRegion(mach_vm_address_t addr, cpu_type_t type) {
   return (addr >= base && addr < (base + size));
 }
 
-void MachVMMemory::GetMemorySizes(task_t task, cpu_type_t cputype,
-                                  nub_process_t pid, mach_vm_size_t &rprvt,
-                                  mach_vm_size_t &vprvt) {
-  // Collecting some other info cheaply but not reporting for now.
-  mach_vm_size_t empty = 0;
-  mach_vm_size_t fw_private = 0;
-
-  mach_vm_size_t aliased = 0;
-  bool global_shared_text_data_mapped = false;
-  vm_size_t pagesize = PageSize(task);
-
-  for (mach_vm_address_t addr = 0, size = 0;; addr += size) {
-    vm_region_top_info_data_t info;
-    mach_msg_type_number_t count = VM_REGION_TOP_INFO_COUNT;
-    mach_port_t object_name;
-
-    kern_return_t kr =
-        mach_vm_region(task, &addr, &size, VM_REGION_TOP_INFO,
-                       (vm_region_info_t)&info, &count, &object_name);
-    if (kr != KERN_SUCCESS)
-      break;
-
-    if (InSharedRegion(addr, cputype)) {
-      // Private Shared
-      fw_private += info.private_pages_resident * pagesize;
-
-      // Check if this process has the globally shared text and data regions
-      // mapped in.  If so, set global_shared_text_data_mapped to TRUE and avoid
-      // checking again.
-      if (global_shared_text_data_mapped == FALSE &&
-          info.share_mode == SM_EMPTY) {
-        vm_region_basic_info_data_64_t b_info;
-        mach_vm_address_t b_addr = addr;
-        mach_vm_size_t b_size = size;
-        count = VM_REGION_BASIC_INFO_COUNT_64;
-
-        kr = mach_vm_region(task, &b_addr, &b_size, VM_REGION_BASIC_INFO,
-                            (vm_region_info_t)&b_info, &count, &object_name);
-        if (kr != KERN_SUCCESS)
-          break;
-
-        if (b_info.reserved) {
-          global_shared_text_data_mapped = TRUE;
-        }
-      }
-
-      // Short circuit the loop if this isn't a shared private region, since
-      // that's the only region type we care about within the current address
-      // range.
-      if (info.share_mode != SM_PRIVATE) {
-        continue;
-      }
-    }
-
-    // Update counters according to the region type.
-    if (info.share_mode == SM_COW && info.ref_count == 1) {
-      // Treat single reference SM_COW as SM_PRIVATE
-      info.share_mode = SM_PRIVATE;
-    }
-
-    switch (info.share_mode) {
-    case SM_LARGE_PAGE:
-    // Treat SM_LARGE_PAGE the same as SM_PRIVATE
-    // since they are not shareable and are wired.
-    case SM_PRIVATE:
-      rprvt += info.private_pages_resident * pagesize;
-      rprvt += info.shared_pages_resident * pagesize;
-      vprvt += size;
-      break;
-
-    case SM_EMPTY:
-      empty += size;
-      break;
-
-    case SM_COW:
-    case SM_SHARED: {
-      if (pid == 0) {
-        // Treat kernel_task specially
-        if (info.share_mode == SM_COW) {
-          rprvt += info.private_pages_resident * pagesize;
-          vprvt += size;
-        }
-        break;
-      }
-
-      if (info.share_mode == SM_COW) {
-        rprvt += info.private_pages_resident * pagesize;
-        vprvt += info.private_pages_resident * pagesize;
-      }
-      break;
-    }
-    default:
-      // log that something is really bad.
-      break;
-    }
-  }
-
-  rprvt += aliased;
-}
-
-static void GetPurgeableAndAnonymous(task_t task, uint64_t &purgeable,
-                                     uint64_t &anonymous) {
-#if defined(TASK_VM_INFO) && TASK_VM_INFO >= 22
-
-  kern_return_t kr;
-  mach_msg_type_number_t info_count;
-  task_vm_info_data_t vm_info;
-
-  info_count = TASK_VM_INFO_COUNT;
-  kr = task_info(task, TASK_VM_INFO_PURGEABLE, (task_info_t)&vm_info,
-                 &info_count);
-  if (kr == KERN_SUCCESS) {
-    purgeable = vm_info.purgeable_volatile_resident;
-    anonymous =
-        vm_info.internal + vm_info.compressed - vm_info.purgeable_volatile_pmap;
-  }
-
-#endif
-}
-
-#if defined(HOST_VM_INFO64_COUNT)
 nub_bool_t MachVMMemory::GetMemoryProfile(
     DNBProfileDataScanType scanType, task_t task, struct task_basic_info ti,
     cpu_type_t cputype, nub_process_t pid, vm_statistics64_data_t &vminfo,
-    uint64_t &physical_memory, mach_vm_size_t &rprvt, mach_vm_size_t &rsize,
-    mach_vm_size_t &vprvt, mach_vm_size_t &vsize, mach_vm_size_t &dirty_size,
-    mach_vm_size_t &purgeable, mach_vm_size_t &anonymous)
-#else
-nub_bool_t MachVMMemory::GetMemoryProfile(
-    DNBProfileDataScanType scanType, task_t task, struct task_basic_info ti,
-    cpu_type_t cputype, nub_process_t pid, vm_statistics_data_t &vminfo,
-    uint64_t &physical_memory, mach_vm_size_t &rprvt, mach_vm_size_t &rsize,
-    mach_vm_size_t &vprvt, mach_vm_size_t &vsize, mach_vm_size_t &dirty_size,
-    mach_vm_size_t &purgeable, mach_vm_size_t &anonymous)
-#endif
+    uint64_t &physical_memory, mach_vm_size_t &anonymous, mach_vm_size_t &phys_footprint)
 {
   if (scanType & eProfileHostMemory)
     physical_memory = GetPhysicalMemory();
 
   if (scanType & eProfileMemory) {
     static mach_port_t localHost = mach_host_self();
-#if defined(HOST_VM_INFO64_COUNT)
     mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
     host_statistics64(localHost, HOST_VM_INFO64, (host_info64_t)&vminfo,
                       &count);
-#else
-    mach_msg_type_number_t count = HOST_VM_INFO_COUNT;
-    host_statistics(localHost, HOST_VM_INFO, (host_info_t)&vminfo, &count);
-    vminfo.wire_count += GetStolenPages(task);
-#endif
+    
+    kern_return_t kr;
+    mach_msg_type_number_t info_count;
+    task_vm_info_data_t vm_info;
 
-    /* We are no longer reporting these. Let's not waste time.
-    GetMemorySizes(task, cputype, pid, rprvt, vprvt);
-    rsize = ti.resident_size;
-    vsize = ti.virtual_size;
+    info_count = TASK_VM_INFO_COUNT;
+    kr = task_info(task, TASK_VM_INFO_PURGEABLE, (task_info_t)&vm_info, &info_count);
+    if (kr == KERN_SUCCESS) {
+      if (scanType & eProfileMemoryAnonymous) {
+        anonymous = vm_info.internal + vm_info.compressed - vm_info.purgeable_volatile_pmap;
+      }
 
-    if (scanType & eProfileMemoryDirtyPage)
-    {
-        // This uses vmmap strategy. We don't use the returned rsize for now. We
-    prefer to match top's version since that's what we do for the rest of the
-    metrics.
-        GetRegionSizes(task, rsize, dirty_size);
-    }
-    */
-
-    if (scanType & eProfileMemoryAnonymous) {
-      GetPurgeableAndAnonymous(task, purgeable, anonymous);
+      phys_footprint = vm_info.phys_footprint;
     }
   }
 

@@ -31,11 +31,11 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    vpalignr {{.*#+}} ymm8 = ymm0[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm0[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[2,3,2,0]
 ; CHECK-NEXT:    vmovaps %xmm6, %xmm9
-; CHECK-NEXT:    # implicit-def: %ymm11
+; CHECK-NEXT:    # implicit-def: $ymm11
 ; CHECK-NEXT:    vinserti128 $1, %xmm9, %ymm11, %ymm11
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm8 = ymm8[0,1,2,3],ymm11[4,5],ymm8[6,7]
 ; CHECK-NEXT:    vmovaps %xmm0, %xmm9
-; CHECK-NEXT:    # implicit-def: %ymm0
+; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm9, %ymm0, %ymm0
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm11 = ymm7[0],ymm2[0],ymm7[2],ymm2[2]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[2,1,2,3]

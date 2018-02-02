@@ -11,7 +11,7 @@ define void @vectorDiv (<2 x i32> addrspace(1)* %nsource, <2 x i32> addrspace(1)
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movslq -{{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    pmovsxdq (%rdi,%rcx,8), %xmm0
 ; CHECK-NEXT:    pmovsxdq (%rsi,%rcx,8), %xmm1
@@ -81,15 +81,15 @@ define <3 x i8> @test_uchar_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-LABEL: test_uchar_div:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    # kill: def %eax killed %eax def %ax
+; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    # kill: def %eax killed %eax def %ax
+; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %r8b
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    # kill: def %eax killed %eax def %ax
+; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %r9b
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl %edi, %eax
@@ -105,34 +105,34 @@ define <5 x i16> @test_short_div(<5 x i16> %num, <5 x i16> %div) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextrw $4, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $4, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %eax, %r8d
 ; CHECK-NEXT:    pextrw $3, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $3, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %eax, %r9d
 ; CHECK-NEXT:    pextrw $2, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $2, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    pextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $1, %xmm1, %esi
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %si
-; CHECK-NEXT:    # kill: def %ax killed %ax def %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
 ; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %eax, %xmm0
 ; CHECK-NEXT:    pinsrw $2, %edi, %xmm0
@@ -294,34 +294,34 @@ define <5 x i16> @test_short_rem(<5 x i16> %num, <5 x i16> %rem) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextrw $4, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $4, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %edx, %r8d
 ; CHECK-NEXT:    pextrw $3, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $3, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %edx, %r9d
 ; CHECK-NEXT:    pextrw $2, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $2, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %cx
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    pextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $1, %xmm1, %esi
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %si
-; CHECK-NEXT:    # kill: def %dx killed %dx def %edx
+; CHECK-NEXT:    # kill: def $dx killed $dx def $edx
 ; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %edx, %xmm0
 ; CHECK-NEXT:    pinsrw $2, %edi, %xmm0
@@ -403,7 +403,7 @@ define void @test_int_div(<3 x i32>* %dest, <3 x i32>* %old, i32 %n) {
 ; CHECK-LABEL: test_int_div:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %r9d
-; CHECK-NEXT:    testl %r9d, %r9d
+; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    jle .LBB12_3
 ; CHECK-NEXT:  # %bb.1: # %bb.nph
 ; CHECK-NEXT:    xorl %ecx, %ecx

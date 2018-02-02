@@ -491,9 +491,8 @@ VNInfo *SplitEditor::defValue(unsigned RegIdx,
   return VNI;
 }
 
-void SplitEditor::forceRecompute(unsigned RegIdx, const VNInfo *ParentVNI) {
-  assert(ParentVNI && "Mapping  NULL value");
-  ValueForcePair &VFP = Values[std::make_pair(RegIdx, ParentVNI->id)];
+void SplitEditor::forceRecompute(unsigned RegIdx, const VNInfo &ParentVNI) {
+  ValueForcePair &VFP = Values[std::make_pair(RegIdx, ParentVNI.id)];
   VNInfo *VNI = VFP.getPointer();
 
   // ParentVNI was either unmapped or already complex mapped. Either way, just
@@ -777,7 +776,7 @@ SlotIndex SplitEditor::leaveIntvAfter(SlotIndex Idx) {
   // the source live range.  The spiller also won't try to hoist this copy.
   if (SpillMode && !SlotIndex::isSameInstr(ParentVNI->def, Idx) &&
       MI->readsVirtualRegister(Edit->getReg())) {
-    forceRecompute(0, ParentVNI);
+    forceRecompute(0, *ParentVNI);
     defFromParent(0, ParentVNI, Idx, *MI->getParent(), MI);
     return Idx;
   }
@@ -835,7 +834,7 @@ void SplitEditor::overlapIntv(SlotIndex Start, SlotIndex End) {
 
   // The complement interval will be extended as needed by LRCalc.extend().
   if (ParentVNI)
-    forceRecompute(0, ParentVNI);
+    forceRecompute(0, *ParentVNI);
   DEBUG(dbgs() << "    overlapIntv [" << Start << ';' << End << "):");
   RegAssign.insert(Start, End, OpenIdx);
   DEBUG(dump());
@@ -878,7 +877,7 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
     unsigned RegIdx = AssignI.value();
     if (AtBegin || !MBBI->readsVirtualRegister(Edit->getReg())) {
       DEBUG(dbgs() << "  cannot find simple kill of RegIdx " << RegIdx << '\n');
-      forceRecompute(RegIdx, Edit->getParent().getVNInfoAt(Def));
+      forceRecompute(RegIdx, *Edit->getParent().getVNInfoAt(Def));
     } else {
       SlotIndex Kill = LIS.getInstructionIndex(*MBBI).getRegSlot();
       DEBUG(dbgs() << "  move kill to " << Kill << '\t' << *MBBI);
@@ -982,7 +981,7 @@ void SplitEditor::computeRedundantBackCopies(
       }
     }
     if (!DominatedVNIs.empty()) {
-      forceRecompute(0, ParentVNI);
+      forceRecompute(0, *ParentVNI);
       for (auto VNI : DominatedVNIs) {
         BackCopies.push_back(VNI);
       }
@@ -1102,7 +1101,7 @@ void SplitEditor::hoistCopies() {
         NotToHoistSet.count(ParentVNI->id))
       continue;
     BackCopies.push_back(VNI);
-    forceRecompute(0, ParentVNI);
+    forceRecompute(0, *ParentVNI);
   }
 
   // If it is not beneficial to hoist all the BackCopies, simply remove
@@ -1428,6 +1427,41 @@ void SplitEditor::deleteRematVictims() {
   Edit->eliminateDeadDefs(Dead, None, &AA);
 }
 
+void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
+  // Fast-path for common case.
+  if (!ParentVNI.isPHIDef()) {
+    for (unsigned I = 0, E = Edit->size(); I != E; ++I)
+      forceRecompute(I, ParentVNI);
+    return;
+  }
+
+  // Trace value through phis.
+  SmallPtrSet<const VNInfo *, 8> Visited; ///< whether VNI was/is in worklist.
+  SmallVector<const VNInfo *, 4> WorkList;
+  Visited.insert(&ParentVNI);
+  WorkList.push_back(&ParentVNI);
+
+  const LiveInterval &ParentLI = Edit->getParent();
+  const SlotIndexes &Indexes = *LIS.getSlotIndexes();
+  do {
+    const VNInfo &VNI = *WorkList.back();
+    WorkList.pop_back();
+    for (unsigned I = 0, E = Edit->size(); I != E; ++I)
+      forceRecompute(I, VNI);
+    if (!VNI.isPHIDef())
+      continue;
+
+    MachineBasicBlock &MBB = *Indexes.getMBBFromIndex(VNI.def);
+    for (const MachineBasicBlock *Pred : MBB.predecessors()) {
+      SlotIndex PredEnd = Indexes.getMBBEndIdx(Pred);
+      VNInfo *PredVNI = ParentLI.getVNInfoBefore(PredEnd);
+      assert(PredVNI && "Value available in PhiVNI predecessor");
+      if (Visited.insert(PredVNI).second)
+        WorkList.push_back(PredVNI);
+    }
+  } while(!WorkList.empty());
+}
+
 void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
   ++NumFinished;
 
@@ -1444,8 +1478,7 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     // Force rematted values to be recomputed everywhere.
     // The new live ranges may be truncated.
     if (Edit->didRematerialize(ParentVNI))
-      for (unsigned i = 0, e = Edit->size(); i != e; ++i)
-        forceRecompute(i, ParentVNI);
+      forceRecomputeVNI(*ParentVNI);
   }
 
   // Hoist back-copies to the complement interval when in spill mode.

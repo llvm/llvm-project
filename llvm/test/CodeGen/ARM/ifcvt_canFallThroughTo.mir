@@ -10,12 +10,12 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.4
 
-    Bcc %bb.4, 1, %cpsr
+    Bcc %bb.4, 1, $cpsr
 
   bb.2:
     successors: %bb.3, %bb.5
 
-    Bcc %bb.5, 1, %cpsr
+    Bcc %bb.5, 1, $cpsr
 
   bb.3:
     successors: %bb.5
@@ -28,7 +28,7 @@ body:             |
   bb.5:
     successors: %bb.1, %bb.6
 
-    Bcc %bb.1, 1, %cpsr
+    Bcc %bb.1, 1, $cpsr
 
   bb.6:
     BX_RET 14, _

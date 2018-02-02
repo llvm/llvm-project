@@ -30,7 +30,7 @@ define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 ; X64-LABEL: fast_fmuladd_opts:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movaps %xmm0, %xmm1
-; X64-NEXT:    addss %xmm1, %xmm1
+; X64-NEXT:    addss %xmm0, %xmm1
 ; X64-NEXT:    addss %xmm0, %xmm1
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
