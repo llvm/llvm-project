@@ -388,6 +388,7 @@ int ClangTool::run(ToolAction *Action) {
             llvm::MemoryBuffer::getMemBuffer(MappedFile.second));
 
   bool ProcessingFailed = false;
+  bool FileSkipped = false;
   for (const auto &SourcePath : SourcePaths) {
     std::string File(getAbsolutePath(SourcePath));
 
@@ -401,12 +402,8 @@ int ClangTool::run(ToolAction *Action) {
     std::vector<CompileCommand> CompileCommandsForFile =
         Compilations.getCompileCommands(File);
     if (CompileCommandsForFile.empty()) {
-      // FIXME: There are two use cases here: doing a fuzzy
-      // "find . -name '*.cc' |xargs tool" match, where as a user I don't care
-      // about the .cc files that were not found, and the use case where I
-      // specify all files I want to run over explicitly, where this should
-      // be an error. We'll want to add an option for this.
       llvm::errs() << "Skipping " << File << ". Compile command not found.\n";
+      FileSkipped = true;
       continue;
     }
     for (CompileCommand &CompileCommand : CompileCommandsForFile) {
@@ -466,7 +463,7 @@ int ClangTool::run(ToolAction *Action) {
                                  Twine(InitialDirectory) + "\n!");
     }
   }
-  return ProcessingFailed ? 1 : 0;
+  return ProcessingFailed ? 1 : (FileSkipped ? 2 : 0);
 }
 
 namespace {

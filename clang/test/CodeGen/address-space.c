@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -check-prefixes=CHECK,X86,GIZ %s
-// RUN: %clang_cc1 -triple amdgcn -emit-llvm < %s | FileCheck -check-prefixes=CHECK,PIZ %s
 // RUN: %clang_cc1 -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK,AMDGIZ,GIZ %s
 
 // CHECK: @foo = common addrspace(1) global
@@ -26,11 +25,9 @@ __attribute__((address_space(2))) int *A, *B;
 // CHECK-LABEL: define void @test3()
 // X86: load i32 addrspace(2)*, i32 addrspace(2)** @B
 // AMDGIZ: load i32 addrspace(2)*, i32 addrspace(2)** addrspacecast (i32 addrspace(2)* addrspace(1)* @B to i32 addrspace(2)**)
-// PIZ: load i32 addrspace(2)*, i32 addrspace(2)* addrspace(4)* addrspacecast (i32 addrspace(2)* addrspace(1)* @B to i32 addrspace(2)* addrspace(4)*)
 // CHECK: load i32, i32 addrspace(2)*
 // X86: load i32 addrspace(2)*, i32 addrspace(2)** @A
 // AMDGIZ: load i32 addrspace(2)*, i32 addrspace(2)** addrspacecast (i32 addrspace(2)* addrspace(1)* @A to i32 addrspace(2)**)
-// PIZ: load i32 addrspace(2)*, i32 addrspace(2)* addrspace(4)* addrspacecast (i32 addrspace(2)* addrspace(1)* @A to i32 addrspace(2)* addrspace(4)*)
 // CHECK: store i32 {{.*}}, i32 addrspace(2)*
 void test3() {
   *A = *B;
@@ -44,8 +41,6 @@ typedef struct {
 // CHECK-LABEL: define void @test4(
 // GIZ: call void @llvm.memcpy.p0i8.p2i8
 // GIZ: call void @llvm.memcpy.p2i8.p0i8
-// PIZ: call void @llvm.memcpy.p4i8.p2i8
-// PIZ: call void @llvm.memcpy.p2i8.p4i8
 void test4(MyStruct __attribute__((address_space(2))) *pPtr) {
   MyStruct s = pPtr[0];
   pPtr[0] = s;
