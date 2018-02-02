@@ -6741,22 +6741,51 @@ INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
 
 INTERCEPTOR(SIZE_T, strlcat, char *dst, char *src, SIZE_T size) {
   void *ctx;
+  SIZE_T len = 0;
   COMMON_INTERCEPTOR_ENTER(ctx, strlcat, dst, src, size);
   // src is checked in the strlcpy() interceptor
   if (dst) {
-    SIZE_T len = REAL(strnlen)(dst, size);
+    len = REAL(strnlen)(dst, size);
     COMMON_INTERCEPTOR_READ_STRING(ctx, dst, Min(len, size - 1) + 1);
-    // Reuse the rest of the code in the strlcpy() interceptor
-    dst += len;
-    size -= len;
   }
-  return WRAP(strlcpy)(dst, src, size);
+  // Reuse the rest of the code in the strlcpy() interceptor
+  return WRAP(strlcpy)(dst + len, src, size - len) + len;
 }
 #define INIT_STRLCPY \
   COMMON_INTERCEPT_FUNCTION(strlcpy); \
   COMMON_INTERCEPT_FUNCTION(strlcat);
 #else
 #define INIT_STRLCPY
+#endif
+
+#if SANITIZER_INTERCEPT_DEVNAME
+INTERCEPTOR(char *, devname, u64 dev, u32 type) {
+  void *ctx;
+  char *name;
+  COMMON_INTERCEPTOR_ENTER(ctx, devname, dev, type);
+  name = REAL(devname)(dev, type);
+  if (name)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  return name;
+}
+#define INIT_DEVNAME COMMON_INTERCEPT_FUNCTION(devname);
+#else
+#define INIT_DEVNAME
+#endif
+
+#if SANITIZER_INTERCEPT_DEVNAME_R
+INTERCEPTOR(int, devname_r, u64 dev, u32 type, char *path, uptr len) {
+  void *ctx;
+  int res;
+  COMMON_INTERCEPTOR_ENTER(ctx, devname_r, dev, type, path, len);
+  res = REAL(devname_r)(dev, type, path, len);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  return res;
+}
+#define INIT_DEVNAME_R COMMON_INTERCEPT_FUNCTION(devname_r);
+#else
+#define INIT_DEVNAME_R
 #endif
 
 static void InitializeCommonInterceptors() {
@@ -6984,6 +7013,8 @@ static void InitializeCommonInterceptors() {
   INIT_NAME_TO_HANDLE_AT;
   INIT_OPEN_BY_HANDLE_AT;
   INIT_STRLCPY;
+  INIT_DEVNAME;
+  INIT_DEVNAME_R;
 
 #if SANITIZER_NETBSD
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);
