@@ -1002,16 +1002,6 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
   assert(swift_can_type.getPointer());
   SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
   assert(swift_ast_ctx);
-  if (enum_decl == ast->getImplicitlyUnwrappedOptionalDecl()) {
-    swift::EnumDecl *optional_decl = ast->getOptionalDecl();
-    swift::CanType bound_optional_can_type =
-        swift::BoundGenericType::get(
-            optional_decl,
-            swift::Type(),
-            swift::cast<swift::BoundGenericType>(swift_can_type)
-                ->getGenericArgs())->getCanonicalType();
-    return CreateDescriptor(ast, bound_optional_can_type, optional_decl);
-  }
   swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
   const swift::irgen::EnumImplStrategy &enum_impl_strategy =
       swift::irgen::getEnumImplStrategy(irgen_module, swift_can_type);
