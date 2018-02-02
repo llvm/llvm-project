@@ -176,57 +176,57 @@ define amdgpu_kernel void @use_kernarg_segment_ptr(i32 addrspace(1)* %ptr) #1 {
 
 ; HSA: define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #11 {
 define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #1 {
-  %stof = addrspacecast i32 addrspace(3)* %ptr to i32 addrspace(4)*
-  store volatile i32 0, i32 addrspace(4)* %stof
+  %stof = addrspacecast i32 addrspace(3)* %ptr to i32*
+  store volatile i32 0, i32* %stof
   ret void
 }
 
-; HSA: define amdgpu_kernel void @use_private_to_flat_addrspacecast(i32* %ptr) #11 {
-define amdgpu_kernel void @use_private_to_flat_addrspacecast(i32* %ptr) #1 {
-  %stof = addrspacecast i32* %ptr to i32 addrspace(4)*
-  store volatile i32 0, i32 addrspace(4)* %stof
+; HSA: define amdgpu_kernel void @use_private_to_flat_addrspacecast(i32 addrspace(5)* %ptr) #11 {
+define amdgpu_kernel void @use_private_to_flat_addrspacecast(i32 addrspace(5)* %ptr) #1 {
+  %stof = addrspacecast i32 addrspace(5)* %ptr to i32*
+  store volatile i32 0, i32* %stof
   ret void
 }
 
-; HSA: define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-  %ftos = addrspacecast i32 addrspace(4)* %ptr to i32 addrspace(3)*
+; HSA: define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32* %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32* %ptr) #1 {
+  %ftos = addrspacecast i32* %ptr to i32 addrspace(3)*
   store volatile i32 0, i32 addrspace(3)* %ftos
   ret void
 }
 
-; HSA: define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-  %ftos = addrspacecast i32 addrspace(4)* %ptr to i32*
-  store volatile i32 0, i32* %ftos
+; HSA: define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32* %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32* %ptr) #1 {
+  %ftos = addrspacecast i32* %ptr to i32 addrspace(5)*
+  store volatile i32 0, i32 addrspace(5)* %ftos
   ret void
 }
 
 ; No-op addrspacecast should not use queue ptr
 ; HSA: define amdgpu_kernel void @use_global_to_flat_addrspacecast(i32 addrspace(1)* %ptr) #1 {
 define amdgpu_kernel void @use_global_to_flat_addrspacecast(i32 addrspace(1)* %ptr) #1 {
-  %stof = addrspacecast i32 addrspace(1)* %ptr to i32 addrspace(4)*
-  store volatile i32 0, i32 addrspace(4)* %stof
+  %stof = addrspacecast i32 addrspace(1)* %ptr to i32*
+  store volatile i32 0, i32* %stof
   ret void
 }
 
 ; HSA: define amdgpu_kernel void @use_constant_to_flat_addrspacecast(i32 addrspace(2)* %ptr) #1 {
 define amdgpu_kernel void @use_constant_to_flat_addrspacecast(i32 addrspace(2)* %ptr) #1 {
-  %stof = addrspacecast i32 addrspace(2)* %ptr to i32 addrspace(4)*
-  %ld = load volatile i32, i32 addrspace(4)* %stof
+  %stof = addrspacecast i32 addrspace(2)* %ptr to i32*
+  %ld = load volatile i32, i32* %stof
   ret void
 }
 
-; HSA: define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-  %ftos = addrspacecast i32 addrspace(4)* %ptr to i32 addrspace(1)*
+; HSA: define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32* %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32* %ptr) #1 {
+  %ftos = addrspacecast i32* %ptr to i32 addrspace(1)*
   store volatile i32 0, i32 addrspace(1)* %ftos
   ret void
 }
 
-; HSA: define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32 addrspace(4)* %ptr) #1 {
-  %ftos = addrspacecast i32 addrspace(4)* %ptr to i32 addrspace(2)*
+; HSA: define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32* %ptr) #1 {
+define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32* %ptr) #1 {
+  %ftos = addrspacecast i32* %ptr to i32 addrspace(2)*
   %ld = load volatile i32, i32 addrspace(2)* %ftos
   ret void
 }

@@ -51,7 +51,7 @@ public:
   /// Returns the length of this table, including the length field, or 0 if the
   /// length has not been determined (e.g. because the table has not yet been
   /// parsed, or there was a problem in parsing).
-  uint64_t length() const;
+  uint32_t length() const;
 };
 
 } // end namespace llvm

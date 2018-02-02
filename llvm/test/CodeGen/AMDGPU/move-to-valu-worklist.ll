@@ -13,7 +13,7 @@
 ; GCN-NEXT: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @in_worklist_once() #0 {
 bb:
-	%tmp = load i64, i64* undef
+	%tmp = load i64, i64 addrspace(5)* undef
 br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb

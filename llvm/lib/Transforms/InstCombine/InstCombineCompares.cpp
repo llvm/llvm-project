@@ -3884,45 +3884,30 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth) {
   }
 }
 
-/// \brief Check if the order of \p Op0 and \p Op1 as operand in an ICmpInst
+/// Check if the order of \p Op0 and \p Op1 as operands in an ICmpInst
 /// should be swapped.
 /// The decision is based on how many times these two operands are reused
 /// as subtract operands and their positions in those instructions.
-/// The rational is that several architectures use the same instruction for
-/// both subtract and cmp, thus it is better if the order of those operands
+/// The rationale is that several architectures use the same instruction for
+/// both subtract and cmp. Thus, it is better if the order of those operands
 /// match.
 /// \return true if Op0 and Op1 should be swapped.
-static bool swapMayExposeCSEOpportunities(const Value * Op0,
-                                          const Value * Op1) {
-  // Filter out pointer value as those cannot appears directly in subtract.
+static bool swapMayExposeCSEOpportunities(const Value *Op0, const Value *Op1) {
+  // Filter out pointer values as those cannot appear directly in subtract.
   // FIXME: we may want to go through inttoptrs or bitcasts.
   if (Op0->getType()->isPointerTy())
     return false;
-  // Count every uses of both Op0 and Op1 in a subtract.
-  // Each time Op0 is the first operand, count -1: swapping is bad, the
-  // subtract has already the same layout as the compare.
-  // Each time Op0 is the second operand, count +1: swapping is good, the
-  // subtract has a different layout as the compare.
-  // At the end, if the benefit is greater than 0, Op0 should come second to
-  // expose more CSE opportunities.
-  int GlobalSwapBenefits = 0;
+  // If a subtract already has the same operands as a compare, swapping would be
+  // bad. If a subtract has the same operands as a compare but in reverse order,
+  // then swapping is good.
+  int GoodToSwap = 0;
   for (const User *U : Op0->users()) {
-    const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(U);
-    if (!BinOp || BinOp->getOpcode() != Instruction::Sub)
-      continue;
-    // If Op0 is the first argument, this is not beneficial to swap the
-    // arguments.
-    int LocalSwapBenefits = -1;
-    unsigned Op1Idx = 1;
-    if (BinOp->getOperand(Op1Idx) == Op0) {
-      Op1Idx = 0;
-      LocalSwapBenefits = 1;
-    }
-    if (BinOp->getOperand(Op1Idx) != Op1)
-      continue;
-    GlobalSwapBenefits += LocalSwapBenefits;
+    if (match(U, m_Sub(m_Specific(Op1), m_Specific(Op0))))
+      GoodToSwap++;
+    else if (match(U, m_Sub(m_Specific(Op0), m_Specific(Op1))))
+      GoodToSwap--;
   }
-  return GlobalSwapBenefits > 0;
+  return GoodToSwap > 0;
 }
 
 /// \brief Check that one use is in the same block as the definition and all

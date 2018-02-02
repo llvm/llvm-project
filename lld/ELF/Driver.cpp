@@ -621,6 +621,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->FixCortexA53Errata843419 = Args.hasArg(OPT_fix_cortex_a53_843419);
   Config->GcSections = Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
+  Config->GnuUnique = Args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   Config->GdbIndex = Args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
   Config->ICF = Args.hasFlag(OPT_icf_all, OPT_icf_none, false);
   Config->IgnoreDataAddressEquality =
@@ -633,10 +634,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
   Config->MapFile = Args.getLastArgValue(OPT_Map);
-  Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->MergeArmExidx =
       Args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
-  Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->OFormatBinary = isOutputFormatBinary(Args);
@@ -672,6 +671,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Undefined = args::getStrings(Args, OPT_undefined);
+  Config->UndefinedVersion =
+      Args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->Verbose = Args.hasArg(OPT_verbose);
   errorHandler().Verbose = Config->Verbose;

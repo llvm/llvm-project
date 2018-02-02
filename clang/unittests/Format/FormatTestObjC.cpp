@@ -281,13 +281,26 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "    ccccccccccccc, ccccccccccccc,\n"
                "    ccccccccccccc, ccccccccccccc> {\n"
                "}");
-
-  Style.BinPackParameters = false;
+  Style.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   verifyFormat("@interface ddddddddddddd () <\n"
                "    ddddddddddddd,\n"
                "    ddddddddddddd,\n"
                "    ddddddddddddd,\n"
                "    ddddddddddddd> {\n"
+               "}");
+
+  Style.BinPackParameters = false;
+  Style.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
+  verifyFormat("@interface eeeeeeeeeeeee () <\n"
+               "    eeeeeeeeeeeee,\n"
+               "    eeeeeeeeeeeee,\n"
+               "    eeeeeeeeeeeee,\n"
+               "    eeeeeeeeeeeee> {\n"
+               "}");
+  Style.ObjCBinPackProtocolList = FormatStyle::BPS_Always;
+  verifyFormat("@interface fffffffffffff () <\n"
+               "    fffffffffffff, fffffffffffff,\n"
+               "    fffffffffffff, fffffffffffff> {\n"
                "}");
 
   Style = getGoogleStyle(FormatStyle::LK_ObjC);

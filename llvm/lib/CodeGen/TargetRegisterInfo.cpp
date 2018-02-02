@@ -450,6 +450,28 @@ bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
   return true;
 }
 
+unsigned TargetRegisterInfo::getRegSizeInBits(unsigned Reg,
+                                         const MachineRegisterInfo &MRI) const {
+  const TargetRegisterClass *RC{};
+  if (isPhysicalRegister(Reg)) {
+    // The size is not directly available for physical registers.
+    // Instead, we need to access a register class that contains Reg and
+    // get the size of that register class.
+    RC = getMinimalPhysRegClass(Reg);
+  } else {
+    LLT Ty = MRI.getType(Reg);
+    unsigned RegSize = Ty.isValid() ? Ty.getSizeInBits() : 0;
+    // If Reg is not a generic register, query the register class to
+    // get its size.
+    if (RegSize)
+      return RegSize;
+    // Since Reg is not a generic register, it must have a register class.
+    RC = MRI.getRegClass(Reg);
+  }
+  assert(RC && "Unable to deduce the register class");
+  return getRegSizeInBits(*RC);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void TargetRegisterInfo::dumpReg(unsigned Reg, unsigned SubRegIndex,

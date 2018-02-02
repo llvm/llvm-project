@@ -7,7 +7,7 @@
 ; global int GlobA;
 ; global int GlobB;
 ;
-; kernel void kernel1(unsigned int ArgN, global int *ArgA, global int *ArgB) {
+; kernel void kernel1(unsigned int ArgN, global int  addrspace(5)*ArgA, global int  addrspace(5)*ArgB) {
 ;   ArgA[ArgN] += ArgB[ArgN];
 ; }
 
@@ -45,22 +45,22 @@ define amdgpu_kernel void @kernel1(
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgB"
     i32 addrspace(1)* %ArgB) !dbg !13 {
 entry:
-  %ArgN.addr = alloca i32, align 4
-  %ArgA.addr = alloca i32 addrspace(1)*, align 4
-  %ArgB.addr = alloca i32 addrspace(1)*, align 4
-  store i32 %ArgN, i32* %ArgN.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %ArgN.addr, metadata !22, metadata !23), !dbg !24
-  store i32 addrspace(1)* %ArgA, i32 addrspace(1)** %ArgA.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)** %ArgA.addr, metadata !25, metadata !23), !dbg !26
-  store i32 addrspace(1)* %ArgB, i32 addrspace(1)** %ArgB.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)** %ArgB.addr, metadata !27, metadata !23), !dbg !28
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)** %ArgB.addr, align 4, !dbg !29
-  %1 = load i32, i32* %ArgN.addr, align 4, !dbg !30
+  %ArgN.addr = alloca i32, align 4, addrspace(5)
+  %ArgA.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  %ArgB.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  store i32 %ArgN, i32 addrspace(5)* %ArgN.addr, align 4
+  call void @llvm.dbg.declare(metadata i32 addrspace(5)* %ArgN.addr, metadata !22, metadata !23), !dbg !24
+  store i32 addrspace(1)* %ArgA, i32 addrspace(1)* addrspace(5)* %ArgA.addr, align 4
+  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %ArgA.addr, metadata !25, metadata !23), !dbg !26
+  store i32 addrspace(1)* %ArgB, i32 addrspace(1)* addrspace(5)* %ArgB.addr, align 4
+  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %ArgB.addr, metadata !27, metadata !23), !dbg !28
+  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %ArgB.addr, align 4, !dbg !29
+  %1 = load i32, i32 addrspace(5)* %ArgN.addr, align 4, !dbg !30
   %idxprom = zext i32 %1 to i64, !dbg !29
   %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 %idxprom, !dbg !29
   %2 = load i32, i32 addrspace(1)* %arrayidx, align 4, !dbg !29
-  %3 = load i32 addrspace(1)*, i32 addrspace(1)** %ArgA.addr, align 4, !dbg !31
-  %4 = load i32, i32* %ArgN.addr, align 4, !dbg !32
+  %3 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %ArgA.addr, align 4, !dbg !31
+  %4 = load i32, i32 addrspace(5)* %ArgN.addr, align 4, !dbg !32
   %idxprom1 = zext i32 %4 to i64, !dbg !31
   %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %3, i64 %idxprom1, !dbg !31
   %5 = load i32, i32 addrspace(1)* %arrayidx2, align 4, !dbg !33
@@ -94,7 +94,7 @@ entry:
 !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64)
 !18 = !{i32 0, i32 1, i32 1}
 !19 = !{!"none", !"none", !"none"}
-!20 = !{!"uint", !"int*", !"int*"}
+!20 = !{!"uint", !"int addrspace(5)*", !"int addrspace(5)*"}
 !21 = !{!"", !"", !""}
 !22 = !DILocalVariable(name: "ArgN", arg: 1, scope: !13, file: !3, line: 4, type: !16)
 !23 = !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)

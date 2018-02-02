@@ -47,7 +47,7 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
                        " has too small length (0x%" PRIx32
                        ") to contain a complete header",
                        TableOffset, length());
-  uint64_t End = TableOffset + length();
+  uint32_t End = TableOffset + length();
   if (!Data.isValidOffsetForDataOfSize(TableOffset, End - TableOffset))
     return createError(
         "section is not large enough to contain a .debug_rnglists table "
@@ -184,7 +184,7 @@ void DWARFDebugRnglists::dump(raw_ostream &OS) const {
   }
 }
 
-uint64_t DWARFDebugRnglists::length() const {
+uint32_t DWARFDebugRnglists::length() const {
   if (HeaderData.Length == 0)
     return 0;
   // TODO: DWARF64 support.

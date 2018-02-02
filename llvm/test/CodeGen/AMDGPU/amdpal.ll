@@ -17,14 +17,14 @@ entry:
 ; PAL: s_load_dwordx4 s{{\[}}[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s{{\[}}[[GITPTR]]:
 ; PAL: buffer_store{{.*}}, s{{\[}}[[SCRATCHDESC]]:
 
-define amdgpu_kernel void @scratch(<2 x i32> %in, i32 %idx, i32* %out) {
+define amdgpu_kernel void @scratch(<2 x i32> %in, i32 %idx, i32 addrspace(5)* %out) {
 entry:
-  %v = alloca [2 x i32]
-  %vv = bitcast [2 x i32]* %v to <2 x i32>*
-  store <2 x i32> %in, <2 x i32>* %vv
-  %e = getelementptr [2 x i32], [2 x i32]* %v, i32 0, i32 %idx
-  %x = load i32, i32* %e
-  store i32 %x, i32* %out
+  %v = alloca [2 x i32], addrspace(5)
+  %vv = bitcast [2 x i32] addrspace(5)* %v to <2 x i32> addrspace(5)*
+  store <2 x i32> %in, <2 x i32> addrspace(5)* %vv
+  %e = getelementptr [2 x i32], [2 x i32] addrspace(5)* %v, i32 0, i32 %idx
+  %x = load i32, i32 addrspace(5)* %e
+  store i32 %x, i32 addrspace(5)* %out
   ret void
 }
 
@@ -41,14 +41,14 @@ entry:
 ; PAL: s_load_dwordx4 s{{\[}}[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s{{\[}}[[GITPTR]]:
 ; PAL: buffer_store{{.*}}, s{{\[}}[[SCRATCHDESC]]:
 
-define amdgpu_kernel void @scratch2(<2 x i32> %in, i32 %idx, i32* %out) #0 {
+define amdgpu_kernel void @scratch2(<2 x i32> %in, i32 %idx, i32 addrspace(5)* %out) #0 {
 entry:
-  %v = alloca [2 x i32]
-  %vv = bitcast [2 x i32]* %v to <2 x i32>*
-  store <2 x i32> %in, <2 x i32>* %vv
-  %e = getelementptr [2 x i32], [2 x i32]* %v, i32 0, i32 %idx
-  %x = load i32, i32* %e
-  store i32 %x, i32* %out
+  %v = alloca [2 x i32], addrspace(5)
+  %vv = bitcast [2 x i32] addrspace(5)* %v to <2 x i32> addrspace(5)*
+  store <2 x i32> %in, <2 x i32> addrspace(5)* %vv
+  %e = getelementptr [2 x i32], [2 x i32] addrspace(5)* %v, i32 0, i32 %idx
+  %x = load i32, i32 addrspace(5)* %e
+  store i32 %x, i32 addrspace(5)* %out
   ret void
 }
 

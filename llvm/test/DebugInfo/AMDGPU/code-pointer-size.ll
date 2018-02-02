@@ -4,11 +4,11 @@
 ;
 ; $clang -cl-std=CL2.0 -g -O0 -target amdgcn-amd-amdhsa -S -emit-llvm <path-to-file>
 ;
-; kernel void kernel1(global int *A) {
+; kernel void kernel1(global int  addrspace(5)*A) {
 ;   *A = 11;
 ; }
 ;
-; kernel void kernel2(global int *B) {
+; kernel void kernel2(global int  addrspace(5)*B) {
 ;   *B = 12;
 ; }
 
@@ -20,20 +20,20 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 define amdgpu_kernel void @kernel1(i32 addrspace(1)* %A) !dbg !7 {
 entry:
-  %A.addr = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)** %A.addr, metadata !16, metadata !17), !dbg !18
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4, !dbg !19
+  %A.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 4
+  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %A.addr, metadata !16, metadata !17), !dbg !18
+  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 4, !dbg !19
   store i32 11, i32 addrspace(1)* %0, align 4, !dbg !20
   ret void, !dbg !21
 }
 
 define amdgpu_kernel void @kernel2(i32 addrspace(1)* %B) !dbg !22 {
 entry:
-  %B.addr = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %B, i32 addrspace(1)** %B.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)** %B.addr, metadata !23, metadata !17), !dbg !24
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)** %B.addr, align 4, !dbg !25
+  %B.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  store i32 addrspace(1)* %B, i32 addrspace(1)* addrspace(5)* %B.addr, align 4
+  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %B.addr, metadata !23, metadata !17), !dbg !24
+  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %B.addr, align 4, !dbg !25
   store i32 12, i32 addrspace(1)* %0, align 4, !dbg !26
   ret void, !dbg !27
 }
@@ -57,7 +57,7 @@ entry:
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !12 = !{i32 1}
 !13 = !{!"none"}
-!14 = !{!"int*"}
+!14 = !{!"int addrspace(5)*"}
 !15 = !{!""}
 !16 = !DILocalVariable(name: "A", arg: 1, scope: !7, file: !1, line: 1, type: !10)
 !17 = !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)

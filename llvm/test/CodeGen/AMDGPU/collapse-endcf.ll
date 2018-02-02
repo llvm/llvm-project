@@ -237,7 +237,7 @@ bb2:                                              ; preds = %bb1
   br i1 %tmp3, label %bb4, label %bb10
 
 bb4:                                              ; preds = %bb2
-  %tmp6 = load float, float* undef
+  %tmp6 = load float, float addrspace(5)* undef
   %tmp7 = fcmp olt float %tmp6, 0.0
   br i1 %tmp7, label %bb8, label %Flow
 
@@ -257,7 +257,7 @@ Flow1:                                            ; preds = %bb10
   br label %bb1
 
 bb12:                                             ; preds = %bb10
-  store volatile <4 x float> %tmp11, <4 x float>* undef, align 16
+  store volatile <4 x float> %tmp11, <4 x float> addrspace(5)* undef, align 16
   ret void
 }
 

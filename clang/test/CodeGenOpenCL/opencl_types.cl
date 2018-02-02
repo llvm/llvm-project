@@ -41,7 +41,8 @@ kernel void foo(image1d_t img) {
   sampler_t smp = CLK_ADDRESS_CLAMP_TO_EDGE|CLK_NORMALIZED_COORDS_TRUE|CLK_FILTER_LINEAR;
   // CHECK-COM: alloca %opencl.sampler_t addrspace(2)*
   event_t evt;
-  // CHECK-COM: alloca %opencl.event_t*
+  // CHECK-SPIR: alloca %opencl.event_t*
+  // CHECK-AMDGCN: alloca %opencl.event_t addrspace(5)*
   clk_event_t clk_evt;
   // CHECK-SPIR: alloca %opencl.clk_event_t*
   // CHECK-AMDGCN: alloca %opencl.clk_event_t addrspace(1)*
