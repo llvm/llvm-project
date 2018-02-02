@@ -20,11 +20,12 @@ static void *start_routine(void *arg) {
 int main(void) {
   const int n_threads = 8;
   int i, counter = n_threads;
-  pthread_t thread;
+  pthread_t thread[n_threads];
 
   for (i = 0; i < n_threads; ++i)
-    pthread_create(&thread, NULL, &start_routine, (void *)&counter);
-  sleep(5);
+    pthread_create(&thread[i], NULL, &start_routine, (void *)&counter);
+  for (i = 0; i < n_threads; ++i)
+    pthread_join(thread[i], NULL);
   return 0;
 }
 
