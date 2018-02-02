@@ -97,8 +97,8 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
   //   * symbols in namespaces or translation unit scopes (e.g. no class
   //     members)
   //   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
-  auto InTopLevelScope =
-      hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl()));
+  auto InTopLevelScope = hasDeclContext(
+      anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
   if (match(decl(allOf(Opts.IndexMainFiles
                            ? decl()
                            : decl(unless(isExpansionInMainFile())),
@@ -180,7 +180,17 @@ bool SymbolCollector::handleDeclOccurence(
       return true;
 
     auto &SM = ND->getASTContext().getSourceManager();
-    std::string QName = ND->getQualifiedNameAsString();
+
+    std::string QName;
+    llvm::raw_string_ostream OS(QName);
+    PrintingPolicy Policy(ASTCtx->getLangOpts());
+    // Note that inline namespaces are treated as transparent scopes. This
+    // reflects the way they're most commonly used for lookup. Ideally we'd
+    // include them, but at query time it's hard to find all the inline
+    // namespaces to query: the preamble doesn't have a dedicated list.
+    Policy.SuppressUnwrittenScope = true;
+    ND->printQualifiedName(OS, Policy);
+    OS.flush();
 
     Symbol S;
     S.ID = std::move(ID);

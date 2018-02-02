@@ -813,7 +813,7 @@ static void setConfigs() {
       Config->IsLE ? support::endianness::little : support::endianness::big;
   Config->IsMips64EL = (Kind == ELF64LEKind && Machine == EM_MIPS);
   Config->IsRela =
-      Config->Is64 || IsX32 || Config->MipsN32Abi || Machine == EM_PPC;
+      (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
   Config->Pic = Config->Pie || Config->Shared;
   Config->Wordsize = Config->Is64 ? 8 : 4;
 }
