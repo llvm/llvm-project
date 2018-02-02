@@ -37,8 +37,12 @@ namespace {
 using llvm::APSInt;
 } // namespace
 
-static const llvm::StringSet<> KnownBannedMacroNames = {"EAGAIN", "EWOULDBLOCK",
-                                                        "SIGCLD", "SIGCHLD"};
+static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
+    "EAGAIN",
+    "EWOULDBLOCK",
+    "SIGCLD",
+    "SIGCHLD",
+};
 
 static bool incrementWithoutOverflow(const APSInt &Value, APSInt &Result) {
   Result = Value;
@@ -318,13 +322,13 @@ AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
 
 AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
 
-AST_MATCHER_P(Expr, expandedByMacro, llvm::StringSet<>, Names) {
+AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringLiteral>, Names) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const LangOptions &LO = Finder->getASTContext().getLangOpts();
   SourceLocation Loc = Node.getExprLoc();
   while (Loc.isMacroID()) {
     StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LO);
-    if (Names.count(MacroName))
+    if (llvm::is_contained(Names, MacroName))
       return true;
     Loc = SM.getImmediateMacroCallerLoc(Loc);
   }
