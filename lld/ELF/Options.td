@@ -7,8 +7,8 @@ class J<string name>: Joined<["--", "-"], name>;
 class S<string name>: Separate<["--", "-"], name>;
 
 multiclass Eq<string name> {
-  def "": Separate<["--", "-"], name>;
-  def _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>;
+  def NAME: Separate<["--", "-"], name>;
+  def NAME # _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>;
 }
 
 multiclass B<string name, string help1, string help2> {
@@ -406,8 +406,7 @@ def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;
 // just ignore the option on lld side as it's easier. In fact, the linker could
 // be called 'ld' and understanding which linker is used would require parsing of
 // --version output.
-def plugin: S<"plugin">;
-def plugin_eq: J<"plugin=">;
+defm plugin: Eq<"plugin">;
 
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
