@@ -2091,7 +2091,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     lldb::addr_t val_ptr_addr = in_value.GetPointerValue();
     {
       auto swift_type = GetSwiftType(dyn_type);
-      if (swift_type->getAnyOptionalObjectType())
+      if (swift_type->getOptionalObjectType())
         val_ptr_addr = GetProcess()->ReadPointerFromMemory(val_ptr_addr, error);
     }
     address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());

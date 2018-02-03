@@ -5477,7 +5477,7 @@ bool SwiftASTContext::IsOptionalChain(CompilerType type,
             llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
       if (auto swift_ast = ast->GetASTContext()) {
         swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-        if (swift_can_type.getAnyOptionalObjectType())
+        if (swift_can_type.getOptionalObjectType())
           return true;
         return false;
       }
