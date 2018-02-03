@@ -55,7 +55,8 @@ class NotEmpty
     virtual ~NotEmpty();
 };
 
-union Union {};
+union EmptyUnion {};
+struct NonEmptyUnion {int x; unsigned y;};
 
 struct bit_zero
 {
@@ -84,6 +85,7 @@ int main()
 {
     test_has_not_has_unique_object_representations<void>();
     test_has_not_has_unique_object_representations<Empty>();
+    test_has_not_has_unique_object_representations<EmptyUnion>();
     test_has_not_has_unique_object_representations<NotEmpty>();
     test_has_not_has_unique_object_representations<bit_zero>();
     test_has_not_has_unique_object_representations<Abstract>();
@@ -97,7 +99,7 @@ int main()
 
 
     test_has_unique_object_representations<unsigned>();
-    test_has_unique_object_representations<Union>();
+    test_has_unique_object_representations<NonEmptyUnion>();
     test_has_unique_object_representations<char[3]>();
     test_has_unique_object_representations<char[]>();
 

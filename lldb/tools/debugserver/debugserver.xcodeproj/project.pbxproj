@@ -687,6 +687,7 @@
 		1DEB914F08733D8E0010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = (
 					arm64,
 					armv7,
@@ -731,6 +732,7 @@
 		1DEB915008733D8E0010E9CD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = (
 					armv7,
 					armv7s,
@@ -775,6 +777,7 @@
 		262419A11198A93E00067686 /* BuildAndIntegration */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = arm64;
 				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -1436,6 +1439,7 @@
 		4968B7A916657FAE00741ABB /* DebugClang */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = (
 					arm64,
 					armv7,
@@ -1581,6 +1585,7 @@
 		940AD5251B1FE3B10051E88F /* DebugPresubmission */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = (
 					arm64,
 					armv7,
@@ -1810,6 +1815,7 @@
 		94D72C871ADF10AA00A3F718 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = (
 					arm64,
 					armv7,
@@ -1946,6 +1952,7 @@
 		94D72C891ADF10B000A3F718 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=iphoneos*]" = (
 					armv7,
 					armv7s,

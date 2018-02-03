@@ -111,6 +111,25 @@ protected:
   const WasmSignature *FunctionType = nullptr;
 };
 
+// linker-generated symbols
+struct WasmSym {
+  // __stack_pointer
+  // Global that holds the address of the top of the explict  value stack
+  // in linear memory.
+  static Symbol *StackPointer;
+
+  // __heap_base
+  static Symbol *HeapBase;
+
+  // __wasm_call_ctors
+  // Function that directly calls all ctors in priority order.
+  static Symbol *CallCtors;
+
+  // __dso_handle
+  // Global used in calls to __cxa_atexit to determine current DLL
+  static Symbol *DsoHandle;
+};
+
 } // namespace wasm
 
 // Returns a symbol name for an error message.

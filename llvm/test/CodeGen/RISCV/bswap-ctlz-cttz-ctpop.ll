@@ -278,7 +278,7 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    sw s8, 12(sp)
 ; RV32I-NEXT:    mv s2, a1
 ; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    addi a0, s3, -1
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    not a1, s3
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    lui a1, 349525
@@ -469,7 +469,7 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ; RV32I-NEXT:    sw s8, 12(sp)
 ; RV32I-NEXT:    mv s2, a1
 ; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    addi a0, s3, -1
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    not a1, s3
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    lui a1, 349525

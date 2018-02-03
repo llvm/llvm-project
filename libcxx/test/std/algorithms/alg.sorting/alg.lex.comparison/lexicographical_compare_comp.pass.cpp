@@ -28,7 +28,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 2, 3};
     int ib[] = {1, 3, 5, 2, 4, 6};
 
-    std::greater<int> pred;
+    std::greater<int> pred{};
     return !std::lexicographical_compare(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib), pred)
         &&  std::lexicographical_compare(std::begin(ib), std::end(ib), std::begin(ia), std::end(ia), pred)
            ;
