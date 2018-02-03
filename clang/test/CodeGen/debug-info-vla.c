@@ -2,9 +2,11 @@
 
 void testVLAwithSize(int s)
 {
-// CHECK: dbg.declare
-// CHECK: dbg.declare({{.*}}, metadata ![[VAR:.*]], metadata !DIExpression())
-// CHECK: ![[VAR]] = !DILocalVariable(name: "vla",{{.*}} line: [[@LINE+1]]
+// CHECK-DAG: dbg.declare({{.*}} %vla_expr, metadata ![[VLAEXPR:[0-9]+]]
+// CHECK-DAG: dbg.declare({{.*}} %vla, metadata ![[VAR:[0-9]+]]
+// CHECK-DAG: ![[VLAEXPR]] = !DILocalVariable(name: "vla_expr"
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "vla",{{.*}} line: [[@LINE+2]]
+// CHECK-DAG: !DISubrange(count: ![[VLAEXPR]])
   int vla[s];
   int i;
   for (i = 0; i < s; i++) {

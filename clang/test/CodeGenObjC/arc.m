@@ -538,6 +538,7 @@ void test20(unsigned n) {
   // CHECK-LABEL: define void @test20
   // CHECK:      [[N:%.*]] = alloca i32, align 4
   // CHECK-NEXT: [[SAVED_STACK:%.*]] = alloca i8*
+  // CHECK-NEXT: [[VLA_EXPR:%.*]] = alloca i64, align 8
   // CHECK-NEXT: store i32 {{%.*}}, i32* [[N]], align 4
 
   id x[n];
@@ -552,6 +553,9 @@ void test20(unsigned n) {
 
   // Allocate the VLA.
   // CHECK-NEXT: [[VLA:%.*]] = alloca i8*, i64 [[DIM]], align 16
+
+  // Store the VLA #elements expression.
+  // CHECK-NEXT: store i64 [[DIM]], i64* [[VLA_EXPR]], align 8
 
   // Zero-initialize.
   // CHECK-NEXT: [[T0:%.*]] = bitcast i8** [[VLA]] to i8*
@@ -579,6 +583,7 @@ void test21(unsigned n) {
   // CHECK-LABEL: define void @test21
   // CHECK:      [[N:%.*]] = alloca i32, align 4
   // CHECK-NEXT: [[SAVED_STACK:%.*]] = alloca i8*
+  // CHECK-NEXT: [[VLA_EXPR:%.*]] = alloca i64, align 8
   // CHECK-NEXT: store i32 {{%.*}}, i32* [[N]], align 4
 
   id x[2][n][3];
@@ -594,6 +599,9 @@ void test21(unsigned n) {
   // Allocate the VLA.
   // CHECK-NEXT: [[T0:%.*]] = mul nuw i64 2, [[DIM]]
   // CHECK-NEXT: [[VLA:%.*]] = alloca [3 x i8*], i64 [[T0]], align 16
+
+  // Store the VLA #elements expression.
+  // CHECK-NEXT: store i64 [[DIM]], i64* [[VLA_EXPR]], align 8
 
   // Zero-initialize.
   // CHECK-NEXT: [[T0:%.*]] = bitcast [3 x i8*]* [[VLA]] to i8*
