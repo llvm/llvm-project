@@ -237,9 +237,10 @@ llvm::Value *CodeGenFunction::getTypeSize(QualType Ty) {
   if (SizeInChars.isZero()) {
     // getTypeSizeInChars() returns 0 for a VLA.
     while (auto *VAT = C.getAsVariableArrayType(Ty)) {
-      llvm::Value *ArraySize;
-      std::tie(ArraySize, Ty) = getVLASize(VAT);
-      Size = Size ? Builder.CreateNUWMul(Size, ArraySize) : ArraySize;
+      auto VlaSize = getVLASize(VAT);
+      Ty = VlaSize.Type;
+      Size = Size ? Builder.CreateNUWMul(Size, VlaSize.NumElts)
+                  : VlaSize.NumElts;
     }
     SizeInChars = C.getTypeSizeInChars(Ty);
     if (SizeInChars.isZero())

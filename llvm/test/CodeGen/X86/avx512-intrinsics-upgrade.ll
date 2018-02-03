@@ -3757,3 +3757,104 @@ define i8@test_int_x86_avx512_ptestnm_q_512(<8 x i64> %x0, <8 x i64> %x1, i8 %x2
   ret i8 %res2
 }
 
+declare i16 @llvm.x86.avx512.kand.w(i16, i16) nounwind readnone
+define i16 @test_kand(i16 %a0, i16 %a1) {
+; CHECK-LABEL: test_kand:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %t1 = call i16 @llvm.x86.avx512.kand.w(i16 %a0, i16 8)
+  %t2 = call i16 @llvm.x86.avx512.kand.w(i16 %t1, i16 %a1)
+  ret i16 %t2
+}
+
+declare i16 @llvm.x86.avx512.kandn.w(i16, i16) nounwind readnone
+define i16 @test_kandn(i16 %a0, i16 %a1) {
+; CHECK-LABEL: test_kandn:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    kandnw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kandnw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %t1 = call i16 @llvm.x86.avx512.kandn.w(i16 %a0, i16 8)
+  %t2 = call i16 @llvm.x86.avx512.kandn.w(i16 %t1, i16 %a1)
+  ret i16 %t2
+}
+
+declare i16 @llvm.x86.avx512.knot.w(i16) nounwind readnone
+define i16 @test_knot(i16 %a0) {
+; CHECK-LABEL: test_knot:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    knotw %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.knot.w(i16 %a0)
+  ret i16 %res
+}
+
+declare i16 @llvm.x86.avx512.kor.w(i16, i16) nounwind readnone
+define i16 @test_kor(i16 %a0, i16 %a1) {
+; CHECK-LABEL: test_kor:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %t1 = call i16 @llvm.x86.avx512.kor.w(i16 %a0, i16 8)
+  %t2 = call i16 @llvm.x86.avx512.kor.w(i16 %t1, i16 %a1)
+  ret i16 %t2
+}
+
+declare i16 @llvm.x86.avx512.kxnor.w(i16, i16) nounwind readnone
+; TODO: the two kxnor instructions here a no op and should be elimintaed,
+; probably by FoldConstantArithmetic in SelectionDAG.
+define i16 @test_kxnor(i16 %a0, i16 %a1) {
+; CHECK-LABEL: test_kxnor:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    kxorw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %t1 = call i16 @llvm.x86.avx512.kxnor.w(i16 %a0, i16 8)
+  %t2 = call i16 @llvm.x86.avx512.kxnor.w(i16 %t1, i16 %a1)
+  ret i16 %t2
+}
+
+declare i16 @llvm.x86.avx512.kxor.w(i16, i16) nounwind readnone
+define i16 @test_kxor(i16 %a0, i16 %a1) {
+; CHECK-LABEL: test_kxor:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    kxorw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %t1 = call i16 @llvm.x86.avx512.kxor.w(i16 %a0, i16 8)
+  %t2 = call i16 @llvm.x86.avx512.kxor.w(i16 %t1, i16 %a1)
+  ret i16 %t2
+}
+
