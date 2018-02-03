@@ -31,6 +31,10 @@ def build_id: F<"build-id">, HelpText<"Generate build ID note">;
 
 def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">;
 
+defm check_sections : B<"check-sections",
+    "Check section addresses for overlaps",
+    "Do not check section addresses for overlaps">;
+
 defm compress_debug_sections : Eq<"compress-debug-sections">,
   HelpText<"Compress DWARF debug sections">;
 

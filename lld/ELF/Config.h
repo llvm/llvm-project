@@ -112,6 +112,7 @@ struct Configuration {
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
+  bool CheckSections;
   bool CompressDebugSections;
   bool DefineCommon;
   bool Demangle = true;
