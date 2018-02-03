@@ -299,20 +299,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Handle the `--undefined <sym>` options.
     for (auto* Arg : Args.filtered(OPT_undefined))
       Symtab->addUndefinedFunction(Arg->getValue(), nullptr);
-
-    // Create linker-synthetic symbols
-    // __wasm_call_ctors:
-    //    Function that directly calls all ctors in priority order.
-    // __stack_pointer:
-    //    Wasm global that holds the address of the top of the explict
-    //    value stack in linear memory.
-    // __dso_handle;
-    //    Global in calls to __cxa_atexit to determine current DLL
-    Config->CtorSymbol = Symtab->addDefinedFunction(
+    WasmSym::CallCtors = Symtab->addDefinedFunction(
         "__wasm_call_ctors", &Signature, WASM_SYMBOL_VISIBILITY_HIDDEN);
-    Config->StackPointerSymbol = Symtab->addDefinedGlobal("__stack_pointer");
-    Config->HeapBaseSymbol = Symtab->addDefinedGlobal("__heap_base");
-    Symtab->addDefinedGlobal("__dso_handle")->setVirtualAddress(0);
+    WasmSym::StackPointer = Symtab->addDefinedGlobal("__stack_pointer");
+    WasmSym::HeapBase = Symtab->addDefinedGlobal("__heap_base");
+    WasmSym::DsoHandle = Symtab->addDefinedGlobal("__dso_handle");
   }
 
   createFiles(Args);

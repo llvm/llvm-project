@@ -237,7 +237,7 @@ void Writer::createGlobalSection() {
   for (const Symbol *Sym : DefinedGlobals) {
     WasmGlobal Global;
     Global.Type.Type = WASM_TYPE_I32;
-    Global.Type.Mutable = Sym == Config->StackPointerSymbol;
+    Global.Type.Mutable = Sym == WasmSym::StackPointer;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
     writeGlobal(OS, Global);
@@ -520,6 +520,11 @@ void Writer::writeSections() {
 
 // Fix the memory layout of the output binary.  This assigns memory offsets
 // to each of the input data sections as well as the explicit stack region.
+// The memory layout is as follows, from low to high.
+//  - initialized data (starting at Config->GlobalBase)
+//  - BSS data (not currently implemented in llvm)
+//  - explicit stack (Config->ZStackSize)
+//  - heap start / unallocated
 void Writer::layoutMemory() {
   uint32_t MemoryPtr = 0;
   if (!Config->Relocatable) {
@@ -529,7 +534,11 @@ void Writer::layoutMemory() {
 
   createOutputSegments();
 
-  // Static data comes first
+  // Arbitrarily set __dso_handle handle to point to the start of the data
+  // segments.
+  if (WasmSym::DsoHandle)
+    WasmSym::DsoHandle->setVirtualAddress(MemoryPtr);
+
   for (OutputSegment *Seg : Segments) {
     MemoryPtr = alignTo(MemoryPtr, Seg->Alignment);
     Seg->StartVA = MemoryPtr;
@@ -538,12 +547,14 @@ void Writer::layoutMemory() {
     MemoryPtr += Seg->Size;
   }
 
+  // TODO: Add .bss space here.
+
   DataSize = MemoryPtr;
   if (!Config->Relocatable)
     DataSize -= Config->GlobalBase;
   debugPrint("mem: static data = %d\n", DataSize);
 
-  // Stack comes after static data
+  // Stack comes after static data and bss
   if (!Config->Relocatable) {
     MemoryPtr = alignTo(MemoryPtr, kStackAlignment);
     if (Config->ZStackSize != alignTo(Config->ZStackSize, kStackAlignment))
@@ -551,12 +562,12 @@ void Writer::layoutMemory() {
     debugPrint("mem: stack size  = %d\n", Config->ZStackSize);
     debugPrint("mem: stack base  = %d\n", MemoryPtr);
     MemoryPtr += Config->ZStackSize;
-    Config->StackPointerSymbol->setVirtualAddress(MemoryPtr);
+    WasmSym::StackPointer->setVirtualAddress(MemoryPtr);
     debugPrint("mem: stack top   = %d\n", MemoryPtr);
     // Set `__heap_base` to directly follow the end of the stack.  We don't
     // allocate any heap memory up front, but instead really on the malloc/brk
     // implementation growing the memory at runtime.
-    Config->HeapBaseSymbol->setVirtualAddress(MemoryPtr);
+    WasmSym::HeapBase->setVirtualAddress(MemoryPtr);
     debugPrint("mem: heap base   = %d\n", MemoryPtr);
   }
 
@@ -619,6 +630,7 @@ void Writer::calculateImports() {
 void Writer::calculateExports() {
   bool ExportHidden = Config->Relocatable;
   StringSet<> UsedNames;
+
   auto BudgeLocalName = [&](const Symbol *Sym) {
     StringRef SymName = Sym->getName();
     // We can't budge non-local names.
@@ -638,9 +650,9 @@ void Writer::calculateExports() {
     }
   };
 
-  if (Config->CtorSymbol && (!Config->CtorSymbol->isHidden() || ExportHidden))
+  if (WasmSym::CallCtors && (!WasmSym::CallCtors->isHidden() || ExportHidden))
     ExportedSymbols.emplace_back(
-        WasmExportEntry{Config->CtorSymbol, Config->CtorSymbol->getName()});
+        WasmExportEntry{WasmSym::CallCtors, WasmSym::CallCtors->getName()});
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     for (Symbol *Sym : File->getSymbols()) {
@@ -664,7 +676,7 @@ void Writer::calculateExports() {
     // Can't export the SP right now because its mutable, and mutuable globals
     // are yet supported in the official binary format.
     // TODO(sbc): Remove this if/when the "mutable global" proposal is accepted.
-    if (Sym == Config->StackPointerSymbol)
+    if (Sym == WasmSym::StackPointer)
       continue;
     ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
   }
@@ -712,23 +724,22 @@ void Writer::assignIndexes() {
   uint32_t GlobalIndex = ImportedGlobals.size() + DefinedGlobals.size();
   uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
 
-  if (Config->StackPointerSymbol) {
-    DefinedGlobals.emplace_back(Config->StackPointerSymbol);
-    Config->StackPointerSymbol->setOutputIndex(GlobalIndex++);
-  }
-
-  if (Config->HeapBaseSymbol) {
-    DefinedGlobals.emplace_back(Config->HeapBaseSymbol);
-    Config->HeapBaseSymbol->setOutputIndex(GlobalIndex++);
-  }
+  auto AddDefinedGlobal = [&](Symbol* Sym) {
+    if (Sym) {
+      DefinedGlobals.emplace_back(Sym);
+      Sym->setOutputIndex(GlobalIndex++);
+    }
+  };
+  AddDefinedGlobal(WasmSym::StackPointer);
+  AddDefinedGlobal(WasmSym::HeapBase);
 
   if (Config->Relocatable)
     DefinedGlobals.reserve(Symtab->getSymbols().size());
 
   uint32_t TableIndex = kInitialTableOffset;
 
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    if (Config->Relocatable) {
+  if (Config->Relocatable) {
+    for (ObjFile *File : Symtab->ObjectFiles) {
       DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
       for (Symbol *Sym : File->getSymbols()) {
         // Create wasm globals for data symbols defined in this file
@@ -737,8 +748,7 @@ void Writer::assignIndexes() {
         if (Sym->isFunction())
           continue;
 
-        DefinedGlobals.emplace_back(Sym);
-        Sym->setOutputIndex(GlobalIndex++);
+        AddDefinedGlobal(Sym);
       }
     }
   }
@@ -822,7 +832,7 @@ static const int OPCODE_END = 0xb;
 // in input object.
 void Writer::createCtorFunction() {
   uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
-  Config->CtorSymbol->setOutputIndex(FunctionIndex);
+  WasmSym::CallCtors->setOutputIndex(FunctionIndex);
 
   // First write the body bytes to a string.
   std::string FunctionBody;
@@ -846,7 +856,7 @@ void Writer::createCtorFunction() {
       reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
       CtorFunctionBody.size());
   CtorFunction = llvm::make_unique<SyntheticFunction>(
-      Signature, BodyArray, Config->CtorSymbol->getName());
+      Signature, BodyArray, WasmSym::CallCtors->getName());
   CtorFunction->setOutputIndex(FunctionIndex);
   DefinedFunctions.emplace_back(CtorFunction.get());
 }
