@@ -476,7 +476,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
       break;
 
     case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::NameAlias:
     case swift::TypeKind::Paren:
     case swift::TypeKind::Dictionary:
@@ -5716,7 +5715,6 @@ SwiftASTContext::GetTypeInfo(void *type,
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -5821,7 +5819,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassOther;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -6294,7 +6291,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -6379,7 +6375,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -6479,7 +6474,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -6593,7 +6587,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -6732,7 +6725,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -6835,7 +6827,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return 0;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -7148,7 +7139,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
@@ -7332,7 +7322,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       break;
 
     case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::NameAlias:
     case swift::TypeKind::Paren:
     case swift::TypeKind::Dictionary:
@@ -7465,7 +7454,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
       break;
 
     case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::NameAlias:
     case swift::TypeKind::Paren:
     case swift::TypeKind::Dictionary:
@@ -7823,7 +7811,6 @@ bool SwiftASTContext::DumpTypeValue(
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
