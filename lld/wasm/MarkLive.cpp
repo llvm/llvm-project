@@ -52,7 +52,7 @@ void lld::wasm::markLive() {
   // Add GC root symbols.
   if (!Config->Entry.empty())
     Enqueue(Symtab->find(Config->Entry));
-  Enqueue(Config->CtorSymbol);
+  Enqueue(WasmSym::CallCtors);
 
   // By default we export all non-hidden, so they are gc roots too
   for (Symbol *Sym : Symtab->getSymbols())
