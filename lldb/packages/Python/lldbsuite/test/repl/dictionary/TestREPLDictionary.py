@@ -28,7 +28,6 @@ class REPLDictionaryTestCase (lldbrepl.REPLTest):
     @decorators.expectedFailureAll(
         oslist=['linux'],
         bugnumber="bugs.swift.org/SR-843")
-    @decorators.skipIf # rdar://36847830
     def testREPL(self):
         lldbrepl.REPLTest.testREPL(self)
 
