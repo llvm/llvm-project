@@ -55,12 +55,16 @@ namespace sema {
 /// parsed.
 class CompoundScopeInfo {
 public:
-  CompoundScopeInfo()
-    : HasEmptyLoopBodies(false) { }
+  CompoundScopeInfo(bool IsStmtExpr)
+    : HasEmptyLoopBodies(false), IsStmtExpr(IsStmtExpr) { }
 
   /// \brief Whether this compound stamement contains `for' or `while' loops
   /// with empty bodies.
   bool HasEmptyLoopBodies;
+
+  /// \brief Whether this compound statement corresponds to a GNU statement
+  /// expression.
+  bool IsStmtExpr;
 
   void setHasEmptyLoopBodies() {
     HasEmptyLoopBodies = true;
