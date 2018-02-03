@@ -1479,8 +1479,8 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
         const CGBlockInfo::Capture &capture = blockInfo.getCapture(variable);
         if (capture.isConstant()) {
           auto addr = LocalDeclMap.find(variable)->second;
-          DI->EmitDeclareOfAutoVariable(variable, addr.getPointer(),
-                                        Builder);
+          (void)DI->EmitDeclareOfAutoVariable(variable, addr.getPointer(),
+                                              Builder);
           continue;
         }
 

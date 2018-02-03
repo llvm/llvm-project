@@ -116,7 +116,7 @@ static cl::opt<GranularityChoice> StmtGranularity(
                           "Scalar independence heuristic"),
                clEnumValN(GranularityChoice::Stores, "store",
                           "Store-level granularity")),
-    cl::init(GranularityChoice::BasicBlocks), cl::cat(PollyCategory));
+    cl::init(GranularityChoice::ScalarIndependence), cl::cat(PollyCategory));
 
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
@@ -856,6 +856,7 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // Finally build the statements.
   int Count = 0;
   long BBIdx = scop->getNextStmtIdx();
+  bool MainFound = false;
   for (auto &Instructions : reverse(LeaderToInstList)) {
     std::vector<Instruction *> &InstList = Instructions.second;
 
@@ -866,6 +867,8 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
                InstList.end();
     else
       IsMain = (Count == 0);
+    if (IsMain)
+      MainFound = true;
 
     std::reverse(InstList.begin(), InstList.end());
     std::string Name = makeStmtName(BB, BBIdx, Count, IsMain);
@@ -877,7 +880,7 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // instructions, but holds the PHI write accesses for successor basic blocks,
   // if the incoming value is not defined in another statement if the same BB.
   // The epilogue will be removed if no PHIWrite is added to it.
-  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, false, true);
+  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, !MainFound, true);
   scop->addScopStmt(BB, EpilogueName, L, {});
 }
 
