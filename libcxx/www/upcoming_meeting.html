@@ -63,11 +63,11 @@
 <tr><td><a href="https://wg21.link/LWG2243">2243</a></td><td><tt>istream::putback</tt> problem</td><td>Jacksonville</td><td>Complete</td></tr>
 <tr><td><a href="https://wg21.link/LWG2816">2816</a></td><td><tt>resize_file</tt> has impossible postcondition</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
 <tr><td><a href="https://wg21.link/LWG2843">2843</a></td><td>Unclear behavior of <tt>std::pmr::memory_resource::do_allocate()</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2849">2849</a></td><td>Why does <tt>!is_regular_file(from)</tt> cause <tt>copy_file</tt> to report a "file already exists" error?</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2851">2851</a></td><td><tt>std::filesystem</tt> enum classes are now underspecified</td><td>Jacksonville</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2849">2849</a></td><td>Why does <tt>!is_regular_file(from)</tt> cause <tt>copy_file</tt> to report a "file already exists" error?</td><td>Jacksonville</td><td>Nothing to do</td></tr>
+<tr><td><a href="https://wg21.link/LWG2851">2851</a></td><td><tt>std::filesystem</tt> enum classes are now underspecified</td><td>Jacksonville</td><td>Nothing to do</td></tr>
 <tr><td><a href="https://wg21.link/LWG2969">2969</a></td><td><tt>polymorphic_allocator::construct()</tt> shouldn't pass <tt>resource()</tt></td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG2975">2975</a></td><td>Missing case for <tt>pair</tt> construction in scoped and polymorphic allocators</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2989">2989</a></td><td><tt>path</tt>'s stream insertion operator lets you insert everything under the sun</td><td>Jacksonville</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2989">2989</a></td><td><tt>path</tt>'s stream insertion operator lets you insert everything under the sun</td><td>Jacksonville</td><td>Completed</td></tr>
 <tr><td><a href="https://wg21.link/LWG3000">3000</a></td><td><tt>monotonic_memory_resource::do_is_equal</tt> uses <tt>dynamic_cast</tt> unnecessarily</td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3002">3002</a></td><td>[networking.ts] <tt>basic_socket_acceptor::is_open()</tt> isn't <tt>noexcept</tt></td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3004">3004</a></td><td>&sect;[string.capacity] and &sect;[vector.capacity] should specify time complexity for <tt>capacity()</tt></td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
@@ -75,9 +75,9 @@
 <tr><td><a href="https://wg21.link/LWG3007">3007</a></td><td><tt>allocate_shared</tt> should rebind allocator to <i>cv</i>-unqualified <tt>value_type</tt> for construction</td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3009">3009</a></td><td>Including <tt>&lt;string_view&gt;</tt> doesn't provide <tt>std::size/empty/data</tt></td><td>Jacksonville</td><td>Complete</td></tr>
 <tr><td><a href="https://wg21.link/LWG3010">3010</a></td><td>[networking.ts] <tt>uses_executor</tt> says "if a type <tt>T::executor_type</tt> exists"</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3013">3013</a></td><td><tt>(recursive_)directory_iterator</tt> construction and traversal should not be <tt>noexcept</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3014">3014</a></td><td>More <tt>noexcept</tt> issues with filesystem operations</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3015">3015</a></td><td><tt>copy_options::<i>unspecified</i></tt> underspecified</td><td>Jacksonville</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3013">3013</a></td><td><tt>(recursive_)directory_iterator</tt> construction and traversal should not be <tt>noexcept</tt></td><td>Jacksonville</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG3014">3014</a></td><td>More <tt>noexcept</tt> issues with filesystem operations</td><td>Jacksonville</td><td>Complete</td></tr>
+      <tr><td><a href="https://wg21.link/LWG3015">3015</a></td><td><tt>copy_options::<i>unspecified</i></tt> underspecified</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
 <tr><td><a href="https://wg21.link/LWG3017">3017</a></td><td><tt>list splice</tt> functions should use <tt>addressof</tt></td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3020">3020</a></td><td>[networking.ts] Remove spurious nested <tt>value_type</tt> buffer sequence requirement</td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3026">3026</a></td><td><tt>filesystem::weakly_canonical</tt> still defined in terms of <tt>canonical(p, base)</tt></td><td>Jacksonville</td><td></td></tr>
@@ -100,11 +100,11 @@
 <li> 2243 - We already do this.</li>
 <li> 2816 - Wording changes only</li>
 <li> 2843 - We don't have PMRs yet</li>
-<li> 2849 - Eric? </li>
-<li> 2851 - Eric? </li>
+<li> 2849 - We already report different errors. </li>
+<li> 2851 - Wording changes only</li>
 <li> 2969 - We don't have PMRs yet</li>
 <li> 2975 - We can do the scoped_ bit, but the PMR stuff will have to wait.</li>
-<li> 2989 - Eric? </li>
+<li> 2989 - Proposed changes LGTM </li>
 <li> 3000 - We don't have PMRs yet</li>
 <li> 3002 - No networking TS implementation yet</li>
 <li> 3004 - Wording changes only</li>
@@ -112,9 +112,9 @@
 <li> 3007 - <i>Looks easy</i></li>
 <li> 3009 - We do this already; tests added in r323719</li>
 <li> 3010 - No networking TS implementation yet</li>
-<li> 3013 - Eric? </li>
-<li> 3014 - Eric? </li>
-<li> 3015 - Eric? </li>
+<li> 3013 - We already implement this</li>
+<li> 3014 - We implement this</li>
+<li> 3015 - Wording changes only</li>
 <li> 3017 - We don't do the splicing stuff yet</li>
 <li> 3020 - No networking TS implementation yet</li>
 <li> 3026 - I think this is just wording cleanup - Eric?</li>

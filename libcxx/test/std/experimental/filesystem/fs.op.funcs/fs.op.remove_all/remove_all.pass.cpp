@@ -33,7 +33,7 @@ TEST_CASE(test_signatures)
     ASSERT_SAME_TYPE(decltype(fs::remove_all(p, ec)), std::uintmax_t);
 
     ASSERT_NOT_NOEXCEPT(fs::remove_all(p));
-    ASSERT_NOEXCEPT(fs::remove_all(p, ec));
+    ASSERT_NOT_NOEXCEPT(fs::remove_all(p, ec));
 }
 
 TEST_CASE(test_error_reporting)
