@@ -20,10 +20,10 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-// FIXME: Clang generates copy assignment operators for types with const members
-// in C++03. The generated operator is ill-formed but still present.
-// I'm not sure if this is a Clang bug, but we need to work around it for now.
-#if TEST_STD_VER < 11 && defined(__clang__)
+// In C++03 the copy assignment operator is not deleted when the implicitly
+// generated operator would be ill-formed; like in the case of a struct with a
+// const member.
+#if TEST_STD_VER < 11
 #define TEST_NOT_COPY_ASSIGNABLE(T) ((void)0)
 #else
 #define TEST_NOT_COPY_ASSIGNABLE(T) static_assert(!std::is_copy_assignable<T>::value, "")
