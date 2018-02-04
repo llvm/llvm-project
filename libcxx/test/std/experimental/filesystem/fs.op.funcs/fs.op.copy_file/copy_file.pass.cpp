@@ -44,8 +44,8 @@ TEST_CASE(test_signatures)
     ASSERT_SAME_TYPE(decltype(fs::copy_file(p, p, opts, ec)), bool);
     ASSERT_NOT_NOEXCEPT(fs::copy_file(p, p));
     ASSERT_NOT_NOEXCEPT(fs::copy_file(p, p, opts));
-    ASSERT_NOEXCEPT(fs::copy_file(p, p, ec));
-    ASSERT_NOEXCEPT(fs::copy_file(p, p, opts, ec));
+    ASSERT_NOT_NOEXCEPT(fs::copy_file(p, p, ec));
+    ASSERT_NOT_NOEXCEPT(fs::copy_file(p, p, opts, ec));
 }
 
 TEST_CASE(test_error_reporting)

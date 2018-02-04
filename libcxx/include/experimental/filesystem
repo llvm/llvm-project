@@ -88,17 +88,17 @@
                    error_code& ec);
 
     bool copy_file(const path& from, const path& to);
-    bool copy_file(const path& from, const path& to, error_code& ec) _NOEXCEPT;
+    bool copy_file(const path& from, const path& to, error_code& ec);
     bool copy_file(const path& from, const path& to, copy_options option);
     bool copy_file(const path& from, const path& to, copy_options option,
-                           error_code& ec) _NOEXCEPT;
+                           error_code& ec);
 
     void copy_symlink(const path& existing_symlink, const path& new_symlink);
     void copy_symlink(const path& existing_symlink, const path& new_symlink,
                               error_code& ec) _NOEXCEPT;
 
     bool create_directories(const path& p);
-    bool create_directories(const path& p, error_code& ec) _NOEXCEPT;
+    bool create_directories(const path& p, error_code& ec);
 
     bool create_directory(const path& p);
     bool create_directory(const path& p, error_code& ec) _NOEXCEPT;
@@ -188,7 +188,7 @@
     bool remove(const path& p, error_code& ec) _NOEXCEPT;
 
     uintmax_t    remove_all(const path& p);
-    uintmax_t    remove_all(const path& p, error_code& ec) _NOEXCEPT;
+    uintmax_t    remove_all(const path& p, error_code& ec);
 
     void rename(const path& from, const path& to);
     void rename(const path& from, const path& to, error_code& ec) _NOEXCEPT;
@@ -1375,7 +1375,7 @@ bool copy_file(const path& __from, const path& __to) {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-bool copy_file(const path& __from, const path& __to, error_code& __ec) _NOEXCEPT {
+bool copy_file(const path& __from, const path& __to, error_code& __ec) {
     return __copy_file(__from, __to, copy_options::none, &__ec);
 }
 
@@ -1386,7 +1386,7 @@ bool copy_file(const path& __from, const path& __to, copy_options __opt) {
 
 inline _LIBCPP_INLINE_VISIBILITY
 bool copy_file(const path& __from, const path& __to,
-               copy_options __opt, error_code& __ec) _NOEXCEPT {
+               copy_options __opt, error_code& __ec){
     return __copy_file(__from, __to, __opt, &__ec);
 }
 
@@ -1406,7 +1406,7 @@ bool create_directories(const path& __p) {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-bool create_directories(const path& __p, error_code& __ec) _NOEXCEPT {
+bool create_directories(const path& __p, error_code& __ec) {
     return __create_directories(__p, &__ec);
 }
 
@@ -1699,7 +1699,7 @@ uintmax_t remove_all(const path& __p) {
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-uintmax_t remove_all(const path& __p, error_code& __ec) _NOEXCEPT {
+uintmax_t remove_all(const path& __p, error_code& __ec) {
     return __remove_all(__p, &__ec);
 }
 

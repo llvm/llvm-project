@@ -34,7 +34,7 @@ TEST_CASE(test_signatures)
     ASSERT_SAME_TYPE(decltype(fs::create_directories(p)), bool);
     ASSERT_SAME_TYPE(decltype(fs::create_directories(p, ec)), bool);
     ASSERT_NOT_NOEXCEPT(fs::create_directories(p));
-    ASSERT_NOEXCEPT(fs::create_directories(p, ec));
+    ASSERT_NOT_NOEXCEPT(fs::create_directories(p, ec));
 }
 
 TEST_CASE(create_existing_directory)
