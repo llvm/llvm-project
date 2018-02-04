@@ -122,7 +122,8 @@ struct __array_traits {
   typedef _Tp _StorageT[_Size];
 
   _LIBCPP_INLINE_VISIBILITY
-  static _LIBCPP_CONSTEXPR_AFTER_CXX14 _Tp* __data(_StorageT& __store) {
+  static _LIBCPP_CONSTEXPR_AFTER_CXX14 typename remove_const<_Tp>::type*
+  __data(typename remove_const<_StorageT>::type& __store) {
     return __store;
   }
 
@@ -144,12 +145,16 @@ struct __array_traits {
 
 template <class _Tp>
 struct __array_traits<_Tp, 0> {
-  typedef typename aligned_storage<sizeof(_Tp), alignment_of<_Tp>::value>::type _StorageT;
+  typedef typename aligned_storage<sizeof(_Tp), alignment_of<_Tp>::value>::type
+      _NonConstStorageT;
+  typedef typename conditional<is_const<_Tp>::value, const _NonConstStorageT,
+                               _NonConstStorageT>::type _StorageT;
 
+  typedef typename remove_const<_Tp>::type _NonConstTp;
   _LIBCPP_INLINE_VISIBILITY
-  static _Tp* __data(_StorageT& __store) {
+  static _NonConstTp* __data(_NonConstStorageT& __store) {
     _StorageT *__ptr = std::addressof(__store);
-    return reinterpret_cast<_Tp*>(__ptr);
+    return reinterpret_cast<_NonConstTp*>(__ptr);
   }
 
   _LIBCPP_INLINE_VISIBILITY
@@ -162,8 +167,7 @@ struct __array_traits<_Tp, 0> {
   static void __swap(_StorageT&, _StorageT&) {}
 
   _LIBCPP_INLINE_VISIBILITY
-  static void __fill(_StorageT&, _Tp const&) {
-  }
+  static void __fill(_StorageT&, _Tp const&) {}
 };
 
 template <class _Tp, size_t _Size>
@@ -187,12 +191,19 @@ struct _LIBCPP_TEMPLATE_VIS array
     typename _Traits::_StorageT __elems_;
 
     // No explicit construct/copy/destroy for aggregate type
-    _LIBCPP_INLINE_VISIBILITY void fill(const value_type& __u)
-        {_Traits::__fill(__elems_, __u);}
+    _LIBCPP_INLINE_VISIBILITY void fill(const value_type& __u) {
+      static_assert(_Size != 0 || !is_const<_Tp>::value,
+                    "cannot fill zero-sized array of type 'const T'");
+      _Traits::__fill(__elems_, __u);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
-    void swap(array& __a) _NOEXCEPT_(_Size == 0 || __is_nothrow_swappable<_Tp>::value)
-        { _Traits::__swap(__elems_, __a.__elems_); }
+    void swap(array& __a)
+        _NOEXCEPT_(_Size == 0 || __is_nothrow_swappable<_Tp>::value) {
+      static_assert(_Size != 0 || !is_const<_Tp>::value,
+                    "cannot swap zero-sized array of type 'const T'");
+      _Traits::__swap(__elems_, __a.__elems_);
+    }
 
     // iterators:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
