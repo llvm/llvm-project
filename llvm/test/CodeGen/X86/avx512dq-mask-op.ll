@@ -4,9 +4,9 @@
 define i8 @mask8(i8 %x) {
 ; CHECK-LABEL: mask8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %edi, %k0
-; CHECK-NEXT:    knotb %k0, %k0
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    xorb %dil, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
