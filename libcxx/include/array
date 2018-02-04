@@ -146,21 +146,19 @@ struct __array_traits {
 template <class _Tp>
 struct __array_traits<_Tp, 0> {
   typedef typename aligned_storage<sizeof(_Tp), alignment_of<_Tp>::value>::type
-      _NonConstStorageT;
+      _NonConstStorageT[1];
   typedef typename conditional<is_const<_Tp>::value, const _NonConstStorageT,
                                _NonConstStorageT>::type _StorageT;
-
   typedef typename remove_const<_Tp>::type _NonConstTp;
+
   _LIBCPP_INLINE_VISIBILITY
-  static _NonConstTp* __data(_NonConstStorageT& __store) {
-    _StorageT *__ptr = std::addressof(__store);
-    return reinterpret_cast<_NonConstTp*>(__ptr);
+  static _NonConstTp* __data(_NonConstStorageT &__store) {
+    return reinterpret_cast<_NonConstTp*>(__store);
   }
 
   _LIBCPP_INLINE_VISIBILITY
-  static const _Tp* __data(const _StorageT& __store) {
-    const _StorageT *__ptr = std::addressof(__store);
-    return reinterpret_cast<const _Tp*>(__ptr);
+  static const _Tp* __data(const _StorageT &__store) {
+    return reinterpret_cast<const _Tp*>(__store);
   }
 
   _LIBCPP_INLINE_VISIBILITY
