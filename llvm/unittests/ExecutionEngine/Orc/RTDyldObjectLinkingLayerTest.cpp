@@ -243,7 +243,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     std::make_shared<object::OwningBinary<object::ObjectFile>>(
       Compile(*MB2.getModule()));
 
-  auto NR = std::make_shared<NullResolver>();
+  auto NR = std::make_shared<NullLegacyResolver>();
   auto H = cantFail(ObjLayer.addObject(std::move(Obj1), NR));
   cantFail(ObjLayer.addObject(std::move(Obj2), NR));
   cantFail(ObjLayer.emitAndFinalize(H));

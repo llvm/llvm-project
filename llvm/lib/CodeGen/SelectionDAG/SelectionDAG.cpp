@@ -1644,7 +1644,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
 }
 
 SDValue SelectionDAG::getCommutedVectorShuffle(const ShuffleVectorSDNode &SV) {
-  MVT VT = SV.getSimpleValueType(0);
+  EVT VT = SV.getValueType(0);
   SmallVector<int, 8> MaskVec(SV.getMask().begin(), SV.getMask().end());
   ShuffleVectorSDNode::commuteMask(MaskVec);
 

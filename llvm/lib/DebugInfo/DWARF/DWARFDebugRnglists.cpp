@@ -114,7 +114,7 @@ Error DWARFDebugRnglists::extract(DWARFDataExtractor Data,
                          "offset 0x%" PRIx32,
                          *OffsetPtr - 1);
     case dwarf::DW_RLE_start_end: {
-      if (End - *OffsetPtr < HeaderData.AddrSize * 2)
+      if ((End - *OffsetPtr) < unsigned(HeaderData.AddrSize * 2))
         return createError("insufficient space remaining in table for "
                            "DW_RLE_start_end encoding "
                            "at offset 0x%" PRIx32,

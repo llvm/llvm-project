@@ -3727,23 +3727,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   // Mask instructions
   // 16-bit mask
-  def int_x86_avx512_kand_w : // TODO: remove this intrinsic
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
-                         [IntrNoMem]>;
-  def int_x86_avx512_kandn_w : // TODO: remove this intrinsic
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
-                         [IntrNoMem]>;
-  def int_x86_avx512_knot_w : // TODO: remove this intrinsic
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty], [IntrNoMem]>;
-  def int_x86_avx512_kor_w : // TODO: remove this intrinsic
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
-                         [IntrNoMem]>;
-  def int_x86_avx512_kxor_w : // TODO: remove this intrinsic
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
-                         [IntrNoMem]>;
-  def int_x86_avx512_kxnor_w : // TODO: remove this intrinsic
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
-                         [IntrNoMem]>;
   def int_x86_avx512_kortestz_w : GCCBuiltin<"__builtin_ia32_kortestzhi">,
               Intrinsic<[llvm_i32_ty], [llvm_i16_ty, llvm_i16_ty],
                         [IntrNoMem]>;

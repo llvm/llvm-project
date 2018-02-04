@@ -540,7 +540,7 @@ define i32 @stack_fold_pcmpeqw(<32 x i16> %a0, <32 x i16> %a1) {
   ret i32 %3
 }
 
-define i16 @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
   ;CHECK-LABEL: stack_fold_pcmpeqd_mask
   ;CHECK:       vpcmpeqd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%k[0-7]}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -550,11 +550,11 @@ define i16 @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* 
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp eq <16 x i32> %3, %a0
   %6 = and <16 x i1> %4, %5
-  %7 = bitcast <16 x i1> %6 to i16
-  ret i16 %7
+  %7 = select <16 x i1> %6, <16 x i32> %b0, <16 x i32> %b1
+  ret <16 x i32> %7
 }
 
-define i16 @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
   ;CHECK-LABEL: stack_fold_pcmpeqd_mask_commuted
   ;CHECK:       vpcmpeqd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%k[0-7]}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -564,11 +564,11 @@ define i16 @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp eq <16 x i32> %a0, %3
   %6 = and <16 x i1> %4, %5
-  %7 = bitcast <16 x i1> %6 to i16
-  ret i16 %7
+  %7 = select <16 x i1> %6, <16 x i32> %b0, <16 x i32> %b1
+  ret <16 x i32> %7
 }
 
-define i16 @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
+define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
   ;CHECK-LABEL: stack_fold_pcmpled_mask
   ;CHECK:       vpcmpled {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%k[0-7]}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -578,8 +578,8 @@ define i16 @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* 
   %4 = bitcast i16 %mask to <16 x i1>
   %5 = icmp sge <16 x i32> %a0, %3
   %6 = and <16 x i1> %4, %5
-  %7 = bitcast <16 x i1> %6 to i16
-  ret i16 %7
+  %7 = select <16 x i1> %6, <16 x i32> %b0, <16 x i32> %b1
+  ret <16 x i32> %7
 }
 
 define i16 @stack_fold_pcmpleud(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {

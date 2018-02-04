@@ -206,7 +206,7 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Test addObject with T1 (allocating)
   auto Obj1 = std::make_shared<MockObjectFile>(211);
-  auto SR = std::make_shared<NullResolver>();
+  auto SR = std::make_shared<NullLegacyResolver>();
   M.expectAddObject(Obj1, SR);
   auto H = cantFail(T1.addObject(std::move(Obj1), SR));
   M.verifyAddObject(H);
@@ -311,7 +311,7 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
   // compile.
-  auto Resolver = std::make_shared<NullResolver>();
+  auto Resolver = std::make_shared<NullLegacyResolver>();
   cantFail(CompileLayer.addModule(std::shared_ptr<llvm::Module>(), Resolver));
 
   // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer

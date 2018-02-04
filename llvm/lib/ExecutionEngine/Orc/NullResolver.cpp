@@ -14,11 +14,12 @@
 namespace llvm {
 namespace orc {
 
-JITSymbol NullResolver::findSymbol(const std::string &Name) {
+JITSymbol NullLegacyResolver::findSymbol(const std::string &Name) {
   llvm_unreachable("Unexpected cross-object symbol reference");
 }
 
-JITSymbol NullResolver::findSymbolInLogicalDylib(const std::string &Name) {
+JITSymbol
+NullLegacyResolver::findSymbolInLogicalDylib(const std::string &Name) {
   llvm_unreachable("Unexpected cross-object symbol reference");
 }
 

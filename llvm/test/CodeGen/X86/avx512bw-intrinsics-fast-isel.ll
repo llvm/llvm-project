@@ -624,14 +624,12 @@ entry:
 define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_mask_test_epi8_mask:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    vptestmb %zmm0, %zmm1, %k2
-; X32-NEXT:    kandd %k1, %k2, %k1
-; X32-NEXT:    kmovd %k1, %eax
-; X32-NEXT:    kshiftrq $32, %k2, %k1
-; X32-NEXT:    kandd %k0, %k1, %k0
-; X32-NEXT:    kmovd %k0, %edx
+; X32-NEXT:    vptestmb %zmm0, %zmm1, %k0
+; X32-NEXT:    kshiftrq $32, %k0, %k1
+; X32-NEXT:    kmovd %k1, %edx
+; X32-NEXT:    kmovd %k0, %eax
+; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -727,14 +725,12 @@ entry:
 define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_mask_testn_epi8_mask:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    vptestnmb %zmm0, %zmm1, %k2
-; X32-NEXT:    kandd %k1, %k2, %k1
-; X32-NEXT:    kmovd %k1, %eax
-; X32-NEXT:    kshiftrq $32, %k2, %k1
-; X32-NEXT:    kandd %k0, %k1, %k0
-; X32-NEXT:    kmovd %k0, %edx
+; X32-NEXT:    vptestnmb %zmm0, %zmm1, %k0
+; X32-NEXT:    kshiftrq $32, %k0, %k1
+; X32-NEXT:    kmovd %k1, %edx
+; X32-NEXT:    kmovd %k0, %eax
+; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;

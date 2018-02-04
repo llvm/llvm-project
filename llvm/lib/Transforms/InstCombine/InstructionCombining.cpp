@@ -144,11 +144,19 @@ Value *InstCombiner::EmitGEPOffset(User *GEP) {
 /// We don't want to convert from a legal to an illegal type or from a smaller
 /// to a larger illegal type. A width of '1' is always treated as a legal type
 /// because i1 is a fundamental type in IR, and there are many specialized
-/// optimizations for i1 types.
+/// optimizations for i1 types. Widths of 8, 16 or 32 are equally treated as
+/// legal to convert to, in order to open up more combining opportunities.
+/// NOTE: this treats i8, i16 and i32 specially, due to them being so common
+/// from frontend languages.
 bool InstCombiner::shouldChangeType(unsigned FromWidth,
                                     unsigned ToWidth) const {
   bool FromLegal = FromWidth == 1 || DL.isLegalInteger(FromWidth);
   bool ToLegal = ToWidth == 1 || DL.isLegalInteger(ToWidth);
+
+  // Convert to widths of 8, 16 or 32 even if they are not legal types. Only
+  // shrink types, to prevent infinite loops.
+  if (ToWidth < FromWidth && (ToWidth == 8 || ToWidth == 16 || ToWidth == 32))
+    return true;
 
   // If this is a legal integer from type, and the result would be an illegal
   // type, don't do the transformation.
