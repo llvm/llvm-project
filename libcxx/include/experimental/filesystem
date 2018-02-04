@@ -28,12 +28,13 @@
 
     path operator/ (const path& lhs, const path& rhs);
 
+    // fs.path.io operators are friends of path.
     template <class charT, class traits>
-    basic_ostream<charT, traits>&
+    friend basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const path& p);
 
     template <class charT, class traits>
-    basic_istream<charT, traits>&
+    friend basic_istream<charT, traits>&
     operator>>(basic_istream<charT, traits>& is, path& p);
 
     template <class Source>
@@ -994,6 +995,40 @@ public:
     iterator begin() const;
     iterator end() const;
 
+
+    template <class _CharT, class _Traits>
+    _LIBCPP_INLINE_VISIBILITY
+    friend typename enable_if<is_same<_CharT, char>::value &&
+                       is_same<_Traits, char_traits<char>>::value,
+                       basic_ostream<_CharT, _Traits>&
+    >::type
+    operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
+        __os << std::__quoted(__p.native());
+        return __os;
+    }
+
+    template <class _CharT, class _Traits>
+    _LIBCPP_INLINE_VISIBILITY
+    friend typename enable_if<!is_same<_CharT, char>::value ||
+                       !is_same<_Traits, char_traits<char>>::value,
+                       basic_ostream<_CharT, _Traits>&
+    >::type
+    operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
+        __os << std::__quoted(__p.string<_CharT, _Traits>());
+        return __os;
+    }
+
+    template <class _CharT, class _Traits>
+    _LIBCPP_INLINE_VISIBILITY
+    friend basic_istream<_CharT, _Traits>&
+    operator>>(basic_istream<_CharT, _Traits>& __is, path& __p)
+    {
+        basic_string<_CharT, _Traits> __tmp;
+        __is >> __quoted(__tmp);
+        __p = __tmp;
+        return __is;
+    }
+
 private:
     inline _LIBCPP_INLINE_VISIBILITY
     path& __assign_view(__string_view const& __s) noexcept { __pn_ = string_type(__s); return *this; }
@@ -1035,39 +1070,6 @@ bool operator>=(const path& __lhs, const path& __rhs) _NOEXCEPT
 inline _LIBCPP_INLINE_VISIBILITY
 path operator/(const path& __lhs, const path& __rhs) {
     return path(__lhs) /= __rhs;
-}
-
-template <class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
-typename enable_if<is_same<_CharT, char>::value &&
-                   is_same<_Traits, char_traits<char>>::value,
-                   basic_ostream<_CharT, _Traits>&
->::type
-operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.native());
-    return __os;
-}
-
-template <class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
-typename enable_if<!is_same<_CharT, char>::value ||
-                   !is_same<_Traits, char_traits<char>>::value,
-                   basic_ostream<_CharT, _Traits>&
->::type
-operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.string<_CharT, _Traits>());
-    return __os;
-}
-
-template <class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
-basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, path& __p)
-{
-    basic_string<_CharT, _Traits> __tmp;
-    __is >> __quoted(__tmp);
-    __p = __tmp;
-    return __is;
 }
 
 template <class _Source>
