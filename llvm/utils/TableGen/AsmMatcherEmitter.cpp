@@ -378,6 +378,9 @@ struct MatchableInfo {
     /// The operand name this is, if anything.
     StringRef SrcOpName;
 
+    /// The operand name this is, before renaming for tied operands.
+    StringRef OrigSrcOpName;
+
     /// The suboperand index within SrcOpName, or -1 for the entire operand.
     int SubOpIdx;
 
@@ -416,14 +419,22 @@ struct MatchableInfo {
       RegOperand
     } Kind;
 
+    /// Tuple containing the index of the (earlier) result operand that should
+    /// be copied from, as well as the indices of the corresponding (parsed)
+    /// operands in the asm string.
+    struct TiedOperandsTuple {
+      unsigned ResOpnd;
+      unsigned SrcOpnd1Idx;
+      unsigned SrcOpnd2Idx;
+    };
+
     union {
       /// This is the operand # in the AsmOperands list that this should be
       /// copied from.
       unsigned AsmOperandNum;
 
-      /// TiedOperandNum - This is the (earlier) result operand that should be
-      /// copied from.
-      unsigned TiedOperandNum;
+      /// Description of tied operands.
+      TiedOperandsTuple TiedOperands;
 
       /// ImmVal - This is the immediate value added to the instruction.
       int64_t ImmVal;
@@ -444,10 +455,11 @@ struct MatchableInfo {
       return X;
     }
 
-    static ResOperand getTiedOp(unsigned TiedOperandNum) {
+    static ResOperand getTiedOp(unsigned TiedOperandNum, unsigned SrcOperand1,
+                                unsigned SrcOperand2) {
       ResOperand X;
       X.Kind = TiedOperand;
-      X.TiedOperandNum = TiedOperandNum;
+      X.TiedOperands = { TiedOperandNum, SrcOperand1, SrcOperand2 };
       X.MINumOperands = 1;
       return X;
     }
@@ -574,7 +586,7 @@ struct MatchableInfo {
 
   /// validate - Return true if this matchable is a valid thing to match against
   /// and perform a bunch of validity checking.
-  bool validate(StringRef CommentDelimiter, bool Hack) const;
+  bool validate(StringRef CommentDelimiter, bool IsAlias) const;
 
   /// findAsmOperand - Find the AsmOperand with the specified name and
   /// suboperand index.
@@ -587,14 +599,21 @@ struct MatchableInfo {
 
   /// findAsmOperandNamed - Find the first AsmOperand with the specified name.
   /// This does not check the suboperand index.
-  int findAsmOperandNamed(StringRef N) const {
-    auto I = find_if(AsmOperands,
+  int findAsmOperandNamed(StringRef N, int LastIdx = -1) const {
+    auto I = std::find_if(AsmOperands.begin() + LastIdx + 1, AsmOperands.end(),
                      [&](const AsmOperand &Op) { return Op.SrcOpName == N; });
     return (I != AsmOperands.end()) ? I - AsmOperands.begin() : -1;
   }
 
+  int findAsmOperandOriginallyNamed(StringRef N) const {
+    auto I =
+        find_if(AsmOperands,
+                [&](const AsmOperand &Op) { return Op.OrigSrcOpName == N; });
+    return (I != AsmOperands.end()) ? I - AsmOperands.begin() : -1;
+  }
+
   void buildInstructionResultOperands();
-  void buildAliasResultOperands();
+  void buildAliasResultOperands(bool AliasConstraintsAreChecked);
 
   /// operator< - Compare two matchables.
   bool operator<(const MatchableInfo &RHS) const {
@@ -860,10 +879,6 @@ void MatchableInfo::formTwoOperandAlias(StringRef Constraint) {
       if (Op.AsmOperandNum > (unsigned)SrcAsmOperand)
         --Op.AsmOperandNum;
       break;
-    case ResOperand::TiedOperand:
-      if (Op.TiedOperandNum > (unsigned)SrcAsmOperand)
-        --Op.TiedOperandNum;
-      break;
     }
   }
 }
@@ -897,22 +912,6 @@ extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
 
   // If there is no register prefix (i.e. "%" in "%eax"), then this may
   // be some random non-register token, just ignore it.
-}
-
-static Optional<size_t>
-getAsmOperandIdx(const SmallVectorImpl<MatchableInfo::AsmOperand> &AsmOperands,
-                 std::string Name) {
-  const auto SymbolicName = std::string("$") + Name;
-  const auto Pos =
-      std::find_if(AsmOperands.begin(), AsmOperands.end(),
-                   [&SymbolicName](const MatchableInfo::AsmOperand &A) {
-        return A.Token == SymbolicName;
-      });
-
-  if (Pos == AsmOperands.end())
-    return Optional<size_t>();
-
-  return Optional<size_t>(std::distance(AsmOperands.begin(), Pos));
 }
 
 void MatchableInfo::initialize(const AsmMatcherInfo &Info,
@@ -963,37 +962,6 @@ void MatchableInfo::initialize(const AsmMatcherInfo &Info,
 
   HasDeprecation =
       DepMask ? !DepMask->getValue()->getAsUnquotedString().empty() : false;
-
-  // Do not generate tied operand info if the instruction does not
-  // use the default AsmMatchConverter.
-  if (TheDef->getValue("AsmMatchConverter") &&
-      !TheDef->getValueAsString("AsmMatchConverter").empty())
-    return;
-
-  // Generate tied operand contraints info.
-  const auto &CGIOperands = getResultInst()->Operands;
-  for (const auto &CGIOp : CGIOperands) {
-    int TiedReg = CGIOp.getTiedRegister();
-    if (TiedReg == -1)
-      continue;
-
-    Optional<size_t> LHSIdx = getAsmOperandIdx(AsmOperands, CGIOp.Name);
-    Optional<size_t> RHSIdx =
-        getAsmOperandIdx(AsmOperands, CGIOperands[TiedReg].Name);
-    // Skipping operands with constraint but no reference in the
-    // AsmString. No need to throw a warning, as it's normal to have
-    // a $dst operand in the outs dag that is constrained to a $src
-    // operand in the ins dag but that does not appear in the AsmString.
-    if (!LHSIdx || !RHSIdx)
-      continue;
-
-    // Add the constraint. Using min/max as we consider constraint
-    // pair {A,B} and {B,A} the same
-    size_t AddMnemonicIdx = HasMnemonicFirst;
-    AsmOperandTiedConstraints.emplace_back(
-        std::min(*LHSIdx, *RHSIdx) + AddMnemonicIdx,
-        std::max(*LHSIdx, *RHSIdx) + AddMnemonicIdx);
-  }
 }
 
 /// Append an AsmOperand for the given substring of AsmString.
@@ -1086,7 +1054,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     addAsmOperand(String.substr(Prev), IsIsolatedToken);
 }
 
-bool MatchableInfo::validate(StringRef CommentDelimiter, bool Hack) const {
+bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
   // Reject matchables with no .s string.
   if (AsmString.empty())
     PrintFatalError(TheDef->getLoc(), "instruction with empty asm string");
@@ -1119,16 +1087,9 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool Hack) const {
       PrintFatalError(TheDef->getLoc(),
                       "matchable with operand modifier '" + Tok +
                       "' not supported by asm matcher.  Mark isCodeGenOnly!");
-
     // Verify that any operand is only mentioned once.
     // We reject aliases and ignore instructions for now.
-    if (Tok[0] == '$' && !OperandNames.insert(Tok).second) {
-      if (!Hack)
-        PrintFatalError(TheDef->getLoc(),
-                        "ERROR: matchable with tied operand '" + Tok +
-                        "' can never be matched!");
-      // FIXME: Should reject these.  The ARM backend hits this with $lane in a
-      // bunch of instructions.  It is unclear what the right answer is.
+    if (!IsAlias && Tok[0] == '$' && !OperandNames.insert(Tok).second) {
       DEBUG({
         errs() << "warning: '" << TheDef->getName() << "': "
                << "ignoring instruction with tied operand '"
@@ -1520,6 +1481,8 @@ void AsmMatcherInfo::buildInfo() {
   assert(SubtargetFeatures.size() <= 64 && "Too many subtarget features!");
 
   bool HasMnemonicFirst = AsmParser->getValueAsBit("HasMnemonicFirst");
+  bool ReportMultipleNearMisses =
+      AsmParser->getValueAsBit("ReportMultipleNearMisses");
 
   // Parse the instructions; we need to do this first so that we can gather the
   // singleton register classes.
@@ -1562,7 +1525,7 @@ void AsmMatcherInfo::buildInfo() {
 
       // Ignore instructions which shouldn't be matched and diagnose invalid
       // instruction definitions with an error.
-      if (!II->validate(CommentDelimiter, true))
+      if (!II->validate(CommentDelimiter, false))
         continue;
 
       Matchables.push_back(std::move(II));
@@ -1593,7 +1556,7 @@ void AsmMatcherInfo::buildInfo() {
       II->initialize(*this, SingletonRegisters, Variant, HasMnemonicFirst);
 
       // Validate the alias definitions.
-      II->validate(CommentDelimiter, false);
+      II->validate(CommentDelimiter, true);
 
       Matchables.push_back(std::move(II));
     }
@@ -1666,7 +1629,12 @@ void AsmMatcherInfo::buildInfo() {
         NewMatchables.push_back(std::move(AliasII));
       }
     } else
-      II->buildAliasResultOperands();
+      // FIXME: The tied operands checking is not yet integrated with the
+      // framework for reporting multiple near misses. To prevent invalid
+      // formats from being matched with an alias if a tied-operands check
+      // would otherwise have disallowed it, we just disallow such constructs
+      // in TableGen completely.
+      II->buildAliasResultOperands(!ReportMultipleNearMisses);
   }
   if (!NewMatchables.empty())
     Matchables.insert(Matchables.end(),
@@ -1739,6 +1707,7 @@ buildInstructionOperandReference(MatchableInfo *II,
 
   // Set up the operand class.
   Op->Class = getOperandClass(Operands[Idx], Op->SubOpIdx);
+  Op->OrigSrcOpName = OperandName;
 
   // If the named operand is tied, canonicalize it to the untied operand.
   // For example, something like:
@@ -1783,6 +1752,7 @@ void AsmMatcherInfo::buildAliasOperandReference(MatchableInfo *II,
       Op.Class = getOperandClass(CGA.ResultOperands[i].getRecord(),
                                  Op.SubOpIdx);
       Op.SrcOpName = OperandName;
+      Op.OrigSrcOpName = OperandName;
       return;
     }
 
@@ -1801,11 +1771,16 @@ void MatchableInfo::buildInstructionResultOperands() {
     if (OpInfo.MINumOperands == 1)
       TiedOp = OpInfo.getTiedRegister();
     if (TiedOp != -1) {
-      ResOperands.push_back(ResOperand::getTiedOp(TiedOp));
+      int TiedSrcOperand = findAsmOperandOriginallyNamed(OpInfo.Name);
+      if (TiedSrcOperand != -1 &&
+          ResOperands[TiedOp].Kind == ResOperand::RenderAsmOperand)
+        ResOperands.push_back(ResOperand::getTiedOp(
+            TiedOp, ResOperands[TiedOp].AsmOperandNum, TiedSrcOperand));
+      else
+        ResOperands.push_back(ResOperand::getTiedOp(TiedOp, 0, 0));
       continue;
     }
 
-    // Find out what operand from the asmparser this MCInst operand comes from.
     int SrcOperand = findAsmOperandNamed(OpInfo.Name);
     if (OpInfo.Name.empty() || SrcOperand == -1) {
       // This may happen for operands that are tied to a suboperand of a
@@ -1834,9 +1809,15 @@ void MatchableInfo::buildInstructionResultOperands() {
   }
 }
 
-void MatchableInfo::buildAliasResultOperands() {
+void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
   const CodeGenInstAlias &CGA = *DefRec.get<const CodeGenInstAlias*>();
   const CodeGenInstruction *ResultInst = getResultInst();
+
+  // Map of:  $reg -> #lastref
+  //   where $reg is the name of the operand in the asm string
+  //   where #lastref is the last processed index where $reg was referenced in
+  //   the asm string.
+  SmallDenseMap<StringRef, int> OperandRefs;
 
   // Loop over all operands of the result instruction, determining how to
   // populate them.
@@ -1850,7 +1831,31 @@ void MatchableInfo::buildAliasResultOperands() {
     if (OpInfo->MINumOperands == 1)
       TiedOp = OpInfo->getTiedRegister();
     if (TiedOp != -1) {
-      ResOperands.push_back(ResOperand::getTiedOp(TiedOp));
+      unsigned SrcOp1 = 0;
+      unsigned SrcOp2 = 0;
+
+      // If an operand has been specified twice in the asm string,
+      // add the two source operand's indices to the TiedOp so that
+      // at runtime the 'tied' constraint is checked.
+      if (ResOperands[TiedOp].Kind == ResOperand::RenderAsmOperand) {
+        SrcOp1 = ResOperands[TiedOp].AsmOperandNum;
+
+        // Find the next operand (similarly named operand) in the string.
+        StringRef Name = AsmOperands[SrcOp1].SrcOpName;
+        auto Insert = OperandRefs.try_emplace(Name, SrcOp1);
+        SrcOp2 = findAsmOperandNamed(Name, Insert.first->second);
+
+        // Not updating the record in OperandRefs will cause TableGen
+        // to fail with an error at the end of this function.
+        if (AliasConstraintsAreChecked)
+          Insert.first->second = SrcOp2;
+
+        // In case it only has one reference in the asm string,
+        // it doesn't need to be checked for tied constraints.
+        SrcOp2 = (SrcOp2 == (unsigned)-1) ? SrcOp1 : SrcOp2;
+      }
+
+      ResOperands.push_back(ResOperand::getTiedOp(TiedOp, SrcOp1, SrcOp2));
       continue;
     }
 
@@ -1870,6 +1875,11 @@ void MatchableInfo::buildAliasResultOperands() {
           PrintFatalError(TheDef->getLoc(), "Instruction '" +
                         TheDef->getName() + "' has operand '" + OpName +
                         "' that doesn't appear in asm string!");
+
+        // Add it to the operand references. If it is added a second time, the
+        // record won't be updated and it will fail later on.
+        OperandRefs.try_emplace(Name, SrcOperand);
+
         unsigned NumOperands = (SubIdx == -1 ? OpInfo->MINumOperands : 1);
         ResOperands.push_back(ResOperand::getRenderedOp(SrcOperand,
                                                         NumOperands));
@@ -1887,6 +1897,13 @@ void MatchableInfo::buildAliasResultOperands() {
       }
       }
     }
+  }
+
+  // Check that operands are not repeated more times than is supported.
+  for (auto &T : OperandRefs) {
+    if (T.second != -1 && findAsmOperandNamed(T.first, T.second) != -1)
+      PrintFatalError(TheDef->getLoc(),
+                      "Operand '" + T.first + "' can never be matched");
   }
 }
 
@@ -1964,9 +1981,14 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   CvtOS << "      static_cast<" << TargetOperandClass
         << "&>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
   CvtOS << "      break;\n";
-  CvtOS << "    case CVT_Tied:\n";
-  CvtOS << "      Inst.addOperand(Inst.getOperand(OpIdx));\n";
+  CvtOS << "    case CVT_Tied: {\n";
+  CvtOS << "      assert(OpIdx < (std::end(TiedAsmOperandTable) -\n";
+  CvtOS << "                      std::begin(TiedAsmOperandTable)) &&\n";
+  CvtOS << "             \"Tied operand not found\");\n";
+  CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[OpIdx][0];\n";
+  CvtOS << "      Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
   CvtOS << "      break;\n";
+  CvtOS << "    }\n";
 
   std::string OperandFnBody;
   raw_string_ostream OpOS(OperandFnBody);
@@ -1996,6 +2018,10 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   OperandConversionKinds.insert(CachedHashString("CVT_Reg"));
   OperandConversionKinds.insert(CachedHashString("CVT_Tied"));
   enum { CVT_Done, CVT_Reg, CVT_Tied };
+
+  // Map of e.g. <0, 2, 3> -> "Tie_0_2_3" enum label.
+  std::map<std::tuple<unsigned, unsigned, unsigned>, std::string>
+  TiedOperandsEnumMap;
 
   for (auto &II : Infos) {
     // Check if we have a custom match function.
@@ -2117,11 +2143,21 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         // If this operand is tied to a previous one, just copy the MCInst
         // operand from the earlier one.We can only tie single MCOperand values.
         assert(OpInfo.MINumOperands == 1 && "Not a singular MCOperand");
-        unsigned TiedOp = OpInfo.TiedOperandNum;
+        unsigned TiedOp = OpInfo.TiedOperands.ResOpnd;
+        unsigned SrcOp1 = OpInfo.TiedOperands.SrcOpnd1Idx + HasMnemonicFirst;
+        unsigned SrcOp2 = OpInfo.TiedOperands.SrcOpnd2Idx + HasMnemonicFirst;
         assert(i > TiedOp && "Tied operand precedes its target!");
-        Signature += "__Tie" + utostr(TiedOp);
+        auto TiedTupleName = std::string("Tie") + utostr(TiedOp) + '_' +
+                             utostr(SrcOp1) + '_' + utostr(SrcOp2);
+        Signature += "__" + TiedTupleName;
         ConversionRow.push_back(CVT_Tied);
         ConversionRow.push_back(TiedOp);
+        ConversionRow.push_back(SrcOp1);
+        ConversionRow.push_back(SrcOp2);
+
+        // Also create an 'enum' for this combination of tied operands.
+        auto Key = std::make_tuple(TiedOp, SrcOp1, SrcOp2);
+        TiedOperandsEnumMap.emplace(Key, TiedTupleName);
         break;
       }
       case MatchableInfo::ResOperand::ImmOperand: {
@@ -2206,6 +2242,30 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   // Finish up the operand number lookup function.
   OpOS << "    }\n  }\n}\n\n";
 
+  // Output a static table for tied operands.
+  if (TiedOperandsEnumMap.size()) {
+    // The number of tied operand combinations will be small in practice,
+    // but just add the assert to be sure.
+    assert(TiedOperandsEnumMap.size() <= 255 &&
+           "Too many tied-operand combinations to reference with "
+           "an 8bit offset from the conversion table");
+
+    OS << "enum {\n";
+    for (auto &KV : TiedOperandsEnumMap) {
+      OS << "  " << KV.second << ",\n";
+    }
+    OS << "};\n\n";
+
+    OS << "const char TiedAsmOperandTable[][3] = {\n";
+    for (auto &KV : TiedOperandsEnumMap) {
+      OS << "  /* " << KV.second << " */ { " << std::get<0>(KV.first) << ", "
+         << std::get<1>(KV.first) << ", " << std::get<2>(KV.first) << " },\n";
+    }
+    OS << "};\n\n";
+  } else
+    OS << "const char TiedAsmOperandTable[][3] = { /* empty  */ {0, 0, 0} "
+          "};\n\n";
+
   OS << "namespace {\n";
 
   // Output the operand conversion kind enum.
@@ -2232,9 +2292,26 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     assert(ConversionTable[Row].size() % 2 == 0 && "bad conversion row!");
     OS << "  // " << InstructionConversionKinds[Row] << "\n";
     OS << "  { ";
-    for (unsigned i = 0, e = ConversionTable[Row].size(); i != e; i += 2)
-      OS << OperandConversionKinds[ConversionTable[Row][i]] << ", "
-         << (unsigned)(ConversionTable[Row][i + 1]) << ", ";
+    for (unsigned i = 0, e = ConversionTable[Row].size(); i != e; i += 2) {
+      OS << OperandConversionKinds[ConversionTable[Row][i]] << ", ";
+      if (OperandConversionKinds[ConversionTable[Row][i]] !=
+          CachedHashString("CVT_Tied")) {
+        OS << (unsigned)(ConversionTable[Row][i + 1]) << ", ";
+        continue;
+      }
+
+      // For a tied operand, emit a reference to the TiedAsmOperandTable
+      // that contains the operand to copy, and the parsed operands to
+      // check for their tied constraints.
+      auto Key = std::make_tuple((unsigned)ConversionTable[Row][i + 1],
+                                 (unsigned)ConversionTable[Row][i + 2],
+                                 (unsigned)ConversionTable[Row][i + 3]);
+      auto TiedOpndEnum = TiedOperandsEnumMap.find(Key);
+      assert(TiedOpndEnum != TiedOperandsEnumMap.end() &&
+             "No record for tied operand pair");
+      OS << TiedOpndEnum->second << ", ";
+      i += 2;
+    }
     OS << "CVT_Done },\n";
   }
 
@@ -2895,71 +2972,34 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
                                           AsmMatcherInfo &Info,
                                           raw_ostream &OS) {
-  std::string Buf;
-  raw_string_ostream TmpOS(Buf);
-  TmpOS << "namespace {\n";
-  TmpOS << "  struct TiedAsmOpndPair {\n";
-  TmpOS << "    unsigned Opcode;\n";
-  TmpOS << "    unsigned Opnd1;\n";
-  TmpOS << "    unsigned Opnd2;\n";
-  TmpOS << "    TiedAsmOpndPair(unsigned Opcode, unsigned Opnd1, unsigned "
-           "Opnd2)\n";
-  TmpOS << "      : Opcode(Opcode), Opnd1(Opnd1), Opnd2(Opnd2) {}\n";
-  TmpOS << "  };\n";
-  TmpOS << "} // end anonymous namespace\n\n";
-  TmpOS << "static const TiedAsmOpndPair TiedAsmOperandsTable[] = {\n";
-  bool TableEmpty = true;
-  for (const auto &Inst : Target.getInstructionsByEnumValue()) {
-    auto It = std::find_if(Info.Matchables.begin(), Info.Matchables.end(),
-                           [&Inst](const std::unique_ptr<MatchableInfo> &MI) {
-      return (MI->TheDef->getID() == Inst->TheDef->getID());
-    });
-
-    if (It == Info.Matchables.end())
-      continue;
-
-    auto &Constraints = (**It).AsmOperandTiedConstraints;
-    if (Constraints.empty())
-      continue;
-
-    std::string Namespace = Inst->TheDef->getValueAsString("Namespace");
-
-    for (const auto &C : Constraints) {
-      TableEmpty = false;
-      TmpOS << "  {";
-      TmpOS << Namespace << "::"<< (**It).TheDef->getName() << ", ";
-      TmpOS << C.first << ", " << C.second;
-      TmpOS << "},\n";
-    }
-  }
-  TmpOS << "};\n\n";
-  if (!TableEmpty)
-    OS << TmpOS.str();
-
   OS << "static bool ";
-  OS << "checkAsmTiedOperandConstraints(const MCInst &Inst,\n";
+  OS << "checkAsmTiedOperandConstraints(unsigned Kind,\n";
   OS << "                               const OperandVector &Operands,\n";
-  OS << "                               SMLoc &Loc) {\n";
-
-  if (TableEmpty) {
-    OS << "return true;\n}\n\n";
-    return;
-  }
-
-  OS << "  const TiedAsmOpndPair SearchValue(Inst.getOpcode(), 0, 0);\n";
-  OS << "  const auto Range = std::equal_range(\n";
-  OS << "      std::begin(TiedAsmOperandsTable), std::end(TiedAsmOperandsTable),\n";
-  OS << "      SearchValue, [](const TiedAsmOpndPair &a,\n";
-  OS << "                      const TiedAsmOpndPair &b) {\n";
-  OS << "        return (a.Opcode < b.Opcode);\n";
-  OS << "      });\n\n";
-  OS << "  for (auto Item = Range.first;  Item != Range.second; ++Item) {\n";
-  OS << "    MCParsedAsmOperand &Op1 = *Operands[Item->Opnd1];\n";
-  OS << "    MCParsedAsmOperand &Op2 = *Operands[Item->Opnd2];\n";
-  OS << "    if ((Op1.isReg() && Op2.isReg()) &&\n";
-  OS << "        (Op1.getReg() != Op2.getReg())) {\n";
-  OS << "      Loc = Op2.getStartLoc();\n";
-  OS << "      return false;\n";
+  OS << "                               uint64_t &ErrorInfo) {\n";
+  OS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
+  OS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
+  OS << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n";
+  OS << "    switch (*p) {\n";
+  OS << "    case CVT_Tied: {\n";
+  OS << "      unsigned OpIdx = *(p+1);\n";
+  OS << "      assert(OpIdx < (std::end(TiedAsmOperandTable) -\n";
+  OS << "                     std::begin(TiedAsmOperandTable)) &&\n";
+  OS << "             \"Tied operand not found\");\n";
+  OS << "      unsigned OpndNum1 = TiedAsmOperandTable[OpIdx][1];\n";
+  OS << "      unsigned OpndNum2 = TiedAsmOperandTable[OpIdx][2];\n";
+  OS << "      if (OpndNum1 != OpndNum2) {\n";
+  OS << "        auto &SrcOp1 = Operands[OpndNum1];\n";
+  OS << "        auto &SrcOp2 = Operands[OpndNum2];\n";
+  OS << "        if (SrcOp1->isReg() && SrcOp2->isReg() &&\n";
+  OS << "            SrcOp1->getReg() != SrcOp2->getReg()) {\n";
+  OS << "          ErrorInfo = OpndNum2;\n";
+  OS << "          return false;\n";
+  OS << "        }\n";
+  OS << "      }\n";
+  OS << "      break;\n";
+  OS << "    }\n";
+  OS << "    default:\n";
+  OS << "      break;\n";
   OS << "    }\n";
   OS << "  }\n";
   OS << "  return true;\n";
@@ -3640,11 +3680,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    if (matchingInlineAsm) {\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
   if (!ReportMultipleNearMisses) {
-    OS << "      SMLoc Loc;\n";
-    OS << "      if (!checkAsmTiedOperandConstraints(Inst, Operands, Loc)) {\n";
-    OS << "        ErrorInfo = " << (HasMnemonicFirst ? "1" : "SIndex") << ";\n";
+    OS << "      if (!checkAsmTiedOperandConstraints(it->ConvertFn, Operands, ErrorInfo))\n";
     OS << "        return Match_InvalidTiedOperand;\n";
-    OS << "      }\n";
     OS << "\n";
   }
   OS << "      return Match_Success;\n";
@@ -3722,11 +3759,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (!ReportMultipleNearMisses) {
-    OS << "      SMLoc Loc;\n";
-    OS << "      if (!checkAsmTiedOperandConstraints(Inst, Operands, Loc)) {\n";
-    OS << "        ErrorInfo = " << (HasMnemonicFirst ? "1" : "SIndex") << ";\n";
+    OS << "      if (!checkAsmTiedOperandConstraints(it->ConvertFn, Operands, ErrorInfo))\n";
     OS << "        return Match_InvalidTiedOperand;\n";
-    OS << "      }\n";
     OS << "\n";
   }
 

@@ -2847,3 +2847,37 @@ define <32 x i8> @insert_dup_elt1_mem_v32i8_sext_i8(i8* %ptr) {
   %tmp4 = shufflevector <16 x i8> %tmp3, <16 x i8> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i8> %tmp4
 }
+
+define <32 x i8> @zeroable_src_to_zext(<32 x i8> %a0) {
+; AVX1-LABEL: zeroable_src_to_zext:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5],zero,zero,zero,zero,zero,zero,xmm0[6,7],zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: zeroable_src_to_zext:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
+; AVX2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: zeroable_src_to_zext:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512VLBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI-LABEL: zeroable_src_to_zext:
+; AVX512VLVBMI:       # %bb.0:
+; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,33,0,0,0,0,0,0,34,35,0,0,0,0,0,0,36,37,16,16,16,16,16,16,38,39,16,16,16,16,16,16]
+; AVX512VLVBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VLVBMI-NEXT:    vpermt2b %ymm0, %ymm2, %ymm1
+; AVX512VLVBMI-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512VLVBMI-NEXT:    retq
+  %1 = shufflevector <32 x i8> %a0, <32 x i8> undef, <32 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %2 = shufflevector <32 x i8> %1, <32 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <32 x i32> <i32 8, i32 9, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 10, i32 11, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 20, i32 21, i32 48, i32 48, i32 48, i32 48, i32 48, i32 48, i32 22, i32 23, i32 48, i32 48, i32 48, i32 48, i32 48, i32 48>
+  ret <32 x i8> %2
+}
