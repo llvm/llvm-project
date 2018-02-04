@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; Check for correct code generation of exit PHIs, even if the same PHI value
 ; is used again inside the the SCoP.

@@ -118,6 +118,55 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Size>
+struct __array_traits {
+  typedef _Tp _StorageT[_Size];
+
+  _LIBCPP_INLINE_VISIBILITY
+  static _LIBCPP_CONSTEXPR_AFTER_CXX14 _Tp* __data(_StorageT& __store) {
+    return __store;
+  }
+
+  _LIBCPP_INLINE_VISIBILITY
+  static _LIBCPP_CONSTEXPR_AFTER_CXX14 _Tp const* __data(const _StorageT& __store) {
+    return __store;
+  }
+
+  _LIBCPP_INLINE_VISIBILITY
+  static void __swap(_StorageT& __lhs, _StorageT& __rhs) {
+    std::swap_ranges(__lhs, __lhs + _Size, __rhs);
+  }
+
+  _LIBCPP_INLINE_VISIBILITY
+  static void __fill(_StorageT& __arr, _Tp const& __val) {
+    _VSTD::fill_n(__arr, _Size, __val);
+  }
+};
+
+template <class _Tp>
+struct __array_traits<_Tp, 0> {
+  typedef typename aligned_storage<sizeof(_Tp), alignment_of<_Tp>::value>::type _StorageT;
+
+  _LIBCPP_INLINE_VISIBILITY
+  static _Tp* __data(_StorageT& __store) {
+    _StorageT *__ptr = std::addressof(__store);
+    return reinterpret_cast<_Tp*>(__ptr);
+  }
+
+  _LIBCPP_INLINE_VISIBILITY
+  static const _Tp* __data(const _StorageT& __store) {
+    const _StorageT *__ptr = std::addressof(__store);
+    return reinterpret_cast<const _Tp*>(__ptr);
+  }
+
+  _LIBCPP_INLINE_VISIBILITY
+  static void __swap(_StorageT&, _StorageT&) {}
+
+  _LIBCPP_INLINE_VISIBILITY
+  static void __fill(_StorageT&, _Tp const&) {
+  }
+};
+
+template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array
 {
     // types:
@@ -134,31 +183,26 @@ struct _LIBCPP_TEMPLATE_VIS array
     typedef std::reverse_iterator<iterator>       reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    value_type __elems_[_Size > 0 ? _Size : 1];
+    typedef __array_traits<_Tp, _Size> _Traits;
+    typename _Traits::_StorageT __elems_;
 
     // No explicit construct/copy/destroy for aggregate type
     _LIBCPP_INLINE_VISIBILITY void fill(const value_type& __u)
-        {_VSTD::fill_n(__elems_, _Size, __u);}
+        {_Traits::__fill(__elems_, __u);}
+
     _LIBCPP_INLINE_VISIBILITY
     void swap(array& __a) _NOEXCEPT_(_Size == 0 || __is_nothrow_swappable<_Tp>::value)
-        { __swap_dispatch((std::integral_constant<bool, _Size == 0>()), __a); }
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __swap_dispatch(std::true_type, array&) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __swap_dispatch(std::false_type, array& __a)
-        { _VSTD::swap_ranges(__elems_, __elems_ + _Size, __a.__elems_);}
+        { _Traits::__swap(__elems_, __a.__elems_); }
 
     // iterators:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    iterator begin() _NOEXCEPT {return iterator(__elems_);}
+    iterator begin() _NOEXCEPT {return iterator(data());}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    const_iterator begin() const _NOEXCEPT {return const_iterator(__elems_);}
+    const_iterator begin() const _NOEXCEPT {return const_iterator(data());}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    iterator end() _NOEXCEPT {return iterator(__elems_ + _Size);}
+    iterator end() _NOEXCEPT {return iterator(data() + _Size);}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    const_iterator end() const _NOEXCEPT {return const_iterator(__elems_ + _Size);}
+    const_iterator end() const _NOEXCEPT {return const_iterator(data() + _Size);}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator rbegin() _NOEXCEPT {return reverse_iterator(end());}
@@ -201,9 +245,9 @@ struct _LIBCPP_TEMPLATE_VIS array
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference back() const  {return __elems_[_Size > 0 ? _Size-1 : 0];}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    value_type* data() _NOEXCEPT {return __elems_;}
+    value_type* data() _NOEXCEPT {return _Traits::__data(__elems_);}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    const value_type* data() const _NOEXCEPT {return __elems_;}
+    const value_type* data() const _NOEXCEPT {return _Traits::__data(__elems_);}
 };
 
 template <class _Tp, size_t _Size>
