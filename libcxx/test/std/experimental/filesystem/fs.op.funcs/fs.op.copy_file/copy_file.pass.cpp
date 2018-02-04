@@ -70,17 +70,21 @@ TEST_CASE(test_error_reporting)
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
     const path file2 = env.create_file("file2", 55);
+    const path non_regular_file = env.create_fifo("non_reg");
     const path dne = env.make_env_path("dne");
     { // exists(to) && equivalent(to, from)
         std::error_code ec;
-        TEST_CHECK(fs::copy_file(file, file, ec) == false);
+        TEST_CHECK(fs::copy_file(file, file, copy_options::overwrite_existing,
+                                 ec) == false);
         TEST_REQUIRE(ec);
+        TEST_CHECK(ec == std::make_error_code(std::errc::file_exists));
         TEST_CHECK(checkThrow(file, file, ec));
     }
     { // exists(to) && !(skip_existing | overwrite_existing | update_existing)
         std::error_code ec;
         TEST_CHECK(fs::copy_file(file, file2, ec) == false);
         TEST_REQUIRE(ec);
+        TEST_CHECK(ec == std::make_error_code(std::errc::file_exists));
         TEST_CHECK(checkThrow(file, file2, ec));
     }
 }
@@ -181,6 +185,7 @@ TEST_CASE(non_regular_file_test)
         TEST_REQUIRE(fs::copy_file(file, fifo, copy_options::overwrite_existing, ec) == false);
         TEST_CHECK(ec);
         TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(ec == std::make_error_code(std::errc::not_supported));
         TEST_CHECK(is_fifo(fifo));
     }
 }

@@ -63,7 +63,7 @@
 <tr><td><a href="https://wg21.link/LWG2243">2243</a></td><td><tt>istream::putback</tt> problem</td><td>Jacksonville</td><td>Complete</td></tr>
 <tr><td><a href="https://wg21.link/LWG2816">2816</a></td><td><tt>resize_file</tt> has impossible postcondition</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
 <tr><td><a href="https://wg21.link/LWG2843">2843</a></td><td>Unclear behavior of <tt>std::pmr::memory_resource::do_allocate()</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2849">2849</a></td><td>Why does <tt>!is_regular_file(from)</tt> cause <tt>copy_file</tt> to report a "file already exists" error?</td><td>Jacksonville</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2849">2849</a></td><td>Why does <tt>!is_regular_file(from)</tt> cause <tt>copy_file</tt> to report a "file already exists" error?</td><td>Jacksonville</td><td>Nothing to do</td></tr>
 <tr><td><a href="https://wg21.link/LWG2851">2851</a></td><td><tt>std::filesystem</tt> enum classes are now underspecified</td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG2969">2969</a></td><td><tt>polymorphic_allocator::construct()</tt> shouldn't pass <tt>resource()</tt></td><td>Jacksonville</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG2975">2975</a></td><td>Missing case for <tt>pair</tt> construction in scoped and polymorphic allocators</td><td>Jacksonville</td><td></td></tr>
@@ -100,7 +100,7 @@
 <li> 2243 - We already do this.</li>
 <li> 2816 - Wording changes only</li>
 <li> 2843 - We don't have PMRs yet</li>
-<li> 2849 - Eric? </li>
+<li> 2849 - We already report different errors. </li>
 <li> 2851 - Eric? </li>
 <li> 2969 - We don't have PMRs yet</li>
 <li> 2975 - We can do the scoped_ bit, but the PMR stuff will have to wait.</li>
