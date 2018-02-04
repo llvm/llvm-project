@@ -24,7 +24,6 @@
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
-#include <iostream>
 
 using namespace std::experimental::filesystem;
 
@@ -347,7 +346,6 @@ TEST_CASE(test_PR35078_with_symlink)
         Opts |= directory_options::follow_directory_symlink;
       recursive_directory_iterator it(startDir, Opts, ec);
       while (!ec && it != endIt && *it != symDir) {
-        std::cout << *it << std::endl;
         if (*it == nestedFile)
           SeenFile3 = true;
         it.increment(ec);
