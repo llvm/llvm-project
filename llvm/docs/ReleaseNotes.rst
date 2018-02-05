@@ -71,6 +71,13 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+Changes to the AArch64 Target
+-----------------------------
+
+During this release:
+
+ * Enabled the new GlobalISel instruction selection framework by default at ``-O0``.
+
 Changes to the ARM Target
 -------------------------
 
