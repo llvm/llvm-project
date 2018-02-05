@@ -52,7 +52,7 @@ class ExecTestCase(TestBase):
             execute_command(
                 "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -o '%s'" %
                 (os.environ["CC"], o_file, exe))
-            if self.debug_info != "dsym":
+            if self.getDebugInfo() != "dsym":
                 dsym_path = self.getBuildArtifact("a.out.dSYM")
                 execute_command("rm -rf '%s'" % (dsym_path))
         else:
