@@ -126,6 +126,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     calculateWasmEHInfo(&fn, EHInfo);
   }
 
+  // If the function might be stolen, note that the SP might change opaquely.
+  if (Fn->hasFnAttribute(Attribute::Stealable))
+    MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
+
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
   // them.

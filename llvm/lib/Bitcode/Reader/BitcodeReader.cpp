@@ -1302,6 +1302,9 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::SanitizeCilk:
     llvm_unreachable("sanitize_cilk attribute not supported in raw format");
     break;
+  case Attribute::Stealable:
+    llvm_unreachable("stealable attribute not supported in raw format");
+    break;
   }
   llvm_unreachable("Unsupported attribute type");
 }
@@ -1513,6 +1516,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SafeStack;
   case bitc::ATTR_KIND_SHADOWCALLSTACK:
     return Attribute::ShadowCallStack;
+  case bitc::ATTR_KIND_STEALABLE:
+    return Attribute::Stealable;
   case bitc::ATTR_KIND_STRICT_FP:
     return Attribute::StrictFP;
   case bitc::ATTR_KIND_STRUCT_RET:

@@ -226,6 +226,7 @@ enum Kind {
   kw_sanitize_thread,
   kw_sanitize_memory,
   kw_speculative_load_hardening,
+  kw_stealable,
   kw_strictfp,
   kw_swifterror,
   kw_swiftself,

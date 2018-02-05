@@ -636,6 +636,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NOSYNC = 63,
   ATTR_KIND_SANITIZE_MEMTAG = 64,
   ATTR_KIND_SANITIZE_CILK = 65,
+  ATTR_KIND_STEALABLE = 66,
 };
 
 enum ComdatSelectionKindCodes {

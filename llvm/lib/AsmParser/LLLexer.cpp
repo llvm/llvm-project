@@ -684,6 +684,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(sanitize_thread);
   KEYWORD(sanitize_memory);
   KEYWORD(speculative_load_hardening);
+  KEYWORD(stealable);
   KEYWORD(swifterror);
   KEYWORD(swiftself);
   KEYWORD(uwtable);
