@@ -2642,6 +2642,11 @@ void ASTContext::adjustExceptionSpec(
   }
 }
 
+bool ASTContext::isParamDestroyedInCallee(QualType T) const {
+  return getTargetInfo().getCXXABI().areArgsDestroyedLeftToRightInCallee() ||
+         T.hasTrivialABIOverride();
+}
+
 /// getComplexType - Return the uniqued reference to the type for a complex
 /// number with the specified element type.
 QualType ASTContext::getComplexType(QualType T) const {

@@ -68,8 +68,8 @@ public:
     if (CGM.getCodeGenOpts().getClangABICompat() <=
             CodeGenOptions::ClangABI::Ver4 ||
         CGM.getTriple().getOS() == llvm::Triple::PS4)
-      return RD->hasNonTrivialDestructor() ||
-             RD->hasNonTrivialCopyConstructor();
+      return RD->hasNonTrivialDestructorForCall() ||
+             RD->hasNonTrivialCopyConstructorForCall();
     return !canCopyArgument(RD);
   }
 
