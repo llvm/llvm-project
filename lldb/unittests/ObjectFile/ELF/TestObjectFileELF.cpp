@@ -102,6 +102,31 @@ TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
 // Test that GetModuleSpecifications works on an "atypical" object file which
 // has section headers right after the ELF header (instead of the more common
 // layout where the section headers are at the very end of the object file).
+//
+// Test file generated with yaml2obj (@svn rev 324254) from the following input:
+/*
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x00000000004003D0
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400274
+    AddressAlign:    0x0000000000000004
+    Content:         040000001400000003000000474E55001B8A73AC238390E32A7FF4AC8EBE4D6A41ECF5C9
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x00000000004003D0
+    AddressAlign:    0x0000000000000010
+    Content:         DEADBEEFBAADF00D
+...
+*/
 TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
   std::string SO = GetInputFilePath("early-section-headers.so");
   ModuleSpecList Specs;
