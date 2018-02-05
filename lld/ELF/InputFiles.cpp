@@ -1032,8 +1032,8 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 
 void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
-  auto *Section = make<InputSection>(nullptr, SHF_ALLOC | SHF_WRITE,
-                                     SHT_PROGBITS, 8, Data, ".data");
+  auto *Section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                                     8, Data, ".data");
   Sections.push_back(Section);
 
   // For each input file foo that is embedded to a result as a binary

@@ -2589,10 +2589,15 @@ Node *Db::parseExpr() {
     if (First[1] == 'u') {
       First += 2;
       Node *Cond = parseExpr();
+      if (Cond == nullptr)
+        return nullptr;
       Node *LHS = parseExpr();
+      if (LHS == nullptr)
+        return nullptr;
       Node *RHS = parseExpr();
-      if (Cond && LHS && RHS)
-        return make<ConditionalExpr>(Cond, LHS, RHS);
+      if (RHS == nullptr)
+        return nullptr;
+      return make<ConditionalExpr>(Cond, LHS, RHS);
     }
     return nullptr;
   case 'r':

@@ -57,6 +57,10 @@ defm Ttext: Eq<"Ttext">,
 def allow_multiple_definition: F<"allow-multiple-definition">,
   HelpText<"Allow multiple definitions">;
 
+defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
+    "Apply dynamic relocations to place",
+    "Do not apply dynamic relocations to place">;
+
 defm as_needed: B<"as-needed",
     "Only set DT_NEEDED for shared libraries if used",
     "Always set DT_NEEDED for shared libraries">;
