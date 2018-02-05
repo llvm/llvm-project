@@ -1050,7 +1050,7 @@ void DWARFCompileUnit::ParseProducerInfo() {
     m_producer = eProcucerOther;
 }
 
-DWARFCompileUnit::Producer DWARFCompileUnit::GetProducer() {
+DWARFProducer DWARFCompileUnit::GetProducer() {
   if (m_producer == eProducerInvalid)
     ParseProducerInfo();
   return m_producer;
