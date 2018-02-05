@@ -98,3 +98,17 @@ TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
   ASSERT_NE(nullptr, start);
   EXPECT_EQ(text_sp, start->GetAddress().GetSection());
 }
+
+// Test that GetModuleSpecifications works on an "atypical" object file which
+// has section headers right after the ELF header (instead of the more common
+// layout where the section headers are at the very end of the object file).
+TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
+  std::string SO = GetInputFilePath("early-section-headers.so");
+  ModuleSpecList Specs;
+  ASSERT_EQ(1u, ObjectFile::GetModuleSpecifications(FileSpec(SO, false), 0, 0, Specs));
+  ModuleSpec Spec;
+  ASSERT_TRUE(Specs.GetModuleSpecAtIndex(0, Spec)) ;
+  UUID Uuid;
+  Uuid.SetFromStringRef("1b8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9", 20);
+  EXPECT_EQ(Spec.GetUUID(), Uuid);
+}
