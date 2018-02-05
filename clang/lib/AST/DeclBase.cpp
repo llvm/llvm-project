@@ -236,8 +236,21 @@ TemplateDecl *Decl::getDescribedTemplate() const {
     return RD->getDescribedClassTemplate();
   else if (auto *VD = dyn_cast<VarDecl>(this))
     return VD->getDescribedVarTemplate();
+  else if (auto *AD = dyn_cast<TypeAliasDecl>(this))
+    return AD->getDescribedAliasTemplate();
 
   return nullptr;
+}
+
+bool Decl::isTemplated() const {
+  // A declaration is dependent if it is a template or a template pattern, or
+  // is within (lexcially for a friend, semantically otherwise) a dependent
+  // context.
+  // FIXME: Should local extern declarations be treated like friends?
+  if (auto *AsDC = dyn_cast<DeclContext>(this))
+    return AsDC->isDependentContext();
+  auto *DC = getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
+  return DC->isDependentContext() || isTemplateDecl() || getDescribedTemplate();
 }
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
