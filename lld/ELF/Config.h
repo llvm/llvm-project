@@ -106,7 +106,6 @@ struct Configuration {
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AndroidPackDynRelocs = false;
-  bool ApplyDynamicRelocs;
   bool ARMHasBlx = false;
   bool ARMHasMovtMovw = false;
   bool ARMJ1J2BranchEncoding = false;
@@ -154,6 +153,7 @@ struct Configuration {
   bool Verbose;
   bool WarnCommon;
   bool WarnMissingEntry;
+  bool WriteAddends;
   bool ZCombreloc;
   bool ZExecstack;
   bool ZNocopyreloc;
