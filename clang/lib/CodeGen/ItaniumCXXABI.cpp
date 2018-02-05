@@ -2761,6 +2761,11 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     // N.B. We must always emit the RTTI data ourselves if there exists a key
     // function.
     bool IsDLLImport = RD->hasAttr<DLLImportAttr>();
+
+    // Don't import the RTTI but emit it locally.
+    if (CGM.getTriple().isWindowsGNUEnvironment() && IsDLLImport)
+      return false;
+
     if (CGM.getVTables().isVTableExternal(RD))
       return IsDLLImport && !CGM.getTriple().isWindowsItaniumEnvironment()
                  ? false
