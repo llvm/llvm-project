@@ -31395,15 +31395,6 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
-  case X86ISD::SHUF128: {
-    if (EltVT.getSizeInBits() != 32 && EltVT.getSizeInBits() != 64)
-      return false;
-    // Only change element size, not type.
-    if (VT.isInteger() != Op.getSimpleValueType().isInteger())
-      return false;
-    return BitcastAndCombineShuffle(Opcode, Op.getOperand(0), Op.getOperand(1),
-                                    Op.getOperand(2));
-  }
   case X86ISD::SUBV_BROADCAST: {
     unsigned EltSize = EltVT.getSizeInBits();
     if (EltSize != 32 && EltSize != 64)
