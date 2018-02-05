@@ -1843,7 +1843,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           // Collect attributes for non-vararg parameters.
           AttributeList Attrs = CI->getAttributes();
           SmallVector<AttributeSet, 8> ArgAttrs;
-          if (!Attrs.isEmpty()) {
+          if (!Attrs.isEmpty() || !VarArgsAttrs.empty()) {
             for (unsigned ArgNo = 0;
                  ArgNo < CI->getFunctionType()->getNumParams(); ++ArgNo)
               ArgAttrs.push_back(Attrs.getParamAttributes(ArgNo));

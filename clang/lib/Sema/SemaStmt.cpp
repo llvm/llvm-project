@@ -337,8 +337,8 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
   DiagRuntimeBehavior(Loc, nullptr, PDiag(DiagID) << R1 << R2);
 }
 
-void Sema::ActOnStartOfCompoundStmt() {
-  PushCompoundScope();
+void Sema::ActOnStartOfCompoundStmt(bool IsStmtExpr) {
+  PushCompoundScope(IsStmtExpr);
 }
 
 void Sema::ActOnFinishOfCompoundStmt() {

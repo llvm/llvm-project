@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
@@ -80,6 +81,10 @@ class CGDebugInfo {
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
 
   llvm::SmallDenseMap<llvm::StringRef, llvm::StringRef> DebugPrefixMap;
+
+  /// Cache that maps VLA types to size expressions for that type,
+  /// represented by instantiated Metadata nodes.
+  llvm::SmallDenseMap<QualType, llvm::Metadata *> SizeExprCache;
 
   struct ObjCInterfaceCacheEntry {
     const ObjCInterfaceType *Type;
@@ -309,6 +314,11 @@ public:
 
   void finalize();
 
+  /// Register VLA size expression debug node with the qualified type.
+  void registerVLASizeExpression(QualType Ty, llvm::Metadata *SizeExpr) {
+    SizeExprCache[Ty] = SizeExpr;
+  }
+
   /// Module debugging: Support for building PCMs.
   /// @{
   /// Set the main CU's DwoId field to \p Signature.
@@ -379,8 +389,11 @@ public:
 
   /// Emit call to \c llvm.dbg.declare for an automatic variable
   /// declaration.
-  void EmitDeclareOfAutoVariable(const VarDecl *Decl, llvm::Value *AI,
-                                 CGBuilderTy &Builder);
+  /// Returns a pointer to the DILocalVariable associated with the
+  /// llvm.dbg.declare, or nullptr otherwise.
+  llvm::DILocalVariable *EmitDeclareOfAutoVariable(const VarDecl *Decl,
+                                                   llvm::Value *AI,
+                                                   CGBuilderTy &Builder);
 
   /// Emit call to \c llvm.dbg.declare for an imported variable
   /// declaration in a block.
@@ -451,10 +464,14 @@ public:
   llvm::DIMacroFile *CreateTempMacroFile(llvm::DIMacroFile *Parent,
                                          SourceLocation LineLoc,
                                          SourceLocation FileLoc);
+
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
-  void EmitDeclare(const VarDecl *decl, llvm::Value *AI,
-                   llvm::Optional<unsigned> ArgNo, CGBuilderTy &Builder);
+  /// Returns a pointer to the DILocalVariable associated with the
+  /// llvm.dbg.declare, or nullptr otherwise.
+  llvm::DILocalVariable *EmitDeclare(const VarDecl *decl, llvm::Value *AI,
+                                     llvm::Optional<unsigned> ArgNo,
+                                     CGBuilderTy &Builder);
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   llvm::DIType *EmitTypeForVarWithBlocksAttr(const VarDecl *VD,

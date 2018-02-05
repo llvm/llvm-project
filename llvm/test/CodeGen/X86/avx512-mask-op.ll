@@ -6,37 +6,11 @@
 
 
 define i16 @mask16(i16 %x) {
-; KNL-LABEL: mask16:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    kmovw %edi, %k0
-; KNL-NEXT:    knotw %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: def $ax killed $ax killed $eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: mask16:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    kmovd %edi, %k0
-; SKX-NEXT:    knotw %k0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: def $ax killed $ax killed $eax
-; SKX-NEXT:    retq
-;
-; AVX512BW-LABEL: mask16:
-; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    kmovd %edi, %k0
-; AVX512BW-NEXT:    knotw %k0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    ## kill: def $ax killed $ax killed $eax
-; AVX512BW-NEXT:    retq
-;
-; AVX512DQ-LABEL: mask16:
-; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    kmovw %edi, %k0
-; AVX512DQ-NEXT:    knotw %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %eax
-; AVX512DQ-NEXT:    ## kill: def $ax killed $ax killed $eax
-; AVX512DQ-NEXT:    retq
+; CHECK-LABEL: mask16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %ret = bitcast <16 x i1> %m1 to i16
@@ -44,33 +18,11 @@ define i16 @mask16(i16 %x) {
 }
 
 define i32 @mask16_zext(i16 %x) {
-; KNL-LABEL: mask16_zext:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    kmovw %edi, %k0
-; KNL-NEXT:    knotw %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: mask16_zext:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    kmovd %edi, %k0
-; SKX-NEXT:    knotw %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
-; SKX-NEXT:    retq
-;
-; AVX512BW-LABEL: mask16_zext:
-; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    kmovd %edi, %k0
-; AVX512BW-NEXT:    knotw %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
-; AVX512BW-NEXT:    retq
-;
-; AVX512DQ-LABEL: mask16_zext:
-; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    kmovw %edi, %k0
-; AVX512DQ-NEXT:    knotw %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %eax
-; AVX512DQ-NEXT:    retq
+; CHECK-LABEL: mask16_zext:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %m2 = bitcast <16 x i1> %m1 to i16
@@ -81,33 +33,33 @@ define i32 @mask16_zext(i16 %x) {
 define i8 @mask8(i8 %x) {
 ; KNL-LABEL: mask8:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    kmovw %edi, %k0
-; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kxnorw %k0, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    xorb %dil, %al
 ; KNL-NEXT:    ## kill: def $al killed $al killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    kmovd %edi, %k0
-; SKX-NEXT:    knotb %k0, %k0
+; SKX-NEXT:    kxnorw %k0, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    xorb %dil, %al
 ; SKX-NEXT:    ## kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mask8:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    kmovd %edi, %k0
-; AVX512BW-NEXT:    knotw %k0, %k0
+; AVX512BW-NEXT:    kxnorw %k0, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    xorb %dil, %al
 ; AVX512BW-NEXT:    ## kill: def $al killed $al killed $eax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: mask8:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    kmovw %edi, %k0
-; AVX512DQ-NEXT:    knotb %k0, %k0
+; AVX512DQ-NEXT:    kxnorw %k0, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    xorb %dil, %al
 ; AVX512DQ-NEXT:    ## kill: def $al killed $al killed $eax
 ; AVX512DQ-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
@@ -119,32 +71,34 @@ define i8 @mask8(i8 %x) {
 define i32 @mask8_zext(i8 %x) {
 ; KNL-LABEL: mask8_zext:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    kmovw %edi, %k0
-; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kxnorw %k0, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    xorb %dil, %al
 ; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8_zext:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    kmovd %edi, %k0
-; SKX-NEXT:    knotb %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kxnorw %k0, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    xorb %dil, %al
+; SKX-NEXT:    movzbl %al, %eax
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mask8_zext:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    kmovd %edi, %k0
-; AVX512BW-NEXT:    knotw %k0, %k0
+; AVX512BW-NEXT:    kxnorw %k0, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    xorb %dil, %al
 ; AVX512BW-NEXT:    movzbl %al, %eax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: mask8_zext:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    kmovw %edi, %k0
-; AVX512DQ-NEXT:    knotb %k0, %k0
-; AVX512DQ-NEXT:    kmovb %k0, %eax
+; AVX512DQ-NEXT:    kxnorw %k0, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    xorb %dil, %al
+; AVX512DQ-NEXT:    movzbl %al, %eax
 ; AVX512DQ-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -171,11 +125,9 @@ define void @mask16_mem(i16* %ptr) {
 define void @mask8_mem(i8* %ptr) {
 ; KNL-LABEL: mask8_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movzbl (%rdi), %eax
-; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kxnorw %k0, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    xorb %al, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8_mem:
@@ -187,11 +139,9 @@ define void @mask8_mem(i8* %ptr) {
 ;
 ; AVX512BW-LABEL: mask8_mem:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    movzbl (%rdi), %eax
-; AVX512BW-NEXT:    kmovd %eax, %k0
-; AVX512BW-NEXT:    knotw %k0, %k0
+; AVX512BW-NEXT:    kxnorw %k0, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, (%rdi)
+; AVX512BW-NEXT:    xorb %al, (%rdi)
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: mask8_mem:

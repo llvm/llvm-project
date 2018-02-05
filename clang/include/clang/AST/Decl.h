@@ -76,7 +76,7 @@ class TypeLoc;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 
-/// \brief A container of type source information.
+/// A container of type source information.
 ///
 /// A client can read the relevant info using TypeLoc wrappers, e.g:
 /// @code
@@ -93,17 +93,17 @@ class LLVM_ALIGNAS(8) TypeSourceInfo {
   TypeSourceInfo(QualType ty) : Ty(ty) {}
 
 public:
-  /// \brief Return the type wrapped by this type source info.
+  /// Return the type wrapped by this type source info.
   QualType getType() const { return Ty; }
 
-  /// \brief Return the TypeLoc wrapper for the type source info.
+  /// Return the TypeLoc wrapper for the type source info.
   TypeLoc getTypeLoc() const; // implemented in TypeLoc.h
   
-  /// \brief Override the type stored in this TypeSourceInfo. Use with caution!
+  /// Override the type stored in this TypeSourceInfo. Use with caution!
   void overrideType(QualType T) { Ty = T; }
 };
 
-/// TranslationUnitDecl - The top declaration context.
+/// The top declaration context.
 class TranslationUnitDecl : public Decl, public DeclContext {
   ASTContext &Ctx;
 
@@ -134,7 +134,7 @@ public:
   }
 };
 
-/// \brief Represents a `#pragma comment` line. Always a child of
+/// Represents a `#pragma comment` line. Always a child of
 /// TranslationUnitDecl.
 class PragmaCommentDecl final
     : public Decl,
@@ -168,7 +168,7 @@ public:
   static bool classofKind(Kind K) { return K == PragmaComment; }
 };
 
-/// \brief Represents a `#pragma detect_mismatch` line. Always a child of
+/// Represents a `#pragma detect_mismatch` line. Always a child of
 /// TranslationUnitDecl.
 class PragmaDetectMismatchDecl final
     : public Decl,
@@ -201,7 +201,7 @@ public:
   static bool classofKind(Kind K) { return K == PragmaDetectMismatch; }
 };
 
-/// \brief Declaration context for names declared as extern "C" in C++. This
+/// Declaration context for names declared as extern "C" in C++. This
 /// is neither the semantic nor lexical context for such declarations, but is
 /// used to check for conflicts with other extern "C" declarations. Example:
 ///
@@ -240,10 +240,13 @@ public:
   }
 };
 
-/// NamedDecl - This represents a decl with a name.  Many decls have names such
+/// This represents a decl that may have a name.  Many decls have names such
 /// as ObjCMethodDecl, but not \@class, etc.
+///
+/// Note that not every NamedDecl is actually named (e.g., a struct might
+/// be anonymous), and not every name is an identifier.
 class NamedDecl : public Decl {
-  /// Name - The name of this declaration, which is typically a normal
+  /// The name of this declaration, which is typically a normal
   /// identifier but may also be a special kind of name (C++
   /// constructor, Objective-C selector, etc.)
   DeclarationName Name;
@@ -258,13 +261,15 @@ protected:
       : Decl(DK, DC, L), Name(N) {}
 
 public:
-  /// getIdentifier - Get the identifier that names this declaration,
-  /// if there is one. This will return NULL if this declaration has
-  /// no name (e.g., for an unnamed class) or if the name is a special
-  /// name (C++ constructor, Objective-C selector, etc.).
+  /// Get the identifier that names this declaration, if there is one.
+  ///
+  /// This will return NULL if this declaration has no name (e.g., for
+  /// an unnamed class) or if the name is a special name (C++ constructor,
+  /// Objective-C selector, etc.).
   IdentifierInfo *getIdentifier() const { return Name.getAsIdentifierInfo(); }
 
-  /// getName - Get the name of identifier for this declaration as a StringRef.
+  /// Get the name of identifier for this declaration as a StringRef.
+  ///
   /// This requires that the declaration have a name and that it be a simple
   /// identifier.
   StringRef getName() const {
@@ -272,11 +277,12 @@ public:
     return getIdentifier() ? getIdentifier()->getName() : "";
   }
 
-  /// getNameAsString - Get a human-readable name for the declaration, even if
-  /// it is one of the special kinds of names (C++ constructor, Objective-C
-  /// selector, etc).  Creating this name requires expensive string
-  /// manipulation, so it should be called only when performance doesn't matter.
-  /// For simple declarations, getNameAsCString() should suffice.
+  /// Get a human-readable name for the declaration, even if it is one of the
+  /// special kinds of names (C++ constructor, Objective-C selector, etc).
+  ///
+  /// Creating this name requires expensive string manipulation, so it should
+  /// be called only when performance doesn't matter. For simple declarations,
+  /// getNameAsCString() should suffice.
   //
   // FIXME: This function should be renamed to indicate that it is not just an
   // alternate form of getName(), and clients should move as appropriate.
@@ -286,17 +292,19 @@ public:
 
   virtual void printName(raw_ostream &os) const;
 
-  /// getDeclName - Get the actual, stored name of the declaration,
-  /// which may be a special name.
+  /// Get the actual, stored name of the declaration, which may be a special
+  /// name.
   DeclarationName getDeclName() const { return Name; }
 
-  /// \brief Set the name of this declaration.
+  /// Set the name of this declaration.
   void setDeclName(DeclarationName N) { Name = N; }
 
-  /// printQualifiedName - Returns human-readable qualified name for
-  /// declaration, like A::B::i, for i being member of namespace A::B.
-  /// If declaration is not member of context which can be named (record,
-  /// namespace), it will return same result as printName().
+  /// Returns a human-readable qualified name for this declaration, like
+  /// A::B::i, for i being member of namespace A::B.
+  ///
+  /// If the declaration is not a member of context which can be named (record,
+  /// namespace), it will return the same result as printName().
+  ///
   /// Creating this name is expensive, so it should be called only when
   /// performance doesn't matter.
   void printQualifiedName(raw_ostream &OS) const;
@@ -315,25 +323,25 @@ public:
                                     const PrintingPolicy &Policy,
                                     bool Qualified) const;
 
-  /// \brief Determine whether this declaration, if
-  /// known to be well-formed within its context, will replace the
-  /// declaration OldD if introduced into scope. A declaration will
-  /// replace another declaration if, for example, it is a
-  /// redeclaration of the same variable or function, but not if it is
-  /// a declaration of a different kind (function vs. class) or an
-  /// overloaded function.
+  /// Determine whether this declaration, if known to be well-formed within
+  /// its context, will replace the declaration OldD if introduced into scope.
+  ///
+  /// A declaration will replace another declaration if, for example, it is
+  /// a redeclaration of the same variable or function, but not if it is a
+  /// declaration of a different kind (function vs. class) or an overloaded
+  /// function.
   ///
   /// \param IsKnownNewer \c true if this declaration is known to be newer
   /// than \p OldD (for instance, if this declaration is newly-created).
   bool declarationReplaces(NamedDecl *OldD, bool IsKnownNewer = true) const;
 
-  /// \brief Determine whether this declaration has linkage.
+  /// Determine whether this declaration has linkage.
   bool hasLinkage() const;
 
   using Decl::isModulePrivate;
   using Decl::setModulePrivate;
 
-  /// \brief Determine whether this declaration is a C++ class member.
+  /// Determine whether this declaration is a C++ class member.
   bool isCXXClassMember() const {
     const DeclContext *DC = getDeclContext();
 
@@ -346,23 +354,24 @@ public:
     return DC->isRecord();
   }
 
-  /// \brief Determine whether the given declaration is an instance member of
+  /// Determine whether the given declaration is an instance member of
   /// a C++ class.
   bool isCXXInstanceMember() const;
 
-  /// \brief Determine what kind of linkage this entity has.
+  /// Determine what kind of linkage this entity has.
+  ///
   /// This is not the linkage as defined by the standard or the codegen notion
   /// of linkage. It is just an implementation detail that is used to compute
   /// those.
   Linkage getLinkageInternal() const;
 
-  /// \brief Get the linkage from a semantic point of view. Entities in
+  /// Get the linkage from a semantic point of view. Entities in
   /// anonymous namespaces are external (in c++98).
   Linkage getFormalLinkage() const {
     return clang::getFormalLinkage(getLinkageInternal());
   }
 
-  /// \brief True if this decl has external linkage.
+  /// True if this decl has external linkage.
   bool hasExternalFormalLinkage() const {
     return isExternalFormalLinkage(getLinkageInternal());
   }
@@ -377,12 +386,12 @@ public:
     return isExternallyVisible() && !getOwningModuleForLinkage();
   }
 
-  /// \brief Determines the visibility of this entity.
+  /// Determines the visibility of this entity.
   Visibility getVisibility() const {
     return getLinkageAndVisibility().getVisibility();
   }
 
-  /// \brief Determines the linkage and visibility of this entity.
+  /// Determines the linkage and visibility of this entity.
   LinkageInfo getLinkageAndVisibility() const;
 
   /// Kinds of explicit visibility.
@@ -398,16 +407,16 @@ public:
     VisibilityForValue
   };
 
-  /// \brief If visibility was explicitly specified for this
+  /// If visibility was explicitly specified for this
   /// declaration, return that visibility.
   Optional<Visibility>
   getExplicitVisibility(ExplicitVisibilityKind kind) const;
 
-  /// \brief True if the computed linkage is valid. Used for consistency
+  /// True if the computed linkage is valid. Used for consistency
   /// checking. Should always return true.
   bool isLinkageValid() const;
 
-  /// \brief True if something has required us to compute the linkage
+  /// True if something has required us to compute the linkage
   /// of this declaration.
   ///
   /// Language features which can retroactively change linkage (like a
@@ -417,7 +426,7 @@ public:
     return hasCachedLinkage();
   }
 
-  /// \brief Looks through UsingDecls and ObjCCompatibleAliasDecls for
+  /// Looks through UsingDecls and ObjCCompatibleAliasDecls for
   /// the underlying named decl.
   NamedDecl *getUnderlyingDecl() {
     // Fast-path the common case.
@@ -451,7 +460,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const NamedDecl &ND) {
   return OS;
 }
 
-/// LabelDecl - Represents the declaration of a label.  Labels also have a
+/// Represents the declaration of a label.  Labels also have a
 /// corresponding LabelStmt, which indicates the position that the label was
 /// defined at.  For normal labels, the location of the decl is the same as the
 /// location of the statement.  For GNU local labels (__label__), the decl
@@ -461,7 +470,7 @@ class LabelDecl : public NamedDecl {
   StringRef MSAsmName;
   bool MSAsmNameResolved = false;
 
-  /// LocStart - For normal labels, this is the same as the main declaration
+  /// For normal labels, this is the same as the main declaration
   /// label, i.e., the location of the identifier; for GNU local labels,
   /// this is the location of the __label__ keyword.
   SourceLocation LocStart;
@@ -501,18 +510,18 @@ public:
   static bool classofKind(Kind K) { return K == Label; }
 };
 
-/// NamespaceDecl - Represent a C++ namespace.
+/// Represent a C++ namespace.
 class NamespaceDecl : public NamedDecl, public DeclContext, 
                       public Redeclarable<NamespaceDecl> 
 {
-  /// LocStart - The starting location of the source range, pointing
+  /// The starting location of the source range, pointing
   /// to either the namespace or the inline keyword.
   SourceLocation LocStart;
 
-  /// RBraceLoc - The ending location of the source range.
+  /// The ending location of the source range.
   SourceLocation RBraceLoc;
 
-  /// \brief A pointer to either the anonymous namespace that lives just inside
+  /// A pointer to either the anonymous namespace that lives just inside
   /// this namespace or to the first namespace in the chain (the latter case
   /// only when this is not the first in the chain), along with a 
   /// boolean value indicating whether this is an inline namespace.
@@ -549,7 +558,7 @@ public:
   using redeclarable_base::getMostRecentDecl;
   using redeclarable_base::isFirstDecl;
 
-  /// \brief Returns true if this is an anonymous namespace declaration.
+  /// Returns true if this is an anonymous namespace declaration.
   ///
   /// For example:
   /// \code
@@ -562,28 +571,28 @@ public:
     return !getIdentifier();
   }
 
-  /// \brief Returns true if this is an inline namespace declaration.
+  /// Returns true if this is an inline namespace declaration.
   bool isInline() const {
     return AnonOrFirstNamespaceAndInline.getInt();
   }
 
-  /// \brief Set whether this is an inline namespace declaration.
+  /// Set whether this is an inline namespace declaration.
   void setInline(bool Inline) {
     AnonOrFirstNamespaceAndInline.setInt(Inline);
   }
 
-  /// \brief Get the original (first) namespace declaration.
+  /// Get the original (first) namespace declaration.
   NamespaceDecl *getOriginalNamespace();
 
-  /// \brief Get the original (first) namespace declaration.
+  /// Get the original (first) namespace declaration.
   const NamespaceDecl *getOriginalNamespace() const;
 
-  /// \brief Return true if this declaration is an original (first) declaration
+  /// Return true if this declaration is an original (first) declaration
   /// of the namespace. This is false for non-original (subsequent) namespace
   /// declarations and anonymous namespaces.
   bool isOriginalNamespace() const;
 
-  /// \brief Retrieve the anonymous namespace nested inside this namespace,
+  /// Retrieve the anonymous namespace nested inside this namespace,
   /// if any.
   NamespaceDecl *getAnonymousNamespace() const {
     return getOriginalNamespace()->AnonOrFirstNamespaceAndInline.getPointer();
@@ -621,7 +630,7 @@ public:
   }
 };
 
-/// ValueDecl - Represent the declaration of a variable (in which case it is
+/// Represent the declaration of a variable (in which case it is
 /// an lvalue) a function (in which case it is a function designator) or
 /// an enum constant.
 class ValueDecl : public NamedDecl {
@@ -638,7 +647,7 @@ public:
   QualType getType() const { return DeclType; }
   void setType(QualType newType) { DeclType = newType; }
 
-  /// \brief Determine whether this symbol is weakly-imported,
+  /// Determine whether this symbol is weakly-imported,
   ///        or declared with the weak or weak-ref attr.
   bool isWeak() const;
 
@@ -647,18 +656,18 @@ public:
   static bool classofKind(Kind K) { return K >= firstValue && K <= lastValue; }
 };
 
-/// QualifierInfo - A struct with extended info about a syntactic
+/// A struct with extended info about a syntactic
 /// name qualifier, to be used for the case of out-of-line declarations.
 struct QualifierInfo {
   NestedNameSpecifierLoc QualifierLoc;
 
-  /// NumTemplParamLists - The number of "outer" template parameter lists.
+  /// The number of "outer" template parameter lists.
   /// The count includes all of the template parameter lists that were matched
   /// against the template-ids occurring into the NNS and possibly (in the
   /// case of an explicit specialization) a final "template <>".
   unsigned NumTemplParamLists = 0;
 
-  /// TemplParamLists - A new-allocated array of size NumTemplParamLists,
+  /// A new-allocated array of size NumTemplParamLists,
   /// containing pointers to the "outer" template parameter lists.
   /// It includes all of the template parameter lists that were matched
   /// against the template-ids occurring into the NNS and possibly (in the
@@ -669,13 +678,12 @@ struct QualifierInfo {
   QualifierInfo(const QualifierInfo &) = delete;
   QualifierInfo& operator=(const QualifierInfo &) = delete;
 
-  /// setTemplateParameterListsInfo - Sets info about "outer" template
-  /// parameter lists.
+  /// Sets info about "outer" template parameter lists.
   void setTemplateParameterListsInfo(ASTContext &Context,
                                      ArrayRef<TemplateParameterList *> TPLists);
 };
 
-/// \brief Represents a ValueDecl that came out of a declarator.
+/// Represents a ValueDecl that came out of a declarator.
 /// Contains type source information through TypeSourceInfo.
 class DeclaratorDecl : public ValueDecl {
   // A struct representing both a TInfo and a syntactic qualifier,
@@ -686,7 +694,7 @@ class DeclaratorDecl : public ValueDecl {
 
   llvm::PointerUnion<TypeSourceInfo *, ExtInfo *> DeclInfo;
 
-  /// InnerLocStart - The start of the source range for this declaration,
+  /// The start of the source range for this declaration,
   /// ignoring outer template declarations.
   SourceLocation InnerLocStart;
 
@@ -717,13 +725,12 @@ public:
       DeclInfo = TI;
   }
 
-  /// getInnerLocStart - Return SourceLocation representing start of source
-  /// range ignoring outer template declarations.
+  /// Return start of source range ignoring outer template declarations.
   SourceLocation getInnerLocStart() const { return InnerLocStart; }
   void setInnerLocStart(SourceLocation L) { InnerLocStart = L; }
 
-  /// getOuterLocStart - Return SourceLocation representing start of source
-  /// range taking into account any outer template declarations.
+  /// Return start of source range taking into account any outer template
+  /// declarations.
   SourceLocation getOuterLocStart() const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -732,14 +739,14 @@ public:
     return getOuterLocStart();
   }
 
-  /// \brief Retrieve the nested-name-specifier that qualifies the name of this
+  /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
   NestedNameSpecifier *getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
                         : nullptr;
   }
 
-  /// \brief Retrieve the nested-name-specifier (with source-location
+  /// Retrieve the nested-name-specifier (with source-location
   /// information) that qualifies the name of this declaration, if it was
   /// present in the source.
   NestedNameSpecifierLoc getQualifierLoc() const {
@@ -770,25 +777,25 @@ public:
   }
 };
 
-/// \brief Structure used to store a statement, the constant value to
+/// Structure used to store a statement, the constant value to
 /// which it was evaluated (if any), and whether or not the statement
 /// is an integral constant expression (if known).
 struct EvaluatedStmt {
-  /// \brief Whether this statement was already evaluated.
+  /// Whether this statement was already evaluated.
   bool WasEvaluated : 1;
 
-  /// \brief Whether this statement is being evaluated.
+  /// Whether this statement is being evaluated.
   bool IsEvaluating : 1;
 
-  /// \brief Whether we already checked whether this statement was an
+  /// Whether we already checked whether this statement was an
   /// integral constant expression.
   bool CheckedICE : 1;
 
-  /// \brief Whether we are checking whether this statement is an
+  /// Whether we are checking whether this statement is an
   /// integral constant expression.
   bool CheckingICE : 1;
 
-  /// \brief Whether this statement is an integral constant expression,
+  /// Whether this statement is an integral constant expression,
   /// or in C++11, whether the statement is a constant expression. Only
   /// valid if CheckedICE is true.
   bool IsICE : 1;
@@ -801,11 +808,10 @@ struct EvaluatedStmt {
 
 };
 
-/// VarDecl - An instance of this class is created to represent a variable
-/// declaration or definition.
+/// Represents a variable declaration or definition.
 class VarDecl : public DeclaratorDecl, public Redeclarable<VarDecl> {
 public:
-  /// \brief Initialization styles.
+  /// Initialization styles.
   enum InitializationStyle {
     /// C-style initialization with assignment
     CInit,
@@ -817,7 +823,7 @@ public:
     ListInit
   };
 
-  /// \brief Kinds of thread-local storage.
+  /// Kinds of thread-local storage.
   enum TLSKind {
     /// Not a TLS variable.
     TLS_None,
@@ -829,8 +835,7 @@ public:
     TLS_Dynamic
   };
 
-  /// getStorageClassSpecifierString - Return the string used to
-  /// specify the storage class \p SC.
+  /// Return the string used to specify the storage class \p SC.
   ///
   /// It is illegal to call this function with SC == None.
   static const char *getStorageClassSpecifierString(StorageClass SC);
@@ -845,7 +850,7 @@ protected:
   // allocated in trailing space when necessary.
   using InitType = llvm::PointerUnion<Stmt *, EvaluatedStmt *>;
 
-  /// \brief The initializer for this variable or, for a ParmVarDecl, the
+  /// The initializer for this variable or, for a ParmVarDecl, the
   /// C++ default argument.
   mutable InitType Init;
 
@@ -915,41 +920,41 @@ protected:
     unsigned : NumVarDeclBits;
 
     // FIXME: We need something similar to CXXRecordDecl::DefinitionData.
-    /// \brief Whether this variable is a definition which was demoted due to
+    /// Whether this variable is a definition which was demoted due to
     /// module merge.
     unsigned IsThisDeclarationADemotedDefinition : 1;
 
-    /// \brief Whether this variable is the exception variable in a C++ catch
+    /// Whether this variable is the exception variable in a C++ catch
     /// or an Objective-C @catch statement.
     unsigned ExceptionVar : 1;
 
-    /// \brief Whether this local variable could be allocated in the return
+    /// Whether this local variable could be allocated in the return
     /// slot of its function, enabling the named return value optimization
     /// (NRVO).
     unsigned NRVOVariable : 1;
 
-    /// \brief Whether this variable is the for-range-declaration in a C++0x
+    /// Whether this variable is the for-range-declaration in a C++0x
     /// for-range statement.
     unsigned CXXForRangeDecl : 1;
 
-    /// \brief Whether this variable is an ARC pseudo-__strong
+    /// Whether this variable is an ARC pseudo-__strong
     /// variable;  see isARCPseudoStrong() for details.
     unsigned ARCPseudoStrong : 1;
 
-    /// \brief Whether this variable is (C++1z) inline.
+    /// Whether this variable is (C++1z) inline.
     unsigned IsInline : 1;
 
-    /// \brief Whether this variable has (C++1z) inline explicitly specified.
+    /// Whether this variable has (C++1z) inline explicitly specified.
     unsigned IsInlineSpecified : 1;
 
-    /// \brief Whether this variable is (C++0x) constexpr.
+    /// Whether this variable is (C++0x) constexpr.
     unsigned IsConstexpr : 1;
 
-    /// \brief Whether this variable is the implicit variable for a lambda
+    /// Whether this variable is the implicit variable for a lambda
     /// init-capture.
     unsigned IsInitCapture : 1;
 
-    /// \brief Whether this local extern variable's previous declaration was
+    /// Whether this local extern variable's previous declaration was
     /// declared in the same block scope. This controls whether we should merge
     /// the type of this declaration with its previous declaration.
     unsigned PreviousDeclInSameBlockScope : 1;
@@ -1004,7 +1009,7 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  /// \brief Returns the storage class as written in the source. For the
+  /// Returns the storage class as written in the source. For the
   /// computed linkage of symbol, see getLinkage.
   StorageClass getStorageClass() const {
     return (StorageClass) VarDeclBits.SClass;
@@ -1020,8 +1025,8 @@ public:
   }
   TLSKind getTLSKind() const;
 
-  /// hasLocalStorage - Returns true if a variable with function scope
-  ///  is a non-static local variable.
+  /// Returns true if a variable with function scope is a non-static local
+  /// variable.
   bool hasLocalStorage() const {
     if (getStorageClass() == SC_None) {
       // OpenCL v1.2 s6.5.3: The __constant or constant address space name is
@@ -1044,8 +1049,8 @@ public:
     return getStorageClass() >= SC_Auto;
   }
 
-  /// isStaticLocal - Returns true if a variable with function scope is a
-  /// static local variable.
+  /// Returns true if a variable with function scope is a static local
+  /// variable.
   bool isStaticLocal() const {
     return (getStorageClass() == SC_Static ||
             // C++11 [dcl.stc]p4
@@ -1053,43 +1058,42 @@ public:
       && !isFileVarDecl();
   }
 
-  /// \brief Returns true if a variable has extern or __private_extern__
+  /// Returns true if a variable has extern or __private_extern__
   /// storage.
   bool hasExternalStorage() const {
     return getStorageClass() == SC_Extern ||
            getStorageClass() == SC_PrivateExtern;
   }
 
-  /// \brief Returns true for all variables that do not have local storage.
+  /// Returns true for all variables that do not have local storage.
   ///
   /// This includes all global variables as well as static variables declared
   /// within a function.
   bool hasGlobalStorage() const { return !hasLocalStorage(); }
 
-  /// \brief Get the storage duration of this variable, per C++ [basic.stc].
+  /// Get the storage duration of this variable, per C++ [basic.stc].
   StorageDuration getStorageDuration() const {
     return hasLocalStorage() ? SD_Automatic :
            getTSCSpec() ? SD_Thread : SD_Static;
   }
 
-  /// \brief Compute the language linkage.
+  /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
 
-  /// \brief Determines whether this variable is a variable with
-  /// external, C linkage.
+  /// Determines whether this variable is a variable with external, C linkage.
   bool isExternC() const;
 
-  /// \brief Determines whether this variable's context is, or is nested within,
+  /// Determines whether this variable's context is, or is nested within,
   /// a C++ extern "C" linkage spec.
   bool isInExternCContext() const;
 
-  /// \brief Determines whether this variable's context is, or is nested within,
+  /// Determines whether this variable's context is, or is nested within,
   /// a C++ extern "C++" linkage spec.
   bool isInExternCXXContext() const;
 
-  /// isLocalVarDecl - Returns true for local variable declarations
-  /// other than parameters.  Note that this includes static variables
-  /// inside of functions. It also includes variables inside blocks.
+  /// Returns true for local variable declarations other than parameters.
+  /// Note that this includes static variables inside of functions. It also
+  /// includes variables inside blocks.
   ///
   ///   void foo() { int x; static int y; extern int z; }
   bool isLocalVarDecl() const {
@@ -1100,13 +1104,12 @@ public:
     return false;
   }
 
-  /// \brief Similar to isLocalVarDecl but also includes parameters.
+  /// Similar to isLocalVarDecl but also includes parameters.
   bool isLocalVarDeclOrParm() const {
     return isLocalVarDecl() || getKind() == Decl::ParmVar;
   }
 
-  /// isFunctionOrMethodVarDecl - Similar to isLocalVarDecl, but
-  /// excludes variables declared in blocks.
+  /// Similar to isLocalVarDecl, but excludes variables declared in blocks.
   bool isFunctionOrMethodVarDecl() const {
     if (getKind() != Decl::Var && getKind() != Decl::Decomposition)
       return false;
@@ -1114,7 +1117,7 @@ public:
     return DC->isFunctionOrMethod() && DC->getDeclKind() != Decl::Block;
   }
 
-  /// \brief Determines whether this is a static data member.
+  /// Determines whether this is a static data member.
   ///
   /// This will only be true in C++, and applies to, e.g., the
   /// variable 'x' in:
@@ -1144,7 +1147,7 @@ public:
     Definition
   };
 
-  /// \brief Check whether this declaration is a definition. If this could be
+  /// Check whether this declaration is a definition. If this could be
   /// a tentative definition (in C), don't check whether there's an overriding
   /// definition.
   DefinitionKind isThisDeclarationADefinition(ASTContext &) const;
@@ -1152,21 +1155,20 @@ public:
     return isThisDeclarationADefinition(getASTContext());
   }
 
-  /// \brief Check whether this variable is defined in this
-  /// translation unit.
+  /// Check whether this variable is defined in this translation unit.
   DefinitionKind hasDefinition(ASTContext &) const;
   DefinitionKind hasDefinition() const {
     return hasDefinition(getASTContext());
   }
 
-  /// \brief Get the tentative definition that acts as the real definition in
-  /// a TU. Returns null if there is a proper definition available.
+  /// Get the tentative definition that acts as the real definition in a TU.
+  /// Returns null if there is a proper definition available.
   VarDecl *getActingDefinition();
   const VarDecl *getActingDefinition() const {
     return const_cast<VarDecl*>(this)->getActingDefinition();
   }
 
-  /// \brief Get the real (not just tentative) definition for this declaration.
+  /// Get the real (not just tentative) definition for this declaration.
   VarDecl *getDefinition(ASTContext &);
   const VarDecl *getDefinition(ASTContext &C) const {
     return const_cast<VarDecl*>(this)->getDefinition(C);
@@ -1178,11 +1180,11 @@ public:
     return const_cast<VarDecl*>(this)->getDefinition();
   }
 
-  /// \brief Determine whether this is or was instantiated from an out-of-line
+  /// Determine whether this is or was instantiated from an out-of-line
   /// definition of a static data member.
   bool isOutOfLine() const override;
 
-  /// isFileVarDecl - Returns true for file scoped variable declaration.
+  /// Returns true for file scoped variable declaration.
   bool isFileVarDecl() const {
     Kind K = getKind();
     if (K == ParmVar || K == ImplicitParam)
@@ -1197,14 +1199,14 @@ public:
     return false;
   }
 
-  /// getAnyInitializer - Get the initializer for this variable, no matter which
+  /// Get the initializer for this variable, no matter which
   /// declaration it is attached to.
   const Expr *getAnyInitializer() const {
     const VarDecl *D;
     return getAnyInitializer(D);
   }
 
-  /// getAnyInitializer - Get the initializer for this variable, no matter which
+  /// Get the initializer for this variable, no matter which
   /// declaration it is attached to. Also get that declaration.
   const Expr *getAnyInitializer(const VarDecl *&D) const;
 
@@ -1214,12 +1216,12 @@ public:
   }
   Expr *getInit();
 
-  /// \brief Retrieve the address of the initializer expression.
+  /// Retrieve the address of the initializer expression.
   Stmt **getInitAddress();
 
   void setInit(Expr *I);
 
-  /// \brief Determine whether this variable's value can be used in a
+  /// Determine whether this variable's value can be used in a
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
   /// whether the initializer is in fact a constant expression.
@@ -1509,7 +1511,7 @@ public:
   static bool classofKind(Kind K) { return K == ImplicitParam; }
 };
 
-/// ParmVarDecl - Represents a parameter to a function.
+/// Represents a parameter to a function.
 class ParmVarDecl : public VarDecl {
 public:
   enum { MaxFunctionScopeDepth = 255 };
@@ -1607,14 +1609,13 @@ public:
     return const_cast<ParmVarDecl *>(this)->getUninstantiatedDefaultArg();
   }
 
-  /// hasDefaultArg - Determines whether this parameter has a default argument,
+  /// Determines whether this parameter has a default argument,
   /// either parsed or not.
   bool hasDefaultArg() const;
 
-  /// hasUnparsedDefaultArg - Determines whether this parameter has a
-  /// default argument that has not yet been parsed. This will occur
-  /// during the processing of a C++ class whose member functions have
-  /// default arguments, e.g.,
+  /// Determines whether this parameter has a default argument that has not
+  /// yet been parsed. This will occur during the processing of a C++ class
+  /// whose member functions have default arguments, e.g.,
   /// @code
   ///   class X {
   ///   public:
@@ -1629,11 +1630,10 @@ public:
     return ParmVarDeclBits.DefaultArgKind == DAK_Uninstantiated;
   }
 
-  /// setUnparsedDefaultArg - Specify that this parameter has an
-  /// unparsed default argument. The argument will be replaced with a
-  /// real default argument via setDefaultArg when the class
-  /// definition enclosing the function declaration that owns this
-  /// default argument is completed.
+  /// Specify that this parameter has an unparsed default argument.
+  /// The argument will be replaced with a real default argument via
+  /// setDefaultArg when the class definition enclosing the function
+  /// declaration that owns this default argument is completed.
   void setUnparsedDefaultArg() {
     ParmVarDeclBits.DefaultArgKind = DAK_Unparsed;
   }
@@ -1652,7 +1652,7 @@ public:
   /// parameter pack.
   bool isParameterPack() const;
 
-  /// setOwningFunction - Sets the function declaration that owns this
+  /// Sets the function declaration that owns this
   /// ParmVarDecl. Since ParmVarDecls are often created before the
   /// FunctionDecls that own them, this routine is required to update
   /// the DeclContext appropriately.
@@ -1683,8 +1683,7 @@ private:
   unsigned getParameterIndexLarge() const;
 };
 
-/// An instance of this class is created to represent a function declaration or
-/// definition.
+/// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
 /// there may be several FunctionDecls that correspond to that
@@ -1707,7 +1706,7 @@ public:
   };
 
 private:
-  /// ParamInfo - new[]'d array of pointers to VarDecls for the formal
+  /// A new[]'d array of pointers to VarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
   /// no formals.
   ParmVarDecl **ParamInfo = nullptr;
@@ -2275,8 +2274,8 @@ public:
 
   bool doesDeclarationForceExternallyVisibleDefinition() const;
 
-  /// isOverloadedOperator - Whether this function declaration
-  /// represents an C++ overloaded operator, e.g., "operator+".
+  /// Whether this function declaration represents an C++ overloaded
+  /// operator, e.g., "operator+".
   bool isOverloadedOperator() const {
     return getOverloadedOperator() != OO_None;
   }
@@ -2475,8 +2474,7 @@ public:
   }
 };
 
-/// FieldDecl - An instance of this class is created by Sema::ActOnField to
-/// represent a member of a struct/union/class.
+/// Represents a member of a struct/union/class.
 class FieldDecl : public DeclaratorDecl, public Mergeable<FieldDecl> {
   unsigned BitField : 1;
   unsigned Mutable : 1;
@@ -2547,20 +2545,20 @@ public:
 
   static FieldDecl *CreateDeserialized(ASTContext &C, unsigned ID);
   
-  /// getFieldIndex - Returns the index of this field within its record,
+  /// Returns the index of this field within its record,
   /// as appropriate for passing to ASTRecordLayout::getFieldOffset.
   unsigned getFieldIndex() const;
 
-  /// isMutable - Determines whether this field is mutable (C++ only).
+  /// Determines whether this field is mutable (C++ only).
   bool isMutable() const { return Mutable; }
 
-  /// \brief Determines whether this field is a bitfield.
+  /// Determines whether this field is a bitfield.
   bool isBitField() const { return BitField; }
 
-  /// @brief Determines whether this is an unnamed bitfield.
+  /// Determines whether this is an unnamed bitfield.
   bool isUnnamedBitfield() const { return isBitField() && !getDeclName(); }
 
-  /// isAnonymousStructOrUnion - Determines whether this field is a
+  /// Determines whether this field is a
   /// representative for an anonymous struct or union. Such fields are
   /// unnamed and are implicitly generated by the implementation to
   /// store the data for the anonymous union or struct.
@@ -2577,7 +2575,7 @@ public:
 
   unsigned getBitWidthValue(const ASTContext &Ctx) const;
 
-  /// setBitWidth - Set the bit-field width for this member.
+  /// Set the bit-field width for this member.
   // Note: used by some clients (i.e., do not remove it).
   void setBitWidth(Expr *Width) {
     assert(!hasCapturedVLAType() && !BitField &&
@@ -2591,7 +2589,7 @@ public:
     BitField = true;
   }
 
-  /// removeBitWidth - Remove the bit-field width from this member.
+  /// Remove the bit-field width from this member.
   // Note: used by some clients (i.e., do not remove it).
   void removeBitWidth() {
     assert(isBitField() && "no bitfield width to remove");
@@ -2623,8 +2621,7 @@ public:
     return static_cast<Expr*>(Ptr);
   }
 
-  /// setInClassInitializer - Set the C++11 in-class initializer for this
-  /// member.
+  /// Set the C++11 in-class initializer for this member.
   void setInClassInitializer(Expr *Init) {
     assert(hasInClassInitializer() && !getInClassInitializer());
     if (BitField)
@@ -2633,8 +2630,7 @@ public:
       InitStorage.setPointer(Init);
   }
 
-  /// removeInClassInitializer - Remove the C++11 in-class initializer from this
-  /// member.
+  /// Remove the C++11 in-class initializer from this member.
   void removeInClassInitializer() {
     assert(hasInClassInitializer() && "no initializer to remove");
     InitStorage.setPointerAndInt(getBitWidth(), ISK_NoInit);
@@ -2656,7 +2652,7 @@ public:
   /// \brief Set the captured variable length array type for this field.
   void setCapturedVLAType(const VariableArrayType *VLAType);
 
-  /// getParent - Returns the parent of this field declaration, which
+  /// Returns the parent of this field declaration, which
   /// is the struct in which this field is defined.
   const RecordDecl *getParent() const {
     return cast<RecordDecl>(getDeclContext());
@@ -2677,7 +2673,7 @@ public:
   static bool classofKind(Kind K) { return K >= firstField && K <= lastField; }
 };
 
-/// EnumConstantDecl - An instance of this object exists for each enum constant
+/// An instance of this object exists for each enum constant
 /// that is defined.  For example, in "enum X {a,b}", each of a/b are
 /// EnumConstantDecl's, X is an instance of EnumDecl, and the type of a/b is a
 /// TagType for the X EnumDecl.
@@ -2718,9 +2714,8 @@ public:
   static bool classofKind(Kind K) { return K == EnumConstant; }
 };
 
-/// IndirectFieldDecl - An instance of this class is created to represent a
-/// field injected from an anonymous union/struct into the parent scope.
-/// IndirectFieldDecl are always implicit.
+/// Represents a field injected from an anonymous union/struct into the parent
+/// scope. These are always implicit.
 class IndirectFieldDecl : public ValueDecl,
                           public Mergeable<IndirectFieldDecl> {
   NamedDecl **Chaining;
@@ -2769,17 +2764,17 @@ public:
   static bool classofKind(Kind K) { return K == IndirectField; }
 };
 
-/// TypeDecl - Represents a declaration of a type.
+/// Represents a declaration of a type.
 class TypeDecl : public NamedDecl {
   friend class ASTContext;
 
-  /// TypeForDecl - This indicates the Type object that represents
+  /// This indicates the Type object that represents
   /// this TypeDecl.  It is a cache maintained by
   /// ASTContext::getTypedefType, ASTContext::getTagDeclType, and
   /// ASTContext::getTemplateTypeParmType, and TemplateTypeParmDecl.
   mutable const Type *TypeForDecl = nullptr;
 
-  /// LocStart - The start of the source range for this declaration.
+  /// The start of the source range for this declaration.
   SourceLocation LocStart;
 
   void anchor() override;
@@ -2912,7 +2907,7 @@ private:
   bool isTransparentTagSlow() const;
 };
 
-/// TypedefDecl - Represents the declaration of a typedef-name via the 'typedef'
+/// Represents the declaration of a typedef-name via the 'typedef'
 /// type specifier.
 class TypedefDecl : public TypedefNameDecl {
   TypedefDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
@@ -2932,7 +2927,7 @@ public:
   static bool classofKind(Kind K) { return K == Typedef; }
 };
 
-/// TypeAliasDecl - Represents the declaration of a typedef-name via a C++0x
+/// Represents the declaration of a typedef-name via a C++11
 /// alias-declaration.
 class TypeAliasDecl : public TypedefNameDecl {
   /// The template for which this is the pattern, if any.
@@ -2959,7 +2954,7 @@ public:
   static bool classofKind(Kind K) { return K == TypeAlias; }
 };
 
-/// TagDecl - Represents the declaration of a struct/union/class/enum.
+/// Represents the declaration of a struct/union/class/enum.
 class TagDecl
   : public TypeDecl, public DeclContext, public Redeclarable<TagDecl> {
 public:
@@ -2968,25 +2963,24 @@ public:
 
 private:
   // FIXME: This can be packed into the bitfields in Decl.
-  /// TagDeclKind - The TagKind enum.
+  /// The TagKind enum.
   unsigned TagDeclKind : 3;
 
-  /// IsCompleteDefinition - True if this is a definition ("struct foo
-  /// {};"), false if it is a declaration ("struct foo;").  It is not
-  /// a definition until the definition has been fully processed.
+  /// True if this is a definition ("struct foo {};"), false if it is a
+  /// declaration ("struct foo;").  It is not considered a definition
+  /// until the definition has been fully processed.
   unsigned IsCompleteDefinition : 1;
 
 protected:
-  /// IsBeingDefined - True if this is currently being defined.
+  /// True if this is currently being defined.
   unsigned IsBeingDefined : 1;
 
 private:
-  /// IsEmbeddedInDeclarator - True if this tag declaration is
-  /// "embedded" (i.e., defined or declared for the very first time)
-  /// in the syntax of a declarator.
+  /// True if this tag declaration is "embedded" (i.e., defined or declared
+  /// for the very first time) in the syntax of a declarator.
   unsigned IsEmbeddedInDeclarator : 1;
 
-  /// \brief True if this tag is free standing, e.g. "struct foo;".
+  /// True if this tag is free standing, e.g. "struct foo;".
   unsigned IsFreeStanding : 1;
 
 protected:
@@ -2994,21 +2988,21 @@ protected:
   unsigned NumPositiveBits : 8;
   unsigned NumNegativeBits : 8;
 
-  /// IsScoped - True if this tag declaration is a scoped enumeration. Only
+  /// True if this tag declaration is a scoped enumeration. Only
   /// possible in C++11 mode.
   unsigned IsScoped : 1;
 
-  /// IsScopedUsingClassTag - If this tag declaration is a scoped enum,
+  /// If this tag declaration is a scoped enum,
   /// then this is true if the scoped enum was declared using the class
   /// tag, false if it was declared with the struct tag. No meaning is
   /// associated if this tag declaration is not a scoped enum.
   unsigned IsScopedUsingClassTag : 1;
 
-  /// IsFixed - True if this is an enumeration with fixed underlying type. Only
+  /// True if this is an enumeration with fixed underlying type. Only
   /// possible in C++11, Microsoft extensions, or Objective C mode.
   unsigned IsFixed : 1;
 
-  /// \brief Indicates whether it is possible for declarations of this kind
+  /// Indicates whether it is possible for declarations of this kind
   /// to have an out-of-date definition.
   ///
   /// This option is only enabled when modules are enabled.
@@ -3091,11 +3085,11 @@ public:
   SourceRange getBraceRange() const { return BraceRange; }
   void setBraceRange(SourceRange R) { BraceRange = R; }
 
-  /// getInnerLocStart - Return SourceLocation representing start of source
+  /// Return SourceLocation representing start of source
   /// range ignoring outer template declarations.
   SourceLocation getInnerLocStart() const { return getLocStart(); }
 
-  /// getOuterLocStart - Return SourceLocation representing start of source
+  /// Return SourceLocation representing start of source
   /// range taking into account any outer template declarations.
   SourceLocation getOuterLocStart() const;
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -3105,14 +3099,13 @@ public:
     return const_cast<TagDecl*>(this)->getCanonicalDecl();
   }
 
-  /// isThisDeclarationADefinition() - Return true if this declaration
-  /// is a completion definition of the type.  Provided for consistency.
+  /// Return true if this declaration is a completion definition of the type.
+  /// Provided for consistency.
   bool isThisDeclarationADefinition() const {
     return isCompleteDefinition();
   }
 
-  /// isCompleteDefinition - Return true if this decl has its body
-  /// fully specified.
+  /// Return true if this decl has its body fully specified.
   bool isCompleteDefinition() const {
     return IsCompleteDefinition;
   }
@@ -3123,7 +3116,7 @@ public:
     return IsCompleteDefinitionRequired;
   }
 
-  /// isBeingDefined - Return true if this decl is currently being defined.
+  /// Return true if this decl is currently being defined.
   bool isBeingDefined() const {
     return IsBeingDefined;
   }
@@ -3145,14 +3138,14 @@ public:
   /// parameters.
   bool isDependentType() const { return isDependentContext(); }
 
-  /// @brief Starts the definition of this tag declaration.
+  /// Starts the definition of this tag declaration.
   ///
   /// This method should be invoked at the beginning of the definition
   /// of this tag declaration. It will set the tag type into a state
   /// where it is in the process of being defined.
   void startDefinition();
 
-  /// getDefinition - Returns the TagDecl that actually defines this
+  /// Returns the TagDecl that actually defines this
   ///  struct/union/class/enum.  When determining whether or not a
   ///  struct/union/class/enum has a definition, one should use this
   ///  method as opposed to 'isDefinition'.  'isDefinition' indicates
@@ -3252,11 +3245,11 @@ public:
   }
 };
 
-/// EnumDecl - Represents an enum.  In C++11, enums can be forward-declared
+/// Represents an enum.  In C++11, enums can be forward-declared
 /// with a fixed underlying type, and in C we allow them to be forward-declared
 /// with no underlying type as an extension.
 class EnumDecl : public TagDecl {
-  /// IntegerType - This represent the integer type that the enum corresponds
+  /// This represent the integer type that the enum corresponds
   /// to for code generation purposes.  Note that the enumerator constants may
   /// have a different type than this does.
   ///
@@ -3272,7 +3265,7 @@ class EnumDecl : public TagDecl {
   /// extra pointer when TypeSourceInfo is needed.
   llvm::PointerUnion<const Type *, TypeSourceInfo *> IntegerType;
 
-  /// PromotionType - The integer type that values of this type should
+  /// The integer type that values of this type should
   /// promote to.  In C, enumerators are generally of an integer type
   /// directly, but gcc-style large enumerators (and all enumerators
   /// in C++) are of the enum type instead.
@@ -3336,9 +3329,9 @@ public:
                           bool IsFixed);
   static EnumDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
-  /// completeDefinition - When created, the EnumDecl corresponds to a
+  /// When created, the EnumDecl corresponds to a
   /// forward-declared enum. This method is used to mark the
-  /// declaration as being defined; it's enumerators have already been
+  /// declaration as being defined; its enumerators have already been
   /// added (via DeclContext::addDecl). NewType is the new underlying
   /// type of the enumeration type.
   void completeDefinition(QualType NewType,
@@ -3346,8 +3339,7 @@ public:
                           unsigned NumPositiveBits,
                           unsigned NumNegativeBits);
 
-  // enumerator_iterator - Iterates through the enumerators of this
-  // enumeration.
+  // Iterates through the enumerators of this enumeration.
   using enumerator_iterator = specific_decl_iterator<EnumConstantDecl>;
   using enumerator_range =
       llvm::iterator_range<specific_decl_iterator<EnumConstantDecl>>;
@@ -3370,14 +3362,13 @@ public:
     return enumerator_iterator(E->decls_end());
   }
 
-  /// getPromotionType - Return the integer type that enumerators
-  /// should promote to.
+  /// Return the integer type that enumerators should promote to.
   QualType getPromotionType() const { return PromotionType; }
 
-  /// \brief Set the promotion type.
+  /// Set the promotion type.
   void setPromotionType(QualType T) { PromotionType = T; }
 
-  /// getIntegerType - Return the integer type this enum decl corresponds to.
+  /// Return the integer type this enum decl corresponds to.
   /// This returns a null QualType for an enum forward definition with no fixed
   /// underlying type.
   QualType getIntegerType() const {
@@ -3500,7 +3491,7 @@ public:
   static bool classofKind(Kind K) { return K == Enum; }
 };
 
-/// RecordDecl - Represents a struct/union/class.  For example:
+/// Represents a struct/union/class.  For example:
 ///   struct X;                  // Forward declaration, no "body".
 ///   union Y { int A, B; };     // Has body with members A and B (FieldDecls).
 /// This decl will be marked invalid if *any* members are invalid.
@@ -3508,24 +3499,23 @@ class RecordDecl : public TagDecl {
   friend class DeclContext;
 
   // FIXME: This can be packed into the bitfields in Decl.
-  /// HasFlexibleArrayMember - This is true if this struct ends with a flexible
+  /// This is true if this struct ends with a flexible
   /// array member (e.g. int X[]) or if this union contains a struct that does.
   /// If so, this cannot be contained in arrays or other structs as a member.
   bool HasFlexibleArrayMember : 1;
 
-  /// AnonymousStructOrUnion - Whether this is the type of an anonymous struct
-  /// or union.
+  /// Whether this is the type of an anonymous struct or union.
   bool AnonymousStructOrUnion : 1;
 
-  /// HasObjectMember - This is true if this struct has at least one member
+  /// This is true if this struct has at least one member
   /// containing an Objective-C object pointer type.
   bool HasObjectMember : 1;
-  
-  /// HasVolatileMember - This is true if struct has at least one member of
+
+  /// This is true if struct has at least one member of
   /// 'volatile' type.
   bool HasVolatileMember : 1;
 
-  /// \brief Whether the field declarations of this record have been loaded
+  /// Whether the field declarations of this record have been loaded
   /// from external storage. To avoid unnecessary deserialization of
   /// methods/nested types we allow deserialization of just the fields
   /// when needed.
@@ -3560,10 +3550,9 @@ public:
   bool hasFlexibleArrayMember() const { return HasFlexibleArrayMember; }
   void setHasFlexibleArrayMember(bool V) { HasFlexibleArrayMember = V; }
 
-  /// isAnonymousStructOrUnion - Whether this is an anonymous struct
-  /// or union. To be an anonymous struct or union, it must have been
-  /// declared without a name and there must be no objects of this
-  /// type declared, e.g.,
+  /// Whether this is an anonymous struct or union. To be an anonymous
+  /// struct or union, it must have been declared without a name and
+  /// there must be no objects of this type declared, e.g.,
   /// @code
   ///   union { int i; float f; };
   /// @endcode
@@ -3617,7 +3606,7 @@ public:
   /// construct.
   void setCapturedRecord();
 
-  /// getDefinition - Returns the RecordDecl that actually defines
+  /// Returns the RecordDecl that actually defines
   ///  this struct/union/class.  When determining whether or not a
   ///  struct/union/class is completely defined, one should use this
   ///  method as opposed to 'isCompleteDefinition'.
@@ -3642,14 +3631,12 @@ public:
     return field_iterator(decl_iterator());
   }
 
-  // field_empty - Whether there are any fields (non-static data
-  // members) in this record.
+  // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
   }
 
-  /// completeDefinition - Notes that the definition of this type is
-  /// now complete.
+  /// Note that the definition of this type is now complete.
   virtual void completeDefinition();
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -3708,7 +3695,7 @@ public:
   static bool classofKind(Kind K) { return K == FileScopeAsm; }
 };
 
-/// BlockDecl - This represents a block literal declaration, which is like an
+/// Pepresents a block literal declaration, which is like an
 /// unnamed FunctionDecl.  For example:
 /// ^{ statement-body }   or   ^(int arg1, float arg2){ statement-body }
 class BlockDecl : public Decl, public DeclContext {
@@ -3758,7 +3745,7 @@ private:
   bool BlockMissingReturnType : 1;
   bool IsConversionFromLambda : 1;
 
-  /// ParamInfo - new[]'d array of pointers to ParmVarDecls for the formal
+  /// A new[]'d array of pointers to ParmVarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
   /// no formals.
   ParmVarDecl **ParamInfo = nullptr;
@@ -3827,11 +3814,11 @@ public:
 
   void setParams(ArrayRef<ParmVarDecl *> NewParamInfo);
 
-  /// hasCaptures - True if this block (or its nested blocks) captures
+  /// True if this block (or its nested blocks) captures
   /// anything of local storage from its enclosing scopes.
   bool hasCaptures() const { return NumCaptures != 0 || CapturesCXXThis; }
 
-  /// getNumCaptures - Returns the number of captured variables.
+  /// Returns the number of captured variables.
   /// Does not include an entry for 'this'.
   unsigned getNumCaptures() const { return NumCaptures; }
 
@@ -3880,8 +3867,7 @@ public:
   }
 };
 
-/// \brief This represents the body of a CapturedStmt, and serves as its
-/// DeclContext.
+/// Represents the body of a CapturedStmt, and serves as its DeclContext.
 class CapturedDecl final
     : public Decl,
       public DeclContext,
@@ -4096,7 +4082,7 @@ public:
   }
 };
 
-/// \brief Represents an empty-declaration.
+/// Represents an empty-declaration.
 class EmptyDecl : public Decl {
   EmptyDecl(DeclContext *DC, SourceLocation L) : Decl(Empty, DC, L) {}
 
@@ -4161,7 +4147,7 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
 
 // Inline function definitions.
 
-/// \brief Check if the given decl is complete.
+/// Check if the given decl is complete.
 ///
 /// We use this function to break a cycle between the inline definitions in
 /// Type.h and Decl.h.
@@ -4169,7 +4155,7 @@ inline bool IsEnumDeclComplete(EnumDecl *ED) {
   return ED->isComplete();
 }
 
-/// \brief Check if the given decl is scoped.
+/// Check if the given decl is scoped.
 ///
 /// We use this function to break a cycle between the inline definitions in
 /// Type.h and Decl.h.

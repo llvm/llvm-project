@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false -polly-prune-unprofitable -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false -polly-prune-unprofitable -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
 ; REQUIRES: asserts
 ;
 ; Skip this SCoP for having scalar dependencies between all statements,

@@ -2671,7 +2671,8 @@ Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
     return DeclSpecContext::DSC_template_param;
   if (Context == DeclaratorContext::TemplateTypeArgContext)
     return DeclSpecContext::DSC_template_type_arg;
-  if (Context == DeclaratorContext::TrailingReturnContext)
+  if (Context == DeclaratorContext::TrailingReturnContext ||
+      Context == DeclaratorContext::TrailingReturnVarContext)
     return DeclSpecContext::DSC_trailing;
   if (Context == DeclaratorContext::AliasDeclContext ||
       Context == DeclaratorContext::AliasTemplateContext)
@@ -5627,7 +5628,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
              D.getContext() == DeclaratorContext::AliasTemplateContext)
       // The most likely error is that the ';' was forgotten.
       DiagnoseIdentifier = NextToken().isOneOf(tok::comma, tok::semi);
-    else if (D.getContext() == DeclaratorContext::TrailingReturnContext &&
+    else if ((D.getContext() == DeclaratorContext::TrailingReturnContext ||
+              D.getContext() == DeclaratorContext::TrailingReturnVarContext) &&
              !isCXX11VirtSpecifier(Tok))
       DiagnoseIdentifier = NextToken().isOneOf(
           tok::comma, tok::semi, tok::equal, tok::l_brace, tok::kw_try);
@@ -5641,6 +5643,18 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   }
 
   if (Tok.is(tok::l_paren)) {
+    // If this might be an abstract-declarator followed by a direct-initializer,
+    // check whether this is a valid declarator chunk. If it can't be, assume
+    // that it's an initializer instead.
+    if (D.mayOmitIdentifier() && D.mayBeFollowedByCXXDirectInit()) {
+      RevertingTentativeParsingAction PA(*this);
+      if (TryParseDeclarator(true, D.mayHaveIdentifier(), true) ==
+              TPResult::False) {
+        D.SetIdentifier(nullptr, Tok.getLocation());
+        goto PastIdentifier;
+      }
+    }
+
     // direct-declarator: '(' declarator ')'
     // direct-declarator: '(' attributes declarator ')'
     // Example: 'char (*X)'   or 'int (*XX)(void)'
@@ -6111,7 +6125,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
           StartLoc = D.getDeclSpec().getTypeSpecTypeLoc();
         LocalEndLoc = Tok.getLocation();
         SourceRange Range;
-        TrailingReturnType = ParseTrailingReturnType(Range);
+        TrailingReturnType =
+            ParseTrailingReturnType(Range, D.mayBeFollowedByCXXDirectInit());
         EndLoc = Range.getEnd();
       }
     } else if (standardAttributesAllowed()) {

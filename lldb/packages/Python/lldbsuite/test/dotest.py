@@ -1200,14 +1200,6 @@ def run_suite():
     build_dir = configuration.test_build_dir
     lldbutil.mkdir_p(build_dir)
 
-    # Create a marker for Spotlight to never index $BUILD_DIR.  LLDB
-    # queries Spotlight to locate .dSYM bundles based on the UUID
-    # embedded in a binary, and because the UUID is a hash of filename
-    # and .text section, there *will* be conflicts inside $BUILD_DIR.
-    if platform.system() == "Darwin":
-        with open(os.path.join(build_dir, '.metadata_never_index'), 'w+'):
-            pass
-
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
 
     checkLibcxxSupport()

@@ -12,13 +12,16 @@ define zeroext i16 @cmp_kor_seq_16(<16 x float> %a, <16 x float> %b, <16 x float
 ; CHECK-LABEL: cmp_kor_seq_16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm0, %k0
-; CHECK-NEXT:    vcmpgeps %zmm4, %zmm1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    vcmpgeps %zmm4, %zmm2, %k1
-; CHECK-NEXT:    vcmpgeps %zmm4, %zmm3, %k2
-; CHECK-NEXT:    korw %k2, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    vcmpgeps %zmm4, %zmm1, %k0
+; CHECK-NEXT:    kmovw %k0, %edx
+; CHECK-NEXT:    vcmpgeps %zmm4, %zmm2, %k0
+; CHECK-NEXT:    kmovw %k0, %esi
+; CHECK-NEXT:    vcmpgeps %zmm4, %zmm3, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    orl %edx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:

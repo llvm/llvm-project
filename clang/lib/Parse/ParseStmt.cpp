@@ -954,7 +954,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   if (T.consumeOpen())
     return StmtError();
 
-  Sema::CompoundScopeRAII CompoundScope(Actions);
+  Sema::CompoundScopeRAII CompoundScope(Actions, isStmtExpr);
 
   // Parse any pragmas at the beginning of the compound statement.
   ParseCompoundStatementLeadingPragmas();

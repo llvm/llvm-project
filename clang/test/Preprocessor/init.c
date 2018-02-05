@@ -10005,6 +10005,8 @@
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=riscv32 < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV32 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=riscv32-unknown-linux < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV32,RISCV32-LINUX %s
 // RISCV32: #define _ILP32 1
 // RISCV32: #define __ATOMIC_ACQUIRE 2
 // RISCV32: #define __ATOMIC_ACQ_REL 4
@@ -10196,13 +10198,22 @@
 // RISCV32: #define __WINT_TYPE__ unsigned int
 // RISCV32: #define __WINT_UNSIGNED__ 1
 // RISCV32: #define __WINT_WIDTH__ 32
+// RISCV32-LINUX: #define __gnu_linux__ 1
+// RISCV32-LINUX: #define __linux 1
+// RISCV32-LINUX: #define __linux__ 1
 // RISCV32: #define __riscv 1
 // RISCV32: #define __riscv_cmodel_medlow 1
 // RISCV32: #define __riscv_float_abi_soft 1
 // RISCV32: #define __riscv_xlen 32
+// RISCV32-LINUX: #define __unix 1
+// RISCV32-LINUX: #define __unix__ 1
+// RISCV32-LINUX: #define linux 1
+// RISCV32-LINUX: #define unix 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=riscv64 < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV64 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=riscv64-unknown-linux < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64,RISCV64-LINUX %s
 // RISCV64: #define _LP64 1
 // RISCV64: #define __ATOMIC_ACQUIRE 2
 // RISCV64: #define __ATOMIC_ACQ_REL 4
@@ -10394,7 +10405,14 @@
 // RISCV64: #define __WINT_TYPE__ unsigned int
 // RISCV64: #define __WINT_UNSIGNED__ 1
 // RISCV64: #define __WINT_WIDTH__ 32
+// RISCV64-LINUX: #define __gnu_linux__ 1
+// RISCV64-LINUX: #define __linux 1
+// RISCV64-LINUX: #define __linux__ 1
 // RISCV64: #define __riscv 1
 // RISCV64: #define __riscv_cmodel_medlow 1
 // RISCV64: #define __riscv_float_abi_soft 1
 // RISCV64: #define __riscv_xlen 64
+// RISCV64-LINUX: #define __unix 1
+// RISCV64-LINUX: #define __unix__ 1
+// RISCV64-LINUX: #define linux 1
+// RISCV64-LINUX: #define unix 1

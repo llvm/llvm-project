@@ -3,10 +3,10 @@
 # RUN: llvm-mc -triple=riscv64 -mattr=+c -riscv-no-aliases -show-encoding < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -riscv-no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -riscv-no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # TODO: more exhaustive testing of immediate encoding.

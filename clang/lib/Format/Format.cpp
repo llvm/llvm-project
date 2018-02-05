@@ -105,6 +105,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::BinPackStyle> {
+  static void enumeration(IO &IO, FormatStyle::BinPackStyle &Value) {
+    IO.enumCase(Value, "Auto", FormatStyle::BPS_Auto);
+    IO.enumCase(Value, "Always", FormatStyle::BPS_Always);
+    IO.enumCase(Value, "Never", FormatStyle::BPS_Never);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
   static void enumeration(IO &IO, FormatStyle::BinaryOperatorStyle &Value) {
     IO.enumCase(Value, "All", FormatStyle::BOS_All);
@@ -378,6 +386,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("MacroBlockEnd", Style.MacroBlockEnd);
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
+    IO.mapOptional("ObjCBinPackProtocolList", Style.ObjCBinPackProtocolList);
     IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
@@ -637,6 +646,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
+  LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;

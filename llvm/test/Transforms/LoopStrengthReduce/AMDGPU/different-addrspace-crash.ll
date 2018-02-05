@@ -1,6 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
 
-target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
 target triple = "amdgcn--"
 
 ; We need to compile this for a target where we have different address spaces,
@@ -21,9 +20,9 @@ entry:
 
 loop:
   %idx0 = phi i32 [ %next_idx0, %loop ], [ 0, %entry ]
-  %0 = getelementptr inbounds i32, i32* null, i32 %idx0
+  %0 = getelementptr inbounds i32, i32 addrspace(5)* null, i32 %idx0
   %1 = getelementptr inbounds i32, i32 addrspace(1)* null, i32 %idx0
-  store i32 1, i32* %0
+  store i32 1, i32 addrspace(5)* %0
   store i32 7, i32 addrspace(1)* %1
   %next_idx0 = add nuw nsw i32 %idx0, 1
   br label %loop

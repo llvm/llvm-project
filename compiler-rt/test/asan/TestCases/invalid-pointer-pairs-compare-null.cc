@@ -15,28 +15,28 @@ char small_global[7] = {};
 int main() {
   // Heap allocated memory.
   char *p = (char *)malloc(42);
-  int r = foo(p, nullptr);
+  int r = foo(p, NULL);
   free(p);
 
   p = (char *)malloc(1024);
-  foo(nullptr, p);
+  foo(NULL, p);
   free(p);
 
   p = (char *)malloc(4096);
-  foo(p, nullptr);
+  foo(p, NULL);
   free(p);
 
   // Global variable.
-  foo(&global[0], nullptr);
-  foo(&global[1000], nullptr);
+  foo(&global[0], NULL);
+  foo(&global[1000], NULL);
 
   p = &small_global[0];
-  foo(p, nullptr);
+  foo(p, NULL);
 
   // Stack variable.
   char stack[10000];
-  foo(&stack[0], nullptr);
-  foo(nullptr, &stack[9000]);
+  foo(&stack[0], NULL);
+  foo(NULL, &stack[9000]);
 
   return 0;
 }

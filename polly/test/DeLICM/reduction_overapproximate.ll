@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm-partial-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm-partial-writes=false  -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=PARTIAL
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm-partial-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm-partial-writes=false  -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=PARTIAL
 ;
 ;    void func(double *A {
 ;      for (int j = -1; j < 3; j += 1) { /* outer */

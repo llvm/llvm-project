@@ -40,22 +40,22 @@ std::ostream &operator<<(std::ostream &OS,
 // std::is_assignable and actually writing such an assignment.
 #if !defined(_MSC_VER)
 static_assert(
-    !std::is_assignable<StringRef, std::string>::value,
+    !std::is_assignable<StringRef&, std::string>::value,
     "Assigning from prvalue std::string");
 static_assert(
-    !std::is_assignable<StringRef, std::string &&>::value,
+    !std::is_assignable<StringRef&, std::string &&>::value,
     "Assigning from xvalue std::string");
 static_assert(
-    std::is_assignable<StringRef, std::string &>::value,
+    std::is_assignable<StringRef&, std::string &>::value,
     "Assigning from lvalue std::string");
 static_assert(
-    std::is_assignable<StringRef, const char *>::value,
+    std::is_assignable<StringRef&, const char *>::value,
     "Assigning from prvalue C string");
 static_assert(
-    std::is_assignable<StringRef, const char * &&>::value,
+    std::is_assignable<StringRef&, const char * &&>::value,
     "Assigning from xvalue C string");
 static_assert(
-    std::is_assignable<StringRef, const char * &>::value,
+    std::is_assignable<StringRef&, const char * &>::value,
     "Assigning from lvalue C string");
 #endif
 

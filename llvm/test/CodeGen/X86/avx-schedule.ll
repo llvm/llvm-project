@@ -566,54 +566,63 @@ define <8 x float> @test_blendps(<8 x float> %a0, <8 x float> %a1, <8 x float> *
 ; GENERIC-LABEL: test_blendps:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
-; GENERIC-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
+; GENERIC-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [8:0.50]
+; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_blendps:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
-; SANDY-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
+; SANDY-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [8:0.50]
+; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
-; HASWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
+; HASWELL-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [8:0.50]
+; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_blendps:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
-; BROADWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [7:0.50]
+; BROADWELL-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [7:0.50]
+; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendps:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
-; SKYLAKE-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
+; SKYLAKE-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [8:0.50]
+; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
-; SKX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
+; SKX-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [8:0.50]
+; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendps:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
-; BTVER2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [6:1.00]
+; BTVER2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [6:1.00]
+; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendps:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
-; ZNVER1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
+; ZNVER1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2],ymm1[3],mem[4,5,6],ymm1[7] sched: [8:0.50]
+; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = load <8 x float>, <8 x float> *%a2, align 32
-  %3 = shufflevector <8 x float> %1, <8 x float> %2, <8 x i32> <i32 0, i32 1, i32 10, i32 3, i32 12, i32 13, i32 14, i32 7>
-  ret <8 x float> %3
+  %3 = shufflevector <8 x float> %a1, <8 x float> %2, <8 x i32> <i32 0, i32 1, i32 10, i32 3, i32 12, i32 13, i32 14, i32 7>
+  %4 = fadd <8 x float> %1, %3
+  ret <8 x float> %4
 }
 
 define <4 x double> @test_blendvpd(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, <4 x double> *%a3) {
@@ -4330,54 +4339,63 @@ define <8 x float> @test_shufps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%
 ; GENERIC-LABEL: test_shufps:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
-; GENERIC-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
+; GENERIC-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [8:1.00]
+; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_shufps:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
-; SANDY-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
+; SANDY-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [8:1.00]
+; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_shufps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
-; HASWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
+; HASWELL-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [8:1.00]
+; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_shufps:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
-; BROADWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [7:1.00]
+; BROADWELL-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [7:1.00]
+; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_shufps:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
-; SKYLAKE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
+; SKYLAKE-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [8:1.00]
+; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_shufps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
-; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
+; SKX-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [8:1.00]
+; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_shufps:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:0.50]
-; BTVER2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [6:1.00]
+; BTVER2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [6:1.00]
+; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_shufps:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:0.50]
-; ZNVER1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:0.50]
+; ZNVER1-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,3],mem[0,0],ymm1[4,7],mem[4,4] sched: [8:0.50]
+; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 0, i32 8, i32 8, i32 4, i32 4, i32 12, i32 12>
   %2 = load <8 x float>, <8 x float> *%a2, align 32
-  %3 = shufflevector <8 x float> %1, <8 x float> %2, <8 x i32> <i32 0, i32 3, i32 8, i32 8, i32 4, i32 7, i32 12, i32 12>
-  ret <8 x float> %3
+  %3 = shufflevector <8 x float> %a1, <8 x float> %2, <8 x i32> <i32 0, i32 3, i32 8, i32 8, i32 4, i32 7, i32 12, i32 12>
+  %4 = fadd <8 x float> %1, %3
+  ret <8 x float> %4
 }
 
 define <4 x double> @test_sqrtpd(<4 x double> %a0, <4 x double> *%a1) {

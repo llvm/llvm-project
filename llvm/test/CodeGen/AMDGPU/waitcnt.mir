@@ -3,8 +3,8 @@
 --- |
   define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
                                  <4 x i32> addrspace(1)* %global16,
-                                 i32 addrspace(4)* %flat4,
-                                 <4 x i32> addrspace(4)* %flat16) {
+                                 i32* %flat4,
+                                 <4 x i32>* %flat16) {
     ret void
   }
 

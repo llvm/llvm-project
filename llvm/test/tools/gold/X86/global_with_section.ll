@@ -45,7 +45,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Confirm via a variable with a non-C identifier section that we are getting
 ; the expected internalization.
-; CHECK-DAG: @var_with_nonC_section = internal global i32 0, section ".nonCsection"
+; CHECK-REGULARLTO-DAG: @var_with_nonC_section = internal global i32 0, section ".nonCsection"
+; Check we dropped definition of dead variable.
+; CHECK-THINLTO-DAG: @var_with_nonC_section = external dso_local global i32, section ".nonCsection"
 @var_with_nonC_section = global i32 0, section ".nonCsection"
 
 ; We should not internalize @deadfunc_with_section due to section

@@ -1731,6 +1731,7 @@ enum class DeclaratorContext {
     LambdaExprParameterContext, // Lambda-expression parameter declarator.
     ConversionIdContext, // C++ conversion-type-id.
     TrailingReturnContext, // C++11 trailing-type-specifier.
+    TrailingReturnVarContext, // C++11 trailing-type-specifier for variable.
     TemplateTypeArgContext, // Template type argument.
     AliasDeclContext,    // C++11 alias-declaration.
     AliasTemplateContext // C++11 alias-declaration template.
@@ -1950,6 +1951,7 @@ public:
     case DeclaratorContext::ConversionIdContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnVarContext:
       return true;
     }
     llvm_unreachable("unknown context kind!");
@@ -1986,6 +1988,7 @@ public:
     case DeclaratorContext::ConversionIdContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnVarContext:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2026,6 +2029,7 @@ public:
     case DeclaratorContext::ConversionIdContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnVarContext:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2052,6 +2056,7 @@ public:
     case DeclaratorContext::BlockContext:
     case DeclaratorContext::ForContext:
     case DeclaratorContext::InitStmtContext:
+    case DeclaratorContext::TrailingReturnVarContext:
       return true;
 
     case DeclaratorContext::ConditionContext:
@@ -2288,6 +2293,7 @@ public:
     case DeclaratorContext::ConversionIdContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnVarContext:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2319,6 +2325,7 @@ public:
     case DeclaratorContext::LambdaExprContext:
     case DeclaratorContext::ConversionIdContext:
     case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnVarContext:
       return false;
 
     case DeclaratorContext::BlockContext:

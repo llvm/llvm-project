@@ -1339,7 +1339,7 @@ public:
       getCurFunction()->recordUseOfWeak(E, IsRead);
   }
 
-  void PushCompoundScope();
+  void PushCompoundScope(bool IsStmtExpr);
   void PopCompoundScope();
 
   sema::CompoundScopeInfo &getCurCompoundScope() const;
@@ -3667,7 +3667,7 @@ public:
   StmtResult ActOnNullStmt(SourceLocation SemiLoc,
                            bool HasLeadingEmptyMacro = false);
 
-  void ActOnStartOfCompoundStmt();
+  void ActOnStartOfCompoundStmt(bool IsStmtExpr);
   void ActOnFinishOfCompoundStmt();
   StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                                ArrayRef<Stmt *> Elts, bool isStmtExpr);
@@ -3675,8 +3675,8 @@ public:
   /// \brief A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:
-    CompoundScopeRAII(Sema &S): S(S) {
-      S.ActOnStartOfCompoundStmt();
+    CompoundScopeRAII(Sema &S, bool IsStmtExpr = false) : S(S) {
+      S.ActOnStartOfCompoundStmt(IsStmtExpr);
     }
 
     ~CompoundScopeRAII() {

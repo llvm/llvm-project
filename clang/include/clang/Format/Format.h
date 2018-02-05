@@ -390,6 +390,17 @@ struct FormatStyle {
   /// \endcode
   bool BinPackParameters;
 
+  /// \brief The style of wrapping parameters on the same line (bin-packed) or
+  /// on one line each.
+  enum BinPackStyle {
+    /// Automatically determine parameter bin-packing behavior.
+    BPS_Auto,
+    /// Always bin-pack parameters.
+    BPS_Always,
+    /// Never bin-pack parameters.
+    BPS_Never,
+  };
+
   /// \brief The style of breaking before or after binary operators.
   enum BinaryOperatorStyle {
     /// Break after operators.
@@ -1299,6 +1310,38 @@ struct FormatStyle {
   /// \brief The indentation used for namespaces.
   NamespaceIndentationKind NamespaceIndentation;
 
+  /// \brief Controls bin-packing Objective-C protocol conformance list
+  /// items into as few lines as possible when they go over ``ColumnLimit``.
+  ///
+  /// If ``Auto`` (the default), delegates to the value in
+  /// ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  /// protocol conformance list items into as few lines as possible
+  /// whenever they go over ``ColumnLimit``.
+  ///
+  /// If ``Always``, always bin-packs Objective-C protocol conformance
+  /// list items into as few lines as possible whenever they go over
+  /// ``ColumnLimit``.
+  ///
+  /// If ``Never``, lays out Objective-C protocol conformance list items
+  /// onto individual lines whenever they go over ``ColumnLimit``.
+  ///
+  /// \code
+  ///    Always (or Auto, if BinPackParameters=true):
+  ///    @interface ccccccccccccc () <
+  ///        ccccccccccccc, ccccccccccccc,
+  ///        ccccccccccccc, ccccccccccccc> {
+  ///    }
+  ///
+  ///    Never (or Auto, if BinPackParameters=false):
+  ///    @interface ddddddddddddd () <
+  ///        ddddddddddddd,
+  ///        ddddddddddddd,
+  ///        ddddddddddddd,
+  ///        ddddddddddddd> {
+  ///    }
+  /// \endcode
+  BinPackStyle ObjCBinPackProtocolList;
+
   /// \brief The number of characters to use for indentation of ObjC blocks.
   /// \code{.objc}
   ///    ObjCBlockIndentWidth: 4
@@ -1681,6 +1724,7 @@ struct FormatStyle {
            MacroBlockEnd == R.MacroBlockEnd &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
+           ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&

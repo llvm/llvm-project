@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces %s | FileCheck %s
+; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces %s | FileCheck %s
 
 ; Regression tests from old HSAIL addrspacecast optimization pass
 
@@ -14,7 +14,7 @@ entry:
   %tmp1 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 %tmp2, %arg0
-  %vecload1 = load <2 x double>, <2 x double> addrspace(4)* bitcast (double addrspace(4)* getelementptr ([100 x double], [100 x double] addrspace(4)* addrspacecast ([100 x double] addrspace(1)* @data to [100 x double] addrspace(4)*), i64 0, i64 4) to <2 x double> addrspace(4)*), align 8
+  %vecload1 = load <2 x double>, <2 x double>* bitcast (double* getelementptr ([100 x double], [100 x double]* addrspacecast ([100 x double] addrspace(1)* @data to [100 x double]*), i64 0, i64 4) to <2 x double>*), align 8
   %cmp = fcmp ord <2 x double> %vecload1, zeroinitializer
   %sext = sext <2 x i1> %cmp to <2 x i64>
   %tmp4 = extractelement <2 x i64> %sext, i64 0
@@ -30,7 +30,7 @@ entry:
 
 @generic_address_bug9749.val = internal addrspace(1) global float 0.0, align 4
 
-declare i32 @_Z9get_fencePU3AS4v(i8 addrspace(4)*)
+declare i32 @_Z9get_fencePv(i8*)
 %opencl.pipe_t = type opaque
 
 ; This is a compile time assert bug, but we still want to check optimization
@@ -53,24 +53,24 @@ entry:
 ; Should generate flat load
 ; CHECK-LABEL: @generic_address_bug9749(
 ; CHECK: br i1
-; CHECK: load float, float addrspace(4)*
+; CHECK: load float, float*
 ; CHECK: br label
 define amdgpu_kernel void @generic_address_bug9749(i32 addrspace(1)* nocapture %results) #0 {
 entry:
-  %ptr = alloca float addrspace(4)*, align 8
+  %ptr = alloca float*, align 8, addrspace(5)
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   store float 0x3FB99999A0000000, float addrspace(1)* @generic_address_bug9749.val, align 4
-  store volatile float addrspace(4)* addrspacecast (float addrspace(1)* @generic_address_bug9749.val to float addrspace(4)*), float addrspace(4)** %ptr, align 8
-  %tmp2 = load volatile float addrspace(4)*, float addrspace(4)** %ptr, align 8
+  store volatile float* addrspacecast (float addrspace(1)* @generic_address_bug9749.val to float*), float* addrspace(5)* %ptr, align 8
+  %tmp2 = load volatile float*, float* addrspace(5)* %ptr, align 8
   %tmp3 = load float, float addrspace(1)* @generic_address_bug9749.val, align 4
-  %tmp4 = bitcast float addrspace(4)* %tmp2 to i8 addrspace(4)*
-  %call.i = call i32 @_Z9get_fencePU3AS4v(i8 addrspace(4)* %tmp4) #1
+  %tmp4 = bitcast float* %tmp2 to i8*
+  %call.i = call i32 @_Z9get_fencePv(i8* %tmp4) #1
   %switch.i.i = icmp ult i32 %call.i, 4
   br i1 %switch.i.i, label %if.end.i, label %helperFunction.exit
 
 if.end.i:                                         ; preds = %entry
-  %tmp5 = load float, float addrspace(4)* %tmp2, align 4
+  %tmp5 = load float, float* %tmp2, align 4
   %not.cmp.i = fcmp oeq float %tmp5, %tmp3
   %phitmp = zext i1 %not.cmp.i to i32
   br label %helperFunction.exit
@@ -91,14 +91,14 @@ entry:
   br i1 %cmp1, label %for.end, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
-  %tmp = addrspacecast i32 addrspace(3)* %in to i32 addrspace(4)*
+  %tmp = addrspacecast i32 addrspace(3)* %in to i32*
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %i.03 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %ptr.02 = phi i32 addrspace(4)* [ %tmp, %for.body.lr.ph ], [ %add.ptr, %for.body ]
-  store i32 %i.03, i32 addrspace(4)* %ptr.02, align 4
-  %add.ptr = getelementptr inbounds i32, i32 addrspace(4)* %ptr.02, i64 4
+  %ptr.02 = phi i32* [ %tmp, %for.body.lr.ph ], [ %add.ptr, %for.body ]
+  store i32 %i.03, i32* %ptr.02, align 4
+  %add.ptr = getelementptr inbounds i32, i32* %ptr.02, i64 4
   %inc = add nuw i32 %i.03, 1
   %exitcond = icmp eq i32 %inc, %numElems
   br i1 %exitcond, label %for.end, label %for.body
@@ -116,23 +116,23 @@ entry:
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = add i64 %tmp2, %arg0
   %sext = shl i64 %tmp3, 32
-  %tmp4 = addrspacecast i32 addrspace(3)* %destValues to i32 addrspace(4)*
-  %tmp5 = addrspacecast i32 addrspace(3)* %sourceA to i32 addrspace(4)*
+  %tmp4 = addrspacecast i32 addrspace(3)* %destValues to i32*
+  %tmp5 = addrspacecast i32 addrspace(3)* %sourceA to i32*
   %tmp6 = ashr exact i64 %sext, 31
-  %tmp7 = getelementptr inbounds i32, i32 addrspace(4)* %tmp5, i64 %tmp6
-  %arrayidx_v4 = bitcast i32 addrspace(4)* %tmp7 to <2 x i32> addrspace(4)*
-  %vecload = load <2 x i32>, <2 x i32> addrspace(4)* %arrayidx_v4, align 4
+  %tmp7 = getelementptr inbounds i32, i32* %tmp5, i64 %tmp6
+  %arrayidx_v4 = bitcast i32* %tmp7 to <2 x i32>*
+  %vecload = load <2 x i32>, <2 x i32>* %arrayidx_v4, align 4
   %tmp8 = extractelement <2 x i32> %vecload, i32 0
   %tmp9 = extractelement <2 x i32> %vecload, i32 1
   %tmp10 = icmp eq i32 %tmp8, 0
   %tmp11 = select i1 %tmp10, i32 32, i32 %tmp8
   %tmp12 = icmp eq i32 %tmp9, 0
   %tmp13 = select i1 %tmp12, i32 32, i32 %tmp9
-  %tmp14 = getelementptr inbounds i32, i32 addrspace(4)* %tmp4, i64 %tmp6
+  %tmp14 = getelementptr inbounds i32, i32* %tmp4, i64 %tmp6
   %tmp15 = insertelement <2 x i32> undef, i32 %tmp11, i32 0
   %tmp16 = insertelement <2 x i32> %tmp15, i32 %tmp13, i32 1
-  %arrayidx_v41 = bitcast i32 addrspace(4)* %tmp14 to <2 x i32> addrspace(4)*
-  store <2 x i32> %tmp16, <2 x i32> addrspace(4)* %arrayidx_v41, align 4
+  %arrayidx_v41 = bitcast i32* %tmp14 to <2 x i32>*
+  store <2 x i32> %tmp16, <2 x i32>* %arrayidx_v41, align 4
   ret void
 }
 

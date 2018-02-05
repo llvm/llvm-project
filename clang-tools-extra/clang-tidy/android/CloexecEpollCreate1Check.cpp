@@ -25,7 +25,7 @@ void CloexecEpollCreate1Check::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecEpollCreate1Check::check(const MatchFinder::MatchResult &Result) {
-  insertMacroFlag(Result, /*MarcoFlag=*/"EPOLL_CLOEXEC", /*ArgPos=*/0);
+  insertMacroFlag(Result, /*MacroFlag=*/"EPOLL_CLOEXEC", /*ArgPos=*/0);
 }
 
 } // namespace android

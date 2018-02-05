@@ -81,10 +81,10 @@ define amdgpu_kernel void @target_fiji() #4 {
 ; CHECK: ; LDSByteSize: 5120
 define amdgpu_kernel void @promote_alloca_enabled(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #5 {
 entry:
-  %stack = alloca [5 x i32], align 4
+  %stack = alloca [5 x i32], align 4, addrspace(5)
   %tmp = load i32, i32 addrspace(1)* %in, align 4
-  %arrayidx1 = getelementptr inbounds [5 x i32], [5 x i32]* %stack, i32 0, i32 %tmp
-  %load = load i32, i32* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(5)* %stack, i32 0, i32 %tmp
+  %load = load i32, i32 addrspace(5)* %arrayidx1
   store i32 %load, i32 addrspace(1)* %out
   ret void
 }
@@ -95,10 +95,10 @@ entry:
 ; CHECK: ScratchSize: 24
 define amdgpu_kernel void @promote_alloca_disabled(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #6 {
 entry:
-  %stack = alloca [5 x i32], align 4
+  %stack = alloca [5 x i32], align 4, addrspace(5)
   %tmp = load i32, i32 addrspace(1)* %in, align 4
-  %arrayidx1 = getelementptr inbounds [5 x i32], [5 x i32]* %stack, i32 0, i32 %tmp
-  %load = load i32, i32* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(5)* %stack, i32 0, i32 %tmp
+  %load = load i32, i32 addrspace(5)* %arrayidx1
   store i32 %load, i32 addrspace(1)* %out
   ret void
 }

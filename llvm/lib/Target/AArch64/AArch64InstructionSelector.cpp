@@ -135,16 +135,21 @@ AArch64InstructionSelector::AArch64InstructionSelector(
 // for each class in the bank.
 static const TargetRegisterClass *
 getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
-                         const RegisterBankInfo &RBI) {
+                         const RegisterBankInfo &RBI,
+                         bool GetAllRegSet = false) {
   if (RB.getID() == AArch64::GPRRegBankID) {
     if (Ty.getSizeInBits() <= 32)
-      return &AArch64::GPR32RegClass;
+      return GetAllRegSet ? &AArch64::GPR32allRegClass
+                          : &AArch64::GPR32RegClass;
     if (Ty.getSizeInBits() == 64)
-      return &AArch64::GPR64RegClass;
+      return GetAllRegSet ? &AArch64::GPR64allRegClass
+                          : &AArch64::GPR64RegClass;
     return nullptr;
   }
 
   if (RB.getID() == AArch64::FPRRegBankID) {
+    if (Ty.getSizeInBits() <= 16)
+      return &AArch64::FPR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return &AArch64::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -324,6 +329,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  (void)DstSize;
   unsigned SrcReg = I.getOperand(1).getReg();
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
   (void)SrcSize;
@@ -342,26 +348,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       "Copy with different width?!");
   assert((DstSize <= 64 || RegBank.getID() == AArch64::FPRRegBankID) &&
          "GPRs cannot get more than 64-bit width values");
-  const TargetRegisterClass *RC = nullptr;
 
-  if (RegBank.getID() == AArch64::FPRRegBankID) {
-    if (DstSize <= 16)
-      RC = &AArch64::FPR16RegClass;
-    else if (DstSize <= 32)
-      RC = &AArch64::FPR32RegClass;
-    else if (DstSize <= 64)
-      RC = &AArch64::FPR64RegClass;
-    else if (DstSize <= 128)
-      RC = &AArch64::FPR128RegClass;
-    else {
-      DEBUG(dbgs() << "Unexpected bitcast size " << DstSize << '\n');
-      return false;
-    }
-  } else {
-    assert(RegBank.getID() == AArch64::GPRRegBankID &&
-           "Bitcast for the flags?");
-    RC =
-        DstSize <= 32 ? &AArch64::GPR32allRegClass : &AArch64::GPR64allRegClass;
+  const TargetRegisterClass *RC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), RegBank, RBI, /* GetAllRegSet */ true);
+  if (!RC) {
+    DEBUG(dbgs() << "Unexpected bitcast size " << DstSize << '\n');
+    return false;
   }
 
   // No need to constrain SrcReg. It will get constrained when

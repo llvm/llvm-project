@@ -265,8 +265,8 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
 
 Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
   unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
-  if (MI->getAlignment() < Alignment) {
-    MI->setAlignment(Alignment);
+  if (MI->getDestAlignment() < Alignment) {
+    MI->setDestAlignment(Alignment);
     return MI;
   }
 
