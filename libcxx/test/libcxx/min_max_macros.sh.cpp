@@ -267,8 +267,6 @@ TEST_MACROS();
 TEST_MACROS();
 #include <experimental/string>
 TEST_MACROS();
-#include <experimental/string_view>
-TEST_MACROS();
 #include <experimental/system_error>
 TEST_MACROS();
 #include <experimental/tuple>
