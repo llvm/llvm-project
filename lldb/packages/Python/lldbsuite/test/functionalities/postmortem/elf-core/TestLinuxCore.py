@@ -44,37 +44,43 @@ class LinuxCoreTestCase(TestBase):
     @skipIf(triple='^mips')
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
-        self.do_test("linux-i386", self._i386_pid, self._i386_regions)
+        self.do_test("linux-i386", self._i386_pid, self._i386_regions, "a.out")
 
     def test_mips_o32(self):
         """Test that lldb can read the process information from an MIPS O32 linux core file."""
-        self.do_test("linux-mipsel-gnuabio32", self._mips_o32_pid, self._mips_regions)
+        self.do_test("linux-mipsel-gnuabio32", self._mips_o32_pid,
+                self._mips_regions, "linux-mipsel-gn")
 
     def test_mips_n32(self):
         """Test that lldb can read the process information from an MIPS N32 linux core file """
-        self.do_test("linux-mips64el-gnuabin32", self._mips64_n32_pid, self._mips_regions)
+        self.do_test("linux-mips64el-gnuabin32", self._mips64_n32_pid,
+                self._mips_regions, "linux-mips64el-")
 
     def test_mips_n64(self):
         """Test that lldb can read the process information from an MIPS N64 linux core file """
-        self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid, self._mips_regions)
+        self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid,
+                self._mips_regions, "linux-mips64el-")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
     def test_ppc64le(self):
         """Test that lldb can read the process information from an ppc64le linux core file."""
-        self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions)
+        self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions,
+                "linux-ppc64le.ou")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
-        self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions)
+        self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
+        "a.out")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
-        self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions)
+        self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions,
+        "a.out")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
@@ -100,7 +106,8 @@ class LinuxCoreTestCase(TestBase):
                     # works.
                     f.seek(pid_offset)
                     f.write(struct.pack("<I", os.getpid()))
-            self.do_test("linux-x86_64-pid", os.getpid(), self._x86_64_regions)
+            self.do_test("linux-x86_64-pid", os.getpid(), self._x86_64_regions,
+                    "a.out")
         finally:
             self.RemoveTempFile("linux-x86_64-pid.out")
             self.RemoveTempFile("linux-x86_64-pid.core")
@@ -132,7 +139,8 @@ class LinuxCoreTestCase(TestBase):
 
         # without destroying this process, run the test which opens another core file with the
         # same pid
-        self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions)
+        self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
+                "a.out")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
@@ -280,7 +288,7 @@ class LinuxCoreTestCase(TestBase):
             self.dbg.SetOutputFileHandle(None, False)
             self.dbg.SetErrorFileHandle(None, False)
 
-    def do_test(self, filename, pid, region_count):
+    def do_test(self, filename, pid, region_count, thread_name):
         target = self.dbg.CreateTarget(filename + ".out")
         process = target.LoadCore(filename + ".core")
         self.assertTrue(process, PROCESS_IS_VALID)
@@ -292,6 +300,7 @@ class LinuxCoreTestCase(TestBase):
         thread = process.GetSelectedThread()
         self.assertTrue(thread)
         self.assertEqual(thread.GetThreadID(), pid)
+        self.assertEqual(thread.GetName(), thread_name)
         backtrace = ["bar", "foo", "_start"]
         self.assertEqual(thread.GetNumFrames(), len(backtrace))
         for i in range(len(backtrace)):

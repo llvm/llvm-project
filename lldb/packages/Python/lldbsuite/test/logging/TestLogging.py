@@ -19,6 +19,7 @@ class LogTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     append_log_file = "lldb-commands-log-append.txt"
     truncate_log_file = "lldb-commands-log-truncate.txt"
+    NO_DEBUG_INFO_TESTCASE = True
 
     @classmethod
     def classCleanup(cls):
@@ -28,23 +29,11 @@ class LogTestCase(TestBase):
 
     def test(self):
         self.build()
-        if self.debug_info == "dsym":
-            self.command_log_tests("dsym")
-        else:
-            self.command_log_tests("dwarf")
-
-    def command_log_tests(self, type):
         exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 
-        log_file = os.path.join(
-            self.getBuildDir(),
-            "lldb-commands-log-%s-%s-%s.txt" %
-            (type,
-             os.path.basename(
-                 self.getCompiler()),
-                self.getArchitecture()))
+        log_file = os.path.join(self.getBuildDir(), "lldb-commands-log.txt")
 
         if (os.path.exists(log_file)):
             os.remove(log_file)
@@ -75,7 +64,6 @@ class LogTestCase(TestBase):
             "Something was written to the log file.")
 
     # Check that lldb truncates its log files
-    @no_debug_info_test
     def test_log_truncate(self):
         if (os.path.exists(self.truncate_log_file)):
             os.remove(self.truncate_log_file)
@@ -99,7 +87,6 @@ class LogTestCase(TestBase):
         self.assertEquals(contents.find("bacon"), -1)
 
     # Check that lldb can append to a log file
-    @no_debug_info_test
     def test_log_append(self):
         if (os.path.exists(self.append_log_file)):
             os.remove(self.append_log_file)

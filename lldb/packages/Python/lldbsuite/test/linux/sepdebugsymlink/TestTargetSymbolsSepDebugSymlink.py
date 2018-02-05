@@ -15,6 +15,7 @@ class TestTargetSymbolsSepDebugSymlink(TestBase):
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @skipUnlessPlatform(['linux'])
     @skipIf(hostoslist=["windows"])
+    @skipIfRemote # llvm.org/pr36237
     def test_target_symbols_sepdebug_symlink_case(self):
         self.build(clean=True)
         exe = self.getBuildArtifact("dirsymlink/stripped.symlink")

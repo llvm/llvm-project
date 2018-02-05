@@ -850,9 +850,6 @@ class Base(unittest2.TestCase):
         self.setPlatformWorkingDir()
         self.enableLogChannelsForCurrentTest()
 
-        # Initialize debug_info
-        self.debug_info = None
-
         lib_dir = os.environ["LLDB_LIB_DIR"]
         self.dsym = None
         self.framework_dir = None
@@ -1404,6 +1401,10 @@ class Base(unittest2.TestCase):
             option_str += " -C " + comp
         return option_str
 
+    def getDebugInfo(self):
+        method = getattr(self, self.testMethodName)
+        return getattr(method, "debug_info", None)
+
     # ==================================================
     # Build methods supported through a plugin interface
     # ==================================================
@@ -1520,7 +1521,7 @@ class Base(unittest2.TestCase):
         """Platform specific way to build the default binaries."""
         if not testdir:
             testdir = self.mydir
-        if self.debug_info:
+        if self.getDebugInfo():
             raise Exception("buildDefault tests must set NO_DEBUG_INFO_TESTCASE")
         module = builder_module()
         self.makeBuildDir()
@@ -1539,7 +1540,7 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with dsym info."""
         if not testdir:
             testdir = self.mydir
-        if self.debug_info <> "dsym":
+        if self.getDebugInfo() != "dsym":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
         module = builder_module()
@@ -1558,7 +1559,7 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with dwarf maps."""
         if not testdir:
             testdir = self.mydir
-        if self.debug_info <> "dwarf":
+        if self.getDebugInfo() != "dwarf":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
         module = builder_module()
@@ -1577,7 +1578,7 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with dwarf maps."""
         if not testdir:
             testdir = self.mydir
-        if self.debug_info <> "dwo":
+        if self.getDebugInfo() != "dwo":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
         module = builder_module()
@@ -1596,7 +1597,7 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with gmodules info."""
         if not testdir:
             testdir = self.mydir
-        if self.debug_info <> "gmodules":
+        if self.getDebugInfo() != "gmodules":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
         module = builder_module()
@@ -1781,40 +1782,40 @@ class LLDBTestCaseFactory(type):
                     @decorators.add_test_categories(["dsym"])
                     @wraps(attrvalue)
                     def dsym_test_method(self, attrvalue=attrvalue):
-                        self.debug_info = "dsym"
                         return attrvalue(self)
                     dsym_method_name = attrname + "_dsym"
                     dsym_test_method.__name__ = dsym_method_name
+                    dsym_test_method.debug_info = "dsym"
                     newattrs[dsym_method_name] = dsym_test_method
 
                 if "dwarf" in supported_categories:
                     @decorators.add_test_categories(["dwarf"])
                     @wraps(attrvalue)
                     def dwarf_test_method(self, attrvalue=attrvalue):
-                        self.debug_info = "dwarf"
                         return attrvalue(self)
                     dwarf_method_name = attrname + "_dwarf"
                     dwarf_test_method.__name__ = dwarf_method_name
+                    dwarf_test_method.debug_info = "dwarf"
                     newattrs[dwarf_method_name] = dwarf_test_method
 
                 if "dwo" in supported_categories:
                     @decorators.add_test_categories(["dwo"])
                     @wraps(attrvalue)
                     def dwo_test_method(self, attrvalue=attrvalue):
-                        self.debug_info = "dwo"
                         return attrvalue(self)
                     dwo_method_name = attrname + "_dwo"
                     dwo_test_method.__name__ = dwo_method_name
+                    dwo_test_method.debug_info = "dwo"
                     newattrs[dwo_method_name] = dwo_test_method
 
                 if "gmodules" in supported_categories:
                     @decorators.add_test_categories(["gmodules"])
                     @wraps(attrvalue)
                     def gmodules_test_method(self, attrvalue=attrvalue):
-                        self.debug_info = "gmodules"
                         return attrvalue(self)
                     gmodules_method_name = attrname + "_gmodules"
                     gmodules_test_method.__name__ = gmodules_method_name
+                    gmodules_test_method.debug_info = "gmodules"
                     newattrs[gmodules_method_name] = gmodules_test_method
 
             else:
@@ -2319,23 +2320,23 @@ class TestBase(Base):
         self.makeBuildDir()
 
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if self.debug_info is None:
+        if self.getDebugInfo() is None:
             return self.buildDefault(architecture, compiler, dictionary,
                                      clean, self.mydir)
-        elif self.debug_info == "dsym":
+        elif self.getDebugInfo() == "dsym":
             return self.buildDsym(architecture, compiler, dictionary,
                                   clean, self.mydir)
-        elif self.debug_info == "dwarf":
+        elif self.getDebugInfo() == "dwarf":
             return self.buildDwarf(architecture, compiler, dictionary,
                                    clean, self.mydir)
-        elif self.debug_info == "dwo":
+        elif self.getDebugInfo() == "dwo":
             return self.buildDwo(architecture, compiler, dictionary,
                                  clean, self.mydir)
-        elif self.debug_info == "gmodules":
+        elif self.getDebugInfo() == "gmodules":
             return self.buildGModules(architecture, compiler, dictionary,
                                       clean, self.mydir)
         else:
-            self.fail("Can't build for debug info: %s" % self.debug_info)
+            self.fail("Can't build for debug info: %s" % self.getDebugInfo())
 
     def run_platform_command(self, cmd):
         platform = self.dbg.GetSelectedPlatform()
