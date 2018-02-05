@@ -47,7 +47,7 @@ namespace {
               MachineFunctionProperties::Property::FailedISel)) {
         if (AbortOnFailedISel)
           report_fatal_error("Instruction selection failed");
-        DEBUG(dbgs() << "Reseting: " << MF.getName() << '\n');
+        DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
         ++NumFunctionsReset;
         MF.reset();
         if (EmitFallbackDiag) {
@@ -65,7 +65,7 @@ namespace {
 
 char ResetMachineFunction::ID = 0;
 INITIALIZE_PASS(ResetMachineFunction, DEBUG_TYPE,
-                "reset machine function if ISel failed", false, false)
+                "Reset machine function if ISel failed", false, false)
 
 MachineFunctionPass *
 llvm::createResetMachineFunctionPass(bool EmitFallbackDiag = false,

@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
@@ -488,6 +489,27 @@ void DWARFContext::dump(
     DWARFDebugRangeList rangeList;
     while (rangeList.extract(rangesData, &offset))
       rangeList.dump(OS);
+  }
+
+  if (shouldDump(Explicit, ".debug_rnglists", DIDT_ID_DebugRnglists,
+                 DObj->getRnglistsSection().Data)) {
+    DWARFDataExtractor rnglistData(*DObj, DObj->getRnglistsSection(),
+                                   isLittleEndian(), 0);
+    uint32_t Offset = 0;
+    while (rnglistData.isValidOffset(Offset)) {
+      DWARFDebugRnglists Rnglists;
+      uint32_t TableOffset = Offset;
+      if (Error Err = Rnglists.extract(rnglistData, &Offset)) {
+        errs() << "error: " + toString(std::move(Err)) << '\n';
+        uint64_t Length = Rnglists.length();
+        // Keep going after an error, if we can, assuming that the length field
+        // could be read. If it couldn't, stop reading the section.
+        if (Length == 0)
+          break;
+        Offset = TableOffset + Length;
+      } else
+        Rnglists.dump(OS);
+    }
   }
 
   if (shouldDump(Explicit, ".debug_pubnames", DIDT_ID_DebugPubnames,
@@ -1164,6 +1186,7 @@ class DWARFObjInMemory final : public DWARFObject {
   DWARFSectionMap LocSection;
   DWARFSectionMap LineSection;
   DWARFSectionMap RangeSection;
+  DWARFSectionMap RnglistsSection;
   DWARFSectionMap StringOffsetSection;
   DWARFSectionMap InfoDWOSection;
   DWARFSectionMap LineDWOSection;
@@ -1184,6 +1207,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_line", &LineSection)
         .Case("debug_str_offsets", &StringOffsetSection)
         .Case("debug_ranges", &RangeSection)
+        .Case("debug_rnglists", &RnglistsSection)
         .Case("debug_info.dwo", &InfoDWOSection)
         .Case("debug_loc.dwo", &LocDWOSection)
         .Case("debug_line.dwo", &LineDWOSection)
@@ -1475,6 +1499,9 @@ public:
   const DWARFSection &getLineSection() const override { return LineSection; }
   StringRef getStringSection() const override { return StringSection; }
   const DWARFSection &getRangeSection() const override { return RangeSection; }
+  const DWARFSection &getRnglistsSection() const override {
+    return RnglistsSection;
+  }
   StringRef getMacinfoSection() const override { return MacinfoSection; }
   StringRef getPubNamesSection() const override { return PubNamesSection; }
   StringRef getPubTypesSection() const override { return PubTypesSection; }

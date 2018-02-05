@@ -703,9 +703,9 @@ define amdgpu_kernel void @commute_uno_2.0_f64(i32 addrspace(1)* %out, double ad
 ; GCN: v_cmp_eq_u32_e32 vcc, v{{[0-9]+}}, [[FI]]
 define amdgpu_kernel void @commute_frameindex(i32 addrspace(1)* nocapture %out) #0 {
 entry:
-  %stack0 = alloca i32
-  %ptr0 = load volatile i32*, i32* addrspace(1)* undef
-  %eq = icmp eq i32* %ptr0, %stack0
+  %stack0 = alloca i32, addrspace(5)
+  %ptr0 = load volatile i32 addrspace(5)*, i32 addrspace(5)* addrspace(1)* undef
+  %eq = icmp eq i32 addrspace(5)* %ptr0, %stack0
   %ext = zext i1 %eq to i32
   store volatile i32 %ext, i32 addrspace(1)* %out
   ret void

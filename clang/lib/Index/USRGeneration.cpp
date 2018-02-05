@@ -103,7 +103,7 @@ public:
   void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D);
 
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
-    IgnoreResults = true;
+    IgnoreResults = true; // No USRs for linkage specs themselves.
   }
 
   void VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -192,6 +192,8 @@ bool USRGenerator::ShouldGenerateLocation(const NamedDecl *D) {
 void USRGenerator::VisitDeclContext(const DeclContext *DC) {
   if (const NamedDecl *D = dyn_cast<NamedDecl>(DC))
     Visit(D);
+  else if (isa<LinkageSpecDecl>(DC)) // Linkage specs are transparent in USRs.
+    VisitDeclContext(DC->getParent());
 }
 
 void USRGenerator::VisitFieldDecl(const FieldDecl *D) {

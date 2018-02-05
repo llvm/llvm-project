@@ -6,10 +6,10 @@
 
 %struct.foo = type {i32, i32, i32}
 
-define amdgpu_kernel void @alu_limits(i32 addrspace(1)* %out, %struct.foo* %in, i32 %offset) {
+define amdgpu_kernel void @alu_limits(i32 addrspace(1)* %out, %struct.foo addrspace(5)* %in, i32 %offset) {
 entry:
-  %ptr = getelementptr inbounds %struct.foo, %struct.foo* %in, i32 1, i32 2
-  %x = load i32, i32 *%ptr, align 4
+  %ptr = getelementptr inbounds %struct.foo, %struct.foo addrspace(5)* %in, i32 1, i32 2
+  %x = load i32, i32  addrspace(5)*%ptr, align 4
   br label %loop
 loop:
   %i = phi i32 [ 100, %entry ], [ %nexti, %loop ]

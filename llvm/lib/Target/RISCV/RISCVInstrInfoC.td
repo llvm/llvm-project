@@ -35,6 +35,13 @@ def simm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<6>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<6>";
 }
 
+def simm6nonzero : Operand<XLenVT>,
+                   ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<6>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<6, "NonZero">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<6>";
+}
+
 def uimm6nonzero : Operand<XLenVT>,
                    ImmLeaf<XLenVT, [{return isUInt<6>(Imm) && (Imm != 0);}]> {
   let ParserMatchClass = UImmAsmOperand<6, "NonZero">;
@@ -91,9 +98,10 @@ def uimm10_lsb00nonzero : Operand<XLenVT>,
 }
 
 // A 10-bit signed immediate where the least significant four bits are zero.
-def simm10_lsb0000 : Operand<XLenVT>,
-                     ImmLeaf<XLenVT, [{return isShiftedInt<6, 4>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<10, "Lsb0000">;
+def simm10_lsb0000nonzero : Operand<XLenVT>,
+                            ImmLeaf<XLenVT,
+                            [{return (Imm != 0) && isShiftedInt<6, 4>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<10, "Lsb0000NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
 }
@@ -253,7 +261,7 @@ def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
-                        (ins GPRNoX0:$rd, simm6:$imm),
+                        (ins GPRNoX0:$rd, simm6nonzero:$imm),
                         "c.addi", "$rd, $imm"> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = imm{4-0};
@@ -282,7 +290,7 @@ def C_LI : RVInst16CI<0b010, 0b01, (outs GPRNoX0:$rd), (ins simm6:$imm),
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI16SP : RVInst16CI<0b011, 0b01, (outs SP:$rd_wb),
-                            (ins SP:$rd, simm10_lsb0000:$imm),
+                            (ins SP:$rd, simm10_lsb0000nonzero:$imm),
                             "c.addi16sp", "$rd, $imm"> {
   let Constraints = "$rd = $rd_wb";
   let Inst{12} = imm{9};

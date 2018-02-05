@@ -159,7 +159,7 @@ TEST(RemoteObjectLayer, AddObject) {
     });
 
   cantFail(Client.addObject(std::move(TestObject),
-                            std::make_shared<NullResolver>()));
+                            std::make_shared<NullLegacyResolver>()));
   cantFail(ClientEP.callB<remote::utils::TerminateSession>());
   ServerThread.join();
 }
@@ -205,8 +205,8 @@ TEST(RemoteObjectLayer, AddObjectFailure) {
         cantFail(ServerEP.handleOne());
     });
 
-  auto HandleOrErr =
-    Client.addObject(std::move(TestObject), std::make_shared<NullResolver>());
+  auto HandleOrErr = Client.addObject(std::move(TestObject),
+                                      std::make_shared<NullLegacyResolver>());
 
   EXPECT_FALSE(HandleOrErr) << "Expected error from addObject";
 
@@ -258,8 +258,8 @@ TEST(RemoteObjectLayer, RemoveObject) {
         cantFail(ServerEP.handleOne());
     });
 
-  auto H  = cantFail(Client.addObject(std::move(TestObject),
-                                      std::make_shared<NullResolver>()));
+  auto H = cantFail(Client.addObject(std::move(TestObject),
+                                     std::make_shared<NullLegacyResolver>()));
 
   cantFail(Client.removeObject(H));
 
@@ -309,8 +309,8 @@ TEST(RemoteObjectLayer, RemoveObjectFailure) {
         cantFail(ServerEP.handleOne());
     });
 
-  auto H  = cantFail(Client.addObject(std::move(TestObject),
-                                      std::make_shared<NullResolver>()));
+  auto H = cantFail(Client.addObject(std::move(TestObject),
+                                     std::make_shared<NullLegacyResolver>()));
 
   auto Err = Client.removeObject(H);
   EXPECT_TRUE(!!Err) << "Expected error from removeObject";
@@ -374,7 +374,7 @@ TEST(RemoteObjectLayer, FindSymbol) {
     });
 
   cantFail(Client.addObject(std::move(TestObject),
-                            std::make_shared<NullResolver>()));
+                            std::make_shared<NullLegacyResolver>()));
 
   // Check that we can find and materialize a valid symbol.
   auto Sym1 = Client.findSymbol("foobar", true);
@@ -463,7 +463,7 @@ TEST(RemoteObjectLayer, FindSymbolIn) {
     });
 
   auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullResolver>()));
+                                     std::make_shared<NullLegacyResolver>()));
 
   auto Sym1 = Client.findSymbolIn(H, "foobar", true);
 
@@ -523,7 +523,7 @@ TEST(RemoteObjectLayer, EmitAndFinalize) {
     });
 
   auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullResolver>()));
+                                     std::make_shared<NullLegacyResolver>()));
 
   auto Err = Client.emitAndFinalize(H);
   EXPECT_FALSE(!!Err) << "emitAndFinalize should work";
@@ -573,7 +573,7 @@ TEST(RemoteObjectLayer, EmitAndFinalizeFailure) {
     });
 
   auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullResolver>()));
+                                     std::make_shared<NullLegacyResolver>()));
 
   auto Err = Client.emitAndFinalize(H);
   EXPECT_TRUE(!!Err) << "emitAndFinalize should work";

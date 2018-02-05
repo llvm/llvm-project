@@ -97,10 +97,17 @@ class AnalysisDiagnostic:
 
 
 class CmpOptions:
+    """
+    Fake output of option parser with manually constructed options.
+    """
+
     def __init__(self, verboseLog=None, rootA="", rootB=""):
         self.rootA = rootA
         self.rootB = rootB
         self.verboseLog = verboseLog
+        self.relative_path_histogram = False
+        self.relative_log_path_histogram = False
+        self.absolute_path_histogram = False
 
 
 class AnalysisReport:

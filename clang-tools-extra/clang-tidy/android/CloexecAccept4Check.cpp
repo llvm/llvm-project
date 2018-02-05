@@ -32,7 +32,7 @@ void CloexecAccept4Check::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecAccept4Check::check(const MatchFinder::MatchResult &Result) {
-  insertMacroFlag(Result, /*MarcoFlag=*/"SOCK_CLOEXEC", /*ArgPos=*/3);
+  insertMacroFlag(Result, /*MacroFlag=*/"SOCK_CLOEXEC", /*ArgPos=*/3);
 }
 
 } // namespace android

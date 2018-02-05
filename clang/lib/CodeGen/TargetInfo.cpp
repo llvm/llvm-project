@@ -3790,17 +3790,18 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Address RegAddrHi =
       CGF.Builder.CreateConstInBoundsByteGEP(RegAddrLo,
                                              CharUnits::fromQuantity(16));
-    llvm::Type *DoubleTy = CGF.DoubleTy;
-    llvm::StructType *ST = llvm::StructType::get(DoubleTy, DoubleTy);
+    llvm::Type *ST = AI.canHaveCoerceToType()
+                         ? AI.getCoerceToType()
+                         : llvm::StructType::get(CGF.DoubleTy, CGF.DoubleTy);
     llvm::Value *V;
     Address Tmp = CGF.CreateMemTemp(Ty);
     Tmp = CGF.Builder.CreateElementBitCast(Tmp, ST);
-    V = CGF.Builder.CreateLoad(
-                   CGF.Builder.CreateElementBitCast(RegAddrLo, DoubleTy));
+    V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
+        RegAddrLo, ST->getStructElementType(0)));
     CGF.Builder.CreateStore(V,
                    CGF.Builder.CreateStructGEP(Tmp, 0, CharUnits::Zero()));
-    V = CGF.Builder.CreateLoad(
-                   CGF.Builder.CreateElementBitCast(RegAddrHi, DoubleTy));
+    V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
+        RegAddrHi, ST->getStructElementType(1)));
     CGF.Builder.CreateStore(V,
           CGF.Builder.CreateStructGEP(Tmp, 1, CharUnits::fromQuantity(8)));
 

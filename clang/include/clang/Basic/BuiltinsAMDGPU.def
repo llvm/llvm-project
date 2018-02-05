@@ -93,6 +93,9 @@ BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
 BUILTIN(__builtin_amdgcn_readfirstlane, "ii", "nc")
 BUILTIN(__builtin_amdgcn_readlane, "iii", "nc")
 BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_ds_fadd, "ff*3fiib", "n")
+BUILTIN(__builtin_amdgcn_ds_fmin, "ff*3fiib", "n")
+BUILTIN(__builtin_amdgcn_ds_fmax, "ff*3fiib", "n")
 
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.

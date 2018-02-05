@@ -99,8 +99,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp)
 ; RV32I-NEXT:    sw s1, 8(sp)
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    sw s1, 4(sp)
-; RV32I-NEXT:    sw s1, 0(sp)
+; RV32I-NEXT:    sw a0, 4(sp)
+; RV32I-NEXT:    sw a0, 0(sp)
 ; RV32I-NEXT:    lui a0, %hi(external_many_args)
 ; RV32I-NEXT:    addi t0, a0, %lo(external_many_args)
 ; RV32I-NEXT:    mv a0, s1

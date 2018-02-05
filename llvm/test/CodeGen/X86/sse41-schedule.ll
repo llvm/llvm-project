@@ -85,60 +85,70 @@ define <4 x float> @test_blendps(<4 x float> %a0, <4 x float> %a1, <4 x float> *
 ; GENERIC-LABEL: test_blendps:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.50]
-; GENERIC-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [7:0.50]
+; GENERIC-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [7:0.50]
+; GENERIC-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_blendps:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:1.00]
-; SLM-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [4:1.00]
+; SLM-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [4:1.00]
+; SLM-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_blendps:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.50]
-; SANDY-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [7:0.50]
+; SANDY-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [7:0.50]
+; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.33]
-; HASWELL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [7:0.50]
+; HASWELL-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [7:0.50]
+; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_blendps:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.33]
-; BROADWELL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [6:0.50]
+; BROADWELL-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [6:0.50]
+; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendps:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.33]
-; SKYLAKE-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [7:0.50]
+; SKYLAKE-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [7:0.50]
+; SKYLAKE-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.33]
-; SKX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [7:0.50]
+; SKX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [7:0.50]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendps:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.50]
-; BTVER2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [6:1.00]
+; BTVER2-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [6:1.00]
+; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendps:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3] sched: [1:0.50]
-; ZNVER1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3] sched: [8:0.50]
+; ZNVER1-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2,3] sched: [8:0.50]
+; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   %2 = load <4 x float>, <4 x float> *%a2, align 16
-  %3 = shufflevector <4 x float> %1, <4 x float> %2, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
-  ret <4 x float> %3
+  %3 = shufflevector <4 x float> %a1, <4 x float> %2, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+  %4 = fadd <4 x float> %1, %3
+  ret <4 x float> %4
 }
 
 define <2 x double> @test_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> *%a3) {
@@ -765,60 +775,70 @@ define <8 x i16> @test_pblendw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_pblendw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:0.50]
-; GENERIC-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [7:0.50]
+; GENERIC-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [7:0.50]
+; GENERIC-NEXT:    paddw %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pblendw:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:1.00]
-; SLM-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [4:1.00]
+; SLM-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [4:1.00]
+; SLM-NEXT:    paddw %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pblendw:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:0.50]
-; SANDY-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [7:0.50]
+; SANDY-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [7:0.50]
+; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pblendw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:1.00]
-; HASWELL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [7:1.00]
+; HASWELL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [7:1.00]
+; HASWELL-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendw:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:1.00]
-; BROADWELL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [6:1.00]
+; BROADWELL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [6:1.00]
+; BROADWELL-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pblendw:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:1.00]
-; SKYLAKE-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [7:1.00]
+; SKYLAKE-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [7:1.00]
+; SKYLAKE-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pblendw:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:1.00]
-; SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [7:1.00]
+; SKX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [7:1.00]
+; SKX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pblendw:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:0.50]
-; BTVER2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [6:1.00]
+; BTVER2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [6:1.00]
+; BTVER2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pblendw:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7] sched: [1:0.33]
-; ZNVER1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3],xmm0[4,5,6],mem[7] sched: [8:0.50]
+; ZNVER1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5,6],mem[7] sched: [8:0.50]
+; ZNVER1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   %2 = load <8 x i16>, <8 x i16> *%a2, align 16
-  %3 = shufflevector <8 x i16> %1, <8 x i16> %2, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 15>
-  ret <8 x i16> %3
+  %3 = shufflevector <8 x i16> %a1, <8 x i16> %2, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 15>
+  %4 = add <8 x i16> %1, %3
+  ret <8 x i16> %4
 }
 
 define <2 x i64> @test_pcmpeqq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {

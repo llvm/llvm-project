@@ -401,13 +401,18 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
-  for (auto &GV : Mod) {
-    auto It = DefinedGlobals.find(GV.getGUID());
-    if (It == DefinedGlobals.end())
-      continue;
-    if (!Index.isGlobalValueLive(It->second))
-      convertToDeclaration(GV);
-  }
+  auto MaybeDrop = [&](GlobalValue &GV) {
+    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
+      if (!Index.isGlobalValueLive(GVS))
+        convertToDeclaration(GV);
+  };
+
+  // Process functions and global now.
+  // FIXME: add support for aliases (needs support in convertToDeclaration).
+  for (auto &GV : Mod)
+    MaybeDrop(GV);
+  for (auto &GV : Mod.globals())
+    MaybeDrop(GV);
 }
 
 Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,

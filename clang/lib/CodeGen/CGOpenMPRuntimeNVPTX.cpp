@@ -2232,7 +2232,7 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
       llvm::Value *Size = CGF.Builder.CreateIntCast(
           CGF.getVLASize(
                  CGF.getContext().getAsVariableArrayType((*IPriv)->getType()))
-              .first,
+              .NumElts,
           CGF.SizeTy, /*isSigned=*/false);
       CGF.Builder.CreateStore(CGF.Builder.CreateIntToPtr(Size, CGF.VoidPtrTy),
                               Elem);

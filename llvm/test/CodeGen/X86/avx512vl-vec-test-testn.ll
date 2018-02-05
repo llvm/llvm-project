@@ -194,19 +194,18 @@ entry:
 define zeroext i8 @TEST_mm256_mask_test_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_mask_test_epi32_mask:
 ; X86_64:       # %bb.0: # %entry
-; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vptestmd %ymm0, %ymm1, %k0 {%k1}
+; X86_64-NEXT:    vptestmd %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
+; X86_64-NEXT:    andb %dil, %al
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm256_mask_test_epi32_mask:
 ; I386:       # %bb.0: # %entry
-; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vptestmd %ymm0, %ymm1, %k0 {%k1}
+; I386-NEXT:    vptestmd %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
+; I386-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; I386-NEXT:    # kill: def $al killed $al killed $eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
@@ -412,19 +411,18 @@ entry:
 define zeroext i8 @TEST_mm256_mask_testn_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_mask_testn_epi32_mask:
 ; X86_64:       # %bb.0: # %entry
-; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vptestnmd %ymm0, %ymm1, %k0 {%k1}
+; X86_64-NEXT:    vptestnmd %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
+; X86_64-NEXT:    andb %dil, %al
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm256_mask_testn_epi32_mask:
 ; I386:       # %bb.0: # %entry
-; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vptestnmd %ymm0, %ymm1, %k0 {%k1}
+; I386-NEXT:    vptestnmd %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
+; I386-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; I386-NEXT:    # kill: def $al killed $al killed $eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl

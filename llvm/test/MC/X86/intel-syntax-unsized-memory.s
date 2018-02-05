@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -mcpu=knl %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
 
 // Check that we deduce unsized memory operands in the general, unambiguous, case.
 // We can't deduce xword memory operands, because there is no instruction

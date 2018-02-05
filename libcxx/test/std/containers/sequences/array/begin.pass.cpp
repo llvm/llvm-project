@@ -31,4 +31,13 @@ int main()
         *i = 5.5;
         assert(c[0] == 5.5);
     }
+    {
+      struct NoDefault {
+        NoDefault(int) {}
+      };
+      typedef NoDefault T;
+      typedef std::array<T, 0> C;
+      C c = {};
+      assert(c.begin() == c.end());
+    }
 }

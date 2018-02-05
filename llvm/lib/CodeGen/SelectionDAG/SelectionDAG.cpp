@@ -1644,7 +1644,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
 }
 
 SDValue SelectionDAG::getCommutedVectorShuffle(const ShuffleVectorSDNode &SV) {
-  MVT VT = SV.getSimpleValueType(0);
+  EVT VT = SV.getValueType(0);
   SmallVector<int, 8> MaskVec(SV.getMask().begin(), SV.getMask().end());
   ShuffleVectorSDNode::commuteMask(MaskVec);
 
@@ -4450,6 +4450,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT:
+    assert(VT.getSizeInBits() >= N1.getValueType().getScalarSizeInBits() &&
+           "The result of EXTRACT_VECTOR_ELT must be at least as wide as the \
+             element type of the vector.");
+
     // EXTRACT_VECTOR_ELT of an UNDEF is an UNDEF.
     if (N1.isUndef())
       return getUNDEF(VT);

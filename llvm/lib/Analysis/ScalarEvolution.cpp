@@ -8669,7 +8669,8 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
   bool RightGuarded = false;
   if (LAR) {
     const Loop *L = LAR->getLoop();
-    if (isLoopEntryGuardedByCond(L, Pred, LAR->getStart(), RHS) &&
+    if (isAvailableAtLoopEntry(RHS, L) &&
+        isLoopEntryGuardedByCond(L, Pred, LAR->getStart(), RHS) &&
         isLoopBackedgeGuardedByCond(L, Pred, LAR->getPostIncExpr(*this), RHS)) {
       if (!RAR) return true;
       LeftGuarded = true;
@@ -8677,7 +8678,8 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
   }
   if (RAR) {
     const Loop *L = RAR->getLoop();
-    if (isLoopEntryGuardedByCond(L, Pred, LHS, RAR->getStart()) &&
+    if (isAvailableAtLoopEntry(LHS, L) &&
+        isLoopEntryGuardedByCond(L, Pred, LHS, RAR->getStart()) &&
         isLoopBackedgeGuardedByCond(L, Pred, LHS, RAR->getPostIncExpr(*this))) {
       if (!LAR) return true;
       RightGuarded = true;
@@ -9062,6 +9064,12 @@ ScalarEvolution::isLoopEntryGuardedByCond(const Loop *L,
   // (interprocedural conditions notwithstanding).
   if (!L) return false;
 
+  // Both LHS and RHS must be available at loop entry.
+  assert(isAvailableAtLoopEntry(LHS, L) &&
+         "LHS is not available at Loop Entry");
+  assert(isAvailableAtLoopEntry(RHS, L) &&
+         "RHS is not available at Loop Entry");
+
   if (isKnownPredicateViaConstantRanges(Pred, LHS, RHS))
     return true;
 
@@ -9418,7 +9426,8 @@ bool ScalarEvolution::isImpliedCondOperandsViaNoOverflow(
   }
 
   // Try to prove (1) or (2), as needed.
-  return isLoopEntryGuardedByCond(L, Pred, FoundRHS,
+  return isAvailableAtLoopEntry(FoundRHS, L) &&
+         isLoopEntryGuardedByCond(L, Pred, FoundRHS,
                                   getConstant(FoundRHSLimit));
 }
 

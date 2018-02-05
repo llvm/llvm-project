@@ -89,3 +89,20 @@ void test_mov_dpp(global int* out, int src)
   *out = __builtin_amdgcn_mov_dpp(src, 0, 0, 0, false);
 }
 
+// CHECK-LABEL: @test_ds_fadd
+// CHECK: call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+void test_ds_fadd(__attribute__((address_space(3))) float *out, float src) {
+  *out = __builtin_amdgcn_ds_fadd(out, src, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_ds_fmin
+// CHECK: call float @llvm.amdgcn.ds.fmin(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+void test_ds_fmin(__attribute__((address_space(3))) float *out, float src) {
+  *out = __builtin_amdgcn_ds_fmin(out, src, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_ds_fmax
+// CHECK: call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+void test_ds_fmax(__attribute__((address_space(3))) float *out, float src) {
+  *out = __builtin_amdgcn_ds_fmax(out, src, 0, 0, false);
+}

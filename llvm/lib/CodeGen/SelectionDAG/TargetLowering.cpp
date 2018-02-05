@@ -3457,9 +3457,12 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
                                 DAG.getConstant(Idx, SL, IdxVT));
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MemSclVT, Elt);
       SDValue ExtElt = DAG.getNode(ISD::ZERO_EXTEND, SL, IntVT, Trunc);
+      unsigned ShiftIntoIdx =
+          (DAG.getDataLayout().isBigEndian() ? (NumElem - 1) - Idx : Idx);
       SDValue ShiftAmount =
-        DAG.getConstant(Idx * MemSclVT.getSizeInBits(), SL, IntVT);
-      SDValue ShiftedElt = DAG.getNode(ISD::SHL, SL, IntVT, ExtElt, ShiftAmount);
+          DAG.getConstant(ShiftIntoIdx * MemSclVT.getSizeInBits(), SL, IntVT);
+      SDValue ShiftedElt =
+          DAG.getNode(ISD::SHL, SL, IntVT, ExtElt, ShiftAmount);
       CurrVal = DAG.getNode(ISD::OR, SL, IntVT, CurrVal, ShiftedElt);
     }
 

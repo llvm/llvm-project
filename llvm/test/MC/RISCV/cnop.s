@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=CHECK-INST %s
 
 # alpha and main are 8 byte alignment
 # but the alpha function's size is 6

@@ -276,7 +276,7 @@ define amdgpu_kernel void @test_double16(<16 x double> %a)
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Name:          a
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -443,7 +443,7 @@ define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_struct(%struct.A* byval %a)
+define amdgpu_kernel void @test_struct(%struct.A addrspace(5)* byval %a)
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -539,7 +539,7 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Name:          g
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -547,7 +547,7 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          c
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -555,7 +555,7 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
 ; CHECK-NEXT:       AddrSpaceQual: Constant
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          l
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -594,7 +594,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Name:          a
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -603,7 +603,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       IsVolatile:    true
 ; CHECK-NEXT:     - Name:          b
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -613,7 +613,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:       IsConst:       true
 ; CHECK-NEXT:       IsRestrict:    true
 ; CHECK-NEXT:     - Name:          c
-; CHECK-NEXT:       TypeName:      'int *'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     Pipe
@@ -1043,7 +1043,7 @@ define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a)
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Name:          a
-; CHECK-NEXT:       TypeName:      'int **'
+; CHECK-NEXT:       TypeName:      'int  addrspace(5)* addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -1067,7 +1067,7 @@ define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_arg_ptr_to_ptr(i32* addrspace(1)* %a)
+define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 addrspace(5)* addrspace(1)* %a)
     !kernel_arg_addr_space !81 !kernel_arg_access_qual !2 !kernel_arg_type !80
     !kernel_arg_base_type !80 !kernel_arg_type_qual !4 {
   ret void
@@ -1103,7 +1103,7 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(i32* addrspace(1)* %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B* byval %a)
+define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B addrspace(5)* byval %a)
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !82
     !kernel_arg_base_type !82 !kernel_arg_type_qual !4 {
  ret void
@@ -1115,7 +1115,7 @@ define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B* byval %a)
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Name:          a
-; CHECK-NEXT:       TypeName:      'global int* __attribute__((ext_vector_type(2)))'
+; CHECK-NEXT:       TypeName:      'global int addrspace(5)* __attribute__((ext_vector_type(2)))'
 ; CHECK-NEXT:       Size:          16
 ; CHECK-NEXT:       Align:         16
 ; CHECK-NEXT:       ValueKind:     ByValue
@@ -1187,7 +1187,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Name:          a
-; CHECK-NEXT:       TypeName:      'long *'
+; CHECK-NEXT:       TypeName:      'long  addrspace(5)*'
 ; CHECK-NEXT:       Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     GlobalBuffer
@@ -1195,7 +1195,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          b
-; CHECK-NEXT:       TypeName:      'char *'
+; CHECK-NEXT:       TypeName:      'char  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -1204,7 +1204,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          c
-; CHECK-NEXT:       TypeName:      'char2 *'
+; CHECK-NEXT:       TypeName:      'char2  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -1213,7 +1213,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          d
-; CHECK-NEXT:       TypeName:      'char3 *'
+; CHECK-NEXT:       TypeName:      'char3  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -1222,7 +1222,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          e
-; CHECK-NEXT:       TypeName:      'char4 *'
+; CHECK-NEXT:       TypeName:      'char4  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -1231,7 +1231,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          f
-; CHECK-NEXT:       TypeName:      'char8 *'
+; CHECK-NEXT:       TypeName:      'char8  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -1240,7 +1240,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Local
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Name:          g
-; CHECK-NEXT:       TypeName:      'char16 *'
+; CHECK-NEXT:       TypeName:      'char16  addrspace(5)*'
 ; CHECK-NEXT:       Size:          4
 ; CHECK-NEXT:       Align:         4
 ; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
@@ -1309,7 +1309,7 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @__test_block_invoke_kernel(
-    <{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }> %arg) #0
+    <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> %arg) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !110
     !kernel_arg_base_type !110 !kernel_arg_type_qual !4 {
   ret void
@@ -1380,7 +1380,7 @@ attributes #1 = { "calls-enqueue-kernel" }
 !13 = !{!"half8"}
 !14 = !{!"float16"}
 !15 = !{!"double16"}
-!16 = !{!"int *"}
+!16 = !{!"int  addrspace(5)*"}
 !17 = !{!"image2d_t"}
 !18 = !{!"sampler_t"}
 !19 = !{!"queue_t"}
@@ -1396,23 +1396,23 @@ attributes #1 = { "calls-enqueue-kernel" }
 !29 = !{i8 undef, i32 1}
 !30 = !{i16 undef, i32 1}
 !31 = !{i64 undef, i32 1}
-!32 = !{i32 *undef, i32 1}
+!32 = !{i32  addrspace(5)*undef, i32 1}
 !50 = !{i32 1, i32 2, i32 3}
-!51 = !{!"int *", !"int *", !"int *"}
+!51 = !{!"int  addrspace(5)*", !"int  addrspace(5)*", !"int  addrspace(5)*"}
 !60 = !{i32 1, i32 1, i32 1}
 !61 = !{!"read_only", !"write_only", !"read_write"}
 !62 = !{!"image1d_t", !"image2d_t", !"image3d_t"}
 !70 = !{!"volatile", !"const restrict", !"pipe"}
-!80 = !{!"int **"}
+!80 = !{!"int  addrspace(5)* addrspace(5)*"}
 !81 = !{i32 1}
 !82 = !{!"struct B"}
-!83 = !{!"global int* __attribute__((ext_vector_type(2)))"}
+!83 = !{!"global int addrspace(5)* __attribute__((ext_vector_type(2)))"}
 !84 = !{!"clk_event_t"}
 !opencl.ocl.version = !{!90}
 !90 = !{i32 2, i32 0}
 !91 = !{i32 0, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3}
 !92 = !{!"none", !"none", !"none", !"none", !"none", !"none", !"none"}
-!93 = !{!"long *", !"char *", !"char2 *", !"char3 *", !"char4 *", !"char8 *", !"char16 *"}
+!93 = !{!"long  addrspace(5)*", !"char  addrspace(5)*", !"char2  addrspace(5)*", !"char3  addrspace(5)*", !"char4  addrspace(5)*", !"char8  addrspace(5)*", !"char16  addrspace(5)*"}
 !94 = !{!"", !"", !"", !"", !"", !"", !""}
 !100 = !{!"1:1:4:%d\5Cn"}
 !101 = !{!"2:1:8:%g\5Cn"}

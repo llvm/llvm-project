@@ -163,7 +163,7 @@ def create_parser():
         '--build-dir',
         dest='test_build_dir',
         metavar='Test build directory',
-        default='lldb-test-build',
+        default='lldb-test-build.noindex',
         help='The root build directory for the tests. It will be removed before running.')
 
     # Configuration options

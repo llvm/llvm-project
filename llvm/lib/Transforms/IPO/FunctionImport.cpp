@@ -629,6 +629,8 @@ void llvm::convertToDeclaration(GlobalValue &GV) {
     // need to add support here for creating either a function or
     // variable declaration, and return the new GlobalValue* for
     // the caller to use.
+    // Support of dropping aliases is required for correct dead code
+    // elimination performed in thin LTO backends (see 'dropDeadSymbols').
     llvm_unreachable("Expected function or variable");
 }
 

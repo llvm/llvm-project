@@ -45,6 +45,7 @@ public:
   virtual StringRef getLineStringSection() const { return ""; }
   virtual StringRef getStringSection() const { return ""; }
   virtual const DWARFSection &getRangeSection() const { return Dummy; }
+  virtual const DWARFSection &getRnglistsSection() const { return Dummy; }
   virtual StringRef getMacinfoSection() const { return ""; }
   virtual StringRef getPubNamesSection() const { return ""; }
   virtual StringRef getPubTypesSection() const { return ""; }

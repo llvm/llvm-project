@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -debug -S < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -debug -S < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
