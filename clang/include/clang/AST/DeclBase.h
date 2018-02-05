@@ -836,6 +836,10 @@ public:
 
   void setLexicalDeclContext(DeclContext *DC);
 
+  /// Determine whether this declaration is a templated entity (whether it is
+  // within the scope of a template parameter).
+  bool isTemplated() const;
+
   /// isDefinedOutsideFunctionOrMethod - This predicate returns true if this
   /// scoped decl is defined outside the current function or method.  This is
   /// roughly global variables and functions, but also handles enums (which

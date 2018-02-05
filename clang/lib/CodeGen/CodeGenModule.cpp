@@ -4000,18 +4000,13 @@ void CodeGenModule::EmitDeclContext(const DeclContext *DC) {
 /// EmitTopLevelDecl - Emit code for a single top level declaration.
 void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   // Ignore dependent declarations.
-  if (D->getDeclContext() && D->getDeclContext()->isDependentContext())
+  if (D->isTemplated())
     return;
 
   switch (D->getKind()) {
   case Decl::CXXConversion:
   case Decl::CXXMethod:
   case Decl::Function:
-    // Skip function templates
-    if (cast<FunctionDecl>(D)->getDescribedFunctionTemplate() ||
-        cast<FunctionDecl>(D)->isLateTemplateParsed())
-      return;
-
     EmitGlobal(cast<FunctionDecl>(D));
     // Always provide some coverage mapping
     // even for the functions that aren't emitted.
@@ -4024,10 +4019,6 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
   case Decl::Var:
   case Decl::Decomposition:
-    // Skip variable templates
-    if (cast<VarDecl>(D)->getDescribedVarTemplate())
-      return;
-    LLVM_FALLTHROUGH;
   case Decl::VarTemplateSpecialization:
     EmitGlobal(cast<VarDecl>(D));
     if (auto *DD = dyn_cast<DecompositionDecl>(D))
@@ -4086,16 +4077,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       DI->EmitUsingDirective(cast<UsingDirectiveDecl>(*D));
     return;
   case Decl::CXXConstructor:
-    // Skip function templates
-    if (cast<FunctionDecl>(D)->getDescribedFunctionTemplate() ||
-        cast<FunctionDecl>(D)->isLateTemplateParsed())
-      return;
-
     getCXXABI().EmitCXXConstructors(cast<CXXConstructorDecl>(D));
     break;
   case Decl::CXXDestructor:
-    if (cast<FunctionDecl>(D)->isLateTemplateParsed())
-      return;
     getCXXABI().EmitCXXDestructors(cast<CXXDestructorDecl>(D));
     break;
 

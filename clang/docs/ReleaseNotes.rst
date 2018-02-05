@@ -132,6 +132,11 @@ New Compiler Flags
   difference between the ``-std=c17`` and ``-std=c11`` language modes is the
   value of the ``__STDC_VERSION__`` macro, as C17 is a bug fix release.
 
+- Added the ``-fexperimental-isel`` and ``-fno-experimental-isel`` flags to
+  enable/disable the new GlobalISel instruction selection framework. This
+  feature is enabled by default for AArch64 at the ``-O0`` optimization level.
+  Support for other targets or optimization levels is currently incomplete.
+
 Deprecated Compiler Flags
 -------------------------
 
