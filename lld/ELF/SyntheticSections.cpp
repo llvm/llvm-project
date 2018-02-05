@@ -1207,10 +1207,11 @@ void RelocationBaseSection::addReloc(uint32_t DynType,
                                      uint64_t OffsetInSec, bool UseSymVA,
                                      Symbol *Sym, int64_t Addend, RelExpr Expr,
                                      RelType Type) {
-  // REL type relocations don't have addend fields unlike RELAs, and
-  // their addends are stored to the section to which they are applied.
-  // So, store addends if we need to.
-  if (!Config->IsRela && UseSymVA)
+  // We store the addends for dynamic relocations for both REL and RELA
+  // relocations for compatibility with GNU Linkers. There is some system
+  // software such as the Bionic dynamic linker that uses the addend prior
+  // to dynamic relocation resolution.
+  if ((!Config->IsRela || Config->ApplyDynamicRelocs) && UseSymVA)
     InputSec->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
   addReloc({DynType, InputSec, OffsetInSec, UseSymVA, Sym, Addend});
 }

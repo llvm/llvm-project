@@ -9,6 +9,7 @@
 
 #include "lldb/Host/Symbols.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -221,7 +222,11 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
         Target::GetDefaultDebugFileSearchPaths());
 
     // Add module directory.
-    const ConstString &file_dir = module_spec.GetFileSpec().GetDirectory();
+    FileSpec module_file_spec = module_spec.GetFileSpec();
+    // We keep the unresolved pathname if it fails.
+    FileSystem::ResolveSymbolicLink(module_file_spec, module_file_spec);
+
+    const ConstString &file_dir = module_file_spec.GetDirectory();
     debug_file_search_paths.AppendIfUnique(
         FileSpec(file_dir.AsCString("."), true));
 
@@ -245,6 +250,8 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       // Some debug files are stored in the .build-id directory like this:
       //   /usr/lib/debug/.build-id/ff/e7fe727889ad82bb153de2ad065b2189693315.debug
       uuid_str = module_uuid.GetAsString("");
+      std::transform(uuid_str.begin(), uuid_str.end(), uuid_str.begin(),
+          ::tolower);
       uuid_str.insert(2, 1, '/');
       uuid_str = uuid_str + ".debug";
     }
@@ -274,7 +281,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
         FileSpec file_spec(filename, true);
 
         if (llvm::sys::fs::equivalent(file_spec.GetPath(),
-                                      module_spec.GetFileSpec().GetPath()))
+                                      module_file_spec.GetPath()))
           continue;
 
         if (file_spec.Exists()) {

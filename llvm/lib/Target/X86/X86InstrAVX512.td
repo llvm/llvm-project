@@ -1487,6 +1487,41 @@ def : Pat<(v32i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
           (VBROADCASTI32X4rm addr:$src)>;
 def : Pat<(v64i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
           (VBROADCASTI32X4rm addr:$src)>;
+
+// Patterns for selects of bitcasted operations.
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16f32 (v8f64 (X86SubVBroadcast (loadv2f64 addr:$src)))),
+                   (bc_v16f32 (v16i32 immAllZerosV))),
+          (VBROADCASTF32X4rmkz VK16WM:$mask, addr:$src)>;
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16f32 (v8f64 (X86SubVBroadcast (loadv2f64 addr:$src)))),
+                   VR512:$src0),
+          (VBROADCASTF32X4rmk VR512:$src0, VK16WM:$mask, addr:$src)>;
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16i32 (v8i64 (X86SubVBroadcast (loadv2i64 addr:$src)))),
+                   (v16i32 immAllZerosV)),
+          (VBROADCASTI32X4rmkz VK16WM:$mask, addr:$src)>;
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16i32 (v8i64 (X86SubVBroadcast (loadv2i64 addr:$src)))),
+                   VR512:$src0),
+          (VBROADCASTI32X4rmk VR512:$src0, VK16WM:$mask, addr:$src)>;
+
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8f64 (v16f32 (X86SubVBroadcast (loadv8f32 addr:$src)))),
+                   (bc_v8f64 (v16i32 immAllZerosV))),
+          (VBROADCASTF64X4rmkz VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8f64 (v16f32 (X86SubVBroadcast (loadv8f32 addr:$src)))),
+                   VR512:$src0),
+          (VBROADCASTF64X4rmk VR512:$src0, VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8i64 (v16i32 (X86SubVBroadcast (bc_v8i32 (loadv4i64 addr:$src))))),
+                   (bc_v8i64 (v16i32 immAllZerosV))),
+          (VBROADCASTI64X4rmkz VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8i64 (v16i32 (X86SubVBroadcast (bc_v8i32 (loadv4i64 addr:$src))))),
+                   VR512:$src0),
+          (VBROADCASTI64X4rmk VR512:$src0, VK8WM:$mask, addr:$src)>;
 }
 
 let Predicates = [HasVLX] in {
@@ -1505,6 +1540,25 @@ def : Pat<(v16i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
           (VBROADCASTI32X4Z256rm addr:$src)>;
 def : Pat<(v32i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
           (VBROADCASTI32X4Z256rm addr:$src)>;
+
+// Patterns for selects of bitcasted operations.
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8f32 (v4f64 (X86SubVBroadcast (loadv2f64 addr:$src)))),
+                   (bc_v8f32 (v8i32 immAllZerosV))),
+          (VBROADCASTF32X4Z256rmkz VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8f32 (v4f64 (X86SubVBroadcast (loadv2f64 addr:$src)))),
+                   VR256X:$src0),
+          (VBROADCASTF32X4Z256rmk VR256X:$src0, VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8i32 (v4i64 (X86SubVBroadcast (loadv2i64 addr:$src)))),
+                   (v8i32 immAllZerosV)),
+          (VBROADCASTI32X4Z256rmkz VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8i32 (v4i64 (X86SubVBroadcast (loadv2i64 addr:$src)))),
+                   VR256X:$src0),
+          (VBROADCASTI32X4Z256rmk VR256X:$src0, VK8WM:$mask, addr:$src)>;
+
 
 // Provide fallback in case the load node that is used in the patterns above
 // is used by additional users, which prevents the pattern selection.
@@ -1535,6 +1589,24 @@ defm VBROADCASTI64X2Z128 : avx512_subvec_broadcast_rm_dq<0x5a, "vbroadcasti64x2"
 defm VBROADCASTF64X2Z128 : avx512_subvec_broadcast_rm_dq<0x1a, "vbroadcastf64x2",
                            v4f64x_info, v2f64x_info>, VEX_W,
                            EVEX_V256, EVEX_CD8<64, CD8VT2>;
+
+// Patterns for selects of bitcasted operations.
+def : Pat<(vselect VK4WM:$mask,
+                   (bc_v4f64 (v8f32 (X86SubVBroadcast (loadv4f32 addr:$src)))),
+                   (bc_v4f64 (v8i32 immAllZerosV))),
+          (VBROADCASTF64X2Z128rmkz VK4WM:$mask, addr:$src)>;
+def : Pat<(vselect VK4WM:$mask,
+                   (bc_v4f64 (v8f32 (X86SubVBroadcast (loadv4f32 addr:$src)))),
+                   VR256X:$src0),
+          (VBROADCASTF64X2Z128rmk VR256X:$src0, VK4WM:$mask, addr:$src)>;
+def : Pat<(vselect VK4WM:$mask,
+                   (bc_v4i64 (v8i32 (X86SubVBroadcast (bc_v4i32 (loadv2i64 addr:$src))))),
+                   (bc_v4i64 (v8i32 immAllZerosV))),
+          (VBROADCASTI64X2Z128rmkz VK4WM:$mask, addr:$src)>;
+def : Pat<(vselect VK4WM:$mask,
+                   (bc_v4i64 (v8i32 (X86SubVBroadcast (bc_v4i32 (loadv2i64 addr:$src))))),
+                   VR256X:$src0),
+          (VBROADCASTI64X2Z128rmk VR256X:$src0, VK4WM:$mask, addr:$src)>;
 }
 
 let Predicates = [HasDQI] in {
@@ -1550,6 +1622,41 @@ defm VBROADCASTF64X2 : avx512_subvec_broadcast_rm_dq<0x1a, "vbroadcastf64x2",
 defm VBROADCASTF32X8 : avx512_subvec_broadcast_rm_dq<0x1b, "vbroadcastf32x8",
                        v16f32_info, v8f32x_info>,
                        EVEX_V512, EVEX_CD8<32, CD8VT8>;
+
+// Patterns for selects of bitcasted operations.
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16f32 (v8f64 (X86SubVBroadcast (loadv4f64 addr:$src)))),
+                   (bc_v16f32 (v16i32 immAllZerosV))),
+          (VBROADCASTF32X8rmkz VK16WM:$mask, addr:$src)>;
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16f32 (v8f64 (X86SubVBroadcast (loadv4f64 addr:$src)))),
+                   VR512:$src0),
+          (VBROADCASTF32X8rmk VR512:$src0, VK16WM:$mask, addr:$src)>;
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16i32 (v8i64 (X86SubVBroadcast (loadv4i64 addr:$src)))),
+                   (v16i32 immAllZerosV)),
+          (VBROADCASTI32X8rmkz VK16WM:$mask, addr:$src)>;
+def : Pat<(vselect VK16WM:$mask,
+                   (bc_v16i32 (v8i64 (X86SubVBroadcast (loadv4i64 addr:$src)))),
+                   VR512:$src0),
+          (VBROADCASTI32X8rmk VR512:$src0, VK16WM:$mask, addr:$src)>;
+
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8f64 (v16f32 (X86SubVBroadcast (loadv4f32 addr:$src)))),
+                   (bc_v8f64 (v16i32 immAllZerosV))),
+          (VBROADCASTF64X2rmkz VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8f64 (v16f32 (X86SubVBroadcast (loadv4f32 addr:$src)))),
+                   VR512:$src0),
+          (VBROADCASTF64X2rmk VR512:$src0, VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8i64 (v16i32 (X86SubVBroadcast (bc_v4i32 (loadv2i64 addr:$src))))),
+                   (bc_v8i64 (v16i32 immAllZerosV))),
+          (VBROADCASTI64X2rmkz VK8WM:$mask, addr:$src)>;
+def : Pat<(vselect VK8WM:$mask,
+                   (bc_v8i64 (v16i32 (X86SubVBroadcast (bc_v4i32 (loadv2i64 addr:$src))))),
+                   VR512:$src0),
+          (VBROADCASTI64X2rmk VR512:$src0, VK8WM:$mask, addr:$src)>;
 }
 
 multiclass avx512_common_broadcast_32x2<bits<8> opc, string OpcodeStr,

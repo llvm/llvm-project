@@ -624,6 +624,10 @@ bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
 }
 
+bool hasMIMG_R128(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128];
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
 }
