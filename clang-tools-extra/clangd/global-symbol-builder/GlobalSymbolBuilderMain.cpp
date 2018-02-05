@@ -41,7 +41,8 @@ static llvm::cl::opt<std::string> AssumedHeaderDir(
                    "If the absolute path cannot be determined (e.g. an "
                    "in-memory VFS) then the relative path is resolved against "
                    "this directory, which must be absolute. If this flag is "
-                   "not given, such headers will have relative paths."));
+                   "not given, such headers will have relative paths."),
+    llvm::cl::init(""));
 
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:

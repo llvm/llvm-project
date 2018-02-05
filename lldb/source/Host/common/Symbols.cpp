@@ -245,6 +245,8 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       // Some debug files are stored in the .build-id directory like this:
       //   /usr/lib/debug/.build-id/ff/e7fe727889ad82bb153de2ad065b2189693315.debug
       uuid_str = module_uuid.GetAsString("");
+      std::transform(uuid_str.begin(), uuid_str.end(), uuid_str.begin(),
+          ::tolower);
       uuid_str.insert(2, 1, '/');
       uuid_str = uuid_str + ".debug";
     }

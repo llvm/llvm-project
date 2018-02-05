@@ -597,6 +597,8 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition =
       Args.hasArg(OPT_allow_multiple_definition) || hasZOption(Args, "muldefs");
+  Config->ApplyDynamicRelocs = Args.hasFlag(OPT_apply_dynamic_relocs,
+                                            OPT_no_apply_dynamic_relocs, true);
   Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
