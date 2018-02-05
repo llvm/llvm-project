@@ -113,7 +113,7 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   for (const auto &thread : process_up->m_threads)
     static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
-  process_up->SetState(StateType::eStateStopped);
+  process_up->SetState(StateType::eStateStopped, false);
 
   return std::move(process_up);
 }
