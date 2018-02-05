@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-delicm -analyze< %s | FileCheck %s
-; RUN: opt %loadPolly -polly-delicm -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=STATS
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze< %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 ;
 ;    void func(double *A) {

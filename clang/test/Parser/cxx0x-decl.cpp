@@ -79,7 +79,7 @@ enum E
 namespace PR5066 {
   using T = int (*f)(); // expected-error {{type-id cannot have a name}}
   template<typename T> using U = int (*f)(); // expected-error {{type-id cannot have a name}}
-  auto f() -> int (*f)(); // expected-error {{type-id cannot have a name}}
+  auto f() -> int (*f)(); // expected-error {{only variables can be initialized}} expected-error {{expected ';'}}
   auto g = []() -> int (*f)() {}; // expected-error {{type-id cannot have a name}}
 }
 

@@ -769,9 +769,10 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
 
 def run_to_name_breakpoint (test, bkpt_name, launch_info = None, 
                             exe_name = "a.out",
+                            bkpt_module = None,
                             in_cwd = True):
     """Start up a target, using exe_name as the executable, and run it to
-       a breakpoint set by name on bkpt_name.
+       a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
        If you want to pass in launch arguments or environment
        variables, you can optionally pass in an SBLaunchInfo.  If you
@@ -781,22 +782,30 @@ def run_to_name_breakpoint (test, bkpt_name, launch_info = None,
        And if your executable isn't in the CWD, pass in the absolute
        path to the executable in exe_name, and set in_cwd to False.
 
+       If you need to restrict the breakpoint to a particular module,
+       pass the module name (a string not a FileSpec) in bkpt_module.  If
+       nothing is passed in setting will be unrestricted.
+
        If the target isn't valid, the breakpoint isn't found, or hit, the
        function will cause a testsuite failure.
 
        If successful it returns a tuple with the target process and
-       thread that hit the breakpoint.
+       thread that hit the breakpoint, and the breakpoint that we set
+       for you.
     """
 
     target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
 
-    breakpoint = target.BreakpointCreateByName(bkpt_name)
+    breakpoint = target.BreakpointCreateByName(bkpt_name, bkpt_module)
+
+
     test.assertTrue(breakpoint.GetNumLocations() > 0,
                     "No locations found for name breakpoint: '%s'."%(bkpt_name))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
 
 def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
                              launch_info = None, exe_name = "a.out",
+                             bkpt_module = None,
                              in_cwd = True):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by source regex bkpt_pattern.
@@ -807,7 +816,7 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
-            bkpt_pattern, source_spec)
+            bkpt_pattern, source_spec, bkpt_module)
     test.assertTrue(breakpoint.GetNumLocations() > 0, 
                     'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'%(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)

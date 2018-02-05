@@ -109,6 +109,12 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "sse2.pminu.b" || // Added in 3.9
       Name == "sse41.pminuw" || // Added in 3.9
       Name == "sse41.pminud" || // Added in 3.9
+      Name == "avx512.kand.w" || // Added in 7.0
+      Name == "avx512.kandn.w" || // Added in 7.0
+      Name == "avx512.knot.w" || // Added in 7.0
+      Name == "avx512.kor.w" || // Added in 7.0
+      Name == "avx512.kxor.w" || // Added in 7.0
+      Name == "avx512.kxnor.w" || // Added in 7.0
       Name.startswith("avx512.mask.pshuf.b.") || // Added in 4.0
       Name.startswith("avx2.pmax") || // Added in 3.9
       Name.startswith("avx2.pmin") || // Added in 3.9
@@ -1118,6 +1124,37 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Concat the vectors.
       Rep = Builder.CreateShuffleVector(LHS, RHS,
                                         makeArrayRef(Indices, NumElts));
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 && Name == "avx512.kand.w") {
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), 16);
+      Rep = Builder.CreateAnd(LHS, RHS);
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 && Name == "avx512.kandn.w") {
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), 16);
+      LHS = Builder.CreateNot(LHS);
+      Rep = Builder.CreateAnd(LHS, RHS);
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 && Name == "avx512.kor.w") {
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), 16);
+      Rep = Builder.CreateOr(LHS, RHS);
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 && Name == "avx512.kxor.w") {
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), 16);
+      Rep = Builder.CreateXor(LHS, RHS);
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 && Name == "avx512.kxnor.w") {
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), 16);
+      LHS = Builder.CreateNot(LHS);
+      Rep = Builder.CreateXor(LHS, RHS);
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 && Name == "avx512.knot.w") {
+      Rep = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Rep = Builder.CreateNot(Rep);
       Rep = Builder.CreateBitCast(Rep, CI->getType());
     } else if (IsX86 && (Name == "sse.add.ss" || Name == "sse2.add.sd")) {
       Type *I32Ty = Type::getInt32Ty(C);

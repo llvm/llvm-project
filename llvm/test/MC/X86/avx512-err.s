@@ -1,4 +1,4 @@
-// RUN: not llvm-mc %s -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512dq -mattr=+avx512f --show-encoding -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not llvm-mc %s -triple x86_64-unknown-unknown --show-encoding -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
 // ERR: Register k0 can't be used as write mask
 vpcmpd $1, %zmm24, %zmm7, %k5{%k0}

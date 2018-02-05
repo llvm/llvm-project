@@ -7,7 +7,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalarize-global-loads=false -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
-target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5"
 
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
 ; OPT-CI-NOT: getelementptr i32, i32 addrspace(1)* %in
@@ -137,24 +137,24 @@ done:
 ; GCN: {{^}}BB4_2:
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
-  %alloca = alloca [512 x i32], align 4
+  %alloca = alloca [512 x i32], align 4, addrspace(5)
   %out.gep.0 = getelementptr i32, i32 addrspace(1)* %out, i64 999998
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i64 999999
   %add.arg = add i32 %arg, 8
-  %alloca.gep = getelementptr [512 x i32], [512 x i32]* %alloca, i32 0, i32 1022
+  %alloca.gep = getelementptr [512 x i32], [512 x i32] addrspace(5)* %alloca, i32 0, i32 1022
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
 if:
-  store volatile i32 123, i32* %alloca.gep
-  %tmp1 = load volatile i32, i32* %alloca.gep
+  store volatile i32 123, i32 addrspace(5)* %alloca.gep
+  %tmp1 = load volatile i32, i32 addrspace(5)* %alloca.gep
   br label %endif
 
 endif:
   %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
   store i32 %x, i32 addrspace(1)* %out.gep.0
-  %load = load volatile i32, i32* %alloca.gep
+  %load = load volatile i32, i32 addrspace(5)* %alloca.gep
   store i32 %load, i32 addrspace(1)* %out.gep.1
   br label %done
 
@@ -178,24 +178,24 @@ done:
 
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
-  %alloca = alloca [512 x i32], align 4
+  %alloca = alloca [512 x i32], align 4, addrspace(5)
   %out.gep.0 = getelementptr i32, i32 addrspace(1)* %out, i64 999998
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i64 999999
   %add.arg = add i32 %arg, 8
-  %alloca.gep = getelementptr [512 x i32], [512 x i32]* %alloca, i32 0, i32 1023
+  %alloca.gep = getelementptr [512 x i32], [512 x i32] addrspace(5)* %alloca, i32 0, i32 1023
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
 if:
-  store volatile i32 123, i32* %alloca.gep
-  %tmp1 = load volatile i32, i32* %alloca.gep
+  store volatile i32 123, i32 addrspace(5)* %alloca.gep
+  %tmp1 = load volatile i32, i32 addrspace(5)* %alloca.gep
   br label %endif
 
 endif:
   %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
   store i32 %x, i32 addrspace(1)* %out.gep.0
-  %load = load volatile i32, i32* %alloca.gep
+  %load = load volatile i32, i32 addrspace(5)* %alloca.gep
   store i32 %load, i32 addrspace(1)* %out.gep.1
   br label %done
 
@@ -204,7 +204,7 @@ done:
 }
 
 ; OPT-LABEL: @test_no_sink_scratch_large_offset_i32(
-; OPT: %alloca.gep = getelementptr [512 x i32], [512 x i32]* %alloca, i32 0, i32 1024
+; OPT: %alloca.gep = getelementptr [512 x i32], [512 x i32] addrspace(5)* %alloca, i32 0, i32 1024
 ; OPT: br i1
 ; OPT-NOT: ptrtoint
 
@@ -215,24 +215,24 @@ done:
 ; GCN: {{^BB[0-9]+}}_2:
 define amdgpu_kernel void @test_no_sink_scratch_large_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
-  %alloca = alloca [512 x i32], align 4
+  %alloca = alloca [512 x i32], align 4, addrspace(5)
   %out.gep.0 = getelementptr i32, i32 addrspace(1)* %out, i64 999998
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i64 999999
   %add.arg = add i32 %arg, 8
-  %alloca.gep = getelementptr [512 x i32], [512 x i32]* %alloca, i32 0, i32 1024
+  %alloca.gep = getelementptr [512 x i32], [512 x i32] addrspace(5)* %alloca, i32 0, i32 1024
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp0 = icmp eq i32 %tid, 0
   br i1 %tmp0, label %endif, label %if
 
 if:
-  store volatile i32 123, i32* %alloca.gep
-  %tmp1 = load volatile i32, i32* %alloca.gep
+  store volatile i32 123, i32 addrspace(5)* %alloca.gep
+  %tmp1 = load volatile i32, i32 addrspace(5)* %alloca.gep
   br label %endif
 
 endif:
   %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
   store i32 %x, i32 addrspace(1)* %out.gep.0
-  %load = load volatile i32, i32* %alloca.gep
+  %load = load volatile i32, i32 addrspace(5)* %alloca.gep
   store i32 %load, i32 addrspace(1)* %out.gep.1
   br label %done
 

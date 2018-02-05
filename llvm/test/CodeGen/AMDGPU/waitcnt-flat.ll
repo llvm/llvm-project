@@ -10,13 +10,13 @@
 ; XGCN: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[DATA:v[0-9]+]]
 ; XGCN: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; XGCN: flat_load_dword [[DATA]], v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @test(i32 addrspace(4)* %out, i32 %in) {
-  store volatile i32 0, i32 addrspace(4)* %out
-  %val = load volatile i32, i32 addrspace(4)* %out
+define amdgpu_kernel void @test(i32* %out, i32 %in) {
+  store volatile i32 0, i32* %out
+  %val = load volatile i32, i32* %out
   ret void
 }
 
-; Make sure lgkmcnt isn't used for global_* instructions
+; Make sure lgkmcnt isn't used for global_ addrspace(5)* instructions
 ; GCN-LABEL: {{^}}test_waitcnt_type_flat_global:
 ; GFX9: global_load_dword [[LD:v[0-9]+]]
 ; GFX9-NEXT: s_waitcnt vmcnt(0){{$}}

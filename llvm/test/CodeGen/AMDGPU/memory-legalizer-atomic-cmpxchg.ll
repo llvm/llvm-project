@@ -7,10 +7,10 @@
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @system_monotonic_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in monotonic monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in monotonic monotonic
   ret void
 }
 
@@ -20,10 +20,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_acquire_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in acquire monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in acquire monotonic
   ret void
 }
 
@@ -33,10 +33,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @system_release_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in release monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in release monotonic
   ret void
 }
 
@@ -46,10 +46,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_acq_rel_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in acq_rel monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in acq_rel monotonic
   ret void
 }
 
@@ -59,10 +59,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_seq_cst_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in seq_cst monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in seq_cst monotonic
   ret void
 }
 
@@ -72,10 +72,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_acquire_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in acquire acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in acquire acquire
   ret void
 }
 
@@ -85,10 +85,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_release_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in release acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in release acquire
   ret void
 }
 
@@ -98,10 +98,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_acq_rel_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in acq_rel acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in acq_rel acquire
   ret void
 }
 
@@ -111,10 +111,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_seq_cst_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in seq_cst acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in seq_cst acquire
   ret void
 }
 
@@ -124,10 +124,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_seq_cst_seq_cst(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in seq_cst seq_cst
   ret void
 }
 
@@ -137,10 +137,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_monotonic_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") monotonic monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") monotonic monotonic
   ret void
 }
 
@@ -150,10 +150,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_acquire_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") acquire monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") acquire monotonic
   ret void
 }
 
@@ -163,10 +163,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_release_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") release monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") release monotonic
   ret void
 }
 
@@ -176,10 +176,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_acq_rel_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel monotonic
   ret void
 }
 
@@ -189,10 +189,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_seq_cst_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst monotonic
   ret void
 }
 
@@ -202,10 +202,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_acquire_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") acquire acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") acquire acquire
   ret void
 }
 
@@ -215,10 +215,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_release_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") release acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") release acquire
   ret void
 }
 
@@ -228,10 +228,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_acq_rel_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel acquire
   ret void
 }
 
@@ -241,10 +241,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_seq_cst_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst acquire
   ret void
 }
 
@@ -254,10 +254,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_seq_cst_seq_cst(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst seq_cst
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst seq_cst
   ret void
 }
 
@@ -267,10 +267,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_monotonic_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") monotonic monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") monotonic monotonic
   ret void
 }
 
@@ -280,10 +280,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_acquire_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") acquire monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") acquire monotonic
   ret void
 }
 
@@ -293,10 +293,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_release_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") release monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") release monotonic
   ret void
 }
 
@@ -306,10 +306,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_acq_rel_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") acq_rel monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") acq_rel monotonic
   ret void
 }
 
@@ -319,10 +319,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_seq_cst_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") seq_cst monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") seq_cst monotonic
   ret void
 }
 
@@ -332,10 +332,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_acquire_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") acquire acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") acquire acquire
   ret void
 }
 
@@ -345,10 +345,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_release_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") release acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") release acquire
   ret void
 }
 
@@ -358,10 +358,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_acq_rel_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") acq_rel acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") acq_rel acquire
   ret void
 }
 
@@ -371,10 +371,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_seq_cst_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") seq_cst acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") seq_cst acquire
   ret void
 }
 
@@ -384,10 +384,10 @@ entry:
 ; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_seq_cst_seq_cst(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
 
@@ -397,10 +397,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_monotonic_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") monotonic monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") monotonic monotonic
   ret void
 }
 
@@ -410,10 +410,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_acquire_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") acquire monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") acquire monotonic
   ret void
 }
 
@@ -423,10 +423,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_release_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") release monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") release monotonic
   ret void
 }
 
@@ -436,10 +436,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_acq_rel_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") acq_rel monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") acq_rel monotonic
   ret void
 }
 
@@ -449,10 +449,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_seq_cst_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") seq_cst monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") seq_cst monotonic
   ret void
 }
 
@@ -462,10 +462,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_acquire_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") acquire acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") acquire acquire
   ret void
 }
 
@@ -475,10 +475,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_release_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") release acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") release acquire
   ret void
 }
 
@@ -488,10 +488,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_acq_rel_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") acq_rel acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") acq_rel acquire
   ret void
 }
 
@@ -501,10 +501,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_seq_cst_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") seq_cst acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") seq_cst acquire
   ret void
 }
 
@@ -514,10 +514,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_seq_cst_seq_cst(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("workgroup") seq_cst seq_cst
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("workgroup") seq_cst seq_cst
   ret void
 }
 
@@ -527,10 +527,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_monotonic_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") monotonic monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") monotonic monotonic
   ret void
 }
 
@@ -540,10 +540,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_acquire_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") acquire monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") acquire monotonic
   ret void
 }
 
@@ -553,10 +553,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_release_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") release monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") release monotonic
   ret void
 }
 
@@ -566,10 +566,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_acq_rel_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel monotonic
   ret void
 }
 
@@ -579,10 +579,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_seq_cst_monotonic(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst monotonic
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst monotonic
   ret void
 }
 
@@ -592,10 +592,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_acquire_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") acquire acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") acquire acquire
   ret void
 }
 
@@ -605,10 +605,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_release_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") release acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") release acquire
   ret void
 }
 
@@ -618,10 +618,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_acq_rel_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel acquire
   ret void
 }
 
@@ -631,10 +631,10 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_seq_cst_acquire(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst acquire
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst acquire
   ret void
 }
 
@@ -644,9 +644,9 @@ entry:
 ; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_seq_cst_seq_cst(
-    i32 addrspace(4)* %out, i32 %in, i32 %old) {
+    i32* %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst seq_cst
+  %gep = getelementptr i32, i32* %out, i32 4
+  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst seq_cst
   ret void
 }

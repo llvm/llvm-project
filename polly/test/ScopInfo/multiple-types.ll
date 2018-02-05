@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze \
 ; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
 ;
 ;    // Check that accessing one array with different types works.

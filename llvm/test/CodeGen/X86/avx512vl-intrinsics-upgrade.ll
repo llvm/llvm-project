@@ -1073,9 +1073,9 @@ define i8 @test_pcmpeq_d_256(<8 x i32> %a, <8 x i32> %b) {
 define i8 @test_mask_pcmpeq_d_256(<8 x i32> %a, <8 x i32> %b, i8 %mask) {
 ; CHECK-LABEL: test_mask_pcmpeq_d_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x76,0xc1]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x76,0xc1]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    andb %dil, %al ## encoding: [0x40,0x20,0xf8]
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.pcmpeq.d.256(<8 x i32> %a, <8 x i32> %b, i8 %mask)
@@ -1123,9 +1123,9 @@ define i8 @test_pcmpgt_d_256(<8 x i32> %a, <8 x i32> %b) {
 define i8 @test_mask_pcmpgt_d_256(<8 x i32> %a, <8 x i32> %b, i8 %mask) {
 ; CHECK-LABEL: test_mask_pcmpgt_d_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x66,0xc1]
+; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x66,0xc1]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    andb %dil, %al ## encoding: [0x40,0x20,0xf8]
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.pcmpgt.d.256(<8 x i32> %a, <8 x i32> %b, i8 %mask)
@@ -6013,11 +6013,9 @@ define i8@test_int_x86_avx512_ptestm_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2)
 ; CHECK-LABEL: test_int_x86_avx512_ptestm_d_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf2,0x7d,0x28,0x27,0xc1]
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vptestmd %ymm1, %ymm0, %k1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x27,0xc9]
-; CHECK-NEXT:    kmovw %k1, %ecx ## encoding: [0xc5,0xf8,0x93,0xc9]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
+; CHECK-NEXT:    andb %al, %dil ## encoding: [0x40,0x20,0xc7]
+; CHECK-NEXT:    addb %dil, %al ## encoding: [0x40,0x00,0xf8]
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestm.d.256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2)
@@ -6089,11 +6087,9 @@ define i8@test_int_x86_avx512_ptestnm_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2
 ; CHECK-LABEL: test_int_x86_avx512_ptestnm_d_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf2,0x7e,0x28,0x27,0xc1]
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vptestnmd %ymm1, %ymm0, %k1 {%k1} ## encoding: [0x62,0xf2,0x7e,0x29,0x27,0xc9]
-; CHECK-NEXT:    kmovw %k1, %ecx ## encoding: [0xc5,0xf8,0x93,0xc9]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
+; CHECK-NEXT:    andb %al, %dil ## encoding: [0x40,0x20,0xc7]
+; CHECK-NEXT:    addb %dil, %al ## encoding: [0x40,0x00,0xf8]
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestnm.d.256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2)

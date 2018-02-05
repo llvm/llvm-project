@@ -11,7 +11,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 #include <cstdint>

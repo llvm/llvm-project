@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-unknown-unknown -mcpu=skx --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple i386-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vaddpd 4096(%edx,%eax), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0xed,0x48,0x58,0x54,0x02,0x40]      

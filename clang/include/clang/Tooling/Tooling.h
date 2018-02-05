@@ -330,6 +330,9 @@ class ClangTool {
   /// Runs an action over all files specified in the command line.
   ///
   /// \param Action Tool action.
+  ///
+  /// \returns 0 on success; 1 if any error occured; 2 if there is no error but
+  /// some files are skipped due to missing compile commands.
   int run(ToolAction *Action);
 
   /// \brief Create an AST for each file specified in the command line and

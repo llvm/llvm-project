@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512bw  --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vpaddb %zmm23, %zmm24, %zmm19
 // CHECK:  encoding: [0x62,0xa1,0x3d,0x40,0xfc,0xdf]

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl --show-encoding < %s  | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s  | FileCheck %s
 
 // CHECK: vaddpd %zmm6, %zmm27, %zmm8
 // CHECK:  encoding: [0x62,0x71,0xa5,0x40,0x58,0xc6]

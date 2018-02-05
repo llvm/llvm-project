@@ -2,32 +2,32 @@
 --- |
 
   define amdgpu_kernel void @fold_fi_vgpr() {
-    %alloca = alloca [4 x i32]
+    %alloca = alloca [4 x i32], addrspace(5)
     ret void
   }
 
   define amdgpu_kernel void @fold_vgpr_fi() {
-    %alloca = alloca [4 x i32]
+    %alloca = alloca [4 x i32], addrspace(5)
     ret void
   }
 
   define amdgpu_kernel void @fold_sgpr_fi() {
-    %alloca = alloca [4 x i32]
+    %alloca = alloca [4 x i32], addrspace(5)
     ret void
   }
 
   define amdgpu_kernel void @fold_fi_sgpr() {
-    %alloca = alloca [4 x i32]
+    %alloca = alloca [4 x i32], addrspace(5)
     ret void
   }
 
   define amdgpu_kernel void @fold_fi_imm() {
-    %alloca = alloca [4 x i32]
+    %alloca = alloca [4 x i32], addrspace(5)
     ret void
   }
 
   define amdgpu_kernel void @fold_imm_fi() {
-    %alloca = alloca [4 x i32]
+    %alloca = alloca [4 x i32], addrspace(5)
     ret void
   }
 

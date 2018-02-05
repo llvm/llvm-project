@@ -657,17 +657,17 @@ break:
 ; CHECK: buffer_store_dwordx4
 define amdgpu_ps void @test_alloca(float %data, i32 %a, i32 %idx) nounwind {
 entry:
-  %array = alloca [32 x i32], align 4
+  %array = alloca [32 x i32], align 4, addrspace(5)
 
   call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> undef, i32 0, i32 0, i1 0, i1 0)
 
-  %s.gep = getelementptr [32 x i32], [32 x i32]* %array, i32 0, i32 0
-  store volatile i32 %a, i32* %s.gep, align 4
+  %s.gep = getelementptr [32 x i32], [32 x i32] addrspace(5)* %array, i32 0, i32 0
+  store volatile i32 %a, i32 addrspace(5)* %s.gep, align 4
 
   call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> undef, i32 1, i32 0, i1 0, i1 0)
 
-  %c.gep = getelementptr [32 x i32], [32 x i32]* %array, i32 0, i32 %idx
-  %c = load i32, i32* %c.gep, align 4
+  %c.gep = getelementptr [32 x i32], [32 x i32] addrspace(5)* %array, i32 0, i32 %idx
+  %c = load i32, i32 addrspace(5)* %c.gep, align 4
   %c.bc = bitcast i32 %c to float
   %t = call <4 x float> @llvm.amdgcn.image.sample.v4f32.f32.v8i32(float %c.bc, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
   call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %t, <4 x i32> undef, i32 0, i32 0, i1 0, i1 0)

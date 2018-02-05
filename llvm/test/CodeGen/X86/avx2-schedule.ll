@@ -1318,43 +1318,50 @@ define <16 x i16> @test_paddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 define <32 x i8> @test_palignr(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_palignr:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; GENERIC-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [5:1.00]
+; GENERIC-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
+; GENERIC-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm1[0],ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm1[16] sched: [1:1.00]
+; GENERIC-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_palignr:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; HASWELL-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [8:1.00]
+; HASWELL-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
+; HASWELL-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm1[0],ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm1[16] sched: [1:1.00]
+; HASWELL-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_palignr:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; BROADWELL-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [7:1.00]
+; BROADWELL-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
+; BROADWELL-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm1[0],ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm1[16] sched: [1:1.00]
+; BROADWELL-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_palignr:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; SKYLAKE-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [8:1.00]
+; SKYLAKE-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
+; SKYLAKE-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm1[0],ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm1[16] sched: [1:1.00]
+; SKYLAKE-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_palignr:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; SKX-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [8:1.00]
+; SKX-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
+; SKX-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm1[0],ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm1[16] sched: [1:1.00]
+; SKX-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_palignr:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:0.25]
-; ZNVER1-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [8:0.50]
+; ZNVER1-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:0.25]
+; ZNVER1-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm1[0],ymm0[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm1[16] sched: [1:0.25]
+; ZNVER1-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <32 x i8> %a1, <32 x i8> %a0, <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48>
   %2 = load <32 x i8>, <32 x i8> *%a2, align 32
-  %3 = shufflevector <32 x i8> %2, <32 x i8> %1, <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48>
-  ret <32 x i8> %3
+  %3 = shufflevector <32 x i8> %a0, <32 x i8> %1, <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48>
+  %4 = add <32 x i8> %1, %3
+  ret <32 x i8> %4
 }
 
 define <4 x i64> @test_pand(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
@@ -1564,98 +1571,98 @@ define <16 x i16> @test_pavgw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 define <4 x i32> @test_pblendd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_pblendd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.50]
+; GENERIC-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.50]
 ; GENERIC-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [5:0.50]
 ; GENERIC-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pblendd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
+; HASWELL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
 ; HASWELL-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [7:0.50]
 ; HASWELL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
+; BROADWELL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
 ; BROADWELL-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [6:0.50]
 ; BROADWELL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pblendd:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
+; SKYLAKE-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
 ; SKYLAKE-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [7:0.50]
 ; SKYLAKE-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pblendd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
+; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [7:0.50]
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pblendd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.50]
+; ZNVER1-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.50]
 ; ZNVER1-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [8:1.00]
 ; ZNVER1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
   %2 = load <4 x i32>, <4 x i32> *%a2, align 16
-  %3 = shufflevector <4 x i32> %1, <4 x i32> %2, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
-  %4 = add <4 x i32> %a0, %3
+  %3 = shufflevector <4 x i32> %a1, <4 x i32> %2, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  %4 = add <4 x i32> %1, %3
   ret <4 x i32> %4
 }
 
 define <8 x i32> @test_pblendd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pblendd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.50]
+; GENERIC-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.50]
 ; GENERIC-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [5:0.50]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pblendd_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
+; HASWELL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
 ; HASWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [8:0.50]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendd_ymm:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
+; BROADWELL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
 ; BROADWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [7:0.50]
 ; BROADWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pblendd_ymm:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
+; SKYLAKE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
 ; SKYLAKE-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [8:0.50]
 ; SKYLAKE-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pblendd_ymm:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
+; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
 ; SKX-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [8:0.50]
 ; SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pblendd_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.50]
+; ZNVER1-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.50]
 ; ZNVER1-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [9:1.50]
 ; ZNVER1-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <8 x i32> %a0, <8 x i32> %a1, <8 x i32> <i32 8, i32 9, i32 10, i32 3, i32 4, i32 5, i32 6, i32 15>
   %2 = load <8 x i32>, <8 x i32> *%a2, align 32
-  %3 = shufflevector <8 x i32> %1, <8 x i32> %2, <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %4 = add <8 x i32> %a0, %3
+  %3 = shufflevector <8 x i32> %a1, <8 x i32> %2, <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %4 = add <8 x i32> %1, %3
   ret <8 x i32> %4
 }
 
@@ -1706,42 +1713,49 @@ define <16 x i16> @test_pblendw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_pblendw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:0.50]
-; GENERIC-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [5:0.50]
+; GENERIC-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [5:0.50]
+; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pblendw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:1.00]
-; HASWELL-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [8:1.00]
+; HASWELL-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [8:1.00]
+; HASWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendw:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:1.00]
-; BROADWELL-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [7:1.00]
+; BROADWELL-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [7:1.00]
+; BROADWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pblendw:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:1.00]
-; SKYLAKE-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [8:1.00]
+; SKYLAKE-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [8:1.00]
+; SKYLAKE-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pblendw:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:1.00]
-; SKX-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [8:1.00]
+; SKX-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [8:1.00]
+; SKX-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pblendw:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [2:0.33]
-; ZNVER1-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [9:0.50]
+; ZNVER1-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [9:0.50]
+; ZNVER1-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <16 x i16> %a0, <16 x i16> %a1, <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 20, i32 5, i32 6, i32 7, i32 8, i32 9, i32 26, i32 27, i32 28, i32 13, i32 14, i32 15>
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
-  %3 = shufflevector <16 x i16> %1, <16 x i16> %2, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
-  ret <16 x i16> %3
+  %3 = shufflevector <16 x i16> %a1, <16 x i16> %2, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+  %4 = add <16 x i16> %1, %3
+  ret <16 x i16> %4
 }
 
 define <16 x i8> @test_pbroadcastb(<16 x i8> %a0, <16 x i8> *%a1) {

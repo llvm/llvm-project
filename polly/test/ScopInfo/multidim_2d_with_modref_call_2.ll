@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN: -polly-invariant-load-hoisting=true \
 ; RUN: < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -polly-allow-nonaffine \
 ; RUN: -polly-invariant-load-hoisting=true \
 ; RUN: -polly-allow-modref-calls -analyze < %s | FileCheck %s --check-prefix=NONAFFINE
 

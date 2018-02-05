@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops \
 ; RUN: -polly-invariant-load-hoisting=true \
 ; RUN: -analyze -S < %s | FileCheck %s
 ;

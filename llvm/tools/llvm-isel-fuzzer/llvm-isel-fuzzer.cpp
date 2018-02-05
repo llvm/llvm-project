@@ -84,8 +84,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     return 0;
 
   LLVMContext Context;
-  auto M = parseModule(Data, Size, Context);
-  if (!M || verifyModule(*M, &errs())) {
+  auto M = parseAndVerify(Data, Size, Context);
+  if (!M) {
     errs() << "error: input module is broken!\n";
     return 0;
   }

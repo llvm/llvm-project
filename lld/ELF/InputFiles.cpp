@@ -618,6 +618,14 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   if (Name.startswith(".gnu.linkonce."))
     return &InputSection::Discarded;
 
+  // If we are creating a new .build-id section, strip existing .build-id
+  // sections so that the output won't have more than one .build-id.
+  // This is not usually a problem because input object files normally don't
+  // have .build-id sections, but you can create such files by
+  // "ld.{bfd,gold,lld} -r --build-id", and we want to guard against it.
+  if (Name == ".note.gnu.build-id" && Config->BuildId != BuildIdKind::None)
+    return &InputSection::Discarded;
+
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
@@ -1024,8 +1032,8 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 
 void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
-  auto *Section = make<InputSection>(nullptr, SHF_ALLOC | SHF_WRITE,
-                                     SHT_PROGBITS, 8, Data, ".data");
+  auto *Section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                                     8, Data, ".data");
   Sections.push_back(Section);
 
   // For each input file foo that is embedded to a result as a binary

@@ -1183,7 +1183,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     if (Tok.is(tok::arrow)) {
       FunLocalRangeEnd = Tok.getLocation();
       SourceRange Range;
-      TrailingReturnType = ParseTrailingReturnType(Range);
+      TrailingReturnType =
+          ParseTrailingReturnType(Range, /*MayBeFollowedByDirectInit*/ false);
       if (Range.getEnd().isValid())
         DeclEndLoc = Range.getEnd();
     }
@@ -1253,7 +1254,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     // Parse the return type, if there is one.
     if (Tok.is(tok::arrow)) {
       SourceRange Range;
-      TrailingReturnType = ParseTrailingReturnType(Range);
+      TrailingReturnType =
+          ParseTrailingReturnType(Range, /*MayBeFollowedByDirectInit*/ false);
       if (Range.getEnd().isValid())
         DeclEndLoc = Range.getEnd();
     }

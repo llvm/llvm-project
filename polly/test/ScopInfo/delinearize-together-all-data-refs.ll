@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
 
 ; void foo(long n, long m, long o, double A[n][m][o]) {
 ;   for (long i = 0; i < n-3; i++)
