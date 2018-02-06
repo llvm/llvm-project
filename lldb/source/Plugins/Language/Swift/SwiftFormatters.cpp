@@ -131,41 +131,6 @@ bool lldb_private::formatters::swift::UnicodeScalar_SummaryProvider(
   return Char32SummaryProvider(*value_sp.get(), stream, options);
 }
 
-static bool invokeNSStringFormatter(Process &process, ValueObject &valobj,
-                                    Stream &stream,
-                                    const TypeSummaryOptions &summary_options) {
-  static ConstString g__owner("_owner");
-  static ConstString g_Some("some");
-  static ConstString g_instance_type("instance_type");
-
-  ValueObjectSP dyn_inst_type0(
-      valobj.GetChildAtNamePath({g__owner, g_Some, g_instance_type}));
-  if (!dyn_inst_type0)
-    return false;
-  lldb::addr_t dyn_inst_type0_ptr =
-      dyn_inst_type0->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  if (dyn_inst_type0_ptr == 0 || dyn_inst_type0_ptr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  InferiorSizedWord dataAddress_isw =
-      InferiorSizedWord(dyn_inst_type0_ptr, process);
-
-  DataExtractor id_ptr = dataAddress_isw.GetAsData(process.GetByteOrder());
-  CompilerType id_type =
-      process.GetTarget().GetScratchClangASTContext()->GetBasicType(
-          lldb::eBasicTypeObjCID);
-
-  if (!id_type)
-    return false;
-
-  ValueObjectSP nsstringhere_sp = ValueObject::CreateValueObjectFromData(
-      "nsstringhere", id_ptr, valobj.GetExecutionContextRef(), id_type);
-  if (nsstringhere_sp)
-    return NSStringSummaryProvider(*nsstringhere_sp.get(), stream,
-                                   summary_options);
-  return false;
-}
-
 bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   return StringGuts_SummaryProvider(
