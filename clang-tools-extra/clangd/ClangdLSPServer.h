@@ -45,7 +45,8 @@ public:
   /// each instance of ClangdLSPServer.
   ///
   /// \return Wether we received a 'shutdown' request before an 'exit' request
-  bool run(std::istream &In);
+  bool run(std::istream &In,
+           JSONStreamStyle InputStyle = JSONStreamStyle::Standard);
 
 private:
   // Implement DiagnosticsConsumer.

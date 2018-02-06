@@ -36,22 +36,4 @@ int main()
         T* p = c.data();
         (void)p; // to placate scan-build
     }
-    {
-      typedef double T;
-      typedef std::array<const T, 0> C;
-      C c = {};
-      const T* p = c.data();
-      static_assert((std::is_same<decltype(c.data()), const T*>::value), "");
-      (void)p; // to placate scan-build
-    }
-    {
-      struct NoDefault {
-        NoDefault(int) {}
-      };
-      typedef NoDefault T;
-      typedef std::array<T, 0> C;
-      C c = {};
-      T* p = c.data();
-      assert(p != nullptr);
-    }
 }

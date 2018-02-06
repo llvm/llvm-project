@@ -6616,18 +6616,21 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::HINT:
-  case ARM::t2HINT:
-    if (hasRAS()) {
-      // ESB is not predicable (pred must be AL)
-      unsigned Imm8 = Inst.getOperand(0).getImm();
-      unsigned Pred = Inst.getOperand(1).getImm();
-      if (Imm8 == 0x10 && Pred != ARMCC::AL)
-        return Error(Operands[1]->getStartLoc(), "instruction 'esb' is not "
-                                                 "predicable, but condition "
-                                                 "code specified");
-    }
-    // Without the RAS extension, this behaves as any other unallocated hint.
+  case ARM::t2HINT: {
+    unsigned Imm8 = Inst.getOperand(0).getImm();
+    unsigned Pred = Inst.getOperand(1).getImm();
+    // ESB is not predicable (pred must be AL). Without the RAS extension, this
+    // behaves as any other unallocated hint.
+    if (Imm8 == 0x10 && Pred != ARMCC::AL && hasRAS())
+      return Error(Operands[1]->getStartLoc(), "instruction 'esb' is not "
+                                               "predicable, but condition "
+                                               "code specified");
+    if (Imm8 == 0x14 && Pred != ARMCC::AL)
+      return Error(Operands[1]->getStartLoc(), "instruction 'csdb' is not "
+                                               "predicable, but condition "
+                                               "code specified");
     break;
+  }
   }
 
   return false;

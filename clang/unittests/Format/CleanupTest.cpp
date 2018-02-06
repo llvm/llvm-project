@@ -496,7 +496,7 @@ TEST_F(CleanUpReplacementsTest, InsertNewSystemIncludeGoogleStyle) {
                      "#include \"y/a.h\"\n"
                      "#include \"z/b.h\"\n";
   // FIXME: inserting after the empty line following the main header might be
-  // prefered.
+  // preferred.
   std::string Expected = "#include \"x/fix.h\"\n"
                          "#include <vector>\n"
                          "\n"

@@ -186,7 +186,7 @@ TEST_F(FormatTestRawStrings, ReformatsShortRawStringsOnSingleLine) {
           R"test(P p = TP(R"pb(item_1:1 item_2:2)pb");)test",
           getRawStringPbStyleWithColumns(40)));
   expect_eq(
-      R"test(P p = TP(R"pb(item_1 <1> item_2: { 2 })pb");)test",
+      R"test(P p = TP(R"pb(item_1 < 1 > item_2: { 2 })pb");)test",
       format(
           R"test(P p = TP(R"pb(item_1<1> item_2:{2})pb");)test",
           getRawStringPbStyleWithColumns(40)));
@@ -225,8 +225,8 @@ P p = TPPPPPPPPPPPPPPP(R"pb(item_1: 1, item_2: 2, item_3: 3)pb");)test",
                    getRawStringPbStyleWithColumns(40)));
 
   expect_eq(R"test(
-P p = TP(R"pb(item_1 <1>
-              item_2: <2>
+P p = TP(R"pb(item_1 < 1 >
+              item_2: < 2 >
               item_3 {})pb");)test",
       format(R"test(
 P p = TP(R"pb(item_1<1> item_2:<2> item_3{ })pb");)test",
@@ -245,9 +245,9 @@ P p = TP(R"pb(item_1: 1, item_2: 2, item_3: 3, item_4: 4)pb");)test",
 
   expect_eq(R"test(
 P p = TPPPPPPPPPPPPPPP(
-    R"pb(item_1 <1>,
+    R"pb(item_1 < 1 >,
          item_2: { 2 },
-         item_3: <3>,
+         item_3: < 3 >,
          item_4: { 4 })pb");)test",
             format(R"test(
 P p = TPPPPPPPPPPPPPPP(R"pb(item_1<1>, item_2: {2}, item_3: <3>, item_4:{4})pb");)test",
