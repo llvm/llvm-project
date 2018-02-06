@@ -1723,15 +1723,18 @@ void TokenAnnotator::setCommentLineLevels(
       }
     }
 
-    if (NextNonCommentLine && CommentLine) {
-      // If the comment is currently aligned with the line immediately following
-      // it, that's probably intentional and we should keep it.
-      bool AlignedWithNextLine =
-          NextNonCommentLine->First->NewlinesBefore <= 1 &&
-          NextNonCommentLine->First->OriginalColumn ==
-              (*I)->First->OriginalColumn;
-      if (AlignedWithNextLine)
-        (*I)->Level = NextNonCommentLine->Level;
+    // If the comment is currently aligned with the line immediately following
+    // it, that's probably intentional and we should keep it.
+    if (NextNonCommentLine && CommentLine &&
+        NextNonCommentLine->First->NewlinesBefore <= 1 &&
+        NextNonCommentLine->First->OriginalColumn ==
+            (*I)->First->OriginalColumn) {
+      // Align comments for preprocessor lines with the # in column 0.
+      // Otherwise, align with the next line.
+      (*I)->Level = (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+                     NextNonCommentLine->Type == LT_ImportStatement)
+                        ? 0
+                        : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = (*I)->First->isNot(tok::r_brace) ? (*I) : nullptr;
     }
