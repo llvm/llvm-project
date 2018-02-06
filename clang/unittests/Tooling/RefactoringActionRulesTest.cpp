@@ -97,7 +97,7 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
   auto Rule =
       createRefactoringActionRule<ReplaceAWithB>(SelectionRequirement());
 
-  // When the requirements are satisifed, the rule's function must be invoked.
+  // When the requirements are satisfied, the rule's function must be invoked.
   {
     RefactoringRuleContext RefContext(Context.Sources);
     SourceLocation Cursor =

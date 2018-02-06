@@ -1275,12 +1275,8 @@ static bool isSExtFree(SDValue N) {
 
 SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
-
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(ty(LHS)))
-    return LowerHvxSetCC(Op, DAG);
-
   SDValue Cmp = Op.getOperand(2);
   ISD::CondCode CC = cast<CondCodeSDNode>(Cmp)->get();
 
@@ -2100,7 +2096,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MUL,                T, Custom);
       setOperationAction(ISD::MULHS,              T, Custom);
       setOperationAction(ISD::MULHU,              T, Custom);
-      setOperationAction(ISD::SETCC,              T, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,  T, Custom);
@@ -2116,6 +2111,14 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SHL,                     T, Custom);
         setOperationAction(ISD::SRL,                     T, Custom);
       }
+
+      setCondCodeAction(ISD::SETNE,  T, Expand);
+      setCondCodeAction(ISD::SETLE,  T, Expand);
+      setCondCodeAction(ISD::SETGE,  T, Expand);
+      setCondCodeAction(ISD::SETLT,  T, Expand);
+      setCondCodeAction(ISD::SETULE, T, Expand);
+      setCondCodeAction(ISD::SETUGE, T, Expand);
+      setCondCodeAction(ISD::SETULT, T, Expand);
     }
 
     for (MVT T : LegalV) {
@@ -2144,15 +2147,39 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       // independent) handling of it would convert it to a load, which is
       // not always the optimal choice.
       setOperationAction(ISD::BUILD_VECTOR, T, Custom);
-      // Custom-lower SETCC for pairs. Expand it into a concat of SETCCs
-      // for individual vectors.
-      setOperationAction(ISD::SETCC,        T, Custom);
 
-      if (T == ByteW)
-        continue;
-      // Promote all shuffles and concats to operate on vectors of bytes.
-      setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
-      setPromoteTo(ISD::CONCAT_VECTORS, T, ByteW);
+      // Custom-lower these operations for pairs. Expand them into a concat
+      // of the corresponding operations on individual vectors.
+      setOperationAction(ISD::ANY_EXTEND,               T, Custom);
+      setOperationAction(ISD::SIGN_EXTEND,              T, Custom);
+      setOperationAction(ISD::ZERO_EXTEND,              T, Custom);
+      setOperationAction(ISD::SIGN_EXTEND_INREG,        T, Custom);
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,  T, Custom);
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+
+      setOperationAction(ISD::ADD,      T, Legal);
+      setOperationAction(ISD::SUB,      T, Legal);
+      setOperationAction(ISD::MUL,      T, Custom);
+      setOperationAction(ISD::MULHS,    T, Custom);
+      setOperationAction(ISD::MULHU,    T, Custom);
+      setOperationAction(ISD::AND,      T, Custom);
+      setOperationAction(ISD::OR,       T, Custom);
+      setOperationAction(ISD::XOR,      T, Custom);
+      setOperationAction(ISD::SETCC,    T, Custom);
+      setOperationAction(ISD::VSELECT,  T, Custom);
+      if (T != ByteW) {
+        setOperationAction(ISD::SRA,      T, Custom);
+        setOperationAction(ISD::SHL,      T, Custom);
+        setOperationAction(ISD::SRL,      T, Custom);
+
+        // Promote all shuffles and concats to operate on vectors of bytes.
+        setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
+        setPromoteTo(ISD::CONCAT_VECTORS, T, ByteW);
+      }
+
+      MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
+      setOperationAction(ISD::SETCC, BoolV, Custom);
     }
   }
 
@@ -2303,6 +2330,9 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::P2D:           return "HexagonISD::P2D";
   case HexagonISD::V2Q:           return "HexagonISD::V2Q";
   case HexagonISD::Q2V:           return "HexagonISD::Q2V";
+  case HexagonISD::QCAT:          return "HexagonISD::QCAT";
+  case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
+  case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
   case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
   case HexagonISD::OP_END:        break;
   }
@@ -2584,7 +2614,16 @@ HexagonTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 HexagonTargetLowering::LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const {
-  return LowerSIGN_EXTEND(Op, DAG);
+  // Lower any-extends of boolean vectors to sign-extends, since they
+  // translate directly to Q2V. Zero-extending could also be done equally
+  // fast, but Q2V is used/recognized in more places.
+  // For all other vectors, use zero-extend.
+  MVT ResTy = ty(Op);
+  SDValue InpV = Op.getOperand(0);
+  MVT ElemTy = ty(InpV).getVectorElementType();
+  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
+    return LowerSIGN_EXTEND(Op, DAG);
+  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Op), ResTy, InpV);
 }
 
 SDValue
@@ -3176,6 +3215,14 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
+
+  // Handle INLINEASM first.
+  if (Opc == ISD::INLINEASM)
+    return LowerINLINEASM(Op, DAG);
+
+  if (isHvxOperation(Op))
+    return LowerHvxOperation(Op, DAG);
+
   switch (Opc) {
     default:
 #ifndef NDEBUG
@@ -3191,9 +3238,6 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::EXTRACT_VECTOR_ELT:   return LowerEXTRACT_VECTOR_ELT(Op, DAG);
     case ISD::BUILD_VECTOR:         return LowerBUILD_VECTOR(Op, DAG);
     case ISD::VECTOR_SHUFFLE:       return LowerVECTOR_SHUFFLE(Op, DAG);
-    case ISD::ANY_EXTEND:           return LowerANY_EXTEND(Op, DAG);
-    case ISD::SIGN_EXTEND:          return LowerSIGN_EXTEND(Op, DAG);
-    case ISD::ZERO_EXTEND:          return LowerZERO_EXTEND(Op, DAG);
     case ISD::BITCAST:              return LowerBITCAST(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
@@ -3201,7 +3245,6 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::ConstantPool:         return LowerConstantPool(Op, DAG);
     case ISD::JumpTable:            return LowerJumpTable(Op, DAG);
     case ISD::EH_RETURN:            return LowerEH_RETURN(Op, DAG);
-      // Frame & Return address. Currently unimplemented.
     case ISD::RETURNADDR:           return LowerRETURNADDR(Op, DAG);
     case ISD::FRAMEADDR:            return LowerFRAMEADDR(Op, DAG);
     case ISD::GlobalTLSAddress:     return LowerGlobalTLSAddress(Op, DAG);
@@ -3215,23 +3258,11 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::VSELECT:              return LowerVSELECT(Op, DAG);
     case ISD::INTRINSIC_WO_CHAIN:   return LowerINTRINSIC_WO_CHAIN(Op, DAG);
     case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
-    case ISD::INLINEASM:            return LowerINLINEASM(Op, DAG);
     case ISD::PREFETCH:             return LowerPREFETCH(Op, DAG);
     case ISD::READCYCLECOUNTER:     return LowerREADCYCLECOUNTER(Op, DAG);
-    case ISD::MUL:
-      if (Subtarget.useHVXOps())
-        return LowerHvxMul(Op, DAG);
-      break;
-    case ISD::MULHS:
-    case ISD::MULHU:
-      if (Subtarget.useHVXOps())
-        return LowerHvxMulh(Op, DAG);
-      break;
-    case ISD::ANY_EXTEND_VECTOR_INREG:
-      if (Subtarget.useHVXOps())
-        return LowerHvxExtend(Op, DAG);
       break;
   }
+
   return SDValue();
 }
 

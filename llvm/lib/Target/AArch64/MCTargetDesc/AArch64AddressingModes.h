@@ -754,6 +754,17 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   return (EncVal << 32) | EncVal;
 }
 
+/// Returns true if Imm is the concatenation of a repeating pattern of type T.
+template <typename T>
+static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
+  union {
+    int64_t Whole;
+    T Parts[sizeof(int64_t)/sizeof(T)];
+  } Vec { Imm };
+
+  return all_of(Vec.Parts, [Vec](T Elem) { return Elem == Vec.Parts[0]; });
+}
+
 inline static bool isAnyMOVZMovAlias(uint64_t Value, int RegWidth) {
   for (int Shift = 0; Shift <= RegWidth - 16; Shift += 16)
     if ((Value & ~(0xffffULL << Shift)) == 0)

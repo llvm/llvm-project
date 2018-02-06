@@ -11,7 +11,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 
 #include "ClangdUnit.h"
-#include "ClangdUnitStore.h"
 #include "CodeComplete.h"
 #include "CompileArgsCache.h"
 #include "DraftStore.h"

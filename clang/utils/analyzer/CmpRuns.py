@@ -86,9 +86,15 @@ class AnalysisDiagnostic:
         return os.path.join(self._report.run.path, self._htmlReport)
 
     def getReadableName(self):
-        return '%s:%d:%d, %s: %s' % (self.getFileName(), self.getLine(),
-                                     self.getColumn(), self.getCategory(),
-                                     self.getDescription())
+        if 'issue_context' in self._data:
+            funcnamePostfix = "#" + self._data['issue_context']
+        else:
+            funcnamePostfix = ""
+        return '%s%s:%d:%d, %s: %s' % (self.getFileName(),
+                                       funcnamePostfix,
+                                       self.getLine(),
+                                       self.getColumn(), self.getCategory(),
+                                       self.getDescription())
 
     # Note, the data format is not an API and may change from one analyzer
     # version to another.

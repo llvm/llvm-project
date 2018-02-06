@@ -9,6 +9,8 @@
 
 #include "SymbolCollector.h"
 #include "../CodeCompletionStrings.h"
+#include "../Logger.h"
+#include "../URI.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
@@ -22,14 +24,17 @@ namespace clang {
 namespace clangd {
 
 namespace {
-// Make the Path absolute using the current working directory of the given
-// SourceManager if the Path is not an absolute path. If failed, this combine
-// relative paths with \p FallbackDir to get an absolute path.
+// Returns a URI of \p Path. Firstly, this makes the \p Path absolute using the
+// current working directory of the given SourceManager if the Path is not an
+// absolute path. If failed, this resolves relative paths against \p FallbackDir
+// to get an absolute path. Then, this tries creating an URI for the absolute
+// path with schemes specified in \p Opts. This returns an URI with the first
+// working scheme, if there is any; otherwise, this returns None.
 //
 // The Path can be a path relative to the build directory, or retrieved from
 // the SourceManager.
-std::string makeAbsolutePath(const SourceManager &SM, StringRef Path,
-                             StringRef FallbackDir) {
+llvm::Optional<std::string> toURI(const SourceManager &SM, StringRef Path,
+                                  const SymbolCollector::Options &Opts) {
   llvm::SmallString<128> AbsolutePath(Path);
   if (std::error_code EC =
           SM.getFileManager().getVirtualFileSystem()->makeAbsolute(
@@ -56,11 +61,21 @@ std::string makeAbsolutePath(const SourceManager &SM, StringRef Path,
                               llvm::sys::path::filename(AbsolutePath.str()));
       AbsolutePath = AbsoluteFilename;
     }
-  } else if (!FallbackDir.empty()) {
-    llvm::sys::fs::make_absolute(FallbackDir, AbsolutePath);
+  } else if (!Opts.FallbackDir.empty()) {
+    llvm::sys::fs::make_absolute(Opts.FallbackDir, AbsolutePath);
     llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   }
-  return AbsolutePath.str();
+
+  std::string ErrMsg;
+  for (const auto &Scheme : Opts.URISchemes) {
+    auto U = URI::create(AbsolutePath, Scheme);
+    if (U)
+      return U->toString();
+    ErrMsg += llvm::toString(U.takeError()) + "\n";
+  }
+  log(llvm::Twine("Failed to create an URI for file ") + AbsolutePath + ": " +
+      ErrMsg);
+  return llvm::None;
 }
 
 // "a::b::c", return {"a::b::", "c"}. Scope is empty if there's no qualifier.
@@ -117,35 +132,34 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
 // For symbols defined inside macros:
 //   * use expansion location, if the symbol is formed via macro concatenation.
 //   * use spelling location, otherwise.
-SymbolLocation GetSymbolLocation(const NamedDecl *D, SourceManager &SM,
-                                 StringRef FallbackDir,
-                                 std::string &FilePathStorage) {
-  SymbolLocation Location;
-
-  SourceLocation Loc = SM.getSpellingLoc(D->getLocation());
-  if (D->getLocation().isMacroID()) {
-    // We use the expansion location for the following symbols, as spelling
-    // locations of these symbols are not interesting to us:
-    //   * symbols formed via macro concatenation, the spelling location will
-    //     be "<scratch space>"
-    //   * symbols controlled and defined by a compile command-line option
-    //     `-DName=foo`, the spelling location will be "<command line>".
-    std::string PrintLoc = Loc.printToString(SM);
+llvm::Optional<SymbolLocation>
+getSymbolLocation(const NamedDecl *D, SourceManager &SM,
+                  const SymbolCollector::Options &Opts,
+                  std::string &FileURIStorage) {
+  SourceLocation Loc = D->getLocation();
+  SourceLocation StartLoc = SM.getSpellingLoc(D->getLocStart());
+  SourceLocation EndLoc = SM.getSpellingLoc(D->getLocEnd());
+  if (Loc.isMacroID()) {
+    std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
     if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
         llvm::StringRef(PrintLoc).startswith("<command line>")) {
-      FilePathStorage = makeAbsolutePath(
-          SM, SM.getFilename(SM.getExpansionLoc(D->getLocation())),
-          FallbackDir);
-      return {FilePathStorage,
-              SM.getFileOffset(SM.getExpansionRange(D->getLocStart()).first),
-              SM.getFileOffset(SM.getExpansionRange(D->getLocEnd()).second)};
+      // We use the expansion location for the following symbols, as spelling
+      // locations of these symbols are not interesting to us:
+      //   * symbols formed via macro concatenation, the spelling location will
+      //     be "<scratch space>"
+      //   * symbols controlled and defined by a compile command-line option
+      //     `-DName=foo`, the spelling location will be "<command line>".
+      StartLoc = SM.getExpansionRange(D->getLocStart()).first;
+      EndLoc = SM.getExpansionRange(D->getLocEnd()).second;
     }
   }
 
-  FilePathStorage = makeAbsolutePath(SM, SM.getFilename(Loc), FallbackDir);
-  return {FilePathStorage,
-          SM.getFileOffset(SM.getSpellingLoc(D->getLocStart())),
-          SM.getFileOffset(SM.getSpellingLoc(D->getLocEnd()))};
+  auto U = toURI(SM, SM.getFilename(StartLoc), Opts);
+  if (!U)
+    return llvm::None;
+  FileURIStorage = std::move(*U);
+  return SymbolLocation{FileURIStorage, SM.getFileOffset(StartLoc),
+                        SM.getFileOffset(EndLoc)};
 }
 
 } // namespace
@@ -201,8 +215,9 @@ bool SymbolCollector::handleDeclOccurence(
     S.ID = std::move(ID);
     std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
     S.SymInfo = index::getSymbolInfo(D);
-    std::string FilePath;
-    S.CanonicalDeclaration = GetSymbolLocation(ND, SM, Opts.FallbackDir, FilePath);
+    std::string URIStorage;
+    if (auto DeclLoc = getSymbolLocation(ND, SM, Opts, URIStorage))
+      S.CanonicalDeclaration = *DeclLoc;
 
     // Add completion info.
     assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");

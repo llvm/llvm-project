@@ -30,10 +30,15 @@ public:
     /// Whether to collect symbols in main files (e.g. the source file
     /// corresponding to a TU).
     bool IndexMainFiles = false;
-    // When symbol paths cannot be resolved to absolute paths (e.g. files in
-    // VFS that does not have absolute path), combine the fallback directory
-    // with symbols' paths to get absolute paths. This must be an absolute path.
+    /// When symbol paths cannot be resolved to absolute paths (e.g. files in
+    /// VFS that does not have absolute path), combine the fallback directory
+    /// with symbols' paths to get absolute paths. This must be an absolute
+    /// path.
     std::string FallbackDir;
+    /// Specifies URI schemes that can be used to generate URIs for file paths
+    /// in symbols. The list of schemes will be tried in order until a working
+    /// scheme is found. If no scheme works, symbol location will be dropped.
+    std::vector<std::string> URISchemes = {"file"};
   };
 
   SymbolCollector(Options Opts);
