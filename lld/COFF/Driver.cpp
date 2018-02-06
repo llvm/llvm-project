@@ -818,7 +818,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   InitializeAllTargetMCs();
   InitializeAllAsmParsers();
   InitializeAllAsmPrinters();
-  InitializeAllDisassemblers();
 
   // Parse command line options.
   ArgParser Parser;

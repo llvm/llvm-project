@@ -63,7 +63,7 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
   Symbol S = L;
   // For each optional field, fill it from R if missing in L.
   // (It might be missing in R too, but that's a no-op).
-  if (S.CanonicalDeclaration.FilePath == "")
+  if (S.CanonicalDeclaration.FileURI == "")
     S.CanonicalDeclaration = R.CanonicalDeclaration;
   if (S.CompletionLabel == "")
     S.CompletionLabel = R.CompletionLabel;

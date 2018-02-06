@@ -876,7 +876,7 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
   // as any store/memset/memcpy is likely using vector instructions so
   // shortening it to not vector size is likely to be slower
   MemIntrinsic *EarlierIntrinsic = cast<MemIntrinsic>(EarlierWrite);
-  unsigned EarlierWriteAlign = EarlierIntrinsic->getAlignment();
+  unsigned EarlierWriteAlign = EarlierIntrinsic->getDestAlignment();
   if (!IsOverwriteEnd)
     LaterOffset = int64_t(LaterOffset + LaterSize);
 

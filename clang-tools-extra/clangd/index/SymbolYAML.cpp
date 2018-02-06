@@ -48,7 +48,7 @@ template <> struct MappingTraits<SymbolLocation> {
   static void mapping(IO &IO, SymbolLocation &Value) {
     IO.mapRequired("StartOffset", Value.StartOffset);
     IO.mapRequired("EndOffset", Value.EndOffset);
-    IO.mapRequired("FilePath", Value.FilePath);
+    IO.mapRequired("FileURI", Value.FileURI);
   }
 };
 

@@ -266,7 +266,7 @@ const char*
 char_traits<char>::find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT
 {
     if (__n == 0)
-        return NULL;
+        return nullptr;
 #if __has_feature(cxx_constexpr_string_builtins)
     return __builtin_char_memchr(__s, to_int_type(__a), __n);
 #elif _LIBCPP_STD_VER <= 14
@@ -278,7 +278,7 @@ char_traits<char>::find(const char_type* __s, size_t __n, const char_type& __a) 
             return __s;
         ++__s;
     }
-    return NULL;
+    return nullptr;
 #endif
 }
 
@@ -372,9 +372,9 @@ const wchar_t*
 char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT
 {
     if (__n == 0)
-        return NULL;
+        return nullptr;
 #if __has_feature(cxx_constexpr_string_builtins)
-        return __builtin_wmemchr(__s, __a, __n);
+    return __builtin_wmemchr(__s, __a, __n);
 #elif _LIBCPP_STD_VER <= 14
     return wmemchr(__s, __a, __n);
 #else
@@ -384,7 +384,7 @@ char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __
             return __s;
         ++__s;
     }
-    return NULL;
+    return nullptr;
 #endif
 }
 

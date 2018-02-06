@@ -12,6 +12,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/Orc/NullResolver.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Constants.h"
@@ -66,7 +67,12 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   bool DebugSectionSeen = false;
   auto MM = std::make_shared<MemoryManagerWrapper>(DebugSectionSeen);
 
-  RTDyldObjectLinkingLayer ObjLayer([&MM]() { return MM; });
+  SymbolStringPool SSP;
+  ExecutionSession ES(SSP);
+
+  RTDyldObjectLinkingLayer ObjLayer(
+      ES, [&MM](VModuleKey) { return MM; },
+      [](orc::VModuleKey) { return std::make_shared<NullResolver>(); });
 
   LLVMContext Context;
   auto M = llvm::make_unique<Module>("", Context);
@@ -92,18 +98,9 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
     std::make_shared<object::OwningBinary<object::ObjectFile>>(
       SimpleCompiler(*TM)(*M));
 
-  auto Resolver =
-    createLambdaResolver(
-      [](const std::string &Name) {
-        return JITSymbol(nullptr);
-      },
-      [](const std::string &Name) {
-        return JITSymbol(nullptr);
-      });
-
   {
     // Test with ProcessAllSections = false (the default).
-    auto H = cantFail(ObjLayer.addObject(Obj, Resolver));
+    auto H = cantFail(ObjLayer.addObject(ES.allocateVModule(), Obj));
     cantFail(ObjLayer.emitAndFinalize(H));
     EXPECT_EQ(DebugSectionSeen, false)
       << "Unexpected debug info section";
@@ -113,7 +110,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   {
     // Test with ProcessAllSections = true.
     ObjLayer.setProcessAllSections(true);
-    auto H = cantFail(ObjLayer.addObject(Obj, Resolver));
+    auto H = cantFail(ObjLayer.addObject(ES.allocateVModule(), Obj));
     cantFail(ObjLayer.emitAndFinalize(H));
     EXPECT_EQ(DebugSectionSeen, true)
       << "Expected debug info section not seen";
@@ -125,9 +122,22 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   if (!TM)
     return;
 
+  SymbolStringPool SSP;
+  ExecutionSession ES(SSP);
+
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
 
-  RTDyldObjectLinkingLayer ObjLayer([&MM]() { return MM; });
+  std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
+
+  RTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey) { return MM; },
+                                    [&](VModuleKey K) {
+                                      auto I = Resolvers.find(K);
+                                      assert(I != Resolvers.end() &&
+                                             "Missing resolver");
+                                      auto R = std::move(I->second);
+                                      Resolvers.erase(I);
+                                      return R;
+                                    });
   SimpleCompiler Compile(*TM);
 
   // Create a pair of modules that will trigger recursive finalization:
@@ -170,19 +180,25 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     std::make_shared<object::OwningBinary<object::ObjectFile>>(
       Compile(*MB2.getModule()));
 
-  auto Resolver =
-    createLambdaResolver(
-      [&](const std::string &Name) {
-        if (auto Sym = ObjLayer.findSymbol(Name, true))
-          return Sym;
-        return JITSymbol(nullptr);
+  auto K1 = ES.allocateVModule();
+  Resolvers[K1] = std::make_shared<NullResolver>();
+  cantFail(ObjLayer.addObject(K1, std::move(Obj1)));
+
+  auto K2 = ES.allocateVModule();
+  auto LegacyLookup = [&](const std::string &Name) {
+    return ObjLayer.findSymbol(Name, true);
+  };
+
+  Resolvers[K2] = createSymbolResolver(
+      [&](SymbolFlagsMap &SymbolFlags, const SymbolNameSet &Symbols) {
+        return cantFail(
+            lookupFlagsWithLegacyFn(SymbolFlags, Symbols, LegacyLookup));
       },
-      [](const std::string &Name) {
-        return JITSymbol(nullptr);
+      [&](AsynchronousSymbolQuery &Query, const SymbolNameSet &Symbols) {
+        return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
       });
 
-  cantFail(ObjLayer.addObject(std::move(Obj1), Resolver));
-  auto H = cantFail(ObjLayer.addObject(std::move(Obj2), Resolver));
+  auto H = cantFail(ObjLayer.addObject(K2, std::move(Obj2)));
   cantFail(ObjLayer.emitAndFinalize(H));
   cantFail(ObjLayer.removeObject(H));
 
@@ -196,9 +212,14 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   if (!TM)
     return;
 
+  SymbolStringPool SSP;
+  ExecutionSession ES(SSP);
+
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
 
-  RTDyldObjectLinkingLayer ObjLayer([&MM]() { return MM; });
+  RTDyldObjectLinkingLayer ObjLayer(
+      ES, [&MM](VModuleKey) { return MM; },
+      [](VModuleKey) { return std::make_shared<NullResolver>(); });
   SimpleCompiler Compile(*TM);
 
   // Create a pair of unrelated modules:
@@ -243,9 +264,8 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     std::make_shared<object::OwningBinary<object::ObjectFile>>(
       Compile(*MB2.getModule()));
 
-  auto NR = std::make_shared<NullLegacyResolver>();
-  auto H = cantFail(ObjLayer.addObject(std::move(Obj1), NR));
-  cantFail(ObjLayer.addObject(std::move(Obj2), NR));
+  auto H = cantFail(ObjLayer.addObject(ES.allocateVModule(), std::move(Obj1)));
+  cantFail(ObjLayer.addObject(ES.allocateVModule(), std::move(Obj2)));
   cantFail(ObjLayer.emitAndFinalize(H));
   cantFail(ObjLayer.removeObject(H));
 
@@ -256,8 +276,11 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 }
 
 TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
+  SymbolStringPool SSP;
+  ExecutionSession ES(SSP);
   RTDyldObjectLinkingLayer ObjLayer(
-      []() { return nullptr; },
+      ES, [](VModuleKey) { return nullptr; },
+      [](VModuleKey) { return std::make_shared<NullResolver>(); },
       [](RTDyldObjectLinkingLayer::ObjHandleT,
          const RTDyldObjectLinkingLayer::ObjectPtr &obj,
          const RuntimeDyld::LoadedObjectInfo &info) {});

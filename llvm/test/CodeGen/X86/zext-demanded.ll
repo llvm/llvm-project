@@ -97,3 +97,45 @@ define i32 @test8(i32 %x) {
   %z = or i32 %y, 1
   ret i32 %z
 }
+
+define i64 @add_neg_one(i64 %x) {
+; CHECK-LABEL: add_neg_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leal 65535(%rdi), %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    retq
+  %a1 = and i64 %x, 65535
+  %a2 = add i64 %x, 65535
+  %r = and i64 %a1, %a2
+  ret i64 %r
+}
+
+define i64 @sub_neg_one(i64 %x) {
+; CHECK-LABEL: sub_neg_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leal -65535(%rdi), %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    retq
+  %a1 = and i64 %x, 65535
+  %a2 = sub i64 %x, 65535
+  %r = and i64 %a1, %a2
+  ret i64 %r
+}
+
+define i64 @mul_neg_one(i64 %x) {
+; CHECK-LABEL: mul_neg_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    retq
+  %a1 = and i64 %x, 65535
+  %a2 = mul i64 %x, 65535
+  %r = and i64 %a1, %a2
+  ret i64 %r
+}
+

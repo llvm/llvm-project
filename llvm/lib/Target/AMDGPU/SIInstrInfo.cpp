@@ -3797,7 +3797,8 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
         }
       }
 
-      BuildMI(*MBB, Inst, Inst.getDebugLoc(),
+      MachineInstr *NewInstr =
+        BuildMI(*MBB, Inst, Inst.getDebugLoc(),
               get(AMDGPU::BUFFER_LOAD_DWORD_OFFEN), VDst)
         .add(*VAddr) // vaddr
         .add(*getNamedOperand(Inst, AMDGPU::OpName::sbase)) // srsrc
@@ -3806,12 +3807,17 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
         .addImm(getNamedOperand(Inst, AMDGPU::OpName::glc)->getImm())
         .addImm(0) // slc
         .addImm(0) // tfe
-        .setMemRefs(Inst.memoperands_begin(), Inst.memoperands_end());
+        .setMemRefs(Inst.memoperands_begin(), Inst.memoperands_end())
+        .getInstr();
 
       MRI.replaceRegWith(getNamedOperand(Inst, AMDGPU::OpName::sdst)->getReg(),
                          VDst);
       addUsersToMoveToVALUWorklist(VDst, MRI, Worklist);
       Inst.eraseFromParent();
+
+      // Legalize all operands other than the offset. Notably, convert the srsrc
+      // into SGPRs using v_readfirstlane if needed.
+      legalizeOperands(*NewInstr);
       continue;
     }
     }

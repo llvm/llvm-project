@@ -52,24 +52,34 @@ namespace detail {
 
   class GenericHandle {
   public:
+    GenericHandle(orc::VModuleKey K) : K(K) {}
+
     virtual ~GenericHandle() = default;
 
     virtual JITSymbol findSymbolIn(const std::string &Name,
                                    bool ExportedSymbolsOnly) = 0;
-    virtual Error removeModule() = 0;
+    virtual Error removeModule(orc::ExecutionSession &ES) = 0;
+
+    orc::VModuleKey K;
   };
 
   template <typename LayerT> class GenericHandleImpl : public GenericHandle {
   public:
-    GenericHandleImpl(LayerT &Layer, typename LayerT::ModuleHandleT Handle)
-        : Layer(Layer), Handle(std::move(Handle)) {}
+    GenericHandleImpl(LayerT &Layer, typename LayerT::ModuleHandleT Handle,
+                      orc::VModuleKey K)
+        : GenericHandle(std::move(K)), Layer(Layer), Handle(std::move(Handle)) {
+    }
 
     JITSymbol findSymbolIn(const std::string &Name,
                            bool ExportedSymbolsOnly) override {
       return Layer.findSymbolIn(Handle, Name, ExportedSymbolsOnly);
     }
 
-    Error removeModule() override { return Layer.removeModule(Handle); }
+    Error removeModule(orc::ExecutionSession &ES) override {
+      auto Err = Layer.removeModule(Handle);
+      ES.releaseVModule(K);
+      return Err;
+    }
 
   private:
     LayerT &Layer;
@@ -82,28 +92,32 @@ namespace detail {
   private:
     using LayerT = orc::RTDyldObjectLinkingLayer;
   public:
-
-    GenericHandleImpl(LayerT &Layer, typename LayerT::ObjHandleT Handle)
-        : Layer(Layer), Handle(std::move(Handle)) {}
+    GenericHandleImpl(LayerT &Layer, typename LayerT::ObjHandleT Handle,
+                      orc::VModuleKey K)
+        : GenericHandle(std::move(K)), Layer(Layer), Handle(std::move(Handle)) {
+    }
 
     JITSymbol findSymbolIn(const std::string &Name,
                            bool ExportedSymbolsOnly) override {
       return Layer.findSymbolIn(Handle, Name, ExportedSymbolsOnly);
     }
 
-    Error removeModule() override { return Layer.removeObject(Handle); }
+    Error removeModule(orc::ExecutionSession &ES) override {
+      auto Err = Layer.removeObject(Handle);
+      ES.releaseVModule(K);
+      return Err;
+    }
 
   private:
     LayerT &Layer;
     typename LayerT::ObjHandleT Handle;
   };
 
-
   template <typename LayerT, typename HandleT>
   std::unique_ptr<GenericHandleImpl<LayerT>>
-  createGenericHandle(LayerT &Layer, HandleT Handle) {
-    return llvm::make_unique<GenericHandleImpl<LayerT>>(Layer,
-                                                        std::move(Handle));
+  createGenericHandle(LayerT &Layer, HandleT Handle, orc::VModuleKey K) {
+    return llvm::make_unique<GenericHandleImpl<LayerT>>(
+        Layer, std::move(Handle), std::move(K));
   }
 
 } // end namespace detail
@@ -126,20 +140,113 @@ private:
 
   using OwningObject = object::OwningBinary<object::ObjectFile>;
 
+  class CBindingsResolver : public orc::SymbolResolver {
+  public:
+    CBindingsResolver(OrcCBindingsStack &Stack,
+                      LLVMOrcSymbolResolverFn ExternalResolver,
+                      void *ExternalResolverCtx)
+        : Stack(Stack), ExternalResolver(std::move(ExternalResolver)),
+          ExternalResolverCtx(std::move(ExternalResolverCtx)) {}
+
+    orc::SymbolNameSet lookupFlags(orc::SymbolFlagsMap &SymbolFlags,
+                                   const orc::SymbolNameSet &Symbols) override {
+      orc::SymbolNameSet SymbolsNotFound;
+
+      for (auto &S : Symbols) {
+        if (auto Sym = findSymbol(*S))
+          SymbolFlags[S] = Sym.getFlags();
+        else if (auto Err = Sym.takeError()) {
+          Stack.reportError(std::move(Err));
+          return orc::SymbolNameSet();
+        } else
+          SymbolsNotFound.insert(S);
+      }
+
+      return SymbolsNotFound;
+    }
+
+    orc::SymbolNameSet lookup(orc::AsynchronousSymbolQuery &Query,
+                              orc::SymbolNameSet Symbols) override {
+      orc::SymbolNameSet UnresolvedSymbols;
+
+      for (auto &S : Symbols) {
+        if (auto Sym = findSymbol(*S)) {
+          if (auto Addr = Sym.getAddress())
+            Query.setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
+          else {
+            Query.setFailed(Addr.takeError());
+            return orc::SymbolNameSet();
+          }
+        } else if (auto Err = Sym.takeError()) {
+          Query.setFailed(std::move(Err));
+          return orc::SymbolNameSet();
+        } else
+          UnresolvedSymbols.insert(S);
+      }
+
+      return UnresolvedSymbols;
+    }
+
+  private:
+    JITSymbol findSymbol(const std::string &Name) {
+      // Search order:
+      // 1. JIT'd symbols.
+      // 2. Runtime overrides.
+      // 3. External resolver (if present).
+
+      if (auto Sym = Stack.CODLayer.findSymbol(Name, true))
+        return Sym;
+      else if (auto Err = Sym.takeError())
+        return Sym.takeError();
+
+      if (auto Sym = Stack.CXXRuntimeOverrides.searchOverrides(Name))
+        return Sym;
+
+      if (ExternalResolver)
+        return JITSymbol(ExternalResolver(Name.c_str(), ExternalResolverCtx),
+                         JITSymbolFlags::Exported);
+
+      return JITSymbol(nullptr);
+    }
+
+    OrcCBindingsStack &Stack;
+    LLVMOrcSymbolResolverFn ExternalResolver;
+    void *ExternalResolverCtx = nullptr;
+  };
+
 public:
   using ModuleHandleT = unsigned;
 
   OrcCBindingsStack(TargetMachine &TM,
                     std::unique_ptr<CompileCallbackMgr> CCMgr,
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
-      : DL(TM.createDataLayout()), IndirectStubsMgr(IndirectStubsMgrBuilder()),
-        CCMgr(std::move(CCMgr)),
-        ObjectLayer(
-          []() {
-            return std::make_shared<SectionMemoryManager>();
-          }),
+      : ES(SSP), DL(TM.createDataLayout()),
+        IndirectStubsMgr(IndirectStubsMgrBuilder()), CCMgr(std::move(CCMgr)),
+        ObjectLayer(ES,
+                    [](orc::VModuleKey K) {
+                      return std::make_shared<SectionMemoryManager>();
+                    },
+                    [this](orc::VModuleKey K) {
+                      auto ResolverI = Resolvers.find(K);
+                      assert(ResolverI != Resolvers.end() &&
+                             "No resolver for module K");
+                      auto Resolver = std::move(ResolverI->second);
+                      Resolvers.erase(ResolverI);
+                      return Resolver;
+                    }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
-        CODLayer(CompileLayer,
+        CODLayer(ES, CompileLayer,
+                 [this](orc::VModuleKey K) {
+                   auto ResolverI = Resolvers.find(K);
+                   assert(ResolverI != Resolvers.end() &&
+                          "No resolver for module K");
+                   return ResolverI->second;
+                 },
+                 [this](orc::VModuleKey K,
+                        std::shared_ptr<orc::SymbolResolver> Resolver) {
+                   assert(!Resolvers.count(K) && "Resolver already present");
+                   Resolvers[K] = std::move(Resolver);
+                 },
                  [](Function &F) { return std::set<Function *>({&F}); },
                  *this->CCMgr, std::move(IndirectStubsMgrBuilder), false),
         CXXRuntimeOverrides(
@@ -195,38 +302,6 @@ public:
                                           JITTargetAddress Addr) {
     return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
   }
-
-  std::shared_ptr<LegacyJITSymbolResolver>
-  createResolver(LLVMOrcSymbolResolverFn ExternalResolver,
-                 void *ExternalResolverCtx) {
-    return orc::createLambdaResolver(
-        [this, ExternalResolver, ExternalResolverCtx](const std::string &Name)
-          -> JITSymbol {
-          // Search order:
-          // 1. JIT'd symbols.
-          // 2. Runtime overrides.
-          // 3. External resolver (if present).
-
-          if (auto Sym = CODLayer.findSymbol(Name, true))
-            return Sym;
-          else if (auto Err = Sym.takeError())
-            return Sym.takeError();
-
-          if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
-            return Sym;
-
-          if (ExternalResolver)
-            return JITSymbol(
-                ExternalResolver(Name.c_str(), ExternalResolverCtx),
-                JITSymbolFlags::Exported);
-
-          return JITSymbol(nullptr);
-        },
-        [](const std::string &Name) -> JITSymbol {
-          return JITSymbol(nullptr);
-        });
-  }
-
   template <typename LayerT>
   LLVMOrcErrorCode
   addIRModule(ModuleHandleT &RetHandle, LayerT &Layer,
@@ -247,13 +322,13 @@ public:
     for (auto Dtor : orc::getDestructors(*M))
       DtorNames.push_back(mangle(Dtor.Func->getName()));
 
-    // Create the resolver.
-    auto Resolver = createResolver(ExternalResolver, ExternalResolverCtx);
-
     // Add the module to the JIT.
     ModuleHandleT H;
-    if (auto LHOrErr = Layer.addModule(std::move(M), std::move(Resolver)))
-      H = createHandle(Layer, *LHOrErr);
+    orc::VModuleKey K = ES.allocateVModule();
+    Resolvers[K] = std::make_shared<CBindingsResolver>(*this, ExternalResolver,
+                                                       ExternalResolverCtx);
+    if (auto LHOrErr = Layer.addModule(K, std::move(M)))
+      H = createHandle(Layer, *LHOrErr, K);
     else
       return mapError(LHOrErr.takeError());
 
@@ -288,7 +363,7 @@ public:
   }
 
   LLVMOrcErrorCode removeModule(ModuleHandleT H) {
-    if (auto Err = GenericHandles[H]->removeModule())
+    if (auto Err = GenericHandles[H]->removeModule(ES))
       return mapError(std::move(Err));
     GenericHandles[H] = nullptr;
     FreeHandleIndexes.push_back(H);
@@ -305,13 +380,13 @@ public:
       auto OwningObj =
         std::make_shared<OwningObject>(std::move(Obj), std::move(ObjBuffer));
 
-      // Create the resolver.
-      auto Resolver = createResolver(ExternalResolver, ExternalResolverCtx);
+      orc::VModuleKey K = ES.allocateVModule();
+      Resolvers[K] = std::make_shared<CBindingsResolver>(
+          *this, ExternalResolver, ExternalResolverCtx);
 
       ModuleHandleT H;
-      if (auto HOrErr = ObjectLayer.addObject(std::move(OwningObj),
-                                              std::move(Resolver)))
-        H = createHandle(ObjectLayer, *HOrErr);
+      if (auto HOrErr = ObjectLayer.addObject(K, std::move(OwningObj)))
+        H = createHandle(ObjectLayer, *HOrErr, K);
       else
         return mapError(HOrErr.takeError());
 
@@ -358,18 +433,18 @@ public:
 
 private:
   template <typename LayerT, typename HandleT>
-  unsigned createHandle(LayerT &Layer, HandleT Handle) {
+  unsigned createHandle(LayerT &Layer, HandleT Handle, orc::VModuleKey K) {
     unsigned NewHandle;
     if (!FreeHandleIndexes.empty()) {
       NewHandle = FreeHandleIndexes.back();
       FreeHandleIndexes.pop_back();
       GenericHandles[NewHandle] =
-        detail::createGenericHandle(Layer, std::move(Handle));
+          detail::createGenericHandle(Layer, std::move(Handle), std::move(K));
       return NewHandle;
     } else {
       NewHandle = GenericHandles.size();
       GenericHandles.push_back(
-        detail::createGenericHandle(Layer, std::move(Handle)));
+          detail::createGenericHandle(Layer, std::move(Handle), std::move(K)));
     }
     return NewHandle;
   }
@@ -385,6 +460,14 @@ private:
     });
     return Result;
   }
+
+  void reportError(Error Err) {
+    // FIXME: Report errors on the execution session.
+    logAllUnhandledErrors(std::move(Err), errs(), "ORC error: ");
+  };
+
+  orc::SymbolStringPool SSP;
+  orc::ExecutionSession ES;
 
   DataLayout DL;
   SectionMemoryManager CCMgrMemMgr;
@@ -402,6 +485,8 @@ private:
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   std::vector<orc::CtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;
   std::string ErrMsg;
+
+  std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
 };
 
 } // end namespace llvm

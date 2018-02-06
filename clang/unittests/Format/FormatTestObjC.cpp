@@ -189,6 +189,17 @@ TEST_F(FormatTestObjC, FormatObjCAutoreleasepool) {
                "}\n");
 }
 
+TEST_F(FormatTestObjC, FormatObjCGenerics) {
+  Style.ColumnLimit = 40;
+  verifyFormat("int aaaaaaaaaaaaaaaa(\n"
+               "    NSArray<aaaaaaaaaaaaaaaaaa *>\n"
+               "        aaaaaaaaaaaaaaaaa);\n");
+  verifyFormat("int aaaaaaaaaaaaaaaa(\n"
+               "    NSArray<aaaaaaaaaaaaaaaaaaa<\n"
+               "        aaaaaaaaaaaaaaaa *> *>\n"
+               "        aaaaaaaaaaaaaaaaa);\n");
+}
+
 TEST_F(FormatTestObjC, FormatObjCInterface) {
   verifyFormat("@interface Foo : NSObject <NSSomeDelegate> {\n"
                "@public\n"

@@ -244,7 +244,6 @@ static llvm::Optional<std::string> readStandardMessage(std::istream &In,
 
   if (ContentLength > 0) {
     std::string JSON(ContentLength, '\0');
-    llvm::StringRef JSONRef;
     In.read(&JSON[0], ContentLength);
     Out.mirrorInput(StringRef(JSON.data(), In.gcount()));
 
