@@ -135,7 +135,6 @@
 // experimental headers
 #if __cplusplus >= 201103L
 #include <experimental/algorithm>
-#include <experimental/chrono>
 #if defined(__cpp_coroutines)
 #include <experimental/coroutine>
 #endif
@@ -149,12 +148,9 @@
 #include <experimental/map>
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
-#include <experimental/ratio>
 #include <experimental/regex>
 #include <experimental/set>
 #include <experimental/string>
-#include <experimental/system_error>
-#include <experimental/tuple>
 #include <experimental/type_traits>
 #include <experimental/unordered_map>
 #include <experimental/unordered_set>
