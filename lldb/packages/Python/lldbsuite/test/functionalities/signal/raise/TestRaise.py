@@ -189,6 +189,7 @@ class RaiseTestCase(TestBase):
         # reset signal handling to default
         self.set_handle(signal, default_pass, default_stop, default_notify)
 
+    @skipIfTargetAndroid()
     def test_restart_bug(self):
         """Test that we catch a signal in the edge case where the process receives it while we are
         about to interrupt it"""

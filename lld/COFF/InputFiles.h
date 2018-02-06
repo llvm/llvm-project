@@ -110,6 +110,8 @@ public:
   MachineTypes getMachineType() override;
   ArrayRef<Chunk *> getChunks() { return Chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return DebugChunks; }
+  ArrayRef<SectionChunk *> getSXDataChunks() { return SXDataChunks; }
+  ArrayRef<SectionChunk *> getGuardFidChunks() { return GuardFidChunks; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
   // Returns a Symbol object for the SymbolIndex'th symbol in the
@@ -123,13 +125,17 @@ public:
 
   static std::vector<ObjFile *> Instances;
 
-  // True if this object file is compatible with SEH.
-  // COFF-specific and x86-only.
-  bool SEHCompat = false;
+  // Flags in the absolute @feat.00 symbol if it is present. These usually
+  // indicate if an object was compiled with certain security features enabled
+  // like stack guard, safeseh, /guard:cf, or other things.
+  uint32_t Feat00Flags = 0;
 
-  // The symbol table indexes of the safe exception handlers.
-  // COFF-specific and x86-only.
-  ArrayRef<llvm::support::ulittle32_t> SXData;
+  // True if this object file is compatible with SEH.  COFF-specific and
+  // x86-only. COFF spec 5.10.1. The .sxdata section.
+  bool hasSafeSEH() { return Feat00Flags & 0x1; }
+
+  // True if this file was compiled with /guard:cf.
+  bool hasGuardCF() { return Feat00Flags & 0x800; }
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like
@@ -164,6 +170,14 @@ private:
 
   // CodeView debug info sections.
   std::vector<SectionChunk *> DebugChunks;
+
+  // Chunks containing symbol table indices of exception handlers. Only used for
+  // 32-bit x86.
+  std::vector<SectionChunk *> SXDataChunks;
+
+  // Chunks containing symbol table indices of address taken symbols.  These are
+  // not linked into the final binary when /guard:cf is set.
+  std::vector<SectionChunk *> GuardFidChunks;
 
   // This vector contains the same chunks as Chunks, but they are
   // indexed such that you can get a SectionChunk by section index.

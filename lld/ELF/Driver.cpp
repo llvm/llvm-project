@@ -596,7 +596,9 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition =
-      Args.hasArg(OPT_allow_multiple_definition) || hasZOption(Args, "muldefs");
+      Args.hasFlag(OPT_allow_multiple_definition,
+                   OPT_no_allow_multiple_definition, false) ||
+      hasZOption(Args, "muldefs");
   Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -678,7 +680,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->Verbose = Args.hasArg(OPT_verbose);
   errorHandler().Verbose = Config->Verbose;
-  Config->WarnCommon = Args.hasArg(OPT_warn_common);
+  Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");

@@ -128,6 +128,15 @@ void parseVersion(StringRef Arg, uint32_t *Major, uint32_t *Minor) {
     fatal("invalid number: " + S2);
 }
 
+void parseGuard(StringRef Arg) {
+  if (Arg.equals_lower("no"))
+    Config->GuardCF = false;
+  else if (Arg.equals_lower("cf"))
+    Config->GuardCF = true;
+  else
+    fatal("invalid argument to /GUARD: " + Arg);
+}
+
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
 void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
                     uint32_t *Minor) {

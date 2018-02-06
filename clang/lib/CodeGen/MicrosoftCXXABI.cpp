@@ -285,9 +285,9 @@ public:
   llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
                                         CharUnits VPtrOffset) override;
 
-  CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
-                                     Address This, llvm::Type *Ty,
-                                     SourceLocation Loc) override;
+  llvm::Value *getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
+                                         Address This, llvm::Type *Ty,
+                                         SourceLocation Loc) override;
 
   llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *Dtor,
@@ -1827,11 +1827,11 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   return VTable;
 }
 
-CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                                    GlobalDecl GD,
-                                                    Address This,
-                                                    llvm::Type *Ty,
-                                                    SourceLocation Loc) {
+llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
+                                                        GlobalDecl GD,
+                                                        Address This,
+                                                        llvm::Type *Ty,
+                                                        SourceLocation Loc) {
   GD = GD.getCanonicalDecl();
   CGBuilderTy &Builder = CGF.Builder;
 
@@ -1858,22 +1858,17 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
         ->ObjectWithVPtr;
   };
 
-  llvm::Value *VFunc;
-  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
-    VFunc = CGF.EmitVTableTypeCheckedLoad(
+  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent()))
+    return CGF.EmitVTableTypeCheckedLoad(
         getObjectWithVPtr(), VTable,
         ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
-  } else {
-    if (CGM.getCodeGenOpts().PrepareForLTO)
-      CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
-    llvm::Value *VFuncPtr =
-        Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
-    VFunc = Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
-  }
+  if (CGM.getCodeGenOpts().PrepareForLTO)
+    CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
-  CGCallee Callee(MethodDecl, VFunc);
-  return Callee;
+  llvm::Value *VFuncPtr =
+      Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+  return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
 }
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
@@ -1887,9 +1882,9 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   GlobalDecl GD(Dtor, Dtor_Deleting);
   const CGFunctionInfo *FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
       Dtor, StructorType::Deleting);
-  llvm::Type *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
-  CGCallee Callee = getVirtualFunctionPointer(
-      CGF, GD, This, Ty, CE ? CE->getLocStart() : SourceLocation());
+  auto *Ty =
+      cast<llvm::FunctionType>(CGF.CGM.getTypes().GetFunctionType(*FInfo));
+  CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
   ASTContext &Context = getContext();
   llvm::Value *ImplicitParam = llvm::ConstantInt::get(

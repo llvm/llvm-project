@@ -101,4 +101,4 @@ entry:
 ; NO-GC-NEXT: ...
 
 ; RUN: not lld -flavor wasm --gc-sections --relocatable -o %t1.no-gc.wasm %t.o 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR
-; CHECK-ERROR: lld: error: -r and --gc-sections may not be used together
+; CHECK-ERROR: lld{{.*}}: error: -r and --gc-sections may not be used together

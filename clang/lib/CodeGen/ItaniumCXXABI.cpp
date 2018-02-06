@@ -280,9 +280,9 @@ public:
   llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
                                         CharUnits VPtrOffset) override;
 
-  CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
-                                     Address This, llvm::Type *Ty,
-                                     SourceLocation Loc) override;
+  llvm::Value *getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
+                                         Address This, llvm::Type *Ty,
+                                         SourceLocation Loc) override;
 
   llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *Dtor,
@@ -1651,47 +1651,42 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   return VTable;
 }
 
-CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                                  GlobalDecl GD,
-                                                  Address This,
-                                                  llvm::Type *Ty,
-                                                  SourceLocation Loc) {
+llvm::Value *ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
+                                                      GlobalDecl GD,
+                                                      Address This,
+                                                      llvm::Type *Ty,
+                                                      SourceLocation Loc) {
   GD = GD.getCanonicalDecl();
   Ty = Ty->getPointerTo()->getPointerTo();
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(This, Ty, MethodDecl->getParent());
 
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
-  llvm::Value *VFunc;
-  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
-    VFunc = CGF.EmitVTableTypeCheckedLoad(
+  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent()))
+    return CGF.EmitVTableTypeCheckedLoad(
         MethodDecl->getParent(), VTable,
         VTableIndex * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
-  } else {
-    CGF.EmitTypeMetadataCodeForVCall(MethodDecl->getParent(), VTable, Loc);
 
-    llvm::Value *VFuncPtr =
-        CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfn");
-    auto *VFuncLoad =
-        CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  CGF.EmitTypeMetadataCodeForVCall(MethodDecl->getParent(), VTable, Loc);
 
-    // Add !invariant.load md to virtual function load to indicate that
-    // function didn't change inside vtable.
-    // It's safe to add it without -fstrict-vtable-pointers, but it would not
-    // help in devirtualization because it will only matter if we will have 2
-    // the same virtual function loads from the same vtable load, which won't
-    // happen without enabled devirtualization with -fstrict-vtable-pointers.
-    if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        CGM.getCodeGenOpts().StrictVTablePointers)
-      VFuncLoad->setMetadata(
-          llvm::LLVMContext::MD_invariant_load,
-          llvm::MDNode::get(CGM.getLLVMContext(),
-                            llvm::ArrayRef<llvm::Metadata *>()));
-    VFunc = VFuncLoad;
-  }
+  llvm::Value *VFuncPtr =
+      CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfn");
+  auto *VFuncLoad =
+      CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
 
-  CGCallee Callee(MethodDecl, VFunc);
-  return Callee;
+  // Add !invariant.load md to virtual function load to indicate that
+  // function didn't change inside vtable.
+  // It's safe to add it without -fstrict-vtable-pointers, but it would not
+  // help in devirtualization because it will only matter if we will have 2
+  // the same virtual function loads from the same vtable load, which won't
+  // happen without enabled devirtualization with -fstrict-vtable-pointers.
+  if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+      CGM.getCodeGenOpts().StrictVTablePointers)
+    VFuncLoad->setMetadata(
+        llvm::LLVMContext::MD_invariant_load,
+        llvm::MDNode::get(CGM.getLLVMContext(),
+                          llvm::ArrayRef<llvm::Metadata *>()));
+  return VFuncLoad;
 }
 
 llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
@@ -1702,10 +1697,10 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
 
   const CGFunctionInfo *FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
       Dtor, getFromDtorType(DtorType));
-  llvm::Type *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
+  auto *Ty =
+      cast<llvm::FunctionType>(CGF.CGM.getTypes().GetFunctionType(*FInfo));
   CGCallee Callee =
-      getVirtualFunctionPointer(CGF, GlobalDecl(Dtor, DtorType), This, Ty,
-                                CE ? CE->getLocStart() : SourceLocation());
+      CGCallee::forVirtual(CE, GlobalDecl(Dtor, DtorType), This, Ty);
 
   CGF.EmitCXXMemberOrOperatorCall(Dtor, Callee, ReturnValueSlot(),
                                   This.getPointer(), /*ImplicitParam=*/nullptr,

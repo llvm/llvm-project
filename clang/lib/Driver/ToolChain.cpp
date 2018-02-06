@@ -323,13 +323,23 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
   return llvm::Triple::getArchTypeName(TC.getArch());
 }
 
+StringRef ToolChain::getOSLibName() const {
+  switch (Triple.getOS()) {
+  case llvm::Triple::FreeBSD:
+    return "freebsd";
+  case llvm::Triple::Solaris:
+    return "sunos";
+  default:
+    return getOS();
+  }
+}
+
 std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (Triple.isOSUnknown()) {
     llvm::sys::path::append(Path, "lib");
   } else {
-    StringRef OSLibName = Triple.isOSFreeBSD() ? "freebsd" : getOS();
-    llvm::sys::path::append(Path, "lib", OSLibName);
+    llvm::sys::path::append(Path, "lib", getOSLibName());
   }
   return Path.str();
 }
@@ -360,8 +370,7 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
 
 std::string ToolChain::getArchSpecificLibPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
-  StringRef OSLibName = getTriple().isOSFreeBSD() ? "freebsd" : getOS();
-  llvm::sys::path::append(Path, "lib", OSLibName,
+  llvm::sys::path::append(Path, "lib", getOSLibName(),
                           llvm::Triple::getArchTypeName(getArch()));
   return Path.str();
 }
