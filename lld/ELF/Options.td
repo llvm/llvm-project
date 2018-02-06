@@ -54,8 +54,9 @@ defm Tdata: Eq<"Tdata">,
 defm Ttext: Eq<"Ttext">,
   HelpText<"Same as --section-start with .text as the sectionname">;
 
-def allow_multiple_definition: F<"allow-multiple-definition">,
-  HelpText<"Allow multiple definitions">;
+defm allow_multiple_definition: B<"allow-multiple-definition",
+    "Allow multiple definitions",
+    "Do not allow multiple definitions">;
 
 defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
     "Apply dynamic relocations to place",
@@ -319,8 +320,9 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 
 defm version_script: Eq<"version-script">, HelpText<"Read a version script">;
 
-def warn_common: F<"warn-common">,
-  HelpText<"Warn about duplicate common symbols">;
+defm warn_common: B<"warn-common",
+    "Warn about duplicate common symbols",
+    "Do not warn about duplicate common symbols">;
 
 def warn_unresolved_symbols: F<"warn-unresolved-symbols">,
   HelpText<"Report unresolved symbols as warnings">;
@@ -354,6 +356,7 @@ def alias_filter: Separate<["-"], "F">, Alias<filter>;
 def alias_format_b: S<"b">, Alias<format>;
 def alias_library: JoinedOrSeparate<["-"], "l">, Alias<library>;
 def alias_library_path: JoinedOrSeparate<["-"], "L">, Alias<library_path>;
+def alias_no_pie_pic_executable: F<"no-pic-executable">, Alias<no_pie>;
 def alias_omagic: Flag<["-"], "N">, Alias<omagic>;
 def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
@@ -424,7 +427,6 @@ def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">;
 def no_ctors_in_init_array: F<"no-ctors-in-init-array">;
 def no_keep_memory: F<"no-keep-memory">;
 def no_mmap_output_file: F<"no-mmap-output-file">;
-def no_warn_common: F<"no-warn-common">;
 def no_warn_mismatch: F<"no-warn-mismatch">;
 def rpath_link: S<"rpath-link">;
 def rpath_link_eq: J<"rpath-link=">;

@@ -151,15 +151,7 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   if (auto EC = COFFObj->getSectionName(Sec, Name))
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
           EC.message());
-  if (Name == ".sxdata") {
-    ArrayRef<uint8_t> Data;
-    COFFObj->getSectionContents(Sec, Data);
-    if (Data.size() % 4 != 0)
-      fatal(".sxdata must be an array of symbol table indices");
-    SXData = {reinterpret_cast<const ulittle32_t *>(Data.data()),
-              Data.size() / 4};
-    return nullptr;
-  }
+
   if (Name == ".drectve") {
     ArrayRef<uint8_t> Data;
     COFFObj->getSectionContents(Sec, Data);
@@ -191,6 +183,10 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // linked in the regular manner.
   if (C->isCodeView())
     DebugChunks.push_back(C);
+  else if (Config->GuardCF && Name == ".gfids$y")
+    GuardFidChunks.push_back(C);
+  else if (Name == ".sxdata")
+    SXDataChunks.push_back(C);
   else
     Chunks.push_back(C);
 
@@ -308,10 +304,8 @@ Optional<Symbol *> ObjFile::createDefined(
     // Skip special symbols.
     if (Name == "@comp.id")
       return nullptr;
-    // COFF spec 5.10.1. The .sxdata section.
     if (Name == "@feat.00") {
-      if (Sym.getValue() & 1)
-        SEHCompat = true;
+      Feat00Flags = Sym.getValue();
       return nullptr;
     }
     if (Sym.isExternal())

@@ -145,6 +145,8 @@ StringRef machineToStr(MachineTypes MT);
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size = nullptr);
 
+void parseGuard(StringRef Arg);
+
 // Parses a string in the form of "<integer>[.<integer>]".
 // Minor's default value is 0.
 void parseVersion(StringRef Arg, uint32_t *Major, uint32_t *Minor);
