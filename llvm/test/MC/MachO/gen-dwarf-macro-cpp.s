@@ -13,5 +13,5 @@
 // We check that the source name "foo.S" is picked up
 // CHECK:                 Dir  Mod Time   File Len   File Name
 // CHECK:                 ---- ---------- ---------- ---------------------------
-// CHECK: file_names[  1]    1 0x00000000 0x00000000 gen-dwarf-macro-cpp.s
-// CHECK: file_names[  2]    0 0x00000000 0x00000000 foo.S
+// CHECK: file_names[  1]    1 0x00000000 0x00000000 "gen-dwarf-macro-cpp.s"
+// CHECK: file_names[  2]    0 0x00000000 0x00000000 "foo.S"

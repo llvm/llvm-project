@@ -65,7 +65,13 @@
 // SANITIZER_SUPPORTS_WEAK_HOOKS means that we support real weak functions that
 // will evaluate to a null pointer when not defined.
 #ifndef SANITIZER_SUPPORTS_WEAK_HOOKS
-#if (SANITIZER_LINUX || SANITIZER_MAC || SANITIZER_SOLARIS) && !SANITIZER_GO
+#if (SANITIZER_LINUX || SANITIZER_SOLARIS) && !SANITIZER_GO
+# define SANITIZER_SUPPORTS_WEAK_HOOKS 1
+// Before Xcode 4.5, the Darwin linker doesn't reliably support undefined
+// weak symbols.  Mac OS X 10.9/Darwin 13 is the first release only supported
+// by Xcode >= 4.5.
+#elif SANITIZER_MAC && \
+    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 1090 && !SANITIZER_GO
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 1
 #else
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 0

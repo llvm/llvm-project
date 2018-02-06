@@ -53,6 +53,7 @@ jal gp, 1 # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes 
 fence %hi(iorw), iorw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
 fence %lo(iorw), iorw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
 fence %pcrel_hi(iorw), iorw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
+fence %pcrel_lo(iorw), iorw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
 
 ## uimm5
 slli a0, a0, %lo(1) # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
@@ -61,6 +62,8 @@ srai a0, a0, %hi(2) # CHECK: :[[@LINE]]:14: error: immediate must be an integer 
 csrrwi a1, 0x1, %hi(b) # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
 csrrsi t1, 999, %pcrel_hi(3) # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
 csrrci x0, 43, %pcrel_hi(c) # CHECK: :[[@LINE]]:16: error: immediate must be an integer in the range [0, 31]
+csrrsi t1, 999, %pcrel_lo(4) # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
+csrrci x0, 43, %pcrel_lo(d) # CHECK: :[[@LINE]]:16: error: immediate must be an integer in the range [0, 31]
 
 ## simm12
 ori a0, a1, %hi(foo) # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-2048, 2047]
@@ -74,6 +77,8 @@ csrrs a0, %hi(2), a0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer
 csrrc a0, %hi(b), a0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [0, 4095]
 csrrwi a0, %pcrel_hi(3), 0 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 4095]
 csrrsi a0, %pcrel_hi(c), a0 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 4095]
+csrrwi a0, %pcrel_lo(4), 0 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 4095]
+csrrsi a0, %pcrel_lo(d), a0 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 4095]
 
 ## simm13_lsb0
 beq t0, t1, %lo(1) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
@@ -82,6 +87,8 @@ blt t0, t1, %hi(2) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple o
 bge t0, t1, %hi(b) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 bltu t0, t1, %pcrel_hi(3) # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 bgeu t0, t1, %pcrel_hi(c) # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
+bltu t0, t1, %pcrel_lo(4) # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
+bgeu t0, t1, %pcrel_lo(d) # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 
 ## uimm20
 lui a0, %lo(1) # CHECK: :[[@LINE]]:9: error: immediate must be an integer in the range [0, 1048575]
@@ -94,6 +101,8 @@ jal gp, %hi(2) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 b
 jal gp, %hi(b) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 jal gp, %pcrel_hi(3) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 jal gp, %pcrel_hi(c) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
+jal gp, %pcrel_lo(4) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
+jal gp, %pcrel_lo(d) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 
 # Unrecognized operand modifier
 addi t0, sp, %modifer(255) # CHECK: :[[@LINE]]:15: error: unrecognized operand modifier

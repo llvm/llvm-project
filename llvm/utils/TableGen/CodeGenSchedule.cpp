@@ -1564,6 +1564,14 @@ void CodeGenSchedModels::collectProcResources() {
     if (!is_contained(PM.ProcResourceDefs, PRG))
       PM.ProcResourceDefs.push_back(PRG);
   }
+  // Add ProcResourceUnits unconditionally.
+  for (Record *PRU : Records.getAllDerivedDefinitions("ProcResourceUnits")) {
+    if (!PRU->getValueInit("SchedModel")->isComplete())
+      continue;
+    CodeGenProcModel &PM = getProcModel(PRU->getValueAsDef("SchedModel"));
+    if (!is_contained(PM.ProcResourceDefs, PRU))
+      PM.ProcResourceDefs.push_back(PRU);
+  }
   // Finalize each ProcModel by sorting the record arrays.
   for (CodeGenProcModel &PM : ProcModels) {
     std::sort(PM.WriteResDefs.begin(), PM.WriteResDefs.end(),

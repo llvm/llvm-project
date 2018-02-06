@@ -11,13 +11,13 @@ For code:
 
 .. code-block:: objc
 
-@property(nonatomic, assign) int LowerCamelCase;
+   @property(nonatomic, assign) int LowerCamelCase;
 
 The fix will be:
 
 .. code-block:: objc
 
-@property(nonatomic, assign) int lowerCamelCase;
+   @property(nonatomic, assign) int lowerCamelCase;
 
 The check will only fix 'CamelCase' to 'camelCase'. In some other cases we will
 only provide warning messages since the property name could be complicated.
@@ -36,7 +36,8 @@ The check will also accept property declared in category with a prefix of
 lowercase letters followed by a '_' to avoid naming conflict. For example:
 
 .. code-block:: objc
-@property(nonatomic, assign) int abc_lowerCamelCase;
+
+   @property(nonatomic, assign) int abc_lowerCamelCase;
 
 The corresponding style rule: https://developer.apple.com/library/content/qa/qa1908/_index.html
 
@@ -62,9 +63,7 @@ Options
    If set to ``1``, the value in ``Acronyms`` is appended to the
    default list of acronyms:
 
-   ``ACL;API;ARGB;ASCII;BGRA;CMYK;DNS;FPS;FTP;GIF;GPS;HD;HDR;HTML;HTTP;HTTPS;
-HUD;ID;JPG;JS;LAN;LZW;MDNS;MIDI;OS;PDF;PIN;PNG;POI;PSTN;PTR;QA;QOS;RGB;RGBA;
-RGBX;ROM;RPC;RTF;RTL;SDK;SSO;TCP;TIFF;TTS;UI;URI;URL;VC;VOIP;VPN;VR;WAN;XML``.
+   ``ACL;API;ARGB;ASCII;BGRA;CMYK;DNS;FPS;FTP;GIF;GPS;HD;HDR;HTML;HTTP;HTTPS;HUD;ID;JPG;JS;LAN;LZW;MDNS;MIDI;OS;PDF;PIN;PNG;POI;PSTN;PTR;QA;QOS;RGB;RGBA;RGBX;ROM;RPC;RTF;RTL;SDK;SSO;TCP;TIFF;TTS;UI;URI;URL;VC;VOIP;VPN;VR;WAN;XML``.
 
    If set to ``0``, the value in ``Acronyms`` replaces the default list
    of acronyms.

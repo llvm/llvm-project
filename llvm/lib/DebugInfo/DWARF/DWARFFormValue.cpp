@@ -284,10 +284,10 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   }
   // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section offset.
   // Don't check for DWARF version here, as some producers may still do this
-  // by mistake. Also accept DW_FORM_strp since this is .debug_str section
-  // offset.
+  // by mistake. Also accept DW_FORM_[line_]strp since these are
+  // .debug_[line_]str section offsets.
   return (Form == DW_FORM_data4 || Form == DW_FORM_data8 ||
-          Form == DW_FORM_strp) &&
+          Form == DW_FORM_strp || Form == DW_FORM_line_strp) &&
          FC == FC_SectionOffset;
 }
 
@@ -511,6 +511,11 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_strp:
     if (DumpOpts.Verbose)
       OS << format(" .debug_str[0x%8.8x] = ", (uint32_t)UValue);
+    dumpString(OS);
+    break;
+  case DW_FORM_line_strp:
+    if (DumpOpts.Verbose)
+      OS << format(" .debug_line_str[0x%8.8x] = ", (uint32_t)UValue);
     dumpString(OS);
     break;
   case DW_FORM_strx:

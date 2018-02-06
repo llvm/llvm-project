@@ -112,6 +112,9 @@ struct Configuration {
 
   bool SaveTemps = false;
 
+  // /guard:cf
+  bool GuardCF;
+
   // Used for SafeSEH.
   Symbol *SEHTable = nullptr;
   Symbol *SEHCount = nullptr;

@@ -13,6 +13,7 @@ add_dependencies(ObjectFileELFTests yaml2obj)
 add_definitions(-DYAML2OBJ="$<TARGET_FILE:yaml2obj>")
 
 set(test_inputs
+  early-section-headers.so
   sections-resolve-consistently.yaml
   )
 add_unittest_inputs(ObjectFileELFTests "${test_inputs}")

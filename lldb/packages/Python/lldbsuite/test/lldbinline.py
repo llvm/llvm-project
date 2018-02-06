@@ -139,34 +139,34 @@ class InlineTest(TestBase):
     @add_test_categories(["dsym"])
     def __test_with_dsym(self):
         self.using_dsym = True
-        self.debug_info = "dsym"
         self.BuildMakefile()
         self.build()
         self.do_test()
+    __test_with_dsym.debug_info = "dsym"
 
     @add_test_categories(["dwarf"])
     def __test_with_dwarf(self):
         self.using_dsym = False
-        self.debug_info = "dwarf"
         self.BuildMakefile()
         self.build()
         self.do_test()
+    __test_with_dwarf.debug_info = "dwarf"
 
     @add_test_categories(["dwo"])
     def __test_with_dwo(self):
         self.using_dsym = False
-        self.debug_info = "dwo"
         self.BuildMakefile()
         self.build()
         self.do_test()
+    __test_with_dwo.debug_info = "dwo"
 
     @add_test_categories(["gmodules"])
     def __test_with_gmodules(self):
         self.using_dsym = False
-        self.debug_info = "gmodules"
         self.BuildMakefile()
         self.build()
         self.do_test()
+    __test_with_gmodules.debug_info = "gmodules"
 
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())

@@ -19,6 +19,7 @@
 // It requires support from the runtime: __cxa_thread_atexit.
 // Rather than detect this, we use the pthread API where available.
 #include <pthread.h>
+#include <cstring>
 static clang::clangd::Context &currentContext() {
   using clang::clangd::Context;
   static pthread_key_t CtxKey;

@@ -674,29 +674,16 @@ size_t ObjectFileELF::GetModuleSpecifications(
                           __FUNCTION__, file.GetPath().c_str());
           }
 
+          data_sp = MapFileData(file, -1, file_offset);
+          if (data_sp)
+            data.SetData(data_sp);
           // In case there is header extension in the section #0, the header
           // we parsed above could have sentinel values for e_phnum, e_shnum,
           // and e_shstrndx.  In this case we need to reparse the header
           // with a bigger data source to get the actual values.
-          size_t section_header_end = header.e_shoff + header.e_shentsize;
-          if (header.HasHeaderExtension() &&
-            section_header_end > data_sp->GetByteSize()) {
-            data_sp = MapFileData(file, section_header_end, file_offset);
-            if (data_sp) {
-              data.SetData(data_sp);
-              lldb::offset_t header_offset = data_offset;
-              header.Parse(data, &header_offset);
-            }
-          }
-
-          // Try to get the UUID from the section list. Usually that's at the
-          // end, so map the file in if we don't have it already.
-          section_header_end =
-              header.e_shoff + header.e_shnum * header.e_shentsize;
-          if (section_header_end > data_sp->GetByteSize()) {
-            data_sp = MapFileData(file, section_header_end, file_offset);
-            if (data_sp)
-              data.SetData(data_sp);
+          if (header.HasHeaderExtension()) {
+            lldb::offset_t header_offset = data_offset;
+            header.Parse(data, &header_offset);
           }
 
           uint32_t gnu_debuglink_crc = 0;
@@ -733,39 +720,14 @@ size_t ObjectFileELF::GetModuleSpecifications(
               // contents crc32 would be too much of luxury.  Thus we will need
               // to fallback to something simpler.
               if (header.e_type == llvm::ELF::ET_CORE) {
-                size_t program_headers_end =
-                    header.e_phoff + header.e_phnum * header.e_phentsize;
-                if (program_headers_end > data_sp->GetByteSize()) {
-                  data_sp = MapFileData(file, program_headers_end, file_offset);
-                  if (data_sp)
-                    data.SetData(data_sp);
-                }
                 ProgramHeaderColl program_headers;
                 GetProgramHeaderInfo(program_headers, data, header);
-
-                size_t segment_data_end = 0;
-                for (ProgramHeaderCollConstIter I = program_headers.begin();
-                     I != program_headers.end(); ++I) {
-                  segment_data_end = std::max<unsigned long long>(
-                      I->p_offset + I->p_filesz, segment_data_end);
-                }
-
-                if (segment_data_end > data_sp->GetByteSize()) {
-                  data_sp = MapFileData(file, segment_data_end, file_offset);
-                  if (data_sp)
-                    data.SetData(data_sp);
-                }
 
                 core_notes_crc =
                     CalculateELFNotesSegmentsCRC32(program_headers, data);
               } else {
-                // Need to map entire file into memory to calculate the crc.
-                data_sp = MapFileData(file, -1, file_offset);
-                if (data_sp) {
-                  data.SetData(data_sp);
-                  gnu_debuglink_crc = calc_gnu_debuglink_crc32(
-                      data.GetDataStart(), data.GetByteSize());
-                }
+                gnu_debuglink_crc = calc_gnu_debuglink_crc32(
+                    data.GetDataStart(), data.GetByteSize());
               }
             }
             if (gnu_debuglink_crc) {

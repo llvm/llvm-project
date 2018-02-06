@@ -3144,7 +3144,6 @@ static void emitWritebacks(CodeGenFunction &CGF,
 
 static void deactivateArgCleanupsBeforeCall(CodeGenFunction &CGF,
                                             const CallArgList &CallArgs) {
-  assert(CGF.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee());
   ArrayRef<CallArgList::CallArgCleanup> Cleanups =
     CallArgs.getCleanupsToDeactivate();
   // Iterate in reverse to increase the likelihood of popping the cleanup.
@@ -3501,8 +3500,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (HasAggregateEvalKind &&
-      CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+  if (HasAggregateEvalKind && getContext().isParamDestroyedInCallee(type)) {
     // If we're using inalloca, use the argument memory.  Otherwise, use a
     // temporary.
     AggValueSlot Slot;
@@ -3514,7 +3512,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     const CXXRecordDecl *RD = type->getAsCXXRecordDecl();
     bool DestroyedInCallee =
         RD && RD->hasNonTrivialDestructor() &&
-        CGM.getCXXABI().getRecordArgABI(RD) != CGCXXABI::RAA_Default;
+        (CGM.getCXXABI().getRecordArgABI(RD) != CGCXXABI::RAA_Default ||
+         RD->hasTrivialABIOverride());
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
 
@@ -3729,7 +3728,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  SourceLocation Loc) {
   // FIXME: We no longer need the types from CallArgs; lift up and simplify.
 
-  assert(Callee.isOrdinary());
+  assert(Callee.isOrdinary() || Callee.isVirtual());
 
   // Handle struct-return functions by passing a pointer to the
   // location that we would like to return into.
@@ -4053,7 +4052,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
   }
 
-  llvm::Value *CalleePtr = Callee.getFunctionPointer();
+  llvm::Value *CalleePtr;
+  if (Callee.isVirtual()) {
+    const CallExpr *CE = Callee.getVirtualCallExpr();
+    CalleePtr = CGM.getCXXABI().getVirtualFunctionPointer(
+        *this, Callee.getVirtualMethodDecl(), Callee.getThisAddress(),
+        Callee.getFunctionType(), CE ? CE->getLocStart() : SourceLocation());
+  } else
+    CalleePtr = Callee.getFunctionPointer();
 
   // If we're using inalloca, set up that argument.
   if (ArgMemory.isValid()) {

@@ -907,6 +907,14 @@ public:
     return AMDGPU::hasXNACK(getSTI());
   }
 
+  bool hasMIMG_R128() const {
+    return AMDGPU::hasMIMG_R128(getSTI());
+  }
+
+  bool hasPackedD16() const {
+    return AMDGPU::hasPackedD16(getSTI());
+  }
+
   bool isSI() const {
     return AMDGPU::isSI(getSTI());
   }
@@ -1042,6 +1050,8 @@ private:
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGDataSize(const MCInst &Inst);
+  bool validateMIMGR128(const MCInst &Inst);
+  bool validateMIMGD16(const MCInst &Inst);
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
@@ -2303,7 +2313,12 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if (DMask == 0)
     DMask = 1;
 
-  return (VDataSize / 4) == countPopulation(DMask) + TFESize;
+  unsigned DataSize = countPopulation(DMask);
+  if ((Desc.TSFlags & SIInstrFlags::D16) != 0 && hasPackedD16()) {
+    DataSize = (DataSize + 1) / 2;
+  }
+
+  return (VDataSize / 4) == DataSize + TFESize;
 }
 
 bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
@@ -2326,6 +2341,35 @@ bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
   return DMask == 0x1 || DMask == 0x3 || DMask == 0xf;
 }
 
+bool AMDGPUAsmParser::validateMIMGR128(const MCInst &Inst) {
+
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
+    return true;
+
+  int Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
+  assert(Idx != -1);
+
+  bool R128 = (Inst.getOperand(Idx).getImm() != 0);
+
+  return !R128 || hasMIMG_R128();
+}
+
+bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
+
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
+    return true;
+  if ((Desc.TSFlags & SIInstrFlags::D16) == 0)
+    return true;
+
+  return !isCI() && !isSI();
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc) {
   if (!validateConstantBusLimitations(Inst)) {
@@ -2341,6 +2385,17 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateIntClampSupported(Inst)) {
     Error(IDLoc,
       "integer clamping is not supported on this GPU");
+    return false;
+  }
+  if (!validateMIMGR128(Inst)) {
+    Error(IDLoc,
+      "r128 modifier is not supported on this GPU");
+    return false;
+  }
+  // For MUBUF/MTBUF d16 is a part of opcode, so there is nothing to validate.
+  if (!validateMIMGD16(Inst)) {
+    Error(IDLoc,
+      "d16 modifier is not supported on this GPU");
     return false;
   }
   if (!validateMIMGDataSize(Inst)) {

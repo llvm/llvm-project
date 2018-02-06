@@ -2236,7 +2236,17 @@ public:
 
   bool CheckNontrivialField(FieldDecl *FD);
   void DiagnoseNontrivial(const CXXRecordDecl *Record, CXXSpecialMember CSM);
+
+  enum TrivialABIHandling {
+    /// The triviality of a method unaffected by "trivial_abi".
+    TAH_IgnoreTrivialABI,
+
+    /// The triviality of a method affected by "trivial_abi".
+    TAH_ConsiderTrivialABI
+  };
+
   bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMember CSM,
+                              TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
                               bool Diagnose = false);
   CXXSpecialMember getSpecialMember(const CXXMethodDecl *MD);
   void ActOnLastBitfield(SourceLocation DeclStart,
@@ -5796,6 +5806,11 @@ public:
       SourceLocation BaseLoc);
 
   void CheckCompletedCXXClass(CXXRecordDecl *Record);
+
+  /// Check that the C++ class annoated with "trivial_abi" satisfies all the
+  /// conditions that are needed for the attribute to have an effect.
+  void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
+
   void ActOnFinishCXXMemberSpecification(Scope* S, SourceLocation RLoc,
                                          Decl *TagDecl,
                                          SourceLocation LBrac,

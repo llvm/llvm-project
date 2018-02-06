@@ -167,6 +167,11 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     case RISCVMCExpr::VK_RISCV_HI:
       FixupKind = RISCV::fixup_riscv_hi20;
       break;
+    case RISCVMCExpr::VK_RISCV_PCREL_LO:
+      FixupKind = MIFrm == RISCVII::InstFormatI
+                      ? RISCV::fixup_riscv_pcrel_lo12_i
+                      : RISCV::fixup_riscv_pcrel_lo12_s;
+      break;
     case RISCVMCExpr::VK_RISCV_PCREL_HI:
       FixupKind = RISCV::fixup_riscv_pcrel_hi20;
       break;

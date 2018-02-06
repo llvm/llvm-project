@@ -158,6 +158,8 @@ struct ValueInfo {
   const GlobalValueSummaryMapTy::value_type *getRef() const {
     return RefAndFlag.getPointer();
   }
+
+  bool isDSOLocal() const;
 };
 
 template <> struct DenseMapInfo<ValueInfo> {

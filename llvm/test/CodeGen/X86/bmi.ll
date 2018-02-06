@@ -188,8 +188,8 @@ define i1 @and_cmp4(i32 %x, i32 %y) {
 define i1 @and_cmp_const(i32 %x) {
 ; CHECK-LABEL: and_cmp_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $43, %eax
-; CHECK-NEXT:    andnl %eax, %edi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    andl $43, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %x, 43

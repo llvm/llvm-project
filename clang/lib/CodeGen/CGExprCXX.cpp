@@ -371,9 +371,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
                   CGM.GetAddrOfFunction(GlobalDecl(Ctor, Ctor_Complete), Ty),
                                  Ctor);
   } else if (UseVirtualCall) {
-    Callee = CGM.getCXXABI().getVirtualFunctionPointer(*this, MD,
-                                                       This.getAddress(), Ty,
-                                                       CE->getLocStart());
+    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
         MD->getParent()->isDynamicClass()) {

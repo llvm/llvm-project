@@ -122,8 +122,8 @@
 ; CHECK-LABEL: .debug_line contents:
 ; CHECK: Line table prologue
 ; CHECK-NOT: file_names[
-; SINGLE: file_names{{.*}} bar.h
-; CHECK: file_names{{.*}} bar.cpp
+; SINGLE: file_names{{.*}} "bar.h"
+; CHECK: file_names{{.*}} "bar.cpp"
 ; CHECK-NOT: file_names[
 
 ; FISSION: .debug_line.dwo contents:
@@ -133,8 +133,8 @@
 ; FISSION-NOT: standard_opcode_lengths
 ; FISSION-NOT: include_directories
 ; FISSION-NOT: file_names[
-; FISSION: file_names{{.*}} bar.h
-; FISSION: file_names{{.*}} bar.cpp
+; FISSION: file_names{{.*}} "bar.h"
+; FISSION: file_names{{.*}} "bar.cpp"
 ; FISSION-NOT: file_names[
 
 ; CHECK-LABEL: .debug_str contents:

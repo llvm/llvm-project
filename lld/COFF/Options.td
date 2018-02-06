@@ -28,6 +28,7 @@ def errorlimit : P<"errorlimit",
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
+def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
 def implib  : P<"implib", "Import library name">;

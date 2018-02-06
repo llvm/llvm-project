@@ -864,14 +864,10 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
   SDValue Vt = Op.getOperand(1);
 
   switch (ElemTy.SimpleTy) {
-    case MVT::i8:
-    case MVT::i16: { // V6_vmpyih
+    case MVT::i8: {
       // For i8 vectors Vs = (a0, a1, ...), Vt = (b0, b1, ...),
       // V6_vmpybv Vs, Vt produces a pair of i16 vectors Hi:Lo,
       // where Lo = (a0*b0, a2*b2, ...), Hi = (a1*b1, a3*b3, ...).
-      // For i16, use V6_vmpyhv, which behaves in an analogous way to
-      // V6_vmpybv: results Lo and Hi are products of even/odd elements
-      // respectively.
       MVT ExtTy = typeExtElem(ResTy, 2);
       unsigned MpyOpc = ElemTy == MVT::i8 ? Hexagon::V6_vmpybv
                                           : Hexagon::V6_vmpyhv;
@@ -886,6 +882,11 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
       SDValue BS = getByteShuffle(dl, P.first, P.second, ShuffMask, DAG);
       return DAG.getBitcast(ResTy, BS);
     }
+    case MVT::i16:
+      // For i16 there is V6_vmpyih, which acts exactly like the MUL opcode.
+      // (There is also V6_vmpyhv, which behaves in an analogous way to
+      // V6_vmpybv.)
+      return getInstr(Hexagon::V6_vmpyih, dl, ResTy, {Vs, Vt}, DAG);
     case MVT::i32: {
       // Use the following sequence for signed word multiply:
       // T0 = V6_vmpyiowh Vs, Vt

@@ -114,15 +114,14 @@ void call_right_override(ChildOverride *child) {
 // the caller site.
 //
 // CHECK: %[[CHILD_i8:.*]] = bitcast %struct.ChildOverride* %[[CHILD]] to i8*
+// CHECK: %[[RIGHT:.*]] = getelementptr inbounds i8, i8* %[[CHILD_i8]], i32 4
 //
+// CHECK: %[[CHILD_i8:.*]] = bitcast %struct.ChildOverride* %[[CHILD]] to i8*
 // CHECK: %[[VFPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[CHILD_i8]], i32 4
 // CHECK: %[[VFPTR:.*]] = bitcast i8* %[[VFPTR_i8]] to void (i8*)***
 // CHECK: %[[VFTABLE:.*]] = load void (i8*)**, void (i8*)*** %[[VFPTR]]
 // CHECK: %[[VFUN:.*]] = getelementptr inbounds void (i8*)*, void (i8*)** %[[VFTABLE]], i64 0
 // CHECK: %[[VFUN_VALUE:.*]] = load void (i8*)*, void (i8*)** %[[VFUN]]
-//
-// CHECK: %[[CHILD_i8:.*]] = bitcast %struct.ChildOverride* %[[CHILD]] to i8*
-// CHECK: %[[RIGHT:.*]] = getelementptr inbounds i8, i8* %[[CHILD_i8]], i32 4
 //
 // CHECK: call x86_thiscallcc void %[[VFUN_VALUE]](i8* %[[RIGHT]])
 // CHECK: ret

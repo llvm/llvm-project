@@ -153,6 +153,7 @@ struct Configuration {
   bool Verbose;
   bool WarnCommon;
   bool WarnMissingEntry;
+  bool WriteAddends;
   bool ZCombreloc;
   bool ZExecstack;
   bool ZNocopyreloc;

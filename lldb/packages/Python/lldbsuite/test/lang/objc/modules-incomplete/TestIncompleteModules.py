@@ -22,8 +22,8 @@ class IncompleteModulesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
+    @skipIfDarwin
     @skipUnlessDarwin
-    @unittest2.expectedFailure("rdar://20416388")
     @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
     def test_expr(self):
         self.build()

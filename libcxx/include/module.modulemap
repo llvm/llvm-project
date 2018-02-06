@@ -558,10 +558,6 @@ module std [system] {
       header "experimental/string"
       export *
     }
-    module string_view {
-      header "experimental/string_view"
-      export *
-    }
     module system_error {
       header "experimental/system_error"
       export *
