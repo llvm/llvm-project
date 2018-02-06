@@ -269,6 +269,9 @@ DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
   return MCDisassembler::Success;
 }
 
+// Note that MIMG format provides no information about VADDR size.
+// Consequently, decoded instructions always show address
+// as if it has 1 dword, which could be not really so.
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                            AMDGPU::OpName::vdst);
@@ -279,8 +282,12 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
 
+  int TFEIdx   = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                            AMDGPU::OpName::tfe);
+
   assert(VDataIdx != -1);
   assert(DMaskIdx != -1);
+  assert(TFEIdx != -1);
 
   bool isAtomic = (VDstIdx != -1);
 
@@ -288,19 +295,28 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (DMask == 0)
     return MCDisassembler::Success;
 
-  unsigned ChannelCount = countPopulation(DMask);
-  if (ChannelCount == 1)
+  unsigned DstSize = countPopulation(DMask);
+  if (DstSize == 1)
+    return MCDisassembler::Success;
+
+  bool D16 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::D16;
+  if (D16 && AMDGPU::hasPackedD16(STI)) {
+    DstSize = (DstSize + 1) / 2;
+  }
+
+  // FIXME: Add tfe support
+  if (MI.getOperand(TFEIdx).getImm())
     return MCDisassembler::Success;
 
   int NewOpcode = -1;
 
   if (isAtomic) {
     if (DMask == 0x1 || DMask == 0x3 || DMask == 0xF) {
-      NewOpcode = AMDGPU::getMaskedMIMGAtomicOp(*MCII, MI.getOpcode(), ChannelCount);
+      NewOpcode = AMDGPU::getMaskedMIMGAtomicOp(*MCII, MI.getOpcode(), DstSize);
     }
     if (NewOpcode == -1) return MCDisassembler::Success;
   } else {
-    NewOpcode = AMDGPU::getMaskedMIMGOp(*MCII, MI.getOpcode(), ChannelCount);
+    NewOpcode = AMDGPU::getMaskedMIMGOp(*MCII, MI.getOpcode(), DstSize);
     assert(NewOpcode != -1 && "could not find matching mimg channel instruction");
   }
 

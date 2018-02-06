@@ -31,7 +31,7 @@ public:
   struct FileNameEntry {
     FileNameEntry() = default;
 
-    StringRef Name;
+    DWARFFormValue Name;
     uint64_t DirIdx = 0;
     uint64_t ModTime = 0;
     uint64_t Length = 0;
@@ -71,7 +71,7 @@ public:
     /// For v5, whether filename entries provide an MD5 checksum.
     bool HasMD5;
     std::vector<uint8_t> StandardOpcodeLengths;
-    std::vector<StringRef> IncludeDirectories;
+    std::vector<DWARFFormValue> IncludeDirectories;
     std::vector<FileNameEntry> FileNames;
 
     const DWARFFormParams getFormParams() const { return FormParams; }
@@ -99,7 +99,7 @@ public:
     }
 
     void clear();
-    void dump(raw_ostream &OS) const;
+    void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
                const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
@@ -219,7 +219,7 @@ public:
                                    DILineInfoSpecifier::FileLineInfoKind Kind,
                                    DILineInfo &Result) const;
 
-    void dump(raw_ostream &OS) const;
+    void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     void clear();
 
     /// Parse prologue and all rows.

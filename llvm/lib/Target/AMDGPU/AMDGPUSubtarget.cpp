@@ -136,6 +136,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     FP64(false),
     FMA(false),
+    MIMG_R128(false),
     IsGCN(false),
     GCN3Encoding(false),
     CIInsts(false),

@@ -1415,8 +1415,8 @@ define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ;
 ; SKX-LABEL: sext_8i1_8i32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpcmpled %ymm0, %ymm1, %k0
-; SKX-NEXT:    vpmovm2d %k0, %ymm0
+; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
+; SKX-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
 ; SKX-NEXT:    retq
   %x = icmp slt <8 x i32> %a1, %a2
   %x1 = xor <8 x i1>%x, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>

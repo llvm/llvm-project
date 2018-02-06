@@ -528,6 +528,27 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   SmallVector<BasicBlock*, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
+  // If there is an exit edge known to be frequently taken,
+  // we should not transform this loop.
+  for (auto &BB : ExitingBlocks) {
+    Instruction *TI = BB->getTerminator();
+    if (!TI) continue;
+
+    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+      uint64_t TrueWeight, FalseWeight;
+      if (!BI->isConditional() ||
+          !BI->extractProfMetadata(TrueWeight, FalseWeight))
+        continue;
+
+      // If the exit path is more frequent than the loop path,
+      // we return here without further analysis for this loop.
+      bool TrueIsExit = !L->contains(BI->getSuccessor(0));
+      if (( TrueIsExit && FalseWeight < TrueWeight) ||
+          (!TrueIsExit && FalseWeight > TrueWeight))
+        return MadeChange;
+    }
+  }
+
   BasicBlock *CountedExitBlock = nullptr;
   const SCEV *ExitCount = nullptr;
   BranchInst *CountedExitBranch = nullptr;

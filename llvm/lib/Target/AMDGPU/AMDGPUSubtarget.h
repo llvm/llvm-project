@@ -139,6 +139,7 @@ protected:
   // Subtarget statically properties set by tablegen
   bool FP64;
   bool FMA;
+  bool MIMG_R128;
   bool IsGCN;
   bool GCN3Encoding;
   bool CIInsts;
@@ -263,6 +264,10 @@ public:
 
   bool hasFP64() const {
     return FP64;
+  }
+
+  bool hasMIMG_R128() const {
+    return MIMG_R128;
   }
 
   bool hasFastFMAF32() const {

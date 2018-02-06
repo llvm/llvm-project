@@ -347,30 +347,31 @@ define void @foldedidx(i8* nocapture %a, i8* nocapture %b, i8* nocapture %c) nou
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl $-400, %eax # imm = 0xFE70
+; X32-NEXT:    movl $3, %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB3_1: # %for.body
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
-; X32-NEXT:    movzbl 400(%esi,%eax), %edi
-; X32-NEXT:    movzbl 400(%edx,%eax), %ebx
+; X32-NEXT:    movzbl -3(%esi,%eax), %edi
+; X32-NEXT:    movzbl -3(%edx,%eax), %ebx
 ; X32-NEXT:    addl %edi, %ebx
-; X32-NEXT:    movb %bl, 400(%ecx,%eax)
-; X32-NEXT:    movzbl 401(%esi,%eax), %edi
-; X32-NEXT:    movzbl 401(%edx,%eax), %ebx
+; X32-NEXT:    movb %bl, -3(%ecx,%eax)
+; X32-NEXT:    movzbl -2(%esi,%eax), %edi
+; X32-NEXT:    movzbl -2(%edx,%eax), %ebx
 ; X32-NEXT:    addl %edi, %ebx
-; X32-NEXT:    movb %bl, 401(%ecx,%eax)
-; X32-NEXT:    movzbl 402(%esi,%eax), %edi
-; X32-NEXT:    movzbl 402(%edx,%eax), %ebx
+; X32-NEXT:    movb %bl, -2(%ecx,%eax)
+; X32-NEXT:    movzbl -1(%esi,%eax), %edi
+; X32-NEXT:    movzbl -1(%edx,%eax), %ebx
 ; X32-NEXT:    addl %edi, %ebx
-; X32-NEXT:    movb %bl, 402(%ecx,%eax)
-; X32-NEXT:    movzbl 403(%esi,%eax), %edi
-; X32-NEXT:    movzbl 403(%edx,%eax), %ebx
+; X32-NEXT:    movb %bl, -1(%ecx,%eax)
+; X32-NEXT:    movzbl (%esi,%eax), %edi
+; X32-NEXT:    movzbl (%edx,%eax), %ebx
 ; X32-NEXT:    addl %edi, %ebx
-; X32-NEXT:    movb %bl, 403(%ecx,%eax)
+; X32-NEXT:    movb %bl, (%ecx,%eax)
 ; X32-NEXT:    addl $4, %eax
+; X32-NEXT:    cmpl $403, %eax # imm = 0x193
 ; X32-NEXT:    jne .LBB3_1
 ; X32-NEXT:  # %bb.2: # %for.end
 ; X32-NEXT:    popl %esi

@@ -398,7 +398,8 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
   if (MOI.isAtomic()) {
     if (MOI.getSSID() == SyncScope::System ||
         MOI.getSSID() == MMI->getAgentSSID()) {
-      if (MOI.getOrdering() == AtomicOrdering::Acquire ||
+      if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
+          MOI.getOrdering() == AtomicOrdering::Acquire ||
           MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
         Changed |= enableGLCBit(MI);
 

@@ -21,7 +21,7 @@ entry:
 
 ; GCN-LABEL: {{^}}system_monotonic
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:   buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
@@ -133,7 +133,7 @@ entry:
 
 ; GCN-LABEL: {{^}}agent_monotonic
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:   buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]

@@ -298,6 +298,7 @@ void splitAndWriteThinLTOBitcode(
         return false;
       }));
   StripDebugInfo(*MergedM);
+  MergedM->setModuleInlineAsm("");
 
   for (Function &F : *MergedM)
     if (!F.isDeclaration()) {

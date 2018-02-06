@@ -613,7 +613,7 @@ llvm::EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
   return std::error_code();
 }
 
-void llvm::convertToDeclaration(GlobalValue &GV) {
+bool llvm::convertToDeclaration(GlobalValue &GV) {
   DEBUG(dbgs() << "Converting to a declaration: `" << GV.getName() << "\n");
   if (Function *F = dyn_cast<Function>(&GV)) {
     F->deleteBody();
@@ -624,14 +624,24 @@ void llvm::convertToDeclaration(GlobalValue &GV) {
     V->setLinkage(GlobalValue::ExternalLinkage);
     V->clearMetadata();
     V->setComdat(nullptr);
-  } else
-    // For now we don't resolve or drop aliases. Once we do we'll
-    // need to add support here for creating either a function or
-    // variable declaration, and return the new GlobalValue* for
-    // the caller to use.
-    // Support of dropping aliases is required for correct dead code
-    // elimination performed in thin LTO backends (see 'dropDeadSymbols').
-    llvm_unreachable("Expected function or variable");
+  } else {
+    GlobalValue *NewGV;
+    if (GV.getValueType()->isFunctionTy())
+      NewGV =
+          Function::Create(cast<FunctionType>(GV.getValueType()),
+                           GlobalValue::ExternalLinkage, "", GV.getParent());
+    else
+      NewGV =
+          new GlobalVariable(*GV.getParent(), GV.getValueType(),
+                             /*isConstant*/ false, GlobalValue::ExternalLinkage,
+                             /*init*/ nullptr, "",
+                             /*insertbefore*/ nullptr, GV.getThreadLocalMode(),
+                             GV.getType()->getAddressSpace());
+    NewGV->takeName(&GV);
+    GV.replaceAllUsesWith(NewGV);
+    return false;
+  }
+  return true;
 }
 
 /// Fixup WeakForLinker linkages in \p TheModule based on summary analysis.
@@ -666,9 +676,13 @@ void llvm::thinLTOResolveWeakForLinkerModule(
     // interposable property and possibly get inlined. Simply drop
     // the definition in that case.
     if (GlobalValue::isAvailableExternallyLinkage(NewLinkage) &&
-        GlobalValue::isInterposableLinkage(GV.getLinkage()))
-      convertToDeclaration(GV);
-    else {
+        GlobalValue::isInterposableLinkage(GV.getLinkage())) {
+      if (!convertToDeclaration(GV))
+        // FIXME: Change this to collect replaced GVs and later erase
+        // them from the parent module once thinLTOResolveWeakForLinkerGUID is
+        // changed to enable this for aliases.
+        llvm_unreachable("Expected GV to be converted");
+    } else {
       DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
                    << GV.getLinkage() << " to " << NewLinkage << "\n");
       GV.setLinkage(NewLinkage);

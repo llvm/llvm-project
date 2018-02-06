@@ -255,11 +255,11 @@ LH_4_end:
 # CHECK-NOT: address_size
 # CHECK-NOT: seg_select_size
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  1] = 'Directory4a'
-# CHECK: include_directories[  2] = 'Directory4b'
+# CHECK: include_directories[  1] = "Directory4a"
+# CHECK: include_directories[  2] = "Directory4b"
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    1 0x00000041 0x00000042 File4a{{$}}
-# CHECK: file_names[  2]    0 0x00000043 0x00000044 File4b{{$}}
+# CHECK: file_names[  1]    1 0x00000041 0x00000042 "File4a"
+# CHECK: file_names[  2]    0 0x00000043 0x00000044 "File4b"
 # CHECK-NOT: file_names
 
 # DWARF v5 line-table header.
@@ -324,12 +324,14 @@ LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  0] = 'Directory5a'
-# CHECK: include_directories[  1] = 'Directory5b'
+# Mixing .debug_str (here) with .debug_line_str (in file_names) is not
+# something a producer would do, but both are legal and we want to test them.
+# CHECK: include_directories[  0] = .debug_str[0x00000045] = "Directory5a"
+# CHECK: include_directories[  1] = .debug_str[0x00000051] = "Directory5b"
 # CHECK-NOT: include_directories
 # CHECK: MD5 Checksum
-# CHECK: file_names[  1]    0 00112233445566778899aabbccddeeff File5a{{$}}
-# CHECK: file_names[  2]    1 ffeeddccbbaa99887766554433221100 File5b{{$}}
+# CHECK: file_names[  1]    0 00112233445566778899aabbccddeeff .debug_line_str[0x00000000] = "File5a"
+# CHECK: file_names[  2]    1 ffeeddccbbaa99887766554433221100 .debug_line_str[0x00000007] = "File5b"
 # CHECK-NOT: file_names
 
         .section .debug_line_str,"MS",@progbits,1
@@ -405,9 +407,9 @@ dwo_LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  0] = 'DWODirectory5a'
-# CHECK: include_directories[  1] = 'DWODirectory5b'
+# CHECK: include_directories[  0] = .debug_str[0x0000003d] = "DWODirectory5a"
+# CHECK: include_directories[  1] = .debug_str[0x0000004c] = "DWODirectory5b"
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    0 0x00000015 0x00000025 DWOFile5a{{$}}
-# CHECK: file_names[  2]    1 0x00000035 0x00000045 DWOFile5b{{$}}
+# CHECK: file_names[  1]    0 0x00000015 0x00000025 "DWOFile5a"
+# CHECK: file_names[  2]    1 0x00000035 0x00000045 "DWOFile5b"
 # CHECK-NOT: file_names

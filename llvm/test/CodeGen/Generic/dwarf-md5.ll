@@ -17,12 +17,12 @@
 ; ASM: .file 2 ".{{/|\\\\}}t2.h" md5 "22222222222222222222222222222222"
 
 ; OBJ-4: Dir Mod Time File Len File Name
-; OBJ-4: file_names[ 1] 1 0x00000000 0x00000000 t1.h
-; OBJ-4: file_names[ 2] 1 0x00000000 0x00000000 t2.h
+; OBJ-4: file_names[ 1] 1 0x00000000 0x00000000 "t1.h"
+; OBJ-4: file_names[ 2] 1 0x00000000 0x00000000 "t2.h"
 
 ; OBJ-5: Dir MD5 Checksum File Name
-; OBJ-5: file_names[ 1] 1 11111111111111111111111111111111 t1.h
-; OBJ-5: file_names[ 2] 1 22222222222222222222222222222222 t2.h
+; OBJ-5: file_names[ 1] 1 11111111111111111111111111111111 "t1.h"
+; OBJ-5: file_names[ 2] 1 22222222222222222222222222222222 "t2.h"
 
 ; ModuleID = 't.c'
 source_filename = "t.c"

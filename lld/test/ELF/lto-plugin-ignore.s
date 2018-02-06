@@ -5,7 +5,7 @@
 # RUN:   -plugin-opt=-pass-through=-lgcc -plugin-opt=-function-sections \
 # RUN:   -plugin-opt=-data-sections -o /dev/null
 
-# RUN: not ld.lld %t -plugin-opt=-data-sectionssss \
-# RUN:   -plugin-opt=-function-sectionsss 2>&1 | FileCheck %s
-# CHECK: unknown option: -data-sectionsss
-# CHECK: unknown option: -function-sectionsss
+# RUN: not ld.lld %t -plugin-opt=-data-sectionxxx \
+# RUN:   -plugin-opt=-function-sectionxxx 2>&1 | FileCheck %s
+# CHECK: Unknown command line argument '-data-sectionxxx'
+# CHECK: Unknown command line argument '-function-sectionxxx'

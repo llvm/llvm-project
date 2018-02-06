@@ -2113,7 +2113,7 @@ define <2 x float> @ubto2f32(<2 x i32> %a) {
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; NOVL-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
+; NOVL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; NOVL-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; NOVL-NEXT:    vzeroupper
@@ -2123,11 +2123,11 @@ define <2 x float> @ubto2f32(<2 x i32> %a) {
 ; VL:       # %bb.0:
 ; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; VL-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1
+; VL-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
 ; VL-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; VL-NEXT:    retq
-  %mask = icmp ult <2 x i32> %a, zeroinitializer
+  %mask = icmp ne <2 x i32> %a, zeroinitializer
   %1 = uitofp <2 x i1> %mask to <2 x float>
   ret <2 x float> %1
 }
@@ -2137,7 +2137,7 @@ define <2 x double> @ubto2f64(<2 x i32> %a) {
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; NOVL-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
+; NOVL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; NOVL-NEXT:    vcvtudq2pd %ymm0, %zmm0
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -2148,11 +2148,11 @@ define <2 x double> @ubto2f64(<2 x i32> %a) {
 ; VL:       # %bb.0:
 ; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; VL-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1
+; VL-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
 ; VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; VL-NEXT:    retq
-  %mask = icmp ult <2 x i32> %a, zeroinitializer
+  %mask = icmp ne <2 x i32> %a, zeroinitializer
   %1 = uitofp <2 x i1> %mask to <2 x double>
   ret <2 x double> %1
 }

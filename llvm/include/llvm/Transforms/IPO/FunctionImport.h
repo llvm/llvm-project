@@ -122,8 +122,9 @@ void computeDeadSymbols(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
 
-/// Converts value \p GV to declaration.
-void convertToDeclaration(GlobalValue &GV);
+/// Converts value \p GV to declaration, or replaces with a declaration if
+/// it is an alias. Returns true if converted, false if replaced.
+bool convertToDeclaration(GlobalValue &GV);
 
 /// Compute the set of summaries needed for a ThinLTO backend compilation of
 /// \p ModulePath.

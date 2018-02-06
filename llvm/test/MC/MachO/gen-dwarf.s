@@ -111,7 +111,7 @@ _x:	.long 1
 // We don't check include_directories as it has a temp path
 // CHECK:                 Dir  Mod Time   File Len   File Name
 // CHECK:                 ---- ---------- ---------- ---------------------------
-// CHECK: file_names[  1]    1 0x00000000 0x00000000 gen-dwarf.s
+// CHECK: file_names[  1]    1 0x00000000 0x00000000 "gen-dwarf.s"
 
 // CHECK: Address            Line   Column File   ISA Discriminator Flags
 // CHECK: ------------------ ------ ------ ------ --- ------------- -------------

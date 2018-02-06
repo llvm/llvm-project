@@ -54,7 +54,8 @@ void DWARFDebugLine::Prologue::clear() {
   FileNames.clear();
 }
 
-void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
+void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
+                                    DIDumpOptions DumpOptions) const {
   OS << "Line table prologue:\n"
      << format("    total_length: 0x%8.8" PRIx64 "\n", TotalLength)
      << format("         version: %u\n", getVersion());
@@ -76,9 +77,11 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
   if (!IncludeDirectories.empty()) {
     // DWARF v5 starts directory indexes at 0.
     uint32_t DirBase = getVersion() >= 5 ? 0 : 1;
-    for (uint32_t I = 0; I != IncludeDirectories.size(); ++I)
-      OS << format("include_directories[%3u] = '", I + DirBase)
-         << IncludeDirectories[I] << "'\n";
+    for (uint32_t I = 0; I != IncludeDirectories.size(); ++I) {
+      OS << format("include_directories[%3u] = ", I + DirBase);
+      IncludeDirectories[I].dump(OS, DumpOptions);
+      OS << '\n';
+    }
   }
 
   if (!FileNames.empty()) {
@@ -98,7 +101,9 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
       else
         OS << format("0x%8.8" PRIx64 " 0x%8.8" PRIx64, FileEntry.ModTime,
                      FileEntry.Length);
-      OS << ' ' << FileEntry.Name << '\n';
+      OS << ' ';
+      FileEntry.Name.dump(OS, DumpOptions);
+      OS << '\n';
     }
   }
 }
@@ -107,13 +112,15 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
 static void
 parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     std::vector<StringRef> &IncludeDirectories,
+                     std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   while (*OffsetPtr < EndPrologueOffset) {
     StringRef S = DebugLineData.getCStrRef(OffsetPtr);
     if (S.empty())
       break;
-    IncludeDirectories.push_back(S);
+    DWARFFormValue Dir(dwarf::DW_FORM_string);
+    Dir.setPValue(S.data());
+    IncludeDirectories.push_back(Dir);
   }
 
   while (*OffsetPtr < EndPrologueOffset) {
@@ -121,7 +128,8 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
     if (Name.empty())
       break;
     DWARFDebugLine::FileNameEntry FileEntry;
-    FileEntry.Name = Name;
+    FileEntry.Name.setForm(dwarf::DW_FORM_string);
+    FileEntry.Name.setPValue(Name.data());
     FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
     FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
     FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
@@ -159,7 +167,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
                      const DWARFFormParams &FormParams, const DWARFContext &Ctx,
                      const DWARFUnit *U, bool &HasMD5,
-                     std::vector<StringRef> &IncludeDirectories,
+                     std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   // Get the directory entry description.
   ContentDescriptors DirDescriptors =
@@ -178,7 +186,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
       case DW_LNCT_path:
         if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, &Ctx, U))
           return false;
-        IncludeDirectories.push_back(Value.getAsCString().getValue());
+        IncludeDirectories.push_back(Value);
         break;
       default:
         if (!Value.skipValue(DebugLineData, OffsetPtr, FormParams))
@@ -205,7 +213,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
         return false;
       switch (Descriptor.Type) {
       case DW_LNCT_path:
-        FileEntry.Name = Value.getAsCString().getValue();
+        FileEntry.Name = Value;
         break;
       case DW_LNCT_directory_index:
         FileEntry.DirIdx = Value.getAsUnsignedConstant().getValue();
@@ -346,8 +354,9 @@ void DWARFDebugLine::Sequence::reset() {
 
 DWARFDebugLine::LineTable::LineTable() { clear(); }
 
-void DWARFDebugLine::LineTable::dump(raw_ostream &OS) const {
-  Prologue.dump(OS);
+void DWARFDebugLine::LineTable::dump(raw_ostream &OS,
+                                     DIDumpOptions DumpOptions) const {
+  Prologue.dump(OS, DumpOptions);
   OS << '\n';
 
   if (!Rows.empty()) {
@@ -430,8 +439,12 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
     return false;
   }
 
-  if (OS)
-    Prologue.dump(*OS);
+  if (OS) {
+    // The presence of OS signals verbose dumping.
+    DIDumpOptions DumpOptions;
+    DumpOptions.Verbose = true;
+    Prologue.dump(*OS, DumpOptions);
+  }
 
   const uint32_t EndOffset =
       DebugLineOffset + Prologue.TotalLength + Prologue.sizeofTotalLength();
@@ -531,14 +544,15 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
         // the file register of the state machine.
         {
           FileNameEntry FileEntry;
-          FileEntry.Name = DebugLineData.getCStr(OffsetPtr);
+          const char *Name = DebugLineData.getCStr(OffsetPtr);
+          FileEntry.Name.setForm(dwarf::DW_FORM_string);
+          FileEntry.Name.setPValue(Name);
           FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
           FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
           FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
           Prologue.FileNames.push_back(FileEntry);
           if (OS)
-            *OS << " (" << FileEntry.Name.str()
-                << ", dir=" << FileEntry.DirIdx << ", mod_time="
+            *OS << " (" << Name << ", dir=" << FileEntry.DirIdx << ", mod_time="
                 << format("(0x%16.16" PRIx64 ")", FileEntry.ModTime)
                 << ", length=" << FileEntry.Length << ")";
         }
@@ -902,7 +916,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = Prologue.FileNames[FileIndex - 1];
-  StringRef FileName = Entry.Name;
+  StringRef FileName = Entry.Name.getAsCString().getValue();
   if (Kind != FileLineInfoKind::AbsoluteFilePath ||
       sys::path::is_absolute(FileName)) {
     Result = FileName;
@@ -915,7 +929,9 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   // Be defensive about the contents of Entry.
   if (IncludeDirIndex > 0 &&
       IncludeDirIndex <= Prologue.IncludeDirectories.size())
-    IncludeDir = Prologue.IncludeDirectories[IncludeDirIndex - 1];
+    IncludeDir = Prologue.IncludeDirectories[IncludeDirIndex - 1]
+                     .getAsCString()
+                     .getValue();
 
   // We may still need to append compilation directory of compile unit.
   // We know that FileName is not absolute, the only way to have an
