@@ -42,7 +42,6 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
@@ -253,11 +252,18 @@ void LinkerDriver::addLibrary(StringRef Name) {
 // LTO calls LLVM functions to compile bitcode files to native code.
 // Technically this can be delayed until we read bitcode files, but
 // we don't bother to do lazily because the initialization is fast.
-static void initLLVM() {
+static void initLLVM(opt::InputArgList &Args) {
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
+
+  // Parse and evaluate -mllvm options.
+  std::vector<const char *> V;
+  V.push_back("lld (LLVM option parsing)");
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    V.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(V.size(), V.data());
 }
 
 // Some command line options or some combinations of them are not allowed.
@@ -366,7 +372,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   }
 
   readConfigs(Args);
-  initLLVM();
+  initLLVM(Args);
   createFiles(Args);
   inferMachineType();
   setConfigs(Args);
@@ -690,7 +696,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   // Parse LTO plugin-related options for compatibility with gold.
-  std::vector<const char *> LTOOptions({Config->Argv[0].data()});
   for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
     StringRef S = Arg->getValue();
     if (S == "disable-verify")
@@ -704,13 +709,11 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     else if (S.startswith("jobs="))
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
-             !S.startswith("-pass-through="))
-      LTOOptions.push_back(S.data());
+             !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
+             !S.startswith("thinlto") && S != "-function-sections" &&
+             S != "-data-sections")
+      error(Arg->getSpelling() + ": unknown option: " + S);
   }
-  // Parse and evaluate -mllvm options.
-  for (auto *Arg : Args.filtered(OPT_mllvm))
-    LTOOptions.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(LTOOptions.size(), LTOOptions.data());
 
   if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + Twine(Config->LTOO));
