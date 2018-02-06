@@ -12,74 +12,65 @@
 
 #include "Context.h"
 #include "Function.h"
+#include <atomic>
+#include <cassert>
 #include <condition_variable>
-#include <deque>
+#include <memory>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 namespace clang {
 namespace clangd {
-/// A simple fixed-size thread pool implementation.
-class ThreadPool {
+
+/// A shared boolean flag indicating if the computation was cancelled.
+/// Once cancelled, cannot be returned to the previous state.
+class CancellationFlag {
 public:
-  /// If \p AsyncThreadsCount is 0, requests added using addToFront and addToEnd
-  /// will be processed synchronously on the calling thread.
-  // Otherwise, \p AsyncThreadsCount threads will be created to schedule the
-  // requests.
-  ThreadPool(unsigned AsyncThreadsCount);
-  /// Destructor blocks until all requests are processed and worker threads are
-  /// terminated.
-  ~ThreadPool();
+  CancellationFlag();
 
-  /// Add a new request to run function \p F with args \p As to the start of the
-  /// queue. The request will be run on a separate thread.
-  template <class Func, class... Args>
-  void addToFront(Func &&F, Args &&... As) {
-    if (RunSynchronously) {
-      std::forward<Func>(F)(std::forward<Args>(As)...);
-      return;
-    }
-
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.emplace_front(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...),
-          Context::current().clone());
-    }
-    RequestCV.notify_one();
+  void cancel() {
+    assert(WasCancelled && "the object was moved");
+    WasCancelled->store(true);
   }
 
-  /// Add a new request to run function \p F with args \p As to the end of the
-  /// queue. The request will be run on a separate thread.
-  template <class Func, class... Args> void addToEnd(Func &&F, Args &&... As) {
-    if (RunSynchronously) {
-      std::forward<Func>(F)(std::forward<Args>(As)...);
-      return;
-    }
-
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.emplace_back(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...),
-          Context::current().clone());
-    }
-    RequestCV.notify_one();
+  bool isCancelled() const {
+    assert(WasCancelled && "the object was moved");
+    return WasCancelled->load();
   }
 
 private:
-  bool RunSynchronously;
-  mutable std::mutex Mutex;
-  /// We run some tasks on separate threads(parsing, CppFile cleanup).
-  /// These threads looks into RequestQueue to find requests to handle and
-  /// terminate when Done is set to true.
-  std::vector<std::thread> Workers;
-  /// Setting Done to true will make the worker threads terminate.
-  bool Done = false;
-  /// A queue of requests.
-  std::deque<std::pair<UniqueFunction<void()>, Context>> RequestQueue;
-  /// Condition variable to wake up worker threads.
-  std::condition_variable RequestCV;
+  std::shared_ptr<std::atomic<bool>> WasCancelled;
+};
+
+/// Limits the number of threads that can acquire the lock at the same time.
+class Semaphore {
+public:
+  Semaphore(std::size_t MaxLocks);
+
+  void lock();
+  void unlock();
+
+private:
+  std::mutex Mutex;
+  std::condition_variable SlotsChanged;
+  std::size_t FreeSlots;
+};
+
+/// Runs tasks on separate (detached) threads and wait for all tasks to finish.
+/// Objects that need to spawn threads can own an AsyncTaskRunner to ensure they
+/// all complete on destruction.
+class AsyncTaskRunner {
+public:
+  /// Destructor waits for all pending tasks to finish.
+  ~AsyncTaskRunner();
+
+  void waitForAll();
+  void runAsync(UniqueFunction<void()> Action);
+
+private:
+  std::mutex Mutex;
+  std::condition_variable TasksReachedZero;
+  std::size_t InFlightTasks = 0;
 };
 } // namespace clangd
 } // namespace clang
