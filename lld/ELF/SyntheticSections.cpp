@@ -1211,7 +1211,7 @@ void RelocationBaseSection::addReloc(uint32_t DynType,
   // relocations for compatibility with GNU Linkers. There is some system
   // software such as the Bionic dynamic linker that uses the addend prior
   // to dynamic relocation resolution.
-  if ((!Config->IsRela || Config->ApplyDynamicRelocs) && UseSymVA)
+  if (Config->WriteAddends && UseSymVA)
     InputSec->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
   addReloc({DynType, InputSec, OffsetInSec, UseSymVA, Sym, Addend});
 }

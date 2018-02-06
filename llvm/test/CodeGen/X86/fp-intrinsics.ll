@@ -245,7 +245,7 @@ entry:
 ; Verify that fma(3.5) isn't simplified when the rounding mode is
 ; unknown.
 ; CHECK-LABEL: f17
-; FMACALL32: jmp fmaf@PLT  # TAILCALL
+; FMACALL32: jmp fmaf  # TAILCALL
 ; FMA32: vfmadd213ss
 define float @f17() {
 entry:
@@ -261,7 +261,7 @@ entry:
 ; Verify that fma(42.1) isn't simplified when the rounding mode is
 ; unknown.
 ; CHECK-LABEL: f18
-; FMACALL64: jmp fma@PLT  # TAILCALL
+; FMACALL64: jmp fma  # TAILCALL
 ; FMA64: vfmadd213sd
 define double @f18() {
 entry:

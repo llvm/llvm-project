@@ -334,8 +334,9 @@ public:
       IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
     else
       IsValid = isInt<12>(Imm);
-    return IsValid &&
-           (VK == RISCVMCExpr::VK_RISCV_None || VK == RISCVMCExpr::VK_RISCV_LO);
+    return IsValid && (VK == RISCVMCExpr::VK_RISCV_None ||
+                       VK == RISCVMCExpr::VK_RISCV_LO ||
+                       VK == RISCVMCExpr::VK_RISCV_PCREL_LO);
   }
 
   bool isSImm12Lsb0() const { return isBareSimmNLsb0<12>(); }

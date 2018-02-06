@@ -911,6 +911,10 @@ public:
     return AMDGPU::hasMIMG_R128(getSTI());
   }
 
+  bool hasPackedD16() const {
+    return AMDGPU::hasPackedD16(getSTI());
+  }
+
   bool isSI() const {
     return AMDGPU::isSI(getSTI());
   }
@@ -2309,7 +2313,12 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if (DMask == 0)
     DMask = 1;
 
-  return (VDataSize / 4) == countPopulation(DMask) + TFESize;
+  unsigned DataSize = countPopulation(DMask);
+  if ((Desc.TSFlags & SIInstrFlags::D16) != 0 && hasPackedD16()) {
+    DataSize = (DataSize + 1) / 2;
+  }
+
+  return (VDataSize / 4) == DataSize + TFESize;
 }
 
 bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
@@ -2378,16 +2387,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
       "integer clamping is not supported on this GPU");
     return false;
   }
-  if (!validateMIMGDataSize(Inst)) {
-    Error(IDLoc,
-      "image data size does not match dmask and tfe");
-    return false;
-  }
-  if (!validateMIMGAtomicDMask(Inst)) {
-    Error(IDLoc,
-      "invalid atomic image dmask");
-    return false;
-  }
   if (!validateMIMGR128(Inst)) {
     Error(IDLoc,
       "r128 modifier is not supported on this GPU");
@@ -2397,6 +2396,16 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGD16(Inst)) {
     Error(IDLoc,
       "d16 modifier is not supported on this GPU");
+    return false;
+  }
+  if (!validateMIMGDataSize(Inst)) {
+    Error(IDLoc,
+      "image data size does not match dmask and tfe");
+    return false;
+  }
+  if (!validateMIMGAtomicDMask(Inst)) {
+    Error(IDLoc,
+      "invalid atomic image dmask");
     return false;
   }
 

@@ -10814,23 +10814,18 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
     // information is added for it.
     diagnoseArrayStarInParamType(*this, PType, Param->getLocation());
 
-    // MSVC destroys objects passed by value in the callee.  Therefore a
-    // function definition which takes such a parameter must be able to call the
-    // object's destructor.  However, we don't perform any direct access check
-    // on the dtor.
-    if (getLangOpts().CPlusPlus && Context.getTargetInfo()
-                                       .getCXXABI()
-                                       .areArgsDestroyedLeftToRightInCallee()) {
-      if (!Param->isInvalidDecl()) {
-        if (const RecordType *RT = Param->getType()->getAs<RecordType>()) {
-          CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-          if (!ClassDecl->isInvalidDecl() &&
-              !ClassDecl->hasIrrelevantDestructor() &&
-              !ClassDecl->isDependentContext()) {
-            CXXDestructorDecl *Destructor = LookupDestructor(ClassDecl);
-            MarkFunctionReferenced(Param->getLocation(), Destructor);
-            DiagnoseUseOfDecl(Destructor, Param->getLocation());
-          }
+    // If the parameter is a c++ class type and it has to be destructed in the
+    // callee function, declare the destructor so that it can be called by the
+    // callee function. Do not perfom any direct access check on the dtor here.
+    if (!Param->isInvalidDecl()) {
+      if (CXXRecordDecl *ClassDecl = Param->getType()->getAsCXXRecordDecl()) {
+        if (!ClassDecl->isInvalidDecl() &&
+            !ClassDecl->hasIrrelevantDestructor() &&
+            !ClassDecl->isDependentContext() &&
+            Context.isParamDestroyedInCallee(Param->getType())) {
+          CXXDestructorDecl *Destructor = LookupDestructor(ClassDecl);
+          MarkFunctionReferenced(Param->getLocation(), Destructor);
+          DiagnoseUseOfDecl(Destructor, Param->getLocation());
         }
       }
     }

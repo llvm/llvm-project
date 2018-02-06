@@ -284,8 +284,8 @@ inline bool isKernel(CallingConv::ID CC) {
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI);
-
 bool hasMIMG_R128(const MCSubtargetInfo &STI);
+bool hasPackedD16(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);

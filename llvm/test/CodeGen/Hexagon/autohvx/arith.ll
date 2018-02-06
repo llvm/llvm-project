@@ -239,16 +239,14 @@ define <128 x i8> @mpyb_128(<128 x i8> %v0, <128 x i8> %v1) #1 {
 }
 
 ; CHECK-LABEL: mpyh_64:
-; CHECK: v[[H01:[0-9]+]]:[[L01:[0-9]+]].w = vmpy(v0.h,v1.h)
-; CHECK: vshuffe(v[[H01]].h,v[[L01]].h)
+; CHECK: vmpyi(v0.h,v1.h)
 define <32 x i16> @mpyh_64(<32 x i16> %v0, <32 x i16> %v1) #0 {
   %p = mul <32 x i16> %v0, %v1
   ret <32 x i16> %p
 }
 
 ; CHECK-LABEL: mpyh_128:
-; CHECK: v[[H11:[0-9]+]]:[[L11:[0-9]+]].w = vmpy(v0.h,v1.h)
-; CHECK: vshuffe(v[[H11]].h,v[[L11]].h)
+; CHECK: vmpyi(v0.h,v1.h)
 define <64 x i16> @mpyh_128(<64 x i16> %v0, <64 x i16> %v1) #1 {
   %p = mul <64 x i16> %v0, %v1
   ret <64 x i16> %p

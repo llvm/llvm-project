@@ -156,23 +156,17 @@ struct C : public A, public B {
 
 // BITCODE-LABEL: define {{.*}}\01?ffun@test4@@YAXAAUC@1@@Z
 void ffun(C &c) {
-  // BITCODE: load
-  // BITCODE: bitcast
-  // BITCODE: bitcast
   // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
   // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
-  // BITCODE-NEXT: call x86_thiscallcc {{.*}}(i8* [[THIS2]])
+  // BITCODE: call x86_thiscallcc {{.*}}(i8* [[THIS2]])
   c.bar();
 }
 
 // BITCODE-LABEL: define {{.*}}\01?fop@test4@@YAXAAUC@1@@Z
 void fop(C &c) {
-  // BITCODE: load
-  // BITCODE: bitcast
-  // BITCODE: bitcast
   // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
   // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
-  // BITCODE-NEXT: call x86_thiscallcc {{.*}}(i8* [[THIS2]])
+  // BITCODE: call x86_thiscallcc {{.*}}(i8* [[THIS2]])
   -c;
 }
 

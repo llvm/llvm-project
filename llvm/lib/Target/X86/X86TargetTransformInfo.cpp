@@ -2482,6 +2482,10 @@ bool X86TTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                     C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }
 
+bool X86TTIImpl::canMacroFuseCmp() {
+  return ST->hasMacroFusion();
+}
+
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
   // The backend can't handle a single element vector.
   if (isa<VectorType>(DataTy) && DataTy->getVectorNumElements() == 1)

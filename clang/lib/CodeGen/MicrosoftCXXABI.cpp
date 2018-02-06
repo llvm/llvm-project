@@ -285,9 +285,9 @@ public:
   llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
                                         CharUnits VPtrOffset) override;
 
-  CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
-                                     Address This, llvm::Type *Ty,
-                                     SourceLocation Loc) override;
+  llvm::Value *getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
+                                         Address This, llvm::Type *Ty,
+                                         SourceLocation Loc) override;
 
   llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *Dtor,
@@ -820,19 +820,8 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     return RAA_Default;
 
   case llvm::Triple::x86_64:
-    // If a class has a destructor, we'd really like to pass it indirectly
-    // because it allows us to elide copies.  Unfortunately, MSVC makes that
-    // impossible for small types, which it will pass in a single register or
-    // stack slot. Most objects with dtors are large-ish, so handle that early.
-    // We can't call out all large objects as being indirect because there are
-    // multiple x64 calling conventions and the C++ ABI code shouldn't dictate
-    // how we pass large POD types.
-    //
-    // Note: This permits small classes with nontrivial destructors to be
-    // passed in registers, which is non-conforming.
-    if (RD->hasNonTrivialDestructor() &&
-        getContext().getTypeSize(RD->getTypeForDecl()) > 64)
-      return RAA_Indirect;
+    bool CopyCtorIsTrivial = false, CopyCtorIsTrivialForCall = false;
+    bool DtorIsTrivialForCall = false;
 
     // If a class has at least one non-deleted, trivial copy constructor, it
     // is passed according to the C ABI. Otherwise, it is passed indirectly.
@@ -841,23 +830,49 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     // passed in registers, so long as they *also* have a trivial copy ctor,
     // which is non-conforming.
     if (RD->needsImplicitCopyConstructor()) {
-      // If the copy ctor has not yet been declared, we can read its triviality
-      // off the AST.
-      if (!RD->defaultedCopyConstructorIsDeleted() &&
-          RD->hasTrivialCopyConstructor())
-        return RAA_Default;
+      if (!RD->defaultedCopyConstructorIsDeleted()) {
+        if (RD->hasTrivialCopyConstructor())
+          CopyCtorIsTrivial = true;
+        if (RD->hasTrivialCopyConstructorForCall())
+          CopyCtorIsTrivialForCall = true;
+      }
     } else {
-      // Otherwise, we need to find the copy constructor(s) and ask.
       for (const CXXConstructorDecl *CD : RD->ctors()) {
-        if (CD->isCopyConstructor()) {
-          // We had at least one nondeleted trivial copy ctor.  Return directly.
-          if (!CD->isDeleted() && CD->isTrivial())
-            return RAA_Default;
+        if (CD->isCopyConstructor() && !CD->isDeleted()) {
+          if (CD->isTrivial())
+            CopyCtorIsTrivial = true;
+          if (CD->isTrivialForCall())
+            CopyCtorIsTrivialForCall = true;
         }
       }
     }
 
-    // We have no trivial, non-deleted copy constructor.
+    if (RD->needsImplicitDestructor()) {
+      if (!RD->defaultedDestructorIsDeleted() &&
+          RD->hasTrivialDestructorForCall())
+        DtorIsTrivialForCall = true;
+    } else if (const auto *D = RD->getDestructor()) {
+      if (!D->isDeleted() && D->isTrivialForCall())
+        DtorIsTrivialForCall = true;
+    }
+
+    // If the copy ctor and dtor are both trivial-for-calls, pass direct.
+    if (CopyCtorIsTrivialForCall && DtorIsTrivialForCall)
+      return RAA_Default;
+
+    // If a class has a destructor, we'd really like to pass it indirectly
+    // because it allows us to elide copies.  Unfortunately, MSVC makes that
+    // impossible for small types, which it will pass in a single register or
+    // stack slot. Most objects with dtors are large-ish, so handle that early.
+    // We can't call out all large objects as being indirect because there are
+    // multiple x64 calling conventions and the C++ ABI code shouldn't dictate
+    // how we pass large POD types.
+
+    // Note: This permits small classes with nontrivial destructors to be
+    // passed in registers, which is non-conforming.
+    if (CopyCtorIsTrivial &&
+        getContext().getTypeSize(RD->getTypeForDecl()) <= 64)
+      return RAA_Default;
     return RAA_Indirect;
   }
 
@@ -1812,11 +1827,11 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   return VTable;
 }
 
-CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                                    GlobalDecl GD,
-                                                    Address This,
-                                                    llvm::Type *Ty,
-                                                    SourceLocation Loc) {
+llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
+                                                        GlobalDecl GD,
+                                                        Address This,
+                                                        llvm::Type *Ty,
+                                                        SourceLocation Loc) {
   GD = GD.getCanonicalDecl();
   CGBuilderTy &Builder = CGF.Builder;
 
@@ -1843,22 +1858,17 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
         ->ObjectWithVPtr;
   };
 
-  llvm::Value *VFunc;
-  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
-    VFunc = CGF.EmitVTableTypeCheckedLoad(
+  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent()))
+    return CGF.EmitVTableTypeCheckedLoad(
         getObjectWithVPtr(), VTable,
         ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
-  } else {
-    if (CGM.getCodeGenOpts().PrepareForLTO)
-      CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
-    llvm::Value *VFuncPtr =
-        Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
-    VFunc = Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
-  }
+  if (CGM.getCodeGenOpts().PrepareForLTO)
+    CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
-  CGCallee Callee(MethodDecl, VFunc);
-  return Callee;
+  llvm::Value *VFuncPtr =
+      Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+  return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
 }
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
@@ -1872,9 +1882,9 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   GlobalDecl GD(Dtor, Dtor_Deleting);
   const CGFunctionInfo *FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
       Dtor, StructorType::Deleting);
-  llvm::Type *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
-  CGCallee Callee = getVirtualFunctionPointer(
-      CGF, GD, This, Ty, CE ? CE->getLocStart() : SourceLocation());
+  auto *Ty =
+      cast<llvm::FunctionType>(CGF.CGM.getTypes().GetFunctionType(*FInfo));
+  CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
   ASTContext &Context = getContext();
   llvm::Value *ImplicitParam = llvm::ConstantInt::get(

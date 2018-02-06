@@ -401,7 +401,7 @@ void DWARFContext::dump(
         LineTable.parse(LineData, &Offset, *this, U, &OS);
       } else {
         LineTable.parse(LineData, &Offset, *this, U);
-        LineTable.dump(OS);
+        LineTable.dump(OS, DIDumpOptions());
       }
       // Check for unparseable prologue, to avoid infinite loops.
       if (OldOffset == Offset)
@@ -426,7 +426,7 @@ void DWARFContext::dump(
       if (!LineTable.Prologue.parse(LineData, &Offset, *this, U))
         break;
       if (!DumpOffset || OldOffset == *DumpOffset)
-        LineTable.dump(OS);
+        LineTable.dump(OS, DumpOpts);
     }
   }
 

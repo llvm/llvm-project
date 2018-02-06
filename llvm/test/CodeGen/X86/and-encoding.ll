@@ -61,7 +61,7 @@ define i64 @lopped64_32to8(i64 %x) {
 ; CHECK-LABEL: lopped64_32to8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrq $36, %rdi # encoding: [0x48,0xc1,0xef,0x24]
-; CHECK-NEXT:    andq $-16, %rdi # encoding: [0x48,0x83,0xe7,0xf0]
+; CHECK-NEXT:    andl $-16, %edi # encoding: [0x83,0xe7,0xf0]
 ; CHECK-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %shr = lshr i64 %x, 36

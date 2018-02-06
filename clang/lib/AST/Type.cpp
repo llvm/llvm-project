@@ -2201,6 +2201,12 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   return false;
 }
 
+bool QualType::hasTrivialABIOverride() const {
+  if (const auto *RD = getTypePtr()->getAsCXXRecordDecl())
+    return RD->hasTrivialABIOverride();
+  return false;
+}
+
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
   return !Context.getLangOpts().ObjCAutoRefCount &&
          Context.getLangOpts().ObjCWeak &&

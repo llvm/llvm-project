@@ -55,6 +55,10 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* The signatures for the builtins @llvm.memcpy, @llvm.memmove, and @llvm.memset
+  have changed. Alignment is no longer an argument, and are instead conveyed as
+  parameter attributes.
+
 Changes to the ARM Backend
 --------------------------
 

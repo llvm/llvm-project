@@ -36118,8 +36118,7 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
   // that's the only integer compares with we have.
   ISD::CondCode CC = cast<CondCodeSDNode>(N0->getOperand(2))->get();
-  if (ISD::isUnsignedIntSetCC(CC) || CC == ISD::SETLE || CC == ISD::SETGE ||
-      CC == ISD::SETNE)
+  if (ISD::isUnsignedIntSetCC(CC))
     return SDValue();
 
   // Only do this combine if the extension will be fully consumed by the setcc.

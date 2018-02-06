@@ -88,7 +88,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       DefaultedMoveConstructorIsDeleted(false),
       DefaultedMoveAssignmentIsDeleted(false),
       DefaultedDestructorIsDeleted(false), HasTrivialSpecialMembers(SMF_All),
-      DeclaredNonTrivialSpecialMembers(0), HasIrrelevantDestructor(true),
+      HasTrivialSpecialMembersForCall(SMF_All),
+      DeclaredNonTrivialSpecialMembers(0),
+      DeclaredNonTrivialSpecialMembersForCall(0), HasIrrelevantDestructor(true),
       HasConstexprNonCopyMoveConstructor(false),
       HasDefaultedDefaultConstructor(false),
       CanPassInRegisters(true),
@@ -281,6 +283,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   operator for a class X] is trivial [...] if:
       //    -- class X has [...] no virtual base classes
       data().HasTrivialSpecialMembers &= SMF_Destructor;
+      data().HasTrivialSpecialMembersForCall &= SMF_Destructor;
 
       // C++0x [class]p7:
       //   A standard-layout class is a class that: [...]
@@ -314,12 +317,19 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //       subobject is trivial, and
       if (!BaseClassDecl->hasTrivialCopyConstructor())
         data().HasTrivialSpecialMembers &= ~SMF_CopyConstructor;
+
+      if (!BaseClassDecl->hasTrivialCopyConstructorForCall())
+        data().HasTrivialSpecialMembersForCall &= ~SMF_CopyConstructor;
+
       // If the base class doesn't have a simple move constructor, we'll eagerly
       // declare it and perform overload resolution to determine which function
       // it actually calls. If it does have a simple move constructor, this
       // check is correct.
       if (!BaseClassDecl->hasTrivialMoveConstructor())
         data().HasTrivialSpecialMembers &= ~SMF_MoveConstructor;
+
+      if (!BaseClassDecl->hasTrivialMoveConstructorForCall())
+        data().HasTrivialSpecialMembersForCall &= ~SMF_MoveConstructor;
 
       // C++0x [class.copy]p27:
       //   A copy/move assignment operator for class X is trivial if [...]
@@ -356,6 +366,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     //   have trivial destructors.
     if (!BaseClassDecl->hasTrivialDestructor())
       data().HasTrivialSpecialMembers &= ~SMF_Destructor;
+
+    if (!BaseClassDecl->hasTrivialDestructorForCall())
+      data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
 
     if (!BaseClassDecl->hasIrrelevantDestructor())
       data().HasIrrelevantDestructor = false;
@@ -539,6 +552,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   assignment operator for a class X] is trivial [...] if:
       //    -- class X has no virtual functions [...]
       data().HasTrivialSpecialMembers &= SMF_Destructor;
+      data().HasTrivialSpecialMembersForCall &= SMF_Destructor;
 
       // C++0x [class]p7:
       //   A standard-layout class is a class that: [...]
@@ -623,8 +637,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
     // C++11 [class.dtor]p5:
     //   A destructor is trivial if [...] the destructor is not virtual.
-    if (DD->isVirtual())
+    if (DD->isVirtual()) {
       data().HasTrivialSpecialMembers &= ~SMF_Destructor;
+      data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
+    }
   }
 
   // Handle member functions.
@@ -670,16 +686,30 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // If this is the first declaration of a special member, we no longer have
       // an implicit trivial special member.
       data().HasTrivialSpecialMembers &=
-        data().DeclaredSpecialMembers | ~SMKind;
+          data().DeclaredSpecialMembers | ~SMKind;
+      data().HasTrivialSpecialMembersForCall &=
+          data().DeclaredSpecialMembers | ~SMKind;
 
       if (!Method->isImplicit() && !Method->isUserProvided()) {
         // This method is user-declared but not user-provided. We can't work out
         // whether it's trivial yet (not until we get to the end of the class).
         // We'll handle this method in finishedDefaultedOrDeletedMember.
-      } else if (Method->isTrivial())
+      } else if (Method->isTrivial()) {
         data().HasTrivialSpecialMembers |= SMKind;
-      else
+        data().HasTrivialSpecialMembersForCall |= SMKind;
+      } else if (Method->isTrivialForCall()) {
+        data().HasTrivialSpecialMembersForCall |= SMKind;
         data().DeclaredNonTrivialSpecialMembers |= SMKind;
+      } else {
+        data().DeclaredNonTrivialSpecialMembers |= SMKind;
+        // If this is a user-provided function, do not set
+        // DeclaredNonTrivialSpecialMembersForCall here since we don't know
+        // yet whether the method would be considered non-trivial for the
+        // purpose of calls (attribute "trivial_abi" can be dropped from the
+        // class later, which can change the special method's triviality).
+        if (!Method->isUserProvided())
+          data().DeclaredNonTrivialSpecialMembersForCall |= SMKind;
+      }
 
       // Note when we have declared a declared special member, and suppress the
       // implicit declaration of this special member.
@@ -772,6 +802,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
         struct DefinitionData &Data = data();
         Data.PlainOldData = false;
         Data.HasTrivialSpecialMembers = 0;
+        Data.HasTrivialSpecialMembersForCall = 0;
         Data.HasIrrelevantDestructor = false;
       } else if (!Context.getLangOpts().ObjCAutoRefCount) {
         setHasObjectMember(true);
@@ -899,11 +930,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //       member is trivial;
         if (!FieldRec->hasTrivialCopyConstructor())
           data().HasTrivialSpecialMembers &= ~SMF_CopyConstructor;
+
+        if (!FieldRec->hasTrivialCopyConstructorForCall())
+          data().HasTrivialSpecialMembersForCall &= ~SMF_CopyConstructor;
+
         // If the field doesn't have a simple move constructor, we'll eagerly
         // declare the move constructor for this class and we'll decide whether
         // it's trivial then.
         if (!FieldRec->hasTrivialMoveConstructor())
           data().HasTrivialSpecialMembers &= ~SMF_MoveConstructor;
+
+        if (!FieldRec->hasTrivialMoveConstructorForCall())
+          data().HasTrivialSpecialMembersForCall &= ~SMF_MoveConstructor;
 
         // C++0x [class.copy]p27:
         //   A copy/move assignment operator for class X is trivial if [...]
@@ -921,6 +959,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         if (!FieldRec->hasTrivialDestructor())
           data().HasTrivialSpecialMembers &= ~SMF_Destructor;
+        if (!FieldRec->hasTrivialDestructorForCall())
+          data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
         if (!FieldRec->hasIrrelevantDestructor())
           data().HasIrrelevantDestructor = false;
         if (FieldRec->hasObjectMember())
@@ -1101,6 +1141,23 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
     data().HasTrivialSpecialMembers |= SMKind;
   else
     data().DeclaredNonTrivialSpecialMembers |= SMKind;
+}
+
+void CXXRecordDecl::setTrivialForCallFlags(CXXMethodDecl *D) {
+  unsigned SMKind = 0;
+
+  if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
+    if (Constructor->isCopyConstructor())
+      SMKind = SMF_CopyConstructor;
+    else if (Constructor->isMoveConstructor())
+      SMKind = SMF_MoveConstructor;
+  } else if (isa<CXXDestructorDecl>(D))
+    SMKind = SMF_Destructor;
+
+  if (D->isTrivialForCall())
+    data().HasTrivialSpecialMembersForCall |= SMKind;
+  else
+    data().DeclaredNonTrivialSpecialMembersForCall |= SMKind;
 }
 
 bool CXXRecordDecl::isCLike() const {
