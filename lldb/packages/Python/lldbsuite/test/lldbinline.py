@@ -97,9 +97,9 @@ class InlineTest(TestBase):
             # The test was skipped altogether.
             return ""
         elif self.using_dsym:
-            return "-N dwarf %s" % (self.mydir)
+            return "-N dwarf " + self.mydir
         else:
-            return "-N dsym %s" % (self.mydir)
+            return "-N dsym " + self.mydir
 
     def BuildMakefile(self):
         self.makeBuildDir()

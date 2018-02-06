@@ -42,6 +42,7 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
@@ -252,18 +253,11 @@ void LinkerDriver::addLibrary(StringRef Name) {
 // LTO calls LLVM functions to compile bitcode files to native code.
 // Technically this can be delayed until we read bitcode files, but
 // we don't bother to do lazily because the initialization is fast.
-static void initLLVM(opt::InputArgList &Args) {
+static void initLLVM() {
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
-
-  // Parse and evaluate -mllvm options.
-  std::vector<const char *> V;
-  V.push_back("lld (LLVM option parsing)");
-  for (auto *Arg : Args.filtered(OPT_mllvm))
-    V.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(V.size(), V.data());
 }
 
 // Some command line options or some combinations of them are not allowed.
@@ -372,7 +366,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   }
 
   readConfigs(Args);
-  initLLVM(Args);
+  initLLVM();
   createFiles(Args);
   inferMachineType();
   setConfigs(Args);
@@ -596,7 +590,9 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition =
-      Args.hasArg(OPT_allow_multiple_definition) || hasZOption(Args, "muldefs");
+      Args.hasFlag(OPT_allow_multiple_definition,
+                   OPT_no_allow_multiple_definition, false) ||
+      hasZOption(Args, "muldefs");
   Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -678,7 +674,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->Verbose = Args.hasArg(OPT_verbose);
   errorHandler().Verbose = Config->Verbose;
-  Config->WarnCommon = Args.hasArg(OPT_warn_common);
+  Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
@@ -694,6 +690,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   // Parse LTO plugin-related options for compatibility with gold.
+  std::vector<const char *> LTOOptions({Config->Argv[0].data()});
   for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
     StringRef S = Arg->getValue();
     if (S == "disable-verify")
@@ -708,10 +705,13 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
              !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
-             !S.startswith("thinlto") && S != "-function-sections" &&
-             S != "-data-sections")
-      error(Arg->getSpelling() + ": unknown option: " + S);
+             !S.startswith("thinlto"))
+      LTOOptions.push_back(S.data());
   }
+  // Parse and evaluate -mllvm options.
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    LTOOptions.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(LTOOptions.size(), LTOOptions.data());
 
   if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + Twine(Config->LTOO));

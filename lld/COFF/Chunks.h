@@ -320,17 +320,41 @@ private:
   Defined *Sym;
 };
 
-// Windows-specific.
-// A chunk for SEH table which contains RVAs of safe exception handler
-// functions. x86-only.
-class SEHTableChunk : public Chunk {
+// Duplicate RVAs are not allowed in RVA tables, so unique symbols by chunk and
+// offset into the chunk. Order does not matter as the RVA table will be sorted
+// later.
+struct ChunkAndOffset {
+  Chunk *InputChunk;
+  uint32_t Offset;
+
+  struct DenseMapInfo {
+    static ChunkAndOffset getEmptyKey() {
+      return {llvm::DenseMapInfo<Chunk *>::getEmptyKey(), 0};
+    }
+    static ChunkAndOffset getTombstoneKey() {
+      return {llvm::DenseMapInfo<Chunk *>::getTombstoneKey(), 0};
+    }
+    static unsigned getHashValue(const ChunkAndOffset &CO) {
+      return llvm::DenseMapInfo<std::pair<Chunk *, uint32_t>>::getHashValue(
+          {CO.InputChunk, CO.Offset});
+    }
+    static bool isEqual(const ChunkAndOffset &LHS, const ChunkAndOffset &RHS) {
+      return LHS.InputChunk == RHS.InputChunk && LHS.Offset == RHS.Offset;
+    }
+  };
+};
+
+using SymbolRVASet = llvm::DenseSet<ChunkAndOffset>;
+
+// Table which contains symbol RVAs. Used for /safeseh and /guard:cf.
+class RVATableChunk : public Chunk {
 public:
-  explicit SEHTableChunk(std::set<Defined *> S) : Syms(std::move(S)) {}
+  explicit RVATableChunk(SymbolRVASet S) : Syms(std::move(S)) {}
   size_t getSize() const override { return Syms.size() * 4; }
   void writeTo(uint8_t *Buf) const override;
 
 private:
-  std::set<Defined *> Syms;
+  SymbolRVASet Syms;
 };
 
 // Windows-specific.
@@ -361,5 +385,11 @@ void applyBranch24T(uint8_t *Off, int32_t V);
 
 } // namespace coff
 } // namespace lld
+
+namespace llvm {
+template <>
+struct DenseMapInfo<lld::coff::ChunkAndOffset>
+    : lld::coff::ChunkAndOffset::DenseMapInfo {};
+}
 
 #endif

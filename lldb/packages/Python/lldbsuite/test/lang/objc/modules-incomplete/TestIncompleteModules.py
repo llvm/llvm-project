@@ -22,6 +22,7 @@ class IncompleteModulesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
+    @skipIfDarwin
     @skipUnlessDarwin
     @expectedFailureDarwin("rdar://24543255")
     @unittest2.expectedFailure("rdar://20416388")
