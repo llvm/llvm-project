@@ -58,15 +58,17 @@ public:
       // This table *must* be in the order that the fixup_* kinds are defined in
       // RISCVFixupKinds.h.
       //
-      // name                    offset bits  flags
-      { "fixup_riscv_hi20",       12,     20,  0 },
-      { "fixup_riscv_lo12_i",     20,     12,  0 },
-      { "fixup_riscv_lo12_s",      0,     32,  0 },
-      { "fixup_riscv_pcrel_hi20", 12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_jal",        12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_branch",      0,     32,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_jump",    2,     11,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_branch",  0,     16,  MCFixupKindInfo::FKF_IsPCRel }
+      // name                      offset bits  flags
+      { "fixup_riscv_hi20",         12,     20,  0 },
+      { "fixup_riscv_lo12_i",       20,     12,  0 },
+      { "fixup_riscv_lo12_s",        0,     32,  0 },
+      { "fixup_riscv_pcrel_hi20",   12,     20,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_pcrel_lo12_i", 20,     12,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_pcrel_lo12_s",  0,     32,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_jal",          12,     20,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_branch",        0,     32,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_rvc_jump",      2,     11,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_rvc_branch",    0,     16,  MCFixupKindInfo::FKF_IsPCRel }
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -122,8 +124,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_8:
     return Value;
   case RISCV::fixup_riscv_lo12_i:
+  case RISCV::fixup_riscv_pcrel_lo12_i:
     return Value & 0xfff;
   case RISCV::fixup_riscv_lo12_s:
+  case RISCV::fixup_riscv_pcrel_lo12_s:
     return (((Value >> 5) & 0x7f) << 25) | ((Value & 0x1f) << 7);
   case RISCV::fixup_riscv_hi20:
   case RISCV::fixup_riscv_pcrel_hi20:

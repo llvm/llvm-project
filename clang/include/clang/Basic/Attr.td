@@ -1159,6 +1159,13 @@ def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
   let Documentation = [LayoutVersionDocs];
 }
 
+def TrivialABI : InheritableAttr {
+  let Spellings = [Clang<"trivial_abi">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [TrivialABIDocs];
+  let LangOpts = [CPlusPlus];
+}
+
 def MaxFieldAlignment : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

@@ -36,6 +36,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/SafeMachO.h"
 #include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Triple.h"
@@ -218,12 +219,15 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   if (sub != LLDB_INVALID_CPUTYPE)
     response.Printf("cpusubtype:%u;", sub);
 
-  if (cpu == ArchSpec::kCore_arm_any) {
+  if (cpu == llvm::MachO::CPU_TYPE_ARM
+      || cpu == llvm::MachO::CPU_TYPE_ARM64) {
 // Indicate the OS type.
 #if defined(TARGET_OS_TV) && TARGET_OS_TV == 1
     response.PutCString("ostype:tvos;");
 #elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
     response.PutCString("ostype:watchos;");
+#elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
+    response.PutCString("ostype:bridgeos;");
 #else
     response.PutCString("ostype:ios;");
 #endif

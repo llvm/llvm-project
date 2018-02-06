@@ -2881,6 +2881,9 @@ def err_base_specifier_attribute : Error<
 def err_invalid_attribute_on_virtual_function : Error<
   "%0 attribute cannot be applied to virtual functions">;
 
+def ext_cannot_use_trivial_abi : ExtWarn<
+  "'trivial_abi' cannot be applied to %0">, InGroup<IgnoredAttributes>;
+
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
   "unknown platform %0 in availability macro">, InGroup<Availability>;

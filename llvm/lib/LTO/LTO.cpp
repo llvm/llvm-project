@@ -177,8 +177,10 @@ static void computeCacheKey(
 
   auto AddUsedThings = [&](GlobalValueSummary *GS) {
     if (!GS) return;
-    for (const ValueInfo &VI : GS->refs())
+    for (const ValueInfo &VI : GS->refs()) {
+      AddUnsigned(VI.isDSOLocal());
       AddUsedCfiGlobal(VI.getGUID());
+    }
     if (auto *FS = dyn_cast<FunctionSummary>(GS)) {
       for (auto &TT : FS->type_tests())
         UsedTypeIds.insert(TT);
@@ -190,8 +192,10 @@ static void computeCacheKey(
         UsedTypeIds.insert(TT.VFunc.GUID);
       for (auto &TT : FS->type_checked_load_const_vcalls())
         UsedTypeIds.insert(TT.VFunc.GUID);
-      for (auto &ET : FS->calls())
+      for (auto &ET : FS->calls()) {
+        AddUnsigned(ET.first.isDSOLocal());
         AddUsedCfiGlobal(ET.first.getGUID());
+      }
     }
   };
 

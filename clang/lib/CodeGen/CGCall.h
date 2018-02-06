@@ -18,6 +18,7 @@
 #include "CGValue.h"
 #include "EHScopeStack.h"
 #include "clang/AST/CanonicalType.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "llvm/IR/Value.h"
 
@@ -68,8 +69,9 @@ public:
       Invalid,
       Builtin,
       PseudoDestructor,
+      Virtual,
 
-      Last = PseudoDestructor
+      Last = Virtual
     };
 
     struct BuiltinInfoStorage {
@@ -79,12 +81,19 @@ public:
     struct PseudoDestructorInfoStorage {
       const CXXPseudoDestructorExpr *Expr;
     };
+    struct VirtualInfoStorage {
+      const CallExpr *CE;
+      GlobalDecl MD;
+      Address Addr;
+      llvm::FunctionType *FTy;
+    };
 
     SpecialKind KindOrFunctionPointer;
     union {
       CGCalleeInfo AbstractInfo;
       BuiltinInfoStorage BuiltinInfo;
       PseudoDestructorInfoStorage PseudoDestructorInfo;
+      VirtualInfoStorage VirtualInfo;
     };
 
     explicit CGCallee(SpecialKind kind) : KindOrFunctionPointer(kind) {}
@@ -127,6 +136,16 @@ public:
       return CGCallee(abstractInfo, functionPtr);
     }
 
+    static CGCallee forVirtual(const CallExpr *CE, GlobalDecl MD, Address Addr,
+                               llvm::FunctionType *FTy) {
+      CGCallee result(SpecialKind::Virtual);
+      result.VirtualInfo.CE = CE;
+      result.VirtualInfo.MD = MD;
+      result.VirtualInfo.Addr = Addr;
+      result.VirtualInfo.FTy = FTy;
+      return result;
+    }
+
     bool isBuiltin() const {
       return KindOrFunctionPointer == SpecialKind::Builtin;
     }
@@ -150,7 +169,9 @@ public:
     bool isOrdinary() const {
       return uintptr_t(KindOrFunctionPointer) > uintptr_t(SpecialKind::Last);
     }
-    const CGCalleeInfo &getAbstractInfo() const {
+    CGCalleeInfo getAbstractInfo() const {
+      if (isVirtual())
+        return VirtualInfo.MD.getDecl();
       assert(isOrdinary());
       return AbstractInfo;
     }
@@ -158,13 +179,32 @@ public:
       assert(isOrdinary());
       return reinterpret_cast<llvm::Value*>(uintptr_t(KindOrFunctionPointer));
     }
-    llvm::FunctionType *getFunctionType() const {
-      return cast<llvm::FunctionType>(
-                    getFunctionPointer()->getType()->getPointerElementType());
-    }
     void setFunctionPointer(llvm::Value *functionPtr) {
       assert(isOrdinary());
       KindOrFunctionPointer = SpecialKind(uintptr_t(functionPtr));
+    }
+
+    bool isVirtual() const {
+      return KindOrFunctionPointer == SpecialKind::Virtual;
+    }
+    const CallExpr *getVirtualCallExpr() const {
+      assert(isVirtual());
+      return VirtualInfo.CE;
+    }
+    GlobalDecl getVirtualMethodDecl() const {
+      assert(isVirtual());
+      return VirtualInfo.MD;
+    }
+    Address getThisAddress() const {
+      assert(isVirtual());
+      return VirtualInfo.Addr;
+    }
+
+    llvm::FunctionType *getFunctionType() const {
+      if (isVirtual())
+        return VirtualInfo.FTy;
+      return cast<llvm::FunctionType>(
+          getFunctionPointer()->getType()->getPointerElementType());
     }
   };
 

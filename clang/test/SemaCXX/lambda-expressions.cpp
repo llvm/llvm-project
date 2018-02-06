@@ -608,3 +608,18 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
   // This used to crash in return type deduction for the conversion opreator.
   struct A { int n; void f() { +[](decltype(n)) {}; } };
 }
+
+namespace TypoCorrection {
+template <typename T> struct X {};
+// expected-note@-1 {{template parameter is declared here}}
+
+template <typename T>
+void Run(const int& points) {
+// expected-note@-1 {{'points' declared here}}
+  auto outer_lambda = []() {
+    auto inner_lambda = [](const X<Points>&) {};
+    // expected-error@-1 {{use of undeclared identifier 'Points'; did you mean 'points'?}}
+    // expected-error@-2 {{template argument for template type parameter must be a type}}
+  };
+}
+}

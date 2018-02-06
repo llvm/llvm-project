@@ -1868,7 +1868,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Don't push a cleanup in a thunk for a method that will also emit a
     // cleanup.
     if (!IsScalar && !CurFuncIsThunk &&
-        getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+        getContext().isParamDestroyedInCallee(Ty)) {
       const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
       if (RD && RD->hasNonTrivialDestructor())
         pushDestroy(QualType::DK_cxx_destructor, DeclPtr, Ty);

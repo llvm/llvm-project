@@ -471,6 +471,11 @@ public:
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) const;
 
+  /// Return true if the target can fuse a compare and branch.
+  /// Loop-strength-reduction (LSR) uses that knowledge to adjust its cost
+  /// calculation for the instructions in a loop.
+  bool canMacroFuseCmp() const;
+
   /// \brief Return true if the target supports masked load/store
   /// AVX2 and AVX-512 targets allow masks for consecutive load and store
   bool isLegalMaskedStore(Type *DataType) const;
@@ -978,6 +983,7 @@ public:
                                      Instruction *I) = 0;
   virtual bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                              TargetTransformInfo::LSRCost &C2) = 0;
+  virtual bool canMacroFuseCmp() = 0;
   virtual bool isLegalMaskedStore(Type *DataType) = 0;
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
@@ -1196,6 +1202,9 @@ public:
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) override {
     return Impl.isLSRCostLess(C1, C2);
+  }
+  bool canMacroFuseCmp() override {
+    return Impl.canMacroFuseCmp();
   }
   bool isLegalMaskedStore(Type *DataType) override {
     return Impl.isLegalMaskedStore(DataType);

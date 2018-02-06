@@ -17,6 +17,15 @@
 #include "llvm/Support/Path.h"
 using namespace llvm;
 
+bool ValueInfo::isDSOLocal() const {
+  // Need to check all summaries are local in case of hash collisions.
+  return getSummaryList().size() &&
+         llvm::all_of(getSummaryList(),
+                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->isDSOLocal();
+                      });
+}
+
 // Collect for the given module the list of function it defines
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(

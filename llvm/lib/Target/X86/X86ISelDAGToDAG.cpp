@@ -2486,14 +2486,24 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
   if (!And1C)
     return false;
 
-  // Bail out if the mask constant is already negative. It can't shrink more.
+  // Bail out if the mask constant is already negative. It's can't shrink more.
+  // If the upper 32 bits of a 64 bit mask are all zeros, we have special isel
+  // patterns to use a 32-bit and instead of a 64-bit and by relying on the
+  // implicit zeroing of 32 bit ops. So we should check if the lower 32 bits
+  // are negative too.
   APInt MaskVal = And1C->getAPIntValue();
   unsigned MaskLZ = MaskVal.countLeadingZeros();
-  if (!MaskLZ)
+  if (!MaskLZ || (VT == MVT::i64 && MaskLZ == 32))
     return false;
 
+  // Don't extend into the upper 32 bits of a 64 bit mask.
+  if (VT == MVT::i64 && MaskLZ >= 32) {
+    MaskLZ -= 32;
+    MaskVal = MaskVal.trunc(32);
+  }
+
   SDValue And0 = And->getOperand(0);
-  APInt HighZeros = APInt::getHighBitsSet(VT.getSizeInBits(), MaskLZ);
+  APInt HighZeros = APInt::getHighBitsSet(MaskVal.getBitWidth(), MaskLZ);
   APInt NegMaskVal = MaskVal | HighZeros;
 
   // If a negative constant would not allow a smaller encoding, there's no need
@@ -2501,6 +2511,12 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
   unsigned MinWidth = NegMaskVal.getMinSignedBits();
   if (MinWidth > 32 || (MinWidth > 8 && MaskVal.getMinSignedBits() <= 32))
     return false;
+
+  // Extend masks if we truncated above.
+  if (VT == MVT::i64 && MaskVal.getBitWidth() < 64) {
+    NegMaskVal = NegMaskVal.zext(64);
+    HighZeros = HighZeros.zext(64);
+  }
 
   // The variable operand must be all zeros in the top bits to allow using the
   // new, negative constant as the mask.

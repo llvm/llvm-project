@@ -2547,6 +2547,20 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "#elif FOO\n"
                "#endif",
                Style);
+  // Non-identifier #define after potential include guard.
+  verifyFormat("#ifndef FOO\n"
+               "#  define 1\n"
+               "#endif\n",
+               Style);
+  // #if closes past last non-preprocessor line.
+  verifyFormat("#ifndef FOO\n"
+               "#define FOO\n"
+               "#if 1\n"
+               "int i;\n"
+               "#  define A 0\n"
+               "#endif\n"
+               "#endif\n",
+               Style);
   // FIXME: This doesn't handle the case where there's code between the
   // #ifndef and #define but all other conditions hold. This is because when
   // the #define line is parsed, UnwrappedLineParser::Lines doesn't hold the

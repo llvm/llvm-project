@@ -4365,14 +4365,14 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; GENERIC-LABEL: sext_8i1_8i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpcmpled %ymm0, %ymm1, %k0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmovm2d %k0, %ymm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sext_8i1_8i32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpcmpled %ymm0, %ymm1, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vpmovm2d %k0, %ymm0 # sched: [1:0.25]
+; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
+; SKX-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %x = icmp slt <8 x i32> %a1, %a2
   %x1 = xor <8 x i1>%x, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
@@ -6687,9 +6687,8 @@ define i32 @mask16_zext(i16 %x) {
 ;
 ; SKX-LABEL: mask16_zext:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; SKX-NEXT:    # sched: [1:0.25]
-; SKX-NEXT:    andnl %eax, %edi, %eax # sched: [1:0.50]
+; SKX-NEXT:    notl %edi # sched: [1:0.25]
+; SKX-NEXT:    movzwl %di, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>

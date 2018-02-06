@@ -92,23 +92,47 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
   }
 
+  // Provide __start___sancov_guards.  Solaris ld doesn't automatically create
+  // __start_SECNAME labels.
+  CmdArgs.push_back("--whole-archive");
+  CmdArgs.push_back(
+      getToolChain().getCompilerRTArgString(Args, "sancov_begin", false));
+  CmdArgs.push_back("--no-whole-archive");
+
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_e, options::OPT_r});
 
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (getToolChain().ShouldLinkCXXStdlib(Args))
       getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (Args.hasArg(options::OPT_fstack_protector) ||
+        Args.hasArg(options::OPT_fstack_protector_strong) ||
+        Args.hasArg(options::OPT_fstack_protector_all)) {
+      // Explicitly link ssp libraries, not folded into Solaris libc.
+      CmdArgs.push_back("-lssp_nonshared");
+      CmdArgs.push_back("-lssp");
+    }
     CmdArgs.push_back("-lgcc_s");
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
       CmdArgs.push_back("-lm");
     }
+    if (NeedsSanitizerDeps)
+      linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
   }
+
+  // Provide __stop___sancov_guards.  Solaris ld doesn't automatically create
+  // __stop_SECNAME labels.
+  CmdArgs.push_back("--whole-archive");
+  CmdArgs.push_back(
+      getToolChain().getCompilerRTArgString(Args, "sancov_end", false));
+  CmdArgs.push_back("--no-whole-archive");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     CmdArgs.push_back(
@@ -163,6 +187,17 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
     addPathIfExists(D, D.Dir + "/../lib", Paths);
 
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);
+}
+
+SanitizerMask Solaris::getSupportedSanitizers() const {
+  const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  // FIXME: Omit X86_64 until 64-bit support is figured out.
+  if (IsX86) {
+    Res |= SanitizerKind::Address;
+  }
+  Res |= SanitizerKind::Vptr;
+  return Res;
 }
 
 Tool *Solaris::buildAssembler() const {

@@ -6009,7 +6009,9 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(Data.DefaultedMoveAssignmentIsDeleted);
   Record->push_back(Data.DefaultedDestructorIsDeleted);
   Record->push_back(Data.HasTrivialSpecialMembers);
+  Record->push_back(Data.HasTrivialSpecialMembersForCall);
   Record->push_back(Data.DeclaredNonTrivialSpecialMembers);
+  Record->push_back(Data.DeclaredNonTrivialSpecialMembersForCall);
   Record->push_back(Data.HasIrrelevantDestructor);
   Record->push_back(Data.HasConstexprNonCopyMoveConstructor);
   Record->push_back(Data.HasDefaultedDefaultConstructor);

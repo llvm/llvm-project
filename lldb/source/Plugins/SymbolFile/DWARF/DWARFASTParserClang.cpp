@@ -10,7 +10,6 @@
 #include <stdlib.h>
 
 #include "DWARFASTParserClang.h"
-#include "DWARFCompileUnit.h"
 #include "DWARFDIE.h"
 #include "DWARFDIECollection.h"
 #include "DWARFDebugInfo.h"
@@ -1767,8 +1766,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 array_element_type.GetCompleteType() == false) {
               ModuleSP module_sp = die.GetModule();
               if (module_sp) {
-                if (die.GetCU()->GetProducer() ==
-                    DWARFCompileUnit::eProducerClang)
+                if (die.GetCU()->GetProducer() == eProducerClang)
                   module_sp->ReportError(
                       "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
                       "class/union/struct element type DIE 0x%8.8x that is a "
@@ -2367,8 +2365,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                                     "does not have a complete definition.",
                                     die.GetName(),
                                     base_class_type.GetTypeName().GetCString());
-                if (die.GetCU()->GetProducer() ==
-                    DWARFCompileUnit::eProducerClang)
+                if (die.GetCU()->GetProducer() == eProducerClang)
                   module->ReportError(":: Try compiling the source file with "
                                       "-fstandalone-debug.");
 
@@ -3205,8 +3202,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 
               if (ClangASTContext::IsCXXClassType(member_clang_type) &&
                   member_clang_type.GetCompleteType() == false) {
-                if (die.GetCU()->GetProducer() ==
-                    DWARFCompileUnit::eProducerClang)
+                if (die.GetCU()->GetProducer() == eProducerClang)
                   module_sp->ReportError(
                       "DWARF DIE at 0x%8.8x (class %s) has a member variable "
                       "0x%8.8x (%s) whose type is a forward declaration, not a "

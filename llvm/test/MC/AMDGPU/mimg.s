@@ -1,13 +1,15 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_0
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_1
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX9 --check-prefix=GFX89
-
-// RUN:     llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89
 
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_0
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_1
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX9
 
 //===----------------------------------------------------------------------===//
@@ -64,6 +66,80 @@ image_store    v5, v[1:4], s[8:15] r128
 // NOGFX9: error: r128 modifier is not supported on this GPU
 
 //===----------------------------------------------------------------------===//
+// Image Load/Store: d16 unpacked
+//===----------------------------------------------------------------------===//
+
+image_load v[5:6], v[1:4], s[8:15] dmask:0x3 d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// GFX8_0:   image_load v[5:6], v[1:4], s[8:15] dmask:0x3 d16 ; encoding: [0x00,0x03,0x00,0xf0,0x01,0x05,0x02,0x80]
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
+
+image_load v[5:7], v[1:4], s[8:15] dmask:0x7 d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// GFX8_0:   image_load v[5:7], v[1:4], s[8:15] dmask:0x7 d16 ; encoding: [0x00,0x07,0x00,0xf0,0x01,0x05,0x02,0x80]
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
+
+image_load v[5:8], v[1:4], s[8:15] dmask:0xf d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// GFX8_0:   image_load v[5:8], v[1:4], s[8:15] dmask:0xf d16 ; encoding: [0x00,0x0f,0x00,0xf0,0x01,0x05,0x02,0x80]
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
+
+image_load v[5:7], v[1:4], s[8:15] dmask:0x3 tfe d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// GFX8_0:   image_load v[5:7], v[1:4], s[8:15] dmask:0x3 tfe d16 ; encoding: [0x00,0x03,0x01,0xf0,0x01,0x05,0x02,0x80]
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
+
+image_load v[5:8], v[1:4], s[8:15] dmask:0x7 tfe d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// GFX8_0:   image_load v[5:8], v[1:4], s[8:15] dmask:0x7 tfe d16 ; encoding: [0x00,0x07,0x01,0xf0,0x01,0x05,0x02,0x80]
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
+
+//===----------------------------------------------------------------------===//
+// Image Load/Store: d16 packed
+//===----------------------------------------------------------------------===//
+
+image_load v5, v[1:4], s[8:15] dmask:0x3 d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_load v5, v[1:4], s[8:15] dmask:0x3 d16 ; encoding: [0x00,0x03,0x00,0xf0,0x01,0x05,0x02,0x80]
+// GFX9:     image_load v5, v[1:4], s[8:15] dmask:0x3 d16 ; encoding: [0x00,0x03,0x00,0xf0,0x01,0x05,0x02,0x80]
+
+image_load v[5:6], v[1:4], s[8:15] dmask:0x7 d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_load v[5:6], v[1:4], s[8:15] dmask:0x7 d16 ; encoding: [0x00,0x07,0x00,0xf0,0x01,0x05,0x02,0x80]
+// GFX9:     image_load v[5:6], v[1:4], s[8:15] dmask:0x7 d16 ; encoding: [0x00,0x07,0x00,0xf0,0x01,0x05,0x02,0x80]
+
+image_load v[5:6], v[1:4], s[8:15] dmask:0xf d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_load v[5:6], v[1:4], s[8:15] dmask:0xf d16 ; encoding: [0x00,0x0f,0x00,0xf0,0x01,0x05,0x02,0x80]
+// GFX9:     image_load v[5:6], v[1:4], s[8:15] dmask:0xf d16 ; encoding: [0x00,0x0f,0x00,0xf0,0x01,0x05,0x02,0x80]
+
+image_load v[5:6], v[1:4], s[8:15] dmask:0x3 tfe d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_load v[5:6], v[1:4], s[8:15] dmask:0x3 tfe d16 ; encoding: [0x00,0x03,0x01,0xf0,0x01,0x05,0x02,0x80]
+// GFX9:     image_load v[5:6], v[1:4], s[8:15] dmask:0x3 tfe d16 ; encoding: [0x00,0x03,0x01,0xf0,0x01,0x05,0x02,0x80]
+
+image_load v[5:7], v[1:4], s[8:15] dmask:0x7 tfe d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_load v[5:7], v[1:4], s[8:15] dmask:0x7 tfe d16 ; encoding: [0x00,0x07,0x01,0xf0,0x01,0x05,0x02,0x80]
+// GFX9:     image_load v[5:7], v[1:4], s[8:15] dmask:0x7 tfe d16 ; encoding: [0x00,0x07,0x01,0xf0,0x01,0x05,0x02,0x80]
+
+image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16 ; encoding: [0x00,0x0f,0x01,0xf0,0x01,0x05,0x02,0x80]
+// GFX9:     image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16 ; encoding: [0x00,0x0f,0x01,0xf0,0x01,0x05,0x02,0x80]
+
+//===----------------------------------------------------------------------===//
 // Image Sample
 //===----------------------------------------------------------------------===//
 
@@ -84,6 +160,26 @@ image_sample  v193, v[237:240], s[28:35], s[4:7] r128
 image_sample  v193, v[237:240], s[28:35], s[4:7] d16
 // NOSICI: error: d16 modifier is not supported on this GPU
 // GFX89:  image_sample v193, v[237:240], s[28:35], s[4:7] d16 ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x80]
+
+//===----------------------------------------------------------------------===//
+// Image Sample: d16 packed
+//===----------------------------------------------------------------------===//
+
+image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// GFX8_0:   image_sample v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 d16 ; encoding: [0x00,0x07,0x80,0xf0,0xed,0xc1,0x27,0x80]
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
+
+//===----------------------------------------------------------------------===//
+// Image Sample: d16 unpacked
+//===----------------------------------------------------------------------===//
+
+image_sample  v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
+// NOSICI:   error: d16 modifier is not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// GFX8_1:   image_sample v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16 ; encoding: [0x00,0x07,0x80,0xf0,0xed,0xc1,0x27,0x80]
+// GFX9:     image_sample v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16 ; encoding: [0x00,0x07,0x80,0xf0,0xed,0xc1,0x27,0x80]
 
 //===----------------------------------------------------------------------===//
 // Image Atomics
