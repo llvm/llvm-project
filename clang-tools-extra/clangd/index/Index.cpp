@@ -54,7 +54,7 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
   // We need to copy every StringRef field onto the arena.
   Intern(S.Name);
   Intern(S.Scope);
-  Intern(S.CanonicalDeclaration.FilePath);
+  Intern(S.CanonicalDeclaration.FileURI);
 
   Intern(S.CompletionLabel);
   Intern(S.CompletionFilterText);
