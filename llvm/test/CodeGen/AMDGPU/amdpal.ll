@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti | FileCheck --check-prefix=PAL --enable-var-scope %s
 
-; PAL: .AMDGPU.config
-
+; PAL-NOT: .AMDGPU.config
+; PAL-LABEL: {{^}}simple:
 define amdgpu_kernel void @simple(i32 addrspace(1)* %out) {
 entry:
   store i32 0, i32 addrspace(1)* %out

@@ -29,6 +29,7 @@
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace llvm::opt;
 
 using namespace lld;
 using namespace lld::elf;

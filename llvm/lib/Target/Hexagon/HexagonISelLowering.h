@@ -73,6 +73,9 @@ namespace HexagonISD {
                    // [*] The equivalence is defined as "Q <=> (V != 0)",
                    //     where the != operation compares bytes.
                    // Note: V != 0 is implemented as V >u 0.
+      QCAT,
+      QTRUE,
+      QFALSE,
       VZERO,
       TYPECAST,    // No-op that's used to convert between different legal
                    // types in a register.
@@ -360,6 +363,8 @@ namespace HexagonISD {
     VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
     SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
 
+    bool isHvxSingleTy(MVT Ty) const;
+    bool isHvxPairTy(MVT Ty) const;
     SDValue convertToByteIndex(SDValue ElemIdx, MVT ElemTy,
                                SelectionDAG &DAG) const;
     SDValue getIndexInWord32(SDValue Idx, MVT ElemTy, SelectionDAG &DAG) const;
@@ -404,9 +409,14 @@ namespace HexagonISD {
     SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
 
+    SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
+
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
         const override;
+
+    bool isHvxOperation(SDValue Op) const;
+    SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
   };
 
 } // end namespace llvm

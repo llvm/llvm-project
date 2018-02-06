@@ -675,18 +675,25 @@ def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
 // Between half, single and double-precision.
 def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtb", ".f32.f16\t$Sd, $Sm",
-                 [ /* intentionally left blank, see rule below */ ]>,
+                 [/* Intentionally left blank, see patterns below */]>,
                  Requires<[HasFP16]>,
              Sched<[WriteFPCVT]>;
 
 def : FullFP16Pat<(f32 (fpextend HPR:$Sm)),
                   (VCVTBHS (COPY_TO_REGCLASS HPR:$Sm, SPR))>;
+def : FP16Pat<(f16_to_fp GPR:$a),
+              (VCVTBHS (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
 def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtb", ".f16.f32\t$Sd, $Sm",
-                 []>,
+                 [/* Intentionally left blank, see patterns below */]>,
                  Requires<[HasFP16]>,
              Sched<[WriteFPCVT]>;
+
+def : FullFP16Pat<(f16 (fpround SPR:$Sm)),
+                  (COPY_TO_REGCLASS (VCVTBSH SPR:$Sm), HPR)>;
+def : FP16Pat<(fp_to_f16 SPR:$a),
+              (i32 (COPY_TO_REGCLASS (VCVTBSH SPR:$a), GPR))>;
 
 def VCVTTHS: ASuI<0b11101, 0b11, 0b0010, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtt", ".f32.f16\t$Sd, $Sm",
@@ -703,7 +710,8 @@ def VCVTTSH: ASuI<0b11101, 0b11, 0b0011, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
 def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),
                    NoItinerary, "vcvtb", ".f64.f16\t$Dd, $Sm",
-                   []>, Requires<[HasFPARMv8, HasDPVFP]>,
+                   [/* Intentionally left blank, see patterns below */]>,
+                   Requires<[HasFPARMv8, HasDPVFP]>,
               Sched<[WriteFPCVT]> {
   // Instruction operands.
   bits<5> Sm;
@@ -713,10 +721,16 @@ def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
   let Inst{5}   = Sm{0};
 }
 
+def : FullFP16Pat<(f64 (fpextend HPR:$Sm)),
+                  (VCVTBHD (COPY_TO_REGCLASS HPR:$Sm, SPR))>;
+def : FP16Pat<(f64 (f16_to_fp GPR:$a)),
+              (VCVTBHD (COPY_TO_REGCLASS GPR:$a, SPR))>;
+
 def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
                    (outs SPR:$Sd), (ins DPR:$Dm),
                    NoItinerary, "vcvtb", ".f16.f64\t$Sd, $Dm",
-                   []>, Requires<[HasFPARMv8, HasDPVFP]> {
+                   [/* Intentionally left blank, see patterns below */]>,
+                   Requires<[HasFPARMv8, HasDPVFP]> {
   // Instruction operands.
   bits<5> Sd;
   bits<5> Dm;
@@ -727,6 +741,11 @@ def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
   let Inst{15-12}   = Sd{4-1};
   let Inst{22}      = Sd{0};
 }
+
+def : FullFP16Pat<(f16 (fpround DPR:$Dm)),
+                  (COPY_TO_REGCLASS (VCVTBDH DPR:$Dm), HPR)>;
+def : FP16Pat<(fp_to_f16 (f64 DPR:$a)),
+              (i32 (COPY_TO_REGCLASS (VCVTBDH DPR:$a), GPR))>;
 
 def VCVTTHD : ADuI<0b11101, 0b11, 0b0010, 0b11, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),
@@ -754,18 +773,6 @@ def VCVTTDH : ADuI<0b11101, 0b11, 0b0011, 0b11, 0,
   let Inst{3-0}   = Dm{3-0};
   let Inst{5}     = Dm{4};
 }
-
-def : FP16Pat<(fp_to_f16 SPR:$a),
-              (i32 (COPY_TO_REGCLASS (VCVTBSH SPR:$a), GPR))>;
-
-def : FP16Pat<(fp_to_f16 (f64 DPR:$a)),
-              (i32 (COPY_TO_REGCLASS (VCVTBDH DPR:$a), GPR))>;
-
-def : FP16Pat<(f16_to_fp GPR:$a),
-              (VCVTBHS (COPY_TO_REGCLASS GPR:$a, SPR))>;
-
-def : FP16Pat<(f64 (f16_to_fp GPR:$a)),
-              (VCVTBHD (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
 multiclass vcvt_inst<string opc, bits<2> rm,
                      SDPatternOperator node = null_frag> {

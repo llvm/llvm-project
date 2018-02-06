@@ -261,8 +261,42 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}smrd_sgpr_descriptor_promoted
+; GCN: v_readfirstlane
+define amdgpu_cs void @smrd_sgpr_descriptor_promoted([0 x i8] addrspace(2)* inreg noalias dereferenceable(18446744073709551615), i32) #0 {
+main_body:
+  %descptr = bitcast [0 x i8] addrspace(2)* %0 to <4 x i32> addrspace(2)*, !amdgpu.uniform !0
+  br label %.outer_loop_header
+
+ret_block:                                       ; preds = %.outer, %.label22, %main_body
+  ret void
+
+.outer_loop_header:
+  br label %.inner_loop_header
+
+.inner_loop_header:                                     ; preds = %.inner_loop_body, %.outer_loop_header
+  %loopctr.1 = phi i32 [ 0, %.outer_loop_header ], [ %loopctr.2, %.inner_loop_body ]
+  %loopctr.2 = add i32 %loopctr.1, 1
+  %inner_br1 = icmp slt i32 %loopctr.2, 10
+  br i1 %inner_br1, label %.inner_loop_body, label %ret_block
+
+.inner_loop_body:
+  %descriptor = load <4 x i32>, <4 x i32> addrspace(2)* %descptr, align 16, !invariant.load !0
+  %load1result = call float @llvm.SI.load.const.v4i32(<4 x i32> %descriptor, i32 0)
+  %inner_br2 = icmp uge i32 %1, 10
+  br i1 %inner_br2, label %.inner_loop_header, label %.outer_loop_body
+
+.outer_loop_body:
+  %offset = shl i32 %loopctr.2, 6
+  %load2result = call float @llvm.SI.load.const.v4i32(<4 x i32> %descriptor, i32 %offset)
+  %outer_br = fcmp ueq float %load2result, 0x0
+  br i1 %outer_br, label %.outer_loop_header, label %ret_block
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+
+!0 = !{}

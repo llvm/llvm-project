@@ -1211,7 +1211,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // void SomeFunction(vector<  // break
     //                       int> v);
     // FIXME: We likely want to do this for more combinations of brackets.
-    // Verify that it is wanted for ObjC, too.
     if (Current.is(tok::less) && Current.ParentBracket == tok::l_paren) {
       NewIndent = std::max(NewIndent, State.Stack.back().Indent);
       LastSpace = std::max(LastSpace, State.Stack.back().Indent);

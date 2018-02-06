@@ -303,7 +303,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
   MCContext &Context = getObjFileLowering().getContext();
-  if (!STM.isAmdHsaOS()) {
+  // FIXME: This should be an explicit check for Mesa.
+  if (!STM.isAmdHsaOS() && !STM.isAmdPalOS()) {
     MCSectionELF *ConfigSection =
         Context.getELFSection(".AMDGPU.config", ELF::SHT_PROGBITS, 0);
     OutStreamer->SwitchSection(ConfigSection);
@@ -322,7 +323,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
     if (STM.isAmdPalOS())
       EmitPALMetadata(MF, CurrentProgramInfo);
-    if (!STM.isAmdHsaOS()) {
+    else if (!STM.isAmdHsaOS()) {
       EmitProgramInfoSI(MF, CurrentProgramInfo);
     }
   } else {
@@ -1007,24 +1008,19 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
     OutStreamer->EmitIntValue(RsrcReg, 4);
     OutStreamer->EmitIntValue(S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks) |
                               S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks), 4);
-    unsigned Rsrc2Val = 0;
     if (STM.isVGPRSpillingEnabled(MF.getFunction())) {
       OutStreamer->EmitIntValue(R_0286E8_SPI_TMPRING_SIZE, 4);
       OutStreamer->EmitIntValue(S_0286E8_WAVESIZE(CurrentProgramInfo.ScratchBlocks), 4);
-      if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
-        Rsrc2Val = S_00B84C_SCRATCH_EN(CurrentProgramInfo.ScratchBlocks > 0);
     }
-    if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
-      OutStreamer->EmitIntValue(R_0286CC_SPI_PS_INPUT_ENA, 4);
-      OutStreamer->EmitIntValue(MFI->getPSInputEnable(), 4);
-      OutStreamer->EmitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
-      OutStreamer->EmitIntValue(MFI->getPSInputAddr(), 4);
-      Rsrc2Val |= S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks);
-    }
-    if (Rsrc2Val) {
-      OutStreamer->EmitIntValue(RsrcReg + 4 /*rsrc2*/, 4);
-      OutStreamer->EmitIntValue(Rsrc2Val, 4);
-    }
+  }
+
+  if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
+    OutStreamer->EmitIntValue(R_00B02C_SPI_SHADER_PGM_RSRC2_PS, 4);
+    OutStreamer->EmitIntValue(S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks), 4);
+    OutStreamer->EmitIntValue(R_0286CC_SPI_PS_INPUT_ENA, 4);
+    OutStreamer->EmitIntValue(MFI->getPSInputEnable(), 4);
+    OutStreamer->EmitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
+    OutStreamer->EmitIntValue(MFI->getPSInputAddr(), 4);
   }
 
   OutStreamer->EmitIntValue(R_SPILLED_SGPRS, 4);

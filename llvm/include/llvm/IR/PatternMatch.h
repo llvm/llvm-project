@@ -289,10 +289,27 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
   template <typename ITy> bool match(ITy *V) {
     if (const auto *CI = dyn_cast<ConstantInt>(V))
       return this->isValue(CI->getValue());
-    if (V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
+    if (V->getType()->isVectorTy()) {
+      if (const auto *C = dyn_cast<Constant>(V)) {
         if (const auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue()))
           return this->isValue(CI->getValue());
+
+        // Non-splat vector constant: check each element for a match.
+        unsigned NumElts = V->getType()->getVectorNumElements();
+        assert(NumElts != 0 && "Constant vector with no elements?");
+        for (unsigned i = 0; i != NumElts; ++i) {
+          Constant *Elt = C->getAggregateElement(i);
+          if (!Elt)
+            return false;
+          if (isa<UndefValue>(Elt))
+            continue;
+          auto *CI = dyn_cast<ConstantInt>(Elt);
+          if (!CI || !this->isValue(CI->getValue()))
+            return false;
+        }
+        return true;
+      }
+    }
     return false;
   }
 };
@@ -329,6 +346,14 @@ struct is_power2 {
 /// \brief Match an integer or vector power of 2.
 inline cst_pred_ty<is_power2> m_Power2() { return cst_pred_ty<is_power2>(); }
 inline api_pred_ty<is_power2> m_Power2(const APInt *&V) { return V; }
+
+struct is_power2_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isPowerOf2(); }
+};
+
+/// \brief Match an integer or vector of zero or power of 2 values.
+inline cst_pred_ty<is_power2_or_zero> m_Power2OrZero() { return cst_pred_ty<is_power2_or_zero>(); }
+inline api_pred_ty<is_power2_or_zero> m_Power2OrZero(const APInt *&V) { return V; }
 
 struct is_maxsignedvalue {
   bool isValue(const APInt &C) { return C.isMaxSignedValue(); }
