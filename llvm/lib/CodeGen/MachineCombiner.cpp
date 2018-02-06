@@ -448,6 +448,7 @@ void MachineCombiner::verifyPatternOrder(
     MachineBasicBlock *MBB, MachineInstr &Root,
     SmallVector<MachineCombinerPattern, 16> &Patterns) {
   long PrevLatencyDiff = std::numeric_limits<long>::max();
+  (void)PrevLatencyDiff; // Variable is used in assert only.
   for (auto P : Patterns) {
     SmallVector<MachineInstr *, 16> InsInstrs;
     SmallVector<MachineInstr *, 16> DelInstrs;

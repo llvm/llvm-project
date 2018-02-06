@@ -2993,8 +2993,14 @@ def Combinev: OutPatFrag<(ops node:$Rs, node:$Rt),
 def LoVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_lo)>;
 def HiVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_hi)>;
 
-def HexagonVZERO: SDNode<"HexagonISD::VZERO", SDTVecLeaf>;
-def vzero: PatFrag<(ops), (HexagonVZERO)>;
+def HexagonVZERO:  SDNode<"HexagonISD::VZERO",  SDTVecLeaf>;
+def HexagonQTRUE:  SDNode<"HexagonISD::QTRUE",  SDTVecLeaf>;
+def HexagonQFALSE: SDNode<"HexagonISD::QFALSE", SDTVecLeaf>;
+def vzero:  PatFrag<(ops), (HexagonVZERO)>;
+def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
+def qfalse: PatFrag<(ops), (HexagonQFALSE)>;
+
+def qnot: PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
 
 def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
@@ -3074,6 +3080,13 @@ let Predicates = [UseHVX] in {
   def: Pat<(vselect HQ32:$Qu, HVI32:$Vs, HVI32:$Vt),
            (V6_vmux HvxQR:$Qu, HvxVR:$Vs, HvxVR:$Vt)>;
 
+  def: Pat<(vselect (qnot HQ8:$Qu), HVI8:$Vs, HVI8:$Vt),
+           (V6_vmux HvxQR:$Qu, HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(vselect (qnot HQ16:$Qu), HVI16:$Vs, HVI16:$Vt),
+           (V6_vmux HvxQR:$Qu, HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(vselect (qnot HQ32:$Qu), HVI32:$Vs, HVI32:$Vt),
+           (V6_vmux HvxQR:$Qu, HvxVR:$Vt, HvxVR:$Vs)>;
+
   def: Pat<(VecPI16 (sext HVI8:$Vs)),  (VSxtb $Vs)>;
   def: Pat<(VecPI32 (sext HVI16:$Vs)), (VSxth $Vs)>;
   def: Pat<(VecPI16 (zext HVI8:$Vs)),  (VZxtb $Vs)>;
@@ -3121,6 +3134,32 @@ let Predicates = [UseHVX] in {
   def: Pat<(sra HVI32:$Vs, HVI32:$Vt), (V6_vasrwv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI16:$Vs, HVI16:$Vt), (V6_vlsrhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI32:$Vs, HVI32:$Vt), (V6_vlsrwv HvxVR:$Vs, HvxVR:$Vt)>;
+
+  def: Pat<(vnot  HQ8:$Qs), (V6_pred_not HvxQR:$Qs)>;
+  def: Pat<(vnot HQ16:$Qs), (V6_pred_not HvxQR:$Qs)>;
+  def: Pat<(vnot HQ32:$Qs), (V6_pred_not HvxQR:$Qs)>;
+  def: Pat<(qnot  HQ8:$Qs), (V6_pred_not HvxQR:$Qs)>;
+  def: Pat<(qnot HQ16:$Qs), (V6_pred_not HvxQR:$Qs)>;
+  def: Pat<(qnot HQ32:$Qs), (V6_pred_not HvxQR:$Qs)>;
+
+  def: Pat<(VecQ8 (seteq   HVI8:$Vs,  HVI8:$Vt)),
+           (V6_veqb  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ8 (setgt   HVI8:$Vs,  HVI8:$Vt)),
+           (V6_vgtb  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ8 (setugt  HVI8:$Vs,  HVI8:$Vt)),
+           (V6_vgtub HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ16 (seteq  HVI16:$Vs, HVI16:$Vt)),
+           (V6_veqh  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ16 (setgt  HVI16:$Vs, HVI16:$Vt)),
+           (V6_vgth  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ16 (setugt HVI16:$Vs, HVI16:$Vt)),
+           (V6_vgtuh HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ32 (seteq  HVI32:$Vs, HVI32:$Vt)),
+           (V6_veqw  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ32 (setgt  HVI32:$Vs, HVI32:$Vt)),
+           (V6_vgtw  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(VecQ32 (setugt HVI32:$Vs, HVI32:$Vt)),
+           (V6_vgtuw HvxVR:$Vs, HvxVR:$Vt)>;
 
   def: Pat<(VecI8 (trunc HWI16:$Vss)),
            (V6_vpackeb (HiVec $Vss), (LoVec $Vss))>;

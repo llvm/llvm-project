@@ -2100,7 +2100,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MUL,                T, Custom);
       setOperationAction(ISD::MULHS,              T, Custom);
       setOperationAction(ISD::MULHU,              T, Custom);
-      setOperationAction(ISD::SETCC,              T, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,  T, Custom);
@@ -2116,6 +2115,14 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SHL,                     T, Custom);
         setOperationAction(ISD::SRL,                     T, Custom);
       }
+
+      setCondCodeAction(ISD::SETNE,  T, Expand);
+      setCondCodeAction(ISD::SETLE,  T, Expand);
+      setCondCodeAction(ISD::SETGE,  T, Expand);
+      setCondCodeAction(ISD::SETLT,  T, Expand);
+      setCondCodeAction(ISD::SETULE, T, Expand);
+      setCondCodeAction(ISD::SETUGE, T, Expand);
+      setCondCodeAction(ISD::SETULT, T, Expand);
     }
 
     for (MVT T : LegalV) {
@@ -2303,6 +2310,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::P2D:           return "HexagonISD::P2D";
   case HexagonISD::V2Q:           return "HexagonISD::V2Q";
   case HexagonISD::Q2V:           return "HexagonISD::Q2V";
+  case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
+  case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
   case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
   case HexagonISD::OP_END:        break;
   }

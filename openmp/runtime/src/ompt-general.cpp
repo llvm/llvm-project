@@ -332,6 +332,12 @@ void ompt_post_init() {
     ompt_enabled.enabled = !!ompt_start_tool_result->initialize(
         ompt_fn_lookup, &(ompt_start_tool_result->tool_data));
 
+    if (!ompt_enabled.enabled) {
+      // tool not enabled, zero out the bitmap, and done
+      memset(&ompt_enabled, 0, sizeof(ompt_enabled));
+      return;
+    }
+
     ompt_thread_t *root_thread = ompt_get_thread();
 
     ompt_set_thread_state(root_thread, omp_state_overhead);

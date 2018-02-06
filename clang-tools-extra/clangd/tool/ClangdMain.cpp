@@ -73,9 +73,24 @@ static llvm::cl::opt<bool> IncludeIneligibleResults(
     llvm::cl::init(clangd::CodeCompleteOptions().IncludeIneligibleResults),
     llvm::cl::Hidden);
 
+static llvm::cl::opt<JSONStreamStyle> InputStyle(
+    "input-style", llvm::cl::desc("Input JSON stream encoding"),
+    llvm::cl::values(
+        clEnumValN(JSONStreamStyle::Standard, "standard", "usual LSP protocol"),
+        clEnumValN(JSONStreamStyle::Delimited, "delimited",
+                   "messages delimited by --- lines, with # comment support")),
+    llvm::cl::init(JSONStreamStyle::Standard));
+
 static llvm::cl::opt<bool>
     PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
                 llvm::cl::init(false));
+
+static llvm::cl::opt<bool> Test(
+    "lit-test",
+    llvm::cl::desc(
+        "Abbreviation for -input-style=delimited -pretty -run-synchronously. "
+        "Intended to simplify lit tests."),
+    llvm::cl::init(false), llvm::cl::Hidden);
 
 static llvm::cl::opt<PCHStorageFlag> PCHStorage(
     "pch-storage",
@@ -132,6 +147,11 @@ static llvm::cl::opt<Path> YamlSymbolFile(
 
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "clangd");
+  if (Test) {
+    RunSynchronously = true;
+    InputStyle = JSONStreamStyle::Delimited;
+    PrettyPrint = true;
+  }
 
   if (!RunSynchronously && WorkerThreadsCount == 0) {
     llvm::errs() << "A number of worker threads cannot be 0. Did you mean to "
@@ -228,5 +248,5 @@ int main(int argc, char *argv[]) {
                             EnableIndexBasedCompletion, StaticIdx.get());
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
-  return LSPServer.run(std::cin) ? 0 : NoShutdownRequestErrorCode;
+  return LSPServer.run(std::cin, InputStyle) ? 0 : NoShutdownRequestErrorCode;
 }

@@ -33984,9 +33984,10 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
 /// or:
 /// (truncate (smax ((smin (x, signed_max_of_dest_type)),
 ///                  signed_min_of_dest_type)) to dest_type).
+/// With MatchPackUS, the smax/smin range is [0, unsigned_max_of_dest_type].
 /// Return the source value to be truncated or SDValue() if the pattern was not
 /// matched.
-static SDValue detectSSatPattern(SDValue In, EVT VT) {
+static SDValue detectSSatPattern(SDValue In, EVT VT, bool MatchPackUS = false) {
   unsigned NumDstBits = VT.getScalarSizeInBits();
   unsigned NumSrcBits = In.getScalarValueSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
@@ -34000,8 +34001,14 @@ static SDValue detectSSatPattern(SDValue In, EVT VT) {
     return SDValue();
   };
 
-  APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
-  APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+  APInt SignedMax, SignedMin;
+  if (MatchPackUS) {
+    SignedMax = APInt::getAllOnesValue(NumDstBits).zext(NumSrcBits);
+    SignedMin = APInt(NumSrcBits, 0);
+  } else {
+    SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+    SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+  }
 
   if (SDValue SMin = MatchMinMax(In, ISD::SMIN, SignedMax))
     if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, SignedMin))
@@ -34032,14 +34039,23 @@ static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  EVT InVT = In.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isTypeLegal(In.getValueType()) || !TLI.isTypeLegal(VT))
+  if (!TLI.isTypeLegal(InVT) || !TLI.isTypeLegal(VT))
     return SDValue();
-  if (isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget)) {
+  if (isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
     if (auto SSatVal = detectSSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
     if (auto USatVal = detectUSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
+  }
+  if (VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) {
+    if (auto SSatVal = detectSSatPattern(In, VT))
+      return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
+                                    Subtarget);
+    if (auto USatVal = detectSSatPattern(In, VT, true))
+      return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
+                                    Subtarget);
   }
   return SDValue();
 }
