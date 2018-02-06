@@ -11,13 +11,14 @@ def buildDsym(
         compiler=None,
         dictionary=None,
         clean=True,
-        testdir=None):
+        testdir=None,
+        testname=None):
     """Build the binaries with dsym debug info."""
     commands = []
-
     if clean:
-        commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
-    commands.append(getMake(testdir) +
+        commands.append(getMake(testdir, testname) +
+                        ["clean", getCmdLine(dictionary)])
+    commands.append(getMake(testdir, testname) +
                     ["MAKE_DSYM=YES",
                      getArchSpec(architecture),
                      getCCSpec(compiler),
