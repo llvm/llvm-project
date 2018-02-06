@@ -17,14 +17,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -71,6 +72,9 @@ namespace orc {
 
 class KaleidoscopeJIT {
 private:
+  SymbolStringPool SSP;
+  ExecutionSession ES;
+  std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
   RTDyldObjectLinkingLayer ObjectLayer;
@@ -88,9 +92,26 @@ public:
   using ModuleHandle = decltype(OptimizeLayer)::ModuleHandleT;
 
   KaleidoscopeJIT()
-      : TM(EngineBuilder().selectTarget()),
-        DL(TM->createDataLayout()),
-        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+      : ES(SSP),
+        Resolver(createLegacyLookupResolver(
+            [this](const std::string &Name) -> JITSymbol {
+              if (auto Sym = IndirectStubsMgr->findStub(Name, false))
+                return Sym;
+              if (auto Sym = OptimizeLayer.findSymbol(Name, false))
+                return Sym;
+              else if (auto Err = Sym.takeError())
+                return std::move(Err);
+              if (auto SymAddr =
+                      RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+                return JITSymbol(SymAddr, JITSymbolFlags::Exported);
+              return nullptr;
+            },
+            [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
+        TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer(
+            ES,
+            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
+            [&](VModuleKey K) { return Resolver; }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {
@@ -107,29 +128,9 @@ public:
   TargetMachine &getTargetMachine() { return *TM; }
 
   ModuleHandle addModule(std::unique_ptr<Module> M) {
-    // Build our symbol resolver:
-    // Lambda 1: Look back into the JIT itself to find symbols that are part of
-    //           the same "logical dylib".
-    // Lambda 2: Search for external symbols in the host process.
-    auto Resolver = createLambdaResolver(
-        [&](const std::string &Name) {
-          if (auto Sym = IndirectStubsMgr->findStub(Name, false))
-            return Sym;
-          if (auto Sym = OptimizeLayer.findSymbol(Name, false))
-            return Sym;
-          return JITSymbol(nullptr);
-        },
-        [](const std::string &Name) {
-          if (auto SymAddr =
-                RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-            return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-          return JITSymbol(nullptr);
-        });
-
-    // Add the set to the JIT with the resolver we created above and a newly
-    // created SectionMemoryManager.
-    return cantFail(OptimizeLayer.addModule(std::move(M),
-                                            std::move(Resolver)));
+    // Add the module to the JIT with a new VModuleKey.
+    return cantFail(
+        OptimizeLayer.addModule(ES.allocateVModule(), std::move(M)));
   }
 
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {

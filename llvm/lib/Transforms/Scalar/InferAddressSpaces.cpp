@@ -785,7 +785,7 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
 
   if (auto *MSI = dyn_cast<MemSetInst>(MI)) {
     B.CreateMemSet(NewV, MSI->getValue(),
-                   MSI->getLength(), MSI->getAlignment(),
+                   MSI->getLength(), MSI->getDestAlignment(),
                    false, // isVolatile
                    TBAA, ScopeMD, NoAliasMD);
   } else if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
@@ -801,14 +801,16 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
 
     if (isa<MemCpyInst>(MTI)) {
       MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
-      B.CreateMemCpy(Dest, Src, MTI->getLength(),
-                     MTI->getAlignment(),
+      B.CreateMemCpy(Dest, MTI->getDestAlignment(),
+                     Src, MTI->getSourceAlignment(),
+                     MTI->getLength(),
                      false, // isVolatile
                      TBAA, TBAAStruct, ScopeMD, NoAliasMD);
     } else {
       assert(isa<MemMoveInst>(MTI));
-      B.CreateMemMove(Dest, Src, MTI->getLength(),
-                      MTI->getAlignment(),
+      B.CreateMemMove(Dest, MTI->getDestAlignment(),
+                      Src, MTI->getSourceAlignment(),
+                      MTI->getLength(),
                       false, // isVolatile
                       TBAA, ScopeMD, NoAliasMD);
     }

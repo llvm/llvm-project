@@ -11,7 +11,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/NullResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Object/ObjectFile.h"
@@ -49,20 +48,16 @@ public:
   MockBaseLayer() : MockSymbol(nullptr) { resetExpectations(); }
 
   template <typename ObjPtrT>
-  llvm::Expected<ObjHandleT>
-  addObject(ObjPtrT Obj,
-            std::shared_ptr<llvm::JITSymbolResolver> Resolver) {
-    EXPECT_EQ(MockResolver, Resolver) << "Resolver should pass through";
+  llvm::Expected<ObjHandleT> addObject(VModuleKey K, ObjPtrT Obj) {
+    EXPECT_EQ(MockKey, K) << "Key should pass through";
     EXPECT_EQ(MockObject + 1, *Obj) << "Transform should be applied";
     LastCalled = "addObject";
     MockObjHandle = 111;
     return MockObjHandle;
   }
 
-  template <typename ObjPtrT>
-  void expectAddObject(ObjPtrT Obj,
-                       std::shared_ptr<llvm::JITSymbolResolver> Resolver) {
-    MockResolver = Resolver;
+  template <typename ObjPtrT> void expectAddObject(VModuleKey K, ObjPtrT Obj) {
+    MockKey = K;
     MockObject = *Obj;
   }
 
@@ -162,7 +157,7 @@ public:
 private:
   // Backing fields for remembering parameter/return values
   std::string LastCalled;
-  std::shared_ptr<llvm::JITSymbolResolver> MockResolver;
+  VModuleKey MockKey;
   MockObjectFile MockObject;
   ObjHandleT MockObjHandle;
   std::string MockName;
@@ -175,7 +170,7 @@ private:
   // Clear remembered parameters between calls
   void resetExpectations() {
     LastCalled = "nothing";
-    MockResolver = nullptr;
+    MockKey = 0;
     MockObject = 0;
     MockObjHandle = 0;
     MockName = "bogus";
@@ -189,6 +184,9 @@ private:
 // Test each operation on ObjectTransformLayer.
 TEST(ObjectTransformLayerTest, Main) {
   MockBaseLayer M;
+
+  SymbolStringPool SSP;
+  ExecutionSession ES(SSP);
 
   // Create one object transform layer using a transform (as a functor)
   // that allocates new objects, and deals in unique pointers.
@@ -205,16 +203,17 @@ TEST(ObjectTransformLayerTest, Main) {
   });
 
   // Test addObject with T1 (allocating)
+  auto K1 = ES.allocateVModule();
   auto Obj1 = std::make_shared<MockObjectFile>(211);
-  auto SR = std::make_shared<NullLegacyResolver>();
-  M.expectAddObject(Obj1, SR);
-  auto H = cantFail(T1.addObject(std::move(Obj1), SR));
+  M.expectAddObject(K1, Obj1);
+  auto H = cantFail(T1.addObject(K1, std::move(Obj1)));
   M.verifyAddObject(H);
 
   // Test addObjectSet with T2 (mutating)
+  auto K2 = ES.allocateVModule();
   auto Obj2 = std::make_shared<MockObjectFile>(222);
-  M.expectAddObject(Obj2, SR);
-  H = cantFail(T2.addObject(Obj2, SR));
+  M.expectAddObject(K2, Obj2);
+  H = cantFail(T2.addObject(K2, Obj2));
   M.verifyAddObject(H);
   EXPECT_EQ(223, *Obj2) << "Expected mutation";
 
@@ -291,9 +290,11 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Construct the jit layers.
   RTDyldObjectLinkingLayer BaseLayer(
-    []() {
-      return std::make_shared<llvm::SectionMemoryManager>();
-    });
+      ES,
+      [](VModuleKey) { return std::make_shared<llvm::SectionMemoryManager>(); },
+      [](VModuleKey) -> std::shared_ptr<SymbolResolver> {
+        llvm_unreachable("Should never be called");
+      });
 
   auto IdentityTransform =
     [](std::shared_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
@@ -311,8 +312,8 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
   // compile.
-  auto Resolver = std::make_shared<NullLegacyResolver>();
-  cantFail(CompileLayer.addModule(std::shared_ptr<llvm::Module>(), Resolver));
+  cantFail(CompileLayer.addModule(ES.allocateVModule(),
+                                  std::shared_ptr<llvm::Module>()));
 
   // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
   // compile.

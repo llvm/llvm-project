@@ -15,18 +15,18 @@
 #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
 #include "RemoteJITUtils.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -76,6 +77,9 @@ using MyRemote = remote::OrcRemoteTargetClient;
 
 class KaleidoscopeJIT {
 private:
+  SymbolStringPool SSP;
+  ExecutionSession ES;
+  std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
   RTDyldObjectLinkingLayer ObjectLayer;
@@ -94,12 +98,28 @@ public:
   using ModuleHandle = decltype(OptimizeLayer)::ModuleHandleT;
 
   KaleidoscopeJIT(MyRemote &Remote)
-      : TM(EngineBuilder().selectTarget(Triple(Remote.getTargetTriple()), "",
+      : ES(SSP),
+        Resolver(createLegacyLookupResolver(
+            [this](const std::string &Name) -> JITSymbol {
+              if (auto Sym = IndirectStubsMgr->findStub(Name, false))
+                return Sym;
+              if (auto Sym = OptimizeLayer.findSymbol(Name, false))
+                return Sym;
+              else if (auto Err = Sym.takeError())
+                return std::move(Err);
+              if (auto Addr = cantFail(this->Remote.getSymbolAddress(Name)))
+                return JITSymbol(Addr, JITSymbolFlags::Exported);
+              return nullptr;
+            },
+            [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
+        TM(EngineBuilder().selectTarget(Triple(Remote.getTargetTriple()), "",
                                         "", SmallVector<std::string, 0>())),
         DL(TM->createDataLayout()),
-        ObjectLayer([&Remote]() {
-            return cantFail(Remote.createRemoteMemoryManager());
-          }),
+        ObjectLayer(ES,
+                    [&Remote](VModuleKey) {
+                      return cantFail(Remote.createRemoteMemoryManager());
+                    },
+                    [this](VModuleKey) { return Resolver; }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {
@@ -120,33 +140,9 @@ public:
   TargetMachine &getTargetMachine() { return *TM; }
 
   ModuleHandle addModule(std::unique_ptr<Module> M) {
-    // Build our symbol resolver:
-    // Lambda 1: Look back into the JIT itself to find symbols that are part of
-    //           the same "logical dylib".
-    // Lambda 2: Search for external symbols in the host process.
-    auto Resolver = createLambdaResolver(
-        [&](const std::string &Name) {
-          if (auto Sym = IndirectStubsMgr->findStub(Name, false))
-            return Sym;
-          if (auto Sym = OptimizeLayer.findSymbol(Name, false))
-            return Sym;
-          return JITSymbol(nullptr);
-        },
-        [&](const std::string &Name) {
-          if (auto AddrOrErr = Remote.getSymbolAddress(Name))
-            return JITSymbol(*AddrOrErr, JITSymbolFlags::Exported);
-          else {
-            logAllUnhandledErrors(AddrOrErr.takeError(), errs(),
-                                  "Error resolving remote symbol:");
-            exit(1);
-          }
-          return JITSymbol(nullptr);
-        });
-
-    // Add the set to the JIT with the resolver we created above and a newly
-    // created SectionMemoryManager.
-    return cantFail(OptimizeLayer.addModule(std::move(M),
-                                            std::move(Resolver)));
+    // Add the module with a new VModuleKey.
+    return cantFail(
+        OptimizeLayer.addModule(ES.allocateVModule(), std::move(M)));
   }
 
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {

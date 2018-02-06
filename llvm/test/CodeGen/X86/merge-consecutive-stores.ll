@@ -10,12 +10,11 @@ define i32 @foo (i64* %so) nounwind uwtable ssp {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $0, 28(%eax)
 ; CHECK-NEXT:    movl $0, 24(%eax)
-; CHECK-NEXT:    movl 20(%eax), %ecx
-; CHECK-NEXT:    movl $0, 20(%eax)
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    cmpl 16(%eax), %edx
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpl 16(%eax), %ecx
 ; CHECK-NEXT:    movl $0, 16(%eax)
-; CHECK-NEXT:    sbbl %ecx, %edx
+; CHECK-NEXT:    sbbl 20(%eax), %ecx
+; CHECK-NEXT:    movl $0, 20(%eax)
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    negl %eax

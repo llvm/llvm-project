@@ -211,7 +211,7 @@ public:
     template <class _Tp,
               class = typename enable_if<
                   __lazy_and<
-                      __lazy_not<is_same<typename decay<_Tp>::type, __tuple_leaf>>
+                      __lazy_not<is_same<typename __uncvref<_Tp>::type, __tuple_leaf>>
                     , is_constructible<_Hp, _Tp>
                     >::value
                 >::type
@@ -293,7 +293,7 @@ public:
     template <class _Tp,
               class = typename enable_if<
                   __lazy_and<
-                        __lazy_not<is_same<typename decay<_Tp>::type, __tuple_leaf>>
+                        __lazy_not<is_same<typename __uncvref<_Tp>::type, __tuple_leaf>>
                       , is_constructible<_Hp, _Tp>
                     >::value
                 >::type
@@ -1383,7 +1383,7 @@ constexpr decltype(auto) apply(_Fn && __f, _Tuple && __t)
 _LIBCPP_NOEXCEPT_RETURN(
     _VSTD::__apply_tuple_impl(
         _VSTD::forward<_Fn>(__f), _VSTD::forward<_Tuple>(__t),
-        typename __make_tuple_indices<tuple_size_v<decay_t<_Tuple>>>::type{})
+        typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{})
 )
 
 template <class _Tp, class _Tuple, size_t... _Idx>
@@ -1398,7 +1398,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 constexpr _Tp make_from_tuple(_Tuple&& __t)
 _LIBCPP_NOEXCEPT_RETURN(
     _VSTD::__make_from_tuple_impl<_Tp>(_VSTD::forward<_Tuple>(__t),
-        typename __make_tuple_indices<tuple_size_v<decay_t<_Tuple>>>::type{})
+        typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{})
 )
 
 #undef _LIBCPP_NOEXCEPT_RETURN

@@ -73,10 +73,7 @@ class SymbolContextAPITestCase(TestBase):
             str(compileUnit),
             "The compile unit should match",
             exe=False,
-            substrs=[
-                os.path.join(
-                    self.mydir,
-                    'main.c')])
+            substrs=[self.getSourcePath('main.c')])
 
         function = context.GetFunction()
         self.assertTrue(function)
@@ -92,8 +89,7 @@ class SymbolContextAPITestCase(TestBase):
             lineEntry.GetFileSpec().GetDirectory(),
             "The line entry should have the correct directory",
             exe=False,
-            substrs=[
-                self.mydir])
+            substrs=[self.mydir])
         self.expect(
             lineEntry.GetFileSpec().GetFilename(),
             "The line entry should have the correct filename",
