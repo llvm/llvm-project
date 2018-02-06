@@ -88,6 +88,14 @@ private:
   Handler UnknownHandler;
 };
 
+/// Controls the way JSON-RPC messages are encoded (both input and output).
+enum JSONStreamStyle {
+  /// Encoding per the LSP specification, with mandatory Content-Length header.
+  Standard,
+  /// Messages are delimited by a '---' line. Comment lines start with #.
+  Delimited
+};
+
 /// Parses input queries from LSP client (coming from \p In) and runs call
 /// method of \p Dispatcher for each query.
 /// After handling each query checks if \p IsDone is set true and exits the loop
@@ -95,6 +103,7 @@ private:
 /// Input stream(\p In) must be opened in binary mode to avoid preliminary
 /// replacements of \r\n with \n.
 void runLanguageServerLoop(std::istream &In, JSONOutput &Out,
+                           JSONStreamStyle InputStyle,
                            JSONRPCDispatcher &Dispatcher, bool &IsDone);
 
 } // namespace clangd

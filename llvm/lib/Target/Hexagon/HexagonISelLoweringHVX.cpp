@@ -324,6 +324,18 @@ HexagonTargetLowering::buildHvxVectorPred(ArrayRef<SDValue> Values,
   unsigned HwLen = Subtarget.getVectorLength();
   assert(VecLen <= HwLen || VecLen == 8*HwLen);
   SmallVector<SDValue,128> Bytes;
+  bool AllT = true, AllF = true;
+
+  auto IsTrue = [] (SDValue V) {
+    if (const auto *N = dyn_cast<ConstantSDNode>(V.getNode()))
+      return !N->isNullValue();
+    return false;
+  };
+  auto IsFalse = [] (SDValue V) {
+    if (const auto *N = dyn_cast<ConstantSDNode>(V.getNode()))
+      return N->isNullValue();
+    return false;
+  };
 
   if (VecLen <= HwLen) {
     // In the hardware, each bit of a vector predicate corresponds to a byte
@@ -332,8 +344,11 @@ HexagonTargetLowering::buildHvxVectorPred(ArrayRef<SDValue> Values,
     assert(HwLen % VecLen == 0);
     unsigned BitBytes = HwLen / VecLen;
     for (SDValue V : Values) {
+      AllT &= IsTrue(V);
+      AllF &= IsFalse(V);
+
       SDValue Ext = !V.isUndef() ? DAG.getZExtOrTrunc(V, dl, MVT::i8)
-                                 : DAG.getConstant(0, dl, MVT::i8);
+                                 : DAG.getUNDEF(MVT::i8);
       for (unsigned B = 0; B != BitBytes; ++B)
         Bytes.push_back(Ext);
     }
@@ -349,8 +364,11 @@ HexagonTargetLowering::buildHvxVectorPred(ArrayRef<SDValue> Values,
           break;
       }
       SDValue F = Values[I+B];
+      AllT &= IsTrue(F);
+      AllF &= IsFalse(F);
+
       SDValue Ext = (B < 8) ? DAG.getZExtOrTrunc(F, dl, MVT::i8)
-                            : DAG.getConstant(0, dl, MVT::i8);
+                            : DAG.getUNDEF(MVT::i8);
       Bytes.push_back(Ext);
       // Verify that the rest of values in the group are the same as the
       // first.
@@ -358,6 +376,11 @@ HexagonTargetLowering::buildHvxVectorPred(ArrayRef<SDValue> Values,
         assert(Values[I+B].isUndef() || Values[I+B] == F);
     }
   }
+
+  if (AllT)
+    return DAG.getNode(HexagonISD::QTRUE, dl, VecTy);
+  if (AllF)
+    return DAG.getNode(HexagonISD::QFALSE, dl, VecTy);
 
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
   SDValue ByteVec = buildHvxVectorReg(Bytes, dl, ByteTy, DAG);
@@ -1013,6 +1036,7 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
   MVT VecTy = ty(Op.getOperand(0));
   assert(VecTy == ty(Op.getOperand(1)));
   unsigned HwLen = Subtarget.getVectorLength();
@@ -1024,78 +1048,14 @@ HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   if (VecTy.getSizeInBits() == 16*HwLen) {
     VectorPair P0 = opSplit(Op.getOperand(0), dl, DAG);
     VectorPair P1 = opSplit(Op.getOperand(1), dl, DAG);
-    MVT HalfTy = typeSplit(VecTy).first;
+    MVT HalfTy = typeSplit(ResTy).first;
 
     SDValue V0 = DAG.getSetCC(dl, HalfTy, P0.first, P1.first, CC);
     SDValue V1 = DAG.getSetCC(dl, HalfTy, P0.second, P1.second, CC);
-    return DAG.getNode(ISD::CONCAT_VECTORS, dl, ty(Op), V1, V0);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, V1, V0);
   }
 
-  bool Negate = false, Swap = false;
-
-  // HVX has instructions for SETEQ, SETGT, SETUGT. The other comparisons
-  // can be arranged as operand-swapped/negated versions of these. Since
-  // the generated code will have the original CC expressed as
-  //   (negate (swap-op NewCmp)),
-  // the condition code for the NewCmp should be calculated from the original
-  // CC by applying these operations in the reverse order.
-  //
-  // This could also be done through setCondCodeAction, but for negation it
-  // uses a xor with a vector of -1s, which it obtains from BUILD_VECTOR.
-  // That is far too expensive for what can be done with a single instruction.
-
-  switch (CC) {
-    case ISD::SETNE:    // !eq
-    case ISD::SETLE:    // !gt
-    case ISD::SETGE:    // !lt
-    case ISD::SETULE:   // !ugt
-    case ISD::SETUGE:   // !ult
-      CC = ISD::getSetCCInverse(CC, true);
-      Negate = true;
-      break;
-    default:
-      break;
-  }
-
-  switch (CC) {
-    case ISD::SETLT:    // swap gt
-    case ISD::SETULT:   // swap ugt
-      CC = ISD::getSetCCSwappedOperands(CC);
-      Swap = true;
-      break;
-    default:
-      break;
-  }
-
-  assert(CC == ISD::SETEQ || CC == ISD::SETGT || CC == ISD::SETUGT);
-
-  MVT ElemTy = VecTy.getVectorElementType();
-  unsigned ElemWidth = ElemTy.getSizeInBits();
-  assert(isPowerOf2_32(ElemWidth));
-
-  auto getIdx = [] (unsigned Code) {
-    static const unsigned Idx[] = { ISD::SETEQ, ISD::SETGT, ISD::SETUGT };
-    for (unsigned I = 0, E = array_lengthof(Idx); I != E; ++I)
-      if (Code == Idx[I])
-        return I;
-    llvm_unreachable("Unhandled CondCode");
-  };
-
-  static unsigned OpcTable[3][3] = {
-    //           SETEQ             SETGT,            SETUGT
-    /* Byte */ { Hexagon::V6_veqb, Hexagon::V6_vgtb, Hexagon::V6_vgtub },
-    /* Half */ { Hexagon::V6_veqh, Hexagon::V6_vgth, Hexagon::V6_vgtuh },
-    /* Word */ { Hexagon::V6_veqw, Hexagon::V6_vgtw, Hexagon::V6_vgtuw }
-  };
-
-  unsigned CmpOpc = OpcTable[Log2_32(ElemWidth)-3][getIdx(CC)];
-
-  MVT ResTy = ty(Op);
-  SDValue OpL = Swap ? Op.getOperand(1) : Op.getOperand(0);
-  SDValue OpR = Swap ? Op.getOperand(0) : Op.getOperand(1);
-  SDValue CmpV = getInstr(CmpOpc, dl, ResTy, {OpL, OpR}, DAG);
-  return Negate ? getInstr(Hexagon::V6_pred_not, dl, ResTy, {CmpV}, DAG)
-                : CmpV;
+  return SDValue();
 }
 
 SDValue

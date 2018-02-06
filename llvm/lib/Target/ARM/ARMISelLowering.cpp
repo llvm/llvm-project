@@ -1042,6 +1042,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
 
   setOperationAction(ISD::SETCC,     MVT::i32, Expand);
+  setOperationAction(ISD::SETCC,     MVT::f16, Expand);
   setOperationAction(ISD::SETCC,     MVT::f32, Expand);
   setOperationAction(ISD::SETCC,     MVT::f64, Expand);
   setOperationAction(ISD::SELECT,    MVT::i32, Custom);
@@ -12746,6 +12747,24 @@ bool ARMTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return false;
 }
 
+bool ARMTargetLowering::isFNegFree(EVT VT) const {
+  if (!VT.isSimple())
+    return false;
+
+  // There are quite a few FP16 instructions (e.g. VNMLA, VNMLS, etc.) that
+  // negate values directly (fneg is free). So, we don't want to let the DAG
+  // combiner rewrite fneg into xors and some other instructions.  For f16 and
+  // FullFP16 argument passing, some bitcast nodes may be introduced,
+  // triggering this DAG combine rewrite, so we are avoiding that with this.
+  switch (VT.getSimpleVT().SimpleTy) {
+  default: break;
+  case MVT::f16:
+    return Subtarget->hasFullFP16();
+  }
+
+  return false;
+}
+
 bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT VT = ExtVal.getValueType();
 
@@ -13842,6 +13861,8 @@ bool ARM::isBitFieldInvertedMask(unsigned v) {
 bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   if (!Subtarget->hasVFP3())
     return false;
+  if (VT == MVT::f16 && Subtarget->hasFullFP16())
+    return ARM_AM::getFP16Imm(Imm) != -1;
   if (VT == MVT::f32)
     return ARM_AM::getFP32Imm(Imm) != -1;
   if (VT == MVT::f64 && !Subtarget->isFPOnlySP())

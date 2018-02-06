@@ -82,7 +82,8 @@ public:
 
 class SymbolCollectorTest : public ::testing::Test {
 public:
-  bool runSymbolCollector(StringRef HeaderCode, StringRef MainCode) {
+  bool runSymbolCollector(StringRef HeaderCode, StringRef MainCode,
+                          const std::vector<std::string> &ExtraArgs = {}) {
     llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
         new vfs::InMemoryFileSystem);
     llvm::IntrusiveRefCntPtr<FileManager> Files(
@@ -90,8 +91,11 @@ public:
 
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(CollectorOpts);
 
+    std::vector<std::string> Args = {"symbol_collector", "-fsyntax-only",
+                                     "-std=c++11", TestFileName};
+    Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
     tooling::ToolInvocation Invocation(
-        {"symbol_collector", "-fsyntax-only", "-std=c++11", TestFileName},
+        Args,
         Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
@@ -262,6 +266,24 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacroInMainFile) {
                   AllOf(QName("Test"),
                         LocationOffsets(Main.offsetRange("spelling")),
                         CPath(TestFileName))));
+}
+
+TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
+  CollectorOpts.IndexMainFiles = false;
+
+  Annotations Header(R"(
+    #ifdef NAME
+    $expansion[[class NAME {}]];
+    #endif
+  )");
+
+  runSymbolCollector(Header.code(), /*Main=*/"",
+                     /*ExtraArgs=*/{"-DNAME=name"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("name"),
+                        LocationOffsets(Header.offsetRange("expansion")),
+                        CPath(TestHeaderName))));
 }
 
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {

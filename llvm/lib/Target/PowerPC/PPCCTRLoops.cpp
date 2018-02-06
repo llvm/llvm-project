@@ -535,7 +535,7 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
     if (!TI) continue;
 
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      uint64_t TrueWeight, FalseWeight;
+      uint64_t TrueWeight = 0, FalseWeight = 0;
       if (!BI->isConditional() ||
           !BI->extractProfMetadata(TrueWeight, FalseWeight))
         continue;

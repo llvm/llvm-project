@@ -73,6 +73,8 @@ namespace HexagonISD {
                    // [*] The equivalence is defined as "Q <=> (V != 0)",
                    //     where the != operation compares bytes.
                    // Note: V != 0 is implemented as V >u 0.
+      QTRUE,
+      QFALSE,
       VZERO,
       TYPECAST,    // No-op that's used to convert between different legal
                    // types in a register.

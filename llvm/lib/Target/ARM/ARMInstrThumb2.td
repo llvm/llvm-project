@@ -3700,6 +3700,8 @@ def : t2InstAlias<"esb$p.w", (t2HINT 16, pred:$p), 1> {
 def : t2InstAlias<"esb$p", (t2HINT 16, pred:$p), 0> {
   let Predicates = [IsThumb2, HasRAS];
 }
+def : t2InstAlias<"csdb$p.w", (t2HINT 20, pred:$p), 0>;
+def : t2InstAlias<"csdb$p",   (t2HINT 20, pred:$p), 1>;
 
 def t2DBG : T2I<(outs), (ins imm0_15:$opt), NoItinerary, "dbg", "\t$opt",
                 [(int_arm_dbg imm0_15:$opt)]> {

@@ -25859,8 +25859,7 @@ define i32 @test_cmpm_rnd_zero(<16 x float> %a, <16 x float> %b) {
 define i8 @mask_zero_lower(<4 x i32> %a) {
 ; VLX-LABEL: mask_zero_lower:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VLX-NEXT:    vpcmpltud %xmm1, %xmm0, %k0
+; VLX-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; VLX-NEXT:    kshiftlb $4, %k0, %k0
 ; VLX-NEXT:    kmovd %k0, %eax
 ; VLX-NEXT:    # kill: def $al killed $al killed $eax
@@ -25869,15 +25868,14 @@ define i8 @mask_zero_lower(<4 x i32> %a) {
 ; NoVLX-LABEL: mask_zero_lower:
 ; NoVLX:       # %bb.0:
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
 ; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
 ; NoVLX-NEXT:    # kill: def $al killed $al killed $eax
 ; NoVLX-NEXT:    vzeroupper
 ; NoVLX-NEXT:    retq
-  %cmp = icmp ult <4 x i32> %a, zeroinitializer
+  %cmp = icmp ne <4 x i32> %a, zeroinitializer
   %concat = shufflevector <4 x i1> %cmp, <4 x i1> zeroinitializer, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   %cast = bitcast <8 x i1> %concat to i8
   ret i8 %cast

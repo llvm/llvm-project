@@ -314,8 +314,8 @@ struct ParenState {
   /// the same token.
   bool HasMultipleNestedBlocks : 1;
 
-  // \brief The start of a nested block (e.g. lambda introducer in C++ or
-  // "function" in JavaScript) is not wrapped to a new line.
+  /// \brief The start of a nested block (e.g. lambda introducer in C++ or
+  /// "function" in JavaScript) is not wrapped to a new line.
   bool NestedBlockInlined : 1;
 
   bool operator<(const ParenState &Other) const {
