@@ -847,6 +847,12 @@ public:
       return C->getValue();
     return nullptr;
   }
+  Constant *getDiscriminantValue() const {
+    assert(getTag() == dwarf::DW_TAG_member && !isStaticMember());
+    if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+      return C->getValue();
+    return nullptr;
+  }
   /// @}
 
   static bool classof(const Metadata *MD) {
@@ -889,12 +895,13 @@ class DICompositeType : public DIType {
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
           DIFlags Flags, DINodeArray Elements, unsigned RuntimeLang,
           DITypeRef VTableHolder, DITemplateParameterArray TemplateParams,
-          StringRef Identifier, StorageType Storage, bool ShouldCreate = true) {
+          StringRef Identifier, DIDerivedType *Discriminator,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(
         Context, Tag, getCanonicalMDString(Context, Name), File, Line, Scope,
         BaseType, SizeInBits, AlignInBits, OffsetInBits, Flags, Elements.get(),
         RuntimeLang, VTableHolder, TemplateParams.get(),
-        getCanonicalMDString(Context, Identifier), Storage, ShouldCreate);
+        getCanonicalMDString(Context, Identifier), Discriminator, Storage, ShouldCreate);
   }
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -902,14 +909,15 @@ class DICompositeType : public DIType {
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
           DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
           Metadata *VTableHolder, Metadata *TemplateParams,
-          MDString *Identifier, StorageType Storage, bool ShouldCreate = true);
+          MDString *Identifier, Metadata *Discriminator,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDICompositeType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
                         getScope(), getBaseType(), getSizeInBits(),
                         getAlignInBits(), getOffsetInBits(), getFlags(),
                         getElements(), getRuntimeLang(), getVTableHolder(),
-                        getTemplateParams(), getIdentifier());
+                        getTemplateParams(), getIdentifier(), getDiscriminator());
   }
 
 public:
@@ -920,10 +928,10 @@ public:
                      DIFlags Flags, DINodeArray Elements, unsigned RuntimeLang,
                      DITypeRef VTableHolder,
                      DITemplateParameterArray TemplateParams = nullptr,
-                     StringRef Identifier = ""),
+                     StringRef Identifier = "", DIDerivedType *Discriminator = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                      AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-                     VTableHolder, TemplateParams, Identifier))
+                     VTableHolder, TemplateParams, Identifier, Discriminator))
   DEFINE_MDNODE_GET(DICompositeType,
                     (unsigned Tag, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Scope, Metadata *BaseType,
@@ -931,10 +939,11 @@ public:
                      uint64_t OffsetInBits, DIFlags Flags, Metadata *Elements,
                      unsigned RuntimeLang, Metadata *VTableHolder,
                      Metadata *TemplateParams = nullptr,
-                     MDString *Identifier = nullptr),
+                     MDString *Identifier = nullptr,
+                     Metadata *Discriminator = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                      AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-                     VTableHolder, TemplateParams, Identifier))
+                     VTableHolder, TemplateParams, Identifier, Discriminator))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
@@ -951,7 +960,7 @@ public:
              Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
              uint64_t OffsetInBits, DIFlags Flags, Metadata *Elements,
              unsigned RuntimeLang, Metadata *VTableHolder,
-             Metadata *TemplateParams);
+             Metadata *TemplateParams, Metadata *Discriminator);
   static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
                                              MDString &Identifier);
 
@@ -970,7 +979,7 @@ public:
                Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
                uint64_t OffsetInBits, DIFlags Flags, Metadata *Elements,
                unsigned RuntimeLang, Metadata *VTableHolder,
-               Metadata *TemplateParams);
+               Metadata *TemplateParams, Metadata *Discriminator);
 
   DITypeRef getBaseType() const { return DITypeRef(getRawBaseType()); }
   DINodeArray getElements() const {
@@ -988,6 +997,8 @@ public:
   Metadata *getRawVTableHolder() const { return getOperand(5); }
   Metadata *getRawTemplateParams() const { return getOperand(6); }
   MDString *getRawIdentifier() const { return getOperandAs<MDString>(7); }
+  Metadata *getRawDiscriminator() const { return getOperand(8); }
+  DIDerivedType *getDiscriminator() const { return getOperandAs<DIDerivedType>(8); }
 
   /// Replace operands.
   ///

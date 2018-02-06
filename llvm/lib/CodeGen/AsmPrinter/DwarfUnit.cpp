@@ -919,9 +919,24 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   case dwarf::DW_TAG_enumeration_type:
     constructEnumTypeDIE(Buffer, CTy);
     break;
+  case dwarf::DW_TAG_variant_part:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_class_type: {
+    // Emit the discriminator for a variant part.
+    DIDerivedType *Discriminator = nullptr;
+    if (Tag == dwarf::DW_TAG_variant_part) {
+      Discriminator = CTy->getDiscriminator();
+      if (Discriminator) {
+        // DWARF says:
+        //    If the variant part has a discriminant, the discriminant is
+        //    represented by a separate debugging information entry which is
+        //    a child of the variant part entry.
+        DIE &DiscMember = constructMemberDIE(Buffer, Discriminator);
+        addDIEEntry(Buffer, dwarf::DW_AT_discr, DiscMember);
+      }
+    }
+
     // Add elements to structure type.
     DINodeArray Elements = CTy->getElements();
     for (const auto *Element : Elements) {
@@ -935,6 +950,18 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           addType(ElemDie, resolve(DDTy->getBaseType()), dwarf::DW_AT_friend);
         } else if (DDTy->isStaticMember()) {
           getOrCreateStaticMemberDIE(DDTy);
+        } else if (Tag == dwarf::DW_TAG_variant_part) {
+          // When emitting a variant part, wrap each member in
+          // DW_TAG_variant.
+          DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
+          if (const ConstantInt *CI =
+              dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
+            if (isUnsignedDIType(DD, resolve(Discriminator->getBaseType())))
+              addUInt(Variant, dwarf::DW_AT_discr_value, None, CI->getZExtValue());
+            else
+              addSInt(Variant, dwarf::DW_AT_discr_value, None, CI->getSExtValue());
+          }
+          constructMemberDIE(Variant, DDTy);
         } else {
           constructMemberDIE(Buffer, DDTy);
         }
@@ -954,6 +981,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         if (unsigned PropertyAttributes = Property->getAttributes())
           addUInt(ElemDie, dwarf::DW_AT_APPLE_property_attribute, None,
                   PropertyAttributes);
+      } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
+        if (Composite->getTag() == dwarf::DW_TAG_variant_part) {
+          DIE &VariantPart = createAndAddDIE(Composite->getTag(), Buffer);
+          constructTypeDIE(VariantPart, Composite);
+        }
       }
     }
 
@@ -1410,7 +1442,7 @@ void DwarfUnit::constructContainingTypeDIEs() {
   }
 }
 
-void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
+DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   DIE &MemberDie = createAndAddDIE(DT->getTag(), Buffer);
   StringRef Name = DT->getName();
   if (!Name.empty())
@@ -1514,6 +1546,8 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
 
   if (DT->isArtificial())
     addFlag(MemberDie, dwarf::DW_AT_artificial);
+
+  return MemberDie;
 }
 
 DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
