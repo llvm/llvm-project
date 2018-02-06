@@ -332,7 +332,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
              StorePreamblesInMemory, BuildDynamicSymbolIndex, StaticIdx,
              ResourceDir) {}
 
-bool ClangdLSPServer::run(std::istream &In) {
+bool ClangdLSPServer::run(std::istream &In, JSONStreamStyle InputStyle) {
   assert(!IsDone && "Run was called before");
 
   // Set up JSONRPCDispatcher.
@@ -342,7 +342,7 @@ bool ClangdLSPServer::run(std::istream &In) {
   registerCallbackHandlers(Dispatcher, Out, /*Callbacks=*/*this);
 
   // Run the Language Server loop.
-  runLanguageServerLoop(In, Out, Dispatcher, IsDone);
+  runLanguageServerLoop(In, Out, InputStyle, Dispatcher, IsDone);
 
   // Make sure IsDone is set to true after this method exits to ensure assertion
   // at the start of the method fires if it's ever executed again.

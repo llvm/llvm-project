@@ -124,10 +124,15 @@ SymbolLocation GetSymbolLocation(const NamedDecl *D, SourceManager &SM,
 
   SourceLocation Loc = SM.getSpellingLoc(D->getLocation());
   if (D->getLocation().isMacroID()) {
-    // The symbol is formed via macro concatenation, the spelling location will
-    // be "<scratch space>", which is not interesting to us, use the expansion
-    // location instead.
-    if (llvm::StringRef(Loc.printToString(SM)).startswith("<scratch")) {
+    // We use the expansion location for the following symbols, as spelling
+    // locations of these symbols are not interesting to us:
+    //   * symbols formed via macro concatenation, the spelling location will
+    //     be "<scratch space>"
+    //   * symbols controlled and defined by a compile command-line option
+    //     `-DName=foo`, the spelling location will be "<command line>".
+    std::string PrintLoc = Loc.printToString(SM);
+    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
+        llvm::StringRef(PrintLoc).startswith("<command line>")) {
       FilePathStorage = makeAbsolutePath(
           SM, SM.getFilename(SM.getExpansionLoc(D->getLocation())),
           FallbackDir);
