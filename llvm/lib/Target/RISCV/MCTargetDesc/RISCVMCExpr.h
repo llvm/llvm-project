@@ -26,6 +26,7 @@ public:
     VK_RISCV_None,
     VK_RISCV_LO,
     VK_RISCV_HI,
+    VK_RISCV_PCREL_LO,
     VK_RISCV_PCREL_HI,
     VK_RISCV_Invalid
   };

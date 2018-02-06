@@ -20,16 +20,16 @@ class SymbolFileDWARFDwo;
 
 typedef std::shared_ptr<DWARFCompileUnit> DWARFCompileUnitSP;
 
+enum DWARFProducer {
+  eProducerInvalid = 0,
+  eProducerClang,
+  eProducerGCC,
+  eProducerLLVMGCC,
+  eProcucerOther
+};
+
 class DWARFCompileUnit {
 public:
-  enum Producer {
-    eProducerInvalid = 0,
-    eProducerClang,
-    eProducerGCC,
-    eProducerLLVMGCC,
-    eProcucerOther
-  };
-
   static DWARFCompileUnitSP Extract(SymbolFileDWARF *dwarf2Data,
       lldb::offset_t *offset_ptr);
   ~DWARFCompileUnit();
@@ -137,7 +137,7 @@ public:
 
   SymbolFileDWARF *GetSymbolFileDWARF() const { return m_dwarf2Data; }
 
-  Producer GetProducer();
+  DWARFProducer GetProducer();
 
   uint32_t GetProducerVersionMajor();
 
@@ -178,7 +178,7 @@ protected:
   dw_offset_t m_length;
   uint16_t m_version;
   uint8_t m_addr_size;
-  Producer m_producer = eProducerInvalid;
+  DWARFProducer m_producer = eProducerInvalid;
   uint32_t m_producer_version_major = 0;
   uint32_t m_producer_version_minor = 0;
   uint32_t m_producer_version_update = 0;

@@ -40,7 +40,7 @@ private:
   };
 
   Header HeaderData;
-  std::vector<uint64_t> Offsets;
+  std::vector<uint32_t> Offsets;
   std::vector<DWARFAddressRangesVector> Ranges;
 
 public:

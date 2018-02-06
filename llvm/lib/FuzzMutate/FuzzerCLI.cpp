@@ -18,6 +18,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Verifier.h"
 
 using namespace llvm;
 
@@ -174,4 +175,13 @@ size_t llvm::writeModule(const Module &M, uint8_t *Dest, size_t MaxSize) {
       return 0;
   memcpy(Dest, Buf.data(), Buf.size());
   return Buf.size();
+}
+
+std::unique_ptr<Module> llvm::parseAndVerify(const uint8_t *Data, size_t Size,
+                                             LLVMContext &Context) {
+  auto M = parseModule(Data, Size, Context);
+  if (!M || verifyModule(*M, &errs()))
+    return nullptr;
+  
+  return M;
 }

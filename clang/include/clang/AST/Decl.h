@@ -1731,6 +1731,12 @@ private:
   unsigned HasWrittenPrototype : 1;
   unsigned IsDeleted : 1;
   unsigned IsTrivial : 1; // sunk from CXXMethodDecl
+
+  /// This flag indicates whether this function is trivial for the purpose of
+  /// calls. This is meaningful only when this function is a copy/move
+  /// constructor or a destructor.
+  unsigned IsTrivialForCall : 1;
+
   unsigned IsDefaulted : 1; // sunk from CXXMethoDecl
   unsigned IsExplicitlyDefaulted : 1; //sunk from CXXMethodDecl
   unsigned HasImplicitReturnZero : 1;
@@ -1845,7 +1851,8 @@ protected:
         IsInline(isInlineSpecified), IsInlineSpecified(isInlineSpecified),
         IsExplicitSpecified(false), IsVirtualAsWritten(false), IsPure(false),
         HasInheritedPrototype(false), HasWrittenPrototype(true),
-        IsDeleted(false), IsTrivial(false), IsDefaulted(false),
+        IsDeleted(false), IsTrivial(false), IsTrivialForCall(false),
+        IsDefaulted(false),
         IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
         IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
         InstantiationIsPending(false), UsesSEHTry(false), HasSkippedBody(false),
@@ -2009,6 +2016,9 @@ public:
   /// the class has been fully built by Sema.
   bool isTrivial() const { return IsTrivial; }
   void setTrivial(bool IT) { IsTrivial = IT; }
+
+  bool isTrivialForCall() const { return IsTrivialForCall; }
+  void setTrivialForCall(bool IT) { IsTrivialForCall = IT; }
 
   /// Whether this function is defaulted per C++0x. Only valid for
   /// special member functions.

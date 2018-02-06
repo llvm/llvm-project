@@ -983,6 +983,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_stack))
     parseNumbers(Arg->getValue(), &Config->StackReserve, &Config->StackCommit);
 
+  // Handle /guard:cf
+  if (auto *Arg = Args.getLastArg(OPT_guard))
+    parseGuard(Arg->getValue());
+
   // Handle /heap
   if (auto *Arg = Args.getLastArg(OPT_heap))
     parseNumbers(Arg->getValue(), &Config->HeapReserve, &Config->HeapCommit);
@@ -1285,11 +1289,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Symtab->addAbsolute("___safe_se_handler_count", 0);
   }
 
-  // We do not support /guard:cf (control flow protection) yet.
-  // Define CFG symbols anyway so that we can link MSVC 2015 CRT.
   Symtab->addAbsolute(mangle("__guard_fids_count"), 0);
   Symtab->addAbsolute(mangle("__guard_fids_table"), 0);
-  Symtab->addAbsolute(mangle("__guard_flags"), 0x100);
+  Symtab->addAbsolute(mangle("__guard_flags"), 0);
   Symtab->addAbsolute(mangle("__guard_iat_count"), 0);
   Symtab->addAbsolute(mangle("__guard_iat_table"), 0);
   Symtab->addAbsolute(mangle("__guard_longjmp_count"), 0);
@@ -1364,7 +1366,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /safeseh.
   if (Args.hasFlag(OPT_safeseh, OPT_safeseh_no, false)) {
     for (ObjFile *File : ObjFile::Instances)
-      if (!File->SEHCompat)
+      if (!File->hasSafeSEH())
         error("/safeseh: " + File->getName() + " is not compatible with SEH");
     if (errorCount())
       return;

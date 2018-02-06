@@ -66,7 +66,7 @@ using namespace lld::elf;
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
 
-static void setConfigs();
+static void setConfigs(opt::InputArgList &Args);
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
@@ -375,7 +375,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   initLLVM(Args);
   createFiles(Args);
   inferMachineType();
-  setConfigs();
+  setConfigs(Args);
   checkOptions(Args);
   if (errorCount())
     return;
@@ -596,9 +596,9 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition =
-      Args.hasArg(OPT_allow_multiple_definition) || hasZOption(Args, "muldefs");
-  Config->ApplyDynamicRelocs = Args.hasFlag(OPT_apply_dynamic_relocs,
-                                            OPT_no_apply_dynamic_relocs, true);
+      Args.hasFlag(OPT_allow_multiple_definition,
+                   OPT_no_allow_multiple_definition, false) ||
+      hasZOption(Args, "muldefs");
   Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -680,7 +680,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->Verbose = Args.hasArg(OPT_verbose);
   errorHandler().Verbose = Config->Verbose;
-  Config->WarnCommon = Args.hasArg(OPT_warn_common);
+  Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
@@ -803,7 +803,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 // command line options, but computed based on other Config values.
 // This function initialize such members. See Config.h for the details
 // of these values.
-static void setConfigs() {
+static void setConfigs(opt::InputArgList &Args) {
   ELFKind Kind = Config->EKind;
   uint16_t Machine = Config->EMachine;
 
@@ -821,6 +821,9 @@ static void setConfigs() {
       (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
   Config->Pic = Config->Pie || Config->Shared;
   Config->Wordsize = Config->Is64 ? 8 : 4;
+  Config->WriteAddends = Args.hasFlag(OPT_apply_dynamic_relocs,
+                                      OPT_no_apply_dynamic_relocs, false) ||
+                         !Config->IsRela;
 }
 
 // Returns a value of "-format" option.

@@ -140,7 +140,7 @@ CHECK-NEXT: [0x0000000100000f90, 0x0000000100000fb4)
 CHECK: .debug_line contents:
 CHECK:                 Dir  Mod Time   File Len   File Name
 CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
-CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 basic1.c
+CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 "basic1.c"
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000f40     26      0      1   0             0  is_stmt
@@ -150,7 +150,7 @@ CHECK-NEXT: 0x0000000100000f4b     27      3      1   0             0  end_seque
 
 CHECK:                 Dir  Mod Time   File Len   File Name
 CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
-CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 basic2.c
+CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 "basic2.c"
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000f50     19      0      1   0             0  is_stmt
@@ -166,7 +166,7 @@ CHECK-NEXT: 0x0000000100000f87     20      3      1   0             0  end_seque
 
 CHECK:                 Dir  Mod Time   File Len   File Name
 CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
-CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 basic3.c
+CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 "basic3.c"
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000f90     16      0      1   0             0  is_stmt

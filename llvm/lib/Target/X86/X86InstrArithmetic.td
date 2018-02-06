@@ -1285,12 +1285,13 @@ multiclass bmi_andn<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
            Sched<[WriteALULd, ReadAfterLd]>;
 }
 
-let Predicates = [HasBMI], Defs = [EFLAGS] in {
+// Complexity is reduced to give and with immediate a chance to match first.
+let Predicates = [HasBMI], Defs = [EFLAGS], AddedComplexity = -6 in {
   defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32>, T8PS, VEX_4V;
   defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64>, T8PS, VEX_4V, VEX_W;
 }
 
-let Predicates = [HasBMI] in {
+let Predicates = [HasBMI], AddedComplexity = -6 in {
   def : Pat<(and (not GR32:$src1), GR32:$src2),
             (ANDN32rr GR32:$src1, GR32:$src2)>;
   def : Pat<(and (not GR64:$src1), GR64:$src2),
