@@ -17,7 +17,11 @@ class ThreadingTest : public ::testing::Test {};
 
 TEST_F(ThreadingTest, TaskRunner) {
   const int TasksCnt = 100;
-  const int IncrementsPerTask = 1000;
+  // This should be const, but MSVC does not allow to use const vars in lambdas
+  // without capture. On the other hand, clang gives a warning that capture of
+  // const var is not required.
+  // Making it non-const makes both compilers happy.
+  int IncrementsPerTask = 1000;
 
   std::mutex Mutex;
   int Counter(0); /* GUARDED_BY(Mutex) */
@@ -25,7 +29,7 @@ TEST_F(ThreadingTest, TaskRunner) {
     AsyncTaskRunner Tasks;
     auto scheduleIncrements = [&]() {
       for (int TaskI = 0; TaskI < TasksCnt; ++TaskI) {
-        Tasks.runAsync([&Counter, &Mutex]() {
+        Tasks.runAsync([&Counter, &Mutex, IncrementsPerTask]() {
           for (int Increment = 0; Increment < IncrementsPerTask; ++Increment) {
             std::lock_guard<std::mutex> Lock(Mutex);
             ++Counter;
