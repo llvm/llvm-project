@@ -304,6 +304,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::StackPointer = Symtab->addDefinedGlobal("__stack_pointer");
     WasmSym::HeapBase = Symtab->addDefinedGlobal("__heap_base");
     WasmSym::DsoHandle = Symtab->addDefinedGlobal("__dso_handle");
+    WasmSym::DataEnd = Symtab->addDefinedGlobal("__data_end");
   }
 
   createFiles(Args);

@@ -1346,23 +1346,21 @@ static void removeUnusedSyntheticSections() {
     if (!OS || !SS->empty())
       continue;
 
-    std::vector<BaseCommand *>::iterator Empty = OS->SectionCommands.end();
-    for (auto I = OS->SectionCommands.begin(), E = OS->SectionCommands.end();
-         I != E; ++I) {
-      BaseCommand *B = *I;
-      if (auto *ISD = dyn_cast<InputSectionDescription>(B)) {
+    // If we reach here, then SS is an unused synthetic section and we want to
+    // remove it from corresponding input section description of output section.
+    for (BaseCommand *B : OS->SectionCommands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(B))
         llvm::erase_if(ISD->Sections,
                        [=](InputSection *IS) { return IS == SS; });
-        if (ISD->Sections.empty())
-          Empty = I;
-      }
-    }
-    if (Empty != OS->SectionCommands.end())
-      OS->SectionCommands.erase(Empty);
 
-    // If there are no other sections in the output section, remove it from the
-    // output.
-    if (OS->SectionCommands.empty())
+    // If there are no other alive sections or commands left in the output
+    // section description, we remove it from the output.
+    bool IsEmpty = llvm::all_of(OS->SectionCommands, [](BaseCommand *B) {
+      if (auto *ISD = dyn_cast<InputSectionDescription>(B))
+        return ISD->Sections.empty();
+      return false;
+    });
+    if (IsEmpty)
       OS->Live = false;
   }
 }

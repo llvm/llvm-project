@@ -703,9 +703,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->LTOPartitions = parseInt(S.substr(15), Arg);
     else if (S.startswith("jobs="))
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
+    else if (S.startswith("mcpu="))
+      LTOOptions.push_back(Saver.save("-" + S).data());
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
-             !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
-             !S.startswith("thinlto"))
+             !S.startswith("-pass-through=") && !S.startswith("thinlto"))
       LTOOptions.push_back(S.data());
   }
   // Parse and evaluate -mllvm options.
