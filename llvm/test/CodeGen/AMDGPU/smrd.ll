@@ -217,14 +217,8 @@ main_body:
 ; GCN-NEXT: %bb.
 ; SICI-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1
 ; SICI-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x7
-; VI-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x4
-; VI-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1c
-; GFX9-NEXT: s_buffer_load_dword s{{[0-9]}}
-; GFX9-NEXT: s_buffer_load_dword s{{[0-9]}}
-; GFX9-NEXT: s_buffer_load_dword s{{[0-9]}}
-; GFX9-NEXT: s_buffer_load_dword s{{[0-9]}}
-; GFX9-NEXT: s_buffer_load_dword s{{[0-9]}}
-; GFX9-NEXT: s_buffer_load_dword s{{[0-9]}}
+; VIGFX9-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x4
+; VIGFX9-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1c
 define amdgpu_ps void @smrd_imm_merged(<4 x i32> inreg %desc) #0 {
 main_body:
   %r1 = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 4)

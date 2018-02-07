@@ -57,8 +57,7 @@ public:
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
   virtual void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                                   CodeGen::CodeGenModule &M,
-                                   ForDefinition_t IsForDefinition) const {}
+                                   CodeGen::CodeGenModule &M) const {}
 
   /// emitTargetMD - Provides a convenient hook to handle extra
   /// target-specific metadata for the given global.

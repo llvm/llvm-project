@@ -1531,7 +1531,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     VTable->setComdat(CGM.getModule().getOrInsertComdat(VTable->getName()));
 
   // Set the right visibility.
-  CGM.setGlobalVisibility(VTable, RD, ForDefinition);
+  CGM.setGlobalVisibility(VTable, RD);
 
   // Use pointer alignment for the vtable. Otherwise we would align them based
   // on the size of the initializer which doesn't make sense as only single
@@ -1641,7 +1641,7 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage);
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  CGM.setGlobalVisibility(VTable, RD, NotForDefinition);
+  CGM.setGlobalVisibility(VTable, RD);
 
   if (RD->hasAttr<DLLImportAttr>())
     VTable->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);

@@ -80,20 +80,9 @@ static opt<bool> Minimize(
     desc("When used when creating a dSYM file, this option will suppress\n"
          "the emission of the .debug_inlines, .debug_pubnames, and\n"
          ".debug_pubtypes sections since dsymutil currently has better\n"
-         "equivalents: .apple_names and .apple_types. When used in\n"
-         "conjunction with --update option, this option will cause redundant\n"
-         "accelerator tables to be removed."),
+         "equivalents: .apple_names and .apple_types."),
     init(false), cat(DsymCategory));
 static alias MinimizeA("z", desc("Alias for --minimize"), aliasopt(Minimize));
-
-static opt<bool> Update(
-    "update",
-    desc("Updates existing dSYM files to contain the latest accelerator\n"
-         "tables and other DWARF optimizations. This option will currently\n"
-         "add the new .apple_names and .apple_types hashed accelerator\n"
-         "tables."),
-    init(false), cat(DsymCategory));
-static alias UpdateA("u", desc("Alias for --update"), aliasopt(Update));
 
 static opt<unsigned> NumThreads(
     "num-threads",
@@ -241,12 +230,8 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
 }
 
 static std::string getOutputFileName(llvm::StringRef InputFile) {
-  // When updating, do in place replacement.
-  if (OutputFileOpt.empty() && Update)
-    return InputFile;
-
-  // If a flat dSYM has been requested, things are pretty simple.
   if (FlatOut) {
+    // If a flat dSYM has been requested, things are pretty simple.
     if (OutputFileOpt.empty()) {
       if (InputFile == "-")
         return "a.out.dwarf";
@@ -284,76 +269,6 @@ static Expected<sys::fs::TempFile> createTempFile() {
   return sys::fs::TempFile::create(TmpModel);
 }
 
-/// Parses the command line options into the LinkOptions struct and performs
-/// some sanity checking. Returns an error in case the latter fails.
-static Expected<LinkOptions> getOptions() {
-  LinkOptions Options;
-
-  Options.Verbose = Verbose;
-  Options.NoOutput = NoOutput;
-  Options.NoODR = NoODR;
-  Options.Minimize = Minimize;
-  Options.Update = Update;
-  Options.NoTimestamp = NoTimestamp;
-  Options.PrependPath = OsoPrependPath;
-
-  if (Options.Update && std::find(InputFiles.begin(), InputFiles.end(), "-") !=
-                            InputFiles.end()) {
-    // FIXME: We cannot use stdin for an update because stdin will be
-    // consumed by the BinaryHolder during the debugmap parsing, and
-    // then we will want to consume it again in DwarfLinker. If we
-    // used a unique BinaryHolder object that could cache multiple
-    // binaries this restriction would go away.
-    return make_error<StringError>(
-        "error: standard input cannot be used as input for a dSYM update.",
-        inconvertibleErrorCode());
-  }
-
-  return Options;
-}
-
-/// Return a list of input files. This function has logic for dealing with the
-/// special case where we might have dSYM bundles as input. The function
-/// returns an error when the directory structure doesn't match that of a dSYM
-/// bundle.
-static Expected<std::vector<std::string>> getInputs(bool DsymAsInput) {
-  if (!DsymAsInput)
-    return InputFiles;
-
-  // If we are updating, we might get dSYM bundles as input.
-  std::vector<std::string> Inputs;
-  for (const auto &Input : InputFiles) {
-    if (!llvm::sys::fs::is_directory(Input)) {
-      Inputs.push_back(Input);
-      continue;
-    }
-
-    // Make sure that we're dealing with a dSYM bundle.
-    std::string dSYMDir = Input + "/Contents/Resources/DWARF";
-    if (!llvm::sys::fs::is_directory(dSYMDir))
-      return make_error<StringError>(
-          Input + " is a directory, but doesn't look like a dSYM bundle.",
-          inconvertibleErrorCode());
-
-    // Create a directory iterator to iterate over all the entries in the
-    // bundle.
-    std::error_code EC;
-    llvm::sys::fs::directory_iterator DirIt(dSYMDir, EC);
-    llvm::sys::fs::directory_iterator DirEnd;
-    if (EC)
-      return errorCodeToError(EC);
-
-    // Add each entry to the list of inputs.
-    while (DirIt != DirEnd) {
-      Inputs.push_back(DirIt->path());
-      DirIt.increment(EC);
-      if (EC)
-        return errorCodeToError(EC);
-    }
-  }
-  return Inputs;
-}
-
 namespace {
 struct TempFileVector {
   std::vector<sys::fs::TempFile> Files;
@@ -370,6 +285,7 @@ int main(int argc, char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram StackPrinter(argc, argv);
   llvm::llvm_shutdown_obj Shutdown;
+  LinkOptions Options;
   void *P = (void *)(intptr_t)getOutputFileName;
   std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], P);
   SDKPath = llvm::sys::path::parent_path(SDKPath);
@@ -392,29 +308,24 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  auto OptionsOrErr = getOptions();
-  if (!OptionsOrErr) {
-    errs() << "error: " << toString(OptionsOrErr.takeError());
-    return 1;
-  }
+  Options.Verbose = Verbose;
+  Options.NoOutput = NoOutput;
+  Options.NoODR = NoODR;
+  Options.Minimize = Minimize;
+  Options.NoTimestamp = NoTimestamp;
+  Options.PrependPath = OsoPrependPath;
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
 
-  auto InputsOrErr = getInputs(OptionsOrErr->Update);
-  if (!InputsOrErr) {
-    errs() << "error: " << toString(InputsOrErr.takeError()) << '\n';
-    return 1;
-  }
-
   if (!FlatOut && OutputFileOpt == "-") {
     llvm::errs() << "error: cannot emit to standard output without --flat\n";
     return 1;
   }
 
-  if (InputsOrErr->size() > 1 && FlatOut && !OutputFileOpt.empty()) {
+  if (InputFiles.size() > 1 && FlatOut && !OutputFileOpt.empty()) {
     llvm::errs() << "error: cannot use -o with multiple inputs in flat mode\n";
     return 1;
   }
@@ -426,7 +337,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-  for (auto &InputFile : *InputsOrErr) {
+  for (auto &InputFile : InputFiles) {
     // Dump the symbol table for each input file and requested arch
     if (DumpStab) {
       if (!dumpStab(InputFile, ArchFlags, OsoPrependPath))
@@ -443,15 +354,6 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    if (OptionsOrErr->Update) {
-      // The debug map should be empty. Add one object file corresponding to
-      // the input file.
-      for (auto &Map : *DebugMapPtrsOrErr)
-        Map->addDebugMapObject(InputFile,
-                               llvm::sys::TimePoint<std::chrono::seconds>());
-    }
-
-    // Ensure that the debug map is not empty (anymore).
     if (DebugMapPtrsOrErr->empty()) {
       llvm::errs() << "error: no architecture to link\n";
       return 1;
@@ -467,10 +369,7 @@ int main(int argc, char **argv) {
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
-    bool NeedsTempFiles =
-        !DumpDebugMap && (OutputFileOpt != "-") &&
-        (DebugMapPtrsOrErr->size() != 1 || OptionsOrErr->Update);
-
+    bool NeedsTempFiles = !DumpDebugMap && (*DebugMapPtrsOrErr).size() != 1;
     llvm::SmallVector<MachOUtils::ArchAndFilename, 4> TempFiles;
     TempFileVector TempFileStore;
     std::atomic_char AllOK(1);
@@ -513,7 +412,7 @@ int main(int argc, char **argv) {
 
       auto LinkLambda = [&,
                          OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
-        AllOK.fetch_and(linkDwarf(*Stream, *Map, *OptionsOrErr));
+        AllOK.fetch_and(linkDwarf(*Stream, *Map, Options));
         Stream->flush();
         if (Verify && !NoOutput)
           AllOK.fetch_and(verify(OutputFile, Map->getTriple().getArchName()));
@@ -535,7 +434,7 @@ int main(int argc, char **argv) {
 
     if (NeedsTempFiles &&
         !MachOUtils::generateUniversalBinary(
-            TempFiles, getOutputFileName(InputFile), *OptionsOrErr, SDKPath))
+            TempFiles, getOutputFileName(InputFile), Options, SDKPath))
       return 1;
   }
 

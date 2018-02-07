@@ -1052,8 +1052,7 @@ public:
       const llvm::Triple &Triple, const CodeGenOptions &Opts);
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &CGM) const override;
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     // Darwin uses different dwarf register numbers for EH.
@@ -1920,9 +1919,8 @@ bool X86_32TargetCodeGenInfo::isStructReturnInRegABI(
 }
 
 void X86_32TargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
-    ForDefinition_t IsForDefinition) const {
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
+  if (GV->isDeclaration())
     return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (FD->hasAttr<X86ForceAlignArgPointerAttr>()) {
@@ -2279,9 +2277,8 @@ public:
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override {
-    if (!IsForDefinition)
+                           CodeGen::CodeGenModule &CGM) const override {
+    if (GV->isDeclaration())
       return;
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       if (FD->hasAttr<X86ForceAlignArgPointerAttr>()) {
@@ -2339,8 +2336,7 @@ public:
         Win32StructABI, NumRegisterParameters, false) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &CGM) const override;
 
   void getDependentLibraryOption(llvm::StringRef Lib,
                                  llvm::SmallString<24> &Opt) const override {
@@ -2369,10 +2365,9 @@ static void addStackProbeSizeTargetAttribute(const Decl *D,
 }
 
 void WinX86_32TargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
-    ForDefinition_t IsForDefinition) const {
-  X86_32TargetCodeGenInfo::setTargetAttributes(D, GV, CGM, IsForDefinition);
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
+  X86_32TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+  if (GV->isDeclaration())
     return;
   addStackProbeSizeTargetAttribute(D, GV, CGM);
 }
@@ -2384,8 +2379,7 @@ public:
       : TargetCodeGenInfo(new WinX86_64ABIInfo(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &CGM) const override;
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 7;
@@ -2415,10 +2409,9 @@ public:
 };
 
 void WinX86_64TargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
-    ForDefinition_t IsForDefinition) const {
-  TargetCodeGenInfo::setTargetAttributes(D, GV, CGM, IsForDefinition);
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
+  TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+  if (GV->isDeclaration())
     return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (FD->hasAttr<X86ForceAlignArgPointerAttr>()) {
@@ -5557,9 +5550,8 @@ public:
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override {
-    if (!IsForDefinition)
+                           CodeGen::CodeGenModule &CGM) const override {
+    if (GV->isDeclaration())
       return;
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD)
@@ -5602,8 +5594,7 @@ public:
       : ARMTargetCodeGenInfo(CGT, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &CGM) const override;
 
   void getDependentLibraryOption(llvm::StringRef Lib,
                                  llvm::SmallString<24> &Opt) const override {
@@ -5617,10 +5608,9 @@ public:
 };
 
 void WindowsARMTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
-    ForDefinition_t IsForDefinition) const {
-  ARMTargetCodeGenInfo::setTargetAttributes(D, GV, CGM, IsForDefinition);
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
+  ARMTargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+  if (GV->isDeclaration())
     return;
   addStackProbeSizeTargetAttribute(D, GV, CGM);
 }
@@ -6149,8 +6139,7 @@ public:
     : TargetCodeGenInfo(new NVPTXABIInfo(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &M) const override;
 
 private:
   // Adds a NamedMDNode with F, Name, and Operand as operands, and adds the
@@ -6206,9 +6195,8 @@ Address NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 }
 
 void NVPTXTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
-    ForDefinition_t IsForDefinition) const {
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (GV->isDeclaration())
     return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) return;
@@ -6644,16 +6632,14 @@ public:
   MSP430TargetCodeGenInfo(CodeGenTypes &CGT)
     : TargetCodeGenInfo(new DefaultABIInfo(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &M) const override;
 };
 
 }
 
 void MSP430TargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
-    ForDefinition_t IsForDefinition) const {
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (GV->isDeclaration())
     return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (const MSP430InterruptAttr *attr = FD->getAttr<MSP430InterruptAttr>()) {
@@ -6713,8 +6699,7 @@ public:
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override {
+                           CodeGen::CodeGenModule &CGM) const override {
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
     llvm::Function *Fn = cast<llvm::Function>(GV);
@@ -6725,7 +6710,7 @@ public:
       Fn->addFnAttr("short-call");
 
     // Other attributes do not have a meaning for declarations.
-    if (!IsForDefinition)
+    if (GV->isDeclaration())
       return;
 
     if (FD->hasAttr<Mips16Attr>()) {
@@ -7089,9 +7074,8 @@ public:
     : TargetCodeGenInfo(new DefaultABIInfo(CGT)) { }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM,
-                           ForDefinition_t IsForDefinition) const override {
-    if (!IsForDefinition)
+                           CodeGen::CodeGenModule &CGM) const override {
+    if (GV->isDeclaration())
       return;
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
@@ -7120,14 +7104,12 @@ public:
     : DefaultTargetCodeGenInfo(CGT) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &M) const override;
 };
 
 void TCETargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
-    ForDefinition_t IsForDefinition) const {
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (GV->isDeclaration())
     return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) return;
@@ -7632,8 +7614,7 @@ public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
     : TargetCodeGenInfo(new AMDGPUABIInfo(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M,
-                           ForDefinition_t IsForDefinition) const override;
+                           CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
@@ -7655,9 +7636,8 @@ public:
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
-    ForDefinition_t IsForDefinition) const {
-  if (!IsForDefinition)
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (GV->isDeclaration())
     return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)

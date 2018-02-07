@@ -34067,13 +34067,15 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
     if (auto USatVal = detectUSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
   }
-  if (VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) {
+  if ((VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) ||
+      (VT.getScalarType() == MVT::i16 && InVT.getScalarType() == MVT::i32)) {
     if (auto SSatVal = detectSSatPattern(In, VT))
       return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
                                     Subtarget);
-    if (auto USatVal = detectSSatPattern(In, VT, true))
-      return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
-                                    Subtarget);
+    if (Subtarget.hasSSE41() || VT.getScalarType() == MVT::i8)
+      if (auto USatVal = detectSSatPattern(In, VT, true))
+        return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
+                                      Subtarget);
   }
   return SDValue();
 }

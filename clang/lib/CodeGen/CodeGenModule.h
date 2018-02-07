@@ -719,8 +719,7 @@ public:
   llvm::ConstantInt *getSize(CharUnits numChars);
 
   /// Set the visibility for the given LLVM GlobalValue.
-  void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D,
-                           ForDefinition_t IsForDefinition) const;
+  void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
   /// Set the TLS mode for the given LLVM GlobalValue for the thread-local
   /// variable declaration D.
@@ -1274,8 +1273,7 @@ private:
 
   /// Set function attributes for a function declaration.
   void SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
-                             bool IsIncompleteFunction, bool IsThunk,
-                             ForDefinition_t IsForDefinition);
+                             bool IsIncompleteFunction, bool IsThunk);
 
   void EmitGlobalDefinition(GlobalDecl D, llvm::GlobalValue *GV = nullptr);
 

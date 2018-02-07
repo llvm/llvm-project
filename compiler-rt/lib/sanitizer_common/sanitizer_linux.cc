@@ -568,7 +568,7 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
   *envp = pss->ps_envstr;
 #elif SANITIZER_NETBSD
   *argv = __ps_strings->ps_argvstr;
-  *argv = __ps_strings->ps_envstr;
+  *envp = __ps_strings->ps_envstr;
 #else
 #if !SANITIZER_GO
   if (&__libc_stack_end) {
@@ -1898,4 +1898,3 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
         // SANITIZER_SOLARIS
-

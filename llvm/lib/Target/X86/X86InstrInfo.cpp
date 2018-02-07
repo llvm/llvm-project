@@ -6919,8 +6919,10 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
         (HasAVX512 ? X86::VMOVSSZmr : HasAVX ? X86::VMOVSSmr : X86::MOVSSmr);
     if (X86::RFP32RegClass.hasSubClassEq(RC))
       return load ? X86::LD_Fp32m : X86::ST_Fp32m;
-    if (X86::VK32RegClass.hasSubClassEq(RC))
+    if (X86::VK32RegClass.hasSubClassEq(RC)) {
+      assert(STI.hasBWI() && "KMOVD requires BWI");
       return load ? X86::KMOVDkm : X86::KMOVDmk;
+    }
     llvm_unreachable("Unknown 4-byte regclass");
   case 8:
     if (X86::GR64RegClass.hasSubClassEq(RC))
@@ -6933,8 +6935,10 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
       return load ? X86::MMX_MOVQ64rm : X86::MMX_MOVQ64mr;
     if (X86::RFP64RegClass.hasSubClassEq(RC))
       return load ? X86::LD_Fp64m : X86::ST_Fp64m;
-    if (X86::VK64RegClass.hasSubClassEq(RC))
+    if (X86::VK64RegClass.hasSubClassEq(RC)) {
+      assert(STI.hasBWI() && "KMOVQ requires BWI");
       return load ? X86::KMOVQkm : X86::KMOVQmk;
+    }
     llvm_unreachable("Unknown 8-byte regclass");
   case 10:
     assert(X86::RFP80RegClass.hasSubClassEq(RC) && "Unknown 10-byte regclass");

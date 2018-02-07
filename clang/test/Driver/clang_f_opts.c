@@ -517,3 +517,8 @@
 // RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-CF-PROTECTION-BRANCH %s
 // CHECK-CF-PROTECTION-BRANCH: -fcf-protection=branch
 // CHECK-NO-CF-PROTECTION-BRANCH-NOT: -fcf-protection=branch
+
+// RUN: %clang -### -S -fdiscard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-DISCARD-NAMES %s
+// RUN: %clang -### -S -fno-discard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-NO-DISCARD-NAMES %s
+// CHECK-DISCARD-NAMES: "-discard-value-names"
+// CHECK-NO-DISCARD-NAMES-NOT: "-discard-value-names"

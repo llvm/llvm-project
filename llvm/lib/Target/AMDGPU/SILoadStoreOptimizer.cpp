@@ -853,9 +853,8 @@ bool SILoadStoreOptimizer::optimizeBlock(MachineBasicBlock &MBB) {
 
       continue;
     }
-    if (STM->hasSBufferLoadStoreAtomicDwordxN() &&
-        (Opc == AMDGPU::S_BUFFER_LOAD_DWORD_IMM ||
-         Opc == AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM)) {
+    if (Opc == AMDGPU::S_BUFFER_LOAD_DWORD_IMM ||
+        Opc == AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM) {
       // EltSize is in units of the offset encoding.
       CI.InstClass = S_BUFFER_LOAD_IMM;
       CI.EltSize = AMDGPU::getSMRDEncodedOffset(*STM, 4);

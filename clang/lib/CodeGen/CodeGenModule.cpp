@@ -700,8 +700,7 @@ llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
 }
 
 void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
-                                        const NamedDecl *D,
-                                        ForDefinition_t IsForDefinition) const {
+                                        const NamedDecl *D) const {
   if (GV->hasDLLImportStorageClass())
     return;
   // Internal definitions always have default visibility.
@@ -712,8 +711,7 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
 
   // Set visibility for definitions.
   LinkageInfo LV = D->getLinkageAndVisibility();
-  if (LV.isVisibilityExplicit() ||
-      (IsForDefinition && !GV->hasAvailableExternallyLinkage()))
+  if (LV.isVisibilityExplicit() || !GV->isDeclarationForLinker())
     GV->setVisibility(GetLLVMVisibility(LV.getVisibility()));
 }
 
@@ -1174,7 +1172,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 void CodeGenModule::SetCommonAttributes(const Decl *D,
                                         llvm::GlobalValue *GV) {
   if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
-    setGlobalVisibility(GV, ND, ForDefinition);
+    setGlobalVisibility(GV, ND);
   else
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
 
@@ -1216,7 +1214,7 @@ void CodeGenModule::setNonAliasAttributes(const Decl *D,
       GO->setSection(SA->getName());
   }
 
-  getTargetCodeGenInfo().setTargetAttributes(D, GO, *this, ForDefinition);
+  getTargetCodeGenInfo().setTargetAttributes(D, GO, *this);
 }
 
 void CodeGenModule::SetInternalFunctionAttributes(const Decl *D,
@@ -1280,8 +1278,7 @@ void CodeGenModule::CreateFunctionTypeMetadata(const FunctionDecl *FD,
 
 void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                           bool IsIncompleteFunction,
-                                          bool IsThunk,
-                                          ForDefinition_t IsForDefinition) {
+                                          bool IsThunk) {
 
   if (llvm::Intrinsic::ID IID = F->getIntrinsicID()) {
     // If this is an intrinsic function, set the function's attributes
@@ -1295,9 +1292,8 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   if (!IsIncompleteFunction) {
     SetLLVMFunctionAttributes(FD, getTypes().arrangeGlobalDeclaration(GD), F);
     // Setup target-specific attributes.
-    if (!IsForDefinition)
-      getTargetCodeGenInfo().setTargetAttributes(FD, F, *this,
-                                                 NotForDefinition);
+    if (F->isDeclaration())
+      getTargetCodeGenInfo().setTargetAttributes(FD, F, *this);
   }
 
   // Add the Returned attribute for "this", except for iOS 5 and earlier
@@ -1316,7 +1312,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // overridden by a definition.
 
   setLinkageForGV(F, FD);
-  setGlobalVisibility(F, FD, NotForDefinition);
+  setGlobalVisibility(F, FD);
 
   if (FD->getAttr<PragmaClangTextSectionAttr>()) {
     F->addFnAttr("implicit-section-name");
@@ -2356,8 +2352,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
   assert(F->getName() == MangledName && "name was uniqued!");
   if (D)
-    SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk,
-                          IsForDefinition);
+    SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
   if (ExtraAttrs.hasAttributes(llvm::AttributeList::FunctionIndex)) {
     llvm::AttrBuilder B(ExtraAttrs, llvm::AttributeList::FunctionIndex);
     F->addAttributes(llvm::AttributeList::FunctionIndex, B);
@@ -2644,7 +2639,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     GV->setAlignment(getContext().getDeclAlign(D).getQuantity());
 
     setLinkageForGV(GV, D);
-    setGlobalVisibility(GV, D, NotForDefinition);
+    setGlobalVisibility(GV, D);
 
     if (D->getTLSKind()) {
       if (D->getTLSKind() == VarDecl::TLS_Dynamic)
@@ -3463,7 +3458,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   setFunctionDLLStorageClass(GD, Fn);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
-  setGlobalVisibility(Fn, D, ForDefinition);
+  setGlobalVisibility(Fn, D);
 
   MaybeHandleStaticInExternC(D, Fn);
 
@@ -4059,7 +4054,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
       getModule(), Type, Constant, Linkage, InitialValue, Name.c_str(),
       /*InsertBefore=*/nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
   if (emitter) emitter->finalize(GV);
-  setGlobalVisibility(GV, VD, ForDefinition);
+  setGlobalVisibility(GV, VD);
   GV->setAlignment(Align.getQuantity());
   if (supportsCOMDAT() && GV->isWeakForLinker())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
