@@ -286,9 +286,6 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
 }
 
 void ConvergingVLIWScheduler::releaseTopNode(SUnit *SU) {
-  if (SU->isScheduled)
-    return;
-
   for (const SDep &PI : SU->Preds) {
     unsigned PredReadyCycle = PI.getSUnit()->TopReadyCycle;
     unsigned MinLatency = PI.getLatency();
@@ -298,13 +295,12 @@ void ConvergingVLIWScheduler::releaseTopNode(SUnit *SU) {
     if (SU->TopReadyCycle < PredReadyCycle + MinLatency)
       SU->TopReadyCycle = PredReadyCycle + MinLatency;
   }
-  Top.releaseNode(SU, SU->TopReadyCycle);
+
+  if (!SU->isScheduled)
+    Top.releaseNode(SU, SU->TopReadyCycle);
 }
 
 void ConvergingVLIWScheduler::releaseBottomNode(SUnit *SU) {
-  if (SU->isScheduled)
-    return;
-
   assert(SU->getInstr() && "Scheduled SUnit must have instr");
 
   for (SUnit::succ_iterator I = SU->Succs.begin(), E = SU->Succs.end();
@@ -317,7 +313,9 @@ void ConvergingVLIWScheduler::releaseBottomNode(SUnit *SU) {
     if (SU->BotReadyCycle < SuccReadyCycle + MinLatency)
       SU->BotReadyCycle = SuccReadyCycle + MinLatency;
   }
-  Bot.releaseNode(SU, SU->BotReadyCycle);
+
+  if (!SU->isScheduled)
+    Bot.releaseNode(SU, SU->BotReadyCycle);
 }
 
 /// Does this SU have a hazard within the current instruction group.
