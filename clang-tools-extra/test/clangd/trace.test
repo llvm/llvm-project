@@ -10,7 +10,7 @@
 #      CHECK: "name": "Preamble"
 #      CHECK: },
 # Finish building the preamble, with filename.
-#      CHECK: "File": "{{.*}}/foo.c"
+#      CHECK: "File": "{{.*(/|\\)}}foo.c"
 # CHECK-NEXT: },
 # CHECK-NEXT: "ph": "E"
 # Start building the file.

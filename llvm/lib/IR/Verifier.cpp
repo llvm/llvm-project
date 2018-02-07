@@ -945,7 +945,8 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
                N.getTag() == dwarf::DW_TAG_structure_type ||
                N.getTag() == dwarf::DW_TAG_union_type ||
                N.getTag() == dwarf::DW_TAG_enumeration_type ||
-               N.getTag() == dwarf::DW_TAG_class_type,
+               N.getTag() == dwarf::DW_TAG_class_type ||
+               N.getTag() == dwarf::DW_TAG_variant_part,
            "invalid tag", &N);
 
   AssertDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
@@ -965,6 +966,11 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
       N.getTag() == dwarf::DW_TAG_union_type) {
     AssertDI(N.getFile() && !N.getFile()->getFilename().empty(),
              "class/union requires a filename", &N, N.getFile());
+  }
+
+  if (auto *D = N.getRawDiscriminator()) {
+    AssertDI(isa<DIDerivedType>(D) && N.getTag() == dwarf::DW_TAG_variant_part,
+             "discriminator can only appear on variant part");
   }
 }
 

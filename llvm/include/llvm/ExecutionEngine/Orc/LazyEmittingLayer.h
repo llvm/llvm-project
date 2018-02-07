@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -46,9 +47,8 @@ public:
 private:
   class EmissionDeferredModule {
   public:
-    EmissionDeferredModule(std::shared_ptr<Module> M,
-                           std::shared_ptr<JITSymbolResolver> Resolver)
-      : M(std::move(M)), Resolver(std::move(Resolver)) {}
+    EmissionDeferredModule(VModuleKey K, std::shared_ptr<Module> M)
+        : K(std::move(K)), M(std::move(M)) {}
 
     JITSymbol find(StringRef Name, bool ExportedSymbolsOnly, BaseLayerT &B) {
       switch (EmitState) {
@@ -139,7 +139,7 @@ private:
       // We don't need the mangled names set any more: Once we've emitted this
       // to the base layer we'll just look for symbols there.
       MangledSymbols.reset();
-      return BaseLayer.addModule(std::move(M), std::move(Resolver));
+      return BaseLayer.addModule(std::move(K), std::move(M));
     }
 
     // If the mangled name of the given GlobalValue matches the given search
@@ -193,8 +193,8 @@ private:
 
     enum { NotEmitted, Emitting, Emitted } EmitState = NotEmitted;
     BaseLayerHandleT Handle;
+    VModuleKey K;
     std::shared_ptr<Module> M;
-    std::shared_ptr<JITSymbolResolver> Resolver;
     mutable std::unique_ptr<StringMap<const GlobalValue*>> MangledSymbols;
   };
 
@@ -212,13 +212,10 @@ public:
   LazyEmittingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
 
   /// @brief Add the given module to the lazy emitting layer.
-  Expected<ModuleHandleT>
-  addModule(std::shared_ptr<Module> M,
-            std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ModuleHandleT> addModule(VModuleKey K, std::shared_ptr<Module> M) {
     return ModuleList.insert(
         ModuleList.end(),
-        llvm::make_unique<EmissionDeferredModule>(std::move(M),
-                                                  std::move(Resolver)));
+        llvm::make_unique<EmissionDeferredModule>(std::move(K), std::move(M)));
   }
 
   /// @brief Remove the module represented by the given handle.

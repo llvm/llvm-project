@@ -32,6 +32,7 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class MCAsmBackend;
 class MCContext;
+class MCDwarfLineStr;
 class MCObjectStreamer;
 class MCStreamer;
 class MCSymbol;
@@ -214,15 +215,18 @@ struct MCDwarfLineTableHeader {
 
   unsigned getFile(StringRef &Directory, StringRef &FileName,
                    MD5::MD5Result *Checksum, unsigned FileNumber = 0);
-  std::pair<MCSymbol *, MCSymbol *> Emit(MCStreamer *MCOS,
-                                         MCDwarfLineTableParams Params) const;
   std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-       ArrayRef<char> SpecialOpcodeLengths) const;
+       Optional<MCDwarfLineStr> &LineStr) const;
+  std::pair<MCSymbol *, MCSymbol *>
+  Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
+       ArrayRef<char> SpecialOpcodeLengths,
+       Optional<MCDwarfLineStr> &LineStr) const;
 
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
-  void emitV5FileDirTables(MCStreamer *MCOS) const;
+  void emitV5FileDirTables(MCStreamer *MCOS,
+                           Optional<MCDwarfLineStr> &LineStr) const;
 };
 
 class MCDwarfDwoLineTable {
@@ -250,7 +254,8 @@ public:
   static void Emit(MCObjectStreamer *MCOS, MCDwarfLineTableParams Params);
 
   // This emits the Dwarf file and the line tables for a given Compile Unit.
-  void EmitCU(MCObjectStreamer *MCOS, MCDwarfLineTableParams Params) const;
+  void EmitCU(MCObjectStreamer *MCOS, MCDwarfLineTableParams Params,
+              Optional<MCDwarfLineStr> &LineStr) const;
 
   unsigned getFile(StringRef &Directory, StringRef &FileName,
                    MD5::MD5Result *Checksum, unsigned FileNumber = 0);

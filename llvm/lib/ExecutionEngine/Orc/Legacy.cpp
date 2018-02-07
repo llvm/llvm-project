@@ -45,10 +45,21 @@ JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
 
   auto UnresolvedSymbols = R.lookup(Query, InternedSymbols);
 
-  if (!UnresolvedSymbols.empty())
-    Err = joinErrors(std::move(Err),
-                     make_error<StringError>("Unresolved symbols",
-                                             inconvertibleErrorCode()));
+  if (!UnresolvedSymbols.empty()) {
+    std::string ErrorMsg = "Unresolved symbols: ";
+
+    ErrorMsg += **UnresolvedSymbols.begin();
+    for (auto I = std::next(UnresolvedSymbols.begin()),
+              E = UnresolvedSymbols.end();
+         I != E; ++I) {
+      ErrorMsg += ", ";
+      ErrorMsg += **I;
+    }
+
+    Err =
+        joinErrors(std::move(Err),
+                   make_error<StringError>(ErrorMsg, inconvertibleErrorCode()));
+  }
 
   if (Err)
     return std::move(Err);

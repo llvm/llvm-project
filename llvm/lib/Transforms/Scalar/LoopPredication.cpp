@@ -266,6 +266,11 @@ class LoopPredication {
   // Return the loopLatchCheck corresponding to the RangeCheckType if safe to do
   // so.
   Optional<LoopICmp> generateLoopLatchCheck(Type *RangeCheckType);
+
+  // Returns the latch predicate for guard. SGT -> SGE, UGT -> UGE, SGE -> SGT,
+  // UGE -> UGT, etc.
+  ICmpInst::Predicate getLatchPredicateForGuard(ICmpInst::Predicate Pred);
+
 public:
   LoopPredication(ScalarEvolution *SE) : SE(SE){};
   bool runOnLoop(Loop *L);
@@ -391,6 +396,30 @@ bool LoopPredication::CanExpand(const SCEV* S) {
   return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
 }
 
+ICmpInst::Predicate
+LoopPredication::getLatchPredicateForGuard(ICmpInst::Predicate Pred) {
+  switch (LatchCheck.Pred) {
+  case ICmpInst::ICMP_ULT:
+    return ICmpInst::ICMP_ULE;
+  case ICmpInst::ICMP_ULE:
+    return ICmpInst::ICMP_ULT;
+  case ICmpInst::ICMP_SLT:
+    return ICmpInst::ICMP_SLE;
+  case ICmpInst::ICMP_SLE:
+    return ICmpInst::ICMP_SLT;
+  case ICmpInst::ICMP_UGT:
+    return ICmpInst::ICMP_UGE;
+  case ICmpInst::ICMP_UGE:
+    return ICmpInst::ICMP_UGT;
+  case ICmpInst::ICMP_SGT:
+    return ICmpInst::ICMP_SGE;
+  case ICmpInst::ICMP_SGE:
+    return ICmpInst::ICMP_SGT;
+  default:
+    llvm_unreachable("Unsupported loop latch!");
+  }
+}
+
 Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
     LoopPredication::LoopICmp LatchCheck, LoopPredication::LoopICmp RangeCheck,
     SCEVExpander &Expander, IRBuilder<> &Builder) {
@@ -415,23 +444,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
     DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
-  ICmpInst::Predicate LimitCheckPred;
-  switch (LatchCheck.Pred) {
-  case ICmpInst::ICMP_ULT:
-    LimitCheckPred = ICmpInst::ICMP_ULE;
-    break;
-  case ICmpInst::ICMP_ULE:
-    LimitCheckPred = ICmpInst::ICMP_ULT;
-    break;
-  case ICmpInst::ICMP_SLT:
-    LimitCheckPred = ICmpInst::ICMP_SLE;
-    break;
-  case ICmpInst::ICMP_SLE:
-    LimitCheckPred = ICmpInst::ICMP_SLT;
-    break;
-  default:
-    llvm_unreachable("Unsupported loop latch!");
-  }
+  auto LimitCheckPred = getLatchPredicateForGuard(LatchCheck.Pred);
 
   DEBUG(dbgs() << "LHS: " << *LatchLimit << "\n");
   DEBUG(dbgs() << "RHS: " << *RHS << "\n");

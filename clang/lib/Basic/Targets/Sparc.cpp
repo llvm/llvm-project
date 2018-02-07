@@ -178,6 +178,13 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro(MyriadArchValue, "1");
       Builder.defineMacro(MyriadArchValue + "__", "1");
     }
+    if (Myriad2Value == "2") {
+      Builder.defineMacro("__ma2x5x", "1");
+      Builder.defineMacro("__ma2x5x__", "1");
+    } else if (Myriad2Value == "3") {
+      Builder.defineMacro("__ma2x8x", "1");
+      Builder.defineMacro("__ma2x8x__", "1");
+    }
     Builder.defineMacro("__myriad2__", Myriad2Value);
     Builder.defineMacro("__myriad2", Myriad2Value);
   }

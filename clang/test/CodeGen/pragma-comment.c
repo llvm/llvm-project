@@ -23,10 +23,9 @@
 // CHECK: ![[bar]] = !{!" /bar=2"}
 // CHECK: ![[foo]] = !{!" /foo=\22foo bar\22"}
 
-// LINUX: !{!"-lmsvcrt.lib"}
-// LINUX: !{!"-lkernel32"}
-// LINUX: !{!"-lUSER32.LIB"}
-// LINUX: !{!" /bar=2"}
+// LINUX: !{!"lib", !"msvcrt.lib"}
+// LINUX: !{!"lib", !"kernel32"}
+// LINUX: !{!"lib", !"USER32.LIB"}
 
 // PS4: !{!"\01msvcrt.lib"}
 // PS4: !{!"\01kernel32"}

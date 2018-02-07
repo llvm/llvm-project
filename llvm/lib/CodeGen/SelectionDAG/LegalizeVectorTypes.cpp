@@ -343,8 +343,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
       ScalarBool = TargetLowering::UndefinedBooleanContent;
   }
 
+  EVT CondVT = Cond.getValueType();
   if (ScalarBool != VecBool) {
-    EVT CondVT = Cond.getValueType();
     switch (ScalarBool) {
       case TargetLowering::UndefinedBooleanContent:
         break;
@@ -364,6 +364,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
         break;
     }
   }
+
+  // Truncate the condition if needed
+  auto BoolVT = getSetCCResultType(CondVT);
+  if (BoolVT.bitsLT(CondVT))
+    Cond = DAG.getNode(ISD::TRUNCATE, SDLoc(N), BoolVT, Cond);
 
   return DAG.getSelect(SDLoc(N),
                        LHS.getValueType(), Cond, LHS,

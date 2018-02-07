@@ -14,22 +14,23 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,8 +45,17 @@ public:
   using ModuleHandleT = CompileLayerT::ModuleHandleT;
 
   KaleidoscopeJIT()
-      : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+      : ES(SSP),
+        Resolver(createLegacyLookupResolver(
+            [this](const std::string &Name) {
+              return ObjectLayer.findSymbol(Name, true);
+            },
+            [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
+        TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer(
+            ES,
+            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
+            [this](VModuleKey) { return Resolver; }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
@@ -53,19 +63,8 @@ public:
   TargetMachine &getTargetMachine() { return *TM; }
 
   ModuleHandleT addModule(std::unique_ptr<Module> M) {
-    // We need a memory manager to allocate memory and resolve symbols for this
-    // new module. Create one that resolves symbols by looking back into the
-    // JIT.
-    auto Resolver = createLambdaResolver(
-        [&](const std::string &Name) {
-          if (auto Sym = findMangledSymbol(Name))
-            return Sym;
-          return JITSymbol(nullptr);
-        },
-        [](const std::string &S) { return nullptr; });
-    auto H = cantFail(CompileLayer.addModule(std::move(M),
-                                             std::move(Resolver)));
-
+    auto H =
+        cantFail(CompileLayer.addModule(ES.allocateVModule(), std::move(M)));
     ModuleHandles.push_back(H);
     return H;
   }
@@ -127,6 +126,9 @@ private:
     return nullptr;
   }
 
+  SymbolStringPool SSP;
+  ExecutionSession ES;
+  std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
   ObjLayerT ObjectLayer;

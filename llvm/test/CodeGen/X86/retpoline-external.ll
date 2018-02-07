@@ -23,18 +23,18 @@ entry:
 ; X64:       callq bar
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq %[[fp]], %r11
-; X64:       callq __llvm_external_retpoline_r11
+; X64:       callq __x86_indirect_thunk_r11
 ; X64:       movl %[[x]], %edi
 ; X64:       callq bar
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq %[[fp]], %r11
-; X64:       jmp __llvm_external_retpoline_r11 # TAILCALL
+; X64:       jmp __x86_indirect_thunk_r11 # TAILCALL
 
 ; X64FAST-LABEL: icall_reg:
 ; X64FAST:       callq bar
-; X64FAST:       callq __llvm_external_retpoline_r11
+; X64FAST:       callq __x86_indirect_thunk_r11
 ; X64FAST:       callq bar
-; X64FAST:       jmp __llvm_external_retpoline_r11 # TAILCALL
+; X64FAST:       jmp __x86_indirect_thunk_r11 # TAILCALL
 
 ; X86-LABEL: icall_reg:
 ; X86-DAG:   movl 12(%esp), %[[fp:[^ ]*]]
@@ -43,19 +43,19 @@ entry:
 ; X86:       calll bar
 ; X86:       movl %[[fp]], %eax
 ; X86:       pushl %[[x]]
-; X86:       calll __llvm_external_retpoline_eax
+; X86:       calll __x86_indirect_thunk_eax
 ; X86:       pushl %[[x]]
 ; X86:       calll bar
 ; X86:       movl %[[fp]], %eax
 ; X86:       pushl %[[x]]
-; X86:       calll __llvm_external_retpoline_eax
+; X86:       calll __x86_indirect_thunk_eax
 ; X86-NOT:   # TAILCALL
 
 ; X86FAST-LABEL: icall_reg:
 ; X86FAST:       calll bar
-; X86FAST:       calll __llvm_external_retpoline_eax
+; X86FAST:       calll __x86_indirect_thunk_eax
 ; X86FAST:       calll bar
-; X86FAST:       calll __llvm_external_retpoline_eax
+; X86FAST:       calll __x86_indirect_thunk_eax
 
 
 @global_fp = external global void (i32)*
@@ -72,28 +72,28 @@ define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
 ; X64-LABEL: icall_global_fp:
 ; X64-DAG:   movl %edi, %[[x:[^ ]*]]
 ; X64-DAG:   movq global_fp(%rip), %r11
-; X64:       callq __llvm_external_retpoline_r11
+; X64:       callq __x86_indirect_thunk_r11
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq global_fp(%rip), %r11
-; X64:       jmp __llvm_external_retpoline_r11 # TAILCALL
+; X64:       jmp __x86_indirect_thunk_r11 # TAILCALL
 
 ; X64FAST-LABEL: icall_global_fp:
 ; X64FAST:       movq global_fp(%rip), %r11
-; X64FAST:       callq __llvm_external_retpoline_r11
+; X64FAST:       callq __x86_indirect_thunk_r11
 ; X64FAST:       movq global_fp(%rip), %r11
-; X64FAST:       jmp __llvm_external_retpoline_r11 # TAILCALL
+; X64FAST:       jmp __x86_indirect_thunk_r11 # TAILCALL
 
 ; X86-LABEL: icall_global_fp:
 ; X86:       movl global_fp, %eax
 ; X86:       pushl 4(%esp)
-; X86:       calll __llvm_external_retpoline_eax
+; X86:       calll __x86_indirect_thunk_eax
 ; X86:       addl $4, %esp
 ; X86:       movl global_fp, %eax
-; X86:       jmp __llvm_external_retpoline_eax # TAILCALL
+; X86:       jmp __x86_indirect_thunk_eax # TAILCALL
 
 ; X86FAST-LABEL: icall_global_fp:
-; X86FAST:       calll __llvm_external_retpoline_eax
-; X86FAST:       jmp __llvm_external_retpoline_eax # TAILCALL
+; X86FAST:       calll __x86_indirect_thunk_eax
+; X86FAST:       jmp __x86_indirect_thunk_eax # TAILCALL
 
 
 %struct.Foo = type { void (%struct.Foo*)** }
@@ -114,14 +114,14 @@ define void @vcall(%struct.Foo* %obj) #0 {
 ; X64:       movq (%rdi), %[[vptr:[^ ]*]]
 ; X64:       movq 8(%[[vptr]]), %[[fp:[^ ]*]]
 ; X64:       movq %[[fp]], %r11
-; X64:       callq __llvm_external_retpoline_r11
+; X64:       callq __x86_indirect_thunk_r11
 ; X64-DAG:   movq %[[obj]], %rdi
 ; X64-DAG:   movq %[[fp]], %r11
-; X64:       jmp __llvm_external_retpoline_r11 # TAILCALL
+; X64:       jmp __x86_indirect_thunk_r11 # TAILCALL
 
 ; X64FAST-LABEL: vcall:
-; X64FAST:       callq __llvm_external_retpoline_r11
-; X64FAST:       jmp __llvm_external_retpoline_r11 # TAILCALL
+; X64FAST:       callq __x86_indirect_thunk_r11
+; X64FAST:       jmp __x86_indirect_thunk_r11 # TAILCALL
 
 ; X86-LABEL: vcall:
 ; X86:       movl 8(%esp), %[[obj:[^ ]*]]
@@ -129,14 +129,14 @@ define void @vcall(%struct.Foo* %obj) #0 {
 ; X86:       movl 4(%[[vptr]]), %[[fp:[^ ]*]]
 ; X86:       movl %[[fp]], %eax
 ; X86:       pushl %[[obj]]
-; X86:       calll __llvm_external_retpoline_eax
+; X86:       calll __x86_indirect_thunk_eax
 ; X86:       addl $4, %esp
 ; X86:       movl %[[fp]], %eax
-; X86:       jmp __llvm_external_retpoline_eax # TAILCALL
+; X86:       jmp __x86_indirect_thunk_eax # TAILCALL
 
 ; X86FAST-LABEL: vcall:
-; X86FAST:       calll __llvm_external_retpoline_eax
-; X86FAST:       jmp __llvm_external_retpoline_eax # TAILCALL
+; X86FAST:       calll __x86_indirect_thunk_eax
+; X86FAST:       jmp __x86_indirect_thunk_eax # TAILCALL
 
 
 declare void @direct_callee()

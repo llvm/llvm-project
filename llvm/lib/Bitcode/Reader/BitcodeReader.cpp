@@ -5133,6 +5133,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     switch (BitCode) {
     default: // Default behavior: ignore.
       break;
+    case bitc::FS_FLAGS: {  // [flags]
+      uint64_t Flags = Record[0];
+      // Scan flags (set only on the combined index).
+      assert(Flags <= 1 && "Unexpected bits in flag");
+
+      // 1 bit: WithGlobalValueDeadStripping flag.
+      if (Flags & 0x1)
+        TheIndex.setWithGlobalValueDeadStripping();
+      break;
+    }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
       uint64_t ValueID = Record[0];
       GlobalValue::GUID RefGUID = Record[1];

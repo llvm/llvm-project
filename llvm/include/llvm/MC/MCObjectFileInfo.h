@@ -79,6 +79,7 @@ protected:
   MCSection *DwarfAbbrevSection;
   MCSection *DwarfInfoSection;
   MCSection *DwarfLineSection;
+  MCSection *DwarfLineStrSection;
   MCSection *DwarfFrameSection;
   MCSection *DwarfPubTypesSection;
   const MCSection *DwarfDebugInlineSection;
@@ -234,6 +235,7 @@ public:
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
   MCSection *getDwarfLineSection() const { return DwarfLineSection; }
+  MCSection *getDwarfLineStrSection() const { return DwarfLineStrSection; }
   MCSection *getDwarfFrameSection() const { return DwarfFrameSection; }
   MCSection *getDwarfPubNamesSection() const { return DwarfPubNamesSection; }
   MCSection *getDwarfPubTypesSection() const { return DwarfPubTypesSection; }

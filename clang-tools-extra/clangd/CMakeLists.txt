@@ -6,6 +6,7 @@ add_clang_library(clangDaemon
   ClangdLSPServer.cpp
   ClangdServer.cpp
   ClangdUnit.cpp
+  ClangdUnitStore.cpp
   CodeComplete.cpp
   CodeCompletionStrings.cpp
   CompileArgsCache.cpp

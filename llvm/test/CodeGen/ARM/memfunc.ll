@@ -421,8 +421,10 @@ entry:
 ; CHECK: arr5:
 ; CHECK-NOT: .p2align
 ; CHECK: arr6:
-; CHECK: .p2align 4
-; CHECK: arr8:
+; CHECK-IOS: arr8,128,4
+; CHECK-DARWIN: arr8,128,4
+; CHECK-EABI: arr8,128,16
+; CHECK-GNUEABI: arr8,128,16
 ; CHECK: .p2align 4
 ; CHECK: arr9:
 

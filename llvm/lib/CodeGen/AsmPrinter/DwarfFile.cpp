@@ -103,37 +103,18 @@ void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection,
 }
 
 bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
-  SmallVectorImpl<DbgVariable *> &Vars = ScopeVariables[LS];
+  auto &ScopeVars = ScopeVariables[LS];
   const DILocalVariable *DV = Var->getVariable();
-  // Variables with positive arg numbers are parameters.
   if (unsigned ArgNum = DV->getArg()) {
-    // Keep all parameters in order at the start of the variable list to ensure
-    // function types are correct (no out-of-order parameters)
-    //
-    // This could be improved by only doing it for optimized builds (unoptimized
-    // builds have the right order to begin with), searching from the back (this
-    // would catch the unoptimized case quickly), or doing a binary search
-    // rather than linear search.
-    auto I = Vars.begin();
-    while (I != Vars.end()) {
-      unsigned CurNum = (*I)->getVariable()->getArg();
-      // A local (non-parameter) variable has been found, insert immediately
-      // before it.
-      if (CurNum == 0)
-        break;
-      // A later indexed parameter has been found, insert immediately before it.
-      if (CurNum > ArgNum)
-        break;
-      if (CurNum == ArgNum) {
-        (*I)->addMMIEntry(*Var);
-        return false;
-      }
-      ++I;
+    auto Cached = ScopeVars.Args.find(ArgNum);
+    if (Cached == ScopeVars.Args.end())
+      ScopeVars.Args[ArgNum] = Var;
+    else {
+      Cached->second->addMMIEntry(*Var);
+      return false;
     }
-    Vars.insert(I, Var);
-    return true;
-  }
-
-  Vars.push_back(Var);
+  } else {
+    ScopeVars.Locals.push_back(Var);
+  }    
   return true;
 }

@@ -68,8 +68,8 @@
 
 # Check that we create the expected binary with --noinhibit-exec or --no-check-sections:
 # RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --noinhibit-exec
-# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-check-sections
-# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --check-sections --no-check-sections
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-check-sections -fatal-warnings
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --check-sections --no-check-sections -fatal-warnings
 
 # Verify that the .sec2 was indeed placed in a PT_LOAD where the PhysAddr
 # overlaps with where .sec1 is loaded:

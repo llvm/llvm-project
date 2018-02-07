@@ -298,6 +298,8 @@ namespace HexagonISD {
     }
 
   private:
+    void initializeHVXLowering();
+
     bool getBuildVectorConstInts(ArrayRef<SDValue> Values, MVT VecTy,
                                  SelectionDAG &DAG,
                                  MutableArrayRef<ConstantInt*> Consts) const;
@@ -313,6 +315,7 @@ namespace HexagonISD {
                             SelectionDAG &DAG) const;
     SDValue contractPredicate(SDValue Vec64, const SDLoc &dl,
                               SelectionDAG &DAG) const;
+    SDValue getVectorShiftByInt(SDValue Op, SelectionDAG &DAG) const;
 
     bool isUndef(SDValue Op) const {
       if (Op.isMachineOpcode())
@@ -403,6 +406,10 @@ namespace HexagonISD {
     SDValue LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue LowerHvxAnyExt(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxSignExt(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxZeroExt(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxMul(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
