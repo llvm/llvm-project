@@ -89,12 +89,12 @@ struct Configuration {
   llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
   llvm::StringRef OptRemarksFilename;
+  llvm::StringRef ProgName;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   llvm::StringRef ThinLTOCacheDir;
   std::string Rpath;
   std::vector<VersionDefinition> VersionDefinitions;
-  std::vector<llvm::StringRef> Argv;
   std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> FilterList;
   std::vector<llvm::StringRef> SearchPaths;

@@ -89,7 +89,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Driver = make<LinkerDriver>();
   Script = make<LinkerScript>();
   Symtab = make<SymbolTable>();
-  Config->Argv = {Args.begin(), Args.end()};
+  Config->ProgName = Args[0];
 
   Driver->main(Args, CanExitEarly);
 
@@ -317,7 +317,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
 
   // Handle -help
   if (Args.hasArg(OPT_help)) {
-    printHelp(ArgsArr[0]);
+    printHelp();
     return;
   }
 
@@ -690,7 +690,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   // Parse LTO plugin-related options for compatibility with gold.
-  std::vector<const char *> LTOOptions({Config->Argv[0].data()});
+  std::vector<const char *> LTOOptions({Config->ProgName.data()});
   for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
     StringRef S = Arg->getValue();
     if (S == "disable-verify")
