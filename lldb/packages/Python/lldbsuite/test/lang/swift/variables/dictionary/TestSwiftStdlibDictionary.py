@@ -25,8 +25,8 @@ class TestSwiftStdlibDictionary(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     # @decorators.skipIfLinux  # bugs.swift.org/SR-844
-    @decorators.expectedFailureAll # rdar://36847830
     def test_swift_stdlib_dictionary(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary"""
         self.build()

@@ -24,11 +24,11 @@ class REPLDictionaryTestCase (lldbrepl.REPLTest):
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     @decorators.no_debug_info_test
     @decorators.expectedFailureAll(
         oslist=['linux'],
         bugnumber="bugs.swift.org/SR-843")
-    @decorators.skipIf # rdar://36847830
     def testREPL(self):
         lldbrepl.REPLTest.testREPL(self)
 
