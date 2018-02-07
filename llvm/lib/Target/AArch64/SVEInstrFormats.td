@@ -27,6 +27,69 @@ def sve_pred_enum : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = SVEPatternOperand;
 }
 
+class SVELogicalImmOperand<int Width> : AsmOperandClass {
+  let Name = "SVELogicalImm" # Width;
+  let DiagnosticType = "LogicalSecondSource";
+  let PredicateMethod = "isLogicalImm<int" # Width # "_t>";
+  let RenderMethod = "addLogicalImmOperands<int" # Width # "_t>";
+}
+
+def sve_logical_imm8 : Operand<i64> {
+  let ParserMatchClass = SVELogicalImmOperand<8>;
+  let PrintMethod = "printLogicalImm<int8_t>";
+
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int8_t>(Val);
+  }];
+}
+
+def sve_logical_imm16 : Operand<i64> {
+  let ParserMatchClass = SVELogicalImmOperand<16>;
+  let PrintMethod = "printLogicalImm<int16_t>";
+
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int16_t>(Val);
+  }];
+}
+
+def sve_logical_imm32 : Operand<i64> {
+  let ParserMatchClass = SVELogicalImmOperand<32>;
+  let PrintMethod = "printLogicalImm<int32_t>";
+
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int32_t>(Val);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+class SVELogicalImmNotOperand<int Width> : AsmOperandClass {
+  let Name = "SVELogicalImm" # Width # "Not";
+  let DiagnosticType = "LogicalSecondSource";
+  let PredicateMethod = "isLogicalImm<int" # Width # "_t>";
+  let RenderMethod = "addLogicalImmNotOperands<int" # Width # "_t>";
+}
+
+def sve_logical_imm8_not : Operand<i64> {
+  let ParserMatchClass = SVELogicalImmNotOperand<8>;
+}
+
+def sve_logical_imm16_not : Operand<i64> {
+  let ParserMatchClass = SVELogicalImmNotOperand<16>;
+}
+
+def sve_logical_imm32_not : Operand<i64> {
+  let ParserMatchClass = SVELogicalImmNotOperand<32>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE PTrue - These are used extensively throughout the pattern matching so
 //             it's important we define them first.
@@ -106,6 +169,46 @@ multiclass sve_int_perm_dup_r<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, GPR32sp:$Rn), 1>;
   def : InstAlias<"mov $Zd, $Rn",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, GPR64sp:$Rn), 1>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE Logical Mask Immediate Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_log_imm<bits<2> opc, string asm>
+: I<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, logical_imm64:$imms13),
+  asm, "\t$Zdn, $_Zdn, $imms13",
+  "", []>, Sched<[]> {
+  bits<5> Zdn;
+  bits<13> imms13;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = opc;
+  let Inst{21-18} = 0b0000;
+  let Inst{17-5}  = imms13;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+  let DecoderMethod = "DecodeSVELogicalImmInstruction";
+}
+
+multiclass sve_int_log_imm<bits<2> opc, string asm, string alias> {
+  def NAME : sve_int_log_imm<opc, asm>;
+
+  def : InstAlias<asm # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR8:$Zdn, sve_logical_imm8:$imm), 4>;
+  def : InstAlias<asm # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR16:$Zdn, sve_logical_imm16:$imm), 3>;
+  def : InstAlias<asm # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR32:$Zdn, sve_logical_imm32:$imm), 2>;
+
+  def : InstAlias<alias # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR8:$Zdn, sve_logical_imm8_not:$imm), 0>;
+  def : InstAlias<alias # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR16:$Zdn, sve_logical_imm16_not:$imm), 0>;
+  def : InstAlias<alias # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR32:$Zdn, sve_logical_imm32_not:$imm), 0>;
+  def : InstAlias<alias # "\t$Zdn, $Zdn, $imm",
+                  (!cast<Instruction>(NAME) ZPR64:$Zdn, logical_imm64_not:$imm), 0>;
 }
 
 //===----------------------------------------------------------------------===//

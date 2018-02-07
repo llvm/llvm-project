@@ -105,13 +105,9 @@ public:
   /// "None" otherwise.
   static Optional<SIMemOpInfo> getAtomicFenceInfo(
       const MachineBasicBlock::iterator &MI);
-  /// \returns Atomic cmpxchg info if \p MI is an atomic cmpxchg operation,
-  /// "None" otherwise.
+  /// \returns Atomic cmpxchg/rmw info if \p MI is an atomic cmpxchg or
+  /// rmw operation, "None" otherwise.
   static Optional<SIMemOpInfo> getAtomicCmpxchgInfo(
-      const MachineBasicBlock::iterator &MI);
-  /// \returns Atomic rmw info if \p MI is an atomic rmw operation,
-  /// "None" otherwise.
-  static Optional<SIMemOpInfo> getAtomicRmwInfo(
       const MachineBasicBlock::iterator &MI);
 
   /// \brief Reports unknown synchronization scope used in \p MI to LLVM
@@ -190,14 +186,10 @@ private:
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicFence(const SIMemOpInfo &MOI,
                          MachineBasicBlock::iterator &MI);
-  /// \brief Expands atomic cmpxchg operation \p MI. Returns true if
+  /// \brief Expands atomic cmpxchg or rmw operation \p MI. Returns true if
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicCmpxchg(const SIMemOpInfo &MOI,
                            MachineBasicBlock::iterator &MI);
-  /// \brief Expands atomic rmw operation \p MI. Returns true if
-  /// instructions are added/deleted or \p MI is modified, false otherwise.
-  bool expandAtomicRmw(const SIMemOpInfo &MOI,
-                       MachineBasicBlock::iterator &MI);
 
 public:
   static char ID;
@@ -316,22 +308,6 @@ Optional<SIMemOpInfo> SIMemOpInfo::getAtomicCmpxchgInfo(
   if (MI->getNumMemOperands() == 0)
     return SIMemOpInfo(SyncScope::System,
                        AtomicOrdering::SequentiallyConsistent,
-                       AtomicOrdering::SequentiallyConsistent);
-
-  return SIMemOpInfo::constructFromMIWithMMO(MI);
-}
-
-/* static */
-Optional<SIMemOpInfo> SIMemOpInfo::getAtomicRmwInfo(
-    const MachineBasicBlock::iterator &MI) {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
-
-  if (!(MI->mayLoad() && MI->mayStore()))
-    return None;
-
-  // Be conservative if there are no memory operands.
-  if (MI->getNumMemOperands() == 0)
-    return SIMemOpInfo(SyncScope::System,
                        AtomicOrdering::SequentiallyConsistent);
 
   return SIMemOpInfo::constructFromMIWithMMO(MI);
@@ -546,43 +522,6 @@ bool SIMemoryLegalizer::expandAtomicCmpxchg(const SIMemOpInfo &MOI,
   return Changed;
 }
 
-bool SIMemoryLegalizer::expandAtomicRmw(const SIMemOpInfo &MOI,
-                                        MachineBasicBlock::iterator &MI) {
-  assert(MI->mayLoad() && MI->mayStore());
-
-  bool Changed = false;
-
-  if (MOI.isAtomic()) {
-    if (MOI.getSSID() == SyncScope::System ||
-        MOI.getSSID() == MMI->getAgentSSID()) {
-      if (MOI.getOrdering() == AtomicOrdering::Release ||
-          MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
-          MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-        Changed |= insertWaitcntVmcnt0(MI);
-
-      if (MOI.getOrdering() == AtomicOrdering::Acquire ||
-          MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
-          MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
-        Changed |= insertWaitcntVmcnt0(MI, false);
-        Changed |= insertBufferWbinvl1Vol(MI, false);
-      }
-
-      return Changed;
-    }
-
-    if (MOI.getSSID() == SyncScope::SingleThread ||
-        MOI.getSSID() == MMI->getWorkgroupSSID() ||
-        MOI.getSSID() == MMI->getWavefrontSSID()) {
-      Changed |= enableGLCBit(MI);
-      return Changed;
-    }
-
-    llvm_unreachable("Unsupported synchronization scope");
-  }
-
-  return Changed;
-}
-
 bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
@@ -609,8 +548,6 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         Changed |= expandAtomicFence(MOI.getValue(), MI);
       else if (const auto &MOI = SIMemOpInfo::getAtomicCmpxchgInfo(MI))
         Changed |= expandAtomicCmpxchg(MOI.getValue(), MI);
-      else if (const auto &MOI = SIMemOpInfo::getAtomicRmwInfo(MI))
-        Changed |= expandAtomicRmw(MOI.getValue(), MI);
     }
   }
 

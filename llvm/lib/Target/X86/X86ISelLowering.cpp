@@ -26953,28 +26953,57 @@ static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
 
 static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
                                       unsigned Reg) {
+  if (Subtarget.useRetpolineExternalThunk()) {
+    // When using an external thunk for retpolines, we pick names that match the
+    // names GCC happens to use as well. This helps simplify the implementation
+    // of the thunks for kernels where they have no easy ability to create
+    // aliases and are doing non-trivial configuration of the thunk's body. For
+    // example, the Linux kernel will do boot-time hot patching of the thunk
+    // bodies and cannot easily export aliases of these to loaded modules.
+    //
+    // Note that at any point in the future, we may need to change the semantics
+    // of how we implement retpolines and at that time will likely change the
+    // name of the called thunk. Essentially, there is no hard guarantee that
+    // LLVM will generate calls to specific thunks, we merely make a best-effort
+    // attempt to help out kernels and other systems where duplicating the
+    // thunks is costly.
+    switch (Reg) {
+    case 0:
+      assert(!Subtarget.is64Bit() && "R11 should always be available on x64");
+      return "__x86_indirect_thunk";
+    case X86::EAX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_eax";
+    case X86::ECX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_ecx";
+    case X86::EDX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_edx";
+    case X86::R11:
+      assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+      return "__x86_indirect_thunk_r11";
+    }
+    llvm_unreachable("unexpected reg for retpoline");
+  }
+
+  // When targeting an internal COMDAT thunk use an LLVM-specific name.
   switch (Reg) {
   case 0:
     assert(!Subtarget.is64Bit() && "R11 should always be available on x64");
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_push"
-               : "__llvm_retpoline_push";
+    return "__llvm_retpoline_push";
   case X86::EAX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_eax"
-               : "__llvm_retpoline_eax";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_eax";
   case X86::ECX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_ecx"
-               : "__llvm_retpoline_ecx";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_ecx";
   case X86::EDX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_edx"
-               : "__llvm_retpoline_edx";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_edx";
   case X86::R11:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_r11"
-               : "__llvm_retpoline_r11";
+    assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+    return "__llvm_retpoline_r11";
   }
   llvm_unreachable("unexpected reg for retpoline");
 }
@@ -32066,17 +32095,6 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
   X86::CondCode CC = (X86::CondCode)N->getConstantOperandVal(2);
   SDValue Cond = N->getOperand(3);
 
-  if (CC == X86::COND_E || CC == X86::COND_NE) {
-    switch (Cond.getOpcode()) {
-    default: break;
-    case X86ISD::BSR:
-    case X86ISD::BSF:
-      // If operand of BSR / BSF are proven never zero, then ZF cannot be set.
-      if (DAG.isKnownNeverZero(Cond.getOperand(0)))
-        return (CC == X86::COND_E) ? FalseOp : TrueOp;
-    }
-  }
-
   // Try to simplify the EFLAGS and condition code operands.
   // We can't always do this as FCMOV only supports a subset of X86 cond.
   if (SDValue Flags = combineSetCCEFLAGS(Cond, CC, DAG, Subtarget)) {
@@ -33984,9 +34002,10 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
 /// or:
 /// (truncate (smax ((smin (x, signed_max_of_dest_type)),
 ///                  signed_min_of_dest_type)) to dest_type).
+/// With MatchPackUS, the smax/smin range is [0, unsigned_max_of_dest_type].
 /// Return the source value to be truncated or SDValue() if the pattern was not
 /// matched.
-static SDValue detectSSatPattern(SDValue In, EVT VT) {
+static SDValue detectSSatPattern(SDValue In, EVT VT, bool MatchPackUS = false) {
   unsigned NumDstBits = VT.getScalarSizeInBits();
   unsigned NumSrcBits = In.getScalarValueSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
@@ -34000,8 +34019,14 @@ static SDValue detectSSatPattern(SDValue In, EVT VT) {
     return SDValue();
   };
 
-  APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
-  APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+  APInt SignedMax, SignedMin;
+  if (MatchPackUS) {
+    SignedMax = APInt::getAllOnesValue(NumDstBits).zext(NumSrcBits);
+    SignedMin = APInt(NumSrcBits, 0);
+  } else {
+    SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+    SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+  }
 
   if (SDValue SMin = MatchMinMax(In, ISD::SMIN, SignedMax))
     if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, SignedMin))
@@ -34032,14 +34057,23 @@ static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  EVT InVT = In.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isTypeLegal(In.getValueType()) || !TLI.isTypeLegal(VT))
+  if (!TLI.isTypeLegal(InVT) || !TLI.isTypeLegal(VT))
     return SDValue();
-  if (isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget)) {
+  if (isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
     if (auto SSatVal = detectSSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
     if (auto USatVal = detectUSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
+  }
+  if (VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) {
+    if (auto SSatVal = detectSSatPattern(In, VT))
+      return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
+                                    Subtarget);
+    if (auto USatVal = detectSSatPattern(In, VT, true))
+      return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
+                                    Subtarget);
   }
   return SDValue();
 }

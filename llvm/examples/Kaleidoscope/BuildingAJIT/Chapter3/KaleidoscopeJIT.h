@@ -17,15 +17,15 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -45,6 +46,9 @@ namespace orc {
 
 class KaleidoscopeJIT {
 private:
+  SymbolStringPool SSP;
+  ExecutionSession ES;
+  std::map<VModuleKey, std::shared_ptr<SymbolResolver>> Resolvers;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
   RTDyldObjectLinkingLayer ObjectLayer;
@@ -62,8 +66,11 @@ public:
   using ModuleHandle = decltype(CODLayer)::ModuleHandleT;
 
   KaleidoscopeJIT()
-      : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+      : ES(SSP), TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer(
+            ES,
+            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
+            [&](orc::VModuleKey K) { return Resolvers[K]; }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {
@@ -71,37 +78,40 @@ public:
                       }),
         CompileCallbackManager(
             orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
-        CODLayer(OptimizeLayer,
-                 [](Function &F) { return std::set<Function*>({&F}); },
+        CODLayer(ES, OptimizeLayer,
+                 [&](orc::VModuleKey K) { return Resolvers[K]; },
+                 [&](orc::VModuleKey K, std::shared_ptr<SymbolResolver> R) {
+                   Resolvers[K] = std::move(R);
+                 },
+                 [](Function &F) { return std::set<Function *>({&F}); },
                  *CompileCallbackManager,
                  orc::createLocalIndirectStubsManagerBuilder(
-                   TM->getTargetTriple())) {
+                     TM->getTargetTriple())) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 
   TargetMachine &getTargetMachine() { return *TM; }
 
   ModuleHandle addModule(std::unique_ptr<Module> M) {
-    // Build our symbol resolver:
-    // Lambda 1: Look back into the JIT itself to find symbols that are part of
-    //           the same "logical dylib".
-    // Lambda 2: Search for external symbols in the host process.
-    auto Resolver = createLambdaResolver(
-        [&](const std::string &Name) {
-          if (auto Sym = CODLayer.findSymbol(Name, false))
-            return Sym;
-          return JITSymbol(nullptr);
-        },
-        [](const std::string &Name) {
-          if (auto SymAddr =
-                RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-            return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-          return JITSymbol(nullptr);
-        });
+    // Create a new VModuleKey.
+    VModuleKey K = ES.allocateVModule();
 
-    // Add the set to the JIT with the resolver we created above and a newly
-    // created SectionMemoryManager.
-    return cantFail(CODLayer.addModule(std::move(M), std::move(Resolver)));
+    // Build a resolver and associate it with the new key.
+    Resolvers[K] = createLegacyLookupResolver(
+        [this](const std::string &Name) -> JITSymbol {
+          if (auto Sym = CompileLayer.findSymbol(Name, false))
+            return Sym;
+          else if (auto Err = Sym.takeError())
+            return std::move(Err);
+          if (auto SymAddr =
+                  RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+            return JITSymbol(SymAddr, JITSymbolFlags::Exported);
+          return nullptr;
+        },
+        [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); });
+
+    // Add the module to the JIT with the new key.
+    return cantFail(CODLayer.addModule(K, std::move(M)));
   }
 
   JITSymbol findSymbol(const std::string Name) {

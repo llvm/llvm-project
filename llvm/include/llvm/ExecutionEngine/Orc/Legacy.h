@@ -92,6 +92,46 @@ SymbolNameSet lookupWithLegacyFn(AsynchronousSymbolQuery &Query,
   return SymbolsNotFound;
 }
 
+/// @brief An ORC SymbolResolver implementation that uses a legacy
+///        findSymbol-like function to perform lookup;
+template <typename LegacyLookupFn>
+class LegacyLookupFnResolver final : public SymbolResolver {
+public:
+  using ErrorReporter = std::function<void(Error)>;
+
+  LegacyLookupFnResolver(LegacyLookupFn LegacyLookup, ErrorReporter ReportError)
+      : LegacyLookup(std::move(LegacyLookup)),
+        ReportError(std::move(ReportError)) {}
+
+  SymbolNameSet lookupFlags(SymbolFlagsMap &Flags,
+                            const SymbolNameSet &Symbols) final {
+    if (auto RemainingSymbols =
+            lookupFlagsWithLegacyFn(Flags, Symbols, LegacyLookup))
+      return std::move(*RemainingSymbols);
+    else {
+      ReportError(RemainingSymbols.takeError());
+      return Symbols;
+    }
+  }
+
+  SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+                       SymbolNameSet Symbols) final {
+    return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
+  }
+
+private:
+  LegacyLookupFn LegacyLookup;
+  ErrorReporter ReportError;
+};
+
+template <typename LegacyLookupFn>
+std::shared_ptr<LegacyLookupFnResolver<LegacyLookupFn>>
+createLegacyLookupResolver(LegacyLookupFn LegacyLookup,
+                           std::function<void(Error)> ErrorReporter) {
+  return std::make_shared<LegacyLookupFnResolver<LegacyLookupFn>>(
+      std::move(LegacyLookup), std::move(ErrorReporter));
+};
+
 } // End namespace orc
 } // End namespace llvm
 

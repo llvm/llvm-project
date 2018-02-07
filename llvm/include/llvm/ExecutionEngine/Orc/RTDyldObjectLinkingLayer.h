@@ -18,6 +18,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
@@ -55,7 +57,7 @@ protected:
     void operator=(const LinkedObject&) = delete;
     virtual ~LinkedObject() = default;
 
-    virtual void finalize() = 0;
+    virtual Error finalize() = 0;
 
     virtual JITSymbol::GetAddressFtor
     getSymbolMaterializer(std::string Name) = 0;
@@ -107,21 +109,17 @@ public:
   using NotifyFinalizedFtor = std::function<void(ObjHandleT)>;
 
 private:
-
-
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT,
-            typename FinalizerFtor>
+  template <typename MemoryManagerPtrT, typename FinalizerFtor>
   class ConcreteLinkedObject : public LinkedObject {
   public:
-    ConcreteLinkedObject(ObjectPtr Obj, MemoryManagerPtrT MemMgr,
-                         SymbolResolverPtrT Resolver,
-                         FinalizerFtor Finalizer,
-                         bool ProcessAllSections)
-      : MemMgr(std::move(MemMgr)),
-        PFC(llvm::make_unique<PreFinalizeContents>(std::move(Obj),
-                                                   std::move(Resolver),
-                                                   std::move(Finalizer),
-                                                   ProcessAllSections)) {
+    ConcreteLinkedObject(ExecutionSession &ES, ObjectPtr Obj,
+                         MemoryManagerPtrT MemMgr,
+                         std::shared_ptr<SymbolResolver> Resolver,
+                         FinalizerFtor Finalizer, bool ProcessAllSections)
+        : MemMgr(std::move(MemMgr)),
+          PFC(llvm::make_unique<PreFinalizeContents>(
+              ES, std::move(Obj), std::move(Resolver), std::move(Finalizer),
+              ProcessAllSections)) {
       buildInitialSymbolTable(PFC->Obj);
     }
 
@@ -133,32 +131,32 @@ private:
       PFC->Handle = H;
     }
 
-    void finalize() override {
+    Error finalize() override {
       assert(PFC && "mapSectionAddress called on finalized LinkedObject");
 
-      RuntimeDyld RTDyld(*MemMgr, *PFC->Resolver);
+      JITSymbolResolverAdapter ResolverAdapter(PFC->ES, *PFC->Resolver);
+      RuntimeDyld RTDyld(*MemMgr, ResolverAdapter);
       RTDyld.setProcessAllSections(PFC->ProcessAllSections);
       PFC->RTDyld = &RTDyld;
 
       this->Finalized = true;
-      PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Obj),
-                     [&]() {
-                       this->updateSymbolTable(RTDyld);
-                     });
+      auto Err = PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Obj),
+                                [&]() { this->updateSymbolTable(RTDyld); });
 
       // Release resources.
       PFC = nullptr;
+      return Err;
     }
 
     JITSymbol::GetAddressFtor getSymbolMaterializer(std::string Name) override {
-      return
-        [this, Name]() {
-          // The symbol may be materialized between the creation of this lambda
-          // and its execution, so we need to double check.
-          if (!this->Finalized)
-            this->finalize();
-          return this->getSymbol(Name, false).getAddress();
-        };
+      return [this, Name]() -> Expected<JITTargetAddress> {
+        // The symbol may be materialized between the creation of this lambda
+        // and its execution, so we need to double check.
+        if (!this->Finalized)
+          if (auto Err = this->finalize())
+            return std::move(Err);
+        return this->getSymbol(Name, false).getAddress();
+      };
     }
 
     void mapSectionAddress(const void *LocalAddress,
@@ -194,14 +192,16 @@ private:
     // Contains the information needed prior to finalization: the object files,
     // memory manager, resolver, and flags needed for RuntimeDyld.
     struct PreFinalizeContents {
-      PreFinalizeContents(ObjectPtr Obj, SymbolResolverPtrT Resolver,
+      PreFinalizeContents(ExecutionSession &ES, ObjectPtr Obj,
+                          std::shared_ptr<SymbolResolver> Resolver,
                           FinalizerFtor Finalizer, bool ProcessAllSections)
-        : Obj(std::move(Obj)), Resolver(std::move(Resolver)),
-          Finalizer(std::move(Finalizer)),
-          ProcessAllSections(ProcessAllSections) {}
+          : ES(ES), Obj(std::move(Obj)), Resolver(std::move(Resolver)),
+            Finalizer(std::move(Finalizer)),
+            ProcessAllSections(ProcessAllSections) {}
 
+      ExecutionSession &ES;
       ObjectPtr Obj;
-      SymbolResolverPtrT Resolver;
+      std::shared_ptr<SymbolResolver> Resolver;
       FinalizerFtor Finalizer;
       bool ProcessAllSections;
       ObjHandleT Handle;
@@ -212,17 +212,14 @@ private:
     std::unique_ptr<PreFinalizeContents> PFC;
   };
 
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT,
-            typename FinalizerFtor>
-  std::unique_ptr<
-    ConcreteLinkedObject<MemoryManagerPtrT, SymbolResolverPtrT, FinalizerFtor>>
-  createLinkedObject(ObjectPtr Obj, MemoryManagerPtrT MemMgr,
-                     SymbolResolverPtrT Resolver,
-                     FinalizerFtor Finalizer,
-                     bool ProcessAllSections) {
-    using LOS = ConcreteLinkedObject<MemoryManagerPtrT, SymbolResolverPtrT,
-                                     FinalizerFtor>;
-    return llvm::make_unique<LOS>(std::move(Obj), std::move(MemMgr),
+  template <typename MemoryManagerPtrT, typename FinalizerFtor>
+  std::unique_ptr<ConcreteLinkedObject<MemoryManagerPtrT, FinalizerFtor>>
+  createLinkedObject(ExecutionSession &ES, ObjectPtr Obj,
+                     MemoryManagerPtrT MemMgr,
+                     std::shared_ptr<SymbolResolver> Resolver,
+                     FinalizerFtor Finalizer, bool ProcessAllSections) {
+    using LOS = ConcreteLinkedObject<MemoryManagerPtrT, FinalizerFtor>;
+    return llvm::make_unique<LOS>(ES, std::move(Obj), std::move(MemMgr),
                                   std::move(Resolver), std::move(Finalizer),
                                   ProcessAllSections);
   }
@@ -231,18 +228,23 @@ public:
 
   /// @brief Functor for creating memory managers.
   using MemoryManagerGetter =
-    std::function<std::shared_ptr<RuntimeDyld::MemoryManager>()>;
+      std::function<std::shared_ptr<RuntimeDyld::MemoryManager>(VModuleKey)>;
+
+  using ResolverGetter =
+      std::function<std::shared_ptr<SymbolResolver>(VModuleKey)>;
 
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
   RTDyldObjectLinkingLayer(
-      MemoryManagerGetter GetMemMgr,
+      ExecutionSession &ES, MemoryManagerGetter GetMemMgr,
+      ResolverGetter GetResolver,
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor())
-      : GetMemMgr(GetMemMgr),
+      : ES(ES), GetMemMgr(std::move(GetMemMgr)),
+        GetResolver(std::move(GetResolver)),
         NotifyLoaded(std::move(NotifyLoaded)),
-        NotifyFinalized(std::move(NotifyFinalized)),
-        ProcessAllSections(false) {}
+        NotifyFinalized(std::move(NotifyFinalized)), ProcessAllSections(false) {
+  }
 
   /// @brief Set the 'ProcessAllSections' flag.
   ///
@@ -258,11 +260,10 @@ public:
   ///
   /// @return A handle that can be used to refer to the loaded object (for 
   ///         symbol searching, finalization, freeing memory, etc.).
-  Expected<ObjHandleT> addObject(ObjectPtr Obj,
-                                 std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ObjHandleT> addObject(VModuleKey K, ObjectPtr Obj) {
     auto Finalizer = [&](ObjHandleT H, RuntimeDyld &RTDyld,
                          const ObjectPtr &ObjToLoad,
-                         std::function<void()> LOSHandleLoad) {
+                         std::function<void()> LOSHandleLoad) -> Error {
       std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info =
         RTDyld.loadObject(*ObjToLoad->getBinary());
 
@@ -273,14 +274,19 @@ public:
 
       RTDyld.finalizeWithMemoryManagerLocking();
 
+      if (RTDyld.hasError())
+        return make_error<StringError>(RTDyld.getErrorString(),
+                                       inconvertibleErrorCode());
+
       if (this->NotifyFinalized)
         this->NotifyFinalized(H);
+
+      return Error::success();
     };
 
     auto LO =
-      createLinkedObject(std::move(Obj), GetMemMgr(),
-                         std::move(Resolver), std::move(Finalizer),
-                         ProcessAllSections);
+        createLinkedObject(ES, std::move(Obj), GetMemMgr(K), GetResolver(K),
+                           std::move(Finalizer), ProcessAllSections);
     // LOS is an owning-ptr. Keep a non-owning one so that we can set the handle
     // below.
     auto *LOPtr = LO.get();
@@ -339,15 +345,13 @@ public:
   /// @brief Immediately emit and finalize the object represented by the given
   ///        handle.
   /// @param H Handle for object to emit/finalize.
-  Error emitAndFinalize(ObjHandleT H) {
-    (*H)->finalize();
-    return Error::success();
-  }
+  Error emitAndFinalize(ObjHandleT H) { return (*H)->finalize(); }
 
 private:
-
+  ExecutionSession &ES;
   LinkedObjectListT LinkedObjList;
   MemoryManagerGetter GetMemMgr;
+  ResolverGetter GetResolver;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
   bool ProcessAllSections = false;

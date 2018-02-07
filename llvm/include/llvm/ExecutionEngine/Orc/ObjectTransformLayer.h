@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -44,9 +45,8 @@ public:
   ///
   /// @return A handle for the added objects.
   template <typename ObjectPtr>
-  Expected<ObjHandleT> addObject(ObjectPtr Obj,
-                                 std::shared_ptr<JITSymbolResolver> Resolver) {
-    return BaseLayer.addObject(Transform(std::move(Obj)), std::move(Resolver));
+  Expected<ObjHandleT> addObject(VModuleKey K, ObjectPtr Obj) {
+    return BaseLayer.addObject(std::move(K), Transform(std::move(Obj)));
   }
 
   /// @brief Remove the object set associated with the handle H.

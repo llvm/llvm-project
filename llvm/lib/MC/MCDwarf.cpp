@@ -28,6 +28,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -44,6 +45,29 @@
 #include <vector>
 
 using namespace llvm;
+
+/// Manage the .debug_line_str section contents, if we use it.
+class llvm::MCDwarfLineStr {
+  MCSymbol *LineStrLabel = nullptr;
+  StringTableBuilder LineStrings{StringTableBuilder::DWARF};
+  bool UseRelocs = false;
+
+public:
+  /// Construct an instance that can emit .debug_line_str (for use in a normal
+  /// v5 line table).
+  explicit MCDwarfLineStr(MCContext &Ctx) {
+    UseRelocs = Ctx.getAsmInfo()->doesDwarfUseRelocationsAcrossSections();
+    if (UseRelocs)
+      LineStrLabel =
+          Ctx.getObjectFileInfo()->getDwarfLineStrSection()->getBeginSymbol();
+  }
+
+  /// Emit a reference to the string.
+  void emitRef(MCStreamer *MCOS, StringRef Path);
+
+  /// Emit the .debug_line_str section if appropriate.
+  void emitSection(MCStreamer *MCOS);
+};
 
 static inline uint64_t ScaleAddrDelta(MCContext &Context, uint64_t AddrDelta) {
   unsigned MinInsnLength = Context.getAsmInfo()->getMinInstAlignment();
@@ -105,6 +129,18 @@ static inline const MCExpr *MakeStartMinusEndExpr(const MCStreamer &MCOS,
   const MCExpr *Res3 =
     MCBinaryExpr::create(MCBinaryExpr::Sub, Res1, Res2, MCOS.getContext());
   return Res3;
+}
+
+//
+// This helper routine returns an expression of Start + IntVal .
+//
+static inline const MCExpr *
+makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
+  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
+  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Variant, Ctx);
+  const MCExpr *RHS = MCConstantExpr::create(IntVal, Ctx);
+  const MCExpr *Res = MCBinaryExpr::create(MCBinaryExpr::Add, LHS, RHS, Ctx);
+  return Res;
 }
 
 //
@@ -205,22 +241,31 @@ void MCDwarfLineTable::Emit(MCObjectStreamer *MCOS,
   if (LineTables.empty())
     return;
 
+  // In a v5 non-split line table, put the strings in a separate section.
+  Optional<MCDwarfLineStr> LineStr;
+  if (context.getDwarfVersion() >= 5)
+    LineStr = MCDwarfLineStr(context);
+
   // Switch to the section where the table will be emitted into.
   MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfLineSection());
 
   // Handle the rest of the Compile Units.
   for (const auto &CUIDTablePair : LineTables)
-    CUIDTablePair.second.EmitCU(MCOS, Params);
+    CUIDTablePair.second.EmitCU(MCOS, Params, LineStr);
+
+  if (LineStr)
+    LineStr->emitSection(MCOS);
 }
 
 void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS,
                                MCDwarfLineTableParams Params) const {
-  MCOS.EmitLabel(Header.Emit(&MCOS, Params, None).second);
+  Optional<MCDwarfLineStr> NoLineStr(None);
+  MCOS.EmitLabel(Header.Emit(&MCOS, Params, None, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
-MCDwarfLineTableHeader::Emit(MCStreamer *MCOS,
-                             MCDwarfLineTableParams Params) const {
+MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
+                             Optional<MCDwarfLineStr> &LineStr) const {
   static const char StandardOpcodeLengths[] = {
       0, // length of DW_LNS_copy
       1, // length of DW_LNS_advance_pc
@@ -237,8 +282,10 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS,
   };
   assert(array_lengthof(StandardOpcodeLengths) >=
          (Params.DWARF2LineOpcodeBase - 1U));
-  return Emit(MCOS, Params, makeArrayRef(StandardOpcodeLengths,
-                                         Params.DWARF2LineOpcodeBase - 1));
+  return Emit(
+      MCOS, Params,
+      makeArrayRef(StandardOpcodeLengths, Params.DWARF2LineOpcodeBase - 1),
+      LineStr);
 }
 
 static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
@@ -255,6 +302,28 @@ static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
 static void emitAbsValue(MCStreamer &OS, const MCExpr *Value, unsigned Size) {
   const MCExpr *ABS = forceExpAbs(OS, Value);
   OS.EmitValue(ABS, Size);
+}
+
+void MCDwarfLineStr::emitSection(MCStreamer *MCOS) {
+  // Switch to the .debug_line_str section.
+  MCOS->SwitchSection(
+      MCOS->getContext().getObjectFileInfo()->getDwarfLineStrSection());
+  // Emit the strings without perturbing the offsets we used.
+  LineStrings.finalizeInOrder();
+  SmallString<0> Data;
+  Data.resize(LineStrings.getSize());
+  LineStrings.write((uint8_t *)Data.data());
+  MCOS->EmitBinaryData(Data.str());
+}
+
+void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
+  int RefSize = 4; // FIXME: Support DWARF-64
+  size_t Offset = LineStrings.add(Path);
+  if (UseRelocs) {
+    MCContext &Ctx = MCOS->getContext();
+    MCOS->EmitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset), RefSize);
+  } else
+    MCOS->EmitIntValue(Offset, RefSize);
 }
 
 void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
@@ -277,18 +346,29 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
   MCOS->EmitIntValue(0, 1); // Terminate the file list.
 }
 
-void MCDwarfLineTableHeader::emitV5FileDirTables(MCStreamer *MCOS) const {
-  // The directory format, which is just inline null-terminated strings.
+void MCDwarfLineTableHeader::emitV5FileDirTables(
+    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const {
+  // The directory format, which is just a list of the directory paths.  In a
+  // non-split object, these are references to .debug_line_str; in a split
+  // object, they are inline strings.
   MCOS->EmitIntValue(1, 1);
   MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_path);
-  MCOS->EmitULEB128IntValue(dwarf::DW_FORM_string);
-  // Then the list of directory paths.  CompilationDir comes first.
+  MCOS->EmitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
+                                    : dwarf::DW_FORM_string);
   MCOS->EmitULEB128IntValue(MCDwarfDirs.size() + 1);
-  MCOS->EmitBytes(CompilationDir);
-  MCOS->EmitBytes(StringRef("\0", 1));
-  for (auto &Dir : MCDwarfDirs) {
-    MCOS->EmitBytes(Dir);                // The DirectoryName, and...
-    MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+  if (LineStr) {
+    // Record path strings, emit references here.
+    LineStr->emitRef(MCOS, CompilationDir);
+    for (auto &Dir : MCDwarfDirs)
+      LineStr->emitRef(MCOS, Dir);
+  } else {
+    // The list of directory paths.  CompilationDir comes first.
+    MCOS->EmitBytes(CompilationDir);
+    MCOS->EmitBytes(StringRef("\0", 1));
+    for (auto &Dir : MCDwarfDirs) {
+      MCOS->EmitBytes(Dir);                // The DirectoryName, and...
+      MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+    }
   }
 
   // The file format, which is the inline null-terminated filename and a
@@ -296,7 +376,8 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(MCStreamer *MCOS) const {
   // in the v5 table.  Emit MD5 checksums if we have them.
   MCOS->EmitIntValue(HasMD5 ? 3 : 2, 1);
   MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_path);
-  MCOS->EmitULEB128IntValue(dwarf::DW_FORM_string);
+  MCOS->EmitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
+                                    : dwarf::DW_FORM_string);
   MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_directory_index);
   MCOS->EmitULEB128IntValue(dwarf::DW_FORM_udata);
   if (HasMD5) {
@@ -307,8 +388,12 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(MCStreamer *MCOS) const {
   MCOS->EmitULEB128IntValue(MCDwarfFiles.size() - 1);
   for (unsigned i = 1; i < MCDwarfFiles.size(); ++i) {
     assert(!MCDwarfFiles[i].Name.empty());
-    MCOS->EmitBytes(MCDwarfFiles[i].Name); // FileName and...
-    MCOS->EmitBytes(StringRef("\0", 1));   // its null terminator.
+    if (LineStr)
+      LineStr->emitRef(MCOS, MCDwarfFiles[i].Name);
+    else {
+      MCOS->EmitBytes(MCDwarfFiles[i].Name); // FileName and...
+      MCOS->EmitBytes(StringRef("\0", 1));   // its null terminator.
+    }
     MCOS->EmitULEB128IntValue(MCDwarfFiles[i].DirIndex); // Directory number.
     if (HasMD5) {
       MD5::MD5Result *Cksum = MCDwarfFiles[i].Checksum;
@@ -321,7 +406,8 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(MCStreamer *MCOS) const {
 
 std::pair<MCSymbol *, MCSymbol *>
 MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-                             ArrayRef<char> StandardOpcodeLengths) const {
+                             ArrayRef<char> StandardOpcodeLengths,
+                             Optional<MCDwarfLineStr> &LineStr) const {
   MCContext &context = MCOS->getContext();
 
   // Create a symbol at the beginning of the line table.
@@ -386,7 +472,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Put out the directory and file tables.  The formats vary depending on
   // the version.
   if (LineTableVersion >= 5)
-    emitV5FileDirTables(MCOS);
+    emitV5FileDirTables(MCOS, LineStr);
   else
     emitV2FileDirTables(MCOS);
 
@@ -398,8 +484,9 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 }
 
 void MCDwarfLineTable::EmitCU(MCObjectStreamer *MCOS,
-                              MCDwarfLineTableParams Params) const {
-  MCSymbol *LineEndSym = Header.Emit(MCOS, Params).second;
+                              MCDwarfLineTableParams Params,
+                              Optional<MCDwarfLineStr> &LineStr) const {
+  MCSymbol *LineEndSym = Header.Emit(MCOS, Params, LineStr).second;
 
   // Put out the line tables.
   for (const auto &LineSec : MCLineSections.getMCLineEntries())

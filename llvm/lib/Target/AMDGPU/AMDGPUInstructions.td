@@ -570,11 +570,35 @@ multiclass BFIPatterns <Instruction BFI_INT,
     (BFI_INT $x, $y, $z)
   >;
 
+  // 64-bit version
+  def : AMDGPUPat <
+    (or (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
+    (REG_SEQUENCE RC64,
+      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub0)),
+               (i32 (EXTRACT_SUBREG $y, sub0)),
+               (i32 (EXTRACT_SUBREG $z, sub0))), sub0,
+      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub1)),
+               (i32 (EXTRACT_SUBREG $y, sub1)),
+               (i32 (EXTRACT_SUBREG $z, sub1))), sub1)
+  >;
+
   // SHA-256 Ch function
   // z ^ (x & (y ^ z))
   def : AMDGPUPat <
     (xor i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
     (BFI_INT $x, $y, $z)
+  >;
+
+  // 64-bit version
+  def : AMDGPUPat <
+    (xor i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+    (REG_SEQUENCE RC64,
+      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub0)),
+               (i32 (EXTRACT_SUBREG $y, sub0)),
+               (i32 (EXTRACT_SUBREG $z, sub0))), sub0,
+      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub1)),
+               (i32 (EXTRACT_SUBREG $y, sub1)),
+               (i32 (EXTRACT_SUBREG $z, sub1))), sub1)
   >;
 
   def : AMDGPUPat <
@@ -610,10 +634,25 @@ multiclass BFIPatterns <Instruction BFI_INT,
 // SHA-256 Ma patterns
 
 // ((x & z) | (y & (x | z))) -> BFI_INT (XOR x, y), z, y
-class SHA256MaPattern <Instruction BFI_INT, Instruction XOR> : AMDGPUPat <
-  (or (and i32:$x, i32:$z), (and i32:$y, (or i32:$x, i32:$z))),
-  (BFI_INT (XOR i32:$x, i32:$y), i32:$z, i32:$y)
->;
+multiclass SHA256MaPattern <Instruction BFI_INT, Instruction XOR, RegisterClass RC64> {
+  def : AMDGPUPat <
+    (or (and i32:$x, i32:$z), (and i32:$y, (or i32:$x, i32:$z))),
+    (BFI_INT (XOR i32:$x, i32:$y), i32:$z, i32:$y)
+  >;
+
+  def : AMDGPUPat <
+    (or (and i64:$x, i64:$z), (and i64:$y, (or i64:$x, i64:$z))),
+    (REG_SEQUENCE RC64,
+      (BFI_INT (XOR (i32 (EXTRACT_SUBREG $x, sub0)),
+                    (i32 (EXTRACT_SUBREG $y, sub0))),
+               (i32 (EXTRACT_SUBREG $z, sub0)),
+               (i32 (EXTRACT_SUBREG $y, sub0))), sub0,
+      (BFI_INT (XOR (i32 (EXTRACT_SUBREG $x, sub1)),
+                    (i32 (EXTRACT_SUBREG $y, sub1))),
+               (i32 (EXTRACT_SUBREG $z, sub1)),
+               (i32 (EXTRACT_SUBREG $y, sub1))), sub1)
+  >;
+}
 
 // Bitfield extract patterns
 

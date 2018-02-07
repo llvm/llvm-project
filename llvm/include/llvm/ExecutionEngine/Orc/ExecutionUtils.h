@@ -104,20 +104,27 @@ public:
   Error runViaLayer(JITLayerT &JITLayer) const {
     using CtorDtorTy = void (*)();
 
-    for (const auto &CtorDtorName : CtorDtorNames)
+    for (const auto &CtorDtorName : CtorDtorNames) {
+      dbgs() << "Searching for ctor/dtor: " << CtorDtorName << "...";
       if (auto CtorDtorSym = JITLayer.findSymbolIn(H, CtorDtorName, false)) {
+        dbgs() << " found symbol...";
         if (auto AddrOrErr = CtorDtorSym.getAddress()) {
+          dbgs() << " at addr " << format("0x%016x", *AddrOrErr) << "\n";
           CtorDtorTy CtorDtor =
             reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
           CtorDtor();
-        } else
+        } else {
+          dbgs() << " failed materialization!\n";
           return AddrOrErr.takeError();
+        }
       } else {
+        dbgs() << " failed to find symbol...";
         if (auto Err = CtorDtorSym.takeError())
           return Err;
         else
           return make_error<JITSymbolNotFound>(CtorDtorName);
       }
+    }
     return Error::success();
   }
 

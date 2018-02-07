@@ -212,6 +212,51 @@ entry:
 ; CHECK-HARDFP-FULLFP16-NEXT:  vcvt.f16.s32  s0, s0
 }
 
+define i32 @f2h(float %f) {
+entry:
+  %conv = fptrunc float %f to half
+  %0 = bitcast half %conv to i16
+  %tmp.0.insert.ext = zext i16 %0 to i32
+  ret i32 %tmp.0.insert.ext
+
+; CHECK-LABEL:            f2h:
+; CHECK-HARDFP-FULLFP16:  vcvtb.f16.f32 s0, s0
+}
+
+define float @h2f(i32 %h.coerce) {
+entry:
+  %tmp.0.extract.trunc = trunc i32 %h.coerce to i16
+  %0 = bitcast i16 %tmp.0.extract.trunc to half
+  %conv = fpext half %0 to float
+  ret float %conv
+
+; CHECK-LABEL:            h2f:
+; CHECK-HARDFP-FULLFP16:  vcvtb.f32.f16 s0, s0
+}
+
+
+define double @h2d(i32 %h.coerce) {
+entry:
+  %tmp.0.extract.trunc = trunc i32 %h.coerce to i16
+  %0 = bitcast i16 %tmp.0.extract.trunc to half
+  %conv = fpext half %0 to double
+  ret double %conv
+
+; CHECK-LABEL:            h2d:
+; CHECK-HARDFP-FULLFP16:  vcvtb.f64.f16 d{{.*}}, s{{.}}
+}
+
+define i32 @d2h(double %d) {
+entry:
+  %conv = fptrunc double %d to half
+  %0 = bitcast half %conv to i16
+  %tmp.0.insert.ext = zext i16 %0 to i32
+  ret i32 %tmp.0.insert.ext
+
+; CHECK-LABEL:            d2h:
+; CHECK-HARDFP-FULLFP16:  vcvtb.f16.f64 s0, d{{.*}}
+}
+
 ; TODO:
 ; 7.  VCVTA
 ; 8.  VCVTM
@@ -426,7 +471,20 @@ entry:
 
 ; TODO: fix immediates.
 ; 21. VMOV (between general-purpose register and half-precision register)
+
 ; 22. VMOV (immediate)
+define i32 @movi(i32 %a.coerce) {
+entry:
+  %tmp.0.extract.trunc = trunc i32 %a.coerce to i16
+  %0 = bitcast i16 %tmp.0.extract.trunc to half
+  %add = fadd half %0, 0xHC000
+  %1 = bitcast half %add to i16
+  %tmp2.0.insert.ext = zext i16 %1 to i32
+  ret i32 %tmp2.0.insert.ext
+
+; CHECK-LABEL:            movi:
+; CHECK-HARDFP-FULLFP16:  vmov.f16  s0, #-2.000000e+00
+}
 
 ; 23. VMUL
 define float @Mul(float %a.coerce, float %b.coerce) {

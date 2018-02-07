@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include <memory>
 #include <string>
 
@@ -42,10 +43,8 @@ public:
   ///        the layer below, along with the memory manager and symbol resolver.
   ///
   /// @return A handle for the added modules.
-  Expected<ModuleHandleT>
-  addModule(std::shared_ptr<Module> M,
-            std::shared_ptr<JITSymbolResolver> Resolver) {
-    return BaseLayer.addModule(Transform(std::move(M)), std::move(Resolver));
+  Expected<ModuleHandleT> addModule(VModuleKey K, std::shared_ptr<Module> M) {
+    return BaseLayer.addModule(std::move(K), Transform(std::move(M)));
   }
 
   /// @brief Remove the module associated with the handle H.
