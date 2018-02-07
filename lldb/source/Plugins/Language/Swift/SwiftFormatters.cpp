@@ -142,8 +142,8 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options,
     StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
+  ProcessSP process(valobj.GetProcessSP());
+  if (!process)
     return false;
 
   Status error;
@@ -151,17 +151,17 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   static ConstString g_otherBits("_otherBits");
   static ConstString g_value("_value");
 
-  ValueObjectSP object_sp, otherBits_sp;
-  bool is_64bit = process_sp->GetAddressByteSize() == 8;
-  if (is_64bit) {
-    object_sp = valobj.GetChildAtNamePath({g_object, g_object});
-    otherBits_sp = valobj.GetChildAtNamePath({g_otherBits, g_value});
+  ValueObjectSP object, otherBits;
+  bool is64Bit = process->GetAddressByteSize() == 8;
+  if (is64Bit) {
+    object = valobj.GetChildAtNamePath({g_object, g_object});
+    otherBits = valobj.GetChildAtNamePath({g_otherBits, g_value});
   } else {
-    object_sp = valobj.GetChildAtNamePath({g_object});
-    otherBits_sp = valobj.GetChildAtNamePath({g_otherBits, g_value});
+    object = valobj.GetChildAtNamePath({g_object});
+    otherBits = valobj.GetChildAtNamePath({g_otherBits, g_value});
   }
 
-  if (!object_sp || !otherBits_sp)
+  if (!object || !otherBits)
     return false;
 
   // Taken from StringObject.swift:
@@ -199,17 +199,17 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   //   isCocoa: the Cocoa object
   //   isOpaque & !isCocoa: the _OpaqueString object
   //   isUnmanaged: the pointer to code units
-  //   isSmall: opaque bits used for inline storage // TODO: use them!
+  //   isSmall: opaque bits used for inline storage
 
   auto readStringFromAddress = [&](uint64_t startAddress, uint64_t length,
-                                   bool is_utf_16) {
+                                   bool isUTF16) {
     if (length == 0) {
       stream.Printf("\"\"");
       return true;
     }
 
     read_options.SetLocation(startAddress);
-    read_options.SetProcessSP(process_sp);
+    read_options.SetProcessSP(process);
     read_options.SetStream(&stream);
     read_options.SetSourceSize(length);
     read_options.SetNeedsZeroTermination(false);
@@ -218,7 +218,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     read_options.SetBinaryZeroIsTerminator(false);
     read_options.SetLanguage(lldb::eLanguageTypeSwift);
 
-    if (!is_utf_16)
+    if (!isUTF16)
       return StringPrinter::ReadStringAndDumpToStream<
           StringPrinter::StringElementType::UTF8>(read_options);
     else
@@ -228,65 +228,62 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
 
   auto readStringAsNSString = [&](uint64_t startAddress) {
     CompilerType id_type =
-        process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(
+        process->GetTarget().GetScratchClangASTContext()->GetBasicType(
             lldb::eBasicTypeObjCID);
-    ValueObjectSP nsstringhere_sp = ValueObject::CreateValueObjectFromAddress(
-        "nsstringhere", startAddress, valobj.GetExecutionContextRef(), id_type);
-    if (nsstringhere_sp)
-      return NSStringSummaryProvider(*nsstringhere_sp.get(), stream,
-                                     summary_options);
+    ValueObjectSP nsstring = ValueObject::CreateValueObjectFromAddress(
+        "nsstring", startAddress, valobj.GetExecutionContextRef(), id_type);
+    if (nsstring)
+      return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
     return false;
   };
 
-  if (is_64bit) {
-    uint64_t objectAddr = object_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (is64Bit) {
+    uint64_t objectAddr = object->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
     if (objectAddr == LLDB_INVALID_ADDRESS)
       return false;
 
-    bool is_a_value = objectAddr & (1ULL << 63);
-    bool is_Cocoa_or_small = objectAddr & (1ULL << 62);
-    bool is_opaque = objectAddr & (1ULL << 61);
-    bool is_utf_16 = objectAddr & (1ULL << 60);
+    bool isValue = objectAddr & (1ULL << 63);
+    bool isCocoaOrSmall = objectAddr & (1ULL << 62);
+    bool isOpaque = objectAddr & (1ULL << 61);
+    bool isUTF16 = objectAddr & (1ULL << 60);
     uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
 
-    if (!is_opaque && !is_Cocoa_or_small) {
+    if (!isOpaque && !isCocoaOrSmall) {
       // Handle native Swift strings.
-      uint64_t count = otherBits_sp->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
+      uint64_t count = otherBits->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
 
       // The character buffer for wrapped strings is offset by 4 words.
-      if (!is_a_value)
+      if (!isValue)
         payloadAddr += 32;
 
-      return readStringFromAddress(payloadAddr, count, is_utf_16);
-    } else if (is_Cocoa_or_small && !is_a_value) {
+      return readStringFromAddress(payloadAddr, count, isUTF16);
+    } else if (isCocoaOrSmall && !isValue) {
       // Handle strings which point to NSStrings.
       return readStringAsNSString(payloadAddr);
-    } else if (is_Cocoa_or_small && is_a_value) {
+    } else if (isCocoaOrSmall && isValue) {
       // Handle strings which contain an NSString inline.
-      return NSStringSummaryProvider(*otherBits_sp.get(), stream,
-                                     summary_options);
+      return NSStringSummaryProvider(*otherBits.get(), stream, summary_options);
     }
   } else {
     static ConstString g_variant("_variant");
     static ConstString g_bits("_bits");
     static ConstString g_strong("strong");
 
-    ValueObjectSP variant_sp(valobj.GetChildAtNamePath({g_object, g_variant}));
-    ValueObjectSP bits_sp =
-        valobj.GetChildAtNamePath({g_object, g_bits, g_value});
+    ValueObjectSP variant(valobj.GetChildAtNamePath({g_object, g_variant}));
+    ValueObjectSP bits = valobj.GetChildAtNamePath({g_object, g_bits, g_value});
 
-    if (!variant_sp || !bits_sp)
+    if (!variant || !bits)
       return false;
 
-    llvm::StringRef variant_case = variant_sp->GetValueAsCString();
+    llvm::StringRef variant_case = variant->GetValueAsCString();
     if (variant_case.startswith("unmanaged")) {
       // Bits points to the string payload, otherBits is the length.
-      uint64_t count = otherBits_sp->GetValueAsUnsigned(0);
-      uint64_t payloadAddr = bits_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+      uint64_t count = otherBits->GetValueAsUnsigned(0);
+      uint64_t payloadAddr = bits->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
       if (payloadAddr == LLDB_INVALID_ADDRESS)
         return false;
       return readStringFromAddress(payloadAddr, count,
-                                   /*is_utf_16=*/variant_case ==
+                                   /*isUTF16=*/variant_case ==
                                        "unmanagedDoubleByte");
     } else if (variant_case.startswith("small")) {
       // Small strings aren't emitted yet.
