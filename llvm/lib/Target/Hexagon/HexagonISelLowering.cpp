@@ -129,11 +129,6 @@ namespace {
 
 // Implement calling convention for Hexagon.
 
-static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
-static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
-static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
-static const MVT LegalW128[] = { MVT::v256i8, MVT::v128i16, MVT::v64i32 };
-
 static bool
 CC_Hexagon(unsigned ValNo, MVT ValVT,
            MVT LocVT, CCValAssign::LocInfo LocInfo,
@@ -1732,40 +1727,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f64, &Hexagon::DoubleRegsRegClass);
   }
 
-  if (Subtarget.hasV60TOps()) {
-    if (Subtarget.useHVX64BOps()) {
-      addRegisterClass(MVT::v64i8,  &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v32i16, &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v16i32, &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v128i8, &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v64i16, &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v32i32, &Hexagon::HvxWRRegClass);
-      // These "short" boolean vector types should be legal because
-      // they will appear as results of vector compares. If they were
-      // not legal, type legalization would try to make them legal
-      // and that would require using operations that do not use or
-      // produce such types. That, in turn, would imply using custom
-      // nodes, which would be unoptimizable by the DAG combiner.
-      // The idea is to rely on target-independent operations as much
-      // as possible.
-      addRegisterClass(MVT::v16i1, &Hexagon::HvxQRRegClass);
-      addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
-      addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
-      addRegisterClass(MVT::v512i1, &Hexagon::HvxQRRegClass);
-    } else if (Subtarget.useHVX128BOps()) {
-      addRegisterClass(MVT::v128i8,  &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v64i16,  &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v32i32,  &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v256i8,  &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v128i16, &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v64i32,  &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
-      addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
-      addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
-      addRegisterClass(MVT::v1024i1, &Hexagon::HvxQRRegClass);
-    }
-  }
-
   //
   // Handling of scalar operations.
   //
@@ -2002,11 +1963,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i16, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i8,  Custom);
 
-  auto setPromoteTo = [this] (unsigned Opc, MVT FromTy, MVT ToTy) {
-    setOperationAction(Opc, FromTy, Promote);
-    AddPromotedToType(Opc, FromTy, ToTy);
-  };
-
   // Subtarget-specific operation actions.
   //
   if (Subtarget.hasV5TOps()) {
@@ -2068,120 +2024,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setIndexedStoreAction(ISD::POST_INC, VT, Legal);
   }
 
-  if (Subtarget.useHVXOps()) {
-    bool Use64b = Subtarget.useHVX64BOps();
-    ArrayRef<MVT> LegalV = Use64b ? LegalV64 : LegalV128;
-    ArrayRef<MVT> LegalW = Use64b ? LegalW64 : LegalW128;
-    MVT ByteV = Use64b ?  MVT::v64i8 : MVT::v128i8;
-    MVT ByteW = Use64b ? MVT::v128i8 : MVT::v256i8;
-
-    setOperationAction(ISD::VECTOR_SHUFFLE, ByteV, Legal);
-    setOperationAction(ISD::VECTOR_SHUFFLE, ByteW, Legal);
-    setOperationAction(ISD::CONCAT_VECTORS, ByteW, Legal);
-    setOperationAction(ISD::AND,            ByteV, Legal);
-    setOperationAction(ISD::OR,             ByteV, Legal);
-    setOperationAction(ISD::XOR,            ByteV, Legal);
-
-    for (MVT T : LegalV) {
-      setIndexedLoadAction(ISD::POST_INC,  T, Legal);
-      setIndexedStoreAction(ISD::POST_INC, T, Legal);
-
-      setOperationAction(ISD::ADD,     T, Legal);
-      setOperationAction(ISD::SUB,     T, Legal);
-      if (T != ByteV) {
-        setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
-        setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
-      }
-
-      setOperationAction(ISD::MUL,                T, Custom);
-      setOperationAction(ISD::MULHS,              T, Custom);
-      setOperationAction(ISD::MULHU,              T, Custom);
-      setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT,  T, Custom);
-      setOperationAction(ISD::EXTRACT_SUBVECTOR,  T, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
-      setOperationAction(ISD::ANY_EXTEND,         T, Custom);
-      setOperationAction(ISD::SIGN_EXTEND,        T, Custom);
-      setOperationAction(ISD::ZERO_EXTEND,        T, Custom);
-      if (T != ByteV) {
-        setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
-        // HVX only has shifts of words and halfwords.
-        setOperationAction(ISD::SRA,                     T, Custom);
-        setOperationAction(ISD::SHL,                     T, Custom);
-        setOperationAction(ISD::SRL,                     T, Custom);
-      }
-
-      setCondCodeAction(ISD::SETNE,  T, Expand);
-      setCondCodeAction(ISD::SETLE,  T, Expand);
-      setCondCodeAction(ISD::SETGE,  T, Expand);
-      setCondCodeAction(ISD::SETLT,  T, Expand);
-      setCondCodeAction(ISD::SETULE, T, Expand);
-      setCondCodeAction(ISD::SETUGE, T, Expand);
-      setCondCodeAction(ISD::SETULT, T, Expand);
-    }
-
-    for (MVT T : LegalV) {
-      MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
-      setOperationAction(ISD::BUILD_VECTOR,       BoolV, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS,     BoolV, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR,   BoolV, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT,  BoolV, Custom);
-      setOperationAction(ISD::EXTRACT_SUBVECTOR,  BoolV, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, BoolV, Custom);
-    }
-
-    for (MVT T : LegalV) {
-      if (T == ByteV)
-        continue;
-      // Promote all shuffles and concats to operate on vectors of bytes.
-      setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteV);
-      setPromoteTo(ISD::CONCAT_VECTORS, T, ByteV);
-      setPromoteTo(ISD::AND,            T, ByteV);
-      setPromoteTo(ISD::OR,             T, ByteV);
-      setPromoteTo(ISD::XOR,            T, ByteV);
-    }
-
-    for (MVT T : LegalW) {
-      // Custom-lower BUILD_VECTOR for vector pairs. The standard (target-
-      // independent) handling of it would convert it to a load, which is
-      // not always the optimal choice.
-      setOperationAction(ISD::BUILD_VECTOR, T, Custom);
-
-      // Custom-lower these operations for pairs. Expand them into a concat
-      // of the corresponding operations on individual vectors.
-      setOperationAction(ISD::ANY_EXTEND,               T, Custom);
-      setOperationAction(ISD::SIGN_EXTEND,              T, Custom);
-      setOperationAction(ISD::ZERO_EXTEND,              T, Custom);
-      setOperationAction(ISD::SIGN_EXTEND_INREG,        T, Custom);
-      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,  T, Custom);
-      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
-      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
-
-      setOperationAction(ISD::ADD,      T, Legal);
-      setOperationAction(ISD::SUB,      T, Legal);
-      setOperationAction(ISD::MUL,      T, Custom);
-      setOperationAction(ISD::MULHS,    T, Custom);
-      setOperationAction(ISD::MULHU,    T, Custom);
-      setOperationAction(ISD::AND,      T, Custom);
-      setOperationAction(ISD::OR,       T, Custom);
-      setOperationAction(ISD::XOR,      T, Custom);
-      setOperationAction(ISD::SETCC,    T, Custom);
-      setOperationAction(ISD::VSELECT,  T, Custom);
-      if (T != ByteW) {
-        setOperationAction(ISD::SRA,      T, Custom);
-        setOperationAction(ISD::SHL,      T, Custom);
-        setOperationAction(ISD::SRL,      T, Custom);
-
-        // Promote all shuffles and concats to operate on vectors of bytes.
-        setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
-        setPromoteTo(ISD::CONCAT_VECTORS, T, ByteW);
-      }
-
-      MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
-      setOperationAction(ISD::SETCC, BoolV, Custom);
-    }
-  }
+  if (Subtarget.useHVXOps())
+    initializeHVXLowering();
 
   computeRegisterProperties(&HRI);
 
@@ -2443,6 +2287,8 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   unsigned VecLen = AM.size();
 
   MVT VecTy = ty(Op);
+  assert(!Subtarget.isHVXVectorType(VecTy, true) &&
+         "HVX shuffles should be legal");
   assert(VecTy.getSizeInBits() <= 64 && "Unexpected vector length");
 
   SDValue Op0 = Op.getOperand(0);
@@ -2558,13 +2404,10 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   return SDValue();
 }
 
-// Lower a vector shift. Try to convert
-// <VT> = SHL/SRA/SRL <VT> by <VT> to Hexagon specific
-// <VT> = SHL/SRA/SRL <VT> by <IT/i32>.
+// Create a Hexagon-specific node for shifting a vector by an integer.
 SDValue
-HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
-  const SDLoc dl(Op);
-
+HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
+      const {
   if (auto *BVN = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode())) {
     if (SDValue S = BVN->getSplatValue()) {
       unsigned NewOpc;
@@ -2581,14 +2424,16 @@ HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
         default:
           llvm_unreachable("Unexpected shift opcode");
       }
-      return DAG.getNode(NewOpc, dl, ty(Op), Op.getOperand(0), S);
+      return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), S);
     }
   }
 
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(ty(Op)))
-    return LowerHvxShift(Op, DAG);
-
   return SDValue();
+}
+
+SDValue
+HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
+  return getVectorShiftByInt(Op, DAG);
 }
 
 SDValue
@@ -2607,43 +2452,6 @@ HexagonTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return SDValue();
-}
-
-// Any-, sign-, and zero-extends of boolean vectors to integer types are
-// all the same.
-
-SDValue
-HexagonTargetLowering::LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const {
-  // Lower any-extends of boolean vectors to sign-extends, since they
-  // translate directly to Q2V. Zero-extending could also be done equally
-  // fast, but Q2V is used/recognized in more places.
-  // For all other vectors, use zero-extend.
-  MVT ResTy = ty(Op);
-  SDValue InpV = Op.getOperand(0);
-  MVT ElemTy = ty(InpV).getVectorElementType();
-  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
-    return LowerSIGN_EXTEND(Op, DAG);
-  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Op), ResTy, InpV);
-}
-
-SDValue
-HexagonTargetLowering::LowerSIGN_EXTEND(SDValue Op, SelectionDAG &DAG) const {
-  MVT ResTy = ty(Op);
-  SDValue InpV = Op.getOperand(0);
-  MVT ElemTy = ty(InpV).getVectorElementType();
-  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
-    return extendHvxVectorPred(InpV, SDLoc(Op), ty(Op), false, DAG);
-  return Op;
-}
-
-SDValue
-HexagonTargetLowering::LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const {
-  MVT ResTy = ty(Op);
-  SDValue InpV = Op.getOperand(0);
-  MVT ElemTy = ty(InpV).getVectorElementType();
-  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
-    return extendHvxVectorPred(InpV, SDLoc(Op), ty(Op), true, DAG);
-  return Op;
 }
 
 bool
@@ -3021,9 +2829,6 @@ HexagonTargetLowering::getZero(const SDLoc &dl, MVT Ty, SelectionDAG &DAG)
 SDValue
 HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   MVT VecTy = ty(Op);
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(VecTy, true))
-    return LowerHvxBuildVector(Op, DAG);
-
   unsigned BW = VecTy.getSizeInBits();
   const SDLoc &dl(Op);
   SmallVector<SDValue,8> Ops;
@@ -3063,7 +2868,6 @@ HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                            SelectionDAG &DAG) const {
   MVT VecTy = ty(Op);
   const SDLoc &dl(Op);
-
   if (VecTy.getSizeInBits() == 64) {
     assert(Op.getNumOperands() == 2);
     return DAG.getNode(HexagonISD::COMBINE, dl, VecTy, Op.getOperand(1),
@@ -3072,9 +2876,6 @@ HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
 
   MVT ElemTy = VecTy.getVectorElementType();
   if (ElemTy == MVT::i1) {
-    if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(VecTy, true))
-      return LowerHvxConcatVectors(Op, DAG);
-
     assert(VecTy == MVT::v2i1 || VecTy == MVT::v4i1 || VecTy == MVT::v8i1);
     MVT OpTy = ty(Op.getOperand(0));
     // Scale is how many times the operands need to be contracted to match
@@ -3131,10 +2932,6 @@ SDValue
 HexagonTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDValue Vec = Op.getOperand(0);
-  MVT VecTy = ty(Vec);
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(VecTy, true))
-    return LowerHvxExtractElement(Op, DAG);
-
   MVT ElemTy = ty(Vec).getVectorElementType();
   return extractVector(Vec, Op.getOperand(1), SDLoc(Op), ElemTy, ty(Op), DAG);
 }
@@ -3142,31 +2939,20 @@ HexagonTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
 SDValue
 HexagonTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
                                               SelectionDAG &DAG) const {
-  SDValue Vec = Op.getOperand(0);
-  MVT VecTy = ty(Vec);
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(VecTy, true))
-    return LowerHvxExtractSubvector(Op, DAG);
-
-  return extractVector(Vec, Op.getOperand(1), SDLoc(Op), ty(Op), ty(Op), DAG);
+  return extractVector(Op.getOperand(0), Op.getOperand(1), SDLoc(Op),
+                       ty(Op), ty(Op), DAG);
 }
 
 SDValue
 HexagonTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                                               SelectionDAG &DAG) const {
-  MVT VecTy = ty(Op);
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(VecTy, true))
-    return LowerHvxInsertElement(Op, DAG);
-
   return insertVector(Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
-                      SDLoc(Op), VecTy.getVectorElementType(), DAG);
+                      SDLoc(Op), ty(Op).getVectorElementType(), DAG);
 }
 
 SDValue
 HexagonTargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
                                              SelectionDAG &DAG) const {
-  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(ty(Op), true))
-    return LowerHvxInsertSubvector(Op, DAG);
-
   SDValue ValV = Op.getOperand(1);
   return insertVector(Op.getOperand(0), ValV, Op.getOperand(2),
                       SDLoc(Op), ty(ValV), DAG);

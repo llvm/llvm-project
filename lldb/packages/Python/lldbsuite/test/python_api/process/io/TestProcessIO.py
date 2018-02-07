@@ -19,6 +19,8 @@ class ProcessIOTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
+
+    def setup_test(self):
         # Get the full path to our executable to be debugged.
         self.exe = self.getBuildArtifact("process_io")
         self.local_input_file = self.getBuildArtifact("input.txt")
@@ -38,6 +40,7 @@ class ProcessIOTestCase(TestBase):
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdin_by_api(self):
         """Exercise SBProcess.PutSTDIN()."""
+        self.setup_test()
         self.build()
         self.create_target()
         self.run_process(True)
@@ -49,6 +52,7 @@ class ProcessIOTestCase(TestBase):
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdin_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDIN without specifying STDOUT or STDERR."""
+        self.setup_test()
         self.build()
         self.create_target()
         self.redirect_stdin()
@@ -62,6 +66,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stdout_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT without specifying STDIN or STDERR."""
+        self.setup_test()
         self.build()
         self.create_target()
         self.redirect_stdout()
@@ -76,6 +81,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stderr_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDERR without specifying STDIN or STDOUT."""
+        self.setup_test()
         self.build()
         self.create_target()
         self.redirect_stderr()
@@ -90,6 +96,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stdout_stderr_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT and STDERR without redirecting STDIN."""
+        self.setup_test()
         self.build()
         self.create_target()
         self.redirect_stdout()

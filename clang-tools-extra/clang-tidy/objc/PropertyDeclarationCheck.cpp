@@ -12,8 +12,8 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/STLExtras.h"
 #include "clang/Basic/CharInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
 
@@ -118,6 +118,12 @@ FixItHint generateFixItHint(const ObjCPropertyDecl *Decl, NamingStyle Style) {
   return FixItHint();
 }
 
+std::string AcronymsGroupRegex(llvm::ArrayRef<std::string> EscapedAcronyms) {
+  return "(" +
+         llvm::join(EscapedAcronyms.begin(), EscapedAcronyms.end(), "s?|") +
+         "s?)";
+}
+
 std::string validPropertyNameRegex(llvm::ArrayRef<std::string> EscapedAcronyms,
                                    bool UsedInMatcher) {
   // Allow any of these names:
@@ -129,12 +135,9 @@ std::string validPropertyNameRegex(llvm::ArrayRef<std::string> EscapedAcronyms,
   // URLString
   // bundleID
   std::string StartMatcher = UsedInMatcher ? "::" : "^";
-
-  return StartMatcher + "((" +
-         llvm::join(EscapedAcronyms.begin(), EscapedAcronyms.end(), "|") +
-         ")[A-Z]?)?[a-z]+[a-z0-9]*([A-Z][a-z0-9]+)*" + "(" +
-         llvm::join(EscapedAcronyms.begin(), EscapedAcronyms.end(), "|") +
-         ")?$";
+  std::string AcronymsMatcher = AcronymsGroupRegex(EscapedAcronyms);
+  return StartMatcher + "(" + AcronymsMatcher + "[A-Z]?)?[a-z]+[a-z0-9]*(" +
+         AcronymsMatcher + "|([A-Z][a-z0-9]+))*$";
 }
 
 bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {

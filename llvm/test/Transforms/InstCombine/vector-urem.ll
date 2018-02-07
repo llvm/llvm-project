@@ -12,7 +12,7 @@ define <4 x i32> @test_v4i32_splatconst_pow2(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_const_pow2(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_const_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem <4 x i32> [[A0:%.*]], <i32 1, i32 2, i32 4, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A0:%.*]], <i32 0, i32 1, i32 3, i32 7>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = urem <4 x i32> %a0, <i32 1, i32 2, i32 4, i32 8>

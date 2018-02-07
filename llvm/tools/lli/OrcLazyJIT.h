@@ -61,13 +61,38 @@ public:
              std::unique_ptr<CompileCallbackMgr> CCMgr,
              IndirectStubsManagerBuilder IndirectStubsMgrBuilder,
              bool InlineStubs)
-      : TM(std::move(TM)), DL(this->TM->createDataLayout()),
+      : ES(SSP), TM(std::move(TM)), DL(this->TM->createDataLayout()),
         CCMgr(std::move(CCMgr)),
-        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+        ObjectLayer(ES,
+                    [](orc::VModuleKey) {
+                      return std::make_shared<SectionMemoryManager>();
+                    },
+                    [&](orc::VModuleKey K) {
+                      auto ResolverI = Resolvers.find(K);
+                      assert(ResolverI != Resolvers.end() &&
+                             "Missing resolver for module K");
+                      auto Resolver = std::move(ResolverI->second);
+                      Resolvers.erase(ResolverI);
+                      return Resolver;
+                    }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(*this->TM)),
         IRDumpLayer(CompileLayer, createDebugDumper()),
-        CODLayer(IRDumpLayer, extractSingleFunction, *this->CCMgr,
-                 std::move(IndirectStubsMgrBuilder), InlineStubs),
+        CODLayer(
+            ES, IRDumpLayer,
+            [&](orc::VModuleKey K) {
+              auto ResolverI = Resolvers.find(K);
+              assert(ResolverI != Resolvers.end() &&
+                     "Missing resolver for module K");
+              auto Resolver = std::move(ResolverI->second);
+              Resolvers.erase(ResolverI);
+              return Resolver;
+            },
+            [&](orc::VModuleKey K, std::shared_ptr<orc::SymbolResolver> R) {
+              assert(!Resolvers.count(K) && "Resolver already present");
+              Resolvers[K] = std::move(R);
+            },
+            extractSingleFunction, *this->CCMgr,
+            std::move(IndirectStubsMgrBuilder), InlineStubs),
         CXXRuntimeOverrides(
             [this](const std::string &S) { return mangle(S); }) {}
 
@@ -114,24 +139,50 @@ public:
     //   2) Check for C++ runtime overrides.
     //   3) Search the host process (LLI)'s symbol table.
     if (!ModulesHandle) {
-      auto Resolver =
-        orc::createLambdaResolver(
-          [this](const std::string &Name) -> JITSymbol {
-            if (auto Sym = CODLayer.findSymbol(Name, true))
-              return Sym;
-            return CXXRuntimeOverrides.searchOverrides(Name);
+      auto LegacyLookupInDylib = [this](const std::string &Name) -> JITSymbol {
+        if (auto Sym = CODLayer.findSymbol(Name, true))
+          return Sym;
+        else if (auto Err = Sym.takeError())
+          return std::move(Err);
+        return CXXRuntimeOverrides.searchOverrides(Name);
+      };
+
+      auto LegacyLookup =
+          [LegacyLookupInDylib](const std::string &Name) -> JITSymbol {
+        if (auto Sym = LegacyLookupInDylib(Name))
+          return Sym;
+        else if (auto Err = Sym.takeError())
+          return std::move(Err);
+
+        if (auto Addr = RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+          return JITSymbol(Addr, JITSymbolFlags::Exported);
+
+        return nullptr;
+      };
+
+      auto K = ES.allocateVModule();
+      assert(!Resolvers.count(K) && "Resolver already present");
+      Resolvers[K] = orc::createSymbolResolver(
+          [LegacyLookupInDylib](orc::SymbolFlagsMap &SymbolFlags,
+                                const orc::SymbolNameSet &Symbols) {
+            auto NotFoundViaLegacyLookup = lookupFlagsWithLegacyFn(
+                SymbolFlags, Symbols, LegacyLookupInDylib);
+            if (!NotFoundViaLegacyLookup) {
+              logAllUnhandledErrors(NotFoundViaLegacyLookup.takeError(), errs(),
+                                    "OrcLazyJIT lookupFlags error: ");
+              SymbolFlags.clear();
+              return orc::SymbolNameSet();
+            }
+            return std::move(*NotFoundViaLegacyLookup);
           },
-          [](const std::string &Name) {
-            if (auto Addr =
-                RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-              return JITSymbol(Addr, JITSymbolFlags::Exported);
-            return JITSymbol(nullptr);
-          }
-        );
+          [LegacyLookup](orc::AsynchronousSymbolQuery &Query,
+                         orc::SymbolNameSet Symbols) {
+            return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
+          });
 
       // Add the module to the JIT.
       if (auto ModulesHandleOrErr =
-          CODLayer.addModule(std::move(M), std::move(Resolver)))
+              CODLayer.addModule(std::move(K), std::move(M)))
         ModulesHandle = std::move(*ModulesHandleOrErr);
       else
         return ModulesHandleOrErr.takeError();
@@ -177,6 +228,11 @@ private:
   }
 
   static TransformFtor createDebugDumper();
+
+  orc::SymbolStringPool SSP;
+  orc::ExecutionSession ES;
+
+  std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
 
   std::unique_ptr<TargetMachine> TM;
   DataLayout DL;

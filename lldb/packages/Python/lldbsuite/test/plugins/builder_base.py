@@ -50,9 +50,10 @@ def getArchFlag():
 
     return ("ARCHFLAG=" + archflag) if archflag else ""
 
-def getMake(test_subdir):
+def getMake(test_subdir, test_name):
     """Returns the invocation for GNU make.
-       The argument test_subdir is the relative path to the testcase."""
+       The first argument is a tuple of the relative path to the testcase
+       and its filename stem."""
     if platform.system() == "FreeBSD" or platform.system() == "NetBSD":
         make = "gmake"
     else:
@@ -61,19 +62,19 @@ def getMake(test_subdir):
     # Construct the base make invocation.
     lldb_test = os.environ["LLDB_TEST"]
     lldb_build = os.environ["LLDB_BUILD"]
-    if not (lldb_test and lldb_build and test_subdir and
+    if not (lldb_test and lldb_build and test_subdir and test_name and
             (not os.path.isabs(test_subdir))):
         raise Exception("Could not derive test directories")
-    build_dir = os.path.join(lldb_build, test_subdir)
-    test_dir = os.path.join(lldb_test, test_subdir)
+    build_dir = os.path.join(lldb_build, test_subdir, test_name)
+    src_dir = os.path.join(lldb_test, test_subdir)
     # This is a bit of a hack to make inline testcases work.
-    makefile = os.path.join(test_dir, "Makefile")
+    makefile = os.path.join(src_dir, "Makefile")
     if not os.path.isfile(makefile):
         makefile = os.path.join(build_dir, "Makefile")
     return [make,
-            "VPATH="+test_dir,
+            "VPATH="+src_dir,
             "-C", build_dir,
-            "-I", test_dir,
+            "-I", src_dir,
             "-f", makefile]
 
 
@@ -140,12 +141,13 @@ def buildDefault(
         compiler=None,
         dictionary=None,
         clean=True,
-        testdir=None):
+        testdir=None,
+        testname=None):
     """Build the binaries the default way."""
     commands = []
     if clean:
-        commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
-    commands.append(getMake(testdir) + ["all", getArchSpec(architecture),
+        commands.append(getMake(testdir, testname) + ["clean", getCmdLine(dictionary)])
+    commands.append(getMake(testdir, testname) + ["all", getArchSpec(architecture),
                      getCCSpec(compiler), getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
@@ -160,13 +162,16 @@ def buildDwarf(
         compiler=None,
         dictionary=None,
         clean=True,
-        testdir=None):
+        testdir=None,
+        testname=None):
     """Build the binaries with dwarf debug info."""
     commands = []
     if clean:
-        commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
-    commands.append(getMake(testdir) + ["MAKE_DSYM=NO", getArchSpec(
-        architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+        commands.append(getMake(testdir, testname) +
+                        ["clean", getCmdLine(dictionary)])
+    commands.append(getMake(testdir, testname) +
+                    ["MAKE_DSYM=NO", getArchSpec(architecture),
+                     getCCSpec(compiler), getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
     # True signifies that we can handle building dwarf.
@@ -179,12 +184,14 @@ def buildDwo(
         compiler=None,
         dictionary=None,
         clean=True,
-        testdir=None):
+        testdir=None,
+        testname=None):
     """Build the binaries with dwarf debug info."""
     commands = []
     if clean:
-        commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
-    commands.append(getMake(testdir) +
+        commands.append(getMake(testdir, testname) +
+                        ["clean", getCmdLine(dictionary)])
+    commands.append(getMake(testdir, testname) +
                     ["MAKE_DSYM=NO", "MAKE_DWO=YES",
                      getArchSpec(architecture),
                      getCCSpec(compiler),
@@ -201,12 +208,14 @@ def buildGModules(
         compiler=None,
         dictionary=None,
         clean=True,
-        testdir=None):
+        testdir=None,
+        testname=None):
     """Build the binaries with dwarf debug info."""
     commands = []
     if clean:
-        commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
-    commands.append(getMake(testdir) +
+        commands.append(getMake(testdir, testname) +
+                        ["clean", getCmdLine(dictionary)])
+    commands.append(getMake(testdir, testname) +
                     ["MAKE_DSYM=NO",
                      "MAKE_GMODULES=YES",
                      getArchSpec(architecture),

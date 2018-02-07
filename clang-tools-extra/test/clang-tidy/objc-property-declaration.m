@@ -14,6 +14,9 @@
 @property(strong, nonatomic) UIViewController *notificationsVC;
 @property(strong, nonatomic) NSString *URL_string;
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: property name 'URL_string' not using lowerCamelCase style or not prefixed in a category, according to the Apple Coding Guidelines [objc-property-declaration]
+@property(strong, nonatomic) NSString *supportURLsCamelCase;
+@property(strong, nonatomic) NSString *supportURLCamelCase;
+@property(strong, nonatomic) NSString *VCsPluralToAdd;
 @end
 
 @interface Foo (Bar)

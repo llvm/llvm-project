@@ -863,3 +863,124 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
   %tmp2 = and i8 %tmp, 1
   ret i8 %tmp2
 }
+
+; Make sure we can detect that the input is non-zero and avoid cmov after BSR
+; This is relevant for 32-bit mode without lzcnt
+define i64 @ctlz_i64_zero_test_knownneverzero(i64 %n) {
+; X32-LABEL: ctlz_i64_zero_test_knownneverzero:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    jne .LBB21_1
+; X32-NEXT:  # %bb.2:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    orl $1, %eax
+; X32-NEXT:    bsrl %eax, %eax
+; X32-NEXT:    xorl $31, %eax
+; X32-NEXT:    orl $32, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB21_1:
+; X32-NEXT:    bsrl %eax, %eax
+; X32-NEXT:    xorl $31, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    retl
+;
+; X64-LABEL: ctlz_i64_zero_test_knownneverzero:
+; X64:       # %bb.0:
+; X64-NEXT:    orq $1, %rdi
+; X64-NEXT:    je .LBB21_1
+; X64-NEXT:  # %bb.2: # %cond.false
+; X64-NEXT:    bsrq %rdi, %rax
+; X64-NEXT:    xorq $63, %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB21_1:
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    retq
+;
+; X32-CLZ-LABEL: ctlz_i64_zero_test_knownneverzero:
+; X32-CLZ:       # %bb.0:
+; X32-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-CLZ-NEXT:    testl %eax, %eax
+; X32-CLZ-NEXT:    jne .LBB21_1
+; X32-CLZ-NEXT:  # %bb.2:
+; X32-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-CLZ-NEXT:    orl $1, %eax
+; X32-CLZ-NEXT:    lzcntl %eax, %eax
+; X32-CLZ-NEXT:    orl $32, %eax
+; X32-CLZ-NEXT:    xorl %edx, %edx
+; X32-CLZ-NEXT:    retl
+; X32-CLZ-NEXT:  .LBB21_1:
+; X32-CLZ-NEXT:    lzcntl %eax, %eax
+; X32-CLZ-NEXT:    xorl %edx, %edx
+; X32-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: ctlz_i64_zero_test_knownneverzero:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    orq $1, %rdi
+; X64-CLZ-NEXT:    lzcntq %rdi, %rax
+; X64-CLZ-NEXT:    retq
+  %o = or i64 %n, 1
+  %tmp1 = call i64 @llvm.ctlz.i64(i64 %o, i1 false)
+  ret i64 %tmp1
+}
+
+; Make sure we can detect that the input is non-zero and avoid cmov after BSF
+; This is relevant for 32-bit mode without tzcnt
+define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
+; X32-LABEL: cttz_i64_zero_test_knownneverzero:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    jne .LBB22_1
+; X32-NEXT:  # %bb.2:
+; X32-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X32-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    bsfl %eax, %eax
+; X32-NEXT:    orl $32, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB22_1:
+; X32-NEXT:    bsfl %eax, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    retl
+;
+; X64-LABEL: cttz_i64_zero_test_knownneverzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    je .LBB22_1
+; X64-NEXT:  # %bb.2: # %cond.false
+; X64-NEXT:    bsfq %rax, %rax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB22_1:
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    retq
+;
+; X32-CLZ-LABEL: cttz_i64_zero_test_knownneverzero:
+; X32-CLZ:       # %bb.0:
+; X32-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-CLZ-NEXT:    testl %eax, %eax
+; X32-CLZ-NEXT:    jne .LBB22_1
+; X32-CLZ-NEXT:  # %bb.2:
+; X32-CLZ-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X32-CLZ-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X32-CLZ-NEXT:    tzcntl %eax, %eax
+; X32-CLZ-NEXT:    orl $32, %eax
+; X32-CLZ-NEXT:    xorl %edx, %edx
+; X32-CLZ-NEXT:    retl
+; X32-CLZ-NEXT:  .LBB22_1:
+; X32-CLZ-NEXT:    tzcntl %eax, %eax
+; X32-CLZ-NEXT:    xorl %edx, %edx
+; X32-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: cttz_i64_zero_test_knownneverzero:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-CLZ-NEXT:    orq %rdi, %rax
+; X64-CLZ-NEXT:    tzcntq %rax, %rax
+; X64-CLZ-NEXT:    retq
+  %o = or i64 %n, -9223372036854775808 ; 0x8000000000000000
+  %tmp1 = call i64 @llvm.cttz.i64(i64 %o, i1 false)
+  ret i64 %tmp1
+}

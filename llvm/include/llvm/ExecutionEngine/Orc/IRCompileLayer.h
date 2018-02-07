@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <string>
@@ -50,12 +51,10 @@ public:
   ///        along with the given memory manager and symbol resolver.
   ///
   /// @return A handle for the added module.
-  Expected<ModuleHandleT>
-  addModule(std::shared_ptr<Module> M,
-            std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ModuleHandleT> addModule(VModuleKey K, std::shared_ptr<Module> M) {
     using CompileResult = decltype(Compile(*M));
     auto Obj = std::make_shared<CompileResult>(Compile(*M));
-    return BaseLayer.addObject(std::move(Obj), std::move(Resolver));
+    return BaseLayer.addObject(std::move(K), std::move(Obj));
   }
 
   /// @brief Remove the module associated with the handle H.

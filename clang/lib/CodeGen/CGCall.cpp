@@ -4052,14 +4052,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
   }
 
-  llvm::Value *CalleePtr;
-  if (Callee.isVirtual()) {
-    const CallExpr *CE = Callee.getVirtualCallExpr();
-    CalleePtr = CGM.getCXXABI().getVirtualFunctionPointer(
-        *this, Callee.getVirtualMethodDecl(), Callee.getThisAddress(),
-        Callee.getFunctionType(), CE ? CE->getLocStart() : SourceLocation());
-  } else
-    CalleePtr = Callee.getFunctionPointer();
+  const CGCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);
+  llvm::Value *CalleePtr = ConcreteCallee.getFunctionPointer();
 
   // If we're using inalloca, set up that argument.
   if (ArgMemory.isValid()) {
@@ -4410,6 +4404,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
 
   return Ret;
+}
+
+CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
+  if (isVirtual()) {
+    const CallExpr *CE = getVirtualCallExpr();
+    return CGF.CGM.getCXXABI().getVirtualFunctionPointer(
+        CGF, getVirtualMethodDecl(), getThisAddress(),
+        getFunctionType(), CE ? CE->getLocStart() : SourceLocation());
+  }
+
+  return *this;
 }
 
 /* VarArg handling */

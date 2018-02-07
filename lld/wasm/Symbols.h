@@ -114,11 +114,18 @@ protected:
 // linker-generated symbols
 struct WasmSym {
   // __stack_pointer
-  // Global that holds the address of the top of the explict  value stack
-  // in linear memory.
+  // Global that holds the address of the top of the explicit value stack in
+  // linear memory.
   static Symbol *StackPointer;
 
+  // __data_end
+  // Symbol marking the end of the data and bss.
+  static Symbol *DataEnd;
+
   // __heap_base
+  // Symbol marking the end of the data, bss and explicit stack.  Any linear
+  // memory following this address is not used by the linked code and can
+  // therefore be used as a backing store for brk()/malloc() implementations.
   static Symbol *HeapBase;
 
   // __wasm_call_ctors

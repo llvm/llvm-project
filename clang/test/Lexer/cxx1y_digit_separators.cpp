@@ -51,6 +51,8 @@ namespace floating {
   float u = 0x.'p1f; // expected-error {{hexadecimal floating literal requires a significand}}
   float v = 0e'f; // expected-error {{exponent has no digits}}
   float w = 0x0p'f; // expected-error {{exponent has no digits}}
+  float x = 0'e+1; // expected-error {{digit separator cannot appear at end of digit sequence}}
+  float y = 0x0'p+1; // expected-error {{digit separator cannot appear at end of digit sequence}}
 }
 
 #line 123'456

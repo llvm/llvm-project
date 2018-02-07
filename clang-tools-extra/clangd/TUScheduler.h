@@ -11,9 +11,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 
 #include "ClangdUnit.h"
+#include "ClangdUnitStore.h"
 #include "Function.h"
 #include "Threading.h"
-#include "llvm/ADT/StringMap.h"
 
 namespace clang {
 namespace clangd {
@@ -42,7 +42,6 @@ class TUScheduler {
 public:
   TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
               ASTParsedCallback ASTCallback);
-  ~TUScheduler();
 
   /// Returns estimated memory usage for each of the currently open files.
   /// The order of results is unspecified.
@@ -82,17 +81,11 @@ public:
       UniqueFunction<void(llvm::Expected<InputsAndPreamble>)> Action);
 
 private:
-  /// This class stores per-file data in the Files map.
-  struct FileData;
+  const ParseInputs &getInputs(PathRef File);
 
-  const bool StorePreamblesInMemory;
-  const std::shared_ptr<PCHContainerOperations> PCHOps;
-  const ASTParsedCallback ASTCallback;
-  Semaphore Barrier;
-  llvm::StringMap<std::unique_ptr<FileData>> Files;
-  // None when running tasks synchronously and non-None when running tasks
-  // asynchronously.
-  llvm::Optional<AsyncTaskRunner> Tasks;
+  llvm::StringMap<ParseInputs> CachedInputs;
+  CppFileCollection Files;
+  ThreadPool Threads;
 };
 } // namespace clangd
 } // namespace clang

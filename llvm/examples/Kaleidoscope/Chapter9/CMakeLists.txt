@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
   Object
+  OrcJIT
   Support
   native
   )

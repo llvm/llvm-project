@@ -6286,6 +6286,13 @@ SDValue DAGCombiner::visitCTLZ(SDNode *N) {
   // fold (ctlz c1) -> c2
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
     return DAG.getNode(ISD::CTLZ, SDLoc(N), VT, N0);
+
+  // If the value is known never to be zero, switch to the undef version.
+  if (!LegalOperations || TLI.isOperationLegal(ISD::CTLZ_ZERO_UNDEF, VT)) {
+    if (DAG.isKnownNeverZero(N0))
+      return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, SDLoc(N), VT, N0);
+  }
+
   return SDValue();
 }
 
@@ -6306,6 +6313,13 @@ SDValue DAGCombiner::visitCTTZ(SDNode *N) {
   // fold (cttz c1) -> c2
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
     return DAG.getNode(ISD::CTTZ, SDLoc(N), VT, N0);
+
+  // If the value is known never to be zero, switch to the undef version.
+  if (!LegalOperations || TLI.isOperationLegal(ISD::CTTZ_ZERO_UNDEF, VT)) {
+    if (DAG.isKnownNeverZero(N0))
+      return DAG.getNode(ISD::CTTZ_ZERO_UNDEF, SDLoc(N), VT, N0);
+  }
+
   return SDValue();
 }
 

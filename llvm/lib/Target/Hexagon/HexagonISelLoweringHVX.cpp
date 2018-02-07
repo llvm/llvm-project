@@ -13,6 +13,168 @@
 
 using namespace llvm;
 
+static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
+static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
+static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
+static const MVT LegalW128[] = { MVT::v256i8, MVT::v128i16, MVT::v64i32 };
+
+
+void
+HexagonTargetLowering::initializeHVXLowering() {
+  if (Subtarget.useHVX64BOps()) {
+    addRegisterClass(MVT::v64i8,  &Hexagon::HvxVRRegClass);
+    addRegisterClass(MVT::v32i16, &Hexagon::HvxVRRegClass);
+    addRegisterClass(MVT::v16i32, &Hexagon::HvxVRRegClass);
+    addRegisterClass(MVT::v128i8, &Hexagon::HvxWRRegClass);
+    addRegisterClass(MVT::v64i16, &Hexagon::HvxWRRegClass);
+    addRegisterClass(MVT::v32i32, &Hexagon::HvxWRRegClass);
+    // These "short" boolean vector types should be legal because
+    // they will appear as results of vector compares. If they were
+    // not legal, type legalization would try to make them legal
+    // and that would require using operations that do not use or
+    // produce such types. That, in turn, would imply using custom
+    // nodes, which would be unoptimizable by the DAG combiner.
+    // The idea is to rely on target-independent operations as much
+    // as possible.
+    addRegisterClass(MVT::v16i1, &Hexagon::HvxQRRegClass);
+    addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
+    addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
+    addRegisterClass(MVT::v512i1, &Hexagon::HvxQRRegClass);
+  } else if (Subtarget.useHVX128BOps()) {
+    addRegisterClass(MVT::v128i8,  &Hexagon::HvxVRRegClass);
+    addRegisterClass(MVT::v64i16,  &Hexagon::HvxVRRegClass);
+    addRegisterClass(MVT::v32i32,  &Hexagon::HvxVRRegClass);
+    addRegisterClass(MVT::v256i8,  &Hexagon::HvxWRRegClass);
+    addRegisterClass(MVT::v128i16, &Hexagon::HvxWRRegClass);
+    addRegisterClass(MVT::v64i32,  &Hexagon::HvxWRRegClass);
+    addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
+    addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
+    addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
+    addRegisterClass(MVT::v1024i1, &Hexagon::HvxQRRegClass);
+  }
+
+  // Set up operation actions.
+
+  bool Use64b = Subtarget.useHVX64BOps();
+  ArrayRef<MVT> LegalV = Use64b ? LegalV64 : LegalV128;
+  ArrayRef<MVT> LegalW = Use64b ? LegalW64 : LegalW128;
+  MVT ByteV = Use64b ?  MVT::v64i8 : MVT::v128i8;
+  MVT ByteW = Use64b ? MVT::v128i8 : MVT::v256i8;
+
+  auto setPromoteTo = [this] (unsigned Opc, MVT FromTy, MVT ToTy) {
+    setOperationAction(Opc, FromTy, Promote);
+    AddPromotedToType(Opc, FromTy, ToTy);
+  };
+
+  setOperationAction(ISD::VECTOR_SHUFFLE, ByteV, Legal);
+  setOperationAction(ISD::VECTOR_SHUFFLE, ByteW, Legal);
+  setOperationAction(ISD::AND,            ByteV, Legal);
+  setOperationAction(ISD::OR,             ByteV, Legal);
+  setOperationAction(ISD::XOR,            ByteV, Legal);
+
+  for (MVT T : LegalV) {
+    setIndexedLoadAction(ISD::POST_INC,  T, Legal);
+    setIndexedStoreAction(ISD::POST_INC, T, Legal);
+
+    setOperationAction(ISD::ADD,     T, Legal);
+    setOperationAction(ISD::SUB,     T, Legal);
+    if (T != ByteV) {
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+    }
+
+    setOperationAction(ISD::MUL,                T, Custom);
+    setOperationAction(ISD::MULHS,              T, Custom);
+    setOperationAction(ISD::MULHU,              T, Custom);
+    setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
+    // Make concat-vectors custom to handle concats of more than 2 vectors.
+    setOperationAction(ISD::CONCAT_VECTORS,     T, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
+    setOperationAction(ISD::INSERT_VECTOR_ELT,  T, Custom);
+    setOperationAction(ISD::EXTRACT_SUBVECTOR,  T, Custom);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
+    setOperationAction(ISD::ANY_EXTEND,         T, Custom);
+    setOperationAction(ISD::SIGN_EXTEND,        T, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        T, Custom);
+    if (T != ByteV) {
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
+      // HVX only has shifts of words and halfwords.
+      setOperationAction(ISD::SRA,                     T, Custom);
+      setOperationAction(ISD::SHL,                     T, Custom);
+      setOperationAction(ISD::SRL,                     T, Custom);
+    }
+
+    setCondCodeAction(ISD::SETNE,  T, Expand);
+    setCondCodeAction(ISD::SETLE,  T, Expand);
+    setCondCodeAction(ISD::SETGE,  T, Expand);
+    setCondCodeAction(ISD::SETLT,  T, Expand);
+    setCondCodeAction(ISD::SETULE, T, Expand);
+    setCondCodeAction(ISD::SETUGE, T, Expand);
+    setCondCodeAction(ISD::SETULT, T, Expand);
+  }
+
+  for (MVT T : LegalV) {
+    MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
+    setOperationAction(ISD::BUILD_VECTOR,       BoolV, Custom);
+    setOperationAction(ISD::CONCAT_VECTORS,     BoolV, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   BoolV, Custom);
+    setOperationAction(ISD::INSERT_VECTOR_ELT,  BoolV, Custom);
+    setOperationAction(ISD::EXTRACT_SUBVECTOR,  BoolV, Custom);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, BoolV, Custom);
+  }
+
+  for (MVT T : LegalV) {
+    if (T == ByteV)
+      continue;
+    // Promote all shuffles to operate on vectors of bytes.
+    setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteV);
+    setPromoteTo(ISD::AND,            T, ByteV);
+    setPromoteTo(ISD::OR,             T, ByteV);
+    setPromoteTo(ISD::XOR,            T, ByteV);
+  }
+
+  for (MVT T : LegalW) {
+    // Custom-lower BUILD_VECTOR for vector pairs. The standard (target-
+    // independent) handling of it would convert it to a load, which is
+    // not always the optimal choice.
+    setOperationAction(ISD::BUILD_VECTOR,   T, Custom);
+    // Make concat-vectors custom to handle concats of more than 2 vectors.
+    setOperationAction(ISD::CONCAT_VECTORS, T, Custom);
+
+    // Custom-lower these operations for pairs. Expand them into a concat
+    // of the corresponding operations on individual vectors.
+    setOperationAction(ISD::ANY_EXTEND,               T, Custom);
+    setOperationAction(ISD::SIGN_EXTEND,              T, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,              T, Custom);
+    setOperationAction(ISD::SIGN_EXTEND_INREG,        T, Custom);
+    setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,  T, Custom);
+    setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
+    setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+
+    setOperationAction(ISD::ADD,      T, Legal);
+    setOperationAction(ISD::SUB,      T, Legal);
+    setOperationAction(ISD::MUL,      T, Custom);
+    setOperationAction(ISD::MULHS,    T, Custom);
+    setOperationAction(ISD::MULHU,    T, Custom);
+    setOperationAction(ISD::AND,      T, Custom);
+    setOperationAction(ISD::OR,       T, Custom);
+    setOperationAction(ISD::XOR,      T, Custom);
+    setOperationAction(ISD::SETCC,    T, Custom);
+    setOperationAction(ISD::VSELECT,  T, Custom);
+    if (T != ByteW) {
+      setOperationAction(ISD::SRA,      T, Custom);
+      setOperationAction(ISD::SHL,      T, Custom);
+      setOperationAction(ISD::SRL,      T, Custom);
+
+      // Promote all shuffles to operate on vectors of bytes.
+      setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
+    }
+
+    MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
+    setOperationAction(ISD::SETCC, BoolV, Custom);
+  }
+}
+
 SDValue
 HexagonTargetLowering::getInt(unsigned IntId, MVT ResTy, ArrayRef<SDValue> Ops,
                               const SDLoc &dl, SelectionDAG &DAG) const {
@@ -791,15 +953,24 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
 SDValue
 HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
       const {
-  // This should only be called for vectors of i1. The "scalar" vector
-  // concatenation does not need special lowering (assuming that only
-  // two vectors are concatenated at a time).
+  // Vector concatenation of two integer (non-bool) vectors does not need
+  // special lowering. Custom-lower concats of bool vectors and expand
+  // concats of more than 2 vectors.
   MVT VecTy = ty(Op);
-  assert(VecTy.getVectorElementType() == MVT::i1);
-
   const SDLoc &dl(Op);
-  unsigned HwLen = Subtarget.getVectorLength();
   unsigned NumOp = Op.getNumOperands();
+  if (VecTy.getVectorElementType() != MVT::i1) {
+    if (NumOp == 2)
+      return Op;
+    // Expand the other cases into a build-vector.
+    SmallVector<SDValue,8> Elems;
+    for (SDValue V : Op.getNode()->ops())
+      DAG.ExtractVectorElements(V, Elems);
+    return DAG.getBuildVector(VecTy, dl, Elems);
+  }
+
+  assert(VecTy.getVectorElementType() == MVT::i1);
+  unsigned HwLen = Subtarget.getVectorLength();
   assert(isPowerOf2_32(NumOp) && HwLen % NumOp == 0);
 
   SDValue Op0 = Op.getOperand(0);
@@ -905,6 +1076,40 @@ HexagonTargetLowering::LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG)
     return insertHvxSubvectorPred(VecV, ValV, IdxV, dl, DAG);
 
   return insertHvxSubvectorReg(VecV, ValV, IdxV, dl, DAG);
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxAnyExt(SDValue Op, SelectionDAG &DAG) const {
+  // Lower any-extends of boolean vectors to sign-extends, since they
+  // translate directly to Q2V. Zero-extending could also be done equally
+  // fast, but Q2V is used/recognized in more places.
+  // For all other vectors, use zero-extend.
+  MVT ResTy = ty(Op);
+  SDValue InpV = Op.getOperand(0);
+  MVT ElemTy = ty(InpV).getVectorElementType();
+  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
+    return LowerHvxSignExt(Op, DAG);
+  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Op), ResTy, InpV);
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxSignExt(SDValue Op, SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  SDValue InpV = Op.getOperand(0);
+  MVT ElemTy = ty(InpV).getVectorElementType();
+  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
+    return extendHvxVectorPred(InpV, SDLoc(Op), ty(Op), false, DAG);
+  return Op;
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxZeroExt(SDValue Op, SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  SDValue InpV = Op.getOperand(0);
+  MVT ElemTy = ty(InpV).getVectorElementType();
+  if (ElemTy == MVT::i1 && Subtarget.isHVXVectorType(ResTy))
+    return extendHvxVectorPred(InpV, SDLoc(Op), ty(Op), true, DAG);
+  return Op;
 }
 
 SDValue
@@ -1076,6 +1281,8 @@ HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
+  if (SDValue S = getVectorShiftByInt(Op, DAG))
+    return S;
   return Op;
 }
 
@@ -1143,19 +1350,19 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Opc) {
     default:
       break;
-    case ISD::CONCAT_VECTORS:           return LowerCONCAT_VECTORS(Op, DAG);
-    case ISD::INSERT_SUBVECTOR:         return LowerINSERT_SUBVECTOR(Op, DAG);
-    case ISD::INSERT_VECTOR_ELT:        return LowerINSERT_VECTOR_ELT(Op, DAG);
-    case ISD::EXTRACT_SUBVECTOR:        return LowerEXTRACT_SUBVECTOR(Op, DAG);
-    case ISD::EXTRACT_VECTOR_ELT:       return LowerEXTRACT_VECTOR_ELT(Op, DAG);
-    case ISD::BUILD_VECTOR:             return LowerBUILD_VECTOR(Op, DAG);
-    case ISD::VECTOR_SHUFFLE:           return LowerVECTOR_SHUFFLE(Op, DAG);
-    case ISD::ANY_EXTEND:               return LowerANY_EXTEND(Op, DAG);
-    case ISD::SIGN_EXTEND:              return LowerSIGN_EXTEND(Op, DAG);
-    case ISD::ZERO_EXTEND:              return LowerZERO_EXTEND(Op, DAG);
+    case ISD::BUILD_VECTOR:             return LowerHvxBuildVector(Op, DAG);
+    case ISD::CONCAT_VECTORS:           return LowerHvxConcatVectors(Op, DAG);
+    case ISD::INSERT_SUBVECTOR:         return LowerHvxInsertSubvector(Op, DAG);
+    case ISD::INSERT_VECTOR_ELT:        return LowerHvxInsertElement(Op, DAG);
+    case ISD::EXTRACT_SUBVECTOR:        return LowerHvxExtractSubvector(Op, DAG);
+    case ISD::EXTRACT_VECTOR_ELT:       return LowerHvxExtractElement(Op, DAG);
+
+    case ISD::ANY_EXTEND:               return LowerHvxAnyExt(Op, DAG);
+    case ISD::SIGN_EXTEND:              return LowerHvxSignExt(Op, DAG);
+    case ISD::ZERO_EXTEND:              return LowerHvxZeroExt(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
-    case ISD::SRL:                      return LowerVECTOR_SHIFT(Op, DAG);
+    case ISD::SRL:                      return LowerHvxShift(Op, DAG);
     case ISD::MUL:                      return LowerHvxMul(Op, DAG);
     case ISD::MULHS:
     case ISD::MULHU:                    return LowerHvxMulh(Op, DAG);
@@ -1173,7 +1380,7 @@ bool
 HexagonTargetLowering::isHvxOperation(SDValue Op) const {
   // If the type of the result, or any operand type are HVX vector types,
   // this is an HVX operation.
-  return Subtarget.isHVXVectorType(ty(Op)) ||
+  return Subtarget.isHVXVectorType(ty(Op), true) ||
          llvm::any_of(Op.getNode()->ops(),
                       [this] (SDValue V) {
                         return Subtarget.isHVXVectorType(ty(V), true);

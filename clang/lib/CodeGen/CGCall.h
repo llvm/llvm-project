@@ -206,6 +206,10 @@ public:
       return cast<llvm::FunctionType>(
           getFunctionPointer()->getType()->getPointerElementType());
     }
+
+    /// If this is a delayed callee computation of some sort, prepare
+    /// a concrete callee.
+    CGCallee prepareConcreteCallee(CodeGenFunction &CGF) const;
   };
 
   struct CallArg {

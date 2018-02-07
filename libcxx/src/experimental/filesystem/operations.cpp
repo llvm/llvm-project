@@ -21,7 +21,34 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <fcntl.h>  /* values for fchmodat */
-#if !defined(UTIME_OMIT)
+
+#if (__APPLE__)
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101300
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#elif defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 110000
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#elif defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 110000
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#elif defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 40000
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#endif // __ENVIRONMENT_.*_VERSION_MIN_REQUIRED__
+#else
+// We can use the presence of UTIME_OMIT to detect platforms that provide
+// utimensat.
+#if defined(UTIME_OMIT)
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#endif // __APPLE__
+
+#if !defined(_LIBCXX_USE_UTIMENSAT)
 #include <sys/time.h> // for ::utimes as used in __last_write_time
 #endif
 
@@ -560,9 +587,7 @@ void __last_write_time(const path& p, file_time_type new_time,
     using namespace std::chrono;
     std::error_code m_ec;
 
-    // We can use the presence of UTIME_OMIT to detect platforms that do not
-    // provide utimensat.
-#if !defined(UTIME_OMIT)
+#if !defined(_LIBCXX_USE_UTIMENSAT)
     // This implementation has a race condition between determining the
     // last access time and attempting to set it to the same value using
     // ::utimes

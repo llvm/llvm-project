@@ -21,7 +21,6 @@ add_extra_unittest(ClangdTests
   JSONExprTests.cpp
   URITests.cpp
   TestFS.cpp
-  ThreadingTests.cpp
   TraceTests.cpp
   TUSchedulerTests.cpp
   SourceCodeTests.cpp
