@@ -206,7 +206,7 @@ SwiftHashedContainerNativeBufferHandler::
   static ConstString g_value("value");
   static ConstString g__value("_value");
 
-  static ConstString g_capacity("capacity");
+  static ConstString g_capacity("bucketCount");
   static ConstString g_count("count");
 
   if (!m_nativeStorage)

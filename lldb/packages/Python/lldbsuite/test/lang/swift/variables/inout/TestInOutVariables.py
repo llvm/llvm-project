@@ -25,7 +25,7 @@ class TestInOutVariables(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.expectedFailureAll # rdar://36847830
+    @decorators.add_test_categories(["swiftpr"])
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""
         self.build()
