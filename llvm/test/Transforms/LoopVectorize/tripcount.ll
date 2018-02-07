@@ -57,7 +57,7 @@ for.end:                                          ; preds = %for.body
 }
 
 define i32 @foo_low_trip_count3(i1 %cond, i32 %bound) !prof !0 {
-; The loop has low invocation count compare to the function invocation count, 
+; The loop has low invocation count compare to the function invocation count,
 ; but has a high trip count per invocation. Vectorize it.
 
 ; CHECK-LABEL: @foo_low_trip_count3(
@@ -84,6 +84,126 @@ for.end:                                          ; preds = %for.body
   ret i32 0
 }
 
+define i32 @foo_low_trip_count_icmp_sgt(i32 %bound) {
+; Simple loop with low tripcount and inequality test for exit.
+; Should not be vectorized.
+
+; CHECK-LABEL: @foo_low_trip_count_icmp_sgt(
+; CHECK-NOT: <{{[0-9]+}} x i8>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %i.08
+  %0 = load i8, i8* %arrayidx, align 1
+  %cmp1 = icmp eq i8 %0, 0
+  %. = select i1 %cmp1, i8 2, i8 1
+  store i8 %., i8* %arrayidx, align 1
+  %inc = add nsw i32 %i.08, 1
+  %exitcond = icmp sgt i32 %i.08, %bound
+  br i1 %exitcond, label %for.end, label %for.body, !prof !1
+
+for.end:                                          ; preds = %for.body
+  ret i32 0
+}
+
+define i32 @const_low_trip_count() {
+; Simple loop with constant, small trip count and no profiling info.
+
+; CHECK-LABEL: @const_low_trip_count
+; CHECK-NOT: <{{[0-9]+}} x i8>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %i.08
+  %0 = load i8, i8* %arrayidx, align 1
+  %cmp1 = icmp eq i8 %0, 0
+  %. = select i1 %cmp1, i8 2, i8 1
+  store i8 %., i8* %arrayidx, align 1
+  %inc = add nsw i32 %i.08, 1
+  %exitcond = icmp slt i32 %i.08, 2
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret i32 0
+}
+
+define i32 @const_large_trip_count() {
+; Simple loop with constant large trip count and no profiling info.
+
+; CHECK-LABEL: @const_large_trip_count
+; CHECK: <{{[0-9]+}} x i8>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %i.08
+  %0 = load i8, i8* %arrayidx, align 1
+  %cmp1 = icmp eq i8 %0, 0
+  %. = select i1 %cmp1, i8 2, i8 1
+  store i8 %., i8* %arrayidx, align 1
+  %inc = add nsw i32 %i.08, 1
+  %exitcond = icmp slt i32 %i.08, 1000
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret i32 0
+}
+
+define i32 @const_small_trip_count_step() {
+; Simple loop with static, small trip count and no profiling info.
+
+; CHECK-LABEL: @const_small_trip_count_step
+; CHECK-NOT: <{{[0-9]+}} x i8>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %i.08
+  %0 = load i8, i8* %arrayidx, align 1
+  %cmp1 = icmp eq i8 %0, 0
+  %. = select i1 %cmp1, i8 2, i8 1
+  store i8 %., i8* %arrayidx, align 1
+  %inc = add nsw i32 %i.08, 5
+  %exitcond = icmp slt i32 %i.08, 10
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret i32 0
+}
+
+define i32 @const_trip_over_profile() {
+; constant trip count takes precedence over profile data
+
+; CHECK-LABEL: @const_trip_over_profile
+; CHECK: <{{[0-9]+}} x i8>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %i.08
+  %0 = load i8, i8* %arrayidx, align 1
+  %cmp1 = icmp eq i8 %0, 0
+  %. = select i1 %cmp1, i8 2, i8 1
+  store i8 %., i8* %arrayidx, align 1
+  %inc = add nsw i32 %i.08, 1
+  %exitcond = icmp slt i32 %i.08, 1000
+  br i1 %exitcond, label %for.body, label %for.end, !prof !1
+
+for.end:                                          ; preds = %for.body
+  ret i32 0
+}
 
 !0 = !{!"function_entry_count", i64 100}
 !1 = !{!"branch_weights", i32 100, i32 0}
