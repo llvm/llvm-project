@@ -22,8 +22,10 @@ class TestValueOfVectorVariableTestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_value_of_vector_variable_using_watchpoint_set(self):
         """Test verify displayed value of vector variable."""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
+        exe = self.getBuildArtifact("a.out")
+        d = {'C_SOURCES': self.source, 'EXE': exe}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
         self.value_of_vector_variable_with_watchpoint_set()
 
     def setUp(self):
@@ -31,8 +33,6 @@ class TestValueOfVectorVariableTestCase(TestBase):
         TestBase.setUp(self)
         # Our simple source filename.
         self.source = 'main.c'
-        self.exe_name = self.getBuildArtifact("a.out")
-        self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
     def value_of_vector_variable_with_watchpoint_set(self):
         """Test verify displayed value of vector variable"""

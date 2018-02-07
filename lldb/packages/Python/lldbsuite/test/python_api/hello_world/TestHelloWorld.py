@@ -20,9 +20,6 @@ class HelloWorldTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        # Get the full path to our executable to be attached/debugged.
-        self.exe = self.getBuildArtifact(self.testMethodName)
-        self.d = {'EXE': self.testMethodName}
         # Find a couple of the line numbers within main.c.
         self.line1 = line_number('main.c', '// Set break point at this line.')
         self.line2 = line_number('main.c', '// Waiting to be attached...')
@@ -37,9 +34,12 @@ class HelloWorldTestCase(TestBase):
     @skipIfiOSSimulator
     def test_with_process_launch_api(self):
         """Create target, breakpoint, launch a process, and then kill it."""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
-        target = self.dbg.CreateTarget(self.exe)
+        # Get the full path to our executable to be attached/debugged.
+        exe = self.getBuildArtifact(self.testMethodName)
+        d = {'EXE': exe}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.dbg.CreateTarget(exe)
 
         breakpoint = target.BreakpointCreateByLocation("main.c", self.line1)
 
@@ -82,12 +82,14 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
-        target = self.dbg.CreateTarget(self.exe)
+        exe = self.getBuildArtifact(self.testMethodName)
+        d = {'EXE': exe}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.dbg.CreateTarget(exe)
 
         # Spawn a new process
-        popen = self.spawnSubprocess(self.exe, ["abc", "xyz"])
+        popen = self.spawnSubprocess(exe, ["abc", "xyz"])
         self.addTearDownHook(self.cleanupSubprocesses)
 
         # Give the subprocess time to start and wait for user input
@@ -112,12 +114,14 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
-        target = self.dbg.CreateTarget(self.exe)
+        exe = self.getBuildArtifact(self.testMethodName)
+        d = {'EXE': exe}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.dbg.CreateTarget(exe)
 
         # Spawn a new process
-        popen = self.spawnSubprocess(self.exe, ["abc", "xyz"])
+        popen = self.spawnSubprocess(exe, ["abc", "xyz"])
         self.addTearDownHook(self.cleanupSubprocesses)
 
         # Give the subprocess time to start and wait for user input
@@ -127,7 +131,7 @@ class HelloWorldTestCase(TestBase):
         error = lldb.SBError()
         # Pass 'False' since we don't want to wait for new instance of
         # "hello_world" to be launched.
-        name = os.path.basename(self.exe)
+        name = os.path.basename(exe)
 
         # While we're at it, make sure that passing a None as the process name
         # does not hang LLDB.
