@@ -64,7 +64,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
 
   // To be an interface, all base classes must be interfaces as well.
   for (const auto &I : Node->bases()) {
-    if (I.isVirtual()) continue;  
+    if (I.isVirtual()) continue;
     const auto *Ty = I.getType()->getAs<RecordType>();
     assert(Ty && "RecordType of base class is unknown");
     const RecordDecl *D = Ty->getDecl()->getDefinition();
@@ -96,7 +96,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     // concrete classes
     unsigned NumConcrete = 0;
     for (const auto &I : D->bases()) {
-      if (I.isVirtual()) continue;
+      if (I.isVirtual() || I.getType()->getAs<TemplateTypeParmType>()) continue;
       const auto *Ty = I.getType()->getAs<RecordType>();
       assert(Ty && "RecordType of base class is unknown");
       const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());

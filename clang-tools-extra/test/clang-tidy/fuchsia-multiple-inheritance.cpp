@@ -129,3 +129,5 @@ struct V13 : virtual Static_Base_2 { static void f(); };
 struct V14 : virtual Static_Base_2 { static void g(); };
 struct D8 : V13, V14 {};
 
+template<typename T> struct A : T {};
+template<typename T> struct B : virtual T {};
