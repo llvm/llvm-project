@@ -1098,6 +1098,7 @@ let SubtargetPredicate = isGCN in {
 def : IMad24Pat<V_MAD_I32_I24, 1>;
 def : UMad24Pat<V_MAD_U32_U24, 1>;
 
+// FIXME: This should only be done for VALU inputs
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
 
@@ -1487,7 +1488,7 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 // FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
 
 defm : BFEPattern <V_BFE_U32, V_BFE_I32, S_MOV_B32>;
-def : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64>;
+defm : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64, SReg_64>;
 
 def : IntMed3Pat<V_MED3_I32, smax, smax_oneuse, smin_oneuse>;
 def : IntMed3Pat<V_MED3_U32, umax, umax_oneuse, umin_oneuse>;

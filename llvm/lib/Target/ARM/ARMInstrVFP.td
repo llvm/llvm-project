@@ -44,7 +44,7 @@ def vfp_f16imm : Operand<f16>,
     }], SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = ARM_AM::getFP16Imm(InVal);
-      return CurDAG->getTargetConstant(enc, MVT::i32);
+      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
     }]>> {
   let PrintMethod = "printFPImmOperand";
   let ParserMatchClass = FPImmOperand;
@@ -2343,10 +2343,11 @@ def FCONSTS : VFPAI<(outs SPR:$Sd), (ins vfp_f32imm:$imm),
   let Inst{3-0}   = imm{3-0};
 }
 
-def FCONSTH : VFPAI<(outs SPR:$Sd), (ins vfp_f16imm:$imm),
+def FCONSTH : VFPAI<(outs HPR:$Sd), (ins vfp_f16imm:$imm),
                      VFPMiscFrm, IIC_fpUNA16,
                      "vmov", ".f16\t$Sd, $imm",
-                     []>, Requires<[HasFullFP16]> {
+                     [(set HPR:$Sd, vfp_f16imm:$imm)]>,
+              Requires<[HasFullFP16]> {
   bits<5> Sd;
   bits<8> imm;
 

@@ -693,6 +693,39 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
                "        ofSize:aa:bbb\n"
                "      atOrigin:cc:dd];");
 
+  // Inline block as a first argument.
+  verifyFormat("[object justBlock:^{\n"
+               "  a = 42;\n"
+               "}];");
+  verifyFormat("[object\n"
+               "    justBlock:^{\n"
+               "      a = 42;\n"
+               "    }\n"
+               "     notBlock:42\n"
+               "            a:42];");
+  verifyFormat("[object\n"
+               "    firstBlock:^{\n"
+               "      a = 42;\n"
+               "    }\n"
+               "    blockWithLongerName:^{\n"
+               "      a = 42;\n"
+               "    }];");
+  verifyFormat("[object\n"
+               "    blockWithLongerName:^{\n"
+               "      a = 42;\n"
+               "    }\n"
+               "    secondBlock:^{\n"
+               "      a = 42;\n"
+               "    }];");
+  verifyFormat("[object\n"
+               "    firstBlock:^{\n"
+               "      a = 42;\n"
+               "    }\n"
+               "    notBlock:42\n"
+               "    secondBlock:^{\n"
+               "      a = 42;\n"
+               "    }];");
+
   Style.ColumnLimit = 70;
   verifyFormat(
       "void f() {\n"

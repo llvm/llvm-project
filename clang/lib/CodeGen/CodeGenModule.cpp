@@ -1411,6 +1411,12 @@ void CodeGenModule::AddDetectMismatch(StringRef Name, StringRef Value) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(getLLVMContext(), MDOpts));
 }
 
+void CodeGenModule::AddELFLibDirective(StringRef Lib) {
+  auto &C = getLLVMContext();
+  LinkerOptionsMetadata.push_back(llvm::MDNode::get(
+      C, {llvm::MDString::get(C, "lib"), llvm::MDString::get(C, Lib)}));
+}
+
 void CodeGenModule::AddDependentLib(StringRef Lib) {
   llvm::SmallString<24> Opt;
   getTargetCodeGenInfo().getDependentLibraryOption(Lib, Opt);
@@ -4329,7 +4335,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       AppendLinkerOptions(PCD->getArg());
       break;
     case PCK_Lib:
-      AddDependentLib(PCD->getArg());
+      if (getTarget().getTriple().isOSBinFormatELF() &&
+          !getTarget().getTriple().isPS4())
+        AddELFLibDirective(PCD->getArg());
+      else
+        AddDependentLib(PCD->getArg());
       break;
     case PCK_Compiler:
     case PCK_ExeStr:

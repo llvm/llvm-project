@@ -22,6 +22,7 @@
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION
+; COMBINED-NEXT:    <FLAGS
 ; See if the call to analias is registered, using the expected value id.
 ; COMBINED-NEXT:    <VALUE_GUID op0=[[ALIASID:[0-9]+]] op1=-5751648690987223394/>
 ; COMBINED-NEXT:    <VALUE_GUID

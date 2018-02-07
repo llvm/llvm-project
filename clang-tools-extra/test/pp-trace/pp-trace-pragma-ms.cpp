@@ -1,4 +1,4 @@
-// RUN: pp-trace -ignore FileChanged,MacroDefined %s -target x86_64 -fms-extensions -w | FileCheck --strict-whitespace %s
+// RUN: pp-trace -ignore FileChanged,MacroDefined %s -target x86_64-unknown-windows-msvc -fms-extensions -w | FileCheck --strict-whitespace %s
 
 #pragma comment(compiler, "compiler comment")
 #pragma comment(exestr, "exestr comment")

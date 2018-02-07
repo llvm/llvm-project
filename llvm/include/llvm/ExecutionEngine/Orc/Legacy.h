@@ -130,7 +130,7 @@ createLegacyLookupResolver(LegacyLookupFn LegacyLookup,
                            std::function<void(Error)> ErrorReporter) {
   return std::make_shared<LegacyLookupFnResolver<LegacyLookupFn>>(
       std::move(LegacyLookup), std::move(ErrorReporter));
-};
+}
 
 } // End namespace orc
 } // End namespace llvm

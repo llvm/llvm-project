@@ -3467,6 +3467,20 @@ CmpInst::Predicate CmpInst::getSwappedPredicate(Predicate pred) {
   }
 }
 
+CmpInst::Predicate CmpInst::getNonStrictPredicate(Predicate pred) {
+  switch (pred) {
+  case ICMP_SGT: return ICMP_SGE;
+  case ICMP_SLT: return ICMP_SLE;
+  case ICMP_UGT: return ICMP_UGE;
+  case ICMP_ULT: return ICMP_ULE;
+  case FCMP_OGT: return FCMP_OGE;
+  case FCMP_OLT: return FCMP_OLE;
+  case FCMP_UGT: return FCMP_UGE;
+  case FCMP_ULT: return FCMP_ULE;
+  default: return pred;
+  }
+}
+
 CmpInst::Predicate CmpInst::getSignedPredicate(Predicate pred) {
   assert(CmpInst::isUnsigned(pred) && "Call only with signed predicates!");
 

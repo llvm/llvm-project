@@ -2725,3 +2725,11 @@ The ``#pragma clang section`` directive obeys the following rules:
 * The decision about which section-kind applies to each global is taken in the back-end.
   Once the section-kind is known, appropriate section name, as specified by the user using
   ``#pragma clang section`` directive, is applied to that global.
+
+Specifying Linker Options on ELF Targets
+========================================
+
+The ``#pragma comment(lib, ...)`` directive is supported on all ELF targets.
+The second parameter is the library name (without the traditional Unix prefix of
+``lib``).  This allows you to provide an implicit link of dependent libraries.
+

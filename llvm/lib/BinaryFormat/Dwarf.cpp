@@ -393,16 +393,6 @@ StringRef llvm::dwarf::ArrayOrderString(unsigned Order) {
   return StringRef();
 }
 
-StringRef llvm::dwarf::DiscriminantString(unsigned Discriminant) {
-  switch (Discriminant) {
-  case DW_DSC_label:
-    return "DW_DSC_label";
-  case DW_DSC_range:
-    return "DW_DSC_range";
-  }
-  return StringRef();
-}
-
 StringRef llvm::dwarf::LNStandardString(unsigned Standard) {
   switch (Standard) {
   default:
@@ -563,8 +553,6 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return InlineCodeString(Val);
   case DW_AT_ordering:
     return ArrayOrderString(Val);
-  case DW_AT_discr_value:
-    return DiscriminantString(Val);
   }
 
   return StringRef();

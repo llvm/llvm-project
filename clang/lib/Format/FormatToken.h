@@ -240,6 +240,10 @@ struct FormatToken {
   /// e.g. because several of them are block-type.
   unsigned LongestObjCSelectorName = 0;
 
+  /// \brief How many parts ObjC selector have (i.e. how many parameters method
+  /// has).
+  unsigned ObjCSelectorNameParts = 0;
+
   /// \brief Stores the number of required fake parentheses and the
   /// corresponding operator precedence.
   ///
