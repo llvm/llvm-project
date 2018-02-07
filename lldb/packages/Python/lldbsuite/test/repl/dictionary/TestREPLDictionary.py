@@ -24,6 +24,7 @@ class REPLDictionaryTestCase (lldbrepl.REPLTest):
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     @decorators.no_debug_info_test
     @decorators.expectedFailureAll(
         oslist=['linux'],

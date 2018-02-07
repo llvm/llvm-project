@@ -17,6 +17,7 @@ class TestSwiftHashedContainerEnum(TestBase):
 
     # @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_any_object_type(self):
         """Test combinations of hashed swift containers with enums"""
         self.build()
