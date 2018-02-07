@@ -34,6 +34,7 @@
 #include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Platform.h"
+#include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
@@ -4595,10 +4596,14 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
       if (sil_module != nullptr) {
         swift::irgen::IRGenerator &ir_generator =
             GetIRGenerator(ir_gen_opts, *sil_module);
+        swift::PrimarySpecificPaths PSPs =
+            GetCompilerInvocation()
+                .getFrontendOptions()
+                .InputsAndOutputs.getPrimarySpecificPathsForAtMostOnePrimary();
         m_ir_gen_module_ap.reset(new swift::irgen::IRGenModule(
             ir_generator, ir_generator.createTargetMachine(), nullptr,
-            GetGlobalLLVMContext(), ir_gen_opts.ModuleName,
-            ir_gen_opts.getSingleOutputFilename()));
+            GetGlobalLLVMContext(), ir_gen_opts.ModuleName, PSPs.OutputFilename,
+            PSPs.MainInputFilenameForDebugInfo));
         llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
         llvm_module->setDataLayout(data_layout.getStringRepresentation());
         llvm_module->setTargetTriple(triple);
