@@ -26,7 +26,6 @@ class TestSwiftStdlibDictionary(TestBase):
 
     @decorators.swiftTest
     @decorators.add_test_categories(["swiftpr"])
-    # @decorators.skipIfLinux  # bugs.swift.org/SR-844
     def test_swift_stdlib_dictionary(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary"""
         self.build()
