@@ -205,14 +205,18 @@ void LivePhysRegs::addPristines(const MachineFunction &MF) {
 }
 
 void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
-  if (!MBB.succ_empty()) {
-    // To get the live-outs we simply merge the live-ins of all successors.
-    for (const MachineBasicBlock *Succ : MBB.successors())
-      addBlockLiveIns(*Succ);
-  } else if (MBB.isReturnBlock()) {
-    // For the return block: Add all callee saved registers that are saved and
-    // restored (somewhere); This does not include callee saved registers that
-    // are unused and hence not saved and restored; they are called pristine.
+  // To get the live-outs we simply merge the live-ins of all successors.
+  for (const MachineBasicBlock *Succ : MBB.successors())
+    addBlockLiveIns(*Succ);
+  if (MBB.isReturnBlock()) {
+    // Return blocks are a special case because we currently don't mark up
+    // return instructions completely: specifically, there is no explicit
+    // use for callee-saved registers. So we add all callee saved registers
+    // that are saved and restored (somewhere). This does not include
+    // callee saved registers that are unused and hence not saved and
+    // restored; they are called pristine.
+    // FIXME: PEI should add explicit markings to return instructions
+    // instead of implicitly handling them here.
     const MachineFunction &MF = *MBB.getParent();
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (MFI.isCalleeSavedInfoValid()) {
@@ -225,15 +229,8 @@ void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
 
 void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-  if (!MBB.succ_empty()) {
-    addPristines(MF);
-    addLiveOutsNoPristines(MBB);
-  } else if (MBB.isReturnBlock()) {
-    // For the return block: Add all callee saved registers.
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (MFI.isCalleeSavedInfoValid())
-      addCalleeSavedRegs(*this, MF);
-  }
+  addPristines(MF);
+  addLiveOutsNoPristines(MBB);
 }
 
 void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
