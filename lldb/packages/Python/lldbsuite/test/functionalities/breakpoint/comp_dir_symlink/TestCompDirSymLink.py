@@ -28,8 +28,6 @@ class CompDirSymLinkTestCase(TestBase):
         self.line = line_number(
             os.path.join(self.getSourceDir(), "main.cpp"),
             '// Set break point at this line.')
-        self.src_path = self.getBuildArtifact(_SRC_FILE)
-
 
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_set(self):
@@ -38,7 +36,8 @@ class CompDirSymLinkTestCase(TestBase):
         self.runCmd(
             "settings set %s %s" %
             (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
-        lldbutil.run_break_set_by_file_and_line(self, self.src_path, self.line)
+        src_path = self.getBuildArtifact(_SRC_FILE)
+        lldbutil.run_break_set_by_file_and_line(self, src_path, self.line)
 
     @skipIf(hostoslist=no_match(["linux"]))
     def test_symlink_paths_set_procselfcwd(self):
@@ -48,21 +47,24 @@ class CompDirSymLinkTestCase(TestBase):
         self.runCmd(
             "settings set %s %s" %
             (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
-        lldbutil.run_break_set_by_file_and_line(self, self.src_path, self.line)
+        src_path = self.getBuildArtifact(_SRC_FILE)
+        lldbutil.run_break_set_by_file_and_line(self, src_path, self.line)
 
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_unset(self):
         pwd_symlink = self.create_src_symlink()
         self.doBuild(pwd_symlink)
         self.runCmd('settings clear ' + _COMP_DIR_SYM_LINK_PROP)
+        src_path = self.getBuildArtifact(_SRC_FILE)
         self.assertRaises(
             AssertionError,
             lldbutil.run_break_set_by_file_and_line,
             self,
-            self.src_path,
+            src_path,
             self.line)
 
     def create_src_symlink(self):
+        self.makeBuildDir()
         pwd_symlink = self.getBuildArtifact('pwd_symlink')
         if os.path.exists(pwd_symlink):
             os.unlink(pwd_symlink)

@@ -17,20 +17,17 @@
 #include <cerrno>
 #include <cinttypes>
 #include <cstdint>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <string>
 #include <thread>
+#include <unistd.h>
 #include <zircon/errors.h>
+#include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <zx/object.h>
-#include <zx/port.h>
-#include <zx/process.h>
-#include <zx/time.h>
 
 namespace fuzzer {
 
@@ -53,13 +50,13 @@ void InterruptHandler() {
   Fuzzer::StaticInterruptCallback();
 }
 
-void CrashHandler(zx::port *Port) {
-  std::unique_ptr<zx::port> ExceptionPort(Port);
+void CrashHandler(zx_handle_t *Port) {
+  std::unique_ptr<zx_handle_t> ExceptionPort(Port);
   zx_port_packet_t Packet;
-  ExceptionPort->wait(zx::time::infinite(), &Packet, 0);
+  _zx_port_wait(*ExceptionPort, ZX_TIME_INFINITE, &Packet, 1);
   // Unbind as soon as possible so we don't receive exceptions from this thread.
-  if (zx_task_bind_exception_port(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID,
-                                  kFuzzingCrash, 0) != ZX_OK) {
+  if (_zx_task_bind_exception_port(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID,
+                                   kFuzzingCrash, 0) != ZX_OK) {
     // Shouldn't happen; if it does the safest option is to just exit.
     Printf("libFuzzer: unable to unbind exception port; aborting!\n");
     exit(1);
@@ -97,15 +94,15 @@ void SetSignalHandler(const FuzzingOptions &Options) {
     return;
 
   // Create an exception port
-  zx::port *ExceptionPort = new zx::port();
-  if ((rc = zx::port::create(0, ExceptionPort)) != ZX_OK) {
-    Printf("libFuzzer: zx_port_create failed: %s\n", zx_status_get_string(rc));
+  zx_handle_t *ExceptionPort = new zx_handle_t;
+  if ((rc = _zx_port_create(0, ExceptionPort)) != ZX_OK) {
+    Printf("libFuzzer: zx_port_create failed: %s\n", _zx_status_get_string(rc));
     exit(1);
   }
 
   // Bind the port to receive exceptions from our process
-  if ((rc = zx_task_bind_exception_port(zx_process_self(), ExceptionPort->get(),
-                                        kFuzzingCrash, 0)) != ZX_OK) {
+  if ((rc = _zx_task_bind_exception_port(_zx_process_self(), *ExceptionPort,
+                                         kFuzzingCrash, 0)) != ZX_OK) {
     Printf("libFuzzer: unable to bind exception port: %s\n",
            zx_status_get_string(rc));
     exit(1);
@@ -117,13 +114,13 @@ void SetSignalHandler(const FuzzingOptions &Options) {
 }
 
 void SleepSeconds(int Seconds) {
-  zx::nanosleep(zx::deadline_after(zx::sec(Seconds)));
+  _zx_nanosleep(_zx_deadline_after(ZX_SEC(Seconds)));
 }
 
 unsigned long GetPid() {
   zx_status_t rc;
   zx_info_handle_basic_t Info;
-  if ((rc = zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
+  if ((rc = zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
                                sizeof(Info), NULL, NULL)) != ZX_OK) {
     Printf("libFuzzer: unable to get info about self: %s\n",
            zx_status_get_string(rc));
@@ -135,13 +132,28 @@ unsigned long GetPid() {
 size_t GetPeakRSSMb() {
   zx_status_t rc;
   zx_info_task_stats_t Info;
-  if ((rc = zx_object_get_info(zx_process_self(), ZX_INFO_TASK_STATS, &Info,
+  if ((rc = _zx_object_get_info(_zx_process_self(), ZX_INFO_TASK_STATS, &Info,
                                sizeof(Info), NULL, NULL)) != ZX_OK) {
     Printf("libFuzzer: unable to get info about self: %s\n",
-           zx_status_get_string(rc));
+           _zx_status_get_string(rc));
     exit(1);
   }
   return (Info.mem_private_bytes + Info.mem_shared_bytes) >> 20;
+}
+
+template <typename Fn>
+class RunOnDestruction {
+ public:
+  explicit RunOnDestruction(Fn fn) : fn_(fn) {}
+  ~RunOnDestruction() { fn_(); }
+
+ private:
+  Fn fn_;
+};
+
+template <typename Fn>
+RunOnDestruction<Fn> at_scope_exit(Fn fn) {
+  return RunOnDestruction<Fn>(fn);
 }
 
 int ExecuteCommand(const Command &Cmd) {
@@ -164,17 +176,17 @@ int ExecuteCommand(const Command &Cmd) {
 
   // Determine stdout
   int FdOut = STDOUT_FILENO;
-  fbl::unique_fd OutputFile;
+
   if (Cmd.hasOutputFile()) {
     auto Filename = Cmd.getOutputFile();
-    OutputFile.reset(open(Filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0));
-    if (!OutputFile) {
+    FdOut = open(Filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
+    if (FdOut == -1) {
       Printf("libFuzzer: failed to open %s: %s\n", Filename.c_str(),
              strerror(errno));
       return ZX_ERR_IO;
     }
-    FdOut = OutputFile.get();
   }
+  auto CloseFdOut = at_scope_exit([&]() { close(FdOut); } );
 
   // Determine stderr
   int FdErr = STDERR_FILENO;
@@ -185,7 +197,7 @@ int ExecuteCommand(const Command &Cmd) {
   if ((rc = launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO)) != ZX_OK ||
       (rc = launchpad_clone_fd(lp, FdOut, STDOUT_FILENO)) != ZX_OK ||
       (rc = launchpad_clone_fd(lp, FdErr, STDERR_FILENO)) != ZX_OK) {
-    Printf("libFuzzer: failed to clone FDIO: %s\n", zx_status_get_string(rc));
+    Printf("libFuzzer: failed to clone FDIO: %s\n", _zx_status_get_string(rc));
     return rc;
   }
 
@@ -194,22 +206,22 @@ int ExecuteCommand(const Command &Cmd) {
   const char *ErrorMsg = nullptr;
   if ((rc = launchpad_go(lp, &ProcessHandle, &ErrorMsg)) != ZX_OK) {
     Printf("libFuzzer: failed to launch '%s': %s, %s\n", Argv[0], ErrorMsg,
-           zx_status_get_string(rc));
+           _zx_status_get_string(rc));
     return rc;
   }
-  zx::process Process(ProcessHandle);
+  auto CloseHandle = at_scope_exit([&]() { _zx_handle_close(ProcessHandle); });
 
   // Now join the process and return the exit status.
-  if ((rc = Process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
-                             nullptr)) != ZX_OK) {
+  if ((rc = _zx_object_wait_one(ProcessHandle, ZX_PROCESS_TERMINATED,
+                                ZX_TIME_INFINITE, nullptr)) != ZX_OK) {
     Printf("libFuzzer: failed to join '%s': %s\n", Argv[0],
-           zx_status_get_string(rc));
+           _zx_status_get_string(rc));
     return rc;
   }
 
   zx_info_process_t Info;
-  if ((rc = Process.get_info(ZX_INFO_PROCESS, &Info, sizeof(Info), nullptr,
-                             nullptr)) != ZX_OK) {
+  if ((rc = _zx_object_get_info(ProcessHandle, ZX_INFO_PROCESS, &Info,
+                                sizeof(Info), nullptr, nullptr)) != ZX_OK) {
     Printf("libFuzzer: unable to get return code from '%s': %s\n", Argv[0],
            zx_status_get_string(rc));
     return rc;

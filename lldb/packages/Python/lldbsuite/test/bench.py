@@ -10,8 +10,6 @@ test driver.
 Use the following to get only the benchmark results in your terminal output:
 
     ./bench.py -e /Volumes/data/lldb/svn/regression/build/Debug/lldb -x '-F Driver::MainLoop()' 2>&1 | grep -P '^lldb.*benchmark:'
-
-See also bench-history.
 """
 
 from __future__ import print_function

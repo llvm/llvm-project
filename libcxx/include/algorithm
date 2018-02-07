@@ -4703,9 +4703,9 @@ __stable_sort_move(_RandomAccessIterator __first1, _RandomAccessIterator __last1
         ::new(__first2) value_type(_VSTD::move(*__first1));
         return;
     case 2:
-       __destruct_n __d(0);
+        __destruct_n __d(0);
         unique_ptr<value_type, __destruct_n&> __h2(__first2, __d);
-         if (__comp(*--__last1, *__first1))
+        if (__comp(*--__last1, *__first1))
         {
             ::new(__first2) value_type(_VSTD::move(*__last1));
             __d.__incr((value_type*)0);

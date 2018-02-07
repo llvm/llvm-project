@@ -1,9 +1,4 @@
-# RUN: clangd -run-synchronously < %s
-# vim: fileformat=dos
-# It is absolutely vital that this file has CRLF line endings.
-Content-Length: 44
-
+# RUN: clangd -lit-test < %s
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
-Content-Length: 33
-
+---
 {"jsonrpc":"2.0":"method":"exit"}

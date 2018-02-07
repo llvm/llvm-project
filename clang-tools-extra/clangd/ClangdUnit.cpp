@@ -547,7 +547,7 @@ CppFile::deferRebuild(ParseInputs &&Inputs) {
         log("Reusing preamble for file " + Twine(That->FileName));
         return OldPreamble;
       }
-      log("Premble for file " + Twine(That->FileName) +
+      log("Preamble for file " + Twine(That->FileName) +
           " cannot be reused. Attempting to rebuild it.");
       // We won't need the OldPreamble anymore, release it so it can be
       // deleted (if there are no other references to it).
@@ -628,7 +628,7 @@ CppFile::deferRebuild(ParseInputs &&Inputs) {
       if (That->ASTCallback)
         That->ASTCallback(That->FileName, NewAST.getPointer());
     } else {
-      // Don't report even Preamble diagnostics if we coulnd't build AST.
+      // Don't report even Preamble diagnostics if we couldn't build AST.
       Diagnostics.clear();
     }
 
@@ -739,7 +739,7 @@ SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
   // after the end of a token. In theory we could just use GetBeginningOfToken
   // to find the start of the token at the input position, but this doesn't
   // work when right after the end, i.e. foo|.
-  // So try to go back by one and see if we're still inside the an identifier
+  // So try to go back by one and see if we're still inside an identifier
   // token. If so, Take the beginning of this token.
   // (It should be the same identifier because you can't have two adjacent
   // identifiers without another token in between.)

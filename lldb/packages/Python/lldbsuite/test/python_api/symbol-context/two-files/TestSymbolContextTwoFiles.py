@@ -22,7 +22,6 @@ class SymbolContextTwoFilesTestCase(TestBase):
         """Test lookup by address in a module with multiple compilation units"""
         self.build()
         exe = self.getBuildArtifact("a.out")
-
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
@@ -45,7 +44,6 @@ class SymbolContextTwoFilesTestCase(TestBase):
         compile unit contains DW_AT_ranges and DW_AT_ranges_base attributes."""
         self.build()
         exe = self.getBuildArtifact("a.out")
-
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 

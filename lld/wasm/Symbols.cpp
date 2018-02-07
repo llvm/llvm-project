@@ -24,6 +24,7 @@ using namespace lld::wasm;
 
 Symbol *WasmSym::CallCtors;
 Symbol *WasmSym::DsoHandle;
+Symbol *WasmSym::DataEnd;
 Symbol *WasmSym::HeapBase;
 Symbol *WasmSym::StackPointer;
 

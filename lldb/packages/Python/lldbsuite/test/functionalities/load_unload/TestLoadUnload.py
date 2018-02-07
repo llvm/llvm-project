@@ -22,13 +22,18 @@ class LoadUnloadTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        lldbutil.mkdir_p(self.getBuildArtifact("hidden"))
+        self.setup_test()
+        # Invoke the default build rule.
+        self.build()
         # Find the line number to break for main.cpp.
         self.line = line_number(
             'main.cpp',
             '// Set break point at this line for test_lldb_process_load_and_unload_commands().')
         self.line_d_function = line_number(
             'd.cpp', '// Find this line number within d_dunction().')
+
+    def setup_test(self):
+        lldbutil.mkdir_p(self.getBuildArtifact("hidden"))
         if not self.platformIsDarwin():
             if not lldb.remote_platform and "LD_LIBRARY_PATH" in os.environ:
                 self.runCmd(
@@ -94,10 +99,6 @@ class LoadUnloadTestCase(TestBase):
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_modules_search_paths(self):
         """Test target modules list after loading a different copy of the library libd.dylib, and verifies that it works with 'target modules search-paths add'."""
-
-        # Invoke the default build rule.
-        self.build()
-
         if self.platformIsDarwin():
             dylibName = 'libloadunload_d.dylib'
         else:
@@ -157,9 +158,6 @@ class LoadUnloadTestCase(TestBase):
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_dyld_library_path(self):
         """Test (DY)LD_LIBRARY_PATH after moving libd.dylib, which defines d_function, somewhere else."""
-
-        # Invoke the default build rule.
-        self.build()
         self.copy_shlibs_to_remote(hidden_dir=True)
 
         exe = self.getBuildArtifact("a.out")
@@ -222,9 +220,6 @@ class LoadUnloadTestCase(TestBase):
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
-
-        # Invoke the default build rule.
-        self.build()
         self.copy_shlibs_to_remote()
 
         exe = self.getBuildArtifact("a.out")
@@ -296,9 +291,6 @@ class LoadUnloadTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     def test_load_unload(self):
         """Test breakpoint by name works correctly with dlopen'ing."""
-
-        # Invoke the default build rule.
-        self.build()
         self.copy_shlibs_to_remote()
 
         exe = self.getBuildArtifact("a.out")
@@ -339,9 +331,6 @@ class LoadUnloadTestCase(TestBase):
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_step_over_load(self):
         """Test stepping over code that loads a shared library works correctly."""
-
-        # Invoke the default build rule.
-        self.build()
         self.copy_shlibs_to_remote()
 
         exe = self.getBuildArtifact("a.out")
@@ -374,8 +363,6 @@ class LoadUnloadTestCase(TestBase):
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
-
-        self.build()
         self.copy_shlibs_to_remote()
 
         exe = self.getBuildArtifact("a.out")

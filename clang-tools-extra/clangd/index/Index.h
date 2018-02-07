@@ -23,8 +23,8 @@ namespace clang {
 namespace clangd {
 
 struct SymbolLocation {
-  // The absolute path of the source file where a symbol occurs.
-  llvm::StringRef FilePath;
+  // The URI of the source file where a symbol occurs.
+  llvm::StringRef FileURI;
   // The 0-based offset to the first character of the symbol from the beginning
   // of the source file.
   unsigned StartOffset;

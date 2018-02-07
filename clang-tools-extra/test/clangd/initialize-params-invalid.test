@@ -1,9 +1,5 @@
-# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
-# It is absolutely vital that this file has CRLF line endings.
-#
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
 # Test with invalid initialize request parameters
-Content-Length: 142
-
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":"","rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
 #      CHECK:  "id": 0,
 # CHECK-NEXT:  "jsonrpc": "2.0",
@@ -41,9 +37,7 @@ Content-Length: 142
 # CHECK-NEXT:      "textDocumentSync": 1
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
-Content-Length: 44
-
+---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
-Content-Length: 33
-
+---
 {"jsonrpc":"2.0","method":"exit"}

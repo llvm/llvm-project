@@ -1,12 +1,6 @@
-# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
-# It is absolutely vital that this file has CRLF line endings.
-#
-Content-Length: 125
-
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
-#
-Content-Length: 152
-
+---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
@@ -42,9 +36,7 @@ Content-Length: 152
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
 # CHECK-NEXT:  }
-Content-Length: 44
-
+---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
-Content-Length: 33
-
+---
 {"jsonrpc":"2.0","method":"exit"}

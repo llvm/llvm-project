@@ -1180,9 +1180,7 @@ struct __is_same_uncvref : is_same<typename __uncvref<_Tp>::type,
 #if _LIBCPP_STD_VER > 17
 // aligned_union - same as __uncvref
 template <class _Tp>
-struct remove_cvref {
-    using type = remove_cv_t<remove_reference_t<_Tp>>;
-};
+struct remove_cvref : public __uncvref<_Tp> {};
 
 template <class _Tp> using remove_cvref_t = typename remove_cvref<_Tp>::type;
 #endif

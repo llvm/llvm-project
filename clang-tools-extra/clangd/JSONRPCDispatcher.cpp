@@ -180,89 +180,131 @@ bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
   return true;
 }
 
-void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
-                                   JSONRPCDispatcher &Dispatcher,
-                                   bool &IsDone) {
+static llvm::Optional<std::string> readStandardMessage(std::istream &In,
+                                                       JSONOutput &Out) {
+  // A Language Server Protocol message starts with a set of HTTP headers,
+  // delimited  by \r\n, and terminated by an empty line (\r\n).
+  unsigned long long ContentLength = 0;
   while (In.good()) {
-    // A Language Server Protocol message starts with a set of HTTP headers,
-    // delimited  by \r\n, and terminated by an empty line (\r\n).
-    unsigned long long ContentLength = 0;
-    while (In.good()) {
-      std::string Line;
-      std::getline(In, Line);
-      if (!In.good() && errno == EINTR) {
-        In.clear();
-        continue;
-      }
-
-      Out.mirrorInput(Line);
-      // Mirror '\n' that gets consumed by std::getline, but is not included in
-      // the resulting Line.
-      // Note that '\r' is part of Line, so we don't need to mirror it
-      // separately.
-      if (!In.eof())
-        Out.mirrorInput("\n");
-
-      llvm::StringRef LineRef(Line);
-
-      // We allow comments in headers. Technically this isn't part
-      // of the LSP specification, but makes writing tests easier.
-      if (LineRef.startswith("#"))
-        continue;
-
-      // Content-Type is a specified header, but does nothing.
-      // Content-Length is a mandatory header. It specifies the length of the
-      // following JSON.
-      // It is unspecified what sequence headers must be supplied in, so we
-      // allow any sequence.
-      // The end of headers is signified by an empty line.
-      if (LineRef.consume_front("Content-Length: ")) {
-        if (ContentLength != 0) {
-          log("Warning: Duplicate Content-Length header received. "
-              "The previous value for this message (" +
-              llvm::Twine(ContentLength) + ") was ignored.\n");
-        }
-
-        llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
-        continue;
-      } else if (!LineRef.trim().empty()) {
-        // It's another header, ignore it.
-        continue;
-      } else {
-        // An empty line indicates the end of headers.
-        // Go ahead and read the JSON.
-        break;
-      }
-    }
-
-    // Guard against large messages. This is usually a bug in the client code
-    // and we don't want to crash downstream because of it.
-    if (ContentLength > 1 << 30) { // 1024M
-      In.ignore(ContentLength);
-      log("Skipped overly large message of " + Twine(ContentLength) +
-          " bytes.\n");
+    std::string Line;
+    std::getline(In, Line);
+    if (!In.good() && errno == EINTR) {
+      In.clear();
       continue;
     }
 
-    if (ContentLength > 0) {
-      std::vector<char> JSON(ContentLength);
-      llvm::StringRef JSONRef;
-      {
-        In.read(JSON.data(), ContentLength);
-        Out.mirrorInput(StringRef(JSON.data(), In.gcount()));
+    Out.mirrorInput(Line);
+    // Mirror '\n' that gets consumed by std::getline, but is not included in
+    // the resulting Line.
+    // Note that '\r' is part of Line, so we don't need to mirror it
+    // separately.
+    if (!In.eof())
+      Out.mirrorInput("\n");
 
-        // If the stream is aborted before we read ContentLength bytes, In
-        // will have eofbit and failbit set.
-        if (!In) {
-          log("Input was aborted. Read only " + llvm::Twine(In.gcount()) +
-              " bytes of expected " + llvm::Twine(ContentLength) + ".\n");
-          break;
-        }
+    llvm::StringRef LineRef(Line);
 
-        JSONRef = StringRef(JSON.data(), ContentLength);
+    // We allow comments in headers. Technically this isn't part
+    // of the LSP specification, but makes writing tests easier.
+    if (LineRef.startswith("#"))
+      continue;
+
+    // Content-Type is a specified header, but does nothing.
+    // Content-Length is a mandatory header. It specifies the length of the
+    // following JSON.
+    // It is unspecified what sequence headers must be supplied in, so we
+    // allow any sequence.
+    // The end of headers is signified by an empty line.
+    if (LineRef.consume_front("Content-Length: ")) {
+      if (ContentLength != 0) {
+        log("Warning: Duplicate Content-Length header received. "
+            "The previous value for this message (" +
+            llvm::Twine(ContentLength) + ") was ignored.\n");
       }
 
-      if (auto Doc = json::parse(JSONRef)) {
+      llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
+      continue;
+    } else if (!LineRef.trim().empty()) {
+      // It's another header, ignore it.
+      continue;
+    } else {
+      // An empty line indicates the end of headers.
+      // Go ahead and read the JSON.
+      break;
+    }
+  }
+
+  // Guard against large messages. This is usually a bug in the client code
+  // and we don't want to crash downstream because of it.
+  if (ContentLength > 1 << 30) { // 1024M
+    In.ignore(ContentLength);
+    log("Skipped overly large message of " + Twine(ContentLength) +
+        " bytes.\n");
+    return llvm::None;
+  }
+
+  if (ContentLength > 0) {
+    std::string JSON(ContentLength, '\0');
+    In.read(&JSON[0], ContentLength);
+    Out.mirrorInput(StringRef(JSON.data(), In.gcount()));
+
+    // If the stream is aborted before we read ContentLength bytes, In
+    // will have eofbit and failbit set.
+    if (!In) {
+      log("Input was aborted. Read only " + llvm::Twine(In.gcount()) +
+          " bytes of expected " + llvm::Twine(ContentLength) + ".\n");
+      return llvm::None;
+    }
+    return std::move(JSON);
+  } else {
+    log("Warning: Missing Content-Length header, or message has zero "
+        "length.\n");
+    return llvm::None;
+  }
+}
+
+// For lit tests we support a simplified syntax:
+// - messages are delimited by '---' on a line by itself
+// - lines starting with # are ignored.
+// This is a testing path, so favor simplicity over performance here.
+static llvm::Optional<std::string> readDelimitedMessage(std::istream &In,
+                                                        JSONOutput &Out) {
+  std::string JSON;
+  std::string Line;
+  while (std::getline(In, Line)) {
+    if (!In.eof()) // getline() consumed the newline.
+      Line.push_back('\n');
+    auto LineRef = llvm::StringRef(Line).trim();
+    if (LineRef.startswith("#")) // comment
+      continue;
+
+    bool IsDelim = LineRef.find_first_not_of('-') == llvm::StringRef::npos;
+    if (!IsDelim) // Line is part of a JSON message.
+      JSON += Line;
+    if (IsDelim || In.eof()) {
+      Out.mirrorInput(
+          llvm::formatv("Content-Length: {0}\r\n\r\n{1}", JSON.size(), JSON));
+      return std::move(JSON);
+    }
+  }
+
+  if (In.bad()) {
+    log("Input error while reading message!");
+    return llvm::None;
+  } else {
+    log("Input message terminated by EOF");
+    return std::move(JSON);
+  }
+}
+
+void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
+                                   JSONStreamStyle InputStyle,
+                                   JSONRPCDispatcher &Dispatcher,
+                                   bool &IsDone) {
+  auto &ReadMessage =
+      (InputStyle == Delimited) ? readDelimitedMessage : readStandardMessage;
+  while (In.good()) {
+    if (auto JSON = ReadMessage(In, Out)) {
+      if (auto Doc = json::parse(*JSON)) {
         // Log the formatted message.
         log(llvm::formatv(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc));
         // Finally, execute the action for this JSON message.
@@ -270,17 +312,13 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
           log("JSON dispatch failed!\n");
       } else {
         // Parse error. Log the raw message.
-        log("<-- " + JSONRef + "\n");
+        log(llvm::formatv("<-- {0}\n" , *JSON));
         log(llvm::Twine("JSON parse error: ") +
             llvm::toString(Doc.takeError()) + "\n");
       }
-
-      // If we're done, exit the loop.
-      if (IsDone)
-        break;
-    } else {
-      log("Warning: Missing Content-Length header, or message has zero "
-          "length.\n");
     }
+    // If we're done, exit the loop.
+    if (IsDone)
+      break;
   }
 }
