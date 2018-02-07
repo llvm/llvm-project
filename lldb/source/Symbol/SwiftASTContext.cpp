@@ -5220,31 +5220,6 @@ bool SwiftASTContext::IsReferenceType(void *type, CompilerType *pointee_type,
   return false;
 }
 
-bool SwiftASTContext::IsInoutType(const CompilerType &compiler_type,
-                                  CompilerType *original_type) {
-  if (compiler_type.IsValid()) {
-    if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-            compiler_type.GetTypeSystem())) {
-      swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
-      swift::LValueType *lvalue = swift_can_type->getAs<swift::LValueType>();
-      if (lvalue) {
-        if (original_type)
-          *original_type =
-          CompilerType(ast, lvalue->getObjectType().getPointer());
-        return true;
-      }
-      swift::InOutType *inout = swift_can_type->getAs<swift::InOutType>();
-      if (inout) {
-        if (original_type)
-          *original_type =
-          CompilerType(ast, inout->getObjectType().getPointer());
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 bool SwiftASTContext::IsFloatingPointType(void *type, uint32_t &count,
                                           bool &is_complex) {
   if (type) {
