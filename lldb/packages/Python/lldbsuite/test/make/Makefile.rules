@@ -360,6 +360,10 @@ ifneq "$(OS)" "Darwin"
     endif
 
     OBJCOPY ?= $(call replace_cc_with,objcopy)
+ifeq ($(wildcard $(OBJCOPY)),)
+    OBJCOPY = objcopy
+endif
+
     ARCHIVER ?= $(call replace_cc_with,ar)
     override AR = $(ARCHIVER)
 endif
@@ -578,7 +582,7 @@ endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
-	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
+	$(OBJCOPY) --remove-section .gnu_debuglink --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
 endif
 endif
 endif
