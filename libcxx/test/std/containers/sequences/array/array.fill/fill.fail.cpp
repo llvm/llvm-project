@@ -9,7 +9,7 @@
 
 // <array>
 
-// iterator begin();
+// void fill(const T& u);
 
 #include <array>
 #include <cassert>
@@ -18,27 +18,12 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-
-int main()
-{
-    {
-        typedef double T;
-        typedef std::array<T, 3> C;
-        C c = {1, 2, 3.5};
-        C::iterator i;
-        i = c.begin();
-        assert(*i == 1);
-        assert(&*i == c.data());
-        *i = 5.5;
-        assert(c[0] == 5.5);
-    }
-    {
-      struct NoDefault {
-        NoDefault(int) {}
-      };
-      typedef NoDefault T;
-      typedef std::array<T, 0> C;
-      C c = {};
-      assert(c.begin() == c.end());
-    }
+int main() {
+  {
+    typedef double T;
+    typedef std::array<const T, 0> C;
+    C c = {};
+    // expected-error-re@array:* {{static_assert failed {{.*}} "cannot fill zero-sized array of type 'const T'"}}
+    c.fill(5.5); // expected-note {{requested here}}
+  }
 }

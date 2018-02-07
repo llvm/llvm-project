@@ -56,6 +56,26 @@ int main()
         catch (const std::out_of_range &) {}
 #endif
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        typedef double T;
+        typedef std::array<T, 0> C;
+        C c = {};
+        C const& cc = c;
+        try
+        {
+            TEST_IGNORE_NODISCARD  c.at(0);
+            assert(false);
+        }
+        catch (const std::out_of_range &) {}
+        try
+        {
+            TEST_IGNORE_NODISCARD  cc.at(0);
+            assert(false);
+        }
+        catch (const std::out_of_range &) {}
+    }
+#endif
     {
         typedef double T;
         typedef std::array<T, 3> C;

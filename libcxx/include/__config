@@ -793,8 +793,13 @@ namespace std {
 # if !defined(_LIBCPP_DEBUG)
 #   error cannot use _LIBCPP_DEBUG_USE_EXCEPTIONS unless _LIBCPP_DEBUG is defined
 # endif
-# define _NOEXCEPT_DEBUG noexcept(false)
-# define _NOEXCEPT_DEBUG_(x) noexcept(false)
+# ifdef _LIBCPP_HAS_NO_NOEXCEPT
+#   define _NOEXCEPT_DEBUG
+#   define _NOEXCEPT_DEBUG_(x)
+# else
+#   define _NOEXCEPT_DEBUG noexcept(false)
+#   define _NOEXCEPT_DEBUG_(x) noexcept(false)
+#endif
 #else
 # define _NOEXCEPT_DEBUG _NOEXCEPT
 # define _NOEXCEPT_DEBUG_(x) _NOEXCEPT_(x)
