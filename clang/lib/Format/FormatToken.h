@@ -240,6 +240,10 @@ struct FormatToken {
   /// e.g. because several of them are block-type.
   unsigned LongestObjCSelectorName = 0;
 
+  /// \brief How many parts ObjC selector have (i.e. how many parameters method
+  /// has).
+  unsigned ObjCSelectorNameParts = 0;
+
   /// \brief Stores the number of required fake parentheses and the
   /// corresponding operator precedence.
   ///
@@ -348,16 +352,22 @@ struct FormatToken {
             Next->isObjCAtKeyword(tok::objc_private));
   }
 
-  /// \brief Returns whether \p Tok is ([{ or a template opening <.
+  /// \brief Returns whether \p Tok is ([{ or an opening < of a template or in
+  /// protos.
   bool opensScope() const {
     if (is(TT_TemplateString) && TokenText.endswith("${"))
+      return true;
+    if (is(TT_DictLiteral) && is(tok::less))
       return true;
     return isOneOf(tok::l_paren, tok::l_brace, tok::l_square,
                    TT_TemplateOpener);
   }
-  /// \brief Returns whether \p Tok is )]} or a template closing >.
+  /// \brief Returns whether \p Tok is )]} or a closing > of a template or in
+  /// protos.
   bool closesScope() const {
     if (is(TT_TemplateString) && TokenText.startswith("}"))
+      return true;
+    if (is(TT_DictLiteral) && is(tok::greater))
       return true;
     return isOneOf(tok::r_paren, tok::r_brace, tok::r_square,
                    TT_TemplateCloser);

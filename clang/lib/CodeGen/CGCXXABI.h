@@ -413,10 +413,10 @@ public:
                                                 CharUnits VPtrOffset) = 0;
 
   /// Build a virtual function pointer in the ABI-specific way.
-  virtual llvm::Value *getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                                 GlobalDecl GD, Address This,
-                                                 llvm::Type *Ty,
-                                                 SourceLocation Loc) = 0;
+  virtual CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF,
+                                             GlobalDecl GD, Address This,
+                                             llvm::Type *Ty,
+                                             SourceLocation Loc) = 0;
 
   /// Emit the ABI-specific virtual destructor call.
   virtual llvm::Value *

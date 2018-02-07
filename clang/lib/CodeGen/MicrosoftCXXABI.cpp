@@ -285,9 +285,9 @@ public:
   llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
                                         CharUnits VPtrOffset) override;
 
-  llvm::Value *getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
-                                         Address This, llvm::Type *Ty,
-                                         SourceLocation Loc) override;
+  CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF, GlobalDecl GD,
+                                     Address This, llvm::Type *Ty,
+                                     SourceLocation Loc) override;
 
   llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *Dtor,
@@ -1827,11 +1827,11 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   return VTable;
 }
 
-llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                                        GlobalDecl GD,
-                                                        Address This,
-                                                        llvm::Type *Ty,
-                                                        SourceLocation Loc) {
+CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
+                                                    GlobalDecl GD,
+                                                    Address This,
+                                                    llvm::Type *Ty,
+                                                    SourceLocation Loc) {
   GD = GD.getCanonicalDecl();
   CGBuilderTy &Builder = CGF.Builder;
 
@@ -1858,17 +1858,22 @@ llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
         ->ObjectWithVPtr;
   };
 
-  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent()))
-    return CGF.EmitVTableTypeCheckedLoad(
+  llvm::Value *VFunc;
+  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
+    VFunc = CGF.EmitVTableTypeCheckedLoad(
         getObjectWithVPtr(), VTable,
         ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
+  } else {
+    if (CGM.getCodeGenOpts().PrepareForLTO)
+      CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
-  if (CGM.getCodeGenOpts().PrepareForLTO)
-    CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
+    llvm::Value *VFuncPtr =
+        Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+    VFunc = Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  }
 
-  llvm::Value *VFuncPtr =
-      Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
-  return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  CGCallee Callee(MethodDecl, VFunc);
+  return Callee;
 }
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(

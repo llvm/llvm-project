@@ -79,7 +79,17 @@ private:
       if (CurrentToken->is(tok::greater)) {
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
-        CurrentToken->Type = TT_TemplateCloser;
+        // In TT_Proto, we must distignuish between:
+        //   map<key, value>
+        //   msg < item: data >
+        //   msg: < item: data >
+        // In TT_TextProto, map<key, value> does not occur.
+        if (Style.Language == FormatStyle::LK_TextProto ||
+            (Style.Language == FormatStyle::LK_Proto && Left->Previous &&
+             Left->Previous->isOneOf(TT_SelectorName, TT_DictLiteral)))
+          CurrentToken->Type = TT_DictLiteral;
+        else
+          CurrentToken->Type = TT_TemplateCloser;
         next();
         return true;
       }
@@ -401,6 +411,8 @@ private:
         if (Contexts.back().FirstObjCSelectorName) {
           Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName =
               Contexts.back().LongestObjCSelectorName;
+          Contexts.back().FirstObjCSelectorName->ObjCSelectorNameParts =
+              Left->ParameterCount;
           if (Left->BlockParameterCount > 1)
             Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName = 0;
         }
@@ -414,6 +426,11 @@ private:
                           TT_DesignatedInitializerLSquare)) {
           Left->Type = TT_ObjCMethodExpr;
           StartsObjCMethodExpr = true;
+          // ParameterCount might have been set to 1 before expression was
+          // recognized as ObjCMethodExpr (as '1 + number of commas' formula is
+          // used for other expression types). Parameter counter has to be,
+          // therefore, reset to 0.
+          Left->ParameterCount = 0;
           Contexts.back().ColonIsObjCMethodExpr = true;
           if (Parent && Parent->is(tok::r_paren))
             Parent->Type = TT_CastRParen;
@@ -488,7 +505,10 @@ private:
   void updateParameterCount(FormatToken *Left, FormatToken *Current) {
     if (Current->is(tok::l_brace) && Current->BlockKind == BK_Block)
       ++Left->BlockParameterCount;
-    if (Current->is(tok::comma)) {
+    if (Left->Type == TT_ObjCMethodExpr) {
+      if (Current->is(tok::colon))
+        ++Left->ParameterCount;
+    } else if (Current->is(tok::comma)) {
       ++Left->ParameterCount;
       if (!Left->Role)
         Left->Role.reset(new CommaSeparatedList(Style));
@@ -670,7 +690,15 @@ private:
     case tok::less:
       if (parseAngle()) {
         Tok->Type = TT_TemplateOpener;
-        if (Style.Language == FormatStyle::LK_TextProto) {
+        // In TT_Proto, we must distignuish between:
+        //   map<key, value>
+        //   msg < item: data >
+        //   msg: < item: data >
+        // In TT_TextProto, map<key, value> does not occur.
+        if (Style.Language == FormatStyle::LK_TextProto ||
+            (Style.Language == FormatStyle::LK_Proto && Tok->Previous &&
+             Tok->Previous->isOneOf(TT_SelectorName, TT_DictLiteral))) {
+          Tok->Type = TT_DictLiteral;
           FormatToken *Previous = Tok->getPreviousNonComment();
           if (Previous && Previous->Type != TT_DictLiteral)
             Previous->Type = TT_SelectorName;
@@ -691,7 +719,8 @@ private:
         return false;
       break;
     case tok::greater:
-      Tok->Type = TT_BinaryOperator;
+      if (Style.Language != FormatStyle::LK_TextProto)
+        Tok->Type = TT_BinaryOperator;
       break;
     case tok::kw_operator:
       while (CurrentToken &&
@@ -1157,7 +1186,9 @@ private:
         Current.Type = TT_ConditionalExpr;
       }
     } else if (Current.isBinaryOperator() &&
-               (!Current.Previous || Current.Previous->isNot(tok::l_square))) {
+               (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
+               (!Current.is(tok::greater) &&
+                Style.Language != FormatStyle::LK_TextProto)) {
       Current.Type = TT_BinaryOperator;
     } else if (Current.is(tok::comment)) {
       if (Current.TokenText.startswith("/*")) {
@@ -2226,8 +2257,17 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return !Left.is(TT_ObjCMethodExpr);
   if (Left.is(tok::coloncolon))
     return false;
-  if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less))
+  if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less)) {
+    if (Style.Language == FormatStyle::LK_TextProto ||
+        (Style.Language == FormatStyle::LK_Proto &&
+         (Left.is(TT_DictLiteral) || Right.is(TT_DictLiteral)))) {
+      // Format empty list as `<>`.
+      if (Left.is(tok::less) && Right.is(tok::greater))
+        return false;
+      return !Style.Cpp11BracedListStyle;
+    }
     return false;
+  }
   if (Right.is(tok::ellipsis))
     return Left.Tok.isLiteral() || (Left.is(tok::identifier) && Left.Previous &&
                                     Left.Previous->is(tok::kw_case));
@@ -2502,9 +2542,13 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.SpaceAfterCStyleCast ||
            Right.isOneOf(TT_BinaryOperator, TT_SelectorName);
 
-  if (Left.is(tok::greater) && Right.is(tok::greater))
+  if (Left.is(tok::greater) && Right.is(tok::greater)) {
+    if (Style.Language == FormatStyle::LK_TextProto ||
+        (Style.Language == FormatStyle::LK_Proto && Left.is(TT_DictLiteral)))
+      return !Style.Cpp11BracedListStyle;
     return Right.is(TT_TemplateCloser) && Left.is(TT_TemplateCloser) &&
            (Style.Standard != FormatStyle::LS_Cpp11 || Style.SpacesInAngles);
+  }
   if (Right.isOneOf(tok::arrow, tok::arrowstar, tok::periodstar) ||
       Left.isOneOf(tok::arrow, tok::period, tok::arrowstar, tok::periodstar) ||
       (Right.is(tok::period) && Right.isNot(TT_DesignatedInitializerPeriod)))
