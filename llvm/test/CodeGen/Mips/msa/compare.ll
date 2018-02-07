@@ -671,9 +671,9 @@ define void @clti_u_v16i8(<16 x i8>* %c, <16 x i8>* %a) nounwind {
 
   %1 = load <16 x i8>, <16 x i8>* %a
   ; CHECK-DAG: ld.b [[R1:\$w[0-9]+]], 0($5)
-  %2 = icmp ult <16 x i8> %1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %2 = icmp ult <16 x i8> %1, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
   %3 = sext <16 x i1> %2 to <16 x i8>
-  ; CHECK-DAG: clti_u.b [[R3:\$w[0-9]+]], [[R1]], 1
+  ; CHECK-DAG: clti_u.b [[R3:\$w[0-9]+]], [[R1]], 2
   store <16 x i8> %3, <16 x i8>* %c
   ; CHECK-DAG: st.b [[R3]], 0($4)
 
@@ -686,9 +686,9 @@ define void @clti_u_v8i16(<8 x i16>* %c, <8 x i16>* %a) nounwind {
 
   %1 = load <8 x i16>, <8 x i16>* %a
   ; CHECK-DAG: ld.h [[R1:\$w[0-9]+]], 0($5)
-  %2 = icmp ult <8 x i16> %1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %2 = icmp ult <8 x i16> %1, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   %3 = sext <8 x i1> %2 to <8 x i16>
-  ; CHECK-DAG: clti_u.h [[R3:\$w[0-9]+]], [[R1]], 1
+  ; CHECK-DAG: clti_u.h [[R3:\$w[0-9]+]], [[R1]], 2
   store <8 x i16> %3, <8 x i16>* %c
   ; CHECK-DAG: st.h [[R3]], 0($4)
 
@@ -701,9 +701,9 @@ define void @clti_u_v4i32(<4 x i32>* %c, <4 x i32>* %a) nounwind {
 
   %1 = load <4 x i32>, <4 x i32>* %a
   ; CHECK-DAG: ld.w [[R1:\$w[0-9]+]], 0($5)
-  %2 = icmp ult <4 x i32> %1, <i32 1, i32 1, i32 1, i32 1>
+  %2 = icmp ult <4 x i32> %1, <i32 2, i32 2, i32 2, i32 2>
   %3 = sext <4 x i1> %2 to <4 x i32>
-  ; CHECK-DAG: clti_u.w [[R3:\$w[0-9]+]], [[R1]], 1
+  ; CHECK-DAG: clti_u.w [[R3:\$w[0-9]+]], [[R1]], 2
   store <4 x i32> %3, <4 x i32>* %c
   ; CHECK-DAG: st.w [[R3]], 0($4)
 
@@ -716,9 +716,9 @@ define void @clti_u_v2i64(<2 x i64>* %c, <2 x i64>* %a) nounwind {
 
   %1 = load <2 x i64>, <2 x i64>* %a
   ; CHECK-DAG: ld.d [[R1:\$w[0-9]+]], 0($5)
-  %2 = icmp ult <2 x i64> %1, <i64 1, i64 1>
+  %2 = icmp ult <2 x i64> %1, <i64 2, i64 2>
   %3 = sext <2 x i1> %2 to <2 x i64>
-  ; CHECK-DAG: clti_u.d [[R3:\$w[0-9]+]], [[R1]], 1
+  ; CHECK-DAG: clti_u.d [[R3:\$w[0-9]+]], [[R1]], 2
   store <2 x i64> %3, <2 x i64>* %c
   ; CHECK-DAG: st.d [[R3]], 0($4)
 

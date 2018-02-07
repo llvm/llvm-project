@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
 #include <memory>
 #include <utility>
 
@@ -47,8 +48,15 @@ class DwarfFile {
   /// the string offsets table. The contribution is shared by all units.
   MCSymbol *StringOffsetsStartSym = nullptr;
 
-  // Collection of dbg variables of a scope.
-  DenseMap<LexicalScope *, SmallVector<DbgVariable *, 8>> ScopeVariables;
+  /// The variables of a lexical scope.
+  struct ScopeVars {
+    /// We need to sort Args by ArgNo and check for duplicates. This could also
+    /// be implemented as a list or vector + std::lower_bound().
+    std::map<unsigned, DbgVariable *> Args;
+    SmallVector<DbgVariable *, 8> Locals;
+  };
+  /// Collection of DbgVariables of each lexical scope.
+  DenseMap<LexicalScope *, ScopeVars> ScopeVariables;
 
   // Collection of abstract subprogram DIEs.
   DenseMap<const MDNode *, DIE *> AbstractSPDies;
@@ -109,7 +117,7 @@ public:
   /// \returns false if the variable was merged with a previous one.
   bool addScopeVariable(LexicalScope *LS, DbgVariable *Var);
 
-  DenseMap<LexicalScope *, SmallVector<DbgVariable *, 8>> &getScopeVariables() {
+  DenseMap<LexicalScope *, ScopeVars> &getScopeVariables() {
     return ScopeVariables;
   }
 

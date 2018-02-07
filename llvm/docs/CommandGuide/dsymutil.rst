@@ -40,7 +40,9 @@ OPTIONS
 
  When used when creating a dSYM file, this option will suppress the emission of
  the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types.
+ dsymutil currently has better equivalents: .apple_names and .apple_types. When
+ used in conjunction with --update option, this option will cause redundant
+ accelerator tables to be removed.
 
 .. option:: --no-odr
 
@@ -71,6 +73,12 @@ OPTIONS
 .. option:: -s, --symtab
 
  Dumps the symbol table found in *executable* or object file(s) and exits.
+
+.. option:: -u, --update
+
+ Update an existing dSYM file to contain the latest accelerator tables and
+ other DWARF optimizations. This option will rebuild the '.apple_names' and
+ '.apple_types' hashed accelerator tables.
 
 .. option:: -v, --verbose
 

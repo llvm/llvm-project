@@ -1691,6 +1691,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printMetadata("vtableHolder", N->getRawVTableHolder());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printString("identifier", N->getIdentifier());
+  Printer.printMetadata("discriminator", N->getRawDiscriminator());
   Out << ")";
 }
 

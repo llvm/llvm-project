@@ -333,6 +333,19 @@ static ConstantAsMetadata *getConstantOrNull(Constant *C) {
   return nullptr;
 }
 
+DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope, StringRef Name,
+						  DIFile *File, unsigned LineNumber,
+						  uint64_t SizeInBits,
+						  uint32_t AlignInBits,
+						  uint64_t OffsetInBits,
+						  Constant *Discriminant,
+						  DINode::DIFlags Flags, DIType *Ty) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
+                            LineNumber, getNonCompileUnitScope(Scope), Ty,
+                            SizeInBits, AlignInBits, OffsetInBits, None, Flags,
+                            getConstantOrNull(Discriminant));
+}
+
 DIDerivedType *DIBuilder::createBitFieldMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint64_t OffsetInBits, uint64_t StorageOffsetInBits,
@@ -454,6 +467,18 @@ DICompositeType *DIBuilder::createUnionType(
       VMContext, dwarf::DW_TAG_union_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
       Elements, RunTimeLang, nullptr, nullptr, UniqueIdentifier);
+  trackIfUnresolved(R);
+  return R;
+}
+
+DICompositeType *DIBuilder::createVariantPart(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+    DIDerivedType *Discriminator, DINodeArray Elements, StringRef UniqueIdentifier) {
+  auto *R = DICompositeType::get(
+      VMContext, dwarf::DW_TAG_variant_part, Name, File, LineNumber,
+      getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
+      Elements, 0, nullptr, nullptr, UniqueIdentifier, Discriminator);
   trackIfUnresolved(R);
   return R;
 }

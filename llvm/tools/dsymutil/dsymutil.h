@@ -37,7 +37,10 @@ struct LinkOptions {
   bool NoOutput = false;
 
   /// Do not unique types according to ODR
-  bool NoODR;
+  bool NoODR = false;
+
+  /// Update
+  bool Update = false;
 
   /// Minimize
   bool Minimize = false;

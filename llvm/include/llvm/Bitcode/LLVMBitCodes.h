@@ -261,6 +261,8 @@ enum GlobalValueSummarySymtabCodes {
   //                   numrefs x valueid,
   //                   n x (valueid, relblockfreq)]
   FS_PERMODULE_RELBF = 19,
+  // Index-wide flags
+  FS_FLAGS = 20,
 };
 
 enum MetadataCodes {

@@ -293,8 +293,10 @@ bool InstructionSelector::executeMatchTable(
                              << "]->getOperand(" << OpIdx
                              << "), TypeID=" << TypeID << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
-      if (MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg()) !=
-          ISelInfo.TypeObjects[TypeID]) {
+
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!MO.isReg() ||
+          MRI.getType(MO.getReg()) != ISelInfo.TypeObjects[TypeID]) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
@@ -319,11 +321,15 @@ bool InstructionSelector::executeMatchTable(
 
       assert(SizeInBits != 0 && "Pointer size must be known");
 
-      const LLT &Ty = MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg());
-      if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits) {
-        if (handleReject() == RejectAndGiveUp)
-          return false;
-      }
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (MO.isReg()) {
+        const LLT &Ty = MRI.getType(MO.getReg());
+        if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits)
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+      } else if (handleReject() == RejectAndGiveUp)
+        return false;
+
       break;
     }
     case GIM_CheckRegBankForClass: {
@@ -335,9 +341,10 @@ bool InstructionSelector::executeMatchTable(
                              << InsnID << "]->getOperand(" << OpIdx
                              << "), RCEnum=" << RCEnum << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
-      if (&RBI.getRegBankFromRegClass(*TRI.getRegClass(RCEnum)) !=
-          RBI.getRegBank(State.MIs[InsnID]->getOperand(OpIdx).getReg(), MRI,
-                         TRI)) {
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!MO.isReg() ||
+          &RBI.getRegBankFromRegClass(*TRI.getRegClass(RCEnum)) !=
+              RBI.getRegBank(MO.getReg(), MRI, TRI)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
@@ -378,15 +385,19 @@ bool InstructionSelector::executeMatchTable(
                              << "), Value=" << Value << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
 
-      // isOperandImmEqual() will sign-extend to 64-bits, so should we.
-      LLT Ty = MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg());
-      Value = SignExtend64(Value, Ty.getSizeInBits());
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (MO.isReg()) {
+        // isOperandImmEqual() will sign-extend to 64-bits, so should we.
+        LLT Ty = MRI.getType(MO.getReg());
+        Value = SignExtend64(Value, Ty.getSizeInBits());
 
-      if (!isOperandImmEqual(State.MIs[InsnID]->getOperand(OpIdx), Value,
-                             MRI)) {
-        if (handleReject() == RejectAndGiveUp)
-          return false;
-      }
+        if (!isOperandImmEqual(MO, Value, MRI)) {
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+        }
+      } else if (handleReject() == RejectAndGiveUp)
+        return false;
+
       break;
     }
 

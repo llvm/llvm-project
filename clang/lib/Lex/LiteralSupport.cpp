@@ -738,15 +738,17 @@ void NumericLiteralParser::ParseDecimalOrOctalCommon(SourceLocation TokLoc){
     s++;
     radix = 10;
     saw_exponent = true;
-    if (*s == '+' || *s == '-')  s++; // sign
+    if (s != ThisTokEnd && (*s == '+' || *s == '-'))  s++; // sign
     const char *first_non_digit = SkipDigits(s);
     if (containsDigits(s, first_non_digit)) {
       checkSeparator(TokLoc, s, CSK_BeforeDigits);
       s = first_non_digit;
     } else {
-      PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, Exponent-ThisTokBegin),
-              diag::err_exponent_has_no_digits);
-      hadError = true;
+      if (!hadError) {
+        PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, Exponent-ThisTokBegin),
+                diag::err_exponent_has_no_digits);
+        hadError = true;
+      }
       return;
     }
   }
@@ -787,10 +789,12 @@ void NumericLiteralParser::checkSeparator(SourceLocation TokLoc,
   } else if (Pos == ThisTokEnd)
     return;
 
-  if (isDigitSeparator(*Pos))
+  if (isDigitSeparator(*Pos)) {
     PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, Pos - ThisTokBegin),
             diag::err_digit_separator_not_between_digits)
       << IsAfterDigits;
+    hadError = true;
+  }
 }
 
 /// ParseNumberStartingWithZero - This method is called when the first character
@@ -840,12 +844,14 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
       const char *Exponent = s;
       s++;
       saw_exponent = true;
-      if (*s == '+' || *s == '-')  s++; // sign
+      if (s != ThisTokEnd && (*s == '+' || *s == '-'))  s++; // sign
       const char *first_non_digit = SkipDigits(s);
       if (!containsDigits(s, first_non_digit)) {
-        PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, Exponent-ThisTokBegin),
-                diag::err_exponent_has_no_digits);
-        hadError = true;
+        if (!hadError) {
+          PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, Exponent-ThisTokBegin),
+                  diag::err_exponent_has_no_digits);
+          hadError = true;
+        }
         return;
       }
       checkSeparator(TokLoc, s, CSK_BeforeDigits);

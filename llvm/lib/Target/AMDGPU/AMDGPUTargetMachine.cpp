@@ -884,13 +884,13 @@ void GCNPassConfig::addPreEmitPass() {
   // cases.
   addPass(&PostRAHazardRecognizerID);
 
+  addPass(createSIMemoryLegalizerPass());
   if (EnableSIInsertWaitcntsPass)
     addPass(createSIInsertWaitcntsPass());
   else
     addPass(createSIInsertWaitsPass());
   addPass(createSIShrinkInstructionsPass());
   addPass(&SIInsertSkipsPassID);
-  addPass(createSIMemoryLegalizerPass());
   addPass(createSIDebuggerInsertNopsPass());
   addPass(&BranchRelaxationPassID);
 }
