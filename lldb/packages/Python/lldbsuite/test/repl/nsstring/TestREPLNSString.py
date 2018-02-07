@@ -26,6 +26,7 @@ class REPLNSStringTestCase (lldbrepl.REPLTest):
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
+    @decorators.add_test_categories(["swiftpr"])
     def testREPL(self):
         lldbrepl.REPLTest.testREPL(self)
 
