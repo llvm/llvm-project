@@ -16,14 +16,12 @@ import time
 import unittest2
 import lldb
 import lldbsuite.test.lldbrepl as lldbrepl
-import lldbsuite.test.decorators as decorators
 
 
 class REPLFuncDefinitionTestCase (lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
-    @decorators.expectedFailureAll # string ABI change
     def doTest(self):
         self.command(
             'func greet(_ name: String) -> String {\nlet greeting = "Hello, " + name + "!"\nreturn greeting\n}')

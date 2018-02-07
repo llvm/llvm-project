@@ -10,9 +10,9 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-import lldbsuite.test.decorators as decorators
+import lldbsuite.test.decorators
 
 lldbinline.MakeInlineTest(
     __file__,
     globals(),
-    decorators=[decorators.skipUnlessDarwin, decorators.expectedFailureAll])
+    decorators=lldbsuite.test.decorators.skipUnlessDarwin)
