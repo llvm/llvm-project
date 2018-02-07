@@ -48,6 +48,10 @@ static cl::opt<bool> fastCilk(
     "fast-cilk", cl::init(false), cl::Hidden,
     cl::desc("Attempt faster Cilk call implementation"));
 
+static cl::opt<bool> DebugABICalls(
+    "debug-abi-calls", cl::init(false), cl::Hidden,
+    cl::desc("Insert ABI calls for debugging"));
+
 using __CILK_JUMP_BUFFER = void *[5];
 
 using __cilkrts_pedigree = CilkABI::__cilkrts_pedigree;
@@ -1509,11 +1513,13 @@ void CilkABI::preProcessFunction(Function &F) {
 }
 
 void CilkABI::postProcessFunction(Function &F) {
-  inlineCilkFunctions(F);
+  if (!DebugABICalls)
+    inlineCilkFunctions(F);
 }
 
 void CilkABI::postProcessHelper(Function &F) {
-  inlineCilkFunctions(F);
+  if (!DebugABICalls)
+    inlineCilkFunctions(F);
 }
 
 
