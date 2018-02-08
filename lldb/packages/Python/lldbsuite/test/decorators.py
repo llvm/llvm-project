@@ -4,6 +4,7 @@ from __future__ import print_function
 # System modules
 from distutils.version import LooseVersion, StrictVersion
 from functools import wraps
+import inspect
 import os
 import platform
 import re
@@ -306,7 +307,11 @@ def add_test_categories(cat):
                 "@add_test_categories can only be used to decorate a test method")
         if hasattr(func, "categories"):
             cat.extend(func.categories)
-        func.categories = cat
+        # For instance methods, the attribute must be set on the actual function.
+        if inspect.ismethod(func):
+            func.__func__.categories = cat
+        else:
+            func.categories = cat
         return func
 
     return impl
@@ -526,7 +531,7 @@ def skipIfNoSBHeaders(func):
                 'LLDB.h')
             if os.path.exists(header):
                 return None
-        
+
         header = os.path.join(
             os.environ["LLDB_SRC"],
             "include",
