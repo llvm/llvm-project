@@ -88,7 +88,7 @@ During this release the ARM target has:
 
 
 Changes to the Hexagon Target
--------------------------
+-----------------------------
 
 * The Hexagon backend now supports V65 ISA.
 
