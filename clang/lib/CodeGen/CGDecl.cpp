@@ -240,7 +240,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
       getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
   GV->setAlignment(getContext().getDeclAlign(&D).getQuantity());
-  setGlobalVisibility(GV, &D);
+  setGVProperties(GV, &D);
 
   if (supportsCOMDAT() && GV->isWeakForLinker())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -344,6 +344,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
                                   OldGV->getThreadLocalMode(),
                            CGM.getContext().getTargetAddressSpace(D.getType()));
     GV->setVisibility(OldGV->getVisibility());
+    GV->setDSOLocal(OldGV->isDSOLocal());
     GV->setComdat(OldGV->getComdat());
 
     // Steal the name of the old global

@@ -9,7 +9,7 @@
 ;
 ; This issue manifests in a CFG that looks something like this:
 ;
-; %bb.2: derived from LLVM BB %finish
+; %bb.2.finish:
 ;     Predecessors according to CFG: %bb.0 %bb.1
 ;         %0 = PHI %3, <%bb.0>, %5, <%bb.1>
 ;         %7 = LDIRdK 2
@@ -49,10 +49,10 @@ dead:
 ; basic block containing `select` needs to contain explicit jumps to
 ; both successors.
 
-; CHECK: %bb.2: derived from LLVM BB %finish
+; CHECK: %bb.2.finish:
 ; CHECK: BREQk [[BRANCHED:%bb.[0-9]+]]
 ; CHECK: RJMPk [[DIRECT:%bb.[0-9]+]]
 ; CHECK: Successors according to CFG
 ; CHECK-SAME-DAG: {{.*}}[[BRANCHED]]
 ; CHECK-SAME-DAG: {{.*}}[[DIRECT]]
-; CHECK: %bb.3: derived from LLVM BB
+; CHECK: %bb.3.dead:

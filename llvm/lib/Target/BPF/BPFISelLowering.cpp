@@ -488,6 +488,11 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i64);
 
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
+
+  // The constant is expected at RHS in Select_Ri pattern.
+  if (isa<ConstantSDNode>(LHS.getNode()))
+    std::swap(LHS, RHS);
+
   SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
 
   return DAG.getNode(BPFISD::SELECT_CC, DL, VTs, Ops);

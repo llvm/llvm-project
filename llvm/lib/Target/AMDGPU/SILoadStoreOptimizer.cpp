@@ -174,9 +174,10 @@ static void moveInstsAfter(MachineBasicBlock::iterator I,
 }
 
 static void addDefsToList(const MachineInstr &MI, DenseSet<unsigned> &Defs) {
-  // XXX: Should this be looking for implicit defs?
-  for (const MachineOperand &Def : MI.defs())
-    Defs.insert(Def.getReg());
+  for (const MachineOperand &Def : MI.operands()) {
+    if (Def.isReg() && Def.isDef())
+      Defs.insert(Def.getReg());
+  }
 }
 
 static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,

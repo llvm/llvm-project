@@ -21,13 +21,13 @@ entry:
     i64 5, label %sw.bb1
     i64 15, label %sw.bb
   ], !prof !0
-; CHECK: %bb.0: derived from LLVM BB %entry
+; CHECK: bb.0.entry:
 ; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}92.17%) %bb.4({{[0-9a-fx/= ]+}}7.83%)
-; CHECK: %bb.4: derived from LLVM BB %entry
+; CHECK: bb.4.entry:
 ; CHECK: Successors according to CFG: %bb.2({{[0-9a-fx/= ]+}}75.29%) %bb.5({{[0-9a-fx/= ]+}}24.71%)
-; CHECK: %bb.5: derived from LLVM BB %entry
+; CHECK: bb.5.entry:
 ; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}47.62%) %bb.6({{[0-9a-fx/= ]+}}52.38%)
-; CHECK: %bb.6: derived from LLVM BB %entry
+; CHECK: bb.6.entry:
 ; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}36.36%) %bb.3({{[0-9a-fx/= ]+}}63.64%)
 
 sw.bb:
@@ -70,7 +70,7 @@ return: ret void
 ; right with weight 20.
 ;
 ; CHECK-LABEL: Machine code for function left_leaning_weight_balanced_tree:
-; CHECK: %bb.0: derived from LLVM BB %entry
+; CHECK: bb.0.entry:
 ; CHECK-NOT: Successors
 ; CHECK: Successors according to CFG: %bb.8({{[0-9a-fx/= ]+}}39.71%) %bb.9({{[0-9a-fx/= ]+}}60.29%)
 }

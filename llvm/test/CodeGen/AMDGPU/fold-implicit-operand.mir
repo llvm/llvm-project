@@ -1,0 +1,14 @@
+# RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
+---
+# Make sure there is no crash when trying to fold an immediate into an
+# implicit use
+
+# CHECK: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: S_ENDPGM implicit %0
+name: fold_imm_implicit_operand
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_ENDPGM implicit %0
+
+...

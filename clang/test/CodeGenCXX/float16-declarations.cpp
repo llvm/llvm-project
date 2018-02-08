@@ -29,18 +29,18 @@ namespace {
 /* File */
 
 _Float16 f1f;
-// CHECK-AARCH64-DAG: @f1f = global half 0xH0000, align 2
-// CHECK-X86-DAG: @f1f = global half 0xH0000, align 2
+// CHECK-AARCH64-DAG: @f1f = dso_local global half 0xH0000, align 2
+// CHECK-X86-DAG: @f1f = dso_local global half 0xH0000, align 2
 
 _Float16 f2f = 32.4;
-// CHECK-DAG: @f2f = global half 0xH500D, align 2
+// CHECK-DAG: @f2f = dso_local global half 0xH500D, align 2
 
 _Float16 arr1f[10];
-// CHECK-AARCH64-DAG: @arr1f = global [10 x half] zeroinitializer, align 2
-// CHECK-X86-DAG: @arr1f = global [10 x half] zeroinitializer, align 16
+// CHECK-AARCH64-DAG: @arr1f = dso_local global [10 x half] zeroinitializer, align 2
+// CHECK-X86-DAG: @arr1f = dso_local global [10 x half] zeroinitializer, align 16
 
 _Float16 arr2f[] = { -1.2, -3.0, -3.e4 };
-// CHECK-DAG: @arr2f = global [3 x half] [half 0xHBCCD, half 0xHC200, half 0xHF753], align 2
+// CHECK-DAG: @arr2f = dso_local global [3 x half] [half 0xHBCCD, half 0xHC200, half 0xHF753], align 2
 
 _Float16 func1f(_Float16 arg);
 
@@ -51,24 +51,24 @@ class C1 {
   _Float16 f1c;
 
   static const _Float16 f2c;
-// CHECK-DAG: @_ZN2C13f2cE = external constant half, align 2
+// CHECK-DAG: @_ZN2C13f2cE = external dso_local constant half, align 2
 
   volatile _Float16 f3c;
 
 public:
   C1(_Float16 arg) : f1c(arg), f3c(arg) { }
 // Check that we mangle _Float16 to DF16_
-// CHECK-DAG: define linkonce_odr void @_ZN2C1C2EDF16_(%class.C1*{{.*}}, half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local void @_ZN2C1C2EDF16_(%class.C1*{{.*}}, half{{.*}})
 
   _Float16 func1c(_Float16 arg ) {
     return f1c + arg;
   }
-// CHECK-DAG: define linkonce_odr half @_ZN2C16func1cEDF16_(%class.C1*{{.*}}, half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local half @_ZN2C16func1cEDF16_(%class.C1*{{.*}}, half{{.*}})
 
   static _Float16 func2c(_Float16 arg) {
     return arg * C1::f2c;
   }
-// CHECK-DAG: define linkonce_odr half @_ZN2C16func2cEDF16_(half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local half @_ZN2C16func2cEDF16_(half{{.*}})
 };
 
 /*  Template */
@@ -76,7 +76,7 @@ public:
 template <class C> C func1t(C arg) {
   return arg * 2.f16;
 }
-// CHECK-DAG: define linkonce_odr half @_Z6func1tIDF16_ET_S0_(half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local half @_Z6func1tIDF16_ET_S0_(half{{.*}})
 
 template <class C> struct S1 {
   C mem1;

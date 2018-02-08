@@ -8535,6 +8535,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       MI.getOperand(2).getTargetFlags() == X86II::MO_GOT_ABSOLUTE_ADDRESS)
     return nullptr;
 
+  // GOTTPOFF relocation loads can only be folded into add instructions.
+  // FIXME: Need to exclude other relocations that only support specific
+  // instructions.
+  if (MOs.size() == X86::AddrNumOperands &&
+      MOs[X86::AddrDisp].getTargetFlags() == X86II::MO_GOTTPOFF &&
+      MI.getOpcode() != X86::ADD64rr)
+    return nullptr;
+
   MachineInstr *NewMI = nullptr;
 
   // Attempt to fold any custom cases we have.

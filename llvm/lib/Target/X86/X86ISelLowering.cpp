@@ -16352,15 +16352,17 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   MVT InVT = In.getSimpleValueType();
   SDLoc dl(Op);
 
-  if ((VT != MVT::v4i64  || InVT != MVT::v4i32) &&
-      (VT != MVT::v8i32  || InVT != MVT::v8i16) &&
-      (VT != MVT::v16i16 || InVT != MVT::v16i8) &&
-      (VT != MVT::v8i64  || InVT != MVT::v8i32) &&
-      (VT != MVT::v8i64  || InVT != MVT::v8i16) &&
-      (VT != MVT::v16i32 || InVT != MVT::v16i16) &&
-      (VT != MVT::v16i32 || InVT != MVT::v16i8) &&
-      (VT != MVT::v32i16 || InVT != MVT::v32i8))
-    return SDValue();
+  assert(VT.isVector() && InVT.isVector() && "Expected vector type");
+  assert(VT.getVectorNumElements() == VT.getVectorNumElements() &&
+         "Expected same number of elements");
+  assert((VT.getVectorElementType() == MVT::i16 ||
+          VT.getVectorElementType() == MVT::i32 ||
+          VT.getVectorElementType() == MVT::i64) &&
+         "Unexpected element type");
+  assert((InVT.getVectorElementType() == MVT::i8 ||
+          InVT.getVectorElementType() == MVT::i16 ||
+          InVT.getVectorElementType() == MVT::i32) &&
+         "Unexpected element type");
 
   if (Subtarget.hasInt256())
     return DAG.getNode(X86ISD::VZEXT, dl, VT, In);
@@ -16466,14 +16468,8 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   if (SVT.getVectorElementType() == MVT::i1)
     return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
 
-  if (Subtarget.hasFp256())
-    if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
-      return Res;
-
-  assert(!Op.getSimpleValueType().is256BitVector() || !SVT.is128BitVector() ||
-         Op.getSimpleValueType().getVectorNumElements() !=
-             SVT.getVectorNumElements());
-  return SDValue();
+  assert(Subtarget.hasFp256() && "Expected AVX support");
+  return LowerAVXExtend(Op, DAG, Subtarget);
 }
 
 /// Helper to recursively truncate vector elements in half with PACKSS/PACKUS.
@@ -17140,11 +17136,6 @@ static SDValue EmitKTEST(SDValue Op, SelectionDAG &DAG,
 /// equivalent.
 SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
                                     SelectionDAG &DAG) const {
-  if (Op.getValueType() == MVT::i1) {
-    SDValue ExtOp = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, Op);
-    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, ExtOp,
-                       DAG.getConstant(0, dl, MVT::i8));
-  }
   // CF and OF aren't always set the way we want. Determine which
   // of these we need.
   bool NeedCF = false;
@@ -18668,11 +18659,8 @@ static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   if (InVT.getVectorElementType() == MVT::i1)
     return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
 
-  if (Subtarget.hasFp256())
-    if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
-      return Res;
-
-  return SDValue();
+  assert(Subtarget.hasFp256() && "Expected AVX support");
+  return LowerAVXExtend(Op, DAG, Subtarget);
 }
 
 // Lowering for SIGN_EXTEND_VECTOR_INREG and ZERO_EXTEND_VECTOR_INREG.
@@ -18772,15 +18760,17 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   if (InVT.getVectorElementType() == MVT::i1)
     return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
 
-  if ((VT != MVT::v4i64  || InVT != MVT::v4i32) &&
-      (VT != MVT::v8i32  || InVT != MVT::v8i16) &&
-      (VT != MVT::v16i16 || InVT != MVT::v16i8) &&
-      (VT != MVT::v8i64  || InVT != MVT::v8i32) &&
-      (VT != MVT::v8i64  || InVT != MVT::v8i16) &&
-      (VT != MVT::v16i32 || InVT != MVT::v16i16) &&
-      (VT != MVT::v16i32 || InVT != MVT::v16i8) &&
-      (VT != MVT::v32i16 || InVT != MVT::v32i8))
-    return SDValue();
+  assert(VT.isVector() && InVT.isVector() && "Expected vector type");
+  assert(VT.getVectorNumElements() == VT.getVectorNumElements() &&
+         "Expected same number of elements");
+  assert((VT.getVectorElementType() == MVT::i16 ||
+          VT.getVectorElementType() == MVT::i32 ||
+          VT.getVectorElementType() == MVT::i64) &&
+         "Unexpected element type");
+  assert((InVT.getVectorElementType() == MVT::i8 ||
+          InVT.getVectorElementType() == MVT::i16 ||
+          InVT.getVectorElementType() == MVT::i32) &&
+         "Unexpected element type");
 
   if (Subtarget.hasInt256())
     return DAG.getNode(X86ISD::VSEXT, dl, VT, In);

@@ -582,6 +582,7 @@ namespace std {
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
 #define _ALIGNAS(x) __declspec(align(x))
+#define _ALIGNAS_TYPE(x) alignas(x)
 #define _LIBCPP_HAS_NO_VARIADICS
 
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {

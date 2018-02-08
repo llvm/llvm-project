@@ -270,6 +270,7 @@ void MachineBasicBlock::print(raw_ostream &OS, const SlotIndexes *Indexes,
   const Function &F = MF->getFunction();
   const Module *M = F.getParent();
   ModuleSlotTracker MST(M);
+  MST.incorporateFunction(F);
   print(OS, MST, Indexes, IsStandalone);
 }
 
@@ -286,21 +287,40 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (Indexes)
     OS << Indexes->getMBBStartIdx(this) << '\t';
 
-  OS << printMBBReference(*this) << ": ";
-
-  const char *Comma = "";
-  if (const BasicBlock *LBB = getBasicBlock()) {
-    OS << Comma << "derived from LLVM BB ";
-    LBB->printAsOperand(OS, /*PrintType=*/false, MST);
-    Comma = ", ";
+  OS << "bb." << getNumber();
+  bool HasAttributes = false;
+  if (const auto *BB = getBasicBlock()) {
+    if (BB->hasName()) {
+      OS << "." << BB->getName();
+    } else {
+      HasAttributes = true;
+      OS << " (";
+      int Slot = MST.getLocalSlot(BB);
+      if (Slot == -1)
+        OS << "<ir-block badref>";
+      else
+        OS << (Twine("%ir-block.") + Twine(Slot)).str();
+    }
   }
-  if (isEHPad()) { OS << Comma << "EH LANDING PAD"; Comma = ", "; }
-  if (hasAddressTaken()) { OS << Comma << "ADDRESS TAKEN"; Comma = ", "; }
-  if (Alignment)
-    OS << Comma << "Align " << Alignment << " (" << (1u << Alignment)
-       << " bytes)";
 
-  OS << '\n';
+  if (hasAddressTaken()) {
+    OS << (HasAttributes ? ", " : " (");
+    OS << "address-taken";
+    HasAttributes = true;
+  }
+  if (isEHPad()) {
+    OS << (HasAttributes ? ", " : " (");
+    OS << "landing-pad";
+    HasAttributes = true;
+  }
+  if (getAlignment()) {
+    OS << (HasAttributes ? ", " : " (");
+    OS << "align " << getAlignment();
+    HasAttributes = true;
+  }
+  if (HasAttributes)
+    OS << ")";
+  OS << ":\n";
 
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   if (!livein_empty()) {
