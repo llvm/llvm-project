@@ -10,8 +10,8 @@
 
 ; CHECK: # Machine code for function test0:
 ; CHECK: Successors according to CFG: %bb.{{[0-9]+}}({{[0-9a-fx/= ]+}}20.00%) %bb.{{[0-9]+}}({{[0-9a-fx/= ]+}}80.00%)
-; CHECK: %bb.{{[0-9]+}}:
-; CHECK: %bb.{{[0-9]+}}:
+; CHECK: bb.{{[0-9]+}}{{[0-9a-zA-Z.]*}}:
+; CHECK: bb.{{[0-9]+}}{{[0-9a-zA-Z.]*}}:
 ; CHECK: # End machine code for function test0.
 
 define i32 @test0(i32 %n, i32 %m, i32* nocapture %a, i32* nocapture %b) {

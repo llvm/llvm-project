@@ -379,28 +379,30 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandCvtFPInt(MBB, MI, Mips::CVT_S_W, Mips::MTC1, false);
     break;
   case Mips::PseudoCVT_D32_W:
-    expandCvtFPInt(MBB, MI, Mips::CVT_D32_W, Mips::MTC1, false);
+    Opc = isMicroMips ? Mips::CVT_D32_W_MM : Mips::CVT_D32_W;
+    expandCvtFPInt(MBB, MI, Opc, Mips::MTC1, false);
     break;
   case Mips::PseudoCVT_S_L:
     expandCvtFPInt(MBB, MI, Mips::CVT_S_L, Mips::DMTC1, true);
     break;
   case Mips::PseudoCVT_D64_W:
-    expandCvtFPInt(MBB, MI, Mips::CVT_D64_W, Mips::MTC1, true);
+    Opc = isMicroMips ? Mips::CVT_D64_W_MM : Mips::CVT_D64_W;
+    expandCvtFPInt(MBB, MI, Opc, Mips::MTC1, true);
     break;
   case Mips::PseudoCVT_D64_L:
     expandCvtFPInt(MBB, MI, Mips::CVT_D64_L, Mips::DMTC1, true);
     break;
   case Mips::BuildPairF64:
-    expandBuildPairF64(MBB, MI, false);
+    expandBuildPairF64(MBB, MI, isMicroMips, false);
     break;
   case Mips::BuildPairF64_64:
-    expandBuildPairF64(MBB, MI, true);
+    expandBuildPairF64(MBB, MI, isMicroMips, true);
     break;
   case Mips::ExtractElementF64:
-    expandExtractElementF64(MBB, MI, false);
+    expandExtractElementF64(MBB, MI, isMicroMips, false);
     break;
   case Mips::ExtractElementF64_64:
-    expandExtractElementF64(MBB, MI, true);
+    expandExtractElementF64(MBB, MI, isMicroMips, true);
     break;
   case Mips::MIPSeh_return32:
   case Mips::MIPSeh_return64:
@@ -651,6 +653,7 @@ void MipsSEInstrInfo::expandCvtFPInt(MachineBasicBlock &MBB,
 
 void MipsSEInstrInfo::expandExtractElementF64(MachineBasicBlock &MBB,
                                               MachineBasicBlock::iterator I,
+                                              bool isMicroMips,
                                               bool FP64) const {
   unsigned DstReg = I->getOperand(0).getReg();
   unsigned SrcReg = I->getOperand(1).getReg();
@@ -682,7 +685,10 @@ void MipsSEInstrInfo::expandExtractElementF64(MachineBasicBlock &MBB,
     //        We therefore pretend that it reads the bottom 32-bits to
     //        artificially create a dependency and prevent the scheduler
     //        changing the behaviour of the code.
-    BuildMI(MBB, I, dl, get(FP64 ? Mips::MFHC1_D64 : Mips::MFHC1_D32), DstReg)
+    BuildMI(MBB, I, dl,
+            get(isMicroMips ? (FP64 ? Mips::MFHC1_D64_MM : Mips::MFHC1_D32_MM)
+                            : (FP64 ? Mips::MFHC1_D64 : Mips::MFHC1_D32)),
+            DstReg)
         .addReg(SrcReg);
   } else
     BuildMI(MBB, I, dl, get(Mips::MFC1), DstReg).addReg(SubReg);
@@ -690,7 +696,7 @@ void MipsSEInstrInfo::expandExtractElementF64(MachineBasicBlock &MBB,
 
 void MipsSEInstrInfo::expandBuildPairF64(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
-                                         bool FP64) const {
+                                         bool isMicroMips, bool FP64) const {
   unsigned DstReg = I->getOperand(0).getReg();
   unsigned LoReg = I->getOperand(1).getReg(), HiReg = I->getOperand(2).getReg();
   const MCInstrDesc& Mtc1Tdd = get(Mips::MTC1);
@@ -735,7 +741,10 @@ void MipsSEInstrInfo::expandBuildPairF64(MachineBasicBlock &MBB,
     //        We therefore pretend that it reads the bottom 32-bits to
     //        artificially create a dependency and prevent the scheduler
     //        changing the behaviour of the code.
-    BuildMI(MBB, I, dl, get(FP64 ? Mips::MTHC1_D64 : Mips::MTHC1_D32), DstReg)
+    BuildMI(MBB, I, dl,
+            get(isMicroMips ? (FP64 ? Mips::MTHC1_D64_MM : Mips::MTHC1_D32_MM)
+                            : (FP64 ? Mips::MTHC1_D64 : Mips::MTHC1_D32)),
+            DstReg)
         .addReg(DstReg)
         .addReg(HiReg);
   } else if (Subtarget.isABI_FPXX())

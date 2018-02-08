@@ -208,7 +208,7 @@ static cl::opt<unsigned> SmallLoopCost(
         "The cost of a loop that is considered 'small' by the interleaver."));
 
 static cl::opt<bool> LoopVectorizeWithBlockFrequency(
-    "loop-vectorize-with-block-frequency", cl::init(false), cl::Hidden,
+    "loop-vectorize-with-block-frequency", cl::init(true), cl::Hidden,
     cl::desc("Enable the use of the block frequency analysis to access PGO "
              "heuristics minimizing code growth in cold regions and being more "
              "aggressive in hot regions."));
@@ -8347,15 +8347,31 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
-  unsigned ExpectedTC = SE->getSmallConstantMaxTripCount(L);
-  bool HasExpectedTC = (ExpectedTC > 0);
-
+  // Prefer constant trip counts over profile data, over upper bound estimate.
+  unsigned ExpectedTC = 0;
+  bool HasExpectedTC = false;
+  if (const SCEVConstant *ConstExits =
+      dyn_cast<SCEVConstant>(SE->getBackedgeTakenCount(L))) {
+    const APInt &ExitsCount = ConstExits->getAPInt();
+    // We are interested in small values for ExpectedTC. Skip over those that
+    // can't fit an unsigned.
+    if (ExitsCount.ult(std::numeric_limits<unsigned>::max())) {
+      ExpectedTC = static_cast<unsigned>(ExitsCount.getZExtValue()) + 1;
+      HasExpectedTC = true;
+    }
+  }
+  // ExpectedTC may be large because it's bound by a variable. Check
+  // profiling information to validate we should vectorize.
   if (!HasExpectedTC && LoopVectorizeWithBlockFrequency) {
     auto EstimatedTC = getLoopEstimatedTripCount(L);
     if (EstimatedTC) {
       ExpectedTC = *EstimatedTC;
       HasExpectedTC = true;
     }
+  }
+  if (!HasExpectedTC) {
+    ExpectedTC = SE->getSmallConstantMaxTripCount(L);
+    HasExpectedTC = (ExpectedTC > 0);
   }
 
   if (HasExpectedTC && ExpectedTC < TinyTripCountVectorThreshold) {

@@ -92,6 +92,8 @@ class SubtargetEmitter {
                          &ProcItinLists);
   void EmitProcessorProp(raw_ostream &OS, const Record *R, StringRef Name,
                          char Separator);
+  void EmitProcessorResourceSubUnits(const CodeGenProcModel &ProcModel,
+                                     raw_ostream &OS);
   void EmitProcessorResources(const CodeGenProcModel &ProcModel,
                               raw_ostream &OS);
   Record *FindWriteResources(const CodeGenSchedRW &SchedWrite,
@@ -578,24 +580,52 @@ void SubtargetEmitter::EmitProcessorProp(raw_ostream &OS, const Record *R,
   OS << '\n';
 }
 
+void SubtargetEmitter::EmitProcessorResourceSubUnits(
+    const CodeGenProcModel &ProcModel, raw_ostream &OS) {
+  OS << "\nstatic const unsigned " << ProcModel.ModelName
+     << "ProcResourceSubUnits[] = {\n"
+     << "  0,  // Invalid\n";
+
+  for (unsigned i = 0, e = ProcModel.ProcResourceDefs.size(); i < e; ++i) {
+    Record *PRDef = ProcModel.ProcResourceDefs[i];
+    if (!PRDef->isSubClassOf("ProcResGroup"))
+      continue;
+    RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
+    for (Record *RUDef : ResUnits) {
+      Record *const RU =
+          SchedModels.findProcResUnits(RUDef, ProcModel, PRDef->getLoc());
+      for (unsigned J = 0; J < RU->getValueAsInt("NumUnits"); ++J) {
+        OS << "  " << ProcModel.getProcResourceIdx(RU) << ", ";
+      }
+    }
+    OS << "  // " << PRDef->getName() << "\n";
+  }
+  OS << "};\n";
+}
+
 void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
                                               raw_ostream &OS) {
-  OS << "\n// {Name, NumUnits, SuperIdx, IsBuffered}\n";
+  EmitProcessorResourceSubUnits(ProcModel, OS);
+
+  OS << "\n// {Name, NumUnits, SuperIdx, IsBuffered, SubUnitsIdxBegin}\n";
   OS << "static const llvm::MCProcResourceDesc "
      << ProcModel.ModelName << "ProcResources" << "[] = {\n"
      << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0},\n";
 
+  unsigned SubUnitsOffset = 1;
   for (unsigned i = 0, e = ProcModel.ProcResourceDefs.size(); i < e; ++i) {
     Record *PRDef = ProcModel.ProcResourceDefs[i];
 
     Record *SuperDef = nullptr;
     unsigned SuperIdx = 0;
     unsigned NumUnits = 0;
+    const unsigned SubUnitsBeginOffset = SubUnitsOffset;
     int BufferSize = PRDef->getValueAsInt("BufferSize");
     if (PRDef->isSubClassOf("ProcResGroup")) {
       RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
       for (Record *RU : ResUnits) {
         NumUnits += RU->getValueAsInt("NumUnits");
+        SubUnitsOffset += NumUnits;
       }
     }
     else {
@@ -612,8 +642,14 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
     OS << "  {DBGFIELD(\"" << PRDef->getName() << "\") ";
     if (PRDef->getName().size() < 15)
       OS.indent(15 - PRDef->getName().size());
-    OS << NumUnits << ", " << SuperIdx << ", "
-       << BufferSize << "}, // #" << i+1;
+    OS << NumUnits << ", " << SuperIdx << ", " << BufferSize << ", ";
+    if (SubUnitsBeginOffset != SubUnitsOffset) {
+      OS << ProcModel.ModelName << "ProcResourceSubUnits + "
+         << SubUnitsBeginOffset;
+    } else {
+      OS << "nullptr";
+    }
+    OS << "}, // #" << i+1;
     if (SuperDef)
       OS << ", Super=" << SuperDef->getName();
     OS << "\n";

@@ -345,6 +345,7 @@ void SIFoldOperands::foldOperand(
     // Don't fold into target independent nodes.  Target independent opcodes
     // don't have defined register classes.
     if (UseDesc.isVariadic() ||
+        UseOp.isImplicit() ||
         UseDesc.OpInfo[UseOpIdx].RegClass == -1)
       return;
   }
