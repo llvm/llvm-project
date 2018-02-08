@@ -311,6 +311,13 @@ public:
     bool __invariants() const;
 };
 
+template<class InputIterator,
+         class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
+basic_string(InputIterator, InputIterator, Allocator = Allocator())
+   -> basic_string<typename iterator_traits<InputIterator>::value_type,
+                  char_traits<typename iterator_traits<InputIterator>::value_type>,
+                  Allocator>;   // C++17
+
 template<class charT, class traits, class Allocator>
 basic_string<charT, traits, Allocator>
 operator+(const basic_string<charT, traits, Allocator>& lhs,
@@ -1485,6 +1492,18 @@ private:
     friend basic_string operator+<>(const basic_string&, value_type);
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _CharT = typename iterator_traits<_InputIterator>::value_type,
+         class _Allocator = allocator<_CharT>,
+         class = typename enable_if<__is_input_iterator<_InputIterator>::value, void>::type,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type
+         >
+basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
+  -> basic_string<_CharT, char_traits<_CharT>, _Allocator>;
+#endif
+
+                  
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 void
