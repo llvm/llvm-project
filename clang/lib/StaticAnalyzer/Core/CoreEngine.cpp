@@ -82,8 +82,13 @@ public:
 // functions, and we the code for the dstor generated in one compilation unit.
 WorkList::~WorkList() {}
 
-WorkList *WorkList::makeDFS() { return new DFS(); }
-WorkList *WorkList::makeBFS() { return new BFS(); }
+std::unique_ptr<WorkList> WorkList::makeDFS() {
+  return llvm::make_unique<DFS>();
+}
+
+std::unique_ptr<WorkList> WorkList::makeBFS() {
+  return llvm::make_unique<BFS>();
+}
 
 namespace {
   class BFSBlockDFSContents : public WorkList {
@@ -119,13 +124,33 @@ namespace {
   };
 } // end anonymous namespace
 
-WorkList* WorkList::makeBFSBlockDFSContents() {
-  return new BFSBlockDFSContents();
+std::unique_ptr<WorkList> WorkList::makeBFSBlockDFSContents() {
+  return llvm::make_unique<BFSBlockDFSContents>();
 }
 
 //===----------------------------------------------------------------------===//
 // Core analysis engine.
 //===----------------------------------------------------------------------===//
+
+static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
+  switch (Opts.getExplorationStrategy()) {
+    case AnalyzerOptions::ExplorationStrategyKind::DFS:
+      return WorkList::makeDFS();
+    case AnalyzerOptions::ExplorationStrategyKind::BFS:
+      return WorkList::makeBFS();
+    case AnalyzerOptions::ExplorationStrategyKind::BFSBlockDFSContents:
+      return WorkList::makeBFSBlockDFSContents();
+    default:
+      llvm_unreachable("Unexpected case");
+  }
+}
+
+CoreEngine::CoreEngine(SubEngine &subengine,
+    FunctionSummariesTy *FS,
+    AnalyzerOptions &Opts) : SubEng(subengine),
+                             WList(generateWorkList(Opts)),
+                             BCounterFactory(G.getAllocator()),
+                             FunctionSummaries(FS) {}
 
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
 bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,

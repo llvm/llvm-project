@@ -90,7 +90,7 @@ ExprEngine::ExprEngine(AnalysisManager &mgr, bool gcEnabled,
                        InliningModes HowToInlineIn)
   : AMgr(mgr),
     AnalysisDeclContexts(mgr.getAnalysisDeclContextManager()),
-    Engine(*this, FS),
+    Engine(*this, FS, mgr.getAnalyzerOptions()),
     G(Engine.getGraph()),
     StateMgr(getContext(), mgr.getStoreManagerCreator(),
              mgr.getConstraintManagerCreator(), G.getAllocator(),
