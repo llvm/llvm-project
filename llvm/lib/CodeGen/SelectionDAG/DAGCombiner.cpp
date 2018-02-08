@@ -7575,10 +7575,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
                                        LN0->getBasePtr(), MemVT,
                                        LN0->getMemOperand());
       CombineTo(N, ExtLoad);
-      CombineTo(N0.getNode(),
-                DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
-                            N0.getValueType(), ExtLoad),
-                ExtLoad.getValue(1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
       return SDValue(N, 0);   // Return N so it doesn't get rechecked!
     }
   }
@@ -7944,10 +7941,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                                        LN0->getBasePtr(), MemVT,
                                        LN0->getMemOperand());
       CombineTo(N, ExtLoad);
-      CombineTo(N0.getNode(),
-                DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(),
-                            ExtLoad),
-                ExtLoad.getValue(1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
       return SDValue(N, 0);   // Return N so it doesn't get rechecked!
     }
   }
@@ -8113,9 +8107,8 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   // fold (aext (zextload x)) -> (aext (truncate (zextload x)))
   // fold (aext (sextload x)) -> (aext (truncate (sextload x)))
   // fold (aext ( extload x)) -> (aext (truncate (extload  x)))
-  if (N0.getOpcode() == ISD::LOAD &&
-      !ISD::isNON_EXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
-      N0.hasOneUse()) {
+  if (N0.getOpcode() == ISD::LOAD && !ISD::isNON_EXTLoad(N0.getNode()) &&
+      ISD::isUNINDEXEDLoad(N0.getNode()) && N0.hasOneUse()) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
     ISD::LoadExtType ExtType = LN0->getExtensionType();
     EVT MemVT = LN0->getMemoryVT();
@@ -8124,10 +8117,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                                        VT, LN0->getChain(), LN0->getBasePtr(),
                                        MemVT, LN0->getMemOperand());
       CombineTo(N, ExtLoad);
-      CombineTo(N0.getNode(),
-                DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
-                            N0.getValueType(), ExtLoad),
-                ExtLoad.getValue(1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
       return SDValue(N, 0);   // Return N so it doesn't get rechecked!
     }
   }
