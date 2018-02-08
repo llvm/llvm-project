@@ -505,8 +505,13 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
         setCXXNewAllocatorValue(State, CNE, LCtx, State->getSVal(CNE, LCtx)));
   }
 
-  getCheckerManager().runCheckersForPostCall(Dst, DstPostValue,
-                                             *Call, *this);
+  ExplodedNodeSet DstPostPostCallCallback;
+  getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
+                                             DstPostValue, *Call, *this);
+  for (auto I : DstPostPostCallCallback) {
+    getCheckerManager().runCheckersForNewAllocator(
+        CNE, getCXXNewAllocatorValue(I->getState(), CNE, LCtx), Dst, I, *this);
+  }
 }
 
 void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
