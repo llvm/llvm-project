@@ -488,6 +488,20 @@ NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
   if (Tok.is(tok::kw_template))
     return ParseTemplateTemplateParameter(Depth, Position);
 
+  // Is there just a typo in the input code? ('typedef' instead of 'typename')
+  if (Tok.is(tok::kw_typedef)) {
+    Diag(Tok.getLocation(), diag::err_expected_template_parameter);
+
+    Diag(Tok.getLocation(), diag::note_meant_to_use_typename)
+        << FixItHint::CreateReplacement(CharSourceRange::getCharRange(
+                                            Tok.getLocation(), Tok.getEndLoc()),
+                                        "typename");
+
+    Tok.setKind(tok::kw_typename);
+
+    return ParseTypeParameter(Depth, Position);
+  }
+
   // If it's none of the above, then it must be a parameter declaration.
   // NOTE: This will pick up errors in the closure of the template parameter
   // list (e.g., template < ; Check here to implement >> style closures.
