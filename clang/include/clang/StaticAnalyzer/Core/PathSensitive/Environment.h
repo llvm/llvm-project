@@ -92,12 +92,9 @@ public:
   bool operator==(const Environment& RHS) const {
     return ExprBindings == RHS.ExprBindings;
   }
-  
-  void print(raw_ostream &Out, const char *NL, const char *Sep) const;
-  
-private:
-  void printAux(raw_ostream &Out, bool printLocations,
-                const char *NL, const char *Sep) const;
+
+  void print(raw_ostream &Out, const char *NL, const char *Sep,
+             const LocationContext *WithLC = nullptr) const;
 };
 
 class EnvironmentManager {
