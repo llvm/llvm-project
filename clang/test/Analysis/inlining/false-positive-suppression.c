@@ -111,14 +111,12 @@ void testInlineCheckInNestedMacro(int *p) {
   *p = 1; // no-warning
 }
 
-// If there is a check in a macro that is not function-like, don't treat
-// it like a function so don't suppress.
 #define NON_FUNCTION_MACRO_WITH_CHECK ( ((p) != 0) ? *p : 17)
 void testNonFunctionMacro(int *p) {
   int i = NON_FUNCTION_MACRO_WITH_CHECK ;
   (void)i;
 
-  *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+  *p = 1; // no-warning
 }
 
 
