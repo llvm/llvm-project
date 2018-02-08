@@ -48,22 +48,22 @@
 <table id="LFTS" border="1">
 <tr><th>Section</th><th>Feature</th><th>shipped in<br/><tt>std</tt></th><th>To be removed from<br/><tt>std::experimental</tt></th><th>Notes</th></tr>
 <tr><td>2.1</td><td>uses_allocator construction</td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>3.1.2</td><td><tt>erased_type</tt></td><td></td><td><center>n/a</center></td><td><I>Not part of C++17</I></td></tr>
-<tr><td>3.2.1</td><td><tt>tuple_size_v</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>3.2.2</td><td><tt>apply</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>3.3.1</td><td>All of the '_v' traits in &lt;type_traits&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
+<tr><td>3.1.2</td><td><tt>erased_type</tt></td><td></td><td><center>n/a</center></td><td><i>Not part of C++17</i></td></tr>
+<tr><td>3.2.1</td><td><tt>tuple_size_v</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
+<tr><td>3.2.2</td><td><tt>apply</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
+<tr><td>3.3.1</td><td>All of the '_v' traits in &lt;type_traits&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
 <tr><td>3.3.2</td><td><tt>invocation_type</tt> and <tt>raw_invocation_type</tt></td><td></td><td><center>n/a</center></td><td><I>Not part of C++17</I></td></tr>
-<tr><td>3.3.3</td><td>Logical operator traits</td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
+<tr><td>3.3.3</td><td>Logical operator traits</td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
 <tr><td>3.3.3</td><td>Detection Idiom</td><td><center>5.0</center></td><td></td><td><I>Only partially in C++17</I></td></tr>
-<tr><td>3.4.1</td><td>All of the '_v' traits in &lt;ratio&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>3.5.1</td><td>All of the '_v' traits in &lt;chrono&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>3.6.1</td><td>All of the '_v' traits in &lt;system_error&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
+<tr><td>3.4.1</td><td>All of the '_v' traits in &lt;ratio&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
+<tr><td>3.5.1</td><td>All of the '_v' traits in &lt;chrono&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
+<tr><td>3.6.1</td><td>All of the '_v' traits in &lt;system_error&gt;</td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
 <tr><td>3.7</td><td><tt>propagate_const</tt></td><td></td><td><center>n/a</center></td><td><I>Not part of C++17</I></td></tr>
 <tr><td>4.2</td><td>Enhancements to <tt>function</tt></td><td><center>Not yet</center></td><td></td><td></td></tr>
 <tr><td>4.3</td><td>searchers</td><td><center>7.0</center></td><td><center>9.0</center></td><td></td></tr>
-<tr><td>5</td><td><tt>optional</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>6</td><td><tt>any</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
-<tr><td>7</td><td><tt>string_view</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
+<tr><td>5</td><td><tt>optional</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
+<tr><td>6</td><td><tt>any</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
+<tr><td>7</td><td><tt>string_view</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
 <tr><td>8.2.1</td><td><tt>shared_ptr</tt> enhancements</td><td><center>Not yet</center></td><td><center>Never added</center></td><td></td></tr>
 <tr><td>8.2.2</td><td><tt>weak_ptr</tt> enhancements</td><td><center>Not yet</center></td><td><center>Never added</center></td><td></td></tr>
 <tr><td>8.5</td><td><tt>memory_resource</tt></td><td><center>Not yet</center></td><td></td><td></td></tr>
@@ -77,9 +77,9 @@
 <tr><td>11.2</td><td><tt>promise</tt></td><td></td><td><center>n/a</center></td><td><I>Not part of C++17</I></td></tr>
 <tr><td>11.3</td><td><tt>packaged_task</tt></td><td></td><td><center>n/a</center></td><td><I>Not part of C++17</I></td></tr>
 <tr><td>12.2</td><td><tt>search</tt></td><td><center>7.0</center></td><td><center>9.0</center></td><td><I></I></td></tr>
-<tr><td>12.3</td><td><tt>sample</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><I></I></td></tr>
+<tr><td>12.3</td><td><tt>sample</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
 <tr><td>12.4</td><td><tt>shuffle</tt></td><td></td><td></td><td><I>Not part of C++17</I></td></tr>
-<tr><td>13.1</td><td><tt>gcd</tt> and <tt>lcm</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td></td></tr>
+<tr><td>13.1</td><td><tt>gcd</tt> and <tt>lcm</tt></td><td><center>5.0</center></td><td><center>7.0</center></td><td><i>Removed</i></td></tr>
 <tr><td>13.2</td><td>Random number generation</td><td></td><td><td><I>Not part of C++17</I></td></tr>
 <tr><td>14</td><td>Reflection Library</td><td></td><td><td><I>Not part of C++17</I></td></tr>
 </table>
@@ -132,7 +132,7 @@
 
 
   <hr/>
-  <p>Last Updated: 8-Jan-2018</p>
+  <p>Last Updated: 8-Feb-2018</p>
 </div>
 </body>
 </html>
