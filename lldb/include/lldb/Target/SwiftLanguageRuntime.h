@@ -111,18 +111,6 @@ public:
 
     llvm::StringRef GetBasename();
 
-    llvm::StringRef GetContext();
-
-    llvm::StringRef GetMetatypeReference();
-
-    llvm::StringRef GetTemplateArguments();
-
-    llvm::StringRef GetArguments();
-
-    llvm::StringRef GetQualifiers();
-
-    llvm::StringRef GetReturnType();
-
     static bool ExtractFunctionBasenameFromMangled(const ConstString &mangled,
                                                    ConstString &basename,
                                                    bool &is_method);
