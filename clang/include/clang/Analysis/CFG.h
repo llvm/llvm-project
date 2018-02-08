@@ -141,6 +141,32 @@ protected:
   CFGStmt() = default;
 };
 
+// This is bulky data for CFGConstructor which would not fit into the
+// CFGElement's room (pair of pointers). Contains the information
+// necessary to express what memory is being initialized by
+// the construction.
+class ConstructionContext {
+  // The construction site - the statement that triggered the construction
+  // for one of its parts. For instance, stack variable declaration statement
+  // triggers construction of itself or its elements if it's an array,
+  // new-expression triggers construction of the newly allocated object(s).
+  Stmt *Trigger = nullptr;
+
+public:
+  ConstructionContext() = default;
+  ConstructionContext(Stmt *Trigger) : Trigger(Trigger) {}
+
+  bool isNull() const { return Trigger == nullptr; }
+
+  const Stmt *getTriggerStmt() const { return Trigger; }
+
+  const ConstructionContext *getPersistentCopy(BumpVectorContext &C) const {
+    ConstructionContext *CC = C.getAllocator().Allocate<ConstructionContext>();
+    *CC = *this;
+    return CC;
+  }
+};
+
 /// CFGConstructor - Represents C++ constructor call. Maintains information
 /// necessary to figure out what memory is being initialized by the
 /// constructor expression. For now this is only used by the analyzer's CFG.
@@ -148,7 +174,7 @@ class CFGConstructor : public CFGStmt {
 public:
   explicit CFGConstructor(CXXConstructExpr *CE, const ConstructionContext *C)
       : CFGStmt(CE, Constructor) {
-    assert(C);
+    assert(!C->isNull());
     Data2.setPointer(const_cast<ConstructionContext *>(C));
   }
 
@@ -156,8 +182,8 @@ public:
     return static_cast<ConstructionContext *>(Data2.getPointer());
   }
 
-  QualType getType() const {
-    return cast<CXXConstructExpr>(getStmt())->getType();
+  const Stmt *getTriggerStmt() const {
+    return getConstructionContext()->getTriggerStmt();
   }
 
 private:
@@ -784,9 +810,9 @@ public:
     Elements.push_back(CFGStmt(statement), C);
   }
 
-  void appendConstructor(CXXConstructExpr *CE, const ConstructionContext *CC,
+  void appendConstructor(CXXConstructExpr *CE, const ConstructionContext &CC,
                          BumpVectorContext &C) {
-    Elements.push_back(CFGConstructor(CE, CC), C);
+    Elements.push_back(CFGConstructor(CE, CC.getPersistentCopy(C)), C);
   }
 
   void appendInitializer(CXXCtorInitializer *initializer,
