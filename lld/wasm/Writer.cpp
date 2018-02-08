@@ -548,6 +548,8 @@ void Writer::layoutMemory() {
   }
 
   // TODO: Add .bss space here.
+  if (WasmSym::DataEnd)
+    WasmSym::DataEnd->setVirtualAddress(MemoryPtr);
 
   DataSize = MemoryPtr;
   if (!Config->Relocatable)
@@ -732,6 +734,7 @@ void Writer::assignIndexes() {
   };
   AddDefinedGlobal(WasmSym::StackPointer);
   AddDefinedGlobal(WasmSym::HeapBase);
+  AddDefinedGlobal(WasmSym::DataEnd);
 
   if (Config->Relocatable)
     DefinedGlobals.reserve(Symtab->getSymbols().size());

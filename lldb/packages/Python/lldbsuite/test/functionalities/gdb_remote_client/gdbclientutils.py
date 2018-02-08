@@ -98,6 +98,10 @@ class MockGDBServerResponder:
         to the given packet received from the client.
         """
         self.packetLog.append(packet)
+        if packet is MockGDBServer.PACKET_INTERRUPT:
+            return self.interrupt()
+        if packet == "c":
+            return self.cont()
         if packet == "g":
             return self.readRegisters()
         if packet[0] == "G":
@@ -133,7 +137,15 @@ class MockGDBServerResponder:
             if data is not None:
                 return self._qXferResponse(data, has_more)
             return ""
+        if packet[0] == "Z":
+            return self.setBreakpoint(packet)
         return self.other(packet)
+
+    def interrupt(self):
+        raise self.UnexpectedPacketException()
+
+    def cont(self):
+        raise self.UnexpectedPacketException()
 
     def readRegisters(self):
         return "00000000" * self.registerCount
@@ -178,9 +190,20 @@ class MockGDBServerResponder:
     def selectThread(self, op, thread_id):
         return "OK"
 
+    def setBreakpoint(self, packet):
+        raise self.UnexpectedPacketException()
+
     def other(self, packet):
         # empty string means unsupported
         return ""
+
+    """
+    Raised when we receive a packet for which there is no default action.
+    Override the responder class to implement behavior suitable for the test at
+    hand.
+    """
+    class UnexpectedPacketException(Exception):
+        pass
 
 
 class MockGDBServer:
@@ -288,6 +311,9 @@ class MockGDBServer:
             if data[0] == '+':
                 self._receivedData = data[1:]
                 return self.PACKET_ACK
+            if ord(data[0]) == 3:
+                self._receivedData = data[1:]
+                return self.PACKET_INTERRUPT
             if data[0] == '$':
                 i += 1
             else:
@@ -343,10 +369,12 @@ class MockGDBServer:
             # Delegate everything else to our responder
             response = self.responder.respond(packet)
         # Handle packet framing since we don't want to bother tests with it.
-        framed = frame_packet(response)
-        self._client.sendall(framed)
+        if response is not None:
+            framed = frame_packet(response)
+            self._client.sendall(framed)
 
     PACKET_ACK = object()
+    PACKET_INTERRUPT = object()
 
     class InvalidPacketException(Exception):
         pass
@@ -410,6 +438,7 @@ class GDBRemoteTestBase(TestBase):
         process = target.ConnectRemote(listener, url, "gdb-remote", error)
         self.assertTrue(error.Success(), error.description)
         self.assertTrue(process, PROCESS_IS_VALID)
+        return process
 
     def assertPacketLogContains(self, packets):
         """

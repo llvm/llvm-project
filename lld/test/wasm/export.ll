@@ -31,4 +31,7 @@ entry:
 ; CHECK-NEXT:       - Name:            __heap_base
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:       - Name:            __data_end
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:   - Type:            CODE
