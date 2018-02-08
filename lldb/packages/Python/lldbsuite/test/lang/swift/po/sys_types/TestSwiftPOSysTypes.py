@@ -15,4 +15,5 @@ import lldbsuite.test.decorators as decorators
 lldbinline.MakeInlineTest(
     __file__,
     globals(),
-    decorators=decorators.skipUnlessDarwin)
+    decorators=[decorators.skipUnlessDarwin,
+                decorators.add_test_categories(["swiftpr"])])
