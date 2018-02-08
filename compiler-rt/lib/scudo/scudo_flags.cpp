@@ -35,6 +35,14 @@ static void RegisterScudoFlags(FlagParser *parser, Flags *f) {
 #undef SCUDO_FLAG
 }
 
+static const char *getCompileDefinitionScudoDefaultOptions() {
+#ifdef SCUDO_DEFAULT_OPTIONS
+  return SANITIZER_STRINGIFY(SCUDO_DEFAULT_OPTIONS);
+#else
+  return "";
+#endif
+}
+
 static const char *getScudoDefaultOptions() {
   return (&__scudo_default_options) ? __scudo_default_options() : "";
 }
@@ -53,6 +61,9 @@ void initFlags() {
   FlagParser ScudoParser;
   RegisterScudoFlags(&ScudoParser, f);
   RegisterCommonFlags(&ScudoParser);
+
+  // Override from compile definition.
+  ScudoParser.ParseString(getCompileDefinitionScudoDefaultOptions());
 
   // Override from user-specified string.
   ScudoParser.ParseString(getScudoDefaultOptions());
