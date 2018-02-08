@@ -34,7 +34,7 @@ void *testPlacementNew() {
 
   void *y = new (x) int;
   clang_analyzer_eval(x == y); // expected-warning{{TRUE}};
-  clang_analyzer_eval(*x == 1); // expected-warning{{UNKNOWN}};
+  clang_analyzer_eval(*x == 1); // expected-warning{{TRUE}};
 
   return y;
 }
@@ -200,8 +200,7 @@ int testNoInitializationPlacement() {
   int n;
   new (&n) int;
 
-  // Should warn that n is uninitialized.
-  if (n) { // no-warning
+  if (n) { // expected-warning{{Branch condition evaluates to a garbage value}}
     return 0;
   }
   return 1;

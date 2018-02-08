@@ -572,10 +572,9 @@ namespace ZeroInitialization {
   }
 
   void testNew() {
-    // FIXME: Pending proper implementation of constructors for 'new'.
     raw_pair *pp = new raw_pair();
-    clang_analyzer_eval(pp->p1 == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(pp->p2 == 0); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(pp->p1 == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(pp->p2 == 0); // expected-warning{{TRUE}}
   }
 
   void testArrayNew() {
@@ -679,8 +678,7 @@ namespace InitializerList {
 
   void testDynamic() {
     List *list = new List{1, 2};
-    // FIXME: When we handle constructors with 'new', this will be TRUE.
-    clang_analyzer_eval(list->usedInitializerList); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(list->usedInitializerList); // expected-warning{{TRUE}}
   }
 }
 
