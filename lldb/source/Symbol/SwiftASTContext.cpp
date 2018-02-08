@@ -5418,37 +5418,6 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
   return false;
 }
 
-bool SwiftASTContext::IsOptionalChain(CompilerType type,
-                                      CompilerType &payload_type,
-                                      uint32_t &depth) {
-  auto is_optional = [](const CompilerType &type) -> bool {
-    if (auto ast =
-            llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
-      if (auto swift_ast = ast->GetASTContext()) {
-        swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-        if (swift_can_type.getOptionalObjectType())
-          return true;
-        return false;
-      }
-    }
-    return false;
-  };
-
-  depth = 0;
-
-  while (is_optional(type)) {
-    ++depth;
-    lldb::TemplateArgumentKind kind;
-    type = type.GetTemplateArgument(0, kind);
-  }
-
-  if (depth > 0) {
-    payload_type = type;
-    return true;
-  } else
-    return false;
-}
-
 SwiftASTContext::TypeAllocationStrategy
 SwiftASTContext::GetAllocationStrategy(const CompilerType &type) {
   if (auto ast =
