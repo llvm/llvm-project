@@ -119,6 +119,8 @@ ReducePassList::doTest(std::vector<std::string> &Prefix,
   return NoFailure;
 }
 
+using BugTester = bool (*)(const BugDriver &, Module *);
+
 namespace {
 /// ReduceCrashingGlobalVariables - This works by removing the global
 /// variable's initializer and seeing if the program still crashes. If it
@@ -126,11 +128,10 @@ namespace {
 ///
 class ReduceCrashingGlobalVariables : public ListReducer<GlobalVariable *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
 
 public:
-  ReduceCrashingGlobalVariables(BugDriver &bd,
-                                bool (*testFn)(const BugDriver &, Module *))
+  ReduceCrashingGlobalVariables(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<GlobalVariable *> &Prefix,
@@ -195,11 +196,10 @@ namespace {
 ///
 class ReduceCrashingFunctions : public ListReducer<Function *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
 
 public:
-  ReduceCrashingFunctions(BugDriver &bd,
-                          bool (*testFn)(const BugDriver &, Module *))
+  ReduceCrashingFunctions(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<Function *> &Prefix,
@@ -368,11 +368,10 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
 ///
 class ReduceCrashingBlocks : public ListReducer<const BasicBlock *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
 
 public:
-  ReduceCrashingBlocks(BugDriver &BD,
-                       bool (*testFn)(const BugDriver &, Module *))
+  ReduceCrashingBlocks(BugDriver &BD, BugTester testFn)
       : BD(BD), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<const BasicBlock *> &Prefix,
@@ -486,13 +485,11 @@ namespace {
 ///
 class ReduceCrashingConditionals : public ListReducer<const BasicBlock *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
   bool Direction;
 
 public:
-  ReduceCrashingConditionals(BugDriver &bd,
-                             bool (*testFn)(const BugDriver &, Module *),
-                             bool Direction)
+  ReduceCrashingConditionals(BugDriver &bd, BugTester testFn, bool Direction)
       : BD(bd), TestFn(testFn), Direction(Direction) {}
 
   Expected<TestResult> doTest(std::vector<const BasicBlock *> &Prefix,
@@ -594,11 +591,11 @@ namespace {
 
 class ReduceSimplifyCFG : public ListReducer<const BasicBlock *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
   TargetTransformInfo TTI;
 
 public:
-  ReduceSimplifyCFG(BugDriver &bd, bool (*testFn)(const BugDriver &, Module *))
+  ReduceSimplifyCFG(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn), TTI(bd.getProgram()->getDataLayout()) {}
 
   Expected<TestResult> doTest(std::vector<const BasicBlock *> &Prefix,
@@ -687,11 +684,10 @@ namespace {
 ///
 class ReduceCrashingInstructions : public ListReducer<const Instruction *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
 
 public:
-  ReduceCrashingInstructions(BugDriver &bd,
-                             bool (*testFn)(const BugDriver &, Module *))
+  ReduceCrashingInstructions(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<const Instruction *> &Prefix,
@@ -764,11 +760,10 @@ namespace {
 // names to avoid having to convert back and forth every time.
 class ReduceCrashingNamedMD : public ListReducer<std::string> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
 
 public:
-  ReduceCrashingNamedMD(BugDriver &bd,
-                        bool (*testFn)(const BugDriver &, Module *))
+  ReduceCrashingNamedMD(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<std::string> &Prefix,
@@ -833,11 +828,10 @@ namespace {
 // Reduce the list of operands to named metadata nodes
 class ReduceCrashingNamedMDOps : public ListReducer<const MDNode *> {
   BugDriver &BD;
-  bool (*TestFn)(const BugDriver &, Module *);
+  BugTester TestFn;
 
 public:
-  ReduceCrashingNamedMDOps(BugDriver &bd,
-                           bool (*testFn)(const BugDriver &, Module *))
+  ReduceCrashingNamedMDOps(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<const MDNode *> &Prefix,
@@ -902,9 +896,7 @@ bool ReduceCrashingNamedMDOps::TestNamedMDOps(
   return false;
 }
 
-static Error ReduceGlobalInitializers(BugDriver &BD,
-                                      bool (*TestFn)(const BugDriver &,
-                                                     Module *)) {
+static Error ReduceGlobalInitializers(BugDriver &BD, BugTester TestFn) {
   if (BD.getProgram()->global_begin() != BD.getProgram()->global_end()) {
     // Now try to reduce the number of global variable initializers in the
     // module to something small.
@@ -960,8 +952,7 @@ static Error ReduceGlobalInitializers(BugDriver &BD,
   return Error::success();
 }
 
-static Error ReduceInsts(BugDriver &BD,
-                        bool (*TestFn)(const BugDriver &, Module *)) {
+static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
   // Attempt to delete instructions using bisection. This should help out nasty
   // cases with large basic blocks where the problem is at one end.
   if (!BugpointIsInterrupted) {
@@ -1048,8 +1039,7 @@ static Error ReduceInsts(BugDriver &BD,
 /// DebugACrash - Given a predicate that determines whether a component crashes
 /// on a program, try to destructively reduce the program while still keeping
 /// the predicate true.
-static Error DebugACrash(BugDriver &BD,
-                         bool (*TestFn)(const BugDriver &, Module *)) {
+static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
   // See if we can get away with nuking some of the global variable initializers
   // in the program...
   if (!NoGlobalRM)
