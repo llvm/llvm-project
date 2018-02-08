@@ -145,86 +145,24 @@ protected:
 // necessary to express what memory is being initialized by
 // the construction.
 class ConstructionContext {
-public:
-  typedef llvm::PointerUnion<Stmt *, CXXCtorInitializer *> TriggerTy;
-
-private:
   // The construction site - the statement that triggered the construction
   // for one of its parts. For instance, stack variable declaration statement
   // triggers construction of itself or its elements if it's an array,
   // new-expression triggers construction of the newly allocated object(s).
-  TriggerTy Trigger;
-
-  // Sometimes a single trigger is not enough to describe the construction site.
-  // In this case we'd have a chain of "partial" construction contexts.
-  // Some examples:
-  // - A constructor within in an aggregate initializer list within a variable
-  //   would have a construction context of the initializer list with the parent
-  //   construction context of a variable.
-  // - A constructor for a temporary that needs to be both destroyed
-  //   and materialized into an elidable copy constructor would have a
-  //   construction context of a CXXBindTemporaryExpr with the parent
-  //   construction context of a MaterializeTemproraryExpr.
-  // Not all of these are currently supported.
-  const ConstructionContext *Parent = nullptr;
-
-  ConstructionContext() = default;
-  ConstructionContext(TriggerTy Trigger, const ConstructionContext *Parent)
-      : Trigger(Trigger), Parent(Parent) {}
+  Stmt *Trigger = nullptr;
 
 public:
-  static const ConstructionContext *
-  create(BumpVectorContext &C, TriggerTy Trigger,
-         const ConstructionContext *Parent = nullptr) {
+  ConstructionContext() = default;
+  ConstructionContext(Stmt *Trigger) : Trigger(Trigger) {}
+
+  bool isNull() const { return Trigger == nullptr; }
+
+  const Stmt *getTriggerStmt() const { return Trigger; }
+
+  const ConstructionContext *getPersistentCopy(BumpVectorContext &C) const {
     ConstructionContext *CC = C.getAllocator().Allocate<ConstructionContext>();
-    return new (CC) ConstructionContext(Trigger, Parent);
-  }
-
-  bool isNull() const { return Trigger.isNull(); }
-
-  TriggerTy getTrigger() const { return Trigger; }
-  const ConstructionContext *getParent() const { return Parent; }
-
-  const Stmt *getTriggerStmt() const {
-    return Trigger.dyn_cast<Stmt *>();
-  }
-
-  const CXXCtorInitializer *getTriggerInit() const {
-    return Trigger.dyn_cast<CXXCtorInitializer *>();
-  }
-
-  const MaterializeTemporaryExpr *getMaterializedTemporary() const {
-    // TODO: Be more careful to ensure that there's only one MTE around.
-    for (const ConstructionContext *CC = this; CC; CC = CC->getParent()) {
-      if (const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(
-              CC->getTriggerStmt())) {
-        return MTE;
-      }
-    }
-    return nullptr;
-  }
-
-  bool isSameAsPartialContext(const ConstructionContext *Other) const {
-    assert(Other);
-    return (Trigger == Other->Trigger);
-  }
-
-  // See if Other is a proper initial segment of this construction context
-  // in terms of the parent chain - i.e. a few first parents coincide and
-  // then the other context terminates but our context goes further - i.e.,
-  // we are providing the same context that the other context provides,
-  // and a bit more above that.
-  bool isStrictlyMoreSpecificThan(const ConstructionContext *Other) const {
-    const ConstructionContext *Self = this;
-    while (true) {
-      if (!Other)
-        return Self;
-      if (!Self || !Self->isSameAsPartialContext(Other))
-        return false;
-      Self = Self->getParent();
-      Other = Other->getParent();
-    }
-    llvm_unreachable("The above loop can only be terminated via return!");
+    *CC = *this;
+    return CC;
   }
 };
 
@@ -243,24 +181,8 @@ public:
     return static_cast<ConstructionContext *>(Data2.getPointer());
   }
 
-  QualType getType() const {
-    return cast<CXXConstructExpr>(getStmt())->getType();
-  }
-
-  ConstructionContext::TriggerTy getTrigger() const {
-    return getConstructionContext()->getTrigger();
-  }
-
   const Stmt *getTriggerStmt() const {
     return getConstructionContext()->getTriggerStmt();
-  }
-
-  const CXXCtorInitializer *getTriggerInit() const {
-    return getConstructionContext()->getTriggerInit();
-  }
-
-  const MaterializeTemporaryExpr *getMaterializedTemporary() const {
-    return getConstructionContext()->getMaterializedTemporary();
   }
 
 private:
@@ -887,9 +809,9 @@ public:
     Elements.push_back(CFGStmt(statement), C);
   }
 
-  void appendConstructor(CXXConstructExpr *CE, const ConstructionContext *CC,
+  void appendConstructor(CXXConstructExpr *CE, const ConstructionContext &CC,
                          BumpVectorContext &C) {
-    Elements.push_back(CFGConstructor(CE, CC), C);
+    Elements.push_back(CFGConstructor(CE, CC.getPersistentCopy(C)), C);
   }
 
   void appendInitializer(CXXCtorInitializer *initializer,
