@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify -DTEST_INLINABLE_ALLOCATORS %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 
