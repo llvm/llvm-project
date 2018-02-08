@@ -151,6 +151,8 @@ using ASTParsedCallback = std::function<void(PathRef Path, ParsedAST *)>;
 
 /// Manages resources, required by clangd. Allows to rebuild file with new
 /// contents, and provides AST and Preamble for it.
+/// NOTE: Threading-related bits of CppFile are now deprecated and will be
+/// removed soon.
 class CppFile : public std::enable_shared_from_this<CppFile> {
 public:
   // We only allow to create CppFile as shared_ptr, because a future returned by
@@ -178,6 +180,7 @@ public:
   /// that will wait for any ongoing rebuilds to finish and actually set the AST
   /// and Preamble to nulls. It can be run on a different thread. This function
   /// is useful to cancel ongoing rebuilds, if any, before removing CppFile.
+  /// DEPRECATED. This function will be removed soon, please do not use it.
   UniqueFunction<void()> deferCancelRebuild();
 
   /// Rebuild AST and Preamble synchronously on the calling thread.
@@ -200,6 +203,7 @@ public:
   /// The future to finish rebuild returns a list of diagnostics built during
   /// reparse, or None, if another deferRebuild was called before this
   /// rebuild was finished.
+  /// DEPRECATED. This function will be removed soon, please do not use it.
   UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
   deferRebuild(ParseInputs &&Inputs);
 
