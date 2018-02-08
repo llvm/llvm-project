@@ -20561,16 +20561,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue SetCC = getSETCC(X86CC, Test, dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
   }
-  case Intrinsic::x86_avx512_kortestz_w:
-  case Intrinsic::x86_avx512_kortestc_w: {
-    X86::CondCode X86CC =
-        (IntNo == Intrinsic::x86_avx512_kortestz_w) ? X86::COND_E : X86::COND_B;
-    SDValue LHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(1));
-    SDValue RHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(2));
-    SDValue Test = DAG.getNode(X86ISD::KORTEST, dl, MVT::i32, LHS, RHS);
-    SDValue SetCC = getSETCC(X86CC, Test, dl, DAG);
-    return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
-  }
 
   case Intrinsic::x86_sse42_pcmpistria128:
   case Intrinsic::x86_sse42_pcmpestria128:

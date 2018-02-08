@@ -816,6 +816,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       KnownBits RHSKnown(BitWidth);
       computeKnownBits(A, RHSKnown, Depth+1, Query(Q, I));
 
+      // If the RHS is known zero, then this assumption must be wrong (nothing
+      // is unsigned less than zero). Signal a conflict and get out of here.
+      if (RHSKnown.isZero()) {
+        Known.Zero.setAllBits();
+        Known.One.setAllBits();
+        break;
+      }
+
       // Whatever high bits in c are zero are known to be zero (if c is a power
       // of 2, then one more).
       if (isKnownToBeAPowerOfTwo(A, false, Depth + 1, Query(Q, I)))

@@ -1,4 +1,4 @@
-; UNSUPPORTED: windows
+; UNSUPPORTED: system-windows
 
 ; RUN: sed -e s/.T1:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK1 %s
 ; RUN: sed -e s/.T2:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s

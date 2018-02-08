@@ -1246,8 +1246,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                   Size, ArgAlign);
             } else {
               unsigned CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
-              Value *Cpy =
-                  EntryIRB.CreateMemCpy(CpShadowPtr, Base, Size, CopyAlign);
+              Value *Cpy = EntryIRB.CreateMemCpy(CpShadowPtr, CopyAlign, Base,
+                                                 CopyAlign, Size);
               DEBUG(dbgs() << "  ByValCpy: " << *Cpy << "\n");
               (void)Cpy;
             }
@@ -2768,7 +2768,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Value *AShadowPtr =
             getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment).first;
 
-        Store = IRB.CreateMemCpy(ArgShadowBase, AShadowPtr, Size, Alignment);
+        Store = IRB.CreateMemCpy(ArgShadowBase, Alignment, AShadowPtr,
+                                 Alignment, Size);
       } else {
         Size = DL.getTypeAllocSize(A->getType());
         if (ArgOffset + Size > kParamTLSSize) break;
@@ -3119,7 +3120,8 @@ struct VarArgAMD64Helper : public VarArgHelper {
         std::tie(ShadowPtr, OriginPtr) = MSV.getShadowOriginPtr(
             A, IRB, IRB.getInt8Ty(), kShadowTLSAlignment);
 
-        IRB.CreateMemCpy(ShadowBase, ShadowPtr, ArgSize, kShadowTLSAlignment);
+        IRB.CreateMemCpy(ShadowBase, kShadowTLSAlignment, ShadowPtr,
+                         kShadowTLSAlignment, ArgSize);
       } else {
         ArgKind AK = classifyArgument(A);
         if (AK == AK_GeneralPurpose && GpOffset >= AMD64GpEndOffset)
@@ -3206,7 +3208,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
         IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, AMD64FpEndOffset),
                       VAArgOverflowSize);
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
-      IRB.CreateMemCpy(VAArgTLSCopy, MS.VAArgTLS, CopySize, 8);
+      IRB.CreateMemCpy(VAArgTLSCopy, 8, MS.VAArgTLS, 8, CopySize);
     }
 
     // Instrument va_start.
@@ -3226,8 +3228,8 @@ struct VarArgAMD64Helper : public VarArgHelper {
       std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
           MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
                                  Alignment);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, AMD64FpEndOffset,
-                       Alignment);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy, Alignment,
+                       AMD64FpEndOffset);
       Value *OverflowArgAreaPtrPtr = IRB.CreateIntToPtr(
           IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         ConstantInt::get(MS.IntptrTy, 8)),
@@ -3239,8 +3241,8 @@ struct VarArgAMD64Helper : public VarArgHelper {
                                  Alignment);
       Value *SrcPtr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), VAArgTLSCopy,
                                              AMD64FpEndOffset);
-      IRB.CreateMemCpy(OverflowArgAreaShadowPtr, SrcPtr, VAArgOverflowSize,
-                       Alignment);
+      IRB.CreateMemCpy(OverflowArgAreaShadowPtr, Alignment, SrcPtr, Alignment,
+                       VAArgOverflowSize);
     }
   }
 };
@@ -3331,7 +3333,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
-      IRB.CreateMemCpy(VAArgTLSCopy, MS.VAArgTLS, CopySize, 8);
+      IRB.CreateMemCpy(VAArgTLSCopy, 8, MS.VAArgTLS, 8, CopySize);
     }
 
     // Instrument va_start.
@@ -3349,7 +3351,8 @@ struct VarArgMIPS64Helper : public VarArgHelper {
       std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
           MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
                                  Alignment);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, CopySize, Alignment);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy, Alignment,
+                       CopySize);
     }
   }
 };
@@ -3512,7 +3515,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
         IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, AArch64VAEndOffset),
                       VAArgOverflowSize);
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
-      IRB.CreateMemCpy(VAArgTLSCopy, MS.VAArgTLS, CopySize, 8);
+      IRB.CreateMemCpy(VAArgTLSCopy, 8, MS.VAArgTLS, 8, CopySize);
     }
 
     Value *GrArgSize = ConstantInt::get(MS.IntptrTy, kAArch64GrArgSize);
@@ -3570,7 +3573,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
                                               GrRegSaveAreaShadowPtrOff);
       Value *GrCopySize = IRB.CreateSub(GrArgSize, GrRegSaveAreaShadowPtrOff);
 
-      IRB.CreateMemCpy(GrRegSaveAreaShadowPtr, GrSrcPtr, GrCopySize, 8);
+      IRB.CreateMemCpy(GrRegSaveAreaShadowPtr, 8, GrSrcPtr, 8, GrCopySize);
 
       // Again, but for FP/SIMD values.
       Value *VrRegSaveAreaShadowPtrOff =
@@ -3588,7 +3591,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
         VrRegSaveAreaShadowPtrOff);
       Value *VrCopySize = IRB.CreateSub(VrArgSize, VrRegSaveAreaShadowPtrOff);
 
-      IRB.CreateMemCpy(VrRegSaveAreaShadowPtr, VrSrcPtr, VrCopySize, 8);
+      IRB.CreateMemCpy(VrRegSaveAreaShadowPtr, 8, VrSrcPtr, 8, VrCopySize);
 
       // And finally for remaining arguments.
       Value *StackSaveAreaShadowPtr =
@@ -3600,8 +3603,8 @@ struct VarArgAArch64Helper : public VarArgHelper {
         IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
                               IRB.getInt32(AArch64VAEndOffset));
 
-      IRB.CreateMemCpy(StackSaveAreaShadowPtr, StackSrcPtr,
-                       VAArgOverflowSize, 16);
+      IRB.CreateMemCpy(StackSaveAreaShadowPtr, 16, StackSrcPtr, 16,
+                       VAArgOverflowSize);
     }
   }
 };
@@ -3659,7 +3662,8 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
           std::tie(AShadowPtr, AOriginPtr) = MSV.getShadowOriginPtr(
               A, IRB, IRB.getInt8Ty(), kShadowTLSAlignment);
 
-          IRB.CreateMemCpy(Base, AShadowPtr, ArgSize, kShadowTLSAlignment);
+          IRB.CreateMemCpy(Base, kShadowTLSAlignment, AShadowPtr,
+                           kShadowTLSAlignment, ArgSize);
         }
         VAArgOffset += alignTo(ArgSize, 8);
       } else {
@@ -3750,7 +3754,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
-      IRB.CreateMemCpy(VAArgTLSCopy, MS.VAArgTLS, CopySize, 8);
+      IRB.CreateMemCpy(VAArgTLSCopy, 8, MS.VAArgTLS, 8, CopySize);
     }
 
     // Instrument va_start.
@@ -3768,7 +3772,8 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
       std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
           MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
                                  Alignment);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, CopySize, Alignment);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy, Alignment,
+                       CopySize);
     }
   }
 };

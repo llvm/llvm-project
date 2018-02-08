@@ -138,7 +138,7 @@ static bool IsMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
 static Constant *getLogBase2(Type *Ty, Constant *C) {
   const APInt *IVal;
   if (const auto *CI = dyn_cast<ConstantInt>(C))
-    if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
+    if (match(CI, m_APInt(IVal)) && IVal->isPowerOf2())
       return ConstantInt::get(Ty, IVal->logBase2());
 
   if (!Ty->isVectorTy())
@@ -1055,9 +1055,10 @@ struct UDivFoldAction {
 // X udiv 2^C -> X >> C
 static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
                                     const BinaryOperator &I, InstCombiner &IC) {
-  const APInt &C = cast<Constant>(Op1)->getUniqueInteger();
-  BinaryOperator *LShr = BinaryOperator::CreateLShr(
-      Op0, ConstantInt::get(Op0->getType(), C.logBase2()));
+  Constant *C1 = getLogBase2(Op0->getType(), cast<Constant>(Op1));
+  if (!C1)
+    llvm_unreachable("Failed to constant fold udiv -> logbase2");
+  BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, C1);
   if (I.isExact())
     LShr->setIsExact();
   return LShr;
@@ -1080,12 +1081,14 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
   if (!match(Op1, m_ZExt(m_Value(ShiftLeft))))
     ShiftLeft = Op1;
 
-  const APInt *CI;
+  Constant *CI;
   Value *N;
-  if (!match(ShiftLeft, m_Shl(m_APInt(CI), m_Value(N))))
+  if (!match(ShiftLeft, m_Shl(m_Constant(CI), m_Value(N))))
     llvm_unreachable("match should never fail here!");
-  if (*CI != 1)
-    N = IC.Builder.CreateAdd(N, ConstantInt::get(N->getType(), CI->logBase2()));
+  Constant *Log2Base = getLogBase2(N->getType(), CI);
+  if (!Log2Base)
+    llvm_unreachable("getLogBase2 should never fail here!");
+  N = IC.Builder.CreateAdd(N, Log2Base);
   if (Op1 != ShiftLeft)
     N = IC.Builder.CreateZExt(N, Op1->getType());
   BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, N);
@@ -1601,8 +1604,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   }
 
   // X urem C -> X < C ? X : X - C, where C >= signbit.
-  const APInt *DivisorC;
-  if (match(Op1, m_APInt(DivisorC)) && DivisorC->isNegative()) {
+  if (match(Op1, m_Negative())) {
     Value *Cmp = Builder.CreateICmpULT(Op0, Op1);
     Value *Sub = Builder.CreateSub(Op0, Op1);
     return SelectInst::Create(Cmp, Op0, Sub);
@@ -1627,7 +1629,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   {
     const APInt *Y;
     // X % -Y -> X % Y
-    if (match(Op1, m_APInt(Y)) && Y->isNegative() && !Y->isMinSignedValue()) {
+    if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue()) {
       Worklist.AddValue(I.getOperand(1));
       I.setOperand(1, ConstantInt::get(I.getType(), -*Y));
       return &I;

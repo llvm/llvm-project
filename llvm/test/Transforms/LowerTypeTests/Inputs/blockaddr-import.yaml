@@ -1,0 +1,10 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+      SizeM1BitWidth:  7
+CfiFunctionDefs:
+  - m
+CfiFunctionDecls:
+...

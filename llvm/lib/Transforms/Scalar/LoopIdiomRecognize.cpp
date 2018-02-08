@@ -756,8 +756,8 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   MSIs.insert(MSI);
   bool NegStride = SizeInBytes == -Stride;
   return processLoopStridedStore(Pointer, (unsigned)SizeInBytes,
-                                 MSI->getAlignment(), SplatValue, MSI, MSIs, Ev,
-                                 BECount, NegStride, /*IsLoopMemset=*/true);
+                                 MSI->getDestAlignment(), SplatValue, MSI, MSIs,
+                                 Ev, BECount, NegStride, /*IsLoopMemset=*/true);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -1037,16 +1037,17 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
 
-  unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
   //  If the load or store are atomic, then they must neccessarily be unordered
   //  by previous checks.
   if (!SI->isAtomic() && !LI->isAtomic())
-    NewCall = Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr, NumBytes, Align);
+    NewCall = Builder.CreateMemCpy(StoreBasePtr, SI->getAlignment(),
+                                   LoadBasePtr, LI->getAlignment(), NumBytes);
   else {
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
+    unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
     if (Align < StoreSize)
       return false;
 

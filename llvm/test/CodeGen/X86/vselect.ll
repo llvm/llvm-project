@@ -480,3 +480,86 @@ define <16 x double> @select_illegal(<16 x double> %a, <16 x double> %b) {
   %sel = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x double> %a, <16 x double> %b
   ret <16 x double> %sel
 }
+
+; Make sure we can optimize the condition MSB when it is used by 2 selects.
+; The v2i1 here will be passed as v2i64 and we will emit a sign_extend_inreg to fill the upper bits.
+; We should be able to remove the sra from the sign_extend_inreg to leave only shl.
+define <2 x i64> @shrunkblend_2uses(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
+; SSE2-LABEL: shrunkblend_2uses:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psllq $63, %xmm0
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    pandn %xmm2, %xmm5
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    por %xmm1, %xmm5
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    paddq %xmm5, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: shrunkblend_2uses:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    psllq $63, %xmm0
+; SSE41-NEXT:    psrad $31, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm4
+; SSE41-NEXT:    paddq %xmm2, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: shrunkblend_2uses:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX-NEXT:    vpcmpgtq %xmm0, %xmm5, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vblendvpd %xmm0, %xmm3, %xmm4, %xmm0
+; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %x = select <2 x i1> %cond, <2 x i64> %a, <2 x i64> %b
+  %y = select <2 x i1> %cond, <2 x i64> %c, <2 x i64> %d
+  %z = add <2 x i64> %x, %y
+  ret <2 x i64> %z
+}
+
+; Similar to above, but condition has a use that isn't a condition of a vselect so we can't optimize.
+define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
+; SSE2-LABEL: shrunkblend_nonvselectuse:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psllq $63, %xmm0
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; SSE2-NEXT:    movdqa %xmm3, %xmm0
+; SSE2-NEXT:    pandn %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    paddq %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: shrunkblend_nonvselectuse:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    psllq $63, %xmm0
+; SSE41-NEXT:    psrad $31, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    paddq %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: shrunkblend_nonvselectuse:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %x = select <2 x i1> %cond, <2 x i64> %a, <2 x i64> %b
+  %y = sext <2 x i1> %cond to <2 x i64>
+  %z = add <2 x i64> %x, %y
+  ret <2 x i64> %z
+}
+

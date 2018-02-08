@@ -3832,3 +3832,48 @@ define i16 @test_kxor(i16 %a0, i16 %a1) {
   ret i16 %t2
 }
 
+declare i32 @llvm.x86.avx512.kortestz.w(i16, i16) nounwind readnone
+define i32 @test_kortestz(<8 x i64> %A, <8 x i64> %B, <8 x i64> %C, <8 x i64> %D) {
+; CHECK-LABEL: test_kortestz:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    kortestw %k1, %k0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %A to <16 x i32>
+  %1 = bitcast <8 x i64> %B to <16 x i32>
+  %2 = icmp ne <16 x i32> %0, %1
+  %3 = bitcast <8 x i64> %C to <16 x i32>
+  %4 = bitcast <8 x i64> %D to <16 x i32>
+  %5 = icmp ne <16 x i32> %3, %4
+  %6 = bitcast <16 x i1> %2 to i16
+  %7 = bitcast <16 x i1> %5 to i16
+  %res = call i32 @llvm.x86.avx512.kortestz.w(i16 %6, i16 %7)
+  ret i32 %res
+}
+
+declare i32 @llvm.x86.avx512.kortestc.w(i16, i16) nounwind readnone
+define i32 @test_kortestc(<8 x i64> %A, <8 x i64> %B, <8 x i64> %C, <8 x i64> %D) {
+; CHECK-LABEL: test_kortestc:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    kortestw %k1, %k0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %A to <16 x i32>
+  %1 = bitcast <8 x i64> %B to <16 x i32>
+  %2 = icmp ne <16 x i32> %0, %1
+  %3 = bitcast <8 x i64> %C to <16 x i32>
+  %4 = bitcast <8 x i64> %D to <16 x i32>
+  %5 = icmp ne <16 x i32> %3, %4
+  %6 = bitcast <16 x i1> %2 to i16
+  %7 = bitcast <16 x i1> %5 to i16
+  %res = call i32 @llvm.x86.avx512.kortestz.w(i16 %6, i16 %7)
+  ret i32 %res
+}

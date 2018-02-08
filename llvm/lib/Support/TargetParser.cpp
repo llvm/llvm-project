@@ -689,6 +689,20 @@ ARM::ArchKind llvm::ARM::parseCPUArch(StringRef CPU) {
   return ARM::ArchKind::INVALID;
 }
 
+void llvm::ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
+  for (const CpuNames<ARM::ArchKind> &Arch : CPUNames) {
+    if (Arch.ArchID != ARM::ArchKind::INVALID)
+      Values.push_back(Arch.getName());
+  }
+}
+
+void llvm::AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
+  for (const CpuNames<AArch64::ArchKind> &Arch : AArch64CPUNames) {
+    if (Arch.ArchID != AArch64::ArchKind::INVALID)
+      Values.push_back(Arch.getName());
+  }
+}
+
 // ARM, Thumb, AArch64
 ARM::ISAKind ARM::parseArchISA(StringRef Arch) {
   return StringSwitch<ARM::ISAKind>(Arch)

@@ -1,4 +1,4 @@
-UNSUPPORTED: windows
+UNSUPPORTED: system-windows
 Remove UNSUPPORTED once we figure out why this fails on Windows.
 
 RUN: rm -rf %t.dir
