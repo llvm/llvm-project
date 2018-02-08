@@ -7622,7 +7622,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
         Mask = Mask.sext(VT.getSizeInBits());
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
-        ExtendSetCCUses(SetCCs, N0, ExtLoad, DL, ISD::SIGN_EXTEND);
+        ExtendSetCCUses(SetCCs, N0.getOperand(0), ExtLoad, DL,
+                        ISD::SIGN_EXTEND);
         bool NoReplaceTruncAnd = !N0.hasOneUse();
         bool NoReplaceTrunc = SDValue(LN00, 0).hasOneUse();
         CombineTo(N, And);
@@ -7926,7 +7927,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         SDLoc DL(N);
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
-        ExtendSetCCUses(SetCCs, N0, ExtLoad, DL, ISD::ZERO_EXTEND);
+        ExtendSetCCUses(SetCCs, N0.getOperand(0), ExtLoad, DL,
+                        ISD::ZERO_EXTEND);
         bool NoReplaceTruncAnd = !N0.hasOneUse();
         bool NoReplaceTrunc = SDValue(LN00, 0).hasOneUse();
         CombineTo(N, And);

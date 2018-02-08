@@ -49,10 +49,10 @@ dead:
 ; basic block containing `select` needs to contain explicit jumps to
 ; both successors.
 
-; CHECK: %bb.2.finish:
+; CHECK: bb.2.finish:
 ; CHECK: BREQk [[BRANCHED:%bb.[0-9]+]]
 ; CHECK: RJMPk [[DIRECT:%bb.[0-9]+]]
 ; CHECK: Successors according to CFG
 ; CHECK-SAME-DAG: {{.*}}[[BRANCHED]]
 ; CHECK-SAME-DAG: {{.*}}[[DIRECT]]
-; CHECK: %bb.3.dead:
+; CHECK: bb.3.dead:

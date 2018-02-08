@@ -730,7 +730,6 @@ class ADDS_FM_MM<bits<2> fmt, bits<8> funct> : MMArch {
   let Inst{9-8}   = fmt;
   let Inst{7-0}   = funct;
 
-  list<dag> Pattern = [];
 }
 
 class LWXC1_FM_MM<bits<9> funct> : MMArch {

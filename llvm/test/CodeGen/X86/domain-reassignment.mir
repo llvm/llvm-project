@@ -256,7 +256,7 @@ constants:
 body:             |
   ; CHECK-LABEL: name: test_8bitops
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $rdi, $zmm0, $zmm1, $zmm2, $zmm3
   ; CHECK:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK:   [[COPY1:%[0-9]+]]:vr512 = COPY $zmm0
@@ -277,9 +277,6 @@ body:             |
   ; CHECK:   [[COPY8:%[0-9]+]]:vk8wm = COPY [[COPY7]]
   ; CHECK:   [[VMOVAPDZrrk:%[0-9]+]]:vr512 = VMOVAPDZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
   ; CHECK:   VMOVAPDZmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVAPDZrrk]]
-  ; CHECK:   KTESTBrr [[KADDBrr]], [[KADDBrr]], implicit-def $eflags
-  ; CHECK:   JE_1 %bb.1, implicit $eflags
-  ; CHECK:   JMP_1 %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -311,9 +308,10 @@ body:             |
     %11 = VMOVAPDZrrk %2, killed %10, %1
     VMOVAPDZmr %0, 1, $noreg, 0, $noreg, killed %11
 
-    TEST8rr %18, %18, implicit-def $eflags
-    JE_1 %bb.1, implicit $eflags
-    JMP_1 %bb.2
+    ; FIXME We can't replace TEST with KTEST due to flag differences
+    ; TEST8rr %18, %18, implicit-def $eflags
+    ; JE_1 %bb.1, implicit $eflags
+    ; JMP_1 %bb.2
 
   bb.1:
 
@@ -377,7 +375,7 @@ constants:
 body:             |
   ; CHECK-LABEL: name: test_16bitops
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $rdi, $zmm0, $zmm1, $zmm2, $zmm3
   ; CHECK:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK:   [[COPY1:%[0-9]+]]:vr512 = COPY $zmm0
@@ -397,9 +395,6 @@ body:             |
   ; CHECK:   [[COPY8:%[0-9]+]]:vk16wm = COPY [[COPY7]]
   ; CHECK:   [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
   ; CHECK:   VMOVAPSZmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVAPSZrrk]]
-  ; CHECK:   KTESTWrr [[KXORWrr]], [[KXORWrr]], implicit-def $eflags
-  ; CHECK:   JE_1 %bb.1, implicit $eflags
-  ; CHECK:   JMP_1 %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -430,9 +425,10 @@ body:             |
     %11 = VMOVAPSZrrk %2, killed %10, %1
     VMOVAPSZmr %0, 1, $noreg, 0, $noreg, killed %11
 
-    TEST16rr %17, %17, implicit-def $eflags
-    JE_1 %bb.1, implicit $eflags
-    JMP_1 %bb.2
+    ; FIXME We can't replace TEST with KTEST due to flag differences
+    ; FIXME TEST16rr %17, %17, implicit-def $eflags
+    ; FIXME JE_1 %bb.1, implicit $eflags
+    ; FIXME JMP_1 %bb.2
 
   bb.1:
 
@@ -490,7 +486,7 @@ constants:
 body:             |
   ; CHECK-LABEL: name: test_32bitops
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $rdi, $zmm0, $zmm1
   ; CHECK:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK:   [[COPY1:%[0-9]+]]:vr512 = COPY $zmm0
@@ -507,9 +503,6 @@ body:             |
   ; CHECK:   [[COPY3:%[0-9]+]]:vk32wm = COPY [[KADDDrr]]
   ; CHECK:   [[VMOVDQU16Zrrk:%[0-9]+]]:vr512 = VMOVDQU16Zrrk [[COPY2]], killed [[COPY3]], [[COPY1]]
   ; CHECK:   VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVDQU16Zrrk]]
-  ; CHECK:   KTESTDrr [[KADDDrr]], [[KADDDrr]], implicit-def $eflags
-  ; CHECK:   JE_1 %bb.1, implicit $eflags
-  ; CHECK:   JMP_1 %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -535,9 +528,10 @@ body:             |
     %4 = VMOVDQU16Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
 
-    TEST32rr %13, %13, implicit-def $eflags
-    JE_1 %bb.1, implicit $eflags
-    JMP_1 %bb.2
+    ; FIXME We can't replace TEST with KTEST due to flag differences
+    ; FIXME TEST32rr %13, %13, implicit-def $eflags
+    ; FIXME JE_1 %bb.1, implicit $eflags
+    ; FIXME JMP_1 %bb.2
 
   bb.1:
 
@@ -595,7 +589,7 @@ constants:
 body:             |
   ; CHECK-LABEL: name: test_64bitops
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $rdi, $zmm0, $zmm1
   ; CHECK:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK:   [[COPY1:%[0-9]+]]:vr512 = COPY $zmm0
@@ -612,9 +606,6 @@ body:             |
   ; CHECK:   [[COPY3:%[0-9]+]]:vk64wm = COPY [[KADDQrr]]
   ; CHECK:   [[VMOVDQU8Zrrk:%[0-9]+]]:vr512 = VMOVDQU8Zrrk [[COPY2]], killed [[COPY3]], [[COPY1]]
   ; CHECK:   VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVDQU8Zrrk]]
-  ; CHECK:   KTESTQrr [[KADDQrr]], [[KADDQrr]], implicit-def $eflags
-  ; CHECK:   JE_1 %bb.1, implicit $eflags
-  ; CHECK:   JMP_1 %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -640,9 +631,10 @@ body:             |
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
 
-    TEST64rr %13, %13, implicit-def $eflags
-    JE_1 %bb.1, implicit $eflags
-    JMP_1 %bb.2
+    ; FIXME We can't replace TEST with KTEST due to flag differences
+    ; FIXME TEST64rr %13, %13, implicit-def $eflags
+    ; FIXME JE_1 %bb.1, implicit $eflags
+    ; FIXME JMP_1 %bb.2
 
   bb.1:
 

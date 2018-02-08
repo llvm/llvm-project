@@ -44,6 +44,11 @@ struct MCProcResourceDesc {
   // an out-of-order cpus.
   int BufferSize;
 
+  // If the resource has sub-units, a pointer to the first element of an array
+  // of `NumUnits` elements containing the ProcResourceIdx of the sub units.
+  // nullptr if the resource does not have sub-units.
+  const unsigned *SubUnitsIdxBegin;
+
   bool operator==(const MCProcResourceDesc &Other) const {
     return NumUnits == Other.NumUnits && SuperIdx == Other.SuperIdx
       && BufferSize == Other.BufferSize;
