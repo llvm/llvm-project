@@ -443,35 +443,12 @@ static void printInitializedTemporariesForContext(raw_ostream &Out,
                                                   const LocationContext *LC) {
   PrintingPolicy PP =
       LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
-  for (auto I : State->get<InitializedTemporaries>()) {
-    std::pair<const CXXBindTemporaryExpr *, const LocationContext *> Key =
-        I.first;
-    const MemRegion *Value = I.second;
-    if (Key.second != LC)
+  for (auto I : State->get<InitializedTemporariesSet>()) {
+    if (I.second != LC)
       continue;
-    Out << '(' << Key.second << ',' << Key.first << ") ";
-    Key.first->printPretty(Out, nullptr, PP);
-    if (Value)
-      Out << " : " << Value;
+    Out << '(' << I.second << ',' << I.first << ") ";
+    I.first->printPretty(Out, nullptr, PP);
     Out << NL;
-  }
-}
-
-static void printTemporaryMaterializationsForContext(
-    raw_ostream &Out, ProgramStateRef State, const char *NL, const char *Sep,
-    const LocationContext *LC) {
-  PrintingPolicy PP =
-      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
-  for (auto I : State->get<TemporaryMaterializations>()) {
-    std::pair<const MaterializeTemporaryExpr *, const LocationContext *> Key =
-        I.first;
-    const MemRegion *Value = I.second;
-    if (Key.second != LC)
-      continue;
-    Out << '(' << Key.second << ',' << Key.first << ") ";
-    Key.first->printPretty(Out, nullptr, PP);
-    assert(Value);
-    Out << " : " << Value << NL;
   }
 }
 
@@ -498,19 +475,11 @@ void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
                             const char *NL, const char *Sep,
                             const LocationContext *LCtx) {
   if (LCtx) {
-    if (!State->get<InitializedTemporaries>().isEmpty()) {
+    if (!State->get<InitializedTemporariesSet>().isEmpty()) {
       Out << Sep << "Initialized temporaries:" << NL;
 
       LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
         printInitializedTemporariesForContext(Out, State, NL, Sep, LC);
-      });
-    }
-
-    if (!State->get<TemporaryMaterializations>().isEmpty()) {
-      Out << Sep << "Temporaries to be materialized:" << NL;
-
-      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
-        printTemporaryMaterializationsForContext(Out, State, NL, Sep, LC);
       });
     }
 
