@@ -159,8 +159,108 @@ std::unique_ptr<PathDiagnosticPiece> BugReporterVisitor::getDefaultEndPath(
   return std::move(P);
 }
 
+/// \return name of the macro inside the location \p Loc.
+static StringRef getMacroName(SourceLocation Loc,
+    BugReporterContext &BRC) {
+  return Lexer::getImmediateMacroName(
+      Loc,
+      BRC.getSourceManager(),
+      BRC.getASTContext().getLangOpts());
+}
+
+/// \return Whether given spelling location corresponds to an expansion
+/// of a function-like macro.
+static bool isFunctionMacroExpansion(SourceLocation Loc,
+                                const SourceManager &SM) {
+  if (!Loc.isMacroID())
+    return false;
+  while (SM.isMacroArgExpansion(Loc))
+    Loc = SM.getImmediateExpansionRange(Loc).first;
+  std::pair<FileID, unsigned> TLInfo = SM.getDecomposedLoc(Loc);
+  SrcMgr::SLocEntry SE = SM.getSLocEntry(TLInfo.first);
+  const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
+  return EInfo.isFunctionMacroExpansion();
+}
 
 namespace {
+
+class MacroNullReturnSuppressionVisitor final
+    : public BugReporterVisitorImpl<MacroNullReturnSuppressionVisitor> {
+
+  const SubRegion *RegionOfInterest;
+
+public:
+  MacroNullReturnSuppressionVisitor(const SubRegion *R) : RegionOfInterest(R) {}
+
+  static void *getTag() {
+    static int Tag = 0;
+    return static_cast<void *>(&Tag);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+  }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                 const ExplodedNode *PrevN,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override {
+    auto BugPoint = BR.getErrorNode()->getLocation().getAs<StmtPoint>();
+    if (!BugPoint)
+      return nullptr;
+
+    const SourceManager &SMgr = BRC.getSourceManager();
+    if (auto Loc = matchAssignment(N, BRC)) {
+      if (isFunctionMacroExpansion(*Loc, SMgr)) {
+        std::string MacroName = getMacroName(*Loc, BRC);
+        SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
+        if (!BugLoc.isMacroID() || getMacroName(BugLoc, BRC) != MacroName)
+          BR.markInvalid(getTag(), MacroName.c_str());
+      }
+    }
+    return nullptr;
+  }
+
+  static void addMacroVisitorIfNecessary(
+        const ExplodedNode *N, const MemRegion *R,
+        bool EnableNullFPSuppression, BugReport &BR,
+        const SVal V) {
+    AnalyzerOptions &Options = N->getState()->getStateManager()
+        .getOwningEngine()->getAnalysisManager().options;
+    if (EnableNullFPSuppression && Options.shouldSuppressNullReturnPaths()
+          && V.getAs<Loc>())
+      BR.addVisitor(llvm::make_unique<MacroNullReturnSuppressionVisitor>(
+              R->getAs<SubRegion>()));
+  }
+
+private:
+  /// \return Source location of right hand side of an assignment
+  /// into \c RegionOfInterest, empty optional if none found.
+  Optional<SourceLocation> matchAssignment(const ExplodedNode *N,
+                                           BugReporterContext &BRC) {
+    const Stmt *S = PathDiagnosticLocation::getStmt(N);
+    ProgramStateRef State = N->getState();
+    auto *LCtx = N->getLocationContext();
+    if (!S)
+      return None;
+
+    if (auto *DS = dyn_cast<DeclStmt>(S)) {
+      if (const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl()))
+        if (const Expr *RHS = VD->getInit())
+          if (RegionOfInterest->isSubRegionOf(
+                  State->getLValue(VD, LCtx).getAsRegion()))
+            return RHS->getLocStart();
+    } else if (auto *BO = dyn_cast<BinaryOperator>(S)) {
+      const MemRegion *R = N->getSVal(BO->getLHS()).getAsRegion();
+      const Expr *RHS = BO->getRHS();
+      if (BO->isAssignmentOp() && RegionOfInterest->isSubRegionOf(R)) {
+        return RHS->getLocStart();
+      }
+    }
+    return None;
+  }
+};
+
 /// Emits an extra note at the return statement of an interesting stack frame.
 ///
 /// The returned value is marked as an interesting value, and if it's null,
@@ -854,13 +954,6 @@ const char *SuppressInlineDefensiveChecksVisitor::getTag() {
   return "IDCVisitor";
 }
 
-/// \return name of the macro inside the location \p Loc.
-static StringRef getMacroName(SourceLocation Loc,
-    BugReporterContext &BRC) {
-  return Lexer::getImmediateMacroName(
-      Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-}
-
 std::shared_ptr<PathDiagnosticPiece>
 SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
                                                 const ExplodedNode *Pred,
@@ -1122,6 +1215,9 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     if (R) {
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
+
+      MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
+          N, R, EnableNullFPSuppression, report, V);
 
       report.markInteresting(R);
       report.markInteresting(V);
