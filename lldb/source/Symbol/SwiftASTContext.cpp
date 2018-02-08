@@ -3062,21 +3062,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     }
 
     GetASTMap().Insert(m_ast_context_ap.get(), this);
-
-    // Store common useful manglings for quick lookup - this also ensures that
-    // types that didn't come out of the visitor (e.g. fallback ObjCPointers)
-    // still exist in our tables for later mangled name retrieval
-    // (the expression parser needs to do this).
-    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBO").c_str()).GetCString(),
-                       m_ast_context_ap->TheUnknownObjectType.getPointer());
-    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBp").c_str()).GetCString(),
-                       m_ast_context_ap->TheRawPointerType.getPointer());
-    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBb").c_str()).GetCString(),
-                       m_ast_context_ap->TheBridgeObjectType.getPointer());
-    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBo").c_str()).GetCString(),
-                       m_ast_context_ap->TheNativeObjectType.getPointer());
-    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtT_").c_str()).GetCString(),
-                       m_ast_context_ap->TheEmptyTupleType.getPointer());
   }
 
   VALID_OR_RETURN(nullptr);
