@@ -197,8 +197,8 @@ loop2:
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i8, i64 [[T0]], align 8
 ; CHECK-NEXT:    call void @use(i8* nonnull [[ALLOC]])
 ; CHECK-NEXT:    call void @llvm.stackrestore(i8* [[SAVE]])
-; CHECK-NEXT:    %cmp = icmp ugt i32 %k, 128
 ; CHECK-NEXT:    %k2 = lshr i32 %k, 1
+; CHECK-NEXT:    %cmp = icmp ugt i32 %k, 128
 ; CHECK-NEXT:    br i1 %cmp, label %loop2,
 ; CHECK-NEXT:  }
 
