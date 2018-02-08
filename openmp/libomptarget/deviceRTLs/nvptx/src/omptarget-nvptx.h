@@ -62,6 +62,46 @@
 #define __ACTIVEMASK() __ballot(1)
 #endif
 
+// arguments needed for L0 parallelism only.
+class omptarget_nvptx_SharedArgs {
+public:
+  // All these methods must be called by the master thread only.
+  INLINE void Init() {
+    args  = buffer;
+    nArgs = MAX_SHARED_ARGS;
+  }
+  INLINE void DeInit() {
+    // Free any memory allocated for outlined parallel function with a large
+    // number of arguments.
+    if (nArgs > MAX_SHARED_ARGS) {
+      SafeFree(args, (char *)"new extended args");
+      Init();
+    }
+  }
+  INLINE void EnsureSize(int size) {
+    if (size > nArgs) {
+      if (nArgs > MAX_SHARED_ARGS) {
+        SafeFree(args, (char *)"new extended args");
+      }
+      args = (void **) SafeMalloc(size * sizeof(void *),
+                                  (char *)"new extended args");
+      nArgs = size;
+    }
+  }
+  // Called by all threads.
+  INLINE void **GetArgs() { return args; };
+private:
+  // buffer of pre-allocated arguments.
+  void *buffer[MAX_SHARED_ARGS];
+  // pointer to arguments buffer.
+  // starts off as a pointer to 'buffer' but can be dynamically allocated.
+  void **args;
+  // starts off as MAX_SHARED_ARGS but can increase in size.
+  uint32_t nArgs;
+};
+
+extern __device__ __shared__ omptarget_nvptx_SharedArgs omptarget_nvptx_sharedArgs;
+
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
   // The maximum number of workers in a kernel.

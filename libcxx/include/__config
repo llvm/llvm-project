@@ -582,6 +582,7 @@ namespace std {
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
 #define _ALIGNAS(x) __declspec(align(x))
+#define _ALIGNAS_TYPE(x) alignas(x)
 #define _LIBCPP_HAS_NO_VARIADICS
 
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {
@@ -793,8 +794,13 @@ namespace std {
 # if !defined(_LIBCPP_DEBUG)
 #   error cannot use _LIBCPP_DEBUG_USE_EXCEPTIONS unless _LIBCPP_DEBUG is defined
 # endif
-# define _NOEXCEPT_DEBUG noexcept(false)
-# define _NOEXCEPT_DEBUG_(x) noexcept(false)
+# ifdef _LIBCPP_HAS_NO_NOEXCEPT
+#   define _NOEXCEPT_DEBUG
+#   define _NOEXCEPT_DEBUG_(x)
+# else
+#   define _NOEXCEPT_DEBUG noexcept(false)
+#   define _NOEXCEPT_DEBUG_(x) noexcept(false)
+#endif
 #else
 # define _NOEXCEPT_DEBUG _NOEXCEPT
 # define _NOEXCEPT_DEBUG_(x) _NOEXCEPT_(x)

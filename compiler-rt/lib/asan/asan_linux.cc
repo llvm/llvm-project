@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -214,7 +215,7 @@ void AsanCheckIncompatibleRT() {
       // the functions in dynamic ASan runtime instead of the functions in
       // system libraries, causing crashes later in ASan initialization.
       MemoryMappingLayout proc_maps(/*cache_enabled*/true);
-      char filename[128];
+      char filename[PATH_MAX];
       MemoryMappedSegment segment(filename, sizeof(filename));
       while (proc_maps.Next(&segment)) {
         if (IsDynamicRTName(segment.filename)) {
