@@ -3266,12 +3266,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!C.isForDiagnostics())
     CmdArgs.push_back("-disable-free");
 
-// Disable the verification pass in -asserts builds.
 #ifdef NDEBUG
-  CmdArgs.push_back("-disable-llvm-verifier");
-  // Discard LLVM value names in -asserts builds.
-  CmdArgs.push_back("-discard-value-names");
+  const bool IsAssertBuild = false;
+#else
+  const bool IsAssertBuild = true;
 #endif
+
+  // Disable the verification pass in -asserts builds.
+  if (!IsAssertBuild)
+    CmdArgs.push_back("-disable-llvm-verifier");
+
+  // Discard value names in assert builds unless otherwise specified.
+  if (const Arg *A = Args.getLastArg(options::OPT_fdiscard_value_names,
+                                     options::OPT_fno_discard_value_names)) {
+    if (A->getOption().matches(options::OPT_fdiscard_value_names))
+      CmdArgs.push_back("-discard-value-names");
+  } else if (!IsAssertBuild)
+    CmdArgs.push_back("-discard-value-names");
 
   // Set the main file name, so that debug info works even with
   // -save-temps.

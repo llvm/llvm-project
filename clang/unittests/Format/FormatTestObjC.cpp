@@ -333,13 +333,16 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
   verifyFormat("@interface Foo (HackStuff) <MyProtocol>\n"
                "+ (id)init;\n"
                "@end");
-  Style.BinPackParameters = false;
-  Style.ColumnLimit = 80;
-  verifyFormat("@interface aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa () <\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> {\n"
+  Style.ColumnLimit = 40;
+  // BinPackParameters should be true by default.
+  verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
+               "              int eeeee, int eeeee);\n");
+  // ObjCBinPackProtocolList should be BPS_Never by default.
+  verifyFormat("@interface fffffffffffff () <\n"
+               "    fffffffffffff,\n"
+               "    fffffffffffff,\n"
+               "    fffffffffffff,\n"
+               "    fffffffffffff> {\n"
                "}");
 }
 

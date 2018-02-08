@@ -2830,11 +2830,17 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_ObjCMethodExpr) && !Right.is(tok::r_square) &&
       Left.isNot(TT_SelectorName))
     return true;
+
   if (Right.is(tok::colon) &&
       !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon))
     return false;
-  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr))
+  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
+    if ((Style.Language == FormatStyle::LK_Proto ||
+         Style.Language == FormatStyle::LK_TextProto) &&
+        Right.isStringLiteral())
+      return false;
     return true;
+  }
   if (Right.is(TT_SelectorName) || (Right.is(tok::identifier) && Right.Next &&
                                     Right.Next->is(TT_ObjCMethodExpr)))
     return Left.isNot(tok::period); // FIXME: Properly parse ObjC calls.

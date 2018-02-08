@@ -306,5 +306,12 @@ TEST_F(FormatTestTextProto, DiscardsUnbreakableTailIfCanBreakAfter) {
       "  }\n"
       "}");
 }
+
+TEST_F(FormatTestTextProto, KeepsLongStringLiteralsOnSameLine) {
+  verifyFormat(
+      "foo: {\n"
+      "  text: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasaaaaaaaaaa\"\n"
+      "}");
+}
 } // end namespace tooling
 } // end namespace clang

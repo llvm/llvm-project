@@ -623,9 +623,9 @@ public:
   /// ReturnCanonical = true and Name = "rax", will return "ax".
   StringRef getNormalizedGCCRegisterName(StringRef Name,
                                          bool ReturnCanonical = false) const;
- 
-  virtual StringRef getConstraintRegister(const StringRef &Constraint,
-                                          const StringRef &Expression) const {
+
+  virtual StringRef getConstraintRegister(StringRef Constraint,
+                                          StringRef Expression) const {
     return "";
   }
 

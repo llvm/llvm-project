@@ -539,7 +539,6 @@ int d;
     unsigned RequestsWithErrors = 0;
     bool LastContentsHadErrors = false;
     bool FileIsRemoved = true;
-    std::future<void> LastRequestFuture;
   };
 
   std::vector<RequestStats> ReqStats;
@@ -565,8 +564,7 @@ int d;
     std::uniform_int_distribution<int> ColumnDist(0, MaxColumnForFileRequests);
 
     // Some helpers.
-    auto UpdateStatsOnAddDocument = [&](unsigned FileIndex, bool HadErrors,
-                                        std::future<void> Future) {
+    auto UpdateStatsOnAddDocument = [&](unsigned FileIndex, bool HadErrors) {
       auto &Stats = ReqStats[FileIndex];
 
       if (HadErrors)
@@ -575,22 +573,17 @@ int d;
         ++Stats.RequestsWithoutErrors;
       Stats.LastContentsHadErrors = HadErrors;
       Stats.FileIsRemoved = false;
-      Stats.LastRequestFuture = std::move(Future);
     };
 
-    auto UpdateStatsOnRemoveDocument = [&](unsigned FileIndex,
-                                           std::future<void> Future) {
+    auto UpdateStatsOnRemoveDocument = [&](unsigned FileIndex) {
       auto &Stats = ReqStats[FileIndex];
 
       Stats.FileIsRemoved = true;
-      Stats.LastRequestFuture = std::move(Future);
     };
 
-    auto UpdateStatsOnForceReparse = [&](unsigned FileIndex,
-                                         std::future<void> Future) {
+    auto UpdateStatsOnForceReparse = [&](unsigned FileIndex) {
       auto &Stats = ReqStats[FileIndex];
 
-      Stats.LastRequestFuture = std::move(Future);
       if (Stats.LastContentsHadErrors)
         ++Stats.RequestsWithErrors;
       else
@@ -599,10 +592,10 @@ int d;
 
     auto AddDocument = [&](unsigned FileIndex) {
       bool ShouldHaveErrors = ShouldHaveErrorsDist(RandGen);
-      auto Future = Server.addDocument(
-          FilePaths[FileIndex], ShouldHaveErrors ? SourceContentsWithErrors
-                                                 : SourceContentsWithoutErrors);
-      UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors, std::move(Future));
+      Server.addDocument(FilePaths[FileIndex],
+                         ShouldHaveErrors ? SourceContentsWithErrors
+                                          : SourceContentsWithoutErrors);
+      UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors);
     };
 
     // Various requests that we would randomly run.
@@ -617,8 +610,8 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      auto Future = Server.forceReparse(FilePaths[FileIndex]);
-      UpdateStatsOnForceReparse(FileIndex, std::move(Future));
+      Server.forceReparse(FilePaths[FileIndex]);
+      UpdateStatsOnForceReparse(FileIndex);
     };
 
     auto RemoveDocumentRequest = [&]() {
@@ -627,8 +620,8 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      auto Future = Server.removeDocument(FilePaths[FileIndex]);
-      UpdateStatsOnRemoveDocument(FileIndex, std::move(Future));
+      Server.removeDocument(FilePaths[FileIndex]);
+      UpdateStatsOnRemoveDocument(FileIndex);
     };
 
     auto CodeCompletionRequest = [&]() {
@@ -680,17 +673,6 @@ int d;
         auto RequestIndex = BlockingRequestIndexDist(RandGen);
         BlockingRequests[RequestIndex]();
       }
-    }
-
-    // Wait for last requests to finish.
-    for (auto &ReqStat : ReqStats) {
-      if (!ReqStat.LastRequestFuture.valid())
-        continue; // We never ran any requests for this file.
-
-      // Future should be ready much earlier than in 5 seconds, the timeout is
-      // there to check we won't wait indefinitely.
-      ASSERT_EQ(ReqStat.LastRequestFuture.wait_for(std::chrono::seconds(5)),
-                std::future_status::ready);
     }
   } // Wait for ClangdServer to shutdown before proceeding.
 

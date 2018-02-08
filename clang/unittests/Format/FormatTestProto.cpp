@@ -412,5 +412,14 @@ TEST_F(FormatTestProto, FormatsImports) {
                "}");
 }
 
+TEST_F(FormatTestProto, KeepsLongStringLiteralsOnSameLine) {
+  verifyFormat(
+      "option (MyProto.options) = {\n"
+      "  foo: {\n"
+      "    text: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasaaaaaaaa\"\n"
+      "  }\n"
+      "}");
+}
+
 } // end namespace tooling
 } // end namespace clang
