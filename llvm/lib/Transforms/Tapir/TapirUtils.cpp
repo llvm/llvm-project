@@ -339,10 +339,30 @@ Function *llvm::extractDetachBodyToFunction(
 
   // Fix up the inputs.
   SetVector<Value *> Inputs;
-  for (Value *V : BodyInputs) {
-    if (V == SyncRegion) continue;
-    if (!Inputs.count(V))
-      Inputs.insert(V);
+  {
+    // Scan for any sret parameters in BodyInputs and add them first.
+    Value *SRetInput = nullptr;
+    if (F.hasStructRetAttr()) {
+      Function::arg_iterator ArgIter = F.arg_begin();
+      if (F.hasParamAttribute(0, Attribute::StructRet))
+	if (BodyInputs.count(&*ArgIter))
+	  SRetInput = &*ArgIter;
+      if (F.hasParamAttribute(1, Attribute::StructRet)) {
+	++ArgIter;
+	if (BodyInputs.count(&*ArgIter))
+	  SRetInput = &*ArgIter;
+      }
+    }
+    if (SRetInput) {
+      DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
+      Inputs.insert(SRetInput);
+    }
+    // Add the remaining inputs.
+    for (Value *V : BodyInputs) {
+      if (V == SyncRegion) continue;
+      if (!Inputs.count(V))
+	Inputs.insert(V);
+    }
   }
 
   // Clone the detached CFG into a helper function.
