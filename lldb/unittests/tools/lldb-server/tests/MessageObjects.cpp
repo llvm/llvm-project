@@ -8,16 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "MessageObjects.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/StringExtras.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
+using namespace lldb;
 using namespace llvm;
 using namespace llvm::support;
 namespace llgs_tests {
 
-Expected<ProcessInfo> ProcessInfo::Create(StringRef response) {
+Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
   ProcessInfo process_info;
   auto elements_or_error = SplitUniquePairList("ProcessInfo", response);
   if (!elements_or_error)
@@ -130,6 +132,72 @@ Expected<JThreadsInfo> JThreadsInfo::Create(StringRef response,
 
 const ThreadInfoMap &JThreadsInfo::GetThreadInfos() const {
   return m_thread_infos;
+}
+
+Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
+  auto ElementsOr = SplitUniquePairList("RegisterInfoParser", Response);
+  if (!ElementsOr)
+    return ElementsOr.takeError();
+  auto &Elements = *ElementsOr;
+
+  RegisterInfo Info = {
+      nullptr,       // Name
+      nullptr,       // Alt name
+      0,             // byte size
+      0,             // offset
+      eEncodingUint, // encoding
+      eFormatHex,    // format
+      {
+          LLDB_INVALID_REGNUM, // eh_frame reg num
+          LLDB_INVALID_REGNUM, // DWARF reg num
+          LLDB_INVALID_REGNUM, // generic reg num
+          LLDB_INVALID_REGNUM, // process plugin reg num
+          LLDB_INVALID_REGNUM  // native register number
+      },
+      NULL,
+      NULL,
+      NULL, // Dwarf expression opcode bytes pointer
+      0     // Dwarf expression opcode bytes length
+  };
+  Info.name = ConstString(Elements["name"]).GetCString();
+  if (!Info.name)
+    return make_parsing_error("qRegisterInfo: name");
+
+  Info.alt_name = ConstString(Elements["alt-name"]).GetCString();
+
+  if (!to_integer(Elements["bitsize"], Info.byte_size, 10))
+    return make_parsing_error("qRegisterInfo: bit-size");
+  Info.byte_size /= CHAR_BIT;
+
+  if (!to_integer(Elements["offset"], Info.byte_offset, 10))
+    return make_parsing_error("qRegisterInfo: offset");
+
+  Info.encoding = Args::StringToEncoding(Elements["encoding"]);
+  if (Info.encoding == eEncodingInvalid)
+    return make_parsing_error("qRegisterInfo: encoding");
+
+  Info.format = StringSwitch<Format>(Elements["format"])
+                    .Case("binary", eFormatBinary)
+                    .Case("decimal", eFormatDecimal)
+                    .Case("hex", eFormatHex)
+                    .Case("float", eFormatFloat)
+                    .Case("vector-sint8", eFormatVectorOfSInt8)
+                    .Case("vector-uint8", eFormatVectorOfUInt8)
+                    .Case("vector-sint16", eFormatVectorOfSInt16)
+                    .Case("vector-uint16", eFormatVectorOfUInt16)
+                    .Case("vector-sint32", eFormatVectorOfSInt32)
+                    .Case("vector-uint32", eFormatVectorOfUInt32)
+                    .Case("vector-float32", eFormatVectorOfFloat32)
+                    .Case("vector-uint64", eFormatVectorOfUInt64)
+                    .Case("vector-uint128", eFormatVectorOfUInt128)
+                    .Default(eFormatInvalid);
+  if (Info.format == eFormatInvalid)
+    return make_parsing_error("qRegisterInfo: format");
+
+  Info.kinds[eRegisterKindGeneric] =
+      Args::StringToGenericRegister(Elements["generic"]);
+
+  return std::move(Info);
 }
 
 //====== StopReply =============================================================
