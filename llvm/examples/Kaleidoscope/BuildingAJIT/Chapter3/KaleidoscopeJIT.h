@@ -63,7 +63,6 @@ private:
   CompileOnDemandLayer<decltype(OptimizeLayer)> CODLayer;
 
 public:
-  using ModuleHandle = decltype(CODLayer)::ModuleHandleT;
 
   KaleidoscopeJIT()
       : ES(SSP), TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
@@ -92,7 +91,7 @@ public:
 
   TargetMachine &getTargetMachine() { return *TM; }
 
-  ModuleHandle addModule(std::unique_ptr<Module> M) {
+  VModuleKey addModule(std::unique_ptr<Module> M) {
     // Create a new VModuleKey.
     VModuleKey K = ES.allocateVModule();
 
@@ -111,7 +110,8 @@ public:
         [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); });
 
     // Add the module to the JIT with the new key.
-    return cantFail(CODLayer.addModule(K, std::move(M)));
+    cantFail(CODLayer.addModule(K, std::move(M)));
+    return K;
   }
 
   JITSymbol findSymbol(const std::string Name) {
@@ -121,8 +121,8 @@ public:
     return CODLayer.findSymbol(MangledNameStream.str(), true);
   }
 
-  void removeModule(ModuleHandle H) {
-    cantFail(CODLayer.removeModule(H));
+  void removeModule(VModuleKey K) {
+    cantFail(CODLayer.removeModule(K));
   }
 
 private:

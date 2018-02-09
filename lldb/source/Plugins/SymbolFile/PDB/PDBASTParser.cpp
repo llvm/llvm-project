@@ -19,8 +19,11 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeSystem.h"
 
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
+#include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
@@ -166,6 +169,28 @@ ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin *pdb_type,
   }
   return compiler_type.GetTypeName();
 }
+
+bool GetDeclarationForSymbol(const PDBSymbol &symbol, Declaration &decl) {
+  auto &raw_sym = symbol.getRawSymbol();
+  auto lines_up = symbol.getSession().findLineNumbersByAddress(
+      raw_sym.getVirtualAddress(), raw_sym.getLength());
+  if (!lines_up)
+    return false;
+  auto first_line_up = lines_up->getNext();
+  if (!first_line_up)
+    return false;
+
+  uint32_t src_file_id = first_line_up->getSourceFileId();
+  auto src_file_up = symbol.getSession().getSourceFileById(src_file_id);
+  if (!src_file_up)
+    return false;
+
+  FileSpec spec(src_file_up->getFileName(), /*resolve_path*/false);
+  decl.SetFile(spec);
+  decl.SetColumn(first_line_up->getColumnNumber());
+  decl.SetLine(first_line_up->getLineNumber());
+  return true;
+}
 }
 
 PDBASTParser::PDBASTParser(lldb_private::ClangASTContext &ast) : m_ast(ast) {}
@@ -182,7 +207,10 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
   clang::DeclContext *tu_decl_ctx = m_ast.GetTranslationUnitDecl();
   Declaration decl;
 
-  if (auto udt = llvm::dyn_cast<PDBSymbolTypeUDT>(&type)) {
+  switch (type.getSymTag()) {
+  case PDB_SymType::UDT: {
+    auto udt = llvm::dyn_cast<PDBSymbolTypeUDT>(&type);
+    assert(udt);
     AccessType access = lldb::eAccessPublic;
     PDB_UdtType udt_kind = udt->getUdtKind();
     auto tag_type_kind = TranslateUdtKind(udt_kind);
@@ -203,7 +231,10 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         ConstString(udt->getName()), udt->getLength(), nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, clang_type,
         lldb_private::Type::eResolveStateForward);
-  } else if (auto enum_type = llvm::dyn_cast<PDBSymbolTypeEnum>(&type)) {
+  } break;
+  case PDB_SymType::Enum: {
+    auto enum_type = llvm::dyn_cast<PDBSymbolTypeEnum>(&type);
+    assert(enum_type);
     auto underlying_type_up = enum_type->getUnderlyingType();
     if (!underlying_type_up)
       return nullptr;
@@ -244,7 +275,10 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name), bytes,
         nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
         ast_enum, lldb_private::Type::eResolveStateFull);
-  } else if (auto type_def = llvm::dyn_cast<PDBSymbolTypeTypedef>(&type)) {
+  } break;
+  case PDB_SymType::Typedef: {
+    auto type_def = llvm::dyn_cast<PDBSymbolTypeTypedef>(&type);
+    assert(type_def);
     lldb_private::Type *target_type =
         m_ast.GetSymbolFile()->ResolveTypeUID(type_def->getTypeId());
     if (!target_type)
@@ -261,7 +295,24 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         bytes, nullptr, target_type->GetID(),
         lldb_private::Type::eEncodingIsTypedefUID, decl, ast_typedef,
         lldb_private::Type::eResolveStateFull);
-  } else if (auto func_sig = llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
+  } break;
+  case PDB_SymType::Function:
+  case PDB_SymType::FunctionSig: {
+    std::string name;
+    PDBSymbolTypeFunctionSig *func_sig = nullptr;
+    if (auto pdb_func = llvm::dyn_cast<PDBSymbolFunc>(&type)) {
+      auto sig = pdb_func->getSignature();
+      if (!sig)
+        return nullptr;
+      func_sig = sig.release();
+      // Function type is named.
+      name = pdb_func->getName();
+    } else if (auto pdb_func_sig =
+              llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
+      func_sig = const_cast<PDBSymbolTypeFunctionSig*>(pdb_func_sig);
+    } else
+      llvm_unreachable("Unexpected PDB symbol!");
+
     auto arg_enum = func_sig->getArguments();
     uint32_t num_args = arg_enum->getChildCount();
     std::vector<CompilerType> arg_list;
@@ -302,11 +353,15 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         return_ast_type, arg_list.data(), arg_list.size(), is_variadic,
         type_quals);
 
+    GetDeclarationForSymbol(type, decl);
     return std::make_shared<lldb_private::Type>(
-        func_sig->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(), 0,
+        type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name), 0,
         nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
         func_sig_ast_type, lldb_private::Type::eResolveStateFull);
-  } else if (auto array_type = llvm::dyn_cast<PDBSymbolTypeArray>(&type)) {
+  } break;
+  case PDB_SymType::ArrayType: {
+    auto array_type = llvm::dyn_cast<PDBSymbolTypeArray>(&type);
+    assert(array_type);
     uint32_t num_elements = array_type->getCount();
     uint32_t element_uid = array_type->getElementType()->getSymIndexId();
     uint32_t bytes = array_type->getLength();
@@ -322,7 +377,10 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         array_type->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(),
         bytes, nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID,
         decl, array_ast_type, lldb_private::Type::eResolveStateFull);
-  } else if (auto *builtin_type = llvm::dyn_cast<PDBSymbolTypeBuiltin>(&type)) {
+  } break;
+  case PDB_SymType::BuiltinType: {
+    auto *builtin_type = llvm::dyn_cast<PDBSymbolTypeBuiltin>(&type);
+    assert(builtin_type);
     PDB_BuiltinType builtin_kind = builtin_type->getBuiltinType();
     if (builtin_kind == PDB_BuiltinType::None)
       return nullptr;
@@ -347,7 +405,10 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         builtin_type->getSymIndexId(), m_ast.GetSymbolFile(), type_name,
         bytes, nullptr, LLDB_INVALID_UID, encoding_data_type,
         decl, builtin_ast_type, lldb_private::Type::eResolveStateFull);
-  } else if (auto *pointer_type = llvm::dyn_cast<PDBSymbolTypePointer>(&type)) {
+  } break;
+  case PDB_SymType::PointerType: {
+    auto *pointer_type = llvm::dyn_cast<PDBSymbolTypePointer>(&type);
+    assert(pointer_type);
     Type *pointee_type = m_ast.GetSymbolFile()->ResolveTypeUID(
         pointer_type->getPointeeType()->getSymIndexId());
     if (!pointee_type)
@@ -367,6 +428,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         pointer_type->getLength(), nullptr, LLDB_INVALID_UID,
         encoding_data_type, decl, pointer_ast_type,
         lldb_private::Type::eResolveStateFull);
+  } break;
+  default: break;
   }
   return nullptr;
 }

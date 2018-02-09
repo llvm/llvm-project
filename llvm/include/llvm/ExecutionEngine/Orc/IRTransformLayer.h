@@ -31,9 +31,6 @@ template <typename BaseLayerT, typename TransformFtor>
 class IRTransformLayer {
 public:
 
-  /// @brief Handle to a set of added modules.
-  using ModuleHandleT = typename BaseLayerT::ModuleHandleT;
-
   /// @brief Construct an IRTransformLayer with the given BaseLayer
   IRTransformLayer(BaseLayerT &BaseLayer,
                    TransformFtor Transform = TransformFtor())
@@ -43,12 +40,12 @@ public:
   ///        the layer below, along with the memory manager and symbol resolver.
   ///
   /// @return A handle for the added modules.
-  Expected<ModuleHandleT> addModule(VModuleKey K, std::shared_ptr<Module> M) {
+  Error addModule(VModuleKey K, std::shared_ptr<Module> M) {
     return BaseLayer.addModule(std::move(K), Transform(std::move(M)));
   }
 
-  /// @brief Remove the module associated with the handle H.
-  Error removeModule(ModuleHandleT H) { return BaseLayer.removeModule(H); }
+  /// @brief Remove the module associated with the VModuleKey K.
+  Error removeModule(VModuleKey K) { return BaseLayer.removeModule(K); }
 
   /// @brief Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
@@ -59,24 +56,22 @@ public:
   }
 
   /// @brief Get the address of the given symbol in the context of the module
-  ///        represented by the handle H. This call is forwarded to the base
+  ///        represented by the VModuleKey K. This call is forwarded to the base
   ///        layer's implementation.
   /// @param H The handle for the module to search in.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it is found in the
   ///         given module.
-  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(VModuleKey K, const std::string &Name,
                          bool ExportedSymbolsOnly) {
-    return BaseLayer.findSymbolIn(H, Name, ExportedSymbolsOnly);
+    return BaseLayer.findSymbolIn(K, Name, ExportedSymbolsOnly);
   }
 
   /// @brief Immediately emit and finalize the module represented by the given
-  ///        handle.
+  ///        VModuleKey.
   /// @param H Handle for module to emit/finalize.
-  Error emitAndFinalize(ModuleHandleT H) {
-    return BaseLayer.emitAndFinalize(H);
-  }
+  Error emitAndFinalize(VModuleKey K) { return BaseLayer.emitAndFinalize(K); }
 
   /// @brief Access the transform functor directly.
   TransformFtor& getTransform() { return Transform; }

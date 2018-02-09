@@ -1,4 +1,3 @@
-REQUIRES: shell
 RUN: rm -rf %t && mkdir -p %t
 RUN: cd %t
 RUN: cp %p/Inputs/split-dwarf-empty.dwo %t

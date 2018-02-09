@@ -69,6 +69,8 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
+  bool enableMultipleCopyHints() const override { return true; }
+
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;

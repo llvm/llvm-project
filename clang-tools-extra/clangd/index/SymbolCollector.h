@@ -58,6 +58,9 @@ public:
   SymbolSlab takeSymbols() { return std::move(Symbols).build(); }
 
 private:
+  const Symbol *addDeclaration(const NamedDecl &, SymbolID);
+  void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
+
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
   ASTContext *ASTCtx;

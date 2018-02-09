@@ -1,4 +1,4 @@
-; RUN: llc -mtriple mips64-unknown-freebsd12.0 -relocation-model pic -mcpu=mips4 -target-abi n64 -O2 -o - %s
+; RUN: llc -mtriple mips64-unknown-freebsd12.0 -relocation-model pic -mcpu=mips4 -target-abi n64 -O2 -verify-machineinstrs -o - %s
 
 ; Test that the long branch pass does not crash due to the control flow
 ; optimizer producing malformed basic block operands due to the backend
