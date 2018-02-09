@@ -57,6 +57,8 @@ STATISTIC(NumFunctionsAnalyzed,
                       "with inlining turned on).");
 STATISTIC(NumBlocksInAnalyzedFunctions,
                       "The # of basic blocks in the analyzed functions.");
+STATISTIC(NumVisitedBlocksInAnalyzedFunctions,
+          "The # of visited basic blocks in the analyzed functions.");
 STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
 STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 
@@ -565,6 +567,8 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 
   // Count how many basic blocks we have not covered.
   NumBlocksInAnalyzedFunctions = FunctionSummaries.getTotalNumBasicBlocks();
+  NumVisitedBlocksInAnalyzedFunctions =
+      FunctionSummaries.getTotalNumVisitedBasicBlocks();
   if (NumBlocksInAnalyzedFunctions > 0)
     PercentReachableBlocks =
       (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
