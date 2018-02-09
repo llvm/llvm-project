@@ -248,6 +248,28 @@ TEST(MergeTest, Merge) {
   EXPECT_EQ(M.Detail->Documentation, "--doc--");
 }
 
+TEST(MergeTest, PreferSymbolWithDefn) {
+  Symbol L, R;
+  Symbol::Details Scratch;
+
+  L.ID = R.ID = SymbolID("hello");
+  L.CanonicalDeclaration.FileURI = "file:/left.h";
+  R.CanonicalDeclaration.FileURI = "file:/right.h";
+  L.CompletionPlainInsertText = "left-insert";
+  R.CompletionPlainInsertText = "right-insert";
+
+  Symbol M = mergeSymbol(L, R, &Scratch);
+  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/left.h");
+  EXPECT_EQ(M.Definition.FileURI, "");
+  EXPECT_EQ(M.CompletionPlainInsertText, "left-insert");
+
+  R.Definition.FileURI = "file:/right.cpp"; // Now right will be favored.
+  M = mergeSymbol(L, R, &Scratch);
+  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/right.h");
+  EXPECT_EQ(M.Definition.FileURI, "file:/right.cpp");
+  EXPECT_EQ(M.CompletionPlainInsertText, "right-insert");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
