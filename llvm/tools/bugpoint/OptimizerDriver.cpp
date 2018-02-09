@@ -177,6 +177,10 @@ bool BugDriver::runPasses(Module *Program,
     errs() << "Cannot find `opt' in PATH!\n";
     return 1;
   }
+  if (!sys::fs::exists(tool)) {
+    errs() << "Specified `opt' binary does not exist: " << tool << "\n";
+    return 1;
+  }
 
   std::string Prog;
   if (UseValgrind) {
