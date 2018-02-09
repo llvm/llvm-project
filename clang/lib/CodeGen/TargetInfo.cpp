@@ -3543,7 +3543,17 @@ ABIArgInfo X86_64ABIInfo::classifyRegCallStructType(QualType Ty,
 
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
-  bool IsRegCall = FI.getCallingConvention() == llvm::CallingConv::X86_RegCall;
+  const unsigned CallingConv = FI.getCallingConvention();
+  // It is possible to force Win64 calling convention on any x86_64 target by
+  // using __attribute__((ms_abi)). In such case to correctly emit Win64
+  // compatible code delegate this call to WinX86_64ABIInfo::computeInfo.
+  if (CallingConv == llvm::CallingConv::Win64) {
+    WinX86_64ABIInfo Win64ABIInfo(CGT);
+    Win64ABIInfo.computeInfo(FI);
+    return;
+  }
+
+  bool IsRegCall = CallingConv == llvm::CallingConv::X86_RegCall;
 
   // Keep track of the number of assigned registers.
   unsigned FreeIntRegs = IsRegCall ? 11 : 6;
