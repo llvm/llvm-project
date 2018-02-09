@@ -38,8 +38,8 @@ exceptional_return:
   ret i64 addrspace(1)* %obj1.relocated1
 }
 ; CHECK-LABEL: GCC_except_table{{[0-9]+}}:
-; CHECK: .long  .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
-; CHECK: .long  .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
+; CHECK: .uleb128  .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
+; CHECK: .uleb128  .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte  0
 ; CHECK: .p2align 4
 
@@ -68,8 +68,8 @@ exceptional_return:
   ret i64 addrspace(1)* %obj.relocated
 }
 ; CHECK-LABEL: GCC_except_table{{[0-9]+}}:
-; CHECK: .long .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
-; CHECK: .long .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
+; CHECK: .uleb128 .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
+; CHECK: .uleb128 .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte 0
 ; CHECK: .p2align 4
 

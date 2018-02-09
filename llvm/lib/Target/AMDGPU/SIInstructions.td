@@ -247,7 +247,6 @@ def SI_IF: CFPseudoInstSI <
 def SI_ELSE : CFPseudoInstSI <
   (outs SReg_64:$dst),
   (ins SReg_64:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
-  let Constraints = "$src = $dst";
   let Size = 12;
   let hasSideEffects = 1;
 }

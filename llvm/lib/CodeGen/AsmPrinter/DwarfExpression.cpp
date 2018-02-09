@@ -341,6 +341,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_mul:
+    case dwarf::DW_OP_or:
       emitOp(Op->getOp());
       break;
     case dwarf::DW_OP_deref:

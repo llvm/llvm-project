@@ -291,6 +291,13 @@ let Predicates = [UseHVX] in {
   def: Pat<(srl HVI16:$Vs, HVI16:$Vt), (V6_vlsrhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI32:$Vs, HVI32:$Vt), (V6_vlsrwv HvxVR:$Vs, HvxVR:$Vt)>;
 
+  def: Pat<(VecQ8   (qtrue)), (PS_qtrue)>;
+  def: Pat<(VecQ16  (qtrue)), (PS_qtrue)>;
+  def: Pat<(VecQ32  (qtrue)), (PS_qtrue)>;
+  def: Pat<(VecQ8  (qfalse)), (PS_qfalse)>;
+  def: Pat<(VecQ16 (qfalse)), (PS_qfalse)>;
+  def: Pat<(VecQ32 (qfalse)), (PS_qfalse)>;
+
   def: Pat<(vnot  HQ8:$Qs), (V6_pred_not HvxQR:$Qs)>;
   def: Pat<(vnot HQ16:$Qs), (V6_pred_not HvxQR:$Qs)>;
   def: Pat<(vnot HQ32:$Qs), (V6_pred_not HvxQR:$Qs)>;

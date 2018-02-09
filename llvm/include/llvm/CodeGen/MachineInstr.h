@@ -893,6 +893,8 @@ public:
     case TargetOpcode::EH_LABEL:
     case TargetOpcode::GC_LABEL:
     case TargetOpcode::DBG_VALUE:
+    case TargetOpcode::LIFETIME_START:
+    case TargetOpcode::LIFETIME_END:
       return true;
     }
   }

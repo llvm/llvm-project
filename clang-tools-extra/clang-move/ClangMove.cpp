@@ -523,6 +523,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto AllDeclsInHeader = namedDecl(
       unless(ForwardClassDecls), unless(namespaceDecl()),
       unless(usingDirectiveDecl()), // using namespace decl.
+      notInMacro(),
       InOldHeader,
       hasParent(decl(anyOf(namespaceDecl(), translationUnitDecl()))),
       hasDeclContext(decl(anyOf(namespaceDecl(), translationUnitDecl()))));
@@ -905,10 +906,9 @@ void ClangMoveTool::onEndOfTranslationUnit() {
 
   if (RemovedDecls.empty())
     return;
-  // Ignore symbols that are not supported (e.g. typedef and enum) when
-  // checking if there is unremoved symbol in old header. This makes sure that
-  // we always move old files to new files when all symbols produced from
-  // dump_decls are moved.
+  // Ignore symbols that are not supported when checking if there is unremoved
+  // symbol in old header. This makes sure that we always move old files to new
+  // files when all symbols produced from dump_decls are moved.
   auto IsSupportedKind = [](const clang::NamedDecl *Decl) {
     switch (Decl->getKind()) {
     case Decl::Kind::Function:

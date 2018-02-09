@@ -706,6 +706,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_mul:
+    case dwarf::DW_OP_or:
     case dwarf::DW_OP_deref:
     case dwarf::DW_OP_xderef:
       break;
@@ -772,6 +773,12 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
   if (DerefAfter)
     Ops.push_back(dwarf::DW_OP_deref);
 
+  return doPrepend(Expr, Ops, StackValue);
+}
+
+DIExpression *DIExpression::doPrepend(const DIExpression *Expr,
+                                      SmallVectorImpl<uint64_t> &Ops,
+                                      bool StackValue) {
   if (Expr)
     for (auto Op : Expr->expr_ops()) {
       // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
