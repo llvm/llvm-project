@@ -472,6 +472,11 @@ class CFGBuilder {
   using LabelSetTy = llvm::SmallSetVector<LabelDecl *, 8>;
   LabelSetTy AddressTakenLabels;
 
+  // Information about the currently visited C++ object construction site.
+  // This is set in the construction trigger and read when the constructor
+  // itself is being visited.
+  ConstructionContext CurrentConstructionContext = {};
+
   bool badCFG = false;
   const CFG::BuildOptions &BuildOpts;
   
@@ -643,6 +648,18 @@ private:
     return Block;
   }
 
+  // Scan the child statement \p Child to find the constructor that might
+  // have been directly triggered by the current node, \p Trigger. If such
+  // constructor has been found, set current construction context to point
+  // to the trigger statement. The construction context will be unset once
+  // it is consumed when the CFG building procedure processes the
+  // construct-expression and adds the respective CFGConstructor element.
+  void EnterConstructionContextIfNecessary(Stmt *Trigger, Stmt *Child);
+  // Unset the construction context after consuming it. This is done immediately
+  // after adding the CFGConstructor element, so there's no need to
+  // do this manually in every Visit... function.
+  void ExitConstructionContext();
+
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
   CFGBlock *createBlock(bool add_successor = true);
   CFGBlock *createNoReturnBlock();
@@ -680,6 +697,20 @@ private:
     // All block-level expressions should have already been IgnoreParens()ed.
     assert(!isa<Expr>(S) || cast<Expr>(S)->IgnoreParens() == S);
     B->appendStmt(const_cast<Stmt*>(S), cfg->getBumpVectorContext());
+  }
+
+  void appendConstructor(CFGBlock *B, CXXConstructExpr *CE) {
+    if (BuildOpts.AddRichCXXConstructors) {
+      if (!CurrentConstructionContext.isNull()) {
+        B->appendConstructor(CE, CurrentConstructionContext,
+                             cfg->getBumpVectorContext());
+        ExitConstructionContext();
+        return;
+      }
+    }
+
+    // No valid construction context found. Fall back to statement.
+    B->appendStmt(CE, cfg->getBumpVectorContext());
   }
 
   void appendInitializer(CFGBlock *B, CXXCtorInitializer *I) {
@@ -1115,6 +1146,26 @@ static const VariableArrayType *FindVA(const Type *t) {
 
   return nullptr;
 }
+
+void CFGBuilder::EnterConstructionContextIfNecessary(Stmt *Trigger,
+                                                     Stmt *Child) {
+  if (!BuildOpts.AddRichCXXConstructors)
+    return;
+  if (!Child)
+    return;
+  if (isa<CXXConstructExpr>(Child)) {
+    assert(CurrentConstructionContext.isNull() &&
+           "Already within a construction context!");
+    CurrentConstructionContext = ConstructionContext(Trigger);
+  }
+}
+
+void CFGBuilder::ExitConstructionContext() {
+  assert(!CurrentConstructionContext.isNull() &&
+         "Cannot exit construction context without the context!");
+  CurrentConstructionContext = ConstructionContext();
+}
+
 
 /// BuildCFG - Constructs a CFG from an AST (a Stmt*).  The AST can represent an
 ///  arbitrary statement.  Examples include a single expression or a function
@@ -3872,7 +3923,7 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E,
 CFGBlock *CFGBuilder::VisitCXXConstructExpr(CXXConstructExpr *C,
                                             AddStmtChoice asc) {
   autoCreateBlock();
-  appendStmt(Block, C);
+  appendConstructor(Block, C);
 
   return VisitChildren(C);
 }
@@ -3882,15 +3933,22 @@ CFGBlock *CFGBuilder::VisitCXXNewExpr(CXXNewExpr *NE,
   autoCreateBlock();
   appendStmt(Block, NE);
 
+  EnterConstructionContextIfNecessary(
+      NE, const_cast<CXXConstructExpr *>(NE->getConstructExpr()));
+
   if (NE->getInitializer())
     Block = Visit(NE->getInitializer());
+
   if (BuildOpts.AddCXXNewAllocator)
     appendNewAllocator(Block, NE);
+
   if (NE->isArray())
     Block = Visit(NE->getArraySize());
+
   for (CXXNewExpr::arg_iterator I = NE->placement_arg_begin(),
        E = NE->placement_arg_end(); I != E; ++I)
     Block = Visit(*I);
+
   return Block;
 }
 
@@ -4210,11 +4268,12 @@ std::unique_ptr<CFG> CFG::buildCFG(const Decl *D, Stmt *Statement,
 const CXXDestructorDecl *
 CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
   switch (getKind()) {
-    case CFGElement::Statement:
     case CFGElement::Initializer:
     case CFGElement::NewAllocator:
     case CFGElement::LoopExit:
     case CFGElement::LifetimeEnds:
+    case CFGElement::Statement:
+    case CFGElement::Constructor:
       llvm_unreachable("getDestructorDecl should only be used with "
                        "ImplicitDtors");
     case CFGElement::AutomaticObjectDtor: {
@@ -4343,8 +4402,8 @@ public:
 
           switch (stmt->getStmtClass()) {
             case Stmt::DeclStmtClass:
-                DeclMap[cast<DeclStmt>(stmt)->getSingleDecl()] = P;
-                break;
+              DeclMap[cast<DeclStmt>(stmt)->getSingleDecl()] = P;
+              break;
             case Stmt::IfStmtClass: {
               const VarDecl *var = cast<IfStmt>(stmt)->getConditionVariable();
               if (var)
@@ -4575,14 +4634,19 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
 
     if (isa<CXXOperatorCallExpr>(S)) {
       OS << " (OperatorCall)";
-    }
-    else if (isa<CXXBindTemporaryExpr>(S)) {
+    } else if (isa<CXXBindTemporaryExpr>(S)) {
       OS << " (BindTemporary)";
-    }
-    else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
-      OS << " (CXXConstructExpr, " << CCE->getType().getAsString() << ")";
-    }
-    else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {
+    } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
+      OS << " (CXXConstructExpr, ";
+      if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
+        if (const Stmt *S = CE->getTriggerStmt())
+          Helper.handledStmt((const_cast<Stmt *>(S)), OS);
+        else
+          llvm_unreachable("Unexpected trigger kind!");
+        OS << ", ";
+      }
+      OS << CCE->getType().getAsString() << ")";
+    } else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {
       OS << " (" << CE->getStmtClassName() << ", "
          << CE->getCastKindName()
          << ", " << CE->getType().getAsString()

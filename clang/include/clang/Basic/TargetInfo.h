@@ -867,6 +867,9 @@ public:
     return false;
   }
 
+  /// Fill a SmallVectorImpl with the valid values to setCPU.
+  virtual void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {}
+
   /// brief Determine whether this TargetInfo supports the given CPU name.
   virtual bool isValidCPUName(StringRef Name) const {
     return true;

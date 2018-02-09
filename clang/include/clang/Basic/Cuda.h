@@ -46,6 +46,7 @@ enum class CudaArch {
   SM_62,
   SM_70,
   SM_72,
+  LAST,
 };
 const char *CudaArchToString(CudaArch A);
 

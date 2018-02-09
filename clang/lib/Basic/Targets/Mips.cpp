@@ -44,26 +44,19 @@ bool MipsTargetInfo::processorSupportsGPR64() const {
   return false;
 }
 
+static constexpr llvm::StringLiteral ValidCPUNames[] = {
+    {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
+    {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
+    {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
+    {"octeon"}, {"p5600"}};
+
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::StringSwitch<bool>(Name)
-      .Case("mips1", true)
-      .Case("mips2", true)
-      .Case("mips3", true)
-      .Case("mips4", true)
-      .Case("mips5", true)
-      .Case("mips32", true)
-      .Case("mips32r2", true)
-      .Case("mips32r3", true)
-      .Case("mips32r5", true)
-      .Case("mips32r6", true)
-      .Case("mips64", true)
-      .Case("mips64r2", true)
-      .Case("mips64r3", true)
-      .Case("mips64r5", true)
-      .Case("mips64r6", true)
-      .Case("octeon", true)
-      .Case("p5600", true)
-      .Default(false);
+  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+}
+
+void MipsTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
 void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,

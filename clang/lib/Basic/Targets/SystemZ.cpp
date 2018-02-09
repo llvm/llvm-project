@@ -83,14 +83,32 @@ bool SystemZTargetInfo::validateAsmConstraint(
   }
 }
 
+struct ISANameRevision {
+  llvm::StringLiteral Name;
+  int ISARevisionID;
+};
+static constexpr ISANameRevision ISARevisions[] = {
+  {{"arch8"}, 8}, {{"z10"}, 8},
+  {{"arch9"}, 9}, {{"z196"}, 9},
+  {{"arch10"}, 10}, {{"zEC12"}, 10},
+  {{"arch11"}, 11}, {{"z13"}, 11},
+  {{"arch12"}, 12}, {{"z14"}, 12}
+};
+
 int SystemZTargetInfo::getISARevision(StringRef Name) const {
-  return llvm::StringSwitch<int>(Name)
-      .Cases("arch8", "z10", 8)
-      .Cases("arch9", "z196", 9)
-      .Cases("arch10", "zEC12", 10)
-      .Cases("arch11", "z13", 11)
-      .Cases("arch12", "z14", 12)
-      .Default(-1);
+  const auto Rev =
+      llvm::find_if(ISARevisions, [Name](const ISANameRevision &CR) {
+        return CR.Name == Name;
+      });
+  if (Rev == std::end(ISARevisions))
+    return -1;
+  return Rev->ISARevisionID;
+}
+
+void SystemZTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  for (const ISANameRevision &Rev : ISARevisions)
+    Values.push_back(Rev.Name);
 }
 
 bool SystemZTargetInfo::hasFeature(StringRef Feature) const {

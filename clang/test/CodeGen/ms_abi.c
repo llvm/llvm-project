@@ -146,3 +146,16 @@ void __attribute__((sysv_abi)) f6(__builtin_ms_va_list ap) {
   // WIN64: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
   // WIN64-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
 }
+
+// This test checks if structs are passed according to Win64 calling convention
+// when it's enforced by __attribute((ms_abi)).
+struct i128 {
+  unsigned long long a;
+  unsigned long long b;
+};
+
+__attribute__((ms_abi)) struct i128 f7(struct i128 a) {
+  // WIN64: define void @f7(%struct.i128* noalias sret %agg.result, %struct.i128* %a)
+  // FREEBSD: define win64cc void @f7(%struct.i128* noalias sret %agg.result, %struct.i128* %a)
+  return a;
+}

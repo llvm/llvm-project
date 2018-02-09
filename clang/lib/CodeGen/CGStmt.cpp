@@ -2133,7 +2133,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   llvm::InlineAsm *IA =
     llvm::InlineAsm::get(FTy, AsmString, Constraints, HasSideEffect,
                          /* IsAlignStack */ false, AsmDialect);
-  llvm::CallInst *Result = Builder.CreateCall(IA, Args);
+  llvm::CallInst *Result =
+      Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
   Result->addAttribute(llvm::AttributeList::FunctionIndex,
                        llvm::Attribute::NoUnwind);
 

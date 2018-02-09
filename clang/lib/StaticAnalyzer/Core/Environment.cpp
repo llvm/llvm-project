@@ -186,28 +186,41 @@ EnvironmentManager::removeDeadBindings(Environment Env,
 }
 
 void Environment::print(raw_ostream &Out, const char *NL,
-                        const char *Sep) const {
-  bool isFirst = true;
+                        const char *Sep, const LocationContext *WithLC) const {
+  if (ExprBindings.isEmpty())
+    return;
 
-  for (Environment::iterator I = begin(), E = end(); I != E; ++I) {
-    const EnvironmentEntry &En = I.getKey();
-
-    if (isFirst) {
-      Out << NL << NL
-          << "Expressions:"
-          << NL;
-      isFirst = false;
-    } else {
-      Out << NL;
+  if (!WithLC) {
+    // Find the freshest location context.
+    llvm::SmallPtrSet<const LocationContext *, 16> FoundContexts;
+    for (auto I : *this) {
+      const LocationContext *LC = I.first.getLocationContext();
+      if (FoundContexts.count(LC) == 0) {
+        // This context is fresher than all other contexts so far.
+        WithLC = LC;
+        for (const LocationContext *LCI = LC; LCI; LCI = LCI->getParent())
+          FoundContexts.insert(LCI);
+      }
     }
-
-    const Stmt *S = En.getStmt();
-    assert(S != nullptr && "Expected non-null Stmt");
-
-    Out << " (" << (const void*) En.getLocationContext() << ','
-      << (const void*) S << ") ";
-    LangOptions LO; // FIXME.
-    S->printPretty(Out, nullptr, PrintingPolicy(LO));
-    Out << " : " << I.getData();
   }
+
+  assert(WithLC);
+
+  LangOptions LO; // FIXME.
+  PrintingPolicy PP(LO);
+
+  Out << NL << NL << "Expressions by stack frame:" << NL;
+  WithLC->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+    for (auto I : ExprBindings) {
+      if (I.first.getLocationContext() != LC)
+        continue;
+
+      const Stmt *S = I.first.getStmt();
+      assert(S != nullptr && "Expected non-null Stmt");
+
+      Out << "(" << (const void *)LC << ',' << (const void *)S << ") ";
+      S->printPretty(Out, nullptr, PP);
+      Out << " : " << I.second << NL;
+    }
+  });
 }

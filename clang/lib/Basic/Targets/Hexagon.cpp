@@ -141,15 +141,29 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
+struct CPUSuffix {
+  llvm::StringLiteral Name;
+  llvm::StringLiteral Suffix;
+};
+
+static constexpr CPUSuffix Suffixes[] = {
+    {{"hexagonv4"}, {"4"}},   {{"hexagonv5"}, {"5"}},
+    {{"hexagonv55"}, {"55"}}, {{"hexagonv60"}, {"60"}},
+    {{"hexagonv62"}, {"62"}}, {{"hexagonv65"}, {"65"}},
+};
+
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {
-  return llvm::StringSwitch<const char *>(Name)
-      .Case("hexagonv4", "4")
-      .Case("hexagonv5", "5")
-      .Case("hexagonv55", "55")
-      .Case("hexagonv60", "60")
-      .Case("hexagonv62", "62")
-      .Case("hexagonv65", "65")
-      .Default(nullptr);
+  const CPUSuffix *Item = llvm::find_if(
+      Suffixes, [Name](const CPUSuffix &S) { return S.Name == Name; });
+  if (Item == std::end(Suffixes))
+    return nullptr;
+  return Item->Suffix.data();
+}
+
+void HexagonTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  for (const CPUSuffix &Suffix : Suffixes)
+    Values.push_back(Suffix.Name);
 }
 
 ArrayRef<Builtin::Info> HexagonTargetInfo::getTargetBuiltins() const {

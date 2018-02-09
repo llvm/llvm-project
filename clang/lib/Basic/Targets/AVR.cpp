@@ -28,7 +28,7 @@ struct LLVM_LIBRARY_VISIBILITY MCUInfo {
 };
 
 // This list should be kept up-to-date with AVRDevices.td in LLVM.
-static ArrayRef<MCUInfo> AVRMcus = {
+static MCUInfo AVRMcus[] = {
     {"at90s1200", "__AVR_AT90S1200__"},
     {"attiny11", "__AVR_ATtiny11__"},
     {"attiny12", "__AVR_ATtiny12__"},
@@ -273,33 +273,27 @@ static ArrayRef<MCUInfo> AVRMcus = {
 } // namespace targets
 } // namespace clang
 
+static constexpr llvm::StringLiteral ValidFamilyNames[] = {
+    "avr1",      "avr2",      "avr25",     "avr3",      "avr31",
+    "avr35",     "avr4",      "avr5",      "avr51",     "avr6",
+    "avrxmega1", "avrxmega2", "avrxmega3", "avrxmega4", "avrxmega5",
+    "avrxmega6", "avrxmega7", "avrtiny"};
+
 bool AVRTargetInfo::isValidCPUName(StringRef Name) const {
-  bool IsFamily = llvm::StringSwitch<bool>(Name)
-                      .Case("avr1", true)
-                      .Case("avr2", true)
-                      .Case("avr25", true)
-                      .Case("avr3", true)
-                      .Case("avr31", true)
-                      .Case("avr35", true)
-                      .Case("avr4", true)
-                      .Case("avr5", true)
-                      .Case("avr51", true)
-                      .Case("avr6", true)
-                      .Case("avrxmega1", true)
-                      .Case("avrxmega2", true)
-                      .Case("avrxmega3", true)
-                      .Case("avrxmega4", true)
-                      .Case("avrxmega5", true)
-                      .Case("avrxmega6", true)
-                      .Case("avrxmega7", true)
-                      .Case("avrtiny", true)
-                      .Default(false);
+  bool IsFamily =
+      llvm::find(ValidFamilyNames, Name) != std::end(ValidFamilyNames);
 
   bool IsMCU =
-      std::find_if(AVRMcus.begin(), AVRMcus.end(), [&](const MCUInfo &Info) {
+      llvm::find_if(AVRMcus, [&](const MCUInfo &Info) {
         return Info.Name == Name;
-      }) != AVRMcus.end();
+      }) != std::end(AVRMcus);
   return IsFamily || IsMCU;
+}
+
+void AVRTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.append(std::begin(ValidFamilyNames), std::end(ValidFamilyNames));
+  for (const MCUInfo &Info : AVRMcus)
+    Values.push_back(Info.Name);
 }
 
 void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -309,12 +303,10 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AVR__");
 
   if (!this->CPU.empty()) {
-    auto It =
-        std::find_if(AVRMcus.begin(), AVRMcus.end(), [&](const MCUInfo &Info) {
-          return Info.Name == this->CPU;
-        });
+    auto It = llvm::find_if(
+        AVRMcus, [&](const MCUInfo &Info) { return Info.Name == this->CPU; });
 
-    if (It != AVRMcus.end())
+    if (It != std::end(AVRMcus))
       Builder.defineMacro(It->DefineName);
   }
 }

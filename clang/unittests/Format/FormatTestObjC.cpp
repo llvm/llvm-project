@@ -975,6 +975,12 @@ TEST_F(FormatTestObjC, ObjCArrayLiterals) {
   verifyFormat("[someFunction someLooooooooooooongParameter:@[\n"
                "  NSBundle.mainBundle.infoDictionary[@\"a\"]\n"
                "]];");
+  Style.ColumnLimit = 20;
+  // We can't break string literals inside NSArray literals
+  // (that raises -Wobjc-string-concatenation).
+  verifyFormat("NSArray *foo = @[\n"
+               "  @\"aaaaaaaaaaaaaaaaaaaaaaaaaa\"\n"
+               "];\n");
 }
 } // end namespace
 } // end namespace format

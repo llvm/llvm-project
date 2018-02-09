@@ -551,6 +551,7 @@ getLocationForCaller(const StackFrameContext *SFC,
 
   switch (Source.getKind()) {
   case CFGElement::Statement:
+  case CFGElement::Constructor:
     return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(),
                                   SM, CallerCtx);
   case CFGElement::Initializer: {

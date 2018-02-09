@@ -479,57 +479,25 @@ ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
   return llvm::makeArrayRef(GCCRegAliases);
 }
 
+static constexpr llvm::StringLiteral ValidCPUNames[] = {
+    {"generic"}, {"440"},         {"450"},     {"601"},    {"602"},
+    {"603"},     {"603e"},        {"603ev"},   {"604"},    {"604e"},
+    {"620"},     {"630"},         {"g3"},      {"7400"},   {"g4"},
+    {"7450"},    {"g4+"},         {"750"},     {"970"},    {"g5"},
+    {"a2"},      {"a2q"},         {"e500mc"},  {"e5500"},  {"power3"},
+    {"pwr3"},    {"power4"},      {"pwr4"},    {"power5"}, {"pwr5"},
+    {"power5x"}, {"pwr5x"},       {"power6"},  {"pwr6"},   {"power6x"},
+    {"pwr6x"},   {"power7"},      {"pwr7"},    {"power8"}, {"pwr8"},
+    {"power9"},  {"pwr9"},        {"powerpc"}, {"ppc"},    {"powerpc64"},
+    {"ppc64"},   {"powerpc64le"}, {"ppc64le"},
+};
+
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::StringSwitch<bool>(Name)
-      .Case("generic", true)
-      .Case("440", true)
-      .Case("450", true)
-      .Case("601", true)
-      .Case("602", true)
-      .Case("603", true)
-      .Case("603e", true)
-      .Case("603ev", true)
-      .Case("604", true)
-      .Case("604e", true)
-      .Case("620", true)
-      .Case("630", true)
-      .Case("g3", true)
-      .Case("7400", true)
-      .Case("g4", true)
-      .Case("7450", true)
-      .Case("g4+", true)
-      .Case("750", true)
-      .Case("970", true)
-      .Case("g5", true)
-      .Case("a2", true)
-      .Case("a2q", true)
-      .Case("e500mc", true)
-      .Case("e5500", true)
-      .Case("power3", true)
-      .Case("pwr3", true)
-      .Case("power4", true)
-      .Case("pwr4", true)
-      .Case("power5", true)
-      .Case("pwr5", true)
-      .Case("power5x", true)
-      .Case("pwr5x", true)
-      .Case("power6", true)
-      .Case("pwr6", true)
-      .Case("power6x", true)
-      .Case("pwr6x", true)
-      .Case("power7", true)
-      .Case("pwr7", true)
-      .Case("power8", true)
-      .Case("pwr8", true)
-      .Case("power9", true)
-      .Case("pwr9", true)
-      .Case("powerpc", true)
-      .Case("ppc", true)
-      .Case("powerpc64", true)
-      .Case("ppc64", true)
-      .Case("powerpc64le", true)
-      .Case("ppc64le", true)
-      .Default(false);
+  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+}
+
+void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
 void PPCTargetInfo::adjust(LangOptions &Opts) {

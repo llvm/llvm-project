@@ -383,8 +383,62 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
                                                          LCtx, Call);
 }
 
+static void printInitializedTemporariesForContext(raw_ostream &Out,
+                                                  ProgramStateRef State,
+                                                  const char *NL,
+                                                  const char *Sep,
+                                                  const LocationContext *LC) {
+  PrintingPolicy PP =
+      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+  for (auto I : State->get<InitializedTemporariesSet>()) {
+    if (I.second != LC)
+      continue;
+    Out << '(' << I.second << ',' << I.first << ") ";
+    I.first->printPretty(Out, nullptr, PP);
+    Out << NL;
+  }
+}
+
+static void printCXXNewAllocatorValuesForContext(raw_ostream &Out,
+                                                 ProgramStateRef State,
+                                                 const char *NL,
+                                                 const char *Sep,
+                                                 const LocationContext *LC) {
+  PrintingPolicy PP =
+      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+
+  for (auto I : State->get<CXXNewAllocatorValues>()) {
+    std::pair<const CXXNewExpr *, const LocationContext *> Key = I.first;
+    SVal Value = I.second;
+    if (Key.second != LC)
+      continue;
+    Out << '(' << Key.second << ',' << Key.first << ") ";
+    Key.first->printPretty(Out, nullptr, PP);
+    Out << " : " << Value << NL;
+  }
+}
+
 void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
-                            const char *NL, const char *Sep) {
+                            const char *NL, const char *Sep,
+                            const LocationContext *LCtx) {
+  if (LCtx) {
+    if (!State->get<InitializedTemporariesSet>().isEmpty()) {
+      Out << Sep << "Initialized temporaries:" << NL;
+
+      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+        printInitializedTemporariesForContext(Out, State, NL, Sep, LC);
+      });
+    }
+
+    if (!State->get<CXXNewAllocatorValues>().isEmpty()) {
+      Out << Sep << "operator new() allocator return values:" << NL;
+
+      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+        printCXXNewAllocatorValuesForContext(Out, State, NL, Sep, LC);
+      });
+    }
+  }
+
   getCheckerManager().runCheckersForPrintState(Out, State, NL, Sep);
 }
 
@@ -400,10 +454,11 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
 
   switch (E.getKind()) {
     case CFGElement::Statement:
-      ProcessStmt(const_cast<Stmt*>(E.castAs<CFGStmt>().getStmt()), Pred);
+    case CFGElement::Constructor:
+      ProcessStmt(E.castAs<CFGStmt>().getStmt(), Pred);
       return;
     case CFGElement::Initializer:
-      ProcessInitializer(E.castAs<CFGInitializer>().getInitializer(), Pred);
+      ProcessInitializer(E.castAs<CFGInitializer>(), Pred);
       return;
     case CFGElement::NewAllocator:
       ProcessNewAllocator(E.castAs<CFGNewAllocator>().getAllocatorExpr(),
@@ -425,7 +480,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
 }
 
 static bool shouldRemoveDeadBindings(AnalysisManager &AMgr,
-                                     const CFGStmt S,
+                                     const Stmt *S,
                                      const ExplodedNode *Pred,
                                      const LocationContext *LC) {
 
@@ -438,17 +493,17 @@ static bool shouldRemoveDeadBindings(AnalysisManager &AMgr,
     return true;
 
   // Is this on a non-expression?
-  if (!isa<Expr>(S.getStmt()))
+  if (!isa<Expr>(S))
     return true;
 
   // Run before processing a call.
-  if (CallEvent::isCallStmt(S.getStmt()))
+  if (CallEvent::isCallStmt(S))
     return true;
 
   // Is this an expression that is consumed by another expression?  If so,
   // postpone cleaning out the state.
   ParentMap &PM = LC->getAnalysisDeclContext()->getParentMap();
-  return !PM.isConsumedExpr(cast<Expr>(S.getStmt()));
+  return !PM.isConsumedExpr(cast<Expr>(S));
 }
 
 void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
@@ -540,20 +595,20 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   }
 }
 
-void ExprEngine::ProcessStmt(const CFGStmt S,
-                             ExplodedNode *Pred) {
+void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   // Reclaim any unnecessary nodes in the ExplodedGraph.
   G.reclaimRecentlyAllocatedNodes();
 
-  const Stmt *currStmt = S.getStmt();
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 currStmt->getLocStart(),
                                 "Error evaluating statement");
 
   // Remove dead bindings and symbols.
   ExplodedNodeSet CleanedStates;
-  if (shouldRemoveDeadBindings(AMgr, S, Pred, Pred->getLocationContext())){
-    removeDead(Pred, CleanedStates, currStmt, Pred->getLocationContext());
+  if (shouldRemoveDeadBindings(AMgr, currStmt, Pred,
+                               Pred->getLocationContext())) {
+    removeDead(Pred, CleanedStates, currStmt,
+                                    Pred->getLocationContext());
   } else
     CleanedStates.Add(Pred);
 
@@ -2768,12 +2823,6 @@ struct DOTGraphTraits<ExplodedNode*> :
         << "\\l";
     }
   }
-  static void printLocation2(raw_ostream &Out, SourceLocation SLoc) {
-    if (SLoc.isFileID() && GraphPrintSourceManager->isInMainFile(SLoc))
-      Out << "line " << GraphPrintSourceManager->getExpansionLineNumber(SLoc);
-    else
-      SLoc.print(Out, *GraphPrintSourceManager);
-  }
 
   static std::string getNodeLabel(const ExplodedNode *N, void*){
 
@@ -2948,40 +2997,7 @@ struct DOTGraphTraits<ExplodedNode*> :
     Out << "\\|StateID: " << (const void*) state.get()
         << " NodeID: " << (const void*) N << "\\|";
 
-    // Analysis stack backtrace.
-    Out << "Location context stack (from current to outer):\\l";
-    const LocationContext *LC = Loc.getLocationContext();
-    unsigned Idx = 0;
-    for (; LC; LC = LC->getParent(), ++Idx) {
-      Out << Idx << ". (" << (const void *)LC << ") ";
-      switch (LC->getKind()) {
-      case LocationContext::StackFrame:
-        if (const NamedDecl *D = dyn_cast<NamedDecl>(LC->getDecl()))
-          Out << "Calling " << D->getQualifiedNameAsString();
-        else
-          Out << "Calling anonymous code";
-        if (const Stmt *S = cast<StackFrameContext>(LC)->getCallSite()) {
-          Out << " at ";
-          printLocation2(Out, S->getLocStart());
-        }
-        break;
-      case LocationContext::Block:
-        Out << "Invoking block";
-        if (const Decl *D = cast<BlockInvocationContext>(LC)->getBlockDecl()) {
-          Out << " defined at ";
-          printLocation2(Out, D->getLocStart());
-        }
-        break;
-      case LocationContext::Scope:
-        Out << "Entering scope";
-        // FIXME: Add more info once ScopeContext is activated.
-        break;
-      }
-      Out << "\\l";
-    }
-    Out << "\\l";
-
-    state->printDOT(Out);
+    state->printDOT(Out, N->getLocationContext());
 
     Out << "\\l";
 

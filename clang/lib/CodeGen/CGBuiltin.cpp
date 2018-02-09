@@ -8710,6 +8710,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86MaskedCompare(*this, CC, false, Ops);
   }
 
+  case X86::BI__builtin_ia32_kortestchi:
+  case X86::BI__builtin_ia32_kortestzhi: {
+    Value *Or = EmitX86MaskLogic(*this, Instruction::Or, 16, Ops);
+    Value *C;
+    if (BuiltinID == X86::BI__builtin_ia32_kortestchi)
+      C = llvm::Constant::getAllOnesValue(Builder.getInt16Ty());
+    else
+      C = llvm::Constant::getNullValue(Builder.getInt16Ty());
+    Value *Cmp = Builder.CreateICmpEQ(Or, C);
+    return Builder.CreateZExt(Cmp, ConvertType(E->getType()));
+  }
+
   case X86::BI__builtin_ia32_kandhi:
     return EmitX86MaskLogic(*this, Instruction::And, 16, Ops);
   case X86::BI__builtin_ia32_kandnhi:

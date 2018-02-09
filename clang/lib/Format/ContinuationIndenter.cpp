@@ -1285,6 +1285,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = BreakBeforeParameter;
   State.Stack.back().HasMultipleNestedBlocks = Current.BlockParameterCount > 1;
+  State.Stack.back().IsInsideObjCArrayLiteral =
+      Current.is(TT_ArrayInitializerLSquare) && Current.Previous &&
+      Current.Previous->is(tok::at);
 }
 
 void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
@@ -1578,6 +1581,11 @@ std::unique_ptr<BreakableToken> ContinuationIndenter::createBreakableToken(
     // likely want to terminate the string before any line breaking is done.
     if (Current.IsUnterminatedLiteral)
       return nullptr;
+    // Don't break string literals inside Objective-C array literals (doing so
+    // raises the warning -Wobjc-string-concatenation).
+    if (State.Stack.back().IsInsideObjCArrayLiteral) {
+      return nullptr;
+    }
 
     StringRef Text = Current.TokenText;
     StringRef Prefix;

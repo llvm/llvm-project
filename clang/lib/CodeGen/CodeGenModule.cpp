@@ -1264,8 +1264,8 @@ void CodeGenModule::setNonAliasAttributes(const Decl *D,
 
     if (auto *F = dyn_cast<llvm::Function>(GO)) {
       if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
-       if (!D->getAttr<SectionAttr>())
-         F->addFnAttr("implicit-section-name", SA->getName());
+        if (!D->getAttr<SectionAttr>())
+          F->addFnAttr("implicit-section-name", SA->getName());
     }
 
     if (const SectionAttr *SA = D->getAttr<SectionAttr>())
