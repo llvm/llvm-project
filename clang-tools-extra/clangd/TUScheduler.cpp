@@ -48,6 +48,7 @@
 #include "llvm/Support/Errc.h"
 #include <memory>
 #include <queue>
+#include <thread>
 
 namespace clang {
 namespace clangd {
@@ -66,7 +67,7 @@ class ASTWorkerHandle;
 /// worker.
 class ASTWorker {
   friend class ASTWorkerHandle;
-  ASTWorker(Semaphore &Barrier, std::shared_ptr<CppFile> AST, bool RunSync);
+  ASTWorker(Semaphore &Barrier, CppFile AST, bool RunSync);
 
 public:
   /// Create a new ASTWorker and return a handle to it.
@@ -75,7 +76,7 @@ public:
   /// synchronously instead. \p Barrier is acquired when processing each
   /// request, it is be used to limit the number of actively running threads.
   static ASTWorkerHandle Create(AsyncTaskRunner *Tasks, Semaphore &Barrier,
-                                std::shared_ptr<CppFile> AST);
+                                CppFile AST);
   ~ASTWorker();
 
   void update(ParseInputs Inputs,
@@ -102,11 +103,14 @@ private:
   const bool RunSync;
   Semaphore &Barrier;
   // AST and FileInputs are only accessed on the processing thread from run().
-  const std::shared_ptr<CppFile> AST;
+  CppFile AST;
   // Inputs, corresponding to the current state of AST.
   ParseInputs FileInputs;
   // Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
+  std::shared_ptr<const PreambleData> LastBuiltPreamble; /* GUARDED_BY(Mutex) */
+  // Result of getUsedBytes() after the last rebuild or read of AST.
+  std::size_t LastASTSize; /* GUARDED_BY(Mutex) */
   // Set to true to signal run() to finish processing.
   bool Done;                           /* GUARDED_BY(Mutex) */
   std::queue<RequestWithCtx> Requests; /* GUARDED_BY(Mutex) */
@@ -159,7 +163,7 @@ private:
 };
 
 ASTWorkerHandle ASTWorker::Create(AsyncTaskRunner *Tasks, Semaphore &Barrier,
-                                  std::shared_ptr<CppFile> AST) {
+                                  CppFile AST) {
   std::shared_ptr<ASTWorker> Worker(
       new ASTWorker(Barrier, std::move(AST), /*RunSync=*/!Tasks));
   if (Tasks)
@@ -168,8 +172,7 @@ ASTWorkerHandle ASTWorker::Create(AsyncTaskRunner *Tasks, Semaphore &Barrier,
   return ASTWorkerHandle(std::move(Worker));
 }
 
-ASTWorker::ASTWorker(Semaphore &Barrier, std::shared_ptr<CppFile> AST,
-                     bool RunSync)
+ASTWorker::ASTWorker(Semaphore &Barrier, CppFile AST, bool RunSync)
     : RunSync(RunSync), Barrier(Barrier), AST(std::move(AST)), Done(false) {
   if (RunSync)
     return;
@@ -193,7 +196,14 @@ void ASTWorker::update(
       return;
     }
     FileInputs = Inputs;
-    auto Diags = AST->rebuild(std::move(Inputs));
+    auto Diags = AST.rebuild(std::move(Inputs));
+
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      if (AST.getPreamble())
+        LastBuiltPreamble = AST.getPreamble();
+      LastASTSize = AST.getUsedBytes();
+    }
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
     // spam us with updates.
@@ -208,17 +218,18 @@ void ASTWorker::update(
 void ASTWorker::runWithAST(
     UniqueFunction<void(llvm::Expected<InputsAndAST>)> Action) {
   auto Task = [=](decltype(Action) Action) {
-    auto ASTWrapper = this->AST->getAST().get();
-    // FIXME: no need to lock here, cleanup the CppFile interface to get rid of
-    // them.
-    ASTWrapper->runUnderLock([&](ParsedAST *AST) {
-      if (!AST) {
-        Action(llvm::make_error<llvm::StringError>(
-            "invalid AST", llvm::errc::invalid_argument));
-        return;
-      }
-      Action(InputsAndAST{FileInputs, *AST});
-    });
+    ParsedAST *ActualAST = AST.getAST();
+    if (!ActualAST) {
+      Action(llvm::make_error<llvm::StringError>("invalid AST",
+                                                 llvm::errc::invalid_argument));
+      return;
+    }
+    Action(InputsAndAST{FileInputs, *ActualAST});
+
+    // Size of the AST might have changed after reads too, e.g. if some decls
+    // were deserialized from preamble.
+    std::lock_guard<std::mutex> Lock(Mutex);
+    LastASTSize = ActualAST->getUsedBytes();
   };
 
   startTask(BindWithForward(Task, std::move(Action)), /*isUpdate=*/false,
@@ -227,14 +238,13 @@ void ASTWorker::runWithAST(
 
 std::shared_ptr<const PreambleData>
 ASTWorker::getPossiblyStalePreamble() const {
-  return AST->getPossiblyStalePreamble();
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return LastBuiltPreamble;
 }
 
 std::size_t ASTWorker::getUsedBytes() const {
-  // FIXME(ibiryukov): we'll need to take locks here after we remove
-  // thread-safety from CppFile. For now, CppFile is thread-safe and we can
-  // safely call methods on it without acquiring a lock.
-  return AST->getUsedBytes();
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return LastASTSize;
 }
 
 void ASTWorker::stop() {
@@ -343,7 +353,7 @@ void TUScheduler::update(
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker = ASTWorker::Create(
         Tasks ? Tasks.getPointer() : nullptr, Barrier,
-        CppFile::Create(File, StorePreamblesInMemory, PCHOps, ASTCallback));
+        CppFile(File, StorePreamblesInMemory, PCHOps, ASTCallback));
     FD = std::unique_ptr<FileData>(new FileData{Inputs, std::move(Worker)});
   } else {
     FD->Inputs = Inputs;

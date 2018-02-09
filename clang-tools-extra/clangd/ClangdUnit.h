@@ -18,10 +18,9 @@
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include <atomic>
-#include <future>
 #include <memory>
-#include <mutex>
+#include <string>
+#include <vector>
 
 namespace llvm {
 class raw_ostream;
@@ -126,151 +125,44 @@ private:
   bool PreambleDeclsDeserialized;
 };
 
-// Provides thread-safe access to ParsedAST.
-class ParsedASTWrapper {
-public:
-  ParsedASTWrapper(ParsedASTWrapper &&Wrapper);
-  ParsedASTWrapper(llvm::Optional<ParsedAST> AST);
-
-  /// Runs \p F on wrapped ParsedAST under lock. Ensures it is not accessed
-  /// concurrently.
-  template <class Func> void runUnderLock(Func F) const {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    F(AST ? AST.getPointer() : nullptr);
-  }
-
-private:
-  // This wrapper is used as an argument to std::shared_future (and it returns a
-  // const ref in get()), but we need to have non-const ref in order to
-  // implement some features.
-  mutable std::mutex Mutex;
-  mutable llvm::Optional<ParsedAST> AST;
-};
-
 using ASTParsedCallback = std::function<void(PathRef Path, ParsedAST *)>;
 
 /// Manages resources, required by clangd. Allows to rebuild file with new
 /// contents, and provides AST and Preamble for it.
-/// NOTE: Threading-related bits of CppFile are now deprecated and will be
-/// removed soon.
-class CppFile : public std::enable_shared_from_this<CppFile> {
+class CppFile {
 public:
-  // We only allow to create CppFile as shared_ptr, because a future returned by
-  // deferRebuild will hold references to it.
-  static std::shared_ptr<CppFile>
-  Create(PathRef FileName, bool StorePreamblesInMemory,
-         std::shared_ptr<PCHContainerOperations> PCHs,
-         ASTParsedCallback ASTCallback);
-
-private:
   CppFile(PathRef FileName, bool StorePreamblesInMemory,
           std::shared_ptr<PCHContainerOperations> PCHs,
           ASTParsedCallback ASTCallback);
 
-public:
-  CppFile(CppFile const &) = delete;
-  CppFile(CppFile &&) = delete;
-
-  /// Cancels a scheduled rebuild, if any, and sets AST and Preamble to nulls.
-  /// If a rebuild is in progress, will wait for it to finish.
-  void cancelRebuild();
-
-  /// Similar to deferRebuild, but sets both Preamble and AST to nulls instead
-  /// of doing an actual parsing. Returned function is a deferred computation
-  /// that will wait for any ongoing rebuilds to finish and actually set the AST
-  /// and Preamble to nulls. It can be run on a different thread. This function
-  /// is useful to cancel ongoing rebuilds, if any, before removing CppFile.
-  /// DEPRECATED. This function will be removed soon, please do not use it.
-  UniqueFunction<void()> deferCancelRebuild();
-
-  /// Rebuild AST and Preamble synchronously on the calling thread.
-  /// Returns a list of diagnostics or a llvm::None, if another rebuild was
-  /// requested in parallel (effectively cancelling this rebuild) before
-  /// diagnostics were produced.
+  /// Rebuild the AST and the preamble.
+  /// Returns a list of diagnostics or llvm::None, if an error occured.
   llvm::Optional<std::vector<DiagWithFixIts>> rebuild(ParseInputs &&Inputs);
-
-  /// Schedule a rebuild and return a deferred computation that will finish the
-  /// rebuild, that can be called on a different thread.
-  /// After calling this method, resources, available via futures returned by
-  /// getPreamble() and getAST(), will be waiting for rebuild to finish. A
-  /// continuation fininshing rebuild, returned by this function, must be
-  /// computed(i.e., operator() must be called on it) in order to make those
-  /// resources ready. If deferRebuild is called again before the rebuild is
-  /// finished (either because returned future had not been called or because it
-  /// had not returned yet), the previous rebuild request is cancelled and the
-  /// resource futures (returned by getPreamble() or getAST()) that were not
-  /// ready will be waiting for the last rebuild to finish instead.
-  /// The future to finish rebuild returns a list of diagnostics built during
-  /// reparse, or None, if another deferRebuild was called before this
-  /// rebuild was finished.
-  /// DEPRECATED. This function will be removed soon, please do not use it.
-  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
-  deferRebuild(ParseInputs &&Inputs);
-
-  /// Returns a future to get the most fresh PreambleData for a file. The
-  /// future will wait until the Preamble is rebuilt.
-  std::shared_future<std::shared_ptr<const PreambleData>> getPreamble() const;
-  /// Return some preamble for a file. It might be stale, but won't wait for
-  /// rebuild to finish.
-  std::shared_ptr<const PreambleData> getPossiblyStalePreamble() const;
-
-  /// Returns a future to get the most fresh AST for a file. Returned AST is
-  /// wrapped to prevent concurrent accesses.
-  /// We use std::shared_ptr here because MVSC fails to compile non-copyable
-  /// classes as template arguments of promise/future. It is guaranteed to
-  /// always be non-null.
-  std::shared_future<std::shared_ptr<ParsedASTWrapper>> getAST() const;
-
+  /// Returns the last built preamble.
+  const std::shared_ptr<const PreambleData> &getPreamble() const;
+  /// Returns the last built AST.
+  ParsedAST *getAST() const;
   /// Returns an estimated size, in bytes, currently occupied by the AST and the
   /// Preamble.
   std::size_t getUsedBytes() const;
 
 private:
-  /// A helper guard that manages the state of CppFile during rebuild.
-  class RebuildGuard {
-  public:
-    RebuildGuard(CppFile &File, unsigned RequestRebuildCounter);
-    ~RebuildGuard();
-
-    bool wasCancelledBeforeConstruction() const;
-
-  private:
-    CppFile &File;
-    unsigned RequestRebuildCounter;
-    bool WasCancelledBeforeConstruction;
-  };
+  /// Build a new preamble for \p Inputs. If the current preamble can be reused,
+  /// it is returned instead.
+  /// This method is const to ensure we don't incidentally modify any fields.
+  std::shared_ptr<const PreambleData>
+  rebuildPreamble(CompilerInvocation &CI,
+                  IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                  llvm::MemoryBuffer &ContentsBuffer) const;
 
   Path FileName;
   bool StorePreamblesInMemory;
 
-  /// Mutex protects all fields, declared below it, FileName and Command are not
-  /// mutated.
-  mutable std::mutex Mutex;
-  /// A counter to cancel old rebuilds.
-  unsigned RebuildCounter;
-  /// Used to wait when rebuild is finished before starting another one.
-  bool RebuildInProgress;
-  /// Condition variable to indicate changes to RebuildInProgress.
-  std::condition_variable RebuildCond;
-
-  /// Size of the last built AST, in bytes.
-  std::size_t ASTMemUsage;
-  /// Size of the last build Preamble, in bytes.
-  std::size_t PreambleMemUsage;
-
-  /// Promise and future for the latests AST. Fulfilled during rebuild.
-  /// We use std::shared_ptr here because MVSC fails to compile non-copyable
-  /// classes as template arguments of promise/future.
-  std::promise<std::shared_ptr<ParsedASTWrapper>> ASTPromise;
-  std::shared_future<std::shared_ptr<ParsedASTWrapper>> ASTFuture;
-
-  /// Promise and future for the latests Preamble. Fulfilled during rebuild.
-  std::promise<std::shared_ptr<const PreambleData>> PreamblePromise;
-  std::shared_future<std::shared_ptr<const PreambleData>> PreambleFuture;
-  /// Latest preamble that was built. May be stale, but always available without
-  /// waiting for rebuild to finish.
-  std::shared_ptr<const PreambleData> LatestAvailablePreamble;
-  /// Utility class, required by clang.
+  /// The last parsed AST.
+  llvm::Optional<ParsedAST> AST;
+  /// The last built Preamble.
+  std::shared_ptr<const PreambleData> Preamble;
+  /// Utility class required by clang
   std::shared_ptr<PCHContainerOperations> PCHs;
   /// This is called after the file is parsed. This can be nullptr if there is
   /// no callback.

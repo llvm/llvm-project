@@ -425,7 +425,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   log("ICF needed " + Twine(Cnt) + " iterations");
 
   auto Print = [&](const Twine &Prefix, size_t I) {
-    if (!Config->Verbose && !Config->PrintIcfSections)
+    if (!Config->PrintIcfSections && !errorHandler().Verbose)
       return;
     std::string Filename =
         Sections[I]->File ? Sections[I]->File->getName() : "<internal>";
@@ -439,7 +439,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   };
 
   // Merge sections by the equivalence class.
-  forEachClass([&](size_t Begin, size_t End) {
+  forEachClassRange(0, Sections.size(), [&](size_t Begin, size_t End) {
     if (End - Begin == 1)
       return;
 
