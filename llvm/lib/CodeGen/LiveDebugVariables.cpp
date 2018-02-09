@@ -1097,7 +1097,7 @@ findNextInsertLocation(MachineBasicBlock *MBB,
   unsigned Reg = LocMO.getReg();
 
   // Find the next instruction in the MBB that define the register Reg.
-  while (I != MBB->end()) {
+  while (I != MBB->end() && !I->isTerminator()) {
     if (!LIS.isNotInMIMap(*I) &&
         SlotIndex::isEarlierEqualInstr(StopIdx, LIS.getInstructionIndex(*I)))
       break;
