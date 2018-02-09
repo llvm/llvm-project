@@ -74,6 +74,7 @@ private:
                             DiagnosticsEngine &Diags) final;
 
   bool isValidCPUName(StringRef Name) const final;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const final;
 
   bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
 

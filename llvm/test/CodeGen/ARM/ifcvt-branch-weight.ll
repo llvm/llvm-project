@@ -19,7 +19,7 @@ bb:
   br i1 %9, label %return, label %bb2
 
 ; CHECK: bb.2.bb2:
-; CHECK: Successors according to CFG: %bb.4({{[0-9a-fx/= ]+}}50.00%) %bb.3({{[0-9a-fx/= ]+}}50.00%)
+; CHECK: successors: %bb.4(0x40000000), %bb.3(0x40000000)
 
 bb2:
   %v10 = icmp eq i32 %3, 16

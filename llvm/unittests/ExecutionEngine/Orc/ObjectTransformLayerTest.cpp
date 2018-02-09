@@ -43,17 +43,13 @@ struct AllocatingTransform {
 //      transform layer called the base layer and forwarded any return value.
 class MockBaseLayer {
 public:
-  typedef int ObjHandleT;
-
   MockBaseLayer() : MockSymbol(nullptr) { resetExpectations(); }
 
-  template <typename ObjPtrT>
-  llvm::Expected<ObjHandleT> addObject(VModuleKey K, ObjPtrT Obj) {
+  template <typename ObjPtrT> llvm::Error addObject(VModuleKey K, ObjPtrT Obj) {
     EXPECT_EQ(MockKey, K) << "Key should pass through";
     EXPECT_EQ(MockObject + 1, *Obj) << "Transform should be applied";
     LastCalled = "addObject";
-    MockObjHandle = 111;
-    return MockObjHandle;
+    return llvm::Error::success();
   }
 
   template <typename ObjPtrT> void expectAddObject(VModuleKey K, ObjPtrT Obj) {
@@ -61,20 +57,18 @@ public:
     MockObject = *Obj;
   }
 
-
-  void verifyAddObject(ObjHandleT Returned) {
+  void verifyAddObject() {
     EXPECT_EQ("addObject", LastCalled);
-    EXPECT_EQ(MockObjHandle, Returned) << "Return should pass through";
     resetExpectations();
   }
 
-  llvm::Error removeObject(ObjHandleT H) {
-    EXPECT_EQ(MockObjHandle, H);
+  llvm::Error removeObject(VModuleKey K) {
+    EXPECT_EQ(MockKey, K);
     LastCalled = "removeObject";
     return llvm::Error::success();
   }
 
-  void expectRemoveObject(ObjHandleT H) { MockObjHandle = H; }
+  void expectRemoveObject(VModuleKey K) { MockKey = K; }
   void verifyRemoveObject() {
     EXPECT_EQ("removeObject", LastCalled);
     resetExpectations();
@@ -100,18 +94,18 @@ public:
     resetExpectations();
   }
 
-  llvm::JITSymbol findSymbolIn(ObjHandleT H, const std::string &Name,
+  llvm::JITSymbol findSymbolIn(VModuleKey K, const std::string &Name,
                                bool ExportedSymbolsOnly) {
-    EXPECT_EQ(MockObjHandle, H) << "Handle should pass through";
+    EXPECT_EQ(MockKey, K) << "VModuleKey should pass through";
     EXPECT_EQ(MockName, Name) << "Name should pass through";
     EXPECT_EQ(MockBool, ExportedSymbolsOnly) << "Flag should pass through";
     LastCalled = "findSymbolIn";
     MockSymbol = llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
     return llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
   }
-  void expectFindSymbolIn(ObjHandleT H, const std::string &Name,
+  void expectFindSymbolIn(VModuleKey K, const std::string &Name,
                           bool ExportedSymbolsOnly) {
-    MockObjHandle = H;
+    MockKey = K;
     MockName = Name;
     MockBool = ExportedSymbolsOnly;
   }
@@ -123,29 +117,29 @@ public:
     resetExpectations();
   }
 
-  llvm::Error emitAndFinalize(ObjHandleT H) {
-    EXPECT_EQ(MockObjHandle, H) << "Handle should pass through";
+  llvm::Error emitAndFinalize(VModuleKey K) {
+    EXPECT_EQ(MockKey, K) << "VModuleKey should pass through";
     LastCalled = "emitAndFinalize";
     return llvm::Error::success();
   }
 
-  void expectEmitAndFinalize(ObjHandleT H) { MockObjHandle = H; }
+  void expectEmitAndFinalize(VModuleKey K) { MockKey = K; }
 
   void verifyEmitAndFinalize() {
     EXPECT_EQ("emitAndFinalize", LastCalled);
     resetExpectations();
   }
 
-  void mapSectionAddress(ObjHandleT H, const void *LocalAddress,
+  void mapSectionAddress(VModuleKey K, const void *LocalAddress,
                          llvm::JITTargetAddress TargetAddr) {
-    EXPECT_EQ(MockObjHandle, H);
+    EXPECT_EQ(MockKey, K);
     EXPECT_EQ(MockLocalAddress, LocalAddress);
     EXPECT_EQ(MockTargetAddress, TargetAddr);
     LastCalled = "mapSectionAddress";
   }
-  void expectMapSectionAddress(ObjHandleT H, const void *LocalAddress,
+  void expectMapSectionAddress(VModuleKey K, const void *LocalAddress,
                                llvm::JITTargetAddress TargetAddr) {
-    MockObjHandle = H;
+    MockKey = K;
     MockLocalAddress = LocalAddress;
     MockTargetAddress = TargetAddr;
   }
@@ -159,7 +153,6 @@ private:
   std::string LastCalled;
   VModuleKey MockKey;
   MockObjectFile MockObject;
-  ObjHandleT MockObjHandle;
   std::string MockName;
   bool MockBool;
   llvm::JITSymbol MockSymbol;
@@ -172,7 +165,6 @@ private:
     LastCalled = "nothing";
     MockKey = 0;
     MockObject = 0;
-    MockObjHandle = 0;
     MockName = "bogus";
     MockSymbol = llvm::JITSymbol(nullptr);
     MockLocalAddress = nullptr;
@@ -206,20 +198,20 @@ TEST(ObjectTransformLayerTest, Main) {
   auto K1 = ES.allocateVModule();
   auto Obj1 = std::make_shared<MockObjectFile>(211);
   M.expectAddObject(K1, Obj1);
-  auto H = cantFail(T1.addObject(K1, std::move(Obj1)));
-  M.verifyAddObject(H);
+  cantFail(T1.addObject(K1, std::move(Obj1)));
+  M.verifyAddObject();
 
   // Test addObjectSet with T2 (mutating)
   auto K2 = ES.allocateVModule();
   auto Obj2 = std::make_shared<MockObjectFile>(222);
   M.expectAddObject(K2, Obj2);
-  H = cantFail(T2.addObject(K2, Obj2));
-  M.verifyAddObject(H);
+  cantFail(T2.addObject(K2, Obj2));
+  M.verifyAddObject();
   EXPECT_EQ(223, *Obj2) << "Expected mutation";
 
   // Test removeObjectSet
-  M.expectRemoveObject(H);
-  cantFail(T1.removeObject(H));
+  M.expectRemoveObject(K2);
+  cantFail(T1.removeObject(K2));
   M.verifyRemoveObject();
 
   // Test findSymbol
@@ -232,20 +224,20 @@ TEST(ObjectTransformLayerTest, Main) {
   // Test findSymbolIn
   Name = "bar";
   ExportedOnly = false;
-  M.expectFindSymbolIn(H, Name, ExportedOnly);
-  llvm::JITSymbol Sym2 = T1.findSymbolIn(H, Name, ExportedOnly);
+  M.expectFindSymbolIn(K1, Name, ExportedOnly);
+  llvm::JITSymbol Sym2 = T1.findSymbolIn(K1, Name, ExportedOnly);
   M.verifyFindSymbolIn(std::move(Sym2));
 
   // Test emitAndFinalize
-  M.expectEmitAndFinalize(H);
-  cantFail(T2.emitAndFinalize(H));
+  M.expectEmitAndFinalize(K1);
+  cantFail(T2.emitAndFinalize(K1));
   M.verifyEmitAndFinalize();
 
   // Test mapSectionAddress
   char Buffer[24];
   llvm::JITTargetAddress MockAddress = 255;
-  M.expectMapSectionAddress(H, Buffer, MockAddress);
-  T1.mapSectionAddress(H, Buffer, MockAddress);
+  M.expectMapSectionAddress(K1, Buffer, MockAddress);
+  T1.mapSectionAddress(K1, Buffer, MockAddress);
   M.verifyMapSectionAddress();
 
   // Verify transform getter (non-const)
@@ -317,11 +309,11 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
   // compile.
-  decltype(TransformLayer)::ObjHandleT H2;
-  cantFail(TransformLayer.emitAndFinalize(H2));
-  TransformLayer.findSymbolIn(H2, Name, false);
+  VModuleKey DummyKey = ES.allocateVModule();
+  cantFail(TransformLayer.emitAndFinalize(DummyKey));
+  TransformLayer.findSymbolIn(DummyKey, Name, false);
   TransformLayer.findSymbol(Name, true);
-  TransformLayer.mapSectionAddress(H2, nullptr, 0);
-  cantFail(TransformLayer.removeObject(H2));
+  TransformLayer.mapSectionAddress(DummyKey, nullptr, 0);
+  cantFail(TransformLayer.removeObject(DummyKey));
 }
 }

@@ -86,6 +86,7 @@ public:
   //  821, 823, 8540, 8548, e300c2, e300c3, e500mc64, e6500, 860, cell,
   //  titan, rs64.
   bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     bool CPUKnown = isValidCPUName(Name);

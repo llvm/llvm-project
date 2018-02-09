@@ -133,6 +133,7 @@ public:
 
   bool isInterestingAlloca(const AllocaInst &AI);
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag);
+  Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   bool instrumentStack(SmallVectorImpl<AllocaInst *> &Allocas,
                        SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
@@ -442,6 +443,24 @@ Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
   return IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, 0xFFU));
 }
 
+// Add a tag to an address.
+Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong,
+                                      Value *Tag) {
+  Value *TaggedPtrLong;
+  if (ClEnableKhwasan) {
+    // Kernel addresses have 0xFF in the most significant byte.
+    Value *ShiftedTag = IRB.CreateOr(
+        IRB.CreateShl(Tag, kPointerTagShift),
+        ConstantInt::get(IntptrTy, (1ULL << kPointerTagShift) - 1));
+    TaggedPtrLong = IRB.CreateAnd(PtrLong, ShiftedTag);
+  } else {
+    // Userspace can simply do OR (tag << 56);
+    Value *ShiftedTag = IRB.CreateShl(Tag, kPointerTagShift);
+    TaggedPtrLong = IRB.CreateOr(PtrLong, ShiftedTag);
+  }
+  return IRB.CreateIntToPtr(TaggedPtrLong, Ty);
+}
+
 bool HWAddressSanitizer::instrumentStack(
     SmallVectorImpl<AllocaInst *> &Allocas,
     SmallVectorImpl<Instruction *> &RetVec) {
@@ -463,11 +482,10 @@ bool HWAddressSanitizer::instrumentStack(
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, AI, N);
     Value *AILong = IRB.CreatePointerCast(AI, IntptrTy);
+    Value *Replacement = tagPointer(IRB, AI->getType(), AILong, Tag);
     std::string Name =
         AI->hasName() ? AI->getName().str() : "alloca." + itostr(N);
-    Value *Replacement = IRB.CreateIntToPtr(
-        IRB.CreateOr(AILong, IRB.CreateShl(Tag, kPointerTagShift)),
-        AI->getType(), Name + ".hwasan");
+    Replacement->setName(Name + ".hwasan");
 
     for (auto UI = AI->use_begin(), UE = AI->use_end(); UI != UE;) {
       Use &U = *UI++;

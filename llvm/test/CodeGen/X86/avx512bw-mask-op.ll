@@ -4,9 +4,8 @@
 define i32 @mask32(i32 %x) {
 ; CHECK-LABEL: mask32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxnord %k0, %k0, %k0
-; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    xorl %edi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i32 %x to <32 x i1>
   %m1 = xor <32 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
@@ -20,9 +19,8 @@ define i32 @mask32(i32 %x) {
 define i64 @mask64(i64 %x) {
 ; CHECK-LABEL: mask64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxnorq %k0, %k0, %k0
-; CHECK-NEXT:    kmovq %k0, %rax
-; CHECK-NEXT:    xorq %rdi, %rax
+; CHECK-NEXT:    notq %rdi
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i64 %x to <64 x i1>
   %m1 = xor <64 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,

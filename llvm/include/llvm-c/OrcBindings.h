@@ -31,7 +31,7 @@ extern "C" {
 
 typedef struct LLVMOpaqueSharedModule *LLVMSharedModuleRef;
 typedef struct LLVMOrcOpaqueJITStack *LLVMOrcJITStackRef;
-typedef uint32_t LLVMOrcModuleHandle;
+typedef uint64_t LLVMOrcModuleHandle;
 typedef uint64_t LLVMOrcTargetAddress;
 typedef uint64_t (*LLVMOrcSymbolResolverFn)(const char *Name, void *LookupCtx);
 typedef uint64_t (*LLVMOrcLazyCompileCallbackFn)(LLVMOrcJITStackRef JITStack,

@@ -26,6 +26,8 @@ const char *CudaVersionToString(CudaVersion V) {
 
 const char *CudaArchToString(CudaArch A) {
   switch (A) {
+  case CudaArch::LAST:
+    break;
   case CudaArch::UNKNOWN:
     return "unknown";
   case CudaArch::SM_20:
@@ -133,6 +135,8 @@ CudaVirtualArch StringToCudaVirtualArch(llvm::StringRef S) {
 
 CudaVirtualArch VirtualArchForCudaArch(CudaArch A) {
   switch (A) {
+  case CudaArch::LAST:
+    break;
   case CudaArch::UNKNOWN:
     return CudaVirtualArch::UNKNOWN;
   case CudaArch::SM_20:
@@ -168,6 +172,8 @@ CudaVirtualArch VirtualArchForCudaArch(CudaArch A) {
 
 CudaVersion MinVersionForCudaArch(CudaArch A) {
   switch (A) {
+  case CudaArch::LAST:
+    break;
   case CudaArch::UNKNOWN:
     return CudaVersion::UNKNOWN;
   case CudaArch::SM_20:

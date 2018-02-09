@@ -251,13 +251,17 @@ std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
 }
 
 bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
-  // FIXME, we should really run through all the known C++ Language plugins and
-  // ask each one if
-  // this is a C++ mangled name, but we can put that off till there is actually
-  // more than one
-  // we care about.
-
-  return (name != nullptr && name[0] == '_' && name[1] == 'Z');
+  // FIXME!! we should really run through all the known C++ Language
+  // plugins and ask each one if this is a C++ mangled name
+  
+  if (name == nullptr)
+    return false;
+  
+  // MSVC style mangling 
+  if (name[0] == '?')
+    return true;
+  
+  return (name[0] != '\0' && name[0] == '_' && name[1] == 'Z');
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(

@@ -15,6 +15,7 @@ void foo() {
 // CHECK-NEXT: cfg-implicit-dtors = true
 // CHECK-NEXT: cfg-lifetime = false
 // CHECK-NEXT: cfg-loopexit = false
+// CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-temporary-dtors = false
 // CHECK-NEXT: exploration_strategy = dfs
 // CHECK-NEXT: faux-bodies = true
@@ -32,4 +33,4 @@ void foo() {
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 20
+// CHECK-NEXT: num-entries = 21
