@@ -2500,6 +2500,13 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
     CmdArgs.push_back("-fno-math-builtin");
 }
 
+void Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
+  llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Result);
+  llvm::sys::path::append(Result, "org.llvm.clang.");
+  appendUserToPath(Result);
+  llvm::sys::path::append(Result, "ModuleCache");
+}
+
 static void RenderModulesOptions(Compilation &C, const Driver &D,
                                  const ArgList &Args, const InputInfo &Input,
                                  const InputInfo &Output,
@@ -2560,10 +2567,7 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
       llvm::sys::path::append(Path, "modules");
     } else if (Path.empty()) {
       // No module path was provided: use the default.
-      llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Path);
-      llvm::sys::path::append(Path, "org.llvm.clang.");
-      appendUserToPath(Path);
-      llvm::sys::path::append(Path, "ModuleCache");
+      Driver::getDefaultModuleCachePath(Path);
     }
 
     const char Arg[] = "-fmodules-cache-path=";
