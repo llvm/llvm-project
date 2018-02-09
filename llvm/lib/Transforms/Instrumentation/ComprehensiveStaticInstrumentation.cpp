@@ -206,6 +206,7 @@ uint64_t SizeTable::add(const BasicBlock &BB) {
     if (isa<DbgInfoIntrinsic>(I)) continue;
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
       if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
+          Intrinsic::detached_rethrow == II->getIntrinsicID() ||
           Intrinsic::lifetime_start == II->getIntrinsicID() ||
           Intrinsic::lifetime_end == II->getIntrinsicID())
         continue;
@@ -607,6 +608,7 @@ void CSIImpl::instrumentCallsite(Instruction *I) {
   // ultimately result in a function call.
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
     if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
+        Intrinsic::detached_rethrow == II->getIntrinsicID() ||
         Intrinsic::lifetime_start == II->getIntrinsicID() ||
         Intrinsic::lifetime_end == II->getIntrinsicID())
       return;

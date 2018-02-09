@@ -6003,10 +6003,14 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB) {
   return false;
 }
 
-/// If BB immediately syncs and BB's predecessor detaches, serialize
-/// the sync and detach.  This will allow normal serial
-/// optimization passes to remove the blocks appropriately.  Return
-/// false if BB does not terminate with a reattach.
+/// If BB immediately syncs and BB's predecessor detaches, serialize the sync
+/// and detach.  This will allow normal serial optimization passes to remove the
+/// blocks appropriately.  Return false if BB does not terminate with a
+/// reattach.
+///
+/// TODO: A more elaborate version of this transformation could handle many more
+/// cases, but requires heavy lifting similar to function inlining.  Create a
+/// new transformation pass to handle such cases.
 static bool serializeDetachToImmediateSync(BasicBlock *BB) {
   Instruction *I = BB->getFirstNonPHIOrDbgOrLifetime();
   if (isa<SyncInst>(I)) {
@@ -6016,9 +6020,13 @@ static bool serializeDetachToImmediateSync(BasicBlock *BB) {
     SmallSet<DetachInst *, 4> DetachPreds;
     SmallVector<Instruction *, 4> ReattachPreds;
     for (BasicBlock *PredBB : predecessors(BB)) {
-      if (DetachInst *DI = dyn_cast<DetachInst>(PredBB->getTerminator()))
+      if (DetachInst *DI = dyn_cast<DetachInst>(PredBB->getTerminator())) {
+        // This transformation gets too complicated the detached task might
+        // throw, so just punt.
+        if (DI->hasUnwindDest())
+          return false;
         DetachPreds.insert(DI);
-
+      }
       if (ReattachInst *RI = dyn_cast<ReattachInst>(PredBB->getTerminator()))
         ReattachPreds.push_back(RI);
     }
@@ -6048,11 +6056,10 @@ static bool serializeDetachToImmediateSync(BasicBlock *BB) {
   return false;
 }
 
-/// If BB immediately reattaches and BB's predecessor detaches,
-/// serialize the reattach and detach.  This will allow normal serial
-/// optimization passes to remove the blocks appropriately.  Return
-/// false if BB does not terminate with a reattach or predecessor does
-/// terminate with detach.
+/// If BB immediately reattaches and BB's predecessor detaches, serialize the
+/// reattach and detach.  This will allow normal serial optimization passes to
+/// remove the blocks appropriately.  Return false if BB does not terminate with
+/// a reattach or predecessor does terminate with detach.
 static bool serializeTrivialDetachedBlock(BasicBlock *BB) {
   Instruction *I = BB->getFirstNonPHI();
   if (ReattachInst *RI = dyn_cast<ReattachInst>(I)) {
@@ -6069,8 +6076,7 @@ static bool serializeTrivialDetachedBlock(BasicBlock *BB) {
       BasicBlock *Continue = DI->getContinue();
       assert(RI->getSuccessor(0) == Continue &&
              "Reattach destination does not match continue block of associated detach.");
-      // Remove the predecessor through the detach from the continue
-      // block.
+      // Remove the predecessor through the detach from the continue block.
       Continue->removePredecessor(PredBB);
       // Serialize the detach: replace it with an unconditional branch.
       ReplaceInstWithInst(DI, BranchInst::Create(Detached));
