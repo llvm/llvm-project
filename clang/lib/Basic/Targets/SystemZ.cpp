@@ -83,7 +83,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
   }
 }
 
-int SystemZTargetInfo::getISARevision(const StringRef &Name) const {
+int SystemZTargetInfo::getISARevision(StringRef Name) const {
   return llvm::StringSwitch<int>(Name)
       .Cases("arch8", "z10", 8)
       .Cases("arch9", "z196", 9)

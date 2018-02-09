@@ -24,7 +24,7 @@ define <2 x i17> @test2(<2 x i17> %X) {
 
 define <2 x i17> @test3(<2 x i17> %X) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i17> [[X:%.*]], <i17 1024, i17 256>
+; CHECK-NEXT:    [[Y:%.*]] = shl <2 x i17> [[X:%.*]], <i17 10, i17 8>
 ; CHECK-NEXT:    ret <2 x i17> [[Y]]
 ;
   %Y = mul <2 x i17> %X, <i17 1024, i17 256>

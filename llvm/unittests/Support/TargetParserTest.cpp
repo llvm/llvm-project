@@ -279,6 +279,20 @@ TEST(TargetParserTest, testARMCPU) {
                          "7-S"));
 }
 
+static constexpr unsigned NumARMCPUArchs = 82;
+
+TEST(TargetParserTest, testARMCPUArchList) {
+  SmallVector<StringRef, NumARMCPUArchs> List;
+  ARM::fillValidCPUArchList(List);
+
+  // No list exists for these in this test suite, so ensure all are
+  // valid, and match the expected 'magic' count.
+  EXPECT_EQ(List.size(), NumARMCPUArchs);
+  for(StringRef CPU : List) {
+    EXPECT_NE(ARM::parseCPUArch(CPU), ARM::ArchKind::INVALID);
+  }
+}
+
 TEST(TargetParserTest, testInvalidARMArch) {
   auto InvalidArchStrings = {"armv", "armv99", "noarm"};
   for (const char* InvalidArch : InvalidArchStrings)
@@ -745,6 +759,20 @@ TEST(TargetParserTest, testAArch64CPU) {
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
       AArch64::AEK_FP | AArch64::AEK_PROFILE,
       "8-A"));
+}
+
+static constexpr unsigned NumAArch64CPUArchs = 19;
+
+TEST(TargetParserTest, testAArch64CPUArchList) {
+  SmallVector<StringRef, NumAArch64CPUArchs> List;
+  AArch64::fillValidCPUArchList(List);
+
+  // No list exists for these in this test suite, so ensure all are
+  // valid, and match the expected 'magic' count.
+  EXPECT_EQ(List.size(), NumAArch64CPUArchs);
+  for(StringRef CPU : List) {
+    EXPECT_NE(AArch64::parseCPUArch(CPU), AArch64::ArchKind::INVALID);
+  }
 }
 
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,

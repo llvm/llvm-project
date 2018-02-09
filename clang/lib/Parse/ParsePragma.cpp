@@ -509,8 +509,10 @@ void Parser::HandlePragmaAlign() {
   Sema::PragmaOptionsAlignKind Kind =
     static_cast<Sema::PragmaOptionsAlignKind>(
     reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
-  SourceLocation PragmaLoc = ConsumeAnnotationToken();
-  Actions.ActOnPragmaOptionsAlign(Kind, PragmaLoc);
+  Actions.ActOnPragmaOptionsAlign(Kind, Tok.getLocation());
+  // Consume the token after processing the pragma to enable pragma-specific
+  // #include warnings.
+  ConsumeAnnotationToken();
 }
 
 void Parser::HandlePragmaDump() {

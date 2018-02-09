@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_comwrd
 
-    ; CHECK:      %r14 = COMRd %r14, implicit-def dead %sreg
-    ; CHECK-NEXT: %r15 = COMRd %r15, implicit-def %sreg
+    ; CHECK:      $r14 = COMRd $r14, implicit-def dead $sreg
+    ; CHECK-NEXT: $r15 = COMRd $r15, implicit-def $sreg
 
-    %r15r14 = COMWRd %r15r14, implicit-def %sreg
+    $r15r14 = COMWRd $r15r14, implicit-def $sreg
 ...

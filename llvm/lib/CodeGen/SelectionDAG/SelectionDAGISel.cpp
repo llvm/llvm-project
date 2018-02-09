@@ -2396,13 +2396,15 @@ HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
       return;
     if (V->getOpcode() == ISD::EntryToken)
       return;
+    if (!Visited.insert(V.getNode()).second)
+      return;
     // Newly selected nodes (-1) are always added directly.
     if (V->getNodeId() == -1)
       InputChains.push_back(V);
     else if (V->getOpcode() == ISD::TokenFactor) {
       for (int i = 0, e = V->getNumOperands(); i != e; ++i)
         AddChains(V->getOperand(i));
-    } else if (!Visited.count(V.getNode()))
+    } else
       InputChains.push_back(V);
   };
 

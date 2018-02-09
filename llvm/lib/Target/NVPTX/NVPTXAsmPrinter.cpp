@@ -1365,7 +1365,8 @@ void NVPTXAsmPrinter::emitPTXAddressSpace(unsigned int AddressSpace,
     O << "shared";
     break;
   default:
-    report_fatal_error("Bad address space found while emitting PTX");
+    report_fatal_error("Bad address space found while emitting PTX: " +
+                       llvm::Twine(AddressSpace));
     break;
   }
 }

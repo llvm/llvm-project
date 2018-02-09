@@ -66,10 +66,6 @@ specify the target triple:
      ============ ==============================================================
      *<empty>*    Defaults to ``opencl``.
      ``opencl``   OpenCL compute kernel (see :ref:`amdgpu-opencl`).
-     ``amdgizcl`` Same as ``opencl`` except a different address space mapping is
-                  used (see :ref:`amdgpu-address-spaces`).
-     ``amdgiz``   Same as ``opencl`` except a different address space mapping is
-                  used (see :ref:`amdgpu-address-spaces`).
      ``hcc``      AMD HC language compute kernel (see :ref:`amdgpu-hcc`).
      ============ ==============================================================
 
@@ -274,30 +270,22 @@ LLVM Address Space number is used throughout LLVM (for example, in LLVM IR).
   .. table:: Address Space Mapping
      :name: amdgpu-address-space-mapping-table
 
-     ================== ================= ================= ================= =================
+     ================== ================= =================
      LLVM Address Space Memory Space
-     ------------------ -----------------------------------------------------------------------
-     \                  Current Default   amdgiz/amdgizcl   hcc               Future Default
-     ================== ================= ================= ================= =================
-     0                  Private (Scratch) Generic (Flat)    Generic (Flat)    Generic (Flat)
-     1                  Global            Global            Global            Global
-     2                  Constant          Constant          Constant          Region (GDS)
-     3                  Local (group/LDS) Local (group/LDS) Local (group/LDS) Local (group/LDS)
-     4                  Generic (Flat)    Region (GDS)      Region (GDS)      Constant
-     5                  Region (GDS)      Private (Scratch) Private (Scratch) Private (Scratch)
-     ================== ================= ================= ================= =================
+     ------------------ -----------------------------------
+     \                  Current Default   Future Default
+     ================== ================= =================
+     0                  Generic (Flat)    Generic (Flat)
+     1                  Global            Global
+     2                  Constant          Region (GDS)
+     3                  Local (group/LDS) Local (group/LDS)
+     4                  Region (GDS)      Constant
+     5                  Private (Scratch) Private (Scratch)
+     ================== ================= =================
 
 Current Default
-  This is the current default address space mapping used for all languages
-  except hcc. This will shortly be deprecated.
-
-amdgiz/amdgizcl
-  This is the current address space mapping used when ``amdgiz`` or ``amdgizcl``
-  is specified as the target triple environment value.
-
-hcc
-  This is the current address space mapping used when ``hcc`` is specified as
-  the target triple environment value.This will shortly be deprecated.
+  This is the current default address space mapping used for all languages.
+  This will shortly be deprecated.
 
 Future Default
   This will shortly be the only address space mapping for all languages using

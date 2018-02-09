@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_ldiwrdrr
 
-    ; CHECK:      %r30 = LDIRdK 255
-    ; CHECK-NEXT: %r31 = LDIRdK 9
+    ; CHECK:      $r30 = LDIRdK 255
+    ; CHECK-NEXT: $r31 = LDIRdK 9
 
-    %r31r30 = LDIWRdK 2559
+    $r31r30 = LDIWRdK 2559
 ...

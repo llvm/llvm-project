@@ -1,14 +1,8 @@
 #include "myModule.h"
-#include "stdio.h"
 
-@implementation MyClass {
-};
--(void)publicMethod {
-  printf("Hello public!\n");
-}
--(int)privateMethod {
-  printf("Hello private!\n");
+void public_func() {}
+
+int private_func() {
   return 5;
 }
-@end
 

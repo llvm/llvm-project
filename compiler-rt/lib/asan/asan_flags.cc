@@ -33,10 +33,7 @@ static const char *MaybeCallAsanDefaultOptions() {
 
 static const char *MaybeUseAsanDefaultOptionsCompileDefinition() {
 #ifdef ASAN_DEFAULT_OPTIONS
-// Stringize the macro value.
-# define ASAN_STRINGIZE(x) #x
-# define ASAN_STRINGIZE_OPTIONS(options) ASAN_STRINGIZE(options)
-  return ASAN_STRINGIZE_OPTIONS(ASAN_DEFAULT_OPTIONS);
+  return SANITIZER_STRINGIFY(ASAN_DEFAULT_OPTIONS);
 #else
   return "";
 #endif

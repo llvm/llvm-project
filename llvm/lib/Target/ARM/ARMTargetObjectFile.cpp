@@ -40,9 +40,6 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
   if (isAAPCS_ABI) {
     LSDASection = nullptr;
   }
-
-  AttributesSection =
-      getContext().getELFSection(".ARM.attributes", ELF::SHT_ARM_ATTRIBUTES, 0);
 }
 
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(

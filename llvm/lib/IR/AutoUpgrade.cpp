@@ -115,6 +115,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.kor.w" || // Added in 7.0
       Name == "avx512.kxor.w" || // Added in 7.0
       Name == "avx512.kxnor.w" || // Added in 7.0
+      Name == "avx512.kortestc.w" || // Added in 7.0
+      Name == "avx512.kortestz.w" || // Added in 7.0
       Name.startswith("avx512.mask.pshuf.b.") || // Added in 4.0
       Name.startswith("avx2.pmax") || // Added in 3.9
       Name.startswith("avx2.pmin") || // Added in 3.9
@@ -1156,6 +1158,19 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
       Rep = Builder.CreateNot(Rep);
       Rep = Builder.CreateBitCast(Rep, CI->getType());
+    } else if (IsX86 &&
+               (Name == "avx512.kortestz.w" || Name == "avx512.kortestc.w")) {
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), 16);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), 16);
+      Rep = Builder.CreateOr(LHS, RHS);
+      Rep = Builder.CreateBitCast(Rep, Builder.getInt16Ty());
+      Value *C;
+      if (Name[14] == 'c')
+        C = ConstantInt::getAllOnesValue(Builder.getInt16Ty());
+      else
+        C = ConstantInt::getNullValue(Builder.getInt16Ty());
+      Rep = Builder.CreateICmpEQ(Rep, C);
+      Rep = Builder.CreateZExt(Rep, Builder.getInt32Ty());
     } else if (IsX86 && (Name == "sse.add.ss" || Name == "sse2.add.sd")) {
       Type *I32Ty = Type::getInt32Ty(C);
       Value *Elt0 = Builder.CreateExtractElement(CI->getArgOperand(0),

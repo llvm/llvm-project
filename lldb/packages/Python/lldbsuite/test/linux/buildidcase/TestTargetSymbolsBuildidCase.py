@@ -14,6 +14,7 @@ class TestTargetSymbolsBuildidCase(TestBase):
 
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @skipUnlessPlatform(['linux'])
+    @skipIf(hostoslist=['windows'])
     def test_target_symbols_buildid_case(self):
         self.build(clean=True)
         exe = self.getBuildArtifact("stripped.out")

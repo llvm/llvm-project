@@ -65,10 +65,8 @@ TEST_F(TUSchedulerTests, MissingFiles) {
     ASSERT_FALSE(bool(Preamble));
     ignoreError(Preamble.takeError());
   });
-  S.remove(Missing, [&](llvm::Error Err) {
-    EXPECT_TRUE(bool(Err));
-    ignoreError(std::move(Err));
-  });
+  // remove() shouldn't crash on missing files.
+  S.remove(Missing);
 
   // Assert there aren't any errors for added file.
   S.runWithAST(
@@ -76,7 +74,7 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   S.runWithPreamble(Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
     EXPECT_TRUE(bool(Preamble));
   });
-  S.remove(Added, [&](llvm::Error Err) { EXPECT_FALSE(bool(Err)); });
+  S.remove(Added);
 
   // Assert that all operations fail after removing the file.
   S.runWithAST(Added, [&](llvm::Expected<InputsAndAST> AST) {
@@ -87,10 +85,8 @@ TEST_F(TUSchedulerTests, MissingFiles) {
     ASSERT_FALSE(bool(Preamble));
     ignoreError(Preamble.takeError());
   });
-  S.remove(Added, [&](llvm::Error Err) {
-    EXPECT_TRUE(bool(Err));
-    ignoreError(std::move(Err));
-  });
+  // remove() shouldn't crash on missing files.
+  S.remove(Added);
 }
 
 TEST_F(TUSchedulerTests, ManyUpdates) {

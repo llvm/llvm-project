@@ -353,6 +353,12 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
+  # Generate PDB even in release for profiling.
+  if (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+    append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("/DEBUG" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+
   # /Zc:strictStrings is incompatible with VS12's (Visual Studio 2013's)
   # debug mode headers. Instead of only enabling them in VS2013's debug mode,
   # we'll just enable them for Visual Studio 2015 (VS 14, MSVC_VERSION 1900)

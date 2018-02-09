@@ -119,7 +119,6 @@ class MFC0_MMR6_ENC : POOL32A_MFTC0_FM_MMR6<"mfc0", 0b00011, 0b111100>;
 class MFC1_MMR6_ENC : POOL32F_MFTC1_FM_MMR6<"mfc1", 0b10000000>;
 class MFC2_MMR6_ENC : POOL32A_MFTC2_FM_MMR6<"mfc2", 0b0100110100>;
 class MFHC0_MMR6_ENC : POOL32A_MFTC0_FM_MMR6<"mfhc0", 0b00011, 0b110100>;
-class MFHC1_MMR6_ENC : POOL32F_MFTC1_FM_MMR6<"mfhc1", 0b11000000>;
 class MFHC2_MMR6_ENC : POOL32A_MFTC2_FM_MMR6<"mfhc2", 0b1000110100>;
 class MOD_MMR6_ENC : ARITH_FM_MMR6<"mod", 0x158>;
 class MODU_MMR6_ENC : ARITH_FM_MMR6<"modu", 0x1d8>;
@@ -131,7 +130,6 @@ class MTC0_MMR6_ENC : POOL32A_MFTC0_FM_MMR6<"mtc0", 0b01011, 0b111100>;
 class MTC1_MMR6_ENC : POOL32F_MFTC1_FM_MMR6<"mtc1", 0b10100000>;
 class MTC2_MMR6_ENC : POOL32A_MFTC2_FM_MMR6<"mtc2", 0b0101110100>;
 class MTHC0_MMR6_ENC : POOL32A_MFTC0_FM_MMR6<"mthc0", 0b01011, 0b110100>;
-class MTHC1_MMR6_ENC : POOL32F_MFTC1_FM_MMR6<"mthc1", 0b11100000>;
 class MTHC2_MMR6_ENC : POOL32A_MFTC2_FM_MMR6<"mthc2", 0b1001110100>;
 class NOR_MMR6_ENC : ARITH_FM_MMR6<"nor", 0x2d0>;
 class OR_MMR6_ENC : ARITH_FM_MMR6<"or", 0x290>;
@@ -238,21 +236,15 @@ class SWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"swc2", 0b1000>;
 
 /// Floating Point Instructions
 class FADD_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"add.s", 0, 0b00110000>;
-class FADD_D_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"add.d", 1, 0b00110000>;
 class FSUB_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"sub.s", 0, 0b01110000>;
-class FSUB_D_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"sub.d", 1, 0b01110000>;
 class FMUL_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"mul.s", 0, 0b10110000>;
-class FMUL_D_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"mul.d", 1, 0b10110000>;
 class FDIV_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"div.s", 0, 0b11110000>;
-class FDIV_D_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"div.d", 1, 0b11110000>;
 class MADDF_S_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"maddf.s", 0, 0b110111000>;
 class MADDF_D_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"maddf.d", 1, 0b110111000>;
 class MSUBF_S_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"msubf.s", 0, 0b111111000>;
 class MSUBF_D_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"msubf.d", 1, 0b111111000>;
 class FMOV_S_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"mov.s", 0, 0b0000001>;
-class FMOV_D_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"mov.d", 1, 0b0000001>;
 class FNEG_S_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"neg.s", 0, 0b0101101>;
-class FNEG_D_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"neg.d", 1, 0b0101101>;
 class MAX_S_MMR6_ENC : POOL32F_MINMAX_FM<"max.s", 0, 0b000001011>;
 class MAX_D_MMR6_ENC : POOL32F_MINMAX_FM<"max.d", 1, 0b000001011>;
 class MAXA_S_MMR6_ENC : POOL32F_MINMAX_FM<"maxa.s", 0, 0b000101011>;
@@ -265,11 +257,7 @@ class MINA_D_MMR6_ENC : POOL32F_MINMAX_FM<"mina.d", 1, 0b000100011>;
 class CVT_L_S_MMR6_ENC : POOL32F_CVT_LW_FM<"cvt.l.s", 0, 0b00000100>;
 class CVT_L_D_MMR6_ENC : POOL32F_CVT_LW_FM<"cvt.l.d", 1, 0b00000100>;
 class CVT_W_S_MMR6_ENC : POOL32F_CVT_LW_FM<"cvt.w.s", 0, 0b00100100>;
-class CVT_W_D_MMR6_ENC : POOL32F_CVT_LW_FM<"cvt.w.d", 1, 0b00100100>;
-class CVT_D_S_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.d.s", 0, 0b1001101>;
-class CVT_D_W_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.d.w", 1, 0b1001101>;
 class CVT_D_L_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.d.l", 2, 0b1001101>;
-class CVT_S_D_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.s.d", 0, 0b1101101>;
 class CVT_S_W_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.s.w", 1, 0b1101101>;
 class CVT_S_L_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.s.l", 2, 0b1101101>;
 
@@ -744,12 +732,6 @@ class MTC2_MMR6_DESC : MTC2_MMR6_DESC_BASE<"mtc2", COP2Opnd, GPR32Opnd,
                                            II_MTC2>;
 class MTHC0_MMR6_DESC : MTC0_MMR6_DESC_BASE<"mthc0", COP0Opnd, GPR32Opnd,
                                             II_MTHC0>;
-class MTHC1_D32_MMR6_DESC : MTC1_64_MMR6_DESC_BASE<"mthc1", AFGR64Opnd,
-                                                   GPR32Opnd, II_MTC1>,
-                            HARDFLOAT, FGR_32;
-class MTHC1_D64_MMR6_DESC : MTC1_64_MMR6_DESC_BASE<"mthc1", FGR64Opnd,
-                                                   GPR32Opnd, II_MTC1>,
-                            HARDFLOAT, FGR_64;
 class MTHC2_MMR6_DESC : MTC2_MMR6_DESC_BASE<"mthc2", COP2Opnd, GPR32Opnd,
                                             II_MTC2>;
 
@@ -793,10 +775,6 @@ class MFC2_MMR6_DESC : MFC2_MMR6_DESC_BASE<"mfc2", GPR32Opnd, COP2Opnd,
                                            II_MFC2>;
 class MFHC0_MMR6_DESC : MFC0_MMR6_DESC_BASE<"mfhc0", GPR32Opnd, COP0Opnd,
                                             II_MFHC0>;
-class MFHC1_D32_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfhc1", GPR32Opnd, AFGR64Opnd,
-                                                II_MFHC1>, HARDFLOAT, FGR_32;
-class MFHC1_D64_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfhc1", GPR32Opnd, FGR64Opnd,
-                                                II_MFHC1>, HARDFLOAT, FGR_64;
 class MFHC2_MMR6_DESC : MFC2_MMR6_DESC_BASE<"mfhc2", GPR32Opnd, COP2Opnd,
                                             II_MFC2>;
 
@@ -865,20 +843,12 @@ class FARITH_MMR6_DESC_BASE<string instr_asm, RegisterOperand RC,
 }
 class FADD_S_MMR6_DESC
   : FARITH_MMR6_DESC_BASE<"add.s", FGR32Opnd, II_ADD_S, 1, fadd>;
-class FADD_D_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"add.d", AFGR64Opnd, II_ADD_D, 1, fadd>;
 class FSUB_S_MMR6_DESC
   : FARITH_MMR6_DESC_BASE<"sub.s", FGR32Opnd, II_SUB_S, 0, fsub>;
-class FSUB_D_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"sub.d", AFGR64Opnd, II_SUB_D, 0, fsub>;
 class FMUL_S_MMR6_DESC
   : FARITH_MMR6_DESC_BASE<"mul.s", FGR32Opnd, II_MUL_S, 1, fmul>;
-class FMUL_D_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"mul.d", AFGR64Opnd, II_MUL_D, 1, fmul>;
 class FDIV_S_MMR6_DESC
   : FARITH_MMR6_DESC_BASE<"div.s", FGR32Opnd, II_DIV_S, 0, fdiv>;
-class FDIV_D_MMR6_DESC
-  : FARITH_MMR6_DESC_BASE<"div.d", AFGR64Opnd, II_DIV_D, 0, fdiv>;
 class MADDF_S_MMR6_DESC : COP1_4R_DESC_BASE<"maddf.s", FGR32Opnd,
                                             II_MADDF_S>, HARDFLOAT;
 class MADDF_D_MMR6_DESC : COP1_4R_DESC_BASE<"maddf.d", FGR64Opnd,
@@ -901,12 +871,8 @@ class FMOV_FNEG_MMR6_DESC_BASE<string instr_asm, RegisterOperand DstRC,
 }
 class FMOV_S_MMR6_DESC
   : FMOV_FNEG_MMR6_DESC_BASE<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>;
-class FMOV_D_MMR6_DESC
-  : FMOV_FNEG_MMR6_DESC_BASE<"mov.d", AFGR64Opnd, AFGR64Opnd, II_MOV_D>;
 class FNEG_S_MMR6_DESC
   : FMOV_FNEG_MMR6_DESC_BASE<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>;
-class FNEG_D_MMR6_DESC
-  : FMOV_FNEG_MMR6_DESC_BASE<"neg.d", AFGR64Opnd, AFGR64Opnd, II_NEG, fneg>;
 
 class MAX_S_MMR6_DESC : MAX_MIN_DESC_BASE<"max.s", FGR32Opnd, II_MAX_S>,
                         HARDFLOAT;
@@ -944,16 +910,8 @@ class CVT_L_D_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.l.d", FGR64Opnd, FGR64Opnd,
                                              II_CVT>;
 class CVT_W_S_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.w.s", FGR32Opnd, FGR32Opnd,
                                              II_CVT>;
-class CVT_W_D_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.w.d", FGR32Opnd, AFGR64Opnd,
-                                             II_CVT>;
-class CVT_D_S_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.d.s", FGR32Opnd, AFGR64Opnd,
-                                             II_CVT>;
-class CVT_D_W_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.d.w", FGR32Opnd, AFGR64Opnd,
-                                             II_CVT>;
 class CVT_D_L_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.d.l", FGR64Opnd, FGR64Opnd,
                                              II_CVT>, FGR_64;
-class CVT_S_D_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.s.d", AFGR64Opnd, FGR32Opnd,
-                                             II_CVT>;
 class CVT_S_W_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.s.w", FGR32Opnd, FGR32Opnd,
                                              II_CVT>;
 class CVT_S_L_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.s.l", FGR64Opnd, FGR32Opnd,
@@ -1414,22 +1372,11 @@ def MTC0_MMR6 : StdMMR6Rel, MTC0_MMR6_ENC, MTC0_MMR6_DESC, ISA_MICROMIPS32R6;
 def MTC1_MMR6 : StdMMR6Rel, MTC1_MMR6_DESC, MTC1_MMR6_ENC, ISA_MICROMIPS32R6;
 def MTC2_MMR6 : StdMMR6Rel, MTC2_MMR6_ENC, MTC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def MTHC0_MMR6 : R6MMR6Rel, MTHC0_MMR6_ENC, MTHC0_MMR6_DESC, ISA_MICROMIPS32R6;
-def MTHC1_D32_MMR6 : StdMMR6Rel, MTHC1_D32_MMR6_DESC, MTHC1_MMR6_ENC, ISA_MICROMIPS32R6;
-let DecoderNamespace = "MicroMipsFP64" in {
-  def MTHC1_D64_MMR6 : R6MMR6Rel, MTHC1_D64_MMR6_DESC, MTHC1_MMR6_ENC,
-                       ISA_MICROMIPS32R6;
-}
 def MTHC2_MMR6 : StdMMR6Rel, MTHC2_MMR6_ENC, MTHC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def MFC0_MMR6 : StdMMR6Rel, MFC0_MMR6_ENC, MFC0_MMR6_DESC, ISA_MICROMIPS32R6;
 def MFC1_MMR6 : StdMMR6Rel, MFC1_MMR6_DESC, MFC1_MMR6_ENC, ISA_MICROMIPS32R6;
 def MFC2_MMR6 : StdMMR6Rel, MFC2_MMR6_ENC, MFC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def MFHC0_MMR6 : R6MMR6Rel, MFHC0_MMR6_ENC, MFHC0_MMR6_DESC, ISA_MICROMIPS32R6;
-def MFHC1_D32_MMR6 : StdMMR6Rel, MFHC1_D32_MMR6_DESC, MFHC1_MMR6_ENC,
-                     ISA_MICROMIPS32R6;
-let DecoderNamespace = "MicroMipsFP64" in {
-  def MFHC1_D64_MMR6 : StdMMR6Rel, MFHC1_D64_MMR6_DESC, MFHC1_MMR6_ENC,
-                       ISA_MICROMIPS32R6;
-}
 def MFHC2_MMR6 : StdMMR6Rel, MFHC2_MMR6_ENC, MFHC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def MOD_MMR6 : R6MMR6Rel, MOD_MMR6_DESC, MOD_MMR6_ENC, ISA_MICROMIPS32R6;
 def MODU_MMR6 : R6MMR6Rel, MODU_MMR6_DESC, MODU_MMR6_ENC, ISA_MICROMIPS32R6;
@@ -1478,19 +1425,11 @@ let DecoderMethod = "DecodeMemMMImm16" in {
 /// Floating Point Instructions
 def FADD_S_MMR6 : StdMMR6Rel, FADD_S_MMR6_ENC, FADD_S_MMR6_DESC,
                   ISA_MICROMIPS32R6;
-def FADD_D_MMR6 : StdMMR6Rel, FADD_D_MMR6_ENC, FADD_D_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
 def FSUB_S_MMR6 : StdMMR6Rel, FSUB_S_MMR6_ENC, FSUB_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def FSUB_D_MMR6 : StdMMR6Rel, FSUB_D_MMR6_ENC, FSUB_D_MMR6_DESC,
                   ISA_MICROMIPS32R6;
 def FMUL_S_MMR6 : StdMMR6Rel, FMUL_S_MMR6_ENC, FMUL_S_MMR6_DESC,
                   ISA_MICROMIPS32R6;
-def FMUL_D_MMR6 : StdMMR6Rel, FMUL_D_MMR6_ENC, FMUL_D_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
 def FDIV_S_MMR6 : StdMMR6Rel, FDIV_S_MMR6_ENC, FDIV_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def FDIV_D_MMR6 : StdMMR6Rel, FDIV_D_MMR6_ENC, FDIV_D_MMR6_DESC,
                   ISA_MICROMIPS32R6;
 def MADDF_S_MMR6 : R6MMR6Rel, MADDF_S_MMR6_ENC, MADDF_S_MMR6_DESC,
                    ISA_MICROMIPS32R6;
@@ -1502,11 +1441,7 @@ def MSUBF_D_MMR6 : R6MMR6Rel, MSUBF_D_MMR6_ENC, MSUBF_D_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def FMOV_S_MMR6 : StdMMR6Rel, FMOV_S_MMR6_ENC, FMOV_S_MMR6_DESC,
                   ISA_MICROMIPS32R6;
-def FMOV_D_MMR6 : StdMMR6Rel, FMOV_D_MMR6_ENC, FMOV_D_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
 def FNEG_S_MMR6 : StdMMR6Rel, FNEG_S_MMR6_ENC, FNEG_S_MMR6_DESC,
-                  ISA_MICROMIPS32R6;
-def FNEG_D_MMR6 : StdMMR6Rel, FNEG_D_MMR6_ENC, FNEG_D_MMR6_DESC,
                   ISA_MICROMIPS32R6;
 def MAX_S_MMR6 : R6MMR6Rel, MAX_S_MMR6_ENC, MAX_S_MMR6_DESC, ISA_MICROMIPS32R6;
 def MAX_D_MMR6 : R6MMR6Rel, MAX_D_MMR6_ENC, MAX_D_MMR6_DESC, ISA_MICROMIPS32R6;
@@ -1526,15 +1461,7 @@ def CVT_L_D_MMR6 : StdMMR6Rel, CVT_L_D_MMR6_ENC, CVT_L_D_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def CVT_W_S_MMR6 : StdMMR6Rel, CVT_W_S_MMR6_ENC, CVT_W_S_MMR6_DESC,
                    ISA_MICROMIPS32R6;
-def CVT_W_D_MMR6 : StdMMR6Rel, CVT_W_D_MMR6_ENC, CVT_W_D_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_D_S_MMR6 : StdMMR6Rel, CVT_D_S_MMR6_ENC, CVT_D_S_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_D_W_MMR6 : StdMMR6Rel, CVT_D_W_MMR6_ENC, CVT_D_W_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
 def CVT_D_L_MMR6 : StdMMR6Rel, CVT_D_L_MMR6_ENC, CVT_D_L_MMR6_DESC,
-                   ISA_MICROMIPS32R6;
-def CVT_S_D_MMR6 : StdMMR6Rel, CVT_S_D_MMR6_ENC, CVT_S_D_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def CVT_S_W_MMR6 : StdMMR6Rel, CVT_S_W_MMR6_ENC, CVT_S_W_MMR6_DESC,
                    ISA_MICROMIPS32R6;

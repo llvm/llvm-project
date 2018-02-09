@@ -554,6 +554,8 @@ getBuildId(opt::InputArgList &Args) {
     return {BuildIdKind::Fast, {}};
 
   StringRef S = Arg->getValue();
+  if (S == "fast")
+    return {BuildIdKind::Fast, {}};
   if (S == "md5")
     return {BuildIdKind::Md5, {}};
   if (S == "sha1" || S == "tree")

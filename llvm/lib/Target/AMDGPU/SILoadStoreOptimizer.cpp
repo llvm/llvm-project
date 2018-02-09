@@ -174,9 +174,10 @@ static void moveInstsAfter(MachineBasicBlock::iterator I,
 }
 
 static void addDefsToList(const MachineInstr &MI, DenseSet<unsigned> &Defs) {
-  // XXX: Should this be looking for implicit defs?
-  for (const MachineOperand &Def : MI.defs())
-    Defs.insert(Def.getReg());
+  for (const MachineOperand &Def : MI.operands()) {
+    if (Def.isReg() && Def.isDef())
+      Defs.insert(Def.getReg());
+  }
 }
 
 static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
@@ -853,9 +854,8 @@ bool SILoadStoreOptimizer::optimizeBlock(MachineBasicBlock &MBB) {
 
       continue;
     }
-    if (STM->hasSBufferLoadStoreAtomicDwordxN() &&
-        (Opc == AMDGPU::S_BUFFER_LOAD_DWORD_IMM ||
-         Opc == AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM)) {
+    if (Opc == AMDGPU::S_BUFFER_LOAD_DWORD_IMM ||
+        Opc == AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM) {
       // EltSize is in units of the offset encoding.
       CI.InstClass = S_BUFFER_LOAD_IMM;
       CI.EltSize = AMDGPU::getSMRDEncodedOffset(*STM, 4);

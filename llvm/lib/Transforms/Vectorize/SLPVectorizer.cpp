@@ -4531,23 +4531,21 @@ static bool hasValueBeenRAUWed(ArrayRef<Value *> VL,
 
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                             unsigned VecRegSize) {
-  unsigned ChainLen = Chain.size();
+  const unsigned ChainLen = Chain.size();
   DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << ChainLen
         << "\n");
-  unsigned Sz = R.getVectorElementSize(Chain[0]);
-  unsigned VF = VecRegSize / Sz;
+  const unsigned Sz = R.getVectorElementSize(Chain[0]);
+  const unsigned VF = VecRegSize / Sz;
 
   if (!isPowerOf2_32(Sz) || VF < 2)
     return false;
 
   // Keep track of values that were deleted by vectorizing in the loop below.
-  SmallVector<WeakTrackingVH, 8> TrackValues(Chain.begin(), Chain.end());
+  const SmallVector<WeakTrackingVH, 8> TrackValues(Chain.begin(), Chain.end());
 
   bool Changed = false;
   // Look for profitable vectorizable trees at all offsets, starting at zero.
-  for (unsigned i = 0, e = ChainLen; i < e; ++i) {
-    if (i + VF > e)
-      break;
+  for (unsigned i = 0, e = ChainLen; i + VF <= e; ++i) {
 
     // Check that a previous iteration of this loop did not delete the Value.
     if (hasValueBeenRAUWed(Chain, TrackValues, i, VF))

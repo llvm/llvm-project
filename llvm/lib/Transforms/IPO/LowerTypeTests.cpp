@@ -983,7 +983,7 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
   if (F->isWeakForLinker())
     replaceWeakDeclarationWithJumpTablePtr(F, FDecl);
   else
-    F->replaceAllUsesWith(FDecl);
+    F->replaceUsesExceptBlockAddr(FDecl);
 }
 
 void LowerTypeTestsModule::lowerTypeTestCalls(
