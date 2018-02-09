@@ -391,3 +391,16 @@ typedef char two_chars[2];
 void test12(unsigned a) {
   if (0 && -1 > a) { }
 }
+
+// PR36008
+
+enum PR36008EnumTest {
+  kPR36008Value = 0,
+};
+
+void pr36008(enum PR36008EnumTest lhs) {
+  __typeof__(lhs) x = lhs;
+  __typeof__(kPR36008Value) y = (kPR36008Value);
+  if (x == y) x = y; // no warning
+  if (y == x) y = x; // no warning
+}

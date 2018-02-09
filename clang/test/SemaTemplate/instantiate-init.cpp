@@ -142,3 +142,17 @@ namespace ReturnStmtIsInitialization {
   template<typename T> X f() { return {}; }
   auto &&x = f<void>();
 }
+
+namespace InitListUpdate {
+  struct A { int n; };
+  using AA = A[1];
+
+  // Check that an init list update doesn't "lose" the pack-ness of an expression.
+  template <int... N> void f() {
+    g(AA{0, [0].n = N} ...); // expected-warning 3{{overrides prior init}} expected-note 3{{previous init}}
+    g(AA{N, [0].n = 0} ...); // expected-warning 3{{overrides prior init}} expected-note 3{{previous init}}
+  };
+
+  void g(AA, AA);
+  void h() { f<1, 2>(); } // expected-note {{instantiation of}}
+}

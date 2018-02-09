@@ -29,3 +29,11 @@ template <class T> struct B {
     return 0;
   }
 };
+
+// This test checks for a crash that resulted from us miscomputing the
+// dependence of a nested initializer list.
+template<int> struct X {
+  static constexpr int n = 4;
+  static constexpr int a[1][1] = {n};
+};
+

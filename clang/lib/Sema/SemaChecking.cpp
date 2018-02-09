@@ -8972,6 +8972,16 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   LHS = LHS->IgnoreParenImpCasts();
   RHS = RHS->IgnoreParenImpCasts();
 
+  if (!S.getLangOpts().CPlusPlus) {
+    // Avoid warning about comparison of integers with different signs when
+    // RHS/LHS has a `typeof(E)` type whose sign is different from the sign of
+    // the type of `E`.
+    if (const auto *TET = dyn_cast<TypeOfExprType>(LHS->getType()))
+      LHS = TET->getUnderlyingExpr()->IgnoreParenImpCasts();
+    if (const auto *TET = dyn_cast<TypeOfExprType>(RHS->getType()))
+      RHS = TET->getUnderlyingExpr()->IgnoreParenImpCasts();
+  }
+
   // Check to see if one of the (unmodified) operands is of different
   // signedness.
   Expr *signedOperand, *unsignedOperand;
