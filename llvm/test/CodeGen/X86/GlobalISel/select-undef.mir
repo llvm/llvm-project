@@ -11,6 +11,9 @@
     ret i8 %r
   }
 
+  define float @test3() {
+    ret float undef
+  }
 ...
 ---
 name:            test
@@ -62,5 +65,24 @@ body:             |
     %2(s8) = G_ADD %0, %1
     $al = COPY %2(s8)
     RET 0, implicit $al
+
+...
+---
+name:            test3
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 1, class: vecr }
+body:             |
+  bb.1 (%ir-block.0):
+    ; ALL-LABEL: name: test3
+    ; ALL: [[DEF:%[0-9]+]]:vr128 = IMPLICIT_DEF
+    ; ALL: $xmm0 = COPY [[DEF]]
+    ; ALL: RET 0, implicit $xmm0
+    %1:vecr(s128) = G_IMPLICIT_DEF
+    $xmm0 = COPY %1:vecr(s128)
+    RET 0, implicit $xmm0
 
 ...

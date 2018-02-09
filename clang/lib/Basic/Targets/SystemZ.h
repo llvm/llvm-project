@@ -82,6 +82,8 @@ public:
     return getISARevision(Name) != -1;
   }
 
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
   bool setCPU(const std::string &Name) override {
     CPU = Name;
     ISARevision = getISARevision(CPU);

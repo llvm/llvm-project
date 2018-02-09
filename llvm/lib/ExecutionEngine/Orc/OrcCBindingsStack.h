@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -49,75 +50,56 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
 namespace detail {
 
+// FIXME: Kill this off once the Layer concept becomes an interface.
+class GenericLayer {
+public:
+  virtual ~GenericLayer() = default;
 
-  class GenericHandle {
-  public:
-    GenericHandle(orc::VModuleKey K) : K(K) {}
-
-    virtual ~GenericHandle() = default;
-
-    virtual JITSymbol findSymbolIn(const std::string &Name,
-                                   bool ExportedSymbolsOnly) = 0;
-    virtual Error removeModule(orc::ExecutionSession &ES) = 0;
-
-    orc::VModuleKey K;
+  virtual JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
+                                 bool ExportedSymbolsOnly) = 0;
+  virtual Error removeModule(orc::VModuleKey K) = 0;
   };
 
-  template <typename LayerT> class GenericHandleImpl : public GenericHandle {
+  template <typename LayerT> class GenericLayerImpl : public GenericLayer {
   public:
-    GenericHandleImpl(LayerT &Layer, typename LayerT::ModuleHandleT Handle,
-                      orc::VModuleKey K)
-        : GenericHandle(std::move(K)), Layer(Layer), Handle(std::move(Handle)) {
-    }
+    GenericLayerImpl(LayerT &Layer) : Layer(Layer) {}
 
-    JITSymbol findSymbolIn(const std::string &Name,
+    JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
                            bool ExportedSymbolsOnly) override {
-      return Layer.findSymbolIn(Handle, Name, ExportedSymbolsOnly);
+      return Layer.findSymbolIn(K, Name, ExportedSymbolsOnly);
     }
 
-    Error removeModule(orc::ExecutionSession &ES) override {
-      auto Err = Layer.removeModule(Handle);
-      ES.releaseVModule(K);
-      return Err;
+    Error removeModule(orc::VModuleKey K) override {
+      return Layer.removeModule(K);
     }
 
   private:
     LayerT &Layer;
-    typename LayerT::ModuleHandleT Handle;
   };
 
   template <>
-  class GenericHandleImpl<orc::RTDyldObjectLinkingLayer>
-    : public GenericHandle {
+  class GenericLayerImpl<orc::RTDyldObjectLinkingLayer> : public GenericLayer {
   private:
     using LayerT = orc::RTDyldObjectLinkingLayer;
   public:
-    GenericHandleImpl(LayerT &Layer, typename LayerT::ObjHandleT Handle,
-                      orc::VModuleKey K)
-        : GenericHandle(std::move(K)), Layer(Layer), Handle(std::move(Handle)) {
-    }
+    GenericLayerImpl(LayerT &Layer) : Layer(Layer) {}
 
-    JITSymbol findSymbolIn(const std::string &Name,
+    JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
                            bool ExportedSymbolsOnly) override {
-      return Layer.findSymbolIn(Handle, Name, ExportedSymbolsOnly);
+      return Layer.findSymbolIn(K, Name, ExportedSymbolsOnly);
     }
 
-    Error removeModule(orc::ExecutionSession &ES) override {
-      auto Err = Layer.removeObject(Handle);
-      ES.releaseVModule(K);
-      return Err;
+    Error removeModule(orc::VModuleKey K) override {
+      return Layer.removeObject(K);
     }
 
   private:
     LayerT &Layer;
-    typename LayerT::ObjHandleT Handle;
   };
 
-  template <typename LayerT, typename HandleT>
-  std::unique_ptr<GenericHandleImpl<LayerT>>
-  createGenericHandle(LayerT &Layer, HandleT Handle, orc::VModuleKey K) {
-    return llvm::make_unique<GenericHandleImpl<LayerT>>(
-        Layer, std::move(Handle), std::move(K));
+  template <typename LayerT>
+  std::unique_ptr<GenericLayerImpl<LayerT>> createGenericLayer(LayerT &Layer) {
+    return llvm::make_unique<GenericLayerImpl<LayerT>>(Layer);
   }
 
 } // end namespace detail
@@ -215,7 +197,6 @@ private:
   };
 
 public:
-  using ModuleHandleT = unsigned;
 
   OrcCBindingsStack(TargetMachine &TM,
                     std::unique_ptr<CompileCallbackMgr> CCMgr,
@@ -304,8 +285,7 @@ public:
   }
   template <typename LayerT>
   LLVMOrcErrorCode
-  addIRModule(ModuleHandleT &RetHandle, LayerT &Layer,
-              std::shared_ptr<Module> M,
+  addIRModule(orc::VModuleKey &RetKey, LayerT &Layer, std::shared_ptr<Module> M,
               std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
               LLVMOrcSymbolResolverFn ExternalResolver,
               void *ExternalResolverCtx) {
@@ -323,54 +303,54 @@ public:
       DtorNames.push_back(mangle(Dtor.Func->getName()));
 
     // Add the module to the JIT.
-    ModuleHandleT H;
-    orc::VModuleKey K = ES.allocateVModule();
-    Resolvers[K] = std::make_shared<CBindingsResolver>(*this, ExternalResolver,
-                                                       ExternalResolverCtx);
-    if (auto LHOrErr = Layer.addModule(K, std::move(M)))
-      H = createHandle(Layer, *LHOrErr, K);
-    else
-      return mapError(LHOrErr.takeError());
+    RetKey = ES.allocateVModule();
+    Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
+        *this, ExternalResolver, ExternalResolverCtx);
+    if (auto Err = Layer.addModule(RetKey, std::move(M)))
+      return mapError(std::move(Err));
+
+    KeyLayers[RetKey] = detail::createGenericLayer(Layer);
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
-    orc::CtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames), H);
+    orc::CtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames),
+                                                      RetKey);
     if (auto Err = CtorRunner.runViaLayer(*this))
       return mapError(std::move(Err));
 
-    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), H);
+    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), RetKey);
 
-    RetHandle = H;
     return LLVMOrcErrSuccess;
   }
 
-  LLVMOrcErrorCode addIRModuleEager(ModuleHandleT &RetHandle,
+  LLVMOrcErrorCode addIRModuleEager(orc::VModuleKey &RetKey,
                                     std::shared_ptr<Module> M,
                                     LLVMOrcSymbolResolverFn ExternalResolver,
                                     void *ExternalResolverCtx) {
-    return addIRModule(RetHandle, CompileLayer, std::move(M),
+    return addIRModule(RetKey, CompileLayer, std::move(M),
                        llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  LLVMOrcErrorCode addIRModuleLazy(ModuleHandleT &RetHandle,
+  LLVMOrcErrorCode addIRModuleLazy(orc::VModuleKey &RetKey,
                                    std::shared_ptr<Module> M,
                                    LLVMOrcSymbolResolverFn ExternalResolver,
                                    void *ExternalResolverCtx) {
-    return addIRModule(RetHandle, CODLayer, std::move(M),
+    return addIRModule(RetKey, CODLayer, std::move(M),
                        llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  LLVMOrcErrorCode removeModule(ModuleHandleT H) {
-    if (auto Err = GenericHandles[H]->removeModule(ES))
+  LLVMOrcErrorCode removeModule(orc::VModuleKey K) {
+    // FIXME: Should error release the module key?
+    if (auto Err = KeyLayers[K]->removeModule(K))
       return mapError(std::move(Err));
-    GenericHandles[H] = nullptr;
-    FreeHandleIndexes.push_back(H);
+    ES.releaseVModule(K);
+    KeyLayers.erase(K);
     return LLVMOrcErrSuccess;
   }
 
-  LLVMOrcErrorCode addObject(ModuleHandleT &RetHandle,
+  LLVMOrcErrorCode addObject(orc::VModuleKey &RetKey,
                              std::unique_ptr<MemoryBuffer> ObjBuffer,
                              LLVMOrcSymbolResolverFn ExternalResolver,
                              void *ExternalResolverCtx) {
@@ -380,17 +360,14 @@ public:
       auto OwningObj =
         std::make_shared<OwningObject>(std::move(Obj), std::move(ObjBuffer));
 
-      orc::VModuleKey K = ES.allocateVModule();
-      Resolvers[K] = std::make_shared<CBindingsResolver>(
+      RetKey = ES.allocateVModule();
+      Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
           *this, ExternalResolver, ExternalResolverCtx);
 
-      ModuleHandleT H;
-      if (auto HOrErr = ObjectLayer.addObject(K, std::move(OwningObj)))
-        H = createHandle(ObjectLayer, *HOrErr, K);
-      else
-        return mapError(HOrErr.takeError());
+      if (auto Err = ObjectLayer.addObject(RetKey, std::move(OwningObj)))
+        return mapError(std::move(Err));
 
-      RetHandle = H;
+      KeyLayers[RetKey] = detail::createGenericLayer(ObjectLayer);
 
       return LLVMOrcErrSuccess;
     } else
@@ -404,9 +381,9 @@ public:
     return CODLayer.findSymbol(mangle(Name), ExportedSymbolsOnly);
   }
 
-  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
                          bool ExportedSymbolsOnly) {
-    return GenericHandles[H]->findSymbolIn(Name, ExportedSymbolsOnly);
+    return KeyLayers[K]->findSymbolIn(K, Name, ExportedSymbolsOnly);
   }
 
   LLVMOrcErrorCode findSymbolAddress(JITTargetAddress &RetAddr,
@@ -432,22 +409,6 @@ public:
   const std::string &getErrorMessage() const { return ErrMsg; }
 
 private:
-  template <typename LayerT, typename HandleT>
-  unsigned createHandle(LayerT &Layer, HandleT Handle, orc::VModuleKey K) {
-    unsigned NewHandle;
-    if (!FreeHandleIndexes.empty()) {
-      NewHandle = FreeHandleIndexes.back();
-      FreeHandleIndexes.pop_back();
-      GenericHandles[NewHandle] =
-          detail::createGenericHandle(Layer, std::move(Handle), std::move(K));
-      return NewHandle;
-    } else {
-      NewHandle = GenericHandles.size();
-      GenericHandles.push_back(
-          detail::createGenericHandle(Layer, std::move(Handle), std::move(K)));
-    }
-    return NewHandle;
-  }
 
   LLVMOrcErrorCode mapError(Error Err) {
     LLVMOrcErrorCode Result = LLVMOrcErrSuccess;
@@ -479,8 +440,7 @@ private:
   CompileLayerT CompileLayer;
   CODLayerT CODLayer;
 
-  std::vector<std::unique_ptr<detail::GenericHandle>> GenericHandles;
-  std::vector<unsigned> FreeHandleIndexes;
+  std::map<orc::VModuleKey, std::unique_ptr<detail::GenericLayer>> KeyLayers;
 
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   std::vector<orc::CtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;

@@ -498,7 +498,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}sdwa_crash_inlineasm_de
+; GCN-LABEL: {{^}}sdwa_crash_inlineasm_def:
 ; GCN: s_mov_b32 s{{[0-9]+}}, 0xffff
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x10000,

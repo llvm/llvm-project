@@ -1099,6 +1099,7 @@ void ScheduleDAGInstrs::dumpNode(const SUnit *SU) const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   SU->getInstr()->dump();
+  dbgs() << '\n';
 #endif
 }
 

@@ -437,24 +437,24 @@ void ProgramState::setStore(const StoreRef &newStore) {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::print(raw_ostream &Out,
-                         const char *NL, const char *Sep) const {
+void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
+                         const LocationContext *LC) const {
   // Print the store.
   ProgramStateManager &Mgr = getStateManager();
   Mgr.getStoreManager().print(getStore(), Out, NL, Sep);
 
   // Print out the environment.
-  Env.print(Out, NL, Sep);
+  Env.print(Out, NL, Sep, LC);
 
   // Print out the constraints.
   Mgr.getConstraintManager().print(this, Out, NL, Sep);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine()->printState(Out, this, NL, Sep);
+  Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
 }
 
-void ProgramState::printDOT(raw_ostream &Out) const {
-  print(Out, "\\l", "\\|");
+void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LC) const {
+  print(Out, "\\l", "\\|", LC);
 }
 
 LLVM_DUMP_METHOD void ProgramState::dump() const {

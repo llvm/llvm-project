@@ -1473,8 +1473,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (isIndirectDebugValue())
       OS << " indirect";
   }
-
-  OS << '\n';
 }
 
 bool MachineInstr::addRegisterKilled(unsigned IncomingReg,

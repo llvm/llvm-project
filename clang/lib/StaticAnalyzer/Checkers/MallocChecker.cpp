@@ -2075,8 +2075,8 @@ void MallocChecker::ReportFunctionPointerFree(CheckerContext &C, SVal ArgVal,
 
   if (ExplodedNode *N = C.generateErrorNode()) {
     if (!BT_BadFree[*CheckKind])
-      BT_BadFree[*CheckKind].reset(
-          new BugType(CheckNames[*CheckKind], "Bad free", "Memory Error"));
+      BT_BadFree[*CheckKind].reset(new BugType(
+          CheckNames[*CheckKind], "Bad free", categories::MemoryError));
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);

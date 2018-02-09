@@ -393,10 +393,10 @@ private:
 
     NotifyObjectLoadedT(OrcMCJITReplacement &M) : M(M) {}
 
-    void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H,
+    void operator()(VModuleKey K,
                     const RTDyldObjectLinkingLayer::ObjectPtr &Obj,
                     const RuntimeDyld::LoadedObjectInfo &Info) const {
-      M.UnfinalizedSections[H] = std::move(M.SectionsAllocatedSinceLastLoad);
+      M.UnfinalizedSections[K] = std::move(M.SectionsAllocatedSinceLastLoad);
       M.SectionsAllocatedSinceLastLoad = SectionAddrSet();
       M.MemMgr->notifyObjectLoaded(&M, *Obj->getBinary());
     }
@@ -408,9 +408,7 @@ private:
   public:
     NotifyFinalizedT(OrcMCJITReplacement &M) : M(M) {}
 
-    void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H) {
-      M.UnfinalizedSections.erase(H);
-    }
+    void operator()(VModuleKey K) { M.UnfinalizedSections.erase(K); }
 
   private:
     OrcMCJITReplacement &M;
@@ -455,15 +453,8 @@ private:
   // that have been emitted but not yet finalized so that we can forward the
   // mapSectionAddress calls appropriately.
   using SectionAddrSet = std::set<const void *>;
-  struct ObjHandleCompare {
-    bool operator()(ObjectLayerT::ObjHandleT H1,
-                    ObjectLayerT::ObjHandleT H2) const {
-      return &*H1 < &*H2;
-    }
-  };
   SectionAddrSet SectionsAllocatedSinceLastLoad;
-  std::map<ObjectLayerT::ObjHandleT, SectionAddrSet, ObjHandleCompare>
-      UnfinalizedSections;
+  std::map<VModuleKey, SectionAddrSet> UnfinalizedSections;
 
   std::vector<object::OwningBinary<object::Archive>> Archives;
 };

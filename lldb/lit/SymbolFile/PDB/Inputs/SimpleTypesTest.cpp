@@ -34,7 +34,7 @@ EnumClass EnumClassVar;
 
 enum struct EnumStruct { red, blue, black };
 EnumStruct EnumStructVar;
-  
+
 int main() {
   return 0;
 }

@@ -38,6 +38,7 @@
 #include "Targets/X86.h"
 #include "Targets/XCore.h"
 #include "clang/Basic/Diagnostic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 
 using namespace clang;
@@ -607,6 +608,10 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   // Set the target CPU if specified.
   if (!Opts->CPU.empty() && !Target->setCPU(Opts->CPU)) {
     Diags.Report(diag::err_target_unknown_cpu) << Opts->CPU;
+    SmallVector<StringRef, 32> ValidList;
+    Target->fillValidCPUList(ValidList);
+    if (!ValidList.empty())
+      Diags.Report(diag::note_valid_options) << llvm::join(ValidList, ", ");
     return nullptr;
   }
 

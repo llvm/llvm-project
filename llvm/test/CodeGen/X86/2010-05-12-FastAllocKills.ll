@@ -4,16 +4,17 @@ target triple = "x86_64-apple-darwin"
 
 ; This test causes a virtual FP register to be redefined while it is live:
 ;%bb.5.bb10:
+;    successors: %bb.5
 ;    Predecessors according to CFG: %bb.4 %bb.5
 ;	%reg1024 = MOV_Fp8080 %reg1034
 ;	%reg1025 = MUL_Fp80m32 %reg1024, %rip, 1, %reg0, %const.0, %reg0; mem:LD4[ConstantPool]
 ;	%reg1034 = MOV_Fp8080 %reg1025
 ;	FP_REG_KILL implicit-def %fp0, implicit-def %fp1, implicit-def %fp2, implicit-def %fp3, implicit-def %fp4, implicit-def %fp5, implicit-def %fp6
 ;	JMP_4 <%bb.5>
-;    Successors according to CFG: %bb.5
 ;
 ; The X86FP pass needs good kill flags, like on %fp0 representing %reg1034:
 ;%bb.5.bb10:
+;    successors: %bb.5
 ;    Predecessors according to CFG: %bb.4 %bb.5
 ;	%fp0 = LD_Fp80m %stack.3, 1, %reg0, 0, %reg0; mem:LD10[FixedStack3](align=4)
 ;	%fp1 = MOV_Fp8080 killed %fp0
@@ -24,7 +25,6 @@ target triple = "x86_64-apple-darwin"
 ;	ST_FpP80m %stack.5, 1, %reg0, 0, %reg0, killed %fp2; mem:ST10[FixedStack5](align=4)
 ;	FP_REG_KILL implicit-def %fp0, implicit-def %fp1, implicit-def %fp2, implicit-def %fp3, implicit-def %fp4, implicit-def %fp5, implicit-def %fp6
 ;	JMP_4 <%bb.5>
-;    Successors according to CFG: %bb.5
 
 define fastcc i32 @sqlite3AtoF(i8* %z, double* nocapture %pResult) nounwind ssp {
 entry:

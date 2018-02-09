@@ -4986,3 +4986,47 @@ define <8 x i64> @test_x86_avx512_maskz_psrlv_q_512(<8 x i64> %a0, <8 x i64> %a1
 
 declare <8 x i64> @llvm.x86.avx512.psrlv.q.512(<8 x i64>, <8 x i64>) nounwind readnone
 
+define <16 x float> @bad_mask_transition(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double> %d, <16 x float> %e, <16 x float> %f) {
+; CHECK-LABEL: bad_mask_transition:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vcmplt_oqpd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vcmplt_oqpd %zmm3, %zmm2, %k0
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kmovw %ecx, %k1
+; CHECK-NEXT:    kunpckbw %k0, %k1, %k1
+; CHECK-NEXT:    vblendmps %zmm5, %zmm4, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %a, <8 x double> %b, i32 17, i8 -1, i32 4)
+  %1 = tail call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %c, <8 x double> %d, i32 17, i8 -1, i32 4)
+  %conv = zext i8 %0 to i16
+  %conv2 = zext i8 %1 to i16
+  %2 = bitcast i16 %conv to <16 x i1>
+  %3 = bitcast i16 %conv2 to <16 x i1>
+  %4 = shufflevector <16 x i1> %2, <16 x i1> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %5 = shufflevector <16 x i1> %3, <16 x i1> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = shufflevector <8 x i1> %4, <8 x i1> %5, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %7 = select <16 x i1> %6, <16 x float> %f, <16 x float> %e
+  ret <16 x float> %7
+}
+
+define <16 x float> @bad_mask_transition_2(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double> %d, <16 x float> %e, <16 x float> %f) {
+; CHECK-LABEL: bad_mask_transition_2:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vcmplt_oqpd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vblendmps %zmm5, %zmm4, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %a, <8 x double> %b, i32 17, i8 -1, i32 4)
+  %conv = zext i8 %0 to i16
+  %1 = bitcast i16 %conv to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %f, <16 x float> %e
+  ret <16 x float> %2
+}

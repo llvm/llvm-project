@@ -435,9 +435,10 @@ public:
   }
 
   // Pretty-printing.
-  void print(raw_ostream &Out, const char *nl = "\n",
-             const char *sep = "") const;
-  void printDOT(raw_ostream &Out) const;
+  void print(raw_ostream &Out, const char *nl = "\n", const char *sep = "",
+             const LocationContext *CurrentLC = nullptr) const;
+  void printDOT(raw_ostream &Out,
+                const LocationContext *CurrentLC = nullptr) const;
   void printTaint(raw_ostream &Out, const char *nl = "\n",
                   const char *sep = "") const;
 

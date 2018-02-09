@@ -126,7 +126,25 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
   void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
                         CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
-    unsigned ExtReg = extendRegister(ValVReg, VA);
+
+    unsigned ExtReg;
+    // If we are copying the value to a physical register with the
+    // size larger than the size of the value itself - build AnyExt
+    // to the size of the register first and only then do the copy.
+    // The example of that would be copying from s32 to xmm0, for which
+    // case ValVT == LocVT == MVT::f32. If LocSize and ValSize are not equal
+    // we expect normal extendRegister mechanism to work.
+    unsigned PhysRegSize =
+        MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI);
+    unsigned ValSize = VA.getValVT().getSizeInBits();
+    unsigned LocSize = VA.getLocVT().getSizeInBits();
+    if (PhysRegSize > ValSize && LocSize == ValSize) {
+      assert((PhysRegSize == 128 || PhysRegSize == 80)  && "We expect that to be 128 bit");
+      auto MIB = MIRBuilder.buildAnyExt(LLT::scalar(PhysRegSize), ValVReg);
+      ExtReg = MIB->getOperand(0).getReg();
+    } else
+      ExtReg = extendRegister(ValVReg, VA);
+
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
@@ -229,10 +247,28 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
   void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
                         CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
+
     switch (VA.getLocInfo()) {
-    default:
+    default: {
+      // If we are copying the value from a physical register with the
+      // size larger than the size of the value itself - build the copy
+      // of the phys reg first and then build the truncation of that copy.
+      // The example of that would be copying from xmm0 to s32, for which
+      // case ValVT == LocVT == MVT::f32. If LocSize and ValSize are not equal
+      // we expect this to be handled in SExt/ZExt/AExt case.
+      unsigned PhysRegSize =
+          MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI);
+      unsigned ValSize = VA.getValVT().getSizeInBits();
+      unsigned LocSize = VA.getLocVT().getSizeInBits();
+      if (PhysRegSize > ValSize && LocSize == ValSize) {
+        auto Copy = MIRBuilder.buildCopy(LLT::scalar(PhysRegSize), PhysReg);
+        MIRBuilder.buildTrunc(ValVReg, Copy);
+        return;
+      }
+
       MIRBuilder.buildCopy(ValVReg, PhysReg);
       break;
+    }
     case CCValAssign::LocInfo::SExt:
     case CCValAssign::LocInfo::ZExt:
     case CCValAssign::LocInfo::AExt: {

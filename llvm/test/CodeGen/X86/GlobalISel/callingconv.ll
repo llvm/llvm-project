@@ -400,9 +400,9 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movq (%rdi), %rdi
-; X64-NEXT:    movq (%rsi), %rcx
+; X64-NEXT:    movq (%rsi), %rax
+; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    movb $1, %al
-; X64-NEXT:    movq %rcx, %xmm0
 ; X64-NEXT:    callq variadic_callee
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq

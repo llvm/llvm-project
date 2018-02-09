@@ -177,6 +177,7 @@ static void computeCacheKey(
 
   auto AddUsedThings = [&](GlobalValueSummary *GS) {
     if (!GS) return;
+    AddUnsigned(GS->isLive());
     for (const ValueInfo &VI : GS->refs()) {
       AddUnsigned(VI.isDSOLocal());
       AddUsedCfiGlobal(VI.getGUID());

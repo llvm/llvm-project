@@ -56,7 +56,6 @@ private:
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
 public:
-  using ModuleHandle = decltype(OptimizeLayer)::ModuleHandleT;
 
   KaleidoscopeJIT()
       : ES(SSP),
@@ -86,10 +85,11 @@ public:
 
   TargetMachine &getTargetMachine() { return *TM; }
 
-  ModuleHandle addModule(std::unique_ptr<Module> M) {
+  VModuleKey addModule(std::unique_ptr<Module> M) {
     // Add the module to the JIT with a new VModuleKey.
-    return cantFail(
-        OptimizeLayer.addModule(ES.allocateVModule(), std::move(M)));
+    auto K = ES.allocateVModule();
+    cantFail(OptimizeLayer.addModule(K, std::move(M)));
+    return K;
   }
 
   JITSymbol findSymbol(const std::string Name) {
@@ -99,8 +99,8 @@ public:
     return OptimizeLayer.findSymbol(MangledNameStream.str(), true);
   }
 
-  void removeModule(ModuleHandle H) {
-    cantFail(OptimizeLayer.removeModule(H));
+  void removeModule(VModuleKey K) {
+    cantFail(OptimizeLayer.removeModule(K));
   }
 
 private:

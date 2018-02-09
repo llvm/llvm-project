@@ -1137,6 +1137,18 @@ public:
   /// be used by clients.
   SourceLocation getImmediateSpellingLoc(SourceLocation Loc) const;
 
+  /// \brief Form a SourceLocation from a FileID and Offset pair.
+  SourceLocation getComposedLoc(FileID FID, unsigned Offset) const {
+    bool Invalid = false;
+    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
+    if (Invalid)
+      return SourceLocation();
+
+    unsigned GlobalOffset = Entry.getOffset() + Offset;
+    return Entry.isFile() ? SourceLocation::getFileLoc(GlobalOffset)
+                          : SourceLocation::getMacroLoc(GlobalOffset);
+  }
+
   /// \brief Decompose the specified location into a raw FileID + Offset pair.
   ///
   /// The first element is the FileID, the second is the offset from the

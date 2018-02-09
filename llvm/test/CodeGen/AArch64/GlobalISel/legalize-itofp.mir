@@ -87,7 +87,7 @@ body: |
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s64) = G_SITOFP %0
-    $w0 = COPY %1
+    $x0 = COPY %1
 ...
 
 ---

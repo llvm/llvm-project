@@ -264,6 +264,8 @@ public:
     return checkCPUKind(getCPUKind(Name));
   }
 
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
   bool setCPU(const std::string &Name) override {
     return checkCPUKind(CPU = getCPUKind(Name));
   }

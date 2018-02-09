@@ -478,6 +478,10 @@ bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
          llvm::ARM::parseCPUArch(Name) != llvm::ARM::ArchKind::INVALID;
 }
 
+void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  llvm::ARM::fillValidCPUArchList(Values);
+}
+
 bool ARMTargetInfo::setCPU(const std::string &Name) {
   if (Name != "generic")
     setArchInfo(llvm::ARM::parseCPUArch(Name));
