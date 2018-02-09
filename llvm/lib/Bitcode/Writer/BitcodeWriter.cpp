@@ -2875,8 +2875,10 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     {
       Code = bitc::FUNC_CODE_INST_DETACH;
       const DetachInst &DI = cast<DetachInst>(I);
-      Vals.push_back(VE.getValueID(DI.getSuccessor(0)));
-      Vals.push_back(VE.getValueID(DI.getSuccessor(1)));
+      Vals.push_back(VE.getValueID(DI.getDetached()));
+      Vals.push_back(VE.getValueID(DI.getContinue()));
+      if (DI.hasUnwindDest())
+        Vals.push_back(VE.getValueID(DI.getUnwindDest()));
       pushValue(DI.getSyncRegion(), InstID, Vals);
     }
     break;

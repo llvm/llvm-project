@@ -3582,6 +3582,13 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
     // landing pad block may be branched to only by the unwind edge of an
     // invoke.
     for (BasicBlock *PredBB : predecessors(BB)) {
+      if (const auto *DI = dyn_cast<DetachInst>(PredBB->getTerminator())) {
+        Assert(DI && DI->getUnwindDest() == BB && DI->getDetached() != BB &&
+               DI->getContinue() != BB,
+               "A detach can only jump to a block containing a LandingPadInst "
+               "as the unwind destination.", LPI);
+        continue;
+      }
       const auto *II = dyn_cast<InvokeInst>(PredBB->getTerminator());
       Assert(II && II->getUnwindDest() == BB && II->getNormalDest() != BB,
              "Block containing LandingPadInst must be jumped to "

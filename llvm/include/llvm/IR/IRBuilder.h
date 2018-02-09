@@ -1051,13 +1051,24 @@ public:
     return Insert(new UnreachableInst(Context));
   }
 
-  /// \brief Create a detach instruction, 'detach within SyncRegion, Detached,
-  // Continue'.
+  /// \brief Create a detach instruction,
+  ///  'detach within SyncRegion, Detached, Continue'.
   DetachInst *CreateDetach(BasicBlock *Detached, BasicBlock *Continue,
                            Value *SyncRegion, MDNode *BranchWeights = nullptr) {
-    return Insert(addBranchMetadata(DetachInst::Create(Detached, Continue,
-                                                       SyncRegion),
-                                    BranchWeights, nullptr));
+    return Insert(addBranchMetadata(
+                      DetachInst::Create(Detached, Continue, SyncRegion),
+                      BranchWeights, nullptr));
+  }
+
+  /// \brief Create a detach instruction,
+  ///  'detach within SyncRegion, Detached, Continue, Unwind'.
+  DetachInst *CreateDetach(BasicBlock *Detached, BasicBlock *Continue,
+                           BasicBlock *Unwind, Value *SyncRegion,
+                           MDNode *BranchWeights = nullptr) {
+    return Insert(addBranchMetadata(
+                      DetachInst::Create(Detached, Continue, Unwind,
+                                         SyncRegion),
+                      BranchWeights, nullptr));
   }
 
   /// \brief Create a reattach instruction, 'reattach within SyncRegion,

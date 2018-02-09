@@ -4631,8 +4631,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       I = new UnreachableInst(Context);
       InstructionList.push_back(I);
       break;
-    case bitc::FUNC_CODE_INST_DETACH: { // DETACH: [bb#, bb#, val]
-      if (Record.size() != 3)
+    case bitc::FUNC_CODE_INST_DETACH: { // DETACH: [bb#, bb#, [bb#,] val]
+      if (Record.size() != 3 && Record.size() != 4)
         return error("Invalid record");
       BasicBlock *Detached = getBasicBlock(Record[0]);
       if (!Detached)
@@ -4642,12 +4642,23 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Continue)
         return error("Invalid record");
 
+      unsigned SREntry = 2;
+      BasicBlock *Unwind = nullptr;
+      if (Record.size() == 4) {
+        Unwind = getBasicBlock(Record[SREntry++]);
+        if (!Unwind)
+          return error("Invalid record");
+      }
+
       Value *SyncRegion =
-        getValue(Record, 2, NextValueNo, Type::getTokenTy(Context));
+        getValue(Record, SREntry, NextValueNo, Type::getTokenTy(Context));
       if (!SyncRegion)
         return error("Invalid record");
 
-      I = DetachInst::Create(Detached, Continue, SyncRegion);
+      if (Unwind)
+        I = DetachInst::Create(Detached, Continue, Unwind, SyncRegion);
+      else
+        I = DetachInst::Create(Detached, Continue, SyncRegion);
       InstructionList.push_back(I);
       break;
     }

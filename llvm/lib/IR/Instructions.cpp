@@ -1132,47 +1132,72 @@ void DetachInst::AssertOK() {
          "Sync region must be a token!");
 }
 
+void DetachInst::init(Value *SyncRegion, BasicBlock *Detached,
+                      BasicBlock *Continue, BasicBlock *Unwind) {
+  Op<-1>() = SyncRegion;
+  Op<-2>() = Detached;
+  Op<-3>() = Continue;
+  if (Unwind) {
+    setInstructionSubclassData(getSubclassDataFromInstruction() | 1);
+    Op<-4>() = Unwind;
+  }
+#ifndef NDEBUG
+  AssertOK();
+#endif
+}
+
 DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
-                       Value *SyncRegion,
-                       Instruction *InsertBefore)
+                       Value *SyncRegion, Instruction *InsertBefore)
     : TerminatorInst(Type::getVoidTy(Detached->getContext()),
                      Instruction::Detach,
                      OperandTraits<DetachInst>::op_end(this) - 3, 3,
                      InsertBefore) {
-  Op<-1>() = Detached;
-  Op<-2>() = Continue;
-  Op<-3>() = SyncRegion;
-#ifndef NDEBUG
-  AssertOK();
-#endif
+  init(SyncRegion, Detached, Continue);
 }
 
 DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
-                       Value *SyncRegion,
-                       BasicBlock *InsertAtEnd)
+                       Value *SyncRegion, BasicBlock *InsertAtEnd)
     : TerminatorInst(Type::getVoidTy(Detached->getContext()),
                      Instruction::Detach,
                      OperandTraits<DetachInst>::op_end(this) - 3, 3,
                      InsertAtEnd) {
-  Op<-1>() = Detached;
-  Op<-2>() = Continue;
-  Op<-3>() = SyncRegion;
-#ifndef NDEBUG
-  AssertOK();
-#endif
+  init(SyncRegion, Detached, Continue);
 }
 
+DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
+                       BasicBlock *Unwind, Value *SyncRegion,
+                       Instruction *InsertBefore)
+    : TerminatorInst(Type::getVoidTy(Detached->getContext()),
+                     Instruction::Detach,
+                     OperandTraits<DetachInst>::op_end(this) - 4, 4,
+                     InsertBefore) {
+  init(SyncRegion, Detached, Continue, Unwind);
+}
+
+DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
+                       BasicBlock *Unwind, Value *SyncRegion,
+                       BasicBlock *InsertAtEnd)
+    : TerminatorInst(Type::getVoidTy(Detached->getContext()),
+                     Instruction::Detach,
+                     OperandTraits<DetachInst>::op_end(this) - 4, 4,
+                     InsertAtEnd) {
+  init(SyncRegion, Detached, Continue, Unwind);
+}
 
 DetachInst::DetachInst(const DetachInst &DI)
     : TerminatorInst(Type::getVoidTy(DI.getContext()), Instruction::Detach,
                      OperandTraits<DetachInst>::op_end(this) -
                      DI.getNumOperands(),
                      DI.getNumOperands()) {
+  setInstructionSubclassData(DI.getSubclassDataFromInstruction());
   Op<-1>() = DI.Op<-1>();
   Op<-2>() = DI.Op<-2>();
   Op<-3>() = DI.Op<-3>();
-  assert(DI.getNumOperands() == 3 && "Detach must have 3 operands!");
-  SubclassOptionalData = DI.SubclassOptionalData;
+  if (DI.hasUnwindDest()) {
+    Op<-4>() = DI.Op<-4>();
+    assert(DI.getNumOperands() == 4 && "Detach must have 4 operands!");
+  } else
+    assert(DI.getNumOperands() == 3 && "Detach must have 3 operands!");
 }
 
 BasicBlock *DetachInst::getSuccessorV(unsigned idx) const {
@@ -1200,8 +1225,8 @@ ReattachInst::ReattachInst(BasicBlock *DetachContinue, Value *SyncRegion,
                      Instruction::Reattach,
                      OperandTraits<ReattachInst>::op_end(this) - 2, 2,
                      InsertBefore) {
-  Op<-1>() = DetachContinue;
-  Op<-2>() = SyncRegion;
+  Op<-1>() = SyncRegion;
+  Op<-2>() = DetachContinue;
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1213,8 +1238,8 @@ ReattachInst::ReattachInst(BasicBlock *DetachContinue, Value *SyncRegion,
                      Instruction::Reattach,
                      OperandTraits<ReattachInst>::op_end(this) - 2, 2,
                      InsertAtEnd) {
-  Op<-1>() = DetachContinue;
-  Op<-2>() = SyncRegion;
+  Op<-1>() = SyncRegion;
+  Op<-2>() = DetachContinue;
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1257,8 +1282,8 @@ SyncInst::SyncInst(BasicBlock *Continue, Value *SyncRegion,
     : TerminatorInst(Type::getVoidTy(Continue->getContext()), Instruction::Sync,
                      OperandTraits<SyncInst>::op_end(this) - 2, 2,
                      InsertBefore) {
-  Op<-1>() = Continue;
-  Op<-2>() = SyncRegion;
+  Op<-1>() = SyncRegion;
+  Op<-2>() = Continue;
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1269,8 +1294,8 @@ SyncInst::SyncInst(BasicBlock *Continue, Value *SyncRegion,
     : TerminatorInst(Type::getVoidTy(Continue->getContext()), Instruction::Sync,
                      OperandTraits<SyncInst>::op_end(this) - 2, 2,
                      InsertAtEnd) {
-  Op<-1>() = Continue;
-  Op<-2>() = SyncRegion;
+  Op<-1>() = SyncRegion;
+  Op<-2>() = Continue;
 #ifndef NDEBUG
   AssertOK();
 #endif

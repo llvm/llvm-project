@@ -3727,6 +3727,10 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     writeOperand(DI.getDetached(), true);
     Out << ", ";
     writeOperand(DI.getContinue(), true);
+    if (DI.hasUnwindDest()) {
+      Out << " unwind ";
+      writeOperand(DI.getUnwindDest(), true);
+    }
   } else if (isa<ReattachInst>(I)) {
     // Special case reattach instruction to get formatting nice and correct
     const ReattachInst &RI(cast<ReattachInst>(I));

@@ -5923,6 +5923,8 @@ bool LLParser::ParseBr(Instruction *&Inst, PerFunctionState &PFS) {
 
 /// ParseDetach
 ///   ::= 'detach' within SyncRegion ',' TypeAndValue ',' TypeAndValue
+///   ::= 'detach' within SyncRegion ',' TypeAndValue ',' TypeAndValue \
+///         unwind TypeAndValue
 bool LLParser::ParseDetach(Instruction *&Inst, PerFunctionState &PFS) {
   LocTy Loc, Loc2;
   Value *SR;
@@ -5946,7 +5948,14 @@ bool LLParser::ParseDetach(Instruction *&Inst, PerFunctionState &PFS) {
       ParseTypeAndBasicBlock(Op2, Loc2, PFS))
     return true;
 
-  Inst = DetachInst::Create(Op1, Op2, SR);
+  LocTy Loc3;
+  BasicBlock *UnwindBB = nullptr;
+  if (EatIfPresent(lltok::kw_unwind)) {
+    if (ParseTypeAndBasicBlock(UnwindBB, Loc3, PFS))
+      return true;
+    Inst = DetachInst::Create(Op1, Op2, UnwindBB, SR);
+  } else
+    Inst = DetachInst::Create(Op1, Op2, SR);
   return false;
 }
 
