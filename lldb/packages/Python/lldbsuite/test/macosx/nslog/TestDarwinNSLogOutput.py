@@ -15,21 +15,20 @@ import re
 import sys
 
 from lldbsuite.test.decorators import *
-from lldbsuite.test import lldbtest
+from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbtest_config
 
 
-class DarwinNSLogOutputTestCase(lldbtest.TestBase):
+class DarwinNSLogOutputTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
+    mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
     @skipIfRemote   # this test is currently written using lldb commands & assumes running on local system
 
     def setUp(self):
         # Call super's setUp().
-        super(DarwinNSLogOutputTestCase, self).setUp()
+        TestBase.setUp(self)
         self.child = None
         self.child_prompt = '(lldb) '
         self.strict_sources = False
@@ -42,7 +41,7 @@ class DarwinNSLogOutputTestCase(lldbtest.TestBase):
         self.d = {'OBJC_SOURCES': self.source, 'EXE': self.exe_name}
 
         # Locate breakpoint.
-        self.line = lldbtest.line_number(self.source, '// break here')
+        self.line = line_number(self.source, '// break here')
 
     def tearDown(self):
         # Shut down the process if it's still running.
