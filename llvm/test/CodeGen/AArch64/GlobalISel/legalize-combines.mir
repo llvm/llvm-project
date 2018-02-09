@@ -68,7 +68,7 @@ body: |
     %1:_(s128) = G_MERGE_VALUES %0, %0
     %2:_(s64) = G_EXTRACT %1, 0
     %3:_(s64) = G_ADD %2, %2
-    $w0 = COPY %3
+    $x0 = COPY %3
 ...
 
 ---

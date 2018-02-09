@@ -204,7 +204,13 @@ bool AnalyzerOptions::includeLifetimeInCFG() {
 
 bool AnalyzerOptions::includeLoopExitInCFG() {
   return getBooleanOption(IncludeLoopExitInCFG, "cfg-loopexit",
-          /* Default = */ false);
+                          /* Default = */ false);
+}
+
+bool AnalyzerOptions::includeRichConstructorsInCFG() {
+  return getBooleanOption(IncludeRichConstructorsInCFG,
+                          "cfg-rich-constructors",
+                          /* Default = */ true);
 }
 
 bool AnalyzerOptions::mayInlineCXXStandardLibrary() {

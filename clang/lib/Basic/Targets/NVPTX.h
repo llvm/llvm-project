@@ -98,6 +98,12 @@ public:
     return StringToCudaArch(Name) != CudaArch::UNKNOWN;
   }
 
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    for (int i = static_cast<int>(CudaArch::SM_20);
+         i < static_cast<int>(CudaArch::LAST); ++i)
+      Values.emplace_back(CudaArchToString(static_cast<CudaArch>(i)));
+  }
+
   bool setCPU(const std::string &Name) override {
     GPU = StringToCudaArch(Name);
     return GPU != CudaArch::UNKNOWN;

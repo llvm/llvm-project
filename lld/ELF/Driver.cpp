@@ -591,6 +591,10 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
 
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
+  errorHandler().Verbose = Args.hasArg(OPT_verbose);
+  errorHandler().FatalWarnings =
+      Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
+
   Config->AllowMultipleDefinition =
       Args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||
@@ -615,8 +619,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = Args.getLastArgValue(OPT_entry);
   Config->ExportDynamic =
       Args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
-  errorHandler().FatalWarnings =
-      Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->FilterList = args::getStrings(Args, OPT_filter);
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->FixCortexA53Errata843419 = Args.hasArg(OPT_fix_cortex_a53_843419);
@@ -674,8 +676,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->UndefinedVersion =
       Args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
-  Config->Verbose = Args.hasArg(OPT_verbose);
-  errorHandler().Verbose = Config->Verbose;
   Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");

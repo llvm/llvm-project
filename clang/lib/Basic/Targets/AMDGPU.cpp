@@ -228,72 +228,37 @@ void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
     TargetOpts.Features.push_back("+fp64-fp16-denormals");
 }
 
+
+constexpr AMDGPUTargetInfo::NameGPUKind AMDGPUTargetInfo::R600Names[];
+constexpr AMDGPUTargetInfo::NameGPUKind AMDGPUTargetInfo::AMDGCNNames[];
 AMDGPUTargetInfo::GPUKind AMDGPUTargetInfo::parseR600Name(StringRef Name) {
-  return llvm::StringSwitch<GPUKind>(Name)
-      .Case("r600", GK_R600)
-      .Case("rv610", GK_R600)
-      .Case("rv620", GK_R600)
-      .Case("rv630", GK_R600)
-      .Case("rv635", GK_R600)
-      .Case("rs780", GK_R600)
-      .Case("rs880", GK_R600)
-      .Case("rv670", GK_R600_DOUBLE_OPS)
-      .Case("rv710", GK_R700)
-      .Case("rv730", GK_R700)
-      .Case("rv740", GK_R700_DOUBLE_OPS)
-      .Case("rv770", GK_R700_DOUBLE_OPS)
-      .Case("palm", GK_EVERGREEN)
-      .Case("cedar", GK_EVERGREEN)
-      .Case("sumo", GK_EVERGREEN)
-      .Case("sumo2", GK_EVERGREEN)
-      .Case("redwood", GK_EVERGREEN)
-      .Case("juniper", GK_EVERGREEN)
-      .Case("hemlock", GK_EVERGREEN_DOUBLE_OPS)
-      .Case("cypress", GK_EVERGREEN_DOUBLE_OPS)
-      .Case("barts", GK_NORTHERN_ISLANDS)
-      .Case("turks", GK_NORTHERN_ISLANDS)
-      .Case("caicos", GK_NORTHERN_ISLANDS)
-      .Case("cayman", GK_CAYMAN)
-      .Case("aruba", GK_CAYMAN)
-      .Default(GK_NONE);
+  const auto *Result = llvm::find_if(
+      R600Names, [Name](const NameGPUKind &Kind) { return Kind.Name == Name; });
+
+  if (Result == std::end(R600Names))
+    return GK_NONE;
+  return Result->Kind;
 }
 
 AMDGPUTargetInfo::GPUKind AMDGPUTargetInfo::parseAMDGCNName(StringRef Name) {
-  return llvm::StringSwitch<GPUKind>(Name)
-      .Case("gfx600", GK_GFX6)
-      .Case("tahiti", GK_GFX6)
-      .Case("gfx601", GK_GFX6)
-      .Case("pitcairn", GK_GFX6)
-      .Case("verde", GK_GFX6)
-      .Case("oland", GK_GFX6)
-      .Case("hainan", GK_GFX6)
-      .Case("gfx700", GK_GFX7)
-      .Case("bonaire", GK_GFX7)
-      .Case("kaveri", GK_GFX7)
-      .Case("gfx701", GK_GFX7)
-      .Case("hawaii", GK_GFX7)
-      .Case("gfx702", GK_GFX7)
-      .Case("gfx703", GK_GFX7)
-      .Case("kabini", GK_GFX7)
-      .Case("mullins", GK_GFX7)
-      .Case("gfx800", GK_GFX8)
-      .Case("iceland", GK_GFX8)
-      .Case("gfx801", GK_GFX8)
-      .Case("carrizo", GK_GFX8)
-      .Case("gfx802", GK_GFX8)
-      .Case("tonga", GK_GFX8)
-      .Case("gfx803", GK_GFX8)
-      .Case("fiji", GK_GFX8)
-      .Case("polaris10", GK_GFX8)
-      .Case("polaris11", GK_GFX8)
-      .Case("gfx804", GK_GFX8)
-      .Case("gfx810", GK_GFX8)
-      .Case("stoney", GK_GFX8)
-      .Case("gfx900", GK_GFX9)
-      .Case("gfx901", GK_GFX9)
-      .Case("gfx902", GK_GFX9)
-      .Case("gfx903", GK_GFX9)
-      .Default(GK_NONE);
+  const auto *Result =
+      llvm::find_if(AMDGCNNames, [Name](const NameGPUKind &Kind) {
+        return Kind.Name == Name;
+      });
+
+  if (Result == std::end(AMDGCNNames))
+    return GK_NONE;
+  return Result->Kind;
+}
+
+void AMDGPUTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  if (getTriple().getArch() == llvm::Triple::amdgcn)
+    llvm::for_each(AMDGCNNames, [&Values](const NameGPUKind &Kind) {
+                   Values.emplace_back(Kind.Name);});
+  else
+    llvm::for_each(R600Names, [&Values](const NameGPUKind &Kind) {
+                   Values.emplace_back(Kind.Name);});
 }
 
 void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {

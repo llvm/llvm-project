@@ -101,6 +101,11 @@ bool AArch64TargetInfo::setCPU(const std::string &Name) {
   return isValidCPUName(Name);
 }
 
+void AArch64TargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::AArch64::fillValidCPUArchList(Values);
+}
+
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");

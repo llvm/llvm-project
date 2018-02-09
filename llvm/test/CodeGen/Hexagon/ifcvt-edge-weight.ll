@@ -2,7 +2,7 @@
 ; Check that the edge weights are updated correctly after if-conversion.
 
 ; CHECK: bb.3.if{{[0-9a-zA-Z.]*}}:
-; CHECK: Successors according to CFG: %bb.2({{[0-9a-fx/= ]+}}10.00%) %bb.1({{[0-9a-fx/= ]+}}90.00%)
+; CHECK: successors: %bb.2(0x0ccccccd), %bb.1(0x73333333)
 @a = external global i32
 @d = external global i32
 

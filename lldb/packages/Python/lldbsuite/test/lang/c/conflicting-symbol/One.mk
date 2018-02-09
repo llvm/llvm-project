@@ -6,7 +6,5 @@ DYLIB_ONLY := YES
 
 include $(LEVEL)/Makefile.rules
 
-CFLAGS_EXTRAS += -fPIC
-
 OneConstant.o: OneConstant.c
 	$(CC) $(CFLAGS_NO_DEBUG) -c $< -o $@

@@ -60,7 +60,7 @@ namespace llvm {
 /// expands to the following machine code:
 ///
 /// %bb.0: derived from LLVM BB %entry
-///    Live Ins: %f1 %f3 %x6
+///    liveins: %f1 %f3 %x6
 ///        <SNIP1>
 ///        %0 = COPY %f1; F8RC:%0
 ///        %5 = CMPLWI killed %4, 0; CRRC:%5 GPRC:%4
@@ -98,7 +98,7 @@ namespace llvm {
 /// If all conditions are meet, IR should collapse to:
 ///
 /// %bb.0: derived from LLVM BB %entry
-///    Live Ins: %f1 %f3 %x6
+///    liveins: %f1 %f3 %x6
 ///        <SNIP1>
 ///        %0 = COPY %f1; F8RC:%0
 ///        %5 = CMPLWI killed %4, 0; CRRC:%5 GPRC:%4
