@@ -648,13 +648,6 @@ ClangModulesDeclVendor::Create(Target &target) {
   std::unique_ptr<clang::CompilerInstance> instance(
       new clang::CompilerInstance());
 
-  std::shared_ptr<clang::PCHContainerOperations> pch_operations =
-      instance->getPCHContainerOperations();
-  pch_operations->registerWriter(
-      llvm::make_unique<clang::ObjectFilePCHContainerWriter>());
-  pch_operations->registerReader(
-      llvm::make_unique<clang::ObjectFilePCHContainerReader>());
-
   instance->setDiagnostics(diagnostics_engine.get());
   instance->setInvocation(invocation);
 
