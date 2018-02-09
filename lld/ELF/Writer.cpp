@@ -1048,6 +1048,13 @@ static DenseMap<SectionBase *, int> buildSectionOrder() {
   return SectionOrder;
 }
 
+static bool isKnownNonreorderableSection(const OutputSection *OS) {
+  return llvm::StringSwitch<bool>(OS->Name)
+      .Cases(".init", ".fini", ".init_array", ".fini_array", ".ctors",
+             ".dtors", true)
+      .Default(false);
+}
+
 // If no layout was provided by linker script, we want to apply default
 // sorting for special input sections. This also handles --symbol-ordering-file.
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
@@ -1057,7 +1064,7 @@ template <class ELFT> void Writer<ELFT>::sortInputSections() {
   if (!Order.empty())
     for (BaseCommand *Base : Script->SectionCommands)
       if (auto *Sec = dyn_cast<OutputSection>(Base))
-        if (Sec->Live)
+        if (Sec->Live && !isKnownNonreorderableSection(Sec))
           Sec->sort([&](InputSectionBase *S) { return Order.lookup(S); });
 
   if (Script->HasSectionsCommand)
