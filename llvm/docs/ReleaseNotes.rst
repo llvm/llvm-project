@@ -120,6 +120,15 @@ Changes to the PowerPC Target
 
  During this release ...
 
+Changes to the SystemZ Target
+-----------------------------
+
+During this release the SystemZ target has:
+
+* Added support for 128-bit atomic operations.
+
+* Added support for the "o" constraint for inline asm statements.
+
 Changes to the X86 Target
 -------------------------
 
