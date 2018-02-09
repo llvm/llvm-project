@@ -483,9 +483,9 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
           .get()
           .Value.items,
       IsEmpty());
-  EXPECT_THAT(
-      Server.signatureHelp(FooCpp, Position{0, 0}).get().Value.signatures,
-      IsEmpty());
+  auto SigHelp = Server.signatureHelp(FooCpp, Position{0, 0});
+  ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
+  EXPECT_THAT(SigHelp->Value.signatures, IsEmpty());
 }
 
 class ClangdThreadingTest : public ClangdVFSTest {};
