@@ -2417,11 +2417,11 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  if (log)
-    log->Printf("AOCRT::NPI Evalulate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
-
   if ((isa & ~m_objc_debug_isa_class_mask) == 0)
     return false;
+
+  if (log)
+    log->Printf("AOCRT::NPI Evalulate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
 
   // If all of the indexed ISA variables are set, then its possible that
   // this ISA is indexed, and we should first try to get its value using
