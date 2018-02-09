@@ -1157,7 +1157,7 @@ void CFGBuilder::EnterConstructionContextIfNecessary(Stmt *Trigger,
     return;
   if (!Child)
     return;
-  if (auto *Constructor = dyn_cast<CXXConstructExpr>(Child)) {
+  if (isa<CXXConstructExpr>(Child)) {
     assert(CurrentConstructionContext.isNull() &&
            "Already within a construction context!");
     CurrentConstructionContext = ConstructionContext(Trigger);
