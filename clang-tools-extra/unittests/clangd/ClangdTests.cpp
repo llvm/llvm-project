@@ -9,6 +9,7 @@
 
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
+#include "Matchers.h"
 #include "TestFS.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
@@ -451,6 +452,40 @@ struct Something {
 
   Server.removeDocument(BarCpp);
   EXPECT_THAT(Server.getUsedBytesPerFile(), IsEmpty());
+}
+
+TEST_F(ClangdVFSTest, InvalidCompileCommand) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true);
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  // clang cannot create CompilerInvocation if we pass two files in the
+  // CompileCommand. We pass the file in ExtraFlags once and CDB adds another
+  // one in getCompileCommand().
+  CDB.ExtraClangFlags.push_back(FooCpp.str());
+
+  // Clang can't parse command args in that case, but we shouldn't crash.
+  Server.addDocument(FooCpp, "int main() {}");
+
+  EXPECT_EQ(Server.dumpAST(FooCpp), "<no-ast>");
+  EXPECT_ERROR(Server.findDefinitions(FooCpp, Position{0, 0}));
+  EXPECT_ERROR(Server.findDocumentHighlights(FooCpp, Position{0, 0}));
+  EXPECT_ERROR(Server.rename(FooCpp, Position{0, 0}, "new_name"));
+  // FIXME: codeComplete and signatureHelp should also return errors when they
+  // can't parse the file.
+  EXPECT_THAT(
+      Server.codeComplete(FooCpp, Position{0, 0}, clangd::CodeCompleteOptions())
+          .get()
+          .Value.items,
+      IsEmpty());
+  EXPECT_THAT(
+      Server.signatureHelp(FooCpp, Position{0, 0}).get().Value.signatures,
+      IsEmpty());
 }
 
 class ClangdThreadingTest : public ClangdVFSTest {};

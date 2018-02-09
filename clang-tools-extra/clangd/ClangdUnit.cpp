@@ -405,10 +405,15 @@ CppFile::rebuild(ParseInputs &&Inputs) {
                                             &IgnoreDiagnostics, false);
     CI = createInvocationFromCommandLine(ArgStrs, CommandLineDiagsEngine,
                                          Inputs.FS);
+    if (!CI) {
+      log("Could not build CompilerInvocation for file " + FileName);
+      AST = llvm::None;
+      Preamble = nullptr;
+      return llvm::None;
+    }
     // createInvocationFromCommandLine sets DisableFree.
     CI->getFrontendOpts().DisableFree = false;
   }
-  assert(CI && "Couldn't create CompilerInvocation");
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, FileName);
