@@ -1102,42 +1102,6 @@ llvm::StringRef SwiftLanguageRuntime::MethodName::GetBasename() {
   return m_basename;
 }
 
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetContext() {
-  if (!m_parsed)
-    Parse();
-  return m_context;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetArguments() {
-  if (!m_parsed)
-    Parse();
-  return m_arguments;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetQualifiers() {
-  if (!m_parsed)
-    Parse();
-  return m_qualifiers;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetMetatypeReference() {
-  if (!m_parsed)
-    Parse();
-  return m_qualifiers;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetTemplateArguments() {
-  if (!m_parsed)
-    Parse();
-  return m_template_args;
-}
-
-llvm::StringRef SwiftLanguageRuntime::MethodName::GetReturnType() {
-  if (!m_parsed)
-    Parse();
-  return m_return_type;
-}
-
 const CompilerType &SwiftLanguageRuntime::GetBoxMetadataType() {
   if (m_box_metadata_type.IsValid())
     return m_box_metadata_type;
