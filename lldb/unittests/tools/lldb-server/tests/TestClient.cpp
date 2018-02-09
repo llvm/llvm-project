@@ -25,8 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
-
-namespace llgs_tests {
+using namespace llgs_tests;
 
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
   SetConnection(Conn.release());
@@ -103,7 +102,7 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
   auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
 
   if (!InferiorArgs.empty()) {
-    if (Error E = Client->QueryProcessInfo())
+    if (Error E = Client->queryProcess())
       return std::move(E);
   }
 
@@ -128,7 +127,7 @@ Error TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
     return E;
   if (Error E = SendMessage("qLaunchSuccess"))
     return E;
-  if (Error E = QueryProcessInfo())
+  if (Error E = queryProcess())
     return E;
   return Error::success();
 }
@@ -147,7 +146,9 @@ Error TestClient::ContinueThread(unsigned long thread_id) {
   return Continue(formatv("vCont;c:{0:x-}", thread_id).str());
 }
 
-const ProcessInfo &TestClient::GetProcessInfo() { return *m_process_info; }
+const llgs_tests::ProcessInfo &TestClient::GetProcessInfo() {
+  return *m_process_info;
+}
 
 Optional<JThreadsInfo> TestClient::GetJThreadsInfo() {
   std::string response;
@@ -201,42 +202,42 @@ Error TestClient::SendMessage(StringRef message, std::string &response_string,
 }
 
 unsigned int TestClient::GetPcRegisterId() {
-  if (m_pc_register != UINT_MAX)
-    return m_pc_register;
-
-  for (unsigned int register_id = 0;; register_id++) {
-    std::string message = formatv("qRegisterInfo{0:x-}", register_id).str();
-    std::string response;
-    if (SendMessage(message, response)) {
-      GTEST_LOG_(ERROR) << "Unable to query register ID for PC register.";
-      return UINT_MAX;
-    }
-
-    auto elements_or_error = SplitUniquePairList("GetPcRegisterId", response);
-    if (auto split_error = elements_or_error.takeError()) {
-      GTEST_LOG_(ERROR) << "GetPcRegisterId: Error splitting response: "
-                        << response;
-      return UINT_MAX;
-    }
-
-    auto elements = *elements_or_error;
-    if (elements["alt-name"] == "pc" || elements["generic"] == "pc") {
-      m_pc_register = register_id;
-      break;
-    }
-  }
-
+  assert(m_pc_register != LLDB_INVALID_REGNUM);
   return m_pc_register;
 }
 
-llvm::Error TestClient::QueryProcessInfo() {
-  std::string response;
-  if (Error E = SendMessage("qProcessInfo", response))
+Error TestClient::qProcessInfo() {
+  m_process_info = None;
+  auto InfoOr = SendMessage<ProcessInfo>("qProcessInfo");
+  if (!InfoOr)
+    return InfoOr.takeError();
+  m_process_info = std::move(*InfoOr);
+  return Error::success();
+}
+
+Error TestClient::qRegisterInfos() {
+  for (unsigned int Reg = 0;; ++Reg) {
+    std::string Message = formatv("qRegisterInfo{0:x-}", Reg).str();
+    Expected<RegisterInfo> InfoOr = SendMessage<RegisterInfoParser>(Message);
+    if (!InfoOr) {
+      consumeError(InfoOr.takeError());
+      break;
+    }
+    m_register_infos.emplace_back(std::move(*InfoOr));
+    if (m_register_infos[Reg].kinds[eRegisterKindGeneric] ==
+        LLDB_REGNUM_GENERIC_PC)
+      m_pc_register = Reg;
+  }
+  if (m_pc_register == LLDB_INVALID_REGNUM)
+    return make_parsing_error("qRegisterInfo: generic");
+  return Error::success();
+}
+
+Error TestClient::queryProcess() {
+  if (Error E = qProcessInfo())
     return E;
-  auto create_or_error = ProcessInfo::Create(response);
-  if (!create_or_error)
-    return create_or_error.takeError();
-  m_process_info = *create_or_error;
+  if (Error E = qRegisterInfos())
+    return E;
   return Error::success();
 }
 
@@ -265,5 +266,3 @@ Error TestClient::Continue(StringRef message) {
   }
   return Error::success();
 }
-
-} // namespace llgs_tests

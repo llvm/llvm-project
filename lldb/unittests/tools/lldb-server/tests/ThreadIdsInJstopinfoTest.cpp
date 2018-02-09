@@ -44,7 +44,7 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
         << "Thread ID: " << tid << " not in JThreadsInfo.";
     auto pc_value = thread_infos[tid].ReadRegisterAsUint64(pc_reg);
     ASSERT_THAT_EXPECTED(pc_value, Succeeded());
-    ASSERT_EQ(stop_reply_pcs[tid], *pc_value)
+    ASSERT_EQ(stop_reply_pc.second, *pc_value)
         << "Mismatched PC for thread: " << tid;
   }
 }

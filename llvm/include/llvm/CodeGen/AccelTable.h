@@ -214,26 +214,19 @@ protected:
 /// Apple-style accelerator table base class.
 class AppleAccelTableBase {
 protected:
-  struct DataArray {
-    DwarfStringPoolEntryRef Name;
-    std::vector<AppleAccelTableData *> Values;
-  };
-
-  friend struct HashData;
-
   struct HashData {
-    StringRef Str;
+    DwarfStringPoolEntryRef Name;
     uint32_t HashValue;
+    std::vector<AppleAccelTableData *> Values;
     MCSymbol *Sym;
-    DataArray &Data;
 
-    HashData(StringRef S, DataArray &Data) : Str(S), Data(Data) {
-      HashValue = djbHash(S);
+    HashData(DwarfStringPoolEntryRef Name) : Name(Name) {
+      HashValue = djbHash(Name.getString());
     }
 
 #ifndef NDEBUG
-    void print(raw_ostream &OS);
-    void dump() { print(dbgs()); }
+    void print(raw_ostream &OS) const;
+    void dump() const { print(dbgs()); }
 #endif
   };
 
@@ -243,9 +236,7 @@ protected:
   /// Header containing both the header and header data.
   AppleAccelTableHeader Header;
 
-  std::vector<HashData *> Data;
-
-  using StringEntries = StringMap<DataArray, BumpPtrAllocator &>;
+  using StringEntries = StringMap<HashData, BumpPtrAllocator &>;
   StringEntries Entries;
 
   using HashList = std::vector<HashData *>;
@@ -323,13 +314,12 @@ template <typename AppleAccelTableDataT>
 template <class... Types>
 void AppleAccelTable<AppleAccelTableDataT>::addName(
     DwarfStringPoolEntryRef Name, Types... Args) {
-  assert(Data.empty() && "Already finalized!");
+  assert(Buckets.empty() && "Already finalized!");
   // If the string is in the list already then add this die to the list
   // otherwise add a new one.
-  DataArray &DA = Entries[Name.getString()];
-  assert(!DA.Name || DA.Name == Name);
-  DA.Name = Name;
-  DA.Values.push_back(new (Allocator) AppleAccelTableDataT(Args...));
+  auto Iter = Entries.try_emplace(Name.getString(), Name).first;
+  assert(Iter->second.Name == Name);
+  Iter->second.Values.push_back(new (Allocator) AppleAccelTableDataT(Args...));
 }
 
 /// Accelerator table data implementation for simple accelerator tables with

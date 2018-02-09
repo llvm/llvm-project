@@ -3,7 +3,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd February 7, 2018
+.Dd February 9, 2018
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -482,3 +482,44 @@ Create a
 segment.
 .El
 .El
+.Sh IMPLEMENTATION NOTES
+.Nm Ap s
+handing of archive files (those with a
+.Cm .a
+file extension) is different from traditional linkers used on Unix-like
+systems.
+.Pp
+Traditional linkers maintain a set of undefined symbols during linking.
+The linker processes each file in the order in which it appears on the
+command line, until the set of undefined symbols becomes empty.
+An object file is linked into the output object when it is encountered,
+with its undefined symbols added to the set.
+Upon encountering an archive file a traditional linker searches the objects
+contained therein, and processes those that satisfy symbols in the unresolved
+set.
+.Pp
+Handling mutually dependent archives may be awkward when using a traditional
+linker.
+Archive files may have to be specified multiple times, or the special command
+line options
+.Fl -start-group
+and
+.Fl -end-group
+may be used to have the linker loop over the files in the group until no new
+symbols are added to the set.
+.Pp
+.Nm
+records all symbols found in objects and archives as it iterates over
+command line arguments.
+When
+.Nm
+encounters an undefined symbol that can be resolved by an object file
+contained in a previously processed archive file, it immediately extracts
+and links it into the output object.
+.Pp
+With certain archive inputs
+.Nm
+may produce different results compared to traditional linkers.
+In practice, large bodies of third party software have been linked with
+.Nm
+without material issues.

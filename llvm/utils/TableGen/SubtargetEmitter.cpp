@@ -626,7 +626,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
       RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
       for (Record *RU : ResUnits) {
         NumUnits += RU->getValueAsInt("NumUnits");
-        SubUnitsOffset += NumUnits;
+        SubUnitsOffset += RU->getValueAsInt("NumUnits");
       }
     }
     else {

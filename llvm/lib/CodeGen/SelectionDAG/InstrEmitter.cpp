@@ -394,11 +394,26 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
   } else if (ConstantFPSDNode *F = dyn_cast<ConstantFPSDNode>(Op)) {
     MIB.addFPImm(F->getConstantFPValue());
   } else if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(Op)) {
+    unsigned VReg = R->getReg();
+    MVT OpVT = Op.getSimpleValueType();
+    const TargetRegisterClass *OpRC =
+        TLI->isTypeLegal(OpVT) ? TLI->getRegClassFor(OpVT) : nullptr;
+    const TargetRegisterClass *IIRC =
+        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum, TRI, *MF))
+           : nullptr;
+
+    if (OpRC && IIRC && OpRC != IIRC &&
+        TargetRegisterInfo::isVirtualRegister(VReg)) {
+      unsigned NewVReg = MRI->createVirtualRegister(IIRC);
+      BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
+               TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+      VReg = NewVReg;
+    }
     // Turn additional physreg operands into implicit uses on non-variadic
     // instructions. This is used by call and return instructions passing
     // arguments in registers.
     bool Imp = II && (IIOpNum >= II->getNumOperands() && !II->isVariadic());
-    MIB.addReg(R->getReg(), getImplRegState(Imp));
+    MIB.addReg(VReg, getImplRegState(Imp));
   } else if (RegisterMaskSDNode *RM = dyn_cast<RegisterMaskSDNode>(Op)) {
     MIB.addRegMask(RM->getRegMask());
   } else if (GlobalAddressSDNode *TGA = dyn_cast<GlobalAddressSDNode>(Op)) {

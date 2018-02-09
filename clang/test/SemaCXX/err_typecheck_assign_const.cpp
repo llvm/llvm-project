@@ -129,3 +129,23 @@ void test() {
   Func &bar();
   bar()() = 0; // expected-error {{read-only variable is not assignable}}
 }
+
+typedef float float4 __attribute__((ext_vector_type(4)));
+struct OhNo {
+  float4 v;
+  void AssignMe() const { v.x = 1; } // expected-error {{cannot assign to non-static data member within const member function 'AssignMe'}} \
+                                        expected-note {{member function 'OhNo::AssignMe' is declared const here}}
+};
+
+typedef float float4_2 __attribute__((__vector_size__(16)));
+struct OhNo2 {
+  float4_2 v;
+  void AssignMe() const { v[0] = 1; } // expected-error {{cannot assign to non-static data member within const member function 'AssignMe'}} \
+                                        expected-note {{member function 'OhNo2::AssignMe' is declared const here}}
+};
+
+struct OhNo3 {
+  float v[4];
+  void AssignMe() const { v[0] = 1; } // expected-error {{cannot assign to non-static data member within const member function 'AssignMe'}} \
+                                        expected-note {{member function 'OhNo3::AssignMe' is declared const here}}
+};
