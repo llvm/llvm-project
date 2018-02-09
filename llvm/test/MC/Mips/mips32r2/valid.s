@@ -11,7 +11,7 @@ a:
         add       $9,$14,15176         # CHECK: addi $9, $14, 15176   # encoding: [0x21,0xc9,0x3b,0x48]
         add       $24,-7193            # CHECK: addi $24, $24, -7193  # encoding: [0x23,0x18,0xe3,0xe7]
         add.d     $f0, $f2, $f4        # CHECK: add.d   $f0, $f2, $f4 # encoding: [0x46,0x24,0x10,0x00]
-                                       # CHECK-NEXT:                  # <MCInst #1067 FADD_D32
+                                       # CHECK-NEXT:                  # <MCInst #{{[0-9]+}} FADD_D32
         add.s     $f8,$f21,$f24
         addi      $13,$9,26322
         addi      $8,$8,~1             # CHECK: addi $8, $8, -2 # encoding: [0x21,0x08,0xff,0xfe]
@@ -83,23 +83,23 @@ a:
         clz       $sp,$gp              # CHECK: clz $sp, $gp  # encoding: [0x73,0x9d,0xe8,0x20]
         ctc1      $a2,$26
         cvt.d.s   $f0,$f2              # CHECK: cvt.d.s $f0, $f2         # encoding: [0x46,0x00,0x10,0x21]
-                                       # CHECK-NEXT:                     # <MCInst #732 CVT_D32_S
+                                       # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} CVT_D32_S
         cvt.d.w   $f0,$f2              # CHECK: cvt.d.w $f0, $f2         # encoding: [0x46,0x80,0x10,0x21]
-                                       # CHECK-NEXT:                     # <MCInst #734 CVT_D32_W
+                                       # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} CVT_D32_W
         cvt.l.d   $f24,$f15
         cvt.l.s   $f11,$f29
         cvt.s.d   $f0,$f2              # CHECK: cvt.s.d $f0, $f2         # encoding: [0x46,0x20,0x10,0x20]
-                                       # CHECK-NEXT:                     # <MCInst #748 CVT_S_D32
+                                       # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} CVT_S_D32
         cvt.s.w   $f22,$f15
         cvt.w.d   $f0,$f2              # CHECK: cvt.w.d $f0, $f2         # encoding: [0x46,0x20,0x10,0x24]
-                                       # CHECK-NEXT:                     # <MCInst #757 CVT_W_D32
+                                       # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} CVT_W_D32
         cvt.w.s   $f20,$f24
         deret
         di        $s8                  # CHECK: di  $fp       # encoding: [0x41,0x7e,0x60,0x00]
         di                             # CHECK: di            # encoding: [0x41,0x60,0x60,0x00]
         div       $zero,$25,$11
         div.d     $f0, $f2, $f4        # CHECK: div.d $f0, $f2, $f4      # encoding: [0x46,0x24,0x10,0x03]
-                                       # CHECK-NEXT:                     # <MCInst #1105 FDIV_D32
+                                       # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} FDIV_D32
         div.s     $f4,$f5,$f15
         divu      $zero,$25,$15
         ehb                            # CHECK: ehb # encoding:  [0x00,0x00,0x00,0xc0]
@@ -145,12 +145,12 @@ a:
         mfc0      $8,$15,1             # CHECK: mfc0 $8, $15, 1      # encoding: [0x40,0x08,0x78,0x01]
         mfc1      $a3,$f27
         mfhc1     $4,$f0               # CHECK: mfhc1 $4, $f0        # encoding: [0x44,0x64,0x00,0x00]
-                                       # CHECK-NEXT:                 # <MCInst #1559 MFHC1_D32
+                                       # CHECK-NEXT:                 # <MCInst #{{[0-9]+}} MFHC1_D32
         mfhi      $s3
         mfhi      $sp
         mflo      $s1
         mov.d     $f0,$f2              # CHECK: mov.d $f0, $f2       # encoding: [0x46,0x20,0x10,0x06]
-                                       # CHECK-NEXT:                 # <MCInst #1160 FMOV_D32
+                                       # CHECK-NEXT:                 # <MCInst #{{[0-9]+}} FMOV_D32
         mov.s     $f2,$f27
         move      $s8,$a0              # CHECK: move $fp, $4             # encoding: [0x00,0x80,0xf0,0x25]
         move      $25,$a2              # CHECK: move $25, $6             # encoding: [0x00,0xc0,0xc8,0x25]
@@ -173,13 +173,13 @@ a:
         mtc0      $9,$15,1             # CHECK: mtc0 $9, $15, 1     # encoding: [0x40,0x89,0x78,0x01]
         mtc1      $s8,$f9
         mthc1     $4,$f0               # CHECK: mthc1 $4, $f0       # encoding: [0x44,0xe4,0x00,0x00]
-                                       # CHECK-NEXT:                # <MCInst #1712 MTHC1_D32
+                                       # CHECK-NEXT:                # <MCInst #{{[0-9]+}} MTHC1_D32
         mthi      $s1
         mtlo      $sp
         mtlo      $25
         mul       $s0,$s4,$at
         mul.d     $f0, $f2, $f4        # CHECK: mul.d $f0, $f2, $f4 # encoding: [0x46,0x24,0x10,0x02]
-                                       # CHECK-NEXT:                # <MCInst #1170 FMUL_D32
+                                       # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FMUL_D32
         mul.s     $f30,$f10,$f2
         mult      $sp,$s4
         mult      $sp,$v0
@@ -190,7 +190,7 @@ a:
         negu      $2                   # CHECK: negu $2, $2            # encoding: [0x00,0x02,0x10,0x23]
         negu      $2,$3                # CHECK: negu $2, $3            # encoding: [0x00,0x03,0x10,0x23]
         neg.d     $f0,$f2              # CHECK: neg.d $f0, $f2         # encoding: [0x46,0x20,0x10,0x07]
-                                       # CHECK-NEXT:                   # <MCInst #1178 FNEG_D32
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FNEG_D32
         neg.s     $f1,$f15
         nmadd.d   $f18,$f9,$f14,$f19
         nmadd.s   $f0,$f5,$f25,$f12
@@ -266,7 +266,7 @@ a:
         sub       $22,$17,-3126        # CHECK: addi $22, $17, 3126    # encoding: [0x22,0x36,0x0c,0x36]
         sub       $13,6512             # CHECK: addi $13, $13, -6512   # encoding: [0x21,0xad,0xe6,0x90]
         sub.d     $f0, $f2, $f4        # CHECK: sub.d $f0, $f2, $f4    # encoding: [0x46,0x24,0x10,0x01]
-                                       # CHECK-NEXT:                   # <MCInst #1213 FSUB_D32 
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FSUB_D32
         sub.s     $f23,$f22,$f22
         subu      $sp,$s6,$s6
         suxc1     $f12,$k1($13)

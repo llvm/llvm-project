@@ -15,6 +15,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/TargetParser.h"
@@ -1648,8 +1649,6 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
 bool X86TargetInfo::checkCPUKind(CPUKind Kind) const {
   // Perform any per-CPU checks necessary to determine if this CPU is
   // acceptable.
-  // FIXME: This results in terrible diagnostics. Clang just says the CPU is
-  // invalid without explaining *why*.
   switch (Kind) {
   case CK_Generic:
     // No processor selected!
@@ -1660,6 +1659,18 @@ bool X86TargetInfo::checkCPUKind(CPUKind Kind) const {
 #include "clang/Basic/X86Target.def"
   }
   llvm_unreachable("Unhandled CPU kind");
+}
+
+void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+#define PROC(ENUM, STRING, IS64BIT)                                            \
+  if (IS64BIT || getTriple().getArch() == llvm::Triple::x86)                   \
+    Values.emplace_back(STRING);
+  // Go through CPUKind checking to ensure that the alias is de-aliased and 
+  // 64 bit-ness is checked.
+#define PROC_ALIAS(ENUM, ALIAS)                                                \
+  if (checkCPUKind(getCPUKind(ALIAS)))                                         \
+    Values.emplace_back(ALIAS);
+#include "clang/Basic/X86Target.def"
 }
 
 X86TargetInfo::CPUKind X86TargetInfo::getCPUKind(StringRef CPU) const {

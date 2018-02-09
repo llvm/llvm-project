@@ -194,7 +194,7 @@ public:
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
                          unsigned StmtIdx, NodeBuilderContext *Ctx) override;
 
-  void ProcessStmt(const CFGStmt S, ExplodedNode *Pred);
+  void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
   void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
 
@@ -299,8 +299,9 @@ public:
                        const CallEvent *Call) override;
 
   /// printState - Called by ProgramStateManager to print checker-specific data.
-  void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) override;
+  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
+                  const char *Sep,
+                  const LocationContext *LCtx = nullptr) override;
 
   ProgramStateManager& getStateManager() override { return StateMgr; }
 

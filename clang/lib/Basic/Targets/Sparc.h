@@ -131,54 +131,15 @@ public:
     CG_V9,
   };
 
-  CPUGeneration getCPUGeneration(CPUKind Kind) const {
-    switch (Kind) {
-    case CK_GENERIC:
-    case CK_V8:
-    case CK_SUPERSPARC:
-    case CK_SPARCLITE:
-    case CK_F934:
-    case CK_HYPERSPARC:
-    case CK_SPARCLITE86X:
-    case CK_SPARCLET:
-    case CK_TSC701:
-    case CK_MYRIAD2100:
-    case CK_MYRIAD2150:
-    case CK_MYRIAD2155:
-    case CK_MYRIAD2450:
-    case CK_MYRIAD2455:
-    case CK_MYRIAD2x5x:
-    case CK_MYRIAD2080:
-    case CK_MYRIAD2085:
-    case CK_MYRIAD2480:
-    case CK_MYRIAD2485:
-    case CK_MYRIAD2x8x:
-    case CK_LEON2:
-    case CK_LEON2_AT697E:
-    case CK_LEON2_AT697F:
-    case CK_LEON3:
-    case CK_LEON3_UT699:
-    case CK_LEON3_GR712RC:
-    case CK_LEON4:
-    case CK_LEON4_GR740:
-      return CG_V8;
-    case CK_V9:
-    case CK_ULTRASPARC:
-    case CK_ULTRASPARC3:
-    case CK_NIAGARA:
-    case CK_NIAGARA2:
-    case CK_NIAGARA3:
-    case CK_NIAGARA4:
-      return CG_V9;
-    }
-    llvm_unreachable("Unexpected CPU kind");
-  }
+  CPUGeneration getCPUGeneration(CPUKind Kind) const;
 
   CPUKind getCPUKind(StringRef Name) const;
 
   bool isValidCPUName(StringRef Name) const override {
     return getCPUKind(Name) != CK_GENERIC;
   }
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     CPU = getCPUKind(Name);
@@ -258,6 +219,8 @@ public:
   bool isValidCPUName(StringRef Name) const override {
     return getCPUGeneration(SparcTargetInfo::getCPUKind(Name)) == CG_V9;
   }
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     if (!SparcTargetInfo::setCPU(Name))

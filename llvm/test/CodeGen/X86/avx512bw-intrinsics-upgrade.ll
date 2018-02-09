@@ -1693,10 +1693,7 @@ define i64 @test_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512BW-NEXT:    addq %rcx, %rax
 ; AVX512BW-NEXT:    vpcmpgtb %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovq %k0, %rcx
-; AVX512BW-NEXT:    addq %rax, %rcx
-; AVX512BW-NEXT:    kxnorq %k0, %k0, %k0
-; AVX512BW-NEXT:    kmovq %k0, %rax
-; AVX512BW-NEXT:    addq %rcx, %rax
+; AVX512BW-NEXT:    leaq -1(%rcx,%rax), %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1742,10 +1739,8 @@ define i64 @test_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-32-NEXT:    kmovd %k0, %eax
 ; AVX512F-32-NEXT:    addl %edi, %eax
 ; AVX512F-32-NEXT:    adcl %ecx, %edx
-; AVX512F-32-NEXT:    kxnord %k0, %k0, %k0
-; AVX512F-32-NEXT:    kmovd %k0, %ecx
-; AVX512F-32-NEXT:    addl %ecx, %eax
-; AVX512F-32-NEXT:    adcl %ecx, %edx
+; AVX512F-32-NEXT:    addl $-1, %eax
+; AVX512F-32-NEXT:    adcl $-1, %edx
 ; AVX512F-32-NEXT:    popl %esi
 ; AVX512F-32-NEXT:    popl %edi
 ; AVX512F-32-NEXT:    vzeroupper
@@ -1904,10 +1899,7 @@ define i64 @test_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512BW-NEXT:    addq %rcx, %rax
 ; AVX512BW-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovq %k0, %rcx
-; AVX512BW-NEXT:    addq %rax, %rcx
-; AVX512BW-NEXT:    kxnorq %k0, %k0, %k0
-; AVX512BW-NEXT:    kmovq %k0, %rax
-; AVX512BW-NEXT:    addq %rcx, %rax
+; AVX512BW-NEXT:    leaq -1(%rcx,%rax), %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1953,10 +1945,8 @@ define i64 @test_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-32-NEXT:    kmovd %k0, %eax
 ; AVX512F-32-NEXT:    addl %edi, %eax
 ; AVX512F-32-NEXT:    adcl %ecx, %edx
-; AVX512F-32-NEXT:    kxnord %k0, %k0, %k0
-; AVX512F-32-NEXT:    kmovd %k0, %ecx
-; AVX512F-32-NEXT:    addl %ecx, %eax
-; AVX512F-32-NEXT:    adcl %ecx, %edx
+; AVX512F-32-NEXT:    addl $-1, %eax
+; AVX512F-32-NEXT:    adcl $-1, %edx
 ; AVX512F-32-NEXT:    popl %esi
 ; AVX512F-32-NEXT:    popl %edi
 ; AVX512F-32-NEXT:    vzeroupper
@@ -2115,10 +2105,7 @@ define i32 @test_cmp_w_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; AVX512BW-NEXT:    addl %ecx, %eax
 ; AVX512BW-NEXT:    vpcmpgtw %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %ecx
-; AVX512BW-NEXT:    addl %eax, %ecx
-; AVX512BW-NEXT:    kxnord %k0, %k0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    addl %ecx, %eax
+; AVX512BW-NEXT:    leal -1(%rcx,%rax), %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -2140,10 +2127,7 @@ define i32 @test_cmp_w_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; AVX512F-32-NEXT:    addl %ecx, %eax
 ; AVX512F-32-NEXT:    vpcmpgtw %zmm1, %zmm0, %k0
 ; AVX512F-32-NEXT:    kmovd %k0, %ecx
-; AVX512F-32-NEXT:    addl %eax, %ecx
-; AVX512F-32-NEXT:    kxnord %k0, %k0, %k0
-; AVX512F-32-NEXT:    kmovd %k0, %eax
-; AVX512F-32-NEXT:    addl %ecx, %eax
+; AVX512F-32-NEXT:    leal -1(%ecx,%eax), %eax
 ; AVX512F-32-NEXT:    vzeroupper
 ; AVX512F-32-NEXT:    retl
   %res0 = call i32 @llvm.x86.avx512.mask.cmp.w.512(<32 x i16> %a0, <32 x i16> %a1, i32 0, i32 -1)
@@ -2256,10 +2240,7 @@ define i32 @test_ucmp_w_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; AVX512BW-NEXT:    addl %ecx, %eax
 ; AVX512BW-NEXT:    vpcmpnleuw %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %ecx
-; AVX512BW-NEXT:    addl %eax, %ecx
-; AVX512BW-NEXT:    kxnord %k0, %k0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    addl %ecx, %eax
+; AVX512BW-NEXT:    leal -1(%rcx,%rax), %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -2281,10 +2262,7 @@ define i32 @test_ucmp_w_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; AVX512F-32-NEXT:    addl %ecx, %eax
 ; AVX512F-32-NEXT:    vpcmpnleuw %zmm1, %zmm0, %k0
 ; AVX512F-32-NEXT:    kmovd %k0, %ecx
-; AVX512F-32-NEXT:    addl %eax, %ecx
-; AVX512F-32-NEXT:    kxnord %k0, %k0, %k0
-; AVX512F-32-NEXT:    kmovd %k0, %eax
-; AVX512F-32-NEXT:    addl %ecx, %eax
+; AVX512F-32-NEXT:    leal -1(%ecx,%eax), %eax
 ; AVX512F-32-NEXT:    vzeroupper
 ; AVX512F-32-NEXT:    retl
   %res0 = call i32 @llvm.x86.avx512.mask.ucmp.w.512(<32 x i16> %a0, <32 x i16> %a1, i32 0, i32 -1)

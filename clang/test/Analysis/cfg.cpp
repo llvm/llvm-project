@@ -1,5 +1,16 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 %s > %t 2>&1
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
+
+// This file tests how we construct two different flavors of the Clang CFG -
+// the CFG used by the Sema analysis-based warnings and the CFG used by the
+// static analyzer. The difference in the behavior is checked via FileCheck
+// prefixes (WARNINGS and ANALYZER respectively). When introducing new analyzer
+// flags, no new run lines should be added - just these flags would go to the
+// respective line depending on where is it turned on and where is it turned
+// off. Feel free to add tests that test only one of the CFG flavors if you're
+// not sure how the other flavor is supposed to work in your case.
 
 // CHECK-LABEL: void checkWrap(int i)
 // CHECK: ENTRY
@@ -116,7 +127,8 @@ public:
 // CHECK-NEXT:   Succs (1): B1
 // CHECK: [B1]
 // CHECK-NEXT:   1:  CFGNewAllocator(A *)
-// CHECK-NEXT:   2:  (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   2:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:   3: new A([B1.2])
 // CHECK-NEXT:   4: A *a = new A();
 // CHECK-NEXT:   5: a
@@ -138,7 +150,8 @@ void test_deletedtor() {
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
 // CHECK-NEXT:   2: CFGNewAllocator(A *)
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A [5])
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A [5])
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A [5])
 // CHECK-NEXT:   4: new A {{\[\[}}B1.1]]
 // CHECK-NEXT:   5: A *a = new A [5];
 // CHECK-NEXT:   6: a
@@ -331,7 +344,8 @@ int test_enum_with_extension_default(enum MyEnum value) {
 // CHECK-NEXT:  3: [B1.2] (ImplicitCastExpr, ArrayToPointerDecay, int *)
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: CFGNewAllocator(MyClass *)
-// CHECK-NEXT:  6:  (CXXConstructExpr, class MyClass)
+// WARNINGS-NEXT:  6:  (CXXConstructExpr, class MyClass)
+// ANALYZER-NEXT:  6:  (CXXConstructExpr, [B1.7], class MyClass)
 // CHECK-NEXT:  7: new ([B1.4]) MyClass([B1.6])
 // CHECK-NEXT:  8: MyClass *obj = new (buffer) MyClass();
 // CHECK-NEXT:  Preds (1): B2
@@ -363,7 +377,8 @@ void test_placement_new() {
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: 5
 // CHECK-NEXT:  6: CFGNewAllocator(MyClass *)
-// CHECK-NEXT:  7:  (CXXConstructExpr, class MyClass [5])
+// WARNINGS-NEXT:  7:  (CXXConstructExpr, class MyClass [5])
+// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], class MyClass [5])
 // CHECK-NEXT:  8: new ([B1.4]) MyClass {{\[\[}}B1.5]]
 // CHECK-NEXT:  9: MyClass *obj = new (buffer) MyClass [5];
 // CHECK-NEXT:  Preds (1): B2

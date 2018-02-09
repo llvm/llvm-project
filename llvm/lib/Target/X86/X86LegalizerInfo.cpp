@@ -92,6 +92,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
 
   for (auto Ty : {p0, s1, s8, s16, s32})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
@@ -136,6 +137,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     setAction({G_SEXT, Ty}, Legal);
     setAction({G_ANYEXT, Ty}, Legal);
   }
+  setAction({G_ANYEXT, s128}, Legal);
 
   // Comparison
   setAction({G_ICMP, s1}, Legal);
@@ -163,6 +165,9 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   const LLT s128 = LLT::scalar(128);
 
   setAction({G_IMPLICIT_DEF, s64}, Legal);
+  // Need to have that, as tryFoldImplicitDef will create this pattern:
+  // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
+  setAction({G_IMPLICIT_DEF, s128}, Legal);
 
   setAction({G_PHI, s64}, Legal);
 

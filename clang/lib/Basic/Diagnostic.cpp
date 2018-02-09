@@ -236,6 +236,96 @@ DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
   return &F;
 }
 
+void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
+                                           StringRef DiagName) const {
+  llvm::errs() << "diagnostic state at ";
+  CurDiagStateLoc.dump(SrcMgr);
+  llvm::errs() << ": " << CurDiagState << "\n";
+
+  for (auto &F : Files) {
+    FileID ID = F.first;
+    File &File = F.second;
+
+    bool PrintedOuterHeading = false;
+    auto PrintOuterHeading = [&] {
+      if (PrintedOuterHeading) return;
+      PrintedOuterHeading = true;
+
+      llvm::errs() << "File " << &File << " <FileID " << ID.getHashValue()
+                   << ">: " << SrcMgr.getBuffer(ID)->getBufferIdentifier();
+      if (F.second.Parent) {
+        std::pair<FileID, unsigned> Decomp =
+            SrcMgr.getDecomposedIncludedLoc(ID);
+        assert(File.ParentOffset == Decomp.second);
+        llvm::errs() << " parent " << File.Parent << " <FileID "
+                     << Decomp.first.getHashValue() << "> ";
+        SrcMgr.getLocForStartOfFile(Decomp.first)
+              .getLocWithOffset(Decomp.second)
+              .dump(SrcMgr);
+      }
+      if (File.HasLocalTransitions)
+        llvm::errs() << " has_local_transitions";
+      llvm::errs() << "\n";
+    };
+
+    if (DiagName.empty())
+      PrintOuterHeading();
+
+    for (DiagStatePoint &Transition : File.StateTransitions) {
+      bool PrintedInnerHeading = false;
+      auto PrintInnerHeading = [&] {
+        if (PrintedInnerHeading) return;
+        PrintedInnerHeading = true;
+
+        PrintOuterHeading();
+        llvm::errs() << "  ";
+        SrcMgr.getLocForStartOfFile(ID)
+              .getLocWithOffset(Transition.Offset)
+              .dump(SrcMgr);
+        llvm::errs() << ": state " << Transition.State << ":\n";
+      };
+
+      if (DiagName.empty())
+        PrintInnerHeading();
+
+      for (auto &Mapping : *Transition.State) {
+        StringRef Option =
+            DiagnosticIDs::getWarningOptionForDiag(Mapping.first);
+        if (!DiagName.empty() && DiagName != Option)
+          continue;
+
+        PrintInnerHeading();
+        llvm::errs() << "    ";
+        if (Option.empty())
+          llvm::errs() << "<unknown " << Mapping.first << ">";
+        else
+          llvm::errs() << Option;
+        llvm::errs() << ": ";
+
+        switch (Mapping.second.getSeverity()) {
+        case diag::Severity::Ignored: llvm::errs() << "ignored"; break;
+        case diag::Severity::Remark: llvm::errs() << "remark"; break;
+        case diag::Severity::Warning: llvm::errs() << "warning"; break;
+        case diag::Severity::Error: llvm::errs() << "error"; break;
+        case diag::Severity::Fatal: llvm::errs() << "fatal"; break;
+        }
+
+        if (!Mapping.second.isUser())
+          llvm::errs() << " default";
+        if (Mapping.second.isPragma())
+          llvm::errs() << " pragma";
+        if (Mapping.second.hasNoWarningAsError())
+          llvm::errs() << " no-error";
+        if (Mapping.second.hasNoErrorAsFatal())
+          llvm::errs() << " no-fatal";
+        if (Mapping.second.wasUpgradedFromWarning())
+          llvm::errs() << " overruled";
+        llvm::errs() << "\n";
+      }
+    }
+  }
+}
+
 void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
                                            SourceLocation Loc) {
   assert(Loc.isValid() && "Adding invalid loc point");

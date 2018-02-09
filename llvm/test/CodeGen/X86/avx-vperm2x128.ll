@@ -435,8 +435,7 @@ define <4 x double> @shuffle_v4f64_zz67_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_01zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_01zz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; ALL-NEXT:    vmovaps %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x double> %s
@@ -444,8 +443,7 @@ define <4 x double> @shuffle_v4f64_01zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_01zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_01zz_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; ALL-NEXT:    vmovaps %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x double> %s
@@ -471,8 +469,7 @@ define <4 x double> @shuffle_v4f64_23zz_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_45zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_45zz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; ALL-NEXT:    vmovaps %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
   ret <4 x double> %s
@@ -480,8 +477,7 @@ define <4 x double> @shuffle_v4f64_45zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_45zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_45zz_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; ALL-NEXT:    vmovaps %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
   ret <4 x double> %s

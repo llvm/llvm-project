@@ -14,8 +14,8 @@
 # CHECK: include_directories[ 2] = .debug_line_str[0x[[DIR2:[0-9a-f]+]]] = "dir2"
 # CHECK-NOT: include_directories
 # CHECK: Dir MD5 Checksum File Name
-# CHECK: file_names[ 1] 1 00112233445566778899aabbccddeeff .debug_line_str[0x[[FILE1:[0-9a-f]+]]] = "foo"
-# CHECK: file_names[ 2] 2 ffeeddccbbaa99887766554433221100 .debug_line_str[0x[[FILE2:[0-9a-f]+]]] = "bar"
+# CHECK: file_names[ 0] 1 00112233445566778899aabbccddeeff .debug_line_str[0x[[FILE1:[0-9a-f]+]]] = "foo"
+# CHECK: file_names[ 1] 2 ffeeddccbbaa99887766554433221100 .debug_line_str[0x[[FILE2:[0-9a-f]+]]] = "bar"
 
 # CHECK: .debug_line_str contents:
 # CHECK-NEXT: 0x[[DIR0]]: ""

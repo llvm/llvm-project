@@ -544,6 +544,11 @@ endif
 #----------------------------------------------------------------------
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
 
+ifneq "$(OS)" "Windows_NT"
+$(DYLIB_OBJECTS) : CFLAGS += -fPIC
+$(DYLIB_OBJECTS) : CXXFLAGS += -fPIC
+endif
+
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 ifeq "$(OS)" "Darwin"
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -install_name "$(DYLIB_EXECUTABLE_PATH)/$(DYLIB_FILENAME)" -dynamiclib -o "$(DYLIB_FILENAME)"
