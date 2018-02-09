@@ -12,13 +12,13 @@
 # implicit use of r0:
 #
 # %bb.0:
-#     Live Ins: %R0
-#         %R1 = A2_sxth killed %R0               ; hoisted, kills r0
+#     liveins: %r0
+#         %r1 = A2_sxth killed %r0               ; hoisted, kills r0
 #         A2_nop implicit-def %P0
-#         %R0 = C2_cmoveit %P0, 2, implicit %R0 ; predicated A2_tfrsi
-#         %R0 = C2_cmoveif killed %P0, 1, implicit %R0 ; predicated A2_tfrsi
-#         %R0 = A2_add killed %R0, killed %R1
-#         J2_jumpr %R31, implicit dead %PC
+#         %r0 = C2_cmoveit %P0, 2, implicit %r0 ; predicated A2_tfrsi
+#         %r0 = C2_cmoveif killed %P0, 1, implicit %r0 ; predicated A2_tfrsi
+#         %r0 = A2_add killed %r0, killed %r1
+#         J2_jumpr %r31, implicit dead %PC
 #
 
 # CHECK: $r1 = A2_sxth killed $r0

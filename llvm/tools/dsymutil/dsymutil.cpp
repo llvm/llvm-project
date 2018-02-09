@@ -329,8 +329,9 @@ static Expected<std::vector<std::string>> getInputs(bool DsymAsInput) {
     }
 
     // Make sure that we're dealing with a dSYM bundle.
-    std::string dSYMDir = Input + "/Contents/Resources/DWARF";
-    if (!llvm::sys::fs::is_directory(dSYMDir))
+    SmallString<256> BundlePath(Input);
+    sys::path::append(BundlePath, "Contents", "Resources", "DWARF");
+    if (!llvm::sys::fs::is_directory(BundlePath))
       return make_error<StringError>(
           Input + " is a directory, but doesn't look like a dSYM bundle.",
           inconvertibleErrorCode());
@@ -338,7 +339,7 @@ static Expected<std::vector<std::string>> getInputs(bool DsymAsInput) {
     // Create a directory iterator to iterate over all the entries in the
     // bundle.
     std::error_code EC;
-    llvm::sys::fs::directory_iterator DirIt(dSYMDir, EC);
+    llvm::sys::fs::directory_iterator DirIt(BundlePath, EC);
     llvm::sys::fs::directory_iterator DirEnd;
     if (EC)
       return errorCodeToError(EC);

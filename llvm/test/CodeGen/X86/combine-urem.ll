@@ -3,41 +3,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX2
 
-; fold (urem undef, x) -> 0
-define i32 @combine_urem_undef0(i32 %x) {
-; CHECK-LABEL: combine_urem_undef0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    retq
-  %1 = urem i32 undef, %x
-  ret i32 %1
-}
-
-define <4 x i32> @combine_vec_urem_undef0(<4 x i32> %x) {
-; CHECK-LABEL: combine_vec_urem_undef0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = urem <4 x i32> undef, %x
-  ret <4 x i32> %1
-}
-
-; fold (urem x, undef) -> undef
-define i32 @combine_urem_undef1(i32 %x) {
-; CHECK-LABEL: combine_urem_undef1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = urem i32 %x, undef
-  ret i32 %1
-}
-
-define <4 x i32> @combine_vec_urem_undef1(<4 x i32> %x) {
-; CHECK-LABEL: combine_vec_urem_undef1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = urem <4 x i32> %x, undef
-  ret <4 x i32> %1
-}
-
 ; fold (urem x, 1) -> 0
 define i32 @combine_urem_by_one(i32 %x) {
 ; CHECK-LABEL: combine_urem_by_one:

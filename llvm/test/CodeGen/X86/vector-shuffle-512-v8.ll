@@ -2761,3 +2761,35 @@ define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
   %res = shufflevector <8 x i64> %v, <8 x i64> undef, <2 x i32> <i32 2, i32 5>
   ret <2 x i64> %res
 }
+
+define <8 x i64> @test_v8i64_insert_zero_128(<8 x i64> %a) {
+; AVX512F-LABEL: test_v8i64_insert_zero_128:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movb $3, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8i64_insert_zero_128:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    movb $3, %al
+; AVX512F-32-NEXT:    kmovw %eax, %k1
+; AVX512F-32-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; AVX512F-32-NEXT:    retl
+  %res = shufflevector <8 x i64> %a, <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9>
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_v8i64_insert_zero_256(<8 x i64> %a) {
+; AVX512F-LABEL: test_v8i64_insert_zero_256:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovaps %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8i64_insert_zero_256:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vmovaps %ymm0, %ymm0
+; AVX512F-32-NEXT:    retl
+  %res = shufflevector <8 x i64> %a, <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  ret <8 x i64> %res
+}

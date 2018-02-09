@@ -6,8 +6,8 @@
 
 define i64 @test(i64 %X, i1 %Cond ) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[QUOTIENT1:%.*]] = lshr i64 %X, 4
-; CHECK-NEXT:    [[QUOTIENT2:%.*]] = lshr i64 %X, 3
+; CHECK-NEXT:    [[QUOTIENT1:%.*]] = lshr i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[QUOTIENT2:%.*]] = lshr i64 [[X]], 3
 ; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i64 [[QUOTIENT1]], [[QUOTIENT2]]
 ; CHECK-NEXT:    ret i64 [[SUM]]
 ;
@@ -24,7 +24,8 @@ define i64 @test(i64 %X, i1 %Cond ) {
 
 define <2 x i32> @PR34856(<2 x i32> %t0, <2 x i32> %t1) {
 ; CHECK-LABEL: @PR34856(
-; CHECK-NEXT:    [[DIV1:%.*]] = udiv <2 x i32> %t1, <i32 -7, i32 -7>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i32> [[T1:%.*]], <i32 -8, i32 -8>
+; CHECK-NEXT:    [[DIV1:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[DIV1]]
 ;
   %cmp = icmp eq <2 x i32> %t0, <i32 1, i32 1>

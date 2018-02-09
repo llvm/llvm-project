@@ -1,5 +1,5 @@
-FIXME: This test should *not* fail on Windows.
-UNSUPPORTED: windows
+UNSUPPORTED: system-windows
+Remove UNSUPPORTED once we figure out why this fails on Windows.
 
 RUN: rm -rf %t.dir
 RUN: mkdir -p %t.dir

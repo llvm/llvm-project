@@ -608,9 +608,10 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
   EmitProcessorResourceSubUnits(ProcModel, OS);
 
   OS << "\n// {Name, NumUnits, SuperIdx, IsBuffered, SubUnitsIdxBegin}\n";
-  OS << "static const llvm::MCProcResourceDesc "
-     << ProcModel.ModelName << "ProcResources" << "[] = {\n"
-     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0},\n";
+  OS << "static const llvm::MCProcResourceDesc " << ProcModel.ModelName
+     << "ProcResources"
+     << "[] = {\n"
+     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0, 0},\n";
 
   unsigned SubUnitsOffset = 1;
   for (unsigned i = 0, e = ProcModel.ProcResourceDefs.size(); i < e; ++i) {
@@ -625,7 +626,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
       RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
       for (Record *RU : ResUnits) {
         NumUnits += RU->getValueAsInt("NumUnits");
-        SubUnitsOffset += NumUnits;
+        SubUnitsOffset += RU->getValueAsInt("NumUnits");
       }
     }
     else {

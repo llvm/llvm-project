@@ -6700,18 +6700,14 @@ define i32 @mask16_zext(i16 %x) {
 define i8 @mask8(i8 %x) {
 ; GENERIC-LABEL: mask8:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    xorb %dil, %al # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: def $al killed $al killed $eax
+; GENERIC-NEXT:    notb %dil # sched: [1:0.33]
+; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask8:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    xorb %dil, %al # sched: [1:0.25]
-; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    notb %dil # sched: [1:0.25]
+; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6722,18 +6718,14 @@ define i8 @mask8(i8 %x) {
 define i32 @mask8_zext(i8 %x) {
 ; GENERIC-LABEL: mask8_zext:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    xorb %dil, %al # sched: [1:0.33]
-; GENERIC-NEXT:    movzbl %al, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    notb %dil # sched: [1:0.33]
+; GENERIC-NEXT:    movzbl %dil, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask8_zext:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    xorb %dil, %al # sched: [1:0.25]
-; SKX-NEXT:    movzbl %al, %eax # sched: [1:0.25]
+; SKX-NEXT:    notb %dil # sched: [1:0.25]
+; SKX-NEXT:    movzbl %dil, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -7028,18 +7020,16 @@ define void @vcmp_test7(<8 x i1> %mask)  {
 ; GENERIC:       # %bb.0: # %allocas
 ; GENERIC-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    movb $85, %al # sched: [1:0.33]
-; GENERIC-NEXT:    kmovd %eax, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    kortestb %k1, %k0 # sched: [1:1.00]
+; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    orb $85, %al # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vcmp_test7:
 ; SKX:       # %bb.0: # %allocas
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:0.50]
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    movb $85, %al # sched: [1:0.25]
-; SKX-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; SKX-NEXT:    kortestb %k1, %k0 # sched: [3:1.00]
+; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
+; SKX-NEXT:    orb $85, %al # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 allocas:
   %a= or <8 x i1> %mask, <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>

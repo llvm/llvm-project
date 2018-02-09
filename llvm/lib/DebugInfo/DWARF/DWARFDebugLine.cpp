@@ -93,9 +93,12 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
       OS << "                Dir  Mod Time   File Len   File Name\n"
          << "                ---- ---------- ---------- -----------"
             "----------------\n";
+    // DWARF v5 starts file indexes at 0.
+    uint32_t FileBase = getVersion() >= 5 ? 0 : 1;
     for (uint32_t I = 0; I != FileNames.size(); ++I) {
       const FileNameEntry &FileEntry = FileNames[I];
-      OS << format("file_names[%3u] %4" PRIu64 " ", I + 1, FileEntry.DirIdx);
+      OS << format("file_names[%3u] %4" PRIu64 " ", I + FileBase,
+                   FileEntry.DirIdx);
       if (HasMD5)
         OS << FileEntry.Checksum.digest();
       else

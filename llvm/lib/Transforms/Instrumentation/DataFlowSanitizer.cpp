@@ -1388,12 +1388,12 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   auto *MTI = cast<MemTransferInst>(
       IRB.CreateCall(I.getCalledValue(),
                      {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
-  // FIXME: Set the source & dest alignments of MTI based on the separate
-  // source & dest alignments of I
   if (ClPreserveAlignment) {
-    MTI->setAlignment(I.getAlignment() * (DFSF.DFS.ShadowWidth / 8));
+    MTI->setDestAlignment(I.getDestAlignment() * (DFSF.DFS.ShadowWidth / 8));
+    MTI->setSourceAlignment(I.getSourceAlignment() * (DFSF.DFS.ShadowWidth / 8));
   } else {
-    MTI->setAlignment(DFSF.DFS.ShadowWidth / 8);
+    MTI->setDestAlignment(DFSF.DFS.ShadowWidth / 8);
+    MTI->setSourceAlignment(DFSF.DFS.ShadowWidth / 8);
   }
 }
 

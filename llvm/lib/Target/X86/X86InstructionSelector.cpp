@@ -104,6 +104,11 @@ private:
                      MachineFunction &MF) const;
   bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
+  bool selectTurnIntoCOPY(MachineInstr &I, MachineRegisterInfo &MRI,
+                          const unsigned DstReg,
+                          const TargetRegisterClass *DstRC,
+                          const unsigned SrcReg,
+                          const TargetRegisterClass *SrcRC) const;
   bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -640,6 +645,31 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
+// Helper function for selectTrunc and selectAnyext.
+// Returns true if DstRC lives on a floating register class and
+// SrcRC lives on a 128-bit vector class.
+static bool canTurnIntoCOPY(const TargetRegisterClass *DstRC,
+                            const TargetRegisterClass *SrcRC) {
+  return (DstRC == &X86::FR32RegClass || DstRC == &X86::FR32XRegClass ||
+          DstRC == &X86::FR64RegClass || DstRC == &X86::FR64XRegClass) &&
+         (SrcRC == &X86::VR128RegClass || SrcRC == &X86::VR128XRegClass);
+}
+
+bool X86InstructionSelector::selectTurnIntoCOPY(
+    MachineInstr &I, MachineRegisterInfo &MRI, const unsigned DstReg,
+    const TargetRegisterClass *DstRC, const unsigned SrcReg,
+    const TargetRegisterClass *SrcRC) const {
+
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
+      !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                 << " operand\n");
+    return false;
+  }
+  I.setDesc(TII.get(X86::COPY));
+  return true;
+}
+
 bool X86InstructionSelector::selectTrunc(MachineInstr &I,
                                          MachineRegisterInfo &MRI,
                                          MachineFunction &MF) const {
@@ -659,15 +689,19 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
     return false;
   }
 
-  if (DstRB.getID() != X86::GPRRegBankID)
-    return false;
-
   const TargetRegisterClass *DstRC = getRegClass(DstTy, DstRB);
-  if (!DstRC)
+  const TargetRegisterClass *SrcRC = getRegClass(SrcTy, SrcRB);
+
+  if (!DstRC || !SrcRC)
     return false;
 
-  const TargetRegisterClass *SrcRC = getRegClass(SrcTy, SrcRB);
-  if (!SrcRC)
+  // If that's truncation of the value that lives on the vector class and goes
+  // into the floating class, just replace it with copy, as we are able to
+  // select it as a regular move.
+  if (canTurnIntoCOPY(DstRC, SrcRC))
+    return selectTurnIntoCOPY(I, MRI, DstReg, DstRC, SrcReg, SrcRC);
+
+  if (DstRB.getID() != X86::GPRRegBankID)
     return false;
 
   unsigned SubIdx;
@@ -765,11 +799,17 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
   assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
          "G_ANYEXT incorrect operand size");
 
-  if (DstRB.getID() != X86::GPRRegBankID)
-    return false;
-
   const TargetRegisterClass *DstRC = getRegClass(DstTy, DstRB);
   const TargetRegisterClass *SrcRC = getRegClass(SrcTy, SrcRB);
+
+  // If that's ANY_EXT of the value that lives on the floating class and goes
+  // into the vector class, just replace it with copy, as we are able to select
+  // it as a regular move.
+  if (canTurnIntoCOPY(SrcRC, DstRC))
+    return selectTurnIntoCOPY(I, MRI, SrcReg, SrcRC, DstReg, DstRC);
+
+  if (DstRB.getID() != X86::GPRRegBankID)
+    return false;
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {

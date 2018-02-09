@@ -271,10 +271,6 @@ class LoopPredication {
   // so.
   Optional<LoopICmp> generateLoopLatchCheck(Type *RangeCheckType);
 
-  // Returns the latch predicate for guard. SGT -> SGE, UGT -> UGE, SGE -> SGT,
-  // UGE -> UGT, etc.
-  ICmpInst::Predicate getLatchPredicateForGuard(ICmpInst::Predicate Pred);
-
 public:
   LoopPredication(ScalarEvolution *SE) : SE(SE){};
   bool runOnLoop(Loop *L);
@@ -400,30 +396,6 @@ bool LoopPredication::CanExpand(const SCEV* S) {
   return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
 }
 
-ICmpInst::Predicate
-LoopPredication::getLatchPredicateForGuard(ICmpInst::Predicate Pred) {
-  switch (LatchCheck.Pred) {
-  case ICmpInst::ICMP_ULT:
-    return ICmpInst::ICMP_ULE;
-  case ICmpInst::ICMP_ULE:
-    return ICmpInst::ICMP_ULT;
-  case ICmpInst::ICMP_SLT:
-    return ICmpInst::ICMP_SLE;
-  case ICmpInst::ICMP_SLE:
-    return ICmpInst::ICMP_SLT;
-  case ICmpInst::ICMP_UGT:
-    return ICmpInst::ICMP_UGE;
-  case ICmpInst::ICMP_UGE:
-    return ICmpInst::ICMP_UGT;
-  case ICmpInst::ICMP_SGT:
-    return ICmpInst::ICMP_SGE;
-  case ICmpInst::ICMP_SGE:
-    return ICmpInst::ICMP_SGT;
-  default:
-    llvm_unreachable("Unsupported loop latch!");
-  }
-}
-
 Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
     LoopPredication::LoopICmp LatchCheck, LoopPredication::LoopICmp RangeCheck,
     SCEVExpander &Expander, IRBuilder<> &Builder) {
@@ -448,7 +420,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
     DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
-  auto LimitCheckPred = getLatchPredicateForGuard(LatchCheck.Pred);
+  auto LimitCheckPred =
+      ICmpInst::getFlippedStrictnessPredicate(LatchCheck.Pred);
 
   DEBUG(dbgs() << "LHS: " << *LatchLimit << "\n");
   DEBUG(dbgs() << "RHS: " << *RHS << "\n");
@@ -489,7 +462,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   // latchLimit <pred> 1.
   // See the header comment for reasoning of the checks.
   Instruction *InsertAt = Preheader->getTerminator();
-  auto LimitCheckPred = getLatchPredicateForGuard(LatchCheck.Pred);
+  auto LimitCheckPred =
+      ICmpInst::getFlippedStrictnessPredicate(LatchCheck.Pred);
   auto *FirstIterationCheck = expandCheck(Expander, Builder, ICmpInst::ICMP_ULT,
                                           GuardStart, GuardLimit, InsertAt);
   auto *LimitCheck = expandCheck(Expander, Builder, LimitCheckPred, LatchLimit,

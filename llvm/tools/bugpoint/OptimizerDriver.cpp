@@ -43,9 +43,6 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
     cl::init(true), cl::Hidden);
 
-// ChildOutput - This option captures the name of the child output file that
-// is set up by the parent bugpoint process
-static cl::opt<std::string> ChildOutput("child-output", cl::ReallyHidden);
 static cl::opt<std::string>
     OptCmd("opt-command", cl::init(""),
            cl::desc("Path to opt. (default: search path "
@@ -178,6 +175,10 @@ bool BugDriver::runPasses(Module *Program,
   }
   if (tool.empty()) {
     errs() << "Cannot find `opt' in PATH!\n";
+    return 1;
+  }
+  if (!sys::fs::exists(tool)) {
+    errs() << "Specified `opt' binary does not exist: " << tool << "\n";
     return 1;
   }
 

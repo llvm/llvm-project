@@ -2707,7 +2707,7 @@ void FunctionStackPoisoner::copyArgsPassedByValToAllocas() {
       Arg.replaceAllUsesWith(AI);
 
       uint64_t AllocSize = DL.getTypeAllocSize(Ty);
-      IRB.CreateMemCpy(AI, &Arg, AllocSize, Align);
+      IRB.CreateMemCpy(AI, Align, &Arg, Align, AllocSize);
     }
   }
 }

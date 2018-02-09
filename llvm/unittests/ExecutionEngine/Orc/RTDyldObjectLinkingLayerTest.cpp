@@ -100,21 +100,23 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
 
   {
     // Test with ProcessAllSections = false (the default).
-    auto H = cantFail(ObjLayer.addObject(ES.allocateVModule(), Obj));
-    cantFail(ObjLayer.emitAndFinalize(H));
+    auto K = ES.allocateVModule();
+    cantFail(ObjLayer.addObject(K, Obj));
+    cantFail(ObjLayer.emitAndFinalize(K));
     EXPECT_EQ(DebugSectionSeen, false)
       << "Unexpected debug info section";
-    cantFail(ObjLayer.removeObject(H));
+    cantFail(ObjLayer.removeObject(K));
   }
 
   {
     // Test with ProcessAllSections = true.
     ObjLayer.setProcessAllSections(true);
-    auto H = cantFail(ObjLayer.addObject(ES.allocateVModule(), Obj));
-    cantFail(ObjLayer.emitAndFinalize(H));
+    auto K = ES.allocateVModule();
+    cantFail(ObjLayer.addObject(K, Obj));
+    cantFail(ObjLayer.emitAndFinalize(K));
     EXPECT_EQ(DebugSectionSeen, true)
       << "Expected debug info section not seen";
-    cantFail(ObjLayer.removeObject(H));
+    cantFail(ObjLayer.removeObject(K));
   }
 }
 
@@ -198,9 +200,9 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
         return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
       });
 
-  auto H = cantFail(ObjLayer.addObject(K2, std::move(Obj2)));
-  cantFail(ObjLayer.emitAndFinalize(H));
-  cantFail(ObjLayer.removeObject(H));
+  cantFail(ObjLayer.addObject(K2, std::move(Obj2)));
+  cantFail(ObjLayer.emitAndFinalize(K2));
+  cantFail(ObjLayer.removeObject(K2));
 
   // Finalization of module 2 should trigger finalization of module 1.
   // Verify that finalize on SMMW is only called once.
@@ -264,10 +266,11 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     std::make_shared<object::OwningBinary<object::ObjectFile>>(
       Compile(*MB2.getModule()));
 
-  auto H = cantFail(ObjLayer.addObject(ES.allocateVModule(), std::move(Obj1)));
+  auto K = ES.allocateVModule();
+  cantFail(ObjLayer.addObject(K, std::move(Obj1)));
   cantFail(ObjLayer.addObject(ES.allocateVModule(), std::move(Obj2)));
-  cantFail(ObjLayer.emitAndFinalize(H));
-  cantFail(ObjLayer.removeObject(H));
+  cantFail(ObjLayer.emitAndFinalize(K));
+  cantFail(ObjLayer.removeObject(K));
 
   // Only one call to needsToReserveAllocationSpace should have been made.
   EXPECT_EQ(MM->NeedsToReserveAllocationSpaceCount, 1)
@@ -281,8 +284,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
   RTDyldObjectLinkingLayer ObjLayer(
       ES, [](VModuleKey) { return nullptr; },
       [](VModuleKey) { return std::make_shared<NullResolver>(); },
-      [](RTDyldObjectLinkingLayer::ObjHandleT,
-         const RTDyldObjectLinkingLayer::ObjectPtr &obj,
+      [](VModuleKey, const RTDyldObjectLinkingLayer::ObjectPtr &obj,
          const RuntimeDyld::LoadedObjectInfo &info) {});
 }
 

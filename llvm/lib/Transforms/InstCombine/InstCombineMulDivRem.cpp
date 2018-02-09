@@ -132,18 +132,30 @@ static bool IsMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
 
 /// \brief A helper routine of InstCombiner::visitMul().
 ///
-/// If C is a vector of known powers of 2, then this function returns
-/// a new vector obtained from C replacing each element with its logBase2.
+/// If C is a scalar/vector of known powers of 2, then this function returns
+/// a new scalar/vector obtained from logBase2 of C.
 /// Return a null pointer otherwise.
-static Constant *getLogBase2Vector(ConstantDataVector *CV) {
+static Constant *getLogBase2(Type *Ty, Constant *C) {
   const APInt *IVal;
-  SmallVector<Constant *, 4> Elts;
+  if (const auto *CI = dyn_cast<ConstantInt>(C))
+    if (match(CI, m_APInt(IVal)) && IVal->isPowerOf2())
+      return ConstantInt::get(Ty, IVal->logBase2());
 
-  for (unsigned I = 0, E = CV->getNumElements(); I != E; ++I) {
-    Constant *Elt = CV->getElementAsConstant(I);
+  if (!Ty->isVectorTy())
+    return nullptr;
+
+  SmallVector<Constant *, 4> Elts;
+  for (unsigned I = 0, E = Ty->getVectorNumElements(); I != E; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (!Elt)
+      return nullptr;
+    if (isa<UndefValue>(Elt)) {
+      Elts.push_back(UndefValue::get(Ty->getScalarType()));
+      continue;
+    }
     if (!match(Elt, m_APInt(IVal)) || !IVal->isPowerOf2())
       return nullptr;
-    Elts.push_back(ConstantInt::get(Elt->getType(), IVal->logBase2()));
+    Elts.push_back(ConstantInt::get(Ty->getScalarType(), IVal->logBase2()));
   }
 
   return ConstantVector::get(Elts);
@@ -232,16 +244,8 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
 
     if (match(&I, m_Mul(m_Value(NewOp), m_Constant(C1)))) {
-      Constant *NewCst = nullptr;
-      if (match(C1, m_APInt(IVal)) && IVal->isPowerOf2())
-        // Replace X*(2^C) with X << C, where C is either a scalar or a splat.
-        NewCst = ConstantInt::get(NewOp->getType(), IVal->logBase2());
-      else if (ConstantDataVector *CV = dyn_cast<ConstantDataVector>(C1))
-        // Replace X*(2^C) with X << C, where C is a vector of known
-        // constant powers of 2.
-        NewCst = getLogBase2Vector(CV);
-
-      if (NewCst) {
+      // Replace X*(2^C) with X << C, where C is either a scalar or a vector.
+      if (Constant *NewCst = getLogBase2(NewOp->getType(), C1)) {
         unsigned Width = NewCst->getType()->getPrimitiveSizeInBits();
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
@@ -1051,9 +1055,10 @@ struct UDivFoldAction {
 // X udiv 2^C -> X >> C
 static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
                                     const BinaryOperator &I, InstCombiner &IC) {
-  const APInt &C = cast<Constant>(Op1)->getUniqueInteger();
-  BinaryOperator *LShr = BinaryOperator::CreateLShr(
-      Op0, ConstantInt::get(Op0->getType(), C.logBase2()));
+  Constant *C1 = getLogBase2(Op0->getType(), cast<Constant>(Op1));
+  if (!C1)
+    llvm_unreachable("Failed to constant fold udiv -> logbase2");
+  BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, C1);
   if (I.isExact())
     LShr->setIsExact();
   return LShr;
@@ -1062,8 +1067,7 @@ static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
 // X udiv C, where C >= signbit
 static Instruction *foldUDivNegCst(Value *Op0, Value *Op1,
                                    const BinaryOperator &I, InstCombiner &IC) {
-  Value *ICI = IC.Builder.CreateICmpULT(Op0, cast<ConstantInt>(Op1));
-
+  Value *ICI = IC.Builder.CreateICmpULT(Op0, cast<Constant>(Op1));
   return SelectInst::Create(ICI, Constant::getNullValue(I.getType()),
                             ConstantInt::get(I.getType(), 1));
 }
@@ -1076,12 +1080,14 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
   if (!match(Op1, m_ZExt(m_Value(ShiftLeft))))
     ShiftLeft = Op1;
 
-  const APInt *CI;
+  Constant *CI;
   Value *N;
-  if (!match(ShiftLeft, m_Shl(m_APInt(CI), m_Value(N))))
+  if (!match(ShiftLeft, m_Shl(m_Constant(CI), m_Value(N))))
     llvm_unreachable("match should never fail here!");
-  if (*CI != 1)
-    N = IC.Builder.CreateAdd(N, ConstantInt::get(N->getType(), CI->logBase2()));
+  Constant *Log2Base = getLogBase2(N->getType(), CI);
+  if (!Log2Base)
+    llvm_unreachable("getLogBase2 should never fail here!");
+  N = IC.Builder.CreateAdd(N, Log2Base);
   if (Op1 != ShiftLeft)
     N = IC.Builder.CreateZExt(N, Op1->getType());
   BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, N);
@@ -1104,12 +1110,11 @@ static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
     return Actions.size();
   }
 
-  if (ConstantInt *C = dyn_cast<ConstantInt>(Op1))
-    // X udiv C, where C >= signbit
-    if (C->getValue().isNegative()) {
-      Actions.push_back(UDivFoldAction(foldUDivNegCst, C));
-      return Actions.size();
-    }
+  // X udiv C, where C >= signbit
+  if (match(Op1, m_Negative())) {
+    Actions.push_back(UDivFoldAction(foldUDivNegCst, Op1));
+    return Actions.size();
+  }
 
   // X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
   if (match(Op1, m_Shl(m_Power2(), m_Value())) ||
@@ -1597,8 +1602,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   }
 
   // X urem C -> X < C ? X : X - C, where C >= signbit.
-  const APInt *DivisorC;
-  if (match(Op1, m_APInt(DivisorC)) && DivisorC->isNegative()) {
+  if (match(Op1, m_Negative())) {
     Value *Cmp = Builder.CreateICmpULT(Op0, Op1);
     Value *Sub = Builder.CreateSub(Op0, Op1);
     return SelectInst::Create(Cmp, Op0, Sub);
@@ -1623,7 +1627,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   {
     const APInt *Y;
     // X % -Y -> X % Y
-    if (match(Op1, m_APInt(Y)) && Y->isNegative() && !Y->isMinSignedValue()) {
+    if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue()) {
       Worklist.AddValue(I.getOperand(1));
       I.setOperand(1, ConstantInt::get(I.getType(), -*Y));
       return &I;

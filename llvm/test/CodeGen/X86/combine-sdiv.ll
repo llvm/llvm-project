@@ -6,41 +6,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=CHECK,AVX,AVX2ORLATER,AVX512,AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+xop | FileCheck %s --check-prefixes=CHECK,AVX,XOP
 
-; fold (sdiv undef, x) -> 0
-define i32 @combine_sdiv_undef0(i32 %x) {
-; CHECK-LABEL: combine_sdiv_undef0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    retq
-  %1 = sdiv i32 undef, %x
-  ret i32 %1
-}
-
-define <4 x i32> @combine_vec_sdiv_undef0(<4 x i32> %x) {
-; CHECK-LABEL: combine_vec_sdiv_undef0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = sdiv <4 x i32> undef, %x
-  ret <4 x i32> %1
-}
-
-; fold (sdiv x, undef) -> undef
-define i32 @combine_sdiv_undef1(i32 %x) {
-; CHECK-LABEL: combine_sdiv_undef1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = sdiv i32 %x, undef
-  ret i32 %1
-}
-
-define <4 x i32> @combine_vec_sdiv_undef1(<4 x i32> %x) {
-; CHECK-LABEL: combine_vec_sdiv_undef1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = sdiv <4 x i32> %x, undef
-  ret <4 x i32> %1
-}
-
 ; fold (sdiv x, 1) -> x
 define i32 @combine_sdiv_by_one(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_by_one:
