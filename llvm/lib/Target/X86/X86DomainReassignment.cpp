@@ -663,8 +663,10 @@ void X86DomainReassignment::initConverters() {
     createReplacer(X86::XOR32rr, X86::KXORDrr);
     createReplacer(X86::XOR64rr, X86::KXORQrr);
 
-    createReplacer(X86::TEST32rr, X86::KTESTDrr);
-    createReplacer(X86::TEST64rr, X86::KTESTQrr);
+    // TODO: KTEST is not a replacement for TEST due to flag differences. Need
+    // to prove only Z flag is used.
+    //createReplacer(X86::TEST32rr, X86::KTESTDrr);
+    //createReplacer(X86::TEST64rr, X86::KTESTQrr);
   }
 
   if (STI->hasDQI()) {
@@ -684,8 +686,10 @@ void X86DomainReassignment::initConverters() {
     createReplacer(X86::SHR8ri, X86::KSHIFTRBri);
     createReplacer(X86::SHL8ri, X86::KSHIFTLBri);
 
-    createReplacer(X86::TEST8rr, X86::KTESTBrr);
-    createReplacer(X86::TEST16rr, X86::KTESTWrr);
+    // TODO: KTEST is not a replacement for TEST due to flag differences. Need
+    // to prove only Z flag is used.
+    //createReplacer(X86::TEST8rr, X86::KTESTBrr);
+    //createReplacer(X86::TEST16rr, X86::KTESTWrr);
 
     createReplacer(X86::XOR8rr, X86::KXORBrr);
   }

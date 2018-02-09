@@ -30,9 +30,9 @@ declare i8* @bar(i32, i8*, i8*)
 ; CHECK-NEXT: [[FOOCALL]]:
 ; CHECK-NEXT:  bl _foo
 ;
-; CHECK-PROB: %bb.0:
+; CHECK-PROB: bb.0{{[0-9a-zA-Z.]*}}:
 ; CHECK-PROB: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}50.00%) %bb.3({{[0-9a-fx/= ]+}}25.00%) %bb.5({{[0-9a-fx/= ]+}}25.00%)
-; CHECK-PROB: %bb.2:
+; CHECK-PROB: bb.2{{[0-9a-zA-Z.]*}}:
 ; CHECK-PROB: Successors according to CFG: %bb.3({{[0-9a-fx/= ]+}}50.00%) %bb.5({{[0-9a-fx/= ]+}}50.00%)
 
 define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) "no-frame-pointer-elim"="true" {

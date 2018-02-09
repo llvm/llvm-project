@@ -16,6 +16,12 @@
 
 /* Returns: the number of leading 0-bits */
 
+#if !defined(__clang__) && (defined(__sparc64__) || defined(__mips64) || defined(__riscv__))
+/* gcc resolves __builtin_clz -> __clzdi2 leading to infinite recursion */
+#define __builtin_clz(a) __clzsi2(a)
+extern si_int __clzsi2(si_int);
+#endif
+
 /* Precondition: a != 0 */
 
 COMPILER_RT_ABI si_int

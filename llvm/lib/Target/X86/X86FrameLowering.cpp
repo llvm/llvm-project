@@ -1925,7 +1925,12 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    // If this is k-register make sure we lookup via the largest legal type.
+    MVT VT = MVT::Other;
+    if (X86::VK16RegClass.contains(Reg))
+      VT = STI.hasBWI() ? MVT::v64i1 : MVT::v16i1;
+
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
     unsigned Size = TRI->getSpillSize(*RC);
     unsigned Align = TRI->getSpillAlignment(*RC);
     // ensure alignment
@@ -1992,9 +1997,15 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     unsigned Reg = CSI[i-1].getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
+
+    // If this is k-register make sure we lookup via the largest legal type.
+    MVT VT = MVT::Other;
+    if (X86::VK16RegClass.contains(Reg))
+      VT = STI.hasBWI() ? MVT::v64i1 : MVT::v16i1;
+
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
     TII.storeRegToStackSlot(MBB, MI, Reg, true, CSI[i - 1].getFrameIdx(), RC,
                             TRI);
@@ -2068,7 +2079,12 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
         X86::GR32RegClass.contains(Reg))
       continue;
 
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    // If this is k-register make sure we lookup via the largest legal type.
+    MVT VT = MVT::Other;
+    if (X86::VK16RegClass.contains(Reg))
+      VT = STI.hasBWI() ? MVT::v64i1 : MVT::v16i1;
+
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
     TII.loadRegFromStackSlot(MBB, MI, Reg, CSI[i].getFrameIdx(), RC, TRI);
   }
 

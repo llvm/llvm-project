@@ -79,7 +79,8 @@ findSchemeByName(llvm::StringRef Scheme) {
 
 bool shouldEscape(unsigned char C) {
   // Unreserved characters.
-  if ((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z'))
+  if ((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
+      (C >= '0' && C <= '9'))
     return false;
   switch (C) {
   case '-':

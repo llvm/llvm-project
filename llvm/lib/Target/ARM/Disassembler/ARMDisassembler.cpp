@@ -4205,15 +4205,8 @@ static DecodeStatus DecodeBankedReg(MCInst &Inst, unsigned Val,
   // The table of encodings for these banked registers comes from B9.2.3 of the
   // ARM ARM. There are patterns, but nothing regular enough to make this logic
   // neater. So by fiat, these values are UNPREDICTABLE:
-  if (!R) {
-    if (SysM == 0x7 || SysM == 0xf || SysM == 0x18 || SysM == 0x19 ||
-        SysM == 0x1a || SysM == 0x1b)
-      return MCDisassembler::SoftFail;
-  } else {
-    if (SysM != 0xe && SysM != 0x10 && SysM != 0x12 && SysM != 0x14 &&
-        SysM != 0x16 && SysM != 0x1c && SysM != 0x1e)
-      return MCDisassembler::SoftFail;
-  }
+  if (!ARMBankedReg::lookupBankedRegByEncoding((R << 5) | SysM))
+    return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Val));
   return MCDisassembler::Success;

@@ -333,13 +333,16 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
   verifyFormat("@interface Foo (HackStuff) <MyProtocol>\n"
                "+ (id)init;\n"
                "@end");
-  Style.BinPackParameters = false;
-  Style.ColumnLimit = 80;
-  verifyFormat("@interface aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa () <\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> {\n"
+  Style.ColumnLimit = 40;
+  // BinPackParameters should be true by default.
+  verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
+               "              int eeeee, int eeeee);\n");
+  // ObjCBinPackProtocolList should be BPS_Never by default.
+  verifyFormat("@interface fffffffffffff () <\n"
+               "    fffffffffffff,\n"
+               "    fffffffffffff,\n"
+               "    fffffffffffff,\n"
+               "    fffffffffffff> {\n"
                "}");
 }
 
@@ -972,6 +975,12 @@ TEST_F(FormatTestObjC, ObjCArrayLiterals) {
   verifyFormat("[someFunction someLooooooooooooongParameter:@[\n"
                "  NSBundle.mainBundle.infoDictionary[@\"a\"]\n"
                "]];");
+  Style.ColumnLimit = 20;
+  // We can't break string literals inside NSArray literals
+  // (that raises -Wobjc-string-concatenation).
+  verifyFormat("NSArray *foo = @[\n"
+               "  @\"aaaaaaaaaaaaaaaaaaaaaaaaaa\"\n"
+               "];\n");
 }
 } // end namespace
 } // end namespace format

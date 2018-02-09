@@ -72,6 +72,7 @@ URI parseOrDie(llvm::StringRef Uri) {
 TEST(PercentEncodingTest, Encode) {
   EXPECT_EQ(URI("x", /*Authority=*/"", "a/b/c").toString(), "x:a/b/c");
   EXPECT_EQ(URI("x", /*Authority=*/"", "a!b;c~").toString(), "x:a%21b%3bc~");
+  EXPECT_EQ(URI("x", /*Authority=*/"", "a123b").toString(), "x:a123b");
 }
 
 TEST(PercentEncodingTest, Decode) {

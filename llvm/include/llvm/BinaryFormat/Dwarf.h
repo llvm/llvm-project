@@ -420,7 +420,6 @@ StringRef CaseString(unsigned Case);
 StringRef ConventionString(unsigned Convention);
 StringRef InlineCodeString(unsigned Code);
 StringRef ArrayOrderString(unsigned Order);
-StringRef DiscriminantString(unsigned Discriminant);
 StringRef LNStandardString(unsigned Standard);
 StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);

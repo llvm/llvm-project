@@ -28,6 +28,29 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-NOT: store
 }
 
+; Make sure memset is formed for larger than 1 byte stores, and that the
+; alignment of the store is preserved
+define void @test1_i16(i16* align 2 %Base, i64 %Size) nounwind ssp {
+bb.nph:                                           ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i16, i16* %Base, i64 %indvar
+  store i16 0, i16* %I.0.014, align 2
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test1_i16(
+; CHECK: %[[BaseBC:.*]] = bitcast i16* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 1
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 2 %[[BaseBC]], i8 0, i64 %[[Sz]], i1 false)
+; CHECK-NOT: store
+}
+
 ; This is a loop that was rotated but where the blocks weren't merged.  This
 ; shouldn't perturb us.
 define void @test1a(i8* %Base, i64 %Size) nounwind ssp {
@@ -165,6 +188,58 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test6(
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+;; memcpy formation, check alignment
+define void @test6_dest_align(i32* noalias align 1 %Base, i32* noalias align 4 %Dest, i64 %Size) nounwind ssp {
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i32, i32* %Base, i64 %indvar
+  %DestI = getelementptr i32, i32* %Dest, i64 %indvar
+  %V = load i32, i32* %I.0.014, align 1
+  store i32 %V, i32* %DestI, align 4
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test6_dest_align(
+; CHECK: %[[Dst:.*]] = bitcast i32* %Dest to i8*
+; CHECK: %[[Src:.*]] = bitcast i32* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %[[Dst]], i8* align 1 %[[Src]], i64 %[[Sz]], i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+;; memcpy formation, check alignment
+define void @test6_src_align(i32* noalias align 4 %Base, i32* noalias align 1 %Dest, i64 %Size) nounwind ssp {
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i32, i32* %Base, i64 %indvar
+  %DestI = getelementptr i32, i32* %Dest, i64 %indvar
+  %V = load i32, i32* %I.0.014, align 4
+  store i32 %V, i32* %DestI, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test6_src_align(
+; CHECK: %[[Dst]] = bitcast i32* %Dest to i8*
+; CHECK: %[[Src]] = bitcast i32* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %[[Dst]], i8* align 4 %[[Src]], i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
