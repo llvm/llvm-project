@@ -150,7 +150,6 @@ struct Configuration {
   bool Target1Rel;
   bool Trace;
   bool UndefinedVersion;
-  bool Verbose;
   bool WarnCommon;
   bool WarnMissingEntry;
   bool WriteAddends;

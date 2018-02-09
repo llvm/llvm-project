@@ -10,6 +10,7 @@
 #ifndef lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 #define lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 
+#include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/UserID.h"
 
@@ -181,6 +182,19 @@ private:
   void FindTypesByName(const std::string &name, uint32_t max_matches,
                        lldb_private::TypeMap &types);
 
+  lldb::CompUnitSP
+  GetCompileUnitContainsAddress(const lldb_private::Address &so_addr);
+
+  typedef std::vector<lldb_private::Type*> TypeCollection;
+
+  void
+  GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol *pdb_symbol,
+                       uint32_t type_mask, TypeCollection &type_collection);
+
+  lldb_private::Function* ParseCompileUnitFunctionForPDBFunc(
+      const llvm::pdb::PDBSymbolFunc *pdb_func,
+      const lldb_private::SymbolContext &sc);
+
   void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland *pdb_compiland,
                            uint32_t &index);
 
@@ -190,6 +204,21 @@ private:
   std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
   GetPDBCompilandByUID(uint32_t uid);
 
+  lldb_private::Mangled
+  GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc *pdb_func);
+
+  bool ResolveFunction(llvm::pdb::PDBSymbolFunc *pdb_func,
+                       bool include_inlines,
+                       lldb_private::SymbolContextList &sc_list);
+
+  bool ResolveFunction(uint32_t uid, bool include_inlines,
+                       lldb_private::SymbolContextList &sc_list);
+
+  void CacheFunctionNames();
+
+  bool DeclContextMatchesThisSymbolFile(
+      const lldb_private::CompilerDeclContext *decl_ctx);
+
   llvm::DenseMap<uint32_t, lldb::CompUnitSP> m_comp_units;
   llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
 
@@ -198,6 +227,10 @@ private:
   std::unique_ptr<llvm::pdb::PDBSymbolExe> m_global_scope_up;
   uint32_t m_cached_compile_unit_count;
   std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
+
+  lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
+  lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
+  lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 };
 
 #endif // lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
