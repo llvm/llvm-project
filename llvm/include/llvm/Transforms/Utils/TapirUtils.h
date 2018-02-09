@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_TAPIRUITLS_H
+#ifndef LLVM_TRANSFORMS_UTILS_TAPIRUTILS_H
 #define LLVM_TRANSFORMS_UTILS_TAPIRUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
@@ -51,6 +51,10 @@ BasicBlock *GetDetachedCtx(BasicBlock *BB);
 /// from a block with multiple successors to a block with multiple predecessors
 /// - even after ignoring all reattach edges.
 bool isCriticalContinueEdge(const TerminatorInst *TI, unsigned SuccNum);
+
+/// canDetach - Return true if the given function can perform a detach, false
+/// otherwise.
+bool canDetach(const Function *F);
 
 } // End llvm namespace
 

@@ -27,31 +27,29 @@
 
 namespace llvm {
 
-typedef SetVector<Value *> ValueSet;
+using ValueSet = SetVector<Value *>;
 
 /// Find the inputs and outputs for a function outlined from the gives set of
 /// basic blocks.
-void findInputsOutputs(const SmallPtrSetImpl<BasicBlock *> &Blocks,
-                       ValueSet &Inputs,
-                       ValueSet &Outputs,
-                       const SmallPtrSetImpl<BasicBlock *> *ExitBlocks =
-                       nullptr);
+void findInputsOutputs(
+    const SmallPtrSetImpl<BasicBlock *> &Blocks,
+    ValueSet &Inputs, ValueSet &Outputs,
+    const SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
+    DominatorTree *DT = nullptr);
 
 /// Clone Blocks into NewFunc, transforming the old arguments into references to
 /// VMap values.
 ///
 /// TODO: Fix the std::vector part of the type of this function.
-void CloneIntoFunction(Function *NewFunc, const Function *OldFunc,
-                       std::vector<BasicBlock *> Blocks,
-                       ValueToValueMapTy &VMap,
-                       bool ModuleLevelChanges,
-                       SmallVectorImpl<ReturnInst *> &Returns,
-                       const StringRef NameSuffix,
-                       SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
-                       DISubprogram *SP = nullptr,
-                       ClonedCodeInfo *CodeInfo = nullptr,
-                       ValueMapTypeRemapper *TypeMapper = nullptr,
-                       ValueMaterializer *Materializer = nullptr);
+void CloneIntoFunction(
+    Function *NewFunc, const Function *OldFunc,
+    std::vector<BasicBlock *> Blocks, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const StringRef NameSuffix,
+    SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
+    DISubprogram *SP = nullptr, ClonedCodeInfo *CodeInfo = nullptr,
+    ValueMapTypeRemapper *TypeMapper = nullptr,
+    ValueMaterializer *Materializer = nullptr);
 
 /// Create a helper function whose signature is based on Inputs and
 /// Outputs as follows: f(in0, ..., inN, out0, ..., outN)
@@ -76,12 +74,9 @@ Function *CreateHelper(const ValueSet &Inputs,
 
 // Add alignment assumptions to parameters of outlined function, based on known
 // alignment data in the caller.
-void AddAlignmentAssumptions(const Function *Caller,
-                             const ValueSet &Inputs,
-                             ValueToValueMapTy &VMap,
-                             const Instruction *CallSite,
-                             AssumptionCache *AC,
-                             DominatorTree *DT);
+void AddAlignmentAssumptions(
+    const Function *Caller, const ValueSet &Inputs, ValueToValueMapTy &VMap,
+    const Instruction *CallSite, AssumptionCache *AC, DominatorTree *DT);
 
 } // End llvm namespace
 

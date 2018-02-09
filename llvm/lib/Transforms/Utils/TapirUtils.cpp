@@ -332,3 +332,12 @@ bool llvm::isCriticalContinueEdge(const TerminatorInst *TI, unsigned SuccNum) {
   }
   return false;
 }
+
+/// canDetach - Return true if the given function can perform a detach, false
+/// otherwise.
+bool llvm::canDetach(const Function *F) {
+  for (const BasicBlock &BB : *F)
+    if (isa<DetachInst>(BB.getTerminator()))
+      return true;
+  return false;
+}

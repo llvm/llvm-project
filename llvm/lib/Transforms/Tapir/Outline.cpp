@@ -17,7 +17,9 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 
 using namespace llvm;
 
@@ -45,10 +47,13 @@ static bool definedInCaller(const SmallPtrSetImpl<BasicBlock *> &Blocks,
   return false;
 }
 
+// findInputsOutputs - Find inputs and outputs for Blocks.  Any blocks in
+// ExitBlocks are handled in a special manner: PHI nodes in Exit Blocks are
+// ignored when determining inputs.
 void llvm::findInputsOutputs(const SmallPtrSetImpl<BasicBlock *> &Blocks,
-                             ValueSet &Inputs,
-                             ValueSet &Outputs,
-                             const SmallPtrSetImpl<BasicBlock *> *ExitBlocks) {
+                             ValueSet &Inputs, ValueSet &Outputs,
+                             const SmallPtrSetImpl<BasicBlock *> *ExitBlocks,
+                             DominatorTree *DT) {
   for (BasicBlock *BB : Blocks) {
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
@@ -66,11 +71,22 @@ void llvm::findInputsOutputs(const SmallPtrSetImpl<BasicBlock *> &Blocks,
           Inputs.insert(*OI);
       }
 
-      for (User *U : II.users())
-        if (!definedInRegion(Blocks, U)) {
-          Outputs.insert(&II);
-          break;
+      // Ignore outputs from exit blocks.
+      if (!ExitBlocks || !ExitBlocks->count(BB)) {
+        for (User *U : II.users()) {
+          if (!definedInRegion(Blocks, U)) {
+            // It looks like we have a use outside of the given blocks, but it's
+            // possible for the use to appear in a basic block that is no longer
+            // alive.  We use the DT to check that this use is still alive.
+            if (Instruction *I = dyn_cast<Instruction>(U)) {
+              if (DT && DT->isReachableFromEntry(I->getParent())) {
+                Outputs.insert(&II);
+                break;
+              }
+            }
+          }
         }
+      }
     }
   }
 }
@@ -79,17 +95,13 @@ void llvm::findInputsOutputs(const SmallPtrSetImpl<BasicBlock *> &Blocks,
 // VMap values.
 //
 /// TODO: Fix the std::vector part of the type of this function.
-void llvm::CloneIntoFunction(Function *NewFunc, const Function *OldFunc,
-                             std::vector<BasicBlock *> Blocks,
-                             ValueToValueMapTy &VMap,
-                             bool ModuleLevelChanges,
-                             SmallVectorImpl<ReturnInst *> &Returns,
-                             const StringRef NameSuffix,
-                             SmallPtrSetImpl<BasicBlock *> *ExitBlocks,
-                             DISubprogram *SP,
-                             ClonedCodeInfo *CodeInfo,
-                             ValueMapTypeRemapper *TypeMapper,
-                             ValueMaterializer *Materializer) {
+void llvm::CloneIntoFunction(
+    Function *NewFunc, const Function *OldFunc,
+    std::vector<BasicBlock *> Blocks, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const StringRef NameSuffix, SmallPtrSetImpl<BasicBlock *> *ExitBlocks,
+    DISubprogram *SP, ClonedCodeInfo *CodeInfo,
+    ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer) {
   // Get the predecessors of the exit blocks
   SmallPtrSet<const BasicBlock *, 4> ExitBlockPreds, ClonedEBPreds;
   if (ExitBlocks)
@@ -120,11 +132,11 @@ void llvm::CloneIntoFunction(Function *NewFunc, const Function *OldFunc,
     // function is never referenced outside of the function.  Given that, we
     // want to map block addresses from the old function to block addresses in
     // the clone. (This is different from the generic ValueMapper
-    // implementation, which generates an invalid blockaddress when
-    // cloning a function.)
+    // implementation, which generates an invalid blockaddress when cloning a
+    // function.)
     if (BB->hasAddressTaken()) {
-      Constant *OldBBAddr = BlockAddress::get(const_cast<Function*>(OldFunc),
-                                              const_cast<BasicBlock*>(BB));
+      Constant *OldBBAddr = BlockAddress::get(const_cast<Function *>(OldFunc),
+                                              const_cast<BasicBlock *>(BB));
       VMap[OldBBAddr] = BlockAddress::get(NewFunc, CBB);
     }
 
@@ -134,7 +146,7 @@ void llvm::CloneIntoFunction(Function *NewFunc, const Function *OldFunc,
   }
 
   // For each exit block, clean up its phi nodes to exclude predecessors that
-  // were not cloned.
+  // were not cloned.  Also remove detached_rethrow invokes with resumes.
   if (ExitBlocks) {
     for (BasicBlock *EB : *ExitBlocks) {
       // Get the predecessors of this exit block that were not cloned.
@@ -152,6 +164,15 @@ void llvm::CloneIntoFunction(Function *NewFunc, const Function *OldFunc,
           if (PN->getBasicBlockIndex(DeadPred) > -1)
             PN->removeIncomingValue(DeadPred);
         ++BI;
+      }
+
+      // If this exit block terminates in a detached_rethrow, replace the
+      // terminator with a resume.
+      if (isDetachedRethrow(EB->getTerminator())) {
+        InvokeInst *II = cast<InvokeInst>(ClonedEB->getTerminator());
+        Value *RethrowArg = II->getArgOperand(0);
+        ReplaceInstWithInst(ClonedEB->getTerminator(),
+                            ResumeInst::Create(RethrowArg));
       }
     }
   }
@@ -224,10 +245,9 @@ Function *llvm::CreateHelper(const ValueSet &Inputs,
   FunctionType *FTy = FunctionType::get(RetTy, paramTy, false);
 
   // Create the new function
-  Function *NewFunc = Function::Create(FTy,
-				       GlobalValue::InternalLinkage,
-				       OldFunc->getName() + "_" +
-				       Header->getName() + NameSuffix, DestM);
+  Function *NewFunc = Function::Create(
+      FTy, GlobalValue::InternalLinkage,
+      OldFunc->getName() + "_" + Header->getName() + NameSuffix, DestM);
 
   // Set names for input and output arguments.
   Function::arg_iterator DestI = NewFunc->arg_begin();
@@ -271,10 +291,14 @@ Function *llvm::CreateHelper(const ValueSet &Inputs,
     }
   }
 
-  // Ignore the return attributes of the old function.
   NewFunc->setAttributes(
       AttributeList::get(NewFunc->getContext(), OldAttrs.getFnAttributes(),
-                         AttributeSet(), NewArgAttrs));
+                         OldAttrs.getRetAttributes(), NewArgAttrs));
+
+  // Remove old return attributes.
+  NewFunc->removeAttributes(
+      AttributeList::ReturnIndex,
+      AttributeFuncs::typeIncompatible(NewFunc->getReturnType()));
 
   // Clone the metadata from the old function into the new.
   bool MustCloneSP =
@@ -319,13 +343,11 @@ Function *llvm::CreateHelper(const ValueSet &Inputs,
 
   // The new function needs a root node because other nodes can branch to the
   // head of the region, but the entry node of a function cannot have preds.
-  BasicBlock *NewEntry = BasicBlock::Create(Header->getContext(),
-					    OldEntry->getName()+NameSuffix,
-                                            NewFunc);
+  BasicBlock *NewEntry = BasicBlock::Create(
+      Header->getContext(), OldEntry->getName()+NameSuffix, NewFunc);
   // The new function also needs an exit node.
-  BasicBlock *NewExit = BasicBlock::Create(Header->getContext(),
-					   OldExit->getName()+NameSuffix,
-                                           NewFunc);
+  BasicBlock *NewExit = BasicBlock::Create(
+      Header->getContext(), OldExit->getName()+NameSuffix, NewFunc);
 
   // Add mappings to the NewEntry and NewExit.
   VMap[OldEntry] = NewEntry;
@@ -351,17 +373,25 @@ Function *llvm::CreateHelper(const ValueSet &Inputs,
   // Add a return in the new function.
   ReturnInst::Create(Header->getContext(), NewExit);
 
+  // If needed, create a landing pad and resume for the unwind destination in
+  // the new function.
+  if (OldUnwind) {
+    LandingPadInst *LPad =
+      LandingPadInst::Create(OldUnwind->getLandingPadInst()->getType(), 1,
+                             "lpadval", NewUnwind);
+    LPad->addClause(ConstantPointerNull::get(
+                        PointerType::getInt8PtrTy(Header->getContext())));
+    ResumeInst::Create(LPad, NewUnwind);
+  }
+
   return NewFunc;
 }
 
 // Add alignment assumptions to parameters of outlined function, based on known
 // alignment data in the caller.
-void llvm::AddAlignmentAssumptions(const Function *Caller,
-                                   const ValueSet &Inputs,
-                                   ValueToValueMapTy &VMap,
-                                   const Instruction *CallSite,
-                                   AssumptionCache *AC,
-                                   DominatorTree *DT) {
+void llvm::AddAlignmentAssumptions(
+    const Function *Caller, const ValueSet &Inputs, ValueToValueMapTy &VMap,
+    const Instruction *CallSite, AssumptionCache *AC, DominatorTree *DT) {
   auto &DL = Caller->getParent()->getDataLayout();
   for (Value *ArgVal : Inputs) {
     // Ignore arguments to non-pointer types
