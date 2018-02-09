@@ -138,13 +138,13 @@ public:
 
   FileSpec &GetSDKPath();
 
+  FileSpec &GetClangModulesCachePath();
+
   FileSpecList &GetClangModuleSearchPaths();
 
   FileSpecList &GetSwiftFrameworkSearchPaths();
 
   FileSpecList &GetSwiftModuleSearchPaths();
-
-  FileSpec &GetModuleCachePath();
 
   bool GetEnableAutoImportClangModules() const;
 
