@@ -22,8 +22,9 @@ define <4 x i32> @test_v4i32_const_pow2(<4 x i32> %a0) {
 ; X udiv C, where C >= signbit
 define <4 x i32> @test_v4i32_negconstsplat(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconstsplat(
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <4 x i32> [[A0:%.*]], <i32 -3, i32 -3, i32 -3, i32 -3>
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[A0:%.*]], <i32 -4, i32 -4, i32 -4, i32 -4>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = udiv <4 x i32> %a0, <i32 -3, i32 -3, i32 -3, i32 -3>
   ret <4 x i32> %1
@@ -31,8 +32,9 @@ define <4 x i32> @test_v4i32_negconstsplat(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_negconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <4 x i32> [[A0:%.*]], <i32 -3, i32 -5, i32 -7, i32 -9>
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[A0:%.*]], <i32 -4, i32 -6, i32 -8, i32 -10>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = udiv <4 x i32> %a0, <i32 -3, i32 -5, i32 -7, i32 -9>
   ret <4 x i32> %1

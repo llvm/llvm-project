@@ -37,7 +37,7 @@ class InputChunk {
 public:
   enum Kind { DataSegment, Function };
 
-  Kind kind() const { return SectionKind; };
+  Kind kind() const { return SectionKind; }
 
   uint32_t getSize() const { return data().size(); }
 
