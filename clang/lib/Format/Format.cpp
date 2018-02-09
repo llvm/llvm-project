@@ -686,11 +686,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_Proto);
     GoogleStyle.Language = FormatStyle::LK_TextProto;
 
-    // Text protos are currently mostly formatted inside C++ raw string literals
-    // and often the current breaking behavior of string literals is not
-    // beneficial there. Investigate turning this on once proper string reflow
-    // has been implemented.
-    GoogleStyle.BreakStringLiterals = false;
     return GoogleStyle;
   }
 
@@ -710,6 +705,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;
   GoogleStyle.PointerAlignment = FormatStyle::PAS_Left;
@@ -761,6 +757,12 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
     GoogleStyle.SpacesInContainerLiterals = false;
     GoogleStyle.Cpp11BracedListStyle = false;
+    // This affects protocol buffer options specifications and text protos.
+    // Text protos are currently mostly formatted inside C++ raw string literals
+    // and often the current breaking behavior of string literals is not
+    // beneficial there. Investigate turning this on once proper string reflow
+    // has been implemented.
+    GoogleStyle.BreakStringLiterals = false;
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.ColumnLimit = 100;
   }

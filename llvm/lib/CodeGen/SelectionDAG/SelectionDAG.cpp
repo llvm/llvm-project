@@ -1078,19 +1078,23 @@ SDValue SelectionDAG::getNOT(const SDLoc &DL, SDValue Val, EVT VT) {
 }
 
 SDValue SelectionDAG::getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT) {
-  EVT EltVT = VT.getScalarType();
-  SDValue TrueValue;
-  switch (TLI->getBooleanContents(VT)) {
-    case TargetLowering::ZeroOrOneBooleanContent:
-    case TargetLowering::UndefinedBooleanContent:
-      TrueValue = getConstant(1, DL, VT);
-      break;
-    case TargetLowering::ZeroOrNegativeOneBooleanContent:
-      TrueValue = getConstant(APInt::getAllOnesValue(EltVT.getSizeInBits()), DL,
-                              VT);
-      break;
-  }
+  SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
   return getNode(ISD::XOR, DL, VT, Val, TrueValue);
+}
+
+SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
+                                      EVT OpVT) {
+  if (!V)
+    return getConstant(0, DL, VT);
+
+  switch (TLI->getBooleanContents(OpVT)) {
+  case TargetLowering::ZeroOrOneBooleanContent:
+  case TargetLowering::UndefinedBooleanContent:
+    return getConstant(1, DL, VT);
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    return getAllOnesConstant(DL, VT);
+  }
+  llvm_unreachable("Unexpected boolean content enum!");
 }
 
 SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
@@ -1871,19 +1875,15 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
 
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
                                 ISD::CondCode Cond, const SDLoc &dl) {
+  EVT OpVT = N1.getValueType();
+
   // These setcc operations always fold.
   switch (Cond) {
   default: break;
   case ISD::SETFALSE:
-  case ISD::SETFALSE2: return getConstant(0, dl, VT);
+  case ISD::SETFALSE2: return getBoolConstant(false, dl, VT, OpVT);
   case ISD::SETTRUE:
-  case ISD::SETTRUE2: {
-    TargetLowering::BooleanContent Cnt =
-        TLI->getBooleanContents(N1->getValueType(0));
-    return getConstant(
-        Cnt == TargetLowering::ZeroOrNegativeOneBooleanContent ? -1ULL : 1, dl,
-        VT);
-  }
+  case ISD::SETTRUE2: return getBoolConstant(true, dl, VT, OpVT);
 
   case ISD::SETOEQ:
   case ISD::SETOGT:
@@ -1906,16 +1906,16 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 
       switch (Cond) {
       default: llvm_unreachable("Unknown integer setcc!");
-      case ISD::SETEQ:  return getConstant(C1 == C2, dl, VT);
-      case ISD::SETNE:  return getConstant(C1 != C2, dl, VT);
-      case ISD::SETULT: return getConstant(C1.ult(C2), dl, VT);
-      case ISD::SETUGT: return getConstant(C1.ugt(C2), dl, VT);
-      case ISD::SETULE: return getConstant(C1.ule(C2), dl, VT);
-      case ISD::SETUGE: return getConstant(C1.uge(C2), dl, VT);
-      case ISD::SETLT:  return getConstant(C1.slt(C2), dl, VT);
-      case ISD::SETGT:  return getConstant(C1.sgt(C2), dl, VT);
-      case ISD::SETLE:  return getConstant(C1.sle(C2), dl, VT);
-      case ISD::SETGE:  return getConstant(C1.sge(C2), dl, VT);
+      case ISD::SETEQ:  return getBoolConstant(C1 == C2, dl, VT, OpVT);
+      case ISD::SETNE:  return getBoolConstant(C1 != C2, dl, VT, OpVT);
+      case ISD::SETULT: return getBoolConstant(C1.ult(C2), dl, VT, OpVT);
+      case ISD::SETUGT: return getBoolConstant(C1.ugt(C2), dl, VT, OpVT);
+      case ISD::SETULE: return getBoolConstant(C1.ule(C2), dl, VT, OpVT);
+      case ISD::SETUGE: return getBoolConstant(C1.uge(C2), dl, VT, OpVT);
+      case ISD::SETLT:  return getBoolConstant(C1.slt(C2), dl, VT, OpVT);
+      case ISD::SETGT:  return getBoolConstant(C1.sgt(C2), dl, VT, OpVT);
+      case ISD::SETLE:  return getBoolConstant(C1.sle(C2), dl, VT, OpVT);
+      case ISD::SETGE:  return getBoolConstant(C1.sge(C2), dl, VT, OpVT);
       }
     }
   }
@@ -1927,41 +1927,54 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       case ISD::SETEQ:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
                         LLVM_FALLTHROUGH;
-      case ISD::SETOEQ: return getConstant(R==APFloat::cmpEqual, dl, VT);
+      case ISD::SETOEQ: return getBoolConstant(R==APFloat::cmpEqual, dl, VT,
+                                               OpVT);
       case ISD::SETNE:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
                         LLVM_FALLTHROUGH;
-      case ISD::SETONE: return getConstant(R==APFloat::cmpGreaterThan ||
-                                           R==APFloat::cmpLessThan, dl, VT);
+      case ISD::SETONE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
+                                               R==APFloat::cmpLessThan, dl, VT,
+                                               OpVT);
       case ISD::SETLT:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
                         LLVM_FALLTHROUGH;
-      case ISD::SETOLT: return getConstant(R==APFloat::cmpLessThan, dl, VT);
+      case ISD::SETOLT: return getBoolConstant(R==APFloat::cmpLessThan, dl, VT,
+                                               OpVT);
       case ISD::SETGT:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
                         LLVM_FALLTHROUGH;
-      case ISD::SETOGT: return getConstant(R==APFloat::cmpGreaterThan, dl, VT);
+      case ISD::SETOGT: return getBoolConstant(R==APFloat::cmpGreaterThan, dl,
+                                               VT, OpVT);
       case ISD::SETLE:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
                         LLVM_FALLTHROUGH;
-      case ISD::SETOLE: return getConstant(R==APFloat::cmpLessThan ||
-                                           R==APFloat::cmpEqual, dl, VT);
+      case ISD::SETOLE: return getBoolConstant(R==APFloat::cmpLessThan ||
+                                               R==APFloat::cmpEqual, dl, VT,
+                                               OpVT);
       case ISD::SETGE:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
                         LLVM_FALLTHROUGH;
-      case ISD::SETOGE: return getConstant(R==APFloat::cmpGreaterThan ||
-                                           R==APFloat::cmpEqual, dl, VT);
-      case ISD::SETO:   return getConstant(R!=APFloat::cmpUnordered, dl, VT);
-      case ISD::SETUO:  return getConstant(R==APFloat::cmpUnordered, dl, VT);
-      case ISD::SETUEQ: return getConstant(R==APFloat::cmpUnordered ||
-                                           R==APFloat::cmpEqual, dl, VT);
-      case ISD::SETUNE: return getConstant(R!=APFloat::cmpEqual, dl, VT);
-      case ISD::SETULT: return getConstant(R==APFloat::cmpUnordered ||
-                                           R==APFloat::cmpLessThan, dl, VT);
-      case ISD::SETUGT: return getConstant(R==APFloat::cmpGreaterThan ||
-                                           R==APFloat::cmpUnordered, dl, VT);
-      case ISD::SETULE: return getConstant(R!=APFloat::cmpGreaterThan, dl, VT);
-      case ISD::SETUGE: return getConstant(R!=APFloat::cmpLessThan, dl, VT);
+      case ISD::SETOGE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
+                                           R==APFloat::cmpEqual, dl, VT, OpVT);
+      case ISD::SETO:   return getBoolConstant(R!=APFloat::cmpUnordered, dl, VT,
+                                               OpVT);
+      case ISD::SETUO:  return getBoolConstant(R==APFloat::cmpUnordered, dl, VT,
+                                               OpVT);
+      case ISD::SETUEQ: return getBoolConstant(R==APFloat::cmpUnordered ||
+                                               R==APFloat::cmpEqual, dl, VT,
+                                               OpVT);
+      case ISD::SETUNE: return getBoolConstant(R!=APFloat::cmpEqual, dl, VT,
+                                               OpVT);
+      case ISD::SETULT: return getBoolConstant(R==APFloat::cmpUnordered ||
+                                               R==APFloat::cmpLessThan, dl, VT,
+                                               OpVT);
+      case ISD::SETUGT: return getBoolConstant(R==APFloat::cmpGreaterThan ||
+                                               R==APFloat::cmpUnordered, dl, VT,
+                                               OpVT);
+      case ISD::SETULE: return getBoolConstant(R!=APFloat::cmpGreaterThan, dl,
+                                               VT, OpVT);
+      case ISD::SETUGE: return getBoolConstant(R!=APFloat::cmpLessThan, dl, VT,
+                                               OpVT);
       }
     } else {
       // Ensure that the constant occurs on the RHS.

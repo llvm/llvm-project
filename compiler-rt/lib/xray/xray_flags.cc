@@ -48,9 +48,7 @@ static const char *useCompilerDefinedFlags() XRAY_NEVER_INSTRUMENT {
 // provided through the XRAY_DEFAULT_OPTIONS from causing compilation issues (or
 // changing the semantics of the implementation through the macro). This ensures
 // that we convert whatever XRAY_DEFAULT_OPTIONS is defined as a string literal.
-#define XRAY_STRINGIZE(x) #x
-#define XRAY_STRINGIZE_OPTIONS(options) XRAY_STRINGIZE(options)
-  return XRAY_STRINGIZE_OPTIONS(XRAY_DEFAULT_OPTIONS);
+  return SANITIZER_STRINGIFY(XRAY_DEFAULT_OPTIONS);
 #else
   return "";
 #endif

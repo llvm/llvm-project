@@ -21,5 +21,5 @@ body: |
     ; CHECK:      ldd     r30, Y+10
     ; CHECK-NEXT: ldd     r31, Y+11
 
-    early-clobber %r31r30 = LDDWRdPtrQ undef %r29r28, 10
+    early-clobber $r31r30 = LDDWRdPtrQ undef $r29r28, 10
 ...

@@ -1162,6 +1162,9 @@ def err_objc_parameterized_implementation : Error<
 
 def err_objc_type_args_after_protocols : Error<
   "protocol qualifiers must precede type arguments">;
+
+def note_meant_to_use_typename : Note<
+  "did you mean to use 'typename'?">;
 }
 
 let CategoryName = "Coroutines Issue" in {

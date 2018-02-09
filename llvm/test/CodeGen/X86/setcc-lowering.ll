@@ -84,8 +84,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    cmovlw %dx, %si
 ; KNL-32-NEXT:    kmovw %esi, %k1
 ; KNL-32-NEXT:    kandw %k0, %k1, %k1
-; KNL-32-NEXT:    kmovw %k1, %esi
-; KNL-32-NEXT:    testw %si, %si
+; KNL-32-NEXT:    kortestw %k1, %k1
 ; KNL-32-NEXT:    jne .LBB1_1
 ; KNL-32-NEXT:  # %bb.2: # %for_exit600
 ; KNL-32-NEXT:    popl %esi

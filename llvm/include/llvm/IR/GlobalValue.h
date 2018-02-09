@@ -112,6 +112,12 @@ protected:
 private:
   friend class Constant;
 
+  void maybeSetDsoLocal() {
+    if (hasLocalLinkage() ||
+        (!hasDefaultVisibility() && !hasExternalWeakLinkage()))
+      setDSOLocal(true);
+  }
+
   // Give subclasses access to what otherwise would be wasted padding.
   // (17 + 4 + 2 + 2 + 2 + 3 + 1 + 1) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
@@ -233,8 +239,7 @@ public:
     assert((!hasLocalLinkage() || V == DefaultVisibility) &&
            "local linkage requires default visibility");
     Visibility = V;
-    if (!hasExternalWeakLinkage() && V != DefaultVisibility)
-      setDSOLocal(true);
+    maybeSetDsoLocal();
   }
 
   /// If the value is "Thread Local", its value isn't shared by the threads.
@@ -437,11 +442,10 @@ public:
   }
 
   void setLinkage(LinkageTypes LT) {
-    if (isLocalLinkage(LT)) {
+    if (isLocalLinkage(LT))
       Visibility = DefaultVisibility;
-      setDSOLocal(true);
-    }
     Linkage = LT;
+    maybeSetDsoLocal();
   }
   LinkageTypes getLinkage() const { return LinkageTypes(Linkage); }
 

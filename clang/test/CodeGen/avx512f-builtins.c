@@ -6247,16 +6247,28 @@ __mmask16 test_mm512_kor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m
                                                   __E, __F);
 }
 
-int test_mm512_kortestc(__mmask16 __A, __mmask16 __B) {
+int test_mm512_kortestc(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: @test_mm512_kortestc
-  // CHECK: @llvm.x86.avx512.kortestc.w
-  return _mm512_kortestc(__A, __B); 
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[OR:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // CHECK: [[CAST:%.*]] = bitcast <16 x i1> [[OR]] to i16
+  // CHECK: [[CMP:%.*]] = icmp eq i16 [[CAST]], -1
+  // CHECK: zext i1 [[CMP]] to i32
+  return _mm512_kortestc(_mm512_cmpneq_epu32_mask(__A, __B),
+                         _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
-int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
+int test_mm512_kortestz(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: @test_mm512_kortestz
-  // CHECK: @llvm.x86.avx512.kortestz.w
-  return _mm512_kortestz(__A, __B); 
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[OR:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // CHECK: [[CAST:%.*]] = bitcast <16 x i1> [[OR]] to i16
+  // CHECK: [[CMP:%.*]] = icmp eq i16 [[CAST]], 0
+  // CHECK: zext i1 [[CMP]] to i32
+  return _mm512_kortestz(_mm512_cmpneq_epu32_mask(__A, __B),
+                         _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
 __mmask16 test_mm512_kunpackb(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {

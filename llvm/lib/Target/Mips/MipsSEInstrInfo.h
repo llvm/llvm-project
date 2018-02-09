@@ -107,9 +107,11 @@ private:
                       unsigned CvtOpc, unsigned MovOpc, bool IsI64) const;
 
   void expandExtractElementF64(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator I, bool FP64) const;
+                               MachineBasicBlock::iterator I, bool isMicroMips,
+                               bool FP64) const;
   void expandBuildPairF64(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator I, bool FP64) const;
+                          MachineBasicBlock::iterator I, bool isMicroMips,
+                          bool FP64) const;
   void expandEhReturn(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I) const;
 };

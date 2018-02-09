@@ -790,6 +790,10 @@ def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tr
     HelpText<"Print a template comparison tree for differing templates">;
 def fdeclspec : Flag<["-"], "fdeclspec">, Group<f_clang_Group>,
   HelpText<"Allow __declspec as a keyword">, Flags<[CC1Option]>;
+def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Group>,
+  HelpText<"Discard value names in LLVM IR">, Flags<[DriverOption]>;
+def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">, Group<f_clang_Group>,
+  HelpText<"Do not discard value names in LLVM IR">, Flags<[DriverOption]>;
 def fdollars_in_identifiers : Flag<["-"], "fdollars-in-identifiers">, Group<f_Group>,
   HelpText<"Allow '$' in identifiers">, Flags<[CC1Option]>;
 def fdwarf2_cfi_asm : Flag<["-"], "fdwarf2-cfi-asm">, Group<clang_ignored_f_Group>;

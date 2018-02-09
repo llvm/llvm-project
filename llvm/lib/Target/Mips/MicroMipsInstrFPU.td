@@ -11,7 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-let isCodeGenOnly = 1 in {
+multiclass ADDS_MMM<string opstr, InstrItinClass Itin, bit IsComm,
+                    SDPatternOperator OpNode = null_frag> {
+  def _D32_MM : MMRel, ADDS_FT<opstr, AFGR64Opnd, Itin, IsComm, OpNode>,
+                FGR_32 {
+    string DecoderNamespace = "MicroMips";
+  }
+  // FIXME: This needs to be part of the instruction mapping tables.
+  def _D64_MM : ADDS_FT<opstr, FGR64Opnd, Itin, IsComm, OpNode>, FGR_64 {
+    string DecoderNamespace = "MicroMipsFP64";
+  }
+}
+
 def FADD_S_MM : MMRel, ADDS_FT<"add.s", FGR32Opnd, II_ADD_S, 1, fadd>,
                 ADDS_FM_MM<0, 0x30>, ISA_MICROMIPS;
 def FDIV_S_MM : MMRel, ADDS_FT<"div.s", FGR32Opnd, II_DIV_S, 0, fdiv>,
@@ -21,15 +32,16 @@ def FMUL_S_MM : MMRel, ADDS_FT<"mul.s", FGR32Opnd, II_MUL_S, 1, fmul>,
 def FSUB_S_MM : MMRel, ADDS_FT<"sub.s", FGR32Opnd, II_SUB_S, 0, fsub>,
                 ADDS_FM_MM<0, 0x70>, ISA_MICROMIPS;
 
-def FADD_MM  : MMRel, ADDS_FT<"add.d", AFGR64Opnd, II_ADD_D, 1, fadd>,
-               ADDS_FM_MM<1, 0x30>, ISA_MICROMIPS;
-def FDIV_MM  : MMRel, ADDS_FT<"div.d", AFGR64Opnd, II_DIV_D, 0, fdiv>,
-               ADDS_FM_MM<1, 0xf0>, ISA_MICROMIPS;
-def FMUL_MM  : MMRel, ADDS_FT<"mul.d", AFGR64Opnd, II_MUL_D, 1, fmul>,
-               ADDS_FM_MM<1, 0xb0>, ISA_MICROMIPS;
-def FSUB_MM  : MMRel, ADDS_FT<"sub.d", AFGR64Opnd, II_SUB_D, 0, fsub>,
-               ADDS_FM_MM<1, 0x70>, ISA_MICROMIPS;
+defm FADD : ADDS_MMM<"add.d", II_ADD_D, 1, fadd>,
+            ADDS_FM_MM<1, 0x30>, ISA_MICROMIPS;
+defm FDIV : ADDS_MMM<"div.d", II_DIV_D, 0, fdiv>,
+            ADDS_FM_MM<1, 0xf0>, ISA_MICROMIPS;
+defm FMUL : ADDS_MMM<"mul.d", II_MUL_D, 1, fmul>,
+            ADDS_FM_MM<1, 0xb0>, ISA_MICROMIPS;
+defm FSUB : ADDS_MMM<"sub.d", II_SUB_D, 0, fsub>,
+            ADDS_FM_MM<1, 0x70>, ISA_MICROMIPS;
 
+let isCodeGenOnly = 1 in {
 def LWXC1_MM : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>,
                LWXC1_FM_MM<0x48>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def SWXC1_MM : MMRel, SWXC1_FT<"swxc1", FGR32Opnd, II_SWXC1, store>,
@@ -76,8 +88,6 @@ def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd,
 
 def CEIL_W_MM  : MMRel, ABSS_FT<"ceil.w.d", FGR32Opnd, AFGR64Opnd, II_CEIL>,
                  ROUND_W_FM_MM<1, 0x6c>, ISA_MICROMIPS, FGR_32;
-def CVT_W_MM   : MMRel, ABSS_FT<"cvt.w.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
-                 ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_32;
 def FLOOR_W_MM : MMRel, ABSS_FT<"floor.w.d", FGR32Opnd, AFGR64Opnd, II_FLOOR>,
                  ROUND_W_FM_MM<1, 0x2c>, ISA_MICROMIPS, FGR_32;
 def ROUND_W_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.d", FGR32Opnd, AFGR64Opnd,
@@ -90,6 +100,14 @@ def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
 def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
                    ROUND_W_FM_MM<1, 0x4>, ISA_MICROMIPS, FGR_64;
 
+}
+let DecoderNamespace = "MicroMips" in {
+  def CVT_W_D32_MM : MMRel, ABSS_FT<"cvt.w.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
+                     ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_32;
+}
+let DecoderNamespace = "MicroMipsFP64" in {
+  def CVT_W_D64_MM : ABSS_FT<"cvt.w.d", FGR32Opnd, FGR64Opnd, II_CVT>,
+                     ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_64;
 }
 
 multiclass ABSS_MMM<string opstr, InstrItinClass Itin,
@@ -113,26 +131,39 @@ let DecoderNamespace = "MicroMips" in {
                   ABS_FM_MM<0, 0xd>, ISA_MICROMIPS;
 }
 
-let isCodeGenOnly = 1 in {
 def FMOV_S_MM : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
                 ABS_FM_MM<0, 0x1>, ISA_MICROMIPS;
 def FNEG_S_MM : MMRel, ABSS_FT<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>,
                 ABS_FM_MM<0, 0x2d>, ISA_MICROMIPS;
-def CVT_D_S_MM : MMRel, ABSS_FT<"cvt.d.s", AFGR64Opnd, FGR32Opnd, II_CVT>,
-                 ABS_FM_MM<0, 0x4d>, ISA_MICROMIPS, FGR_32;
-def CVT_D32_W_MM : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
-                   ABS_FM_MM<1, 0x4d>, ISA_MICROMIPS, FGR_32;
-def CVT_S_D32_MM : MMRel, ABSS_FT<"cvt.s.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
-                   ABS_FM_MM<0, 0x6d>, ISA_MICROMIPS, FGR_32;
+
+let DecoderNamespace = "MicroMips" in {
+  def CVT_D32_S_MM : MMRel, ABSS_FT<"cvt.d.s", AFGR64Opnd, FGR32Opnd, II_CVT>,
+                     ABS_FM_MM<0, 0x4d>, ISA_MICROMIPS, FGR_32;
+  def CVT_D32_W_MM : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
+                     ABS_FM_MM<1, 0x4d>, ISA_MICROMIPS, FGR_32;
+}
+
+let DecoderNamespace = "MicroMipsFP64" in {
+  def CVT_D64_S_MM : ABSS_FT<"cvt.d.s", FGR64Opnd, FGR32Opnd, II_CVT>,
+                     ABS_FM_MM<0, 0x4d>, ISA_MICROMIPS, FGR_64;
+  def CVT_D64_W_MM : ABSS_FT<"cvt.d.w", FGR64Opnd, FGR32Opnd, II_CVT>,
+                     ABS_FM_MM<1, 0x4d>, ISA_MICROMIPS, FGR_64;
+  def CVT_S_D64_MM : ABSS_FT<"cvt.s.d", FGR32Opnd, FGR64Opnd, II_CVT>,
+                     ABS_FM_MM<0, 0x6d>, ISA_MICROMIPS, FGR_64;
+}
+
+let DecoderNamespace = "MicroMips" in {
+  def CVT_S_D32_MM : MMRel, ABSS_FT<"cvt.s.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
+                     ABS_FM_MM<0, 0x6d>, ISA_MICROMIPS, FGR_32;
+}
+
 def CVT_S_W_MM : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
                  ABS_FM_MM<1, 0x6d>, ISA_MICROMIPS;
 
-def FNEG_MM : MMRel, ABSS_FT<"neg.d", AFGR64Opnd, AFGR64Opnd, II_NEG, fneg>,
-              ABS_FM_MM<1, 0x2d>, ISA_MICROMIPS, FGR_32;
+defm FNEG : ABSS_MMM<"neg.d", II_NEG, fneg>, ABS_FM_MM<1, 0x2d>;
+defm FMOV : ABSS_MMM<"mov.d", II_MOV_D>, ABS_FM_MM<1, 0x1>;
 
-def FMOV_D32_MM : MMRel, ABSS_FT<"mov.d", AFGR64Opnd, AFGR64Opnd, II_MOV_D>,
-                  ABS_FM_MM<1, 0x1>, ISA_MICROMIPS, FGR_32;
-
+let isCodeGenOnly = 1 in {
 def MOVZ_I_S_MM : MMRel, CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd,
                                      II_MOVZ_S>, CMov_I_F_FM_MM<0x78, 0>,
                   ISA_MICROMIPS32_NOT_MIPS32R6;
@@ -196,10 +227,20 @@ def FSQRT_S_MM : MMRel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd, II_SQRT_S,
                                 fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS {
   string DecoderNamespace = "MicroMips";
 }
-def MTHC1_MM : MMRel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
-               MFC1_FM_MM<0xe0>, ISA_MICROMIPS, FGR_32;
-def MFHC1_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
-               MFC1_FM_MM<0xc0>, ISA_MICROMIPS, FGR_32;
+
+let DecoderNamespace = "MicroMips" in {
+  def MTHC1_D32_MM : MMRel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
+                     MFC1_FM_MM<0xe0>, ISA_MICROMIPS, FGR_32;
+  def MFHC1_D32_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
+                     MFC1_FM_MM<0xc0>, ISA_MICROMIPS, FGR_32;
+}
+
+let DecoderNamespace = "MicroMipsFP64" in {
+  def MTHC1_D64_MM : MTC1_64_FT<"mthc1", FGR64Opnd, GPR32Opnd, II_MTHC1>,
+                     MFC1_FM_MM<0xe0>, ISA_MICROMIPS, FGR_64;
+  def MFHC1_D64_MM : MFC1_FT<"mfhc1", GPR32Opnd, FGR64Opnd, II_MFHC1>,
+                     MFC1_FM_MM<0xc0>, ISA_MICROMIPS, FGR_64;
+}
 
 let DecoderNamespace = "MicroMips" in {
   def CFC1_MM : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>,
@@ -358,3 +399,12 @@ let AddedComplexity = 40 in {
   def : LoadRegImmPat<LWC1_MM, f32, load>, ISA_MICROMIPS;
   def : StoreRegImmPat<SWC1_MM, f32>, ISA_MICROMIPS;
 }
+
+  def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
+                (CVT_S_D64_MM FGR64Opnd:$src)>, ISA_MICROMIPS, FGR_64;
+  def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+                (CVT_D64_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
+  def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
+                (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
+  def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+                (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;

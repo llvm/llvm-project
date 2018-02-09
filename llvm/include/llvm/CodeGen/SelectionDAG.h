@@ -570,6 +570,10 @@ public:
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
   }
+
+  /// \brief Create a true or false constant of type \p VT using the target's
+  /// BooleanContent for type \p OpVT.
+  SDValue getBoolConstant(bool V, const SDLoc &DL, EVT VT, EVT OpVT);
   /// @}
 
   /// \brief Create a ConstantFPSDNode wrapping a constant value.

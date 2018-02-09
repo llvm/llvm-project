@@ -411,6 +411,8 @@ private:
         if (Contexts.back().FirstObjCSelectorName) {
           Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName =
               Contexts.back().LongestObjCSelectorName;
+          Contexts.back().FirstObjCSelectorName->ObjCSelectorNameParts =
+              Left->ParameterCount;
           if (Left->BlockParameterCount > 1)
             Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName = 0;
         }
@@ -424,6 +426,11 @@ private:
                           TT_DesignatedInitializerLSquare)) {
           Left->Type = TT_ObjCMethodExpr;
           StartsObjCMethodExpr = true;
+          // ParameterCount might have been set to 1 before expression was
+          // recognized as ObjCMethodExpr (as '1 + number of commas' formula is
+          // used for other expression types). Parameter counter has to be,
+          // therefore, reset to 0.
+          Left->ParameterCount = 0;
           Contexts.back().ColonIsObjCMethodExpr = true;
           if (Parent && Parent->is(tok::r_paren))
             Parent->Type = TT_CastRParen;
@@ -498,7 +505,10 @@ private:
   void updateParameterCount(FormatToken *Left, FormatToken *Current) {
     if (Current->is(tok::l_brace) && Current->BlockKind == BK_Block)
       ++Left->BlockParameterCount;
-    if (Current->is(tok::comma)) {
+    if (Left->Type == TT_ObjCMethodExpr) {
+      if (Current->is(tok::colon))
+        ++Left->ParameterCount;
+    } else if (Current->is(tok::comma)) {
       ++Left->ParameterCount;
       if (!Left->Role)
         Left->Role.reset(new CommaSeparatedList(Style));
@@ -2820,11 +2830,17 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_ObjCMethodExpr) && !Right.is(tok::r_square) &&
       Left.isNot(TT_SelectorName))
     return true;
+
   if (Right.is(tok::colon) &&
       !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon))
     return false;
-  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr))
+  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
+    if ((Style.Language == FormatStyle::LK_Proto ||
+         Style.Language == FormatStyle::LK_TextProto) &&
+        Right.isStringLiteral())
+      return false;
     return true;
+  }
   if (Right.is(TT_SelectorName) || (Right.is(tok::identifier) && Right.Next &&
                                     Right.Next->is(TT_ObjCMethodExpr)))
     return Left.isNot(tok::period); // FIXME: Properly parse ObjC calls.

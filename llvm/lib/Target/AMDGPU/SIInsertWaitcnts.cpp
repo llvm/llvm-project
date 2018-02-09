@@ -398,8 +398,8 @@ public:
   }
 
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
-  MachineInstr *generateSWaitCntInstBefore(MachineInstr &MI,
-                                           BlockWaitcntBrackets *ScoreBrackets);
+  void generateSWaitCntInstBefore(MachineInstr &MI,
+                                  BlockWaitcntBrackets *ScoreBrackets);
   void updateEventWaitCntAfter(MachineInstr &Inst,
                                BlockWaitcntBrackets *ScoreBrackets);
   void mergeInputScoreBrackets(MachineBasicBlock &Block);
@@ -799,13 +799,11 @@ static bool readsVCCZ(const MachineInstr &MI) {
 ///  and if so what the value of each counter is.
 ///  The "score bracket" is bound by the lower bound and upper bound
 ///  scores (*_score_LB and *_score_ub respectively).
-MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
+void SIInsertWaitcnts::generateSWaitCntInstBefore(
     MachineInstr &MI, BlockWaitcntBrackets *ScoreBrackets) {
   // To emit, or not to emit - that's the question!
   // Start with an assumption that there is no need to emit.
   unsigned int EmitSwaitcnt = 0;
-  // s_waitcnt instruction to return; default is NULL.
-  MachineInstr *SWaitInst = nullptr;
   // No need to wait before phi. If a phi-move exists, then the wait should
   // has been inserted before the move. If a phi-move does not exist, then
   // wait should be inserted before the real use. The same is true for
@@ -815,7 +813,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
   if (MI.isDebugValue() &&
       // TODO: any other opcode?
       !NeedLineMapping) {
-    return SWaitInst;
+    return;
   }
 
   // See if an s_waitcnt is forced at block entry, or is needed at
@@ -1126,27 +1124,49 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
       }
 
       // Update an existing waitcount, or make a new one.
-      MachineFunction &MF = *MI.getParent()->getParent();
-      if (OldWaitcnt && OldWaitcnt->getOpcode() != AMDGPU::S_WAITCNT) {
-        SWaitInst = OldWaitcnt;
-      } else {
-        SWaitInst = MF.CreateMachineInstr(TII->get(AMDGPU::S_WAITCNT),
-                                          MI.getDebugLoc());
-        TrackedWaitcntSet.insert(SWaitInst);
+      unsigned Enc = AMDGPU::encodeWaitcnt(IV, CntVal[VM_CNT],
+                                           CntVal[EXP_CNT], CntVal[LGKM_CNT]);
+      // We don't (yet) track waitcnts that existed prior to the waitcnt
+      // pass (we just skip over them); because the waitcnt pass is ignorant
+      // of them, it may insert a redundant waitcnt. To avoid this, check
+      // the prev instr. If it and the to-be-inserted waitcnt are the
+      // same, keep the prev waitcnt and skip the insertion. We assume that
+      // whomever. e.g., for memory model, inserted the prev waitcnt really
+      // wants it there.
+      bool insertSWaitInst = true;
+      if (MI.getIterator() != MI.getParent()->begin()) {
+        MachineInstr *MIPrevInst = &*std::prev(MI.getIterator());
+        if (MIPrevInst &&
+            MIPrevInst->getOpcode() == AMDGPU::S_WAITCNT &&
+            MIPrevInst->getOperand(0).getImm() == Enc) {
+          insertSWaitInst = false;
+        }
       }
+      if (insertSWaitInst) {
+        if (OldWaitcnt && OldWaitcnt->getOpcode() == AMDGPU::S_WAITCNT) {
+          OldWaitcnt->getOperand(0).setImm(Enc);
+          MI.getParent()->insert(MI, OldWaitcnt);
 
-      const MachineOperand &Op =
-          MachineOperand::CreateImm(AMDGPU::encodeWaitcnt(
-              IV, CntVal[VM_CNT], CntVal[EXP_CNT], CntVal[LGKM_CNT]));
-      SWaitInst->addOperand(MF, Op);
+          DEBUG(dbgs() << "updateWaitcntInBlock\n"
+                       << "Old Instr: " << MI << '\n'
+                       << "New Instr: " << *OldWaitcnt << '\n');
+        } else {
+            auto SWaitInst = BuildMI(*MI.getParent(), MI.getIterator(),
+                               MI.getDebugLoc(), TII->get(AMDGPU::S_WAITCNT))
+                             .addImm(Enc);
+            TrackedWaitcntSet.insert(SWaitInst);
+
+            DEBUG(dbgs() << "insertWaitcntInBlock\n"
+                         << "Old Instr: " << MI << '\n'
+                         << "New Instr: " << *SWaitInst << '\n');
+        }
+      }
 
       if (CntVal[EXP_CNT] == 0) {
         ScoreBrackets->setMixedExpTypes(false);
       }
     }
   }
-
-  return SWaitInst;
 }
 
 void SIInsertWaitcnts::insertWaitcntBeforeCF(MachineBasicBlock &MBB,
@@ -1560,34 +1580,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Generate an s_waitcnt instruction to be placed before
     // cur_Inst, if needed.
-    MachineInstr *SWaitInst = generateSWaitCntInstBefore(Inst, ScoreBrackets);
-
-    if (SWaitInst) {
-      // We don't (yet) track waitcnts that existed prior to the waitcnt
-      // pass (we just skip over them); because the waitcnt pass is ignorant
-      // of them, it may insert a redundant waitcnt. To avoid this, check
-      // the prev instr. If it and the to-be-inserted waitcnt are the
-      // same, keep the prev waitcnt and skip the insertion. We assume that
-      // whomever. e.g., for memory model, inserted the prev waitcnt really
-      // wants it there.
-      bool insertSWaitInst = true;
-      if (Iter != Block.begin()) {
-        MachineInstr *MIPrevInst = &*std::prev(Iter);
-        if (MIPrevInst &&
-            MIPrevInst->getOpcode() == AMDGPU::S_WAITCNT &&
-            MIPrevInst->getOperand(0).getImm() == SWaitInst->getOperand(0).getImm()) {
-          insertSWaitInst = false;
-        }
-      }
-      if (insertSWaitInst) {
-        Block.insert(Inst, SWaitInst);
-        if (ScoreBrackets->getWaitcnt() != SWaitInst) {
-          DEBUG(dbgs() << "insertWaitcntInBlock\n"
-                       << "Old Instr: " << Inst << '\n'
-                       << "New Instr: " << *SWaitInst << '\n';);
-        }
-      }
-    }
+    generateSWaitCntInstBefore(Inst, ScoreBrackets);
 
     updateEventWaitCntAfter(Inst, ScoreBrackets);
 
@@ -1604,9 +1597,6 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     ScoreBrackets->clearWaitcnt();
 
-    if (SWaitInst) {
-      DEBUG({ SWaitInst->print(dbgs() << '\n'); });
-    }
     DEBUG({
       Inst.print(dbgs());
       ScoreBrackets->dump();

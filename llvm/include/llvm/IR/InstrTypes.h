@@ -973,6 +973,19 @@ public:
   /// @brief Return the predicate as if the operands were swapped.
   static Predicate getSwappedPredicate(Predicate pred);
 
+  /// For example, SGT -> SGE, SLT -> SLE, ULT -> ULE, UGT -> UGE.
+  /// @brief Returns the non-strict version of strict comparisons.
+  Predicate getNonStrictPredicate() const {
+    return getNonStrictPredicate(getPredicate());
+  }
+
+  /// This is a static version that you can use without an instruction
+  /// available.
+  /// @returns the non-strict version of comparison provided in \p pred.
+  /// If \p pred is not a strict comparison predicate, returns \p pred.
+  /// @brief Returns the non-strict version of strict comparisons.
+  static Predicate getNonStrictPredicate(Predicate pred);
+
   /// @brief Provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 

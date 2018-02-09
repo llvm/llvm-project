@@ -569,10 +569,8 @@ TSAN_INTERCEPTOR(int, sigsetjmp, void *env);
 #define TSAN_INTERCEPTOR_SETJMP TSAN_INTERCEPTOR_SETJMP__(setjmp_symname)
 #define TSAN_INTERCEPTOR_SIGSETJMP TSAN_INTERCEPTOR_SETJMP__(sigsetjmp_symname)
 
-#define TSAN_STRING_SETJMP_(x) # x
-#define TSAN_STRING_SETJMP__(x) TSAN_STRING_SETJMP_(x)
-#define TSAN_STRING_SETJMP TSAN_STRING_SETJMP__(setjmp_symname)
-#define TSAN_STRING_SIGSETJMP TSAN_STRING_SETJMP__(sigsetjmp_symname)
+#define TSAN_STRING_SETJMP SANITIZER_STRINGIFY(setjmp_symname)
+#define TSAN_STRING_SIGSETJMP SANITIZER_STRINGIFY(sigsetjmp_symname)
 
 // Not called.  Merely to satisfy TSAN_INTERCEPT().
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE

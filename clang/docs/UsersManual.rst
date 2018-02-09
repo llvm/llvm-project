@@ -1855,6 +1855,27 @@ features. You can "tune" the debug info for one of several different debuggers.
   must come first.)
 
 
+Controlling LLVM IR Output
+--------------------------
+
+Controlling Value Names in LLVM IR
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Emitting value names in LLVM IR increases the size and verbosity of the IR.
+By default, value names are only emitted in assertion-enabled builds of Clang.
+However, when reading IR it can be useful to re-enable the emission of value
+names to improve readability.
+
+.. option:: -fdiscard-value-names
+
+  Discard value names when generating LLVM IR.
+
+.. option:: -fno-discard-value-names
+
+  Do not discard value names when generating LLVM IR. This option can be used
+  to re-enable names for release builds of Clang.
+
+
 Comment Parsing Options
 -----------------------
 

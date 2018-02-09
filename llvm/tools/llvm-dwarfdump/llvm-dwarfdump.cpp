@@ -478,6 +478,8 @@ static bool handleFile(StringRef Filename, HandlerFn HandleObj,
 static std::vector<std::string> expandBundle(const std::string &InputPath) {
   std::vector<std::string> BundlePaths;
   SmallString<256> BundlePath(InputPath);
+  // Normalize input path. This is necessary to accept `bundle.dSYM/`.
+  sys::path::remove_dots(BundlePath);
   // Manually open up the bundle to avoid introducing additional dependencies.
   if (sys::fs::is_directory(BundlePath) &&
       sys::path::extension(BundlePath) == ".dSYM") {

@@ -26,6 +26,7 @@
 template <typename T>
 void test_allocators()
 {
+	static_assert(!std::__is_allocator<T>::value, "" );
 	static_assert( std::__is_allocator<std::allocator<T>>::value, "" );
 	static_assert( std::__is_allocator<test_allocator<T>>::value, "" );
 	static_assert( std::__is_allocator<min_allocator<T>>::value, "" );
