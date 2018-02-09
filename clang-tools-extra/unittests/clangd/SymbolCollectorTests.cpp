@@ -47,11 +47,16 @@ MATCHER_P(Snippet, S, "") {
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
-MATCHER_P(LocationOffsets, Offsets, "") {
+MATCHER_P(DeclRange, Offsets, "") {
   // Offset range in SymbolLocation is [start, end] while in Clangd is [start,
   // end).
+  // FIXME: SymbolLocation should be [start, end).
   return arg.CanonicalDeclaration.StartOffset == Offsets.first &&
       arg.CanonicalDeclaration.EndOffset == Offsets.second - 1;
+}
+MATCHER_P(DefRange, Offsets, "") {
+  return arg.Definition.StartOffset == Offsets.first &&
+         arg.Definition.EndOffset == Offsets.second - 1;
 }
 
 namespace clang {
@@ -97,7 +102,8 @@ public:
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(CollectorOpts);
 
     std::vector<std::string> Args = {"symbol_collector", "-fsyntax-only",
-                                     "-std=c++11", TestFileName};
+                                     "-std=c++11",       "-include",
+                                     TestHeaderName,     TestFileName};
     Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
     tooling::ToolInvocation Invocation(
         Args,
@@ -106,14 +112,8 @@ public:
 
     InMemoryFileSystem->addFile(TestHeaderName, 0,
                                 llvm::MemoryBuffer::getMemBuffer(HeaderCode));
-
-    std::string Content = MainCode;
-    if (!HeaderCode.empty())
-      Content = (llvm::Twine("#include\"") +
-                 llvm::sys::path::filename(TestHeaderName) + "\"\n" + Content)
-                    .str();
     InMemoryFileSystem->addFile(TestFileName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(Content));
+                                llvm::MemoryBuffer::getMemBuffer(MainCode));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
     return true;
@@ -174,6 +174,42 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
                    QName("kStr"), QName("foo"), QName("foo::bar"),
                    QName("foo::int32"), QName("foo::int32_t"), QName("foo::v1"),
                    QName("foo::bar::v2"), QName("foo::baz")}));
+}
+
+TEST_F(SymbolCollectorTest, Locations) {
+  // FIXME: the behavior here is bad: chopping tokens, including more than the
+  // ident range, using half-open ranges. See fixmes in getSymbolLocation().
+  CollectorOpts.IndexMainFiles = true;
+  Annotations Header(R"cpp(
+    // Declared in header, defined in main.
+    $xdecl[[extern int X]];
+    $clsdecl[[class C]]ls;
+    $printdecl[[void print()]];
+
+    // Declared in header, defined nowhere.
+    $zdecl[[extern int Z]];
+  )cpp");
+  Annotations Main(R"cpp(
+    $xdef[[int X = 4]]2;
+    $clsdef[[class Cls {}]];
+    $printdef[[void print() {}]]
+
+    // Declared/defined in main only.
+    $y[[int Y]];
+  )cpp");
+  runSymbolCollector(Header.code(), Main.code());
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(QName("X"), DeclRange(Header.offsetRange("xdecl")),
+                DefRange(Main.offsetRange("xdef"))),
+          AllOf(QName("Cls"), DeclRange(Header.offsetRange("clsdecl")),
+                DefRange(Main.offsetRange("clsdef"))),
+          AllOf(QName("print"), DeclRange(Header.offsetRange("printdecl")),
+                DefRange(Main.offsetRange("printdef"))),
+          AllOf(QName("Z"), DeclRange(Header.offsetRange("zdecl"))),
+          AllOf(QName("Y"), DeclRange(Main.offsetRange("y")),
+                DefRange(Main.offsetRange("y")))));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeNoFallback) {
@@ -280,10 +316,9 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(
-          AllOf(QName("abc_Test"),
-                LocationOffsets(Header.offsetRange("expansion")),
+          AllOf(QName("abc_Test"), DeclRange(Header.offsetRange("expansion")),
                 DeclURI(TestHeaderURI)),
-          AllOf(QName("Test"), LocationOffsets(Header.offsetRange("spelling")),
+          AllOf(QName("Test"), DeclRange(Header.offsetRange("spelling")),
                 DeclURI(TestHeaderURI))));
 }
 
@@ -302,13 +337,13 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacroInMainFile) {
     FF2();
   )");
   runSymbolCollector(/*Header=*/"", Main.code());
-  EXPECT_THAT(Symbols, UnorderedElementsAre(
-                           AllOf(QName("abc_Test"),
-                                 LocationOffsets(Main.offsetRange("expansion")),
-                                 DeclURI(TestFileURI)),
-                           AllOf(QName("Test"),
-                                 LocationOffsets(Main.offsetRange("spelling")),
-                                 DeclURI(TestFileURI))));
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(QName("abc_Test"), DeclRange(Main.offsetRange("expansion")),
+                DeclURI(TestFileURI)),
+          AllOf(QName("Test"), DeclRange(Main.offsetRange("spelling")),
+                DeclURI(TestFileURI))));
 }
 
 TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
@@ -322,10 +357,10 @@ TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
 
   runSymbolCollector(Header.code(), /*Main=*/"",
                      /*ExtraArgs=*/{"-DNAME=name"});
-  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(
-                           QName("name"),
-                           LocationOffsets(Header.offsetRange("expansion")),
-                           DeclURI(TestHeaderURI))));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(
+                  QName("name"), DeclRange(Header.offsetRange("expansion")),
+                  DeclURI(TestHeaderURI))));
 }
 
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {
@@ -503,19 +538,23 @@ CompletionSnippetInsertText:    'snippet'
 ...
 )";
 
-  auto Symbols1 = SymbolFromYAML(YAML1);
+  auto Symbols1 = SymbolsFromYAML(YAML1);
   EXPECT_THAT(Symbols1,
               UnorderedElementsAre(AllOf(
                   QName("clang::Foo1"), Labeled("Foo1-label"), Doc("Foo doc"),
                   Detail("int"), DeclURI("file:///path/foo.h"))));
-  auto Symbols2 = SymbolFromYAML(YAML2);
+  auto Symbols2 = SymbolsFromYAML(YAML2);
   EXPECT_THAT(Symbols2, UnorderedElementsAre(AllOf(
                             QName("clang::Foo2"), Labeled("Foo2-label"),
                             Not(HasDetail()), DeclURI("file:///path/bar.h"))));
 
-  std::string ConcatenatedYAML =
-      SymbolsToYAML(Symbols1) + SymbolsToYAML(Symbols2);
-  auto ConcatenatedSymbols = SymbolFromYAML(ConcatenatedYAML);
+  std::string ConcatenatedYAML;
+  {
+    llvm::raw_string_ostream OS(ConcatenatedYAML);
+    SymbolsToYAML(Symbols1, OS);
+    SymbolsToYAML(Symbols2, OS);
+  }
+  auto ConcatenatedSymbols = SymbolsFromYAML(ConcatenatedYAML);
   EXPECT_THAT(ConcatenatedSymbols,
               UnorderedElementsAre(QName("clang::Foo1"),
                                    QName("clang::Foo2")));

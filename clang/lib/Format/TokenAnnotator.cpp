@@ -591,12 +591,12 @@ private:
             BeforePrevious->is(tok::r_square) ||
             Contexts.back().LongestObjCSelectorName == 0) {
           Tok->Previous->Type = TT_SelectorName;
-          if (Tok->Previous->ColumnWidth >
-              Contexts.back().LongestObjCSelectorName)
-            Contexts.back().LongestObjCSelectorName =
-                Tok->Previous->ColumnWidth;
           if (!Contexts.back().FirstObjCSelectorName)
             Contexts.back().FirstObjCSelectorName = Tok->Previous;
+          else if (Tok->Previous->ColumnWidth >
+                   Contexts.back().LongestObjCSelectorName)
+            Contexts.back().LongestObjCSelectorName =
+                Tok->Previous->ColumnWidth;
         }
       } else if (Contexts.back().ColonIsForRangeExpr) {
         Tok->Type = TT_RangeBasedForLoopColon;

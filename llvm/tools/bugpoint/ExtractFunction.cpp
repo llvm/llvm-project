@@ -85,7 +85,7 @@ std::unique_ptr<Module>
 BugDriver::deleteInstructionFromProgram(const Instruction *I,
                                         unsigned Simplification) {
   // FIXME, use vmap?
-  Module *Clone = CloneModule(Program).release();
+  std::unique_ptr<Module> Clone = CloneModule(Program);
 
   const BasicBlock *PBB = I->getParent();
   const Function *PF = PBB->getParent();
@@ -118,8 +118,7 @@ BugDriver::deleteInstructionFromProgram(const Instruction *I,
     Passes.push_back("simplifycfg"); // Delete dead control flow
 
   Passes.push_back("verify");
-  std::unique_ptr<Module> New = runPassesOn(Clone, Passes);
-  delete Clone;
+  std::unique_ptr<Module> New = runPassesOn(Clone.get(), Passes);
   if (!New) {
     errs() << "Instruction removal failed.  Sorry. :(  Please report a bug!\n";
     exit(1);

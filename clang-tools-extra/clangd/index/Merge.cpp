@@ -60,32 +60,40 @@ private:
 Symbol
 mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
   assert(L.ID == R.ID);
-  Symbol S = L;
-  // For each optional field, fill it from R if missing in L.
-  // (It might be missing in R too, but that's a no-op).
-  if (S.CanonicalDeclaration.FileURI == "")
-    S.CanonicalDeclaration = R.CanonicalDeclaration;
-  if (S.CompletionLabel == "")
-    S.CompletionLabel = R.CompletionLabel;
-  if (S.CompletionFilterText == "")
-    S.CompletionFilterText = R.CompletionFilterText;
-  if (S.CompletionPlainInsertText == "")
-    S.CompletionPlainInsertText = R.CompletionPlainInsertText;
-  if (S.CompletionSnippetInsertText == "")
-    S.CompletionSnippetInsertText = R.CompletionSnippetInsertText;
+  // We prefer information from TUs that saw the definition.
+  // Classes: this is the def itself. Functions: hopefully the header decl.
+  // If both did (or both didn't), continue to prefer L over R.
+  bool PreferR = R.Definition && !L.Definition;
+  Symbol S = PreferR ? R : L;        // The target symbol we're merging into.
+  const Symbol &O = PreferR ? L : R; // The "other" less-preferred symbol.
 
-  if (L.Detail && R.Detail) {
-    // Copy into scratch space so we can merge.
-    *Scratch = *L.Detail;
-    if (Scratch->Documentation == "")
-      Scratch->Documentation = R.Detail->Documentation;
-    if (Scratch->CompletionDetail == "")
-      Scratch->CompletionDetail = R.Detail->CompletionDetail;
-    S.Detail = Scratch;
-  } else if (L.Detail)
-    S.Detail = L.Detail;
-  else if (R.Detail)
-    S.Detail = R.Detail;
+  // For each optional field, fill it from O if missing in S.
+  // (It might be missing in O too, but that's a no-op).
+  if (!S.Definition)
+    S.Definition = O.Definition;
+  if (!S.CanonicalDeclaration)
+    S.CanonicalDeclaration = O.CanonicalDeclaration;
+  if (S.CompletionLabel == "")
+    S.CompletionLabel = O.CompletionLabel;
+  if (S.CompletionFilterText == "")
+    S.CompletionFilterText = O.CompletionFilterText;
+  if (S.CompletionPlainInsertText == "")
+    S.CompletionPlainInsertText = O.CompletionPlainInsertText;
+  if (S.CompletionSnippetInsertText == "")
+    S.CompletionSnippetInsertText = O.CompletionSnippetInsertText;
+
+  if (O.Detail) {
+    if (S.Detail) {
+      // Copy into scratch space so we can merge.
+      *Scratch = *S.Detail;
+      if (Scratch->Documentation == "")
+        Scratch->Documentation = O.Detail->Documentation;
+      if (Scratch->CompletionDetail == "")
+        Scratch->CompletionDetail = O.Detail->CompletionDetail;
+      S.Detail = Scratch;
+    } else
+      S.Detail = O.Detail;
+  }
   return S;
 }
 

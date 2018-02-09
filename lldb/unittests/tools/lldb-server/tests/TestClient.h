@@ -74,12 +74,17 @@ public:
                           std::string &response_string);
   llvm::Error SendMessage(llvm::StringRef message, std::string &response_string,
                           PacketResult expected_result);
+
+  template <typename P>
+  llvm::Expected<typename P::result_type> SendMessage(llvm::StringRef Message);
   unsigned int GetPcRegisterId();
 
 private:
   TestClient(std::unique_ptr<lldb_private::Connection> Conn);
 
-  llvm::Error QueryProcessInfo();
+  llvm::Error qProcessInfo();
+  llvm::Error qRegisterInfos();
+  llvm::Error queryProcess();
   llvm::Error Continue(llvm::StringRef message);
   std::string FormatFailedResult(
       const std::string &message,
@@ -88,8 +93,18 @@ private:
 
   llvm::Optional<ProcessInfo> m_process_info;
   std::unique_ptr<StopReply> m_stop_reply;
-  unsigned int m_pc_register = UINT_MAX;
+  std::vector<lldb_private::RegisterInfo> m_register_infos;
+  unsigned int m_pc_register = LLDB_INVALID_REGNUM;
 };
+
+template <typename P>
+llvm::Expected<typename P::result_type>
+TestClient::SendMessage(llvm::StringRef Message) {
+  std::string ResponseText;
+  if (llvm::Error E = SendMessage(Message, ResponseText))
+    return std::move(E);
+  return P::create(ResponseText);
+}
 
 } // namespace llgs_tests
 

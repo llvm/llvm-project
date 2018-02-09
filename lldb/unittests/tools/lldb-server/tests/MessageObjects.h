@@ -25,9 +25,11 @@ typedef llvm::DenseMap<uint64_t, ThreadInfo> ThreadInfoMap;
 typedef llvm::DenseMap<uint64_t, uint64_t> U64Map;
 typedef llvm::DenseMap<unsigned int, std::string> RegisterMap;
 
-class ProcessInfo {
+template <typename T> struct Parser { using result_type = T; };
+
+class ProcessInfo : public Parser<ProcessInfo> {
 public:
-  static llvm::Expected<ProcessInfo> Create(llvm::StringRef response);
+  static llvm::Expected<ProcessInfo> create(llvm::StringRef response);
   lldb::pid_t GetPid() const;
   llvm::support::endianness GetEndian() const;
 
@@ -71,6 +73,11 @@ public:
 private:
   JThreadsInfo() = default;
   ThreadInfoMap m_thread_infos;
+};
+
+struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
+  static llvm::Expected<lldb_private::RegisterInfo>
+  create(llvm::StringRef Response);
 };
 
 class StopReply {

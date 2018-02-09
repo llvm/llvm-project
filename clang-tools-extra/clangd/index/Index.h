@@ -27,11 +27,14 @@ struct SymbolLocation {
   llvm::StringRef FileURI;
   // The 0-based offset to the first character of the symbol from the beginning
   // of the source file.
-  unsigned StartOffset;
+  unsigned StartOffset = 0;
   // The 0-based offset to the last character of the symbol from the beginning
   // of the source file.
-  unsigned EndOffset;
+  unsigned EndOffset = 0;
+
+  operator bool() const { return !FileURI.empty(); }
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
 
 // The class identifies a particular C++ symbol (class, function, method, etc).
 //
@@ -44,7 +47,7 @@ struct SymbolLocation {
 class SymbolID {
 public:
   SymbolID() = default;
-  SymbolID(llvm::StringRef USR);
+  explicit SymbolID(llvm::StringRef USR);
 
   bool operator==(const SymbolID &Sym) const {
     return HashValue == Sym.HashValue;
@@ -117,13 +120,16 @@ struct Symbol {
   llvm::StringRef Name;
   // The containing namespace. e.g. "" (global), "ns::" (top-level namespace).
   llvm::StringRef Scope;
-  // The location of the canonical declaration of the symbol.
+  // The location of the symbol's definition, if one was found.
+  // This covers the whole definition (e.g. class body).
+  SymbolLocation Definition;
+  // The location of the preferred declaration of the symbol.
+  // This may be the same as Definition.
   //
-  // A C++ symbol could have multiple declarations and one definition (e.g.
-  // a function is declared in ".h" file, and is defined in ".cc" file).
-  //   * For classes, the canonical declaration is usually definition.
-  //   * For non-inline functions, the canonical declaration is a declaration
-  //     (not a definition), which is usually declared in ".h" file.
+  // A C++ symbol may have multiple declarations, and we pick one to prefer.
+  //   * For classes, the canonical declaration should be the definition.
+  //   * For non-inline functions, the canonical declaration typically appears
+  //     in the ".h" file corresponding to the definition.
   SymbolLocation CanonicalDeclaration;
 
   /// A brief description of the symbol that can be displayed in the completion
@@ -160,12 +166,14 @@ struct Symbol {
   // FIXME: add all occurrences support.
   // FIXME: add extra fields for index scoring signals.
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S);
 
 // An immutable symbol container that stores a set of symbols.
 // The container will maintain the lifetime of the symbols.
 class SymbolSlab {
 public:
   using const_iterator = std::vector<Symbol>::const_iterator;
+  using iterator = const_iterator;
 
   SymbolSlab() = default;
 
