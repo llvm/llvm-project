@@ -1048,40 +1048,45 @@ static DenseMap<SectionBase *, int> buildSectionOrder() {
   return SectionOrder;
 }
 
-static bool isKnownNonreorderableSection(const OutputSection *OS) {
-  return llvm::StringSwitch<bool>(OS->Name)
-      .Cases(".init", ".fini", ".init_array", ".fini_array", ".ctors",
-             ".dtors", true)
-      .Default(false);
+static void sortSection(OutputSection *Sec,
+                        const DenseMap<SectionBase *, int> &Order) {
+  if (!Sec->Live)
+    return;
+  StringRef Name = Sec->Name;
+
+  // Sort input sections by section name suffixes for
+  // __attribute__((init_priority(N))).
+  if (Name == ".init_array" || Name == ".fini_array") {
+    if (!Script->HasSectionsCommand)
+      Sec->sortInitFini();
+    return;
+  }
+
+  // Sort input sections by the special rule for .ctors and .dtors.
+  if (Name == ".ctors" || Name == ".dtors") {
+    if (!Script->HasSectionsCommand)
+      Sec->sortCtorsDtors();
+    return;
+  }
+
+  // Never sort these.
+  if (Name == ".init" || Name == ".fini")
+    return;
+
+  // Sort input sections by priority using the list provided
+  // by --symbol-ordering-file.
+  if (!Order.empty())
+    Sec->sort([&](InputSectionBase *S) { return Order.lookup(S); });
 }
 
 // If no layout was provided by linker script, we want to apply default
 // sorting for special input sections. This also handles --symbol-ordering-file.
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
-  // Sort input sections by priority using the list provided
-  // by --symbol-ordering-file.
+  // Build the order once since it is expensive.
   DenseMap<SectionBase *, int> Order = buildSectionOrder();
-  if (!Order.empty())
-    for (BaseCommand *Base : Script->SectionCommands)
-      if (auto *Sec = dyn_cast<OutputSection>(Base))
-        if (Sec->Live && !isKnownNonreorderableSection(Sec))
-          Sec->sort([&](InputSectionBase *S) { return Order.lookup(S); });
-
-  if (Script->HasSectionsCommand)
-    return;
-
-  // Sort input sections by section name suffixes for
-  // __attribute__((init_priority(N))).
-  if (OutputSection *Sec = findSection(".init_array"))
-    Sec->sortInitFini();
-  if (OutputSection *Sec = findSection(".fini_array"))
-    Sec->sortInitFini();
-
-  // Sort input sections by the special rule for .ctors and .dtors.
-  if (OutputSection *Sec = findSection(".ctors"))
-    Sec->sortCtorsDtors();
-  if (OutputSection *Sec = findSection(".dtors"))
-    Sec->sortCtorsDtors();
+  for (BaseCommand *Base : Script->SectionCommands)
+    if (auto *Sec = dyn_cast<OutputSection>(Base))
+      sortSection(Sec, Order);
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
