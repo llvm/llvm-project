@@ -566,7 +566,8 @@ def runCmpResults(Dir, Strictness=0):
                                RefDir, NewDir))
 
         PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
-        Opts = CmpRuns.CmpOptions(rootA="", rootB=PatchedSourceDirPath)
+        Opts, Args = CmpRuns.generate_option_parser().parse_args(
+            ["", PatchedSourceDirPath])
         # Scan the results, delete empty plist files.
         NumDiffs, ReportsInRef, ReportsInNew = \
             CmpRuns.dumpScanBuildResultsDiff(RefDir, NewDir, Opts, False)

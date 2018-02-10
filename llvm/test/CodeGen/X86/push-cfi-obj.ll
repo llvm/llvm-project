@@ -11,7 +11,7 @@
 ; LINUX-NEXT:      SHF_ALLOC (0x2)
 ; LINUX-NEXT:    ]
 ; LINUX-NEXT:    Address: 0x0
-; LINUX-NEXT:    Offset: 0x68
+; LINUX-NEXT:    Offset: 0x5C
 ; LINUX-NEXT:    Size: 64
 ; LINUX-NEXT:    Link: 0
 ; LINUX-NEXT:    Info: 0

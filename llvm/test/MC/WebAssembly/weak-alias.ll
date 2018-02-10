@@ -231,13 +231,13 @@ entry:
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:
-; CHECK-SYMS-NEXT: 00000001 gw    F EXPORT	.hidden foo_alias
-; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	.hidden bar_alias
-; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	.hidden foo
-; CHECK-SYMS-NEXT: 00000002 g     F EXPORT	.hidden call_direct
-; CHECK-SYMS-NEXT: 00000003 g     F EXPORT	.hidden call_alias
-; CHECK-SYMS-NEXT: 00000004 g     F EXPORT	.hidden call_direct_ptr
-; CHECK-SYMS-NEXT: 00000008 g       EXPORT	direct_address
-; CHECK-SYMS-NEXT: 00000005 g     F EXPORT	.hidden call_alias_ptr
-; CHECK-SYMS-NEXT: 00000010 g       EXPORT	alias_address
-; CHECK-SYMS-NEXT: 00000000 g       EXPORT	bar
+; CHECK-SYMS-NEXT: 00000001 gw    F CODE	.hidden foo_alias
+; CHECK-SYMS-NEXT: 00000000 gw      DATA	.hidden bar_alias
+; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden foo
+; CHECK-SYMS-NEXT: 00000002 g     F CODE	.hidden call_direct
+; CHECK-SYMS-NEXT: 00000003 g     F CODE	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000004 g     F CODE	.hidden call_direct_ptr
+; CHECK-SYMS-NEXT: 00000008 g       DATA	direct_address
+; CHECK-SYMS-NEXT: 00000005 g     F CODE	.hidden call_alias_ptr
+; CHECK-SYMS-NEXT: 00000010 g       DATA	alias_address
+; CHECK-SYMS-NEXT: 00000000 g       DATA	bar

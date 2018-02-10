@@ -859,9 +859,10 @@ public:
 
     // Copy initializer elements.
     SmallVector<llvm::Constant*, 16> Elts;
-    Elts.reserve(NumInitableElts + NumElements);
+    Elts.reserve(std::max(NumInitableElts, NumElements));
 
     bool RewriteType = false;
+    bool AllNullValues = true;
     for (unsigned i = 0; i < NumInitableElts; ++i) {
       Expr *Init = ILE->getInit(i);
       llvm::Constant *C = Emitter.tryEmitPrivateForMemory(Init, EltType);
@@ -869,7 +870,14 @@ public:
         return nullptr;
       RewriteType |= (C->getType() != ElemTy);
       Elts.push_back(C);
+      if (AllNullValues && !C->isNullValue())
+        AllNullValues = false;
     }
+
+    // If all initializer elements are "zero," then avoid storing NumElements
+    // instances of the zero representation.
+    if (AllNullValues)
+      return llvm::ConstantAggregateZero::get(AType);
 
     RewriteType |= (fillC->getType() != ElemTy);
     Elts.resize(NumElements, fillC);
@@ -877,7 +885,7 @@ public:
     if (RewriteType) {
       // FIXME: Try to avoid packing the array
       std::vector<llvm::Type*> Types;
-      Types.reserve(NumInitableElts + NumElements);
+      Types.reserve(Elts.size());
       for (unsigned i = 0, e = Elts.size(); i < e; ++i)
         Types.push_back(Elts[i]->getType());
       llvm::StructType *SType = llvm::StructType::get(AType->getContext(),

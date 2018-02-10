@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: ld.lld %t -o %t2 --icf=all --verbose 2>&1 | FileCheck %s
+# RUN: ld.lld %t -o %t2 --icf=all --print-icf-sections | FileCheck %s
 # RUN: llvm-objdump -t %t2 | FileCheck -check-prefix=ALIGN %s
 
 # CHECK: selected section '.text.f1' from file [[T:'.*']]

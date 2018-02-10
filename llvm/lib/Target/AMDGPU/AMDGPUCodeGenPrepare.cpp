@@ -466,7 +466,8 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
 }
 
 bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst  &I) {
-  if (I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
+  if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
+       I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
       canWidenScalarExtLoad(I)) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());

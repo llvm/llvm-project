@@ -72,9 +72,9 @@ protected:
 
   /// Compute the actions table and gather the first action index for each
   /// landing pad site.
-  unsigned computeActionsTable(const SmallVectorImpl<const LandingPadInfo*>&LPs,
-                               SmallVectorImpl<ActionEntry> &Actions,
-                               SmallVectorImpl<unsigned> &FirstActions);
+  void computeActionsTable(const SmallVectorImpl<const LandingPadInfo *> &LPs,
+                           SmallVectorImpl<ActionEntry> &Actions,
+                           SmallVectorImpl<unsigned> &FirstActions);
 
   void computePadMap(const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
                      RangeMapType &PadMap);
@@ -110,7 +110,7 @@ protected:
   ///     catches in the function.  This tables is reversed indexed base 1.
   void emitExceptionTable();
 
-  virtual void emitTypeInfos(unsigned TTypeEncoding);
+  virtual void emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel);
 
   // Helpers for identifying what kind of clause an EH typeid or selector
   // corresponds to. Negative selectors are for filter clauses, the zero

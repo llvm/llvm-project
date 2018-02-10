@@ -287,6 +287,9 @@ def M3WriteNEOND   : SchedWriteRes<[M3UnitNSHF,
 def M3WriteNEONH   : SchedWriteRes<[M3UnitNALU,
                                     M3UnitS]>     { let Latency = 5;
                                                     let NumMicroOps = 2; }
+def M3WriteNEONI   : SchedWriteRes<[M3UnitNSHF,
+                                    M3UnitS]>     { let Latency = 5;
+                                                    let NumMicroOps = 2; }
 def M3WriteNEONV   : SchedWriteRes<[M3UnitFDIV,
                                     M3UnitFDIV]>  { let Latency = 7;
                                                     let NumMicroOps = 1;
@@ -527,8 +530,9 @@ def : InstRW<[M3WriteFCVT4],  (instregex "^[FU](RECP|RSQRT)Ev1")>;
 def : InstRW<[M3WriteNMSC1],  (instregex "^FRECPXv1")>;
 def : InstRW<[M3WriteFMAC4,
               M3ReadFMAC],    (instregex "^F(RECP|RSQRT)S(16|32|64)")>;
-def : InstRW<[M3WriteNALU1],  (instregex "^FMOV[WX][DS](High)?r")>;
-def : InstRW<[M3WriteNALU1],  (instregex "^FMOV[DS][WX](High)?r")>;
+def : InstRW<[M3WriteNALU1],  (instregex "^FMOV[WX][DS]r")>;
+def : InstRW<[M3WriteNALU1],  (instregex "^FMOV[DS][WX]r")>;
+def : InstRW<[M3WriteNEONI],  (instregex "^FMOV(DX|XD)Highr")>;
 
 // FP load instructions.
 def : InstRW<[WriteVLD],    (instregex "^LDR[DSQ]l")>;
