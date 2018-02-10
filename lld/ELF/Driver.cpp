@@ -790,9 +790,11 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
         readDynamicList(*Buffer);
 
-    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
+    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol)) {
       Config->DynamicList.push_back(
           {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
+      Config->Undefined.push_back(Arg->getValue());
+    }
   }
 
   for (auto *Arg : Args.filtered(OPT_version_script))
