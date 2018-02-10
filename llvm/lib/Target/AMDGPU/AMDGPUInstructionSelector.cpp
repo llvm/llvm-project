@@ -229,6 +229,9 @@ static bool isInstrUniform(const MachineInstr &MI) {
       isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
     return true;
 
+  if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    return true;
+
   const Instruction *I = dyn_cast<Instruction>(Ptr);
   return I && I->getMetadata("amdgpu.uniform");
 }
@@ -293,7 +296,8 @@ bool AMDGPUInstructionSelector::selectSMRD(MachineInstr &I,
   if (!I.hasOneMemOperand())
     return false;
 
-  if ((*I.memoperands_begin())->getAddrSpace() != AMDGPUASI.CONSTANT_ADDRESS)
+  if ((*I.memoperands_begin())->getAddrSpace() != AMDGPUASI.CONSTANT_ADDRESS &&
+      (*I.memoperands_begin())->getAddrSpace() != AMDGPUASI.CONSTANT_ADDRESS_32BIT)
     return false;
 
   if (!isInstrUniform(I))

@@ -179,6 +179,9 @@ public:
   void emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
                               unsigned Size) override;
 
+  void emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
+                                       const MCSymbol *Lo) override;
+
   bool mayHaveInstructions(MCSection &Sec) const override;
 };
 

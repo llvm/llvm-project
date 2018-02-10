@@ -919,26 +919,22 @@ void TernOpInit::Profile(FoldingSetNodeID &ID) const {
   ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
-static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
-                           Record *CurRec, MultiClass *CurMultiClass);
+static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, Record *CurRec,
+                           MultiClass *CurMultiClass);
 
+// Evaluates operation RHSo after replacing all operands matching LHS with Arg.
 static Init *EvaluateOperation(OpInit *RHSo, Init *LHS, Init *Arg,
-                               RecTy *Type, Record *CurRec,
-                               MultiClass *CurMultiClass) {
-  // If this is a dag, recurse
-  if (auto *TArg = dyn_cast<TypedInit>(Arg))
-    if (isa<DagRecTy>(TArg->getType()))
-      return ForeachHelper(LHS, Arg, RHSo, Type, CurRec, CurMultiClass);
+                               Record *CurRec, MultiClass *CurMultiClass) {
 
   SmallVector<Init *, 8> NewOperands;
   NewOperands.reserve(RHSo->getNumOperands());
   for (unsigned i = 0, e = RHSo->getNumOperands(); i < e; ++i) {
     if (auto *RHSoo = dyn_cast<OpInit>(RHSo->getOperand(i))) {
-      if (Init *Result = EvaluateOperation(RHSoo, LHS, Arg,
-                                           Type, CurRec, CurMultiClass))
+      if (Init *Result =
+              EvaluateOperation(RHSoo, LHS, Arg, CurRec, CurMultiClass))
         NewOperands.push_back(Result);
       else
-        NewOperands.push_back(Arg);
+        NewOperands.push_back(RHSoo);
     } else if (LHS->getAsString() == RHSo->getOperand(i)->getAsString()) {
       NewOperands.push_back(Arg);
     } else {
@@ -952,8 +948,9 @@ static Init *EvaluateOperation(OpInit *RHSo, Init *LHS, Init *Arg,
   return (NewVal != NewOp) ? NewVal : nullptr;
 }
 
-static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
-                           Record *CurRec, MultiClass *CurMultiClass) {
+// Applies RHS to all elements of MHS, using LHS as a temp variable.
+static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, Record *CurRec,
+                           MultiClass *CurMultiClass) {
   OpInit *RHSo = dyn_cast<OpInit>(RHS);
 
   if (!RHSo)
@@ -965,21 +962,23 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
     PrintFatalError(CurRec->getLoc(), "!foreach requires typed variable\n");
 
   DagInit *MHSd = dyn_cast<DagInit>(MHS);
-  if (MHSd && isa<DagRecTy>(Type)) {
+  if (MHSd) {
     Init *Val = MHSd->getOperator();
-    if (Init *Result = EvaluateOperation(RHSo, LHS, Val,
-                                         Type, CurRec, CurMultiClass))
+    if (Init *Result = EvaluateOperation(RHSo, LHS, Val, CurRec, CurMultiClass))
       Val = Result;
 
-    SmallVector<std::pair<Init *, StringInit*>, 8> args;
+    SmallVector<std::pair<Init *, StringInit *>, 8> args;
     for (unsigned int i = 0; i < MHSd->getNumArgs(); ++i) {
       Init *Arg = MHSd->getArg(i);
       StringInit *ArgName = MHSd->getArgName(i);
-
-      // Process args
-      if (Init *Result = EvaluateOperation(RHSo, LHS, Arg, Type,
-                                           CurRec, CurMultiClass))
+      // If this is a dag, recurse
+      if (isa<DagInit>(Arg)) {
+        if (Init *Result = ForeachHelper(LHS, Arg, RHSo, CurRec, CurMultiClass))
+          Arg = Result;
+      } else if (Init *Result =
+                     EvaluateOperation(RHSo, LHS, Arg, CurRec, CurMultiClass)) {
         Arg = Result;
+      }
 
       // TODO: Process arg names
       args.push_back(std::make_pair(Arg, ArgName));
@@ -989,25 +988,12 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
   }
 
   ListInit *MHSl = dyn_cast<ListInit>(MHS);
-  if (MHSl && isa<ListRecTy>(Type)) {
-    SmallVector<Init *, 8> NewOperands;
+  if (MHSl) {
     SmallVector<Init *, 8> NewList(MHSl->begin(), MHSl->end());
-
-    for (Init *&Item : NewList) {
-      NewOperands.clear();
-      for(unsigned i = 0; i < RHSo->getNumOperands(); ++i) {
-        // First, replace the foreach variable with the list item
-        if (LHS->getAsString() == RHSo->getOperand(i)->getAsString())
-          NewOperands.push_back(Item);
-        else
-          NewOperands.push_back(RHSo->getOperand(i));
-      }
-
-      // Now run the operator and use its result as the new list item
-      const OpInit *NewOp = RHSo->clone(NewOperands);
-      Init *NewItem = NewOp->Fold(CurRec, CurMultiClass);
-      if (NewItem != NewOp)
-        Item = NewItem;
+    for (Init *&Arg : NewList) {
+      if (Init *Result =
+              EvaluateOperation(RHSo, LHS, Arg, CurRec, CurMultiClass))
+        Arg = Result;
     }
     return ListInit::get(NewList, MHSl->getType());
   }
@@ -1060,8 +1046,7 @@ Init *TernOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
   }
 
   case FOREACH: {
-    if (Init *Result = ForeachHelper(LHS, MHS, RHS, getType(),
-                                     CurRec, CurMultiClass))
+    if (Init *Result = ForeachHelper(LHS, MHS, RHS, CurRec, CurMultiClass))
       return Result;
     break;
   }

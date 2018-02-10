@@ -5563,6 +5563,14 @@ static void print_image_info64(SectionRef S, struct DisassembleInfo *info) {
       outs() << " Swift 1.0";
     else if (swift_version == 2)
       outs() << " Swift 1.1";
+    else if(swift_version == 3)
+      outs() << " Swift 2.0";
+    else if(swift_version == 4)
+      outs() << " Swift 3.0";
+    else if(swift_version == 5)
+      outs() << " Swift 4.0";
+    else if(swift_version == 6)
+      outs() << " Swift 4.1";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
   }
@@ -5606,6 +5614,14 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
       outs() << " Swift 1.0";
     else if (swift_version == 2)
       outs() << " Swift 1.1";
+    else if(swift_version == 3)
+      outs() << " Swift 2.0";
+    else if(swift_version == 4)
+      outs() << " Swift 3.0";
+    else if(swift_version == 5)
+      outs() << " Swift 4.0";
+    else if(swift_version == 6)
+      outs() << " Swift 4.1";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
   }

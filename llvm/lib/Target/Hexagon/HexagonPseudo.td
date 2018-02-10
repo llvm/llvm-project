@@ -448,6 +448,14 @@ def PS_wselect: VSELInst<(outs HvxWR:$dst),
       (ins PredRegs:$src1, HvxWR:$src2, HvxWR:$src3), V6_vccombine>,
       Requires<[HasV60T,UseHVX]>;
 
+let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
+    isCodeGenOnly = 1 in {
+  def PS_qtrue:  InstHexagon<(outs HvxQR:$Qd), (ins), "", [], "",
+                 V6_veqw.Itinerary, TypeCVI_VA>;
+  def PS_qfalse: InstHexagon<(outs HvxQR:$Qd), (ins), "", [], "",
+                 V6_vgtw.Itinerary, TypeCVI_VA>;
+}
+
 // Store predicate.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in

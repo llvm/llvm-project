@@ -374,9 +374,13 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // Print the preds of this block according to the CFG.
   if (!pred_empty()) {
     if (Indexes) OS << '\t';
-    OS << "    Predecessors according to CFG:";
-    for (const_pred_iterator PI = pred_begin(), E = pred_end(); PI != E; ++PI)
-      OS << " " << printMBBReference(*(*PI));
+    // Don't indent(2), align with previous line attributes.
+    OS << "; predecessors: ";
+    for (auto I = pred_begin(), E = pred_end(); I != E; ++I) {
+      if (I != pred_begin())
+        OS << ", ";
+      OS << printMBBReference(**I);
+    }
     OS << '\n';
   }
 

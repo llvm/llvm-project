@@ -2430,9 +2430,6 @@ HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
   for (auto *N : ChainNodesMatched)
     if (SDNode::hasPredecessorHelper(N, Visited, Worklist, Max, true))
       return SDValue();
-  // Fail conservatively if we stopped searching early.
-  if (Visited.size() >= Max)
-    return SDValue();
 
   // Return merged chain.
   if (InputChains.size() == 1)

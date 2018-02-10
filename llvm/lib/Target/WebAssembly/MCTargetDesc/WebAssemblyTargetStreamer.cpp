@@ -107,6 +107,11 @@ void WebAssemblyTargetAsmStreamer::emitGlobalImport(StringRef name) {
   OS << "\t.import_global\t" << name << '\n';
 }
 
+void WebAssemblyTargetAsmStreamer::emitImportModule(MCSymbolWasm *Sym,
+                                                    StringRef ModuleName) {
+  OS << "\t.import_module\t" << Sym->getName() << ", " << ModuleName << '\n';
+}
+
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
   OS << "\t.indidx  \t" << *Value << '\n';
 }
@@ -142,6 +147,11 @@ void WebAssemblyTargetELFStreamer::emitIndirectFunctionType(
 }
 
 void WebAssemblyTargetELFStreamer::emitGlobalImport(StringRef name) {
+}
+
+void WebAssemblyTargetELFStreamer::emitImportModule(MCSymbolWasm *Sym,
+                                                    StringRef ModuleName) {
+  llvm_unreachable(".import_module encoding not yet implemented");
 }
 
 void WebAssemblyTargetWasmStreamer::emitParam(MCSymbol *Symbol,
@@ -210,4 +220,9 @@ void WebAssemblyTargetWasmStreamer::emitIndirectFunctionType(
 
 void WebAssemblyTargetWasmStreamer::emitGlobalImport(StringRef name) {
   llvm_unreachable(".global_import is not needed for direct wasm output");
+}
+
+void WebAssemblyTargetWasmStreamer::emitImportModule(MCSymbolWasm *Sym,
+                                                     StringRef ModuleName) {
+  Sym->setModuleName(ModuleName);
 }

@@ -327,7 +327,7 @@ void WasmObjectFile::populateSymbolTable() {
       assert(Import.Global.Type == wasm::WASM_TYPE_I32);
       SymbolMap.try_emplace(Import.Field, Symbols.size());
       Symbols.emplace_back(Import.Field, WasmSymbol::SymbolType::GLOBAL_IMPORT,
-                           ImportSection, GlobalIndex++);
+                           GlobalIndex++);
       DEBUG(dbgs() << "Adding import: " << Symbols.back()
                    << " sym index:" << Symbols.size() << "\n");
       break;
@@ -335,7 +335,7 @@ void WasmObjectFile::populateSymbolTable() {
       SymbolMap.try_emplace(Import.Field, Symbols.size());
       Symbols.emplace_back(Import.Field,
                            WasmSymbol::SymbolType::FUNCTION_IMPORT,
-                           ImportSection, FunctionIndex++, Import.SigIndex);
+                           FunctionIndex++, Import.SigIndex);
       DEBUG(dbgs() << "Adding import: " << Symbols.back()
                    << " sym index:" << Symbols.size() << "\n");
       break;
@@ -354,14 +354,13 @@ void WasmObjectFile::populateSymbolTable() {
               : WasmSymbol::SymbolType::GLOBAL_EXPORT;
       auto Pair = SymbolMap.try_emplace(Export.Name, Symbols.size());
       if (Pair.second) {
-        Symbols.emplace_back(Export.Name, ExportType,
-                             ExportSection, Export.Index);
+        Symbols.emplace_back(Export.Name, ExportType, Export.Index);
         DEBUG(dbgs() << "Adding export: " << Symbols.back()
                      << " sym index:" << Symbols.size() << "\n");
       } else {
         uint32_t SymIndex = Pair.first->second;
         const WasmSymbol &OldSym = Symbols[SymIndex];
-        WasmSymbol NewSym(Export.Name, ExportType, ExportSection, Export.Index);
+        WasmSymbol NewSym(Export.Name, ExportType, Export.Index);
         NewSym.setAltIndex(OldSym.ElementIndex);
         Symbols[SymIndex] = NewSym;
 
@@ -628,7 +627,6 @@ Error WasmObjectFile::parseTypeSection(const uint8_t *Ptr, const uint8_t *End) {
 }
 
 Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End) {
-  ImportSection = Sections.size();
   uint32_t Count = readVaruint32(Ptr);
   Imports.reserve(Count);
   for (uint32_t i = 0; i < Count; i++) {
@@ -726,7 +724,6 @@ Error WasmObjectFile::parseGlobalSection(const uint8_t *Ptr, const uint8_t *End)
 }
 
 Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End) {
-  ExportSection = Sections.size();
   uint32_t Count = readVaruint32(Ptr);
   Exports.reserve(Count);
   for (uint32_t i = 0; i < Count; i++) {
@@ -783,6 +780,7 @@ Error WasmObjectFile::parseStartSection(const uint8_t *Ptr, const uint8_t *End) 
 }
 
 Error WasmObjectFile::parseCodeSection(const uint8_t *Ptr, const uint8_t *End) {
+  CodeSection = Sections.size();
   const uint8_t *CodeSectionStart = Ptr;
   uint32_t FunctionCount = readVaruint32(Ptr);
   if (FunctionCount != FunctionTypes.size()) {
@@ -846,6 +844,7 @@ Error WasmObjectFile::parseElemSection(const uint8_t *Ptr, const uint8_t *End) {
 }
 
 Error WasmObjectFile::parseDataSection(const uint8_t *Ptr, const uint8_t *End) {
+  DataSection = Sections.size();
   const uint8_t *Start = Ptr;
   uint32_t Count = readVaruint32(Ptr);
   DataSegments.reserve(Count);
@@ -987,7 +986,13 @@ WasmObjectFile::getSymbolType(DataRefImpl Symb) const {
 Expected<section_iterator>
 WasmObjectFile::getSymbolSection(DataRefImpl Symb) const {
   DataRefImpl Ref;
-  Ref.d.a = getWasmSymbol(Symb).Section;
+  const WasmSymbol& Sym = getWasmSymbol(Symb);
+  if (Sym.Type == WasmSymbol::SymbolType::GLOBAL_EXPORT)
+    Ref.d.a = DataSection;
+  else if (Sym.Type == WasmSymbol::SymbolType::FUNCTION_EXPORT)
+    Ref.d.a = CodeSection;
+  else
+    return section_end();
   return section_iterator(SectionRef(Ref, this));
 }
 

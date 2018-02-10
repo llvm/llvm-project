@@ -2138,7 +2138,6 @@ CleanupAndExit:
   // pointer size if it isn't already.
   LLVMContext &Ctx = SI->getContext();
   BECount = SE->getTruncateOrZeroExtend(BECount, IntPtrTy);
-  unsigned Alignment = std::min(SI->getAlignment(), LI->getAlignment());
   DebugLoc DLoc = SI->getDebugLoc();
 
   const SCEV *NumBytesS =
@@ -2272,12 +2271,14 @@ CleanupAndExit:
                       : CondBuilder.CreateBitCast(LoadBasePtr, Int32PtrTy);
       NewCall = CondBuilder.CreateCall(Fn, {Op0, Op1, NumWords});
     } else {
-      NewCall = CondBuilder.CreateMemMove(StoreBasePtr, LoadBasePtr,
-                                          NumBytes, Alignment);
+      NewCall = CondBuilder.CreateMemMove(StoreBasePtr, SI->getAlignment(),
+                                          LoadBasePtr, LI->getAlignment(),
+                                          NumBytes);
     }
   } else {
-    NewCall = Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr,
-                                   NumBytes, Alignment);
+    NewCall = Builder.CreateMemCpy(StoreBasePtr, SI->getAlignment(),
+                                   LoadBasePtr, LI->getAlignment(),
+                                   NumBytes);
     // Okay, the memcpy has been formed.  Zap the original store and
     // anything that feeds into it.
     RecursivelyDeleteTriviallyDeadInstructions(SI, TLI);

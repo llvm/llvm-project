@@ -1168,10 +1168,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v8i1,  MVT::v8i32);
     setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v4i1,  MVT::v4i32);
     setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v4i1,  MVT::v4i32);
-    if (Subtarget.hasVLX()) {
-      setOperationAction(ISD::FP_TO_SINT,         MVT::v2i1,  Custom);
-      setOperationAction(ISD::FP_TO_UINT,         MVT::v2i1,  Custom);
-    }
+    setOperationAction(ISD::FP_TO_SINT,         MVT::v2i1,  Custom);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v2i1,  Custom);
 
     // Extends of v16i1/v8i1/v4i1/v2i1 to 128-bit vectors.
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
@@ -14414,8 +14412,36 @@ static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 // vector, shuffle and then truncate it back.
 static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                       MVT VT, SDValue V1, SDValue V2,
+                                      const APInt &Zeroable,
                                       const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
+  unsigned NumElts = Mask.size();
+
+  // Try to recognize shuffles that are just padding a subvector with zeros.
+  unsigned SubvecElts = 0;
+  for (int i = 0; i != (int)NumElts; ++i) {
+    if (Mask[i] >= 0 && Mask[i] != i)
+      break;
+
+    ++SubvecElts;
+  }
+  assert(SubvecElts != NumElts && "Identity shuffle?");
+
+  // Clip to a power 2.
+  SubvecElts = PowerOf2Floor(SubvecElts);
+
+  // Make sure the number of zeroable bits in the top at least covers the bits
+  // not covered by the subvector.
+  if (Zeroable.countLeadingOnes() >= (NumElts - SubvecElts)) {
+    MVT ExtractVT = MVT::getVectorVT(MVT::i1, SubvecElts);
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT,
+                                  V1, DAG.getIntPtrConstant(0, DL));
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                       getZeroVector(VT, Subtarget, DAG, DL),
+                       Extract, DAG.getIntPtrConstant(0, DL));
+  }
+
+
   assert(Subtarget.hasAVX512() &&
          "Cannot lower 512-bit vectors w/o basic ISA!");
   MVT ExtVT;
@@ -14624,7 +14650,8 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
                                     DAG);
 
   if (Is1BitVector)
-    return lower1BitVectorShuffle(DL, Mask, VT, V1, V2, Subtarget, DAG);
+    return lower1BitVectorShuffle(DL, Mask, VT, V1, V2, Zeroable, Subtarget,
+                                  DAG);
 
   llvm_unreachable("Unimplemented!");
 }
@@ -16443,10 +16470,17 @@ static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
   SDLoc DL(Op);
   unsigned NumElts = VT.getVectorNumElements();
 
-  // Extend VT if the scalar type is v8/v16 and BWI is not supported.
+  // For all vectors, but vXi8 we can just emit a sign_extend a shift. This
+  // avoids a constant pool load.
+  if (VT.getVectorElementType() != MVT::i8) {
+    SDValue Extend = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, In);
+    return DAG.getNode(ISD::SRL, DL, VT, Extend,
+                       DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT));
+  }
+
+  // Extend VT if BWI is not supported.
   MVT ExtVT = VT;
-  if (!Subtarget.hasBWI() &&
-      (VT.getVectorElementType().getSizeInBits() <= 16)) {
+  if (!Subtarget.hasBWI()) {
     // If v16i32 is to be avoided, we'll need to split and concatenate.
     if (NumElts == 16 && !Subtarget.canExtendTo512DQ())
       return SplitAndExtendv16i1(ISD::ZERO_EXTEND, VT, In, DL, DAG);
@@ -16470,9 +16504,9 @@ static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
 
   SDValue SelectedVal = DAG.getSelect(DL, WideVT, In, One, Zero);
 
-  // Truncate if we had to extend i16/i8 above.
+  // Truncate if we had to extend above.
   if (VT != ExtVT) {
-    WideVT = MVT::getVectorVT(VT.getVectorElementType(), NumElts);
+    WideVT = MVT::getVectorVT(MVT::i8, NumElts);
     SelectedVal = DAG.getNode(ISD::TRUNCATE, DL, WideVT, SelectedVal);
   }
 
@@ -36189,10 +36223,6 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
-  // Only handle sext/aext for now.
-  if (N->getOpcode() != ISD::SIGN_EXTEND && N->getOpcode() != ISD::ANY_EXTEND)
-    return SDValue();
-
   // Only do this combine with AVX512 for vector extends.
   if (!Subtarget.hasAVX512() || !VT.isVector() || N0->getOpcode() != ISD::SETCC)
     return SDValue();
@@ -36220,7 +36250,12 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   if (Size != MatchingVecType.getSizeInBits())
     return SDValue();
 
-  return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
+  SDValue Res = DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
+
+  if (N->getOpcode() == ISD::ZERO_EXTEND)
+    Res = DAG.getZeroExtendInReg(Res, dl, N0.getValueType().getScalarType());
+
+  return Res;
 }
 
 static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
@@ -37631,9 +37666,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
 
   MVT OpVT = N->getSimpleValueType(0);
 
-  // Early out for mask vectors.
-  if (OpVT.getVectorElementType() == MVT::i1)
-    return SDValue();
+  bool IsI1Vector = OpVT.getVectorElementType() == MVT::i1;
 
   SDLoc dl(N);
   SDValue Vec = N->getOperand(0);
@@ -37645,23 +37678,40 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
     // Inserting zeros into zeros is a nop.
     if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
-      return Vec;
+      return getZeroVector(OpVT, Subtarget, DAG, dl);
 
     // If we're inserting into a zero vector and then into a larger zero vector,
     // just insert into the larger zero vector directly.
     if (SubVec.getOpcode() == ISD::INSERT_SUBVECTOR &&
         ISD::isBuildVectorAllZeros(SubVec.getOperand(0).getNode())) {
       unsigned Idx2Val = SubVec.getConstantOperandVal(2);
-      return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec,
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                         getZeroVector(OpVT, Subtarget, DAG, dl),
                          SubVec.getOperand(1),
                          DAG.getIntPtrConstant(IdxVal + Idx2Val, dl));
+    }
+
+    // If we're inserting into a zero vector and our input was extracted from an
+    // insert into a zero vector of the same type and the extraction was at
+    // least as large as the original insertion. Just insert the original
+    // subvector into a zero vector.
+    if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR && IdxVal == 0 &&
+        SubVec.getConstantOperandVal(1) == 0 &&
+        SubVec.getOperand(0).getOpcode() == ISD::INSERT_SUBVECTOR) {
+      SDValue Ins = SubVec.getOperand(0);
+      if (Ins.getConstantOperandVal(2) == 0 &&
+          ISD::isBuildVectorAllZeros(Ins.getOperand(0).getNode()) &&
+          Ins.getOperand(1).getValueSizeInBits() <= SubVecVT.getSizeInBits())
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                           getZeroVector(OpVT, Subtarget, DAG, dl),
+                           Ins.getOperand(1), N->getOperand(2));
     }
 
     // If we're inserting a bitcast into zeros, rewrite the insert and move the
     // bitcast to the other side. This helps with detecting zero extending
     // during isel.
     // TODO: Is this useful for other indices than 0?
-    if (SubVec.getOpcode() == ISD::BITCAST && IdxVal == 0) {
+    if (!IsI1Vector && SubVec.getOpcode() == ISD::BITCAST && IdxVal == 0) {
       MVT CastVT = SubVec.getOperand(0).getSimpleValueType();
       unsigned NumElems = OpVT.getSizeInBits() / CastVT.getScalarSizeInBits();
       MVT NewVT = MVT::getVectorVT(CastVT.getVectorElementType(), NumElems);
@@ -37671,6 +37721,10 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       return DAG.getBitcast(OpVT, Insert);
     }
   }
+
+  // Stop here if this is an i1 vector.
+  if (IsI1Vector)
+    return SDValue();
 
   // If this is an insert of an extract, combine to a shuffle. Don't do this
   // if the insert or extract can be represented with a subregister operation.

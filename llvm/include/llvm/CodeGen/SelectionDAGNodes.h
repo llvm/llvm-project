@@ -842,6 +842,9 @@ public:
     }
     // Push deferred nodes back on worklist.
     Worklist.append(DeferredNodes.begin(), DeferredNodes.end());
+    // If we bailed early, conservatively return found.
+    if (MaxSteps != 0 && Visited.size() >= MaxSteps)
+        return true;
     return Found;
   }
 

@@ -24,6 +24,7 @@ namespace llvm {
 
 class MCELFStreamer;
 class MCWasmStreamer;
+class MCSymbolWasm;
 
 /// WebAssembly-specific streamer interface, to implement support
 /// WebAssembly-specific assembly directives.
@@ -47,6 +48,8 @@ public:
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .import_global
   virtual void emitGlobalImport(StringRef name) = 0;
+  /// .import_module
+  virtual void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) = 0;
 
 protected:
   void emitValueType(wasm::ValType Type);
@@ -68,6 +71,7 @@ public:
                                 SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;
+  void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
 };
 
 /// This part is for ELF object output
@@ -84,6 +88,7 @@ public:
                                 SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;
+  void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
 };
 
 /// This part is for Wasm object output
@@ -100,6 +105,7 @@ public:
                                 SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;
+  void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
 };
 
 } // end namespace llvm

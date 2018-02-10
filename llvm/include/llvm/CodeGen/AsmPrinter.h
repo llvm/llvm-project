@@ -458,6 +458,10 @@ public:
   void EmitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
                            unsigned Size) const;
 
+  /// Emit something like ".uleb128 Hi-Lo".
+  void EmitLabelDifferenceAsULEB128(const MCSymbol *Hi,
+                                    const MCSymbol *Lo) const;
+
   /// Emit something like ".long Label+Offset" where the size in bytes of the
   /// directive is specified by Size and Label specifies the label.  This
   /// implicitly uses .set if it is available.
@@ -480,11 +484,6 @@ public:
 
   /// Emit the specified unsigned leb128 value.
   void EmitULEB128(uint64_t Value, const char *Desc = nullptr) const;
-
-  /// Emit the specified unsigned leb128 value padded to a specific number
-  /// bytes
-  void EmitPaddedULEB128(uint64_t Value, unsigned PadTo,
-                         const char *Desc = nullptr) const;
 
   /// Emit a .byte 42 directive that corresponds to an encoding.  If verbose
   /// assembly output is enabled, we output comments describing the encoding.

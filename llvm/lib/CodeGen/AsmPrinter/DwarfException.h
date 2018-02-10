@@ -70,7 +70,7 @@ public:
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMException : public DwarfCFIExceptionBase {
-  void emitTypeInfos(unsigned TTypeEncoding) override;
+  void emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) override;
   ARMTargetStreamer &getTargetStreamer();
 
 public:
