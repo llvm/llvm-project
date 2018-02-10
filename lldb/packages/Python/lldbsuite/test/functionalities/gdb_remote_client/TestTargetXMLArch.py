@@ -6,6 +6,7 @@ from gdbclientutils import *
 
 class TestTargetXMLArch(GDBRemoteTestBase):
 
+    @expectedFailureAll(archs=["i386"])
     def test(self):
         """
         Test lldb's parsing of the <architecture> tag in the target.xml register
