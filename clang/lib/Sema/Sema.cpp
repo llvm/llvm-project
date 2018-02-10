@@ -37,6 +37,7 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 using namespace clang;

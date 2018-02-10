@@ -1001,49 +1001,53 @@ __m512 test_mm512_unpacklo_ps(__m512 a, __m512 b)
 
 __mmask16 test_mm512_cmp_round_ps_mask(__m512 a, __m512 b) {
   // CHECK-LABEL: @test_mm512_cmp_round_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK: call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512
   return _mm512_cmp_round_ps_mask(a, b, 0, _MM_FROUND_CUR_DIRECTION);
 }
 
 __mmask16 test_mm512_mask_cmp_round_ps_mask(__mmask16 m, __m512 a, __m512 b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_round_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK: [[CMP:%.*]] = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK: and <16 x i1> [[CMP]], {{.*}}
   return _mm512_mask_cmp_round_ps_mask(m, a, b, 0, _MM_FROUND_CUR_DIRECTION);
 }
 
 __mmask16 test_mm512_cmp_ps_mask(__m512 a, __m512 b) {
   // CHECK-LABEL: @test_mm512_cmp_ps_mask
-  // CHECKn: @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK: call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512
   return _mm512_cmp_ps_mask(a, b, 0);
 }
 
 __mmask16 test_mm512_mask_cmp_ps_mask(__mmask16 m, __m512 a, __m512 b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK: [[CMP:%.*]] = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512
+  // CHECK: and <16 x i1> [[CMP]], {{.*}}
   return _mm512_mask_cmp_ps_mask(m, a, b, 0);
 }
 
 __mmask8 test_mm512_cmp_round_pd_mask(__m512d a, __m512d b) {
   // CHECK-LABEL: @test_mm512_cmp_round_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK: call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512
   return _mm512_cmp_round_pd_mask(a, b, 0, _MM_FROUND_CUR_DIRECTION);
 }
 
 __mmask8 test_mm512_mask_cmp_round_pd_mask(__mmask8 m, __m512d a, __m512d b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_round_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK: [[CMP:%.*]] = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK: and <8 x i1> [[CMP]], {{.*}}
   return _mm512_mask_cmp_round_pd_mask(m, a, b, 0, _MM_FROUND_CUR_DIRECTION);
 }
 
 __mmask8 test_mm512_cmp_pd_mask(__m512d a, __m512d b) {
   // CHECK-LABEL: @test_mm512_cmp_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK: call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512
   return _mm512_cmp_pd_mask(a, b, 0);
 }
 
 __mmask8 test_mm512_mask_cmp_pd_mask(__mmask8 m, __m512d a, __m512d b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK: [[CMP:%.*]] = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512
+  // CHECK: and <8 x i1> [[CMP]], {{.*}}
   return _mm512_mask_cmp_pd_mask(m, a, b, 0);
 }
 
