@@ -1,8 +1,23 @@
 // RUN: rm -f %t
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-temporary-dtors=true -std=c++98 %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefix=CXX98 -check-prefix=CHECK %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-temporary-dtors=true -std=c++11 %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefix=CXX11 -check-prefix=CHECK %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-temporary-dtors=true,cfg-rich-constructors=false -std=c++98 %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,WARNINGS,CXX98-WARNINGS %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-temporary-dtors=true,cfg-rich-constructors=false -std=c++11 %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX11,WARNINGS,CXX11-WARNINGS %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-temporary-dtors=true,cfg-rich-constructors=true -std=c++98 %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,ANALYZER,CXX98-ANALYZER %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-temporary-dtors=true,cfg-rich-constructors=true -std=c++11 %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX11,ANALYZER,CXX11-ANALYZER %s
+
+// This file tests how we construct two different flavors of the Clang CFG -
+// the CFG used by the Sema analysis-based warnings and the CFG used by the
+// static analyzer. The difference in the behavior is checked via FileCheck
+// prefixes (WARNINGS and ANALYZER respectively). When introducing new analyzer
+// flags, no new run lines should be added - just these flags would go to the
+// respective line depending on where is it turned on and where is it turned
+// off. Feel free to add tests that test only one of the CFG flavors if you're
+// not sure how the other flavor is supposed to work in your case.
+
+// Additionally, different C++ standards are checked.
 
 class A {
 public:
@@ -492,7 +507,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     1: [B10.5] ? [B8.6] : [B9.15]
 // CHECK:     2: [B7.1] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     3: [B7.2]
-// CHECK:     4: [B7.3] (CXXConstructExpr, class A)
+// WARNINGS:     4: [B7.3] (CXXConstructExpr, class A)
+// ANALYZER:     4: [B7.3] (CXXConstructExpr, [B7.5], class A)
 // CHECK:     5: A a = B() ? A() : A(B());
 // CHECK:     T: (Temp Dtor) [B9.2]
 // CHECK:     Preds (2): B8 B9
@@ -625,7 +641,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     2: [B4.1] (BindTemporary)
 // CHECK:     3: [B4.2] (ImplicitCastExpr, NoOp, const struct C)
 // CHECK:     4: [B4.3]
-// CHECK:     5: [B4.4] (CXXConstructExpr, struct C)
+// WARNINGS:     5: [B4.4] (CXXConstructExpr, struct C)
+// ANALYZER:     5: [B4.4] (CXXConstructExpr, [B4.6], struct C)
 // CHECK:     6: C c = C();
 // CHECK:     7: ~C() (Temporary object destructor)
 // CHECK:     8: c
@@ -675,7 +692,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     1: D() (CXXConstructExpr, struct D)
 // CXX98:     2: [B3.1] (ImplicitCastExpr, NoOp, const struct D)
 // CXX98:     3: [B3.2]
-// CXX98:     4: [B3.3] (CXXConstructExpr, struct D)
+// CXX98-WARNINGS:     4: [B3.3] (CXXConstructExpr, struct D)
+// CXX98-ANALYZER:     4: [B3.3] (CXXConstructExpr, [B3.5], struct D)
 // CXX98:     5: D d = D();
 // CXX98:     6: d
 // CXX98:     7: [B3.6].operator bool
@@ -683,7 +701,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CXX98:     9: [B3.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CXX98:     T: if [B3.9]
 // CXX11:     2: [B3.1]
-// CXX11:     3: [B3.2] (CXXConstructExpr, struct D)
+// CXX11-WARNINGS:     3: [B3.2] (CXXConstructExpr, struct D)
+// CXX11-ANALYZER:     3: [B3.2] (CXXConstructExpr, [B3.4], struct D)
 // CXX11:     4: D d = D();
 // CXX11:     5: d
 // CXX11:     6: [B3.5].operator bool
@@ -838,7 +857,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CXX11:     1: [B7.3] ?: [B6.6]
 // CHECK:     2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     3: [B4.2]
-// CHECK:     4: [B4.3] (CXXConstructExpr, class A)
+// WARNINGS:     4: [B4.3] (CXXConstructExpr, class A)
+// ANALYZER:     4: [B4.3] (CXXConstructExpr, [B4.5], class A)
 // CHECK:     5: A a = A() ?: A();
 // CHECK:     T: (Temp Dtor) [B6.2]
 // CHECK:     Preds (2): B5 B6
@@ -993,7 +1013,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
-// CHECK:     5: [B1.4] (CXXConstructExpr, class A)
+// WARNINGS:     5: [B1.4] (CXXConstructExpr, class A)
+// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.6], class A)
 // CHECK:     6: A a = A();
 // CHECK:     7: ~A() (Temporary object destructor)
 // CHECK:     8: int b;
@@ -1033,7 +1054,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     4: [B1.3] (BindTemporary)
 // CHECK:     5: [B1.4] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     6: [B1.5]
-// CHECK:     7: [B1.6] (CXXConstructExpr, class A)
+// WARNINGS:     7: [B1.6] (CXXConstructExpr, class A)
+// ANALYZER:     7: [B1.6] (CXXConstructExpr, [B1.8], class A)
 // CHECK:     8: A a = A::make();
 // CHECK:     9: ~A() (Temporary object destructor)
 // CHECK:    10: int b;
