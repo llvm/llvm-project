@@ -347,6 +347,14 @@ struct is_negative {
 inline cst_pred_ty<is_negative> m_Negative() { return cst_pred_ty<is_negative>(); }
 inline api_pred_ty<is_negative> m_Negative(const APInt *&V) { return V; }
 
+struct is_nonnegative {
+  bool isValue(const APInt &C) { return C.isNonNegative(); }
+};
+
+/// \brief Match an integer or vector of nonnegative values.
+inline cst_pred_ty<is_nonnegative> m_NonNegative() { return cst_pred_ty<is_nonnegative>(); }
+inline api_pred_ty<is_nonnegative> m_NonNegative(const APInt *&V) { return V; }
+
 struct is_power2 {
   bool isValue(const APInt &C) { return C.isPowerOf2(); }
 };

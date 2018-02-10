@@ -21,7 +21,7 @@ vector.body:
   %0 = and <4 x i32> %wide.load, <i32 -16711936, i32 -16711936, i32 -16711936, i32 -16711936>
   %1 = sub <4 x i32> %wide.load, zeroinitializer
   %2 = and <4 x i32> %1, <i32 16711680, i32 16711680, i32 16711680, i32 16711680>
-  %3 = or <4 x i32> undef, %0
+  %3 = or <4 x i32> %0, <i32 1, i32 2, i32 3, i32 4>
   %4 = or <4 x i32> %3, %2
   store <4 x i32> %4, <4 x i32>* undef, align 4
   br label %vector.body
