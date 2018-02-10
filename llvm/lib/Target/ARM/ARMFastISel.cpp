@@ -2546,7 +2546,8 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
         if (!ARMComputeAddress(MTI.getRawDest(), Dest) ||
             !ARMComputeAddress(MTI.getRawSource(), Src))
           return false;
-        unsigned Alignment = MTI.getAlignment();
+        unsigned Alignment = MinAlign(MTI.getDestAlignment(),
+                                      MTI.getSourceAlignment());
         if (ARMTryEmitSmallMemCpy(Dest, Src, Len, Alignment))
           return true;
       }

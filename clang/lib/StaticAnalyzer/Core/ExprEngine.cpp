@@ -1543,12 +1543,19 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
 
-    case Stmt::OffsetOfExprClass:
+    case Stmt::OffsetOfExprClass: {
       Bldr.takeNodes(Pred);
-      VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Pred, Dst);
+      ExplodedNodeSet PreVisit;
+      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+
+      ExplodedNodeSet PostVisit;
+      for (ExplodedNode *Node : PreVisit)
+        VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Node, PostVisit);
+
+      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       Bldr.addNodes(Dst);
       break;
-
+    }
     case Stmt::UnaryExprOrTypeTraitExprClass:
       Bldr.takeNodes(Pred);
       VisitUnaryExprOrTypeTraitExpr(cast<UnaryExprOrTypeTraitExpr>(S),

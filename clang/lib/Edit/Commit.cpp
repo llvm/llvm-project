@@ -225,8 +225,7 @@ bool Commit::canInsert(SourceLocation loc, FileOffset &offs) {
     isAtStartOfMacroExpansion(loc, &loc);
 
   const SourceManager &SM = SourceMgr;
-  while (SM.isMacroArgExpansion(loc))
-    loc = SM.getImmediateSpellingLoc(loc);
+  loc = SM.getTopMacroCallerLoc(loc);
 
   if (loc.isMacroID())
     if (!isAtStartOfMacroExpansion(loc, &loc))
@@ -256,8 +255,7 @@ bool Commit::canInsertAfterToken(SourceLocation loc, FileOffset &offs,
     isAtEndOfMacroExpansion(loc, &loc);
 
   const SourceManager &SM = SourceMgr;
-  while (SM.isMacroArgExpansion(loc))
-    loc = SM.getImmediateSpellingLoc(loc);
+  loc = SM.getTopMacroCallerLoc(loc);
 
   if (loc.isMacroID())
     if (!isAtEndOfMacroExpansion(loc, &loc))

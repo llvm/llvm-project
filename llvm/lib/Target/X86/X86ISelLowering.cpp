@@ -14414,8 +14414,36 @@ static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 // vector, shuffle and then truncate it back.
 static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                       MVT VT, SDValue V1, SDValue V2,
+                                      const APInt &Zeroable,
                                       const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
+  unsigned NumElts = Mask.size();
+
+  // Try to recognize shuffles that are just padding a subvector with zeros.
+  unsigned SubvecElts = 0;
+  for (int i = 0; i != (int)NumElts; ++i) {
+    if (Mask[i] >= 0 && Mask[i] != i)
+      break;
+
+    ++SubvecElts;
+  }
+  assert(SubvecElts != NumElts && "Identity shuffle?");
+
+  // Clip to a power 2.
+  SubvecElts = PowerOf2Floor(SubvecElts);
+
+  // Make sure the number of zeroable bits in the top at least covers the bits
+  // not covered by the subvector.
+  if (Zeroable.countLeadingOnes() >= (NumElts - SubvecElts)) {
+    MVT ExtractVT = MVT::getVectorVT(MVT::i1, SubvecElts);
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT,
+                                  V1, DAG.getIntPtrConstant(0, DL));
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                       getZeroVector(VT, Subtarget, DAG, DL),
+                       Extract, DAG.getIntPtrConstant(0, DL));
+  }
+
+
   assert(Subtarget.hasAVX512() &&
          "Cannot lower 512-bit vectors w/o basic ISA!");
   MVT ExtVT;
@@ -14624,7 +14652,8 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
                                     DAG);
 
   if (Is1BitVector)
-    return lower1BitVectorShuffle(DL, Mask, VT, V1, V2, Subtarget, DAG);
+    return lower1BitVectorShuffle(DL, Mask, VT, V1, V2, Zeroable, Subtarget,
+                                  DAG);
 
   llvm_unreachable("Unimplemented!");
 }
@@ -37631,9 +37660,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
 
   MVT OpVT = N->getSimpleValueType(0);
 
-  // Early out for mask vectors.
-  if (OpVT.getVectorElementType() == MVT::i1)
-    return SDValue();
+  bool IsI1Vector = OpVT.getVectorElementType() == MVT::i1;
 
   SDLoc dl(N);
   SDValue Vec = N->getOperand(0);
@@ -37645,23 +37672,40 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
     // Inserting zeros into zeros is a nop.
     if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
-      return Vec;
+      return getZeroVector(OpVT, Subtarget, DAG, dl);
 
     // If we're inserting into a zero vector and then into a larger zero vector,
     // just insert into the larger zero vector directly.
     if (SubVec.getOpcode() == ISD::INSERT_SUBVECTOR &&
         ISD::isBuildVectorAllZeros(SubVec.getOperand(0).getNode())) {
       unsigned Idx2Val = SubVec.getConstantOperandVal(2);
-      return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec,
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                         getZeroVector(OpVT, Subtarget, DAG, dl),
                          SubVec.getOperand(1),
                          DAG.getIntPtrConstant(IdxVal + Idx2Val, dl));
+    }
+
+    // If we're inserting into a zero vector and our input was extracted from an
+    // insert into a zero vector of the same type and the extraction was at
+    // least as large as the original insertion. Just insert the original
+    // subvector into a zero vector.
+    if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR && IdxVal == 0 &&
+        SubVec.getConstantOperandVal(1) == 0 &&
+        SubVec.getOperand(0).getOpcode() == ISD::INSERT_SUBVECTOR) {
+      SDValue Ins = SubVec.getOperand(0);
+      if (Ins.getConstantOperandVal(2) == 0 &&
+          ISD::isBuildVectorAllZeros(Ins.getOperand(0).getNode()) &&
+          Ins.getOperand(1).getValueSizeInBits() <= SubVecVT.getSizeInBits())
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                           getZeroVector(OpVT, Subtarget, DAG, dl),
+                           Ins.getOperand(1), N->getOperand(2));
     }
 
     // If we're inserting a bitcast into zeros, rewrite the insert and move the
     // bitcast to the other side. This helps with detecting zero extending
     // during isel.
     // TODO: Is this useful for other indices than 0?
-    if (SubVec.getOpcode() == ISD::BITCAST && IdxVal == 0) {
+    if (!IsI1Vector && SubVec.getOpcode() == ISD::BITCAST && IdxVal == 0) {
       MVT CastVT = SubVec.getOperand(0).getSimpleValueType();
       unsigned NumElems = OpVT.getSizeInBits() / CastVT.getScalarSizeInBits();
       MVT NewVT = MVT::getVectorVT(CastVT.getVectorElementType(), NumElems);
@@ -37671,6 +37715,10 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       return DAG.getBitcast(OpVT, Insert);
     }
   }
+
+  // Stop here if this is an i1 vector.
+  if (IsI1Vector)
+    return SDValue();
 
   // If this is an insert of an extract, combine to a shuffle. Don't do this
   // if the insert or extract can be represented with a subregister operation.

@@ -2117,10 +2117,10 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
     // this search by visiting the uses and make sure they all have
     // smaller node id than the load.
 
-    bool FoundLoad = false;
-    SmallVector<SDValue, 4> ChainOps;
-    SmallVector<const SDNode *, 4> LoopWorklist;
-    SmallPtrSet<const SDNode *, 16> Visited;
+  bool FoundLoad = false;
+  SmallVector<SDValue, 4> ChainOps;
+  SmallVector<const SDNode *, 4> LoopWorklist;
+  SmallPtrSet<const SDNode *, 16> Visited;
     for (unsigned i = 0, e = Chain.getNumOperands(); i != e; ++i) {
       SDValue Op = Chain.getOperand(i);
       if (Op == Load.getValue(1)) {
@@ -2143,9 +2143,6 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
       // dependencies.
       if (SDNode::hasPredecessorHelper(Load.getNode(), Visited, LoopWorklist,
                                        Max, true))
-        return false;
-      // Fail conservatively if we ended loop search early.
-      if (Visited.size() >= Max)
         return false;
     }
 
