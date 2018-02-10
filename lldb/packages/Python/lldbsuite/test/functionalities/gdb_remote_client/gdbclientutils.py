@@ -169,7 +169,7 @@ class MockGDBServerResponder:
         return "OK"
 
     def qSupported(self, client_supported):
-        return "PacketSize=3fff;QStartNoAckMode+"
+        return "qXfer:features:read+;PacketSize=3fff;QStartNoAckMode+"
 
     def qfThreadInfo(self):
         return "l"
