@@ -356,20 +356,30 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   // paths when no-return temporary destructors are used for assertions.
   const AnalysisDeclContext *ADC = LCtx->getAnalysisDeclContext();
   if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
-      const MemRegion *Target = Call->getCXXThisVal().getAsRegion();
-      if (Target && isa<CXXTempObjectRegion>(Target) &&
-          Call->getDecl()->getParent()->isAnyDestructorNoReturn()) {
+    const MemRegion *Target = Call->getCXXThisVal().getAsRegion();
+    if (Target && isa<CXXTempObjectRegion>(Target) &&
+        Call->getDecl()->getParent()->isAnyDestructorNoReturn()) {
+
+      // If we've inlined the constructor, then DstEvaluated would be empty.
+      // In this case we still want a sink, which could be implemented
+      // in processCallExit. But we don't have that implemented at the moment,
+      // so if you hit this assertion, see if you can avoid inlining
+      // the respective constructor when analyzer-config cfg-temporary-dtors
+      // is set to false.
+      // Otherwise there's nothing wrong with inlining such constructor.
+      assert(!DstEvaluated.empty() &&
+             "We should not have inlined this constructor!");
 
       for (ExplodedNode *N : DstEvaluated) {
         Bldr.generateSink(CE, N, N->getState());
       }
 
-      // There is no need to run the PostCall and PostStmtchecker
+      // There is no need to run the PostCall and PostStmt checker
       // callbacks because we just generated sinks on all nodes in th
       // frontier.
       return;
     }
- }
+  }
 
   ExplodedNodeSet DstPostCall;
   getCheckerManager().runCheckersForPostCall(DstPostCall, DstEvaluated,
