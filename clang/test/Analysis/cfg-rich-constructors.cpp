@@ -126,3 +126,28 @@ void referenceVariableWithInitializer() {
 }
 
 } // end namespace decl_stmt
+
+namespace ctor_initializers {
+
+class D: public C {
+  C c1;
+
+public:
+
+// CHECK: D()
+// CHECK:          1:  (CXXConstructExpr, C() (Base initializer), class C)
+// CHECK-NEXT:     2: C([B1.1]) (Base initializer)
+// CHECK-NEXT:     3: CFGNewAllocator(C *)
+// CHECK-NEXT:     4:  (CXXConstructExpr, [B1.5], class C)
+// CHECK-NEXT:     5: new C([B1.4])
+// CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, c1([B1.5]) (Member initializer), class C)
+// CHECK-NEXT:     7: c1([B1.6]) (Member initializer)
+  D(): C(), c1(new C()) {}
+
+// CHECK: D(int)
+// CHECK:          1:  (CXXConstructExpr, D() (Delegating initializer), class ctor_initializers::D)
+// CHECK-NEXT:     2: D([B1.1]) (Delegating initializer)
+  D(int): D() {}
+};
+
+} // end namespace ctor_initializers
