@@ -391,6 +391,26 @@ TEST(ClangMove, DontMoveAll) {
   }
 }
 
+TEST(ClangMove, IgnoreMacroSymbolsAndMoveAll) {
+  const char TestCode[] = "#include \"foo.h\"";
+  std::vector<std::string> TestHeaders = {
+    "#define DEFINE_Foo int Foo = 1;\nDEFINE_Foo;\nclass Bar {};\n",
+    "#define DEFINE(x) int var_##x = 1;\nDEFINE(foo);\nclass Bar {};\n",
+  };
+  move::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("Bar");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+
+  for (const auto& Header : TestHeaders) {
+    auto Results = runClangMoveOnCode(Spec, Header.c_str(), TestCode);
+    EXPECT_EQ("", Results[Spec.OldHeader]);
+    EXPECT_EQ(Header, Results[Spec.NewHeader]);
+  }
+}
+
 TEST(ClangMove, MacroInFunction) {
   const char TestHeader[] = "#define INT int\n"
                             "class A {\npublic:\n  int f();\n};\n"
@@ -570,7 +590,9 @@ TEST(ClangMove, DumpDecls) {
                             "extern int kGlobalInt;\n"
                             "extern const char* const kGlobalStr;\n"
                             "} // namespace b\n"
-                            "} // namespace a\n";
+                            "} // namespace a\n"
+                            "#define DEFINE_FOO class Foo {};\n"
+                            "DEFINE_FOO\n";
   const char TestCode[] = "#include \"foo.h\"\n";
   move::MoveDefinitionSpec Spec;
   Spec.Names.push_back("B");

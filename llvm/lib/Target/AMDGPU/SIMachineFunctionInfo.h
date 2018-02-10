@@ -186,6 +186,8 @@ private:
   // current hardware only allows a 16 bit value.
   unsigned GITPtrHigh;
 
+  unsigned HighBitsOf32BitAddress;
+
   MCPhysReg getNextUserSGPR() const {
     assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
     return AMDGPU::SGPR0 + NumUserSGPRs;
@@ -409,6 +411,10 @@ public:
 
   unsigned getGITPtrHigh() const {
     return GITPtrHigh;
+  }
+
+  unsigned get32BitAddressHighBits() const {
+    return HighBitsOf32BitAddress;
   }
 
   unsigned getNumUserSGPRs() const {

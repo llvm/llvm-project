@@ -2,32 +2,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX
 
-; fold (mul undef, x) -> 0
-define <4 x i32> @combine_vec_mul_undef0(<4 x i32> %x) {
-; SSE-LABEL: combine_vec_mul_undef0:
-; SSE:       # %bb.0:
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_vec_mul_undef0:
-; AVX:       # %bb.0:
-; AVX-NEXT:    retq
-  %1 = mul <4 x i32> undef, %x
-  ret <4 x i32> %1
-}
-
-; fold (mul x, undef) -> 0
-define <4 x i32> @combine_vec_mul_undef1(<4 x i32> %x) {
-; SSE-LABEL: combine_vec_mul_undef1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_vec_mul_undef1:
-; AVX:       # %bb.0:
-; AVX-NEXT:    retq
-  %1 = mul <4 x i32> %x, undef
-  ret <4 x i32> %1
-}
-
 ; fold (mul x, 0) -> 0
 define <4 x i32> @combine_vec_mul_zero(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_zero:

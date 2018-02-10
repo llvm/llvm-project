@@ -16,4 +16,4 @@ high/low pc (& update the CU length field and abbrev to match) & then
 compile/objcopy to make the .o and .dwo.
 
 CHECK: _Z2f2v
-CHECK: ./test.cpp:2:51
+CHECK: test.cpp:2:51

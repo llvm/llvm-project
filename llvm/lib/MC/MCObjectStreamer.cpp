@@ -51,17 +51,34 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
   PendingLabels.clear();
 }
 
+// As a compile-time optimization, avoid allocating and evaluating an MCExpr
+// tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment.
+static Optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
+                                             const MCSymbol *Lo) {
+  if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
+      Hi->isVariable() || Lo->isVariable())
+    return None;
+
+  return Hi->getOffset() - Lo->getOffset();
+}
+
 void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
                                               const MCSymbol *Lo,
                                               unsigned Size) {
-  // If not assigned to the same (valid) fragment, fallback.
-  if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
-      Hi->isVariable() || Lo->isVariable()) {
-    MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
+  if (Optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo)) {
+    EmitIntValue(*Diff, Size);
     return;
   }
+  MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
+}
 
-  EmitIntValue(Hi->getOffset() - Lo->getOffset(), Size);
+void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
+                                                       const MCSymbol *Lo) {
+  if (Optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo)) {
+    EmitULEB128IntValue(*Diff);
+    return;
+  }
+  MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
 void MCObjectStreamer::reset() {

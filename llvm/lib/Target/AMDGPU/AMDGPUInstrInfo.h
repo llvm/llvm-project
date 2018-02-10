@@ -50,6 +50,8 @@ public:
   /// Return -1 if the target-specific opcode for the pseudo instruction does
   /// not exist. If Opcode is not a pseudo instruction, this is identity.
   int pseudoToMCOpcode(int Opcode) const;
+
+  static bool isUniformMMO(const MachineMemOperand *MMO);
 };
 } // End llvm namespace
 
