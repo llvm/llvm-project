@@ -132,13 +132,19 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
 // For symbols defined inside macros:
 //   * use expansion location, if the symbol is formed via macro concatenation.
 //   * use spelling location, otherwise.
+//
+// FIXME: EndOffset is inclusive (closed range), and should be exclusive.
+// FIXME: Because the underlying ranges are token ranges, this code chops the
+//        last token in half if it contains multiple characters.
+// FIXME: We probably want to get just the location of the symbol name, not
+//        the whole e.g. class.
 llvm::Optional<SymbolLocation>
-getSymbolLocation(const NamedDecl *D, SourceManager &SM,
+getSymbolLocation(const NamedDecl &D, SourceManager &SM,
                   const SymbolCollector::Options &Opts,
                   std::string &FileURIStorage) {
-  SourceLocation Loc = D->getLocation();
-  SourceLocation StartLoc = SM.getSpellingLoc(D->getLocStart());
-  SourceLocation EndLoc = SM.getSpellingLoc(D->getLocEnd());
+  SourceLocation Loc = D.getLocation();
+  SourceLocation StartLoc = SM.getSpellingLoc(D.getLocStart());
+  SourceLocation EndLoc = SM.getSpellingLoc(D.getLocEnd());
   if (Loc.isMacroID()) {
     std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
     if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
@@ -149,8 +155,8 @@ getSymbolLocation(const NamedDecl *D, SourceManager &SM,
       //     be "<scratch space>"
       //   * symbols controlled and defined by a compile command-line option
       //     `-DName=foo`, the spelling location will be "<command line>".
-      StartLoc = SM.getExpansionRange(D->getLocStart()).first;
-      EndLoc = SM.getExpansionRange(D->getLocEnd()).second;
+      StartLoc = SM.getExpansionRange(D.getLocStart()).first;
+      EndLoc = SM.getExpansionRange(D.getLocEnd()).second;
     }
   }
 
@@ -158,8 +164,11 @@ getSymbolLocation(const NamedDecl *D, SourceManager &SM,
   if (!U)
     return llvm::None;
   FileURIStorage = std::move(*U);
-  return SymbolLocation{FileURIStorage, SM.getFileOffset(StartLoc),
-                        SM.getFileOffset(EndLoc)};
+  SymbolLocation Result;
+  Result.FileURI = FileURIStorage;
+  Result.StartOffset = SM.getFileOffset(StartLoc);
+  Result.EndOffset = SM.getFileOffset(EndLoc);
+  return std::move(Result);
 }
 
 } // namespace
@@ -195,62 +204,86 @@ bool SymbolCollector::handleDeclOccurence(
       return true;
 
     auto ID = SymbolID(USR);
-    if (Symbols.find(ID) != nullptr)
-      return true;
-
-    auto &SM = ND->getASTContext().getSourceManager();
-
-    std::string QName;
-    llvm::raw_string_ostream OS(QName);
-    PrintingPolicy Policy(ASTCtx->getLangOpts());
-    // Note that inline namespaces are treated as transparent scopes. This
-    // reflects the way they're most commonly used for lookup. Ideally we'd
-    // include them, but at query time it's hard to find all the inline
-    // namespaces to query: the preamble doesn't have a dedicated list.
-    Policy.SuppressUnwrittenScope = true;
-    ND->printQualifiedName(OS, Policy);
-    OS.flush();
-
-    Symbol S;
-    S.ID = std::move(ID);
-    std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
-    S.SymInfo = index::getSymbolInfo(D);
-    std::string URIStorage;
-    if (auto DeclLoc = getSymbolLocation(ND, SM, Opts, URIStorage))
-      S.CanonicalDeclaration = *DeclLoc;
-
-    // Add completion info.
-    assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
-    CodeCompletionResult SymbolCompletion(ND, 0);
-    const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
-        *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
-        *CompletionTUInfo,
-        /*IncludeBriefComments*/ true);
-    std::string Label;
-    std::string SnippetInsertText;
-    std::string IgnoredLabel;
-    std::string PlainInsertText;
-    getLabelAndInsertText(*CCS, &Label, &SnippetInsertText,
-                          /*EnableSnippets=*/true);
-    getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
-                          /*EnableSnippets=*/false);
-    std::string FilterText = getFilterText(*CCS);
-    std::string Documentation = getDocumentation(*CCS);
-    std::string CompletionDetail = getDetail(*CCS);
-
-    S.CompletionFilterText = FilterText;
-    S.CompletionLabel = Label;
-    S.CompletionPlainInsertText = PlainInsertText;
-    S.CompletionSnippetInsertText = SnippetInsertText;
-    Symbol::Details Detail;
-    Detail.Documentation = Documentation;
-    Detail.CompletionDetail = CompletionDetail;
-    S.Detail = &Detail;
-
-    Symbols.insert(S);
+    const Symbol* BasicSymbol = Symbols.find(ID);
+    if (!BasicSymbol) // Regardless of role, ND is the canonical declaration.
+      BasicSymbol = addDeclaration(*ND, std::move(ID));
+    if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
+      addDefinition(*cast<NamedDecl>(ASTNode.OrigD), *BasicSymbol);
   }
-
   return true;
+}
+
+const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
+                                              SymbolID ID) {
+  auto &SM = ND.getASTContext().getSourceManager();
+
+  std::string QName;
+  llvm::raw_string_ostream OS(QName);
+  PrintingPolicy Policy(ASTCtx->getLangOpts());
+  // Note that inline namespaces are treated as transparent scopes. This
+  // reflects the way they're most commonly used for lookup. Ideally we'd
+  // include them, but at query time it's hard to find all the inline
+  // namespaces to query: the preamble doesn't have a dedicated list.
+  Policy.SuppressUnwrittenScope = true;
+  ND.printQualifiedName(OS, Policy);
+  OS.flush();
+
+  Symbol S;
+  S.ID = std::move(ID);
+  std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
+  S.SymInfo = index::getSymbolInfo(&ND);
+  std::string FileURI;
+  // FIXME: we may want a different "canonical" heuristic than clang chooses.
+  // Clang seems to choose the first, which may not have the most information.
+  if (auto DeclLoc = getSymbolLocation(ND, SM, Opts, FileURI))
+    S.CanonicalDeclaration = *DeclLoc;
+
+  // Add completion info.
+  // FIXME: we may want to choose a different redecl, or combine from several.
+  assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
+  CodeCompletionResult SymbolCompletion(&ND, 0);
+  const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
+      *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
+      *CompletionTUInfo,
+      /*IncludeBriefComments*/ true);
+  std::string Label;
+  std::string SnippetInsertText;
+  std::string IgnoredLabel;
+  std::string PlainInsertText;
+  getLabelAndInsertText(*CCS, &Label, &SnippetInsertText,
+                        /*EnableSnippets=*/true);
+  getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
+                        /*EnableSnippets=*/false);
+  std::string FilterText = getFilterText(*CCS);
+  std::string Documentation = getDocumentation(*CCS);
+  std::string CompletionDetail = getDetail(*CCS);
+
+  S.CompletionFilterText = FilterText;
+  S.CompletionLabel = Label;
+  S.CompletionPlainInsertText = PlainInsertText;
+  S.CompletionSnippetInsertText = SnippetInsertText;
+  Symbol::Details Detail;
+  Detail.Documentation = Documentation;
+  Detail.CompletionDetail = CompletionDetail;
+  S.Detail = &Detail;
+
+  Symbols.insert(S);
+  return Symbols.find(S.ID);
+}
+
+void SymbolCollector::addDefinition(const NamedDecl &ND,
+                                    const Symbol &DeclSym) {
+  if (DeclSym.Definition)
+    return;
+  // If we saw some forward declaration, we end up copying the symbol.
+  // This is not ideal, but avoids duplicating the "is this a definition" check
+  // in clang::index. We should only see one definition.
+  Symbol S = DeclSym;
+  std::string FileURI;
+  if (auto DefLoc = getSymbolLocation(ND, ND.getASTContext().getSourceManager(),
+                                      Opts, FileURI))
+    S.Definition = *DefLoc;
+  Symbols.insert(S);
 }
 
 } // namespace clangd

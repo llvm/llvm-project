@@ -650,7 +650,10 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
       CompilerInstance::createDiagnostics(new DiagnosticOptions,
                                           &DummyDiagsConsumer, false),
       Input.VFS);
-  assert(CI && "Couldn't create CompilerInvocation");
+  if (!CI) {
+    log("Couldn't create CompilerInvocation");;
+    return false;
+  }
   CI->getFrontendOpts().DisableFree = false;
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =

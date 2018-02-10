@@ -29,6 +29,7 @@ Usage:
 import os
 import plistlib
 from math import log
+from optparse import OptionParser
 
 
 # Information about analysis run:
@@ -100,20 +101,6 @@ class AnalysisDiagnostic:
     # version to another.
     def getRawData(self):
         return self._data
-
-
-class CmpOptions:
-    """
-    Fake output of option parser with manually constructed options.
-    """
-
-    def __init__(self, verboseLog=None, rootA="", rootB=""):
-        self.rootA = rootA
-        self.rootB = rootB
-        self.verboseLog = verboseLog
-        self.relative_path_histogram = False
-        self.relative_log_path_histogram = False
-        self.absolute_path_histogram = False
 
 
 class AnalysisReport:
@@ -322,9 +309,7 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True):
 
     return foundDiffs, len(resultsA.diagnostics), len(resultsB.diagnostics)
 
-
-def main():
-    from optparse import OptionParser
+def generate_option_parser():
     parser = OptionParser("usage: %prog [options] [dir A] [dir B]")
     parser.add_option("", "--rootA", dest="rootA",
                       help="Prefix to ignore on source files for directory A",
@@ -334,24 +319,29 @@ def main():
                       action="store", type=str, default="")
     parser.add_option("", "--verbose-log", dest="verboseLog",
                       help="Write additional information to LOG \
-                      [default=None]",
+                           [default=None]",
                       action="store", type=str, default=None,
                       metavar="LOG")
     parser.add_option("--relative-path-differences-histogram",
                       action="store_true", dest="relative_path_histogram",
                       default=False,
                       help="Show histogram of relative paths differences. \
-                      Requires matplotlib")
+                            Requires matplotlib")
     parser.add_option("--relative-log-path-differences-histogram",
                       action="store_true", dest="relative_log_path_histogram",
                       default=False,
                       help="Show histogram of log relative paths differences. \
-                      Requires matplotlib")
+                            Requires matplotlib")
     parser.add_option("--absolute-path-differences-histogram",
                       action="store_true", dest="absolute_path_histogram",
                       default=False,
                       help="Show histogram of absolute paths differences. \
-                      Requires matplotlib")
+                            Requires matplotlib")
+    return parser
+
+
+def main():
+    parser = generate_option_parser()
     (opts, args) = parser.parse_args()
 
     if len(args) != 2:

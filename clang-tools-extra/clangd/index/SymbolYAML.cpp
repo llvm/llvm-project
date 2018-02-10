@@ -97,7 +97,9 @@ template <> struct MappingTraits<Symbol> {
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
     IO.mapRequired("SymInfo", Sym.SymInfo);
-    IO.mapRequired("CanonicalDeclaration", Sym.CanonicalDeclaration);
+    IO.mapOptional("CanonicalDeclaration", Sym.CanonicalDeclaration,
+                   SymbolLocation());
+    IO.mapOptional("Definition", Sym.Definition, SymbolLocation());
     IO.mapRequired("CompletionLabel", Sym.CompletionLabel);
     IO.mapRequired("CompletionFilterText", Sym.CompletionFilterText);
     IO.mapRequired("CompletionPlainInsertText", Sym.CompletionPlainInsertText);
@@ -160,7 +162,7 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
 namespace clang {
 namespace clangd {
 
-SymbolSlab SymbolFromYAML(llvm::StringRef YAMLContent) {
+SymbolSlab SymbolsFromYAML(llvm::StringRef YAMLContent) {
   // Store data of pointer fields (excl. `StringRef`) like `Detail`.
   llvm::BumpPtrAllocator Arena;
   llvm::yaml::Input Yin(YAMLContent, &Arena);
@@ -173,13 +175,18 @@ SymbolSlab SymbolFromYAML(llvm::StringRef YAMLContent) {
   return std::move(Syms).build();
 }
 
-std::string SymbolsToYAML(const SymbolSlab& Symbols) {
-  std::string Str;
-  llvm::raw_string_ostream OS(Str);
+Symbol SymbolFromYAML(llvm::StringRef YAMLContent,
+                      llvm::BumpPtrAllocator &Arena) {
+  llvm::yaml::Input Yin(YAMLContent, &Arena);
+  Symbol S;
+  Yin >> S;
+  return S;
+}
+
+void SymbolsToYAML(const SymbolSlab& Symbols, llvm::raw_ostream &OS) {
   llvm::yaml::Output Yout(OS);
   for (Symbol S : Symbols) // copy: Yout<< requires mutability.
     Yout << S;
-  return OS.str();
 }
 
 std::string SymbolToYAML(Symbol Sym) {

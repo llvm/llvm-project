@@ -13,6 +13,7 @@
 
 // Other libraries and framework includes
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
@@ -590,14 +591,12 @@ ClangModulesDeclVendor::Create(Target &target) {
   // Add additional search paths with { "-I", path } or { "-F", path } here.
 
   {
-    llvm::SmallString<128> DefaultModuleCache;
-    const bool erased_on_reboot = false;
-    llvm::sys::path::system_temp_directory(erased_on_reboot,
-                                           DefaultModuleCache);
-    llvm::sys::path::append(DefaultModuleCache, "org.llvm.clang");
-    llvm::sys::path::append(DefaultModuleCache, "ModuleCache");
+    llvm::SmallString<128> Path;
+    target.GetClangModulesCachePath().GetPath(Path);
+    if (Path.empty())
+      clang::driver::Driver::getDefaultModuleCachePath(Path);
     std::string module_cache_argument("-fmodules-cache-path=");
-    module_cache_argument.append(DefaultModuleCache.str().str());
+    module_cache_argument.append(Path.str());
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 

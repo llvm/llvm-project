@@ -1646,6 +1646,9 @@ public:
     return getImmediateExpansionRange(Loc).first;
   }
 
+  /// \return Location of the top-level macro caller.
+  SourceLocation getTopMacroCallerLoc(SourceLocation Loc) const;
+
 private:
   friend class ASTReader;
   friend class ASTWriter;

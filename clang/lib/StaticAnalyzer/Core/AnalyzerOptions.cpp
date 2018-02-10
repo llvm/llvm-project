@@ -287,6 +287,12 @@ bool AnalyzerOptions::shouldWriteStableReportFilename() {
                           /* Default = */ false);
 }
 
+bool AnalyzerOptions::shouldSerializeStats() {
+  return getBooleanOption(SerializeStats,
+                          "serialize-stats",
+                          /* Default = */ false);
+}
+
 int AnalyzerOptions::getOptionAsInteger(StringRef Name, int DefaultVal,
                                         const CheckerBase *C,
                                         bool SearchInParents) {

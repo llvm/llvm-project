@@ -701,7 +701,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
                  ? std::max(State.Stack.back().Indent,
                             State.FirstIndent + Style.ContinuationIndentWidth)
                  : State.Stack.back().Indent) +
-            NextNonComment->LongestObjCSelectorName;
+            std::max(NextNonComment->LongestObjCSelectorName,
+                     NextNonComment->ColumnWidth);
       }
     } else if (State.Stack.back().AlignColons &&
                State.Stack.back().ColonPos <= NextNonComment->ColumnWidth) {
@@ -900,7 +901,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
                   ? std::max(State.Stack.back().Indent,
                              State.FirstIndent + Style.ContinuationIndentWidth)
                   : State.Stack.back().Indent) +
-             NextNonComment->LongestObjCSelectorName -
+             std::max(NextNonComment->LongestObjCSelectorName,
+                      NextNonComment->ColumnWidth) -
              NextNonComment->ColumnWidth;
     }
     if (!State.Stack.back().AlignColons)

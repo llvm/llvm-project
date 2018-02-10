@@ -20,12 +20,17 @@
 
 #include "Index.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
 
 // Read symbols from a YAML-format string.
-SymbolSlab SymbolFromYAML(llvm::StringRef YAMLContent);
+SymbolSlab SymbolsFromYAML(llvm::StringRef YAMLContent);
+
+// Read one symbol from a YAML-format string, backed by the arena.
+Symbol SymbolFromYAML(llvm::StringRef YAMLContent,
+                      llvm::BumpPtrAllocator &Arena);
 
 // Convert a single symbol to YAML-format string.
 // The YAML result is safe to concatenate.
@@ -33,7 +38,7 @@ std::string SymbolToYAML(Symbol Sym);
 
 // Convert symbols to a YAML-format string.
 // The YAML result is safe to concatenate if you have multiple symbol slabs.
-std::string SymbolsToYAML(const SymbolSlab& Symbols);
+void SymbolsToYAML(const SymbolSlab& Symbols, llvm::raw_ostream &OS);
 
 } // namespace clangd
 } // namespace clang

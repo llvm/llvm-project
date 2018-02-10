@@ -955,6 +955,12 @@ SourceManager::getImmediateExpansionRange(SourceLocation Loc) const {
   return Expansion.getExpansionLocRange();
 }
 
+SourceLocation SourceManager::getTopMacroCallerLoc(SourceLocation Loc) const {
+  while (isMacroArgExpansion(Loc))
+    Loc = getImmediateSpellingLoc(Loc);
+  return Loc;
+}
+
 /// getExpansionRange - Given a SourceLocation object, return the range of
 /// tokens covered by the expansion in the ultimate file.
 std::pair<SourceLocation,SourceLocation>

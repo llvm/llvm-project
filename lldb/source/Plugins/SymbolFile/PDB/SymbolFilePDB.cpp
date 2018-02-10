@@ -535,10 +535,10 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
                                     uint32_t resolve_scope,
                                     lldb_private::SymbolContext &sc) {
   uint32_t resolved_flags = 0;
-  if (resolve_scope & eSymbolContextCompUnit |
-      resolve_scope & eSymbolContextVariable |
-      resolve_scope & eSymbolContextFunction |
-      resolve_scope & eSymbolContextBlock |
+  if (resolve_scope & eSymbolContextCompUnit ||
+      resolve_scope & eSymbolContextVariable ||
+      resolve_scope & eSymbolContextFunction ||
+      resolve_scope & eSymbolContextBlock ||
       resolve_scope & eSymbolContextLineEntry) {
     addr_t file_vm_addr = so_addr.GetFileAddress();
     auto symbol_up =
@@ -904,7 +904,6 @@ void SymbolFilePDB::CacheFunctionNames() {
       if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
         auto demangled_name = pub_sym_up->getUndecoratedName();
         std::vector<uint32_t> ids;
-        auto cstr_name = ConstString(demangled_name);
         auto vm_addr = pub_sym_up->getVirtualAddress();
 
         // PDB public symbol has mangled name for its associated function.
@@ -941,8 +940,8 @@ uint32_t SymbolFilePDB::FindFunctions(
     return 0;
 
   auto old_size = sc_list.GetSize();
-  if (name_type_mask & eFunctionNameTypeFull |
-      name_type_mask & eFunctionNameTypeBase |
+  if (name_type_mask & eFunctionNameTypeFull ||
+      name_type_mask & eFunctionNameTypeBase ||
       name_type_mask & eFunctionNameTypeMethod) {
     CacheFunctionNames();
 
