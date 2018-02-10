@@ -2377,7 +2377,9 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
 
   autoCreateBlock();
   appendStmt(Block, DS);
-  
+
+  EnterConstructionContextIfNecessary(DS, Init);
+
   // Keep track of the last non-null block, as 'Block' can be nulled out
   // if the initializer expression is something like a 'while' in a
   // statement-expression.

@@ -59,11 +59,14 @@ void checkWrap(int i) {
 // CHECK-NEXT:   5: int l;
 // CHECK-NEXT:   6: 2
 // CHECK-NEXT:   7: int m = 2;
-// CHECK-NEXT: CXXConstructExpr
+// WARNINGS-NEXT: (CXXConstructExpr, struct standalone)
+// ANALYZER-NEXT: (CXXConstructExpr, [B1.9], struct standalone)
 // CHECK-NEXT:   9: struct standalone myStandalone;
-// CHECK-NEXT: CXXConstructExpr
+// WARNINGS-NEXT: (CXXConstructExpr, struct (anonymous struct at {{.*}}))
+// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (anonymous struct at {{.*}}))
 // CHECK-NEXT:  11: struct (anonymous struct at {{.*}}) myAnon;
-// CHECK-NEXT: CXXConstructExpr
+// WARNINGS-NEXT: (CXXConstructExpr, struct named)
+// ANALYZER-NEXT: (CXXConstructExpr, [B1.13], struct named)
 // CHECK-NEXT:  13: struct named myNamed;
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
