@@ -5,6 +5,8 @@ class C {
 public:
   C();
   C(C *);
+
+  static C get();
 };
 
 typedef __typeof(sizeof(int)) size_t;
@@ -44,3 +46,83 @@ void operatorPlacementNewWithConstructorWithinPlacementArgument() {
 }
 
 } // namespace operator_new
+
+namespace decl_stmt {
+
+// CHECK: void simpleVariable()
+// CHECK:          1:  (CXXConstructExpr, [B1.2], class C)
+// CHECK-NEXT:     2: C c;
+void simpleVariable() {
+  C c;
+}
+
+// CHECK: void simpleVariableWithBraces()
+// CHECK:          1: {} (CXXConstructExpr, [B1.2], class C)
+// CHECK-NEXT:     2: C c{};
+void simpleVariableWithBraces() {
+  C c{};
+}
+
+// CHECK: void simpleVariableWithConstructorArgument()
+// CHECK:          1: 0
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NullToPointer, class C *)
+// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], class C)
+// CHECK-NEXT:     4: C c(0);
+void simpleVariableWithConstructorArgument() {
+  C c(0);
+}
+
+// CHECK: void simpleVariableWithOperatorNewInConstructorArgument()
+// CHECK:          1: CFGNewAllocator(C *)
+// CHECK-NEXT:     2:  (CXXConstructExpr, [B1.3], class C)
+// CHECK-NEXT:     3: new C([B1.2])
+// CHECK-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.5], class C)
+// CHECK-NEXT:     5: C c(new C());
+void simpleVariableWithOperatorNewInConstructorArgument() {
+  C c(new C());
+}
+
+// CHECK: void simpleVariableWithOperatorNewInBraces()
+// CHECK:          1: CFGNewAllocator(C *)
+// CHECK-NEXT:     2:  (CXXConstructExpr, [B1.3], class C)
+// CHECK-NEXT:     3: new C([B1.2])
+// CHECK-NEXT:     4: {[B1.3]} (CXXConstructExpr, [B1.5], class C)
+// CHECK-NEXT:     5: C c{new C()};
+void simpleVariableWithOperatorNewInBraces() {
+  C c{new C()};
+}
+
+// TODO: Should find construction target here.
+// CHECK: void simpleVariableInitializedByValue()
+// CHECK:          1: C::get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, class C)
+// CHECK-NEXT:     6: C c = C::get();
+void simpleVariableInitializedByValue() {
+  C c = C::get();
+}
+
+// TODO: Should find construction target here.
+// CHECK: void referenceVariableWithConstructor()
+// CHECK:          1: 0
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NullToPointer, class C *)
+// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, const class C)
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: const C &c(0);
+void referenceVariableWithConstructor() {
+  const C &c(0);
+}
+
+// TODO: Should find construction target here.
+// CHECK: void referenceVariableWithInitializer()
+// CHECK:          1: C() (CXXConstructExpr, class C)
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class C)
+// CHECK-NEXT:     3: [B1.2]
+// CHECK-NEXT:     4: const C &c = C();
+void referenceVariableWithInitializer() {
+  const C &c = C();
+}
+
+} // end namespace decl_stmt
