@@ -665,13 +665,6 @@ private:
   /// constructing into an existing region.
   const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
 
-  /// For a CXXConstructExpr, walk forward in the current CFG block to find the
-  /// CFGElement for the DeclStmt or CXXInitCtorInitializer or CXXNewExpr which
-  /// is directly constructed by this constructor. Returns None if the current
-  /// constructor expression did not directly construct into an existing
-  /// region.
-  Optional<CFGElement> findElementDirectlyInitializedByCurrentConstructor();
-
   /// For a given constructor, look forward in the current CFG block to
   /// determine the region into which an object will be constructed by \p CE.
   /// When the lookahead fails, a temporary region is returned, and the
