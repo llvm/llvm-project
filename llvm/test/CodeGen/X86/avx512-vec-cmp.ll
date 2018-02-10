@@ -288,11 +288,19 @@ define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 }
 
 define <16 x i32> @test13(<16 x float>%a, <16 x float>%b)
-; CHECK-LABEL: test13:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; CHECK-NEXT:    retq
+; AVX512-LABEL: test13:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
+; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpsrld $31, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+;
+; SKX-LABEL: test13:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; SKX-NEXT:    vpmovm2d %k0, %zmm0
+; SKX-NEXT:    vpsrld $31, %zmm0, %zmm0
+; SKX-NEXT:    retq
 {
   %cmpvector_i = fcmp oeq <16 x float> %a, %b
   %conv = zext <16 x i1> %cmpvector_i to <16 x i32>
@@ -883,23 +891,14 @@ define <4 x i32> @test44(<4 x i16> %x, <4 x i16> %y) #0 {
 }
 
 define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
-; AVX512-LABEL: test45:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
-; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
-; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; AVX512-NEXT:    retq
-;
-; SKX-LABEL: test45:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
-; SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
-; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
-; SKX-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
-; SKX-NEXT:    retq
+; CHECK-LABEL: test45:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
+; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; CHECK-NEXT:    retq
   %mask = icmp eq <2 x i16> %x, %y
   %1 = zext <2 x i1> %mask to <2 x i64>
   ret <2 x i64> %1
@@ -915,8 +914,9 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ;
 ; SKX-LABEL: test46:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
-; SKX-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
+; SKX-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
+; SKX-NEXT:    vpmovm2q %k0, %xmm0
+; SKX-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %mask = fcmp oeq <2 x float> %x, %y
   %1 = zext <2 x i1> %mask to <2 x i64>
