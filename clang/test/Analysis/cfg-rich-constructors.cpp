@@ -92,16 +92,43 @@ void simpleVariableWithOperatorNewInBraces() {
   C c{new C()};
 }
 
-// TODO: Should find construction target here.
 // CHECK: void simpleVariableInitializedByValue()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
 // CHECK-NEXT:     3: [B1.2]()
 // CHECK-NEXT:     4: [B1.3]
-// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, class C)
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
 // CHECK-NEXT:     6: C c = C::get();
 void simpleVariableInitializedByValue() {
   C c = C::get();
+}
+
+// TODO: Should find construction target for the three temporaries as well.
+// CHECK: void simpleVariableWithTernaryOperator(bool coin)
+// CHECK:        [B1]
+// CHECK-NEXT:     1: [B4.2] ? [B2.5] : [B3.6]
+// CHECK-NEXT:     2: [B1.1]
+// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], class C)
+// CHECK-NEXT:     4: C c = coin ? C::get() : C(0);
+// CHECK:        [B2]
+// CHECK-NEXT:     1: C::get
+// CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:     3: [B2.2]()
+// CHECK-NEXT:     4: [B2.3]
+// CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, class C)
+// CHECK:        [B3]
+// CHECK-NEXT:     1: 0
+// CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
+// CHECK-NEXT:     3: [B3.2] (CXXConstructExpr, class C)
+// CHECK-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
+// CHECK-NEXT:     5: [B3.4]
+// CHECK-NEXT:     6: [B3.5] (CXXConstructExpr, class C)
+// CHECK:        [B4]
+// CHECK-NEXT:     1: coin
+// CHECK-NEXT:     2: [B4.1] (ImplicitCastExpr, LValueToRValue, _Bool)
+// CHECK-NEXT:     T: [B4.2] ? ... : ...
+void simpleVariableWithTernaryOperator(bool coin) {
+  C c = coin ? C::get() : C(0);
 }
 
 // TODO: Should find construction target here.
@@ -123,6 +150,34 @@ void referenceVariableWithConstructor() {
 // CHECK-NEXT:     4: const C &c = C();
 void referenceVariableWithInitializer() {
   const C &c = C();
+}
+
+// TODO: Should find construction targets here.
+// CHECK: void referenceVariableWithTernaryOperator(bool coin)
+// CHECK:        [B1]
+// CHECK-NEXT:     1: [B4.2] ? [B2.5] : [B3.6]
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class C)
+// CHECK-NEXT:     3: [B1.2]
+// CHECK-NEXT:     4: const C &c = coin ? C::get() : C(0);
+// CHECK:        [B2]
+// CHECK-NEXT:     1: C::get
+// CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:     3: [B2.2]()
+// CHECK-NEXT:     4: [B2.3]
+// CHECK-NEXT:     5: [B2.4] (CXXConstructExpr, class C)
+// CHECK:        [B3]
+// CHECK-NEXT:     1: 0
+// CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
+// CHECK-NEXT:     3: [B3.2] (CXXConstructExpr, class C)
+// CHECK-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
+// CHECK-NEXT:     5: [B3.4]
+// CHECK-NEXT:     6: [B3.5] (CXXConstructExpr, class C)
+// CHECK:        [B4]
+// CHECK-NEXT:     1: coin
+// CHECK-NEXT:     2: [B4.1] (ImplicitCastExpr, LValueToRValue, _Bool)
+// CHECK-NEXT:     T: [B4.2] ? ... : ...
+void referenceVariableWithTernaryOperator(bool coin) {
+  const C &c = coin ? C::get() : C(0);
 }
 
 } // end namespace decl_stmt
@@ -148,6 +203,24 @@ public:
 // CHECK:          1:  (CXXConstructExpr, D() (Delegating initializer), class ctor_initializers::D)
 // CHECK-NEXT:     2: D([B1.1]) (Delegating initializer)
   D(int): D() {}
+
+// CHECK: D(double)
+// CHECK:          1: C::get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, C([B1.4]) (Base initializer), class C)
+// CHECK-NEXT:     6: C([B1.5]) (Base initializer)
+// CHECK-NEXT:     7: CFGNewAllocator(C *)
+// CHECK-NEXT:     8: C::get
+// CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:    10: [B1.9]()
+// CHECK-NEXT:    11: [B1.10]
+// CHECK-NEXT:    12: [B1.11] (CXXConstructExpr, [B1.13], class C)
+// CHECK-NEXT:    13: new C([B1.12])
+// CHECK-NEXT:    14: [B1.13] (CXXConstructExpr, c1([B1.13]) (Member initializer), class C)
+// CHECK-NEXT:    15: c1([B1.14]) (Member initializer)
+  D(double): C(C::get()), c1(new C(C::get())) {}
 };
 
 } // end namespace ctor_initializers
