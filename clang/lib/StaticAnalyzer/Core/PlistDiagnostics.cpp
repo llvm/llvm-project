@@ -16,9 +16,12 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Rewrite/Core/HTMLRewrite.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 using namespace clang;
@@ -30,6 +33,7 @@ namespace {
     const std::string OutputFile;
     const LangOptions &LangOpts;
     const bool SupportsCrossFileDiagnostics;
+    const bool SerializeStatistics;
   public:
     PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
                      const std::string& prefix,
@@ -61,7 +65,8 @@ PlistDiagnostics::PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
                                    bool supportsMultipleFiles)
   : OutputFile(output),
     LangOpts(LO),
-    SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
+    SupportsCrossFileDiagnostics(supportsMultipleFiles),
+    SerializeStatistics(AnalyzerOpts.shouldSerializeStats()) {}
 
 void ento::createPlistDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
                                          PathDiagnosticConsumers &C,
@@ -483,6 +488,15 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   }
 
   o << " </array>\n";
+
+  if (llvm::AreStatisticsEnabled() && SerializeStatistics) {
+    o << " <key>statistics</key>\n";
+    std::string stats;
+    llvm::raw_string_ostream os(stats);
+    llvm::PrintStatisticsJSON(os);
+    os.flush();
+    EmitString(o, html::EscapeText(stats)) << '\n';
+  }
 
   // Finish.
   o << "</dict>\n</plist>";
