@@ -41,14 +41,13 @@ public:
     GLOBAL_EXPORT,
   };
 
-  WasmSymbol(StringRef Name, SymbolType Type, uint32_t Section,
-             uint32_t ElementIndex, uint32_t FunctionType = 0)
-      : Name(Name), Type(Type), Section(Section), ElementIndex(ElementIndex),
+  WasmSymbol(StringRef Name, SymbolType Type, uint32_t ElementIndex,
+             uint32_t FunctionType = 0)
+      : Name(Name), Type(Type), ElementIndex(ElementIndex),
         FunctionType(FunctionType) {}
 
   StringRef Name;
   SymbolType Type;
-  uint32_t Section;
   uint32_t Flags = 0;
 
   // Index into either the function or global index space.
@@ -68,8 +67,8 @@ public:
   }
 
   bool isTypeFunction() const {
-    return Type == WasmSymbol::SymbolType::FUNCTION_IMPORT ||
-           Type == WasmSymbol::SymbolType::FUNCTION_EXPORT;
+    return Type == SymbolType::FUNCTION_IMPORT ||
+           Type == SymbolType::FUNCTION_EXPORT;
   }
 
   bool isTypeGlobal() const {
@@ -266,8 +265,8 @@ private:
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedFunctions = 0;
-  uint32_t ImportSection = 0;
-  uint32_t ExportSection = 0;
+  uint32_t CodeSection = 0;
+  uint32_t DataSection = 0;
 
   StringMap<uint32_t> SymbolMap;
 };

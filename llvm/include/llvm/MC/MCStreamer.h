@@ -609,10 +609,6 @@ public:
   /// pass in a MCExpr for constant integers.
   void EmitULEB128IntValue(uint64_t Value);
 
-  /// \brief Like EmitULEB128Value but pads the output to specific number of
-  /// bytes.
-  void EmitPaddedULEB128IntValue(uint64_t Value, unsigned PadTo);
-
   /// \brief Special case of EmitSLEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
   void EmitSLEB128IntValue(int64_t Value);
@@ -827,6 +823,10 @@ public:
   /// \pre Offset of \c Hi is greater than the offset \c Lo.
   virtual void emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
                                       unsigned Size);
+
+  /// Emit the absolute difference between two symbols encoded with ULEB128.
+  virtual void emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
+                                               const MCSymbol *Lo);
 
   virtual MCSymbol *getDwarfLineTableSymbol(unsigned CUID);
   virtual void EmitCFISections(bool EH, bool Debug);

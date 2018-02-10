@@ -120,7 +120,7 @@ static bool isInstrUniform(const MachineInstr &MI) {
     return false;
 
   const MachineMemOperand *MMO = *MI.memoperands_begin();
-  return AMDGPU::isUniformMMO(MMO);
+  return AMDGPUInstrInfo::isUniformMMO(MMO);
 }
 
 const RegisterBankInfo::InstructionMapping &

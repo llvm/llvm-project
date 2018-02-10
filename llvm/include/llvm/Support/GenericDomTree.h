@@ -52,7 +52,7 @@ struct SemiNCAInfo;
 
 /// \brief Base class for the actual dominator tree node.
 template <class NodeT> class DomTreeNodeBase {
-  friend struct PostDominatorTree;
+  friend class PostDominatorTree;
   friend class DominatorTreeBase<NodeT, false>;
   friend class DominatorTreeBase<NodeT, true>;
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase<NodeT, false>>;

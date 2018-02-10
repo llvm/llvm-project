@@ -33,12 +33,12 @@ static const char *const DataLayoutStringR600 =
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5";
 
 static const char *const DataLayoutStringSIPrivateIsZero =
-    "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32"
+    "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
     "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
 
 static const char *const DataLayoutStringSIGenericIsZero =
-    "e-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32-p5:32:32"
+    "e-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32-p5:32:32-p6:32:32"
     "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5";
 
@@ -144,7 +144,7 @@ const char *const AMDGPUTargetInfo::GCCRegNames[] = {
   "s104", "s105", "s106", "s107", "s108", "s109", "s110", "s111", "s112",
   "s113", "s114", "s115", "s116", "s117", "s118", "s119", "s120", "s121",
   "s122", "s123", "s124", "s125", "s126", "s127", "exec", "vcc", "scc",
-  "m0", "flat_scratch", "exec_lo", "exec_hi", "vcc_lo", "vcc_hi", 
+  "m0", "flat_scratch", "exec_lo", "exec_hi", "vcc_lo", "vcc_hi",
   "flat_scratch_lo", "flat_scratch_hi"
 };
 

@@ -2340,6 +2340,12 @@ public:
                                int64_t Offset = 0, bool DerefAfter = false,
                                bool StackValue = false);
 
+  /// Prepend \p DIExpr with the given opcodes and optionally turn it into a
+  /// stack value.
+  static DIExpression *doPrepend(const DIExpression *DIExpr,
+                                 SmallVectorImpl<uint64_t> &Ops,
+                                 bool StackValue = false);
+
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
   /// will be appended to the elements of \c Expr. If \c Expr already contains

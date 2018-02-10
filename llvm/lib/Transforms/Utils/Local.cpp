@@ -1497,14 +1497,25 @@ void llvm::salvageDebugInfo(Instruction &I) {
     return MetadataAsValue::get(I.getContext(), ValueAsMetadata::get(V));
   };
 
-  auto applyOffset = [&](DbgInfoIntrinsic *DII, uint64_t Offset) {
+  auto doSalvage = [&](DbgInfoIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
     auto *DIExpr = DII->getExpression();
-    DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
-                                   DIExpression::NoDeref,
-                                   DIExpression::WithStackValue);
+    DIExpr = DIExpression::doPrepend(DIExpr, Ops,
+                                     DIExpression::WithStackValue);
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
     DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
+  };
+
+  auto applyOffset = [&](DbgInfoIntrinsic *DII, uint64_t Offset) {
+    SmallVector<uint64_t, 8> Ops;
+    DIExpression::appendOffset(Ops, Offset);
+    doSalvage(DII, Ops);
+  };
+
+  auto applyOps = [&](DbgInfoIntrinsic *DII,
+                      std::initializer_list<uint64_t> Opcodes) {
+    SmallVector<uint64_t, 8> Ops(Opcodes);
+    doSalvage(DII, Ops);
   };
 
   if (isa<BitCastInst>(&I) || isa<IntToPtrInst>(&I)) {
@@ -1525,11 +1536,17 @@ void llvm::salvageDebugInfo(Instruction &I) {
       for (auto *DII : DbgUsers)
         applyOffset(DII, Offset.getSExtValue());
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
-    if (BI->getOpcode() == Instruction::Add)
+    if (BI->getOpcode() == Instruction::Add ||
+        BI->getOpcode() == Instruction::Or)
       if (auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1)))
-        if (ConstInt->getBitWidth() <= 64)
+        if (ConstInt->getBitWidth() <= 64) {
+          uint64_t Val = ConstInt->getSExtValue();
           for (auto *DII : DbgUsers)
-            applyOffset(DII, ConstInt->getSExtValue());
+            if (BI->getOpcode() == Instruction::Add)
+              applyOffset(DII, Val);
+            else if (BI->getOpcode() == Instruction::Or)
+              applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
+        }
   } else if (isa<LoadInst>(&I)) {
     MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
     for (auto *DII : DbgUsers) {
