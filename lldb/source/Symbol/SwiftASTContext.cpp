@@ -1103,7 +1103,7 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
       m_extra_type_info_cache(), m_swift_type_map() {
   // Set the module-cache path if it has been specified:
   if (target) {
-    FileSpec &module_cache = target->GetModuleCachePath();
+    FileSpec &module_cache = target->GetClangModulesCachePath();
     if (module_cache && module_cache.Exists()) {
 
       std::string module_cache_path = module_cache.GetPath();
