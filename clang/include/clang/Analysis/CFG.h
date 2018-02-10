@@ -163,6 +163,8 @@ public:
 
   bool isNull() const { return Trigger.isNull(); }
 
+  TriggerTy getTrigger() const { return Trigger; }
+
   const Stmt *getTriggerStmt() const {
     return Trigger.dyn_cast<Stmt *>();
   }
@@ -191,6 +193,14 @@ public:
 
   const ConstructionContext *getConstructionContext() const {
     return static_cast<ConstructionContext *>(Data2.getPointer());
+  }
+
+  QualType getType() const {
+    return cast<CXXConstructExpr>(getStmt())->getType();
+  }
+
+  ConstructionContext::TriggerTy getTrigger() const {
+    return getConstructionContext()->getTrigger();
   }
 
   const Stmt *getTriggerStmt() const {
