@@ -1,6 +1,17 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks %s > %t 2>&1
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
+
+// This file tests how we construct two different flavors of the Clang CFG -
+// the CFG used by the Sema analysis-based warnings and the CFG used by the
+// static analyzer. The difference in the behavior is checked via FileCheck
+// prefixes (WARNINGS and ANALYZER respectively). When introducing new analyzer
+// flags, no new run lines should be added - just these flags would go to the
+// respective line depending on where is it turned on and where is it turned
+// off. Feel free to add tests that test only one of the CFG flavors if you're
+// not sure how the other flavor is supposed to work in your case.
 
 // expected-no-diagnostics
 
@@ -64,7 +75,8 @@ void testBlockWithCaptureByReference() {
 
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
-// CHECK-NEXT:   2: [B1.1] (CXXConstructExpr, struct StructWithCopyConstructor)
+// WARNINGS-NEXT:   2: [B1.1] (CXXConstructExpr, struct StructWithCopyConstructor)
+// ANALYZER-NEXT:   2: [B1.1] (CXXConstructExpr, [B1.3], struct StructWithCopyConstructor)
 // CHECK-NEXT:   3: StructWithCopyConstructor s(5) __attribute__((blocks("byref")));
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)

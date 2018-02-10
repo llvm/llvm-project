@@ -72,8 +72,8 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 } // end namespace llvm
 
 static cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input>"));
-static cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
-                                           cl::init("-"));
+static cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("[ <output> ]"));
+
 static cl::opt<std::string>
     OutputFormat("O", cl::desc("Set output format to one of the following:"
                                "\n\tbinary"));
@@ -340,7 +340,9 @@ int main(int argc, char **argv) {
 
   auto Reader = CreateReader();
   auto Obj = Reader->create();
-  auto Writer = CreateWriter(*Obj, OutputFilename);
+  StringRef Output =
+      OutputFilename.getNumOccurrences() ? OutputFilename : InputFilename;
+  auto Writer = CreateWriter(*Obj, Output);
   HandleArgs(*Obj, *Reader);
   Writer->finalize();
   Writer->write();
