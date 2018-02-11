@@ -7691,8 +7691,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     // If the type of the setcc is larger (say, i8) then the value of the high
     // bit depends on getBooleanContents(), so ask TLI for a real "true" value
     // of the appropriate width.
-    SDValue ExtTrueVal = (SetCCWidth == 1) ? DAG.getAllOnesConstant(DL, VT)
-                                           : TLI.getConstTrueVal(DAG, VT, DL);
+    SDValue ExtTrueVal = (SetCCWidth == 1)
+                             ? DAG.getAllOnesConstant(DL, VT)
+                             : DAG.getBoolConstant(true, DL, VT, N00VT);
     SDValue Zero = DAG.getConstant(0, DL, VT);
     if (SDValue SCC =
             SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
