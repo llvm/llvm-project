@@ -21,6 +21,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include <cstdio>
 #include <memory>
@@ -121,6 +122,10 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   bool OldCollectStats = PrintStats;
   std::swap(OldCollectStats, S.CollectStats);
 
+  // Initialize the template instantiation observer chain.
+  // FIXME: See note on "finalize" below.
+  initialize(S.TemplateInstCallbacks, S);
+
   ASTConsumer *Consumer = &S.getASTConsumer();
 
   std::unique_ptr<Parser> ParseOP(
@@ -157,6 +162,13 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     Consumer->HandleTopLevelDecl(DeclGroupRef(D));
   
   Consumer->HandleTranslationUnit(S.getASTContext());
+
+  // Finalize the template instantiation observer chain.
+  // FIXME: This (and init.) should be done in the Sema class, but because
+  // Sema does not have a reliable "Finalize" function (it has a
+  // destructor, but it is not guaranteed to be called ("-disable-free")).
+  // So, do the initialization above and do the finalization here:
+  finalize(S.TemplateInstCallbacks, S);
 
   std::swap(OldCollectStats, S.CollectStats);
   if (PrintStats) {

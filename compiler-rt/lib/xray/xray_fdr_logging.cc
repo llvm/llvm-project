@@ -136,8 +136,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
       retryingWriteAll(Fd, reinterpret_cast<char *>(&ExtentsRecord),
                        reinterpret_cast<char *>(&ExtentsRecord) +
                            sizeof(MetadataRecord));
-      retryingWriteAll(Fd, reinterpret_cast<char *>(B.Buffer),
-                       reinterpret_cast<char *>(B.Buffer) + BufferExtents);
+      retryingWriteAll(Fd, reinterpret_cast<char *>(B.Data),
+                       reinterpret_cast<char *>(B.Data) + BufferExtents);
     }
   });
 
@@ -341,7 +341,7 @@ XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
       auto EC = TLD.BQ->releaseBuffer(TLD.Buffer);
       if (EC != BufferQueue::ErrorCode::Ok)
         Report("At thread exit, failed to release buffer at %p; error=%s\n",
-               TLD.Buffer.Buffer, BufferQueue::getErrorString(EC));
+               TLD.Buffer.Data, BufferQueue::getErrorString(EC));
     });
     return false;
   }();

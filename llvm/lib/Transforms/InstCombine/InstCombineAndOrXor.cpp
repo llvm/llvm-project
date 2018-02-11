@@ -2284,16 +2284,18 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     // the 'not' by inverting the constant and using the opposite shift type.
     // Canonicalization rules ensure that only a negative constant uses 'ashr',
     // but we must check that in case that transform has not fired yet.
-    const APInt *C;
-    if (match(NotVal, m_AShr(m_APInt(C), m_Value(Y))) && C->isNegative()) {
+    Constant *C;
+    if (match(NotVal, m_AShr(m_Constant(C), m_Value(Y))) &&
+        match(C, m_Negative())) {
       // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
-      Constant *NotC = ConstantInt::get(I.getType(), ~(*C));
+      Constant *NotC = ConstantExpr::getNot(C);
       return BinaryOperator::CreateLShr(NotC, Y);
     }
 
-    if (match(NotVal, m_LShr(m_APInt(C), m_Value(Y))) && C->isNonNegative()) {
+    if (match(NotVal, m_LShr(m_Constant(C), m_Value(Y))) &&
+        match(C, m_NonNegative())) {
       // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
-      Constant *NotC = ConstantInt::get(I.getType(), ~(*C));
+      Constant *NotC = ConstantExpr::getNot(C);
       return BinaryOperator::CreateAShr(NotC, Y);
     }
   }
