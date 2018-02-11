@@ -35,11 +35,12 @@ TapirTargetType clang::parseTapirTarget(const ArgList &Args) {
   TapirTargetType TapirTarget = TapirTargetType::None;
   if (const Arg *A = Args.getLastArg(options::OPT_ftapir_EQ))
     TapirTarget = llvm::StringSwitch<TapirTargetType>(A->getValue())
+      .Case("none", TapirTargetType::None)
       .Case("serial", TapirTargetType::Serial)
       .Case("cilk", TapirTargetType::Cilk)
       .Case("openmp", TapirTargetType::OpenMP)
       .Case("cilkr", TapirTargetType::CilkR)
-      .Default(TapirTargetType::None);
+      .Default(TapirTargetType::Last_TapirTargetType);
 
   return TapirTarget;
 }

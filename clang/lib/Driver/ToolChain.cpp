@@ -1047,7 +1047,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
 void ToolChain::AddTapirRuntimeLibArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) const {
   TapirTargetType TapirTarget = parseTapirTarget(Args);
-  if (TapirTarget == TapirTargetType::None)
+  if (TapirTarget == TapirTargetType::Last_TapirTargetType)
     if (const Arg *A = Args.getLastArg(options::OPT_ftapir_EQ))
       getDriver().Diag(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                     << A->getValue();
