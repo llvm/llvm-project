@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements several utility functions for operating with Tapir.
+// This file implements several utility functions for lowering Tapir.
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,7 +26,7 @@ using namespace llvm;
 #define DEBUG_TYPE "tapir"
 
 TapirTarget *llvm::getTapirTargetFromType(TapirTargetType Type) {
-  switch(Type) {
+  switch (Type) {
   case TapirTargetType::Cilk:
     return new CilkABI();
   case TapirTargetType::OpenMP:
@@ -36,9 +36,9 @@ TapirTarget *llvm::getTapirTargetFromType(TapirTargetType Type) {
   case TapirTargetType::None:
   case TapirTargetType::Serial:
     return nullptr;
+  default:
+    llvm_unreachable("Invalid TapirTargetType");
   }
-
-  llvm_unreachable("Invalid TapirTargetType");
 }
 
 bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,

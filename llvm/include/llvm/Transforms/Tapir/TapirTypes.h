@@ -1,4 +1,4 @@
-//===- TapirTypes.h - Tapir types               ----*- C++ -*--===//
+//===- TapirTypes.h - Tapir types ------------------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass is a simple pass wrapper around the PromoteMemToReg function call
-// exposed by the Utils library.
+// This file enumerates the available Tapir lowering targets.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,11 +17,12 @@
 namespace llvm {
 
 enum class TapirTargetType {
-  None = 0,
-  Serial = 1,
-  Cilk = 2,
-  OpenMP = 3,
-  CilkR = 4,
+  None,    // Perform no lowering
+  Serial,  // FIXME: Make this option useful.  Perhaps only outline tasks?
+  Cilk,    // Lower to the Cilk Plus ABI
+  OpenMP,  // Lower to OpenMP
+  CilkR,   // Lower to the CilkR ABI
+  Last_TapirTargetType
 };
 
 } // end namespace llvm
