@@ -8060,6 +8060,29 @@ static Value *EmitX86Select(CodeGenFunction &CGF,
   return CGF.Builder.CreateSelect(Mask, Op0, Op1);
 }
 
+static Value *EmitX86MaskedCompareResult(CodeGenFunction &CGF, Value *Cmp,
+                                         unsigned NumElts, Value *MaskIn) {
+  if (MaskIn) {
+    const auto *C = dyn_cast<Constant>(MaskIn);
+    if (!C || !C->isAllOnesValue())
+      Cmp = CGF.Builder.CreateAnd(Cmp, getMaskVecValue(CGF, MaskIn, NumElts));
+  }
+
+  if (NumElts < 8) {
+    uint32_t Indices[8];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+    for (unsigned i = NumElts; i != 8; ++i)
+      Indices[i] = i % NumElts + NumElts;
+    Cmp = CGF.Builder.CreateShuffleVector(
+        Cmp, llvm::Constant::getNullValue(Cmp->getType()), Indices);
+  }
+
+  return CGF.Builder.CreateBitCast(Cmp,
+                                   IntegerType::get(CGF.getLLVMContext(),
+                                                    std::max(NumElts, 8U)));
+}
+
 static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
                                    bool Signed, ArrayRef<Value *> Ops) {
   assert((Ops.size() == 2 || Ops.size() == 4) &&
@@ -8087,24 +8110,11 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
     Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
   }
 
-  if (Ops.size() == 4) {
-    const auto *C = dyn_cast<Constant>(Ops[3]);
-    if (!C || !C->isAllOnesValue())
-      Cmp = CGF.Builder.CreateAnd(Cmp, getMaskVecValue(CGF, Ops[3], NumElts));
-  }
+  Value *MaskIn = nullptr;
+  if (Ops.size() == 4)
+    MaskIn = Ops[3];
 
-  if (NumElts < 8) {
-    uint32_t Indices[8];
-    for (unsigned i = 0; i != NumElts; ++i)
-      Indices[i] = i;
-    for (unsigned i = NumElts; i != 8; ++i)
-      Indices[i] = i % NumElts + NumElts;
-    Cmp = CGF.Builder.CreateShuffleVector(
-        Cmp, llvm::Constant::getNullValue(Cmp->getType()), Indices);
-  }
-  return CGF.Builder.CreateBitCast(Cmp,
-                                   IntegerType::get(CGF.getLLVMContext(),
-                                                    std::max(NumElts, 8U)));
+  return EmitX86MaskedCompareResult(CGF, Cmp, NumElts, MaskIn);
 }
 
 static Value *EmitX86ConvertToMask(CodeGenFunction &CGF, Value *In) {
@@ -8880,6 +8890,43 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Builder.CreateDefaultAlignedStore(Builder.CreateExtractValue(Call, 0),
                                       Ops[0]);
     return Builder.CreateExtractValue(Call, 1);
+  }
+
+  case X86::BI__builtin_ia32_cmpps128_mask:
+  case X86::BI__builtin_ia32_cmpps256_mask:
+  case X86::BI__builtin_ia32_cmpps512_mask:
+  case X86::BI__builtin_ia32_cmppd128_mask:
+  case X86::BI__builtin_ia32_cmppd256_mask:
+  case X86::BI__builtin_ia32_cmppd512_mask: {
+    unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+    Value *MaskIn = Ops[3];
+    Ops.erase(&Ops[3]);
+
+    Intrinsic::ID ID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_cmpps128_mask:
+      ID = Intrinsic::x86_avx512_mask_cmp_ps_128;
+      break;
+    case X86::BI__builtin_ia32_cmpps256_mask:
+      ID = Intrinsic::x86_avx512_mask_cmp_ps_256;
+      break;
+    case X86::BI__builtin_ia32_cmpps512_mask:
+      ID = Intrinsic::x86_avx512_mask_cmp_ps_512;
+      break;
+    case X86::BI__builtin_ia32_cmppd128_mask:
+      ID = Intrinsic::x86_avx512_mask_cmp_pd_128;
+      break;
+    case X86::BI__builtin_ia32_cmppd256_mask:
+      ID = Intrinsic::x86_avx512_mask_cmp_pd_256;
+      break;
+    case X86::BI__builtin_ia32_cmppd512_mask:
+      ID = Intrinsic::x86_avx512_mask_cmp_pd_512;
+      break;
+    }
+
+    Value *Cmp = Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
+    return EmitX86MaskedCompareResult(*this, Cmp, NumElts, MaskIn);
   }
 
   // SSE packed comparison intrinsics

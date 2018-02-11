@@ -3860,3 +3860,27 @@ entry:
   %res = call i32 @llvm.x86.avx512.kortestz.w(i16 %6, i16 %7)
   ret i32 %res
 }
+
+define i16 @test_cmpps(<16 x float> %a, <16 x float> %b) {
+; CHECK-LABEL: test_cmpps:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a, <16 x float> %b, i32 2, i16 -1, i32 8)
+  ret i16 %res
+}
+declare i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> , <16 x float> , i32, i16, i32)
+
+define i8 @test_cmppd(<8 x double> %a, <8 x double> %b) {
+; CHECK-LABEL: test_cmppd:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vcmpneqpd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %res = call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %a, <8 x double> %b, i32 4, i8 -1, i32 4)
+  ret i8 %res
+}
+declare i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> , <8 x double> , i32, i8, i32)
