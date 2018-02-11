@@ -1914,6 +1914,14 @@ class TestBase(Base):
         # decorators.
         Base.setUp(self)
 
+        # Set the clang modules cache path.
+        if self.child:
+            assert(self.getDebugInfo() == 'default')
+            mod_cache = os.path.join(self.getBuildDir(), "module-cache")
+            self.runCmd("settings set target.clang-modules-cache-path "
+                        + mod_cache)
+
+
         if "LLDB_MAX_LAUNCH_COUNT" in os.environ:
             self.maxLaunchCount = int(os.environ["LLDB_MAX_LAUNCH_COUNT"])
 

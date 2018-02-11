@@ -5926,7 +5926,12 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
       // Ignore A if it's already in a group or isn't the same kind of memory
       // operation as B.
-      if (isInterleaved(A) || A->mayReadFromMemory() != B->mayReadFromMemory())
+      // Note that mayReadFromMemory() isn't mutually exclusive to mayWriteToMemory
+      // in the case of atomic loads. We shouldn't see those here, canVectorizeMemory()
+      // should have returned false - except for the case we asked for optimization
+      // remarks.
+      if (isInterleaved(A) || (A->mayReadFromMemory() != B->mayReadFromMemory())
+          || (A->mayWriteToMemory() != B->mayWriteToMemory()))
         continue;
 
       // Check rules 1 and 2. Ignore A if its stride or size is different from

@@ -99,103 +99,72 @@ while.end:                                        ; preds = %while.body, %entry
 define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    movaps %xmm3, %xmm8
-; CHECK-NEXT:    xorps %xmm3, %xmm3
-; CHECK-NEXT:    pxor %xmm6, %xmm6
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm6
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255]
-; CHECK-NEXT:    pand %xmm6, %xmm5
-; CHECK-NEXT:    packuswb %xmm5, %xmm5
-; CHECK-NEXT:    packuswb %xmm5, %xmm5
-; CHECK-NEXT:    cvttps2dq %xmm0, %xmm13
-; CHECK-NEXT:    movdqa %xmm0, %xmm10
-; CHECK-NEXT:    cmpltps %xmm3, %xmm10
-; CHECK-NEXT:    movdqa %xmm6, %xmm9
-; CHECK-NEXT:    pxor %xmm10, %xmm9
-; CHECK-NEXT:    cvttps2dq %xmm1, %xmm14
-; CHECK-NEXT:    movaps %xmm1, %xmm11
-; CHECK-NEXT:    cmpltps %xmm3, %xmm11
-; CHECK-NEXT:    movdqa %xmm6, %xmm7
-; CHECK-NEXT:    pxor %xmm11, %xmm7
-; CHECK-NEXT:    cvttps2dq %xmm2, %xmm1
-; CHECK-NEXT:    cmpltps %xmm3, %xmm2
-; CHECK-NEXT:    movdqa %xmm6, %xmm4
-; CHECK-NEXT:    pxor %xmm2, %xmm4
-; CHECK-NEXT:    cvttps2dq %xmm8, %xmm12
-; CHECK-NEXT:    cmpltps %xmm3, %xmm8
-; CHECK-NEXT:    pxor %xmm8, %xmm6
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
-; CHECK-NEXT:    pand %xmm0, %xmm6
-; CHECK-NEXT:    pand %xmm0, %xmm4
-; CHECK-NEXT:    pand %xmm0, %xmm7
-; CHECK-NEXT:    pand %xmm0, %xmm9
-; CHECK-NEXT:    cvtdq2ps %xmm13, %xmm15
-; CHECK-NEXT:    cvtdq2ps %xmm14, %xmm14
-; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm13
-; CHECK-NEXT:    cvtdq2ps %xmm12, %xmm12
-; CHECK-NEXT:    pxor %xmm0, %xmm0
-; CHECK-NEXT:    cmpltps %xmm12, %xmm0
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    cmpltps %xmm13, %xmm1
-; CHECK-NEXT:    packssdw %xmm0, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cmpltps %xmm14, %xmm0
-; CHECK-NEXT:    cmpltps %xmm15, %xmm3
-; CHECK-NEXT:    packssdw %xmm0, %xmm3
-; CHECK-NEXT:    packsswb %xmm1, %xmm3
-; CHECK-NEXT:    pand %xmm5, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, %xmm1
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; CHECK-NEXT:    pslld $31, %xmm0
-; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; CHECK-NEXT:    pslld $31, %xmm1
-; CHECK-NEXT:    psrad $31, %xmm1
-; CHECK-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm0[8],xmm3[9],xmm0[9],xmm3[10],xmm0[10],xmm3[11],xmm0[11],xmm3[12],xmm0[12],xmm3[13],xmm0[13],xmm3[14],xmm0[14],xmm3[15],xmm0[15]
-; CHECK-NEXT:    movdqa %xmm3, %xmm5
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
-; CHECK-NEXT:    pslld $31, %xmm5
-; CHECK-NEXT:    psrad $31, %xmm5
-; CHECK-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; CHECK-NEXT:    pslld $31, %xmm3
-; CHECK-NEXT:    psrad $31, %xmm3
-; CHECK-NEXT:    pxor %xmm9, %xmm0
-; CHECK-NEXT:    pxor %xmm15, %xmm0
-; CHECK-NEXT:    pxor %xmm7, %xmm1
-; CHECK-NEXT:    pxor %xmm14, %xmm1
-; CHECK-NEXT:    pxor %xmm4, %xmm5
-; CHECK-NEXT:    pxor %xmm13, %xmm5
-; CHECK-NEXT:    pxor %xmm6, %xmm3
-; CHECK-NEXT:    pxor %xmm12, %xmm3
-; CHECK-NEXT:    pand %xmm8, %xmm3
-; CHECK-NEXT:    pand %xmm2, %xmm5
-; CHECK-NEXT:    pand %xmm11, %xmm1
-; CHECK-NEXT:    pand %xmm10, %xmm0
-; CHECK-NEXT:    pxor %xmm9, %xmm0
-; CHECK-NEXT:    pxor %xmm7, %xmm1
-; CHECK-NEXT:    pxor %xmm4, %xmm5
-; CHECK-NEXT:    pxor %xmm6, %xmm3
-; CHECK-NEXT:    movdqa %xmm5, %xmm2
+; CHECK-NEXT:    xorps %xmm8, %xmm8
+; CHECK-NEXT:    cvttps2dq %xmm3, %xmm9
+; CHECK-NEXT:    movaps %xmm3, %xmm13
+; CHECK-NEXT:    cmpltps %xmm8, %xmm13
+; CHECK-NEXT:    movaps {{.*#+}} xmm7 = [1,1,1,1]
+; CHECK-NEXT:    movaps %xmm13, %xmm3
+; CHECK-NEXT:    andps %xmm7, %xmm3
+; CHECK-NEXT:    cvttps2dq %xmm2, %xmm10
+; CHECK-NEXT:    movaps %xmm2, %xmm5
+; CHECK-NEXT:    cmpltps %xmm8, %xmm5
+; CHECK-NEXT:    movaps %xmm5, %xmm2
+; CHECK-NEXT:    andps %xmm7, %xmm2
+; CHECK-NEXT:    cvttps2dq %xmm1, %xmm11
+; CHECK-NEXT:    movaps %xmm1, %xmm4
+; CHECK-NEXT:    cmpltps %xmm8, %xmm4
+; CHECK-NEXT:    movaps %xmm4, %xmm1
+; CHECK-NEXT:    andps %xmm7, %xmm1
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm12
+; CHECK-NEXT:    movaps %xmm0, %xmm6
+; CHECK-NEXT:    cmpltps %xmm8, %xmm6
+; CHECK-NEXT:    andps %xmm6, %xmm7
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm6
+; CHECK-NEXT:    movaps {{.*#+}} xmm14 = [5,6,7,8]
+; CHECK-NEXT:    orps %xmm14, %xmm4
+; CHECK-NEXT:    movaps {{.*#+}} xmm15 = [9,10,11,12]
+; CHECK-NEXT:    orps %xmm15, %xmm5
+; CHECK-NEXT:    movaps {{.*#+}} xmm8 = [13,14,15,16]
+; CHECK-NEXT:    orps %xmm8, %xmm13
+; CHECK-NEXT:    cvtdq2ps %xmm12, %xmm0
+; CHECK-NEXT:    cvtdq2ps %xmm11, %xmm11
+; CHECK-NEXT:    cvtdq2ps %xmm10, %xmm10
+; CHECK-NEXT:    cvtdq2ps %xmm9, %xmm9
+; CHECK-NEXT:    andps %xmm8, %xmm9
+; CHECK-NEXT:    andps %xmm15, %xmm10
+; CHECK-NEXT:    andps %xmm14, %xmm11
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps %xmm7, %xmm0
+; CHECK-NEXT:    andps %xmm6, %xmm0
+; CHECK-NEXT:    xorps %xmm1, %xmm11
+; CHECK-NEXT:    andps %xmm4, %xmm11
+; CHECK-NEXT:    xorps %xmm2, %xmm10
+; CHECK-NEXT:    andps %xmm5, %xmm10
+; CHECK-NEXT:    xorps %xmm3, %xmm9
+; CHECK-NEXT:    andps %xmm13, %xmm9
+; CHECK-NEXT:    xorps %xmm7, %xmm0
+; CHECK-NEXT:    xorps %xmm11, %xmm1
+; CHECK-NEXT:    xorps %xmm10, %xmm2
+; CHECK-NEXT:    xorps %xmm9, %xmm3
 ; CHECK-NEXT:    retq
 bb:
-  %v3 = icmp slt <16 x i32> undef, zeroinitializer
+  %v3 = icmp slt <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, zeroinitializer
   %v14 = zext <16 x i1> %v3 to <16 x i32>
   %v16 = fcmp olt <16 x float> %x, zeroinitializer
   %v17 = sext <16 x i1> %v16 to <16 x i32>
   %v18 = zext <16 x i1> %v16 to <16 x i32>
   %v19 = xor <16 x i32> %v14, %v18
-  %v20 = or <16 x i32> %v17, undef
+  %v20 = or <16 x i32> %v17, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   %v21 = fptosi <16 x float> %x to <16 x i32>
   %v22 = sitofp <16 x i32> %v21 to <16 x float>
   %v69 = fcmp ogt <16 x float> %v22, zeroinitializer
   %v75 = and <16 x i1> %v69, %v3
   %v77 = bitcast <16 x float> %v22 to <16 x i32>
   %v79 = sext <16 x i1> %v75 to <16 x i32>
-  %v80 = and <16 x i32> undef, %v79
+  %v80 = and <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, %v79
   %v81 = xor <16 x i32> %v77, %v80
-  %v82 = and <16 x i32> undef, %v81
+  %v82 = and <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, %v81
   %v83 = xor <16 x i32> %v19, %v82
   %v84 = and <16 x i32> %v83, %v20
   %v85 = xor <16 x i32> %v19, %v84

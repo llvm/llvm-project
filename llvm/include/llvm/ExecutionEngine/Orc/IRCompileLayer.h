@@ -78,7 +78,7 @@ public:
 
   /// @brief Immediately emit and finalize the module represented by the given
   ///        handle.
-  /// @param H Handle for module to emit/finalize.
+  /// @param K The VModuleKey for the module to emit/finalize.
   Error emitAndFinalize(VModuleKey K) { return BaseLayer.emitAndFinalize(K); }
 
 private:

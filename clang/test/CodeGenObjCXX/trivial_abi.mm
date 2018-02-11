@@ -81,7 +81,6 @@ void testCallStrong(Strong *a) {
 }
 
 // CHECK: define i64 @_Z16testReturnStrongP6Strong(%[[STRUCT_STRONG]]* %[[A:.*]])
-// CHECK: entry:
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONG]]*, align 8
 // CHECK: store %[[STRUCT_STRONG]]* %[[A]], %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8

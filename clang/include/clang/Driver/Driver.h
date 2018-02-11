@@ -572,6 +572,8 @@ public:
   /// no extra characters remaining at the end.
   static bool GetReleaseVersion(StringRef Str,
                                 MutableArrayRef<unsigned> Digits);
+  /// Compute the default -fmodule-cache-path.
+  static void getDefaultModuleCachePath(SmallVectorImpl<char> &Result);
 };
 
 /// \return True if the last defined optimization level is -Ofast.
