@@ -396,7 +396,7 @@ static void Print(const Twine &Prefix, InputSection *S) {
     return;
   std::string File = S->File ? S->File->getName() : "<internal>";
   message(Prefix + " section '" + S->Name + "' from file '" + File + "'");
-};
+}
 
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
