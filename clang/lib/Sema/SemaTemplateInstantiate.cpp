@@ -25,6 +25,7 @@
 #include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "clang/Sema/TemplateInstCallback.h"
 
 using namespace clang;
 using namespace sema;
@@ -199,6 +200,10 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case DeclaringSpecialMember:
   case DefiningSynthesizedFunction:
     return false;
+       
+  // This function should never be called when Kind's value is Memoization.
+  case Memoization:
+    break;
   }
 
   llvm_unreachable("Invalid SynthesisKind!");
@@ -235,6 +240,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
         !SemaRef.InstantiatingSpecializations
              .insert(std::make_pair(Inst.Entity->getCanonicalDecl(), Inst.Kind))
              .second;
+    atTemplateBegin(SemaRef.TemplateInstCallbacks, SemaRef, Inst);
   }
 }
 
@@ -394,8 +400,10 @@ void Sema::InstantiatingTemplate::Clear() {
           std::make_pair(Active.Entity, Active.Kind));
     }
 
-    SemaRef.popCodeSynthesisContext();
+    atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef,
+                  SemaRef.CodeSynthesisContexts.back());
 
+    SemaRef.popCodeSynthesisContext();
     Invalid = true;
   }
 }
@@ -626,7 +634,7 @@ void Sema::PrintInstantiationStack() {
         << cast<CXXRecordDecl>(Active->Entity) << Active->SpecialMember;
       break;
 
-    case CodeSynthesisContext::DefiningSynthesizedFunction:
+    case CodeSynthesisContext::DefiningSynthesizedFunction: {
       // FIXME: For synthesized members other than special members, produce a note.
       auto *MD = dyn_cast<CXXMethodDecl>(Active->Entity);
       auto CSM = MD ? getSpecialMember(MD) : CXXInvalid;
@@ -635,6 +643,10 @@ void Sema::PrintInstantiationStack() {
                      diag::note_member_synthesized_at)
           << CSM << Context.getTagDeclType(MD->getParent());
       }
+      break;
+    }
+
+    case CodeSynthesisContext::Memoization:
       break;
     }
   }
@@ -682,6 +694,9 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       // This happens in a context unrelated to template instantiation, so
       // there is no SFINAE.
       return None;
+
+    case CodeSynthesisContext::Memoization:
+      break;
     }
 
     // The inner context was transparent for SFINAE. If it occurred within a

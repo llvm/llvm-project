@@ -31,6 +31,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -7565,6 +7566,14 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         diagnoseMissingImport(Loc, SuggestedDef, MissingImportKind::Definition,
                               /*Recover*/TreatAsComplete);
       return !TreatAsComplete;
+    } else if (Def && !TemplateInstCallbacks.empty()) {
+      CodeSynthesisContext TempInst;
+      TempInst.Kind = CodeSynthesisContext::Memoization;
+      TempInst.Template = Def;
+      TempInst.Entity = Def;
+      TempInst.PointOfInstantiation = Loc;
+      atTemplateBegin(TemplateInstCallbacks, *this, TempInst);
+      atTemplateEnd(TemplateInstCallbacks, *this, TempInst);
     }
 
     return false;

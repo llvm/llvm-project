@@ -1,9 +1,17 @@
 import re
-import string
+import sys
 
 from . import common
 
+if sys.version_info[0] > 2:
+  class string:
+    expandtabs = str.expandtabs
+else:
+  import string
+
 # RegEx: this is where the magic happens.
+
+##### Assembly parser
 
 ASM_FUNCTION_X86_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
@@ -197,3 +205,29 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
   common.build_function_body_dictionary(
           function_re, scrubber, [args], raw_tool_output, prefixes,
           func_dict, args.verbose)
+
+##### Generator of assembly CHECK lines
+
+def add_asm_checks(output_lines, comment_marker, run_list, func_dict, func_name):
+  printed_prefixes = []
+  for p in run_list:
+    checkprefixes = p[0]
+    for checkprefix in checkprefixes:
+      if checkprefix in printed_prefixes:
+        break
+      # TODO func_dict[checkprefix] may be None, '' or not exist.
+      # Fix the call sites.
+      if func_name not in func_dict[checkprefix] or not func_dict[checkprefix][func_name]:
+        continue
+      # Add some space between different check prefixes.
+      if len(printed_prefixes) != 0:
+        output_lines.append(comment_marker)
+      printed_prefixes.append(checkprefix)
+      output_lines.append('%s %s-LABEL: %s:' % (comment_marker, checkprefix, func_name))
+      func_body = func_dict[checkprefix][func_name].splitlines()
+      output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
+      for func_line in func_body[1:]:
+        output_lines.append('%s %s-NEXT:  %s' % (comment_marker, checkprefix, func_line))
+      # Add space between different check prefixes and the first line of code.
+      # output_lines.append(';')
+      break
