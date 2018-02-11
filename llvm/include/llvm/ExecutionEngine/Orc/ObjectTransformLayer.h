@@ -59,7 +59,7 @@ public:
   /// @brief Get the address of the given symbol in the context of the set of
   ///        objects represented by the VModuleKey K. This call is forwarded to
   ///        the base layer's implementation.
-  /// @param H The handle for the object set to search in.
+  /// @param K The VModuleKey associated with the object set to search in.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it is found in the

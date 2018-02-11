@@ -790,14 +790,23 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FABS,               MVT::v2f64, Custom);
     setOperationAction(ISD::FCOPYSIGN,          MVT::v2f64, Custom);
 
-    setOperationAction(ISD::SMAX,               MVT::v8i16, Legal);
-    setOperationAction(ISD::UMAX,               MVT::v16i8, Legal);
-    setOperationAction(ISD::SMIN,               MVT::v8i16, Legal);
-    setOperationAction(ISD::UMIN,               MVT::v16i8, Legal);
+    for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
+      setOperationAction(ISD::SMAX, VT, VT == MVT::v8i16 ? Legal : Custom);
+      setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
+      setOperationAction(ISD::UMAX, VT, VT == MVT::v16i8 ? Legal : Custom);
+      setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
+    }
 
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v8i16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4i32, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4f32, Custom);
+
+    // Provide custom widening for v2f32 setcc. This is really for VLX when
+    // setcc result type returns v2i1/v4i1 vector for v2f32/v4f32 leading to
+    // type legalization changing the result type to v4i1 during widening.
+    // It works fine for SSE2 and is probably faster so no need to qualify with
+    // VLX support.
+    setOperationAction(ISD::SETCC,               MVT::v2i32, Custom);
 
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SETCC,              VT, Custom);
@@ -1060,6 +1069,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MULHU,     MVT::v32i8,  Custom);
     setOperationAction(ISD::MULHS,     MVT::v32i8,  Custom);
 
+    setOperationAction(ISD::SMAX,      MVT::v4i64,  Custom);
+    setOperationAction(ISD::UMAX,      MVT::v4i64,  Custom);
+    setOperationAction(ISD::SMIN,      MVT::v4i64,  Custom);
+    setOperationAction(ISD::UMIN,      MVT::v4i64,  Custom);
+
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32 }) {
       setOperationAction(ISD::ABS,  VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::SMAX, VT, HasInt256 ? Legal : Custom);
@@ -1137,12 +1151,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  // This block controls legalization of the mask vector sizes that are
+  // available with AVX512. 512-bit vectors are in a separate block controlled
+  // by useAVX512Regs.
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX512()) {
-    addRegisterClass(MVT::v16i32, &X86::VR512RegClass);
-    addRegisterClass(MVT::v16f32, &X86::VR512RegClass);
-    addRegisterClass(MVT::v8i64,  &X86::VR512RegClass);
-    addRegisterClass(MVT::v8f64,  &X86::VR512RegClass);
-
     addRegisterClass(MVT::v1i1,   &X86::VK1RegClass);
     addRegisterClass(MVT::v2i1,   &X86::VK2RegClass);
     addRegisterClass(MVT::v4i1,   &X86::VK4RegClass);
@@ -1153,17 +1165,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v1i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v1i1, Custom);
 
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v16i1, MVT::v16i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v16i1, MVT::v16i32);
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i1,  MVT::v8i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v8i1,  MVT::v8i32);
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i1,  MVT::v4i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v4i1,  MVT::v4i32);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v2i1,  Custom);
-
-    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i1, MVT::v16i32);
-    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i1, MVT::v16i32);
     setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v8i1,  MVT::v8i32);
     setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v8i1,  MVT::v8i32);
     setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v4i1,  MVT::v4i32);
@@ -1202,6 +1203,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v16i1, Custom);
     for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+  }
+
+  // This block controls legalization for 512-bit operations with 32/64 bit
+  // elements. 512-bits can be disabled based on prefer-vector-width and
+  // required-vector-width function attributes.
+  if (!Subtarget.useSoftFloat() && Subtarget.useAVX512Regs()) {
+    addRegisterClass(MVT::v16i32, &X86::VR512RegClass);
+    addRegisterClass(MVT::v16f32, &X86::VR512RegClass);
+    addRegisterClass(MVT::v8i64,  &X86::VR512RegClass);
+    addRegisterClass(MVT::v8f64,  &X86::VR512RegClass);
 
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v8f32, Legal);
@@ -1224,7 +1235,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT,         MVT::v16i32, Legal);
     setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i16, MVT::v16i32);
     setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i8, MVT::v16i32);
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i1, MVT::v16i32);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i1, MVT::v16i32);
     setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i8, MVT::v16i32);
     setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i16, MVT::v16i32);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
@@ -1354,8 +1367,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }// has  AVX-512
 
-  if (!Subtarget.useSoftFloat() &&
-      (Subtarget.hasAVX512() || Subtarget.hasVLX())) {
+  // This block controls legalization for operations that don't have
+  // pre-AVX512 equivalents. Without VLX we use 512-bit operations for
+  // narrower widths.
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAVX512()) {
     // These operations are handled on non-VLX by artificially widening in
     // isel patterns.
     // TODO: Custom widen in lowering on non-VLX and drop the isel patterns?
@@ -1409,10 +1424,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  // This block control legalization of v32i1/v64i1 which are available with
+  // AVX512BW. 512-bit v32i16 and v64i8 vector legalization is controlled with
+  // useBWIRegs.
   if (!Subtarget.useSoftFloat() && Subtarget.hasBWI()) {
-    addRegisterClass(MVT::v32i16, &X86::VR512RegClass);
-    addRegisterClass(MVT::v64i8,  &X86::VR512RegClass);
-
     addRegisterClass(MVT::v32i1,  &X86::VK32RegClass);
     addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
 
@@ -1442,6 +1457,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
+  }
+
+  // This block controls legalization for v32i16 and v64i8. 512-bits can be
+  // disabled based on prefer-vector-width and required-vector-width function
+  // attributes.
+  if (!Subtarget.useSoftFloat() && Subtarget.useBWIRegs()) {
+    addRegisterClass(MVT::v32i16, &X86::VR512RegClass);
+    addRegisterClass(MVT::v64i8,  &X86::VR512RegClass);
+
     // Extends from v64i1 masks to 512-bit vectors.
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v64i8, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v64i8, Custom);
@@ -1507,8 +1531,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
-      (Subtarget.hasAVX512() || Subtarget.hasVLX())) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI()) {
     for (auto VT : { MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16 }) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
@@ -15754,14 +15777,6 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
                                      DAG.getUNDEF(SrcVT)));
     }
-    if (SrcVT == MVT::v2i1) {
-      // For v2i1, we need to widen to v4i1 first.
-      assert(VT == MVT::v2f64 && "Unexpected type");
-      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Src,
-                        DAG.getUNDEF(MVT::v2i1));
-      return DAG.getNode(X86ISD::CVTSI2P, dl, Op.getValueType(),
-                         DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Src));
-    }
     return SDValue();
   }
 
@@ -16097,15 +16112,6 @@ static SDValue lowerUINT_TO_FP_vec(SDValue Op, SelectionDAG &DAG,
   SDValue N0 = Op.getOperand(0);
   MVT SrcVT = N0.getSimpleValueType();
   SDLoc dl(Op);
-
-  if (SrcVT == MVT::v2i1) {
-    // For v2i1, we need to widen to v4i1 first.
-    assert(Op.getValueType() == MVT::v2f64 && "Unexpected type");
-    N0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, N0,
-                     DAG.getUNDEF(MVT::v2i1));
-    return DAG.getNode(X86ISD::CVTUI2P, dl, MVT::v2f64,
-                       DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v4i32, N0));
-  }
 
   switch (SrcVT.SimpleTy) {
   default:
@@ -17927,6 +17933,11 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
          "Expected operands with same type!");
   assert(VT.getVectorNumElements() == VTOp0.getVectorNumElements() &&
          "Invalid number of packed elements for source and destination!");
+
+  // This is being called by type legalization because v2i32 is marked custom
+  // for result type legalization for v2f32.
+  if (VTOp0 == MVT::v2i32)
+    return SDValue();
 
   if (VT.is128BitVector() && VTOp0.is256BitVector()) {
     // On non-AVX512 targets, a vector of MVT::i1 is promoted by the type
@@ -20343,8 +20354,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8, FPclassMask,
                          DAG.getIntPtrConstant(0, dl));
     }
-    case CMP_MASK:
-    case CMP_MASK_CC: {
+    case CMP_MASK: {
       // Comparison intrinsics with masks.
       // Example of transformation:
       // (i8 (int_x86_avx512_mask_pcmpeq_q_128
@@ -20359,35 +20369,37 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Mask = Op.getOperand((IntrData->Type == CMP_MASK_CC) ? 4 : 3);
       MVT BitcastVT = MVT::getVectorVT(MVT::i1,
                                        Mask.getSimpleValueType().getSizeInBits());
-      SDValue Cmp;
-      if (IntrData->Type == CMP_MASK_CC) {
-        SDValue CC = Op.getOperand(3);
-        CC = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, CC);
-        // We specify 2 possible opcodes for intrinsics with rounding modes.
-        // First, we check if the intrinsic may have non-default rounding mode,
-        // (IntrData->Opc1 != 0), then we check the rounding mode operand.
-        if (IntrData->Opc1 != 0) {
-          SDValue Rnd = Op.getOperand(5);
-          if (!isRoundModeCurDirection(Rnd))
-            Cmp = DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
-                              Op.getOperand(2), CC, Rnd);
-        }
-        //default rounding mode
-        if(!Cmp.getNode())
-            Cmp = DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
-                              Op.getOperand(2), CC);
-
-      } else {
-        assert(IntrData->Type == CMP_MASK && "Unexpected intrinsic type!");
-        Cmp = DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
-                          Op.getOperand(2));
-      }
+      SDValue Cmp = DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
+                                Op.getOperand(2));
       SDValue CmpMask = getVectorMaskingNode(Cmp, Mask, SDValue(),
                                              Subtarget, DAG);
       SDValue Res = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, BitcastVT,
                                 DAG.getUNDEF(BitcastVT), CmpMask,
                                 DAG.getIntPtrConstant(0, dl));
       return DAG.getBitcast(Op.getValueType(), Res);
+    }
+
+    case CMP_MASK_CC: {
+      MVT VT = Op.getOperand(1).getSimpleValueType();
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+      SDValue Cmp;
+      SDValue CC = Op.getOperand(3);
+      CC = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, CC);
+      // We specify 2 possible opcodes for intrinsics with rounding modes.
+      // First, we check if the intrinsic may have non-default rounding mode,
+      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
+      if (IntrData->Opc1 != 0) {
+        SDValue Rnd = Op.getOperand(4);
+        if (!isRoundModeCurDirection(Rnd))
+          Cmp = DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
+                            Op.getOperand(2), CC, Rnd);
+      }
+      //default rounding mode
+      if (!Cmp.getNode())
+        Cmp = DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
+                          Op.getOperand(2), CC);
+
+      return Cmp;
     }
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
@@ -22057,10 +22069,42 @@ static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
-  assert(Op.getSimpleValueType().is256BitVector() &&
-         Op.getSimpleValueType().isInteger() &&
-         "Only handle AVX 256-bit vector integer operation");
-  return Lower256IntArith(Op, DAG);
+  MVT VT = Op.getSimpleValueType();
+
+  // For AVX1 cases, split to use use legal ops (everything but v4i64).
+  if (VT.getScalarType() != MVT::i64 && VT.is256BitVector())
+    return Lower256IntArith(Op, DAG);
+
+  SDLoc DL(Op);
+  unsigned Opcode = Op.getOpcode();
+  SDValue N0 = Op.getOperand(0);
+  SDValue N1 = Op.getOperand(1);
+
+  // For pre-SSE41, we can perform UMIN/UMAX v8i16 by flipping the signbit,
+  // using the SMIN/SMAX instructions and flipping the signbit back.
+  if (VT == MVT::v8i16) {
+    assert((Opcode == ISD::UMIN || Opcode == ISD::UMAX) &&
+           "Unexpected MIN/MAX opcode");
+    SDValue Sign = DAG.getConstant(APInt::getSignedMinValue(16), DL, VT);
+    N0 = DAG.getNode(ISD::XOR, DL, VT, N0, Sign);
+    N1 = DAG.getNode(ISD::XOR, DL, VT, N1, Sign);
+    Opcode = (Opcode == ISD::UMIN ? ISD::SMIN : ISD::SMAX);
+    SDValue Result = DAG.getNode(Opcode, DL, VT, N0, N1);
+    return DAG.getNode(ISD::XOR, DL, VT, Result, Sign);
+  }
+
+  // Else, expand to a compare/select.
+  ISD::CondCode CC;
+  switch (Opcode) {
+  case ISD::SMIN: CC = ISD::CondCode::SETLT;  break;
+  case ISD::SMAX: CC = ISD::CondCode::SETGT;  break;
+  case ISD::UMIN: CC = ISD::CondCode::SETULT; break;
+  case ISD::UMAX: CC = ISD::CondCode::SETUGT; break;
+  default: llvm_unreachable("Unknown MINMAX opcode");
+  }
+
+  SDValue Cond = DAG.getSetCC(DL, VT, N0, N1, CC);
+  return DAG.getSelect(DL, VT, Cond, N0, N1);
 }
 
 static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
@@ -24736,6 +24780,26 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Res = DAG.getNode(X86ISD::AVG, dl, RegVT, InVec0, InVec1);
     if (!ExperimentalVectorWideningLegalization)
       Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, InVT, Res,
+                        DAG.getIntPtrConstant(0, dl));
+    Results.push_back(Res);
+    return;
+  }
+  case ISD::SETCC: {
+    // Widen v2i32 (setcc v2f32). This is really needed for AVX512VL when
+    // setCC result type is v2i1 because type legalzation will end up with
+    // a v4i1 setcc plus an extend.
+    assert(N->getValueType(0) == MVT::v2i32 && "Unexpected type");
+    if (N->getOperand(0).getValueType() != MVT::v2f32)
+      return;
+    SDValue UNDEF = DAG.getUNDEF(MVT::v2f32);
+    SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
+                              N->getOperand(0), UNDEF);
+    SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
+                              N->getOperand(1), UNDEF);
+    SDValue Res = DAG.getNode(ISD::SETCC, dl, MVT::v4i32, LHS, RHS,
+                              N->getOperand(2));
+    if (!ExperimentalVectorWideningLegalization)
+      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
                         DAG.getIntPtrConstant(0, dl));
     Results.push_back(Res);
     return;
@@ -30044,7 +30108,7 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
   EVT VT = N->getValueType(0);
   if ((!Subtarget.hasSSE3() || (VT != MVT::v4f32 && VT != MVT::v2f64)) &&
       (!Subtarget.hasAVX() || (VT != MVT::v8f32 && VT != MVT::v4f64)) &&
-      (!Subtarget.hasAVX512() || (VT != MVT::v16f32 && VT != MVT::v8f64)))
+      (!Subtarget.useAVX512Regs() || (VT != MVT::v16f32 && VT != MVT::v8f64)))
     return false;
 
   // We only handle target-independent shuffles.
@@ -31081,7 +31145,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   unsigned RegSize = 128;
-  if (Subtarget.hasBWI())
+  if (Subtarget.useBWIRegs())
     RegSize = 512;
   else if (Subtarget.hasAVX2())
     RegSize = 256;
@@ -32659,7 +32723,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.getProcFamily() != X86Subtarget::IntelKNL &&
       ((VT == MVT::v4i32 && Subtarget.hasSSE2()) ||
        (VT == MVT::v8i32 && Subtarget.hasAVX2()) ||
-       (VT == MVT::v16i32 && Subtarget.hasBWI()))) {
+       (VT == MVT::v16i32 && Subtarget.useBWIRegs()))) {
     SDValue N0 = N->getOperand(0);
     SDValue N1 = N->getOperand(1);
     APInt Mask17 = APInt::getHighBitsSet(32, 17);
@@ -34185,7 +34249,7 @@ SDValue SplitBinaryOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                                SDValue Op1, F Builder) {
   assert(Subtarget.hasSSE2() && "Target assumed to support at least SSE2");
   unsigned NumSubs = 1;
-  if (Subtarget.hasBWI()) {
+  if (Subtarget.useBWIRegs()) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -36176,7 +36240,7 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   // Also use this if we don't have SSE41 to allow the legalizer do its job.
   if (!Subtarget.hasSSE41() || VT.is128BitVector() ||
       (VT.is256BitVector() && Subtarget.hasInt256()) ||
-      (VT.is512BitVector() && Subtarget.hasAVX512())) {
+      (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
     SDValue ExOp = ExtendVecSize(DL, N0, VT.getSizeInBits());
     return Opcode == ISD::SIGN_EXTEND
                ? DAG.getSignExtendVectorInReg(ExOp, DL, VT)
@@ -36209,7 +36273,7 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
 
   // On pre-AVX512 targets, split into 256-bit nodes of
   // ISD::*_EXTEND_VECTOR_INREG.
-  if (!Subtarget.hasAVX512() && !(VT.getSizeInBits() % 256))
+  if (!Subtarget.useAVX512Regs() && !(VT.getSizeInBits() % 256))
     return SplitAndExtendInReg(256);
 
   return SDValue();
@@ -36836,11 +36900,11 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   SDValue Op0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
-  EVT InSVT = InVT.getScalarType();
 
+  // UINT_TO_FP(vXi1) -> SINT_TO_FP(SEXT(vXi1 to vXi32))
   // UINT_TO_FP(vXi8) -> SINT_TO_FP(ZEXT(vXi8 to vXi32))
   // UINT_TO_FP(vXi16) -> SINT_TO_FP(ZEXT(vXi16 to vXi32))
-  if (InVT.isVector() && (InSVT == MVT::i8 || InSVT == MVT::i16)) {
+  if (InVT.isVector() && InVT.getScalarSizeInBits() < 32) {
     SDLoc dl(N);
     EVT DstVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                  InVT.getVectorNumElements());
@@ -36870,14 +36934,11 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   SDValue Op0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
-  EVT InSVT = InVT.getScalarType();
 
   // SINT_TO_FP(vXi1) -> SINT_TO_FP(SEXT(vXi1 to vXi32))
   // SINT_TO_FP(vXi8) -> SINT_TO_FP(SEXT(vXi8 to vXi32))
   // SINT_TO_FP(vXi16) -> SINT_TO_FP(SEXT(vXi16 to vXi32))
-  if (InVT.isVector() &&
-      (InSVT == MVT::i8 || InSVT == MVT::i16 ||
-       (InSVT == MVT::i1 && !DAG.getTargetLoweringInfo().isTypeLegal(InVT)))) {
+  if (InVT.isVector() && InVT.getScalarSizeInBits() < 32) {
     SDLoc dl(N);
     EVT DstVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                  InVT.getVectorNumElements());
@@ -37167,7 +37228,7 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   unsigned RegSize = 128;
-  if (Subtarget.hasBWI())
+  if (Subtarget.useBWIRegs())
     RegSize = 512;
   else if (Subtarget.hasAVX2())
     RegSize = 256;
@@ -37212,7 +37273,7 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   unsigned RegSize = 128;
-  if (Subtarget.hasBWI())
+  if (Subtarget.useBWIRegs())
     RegSize = 512;
   else if (Subtarget.hasAVX2())
     RegSize = 256;
@@ -37440,8 +37501,8 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   if (!(Subtarget.hasSSE2() && (VT == MVT::v16i8 || VT == MVT::v8i16)) &&
       !(Subtarget.hasSSE41() && (VT == MVT::v8i32)) &&
       !(Subtarget.hasAVX2() && (VT == MVT::v32i8 || VT == MVT::v16i16)) &&
-      !(Subtarget.hasBWI() && (VT == MVT::v64i8 || VT == MVT::v32i16 ||
-                               VT == MVT::v16i32 || VT == MVT::v8i64)))
+      !(Subtarget.useBWIRegs() && (VT == MVT::v64i8 || VT == MVT::v32i16 ||
+                                   VT == MVT::v16i32 || VT == MVT::v8i64)))
     return SDValue();
 
   SDValue SubusLHS, SubusRHS;
