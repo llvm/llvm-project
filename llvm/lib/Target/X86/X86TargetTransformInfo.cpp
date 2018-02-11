@@ -433,7 +433,9 @@ int X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::MUL,     MVT::v32i8,     13 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,     MVT::v16i8,      5 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,     MVT::v16i32,     1 }, // pmulld
+    { ISD::MUL,     MVT::v16i32,     1 }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v8i32,      1 }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i64,      8 }, // 3*pmuludq/3*shift/2*add
 
     // Vectorizing division is a bad idea. See the SSE2 table for more comments.
@@ -572,7 +574,7 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,  MVT::v32i8,     17 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,  MVT::v16i8,      7 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,  MVT::v16i16,     1 }, // pmullw
-    { ISD::MUL,  MVT::v8i32,      1 }, // pmulld
+    { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
     { ISD::MUL,  MVT::v4i64,      8 }, // 3*pmuludq/3*shift/2*add
 
     { ISD::FDIV, MVT::f32,        7 }, // Haswell from http://www.agner.org/
@@ -667,7 +669,7 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i32,      12 }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v8i32,  2*12+2 }, // Shift each lane + blend + split.
 
-    { ISD::MUL,  MVT::v4i32,       1 }  // pmulld
+    { ISD::MUL,  MVT::v4i32,       2 }  // pmulld (Nehalem from agner.org)
   };
 
   if (ST->hasSSE41())

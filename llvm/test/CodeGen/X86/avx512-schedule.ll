@@ -2536,18 +2536,14 @@ define <2 x float> @sbto2f32(<2 x float> %a) {
 ; GENERIC-LABEL: sbto2f32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
-; GENERIC-NEXT:    vcmpltps %xmm0, %xmm1, %k0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3] sched: [1:0.50]
+; GENERIC-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtdq2ps %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sbto2f32:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
-; SKX-NEXT:    vcmpltps %xmm0, %xmm1, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
-; SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3] sched: [1:1.00]
+; SKX-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vcvtdq2ps %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cmpres = fcmp ogt <2 x float> %a, zeroinitializer

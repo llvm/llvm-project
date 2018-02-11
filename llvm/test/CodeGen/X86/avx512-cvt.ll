@@ -1707,19 +1707,14 @@ define <2 x float> @sbto2f32(<2 x float> %a) {
 ; VLDQ-LABEL: sbto2f32:
 ; VLDQ:       # %bb.0:
 ; VLDQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; VLDQ-NEXT:    vcmpltps %xmm0, %xmm1, %k0
-; VLDQ-NEXT:    vpmovm2q %k0, %xmm0
-; VLDQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; VLDQ-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; VLDQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; VLDQ-NEXT:    retq
 ;
 ; VLNODQ-LABEL: sbto2f32:
 ; VLNODQ:       # %bb.0:
 ; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VLNODQ-NEXT:    vcmpltps %xmm0, %xmm1, %k1
-; VLNODQ-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; VLNODQ-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
-; VLNODQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; VLNODQ-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; VLNODQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; VLNODQ-NEXT:    retq
   %cmpres = fcmp ogt <2 x float> %a, zeroinitializer

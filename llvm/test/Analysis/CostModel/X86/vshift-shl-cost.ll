@@ -398,8 +398,8 @@ define <8 x i64> @constant_shift_v8i64(<8 x i64> %a) {
 define <4 x i32> @constant_shift_v4i32(<4 x i32> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'constant_shift_v4i32':
 ; SSE2: Found an estimated cost of 6 for instruction:   %shift
-; SSE41: Found an estimated cost of 1 for instruction:   %shift
-; AVX: Found an estimated cost of 1 for instruction:   %shift
+; SSE41: Found an estimated cost of 2 for instruction:   %shift
+; AVX: Found an estimated cost of 2 for instruction:   %shift
 ; AVX2: Found an estimated cost of 1 for instruction:   %shift
 ; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOPAVX: Found an estimated cost of 1 for instruction:   %shift
@@ -411,7 +411,7 @@ define <4 x i32> @constant_shift_v4i32(<4 x i32> %a) {
 define <8 x i32> @constant_shift_v8i32(<8 x i32> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'constant_shift_v8i32':
 ; SSE2: Found an estimated cost of 12 for instruction:   %shift
-; SSE41: Found an estimated cost of 2 for instruction:   %shift
+; SSE41: Found an estimated cost of 4 for instruction:   %shift
 ; AVX: Found an estimated cost of 4 for instruction:   %shift
 ; AVX2: Found an estimated cost of 1 for instruction:   %shift
 ; AVX512: Found an estimated cost of 1 for instruction:   %shift
@@ -424,7 +424,7 @@ define <8 x i32> @constant_shift_v8i32(<8 x i32> %a) {
 define <16 x i32> @constant_shift_v16i32(<16 x i32> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'constant_shift_v16i32':
 ; SSE2: Found an estimated cost of 24 for instruction:   %shift
-; SSE41: Found an estimated cost of 4 for instruction:   %shift
+; SSE41: Found an estimated cost of 8 for instruction:   %shift
 ; AVX: Found an estimated cost of 8 for instruction:   %shift
 ; AVX2: Found an estimated cost of 2 for instruction:   %shift
 ; AVX512: Found an estimated cost of 1 for instruction:   %shift
@@ -694,7 +694,7 @@ define <8 x i16> @test2(<8 x i16> %a) {
 
 
 ; With SSE4.1, v4i32 shifts can be lowered into a single pmulld instruction.
-; Make sure that the estimated cost is always 1 except for the case where
+; Make sure that the estimated cost is always 2 except for the case where
 ; we only have SSE2 support. With SSE2, we are forced to special lower the
 ; v4i32 mul as a 2x shuffle, 2x pmuludq, 2x shuffle.
 
@@ -704,8 +704,8 @@ define <4 x i32> @test3(<4 x i32> %a) {
 }
 ; CHECK: 'Cost Model Analysis' for function 'test3':
 ; SSE2: Found an estimated cost of 6 for instruction:   %shl
-; SSE41: Found an estimated cost of 1 for instruction:   %shl
-; AVX: Found an estimated cost of 1 for instruction:   %shl
+; SSE41: Found an estimated cost of 2 for instruction:   %shl
+; AVX: Found an estimated cost of 2 for instruction:   %shl
 ; AVX2: Found an estimated cost of 1 for instruction:   %shl
 ; XOP: Found an estimated cost of 1 for instruction:   %shl
 
@@ -716,8 +716,8 @@ define <4 x i32> @test4(<4 x i32> %a) {
 }
 ; CHECK: 'Cost Model Analysis' for function 'test4':
 ; SSE2: Found an estimated cost of 6 for instruction:   %shl
-; SSE41: Found an estimated cost of 1 for instruction:   %shl
-; AVX: Found an estimated cost of 1 for instruction:   %shl
+; SSE41: Found an estimated cost of 2 for instruction:   %shl
+; AVX: Found an estimated cost of 2 for instruction:   %shl
 ; AVX2: Found an estimated cost of 1 for instruction:   %shl
 ; XOP: Found an estimated cost of 1 for instruction:   %shl
 
@@ -775,7 +775,7 @@ define <8 x i32> @test7(<8 x i32> %a) {
 }
 ; CHECK: 'Cost Model Analysis' for function 'test7':
 ; SSE2: Found an estimated cost of 12 for instruction:   %shl
-; SSE41: Found an estimated cost of 2 for instruction:   %shl
+; SSE41: Found an estimated cost of 4 for instruction:   %shl
 ; AVX: Found an estimated cost of 4 for instruction:   %shl
 ; AVX2: Found an estimated cost of 1 for instruction:   %shl
 ; XOPAVX: Found an estimated cost of 4 for instruction:   %shl
@@ -823,7 +823,7 @@ define <16 x i32> @test10(<16 x i32> %a) {
 }
 ; CHECK: 'Cost Model Analysis' for function 'test10':
 ; SSE2: Found an estimated cost of 24 for instruction:   %shl
-; SSE41: Found an estimated cost of 4 for instruction:   %shl
+; SSE41: Found an estimated cost of 8 for instruction:   %shl
 ; AVX: Found an estimated cost of 8 for instruction:   %shl
 ; AVX2: Found an estimated cost of 2 for instruction:   %shl
 ; XOPAVX: Found an estimated cost of 8 for instruction:   %shl
