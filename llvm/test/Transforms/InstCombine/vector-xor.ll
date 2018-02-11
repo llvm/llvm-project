@@ -132,9 +132,8 @@ define <4 x i32> @test_v4i32_not_ashr_negative_splatconst(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_not_ashr_negative_const(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_ashr_negative_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> <i32 -3, i32 -5, i32 -7, i32 -9>, [[A0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 2, i32 4, i32 6, i32 8>, [[A0:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = ashr <4 x i32> <i32 -3, i32 -5, i32 -7, i32 -9>, %a0
   %2 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %1
@@ -166,9 +165,8 @@ define <4 x i32> @test_v4i32_not_lshr_nonnegative_splatconst(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_not_lshr_nonnegative_const(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_lshr_nonnegative_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 3, i32 5, i32 7, i32 9>, [[A0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> <i32 -4, i32 -6, i32 -8, i32 -10>, [[A0:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = lshr <4 x i32> <i32  3, i32  5, i32  7, i32  9>, %a0
   %2 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %1
