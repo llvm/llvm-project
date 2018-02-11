@@ -59,6 +59,7 @@ extern "C" {
 #include <libkern/OSAtomic.h>
 #include <mach-o/dyld.h>
 #include <mach/mach.h>
+#include <mach/mach_time.h>
 #include <mach/vm_statistics.h>
 #include <pthread.h>
 #include <sched.h>
@@ -362,11 +363,17 @@ void BlockingMutex::CheckLocked() {
 }
 
 u64 NanoTime() {
-  return 0;
+  timeval tv;
+  internal_memset(&tv, 0, sizeof(tv));
+  gettimeofday(&tv, 0);
+  return (u64)tv.tv_sec * 1000*1000*1000 + tv.tv_usec * 1000;
 }
 
+// This needs to be called during initialization to avoid being racy.
 u64 MonotonicNanoTime() {
-  return 0;
+  static mach_timebase_info_data_t timebase_info;
+  if (timebase_info.denom == 0) mach_timebase_info(&timebase_info);
+  return (mach_absolute_time() * timebase_info.numer) / timebase_info.denom;
 }
 
 uptr GetTlsSize() {
@@ -673,6 +680,9 @@ bool DyldNeedsEnvVariable() {
 }
 
 void MaybeReexec() {
+  // FIXME: This should really live in some "InitializePlatform" method.
+  MonotonicNanoTime();
+
   if (ReexecDisabled()) return;
 
   // Make sure the dynamic runtime library is preloaded so that the
