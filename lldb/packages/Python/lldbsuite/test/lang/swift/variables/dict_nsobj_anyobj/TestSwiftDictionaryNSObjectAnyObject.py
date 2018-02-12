@@ -26,7 +26,6 @@ class TestDictionaryNSObjectAnyObject(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureDarwin("rdar://35650693")
     def test_dictionary_nsobject_any_object(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,AnyObject>"""
         self.build()

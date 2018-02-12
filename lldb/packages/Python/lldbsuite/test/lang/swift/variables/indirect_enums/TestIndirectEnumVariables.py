@@ -31,9 +31,8 @@ class TestIndirectEnumVariables(TestBase):
         self.build()
         self.do_test("indirect case break here")
 
+    @decorators.swiftTest
     @decorators.skipIf(bugnumber='rdar://27568868', oslist=['linux'])
-    @decorators.expectedFailureAll(
-        bugnumber="rdar://29953436")
     def test_indirect_enum_variables(self):
         """Tests that indirect Enum variables display correctly when enum is indirect"""
         self.build()
