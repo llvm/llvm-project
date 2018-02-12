@@ -188,13 +188,6 @@ public:
                     llvm::Optional<StringRef> OverridenContents = llvm::None,
                     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
-  /// DEPRECATED: Please use the callback-based version of codeComplete.
-  std::future<Tagged<CompletionList>>
-  codeComplete(PathRef File, Position Pos,
-               const clangd::CodeCompleteOptions &Opts,
-               llvm::Optional<StringRef> OverridenContents = llvm::None,
-               IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
-
   /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
   /// not None, they will used only for signature help, i.e. no diagnostics
   /// update will be scheduled and a draft for \p File will not be updated. If
