@@ -461,7 +461,11 @@ public:
 typedef llvm::TypeBuilder<ptask, false> ptask_builder;
 typedef llvm::TypeBuilder<pshareds, false> pshareds_builder;
 
-Function* formatFunctionToTask(Function* extracted, CallInst* cal) {
+Function* formatFunctionToTask(Function* extracted, Instruction* CallSite) {
+  // TODO: Fix this function to support call sites that are invokes instead of
+  // calls.
+  CallInst *cal = dyn_cast<CallInst>(CallSite);
+  assert(cal && "Call instruction for task not found.");
   std::vector<Value*> LoadedCapturedArgs;
   for(auto& a:cal->arg_operands()) {
     LoadedCapturedArgs.push_back(a);
@@ -587,9 +591,9 @@ Function *llvm::OpenMPABI::createDetach(DetachInst &detach,
 
   Module *M = F.getParent();
 
-  CallInst *cal = nullptr;
-  Function *extracted = extractDetachBodyToFunction(detach, DT, AC, &cal);
-  extracted = formatFunctionToTask(extracted, cal);
+  Instruction *CallSite = nullptr;
+  Function *Extracted = extractDetachBodyToFunction(detach, DT, AC, &CallSite);
+  Extracted = formatFunctionToTask(Extracted, CallSite);
 
   // Replace the detach with a branch to the continuation.
   BranchInst *ContinueBr = BranchInst::Create(Continue);
@@ -603,7 +607,7 @@ Function *llvm::OpenMPABI::createDetach(DetachInst &detach,
       ++BI;
     }
   }
-  return extracted;
+  return Extracted;
 }
 
 void llvm::OpenMPABI::preProcessFunction(Function &F) {

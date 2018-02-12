@@ -1002,6 +1002,9 @@ bool makeFunctionDetachable(Function &extracted,
       // Flags = AtExit->CreateOr(Flags,
       //                          ConstantInt::get(Flags->getType(),
       //                                           CILK_FRAME_EXCEPTING));
+      // StoreSTyField(*AtExit, DL, StackFrameBuilder::get(Ctx), Flags, SF,
+      //               StackFrameBuilder::flags, /*isVolatile=*/false,
+      //               AtomicOrdering::Release);
       // StoreSTyField(*AtExit, DL, StackFrameBuilder::get(Ctx), Exn, SF,
       //               StackFrameBuilder::except_data, /*isVolatile=*/false,
       //               AtomicOrdering::Release);
@@ -1065,9 +1068,9 @@ Function *CilkRABI::createDetach(DetachInst &detach,
                                       /*isFast=*/false);
   assert(SF && "null stack frame unexpected");
 
-  CallInst *cal = nullptr;
-  Function *extracted = extractDetachBodyToFunction(detach, DT, AC, &cal);
-  assert(extracted && "could not extract detach body to function");
+  Instruction *CallSite = nullptr;
+  Function *Extracted = extractDetachBodyToFunction(detach, DT, AC, &CallSite);
+  assert(Extracted && "could not extract detach body to function");
 
   // Unlink the detached CFG in the original function.  The heavy lifting of
   // removing the outlined detached-CFG is left to subsequent DCE.
@@ -1087,14 +1090,14 @@ Function *CilkRABI::createDetach(DetachInst &detach,
 
   Value *SetJmpRes;
   {
-    IRBuilder<> b(cal);
-    SetJmpRes = EmitCilkSetJmp(b, SF, *M);
+    IRBuilder<> B(CallSite);
+    SetJmpRes = EmitCilkSetJmp(B, SF, *M);
   }
 
   // Conditionally call the new helper function based on the result of the
   // setjmp.
   {
-    BasicBlock *CallBlock = SplitBlock(detB, cal, &DT);
+    BasicBlock *CallBlock = SplitBlock(detB, CallSite, &DT);
     BasicBlock *CallCont = SplitBlock(CallBlock,
                                       CallBlock->getTerminator(), &DT);
     IRBuilder<> B(detB->getTerminator());
@@ -1104,11 +1107,12 @@ Function *CilkRABI::createDetach(DetachInst &detach,
     detB->getTerminator()->eraseFromParent();
   }
 
-  makeFunctionDetachable(*extracted, DetachCtxToStackFrame);
   // Mark this function as stealable.
   F.addFnAttr(Attribute::Stealable);
 
-  return extracted;
+  makeFunctionDetachable(*Extracted, DetachCtxToStackFrame);
+
+  return Extracted;
 }
 
 // Helper function to inline calls to compiler-generated Cilk Plus runtime

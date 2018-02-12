@@ -25,6 +25,7 @@ class CallInst;
 class DetachInst;
 class DominatorTree;
 class Function;
+class Instruction;
 class SyncInst;
 class Value;
 
@@ -33,13 +34,11 @@ bool verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
 
 bool populateDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
                          SmallPtrSetImpl<BasicBlock *> &functionPieces,
-                         SmallVectorImpl<BasicBlock *> &reattachB,
-                         SmallPtrSetImpl<BasicBlock *> &ExitBlocks,
-                         int replaceOrDelete, bool error = true);
+                         SmallPtrSetImpl<BasicBlock *> &ExitBlocks);
 
 Function *extractDetachBodyToFunction(DetachInst &Detach,
                                       DominatorTree &DT, AssumptionCache &AC,
-                                      CallInst **call = nullptr);
+                                      Instruction **CallSite = nullptr);
 
 class TapirTarget {
 public:

@@ -351,15 +351,12 @@ public:
   //     : OrigLoop(OrigLoop), SE(SE), LI(LI), DT(DT),
   //       TLI(TLI), TTI(TTI), ORE(ORE)
   // {}
-  TapirTarget* tapirTarget;
-  DACLoopSpawning(Loop *OrigLoop, unsigned Grainsize,
-                  ScalarEvolution &SE,
-                  LoopInfo *LI, DominatorTree *DT,
-                  AssumptionCache *AC,
-                  OptimizationRemarkEmitter &ORE, TapirTarget* tapirTarget)
+  DACLoopSpawning(
+      Loop *OrigLoop, unsigned Grainsize, ScalarEvolution &SE, LoopInfo *LI,
+      DominatorTree *DT, AssumptionCache *AC, OptimizationRemarkEmitter &ORE,
+      TapirTarget* tapirTarget)
       : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE),
-        tapirTarget(tapirTarget),
-        SpecifiedGrainsize(Grainsize)
+        tapirTarget(tapirTarget), SpecifiedGrainsize(Grainsize)
   {}
 
   bool processLoop();
@@ -368,17 +365,14 @@ public:
 
 protected:
   Value* computeGrainsize(Value *Limit);
-  void implementDACIterSpawnOnHelper(Function *Helper,
-                                     BasicBlock *Preheader,
-                                     BasicBlock *Header,
-                                     PHINode *CanonicalIV,
-                                     Argument *Limit,
-                                     Argument *Grainsize,
-                                     Instruction *SyncRegion,
-                                     DominatorTree *DT,
-                                     LoopInfo *LI,
-                                     bool CanonicalIVFlagNUW = false,
-                                     bool CanonicalIVFlagNSW = false);
+  void implementDACIterSpawnOnHelper(
+      Function *Helper, BasicBlock *Preheader, BasicBlock *Header,
+      PHINode *CanonicalIV, Argument *Limit, Argument *Grainsize,
+      Instruction *SyncRegion, BasicBlock *DetachUnwind, DominatorTree *DT,
+      LoopInfo *LI, bool CanonicalIVFlagNUW = false,
+      bool CanonicalIVFlagNSW = false);
+
+  TapirTarget* tapirTarget;
   unsigned SpecifiedGrainsize;
 // private:
 //   /// Report an analysis message to assist the user in diagnosing loops that are
@@ -407,14 +401,11 @@ struct LoopSpawningImpl {
   //     : F(F), GetLI(GetLI), LI(nullptr), GetSE(GetSE), GetDT(GetDT),
   //       ORE(ORE)
   // {}
-  LoopSpawningImpl(Function &F,
-                   LoopInfo &LI,
-                   ScalarEvolution &SE,
-                   DominatorTree &DT,
-                   AssumptionCache &AC,
-                   OptimizationRemarkEmitter &ORE,
-                   TapirTarget* tapirTarget)
-      : F(F), LI(LI), SE(SE), DT(DT), AC(AC), ORE(ORE), tapirTarget(tapirTarget) {}
+  LoopSpawningImpl(Function &F, LoopInfo &LI, ScalarEvolution &SE,
+                   DominatorTree &DT, AssumptionCache &AC,
+                   OptimizationRemarkEmitter &ORE, TapirTarget* tapirTarget)
+      : F(F), LI(LI), SE(SE), DT(DT), AC(AC), ORE(ORE), tapirTarget(tapirTarget)
+  {}
 
   bool run();
 
@@ -612,17 +603,11 @@ Value* DACLoopSpawning::computeGrainsize(Value *Limit) {
 ///   sync;
 /// }
 ///
-void DACLoopSpawning::implementDACIterSpawnOnHelper(Function *Helper,
-                                                    BasicBlock *Preheader,
-                                                    BasicBlock *Header,
-                                                    PHINode *CanonicalIV,
-                                                    Argument *Limit,
-                                                    Argument *Grainsize,
-                                                    Instruction *SyncRegion,
-                                                    DominatorTree *DT,
-                                                    LoopInfo *LI,
-                                                    bool CanonicalIVFlagNUW,
-                                                    bool CanonicalIVFlagNSW) {
+void DACLoopSpawning::implementDACIterSpawnOnHelper(
+    Function *Helper, BasicBlock *Preheader, BasicBlock *Header,
+    PHINode *CanonicalIV, Argument *Limit, Argument *Grainsize,
+    Instruction *SyncRegion, BasicBlock *DetachUnwind, DominatorTree *DT,
+    LoopInfo *LI, bool CanonicalIVFlagNUW, bool CanonicalIVFlagNSW) {
   // Serialize the cloned copy of the loop.
   assert(Preheader->getParent() == Helper &&
          "Preheader does not belong to helper function.");
@@ -656,21 +641,17 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(Function *Helper,
     CanonicalIVStart = Builder.CreatePHI(CanonicalIV->getType(), 2,
                                          CanonicalIV->getName()+".dac");
     CanonicalIVInput->replaceAllUsesWith(CanonicalIVStart);
-    IterCount = Builder.CreateSub(Limit, CanonicalIVStart,
-                                  "itercount");
+    IterCount = Builder.CreateSub(Limit, CanonicalIVStart, "itercount");
     Value *IterCountCmp = Builder.CreateICmpUGT(IterCount, Grainsize);
     TerminatorInst *RecurTerm =
       SplitBlockAndInsertIfThen(IterCountCmp, PreheaderOrigFront,
                                 /*Unreachable=*/false,
-                                /*BranchWeights=*/nullptr,
-                                DT);
+                                /*BranchWeights=*/nullptr, DT);
     RecurHead = RecurTerm->getParent();
     // Create skeleton of divide-and-conquer recursion:
     // DACHead -> RecurHead -> RecurDet -> RecurCont -> DACHead
-    RecurDet = SplitBlock(RecurHead, RecurHead->getTerminator(),
-                          DT, LI);
-    RecurCont = SplitBlock(RecurDet, RecurDet->getTerminator(),
-                           DT, LI);
+    RecurDet = SplitBlock(RecurHead, RecurHead->getTerminator(), DT, LI);
+    RecurCont = SplitBlock(RecurDet, RecurDet->getTerminator(), DT, LI);
     RecurCont->getTerminator()->replaceUsesOfWith(RecurTerm->getSuccessor(0),
                                                   DACHead);
   }
@@ -679,14 +660,13 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(Function *Helper,
   Value *MidIter, *MidIterPlusOne;
   {
     IRBuilder<> Builder(&(RecurHead->front()));
-    MidIter = Builder.CreateAdd(CanonicalIVStart,
-                                Builder.CreateLShr(IterCount, 1,
-                                                   "halfcount"),
-                                "miditer",
-                                CanonicalIVFlagNUW, CanonicalIVFlagNSW);
+    MidIter = Builder.CreateAdd(
+        CanonicalIVStart, Builder.CreateLShr(IterCount, 1, "halfcount"),
+        "miditer", CanonicalIVFlagNUW, CanonicalIVFlagNSW);
   }
 
   // Create recursive call in RecurDet.
+  BasicBlock *RecurCallDest = RecurDet;
   {
     // Create input array for recursive call.
     IRBuilder<> Builder(&(RecurDet->front()));
@@ -700,16 +680,8 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(Function *Helper,
            "Second argument does not match original input to the loop limit.");
     RecurInputs.insert(MidIter);
     ++AI;
-    for (Function::arg_iterator AE = Helper->arg_end();
-         AI != AE;  ++AI)
-        RecurInputs.insert(&*AI);
-    // RecurInputs.insert(CanonicalIVStart);
-    // // for (PHINode *IV : IVs)
-    // //   RecurInputs.insert(DACStart[IV]);
-    // RecurInputs.insert(Limit);
-    // RecurInputs.insert(Grainsize);
-    // for (Value *V : BodyInputs)
-    //   RecurInputs.insert(VMap[V]);
+    for (Function::arg_iterator AE = Helper->arg_end(); AI != AE; ++AI)
+      RecurInputs.insert(&*AI);
     DEBUG({
         dbgs() << "RecurInputs: ";
         for (Value *Input : RecurInputs)
@@ -718,24 +690,65 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(Function *Helper,
       });
 
     // Create call instruction.
-    CallInst *RecurCall = Builder.CreateCall(Helper, RecurInputs.getArrayRef());
-    RecurCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
-    // Use a fast calling convention for the helper.
-    RecurCall->setCallingConv(CallingConv::Fast);
-    // RecurCall->setCallingConv(Helper->getCallingConv());
-    // // Update CG graph with the recursive call we just added.
-    // CG[Helper]->addCalledFunction(RecurCall, CG[Helper]);
+    if (!DetachUnwind) {
+      CallInst *RecurCall = Builder.CreateCall(
+          Helper, RecurInputs.getArrayRef());
+      RecurCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
+      // Use a fast calling convention for the helper.
+      RecurCall->setCallingConv(CallingConv::Fast);
+      // RecurCall->setCallingConv(Helper->getCallingConv());
+      // // Update CG graph with the recursive call we just added.
+      // CG[Helper]->addCalledFunction(RecurCall, CG[Helper]);
+    } else {
+      Module *M = Helper->getParent();
+      LLVMContext &Ctx = M->getContext();
+      BasicBlock *CallDest = SplitBlock(
+          RecurDet, RecurDet->getTerminator(), DT, LI);
+      BasicBlock *CallUnwind = BasicBlock::Create(
+          Ctx, RecurDet->getName()+".unwind", Helper);
+      // Set up the unwind for the new invoke, the pseduoIR for which is as
+      // follows:
+      //
+      // callunwind:
+      //   lpad = landingpad
+      //            catch null
+      //   invoke detached_rethrow(lpad), label unreachable, label detach_unwind
+      {
+        IRBuilder<> Builder(CallUnwind);
+        LandingPadInst *LPad = Builder.CreateLandingPad(
+            DetachUnwind->getLandingPadInst()->getType(), 1);
+        LPad->addClause(ConstantPointerNull::get(Builder.getInt8PtrTy()));
+        BasicBlock *DRUnreachable = BasicBlock::Create(
+            Ctx, CallUnwind->getName()+".unreachable", Helper);
+        Builder.CreateInvoke(
+            Intrinsic::getDeclaration(M, Intrinsic::detached_rethrow,
+                                      LPad->getType()),
+            DRUnreachable, DetachUnwind, { LPad });
+
+        Builder.SetInsertPoint(DRUnreachable);
+        Builder.CreateUnreachable();
+      }
+      // Now insert the recursive invoke.
+      InvokeInst *RecurCall = InvokeInst::Create(
+          Helper, CallDest, CallUnwind, RecurInputs.getArrayRef());
+      ReplaceInstWithInst(RecurDet->getTerminator(), RecurCall);
+      RecurCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
+      // Use a fast calling convention for the helper.
+      RecurCall->setCallingConv(CallingConv::Fast);
+      // RecurCall->setCallingConv(Helper->getCallingConv());
+      // // Update CG graph with the recursive call we just added.
+      // CG[Helper]->addCalledFunction(RecurCall, CG[Helper]);
+      RecurCallDest = CallDest;
+    }
   }
 
   // Set up continuation of detached recursive call.  We effectively
   // inline this tail call automatically.
   {
     IRBuilder<> Builder(&(RecurCont->front()));
-    MidIterPlusOne = Builder.CreateAdd(MidIter,
-                                       ConstantInt::get(Limit->getType(), 1),
-                                       "miditerplusone",
-                                       CanonicalIVFlagNUW,
-                                       CanonicalIVFlagNSW);
+    MidIterPlusOne = Builder.CreateAdd(
+        MidIter, ConstantInt::get(Limit->getType(), 1), "miditerplusone",
+        CanonicalIVFlagNUW, CanonicalIVFlagNSW);
   }
 
   // Finish setup of new phi node for canonical IV.
@@ -748,32 +761,40 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(Function *Helper,
   {
     IRBuilder<> Builder(RecurHead->getTerminator());
     // Create the detach.
-    DetachInst *DI = Builder.CreateDetach(RecurDet, RecurCont, SyncRegion);
+    DetachInst *DI;
+    if (!DetachUnwind)
+      DI = Builder.CreateDetach(RecurDet, RecurCont, SyncRegion);
+    else
+      DI = Builder.CreateDetach(RecurDet, RecurCont, DetachUnwind, SyncRegion);
     DI->setDebugLoc(Header->getTerminator()->getDebugLoc());
     RecurHead->getTerminator()->eraseFromParent();
     // Create the reattach.
-    Builder.SetInsertPoint(RecurDet->getTerminator());
+    Builder.SetInsertPoint(RecurCallDest->getTerminator());
     ReattachInst *RI = Builder.CreateReattach(RecurCont, SyncRegion);
     RI->setDebugLoc(Header->getTerminator()->getDebugLoc());
-    RecurDet->getTerminator()->eraseFromParent();
+    RecurCallDest->getTerminator()->eraseFromParent();
   }
 }
 
 /// Helper routine to get all exit blocks of a loop that are unreachable.
 static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
+                       const BasicBlock *DetachUnwind,
                        SmallVectorImpl<BasicBlock *> &EHExits) {
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
 
+  // Create a work list of exits from the Tapir loop body.
   SmallVector<BasicBlock *, 4> WorkList;
   for (BasicBlock *Exit : ExitBlocks) {
     if (Exit == DesignatedExitBlock) continue;
+    if (Exit == DetachUnwind) continue;
     EHExits.push_back(Exit);
     WorkList.push_back(Exit);
   }
 
-  // Traverse the CFG from these frontier blocks to find all blocks involved in
-  // exception-handling exit code.
+  // Now traverse the CFG from these frontier blocks to find all blocks involved
+  // in exception-handling exit code.  Exits from the loop body should be
+  // ultimately terminated by a detached rethrow.
   SmallPtrSet<BasicBlock *, 4> Visited;
   while (!WorkList.empty()) {
     BasicBlock *BB = WorkList.pop_back_val();
@@ -783,6 +804,9 @@ static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
     // Check that the exception handling blocks do not reenter the loop.
     assert(!L->contains(BB) &&
            "Exception handling blocks re-enter loop.");
+
+    if (isDetachedRethrow(BB->getTerminator()))
+      continue;
 
     for (BasicBlock *Succ : successors(BB)) {
       EHExits.push_back(Succ);
@@ -817,12 +841,23 @@ static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
   return Ty1;
 }
 
+/// Insert a sync before the specified escape, which is either a return or a
+/// resume.
+static SyncInst *insertSyncBeforeEscape(BasicBlock *Esc, Instruction *SyncReg,
+                                        DominatorTree *DT, LoopInfo *LI) {
+  BasicBlock *NewEsc = SplitBlock(Esc, Esc->getTerminator(), DT, LI);
+  Instruction *OldTerm = Esc->getTerminator();
+  IRBuilder<> Builder(OldTerm);
+  SyncInst *NewSync = Builder.CreateSync(NewEsc, SyncReg);
+  OldTerm->eraseFromParent();
+  return NewSync;
+}
+
 /// Top-level call to convert loop to spawn its iterations in a
 /// divide-and-conquer fashion.
 bool DACLoopSpawning::processLoop() {
-  if (!tapirTarget) {
+  if (!tapirTarget)
     return false;
-  }
 
   Loop *L = OrigLoop;
 
@@ -850,30 +885,27 @@ bool DACLoopSpawning::processLoop() {
     return false;
   }
 
+  // Get the unwind destination of the detach in the header.
+  BasicBlock *DetachUnwind = nullptr;
+  {
+    DetachInst *DI = cast<DetachInst>(Header->getTerminator());
+    if (DI->hasUnwindDest())
+      DetachUnwind = DI->getUnwindDest();
+  }
   // Get special exits from this loop.
   SmallVector<BasicBlock *, 4> EHExits;
-  getEHExits(L, ExitBlock, EHExits);
+  getEHExits(L, ExitBlock, DetachUnwind, EHExits);
 
   // Check the exit blocks of the loop.
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
 
-  for (const BasicBlock *Exit : ExitBlocks) {
-    if (Exit == ExitBlock) continue;
-    if (Exit->isLandingPad()) {
-      DEBUG({
-          const LandingPadInst *LPI = Exit->getLandingPadInst();
-          dbgs() << "landing pad found: " << *LPI << "\n";
-          for (const User *U : LPI->users())
-            dbgs() << "\tuser " << *U << "\n";
-        });
-    }
-  }
   SmallPtrSet<BasicBlock *, 4> HandledExits;
   for (BasicBlock *BB : EHExits)
     HandledExits.insert(BB);
   for (BasicBlock *Exit : ExitBlocks) {
     if (Exit == ExitBlock) continue;
+    if (Exit == DetachUnwind) continue;
     if (!HandledExits.count(Exit)) {
       DEBUG(dbgs() << "LS loop contains a bad exit block " << *Exit);
       ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "BadExit",
@@ -885,7 +917,7 @@ bool DACLoopSpawning::processLoop() {
   }
 
   Function *F = Header->getParent();
-  Module* M = F->getParent();
+  Module *M = F->getParent();
 
   DEBUG(dbgs() << "LS loop header:" << *Header);
   DEBUG(dbgs() << "LS loop latch:" << *Latch);
@@ -1071,7 +1103,6 @@ bool DACLoopSpawning::processLoop() {
   SetVector<Value *> BodyInputs, BodyOutputs;
   ValueToValueMapTy VMap, InputMap;
   std::vector<BasicBlock *> LoopBlocks;
-  SmallPtrSet<BasicBlock *, 4> ExitsToSplit;
 
   // Get the sync region containing this Tapir loop.
   const Instruction *InputSyncRegion;
@@ -1083,15 +1114,6 @@ bool DACLoopSpawning::processLoop() {
   // Add start iteration, end iteration, and grainsize to inputs.
   {
     LoopBlocks = L->getBlocks();
-    // // Add exit blocks terminated by unreachable.  There should not be any other
-    // // exit blocks in the loop.
-    // SmallSet<BasicBlock *, 4> UnreachableExits;
-    // for (BasicBlock *Exit : ExitBlocks) {
-    //   if (Exit == ExitBlock) continue;
-    //   assert(isa<UnreachableInst>(Exit->getTerminator()) &&
-    //          "Found problematic exit block.");
-    //   UnreachableExits.insert(Exit);
-    // }
 
     // Add unreachable and exception-handling exits to the set of loop blocks to
     // clone.
@@ -1103,36 +1125,13 @@ bool DACLoopSpawning::processLoop() {
       });
     for (BasicBlock *HE : HandledExits)
       LoopBlocks.push_back(HE);
-    {
-      const DetachInst *DI = cast<DetachInst>(Header->getTerminator());
-      BasicBlockEdge DetachEdge(Header, DI->getDetached());
-      for (BasicBlock *HE : HandledExits)
-        if (!DT || !DT->dominates(DetachEdge, HE))
-          ExitsToSplit.insert(HE);
-      DEBUG({
-          dbgs() << "Loop exits to split:";
-          for (BasicBlock *ETS : ExitsToSplit)
-            dbgs() << *ETS;
-          dbgs() << "\n";
-        });
-    }
-
-    // DEBUG({
-    //     dbgs() << "LoopBlocks: ";
-    //     for (BasicBlock *LB : LoopBlocks)
-    //       dbgs() << LB->getName() << "("
-    //              << *(LB->getTerminator()) << "), ";
-    //     dbgs() << "\n";
-    //   });
 
     // Get the inputs and outputs for the loop body.
     {
-      // CodeExtractor Ext(LoopBlocks, DT);
-      // Ext.findInputsOutputs(BodyInputs, BodyOutputs);
       SmallPtrSet<BasicBlock *, 32> Blocks;
       for (BasicBlock *BB : LoopBlocks)
         Blocks.insert(BB);
-      findInputsOutputs(Blocks, BodyInputs, BodyOutputs, &ExitsToSplit);
+      findInputsOutputs(Blocks, BodyInputs, BodyOutputs, &HandledExits, DT);
     }
 
     // Add argument for start of CanonicalIV.
@@ -1206,7 +1205,7 @@ bool DACLoopSpawning::processLoop() {
       });
     for (Value *V : BodyOutputs)
       dbgs() << "EL output: " << *V << "\n";
-    assert(0 == BodyOutputs.size() &&
+    assert(BodyOutputs.empty() &&
            "All results from parallel loop should be passed by memory already.");
   }
   DEBUG({
@@ -1227,7 +1226,7 @@ bool DACLoopSpawning::processLoop() {
                           Header, Preheader, ExitBlock,
                           VMap, M,
                           F->getSubprogram() != nullptr, Returns, ".ls",
-                          &ExitsToSplit, InputSyncRegion,
+                          &HandledExits, DetachUnwind, InputSyncRegion,
                           nullptr, nullptr, nullptr);
 
     assert(Returns.empty() && "Returns cloned when cloning loop.");
@@ -1240,35 +1239,33 @@ bool DACLoopSpawning::processLoop() {
   // Add a sync to the helper's return.
   BasicBlock *HelperHeader = cast<BasicBlock>(VMap[Header]);
   {
-    BasicBlock *HelperExit = cast<BasicBlock>(VMap[ExitBlock]);
-    assert(isa<ReturnInst>(HelperExit->getTerminator()));
-    BasicBlock *NewHelperExit = SplitBlock(HelperExit,
-                                           HelperExit->getTerminator(),
-                                           DT, LI);
-    IRBuilder<> Builder(&(HelperExit->front()));
-    SyncInst *NewSync = Builder.CreateSync(
-        NewHelperExit,
-        cast<Instruction>(VMap[InputSyncRegion]));
+    assert(isa<ReturnInst>(cast<BasicBlock>(VMap[ExitBlock])->getTerminator()));
+    SyncInst *NewSync =
+      insertSyncBeforeEscape(cast<BasicBlock>(VMap[ExitBlock]),
+                             cast<Instruction>(VMap[InputSyncRegion]), DT, LI);
     // Set debug info of new sync to match that of terminator of the header of
     // the cloned loop.
     NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
-    HelperExit->getTerminator()->eraseFromParent();
   }
 
-  // // Add syncs to the helper's cloned resume blocks.
-  // for (BasicBlock *BB : Resumes) {
-  //   BasicBlock *HelperResume = cast<BasicBlock>(VMap[BB]);
-  //   assert(isa<ResumeInst>(HelperResume->getTerminator()));
-  //   BasicBlock *NewHelperResume = SplitBlock(HelperResume,
-  //                                            HelperResume->getTerminator(),
-  //                                            DT, LI);
-  //   IRBuilder<> Builder(&(HelperResume->front()));
-  //   SyncInst *NewSync = Builder.CreateSync(NewHelperResume);
-  //   // Set debug info of new sync to match that of terminator of the header of
-  //   // the cloned loop.
-  //   NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
-  //   HelperResume->getTerminator()->eraseFromParent();
-  // }
+  // Add syncs to the helper's resume blocks.
+  if (DetachUnwind) {
+    assert(
+        isa<ResumeInst>(cast<BasicBlock>(VMap[DetachUnwind])->getTerminator()));
+    SyncInst *NewSync =
+      insertSyncBeforeEscape(cast<BasicBlock>(VMap[DetachUnwind]),
+                             cast<Instruction>(VMap[InputSyncRegion]), DT, LI);
+    NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
+
+  }
+  for (BasicBlock *BB : HandledExits) {
+    if (!isDetachedRethrow(BB->getTerminator())) continue;
+    assert(isa<ResumeInst>(cast<BasicBlock>(VMap[BB])->getTerminator()));
+    SyncInst *NewSync =
+      insertSyncBeforeEscape(cast<BasicBlock>(VMap[BB]),
+                             cast<Instruction>(VMap[InputSyncRegion]), DT, LI);
+    NewSync->setDebugLoc(HelperHeader->getTerminator()->getDebugLoc());
+  }
 
   BasicBlock *NewPreheader = cast<BasicBlock>(VMap[Preheader]);
   PHINode *NewCanonicalIV = cast<PHINode>(VMap[CanonicalIV]);
@@ -1285,8 +1282,7 @@ bool DACLoopSpawning::processLoop() {
       NewCanonicalIV->setIncomingValue(NewPreheaderIdx, NewCanonicalIVStart);
     }
 
-    // Rewrite other cloned IV's to start at their value at the start
-    // iteration.
+    // Rewrite other cloned IV's to start at their value at the start iteration.
     const SCEV *StartIterSCEV = SE.getSCEV(NewCanonicalIVStart);
     DEBUG(dbgs() << "StartIterSCEV: " << *StartIterSCEV << "\n");
     for (PHINode *IV : IVs) {
@@ -1314,8 +1310,8 @@ bool DACLoopSpawning::processLoop() {
       NewIV->setIncomingValue(NewPreheaderIdx, IVStart);
     }
 
-    // Remap the newly added instructions in the new preheader to use
-    // values local to the helper.
+    // Remap the newly added instructions in the new preheader to use values
+    // local to the helper.
     for (Instruction &II : *NewPreheader)
       RemapInstruction(&II, VMap, RF_IgnoreMissingLocals,
                        /*TypeMapper=*/nullptr, /*Materializer=*/nullptr);
@@ -1344,15 +1340,16 @@ bool DACLoopSpawning::processLoop() {
   // DEBUGGING: Simply serialize the cloned loop.
   // BasicBlock *NewHeader = cast<BasicBlock>(VMap[Header]);
   // SerializeDetachedCFG(cast<DetachInst>(NewHeader->getTerminator()), nullptr);
-  implementDACIterSpawnOnHelper(Helper, NewPreheader,
-                                cast<BasicBlock>(VMap[Header]),
-                                cast<PHINode>(VMap[CanonicalIV]),
-                                cast<Argument>(VMap[InputMap[LimitVar]]),
-                                cast<Argument>(VMap[InputMap[GrainVar]]),
-                                cast<Instruction>(VMap[InputSyncRegion]),
-                                /*DT=*/nullptr, /*LI=*/nullptr,
-                                CanonicalSCEV->getNoWrapFlags(SCEV::FlagNUW),
-                                CanonicalSCEV->getNoWrapFlags(SCEV::FlagNSW));
+  implementDACIterSpawnOnHelper(
+      Helper, NewPreheader, cast<BasicBlock>(VMap[Header]),
+      cast<PHINode>(VMap[CanonicalIV]),
+      cast<Argument>(VMap[InputMap[LimitVar]]),
+      cast<Argument>(VMap[InputMap[GrainVar]]),
+      cast<Instruction>(VMap[InputSyncRegion]),
+      DetachUnwind ? cast<BasicBlock>(VMap[DetachUnwind]) : nullptr,
+      /*DT=*/nullptr, /*LI=*/nullptr,
+      CanonicalSCEV->getNoWrapFlags(SCEV::FlagNUW),
+      CanonicalSCEV->getNoWrapFlags(SCEV::FlagNSW));
 
   if (verifyFunction(*Helper, &dbgs()))
     return false;
@@ -1427,16 +1424,30 @@ bool DACLoopSpawning::processLoop() {
       });
 
     // Create call instruction.
-    IRBuilder<> Builder(Preheader->getTerminator());
-    CallInst *TopCall = Builder.CreateCall(Helper,
-                                           ArrayRef<Value *>(TopCallArgs));
+    if (!DetachUnwind) {
+      IRBuilder<> Builder(Preheader->getTerminator());
+      CallInst *TopCall = Builder.CreateCall(
+          Helper, ArrayRef<Value *>(TopCallArgs));
 
-    // Use a fast calling convention for the helper.
-    TopCall->setCallingConv(CallingConv::Fast);
-    // TopCall->setCallingConv(Helper->getCallingConv());
-    TopCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
-    // // Update CG graph with the call we just added.
-    // CG[F]->addCalledFunction(TopCall, CG[Helper]);
+      // Use a fast calling convention for the helper.
+      TopCall->setCallingConv(CallingConv::Fast);
+      // TopCall->setCallingConv(Helper->getCallingConv());
+      TopCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
+      // // Update CG graph with the call we just added.
+      // CG[F]->addCalledFunction(TopCall, CG[Helper]);
+    } else {
+      BasicBlock *CallDest = SplitBlock(Preheader, Preheader->getTerminator(),
+                                        DT, LI);
+      InvokeInst *TopCall = InvokeInst::Create(Helper, CallDest, DetachUnwind,
+                                               ArrayRef<Value *>(TopCallArgs));
+      ReplaceInstWithInst(Preheader->getTerminator(), TopCall);
+      // Use a fast calling convention for the helper.
+      TopCall->setCallingConv(CallingConv::Fast);
+      // TopCall->setCallingConv(Helper->getCallingConv());
+      TopCall->setDebugLoc(Header->getTerminator()->getDebugLoc());
+      // // Update CG graph with the call we just added.
+      // CG[F]->addCalledFunction(TopCall, CG[Helper]);
+    }
   }
 
   // Remove sync of loop in parent.
@@ -1473,9 +1484,9 @@ bool DACLoopSpawning::processLoop() {
       ReplaceInstWithInst(LoopSync,
                           BranchInst::Create(LoopSync->getSuccessor(0)));
     else if (!LoopSync)
-      DEBUG(dbgs() << "No sync found for this loop.");
+      DEBUG(dbgs() << "No sync found for this loop.\n");
     else
-      DEBUG(dbgs() << "No single sync found that only affects this loop.");
+      DEBUG(dbgs() << "No single sync found that only affects this loop.\n");
   }
 
   ++LoopsConvertedToDAC;

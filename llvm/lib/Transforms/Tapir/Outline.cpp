@@ -199,22 +199,15 @@ void llvm::CloneIntoFunction(
 /// Outputs as follows: f(in0, ..., inN, out0, ..., outN)
 ///
 /// TODO: Fix the std::vector part of the type of this function.
-Function *llvm::CreateHelper(const ValueSet &Inputs,
-                             const ValueSet &Outputs,
-                             std::vector<BasicBlock *> Blocks,
-                             BasicBlock *Header,
-                             const BasicBlock *OldEntry,
-                             const BasicBlock *OldExit,
-                             ValueToValueMapTy &VMap,
-                             Module *DestM,
-                             bool ModuleLevelChanges,
-                             SmallVectorImpl<ReturnInst *> &Returns,
-                             const StringRef NameSuffix,
-                             SmallPtrSetImpl<BasicBlock *> *ExitBlocks,
-                             const Instruction *InputSyncRegion,
-                             ClonedCodeInfo *CodeInfo,
-                             ValueMapTypeRemapper *TypeMapper,
-                             ValueMaterializer *Materializer) {
+Function *llvm::CreateHelper(
+    const ValueSet &Inputs, const ValueSet &Outputs,
+    std::vector<BasicBlock *> Blocks, BasicBlock *Header,
+    const BasicBlock *OldEntry, const BasicBlock *OldExit,
+    ValueToValueMapTy &VMap, Module *DestM, bool ModuleLevelChanges,
+    SmallVectorImpl<ReturnInst *> &Returns, const StringRef NameSuffix,
+    SmallPtrSetImpl<BasicBlock *> *ExitBlocks, const BasicBlock *OldUnwind,
+    const Instruction *InputSyncRegion, ClonedCodeInfo *CodeInfo,
+    ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer) {
   DEBUG(dbgs() << "inputs: " << Inputs.size() << "\n");
   DEBUG(dbgs() << "outputs: " << Outputs.size() << "\n");
 
@@ -352,6 +345,14 @@ Function *llvm::CreateHelper(const ValueSet &Inputs,
   // Add mappings to the NewEntry and NewExit.
   VMap[OldEntry] = NewEntry;
   VMap[OldExit] = NewExit;
+
+  BasicBlock *NewUnwind = nullptr;
+  // Create a new unwind destination for the cloned blocks if it's needed.
+  if (OldUnwind) {
+    NewUnwind = BasicBlock::Create(
+        NewFunc->getContext(), OldUnwind->getName()+NameSuffix, NewFunc);
+    VMap[OldUnwind] = NewUnwind;
+  }
 
   // Create new sync region to replace the old one containing any cloned Tapir
   // instructions, and add the appropriate mappings.
