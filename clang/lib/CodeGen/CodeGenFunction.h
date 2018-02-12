@@ -967,28 +967,55 @@ public:
     CodeGenFunction &CGF;
     SyncRegion *ParentRegion;
     llvm::Instruction *SyncRegionStart;
+    RunCleanupsScope *InnerSyncScope;
 
     SyncRegion(const SyncRegion &) = delete;
     void operator=(const SyncRegion &) = delete;
   public:
     explicit SyncRegion(CodeGenFunction &CGF)
-        : CGF(CGF), ParentRegion(CGF.CurSyncRegion), SyncRegionStart(nullptr)
+        : CGF(CGF), ParentRegion(CGF.CurSyncRegion), SyncRegionStart(nullptr),
+          InnerSyncScope(nullptr)
     {}
 
     ~SyncRegion() {
-      // if (SyncRegionStart)
-      //   // Emit end of sync region.
-      //   CGF.Builder.CreateCall(
-      //       CGF.CGM.getIntrinsic(llvm::Intrinsic::syncregion_end),
-      //       {SyncRegionStart});
+      if (InnerSyncScope)
+        delete InnerSyncScope;
       CGF.CurSyncRegion = ParentRegion;
     }
 
-    llvm::Instruction *getSyncRegionStart() {
+    llvm::Instruction *getSyncRegionStart() const {
       return SyncRegionStart;
     }
+
     void setSyncRegionStart(llvm::Instruction *SRStart) {
       SyncRegionStart = SRStart;
+    }
+
+    void addImplicitSync() {
+      if (!InnerSyncScope) {
+        InnerSyncScope = new RunCleanupsScope(CGF);
+        CGF.EHStack.pushCleanup<ImplicitSyncCleanup>(NormalCleanup);
+      }
+    }
+  };
+
+  /// \brief Cleanup to ensure parent stack frame is synced.
+  struct ImplicitSyncCleanup : public EHScopeStack::Cleanup {
+    llvm::Instruction *SyncRegion;
+  public:
+    ImplicitSyncCleanup(llvm::Instruction *SyncRegion = nullptr)
+        : SyncRegion(SyncRegion) {}
+    void Emit(CodeGenFunction &CGF, Flags F) {
+      llvm::Instruction *SR = SyncRegion;
+      // If a sync region wasn't specified with this cleanup initially, try to
+      // graph the current sync region.
+      if (!SR && CGF.CurSyncRegion)
+        SR = CGF.CurSyncRegion->getSyncRegionStart();
+      if (SR) {
+        llvm::BasicBlock *ContinueBlock = CGF.createBasicBlock("sync.continue");
+        CGF.Builder.CreateSync(ContinueBlock, SR);
+        CGF.EmitBlock(ContinueBlock);
+      }
     }
   };
 
@@ -1002,7 +1029,8 @@ public:
   llvm::Instruction *EmitSyncRegionStart();
 
   void PopSyncRegion() {
-    delete CurSyncRegion;
+    if (CurSyncRegion)
+      delete CurSyncRegion;
   }
 
   void EnsureSyncRegion() {
@@ -1012,14 +1040,41 @@ public:
       CurSyncRegion->setSyncRegionStart(EmitSyncRegionStart());
   }
 
+  /// \brief Class for handling exceptions thrown from within a detached scope
+  /// that should be caught by the parent of that scope.
+  ///
+  /// This class provides a catch-all handler for a catch scope enclosing a
+  /// detached scope.
+  class DetachedRethrowHandler {
+    CodeGenFunction &CGF;
+    llvm::BasicBlock *DetachedRethrowBlock;
+    llvm::BasicBlock *DetachedRethrowResumeBlock;
+
+  public:
+    explicit DetachedRethrowHandler(CodeGenFunction &CGF)
+        : CGF(CGF), DetachedRethrowBlock(nullptr),
+          DetachedRethrowResumeBlock(nullptr) {}
+
+    llvm::BasicBlock *get();
+    bool isUsed() const {
+      return DetachedRethrowBlock && !DetachedRethrowBlock->use_empty();
+    }
+    void emitIfUsed(llvm::Value *ExnSlot, llvm::Value *SelSlot);
+  };
+
   /// \brief RAII object to manage creation of detach/reattach instructions.
   class DetachScope {
     CodeGenFunction &CGF;
     bool DetachStarted, DetachInitialized;
+    llvm::DetachInst *Detach;
     llvm::BasicBlock *DetachedBlock;
     llvm::BasicBlock *ContinueBlock;
+
     RunCleanupsScope *CleanupsScope;
+    RunCleanupsScope *ExnCleanupsScope;
     DetachScope *ParentScope;
+
+    DetachedRethrowHandler DetRethrow;
 
     // Old state from the CGF to restore when we're done with the detach.
     llvm::AssertingVH<llvm::Instruction> OldAllocaInsertPt;
@@ -1045,8 +1100,10 @@ public:
     /// \brief Enter a new detach scope
     explicit DetachScope(CodeGenFunction &CGF)
         : CGF(CGF), DetachStarted(false), DetachInitialized(false),
-          DetachedBlock(nullptr), ContinueBlock(nullptr),
-          CleanupsScope(nullptr), ParentScope(CGF.CurDetachScope),
+          Detach(nullptr), DetachedBlock(nullptr),
+          ContinueBlock(nullptr), CleanupsScope(nullptr),
+          ExnCleanupsScope(nullptr), ParentScope(CGF.CurDetachScope),
+          DetRethrow(CGF),
           OldAllocaInsertPt(nullptr), OldEHResumeBlock(nullptr),
           OldExceptionSlot(nullptr), OldEHSelectorSlot(nullptr),
           SavedDetachedAllocaInsertPt(nullptr),
@@ -1057,14 +1114,14 @@ public:
     // \brief Exit this detach scope.
     ~DetachScope() {
       delete CleanupsScope;
+      delete ExnCleanupsScope;
       CGF.CurDetachScope = ParentScope;
     }
 
     void StartDetach();
     void FinishDetach();
 
-    Address CreateDetachedMemTemp(QualType Ty,
-                                  StorageDuration SD,
+    Address CreateDetachedMemTemp(QualType Ty, StorageDuration SD,
                                   const Twine &Name = "det.tmp");
 
     bool IsDetachStarted() { return DetachStarted; }
@@ -3032,8 +3089,6 @@ public:
   void EmitCaseStmt(const CaseStmt &S);
   void EmitCaseStmtRange(const CaseStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
-
-  bool GenerateStartOfCilkSpawn();
 
   void EmitCilkSpawnStmt(const CilkSpawnStmt &S);
   void EmitCilkSyncStmt(const CilkSyncStmt &S);
