@@ -10,6 +10,7 @@
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "Matchers.h"
+#include "SyncAPI.h"
 #include "TestFS.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
@@ -302,14 +303,14 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   // thread.
   FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
+  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position{0, 0}, CCOpts).Tag,
             FS.Tag);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
+  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position{0, 0}, CCOpts).Tag,
             FS.Tag);
 }
 
@@ -478,11 +479,10 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   EXPECT_ERROR(Server.rename(FooCpp, Position{0, 0}, "new_name"));
   // FIXME: codeComplete and signatureHelp should also return errors when they
   // can't parse the file.
-  EXPECT_THAT(
-      Server.codeComplete(FooCpp, Position{0, 0}, clangd::CodeCompleteOptions())
-          .get()
-          .Value.items,
-      IsEmpty());
+  EXPECT_THAT(runCodeComplete(Server, FooCpp, Position{0, 0},
+                              clangd::CodeCompleteOptions())
+                  .Value.items,
+              IsEmpty());
   auto SigHelp = Server.signatureHelp(FooCpp, Position{0, 0});
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
   EXPECT_THAT(SigHelp->Value.signatures, IsEmpty());
@@ -672,10 +672,8 @@ int d;
       // requests as opposed to AddDocument/RemoveDocument, which are implicitly
       // cancelled by any subsequent AddDocument/RemoveDocument request to the
       // same file.
-      Server
-          .codeComplete(FilePaths[FileIndex], Pos,
-                        clangd::CodeCompleteOptions())
-          .wait();
+      runCodeComplete(Server, FilePaths[FileIndex], Pos,
+                      clangd::CodeCompleteOptions());
     };
 
     auto FindDefinitionsRequest = [&]() {

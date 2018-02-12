@@ -241,8 +241,8 @@ public:
     operator ()(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
         static_assert ( std::is_same<
-                typename std::decay<typename std::iterator_traits<_RandomAccessIterator1>::value_type>::type, 
-                typename std::decay<typename std::iterator_traits<_RandomAccessIterator2>::value_type>::type
+                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type>::type, 
+                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator2>::value_type>::type
                     >::value,
                 "Corpus and Pattern iterators must point to the same type" );
 
@@ -394,8 +394,8 @@ public:
     operator ()(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
         static_assert ( std::is_same<
-                typename std::decay<typename std::iterator_traits<_RandomAccessIterator1>::value_type>::type, 
-                typename std::decay<typename std::iterator_traits<_RandomAccessIterator2>::value_type>::type
+                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type>::type, 
+                typename std::__uncvref<typename std::iterator_traits<_RandomAccessIterator2>::value_type>::type
                     >::value,
                 "Corpus and Pattern iterators must point to the same type" );
 

@@ -431,12 +431,16 @@ TEST(ClangMove, MacroInFunction) {
 
 TEST(ClangMove, DefinitionInMacro) {
   const char TestHeader[] = "#define DEF(CLASS) void CLASS##_::f() {}\n"
-                            "class A_ {\nvoid f();\n};\n"
+                            "#define DEF2(CLASS, ...) void CLASS##_::f2() {}\n"
+                            "class A_ {\nvoid f();\nvoid f2();\n};\n"
                             "class B {};\n";
   const char TestCode[] = "#include \"foo.h\"\n"
-                          "DEF(A)\n";
+                          "DEF(A)\n\n"
+                          "DEF2(A,\n"
+                          "     123)\n";
   const char ExpectedNewCode[] = "#include \"new_foo.h\"\n\n"
-                                 "DEF(A)\n";
+                                 "DEF(A)\n\n"
+                                 "DEF2(A, 123)\n";
   move::MoveDefinitionSpec Spec;
   Spec.Names.push_back("A_");
   Spec.OldHeader = "foo.h";
