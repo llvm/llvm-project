@@ -566,6 +566,9 @@ def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-
 def fcuda_approx_transcendentals : Flag<["-"], "fcuda-approx-transcendentals">,
   Flags<[CC1Option]>, HelpText<"Use approximate transcendental functions">;
 def fno_cuda_approx_transcendentals : Flag<["-"], "fno-cuda-approx-transcendentals">;
+def fcuda_rdc : Flag<["-"], "fcuda-rdc">, Flags<[CC1Option, HelpHidden]>,
+  HelpText<"Generate relocatable device code, also known as separate compilation mode.">;
+def fno_cuda_rdc : Flag<["-"], "fno-cuda-rdc">;
 def dA : Flag<["-"], "dA">, Group<d_Group>;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;
@@ -895,6 +898,14 @@ def fno_sanitize_address_use_after_scope : Flag<["-"], "fno-sanitize-address-use
                                            Group<f_clang_Group>,
                                            Flags<[CoreOption, DriverOption]>,
                                            HelpText<"Disable use-after-scope detection in AddressSanitizer">;
+def fsanitize_address_poison_class_member_array_new_cookie
+    : Flag<[ "-" ], "fsanitize-address-poison-class-member-array-new-cookie">,
+      Group<f_clang_Group>,
+      HelpText<"Enable poisoning array cookies when using class member operator new[] in AddressSanitizer">;
+def fno_sanitize_address_poison_class_member_array_new_cookie
+    : Flag<[ "-" ], "fno-sanitize-address-poison-class-member-array-new-cookie">,
+      Group<f_clang_Group>,
+      HelpText<"Disable poisoning array cookies when using class member operator new[] in AddressSanitizer">;
 def fsanitize_address_globals_dead_stripping : Flag<["-"], "fsanitize-address-globals-dead-stripping">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable linker dead stripping of globals in AddressSanitizer">;

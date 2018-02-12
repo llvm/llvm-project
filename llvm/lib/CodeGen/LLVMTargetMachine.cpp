@@ -34,6 +34,10 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
+static cl::opt<bool> EnableTrapUnreachable("trap-unreachable",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Enable generating trap for unreachable"));
+
 void LLVMTargetMachine::initAsmInfo() {
   MRI = TheTarget.createMCRegInfo(getTargetTriple().str());
   MII = TheTarget.createMCInstrInfo();
@@ -79,6 +83,9 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
   this->RM = RM;
   this->CMModel = CM;
   this->OptLevel = OL;
+
+  if (EnableTrapUnreachable)
+    this->Options.TrapUnreachable = true;
 }
 
 TargetTransformInfo

@@ -81,9 +81,9 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   auto *Symbol = cast<MCSymbolWasm>(S);
 
-  // Adding a symbol attribute always introduces the symbol, note that an
-  // important side effect of calling registerSymbol here is to register
-  // the symbol with the assembler.
+  // Adding a symbol attribute always introduces the symbol; note that an
+  // important side effect of calling registerSymbol here is to register the
+  // symbol with the assembler.
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
