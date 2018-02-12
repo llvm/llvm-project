@@ -148,6 +148,11 @@ public:
     return true;
   }
 };
+
+CXSymbolRole getSymbolRole(SymbolRoleSet Role) {
+  // CXSymbolRole mirrors low 9 bits of clang::index::SymbolRole.
+  return CXSymbolRole(static_cast<uint32_t>(Role) & ((1 << 9) - 1));
+}
 }
 
 bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
@@ -184,6 +189,7 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
     if (Roles & (unsigned)SymbolRole::Implicit) {
       Kind = CXIdxEntityRef_Implicit;
     }
+    CXSymbolRole CXRole = getSymbolRole(Roles);
 
     CXCursor Cursor;
     if (ASTNode.OrigE) {
@@ -202,7 +208,7 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
     }
     handleReference(ND, Loc, Cursor,
                     dyn_cast_or_null<NamedDecl>(ASTNode.Parent),
-                    ASTNode.ContainerDC, ASTNode.OrigE, Kind);
+                    ASTNode.ContainerDC, ASTNode.OrigE, Kind, CXRole);
 
   } else {
     const DeclContext *LexicalDC = ASTNode.ContainerDC;
@@ -889,13 +895,14 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                                       const NamedDecl *Parent,
                                       const DeclContext *DC,
                                       const Expr *E,
-                                      CXIdxEntityRefKind Kind) {
+                                      CXIdxEntityRefKind Kind,
+                                      CXSymbolRole Role) {
   if (!D || !DC)
     return false;
 
   CXCursor Cursor = E ? MakeCXCursor(E, cast<Decl>(DC), CXTU)
                       : getRefCursor(D, Loc);
-  return handleReference(D, Loc, Cursor, Parent, DC, E, Kind);
+  return handleReference(D, Loc, Cursor, Parent, DC, E, Kind, Role);
 }
 
 bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc,
@@ -903,7 +910,8 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                                       const NamedDecl *Parent,
                                       const DeclContext *DC,
                                       const Expr *E,
-                                      CXIdxEntityRefKind Kind) {
+                                      CXIdxEntityRefKind Kind,
+                                      CXSymbolRole Role) {
   if (!CB.indexEntityReference)
     return false;
 
@@ -939,7 +947,8 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                               getIndexLoc(Loc),
                               &RefEntity,
                               Parent ? &ParentEntity : nullptr,
-                              &Container };
+                              &Container,
+                              Role };
   CB.indexEntityReference(ClientData, &Info);
   return true;
 }

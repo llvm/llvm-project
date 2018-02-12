@@ -31,7 +31,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     const int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     const int ib[] = {2, 4, 4, 6};
           int results[std::size(ia)] = {0};
-    
+
     auto comp = [](int a, int b) {return a < b; };
     auto it = std::set_intersection(std::begin(ia), std::end(ia),
                                     std::begin(ib), std::end(ib), std::begin(results), comp);

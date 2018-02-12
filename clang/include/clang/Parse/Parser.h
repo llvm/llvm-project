@@ -1340,7 +1340,7 @@ private:
 
   // Objective-C External Declarations
   void MaybeSkipAttributes(tok::ObjCKeywordKind Kind);
-  DeclGroupPtrTy ParseObjCAtDirectives();
+  DeclGroupPtrTy ParseObjCAtDirectives(ParsedAttributesWithRange &Attrs);
   DeclGroupPtrTy ParseObjCAtClassDeclaration(SourceLocation atLoc);
   Decl *ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
                                         ParsedAttributes &prefixAttrs);

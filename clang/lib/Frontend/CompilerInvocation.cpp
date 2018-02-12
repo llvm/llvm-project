@@ -890,6 +890,13 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SanitizeCfiICallGeneralizePointers =
       Args.hasArg(OPT_fsanitize_cfi_icall_generalize_pointers);
   Opts.SanitizeStats = Args.hasArg(OPT_fsanitize_stats);
+  if (Arg *A = Args.getLastArg(
+          OPT_fsanitize_address_poison_class_member_array_new_cookie,
+          OPT_fno_sanitize_address_poison_class_member_array_new_cookie)) {
+    Opts.SanitizeAddressPoisonClassMemberArrayNewCookie =
+        A->getOption().getID() ==
+        OPT_fsanitize_address_poison_class_member_array_new_cookie;
+  }
   if (Arg *A = Args.getLastArg(OPT_fsanitize_address_use_after_scope,
                                OPT_fno_sanitize_address_use_after_scope)) {
     Opts.SanitizeAddressUseAfterScope =

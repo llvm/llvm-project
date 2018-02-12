@@ -26,7 +26,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     const size_t N = 5;
     int ib[] = {0, 0, 0, 0, 0, 0}; // one bigger than N
 
-    auto it = std::fill_n(std::begin(ib), N, 5);    
+    auto it = std::fill_n(std::begin(ib), N, 5);
     return it == (std::begin(ib) + N)
         && std::all_of(std::begin(ib), it, [](int a) {return a == 5; })
         && *it == 0 // don't overwrite the last value in the output array

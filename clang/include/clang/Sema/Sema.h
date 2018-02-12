@@ -2342,8 +2342,7 @@ public:
                                       Expr *val);
   bool CheckEnumUnderlyingType(TypeSourceInfo *TI);
   bool CheckEnumRedeclaration(SourceLocation EnumLoc, bool IsScoped,
-                              QualType EnumUnderlyingTy,
-                              bool EnumUnderlyingIsImplicit,
+                              QualType EnumUnderlyingTy, bool IsFixed,
                               const EnumDecl *Prev);
 
   /// Determine whether the body of an anonymous enumeration should be skipped.

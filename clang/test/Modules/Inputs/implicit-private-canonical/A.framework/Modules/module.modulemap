@@ -1,4 +1,7 @@
 framework module A {
   header "a.h"
+
+  module Pirate {}
+
   export *
 }

@@ -28,10 +28,10 @@ TEST_CONSTEXPR bool test_constexpr() {
     const int ib[] = {2, 4, 7, 8};
           int ic[] = {0, 0, 0, 0, 0}; // one bigger
     const int expected[] = {3, 7, 13, 15};
-    
-    auto it = std::transform(std::begin(ia), std::end(ia), 
+
+    auto it = std::transform(std::begin(ia), std::end(ia),
                              std::begin(ib), std::begin(ic), std::plus<int>());
-    
+
     return it == (std::begin(ic) + std::size(ia))
         && *it == 0 // don't overwrite the last value in the output array
         && std::equal(std::begin(expected), std::end(expected), std::begin(ic), it)

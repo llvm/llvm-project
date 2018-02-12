@@ -2482,11 +2482,11 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef Name,
   return make<MergeNoTailSection>(Name, Type, Flags, Alignment);
 }
 
-// Debug sections may be compressed by zlib. Uncompress if exists.
+// Debug sections may be compressed by zlib. Decompress if exists.
 void elf::decompressSections() {
   parallelForEach(InputSections, [](InputSectionBase *Sec) {
     if (Sec->Live)
-      Sec->maybeUncompress();
+      Sec->maybeDecompress();
   });
 }
 

@@ -148,15 +148,13 @@ void Driver::setDriverModeFromOption(StringRef Opt) {
     return;
   StringRef Value = Opt.drop_front(OptName.size());
 
-  auto M = llvm::StringSwitch<llvm::Optional<DriverMode>>(Value)
-                           .Case("gcc", GCCMode)
-                           .Case("g++", GXXMode)
-                           .Case("cpp", CPPMode)
-                           .Case("cl", CLMode)
-                           .Default(None);
-
-  if (M)
-    Mode = M.getValue();
+  if (auto M = llvm::StringSwitch<llvm::Optional<DriverMode>>(Value)
+                   .Case("gcc", GCCMode)
+                   .Case("g++", GXXMode)
+                   .Case("cpp", CPPMode)
+                   .Case("cl", CLMode)
+                   .Default(None))
+    Mode = *M;
   else
     Diag(diag::err_drv_unsupported_option_argument) << OptName << Value;
 }

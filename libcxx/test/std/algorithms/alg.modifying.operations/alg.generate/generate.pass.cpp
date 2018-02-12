@@ -32,7 +32,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {0, 1, 2, 3, 4};
 
     std::generate(std::begin(ia), std::end(ia), gen_test());
-    
+
     return std::all_of(std::begin(ia), std::end(ia), [](int x) { return x == 1; })
         ;
     }
