@@ -280,10 +280,10 @@ Options for ``NVPTX device RTL``
   compatible with NVCC, this option can be use to pass to NVCC a valid compiler
   to avoid the error.
 
- **LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITY** = ``35``
-  CUDA compute capability that should be supported by the NVPTX device RTL. E.g.
-  for compute capability 6.0, the option "60" should be used. Compute capability
-  3.5 is the minimum required.
+ **LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES** = ``35``
+  List of CUDA compute capabilities that should be supported by the NVPTX
+  device RTL. E.g. for compute capabilities 6.0 and 7.0, the option "60,70"
+  should be used. Compute capability 3.5 is the minimum required.
 
  **LIBOMPTARGET_NVPTX_DEBUG** = ``OFF|ON``
   Enable printing of debug messages from the NVPTX device RTL.
