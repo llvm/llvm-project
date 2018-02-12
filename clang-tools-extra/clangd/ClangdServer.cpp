@@ -166,24 +166,6 @@ std::future<void> ClangdServer::forceReparse(PathRef File) {
                                  std::move(TaggedFS));
 }
 
-std::future<Tagged<CompletionList>>
-ClangdServer::codeComplete(PathRef File, Position Pos,
-                           const clangd::CodeCompleteOptions &Opts,
-                           llvm::Optional<StringRef> OverridenContents,
-                           IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
-  std::promise<Tagged<CompletionList>> ResultPromise;
-  auto Callback = [](std::promise<Tagged<CompletionList>> ResultPromise,
-                     Tagged<CompletionList> Result) -> void {
-    ResultPromise.set_value(std::move(Result));
-  };
-
-  auto ResultFuture = ResultPromise.get_future();
-  codeComplete(File, Pos, Opts,
-               BindWithForward(Callback, std::move(ResultPromise)),
-               OverridenContents, UsedFS);
-  return ResultFuture;
-}
-
 void ClangdServer::codeComplete(
     PathRef File, Position Pos, const clangd::CodeCompleteOptions &Opts,
     UniqueFunction<void(Tagged<CompletionList>)> Callback,

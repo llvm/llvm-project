@@ -14,6 +14,7 @@
 #include "Matchers.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "SyncAPI.h"
 #include "TestFS.h"
 #include "index/MemIndex.h"
 #include "gmock/gmock.h"
@@ -121,8 +122,7 @@ CompletionList completions(StringRef Text,
   auto File = getVirtualTestFilePath("foo.cpp");
   Annotations Test(Text);
   Server.addDocument(File, Test.code()).wait();
-  auto CompletionList =
-      Server.codeComplete(File, Test.point(), Opts).get().Value;
+  auto CompletionList = runCodeComplete(Server, File, Test.point(), Opts).Value;
   // Sanity-check that filterText is valid.
   EXPECT_THAT(CompletionList.items, Each(NameContainsFilter()));
   return CompletionList;
@@ -348,10 +348,8 @@ TEST(CompletionTest, CheckContentsOverride) {
 
   Annotations Example("int cbc; int b = ^;");
   auto Results =
-      Server
-          .codeComplete(File, Example.point(), clangd::CodeCompleteOptions(),
-                        StringRef(Example.code()))
-          .get()
+      runCodeComplete(Server, File, Example.point(),
+                      clangd::CodeCompleteOptions(), StringRef(Example.code()))
           .Value;
   EXPECT_THAT(Results.items, Contains(Named("cbc")));
 }
@@ -556,17 +554,17 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   Server.addDocument(File, Test.code()).wait();
   clangd::CodeCompleteOptions Opts = {};
 
-  auto WithoutIndex = Server.codeComplete(File, Test.point(), Opts).get().Value;
+  auto WithoutIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
   EXPECT_THAT(WithoutIndex.items,
               UnorderedElementsAre(Named("local"), Named("preamble")));
 
   auto I = memIndex({var("ns::index")});
   Opts.Index = I.get();
-  auto WithIndex = Server.codeComplete(File, Test.point(), Opts).get().Value;
+  auto WithIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
   EXPECT_THAT(WithIndex.items,
               UnorderedElementsAre(Named("local"), Named("index")));
   auto ClassFromPreamble =
-      Server.codeComplete(File, Test.point("2"), Opts).get().Value;
+      runCodeComplete(Server, File, Test.point("2"), Opts).Value;
   EXPECT_THAT(ClassFromPreamble.items, Contains(Named("member")));
 }
 
@@ -595,7 +593,7 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
   )cpp");
   Server.addDocument(File, Test.code()).wait();
 
-  auto Results = Server.codeComplete(File, Test.point(), {}).get().Value;
+  auto Results = runCodeComplete(Server, File, Test.point(), {}).Value;
   // "XYZ" and "foo" are not included in the file being completed but are still
   // visible through the index.
   EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));

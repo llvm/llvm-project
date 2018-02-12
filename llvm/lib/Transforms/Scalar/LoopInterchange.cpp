@@ -1222,17 +1222,12 @@ void LoopInterchangeTransform::splitInnerLoopHeader() {
   // stay in the innerloop body.
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
+  SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHI(), DT, LI);
   if (InnerLoopHasReduction) {
-    // Note: The induction PHI must be the first PHI for this to work
-    BasicBlock *New = InnerLoopHeader->splitBasicBlock(
-        ++(InnerLoopHeader->begin()), InnerLoopHeader->getName() + ".split");
-    if (LI)
-      if (Loop *L = LI->getLoopFor(InnerLoopHeader))
-        L->addBasicBlockToLoop(New, *LI);
-
-    // Adjust Reduction PHI's in the block.
+    // Adjust Reduction PHI's in the block. The induction PHI must be the first
+    // PHI in InnerLoopHeader for this to work.
     SmallVector<PHINode *, 8> PHIVec;
-    for (auto I = New->begin(); isa<PHINode>(I); ++I) {
+    for (auto I = std::next(InnerLoopHeader->begin()); isa<PHINode>(I); ++I) {
       PHINode *PHI = dyn_cast<PHINode>(I);
       Value *V = PHI->getIncomingValueForBlock(InnerLoopPreHeader);
       PHI->replaceAllUsesWith(V);
@@ -1241,8 +1236,6 @@ void LoopInterchangeTransform::splitInnerLoopHeader() {
     for (PHINode *P : PHIVec) {
       P->eraseFromParent();
     }
-  } else {
-    SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHI(), DT, LI);
   }
 
   DEBUG(dbgs() << "Output of splitInnerLoopHeader InnerLoopHeaderSucc & "

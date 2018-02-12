@@ -896,6 +896,7 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
 Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   bool IsSigned = I.getOpcode() == Instruction::SDiv;
+  Type *Ty = I.getType();
 
   // The RHS is known non-zero.
   if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I)) {
@@ -908,7 +909,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
-  if (Instruction *LHS = dyn_cast<Instruction>(Op0)) {
+  if (auto *LHS = dyn_cast<Instruction>(Op0)) {
     const APInt *C2;
     if (match(Op1, m_APInt(C2))) {
       Value *X;
@@ -920,7 +921,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
         APInt Product(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
         if (!MultiplyOverflows(*C1, *C2, Product, IsSigned))
           return BinaryOperator::Create(I.getOpcode(), X,
-                                        ConstantInt::get(I.getType(), Product));
+                                        ConstantInt::get(Ty, Product));
       }
 
       if ((IsSigned && match(LHS, m_NSWMul(m_Value(X), m_APInt(C1)))) ||
@@ -930,7 +931,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
         // (X * C1) / C2 -> X / (C2 / C1) if C2 is a multiple of C1.
         if (IsMultiple(*C2, *C1, Quotient, IsSigned)) {
           BinaryOperator *BO = BinaryOperator::Create(
-              I.getOpcode(), X, ConstantInt::get(X->getType(), Quotient));
+              I.getOpcode(), X, ConstantInt::get(Ty, Quotient));
           BO->setIsExact(I.isExact());
           return BO;
         }
@@ -938,7 +939,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
         // (X * C1) / C2 -> X * (C1 / C2) if C1 is a multiple of C2.
         if (IsMultiple(*C1, *C2, Quotient, IsSigned)) {
           BinaryOperator *BO = BinaryOperator::Create(
-              Instruction::Mul, X, ConstantInt::get(X->getType(), Quotient));
+              Instruction::Mul, X, ConstantInt::get(Ty, Quotient));
           BO->setHasNoUnsignedWrap(
               !IsSigned &&
               cast<OverflowingBinaryOperator>(LHS)->hasNoUnsignedWrap());
@@ -957,16 +958,16 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
 
         // (X << C1) / C2 -> X / (C2 >> C1) if C2 is a multiple of C1.
         if (IsMultiple(*C2, C1Shifted, Quotient, IsSigned)) {
-          BinaryOperator *BO = BinaryOperator::Create(
-              I.getOpcode(), X, ConstantInt::get(X->getType(), Quotient));
+          auto *BO = BinaryOperator::Create(I.getOpcode(), X,
+                                            ConstantInt::get(Ty, Quotient));
           BO->setIsExact(I.isExact());
           return BO;
         }
 
         // (X << C1) / C2 -> X * (C2 >> C1) if C1 is a multiple of C2.
         if (IsMultiple(C1Shifted, *C2, Quotient, IsSigned)) {
-          BinaryOperator *BO = BinaryOperator::Create(
-              Instruction::Mul, X, ConstantInt::get(X->getType(), Quotient));
+          auto *BO = BinaryOperator::Create(Instruction::Mul, X,
+                                            ConstantInt::get(Ty, Quotient));
           BO->setHasNoUnsignedWrap(
               !IsSigned &&
               cast<OverflowingBinaryOperator>(LHS)->hasNoUnsignedWrap());
@@ -983,18 +984,18 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   }
 
   if (match(Op0, m_One())) {
-    assert(!I.getType()->isIntOrIntVectorTy(1) && "i1 divide not removed?");
-    if (I.getOpcode() == Instruction::SDiv) {
+    assert(!Ty->isIntOrIntVectorTy(1) && "i1 divide not removed?");
+    if (IsSigned) {
       // If Op1 is 0 then it's undefined behaviour, if Op1 is 1 then the
       // result is one, if Op1 is -1 then the result is minus one, otherwise
       // it's zero.
       Value *Inc = Builder.CreateAdd(Op1, Op0);
-      Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(I.getType(), 3));
-      return SelectInst::Create(Cmp, Op1, ConstantInt::get(I.getType(), 0));
+      Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(Ty, 3));
+      return SelectInst::Create(Cmp, Op1, ConstantInt::get(Ty, 0));
     } else {
       // If Op1 is 0 then it's undefined behaviour. If Op1 is 1 then the
       // result is one, otherwise it's zero.
-      return new ZExtInst(Builder.CreateICmpEQ(Op1, Op0), I.getType());
+      return new ZExtInst(Builder.CreateICmpEQ(Op1, Op0), Ty);
     }
   }
 
@@ -1012,16 +1013,16 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   // (X << Y) / X -> 1 << Y
   Value *Y;
   if (IsSigned && match(Op0, m_NSWShl(m_Specific(Op1), m_Value(Y))))
-    return BinaryOperator::CreateNSWShl(ConstantInt::get(I.getType(), 1), Y);
+    return BinaryOperator::CreateNSWShl(ConstantInt::get(Ty, 1), Y);
   if (!IsSigned && match(Op0, m_NUWShl(m_Specific(Op1), m_Value(Y))))
-    return BinaryOperator::CreateNUWShl(ConstantInt::get(I.getType(), 1), Y);
+    return BinaryOperator::CreateNUWShl(ConstantInt::get(Ty, 1), Y);
 
   // X / (X * Y) -> 1 / Y if the multiplication does not overflow.
   if (match(Op1, m_c_Mul(m_Specific(Op0), m_Value(Y)))) {
     bool HasNSW = cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap();
     bool HasNUW = cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap();
     if ((IsSigned && HasNSW) || (!IsSigned && HasNUW)) {
-      I.setOperand(0, ConstantInt::get(I.getType(), 1));
+      I.setOperand(0, ConstantInt::get(Ty, 1));
       I.setOperand(1, Y);
       return &I;
     }
