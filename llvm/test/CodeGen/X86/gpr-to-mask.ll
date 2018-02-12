@@ -109,13 +109,13 @@ define void @test_load_add(i1 %cond, float* %fptr, i1* %iptr1, i1* %iptr2, float
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB2_2
 ; X86-64-NEXT:  # %bb.1: # %if
-; X86-64-NEXT:    kmovb (%rdx), %k0
-; X86-64-NEXT:    kmovb (%rcx), %k1
-; X86-64-NEXT:    kaddb %k1, %k0, %k1
+; X86-64-NEXT:    movb (%rdx), %al
+; X86-64-NEXT:    addb (%rcx), %al
 ; X86-64-NEXT:    jmp .LBB2_3
 ; X86-64-NEXT:  .LBB2_2: # %else
-; X86-64-NEXT:    kmovb (%rcx), %k1
+; X86-64-NEXT:    movb (%rcx), %al
 ; X86-64-NEXT:  .LBB2_3: # %exit
+; X86-64-NEXT:    kmovd %eax, %k1
 ; X86-64-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
 ; X86-64-NEXT:    vmovss %xmm1, (%rsi)
 ; X86-64-NEXT:    retq
@@ -130,13 +130,13 @@ define void @test_load_add(i1 %cond, float* %fptr, i1* %iptr1, i1* %iptr2, float
 ; X86-32-NEXT:    je .LBB2_2
 ; X86-32-NEXT:  # %bb.1: # %if
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-32-NEXT:    kmovb (%edx), %k0
-; X86-32-NEXT:    kmovb (%ecx), %k1
-; X86-32-NEXT:    kaddb %k1, %k0, %k1
+; X86-32-NEXT:    movb (%edx), %dl
+; X86-32-NEXT:    addb (%ecx), %dl
 ; X86-32-NEXT:    jmp .LBB2_3
 ; X86-32-NEXT:  .LBB2_2: # %else
-; X86-32-NEXT:    kmovb (%ecx), %k1
+; X86-32-NEXT:    movb (%ecx), %dl
 ; X86-32-NEXT:  .LBB2_3: # %exit
+; X86-32-NEXT:    kmovd %edx, %k1
 ; X86-32-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; X86-32-NEXT:    vmovss %xmm0, (%eax)
 ; X86-32-NEXT:    retl

@@ -373,11 +373,13 @@ X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
 X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                            const X86TargetMachine &TM,
                            unsigned StackAlignOverride,
-                           unsigned PreferVectorWidthOverride)
+                           unsigned PreferVectorWidthOverride,
+                           unsigned RequiredVectorWidth)
     : X86GenSubtargetInfo(TT, CPU, FS), X86ProcFamily(Others),
       PICStyle(PICStyles::None), TM(TM), TargetTriple(TT),
       StackAlignOverride(StackAlignOverride),
       PreferVectorWidthOverride(PreferVectorWidthOverride),
+      RequiredVectorWidth(RequiredVectorWidth),
       In64BitMode(TargetTriple.getArch() == Triple::x86_64),
       In32BitMode(TargetTriple.getArch() == Triple::x86 &&
                   TargetTriple.getEnvironment() != Triple::CODE16),

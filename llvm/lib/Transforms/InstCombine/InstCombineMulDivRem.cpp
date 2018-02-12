@@ -1016,6 +1016,17 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   if (!IsSigned && match(Op0, m_NUWShl(m_Specific(Op1), m_Value(Y))))
     return BinaryOperator::CreateNUWShl(ConstantInt::get(I.getType(), 1), Y);
 
+  // X / (X * Y) -> 1 / Y if the multiplication does not overflow.
+  if (match(Op1, m_c_Mul(m_Specific(Op0), m_Value(Y)))) {
+    bool HasNSW = cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap();
+    bool HasNUW = cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap();
+    if ((IsSigned && HasNSW) || (!IsSigned && HasNUW)) {
+      I.setOperand(0, ConstantInt::get(I.getType(), 1));
+      I.setOperand(1, Y);
+      return &I;
+    }
+  }
+
   return nullptr;
 }
 
