@@ -5,6 +5,7 @@ class C {
 public:
   C();
   C(C *);
+  C(int, int);
 
   static C get();
 };
@@ -224,3 +225,94 @@ public:
 };
 
 } // end namespace ctor_initializers
+
+namespace return_stmt {
+
+// CHECK: C returnVariable()
+// CHECK:          1:  (CXXConstructExpr, [B1.2], class C)
+// CHECK-NEXT:     2: C c;
+// CHECK-NEXT:     3: c
+// CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, class C)
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
+// CHECK-NEXT:     6: return [B1.5];
+C returnVariable() {
+  C c;
+  return c;
+}
+
+// CHECK: C returnEmptyBraces()
+// CHECK:          1: {} (CXXConstructExpr, [B1.2], class C)
+// CHECK-NEXT:     2: return [B1.1];
+C returnEmptyBraces() {
+  return {};
+}
+
+// CHECK: C returnBracesWithOperatorNew()
+// CHECK:          1: CFGNewAllocator(C *)
+// CHECK-NEXT:     2:  (CXXConstructExpr, [B1.3], class C)
+// CHECK-NEXT:     3: new C([B1.2])
+// CHECK-NEXT:     4: {[B1.3]} (CXXConstructExpr, [B1.5], class C)
+// CHECK-NEXT:     5: return [B1.4];
+C returnBracesWithOperatorNew() {
+  return {new C()};
+}
+
+// CHECK: C returnBracesWithMultipleItems()
+// CHECK:          1: 123
+// CHECK-NEXT:     2: 456
+// CHECK-NEXT:     3: {[B1.1], [B1.2]} (CXXConstructExpr, [B1.4], class C)
+// CHECK-NEXT:     4: return [B1.3];
+C returnBracesWithMultipleItems() {
+  return {123, 456};
+}
+
+// TODO: Should find construction targets for the first constructor as well.
+// CHECK: C returnTemporary()
+// CHECK:          1: C() (CXXConstructExpr, class C)
+// CHECK-NEXT:     2: [B1.1]
+// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], class C)
+// CHECK-NEXT:     4: return [B1.3];
+C returnTemporary() {
+  return C();
+}
+
+// TODO: Should find construction targets for the first constructor as well.
+// CHECK: C returnTemporaryWithArgument()
+// CHECK:          1: nullptr
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NullToPointer, class C *)
+// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, class C)
+// CHECK-NEXT:     4: C([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
+// CHECK-NEXT:     5: [B1.4]
+// CHECK-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.7], class C)
+// CHECK-NEXT:     7: return [B1.6];
+C returnTemporaryWithArgument() {
+  return C(nullptr);
+}
+
+// CHECK: C returnTemporaryConstructedByFunction()
+// CHECK:          1: C::get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
+// CHECK-NEXT:     6: return [B1.5];
+C returnTemporaryConstructedByFunction() {
+  return C::get();
+}
+
+// TODO: Should find construction targets for the first constructor as well.
+// CHECK: C returnChainOfCopies()
+// CHECK:          1: C::get
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
+// CHECK-NEXT:     3: [B1.2]()
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, class C)
+// CHECK-NEXT:     6: C([B1.5]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
+// CHECK-NEXT:     7: [B1.6]
+// CHECK-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.9], class C)
+// CHECK-NEXT:     9: return [B1.8];
+C returnChainOfCopies() {
+  return C(C::get());
+}
+
+} // end namespace return_stmt
