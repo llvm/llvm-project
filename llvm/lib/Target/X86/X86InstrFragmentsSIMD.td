@@ -205,6 +205,8 @@ def X86kshiftr : SDNode<"X86ISD::KSHIFTR",
                                              SDTCisSameAs<0, 1>,
                                              SDTCisVT<2, i8>]>>;
 
+def X86kadd : SDNode<"X86ISD::KADD", SDTIntBinOp, [SDNPCommutative]>;
+
 def X86vrotli  : SDNode<"X86ISD::VROTLI", X86vshiftimm>;
 def X86vrotri  : SDNode<"X86ISD::VROTRI", X86vshiftimm>;
 

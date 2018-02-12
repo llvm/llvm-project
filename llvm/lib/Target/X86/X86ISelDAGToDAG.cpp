@@ -3064,12 +3064,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     return;
   }
 
-  case X86ISD::CMP:
-  case X86ISD::SUB: {
-    // Sometimes a SUB is used to perform comparison.
-    if (Opcode == X86ISD::SUB && Node->hasAnyUseOfValue(0))
-      // This node is not a CMP.
-      break;
+  case X86ISD::CMP: {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
@@ -3080,8 +3075,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // Look for (X86cmp (and $op, $imm), 0) and see if we can convert it to
     // use a smaller encoding.
     // Look past the truncate if CMP is the only use of it.
-    if ((N0.getOpcode() == ISD::AND ||
-         (N0.getResNo() == 0 && N0.getOpcode() == X86ISD::AND)) &&
+    if (N0.getOpcode() == ISD::AND &&
         N0.getNode()->hasOneUse() &&
         N0.getValueType() != MVT::i8 &&
         X86::isZeroNode(N1)) {
@@ -3132,10 +3126,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
       // Emit a testl or testw.
       SDNode *NewNode = CurDAG->getMachineNode(Op, dl, MVT::i32, Reg, Imm);
-      // Replace SUB|CMP with TEST, since SUB has two outputs while TEST has
-      // one, do not call ReplaceAllUsesWith.
-      ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
-                  SDValue(NewNode, 0));
+      // Replace CMP with TEST.
+      CurDAG->ReplaceAllUsesWith(Node, NewNode);
       CurDAG->RemoveDeadNode(Node);
       return;
     }

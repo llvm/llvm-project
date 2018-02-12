@@ -350,9 +350,7 @@ class Type;
 
     /// Return an expression representing the value of this expression
     /// one iteration of the loop ahead.
-    const SCEVAddRecExpr *getPostIncExpr(ScalarEvolution &SE) const {
-      return cast<SCEVAddRecExpr>(SE.getAddExpr(this, getStepRecurrence(SE)));
-    }
+    const SCEVAddRecExpr *getPostIncExpr(ScalarEvolution &SE) const;
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {

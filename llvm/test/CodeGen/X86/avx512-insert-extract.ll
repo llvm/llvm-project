@@ -285,9 +285,8 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 define i16 @test15(i1 *%addr) {
 ; CHECK-LABEL: test15:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movb (%rdi), %al
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    cmpb $0, (%rdi)
 ; CHECK-NEXT:    movw $-1, %ax
 ; CHECK-NEXT:    cmovew %cx, %ax
 ; CHECK-NEXT:    retq
