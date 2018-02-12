@@ -67,7 +67,6 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugLine.h"
 #include "DWARFDebugMacro.h"
-#include "DWARFDebugPubnames.h"
 #include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"

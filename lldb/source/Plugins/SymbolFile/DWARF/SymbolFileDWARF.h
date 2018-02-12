@@ -54,7 +54,6 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
-class DWARFDebugPubnames;
 class DWARFDebugRanges;
 class DWARFDeclContext;
 class DWARFDIECollection;
