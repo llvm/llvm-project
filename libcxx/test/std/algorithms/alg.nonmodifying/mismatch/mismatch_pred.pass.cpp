@@ -40,11 +40,11 @@ TEST_CONSTEXPR bool test_constexpr() {
     auto p1 = std::mismatch(std::begin(ia), std::end(ia), std::begin(ic), eq);
     if (p1.first != ia+2 || p1.second != ic+2)
         return false;
-        
+
     auto p2 = std::mismatch(std::begin(ia), std::end(ia), std::begin(ic), std::end(ic), eq);
     if (p2.first != ia+2 || p2.second != ic+2)
         return false;
-    
+
     auto p3 = std::mismatch(std::begin(ib), std::end(ib), std::begin(ic), eq);
     if (p3.first != ib+2 || p3.second != ic+2)
         return false;
@@ -60,7 +60,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     if (p6.first != BI(ib+2) || p6.second != BI(ic+2))
         return false;
 
-    return true;    
+    return true;
     }
 #endif
 

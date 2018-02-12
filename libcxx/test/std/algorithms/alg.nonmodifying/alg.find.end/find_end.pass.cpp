@@ -28,7 +28,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     typedef forward_iterator<int*>       FI;
     typedef bidirectional_iterator<int*> BI;
     typedef random_access_iterator<int*> RI;
-    
+
     return    (std::find_end(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ia)), FI(std::end(ia))) == FI(ic+15))
            && (std::find_end(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ib)), FI(std::end(ib))) == FI(std::end(ic)))
            && (std::find_end(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ia)), BI(std::end(ia))) == BI(ic+15))
