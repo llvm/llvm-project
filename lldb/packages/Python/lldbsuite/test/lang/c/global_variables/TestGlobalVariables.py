@@ -22,12 +22,6 @@ class GlobalVariablesTestCase(TestBase):
         self.shlib_names = ["a"]
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
-    @expectedFailureAll(
-        "llvm.org/pr25872, <rdar://problem/28725399>",
-        oslist=["macosx"],
-        debug_info=[
-            "dwarf",
-            "gmodules"])
     def test_c_global_variables(self):
         """Test 'frame variable --scope --no-args' which omits args and shows scopes."""
         self.build()
