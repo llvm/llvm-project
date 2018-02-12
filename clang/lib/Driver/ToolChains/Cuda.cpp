@@ -355,11 +355,17 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto& A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
     CmdArgs.push_back(Args.MakeArgString(A));
 
-  // In OpenMP we need to generate relocatable code.
-  if (JA.isOffloading(Action::OFK_OpenMP) &&
-      Args.hasFlag(options::OPT_fopenmp_relocatable_target,
-                   options::OPT_fnoopenmp_relocatable_target,
-                   /*Default=*/ true))
+  bool Relocatable = false;
+  if (JA.isOffloading(Action::OFK_OpenMP))
+    // In OpenMP we need to generate relocatable code.
+    Relocatable = Args.hasFlag(options::OPT_fopenmp_relocatable_target,
+                               options::OPT_fnoopenmp_relocatable_target,
+                               /*Default=*/true);
+  else if (JA.isOffloading(Action::OFK_Cuda))
+    Relocatable = Args.hasFlag(options::OPT_fcuda_rdc,
+                               options::OPT_fno_cuda_rdc, /*Default=*/false);
+
+  if (Relocatable)
     CmdArgs.push_back("-c");
 
   const char *Exec;
@@ -540,6 +546,10 @@ void CudaToolChain::addClangTargetOptions(
     if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
                            options::OPT_fno_cuda_approx_transcendentals, false))
       CC1Args.push_back("-fcuda-approx-transcendentals");
+
+    if (DriverArgs.hasFlag(options::OPT_fcuda_rdc, options::OPT_fno_cuda_rdc,
+                           false))
+      CC1Args.push_back("-fcuda-rdc");
   }
 
   if (DriverArgs.hasArg(options::OPT_nocudalib))
