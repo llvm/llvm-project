@@ -476,8 +476,8 @@ private:
   template <class... _Fs>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto __make_farray(_Fs&&... __fs) {
-    __std_visit_visitor_return_type_check<decay_t<_Fs>...>();
-    using __result = array<common_type_t<decay_t<_Fs>...>, sizeof...(_Fs)>;
+    __std_visit_visitor_return_type_check<__uncvref_t<_Fs>...>();
+    using __result = array<common_type_t<__uncvref_t<_Fs>...>, sizeof...(_Fs)>;
     return __result{{_VSTD::forward<_Fs>(__fs)...}};
   }
 
@@ -514,8 +514,8 @@ private:
   template <class _Fp, class _Vp, class... _Vs>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto __make_fdiagonal() {
-    constexpr size_t _Np = decay_t<_Vp>::__size();
-    static_assert(__all<(_Np == decay_t<_Vs>::__size())...>::value);
+    constexpr size_t _Np = __uncvref_t<_Vp>::__size();
+    static_assert(__all<(_Np == __uncvref_t<_Vs>::__size())...>::value);
     return __make_fdiagonal_impl<_Fp, _Vp, _Vs...>(make_index_sequence<_Np>{});
   }
 
@@ -538,7 +538,7 @@ private:
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto __make_fmatrix() {
     return __make_fmatrix_impl<_Fp, _Vs...>(
-        index_sequence<>{}, make_index_sequence<decay_t<_Vs>::__size()>{}...);
+        index_sequence<>{}, make_index_sequence<__uncvref_t<_Vs>::__size()>{}...);
   }
 };
 
@@ -756,7 +756,7 @@ _LIBCPP_VARIANT_DESTRUCTOR(
       if (!this->valueless_by_exception()) {
         __visitation::__base::__visit_alt(
             [](auto& __alt) noexcept {
-              using __alt_type = decay_t<decltype(__alt)>;
+              using __alt_type = __uncvref_t<decltype(__alt)>;
               __alt.~__alt_type();
             },
             *this);
@@ -1564,7 +1564,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<
                ? 299792458 // Random value chosen by the universe upon creation
                : __variant::__visit_alt(
                      [](const auto& __alt) {
-                       using __alt_type = decay_t<decltype(__alt)>;
+                       using __alt_type = __uncvref_t<decltype(__alt)>;
                        using __value_type = remove_const_t<
                          typename __alt_type::__value_type>;
                        return hash<__value_type>{}(__alt.__value);
