@@ -8,11 +8,36 @@
 //===---------------------------------------------------------------------===//
 
 #include "Compiler.h"
+#include "Logger.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
 namespace clangd {
+
+void IgnoreDiagnostics::log(DiagnosticsEngine::Level DiagLevel,
+                            const clang::Diagnostic &Info) {
+  SmallString<64> Message;
+  Info.FormatDiagnostic(Message);
+
+  SmallString<64> Location;
+  if (Info.hasSourceManager() && Info.getLocation().isValid()) {
+    auto &SourceMgr = Info.getSourceManager();
+    auto Loc = SourceMgr.getFileLoc(Info.getLocation());
+    llvm::raw_svector_ostream OS(Location);
+    Loc.print(OS, SourceMgr);
+    OS << ":";
+  }
+
+  clangd::log(llvm::formatv("Ignored diagnostic. {0}{1}", Location, Message));
+}
+
+void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                                         const clang::Diagnostic &Info) {
+  IgnoreDiagnostics::log(DiagLevel, Info);
+}
 
 std::unique_ptr<CompilerInstance>
 prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,

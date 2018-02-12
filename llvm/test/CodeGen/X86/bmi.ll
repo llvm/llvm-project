@@ -813,8 +813,7 @@ define i64 @blsr64(i64 %x)   {
 define i64 @blsr_disguised_constant(i64 %x) {
 ; CHECK-LABEL: blsr_disguised_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leal 65535(%rdi), %eax
-; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    blsrl %edi, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq
   %a1 = and i64 %x, 65535

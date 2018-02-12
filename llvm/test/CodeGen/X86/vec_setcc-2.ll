@@ -5,26 +5,49 @@
 ; For a setult against a constant, turn it into a setule and lower via psubusw.
 
 define void @loop_no_const_reload(<2 x i64>*  %in, <2 x i64>* %out, i32 %n) {
-; CHECK-LABEL: loop_no_const_reload:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    je LBB0_3
-; CHECK-NEXT:  ## %bb.1: ## %for.body.preheader
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [25,25,25,25,25,25,25,25]
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB0_2: ## %for.body
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movdqa (%rdi,%rax), %xmm2
-; CHECK-NEXT:    psubusw %xmm0, %xmm2
-; CHECK-NEXT:    pcmpeqw %xmm1, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, (%rsi,%rax)
-; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    decl %edx
-; CHECK-NEXT:    jne LBB0_2
-; CHECK-NEXT:  LBB0_3: ## %for.end
-; CHECK-NEXT:    retq
+; SSE2-LABEL: loop_no_const_reload:
+; SSE2:       ## %bb.0: ## %entry
+; SSE2-NEXT:    testl %edx, %edx
+; SSE2-NEXT:    je LBB0_3
+; SSE2-NEXT:  ## %bb.1: ## %for.body.preheader
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [25,25,25,25,25,25,25,25]
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  LBB0_2: ## %for.body
+; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqa (%rdi,%rax), %xmm2
+; SSE2-NEXT:    psubusw %xmm0, %xmm2
+; SSE2-NEXT:    pcmpeqw %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, (%rsi,%rax)
+; SSE2-NEXT:    addq $16, %rax
+; SSE2-NEXT:    decl %edx
+; SSE2-NEXT:    jne LBB0_2
+; SSE2-NEXT:  LBB0_3: ## %for.end
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: loop_no_const_reload:
+; SSE41:       ## %bb.0: ## %entry
+; SSE41-NEXT:    testl %edx, %edx
+; SSE41-NEXT:    je LBB0_3
+; SSE41-NEXT:  ## %bb.1: ## %for.body.preheader
+; SSE41-NEXT:    xorl %eax, %eax
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [26,26,26,26,26,26,26,26]
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    .p2align 4, 0x90
+; SSE41-NEXT:  LBB0_2: ## %for.body
+; SSE41-NEXT:    ## =>This Inner Loop Header: Depth=1
+; SSE41-NEXT:    movdqa (%rdi,%rax), %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    pmaxuw %xmm0, %xmm3
+; SSE41-NEXT:    pcmpeqw %xmm2, %xmm3
+; SSE41-NEXT:    pxor %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm3, (%rsi,%rax)
+; SSE41-NEXT:    addq $16, %rax
+; SSE41-NEXT:    decl %edx
+; SSE41-NEXT:    jne LBB0_2
+; SSE41-NEXT:  LBB0_3: ## %for.end
+; SSE41-NEXT:    retq
 entry:
   %cmp9 = icmp eq i32 %n, 0
   br i1 %cmp9, label %for.end, label %for.body
@@ -51,27 +74,50 @@ for.end:                                          ; preds = %for.body, %entry
 ; Be careful if decrementing the constant would undeflow.
 
 define void @loop_const_folding_underflow(<2 x i64>*  %in, <2 x i64>* %out, i32 %n) {
-; CHECK-LABEL: loop_const_folding_underflow:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    je LBB1_3
-; CHECK-NEXT:  ## %bb.1: ## %for.body.preheader
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32794,32794,32794,32794,32794,32794,32794]
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB1_2: ## %for.body
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movdqa (%rdi,%rax), %xmm2
-; CHECK-NEXT:    pxor %xmm0, %xmm2
-; CHECK-NEXT:    movdqa %xmm1, %xmm3
-; CHECK-NEXT:    pcmpgtw %xmm2, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, (%rsi,%rax)
-; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    decl %edx
-; CHECK-NEXT:    jne LBB1_2
-; CHECK-NEXT:  LBB1_3: ## %for.end
-; CHECK-NEXT:    retq
+; SSE2-LABEL: loop_const_folding_underflow:
+; SSE2:       ## %bb.0: ## %entry
+; SSE2-NEXT:    testl %edx, %edx
+; SSE2-NEXT:    je LBB1_3
+; SSE2-NEXT:  ## %bb.1: ## %for.body.preheader
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32794,32794,32794,32794,32794,32794,32794]
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  LBB1_2: ## %for.body
+; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqa (%rdi,%rax), %xmm2
+; SSE2-NEXT:    pxor %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    pcmpgtw %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, (%rsi,%rax)
+; SSE2-NEXT:    addq $16, %rax
+; SSE2-NEXT:    decl %edx
+; SSE2-NEXT:    jne LBB1_2
+; SSE2-NEXT:  LBB1_3: ## %for.end
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: loop_const_folding_underflow:
+; SSE41:       ## %bb.0: ## %entry
+; SSE41-NEXT:    testl %edx, %edx
+; SSE41-NEXT:    je LBB1_3
+; SSE41-NEXT:  ## %bb.1: ## %for.body.preheader
+; SSE41-NEXT:    xorl %eax, %eax
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [0,26,26,26,26,26,26,26]
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    .p2align 4, 0x90
+; SSE41-NEXT:  LBB1_2: ## %for.body
+; SSE41-NEXT:    ## =>This Inner Loop Header: Depth=1
+; SSE41-NEXT:    movdqa (%rdi,%rax), %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    pmaxuw %xmm0, %xmm3
+; SSE41-NEXT:    pcmpeqw %xmm2, %xmm3
+; SSE41-NEXT:    pxor %xmm1, %xmm3
+; SSE41-NEXT:    movdqa %xmm3, (%rsi,%rax)
+; SSE41-NEXT:    addq $16, %rax
+; SSE41-NEXT:    decl %edx
+; SSE41-NEXT:    jne LBB1_2
+; SSE41-NEXT:  LBB1_3: ## %for.end
+; SSE41-NEXT:    retq
 entry:
   %cmp9 = icmp eq i32 %n, 0
   br i1 %cmp9, label %for.end, label %for.body
@@ -100,9 +146,11 @@ for.end:                                          ; preds = %for.body, %entry
 define <16 x i8> @test_ult_byte(<16 x i8> %a) {
 ; CHECK-LABEL: test_ult_byte:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    psubusb {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11]
+; CHECK-NEXT:    pmaxub %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqb %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %icmp = icmp ult <16 x i8> %a, <i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11>
@@ -114,14 +162,22 @@ entry:
 ; register operands.
 
 define <8 x i16> @test_ult_register(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: test_ult_register:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; CHECK-NEXT:    pxor %xmm2, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pcmpgtw %xmm0, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    retq
+; SSE2-LABEL: test_ult_register:
+; SSE2:       ## %bb.0: ## %entry
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_ult_register:
+; SSE41:       ## %bb.0: ## %entry
+; SSE41-NEXT:    pmaxuw %xmm0, %xmm1
+; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    retq
 entry:
   %icmp = icmp ult <8 x i16> %a, %b
   %sext = sext <8 x i1> %icmp to <8 x i16>

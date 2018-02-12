@@ -259,8 +259,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   // the feature string out later.
   unsigned CPUFSWidth = Key.size();
 
-  // Translate vector width function attribute into subtarget features. This
-  // overrides any CPU specific turning parameter
+  // Extract prefer-vector-width attribute.
   unsigned PreferVectorWidthOverride = 0;
   if (F.hasFnAttribute("prefer-vector-width")) {
     StringRef Val = F.getFnAttribute("prefer-vector-width").getValueAsString();
@@ -272,6 +271,21 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     }
   }
 
+  // Extract required-vector-width attribute.
+  unsigned RequiredVectorWidth = UINT32_MAX;
+  if (F.hasFnAttribute("required-vector-width")) {
+    StringRef Val = F.getFnAttribute("required-vector-width").getValueAsString();
+    unsigned Width;
+    if (!Val.getAsInteger(0, Width)) {
+      Key += ",required-vector-width=";
+      Key += Val;
+      RequiredVectorWidth = Width;
+    }
+  }
+
+  // Extracted here so that we make sure there is backing for the StringRef. If
+  // we assigned earlier, its possible the SmallString reallocated leaving a
+  // dangling StringRef.
   FS = Key.slice(CPU.size(), CPUFSWidth);
 
   auto &I = SubtargetMap[Key];
@@ -282,7 +296,8 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = llvm::make_unique<X86Subtarget>(TargetTriple, CPU, FS, *this,
                                         Options.StackAlignmentOverride,
-                                        PreferVectorWidthOverride);
+                                        PreferVectorWidthOverride,
+                                        RequiredVectorWidth);
   }
   return I.get();
 }

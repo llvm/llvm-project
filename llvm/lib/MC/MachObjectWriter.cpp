@@ -945,7 +945,13 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
          it != ie; ++it) {
     const DataRegionData *Data = &(*it);
     uint64_t Start = getSymbolAddress(*Data->Start, Layout);
-    uint64_t End = getSymbolAddress(*Data->End, Layout);
+    uint64_t End;
+    if (Data->End) 
+      End = getSymbolAddress(*Data->End, Layout);
+    else
+      report_fatal_error("Data region not terminated");
+
+
     DEBUG(dbgs() << "data in code region-- kind: " << Data->Kind
                  << "  start: " << Start << "(" << Data->Start->getName() << ")"
                  << "  end: " << End << "(" << Data->End->getName() << ")"

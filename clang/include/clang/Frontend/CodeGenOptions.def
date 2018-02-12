@@ -159,6 +159,9 @@ CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
                                                 ///< in AddressSanitizer
+CODEGENOPT(SanitizeAddressPoisonClassMemberArrayNewCookie, 1,
+           0) ///< Enable poisoning operator new[] which is not a replaceable
+              ///< global allocation function in AddressSanitizer
 CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0) ///< Enable linker dead stripping
                                                       ///< of globals in AddressSanitizer
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in

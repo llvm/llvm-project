@@ -101,7 +101,7 @@ define i32 @test8(i32 %x) {
 define i64 @add_neg_one(i64 %x) {
 ; CHECK-LABEL: add_neg_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leal 65535(%rdi), %eax
+; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq
@@ -128,8 +128,7 @@ define i64 @mul_neg_one(i64 %x) {
 ; CHECK-LABEL: mul_neg_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq

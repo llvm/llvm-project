@@ -808,10 +808,9 @@ end:
 ; DISABLE-NEXT: subq $16, %rsp
 ;
 ; Load the value of b.
-; CHECK: movb _b(%rip), [[BOOL:%cl]]
 ; Create the zero value for the select assignment.
-; CHECK-NEXT: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
-; CHECK-NEXT: testb [[BOOL]], [[BOOL]]
+; CHECK: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
+; CHECK-NEXT: cmpb $0, _b(%rip)
 ; CHECK-NEXT: jne [[STOREC_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: movb $48, [[CMOVE_VAL:%al]]

@@ -12,11 +12,7 @@ define <8 x i16> @test_v8i16_nosignbit(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    psrlw $1, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtw %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v8i16_nosignbit:

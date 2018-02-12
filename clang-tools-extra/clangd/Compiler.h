@@ -24,8 +24,11 @@ namespace clangd {
 
 class IgnoreDiagnostics : public DiagnosticConsumer {
 public:
+  static void log(DiagnosticsEngine::Level DiagLevel,
+                  const clang::Diagnostic &Info);
+
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const clang::Diagnostic &Info) override {}
+                        const clang::Diagnostic &Info) override;
 };
 
 /// Creates a compiler instance, configured so that:

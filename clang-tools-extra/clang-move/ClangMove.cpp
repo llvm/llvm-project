@@ -280,7 +280,7 @@ SourceLocation
 getLocForEndOfDecl(const clang::Decl *D,
                    const LangOptions &LangOpts = clang::LangOptions()) {
   const auto &SM = D->getASTContext().getSourceManager();
-  auto EndExpansionLoc = SM.getExpansionLoc(D->getLocEnd());
+  auto EndExpansionLoc = SM.getExpansionRange(D->getLocEnd()).second;
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(EndExpansionLoc);
   // Try to load the file buffer.
   bool InvalidTemp = false;

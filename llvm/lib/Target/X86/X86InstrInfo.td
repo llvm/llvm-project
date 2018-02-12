@@ -1028,6 +1028,17 @@ def i64immZExt32SExt8 : ImmLeaf<i64, [{
 }]>;
 
 // Helper fragments for loads.
+
+// It's safe to fold a zextload/extload from i1 as a regular i8 load. The
+// upper bits are guaranteed to be zero and we were going to emit a MOV8rm
+// which might get folded during peephole anyway.
+def loadi8 : PatFrag<(ops node:$ptr), (i8 (unindexedload node:$ptr)), [{
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  ISD::LoadExtType ExtType = LD->getExtensionType();
+  return ExtType == ISD::NON_EXTLOAD || ExtType == ISD::EXTLOAD ||
+         ExtType == ISD::ZEXTLOAD;
+}]>;
+
 // It's always safe to treat a anyext i16 load as a i32 load if the i16 is
 // known to be 32-bit aligned or better. Ditto for i8 to i16.
 def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
@@ -1058,7 +1069,6 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   return false;
 }]>;
 
-def loadi8   : PatFrag<(ops node:$ptr), (i8  (load node:$ptr))>;
 def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
 def loadf32  : PatFrag<(ops node:$ptr), (f32 (load node:$ptr))>;
 def loadf64  : PatFrag<(ops node:$ptr), (f64 (load node:$ptr))>;

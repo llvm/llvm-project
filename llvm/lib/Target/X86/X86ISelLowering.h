@@ -372,6 +372,9 @@ namespace llvm {
       KORTEST,
       KTEST,
 
+      // ADD for masks.
+      KADD,
+
       // Several flavors of instructions with vector shuffle behaviors.
       // Saturated signed/unnsigned packing.
       PACKSS,
