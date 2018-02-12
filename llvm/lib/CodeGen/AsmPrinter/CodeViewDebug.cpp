@@ -501,12 +501,12 @@ void CodeViewDebug::endModule() {
   clear();
 }
 
-static void emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S) {
+static void emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S,
+    unsigned MaxFixedRecordLength = 0xF00) {
   // The maximum CV record length is 0xFF00. Most of the strings we emit appear
   // after a fixed length portion of the record. The fixed length portion should
   // always be less than 0xF00 (3840) bytes, so truncate the string so that the
   // overall record size is less than the maximum allowed.
-  unsigned MaxFixedRecordLength = 0xF00;
   SmallString<32> NullTerminatedString(
       S.take_front(MaxRecordLength - MaxFixedRecordLength - 1));
   NullTerminatedString.push_back('\0');
@@ -2448,6 +2448,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   // FIXME: Thread local data, etc
   MCSymbol *DataBegin = MMI->getContext().createTempSymbol(),
            *DataEnd = MMI->getContext().createTempSymbol();
+  const unsigned FixedLengthOfThisRecord = 12;
   OS.AddComment("Record length");
   OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
   OS.EmitLabel(DataBegin);
@@ -2475,6 +2476,6 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Segment");
   OS.EmitCOFFSectionIndex(GVSym);
   OS.AddComment("Name");
-  emitNullTerminatedSymbolName(OS, DIGV->getName());
+  emitNullTerminatedSymbolName(OS, DIGV->getName(), FixedLengthOfThisRecord);
   OS.EmitLabel(DataEnd);
 }

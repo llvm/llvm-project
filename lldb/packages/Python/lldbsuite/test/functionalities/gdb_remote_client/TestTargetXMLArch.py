@@ -6,6 +6,7 @@ from gdbclientutils import *
 
 class TestTargetXMLArch(GDBRemoteTestBase):
 
+    @skipIf(hostoslist=no_match(lldbplatformutil.getDarwinOSTriples()))
     @expectedFailureAll(archs=["i386"])
     def test(self):
         """

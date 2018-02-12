@@ -850,7 +850,8 @@ class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 class BinOpMR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                 SDPatternOperator opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
-            [(set EFLAGS, (opnode (load addr:$dst), typeinfo.RegClass:$src))]>;
+            [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
+                                   typeinfo.RegClass:$src))]>;
 
 // BinOpMI - Instructions like "add [mem], imm".
 class BinOpMI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -882,8 +883,8 @@ class BinOpMI_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 class BinOpMI_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                 SDPatternOperator opnode, Format f>
   : BinOpMI<opcode, mnemonic, typeinfo, f,
-            [(set EFLAGS, (opnode (typeinfo.VT (load addr:$dst)),
-                                               typeinfo.ImmOperator:$src))]>;
+            [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
+                                  typeinfo.ImmOperator:$src))]>;
 
 // BinOpMI8 - Instructions like "add [mem], imm8".
 class BinOpMI8<string mnemonic, X86TypeInfo typeinfo,
@@ -916,7 +917,7 @@ class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
 class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo,
                  SDPatternOperator opnode, Format f>
   : BinOpMI8<mnemonic, typeinfo, f,
-             [(set EFLAGS, (opnode (load addr:$dst),
+             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                    typeinfo.Imm8Operator:$src))]>;
 
 // BinOpAI - Instructions like "add %eax, %eax, imm", that imp-def EFLAGS.

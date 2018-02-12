@@ -1232,6 +1232,27 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       }
       return true;
     }
+
+    // If we have a constant operand, we may be able to turn it into -1 if we
+    // do not demand the high bits. This can make the constant smaller to
+    // encode, allow more general folding, or match specialized instruction
+    // patterns (eg, 'blsr' on x86). Don't bother changing 1 to -1 because that
+    // is probably not useful (and could be detrimental).
+    ConstantSDNode *C = isConstOrConstSplat(Op1);
+    APInt HighMask = APInt::getHighBitsSet(NewMask.getBitWidth(), NewMaskLZ);
+    if (C && !C->isAllOnesValue() && !C->isOne() &&
+        (C->getAPIntValue() | HighMask).isAllOnesValue()) {
+      SDValue Neg1 = TLO.DAG.getAllOnesConstant(dl, VT);
+      // We can't guarantee that the new math op doesn't wrap, so explicitly
+      // clear those flags to prevent folding with a potential existing node
+      // that has those flags set.
+      SDNodeFlags Flags;
+      Flags.setNoSignedWrap(false);
+      Flags.setNoUnsignedWrap(false);
+      SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Neg1, Flags);
+      return TLO.CombineTo(Op, NewOp);
+    }
+
     LLVM_FALLTHROUGH;
   }
   default:

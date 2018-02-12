@@ -2956,7 +2956,7 @@ defm KOR   : avx512_mask_binop_all<0x45, "kor",   or,    SSE_BIT_ITINS_P, 1>;
 defm KXNOR : avx512_mask_binop_all<0x46, "kxnor", vxnor, SSE_BIT_ITINS_P, 1>;
 defm KXOR  : avx512_mask_binop_all<0x47, "kxor",  xor,   SSE_BIT_ITINS_P, 1>;
 defm KANDN : avx512_mask_binop_all<0x42, "kandn", vandn, SSE_BIT_ITINS_P, 0>;
-defm KADD  : avx512_mask_binop_all<0x4A, "kadd",  add,   SSE_BIT_ITINS_P, 1, HasDQI>;
+defm KADD  : avx512_mask_binop_all<0x4A, "kadd",  X86kadd, SSE_BIT_ITINS_P, 1, HasDQI>;
 
 multiclass avx512_binop_pat<SDPatternOperator VOpNode, SDPatternOperator OpNode,
                             Instruction Inst> {

@@ -431,198 +431,225 @@ middle.block:
   ret i32 %12
 }
 
-define <16 x float> @sbto16f32_256(<16 x i32> %a) "required-vector-width"="256" {
+define void @sbto16f32_256(<16 x i16> %a, <16 x float>* %res) "required-vector-width"="256" {
 ; CHECK-LABEL: sbto16f32_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    vpmovm2d %k1, %ymm0
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmovm2d %k0, %ymm1
 ; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vmovaps %ymm1, (%rdi)
+; CHECK-NEXT:    vmovaps %ymm0, 32(%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %mask = icmp slt <16 x i32> %a, zeroinitializer
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = sitofp <16 x i1> %mask to <16 x float>
-  ret <16 x float> %1
+  store <16 x float> %1, <16 x float>* %res
+  ret void
 }
 
-define <16 x float> @sbto16f32_512(<16 x i32> %a) "required-vector-width"="512" {
+define void @sbto16f32_512(<16 x i16> %a, <16 x float>* %res) "required-vector-width"="512" {
 ; CHECK-LABEL: sbto16f32_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovd2m %zmm0, %k0
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %zmm0
 ; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; CHECK-NEXT:    vmovaps %zmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %mask = icmp slt <16 x i32> %a, zeroinitializer
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = sitofp <16 x i1> %mask to <16 x float>
-  ret <16 x float> %1
+  store <16 x float> %1, <16 x float>* %res
+  ret void
 }
 
-define <16 x double> @sbto16f64_256(<16 x double> %a)  "required-vector-width"="256" {
+define void @sbto16f64_256(<16 x i16> %a, <16 x double>* %res)  "required-vector-width"="256" {
 ; CHECK-LABEL: sbto16f64_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vcmpltpd %ymm2, %ymm4, %k0
-; CHECK-NEXT:    vcmpltpd %ymm3, %ymm4, %k1
-; CHECK-NEXT:    kshiftlb $4, %k1, %k1
-; CHECK-NEXT:    korb %k1, %k0, %k0
-; CHECK-NEXT:    vcmpltpd %ymm0, %ymm4, %k1
-; CHECK-NEXT:    vcmpltpd %ymm1, %ymm4, %k2
-; CHECK-NEXT:    kshiftlb $4, %k2, %k2
-; CHECK-NEXT:    korb %k2, %k1, %k1
-; CHECK-NEXT:    vpmovm2d %k1, %ymm1
-; CHECK-NEXT:    vcvtdq2pd %xmm1, %ymm0
-; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vcvtdq2pd %xmm1, %ymm1
-; CHECK-NEXT:    vpmovm2d %k0, %ymm3
-; CHECK-NEXT:    vcvtdq2pd %xmm3, %ymm2
-; CHECK-NEXT:    vextracti128 $1, %ymm3, %xmm3
-; CHECK-NEXT:    vcvtdq2pd %xmm3, %ymm3
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    vpmovm2d %k1, %ymm0
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm1
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; CHECK-NEXT:    vpmovm2d %k0, %ymm2
+; CHECK-NEXT:    vcvtdq2pd %xmm2, %ymm3
+; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; CHECK-NEXT:    vcvtdq2pd %xmm2, %ymm2
+; CHECK-NEXT:    vmovaps %ymm2, 32(%rdi)
+; CHECK-NEXT:    vmovaps %ymm3, (%rdi)
+; CHECK-NEXT:    vmovaps %ymm0, 96(%rdi)
+; CHECK-NEXT:    vmovaps %ymm1, 64(%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %cmpres = fcmp ogt <16 x double> %a, zeroinitializer
-  %1 = sitofp <16 x i1> %cmpres to <16 x double>
-  ret <16 x double> %1
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
+  %1 = sitofp <16 x i1> %mask to <16 x double>
+  store <16 x double> %1, <16 x double>* %res
+  ret void
 }
 
-define <16 x double> @sbto16f64_512(<16 x double> %a)  "required-vector-width"="512" {
+define void @sbto16f64_512(<16 x i16> %a, <16 x double>* %res)  "required-vector-width"="512" {
 ; CHECK-LABEL: sbto16f64_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpltpd %zmm0, %zmm2, %k0
-; CHECK-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpmovm2d %k0, %zmm1
-; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm0
-; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
+; CHECK-NEXT:    vpmovm2d %k0, %zmm0
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vmovaps %zmm0, 64(%rdi)
+; CHECK-NEXT:    vmovaps %zmm1, (%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %cmpres = fcmp ogt <16 x double> %a, zeroinitializer
-  %1 = sitofp <16 x i1> %cmpres to <16 x double>
-  ret <16 x double> %1
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
+  %1 = sitofp <16 x i1> %mask to <16 x double>
+  store <16 x double> %1, <16 x double>* %res
+  ret void
 }
 
-define <16 x float> @ubto16f32_256(<16 x i32> %a) "required-vector-width"="256" {
+define void @ubto16f32_256(<16 x i16> %a, <16 x float>* %res) "required-vector-width"="256" {
 ; CHECK-LABEL: ubto16f32_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm1
-; CHECK-NEXT:    vpand %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    vpmovm2d %k1, %ymm0
+; CHECK-NEXT:    vpsrld $31, %ymm0, %ymm0
+; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; CHECK-NEXT:    vpmovm2d %k0, %ymm1
+; CHECK-NEXT:    vpsrld $31, %ymm1, %ymm1
+; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vmovaps %ymm1, (%rdi)
+; CHECK-NEXT:    vmovaps %ymm0, 32(%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %mask = icmp slt <16 x i32> %a, zeroinitializer
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x float>
-  ret <16 x float> %1
+  store <16 x float> %1, <16 x float>* %res
+  ret void
 }
 
-define <16 x float> @ubto16f32_512(<16 x i32> %a) "required-vector-width"="512" {
+define void @ubto16f32_512(<16 x i16> %a, <16 x float>* %res) "required-vector-width"="512" {
 ; CHECK-LABEL: ubto16f32_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovd2m %zmm0, %k0
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %zmm0
 ; CHECK-NEXT:    vpsrld $31, %zmm0, %zmm0
 ; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; CHECK-NEXT:    vmovaps %zmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %mask = icmp slt <16 x i32> %a, zeroinitializer
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x float>
-  ret <16 x float> %1
+  store <16 x float> %1, <16 x float>* %res
+  ret void
 }
 
-define <16 x double> @ubto16f64_256(<16 x i32> %a) "required-vector-width"="256" {
+define void @ubto16f64_256(<16 x i16> %a, <16 x double>* %res) "required-vector-width"="256" {
 ; CHECK-LABEL: ubto16f64_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
-; CHECK-NEXT:    vpsrld $31, %ymm0, %ymm3
-; CHECK-NEXT:    vcvtdq2pd %xmm3, %ymm0
-; CHECK-NEXT:    vextracti128 $1, %ymm3, %xmm3
-; CHECK-NEXT:    vcvtdq2pd %xmm3, %ymm4
-; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm1
-; CHECK-NEXT:    vpsrld $31, %ymm1, %ymm1
-; CHECK-NEXT:    vcvtdq2pd %xmm1, %ymm2
-; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vcvtdq2pd %xmm1, %ymm3
-; CHECK-NEXT:    vmovaps %ymm4, %ymm1
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    vpmovm2d %k1, %ymm0
+; CHECK-NEXT:    vpsrld $31, %ymm0, %ymm0
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm1
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; CHECK-NEXT:    vpmovm2d %k0, %ymm2
+; CHECK-NEXT:    vpsrld $31, %ymm2, %ymm2
+; CHECK-NEXT:    vcvtdq2pd %xmm2, %ymm3
+; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; CHECK-NEXT:    vcvtdq2pd %xmm2, %ymm2
+; CHECK-NEXT:    vmovaps %ymm2, 32(%rdi)
+; CHECK-NEXT:    vmovaps %ymm3, (%rdi)
+; CHECK-NEXT:    vmovaps %ymm0, 96(%rdi)
+; CHECK-NEXT:    vmovaps %ymm1, 64(%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %mask = icmp slt <16 x i32> %a, zeroinitializer
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x double>
-  ret <16 x double> %1
+  store <16 x double> %1, <16 x double>* %res
+  ret void
 }
 
-define <16 x double> @ubto16f64_512(<16 x i32> %a) "required-vector-width"="512" {
+define void @ubto16f64_512(<16 x i16> %a, <16 x double>* %res) "required-vector-width"="512" {
 ; CHECK-LABEL: ubto16f64_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovd2m %zmm0, %k0
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %zmm0
-; CHECK-NEXT:    vpsrld $31, %zmm0, %zmm1
-; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm0
-; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vpsrld $31, %zmm0, %zmm0
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vmovaps %zmm0, 64(%rdi)
+; CHECK-NEXT:    vmovaps %zmm1, (%rdi)
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %mask = icmp slt <16 x i32> %a, zeroinitializer
+  %mask = icmp slt <16 x i16> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x double>
-  ret <16 x double> %1
+  store <16 x double> %1, <16 x double>* %res
+  ret void
 }
 
-define <16 x i32> @test_16f32toub_256(<16 x float> %a, <16 x i32> %passthru) "required-vector-width"="256" {
+define <16 x i16> @test_16f32toub_256(<16 x float>* %ptr, <16 x i16> %passthru) "required-vector-width"="256" {
 ; CHECK-LABEL: test_16f32toub_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
-; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
-; CHECK-NEXT:    vcvttps2dq %ymm1, %ymm1
+; CHECK-NEXT:    vcvttps2dq (%rdi), %ymm1
 ; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpsllw $15, %ymm0, %ymm0
-; CHECK-NEXT:    vpmovw2m %ymm0, %k1
-; CHECK-NEXT:    vmovdqa32 %ymm2, %ymm0 {%k1} {z}
-; CHECK-NEXT:    kshiftrw $8, %k1, %k1
-; CHECK-NEXT:    vmovdqa32 %ymm3, %ymm1 {%k1} {z}
+; CHECK-NEXT:    vcvttps2dq 32(%rdi), %ymm2
+; CHECK-NEXT:    vpmovdw %ymm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vpsllw $15, %ymm1, %ymm1
+; CHECK-NEXT:    vpmovw2m %ymm1, %k1
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
+  %a = load <16 x float>, <16 x float>* %ptr
   %mask = fptoui <16 x float> %a to <16 x i1>
-  %select = select <16 x i1> %mask, <16 x i32> %passthru, <16 x i32> zeroinitializer
-  ret <16 x i32> %select
+  %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
+  ret <16 x i16> %select
 }
 
-define <16 x i32> @test_16f32toub_512(<16 x float> %a, <16 x i32> %passthru) "required-vector-width"="512" {
+define <16 x i16> @test_16f32toub_512(<16 x float>* %ptr, <16 x i16> %passthru) "required-vector-width"="512" {
 ; CHECK-LABEL: test_16f32toub_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm0
-; CHECK-NEXT:    vpslld $31, %zmm0, %zmm0
-; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vcvttps2dq (%rdi), %zmm1
+; CHECK-NEXT:    vpslld $31, %zmm1, %zmm1
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
+  %a = load <16 x float>, <16 x float>* %ptr
   %mask = fptoui <16 x float> %a to <16 x i1>
-  %select = select <16 x i1> %mask, <16 x i32> %passthru, <16 x i32> zeroinitializer
-  ret <16 x i32> %select
+  %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
+  ret <16 x i16> %select
 }
 
-define <16 x i32> @test_16f32tosb_256(<16 x float> %a, <16 x i32> %passthru) "required-vector-width"="256" {
+define <16 x i16> @test_16f32tosb_256(<16 x float>* %ptr, <16 x i16> %passthru) "required-vector-width"="256" {
 ; CHECK-LABEL: test_16f32tosb_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
-; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
-; CHECK-NEXT:    vcvttps2dq %ymm1, %ymm1
+; CHECK-NEXT:    vcvttps2dq (%rdi), %ymm1
 ; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpsllw $15, %ymm0, %ymm0
-; CHECK-NEXT:    vpmovw2m %ymm0, %k1
-; CHECK-NEXT:    vmovdqa32 %ymm2, %ymm0 {%k1} {z}
-; CHECK-NEXT:    kshiftrw $8, %k1, %k1
-; CHECK-NEXT:    vmovdqa32 %ymm3, %ymm1 {%k1} {z}
+; CHECK-NEXT:    vcvttps2dq 32(%rdi), %ymm2
+; CHECK-NEXT:    vpmovdw %ymm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vpsllw $15, %ymm1, %ymm1
+; CHECK-NEXT:    vpmovw2m %ymm1, %k1
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
+  %a = load <16 x float>, <16 x float>* %ptr
   %mask = fptosi <16 x float> %a to <16 x i1>
-  %select = select <16 x i1> %mask, <16 x i32> %passthru, <16 x i32> zeroinitializer
-  ret <16 x i32> %select
+  %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
+  ret <16 x i16> %select
 }
 
-define <16 x i32> @test_16f32tosb_512(<16 x float> %a, <16 x i32> %passthru) "required-vector-width"="512" {
+define <16 x i16> @test_16f32tosb_512(<16 x float>* %ptr, <16 x i16> %passthru) "required-vector-width"="512" {
 ; CHECK-LABEL: test_16f32tosb_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm0
-; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vcvttps2dq (%rdi), %zmm1
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
+  %a = load <16 x float>, <16 x float>* %ptr
   %mask = fptosi <16 x float> %a to <16 x i1>
-  %select = select <16 x i1> %mask, <16 x i32> %passthru, <16 x i32> zeroinitializer
-  ret <16 x i32> %select
+  %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
+  ret <16 x i16> %select
 }
