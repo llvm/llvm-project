@@ -102,27 +102,6 @@ define i32 @test9(i32 %A) {
   ret i32 %C
 }
 
-define i32 @test10(i32 %A, i32 %B) {
-; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[E:%.*]] = mul i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[E]]
-;
-  %C = sub i32 0, %A
-  %D = sub i32 0, %B
-  %E = mul i32 %C, %D
-  ret i32 %E
-}
-
-define i32 @test10a(i32 %A) {
-; CHECK-LABEL: @test10a(
-; CHECK-NEXT:    [[E:%.*]] = mul i32 [[A:%.*]], -7
-; CHECK-NEXT:    ret i32 [[E]]
-;
-  %C = sub i32 0, %A
-  %E = mul i32 %C, 7
-  ret i32 %E
-}
-
 define i1 @test11(i8 %A, i8 %B) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[D:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]

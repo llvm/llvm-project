@@ -4,9 +4,9 @@
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
 define void @use_dispatch_ptr() #1 {
-  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
-  %header_ptr = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
-  %value = load volatile i32, i32 addrspace(2)* %header_ptr
+  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
+  %header_ptr = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
+  %value = load volatile i32, i32 addrspace(4)* %header_ptr
   ret void
 }
 
@@ -21,9 +21,9 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_ptr(i32) #1 {
 ; GCN-LABEL: {{^}}use_queue_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
 define void @use_queue_ptr() #1 {
-  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
-  %header_ptr = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
-  %value = load volatile i32, i32 addrspace(2)* %header_ptr
+  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
+  %header_ptr = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
+  %value = load volatile i32, i32 addrspace(4)* %header_ptr
   ret void
 }
 
@@ -62,9 +62,9 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr_addrspacecast(i32) #1 {
 ; GCN-LABEL: {{^}}use_kernarg_segment_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
 define void @use_kernarg_segment_ptr() #1 {
-  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %header_ptr = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
-  %value = load volatile i32, i32 addrspace(2)* %header_ptr
+  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %header_ptr = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
+  %value = load volatile i32, i32 addrspace(4)* %header_ptr
   ret void
 }
 
@@ -435,17 +435,17 @@ define void @use_every_sgpr_input() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
 
-  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
-  %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
-  %val0 = load volatile i32, i32 addrspace(2)* %dispatch_ptr.bc
+  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
+  %dispatch_ptr.bc = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
+  %val0 = load volatile i32, i32 addrspace(4)* %dispatch_ptr.bc
 
-  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
-  %queue_ptr.bc = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
-  %val1 = load volatile i32, i32 addrspace(2)* %queue_ptr.bc
+  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
+  %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
-  %val2 = load volatile i32, i32 addrspace(2)* %kernarg_segment_ptr.bc
+  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
+  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -515,17 +515,17 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
 
-  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
-  %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
-  %val0 = load volatile i32, i32 addrspace(2)* %dispatch_ptr.bc
+  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
+  %dispatch_ptr.bc = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
+  %val0 = load volatile i32, i32 addrspace(4)* %dispatch_ptr.bc
 
-  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
-  %queue_ptr.bc = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
-  %val1 = load volatile i32, i32 addrspace(2)* %queue_ptr.bc
+  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
+  %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
-  %val2 = load volatile i32, i32 addrspace(2)* %kernarg_segment_ptr.bc
+  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
+  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -573,17 +573,17 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
 
   store volatile i32 0, i32 addrspace(5)* %alloca
 
-  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
-  %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
-  %val0 = load volatile i32, i32 addrspace(2)* %dispatch_ptr.bc
+  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
+  %dispatch_ptr.bc = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
+  %val0 = load volatile i32, i32 addrspace(4)* %dispatch_ptr.bc
 
-  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
-  %queue_ptr.bc = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
-  %val1 = load volatile i32, i32 addrspace(2)* %queue_ptr.bc
+  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
+  %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
-  %val2 = load volatile i32, i32 addrspace(2)* %kernarg_segment_ptr.bc
+  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
+  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -603,10 +603,10 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
 declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
-declare noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
+declare noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
+declare noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i64 @llvm.amdgcn.dispatch.id() #0
-declare noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
+declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }

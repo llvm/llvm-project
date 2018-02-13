@@ -4,9 +4,9 @@
 ; This test just checks that the compiler doesn't crash.
 
 ; FUNC-LABEL: {{^}}v32i8_to_v8i32:
-define amdgpu_ps float @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
+define amdgpu_ps float @v32i8_to_v8i32(<32 x i8> addrspace(4)* inreg) #0 {
 entry:
-  %1 = load <32 x i8>, <32 x i8> addrspace(2)* %0
+  %1 = load <32 x i8>, <32 x i8> addrspace(4)* %0
   %2 = bitcast <32 x i8> %1 to <8 x i32>
   %3 = extractelement <8 x i32> %2, i32 1
   %4 = icmp ne i32 %3, 0

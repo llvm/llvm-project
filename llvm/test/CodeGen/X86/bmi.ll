@@ -822,13 +822,13 @@ define i64 @blsr_disguised_constant(i64 %x) {
   ret i64 %r
 }
 
-; The add here gets shrunk, but the and does not thus hiding the blsr pattern.
+; The add here used to get shrunk, but the and did not thus hiding the blsr pattern.
+; We now use the knowledge that upper bits of the shift guarantee the and result has 0s in the upper bits to reduce it too.
 define i64 @blsr_disguised_shrunk_add(i64 %x) {
 ; CHECK-LABEL: blsr_disguised_shrunk_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrq $48, %rdi
-; CHECK-NEXT:    leal -1(%rdi), %eax
-; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    blsrl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = lshr i64 %x, 48
   %b = add i64 %a, -1

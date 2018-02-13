@@ -55,12 +55,12 @@ public:
   Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
-  Symbol *addDefinedGlobal(StringRef Name);
-  Symbol *addDefinedFunction(StringRef Name, const WasmSignature *Type,
-                             uint32_t Flags);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
   bool addComdat(StringRef Name, ObjFile *);
 
+  Symbol *addSyntheticGlobal(StringRef Name);
+  Symbol *addSyntheticFunction(StringRef Name, const WasmSignature *Type,
+                               uint32_t Flags);
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 

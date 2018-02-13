@@ -10,7 +10,7 @@ void test() {
 
 // PRIVATE5: %arr = alloca [3 x i32], align 4, addrspace(5)
 // PRIVATE5: %0 = bitcast [3 x i32] addrspace(5)* %arr to i8 addrspace(5)*
-// PRIVATE5: call void @llvm.memcpy.p5i8.p2i8.i64(i8 addrspace(5)* align 4 %0, i8 addrspace(2)* align 4 bitcast ([3 x i32] addrspace(2)* @test.arr to i8 addrspace(2)*), i64 12, i1 false)
+// PRIVATE5: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 4 %0, i8 addrspace(4)* align 4 bitcast ([3 x i32] addrspace(4)* @test.arr to i8 addrspace(4)*), i64 12, i1 false)
 }
 
 __kernel void initializer_cast_is_valid_crash() {

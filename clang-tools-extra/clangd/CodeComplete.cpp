@@ -642,7 +642,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   for (const auto &S : Input.Command.CommandLine)
     ArgStrs.push_back(S.c_str());
 
-  Input.VFS->setCurrentWorkingDirectory(Input.Command.Directory);
+  if (Input.VFS->setCurrentWorkingDirectory(Input.Command.Directory)) {
+    log("Couldn't set working directory");
+    // We run parsing anyway, our lit-tests rely on results for non-existing
+    // working dirs.
+  }
 
   IgnoreDiagnostics DummyDiagsConsumer;
   auto CI = createInvocationFromCommandLine(

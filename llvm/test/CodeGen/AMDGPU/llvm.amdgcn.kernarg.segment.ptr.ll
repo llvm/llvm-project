@@ -11,10 +11,10 @@
 
 ; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s[0:1], 0xa
 define amdgpu_kernel void @test(i32 addrspace(1)* %out) #1 {
-  %kernarg.segment.ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-  %header.ptr = bitcast i8 addrspace(2)* %kernarg.segment.ptr to i32 addrspace(2)*
-  %gep = getelementptr i32, i32 addrspace(2)* %header.ptr, i64 10
-  %value = load i32, i32 addrspace(2)* %gep
+  %kernarg.segment.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+  %header.ptr = bitcast i8 addrspace(4)* %kernarg.segment.ptr to i32 addrspace(4)*
+  %gep = getelementptr i32, i32 addrspace(4)* %header.ptr, i64 10
+  %value = load i32, i32 addrspace(4)* %gep
   store i32 %value, i32 addrspace(1)* %out
   ret void
 }
@@ -23,10 +23,10 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out) #1 {
 ; 10 + 9 (36 prepended implicit bytes) + 2(out pointer) = 21 = 0x15
 ; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s[0:1], 0x15
 define amdgpu_kernel void @test_implicit(i32 addrspace(1)* %out) #1 {
-  %implicitarg.ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
-  %header.ptr = bitcast i8 addrspace(2)* %implicitarg.ptr to i32 addrspace(2)*
-  %gep = getelementptr i32, i32 addrspace(2)* %header.ptr, i64 10
-  %value = load i32, i32 addrspace(2)* %gep
+  %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+  %header.ptr = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
+  %gep = getelementptr i32, i32 addrspace(4)* %header.ptr, i64 10
+  %value = load i32, i32 addrspace(4)* %gep
   store i32 %value, i32 addrspace(1)* %out
   ret void
 }
@@ -42,9 +42,9 @@ define amdgpu_kernel void @test_implicit(i32 addrspace(1)* %out) #1 {
 ; MESA: buffer_store_dword [[V_VAL]]
 ; HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
 define amdgpu_kernel void @test_implicit_alignment(i32 addrspace(1)* %out, <2 x i8> %in) #1 {
-  %implicitarg.ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
-  %arg.ptr = bitcast i8 addrspace(2)* %implicitarg.ptr to i32 addrspace(2)*
-  %val = load i32, i32 addrspace(2)* %arg.ptr
+  %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+  %arg.ptr = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
+  %val = load i32, i32 addrspace(4)* %arg.ptr
   store i32 %val, i32 addrspace(1)* %out
   ret void
 }
@@ -53,16 +53,16 @@ define amdgpu_kernel void @test_implicit_alignment(i32 addrspace(1)* %out, <2 x 
 ; HSA: enable_sgpr_kernarg_segment_ptr = 1
 ; HSA: s_load_dword s{{[0-9]+}}, s[4:5]
 define amdgpu_kernel void @test_no_kernargs() #1 {
-  %kernarg.segment.ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-  %header.ptr = bitcast i8 addrspace(2)* %kernarg.segment.ptr to i32 addrspace(2)*
-  %gep = getelementptr i32, i32 addrspace(2)* %header.ptr, i64 10
-  %value = load i32, i32 addrspace(2)* %gep
+  %kernarg.segment.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+  %header.ptr = bitcast i8 addrspace(4)* %kernarg.segment.ptr to i32 addrspace(4)*
+  %gep = getelementptr i32, i32 addrspace(4)* %header.ptr, i64 10
+  %value = load i32, i32 addrspace(4)* %gep
   store volatile i32 %value, i32 addrspace(1)* undef
   ret void
 }
 
-declare i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
-declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr() #0
+declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

@@ -59,13 +59,11 @@
 #include "llvm/Transforms/Scalar/CallSiteSplitting.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -74,15 +72,6 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "callsite-splitting"
 
 STATISTIC(NumCallSiteSplit, "Number of call-site split");
-
-/// Only allow instructions before a call, if their CodeSize cost is below
-/// DuplicationThreshold. Those instructions need to be duplicated in all
-/// split blocks.
-static cl::opt<unsigned>
-    DuplicationThreshold("callsite-splitting-duplication-threshold", cl::Hidden,
-                         cl::desc("Only allow instructions before a call, if "
-                                  "their cost is below DuplicationThreshold"),
-                         cl::init(5));
 
 static void addNonNullAttribute(CallSite CS, Value *Op) {
   unsigned ArgNo = 0;
@@ -179,26 +168,20 @@ static SmallVector<BasicBlock *, 2> getTwoPredecessors(BasicBlock *BB) {
   return Preds;
 }
 
-static bool canSplitCallSite(CallSite CS, TargetTransformInfo &TTI) {
+static bool canSplitCallSite(CallSite CS) {
   // FIXME: As of now we handle only CallInst. InvokeInst could be handled
   // without too much effort.
   Instruction *Instr = CS.getInstruction();
   if (!isa<CallInst>(Instr))
     return false;
 
+  // Allow splitting a call-site only when there is no instruction before the
+  // call-site in the basic block. Based on this constraint, we only clone the
+  // call instruction, and we do not move a call-site across any other
+  // instruction.
   BasicBlock *CallSiteBB = Instr->getParent();
-  // Allow splitting a call-site only when the CodeSize cost of the
-  // instructions before the call is less then DuplicationThreshold. The
-  // instructions before the call will be duplicated in the split blocks and
-  // corresponding uses will be updated.
-  unsigned Cost = 0;
-  for (auto &InstBeforeCall :
-       llvm::make_range(CallSiteBB->begin(), Instr->getIterator())) {
-    Cost += TTI.getInstructionCost(&InstBeforeCall,
-                                   TargetTransformInfo::TCK_CodeSize);
-    if (Cost >= DuplicationThreshold)
-      return false;
-  }
+  if (Instr != CallSiteBB->getFirstNonPHIOrDbg())
+    return false;
 
   // Need 2 predecessors and cannot split an edge from an IndirectBrInst.
   SmallVector<BasicBlock *, 2> Preds(predecessors(CallSiteBB));
@@ -263,22 +246,16 @@ static void splitCallSite(
     CallPN = PHINode::Create(Instr->getType(), Preds.size(), "phi.call");
 
   DEBUG(dbgs() << "split call-site : " << *Instr << " into \n");
-
-  assert(Preds.size() == 2 && "The ValueToValueMaps array has size 2.");
-  // ValueToValueMapTy is neither copy nor moveable, so we use a simple array
-  // here.
-  ValueToValueMapTy ValueToValueMaps[2];
-  for (unsigned i = 0; i < Preds.size(); i++) {
-    new (&ValueToValueMaps[i]) ValueToValueMapTy;
-    BasicBlock *PredBB = Preds[i].first;
-    BasicBlock *SplitBlock = DuplicateInstructionsInSplitBetween(
-        TailBB, PredBB, &*std::next(Instr->getIterator()), ValueToValueMaps[i]);
+  for (const auto &P : Preds) {
+    BasicBlock *PredBB = P.first;
+    BasicBlock *SplitBlock =
+        SplitBlockPredecessors(TailBB, PredBB, ".predBB.split");
     assert(SplitBlock && "Unexpected new basic block split.");
 
-    Instruction *NewCI =
-        &*std::prev(SplitBlock->getTerminator()->getIterator());
+    Instruction *NewCI = Instr->clone();
     CallSite NewCS(NewCI);
-    addConditions(NewCS, Preds[i].second);
+    addConditions(NewCS, P.second);
+    NewCI->insertBefore(&*SplitBlock->getFirstInsertionPt());
 
     // Handle PHIs used as arguments in the call-site.
     for (PHINode &PN : TailBB->phis()) {
@@ -296,44 +273,13 @@ static void splitCallSite(
       CallPN->addIncoming(NewCI, SplitBlock);
   }
 
-  auto *OriginalBegin = &*TailBB->begin();
   // Replace users of the original call with a PHI mering call-sites split.
   if (CallPN) {
-    CallPN->insertBefore(OriginalBegin);
+    CallPN->insertBefore(TailBB->getFirstNonPHI());
     Instr->replaceAllUsesWith(CallPN);
   }
 
-  // Remove instructions moved to split blocks from TailBB, from the duplicated
-  // call instruction to the beginning of the basic block. If an instruction
-  // has any uses, add a new PHI node to combine the values coming from the
-  // split blocks. The new PHI nodes are placed before the first original
-  // instruction, so we do not end up deleting them. By using reverse-order, we
-  // do not introduce unnecessary PHI nodes for def-use chains from the call
-  // instruction to the beginning of the block.
-  auto I = Instr->getReverseIterator();
-  while (I != TailBB->rend()) {
-    Instruction *CurrentI = &*I++;
-    if (!CurrentI->use_empty()) {
-      // If an existing PHI has users after the call, there is no need to create
-      // a new one.
-      if (isa<PHINode>(CurrentI))
-        continue;
-      PHINode *NewPN = PHINode::Create(CurrentI->getType(), Preds.size());
-      for (auto &Mapping : ValueToValueMaps)
-        NewPN->addIncoming(Mapping[CurrentI],
-                           cast<Instruction>(Mapping[CurrentI])->getParent());
-      NewPN->insertBefore(&*TailBB->begin());
-      CurrentI->replaceAllUsesWith(NewPN);
-    }
-    CurrentI->eraseFromParent();
-    // We are done once we handled the first original instruction in TailBB.
-    if (CurrentI == OriginalBegin)
-      break;
-  }
-
-  ValueToValueMaps[0].clear();
-  ValueToValueMaps[1].clear();
-
+  Instr->eraseFromParent();
   NumCallSiteSplit++;
 }
 
@@ -398,15 +344,14 @@ static bool tryToSplitOnPredicatedArgument(CallSite CS) {
   return true;
 }
 
-static bool tryToSplitCallSite(CallSite CS, TargetTransformInfo &TTI) {
-  if (!CS.arg_size() || !canSplitCallSite(CS, TTI))
+static bool tryToSplitCallSite(CallSite CS) {
+  if (!CS.arg_size() || !canSplitCallSite(CS))
     return false;
   return tryToSplitOnPredicatedArgument(CS) ||
          tryToSplitOnPHIPredicatedArgument(CS);
 }
 
-static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
-                                TargetTransformInfo &TTI) {
+static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI) {
   bool Changed = false;
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE;) {
     BasicBlock &BB = *BI++;
@@ -419,7 +364,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
       Function *Callee = CS.getCalledFunction();
       if (!Callee || Callee->isDeclaration())
         continue;
-      Changed |= tryToSplitCallSite(CS, TTI);
+      Changed |= tryToSplitCallSite(CS);
     }
   }
   return Changed;
@@ -434,7 +379,6 @@ struct CallSiteSplittingLegacyPass : public FunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -443,8 +387,7 @@ struct CallSiteSplittingLegacyPass : public FunctionPass {
       return false;
 
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return doCallSiteSplitting(F, TLI, TTI);
+    return doCallSiteSplitting(F, TLI);
   }
 };
 } // namespace
@@ -453,7 +396,6 @@ char CallSiteSplittingLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(CallSiteSplittingLegacyPass, "callsite-splitting",
                       "Call-site splitting", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(CallSiteSplittingLegacyPass, "callsite-splitting",
                     "Call-site splitting", false, false)
 FunctionPass *llvm::createCallSiteSplittingPass() {
@@ -463,9 +405,8 @@ FunctionPass *llvm::createCallSiteSplittingPass() {
 PreservedAnalyses CallSiteSplittingPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  if (!doCallSiteSplitting(F, TLI, TTI))
+  if (!doCallSiteSplitting(F, TLI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   return PA;

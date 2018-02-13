@@ -443,3 +443,18 @@ define <4 x i32> @xor_undef_lhs_vec(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+; This would crash because the shift amount is an i8 operand,
+; but the result of the shift is i32. We can't just propagate
+; the existing undef as the result.
+
+define i1 @undef_operand_size_not_same_as_result() {
+; CHECK-LABEL: undef_operand_size_not_same_as_result:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %sh = shl i32 7, undef
+  %cmp = icmp eq i32 0, %sh
+  ret i1 %cmp
+}
+

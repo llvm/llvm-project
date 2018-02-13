@@ -87,12 +87,12 @@ define amdgpu_kernel void @test_sink_noop_addrspacecast_flat_to_constant_i32(i32
 entry:
   %out.gep = getelementptr i32, i32* %out, i64 999999
   %in.gep = getelementptr i32, i32* %in, i64 7
-  %cast = addrspacecast i32* %in.gep to i32 addrspace(2)*
+  %cast = addrspacecast i32* %in.gep to i32 addrspace(4)*
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1 = load i32, i32 addrspace(2)* %cast
+  %tmp1 = load i32, i32 addrspace(4)* %cast
   br label %endif
 
 endif:

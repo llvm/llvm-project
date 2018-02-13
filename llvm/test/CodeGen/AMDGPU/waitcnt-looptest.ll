@@ -22,19 +22,19 @@ bb:
   br label %bb18
 
 bb1:                                              ; preds = %bb18
-  %tmp = tail call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+  %tmp = tail call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
   %tmp2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %tmp4 = getelementptr inbounds i8, i8 addrspace(2)* %tmp, i64 4
-  %tmp5 = bitcast i8 addrspace(2)* %tmp4 to i16 addrspace(2)*
-  %tmp6 = load i16, i16 addrspace(2)* %tmp5, align 4
+  %tmp4 = getelementptr inbounds i8, i8 addrspace(4)* %tmp, i64 4
+  %tmp5 = bitcast i8 addrspace(4)* %tmp4 to i16 addrspace(4)*
+  %tmp6 = load i16, i16 addrspace(4)* %tmp5, align 4
   %tmp7 = zext i16 %tmp6 to i32
   %tmp8 = mul i32 %tmp3, %tmp7
   %tmp9 = add i32 %tmp8, %tmp2
-  %tmp10 = tail call i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
+  %tmp10 = tail call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
   %tmp11 = zext i32 %tmp9 to i64
-  %tmp12 = bitcast i8 addrspace(2)* %tmp10 to i64 addrspace(2)*
-  %tmp13 = load i64, i64 addrspace(2)* %tmp12, align 8
+  %tmp12 = bitcast i8 addrspace(4)* %tmp10 to i64 addrspace(4)*
+  %tmp13 = load i64, i64 addrspace(4)* %tmp12, align 8
   %tmp14 = add i64 %tmp13, %tmp11
   %tmp15 = zext i1 %tmp99 to i32
   %tmp16 = and i64 %tmp14, 4294967295
@@ -131,7 +131,7 @@ bb18:                                             ; preds = %bb18, %bb
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare i32 @llvm.amdgcn.workitem.id.x() #1
@@ -140,7 +140,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #0 = { "target-cpu"="fiji" "target-features"="-flat-for-global" }
 attributes #1 = { nounwind readnone speculatable }
