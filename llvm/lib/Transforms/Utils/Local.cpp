@@ -1474,6 +1474,15 @@ void llvm::salvageDebugInfo(Instruction &I) {
       case Instruction::Xor:
         applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
         break;
+      case Instruction::Shl:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
+        break;
+      case Instruction::LShr:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
+        break;
+      case Instruction::AShr:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
+        break;
       default:
         // TODO: Salvage constants from each kind of binop we know about.
         continue;
