@@ -43,9 +43,6 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
     cl::init(true), cl::Hidden);
 
-// ChildOutput - This option captures the name of the child output file that
-// is set up by the parent bugpoint process
-static cl::opt<std::string> ChildOutput("child-output", cl::ReallyHidden);
 static cl::opt<std::string>
     OptCmd("opt-command", cl::init(""),
            cl::desc("Path to opt. (default: search path "
