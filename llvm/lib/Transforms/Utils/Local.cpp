@@ -1536,17 +1536,48 @@ void llvm::salvageDebugInfo(Instruction &I) {
       for (auto *DII : DbgUsers)
         applyOffset(DII, Offset.getSExtValue());
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
-    if (BI->getOpcode() == Instruction::Add ||
-        BI->getOpcode() == Instruction::Or)
-      if (auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1)))
-        if (ConstInt->getBitWidth() <= 64) {
-          uint64_t Val = ConstInt->getSExtValue();
-          for (auto *DII : DbgUsers)
-            if (BI->getOpcode() == Instruction::Add)
-              applyOffset(DII, Val);
-            else if (BI->getOpcode() == Instruction::Or)
-              applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
-        }
+    auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1));
+    if (!ConstInt || ConstInt->getBitWidth() > 64)
+      return;
+
+    uint64_t Val = ConstInt->getSExtValue();
+    for (auto *DII : DbgUsers) {
+      switch (BI->getOpcode()) {
+      case Instruction::Add:
+        applyOffset(DII, Val);
+        break;
+      case Instruction::Sub:
+        applyOffset(DII, -int64_t(Val));
+        break;
+      case Instruction::Mul:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
+        break;
+      case Instruction::SDiv:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
+        break;
+      case Instruction::SRem:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
+        break;
+      case Instruction::Or:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
+        break;
+      case Instruction::Xor:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
+        break;
+      case Instruction::Shl:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
+        break;
+      case Instruction::LShr:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
+        break;
+      case Instruction::AShr:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
+        break;
+      default:
+        // TODO: Salvage constants from each kind of binop we know about.
+        continue;
+      }
+    }
   } else if (isa<LoadInst>(&I)) {
     MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
     for (auto *DII : DbgUsers) {

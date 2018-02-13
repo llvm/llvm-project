@@ -346,6 +346,9 @@ namespace llvm {
       ADD, SUB, ADC, SBB, SMUL,
       INC, DEC, OR, XOR, AND,
 
+      // Bit field extract.
+      BEXTR,
+
       // LOW, HI, FLAGS = umul LHS, RHS.
       UMUL,
 
@@ -371,6 +374,9 @@ namespace llvm {
       // OR/AND test for masks.
       KORTEST,
       KTEST,
+
+      // ADD for masks.
+      KADD,
 
       // Several flavors of instructions with vector shuffle behaviors.
       // Saturated signed/unnsigned packing.

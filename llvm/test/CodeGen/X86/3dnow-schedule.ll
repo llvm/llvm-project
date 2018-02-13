@@ -4,7 +4,7 @@
 define void @test_femms() optsize {
 ; CHECK-LABEL: test_femms:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    femms
+; CHECK-NEXT:    femms # sched: [100:0.33]
 ; CHECK-NEXT:    retq # sched: [1:1.00]
   call void @llvm.x86.mmx.femms()
   ret void

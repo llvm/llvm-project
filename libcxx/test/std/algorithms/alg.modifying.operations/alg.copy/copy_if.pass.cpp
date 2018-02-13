@@ -25,11 +25,11 @@
 // TEST_CONSTEXPR bool test_constexpr() {
 //     int ia[] = {2, 4, 6, 8, 6};
 //     int ic[] = {0, 0, 0, 0, 0, 0};
-// 
+//
 // 	auto p = std::copy_if(std::begin(ia), std::end(ia), std::begin(ic), is6);
 // 	return std::all_of(std::begin(ic), p, [](int a){return a == 6;})
 // 	    && std::all_of(p, std::end(ic),   [](int a){return a == 0;})
-// 	    ;	    
+// 	    ;
 //     }
 // #endif
 

@@ -67,6 +67,9 @@ struct S2 {
 
 void foo5() {
   struct S2 s = { .y = 1, .x = 4};
+  s.y = s.x + 1;
+  (void)&foo3;
+  foo4(s.y);
 }
 
 int ginitlist[] = {EnumVal};
@@ -105,7 +108,7 @@ int ginitlist[] = {EnumVal};
 // CHECK:      [indexDeclaration]: kind: c++-class-template | name: TS | {{.*}} | loc: 47:8
 // CHECK-NEXT: [indexDeclaration]: kind: struct-template-partial-spec | name: TS | USR: c:@SP>1#T@TS>#t0.0#I | {{.*}} | loc: 50:8
 // CHECK-NEXT: [indexDeclaration]: kind: typedef | name: MyInt | USR: c:index-refs.cpp@SP>1#T@TS>#t0.0#I@T@MyInt | {{.*}} | loc: 51:15 | semantic-container: [TS:50:8] | lexical-container: [TS:50:8]
-// CHECK-NEXT: [indexEntityReference]: kind: c++-class-template | name: TS | USR: c:@ST>2#T#T@TS | lang: C++ | cursor: TemplateRef=TS:47:8 | loc: 50:8 | <parent>:: <<NULL>> | container: [TU] | refkind: direct
+// CHECK-NEXT: [indexEntityReference]: kind: c++-class-template | name: TS | USR: c:@ST>2#T#T@TS | lang: C++ | cursor: TemplateRef=TS:47:8 | loc: 50:8 | <parent>:: <<NULL>> | container: [TU] | refkind: direct | role: ref
 /* when indexing implicit instantiations
   [indexDeclaration]: kind: struct-template-spec | name: TS | USR: c:@S@TS>#I | {{.*}} | loc: 50:8
   [indexDeclaration]: kind: typedef | name: MyInt | USR: c:index-refs.cpp@593@S@TS>#I@T@MyInt | {{.*}} | loc: 51:15 | semantic-container: [TS:50:8] | lexical-container: [TS:50:8]
@@ -117,7 +120,7 @@ int ginitlist[] = {EnumVal};
 // CHECK-NEXT: [indexEntityReference]: kind: c++-class-template | name: TS | USR: c:@ST>2#T#T@TS | {{.*}} | loc: 55:3
 
 // CHECK:      [indexEntityReference]: kind: variable | name: array_size | {{.*}} | loc: 59:22
-// CHECK:      [indexEntityReference]: kind: variable | name: default_param | {{.*}} | loc: 62:19
+// CHECK:      [indexEntityReference]: kind: variable | name: default_param | {{.*}} | loc: 62:19 | {{.*}} | role: ref read
 // CHECK-NOT:  [indexEntityReference]: kind: variable | name: default_param | {{.*}} | loc: 62:19
 
 // CHECK:      [indexEntityReference]: kind: field | name: y | {{.*}} | loc: 69:20
@@ -125,6 +128,11 @@ int ginitlist[] = {EnumVal};
 // CHECK-NOT:  [indexEntityReference]: kind: field | name: y | {{.*}} | loc: 69:20
 // CHECK-NOT:  [indexEntityReference]: kind: field | name: x | {{.*}} | loc: 69:28
 
+// CHECK:      [indexEntityReference]: kind: field | name: y | {{.*}} | loc: 70:5 | {{.*}} | role: ref write
+// CHECK:      [indexEntityReference]: kind: field | name: x | {{.*}} | loc: 70:11 | {{.*}} | role: ref read
+// CHECK:      [indexEntityReference]: kind: function | name: foo3 | {{.*}} | loc: 71:10 | {{.*}} | role: ref addr
+// CHECK:      [indexEntityReference]: kind: function | name: foo4 | {{.*}} | loc: 72:3 | {{.*}} | role: ref call
+
 // CHECK:      [indexDeclaration]: kind: variable | name: ginitlist |
-// CHECK:      [indexEntityReference]: kind: enumerator | name: EnumVal | {{.*}} | loc: 72:20
-// CHECK-NOT:  [indexEntityReference]: kind: enumerator | name: EnumVal | {{.*}} | loc: 72:20
+// CHECK:      [indexEntityReference]: kind: enumerator | name: EnumVal | {{.*}} | loc: 75:20
+// CHECK-NOT:  [indexEntityReference]: kind: enumerator | name: EnumVal | {{.*}} | loc: 75:20

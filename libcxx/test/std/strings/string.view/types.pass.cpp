@@ -28,7 +28,7 @@
 // 	using size_type                 = size_t;
 // 	using difference_type           = ptrdiff_t;
 // 	static constexpr size_type npos = size_type(-1);
-// 
+//
 // };
 
 #include <string_view>

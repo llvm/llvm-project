@@ -753,6 +753,25 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         .addUse(getOrCreateVReg(*CI.getArgOperand(1)))
         .addUse(getOrCreateVReg(*CI.getArgOperand(2)));
     return true;
+  case Intrinsic::fmuladd: {
+    const TargetMachine &TM = MF->getTarget();
+    const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
+    unsigned Dst = getOrCreateVReg(CI);
+    unsigned Op0 = getOrCreateVReg(*CI.getArgOperand(0));
+    unsigned Op1 = getOrCreateVReg(*CI.getArgOperand(1));
+    unsigned Op2 = getOrCreateVReg(*CI.getArgOperand(2));
+    if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
+        TLI.isFMAFasterThanFMulAndFAdd(TLI.getValueType(*DL, CI.getType()))) {
+      // TODO: Revisit this to see if we should move this part of the
+      // lowering to the combiner.
+      MIRBuilder.buildInstr(TargetOpcode::G_FMA, Dst, Op0, Op1, Op2);
+    } else {
+      LLT Ty = getLLTForType(*CI.getType(), *DL);
+      auto FMul = MIRBuilder.buildInstr(TargetOpcode::G_FMUL, Ty, Op0, Op1);
+      MIRBuilder.buildInstr(TargetOpcode::G_FADD, Dst, FMul, Op2);
+    }
+    return true;
+  }
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset:

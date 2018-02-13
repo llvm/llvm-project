@@ -4805,8 +4805,13 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator<(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
 {
+#if _LIBCPP_STD_VER <= 11
     typedef typename common_type<_Tp*, _Up*>::type _Vp;
     return less<_Vp>()(__x.get(), __y.get());
+#else
+    return less<>()(__x.get(), __y.get());
+#endif
+
 }
 
 template<class _Tp, class _Up>

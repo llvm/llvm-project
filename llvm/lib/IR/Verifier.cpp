@@ -988,23 +988,23 @@ void Verifier::visitDISubroutineType(const DISubroutineType &N) {
 
 void Verifier::visitDIFile(const DIFile &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_file_type, "invalid tag", &N);
-  AssertDI(N.getChecksumKind() <= DIFile::CSK_Last, "invalid checksum kind",
-           &N);
-  size_t Size;
-  switch (N.getChecksumKind()) {
-  case DIFile::CSK_None:
-    Size = 0;
-    break;
-  case DIFile::CSK_MD5:
-    Size = 32;
-    break;
-  case DIFile::CSK_SHA1:
-    Size = 40;
-    break;
+  Optional<DIFile::ChecksumInfo<StringRef>> Checksum = N.getChecksum();
+  if (Checksum) {
+    AssertDI(Checksum->Kind <= DIFile::ChecksumKind::CSK_Last,
+             "invalid checksum kind", &N);
+    size_t Size;
+    switch (Checksum->Kind) {
+    case DIFile::CSK_MD5:
+      Size = 32;
+      break;
+    case DIFile::CSK_SHA1:
+      Size = 40;
+      break;
+    }
+    AssertDI(Checksum->Value.size() == Size, "invalid checksum length", &N);
+    AssertDI(Checksum->Value.find_if_not(llvm::isHexDigit) == StringRef::npos,
+             "invalid checksum", &N);
   }
-  AssertDI(N.getChecksum().size() == Size, "invalid checksum length", &N);
-  AssertDI(N.getChecksum().find_if_not(llvm::isHexDigit) == StringRef::npos,
-           "invalid checksum", &N);
 }
 
 void Verifier::visitDICompileUnit(const DICompileUnit &N) {

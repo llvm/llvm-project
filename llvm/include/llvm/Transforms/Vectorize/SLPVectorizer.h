@@ -95,9 +95,11 @@ private:
   bool tryToVectorizePair(Value *A, Value *B, slpvectorizer::BoUpSLP &R);
 
   /// \brief Try to vectorize a list of operands.
+  /// \param UserCost Cost of the user operations of \p VL if they may affect
+  /// the cost of the vectorization.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
-                          bool AllowReorder = false);
+                          int UserCost = 0, bool AllowReorder = false);
 
   /// \brief Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);

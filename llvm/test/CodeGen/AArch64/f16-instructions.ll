@@ -736,6 +736,9 @@ declare half @llvm.rint.f16(half %a) #0
 declare half @llvm.nearbyint.f16(half %a) #0
 declare half @llvm.round.f16(half %a) #0
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
+declare half @llvm.aarch64.neon.frecpe.f16(half %a) #0
+declare half @llvm.aarch64.neon.frecpx.f16(half %a) #0
+declare half @llvm.aarch64.neon.frsqrte.f16(half %a) #0
 
 ; CHECK-CVT-LABEL: test_sqrt:
 ; CHECK-CVT-NEXT: fcvt s0, h0
@@ -1121,6 +1124,33 @@ define half @test_round(half %a) #0 {
 
 define half @test_fmuladd(half %a, half %b, half %c) #0 {
   %r = call half @llvm.fmuladd.f16(half %a, half %b, half %c)
+  ret half %r
+}
+
+; CHECK-FP16-LABEL: test_vrecpeh_f16:
+; CHECK-FP16-NEXT: frecpe h0, h0
+; CHECK-FP16-NEXT: ret
+
+define half @test_vrecpeh_f16(half %a) #0 {
+  %r = call half @llvm.aarch64.neon.frecpe.f16(half %a)
+  ret half %r
+}
+
+; CHECK-FP16-LABEL: test_vrecpxh_f16:
+; CHECK-FP16-NEXT: frecpx h0, h0
+; CHECK-FP16-NEXT: ret
+
+define half @test_vrecpxh_f16(half %a) #0 {
+  %r = call half @llvm.aarch64.neon.frecpx.f16(half %a)
+  ret half %r
+}
+
+; CHECK-FP16-LABEL: test_vrsqrteh_f16:
+; CHECK-FP16-NEXT: frsqrte h0, h0
+; CHECK-FP16-NEXT: ret
+
+define half @test_vrsqrteh_f16(half %a) #0 {
+  %r = call half @llvm.aarch64.neon.frsqrte.f16(half %a)
   ret half %r
 }
 

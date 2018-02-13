@@ -485,6 +485,8 @@ def atomic_load_sub : SDNode<"ISD::ATOMIC_LOAD_SUB" , SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_and : SDNode<"ISD::ATOMIC_LOAD_AND" , SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_clr : SDNode<"ISD::ATOMIC_LOAD_CLR" , SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_or  : SDNode<"ISD::ATOMIC_LOAD_OR" , SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_xor : SDNode<"ISD::ATOMIC_LOAD_XOR" , SDTAtomic2,
@@ -1244,6 +1246,7 @@ defm atomic_load_add  : binary_atomic_op<atomic_load_add>;
 defm atomic_swap      : binary_atomic_op<atomic_swap>;
 defm atomic_load_sub  : binary_atomic_op<atomic_load_sub>;
 defm atomic_load_and  : binary_atomic_op<atomic_load_and>;
+defm atomic_load_clr  : binary_atomic_op<atomic_load_clr>;
 defm atomic_load_or   : binary_atomic_op<atomic_load_or>;
 defm atomic_load_xor  : binary_atomic_op<atomic_load_xor>;
 defm atomic_load_nand : binary_atomic_op<atomic_load_nand>;

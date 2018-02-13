@@ -70,7 +70,7 @@ struct SizeClassAllocator64LocalCache {
   }
 
   void Drain(SizeClassAllocator *allocator) {
-    for (uptr i = 0; i < kNumClasses; i++) {
+    for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
       while (c->count > 0)
         Drain(c, allocator, i, c->count);
@@ -94,10 +94,11 @@ struct SizeClassAllocator64LocalCache {
   void InitCache(PerClass *c) {
     if (LIKELY(c->max_count))
       return;
-    for (uptr i = 0; i < kNumClasses; i++) {
+    for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      c->max_count = 2 * SizeClassMap::MaxCachedHint(i);
-      c->class_size = Allocator::ClassIdToSize(i);
+      const uptr size = Allocator::ClassIdToSize(i);
+      c->max_count = 2 * SizeClassMap::MaxCachedHint(size);
+      c->class_size = size;
     }
     DCHECK_NE(c->max_count, 0UL);
   }
@@ -185,7 +186,7 @@ struct SizeClassAllocator32LocalCache {
   }
 
   void Drain(SizeClassAllocator *allocator) {
-    for (uptr i = 0; i < kNumClasses; i++) {
+    for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
       while (c->count > 0)
         Drain(c, allocator, i);
@@ -217,11 +218,12 @@ struct SizeClassAllocator32LocalCache {
     if (LIKELY(c->max_count))
       return;
     const uptr batch_class_id = SizeClassMap::ClassID(sizeof(TransferBatch));
-    for (uptr i = 0; i < kNumClasses; i++) {
+    for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      uptr max_cached = TransferBatch::MaxCached(i);
+      const uptr size = Allocator::ClassIdToSize(i);
+      const uptr max_cached = TransferBatch::MaxCached(size);
       c->max_count = 2 * max_cached;
-      c->class_size = Allocator::ClassIdToSize(i);
+      c->class_size = size;
       // Precompute the class id to use to store batches for the current class
       // id. 0 means the class size is large enough to store a batch within one
       // of the chunks. If using a separate size class, it will always be
@@ -229,7 +231,7 @@ struct SizeClassAllocator32LocalCache {
       if (kUseSeparateSizeClassForBatch) {
         c->batch_class_id = (i == kBatchClassID) ? 0 : kBatchClassID;
       } else {
-        c->batch_class_id = (c->class_size <
+        c->batch_class_id = (size <
           TransferBatch::AllocationSizeRequiredForNElements(max_cached)) ?
               batch_class_id : 0;
       }
@@ -266,4 +268,3 @@ struct SizeClassAllocator32LocalCache {
     allocator->DeallocateBatch(&stats_, class_id, b);
   }
 };
-

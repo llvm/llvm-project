@@ -8,7 +8,7 @@
 #include <arm_fp16.h>
 
 // CHECK-LABEL: test_vabsh_f16
-// CHECK:  [[ABS:%.*]] =  call half @llvm.aarch64.neon.abs.f16(half %a)
+// CHECK:  [[ABS:%.*]] =  call half @llvm.fabs.f16(half %a)
 // CHECK:  ret half [[ABS]]
 float16_t test_vabsh_f16(float16_t a) {
   return vabsh_f16(a);
@@ -139,8 +139,9 @@ uint64_t test_vcvth_u64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtah_s16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtas.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtas.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 int16_t test_vcvtah_s16_f16 (float16_t a) {
   return vcvtah_s16_f16(a);
 }
@@ -160,8 +161,9 @@ int64_t test_vcvtah_s64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtah_u16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtau.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtau.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcvtah_u16_f16 (float16_t a) {
   return vcvtah_u16_f16(a);
 }
@@ -181,8 +183,9 @@ uint64_t test_vcvtah_u64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtmh_s16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtms.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtms.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 int16_t test_vcvtmh_s16_f16 (float16_t a) {
   return vcvtmh_s16_f16(a);
 }
@@ -202,8 +205,9 @@ int64_t test_vcvtmh_s64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtmh_u16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtmu.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtmu.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcvtmh_u16_f16 (float16_t a) {
   return vcvtmh_u16_f16(a);
 }
@@ -223,8 +227,9 @@ uint64_t test_vcvtmh_u64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtnh_s16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtns.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtns.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 int16_t test_vcvtnh_s16_f16 (float16_t a) {
   return vcvtnh_s16_f16(a);
 }
@@ -244,8 +249,9 @@ int64_t test_vcvtnh_s64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtnh_u16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtnu.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtnu.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcvtnh_u16_f16 (float16_t a) {
   return vcvtnh_u16_f16(a);
 }
@@ -265,8 +271,9 @@ uint64_t test_vcvtnh_u64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtph_s16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtps.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtps.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 int16_t test_vcvtph_s16_f16 (float16_t a) {
   return vcvtph_s16_f16(a);
 }
@@ -286,8 +293,9 @@ int64_t test_vcvtph_s64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvtph_u16_f16
-// CHECK: [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtpu.i16.f16(half %a)
-// CHECK: ret i16 [[VCVT]]
+// CHECK: [[FCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtpu.i32.f16(half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FCVT]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcvtph_u16_f16 (float16_t a) {
   return vcvtph_u16_f16(a);
 }
@@ -405,29 +413,33 @@ float16_t test_vabdh_f16(float16_t a, float16_t b) {
 }
 
 // CHECK-LABEL: test_vcageh_f16
-// CHECK:  [[ABS:%.*]] = call i16 @llvm.aarch64.neon.facge.i16.f16(half %a, half %b)
-// CHECK:  ret i16 [[ABS]]
+// CHECK:  [[FACG:%.*]] = call i32 @llvm.aarch64.neon.facge.i32.f16(half %a, half %b)
+// CHECK: [[RET:%.*]] = trunc i32 [[FACG]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcageh_f16(float16_t a, float16_t b) {
   return vcageh_f16(a, b);
 }
 
 // CHECK-LABEL: test_vcagth_f16
-// CHECK:  [[ABS:%.*]] = call i16 @llvm.aarch64.neon.facgt.i16.f16(half %a, half %b)
-// CHECK:  ret i16 [[ABS]]
+// CHECK:  [[FACG:%.*]] = call i32 @llvm.aarch64.neon.facgt.i32.f16(half %a, half %b)
+// CHECK: [[RET:%.*]] = trunc i32 [[FACG]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcagth_f16(float16_t a, float16_t b) {
   return vcagth_f16(a, b);
 }
 
 // CHECK-LABEL: test_vcaleh_f16
-// CHECK:  [[ABS:%.*]] = call i16 @llvm.aarch64.neon.facge.i16.f16(half %a, half %b)
-// CHECK:  ret i16 [[ABS]]
+// CHECK:  [[FACG:%.*]] = call i32 @llvm.aarch64.neon.facge.i32.f16(half %b, half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FACG]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcaleh_f16(float16_t a, float16_t b) {
   return vcaleh_f16(a, b);
 }
 
 // CHECK-LABEL: test_vcalth_f16
-// CHECK:  [[ABS:%.*]] = call i16 @llvm.aarch64.neon.facgt.i16.f16(half %a, half %b)
-// CHECK:  ret i16 [[ABS]]
+// CHECK:  [[FACG:%.*]] = call i32 @llvm.aarch64.neon.facgt.i32.f16(half %b, half %a)
+// CHECK: [[RET:%.*]] = trunc i32 [[FACG]] to i16
+// CHECK: ret i16 [[RET]]
 uint16_t test_vcalth_f16(float16_t a, float16_t b) {
   return vcalth_f16(a, b);
 }
@@ -473,7 +485,8 @@ uint16_t test_vclth_f16(float16_t a, float16_t b) {
 }
 
 // CHECK-LABEL: test_vcvth_n_f16_s16
-// CHECK:  [[CVT:%.*]] = call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i16(i16 %a, i32 0)
+// CHECK: [[SEXT:%.*]] = sext i16 %a to i32
+// CHECK:  [[CVT:%.*]] = call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i32(i32 [[SEXT]], i32 0)
 // CHECK:  ret half [[CVT]]
 float16_t test_vcvth_n_f16_s16(int16_t a) {
   return vcvth_n_f16_s16(a, 0);
@@ -494,8 +507,9 @@ float16_t test_vcvth_n_f16_s64(int64_t a) {
 }
 
 // CHECK-LABEL: test_vcvth_n_s16_f16
-// CHECK:  [[CVT:%.*]] = call i16 @llvm.aarch64.neon.vcvtfp2fxs.i16.f16(half %a, i32 0)
-// CHECK:  ret i16 [[CVT]]
+// CHECK:  [[CVT:%.*]] = call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f16(half %a, i32 0)
+// CHECK: [[RET:%.*]] = trunc i32 [[CVT]] to i16
+// CHECK: ret i16 [[RET]]
 int16_t test_vcvth_n_s16_f16(float16_t a) {
   return vcvth_n_s16_f16(a, 0);
 }
@@ -515,7 +529,8 @@ int64_t test_vcvth_n_s64_f16(float16_t a) {
 }
 
 // CHECK-LABEL: test_vcvth_n_f16_u16
-// CHECK:  [[CVT:%.*]] = call half @llvm.aarch64.neon.vcvtfxu2fp.f16.i16(i16 %a, i32 0)
+// CHECK: [[SEXT:%.*]] = zext i16 %a to i32
+// CHECK:  [[CVT:%.*]] = call half @llvm.aarch64.neon.vcvtfxu2fp.f16.i32(i32 [[SEXT]], i32 0)
 // CHECK:  ret half [[CVT]]
 float16_t test_vcvth_n_f16_u16(int16_t a) {
   return vcvth_n_f16_u16(a, 0);
@@ -536,8 +551,9 @@ float16_t test_vcvth_n_f16_u64(int64_t a) {
 }
 
 // CHECK-LABEL: test_vcvth_n_u16_f16
-// CHECK:  [[CVT:%.*]] = call i16 @llvm.aarch64.neon.vcvtfp2fxu.i16.f16(half %a, i32 0)
-// CHECK:  ret i16 [[CVT]]
+// CHECK:  [[CVT:%.*]] = call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half %a, i32 0)
+// CHECK: [[RET:%.*]] = trunc i32 [[CVT]] to i16
+// CHECK: ret i16 [[RET]]
 int16_t test_vcvth_n_u16_f16(float16_t a) {
   return vcvth_n_u16_f16(a, 0);
 }

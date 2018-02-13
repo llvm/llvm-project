@@ -23,7 +23,7 @@
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 5, 2, 5, 6};
     int ib[std::size(ia)] = {0};
-    
+
     auto it = std::reverse_copy(std::begin(ia), std::end(ia), std::begin(ib));
 
     return std::distance(std::begin(ib), it) == std::size(ia)

@@ -32,7 +32,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     const int expected[] = {2, 4, 7, 8};
 
     auto it = std::transform(std::begin(ia), std::end(ia), std::begin(ib), plusOne);
-    
+
     return it == (std::begin(ib) + std::size(ia))
         && *it == 0 // don't overwrite the last value in the output array
         && std::equal(std::begin(ib), it, std::begin(expected), std::end(expected))

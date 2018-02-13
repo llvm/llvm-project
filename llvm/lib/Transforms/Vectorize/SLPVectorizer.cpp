@@ -4702,11 +4702,11 @@ bool SLPVectorizerPass::tryToVectorizePair(Value *A, Value *B, BoUpSLP &R) {
   if (!A || !B)
     return false;
   Value *VL[] = { A, B };
-  return tryToVectorizeList(VL, R, true);
+  return tryToVectorizeList(VL, R, /*UserCost=*/0, true);
 }
 
 bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
-                                           bool AllowReorder) {
+                                           int UserCost, bool AllowReorder) {
   if (VL.size() < 2)
     return false;
 
@@ -4815,7 +4815,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         continue;
 
       R.computeMinimumValueSizes();
-      int Cost = R.getTreeCost();
+      int Cost = R.getTreeCost() - UserCost;
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
 
@@ -5748,9 +5748,17 @@ private:
 ///
 /// Returns true if it matches
 static bool findBuildVector(InsertElementInst *LastInsertElem,
-                            SmallVectorImpl<Value *> &BuildVectorOpds) {
+                            TargetTransformInfo *TTI,
+                            SmallVectorImpl<Value *> &BuildVectorOpds,
+                            int &UserCost) {
+  UserCost = 0;
   Value *V = nullptr;
   do {
+    if (auto *CI = dyn_cast<ConstantInt>(LastInsertElem->getOperand(2))) {
+      UserCost += TTI->getVectorInstrCost(Instruction::InsertElement,
+                                          LastInsertElem->getType(),
+                                          CI->getZExtValue());
+    }
     BuildVectorOpds.push_back(LastInsertElem->getOperand(1));
     V = LastInsertElem->getOperand(0);
     if (isa<UndefValue>(V))
@@ -5965,13 +5973,17 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
                                                    BasicBlock *BB, BoUpSLP &R) {
+  int UserCost;
   SmallVector<Value *, 16> BuildVectorOpds;
-  if (!findBuildVector(IEI, BuildVectorOpds))
+  if (!findBuildVector(IEI, TTI, BuildVectorOpds, UserCost) ||
+      (llvm::all_of(BuildVectorOpds,
+                    [](Value *V) { return isa<ExtractElementInst>(V); }) &&
+       isShuffle(BuildVectorOpds)))
     return false;
 
   // Vectorize starting with the build vector operands ignoring the BuildVector
   // instructions for the purpose of scheduling and user extraction.
-  return tryToVectorizeList(BuildVectorOpds, R);
+  return tryToVectorizeList(BuildVectorOpds, R, UserCost);
 }
 
 bool SLPVectorizerPass::vectorizeCmpInst(CmpInst *CI, BasicBlock *BB,
@@ -6049,8 +6061,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // is done when there are exactly two elements since tryToVectorizeList
       // asserts that there are only two values when AllowReorder is true.
       bool AllowReorder = NumElts == 2;
-      if (NumElts > 1 &&
-          tryToVectorizeList(makeArrayRef(IncIt, NumElts), R, AllowReorder)) {
+      if (NumElts > 1 && tryToVectorizeList(makeArrayRef(IncIt, NumElts), R,
+                                            /*UserCost=*/0, AllowReorder)) {
         // Success start over because instructions might have been changed.
         HaveVectorizedPhiNodes = true;
         Changed = true;

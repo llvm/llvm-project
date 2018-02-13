@@ -15,7 +15,6 @@
 namespace llvm {
 
 class MCSymbolWasm : public MCSymbol {
-private:
   bool IsFunction = false;
   bool IsWeak = false;
   bool IsHidden = false;
