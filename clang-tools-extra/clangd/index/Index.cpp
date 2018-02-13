@@ -19,7 +19,7 @@ using namespace llvm;
 raw_ostream &operator<<(raw_ostream &OS, const SymbolLocation &L) {
   if (!L)
     return OS << "(none)";
-  return OS << L.FileURI << "[" << L.StartOffset << "-" << L.EndOffset << "]";
+  return OS << L.FileURI << "[" << L.StartOffset << "-" << L.EndOffset << ")";
 }
 
 SymbolID::SymbolID(StringRef USR)
