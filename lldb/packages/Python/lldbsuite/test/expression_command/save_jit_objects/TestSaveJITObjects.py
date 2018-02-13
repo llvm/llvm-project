@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 
 def enumerateJITFiles():
     return [f for f in os.listdir(os.getcwd()) if f.startswith("jit")]
-    
+
 def countJITFiles():
     return len(enumerateJITFiles())
 
@@ -26,12 +26,11 @@ class SaveJITObjectsTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"])
-    @expectedFailureDarwin("rdar://35774408")
     def test_save_jit_objects(self):
         self.build()
         src_file = "main.c"
         src_file_spec = lldb.SBFileSpec(src_file)
-  
+
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break", src_file_spec)
 
