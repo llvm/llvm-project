@@ -45,7 +45,7 @@ TEST_F(ThreadingTest, TaskRunner) {
       scheduleIncrements();
     }
 
-    Tasks.waitForAll();
+    Tasks.wait();
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       ASSERT_EQ(Counter, TasksCnt * IncrementsPerTask);

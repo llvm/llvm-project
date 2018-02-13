@@ -368,12 +368,35 @@ private:
                  Parent->is(TT_TemplateCloser)) {
         Left->Type = TT_ArraySubscriptLSquare;
       } else if (Style.Language == FormatStyle::LK_Proto ||
-                 (!CppArrayTemplates && Parent &&
-                  Parent->isOneOf(TT_BinaryOperator, TT_TemplateCloser, tok::at,
-                                  tok::comma, tok::l_paren, tok::l_square,
-                                  tok::question, tok::colon, tok::kw_return,
-                                  // Should only be relevant to JavaScript:
-                                  tok::kw_default))) {
+                 Style.Language == FormatStyle::LK_TextProto) {
+        // Square braces in LK_Proto can either be message field attributes:
+        //
+        // optional Aaa aaa = 1 [
+        //   (aaa) = aaa
+        // ];
+        //
+        // or text proto extensions (in options):
+        //
+        // option (Aaa.options) = {
+        //   [type.type/type] {
+        //     key: value
+        //   }
+        // }
+        //
+        // In the first case we want to spread the contents inside the square
+        // braces; in the second we want to keep them inline.
+        Left->Type = TT_ArrayInitializerLSquare;
+        if (!Left->endsSequence(tok::l_square, tok::numeric_constant,
+                                tok::equal)) {
+          Left->Type = TT_ProtoExtensionLSquare;
+          BindingIncrease = 10;
+        }
+      } else if (!CppArrayTemplates && Parent &&
+                 Parent->isOneOf(TT_BinaryOperator, TT_TemplateCloser, tok::at,
+                                 tok::comma, tok::l_paren, tok::l_square,
+                                 tok::question, tok::colon, tok::kw_return,
+                                 // Should only be relevant to JavaScript:
+                                 tok::kw_default)) {
         Left->Type = TT_ArrayInitializerLSquare;
       } else {
         BindingIncrease = 10;
@@ -2396,6 +2419,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     if (Right.isOneOf(tok::l_brace, tok::less) && Left.is(TT_SelectorName))
       return true;
+    // Slashes occur in text protocol extension syntax: [type/type] { ... }.
+    if (Left.is(tok::slash) || Right.is(tok::slash))
+      return false;
+    if (Left.MatchingParen && Left.MatchingParen->is(TT_ProtoExtensionLSquare) &&
+        Right.isOneOf(tok::l_brace, tok::less))
+      return !Style.Cpp11BracedListStyle;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
@@ -2730,6 +2759,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Left.is(TT_LeadingJavaAnnotation) &&
       Right.isNot(TT_LeadingJavaAnnotation) && Right.isNot(tok::l_paren) &&
       (Line.Last->is(tok::l_brace) || Style.BreakAfterJavaFieldAnnotations))
+    return true;
+
+  if (Right.is(TT_ProtoExtensionLSquare))
     return true;
 
   return false;

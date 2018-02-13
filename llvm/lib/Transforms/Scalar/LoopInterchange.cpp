@@ -541,7 +541,7 @@ struct LoopInterchange : public FunctionPass {
     BasicBlock *OuterMostLoopLatch = OuterMostLoop->getLoopLatch();
     BranchInst *OuterMostLoopLatchBI =
         dyn_cast<BranchInst>(OuterMostLoopLatch->getTerminator());
-    if (!OuterMostLoopLatchBI)
+    if (!OuterMostLoopLatchBI || OuterMostLoopLatchBI->getNumSuccessors() != 2)
       return false;
 
     // Since we currently do not handle LCSSA PHI's any failure in loop
