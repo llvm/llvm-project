@@ -488,7 +488,12 @@ namespace {
 
     void runChecker(CheckerManager::CheckNewAllocatorFunc checkFn,
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
-      ProgramPoint L = PostAllocatorCall(NE, Pred->getLocationContext());
+      // TODO: Does this deserve a custom program point? For now we're re-using
+      // PostImplicitCall because we're guaranteed to use the non-implicit
+      // PostStmt for the PostCall callback, because we have some sort of
+      // call site (CXXNewExpr) in this scenario.
+      ProgramPoint L = PostImplicitCall(NE->getOperatorNew(), NE->getLocStart(),
+                                        Pred->getLocationContext());
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
       checkFn(NE, Target, C);
     }
