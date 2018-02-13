@@ -600,6 +600,20 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
         Offset = -Offset;
         isSub = true;
       }
+    } else if (AddrMode == ARMII::AddrMode5FP16) {
+      // VFP address mode.
+      const MachineOperand &OffOp = MI.getOperand(FrameRegIdx+1);
+      int InstrOffs = ARM_AM::getAM5FP16Offset(OffOp.getImm());
+      if (ARM_AM::getAM5FP16Op(OffOp.getImm()) == ARM_AM::sub)
+        InstrOffs *= -1;
+      NumBits = 8;
+      Scale = 2;
+      Offset += InstrOffs * 2;
+      assert((Offset & (Scale-1)) == 0 && "Can't encode this offset!");
+      if (Offset < 0) {
+        Offset = -Offset;
+        isSub = true;
+      }
     } else if (AddrMode == ARMII::AddrModeT2_i8s4) {
       Offset += MI.getOperand(FrameRegIdx + 1).getImm() * 4;
       NumBits = 10; // 8 bits scaled by 4

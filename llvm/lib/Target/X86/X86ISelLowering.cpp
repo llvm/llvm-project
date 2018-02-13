@@ -24767,7 +24767,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue InVec1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, RegVT, Ops);
 
     SDValue Res = DAG.getNode(X86ISD::AVG, dl, RegVT, InVec0, InVec1);
-    if (!ExperimentalVectorWideningLegalization)
+    if (getTypeAction(*DAG.getContext(), InVT) != TypeWidenVector)
       Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, InVT, Res,
                         DAG.getIntPtrConstant(0, dl));
     Results.push_back(Res);
@@ -24787,7 +24787,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                               N->getOperand(1), UNDEF);
     SDValue Res = DAG.getNode(ISD::SETCC, dl, MVT::v4i32, LHS, RHS,
                               N->getOperand(2));
-    if (!ExperimentalVectorWideningLegalization)
+    if (getTypeAction(*DAG.getContext(), MVT::v2i32) != TypeWidenVector)
       Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
                         DAG.getIntPtrConstant(0, dl));
     Results.push_back(Res);
@@ -24839,8 +24839,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                             Src, DAG.getIntPtrConstant(0, dl));
         }
         SDValue Res = DAG.getNode(Opc, dl, ResVT, Src);
-        ResVT = ExperimentalVectorWideningLegalization ? MVT::v4i32
-                                                       : MVT::v2i32;
+        bool WidenType = getTypeAction(*DAG.getContext(),
+                                       MVT::v2i32) == TypeWidenVector;
+        ResVT = WidenType ? MVT::v4i32 : MVT::v2i32;
         Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResVT, Res,
                           DAG.getIntPtrConstant(0, dl));
         Results.push_back(Res);
@@ -24852,7 +24853,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                   DAG.getUNDEF(MVT::v2f32));
         Res = DAG.getNode(IsSigned ? ISD::FP_TO_SINT
                                    : ISD::FP_TO_UINT, dl, MVT::v4i32, Res);
-        if (!ExperimentalVectorWideningLegalization)
+        if (getTypeAction(*DAG.getContext(), MVT::v2i32) != TypeWidenVector)
           Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res, Idx);
         Results.push_back(Res);
         return;
@@ -25081,7 +25082,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                    MVT::v2f64, N->getOperand(0));
     SDValue ToVecInt = DAG.getBitcast(WiderVT, Expanded);
 
-    if (ExperimentalVectorWideningLegalization) {
+    if (getTypeAction(*DAG.getContext(), DstVT) == TypeWidenVector) {
       // If we are legalizing vectors by widening, we already have the desired
       // legal vector type, just return it.
       Results.push_back(ToVecInt);
@@ -25148,7 +25149,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
           DAG.getVTList(MVT::v4i32, Mask.getValueType(), MVT::Other), Ops, dl,
           Gather->getMemoryVT(), Gather->getMemOperand());
         SDValue Chain = Res.getValue(2);
-        if (!ExperimentalVectorWideningLegalization)
+        if (getTypeAction(*DAG.getContext(), VT) != TypeWidenVector)
           Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
                             DAG.getIntPtrConstant(0, dl));
         Results.push_back(Res);
@@ -25169,7 +25170,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                         Gather->getMemoryVT(), dl, Ops,
                                         Gather->getMemOperand());
       SDValue Chain = Res.getValue(1);
-      if (!ExperimentalVectorWideningLegalization)
+      if (getTypeAction(*DAG.getContext(), MVT::v2i32) != TypeWidenVector)
         Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
                           DAG.getIntPtrConstant(0, dl));
       Results.push_back(Res);
