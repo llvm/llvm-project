@@ -188,7 +188,8 @@ public:
   std::unique_ptr<AnalysisManager> Mgr;
 
   /// Time the analyzes time of each translation unit.
-  static llvm::Timer* TUTotalTimer;
+  std::unique_ptr<llvm::TimerGroup> AnalyzerTimers;
+  std::unique_ptr<llvm::Timer> TUTotalTimer;
 
   /// The information about analyzed functions shared throughout the
   /// translation unit.
@@ -201,15 +202,17 @@ public:
         OutDir(outdir), Opts(std::move(opts)), Plugins(plugins),
         Injector(injector) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats) {
-      llvm::EnableStatistics(false);
-      TUTotalTimer = new llvm::Timer("time", "Analyzer Total Time");
+    if (Opts->PrintStats || Opts->shouldSerializeStats()) {
+      AnalyzerTimers = llvm::make_unique<llvm::TimerGroup>(
+          "analyzer", "Analyzer timers");
+      TUTotalTimer = llvm::make_unique<llvm::Timer>(
+          "time", "Analyzer total time", *AnalyzerTimers);
+      llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
   }
 
   ~AnalysisConsumer() override {
     if (Opts->PrintStats) {
-      delete TUTotalTimer;
       llvm::PrintStatistics();
     }
   }
@@ -394,8 +397,6 @@ private:
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer implementation.
 //===----------------------------------------------------------------------===//
-llvm::Timer* AnalysisConsumer::TUTotalTimer = nullptr;
-
 bool AnalysisConsumer::HandleTopLevelDecl(DeclGroupRef DG) {
   storeTopLevelDecls(DG);
   return true;
@@ -557,12 +558,6 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
     RecVisitorBR = nullptr;
   }
 
-  // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
-  // FIXME: This should be replaced with something that doesn't rely on
-  // side-effects in PathDiagnosticConsumer's destructor. This is required when
-  // used with option -disable-free.
-  Mgr.reset();
-
   if (TUTotalTimer) TUTotalTimer->stopTimer();
 
   // Count how many basic blocks we have not covered.
@@ -574,6 +569,11 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
       (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
         NumBlocksInAnalyzedFunctions;
 
+  // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
+  // FIXME: This should be replaced with something that doesn't rely on
+  // side-effects in PathDiagnosticConsumer's destructor. This is required when
+  // used with option -disable-free.
+  Mgr.reset();
 }
 
 std::string AnalysisConsumer::getFunctionName(const Decl *D) {

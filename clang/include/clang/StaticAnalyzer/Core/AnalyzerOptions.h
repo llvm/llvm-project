@@ -277,6 +277,8 @@ private:
   /// \sa StableReportFilename
   Optional<bool> StableReportFilename;
 
+  Optional<bool> SerializeStats;
+
   /// \sa getGraphTrimInterval
   Optional<unsigned> GraphTrimInterval;
 
@@ -537,6 +539,14 @@ public:
   /// This is controlled by the 'stable-report-filename' config option,
   /// which accepts the values "true" and "false". Default = false
   bool shouldWriteStableReportFilename();
+
+  /// \return Whether the analyzer should
+  /// serialize statistics to plist output.
+  /// Statistics would be serialized in JSON format inside the main dictionary
+  /// under the \c statistics key.
+  /// Available only if compiled in assert mode or with LLVM statistics
+  /// explicitly enabled.
+  bool shouldSerializeStats();
 
   /// Returns whether irrelevant parts of a bug report path should be pruned
   /// out of the final output.
