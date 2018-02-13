@@ -150,11 +150,7 @@ public:
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
-  /// \return A future that will become ready when the rebuild (including
-  /// diagnostics) is finished.
-  /// FIXME: don't return futures here, LSP does not require a response for this
-  /// request.
-  std::future<void> addDocument(PathRef File, StringRef Contents);
+  void addDocument(PathRef File, StringRef Contents);
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
@@ -164,9 +160,7 @@ public:
   /// Will also check if CompileCommand, provided by GlobalCompilationDatabase
   /// for \p File has changed. If it has, will remove currently stored Preamble
   /// and AST and rebuild them from scratch.
-  /// FIXME: don't return futures here, LSP does not require a response for this
-  /// request.
-  std::future<void> forceReparse(PathRef File);
+  void forceReparse(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
   /// Request is processed asynchronously.
@@ -252,6 +246,11 @@ public:
   /// FIXME: those metrics might be useful too, we should add them.
   std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
 
+  // Blocks the main thread until the server is idle. Only for use in tests.
+  // Returns false if the timeout expires.
+  LLVM_NODISCARD bool
+  blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
+
 private:
   /// FIXME: This stats several files to find a .clang-format file. I/O can be
   /// slow. Think of a way to cache this.
@@ -259,7 +258,7 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  std::future<void>
+  void
   scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
                           Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
 

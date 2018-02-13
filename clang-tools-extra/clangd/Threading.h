@@ -56,6 +56,21 @@ private:
   std::size_t FreeSlots;
 };
 
+/// A point in time we may wait for, or None to wait forever.
+/// (Not time_point::max(), because many std::chrono implementations overflow).
+using Deadline = llvm::Optional<std::chrono::steady_clock::time_point>;
+/// Makes a deadline from a timeout in seconds.
+Deadline timeoutSeconds(llvm::Optional<double> Seconds);
+/// Waits on a condition variable until F() is true or D expires.
+template <typename Func>
+LLVM_NODISCARD bool wait(std::unique_lock<std::mutex> &Lock,
+                         std::condition_variable &CV, Deadline D, Func F) {
+  if (D)
+    return CV.wait_until(Lock, *D, F);
+  CV.wait(Lock, F);
+  return true;
+}
+
 /// Runs tasks on separate (detached) threads and wait for all tasks to finish.
 /// Objects that need to spawn threads can own an AsyncTaskRunner to ensure they
 /// all complete on destruction.
@@ -64,12 +79,13 @@ public:
   /// Destructor waits for all pending tasks to finish.
   ~AsyncTaskRunner();
 
-  void waitForAll();
+  void wait() const { (void) wait(llvm::None); }
+  LLVM_NODISCARD bool wait(Deadline D) const;
   void runAsync(UniqueFunction<void()> Action);
 
 private:
-  std::mutex Mutex;
-  std::condition_variable TasksReachedZero;
+  mutable std::mutex Mutex;
+  mutable std::condition_variable TasksReachedZero;
   std::size_t InFlightTasks = 0;
 };
 } // namespace clangd
