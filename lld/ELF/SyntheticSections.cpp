@@ -1202,7 +1202,12 @@ RelocationBaseSection::RelocationBaseSection(StringRef Name, uint32_t Type,
     : SyntheticSection(SHF_ALLOC, Type, Config->Wordsize, Name),
       DynamicTag(DynamicTag), SizeDynamicTag(SizeDynamicTag) {}
 
-void RelocationBaseSection::addReloc(uint32_t DynType,
+void RelocationBaseSection::addReloc(RelType DynType, InputSectionBase *IS,
+                                     uint64_t OffsetInSec, Symbol *Sym) {
+  addReloc({DynType, IS, OffsetInSec, false, Sym, 0});
+}
+
+void RelocationBaseSection::addReloc(RelType DynType,
                                      InputSectionBase *InputSec,
                                      uint64_t OffsetInSec, bool UseSymVA,
                                      Symbol *Sym, int64_t Addend, RelExpr Expr,
