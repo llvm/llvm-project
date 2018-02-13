@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
 #include "ClangdUnit.h"
+#include "Compiler.h"
 #include "Matchers.h"
 #include "TestFS.h"
 #include "XRefs.h"
@@ -36,6 +37,11 @@ using testing::ElementsAre;
 using testing::Field;
 using testing::Matcher;
 using testing::UnorderedElementsAreArray;
+
+class IgnoreDiagnostics : public DiagnosticsConsumer {
+  void onDiagnosticsReady(
+      PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {}
+};
 
 // FIXME: this is duplicated with FileIndexTests. Share it.
 ParsedAST build(StringRef Code) {
@@ -225,6 +231,30 @@ TEST(GoToDefinition, All) {
                 ElementsAre(RangeIs(T.range())))
         << Test;
   }
+}
+
+TEST(GoToDefinition, RelPathsInCompileCommand) {
+  Annotations SourceAnnotations(R"cpp(
+[[int foo]];
+int baz = f^oo;
+)cpp");
+
+  IgnoreDiagnostics DiagConsumer;
+  MockCompilationDatabase CDB(/*UseRelPaths=*/true);
+  MockFSProvider FS;
+  ClangdServer Server(CDB, DiagConsumer, FS, /*AsyncThreadsCount=*/0,
+                      /*StorePreambleInMemory=*/true);
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  FS.Files[FooCpp] = "";
+
+  Server.addDocument(FooCpp, SourceAnnotations.code());
+  auto Locations = Server.findDefinitions(FooCpp, SourceAnnotations.point());
+  EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+
+  EXPECT_THAT(Locations->Value,
+              ElementsAre(Location{URIForFile{FooCpp.str()},
+                                   SourceAnnotations.range()}));
 }
 
 } // namespace

@@ -37,12 +37,15 @@ public:
 // A Compilation database that returns a fixed set of compile flags.
 class MockCompilationDatabase : public GlobalCompilationDatabase {
 public:
-  MockCompilationDatabase();
+  /// When \p UseRelPaths is true, uses relative paths in compile commands.
+  /// When \p UseRelPaths is false, uses absoulte paths.
+  MockCompilationDatabase(bool UseRelPaths = false);
 
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
   std::vector<std::string> ExtraClangFlags;
+  const bool UseRelPaths;
 };
 
 // Returns an absolute (fake) test directory for this OS.

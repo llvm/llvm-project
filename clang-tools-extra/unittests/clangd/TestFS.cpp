@@ -33,8 +33,10 @@ MockFSProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(FS, Tag);
 }
 
-MockCompilationDatabase::MockCompilationDatabase()
-    : ExtraClangFlags({"-ffreestanding"}) {} // Avoid implicit stdc-predef.h.
+MockCompilationDatabase::MockCompilationDatabase(bool UseRelPaths)
+    : ExtraClangFlags({"-ffreestanding"}), UseRelPaths(UseRelPaths) {
+  // -ffreestanding avoids implicit stdc-predef.h.
+}
 
 llvm::Optional<tooling::CompileCommand>
 MockCompilationDatabase::getCompileCommand(PathRef File) const {
@@ -42,10 +44,10 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
     return llvm::None;
 
   auto CommandLine = ExtraClangFlags;
+  auto FileName = llvm::sys::path::filename(File);
   CommandLine.insert(CommandLine.begin(), "clang");
-  CommandLine.insert(CommandLine.end(), File.str());
-  return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
-                                  llvm::sys::path::filename(File),
+  CommandLine.insert(CommandLine.end(), UseRelPaths ? FileName : File);
+  return {tooling::CompileCommand(llvm::sys::path::parent_path(File), FileName,
                                   std::move(CommandLine), "")};
 }
 
