@@ -1457,7 +1457,7 @@ void ModuleBitcodeWriter::writeDISubrange(const DISubrange *N,
 void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  Record.push_back((N->isUnsigned() << 1) | N->isDistinct());
   Record.push_back(rotateSign(N->getValue()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
 
@@ -1551,8 +1551,15 @@ void ModuleBitcodeWriter::writeDIFile(const DIFile *N,
   Record.push_back(N->isDistinct());
   Record.push_back(VE.getMetadataOrNullID(N->getRawFilename()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawDirectory()));
-  Record.push_back(N->getChecksumKind());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawChecksum()));
+  if (N->getRawChecksum()) {
+    Record.push_back(N->getRawChecksum()->Kind);
+    Record.push_back(VE.getMetadataOrNullID(N->getRawChecksum()->Value));
+  } else {
+    // Maintain backwards compatibility with the old internal representation of
+    // CSK_None in ChecksumKind by writing nulls here when Checksum is None.
+    Record.push_back(0);
+    Record.push_back(VE.getMetadataOrNullID(nullptr));
+  }
 
   Stream.EmitRecord(bitc::METADATA_FILE, Record, Abbrev);
   Record.clear();

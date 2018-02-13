@@ -26,8 +26,6 @@ class MCSymbol;
 
 /// This represents a section on wasm.
 class MCSectionWasm final : public MCSection {
-private:
-
   /// This is the name of the section.  The referenced memory is owned by
   /// TargetLoweringObjectFileWasm's WasmUniqueMap.
   StringRef SectionName;

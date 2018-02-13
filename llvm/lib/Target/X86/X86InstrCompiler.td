@@ -2011,3 +2011,34 @@ def : Pat<(cttz_zero_undef (loadi64 addr:$src)), (BSF64rm addr:$src)>;
 let Predicates = [HasMOVBE] in {
  def : Pat<(bswap GR16:$src), (ROL16ri GR16:$src, (i8 8))>;
 }
+
+// These patterns are selected by some custom code in X86ISelDAGToDAG.cpp that
+// custom combines and+srl into BEXTR. We use these patterns to avoid a bunch
+// of manual code for folding loads.
+let Predicates = [HasBMI, NoTBM] in {
+  def : Pat<(X86bextr GR32:$src1, (i32 imm:$src2)),
+            (BEXTR32rr GR32:$src1, (MOV32ri imm:$src2))>;
+  def : Pat<(X86bextr (loadi32 addr:$src1), (i32 imm:$src2)),
+            (BEXTR32rm addr:$src1, (MOV32ri imm:$src2))>;
+  def : Pat<(X86bextr GR64:$src1, mov64imm32:$src2),
+            (BEXTR64rr GR64:$src1,
+                       (SUBREG_TO_REG (i64 0),
+                                      (MOV32ri64 mov64imm32:$src2),
+                                      sub_32bit))>;
+  def : Pat<(X86bextr (loadi64 addr:$src1), mov64imm32:$src2),
+            (BEXTR64rm addr:$src1,
+                       (SUBREG_TO_REG (i64 0),
+                                      (MOV32ri64 mov64imm32:$src2),
+                                      sub_32bit))>;
+} // HasBMI, NoTBM
+
+let Predicates = [HasTBM] in {
+  def : Pat<(X86bextr GR32:$src1, (i32 imm:$src2)),
+            (BEXTRI32ri GR32:$src1, imm:$src2)>;
+  def : Pat<(X86bextr (loadi32 addr:$src1), (i32 imm:$src2)),
+            (BEXTRI32mi addr:$src1, imm:$src2)>;
+  def : Pat<(X86bextr GR64:$src1, i64immSExt32:$src2),
+            (BEXTRI64ri GR64:$src1, i64immSExt32:$src2)>;
+  def : Pat<(X86bextr (loadi64 addr:$src1), i64immSExt32:$src2),
+            (BEXTRI64mi addr:$src1, i64immSExt32:$src2)>;
+}

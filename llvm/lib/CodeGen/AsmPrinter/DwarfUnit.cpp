@@ -280,15 +280,16 @@ void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
 
 MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) {
   assert(File);
-  if (File->getChecksumKind() != DIFile::CSK_MD5)
+  Optional<DIFile::ChecksumInfo<StringRef>> Checksum = File->getChecksum();
+  if (!Checksum || Checksum->Kind != DIFile::CSK_MD5)
     return nullptr;
 
   // Convert the string checksum to an MD5Result for the streamer.
   // The verifier validates the checksum so we assume it's okay.
   // An MD5 checksum is 16 bytes.
-  std::string Checksum = fromHex(File->getChecksum());
+  std::string ChecksumString = fromHex(Checksum->Value);
   void *CKMem = Asm->OutStreamer->getContext().allocate(16, 1);
-  memcpy(CKMem, Checksum.data(), 16);
+  memcpy(CKMem, ChecksumString.data(), 16);
   return reinterpret_cast<MD5::MD5Result *>(CKMem);
 }
 
@@ -1435,6 +1436,15 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 }
 
 void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
+  const DIType *DTy = resolve(CTy->getBaseType());
+  bool IsUnsigned = DTy && isUnsignedDIType(DD, DTy);
+  if (DTy && DD->getDwarfVersion() >= 3)
+    addType(Buffer, DTy);
+  if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagFixedEnum)) {
+    assert(DTy);
+    addFlag(Buffer, dwarf::DW_AT_enum_class);
+  }
+
   DINodeArray Elements = CTy->getElements();
 
   // Add enumerators to enumeration type.
@@ -1444,15 +1454,9 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       DIE &Enumerator = createAndAddDIE(dwarf::DW_TAG_enumerator, Buffer);
       StringRef Name = Enum->getName();
       addString(Enumerator, dwarf::DW_AT_name, Name);
-      int64_t Value = Enum->getValue();
-      addSInt(Enumerator, dwarf::DW_AT_const_value, dwarf::DW_FORM_sdata,
-              Value);
+      auto Value = static_cast<uint64_t>(Enum->getValue());
+      addConstantValue(Enumerator, IsUnsigned, Value);
     }
-  }
-  const DIType *DTy = resolve(CTy->getBaseType());
-  if (DTy) {
-    addType(Buffer, DTy);
-    addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
 }
 
