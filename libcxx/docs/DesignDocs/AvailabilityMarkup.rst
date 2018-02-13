@@ -58,7 +58,7 @@ Testing
 Some parameters can be passed to lit to run the test-suite and exercising the
 availability.
 
-* The `platform` parameter controls the deployement target. For example lit can
+* The `platform` parameter controls the deployment target. For example lit can
   be invoked with `--param=platform=macosx10.8`. Default is the current host.
 * The `use_system_cxx_lib` parameter indicates to use another library than the
   just built one. Invoking lit with `--param=use_system_cxx_lib=true` will run
