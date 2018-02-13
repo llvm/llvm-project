@@ -346,6 +346,9 @@ namespace llvm {
       ADD, SUB, ADC, SBB, SMUL,
       INC, DEC, OR, XOR, AND,
 
+      // Bit field extract.
+      BEXTR,
+
       // LOW, HI, FLAGS = umul LHS, RHS.
       UMUL,
 

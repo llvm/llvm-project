@@ -3449,7 +3449,9 @@ public:
 
   /// \brief Returns true if this can be considered a complete type.
   bool isComplete() const {
-    return isCompleteDefinition() || isFixed();
+    // IntegerType is set for fixed type enums and non-fixed but implicitly
+    // int-sized Microsoft enums.
+    return isCompleteDefinition() || IntegerType;
   }
 
   /// Returns true if this enum is either annotated with

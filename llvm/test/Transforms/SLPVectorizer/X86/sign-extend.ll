@@ -34,18 +34,15 @@ entry:
 define <4 x i16> @truncate_v_v(<4 x i32> %lhs) {
 ; CHECK-LABEL: @truncate_v_v(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[LHS:%.*]], i32 0
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[VECEXT]] to i16
-; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i16> undef, i16 [[CONV]], i32 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[LHS]], i32 1
-; CHECK-NEXT:    [[CONV2:%.*]] = trunc i32 [[VECEXT1]] to i16
-; CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x i16> [[VECINIT]], i16 [[CONV2]], i32 1
-; CHECK-NEXT:    [[VECEXT4:%.*]] = extractelement <4 x i32> [[LHS]], i32 2
-; CHECK-NEXT:    [[CONV5:%.*]] = trunc i32 [[VECEXT4]] to i16
-; CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x i16> [[VECINIT3]], i16 [[CONV5]], i32 2
-; CHECK-NEXT:    [[VECEXT7:%.*]] = extractelement <4 x i32> [[LHS]], i32 3
-; CHECK-NEXT:    [[CONV8:%.*]] = trunc i32 [[VECEXT7]] to i16
-; CHECK-NEXT:    [[VECINIT9:%.*]] = insertelement <4 x i16> [[VECINIT6]], i16 [[CONV8]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[LHS:%.*]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i16> undef, i16 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x i16> [[VECINIT]], i16 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x i16> [[VECINIT3]], i16 [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP0]], i32 3
+; CHECK-NEXT:    [[VECINIT9:%.*]] = insertelement <4 x i16> [[VECINIT6]], i16 [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x i16> [[VECINIT9]]
 ;
 entry:

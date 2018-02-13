@@ -21,6 +21,17 @@ int __attribute__((target("no-mmx"))) qq(int a) { return 40; }
 
 int __attribute__((target("arch=lakemont,mmx"))) lake(int a) { return 4; }
 
+int use_before_def(void);
+int useage(void){
+  return use_before_def();
+}
+
+// Adding the attribute to a definition does update it in IR.
+int __attribute__((target("arch=lakemont,mmx"))) use_before_def(void) {
+  return 5;
+}
+
+
 // Check that we emit the additional subtarget and cpu features for foo and not for baz or bar.
 // CHECK: baz{{.*}} #0
 // CHECK: foo{{.*}} #1
@@ -36,6 +47,7 @@ int __attribute__((target("arch=lakemont,mmx"))) lake(int a) { return 4; }
 // CHECK: qax{{.*}} #5
 // CHECK: qq{{.*}} #6
 // CHECK: lake{{.*}} #7
+// CHECK: use_before_def{{.*}} #7
 // CHECK: #0 = {{.*}}"target-cpu"="i686" "target-features"="+x87"
 // CHECK: #1 = {{.*}}"target-cpu"="ivybridge" "target-features"="+aes,+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
 // CHECK: #2 = {{.*}}"target-cpu"="i686" "target-features"="+x87,-aes,-avx,-avx2,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vpopcntdq,-f16c,-fma,-fma4,-gfni,-pclmul,-sha,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-xop,-xsave,-xsaveopt"

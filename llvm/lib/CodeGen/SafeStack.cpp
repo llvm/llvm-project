@@ -557,6 +557,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   for (Argument *Arg : ByValArguments) {
     unsigned Offset = SSL.getObjectOffset(Arg);
+    unsigned Align = SSL.getObjectAlignment(Arg);
     Type *Ty = Arg->getType()->getPointerElementType();
 
     uint64_t Size = DL.getTypeStoreSize(Ty);
@@ -573,7 +574,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
                       DIExpression::NoDeref, -Offset, DIExpression::NoDeref);
     Arg->replaceAllUsesWith(NewArg);
     IRB.SetInsertPoint(cast<Instruction>(NewArg)->getNextNode());
-    IRB.CreateMemCpy(Off, Arg, Size, Arg->getParamAlignment());
+    IRB.CreateMemCpy(Off, Align, Arg, Arg->getParamAlignment(), Size);
   }
 
   // Allocate space for every unsafe static AllocaInst on the unsafe stack.

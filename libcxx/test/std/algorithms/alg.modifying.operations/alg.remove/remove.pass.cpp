@@ -25,7 +25,7 @@
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 5, 2, 5, 6};
-    
+
     auto it = std::remove(std::begin(ia), std::end(ia), 5);
 
     return (std::begin(ia) + std::size(ia) - 2) == it  // we removed two elements

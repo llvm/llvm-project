@@ -17,7 +17,7 @@ define void @test1(i8* %A, i8* %B, i32 %N) {
 define void @test2(i8* %A, i32 %N) {
   ;; dest can't alias source since we can't write to source!
   ;; CHECK-LABEL: test2
-  ;; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %A, i8* align 1 getelementptr inbounds ([33 x i8], [33 x i8]* @S, i{{32|64}} 0, i{{32|64}} 0), i32 %N, i1 false)
+  ;; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %A, i8* align 16 getelementptr inbounds ([33 x i8], [33 x i8]* @S, i{{32|64}} 0, i{{32|64}} 0), i32 %N, i1 false)
   ;; CHECK-NEXT: ret void
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %A, i8* getelementptr inbounds ([33 x i8], [33 x i8]* @S, i32 0, i32 0), i32 %N, i1 false)
   ret void

@@ -497,6 +497,8 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
       std::string Name = Globals[k]->getName();
+      GlobalValue::DLLStorageClassTypes DLLStorage =
+          Globals[k]->getDLLStorageClass();
 
       // Copy metadata while adjusting any debug info metadata by the original
       // global's offset within the merged global.
@@ -517,7 +519,9 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       // It's not safe on Mach-O as the alias (and thus the portion of the
       // MergedGlobals variable) may be dead stripped at link time.
       if (Linkage != GlobalValue::InternalLinkage || !IsMachO) {
-        GlobalAlias::create(Tys[idx], AddrSpace, Linkage, Name, GEP, &M);
+        GlobalAlias *GA =
+            GlobalAlias::create(Tys[idx], AddrSpace, Linkage, Name, GEP, &M);
+        GA->setDLLStorageClass(DLLStorage);
       }
 
       NumMerged++;
@@ -577,8 +581,7 @@ bool GlobalMerge::doInitialization(Module &M) {
   for (auto &GV : M.globals()) {
     // Merge is safe for "normal" internal or external globals only
     if (GV.isDeclaration() || GV.isThreadLocal() ||
-        GV.hasSection() || GV.hasImplicitSection() ||
-        GV.hasDLLExportStorageClass())
+        GV.hasSection() || GV.hasImplicitSection())
       continue;
 
     // It's not safe to merge globals that may be preempted

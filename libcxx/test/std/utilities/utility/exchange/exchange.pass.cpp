@@ -25,13 +25,13 @@
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
     int v = 12;
-    
+
     if (12 != std::exchange(v,23) || v != 23)
         return false;
 
     if (23 != std::exchange(v,static_cast<short>(67)) || v != 67)
         return false;
-        
+
     if (67 != std::exchange<int, short>(v, {}) || v != 0)
         return false;
     return true;

@@ -113,6 +113,8 @@ defm PFSUBR   : I3DNow_binop_rm_int<0xAA, "pfsubr", I3DNOW_FALU_ITINS, 1>;
 defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd", I3DNOW_FCVT_I2F_ITINS>;
 defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", I3DNOW_MISC_FUNC_ITINS, 1>;
 
+// FIXME: Is there a better scheduler class for EMMS/FEMMS?
+let SchedRW = [WriteMicrocoded] in
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
                    [(int_x86_mmx_femms)], IIC_MMX_EMMS>;
 

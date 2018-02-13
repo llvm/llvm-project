@@ -32,8 +32,8 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 5, 2, 4, 6};
     int r1[10] = {0};
     int r2[10] = {0};
-    
-    auto p = std::partition_copy(std::begin(ia), std::end(ia), 
+
+    auto p = std::partition_copy(std::begin(ia), std::end(ia),
                     std::begin(r1), std::begin(r2), is_odd());
 
     return std::all_of(std::begin(r1), p.first, is_odd())

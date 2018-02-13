@@ -89,6 +89,8 @@ enum class SymbolProperty : SymbolPropertySet {
 static const unsigned SymbolPropertyBitNum = 8;
 
 /// Set of roles that are attributed to symbol occurrences.
+///
+/// Low 9 bits of clang-c/include/Index.h CXSymbolRole mirrors this enum.
 enum class SymbolRole : uint32_t {
   Declaration = 1 << 0,
   Definition  = 1 << 1,

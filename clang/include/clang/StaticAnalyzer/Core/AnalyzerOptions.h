@@ -191,6 +191,7 @@ public:
   enum class ExplorationStrategyKind {
     DFS,
     BFS,
+    UnexploredFirst,
     BFSBlockDFSContents,
     NotSet
   };

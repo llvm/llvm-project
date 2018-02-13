@@ -27,7 +27,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int ib[] = {2, 4};
     int ic[] = {3, 3, 3, 3};
-    
+
     auto comp = [](int a, int b) {return a < b; };
     return  std::includes(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib), comp)
         && !std::includes(std::begin(ia), std::end(ia), std::begin(ic), std::end(ic), comp)

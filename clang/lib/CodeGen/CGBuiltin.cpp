@@ -4160,45 +4160,28 @@ static const NeonIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vuqadds_s32, aarch64_neon_suqadd, Add1ArgType),
   // FP16 scalar intrinisics go here.
   NEONMAP1(vabdh_f16, aarch64_sisd_fabd, Add1ArgType),
-  NEONMAP1(vabsh_f16, aarch64_neon_abs, Add1ArgType),
-  NEONMAP1(vcageh_f16, aarch64_neon_facge, AddRetType | Add1ArgType),
-  NEONMAP1(vcagth_f16, aarch64_neon_facgt, AddRetType | Add1ArgType),
-  NEONMAP1(vcaleh_f16, aarch64_neon_facge, AddRetType | Add1ArgType),
-  NEONMAP1(vcalth_f16, aarch64_neon_facgt, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtah_s16_f16, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
   NEONMAP1(vcvtah_s32_f16, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
   NEONMAP1(vcvtah_s64_f16, aarch64_neon_fcvtas, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtah_u16_f16, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
   NEONMAP1(vcvtah_u32_f16, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
   NEONMAP1(vcvtah_u64_f16, aarch64_neon_fcvtau, AddRetType | Add1ArgType),
-  NEONMAP1(vcvth_n_f16_s16, aarch64_neon_vcvtfxs2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_f16_s32, aarch64_neon_vcvtfxs2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_f16_s64, aarch64_neon_vcvtfxs2fp, AddRetType | Add1ArgType),
-  NEONMAP1(vcvth_n_f16_u16, aarch64_neon_vcvtfxu2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_f16_u32, aarch64_neon_vcvtfxu2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_f16_u64, aarch64_neon_vcvtfxu2fp, AddRetType | Add1ArgType),
-  NEONMAP1(vcvth_n_s16_f16, aarch64_neon_vcvtfp2fxs, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_s32_f16, aarch64_neon_vcvtfp2fxs, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_s64_f16, aarch64_neon_vcvtfp2fxs, AddRetType | Add1ArgType),
-  NEONMAP1(vcvth_n_u16_f16, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_u32_f16, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
   NEONMAP1(vcvth_n_u64_f16, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtmh_s16_f16, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmh_s32_f16, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmh_s64_f16, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtmh_u16_f16, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmh_u32_f16, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmh_u64_f16, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtnh_s16_f16, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
   NEONMAP1(vcvtnh_s32_f16, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
   NEONMAP1(vcvtnh_s64_f16, aarch64_neon_fcvtns, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtnh_u16_f16, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtnh_u32_f16, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtnh_u64_f16, aarch64_neon_fcvtnu, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtph_s16_f16, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
   NEONMAP1(vcvtph_s32_f16, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
   NEONMAP1(vcvtph_s64_f16, aarch64_neon_fcvtps, AddRetType | Add1ArgType),
-  NEONMAP1(vcvtph_u16_f16, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtph_u32_f16, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtph_u64_f16, aarch64_neon_fcvtpu, AddRetType | Add1ArgType),
   NEONMAP1(vmulxh_f16, aarch64_neon_fmulx, Add1ArgType),
@@ -6188,6 +6171,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   // Handle non-overloaded intrinsics first.
   switch (BuiltinID) {
   default: break;
+  case NEON::BI__builtin_neon_vabsh_f16:
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::fabs, HalfTy), Ops, "vabs");
   case NEON::BI__builtin_neon_vldrq_p128: {
     llvm::Type *Int128Ty = llvm::Type::getIntNTy(getLLVMContext(), 128);
     llvm::Type *Int128PTy = llvm::PointerType::get(Int128Ty, 0);
@@ -6281,6 +6267,101 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     if (usgn)
       return Builder.CreateFPToUI(Ops[0], Int64Ty);
     return Builder.CreateFPToSI(Ops[0], Int64Ty);
+  }
+  case NEON::BI__builtin_neon_vcvtah_u16_f16:
+  case NEON::BI__builtin_neon_vcvtmh_u16_f16:
+  case NEON::BI__builtin_neon_vcvtnh_u16_f16:
+  case NEON::BI__builtin_neon_vcvtph_u16_f16:
+  case NEON::BI__builtin_neon_vcvtah_s16_f16:
+  case NEON::BI__builtin_neon_vcvtmh_s16_f16:
+  case NEON::BI__builtin_neon_vcvtnh_s16_f16:
+  case NEON::BI__builtin_neon_vcvtph_s16_f16: {
+    unsigned Int;
+    llvm::Type* InTy = Int32Ty;
+    llvm::Type* FTy  = HalfTy;
+    llvm::Type *Tys[2] = {InTy, FTy};
+    Ops.push_back(EmitScalarExpr(E->getArg(0)));
+    switch (BuiltinID) {
+    default: llvm_unreachable("missing builtin ID in switch!");
+    case NEON::BI__builtin_neon_vcvtah_u16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtau; break;
+    case NEON::BI__builtin_neon_vcvtmh_u16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtmu; break;
+    case NEON::BI__builtin_neon_vcvtnh_u16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtnu; break;
+    case NEON::BI__builtin_neon_vcvtph_u16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtpu; break;
+    case NEON::BI__builtin_neon_vcvtah_s16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtas; break;
+    case NEON::BI__builtin_neon_vcvtmh_s16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtms; break;
+    case NEON::BI__builtin_neon_vcvtnh_s16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtns; break;
+    case NEON::BI__builtin_neon_vcvtph_s16_f16:
+      Int = Intrinsic::aarch64_neon_fcvtps; break;
+    }
+    Ops[0] = EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "fcvt");
+    return Builder.CreateTrunc(Ops[0], Int16Ty);
+  }
+  case NEON::BI__builtin_neon_vcaleh_f16:
+  case NEON::BI__builtin_neon_vcalth_f16:
+  case NEON::BI__builtin_neon_vcageh_f16:
+  case NEON::BI__builtin_neon_vcagth_f16: {
+    unsigned Int;
+    llvm::Type* InTy = Int32Ty;
+    llvm::Type* FTy  = HalfTy;
+    llvm::Type *Tys[2] = {InTy, FTy};
+    Ops.push_back(EmitScalarExpr(E->getArg(1)));
+    switch (BuiltinID) {
+    default: llvm_unreachable("missing builtin ID in switch!");
+    case NEON::BI__builtin_neon_vcageh_f16:
+      Int = Intrinsic::aarch64_neon_facge; break;
+    case NEON::BI__builtin_neon_vcagth_f16:
+      Int = Intrinsic::aarch64_neon_facgt; break;
+    case NEON::BI__builtin_neon_vcaleh_f16:
+      Int = Intrinsic::aarch64_neon_facge; std::swap(Ops[0], Ops[1]); break;
+    case NEON::BI__builtin_neon_vcalth_f16:
+      Int = Intrinsic::aarch64_neon_facgt; std::swap(Ops[0], Ops[1]); break;
+    }
+    Ops[0] = EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "facg");
+    return Builder.CreateTrunc(Ops[0], Int16Ty);
+  }
+  case NEON::BI__builtin_neon_vcvth_n_s16_f16:
+  case NEON::BI__builtin_neon_vcvth_n_u16_f16: {
+    unsigned Int;
+    llvm::Type* InTy = Int32Ty;
+    llvm::Type* FTy  = HalfTy;
+    llvm::Type *Tys[2] = {InTy, FTy};
+    Ops.push_back(EmitScalarExpr(E->getArg(1)));
+    switch (BuiltinID) {
+    default: llvm_unreachable("missing builtin ID in switch!");
+    case NEON::BI__builtin_neon_vcvth_n_s16_f16:
+      Int = Intrinsic::aarch64_neon_vcvtfp2fxs; break;
+    case NEON::BI__builtin_neon_vcvth_n_u16_f16:
+      Int = Intrinsic::aarch64_neon_vcvtfp2fxu; break;
+    }
+    Ops[0] = EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "fcvth_n");
+    return Builder.CreateTrunc(Ops[0], Int16Ty);
+  }
+  case NEON::BI__builtin_neon_vcvth_n_f16_s16:
+  case NEON::BI__builtin_neon_vcvth_n_f16_u16: {
+    unsigned Int;
+    llvm::Type* FTy  = HalfTy;
+    llvm::Type* InTy = Int32Ty;
+    llvm::Type *Tys[2] = {FTy, InTy};
+    Ops.push_back(EmitScalarExpr(E->getArg(1)));
+    switch (BuiltinID) {
+    default: llvm_unreachable("missing builtin ID in switch!");
+    case NEON::BI__builtin_neon_vcvth_n_f16_s16:
+      Int = Intrinsic::aarch64_neon_vcvtfxs2fp;
+      Ops[0] = Builder.CreateSExt(Ops[0], InTy, "sext");
+      break;
+    case NEON::BI__builtin_neon_vcvth_n_f16_u16:
+      Int = Intrinsic::aarch64_neon_vcvtfxu2fp;
+      Ops[0] = Builder.CreateZExt(Ops[0], InTy);
+      break;
+    }
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "fcvth_n");
   }
   case NEON::BI__builtin_neon_vpaddd_s64: {
     llvm::Type *Ty = llvm::VectorType::get(Int64Ty, 2);
@@ -8765,7 +8846,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     RHS = Builder.CreateShuffleVector(RHS, RHS,
                                       makeArrayRef(Indices, NumElts / 2));
     // Concat the vectors.
-    Value *Res = Builder.CreateShuffleVector(LHS, RHS,
+    // NOTE: Operands are swapped to match the intrinsic definition.
+    Value *Res = Builder.CreateShuffleVector(RHS, LHS,
                                              makeArrayRef(Indices, NumElts));
     return Builder.CreateBitCast(Res, Ops[0]->getType());
   }

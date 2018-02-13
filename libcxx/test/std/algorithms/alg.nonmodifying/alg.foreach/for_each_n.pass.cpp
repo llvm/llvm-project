@@ -26,7 +26,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 6, 7};
     int expected[] = {3, 5, 8, 9};
     const size_t N = 4;
-    
+
     auto it = std::for_each_n(std::begin(ia), N, [](int &a) { a += 2; });
     return it == (std::begin(ia) + N)
         && std::equal(std::begin(ia), std::end(ia), std::begin(expected))

@@ -47,6 +47,7 @@ class StackLayout {
   SmallVector<StackObject, 8> StackObjects;
 
   DenseMap<const Value *, unsigned> ObjectOffsets;
+  DenseMap<const Value *, unsigned> ObjectAlignments;
 
   void layoutObject(StackObject &Obj);
 
@@ -63,6 +64,9 @@ public:
 
   /// Returns the offset to the object start in the stack frame.
   unsigned getObjectOffset(const Value *V) { return ObjectOffsets[V]; }
+
+  /// Returns the alignment of the object
+  unsigned getObjectAlignment(const Value *V) { return ObjectAlignments[V]; }
 
   /// Returns the size of the entire frame.
   unsigned getFrameSize() { return Regions.empty() ? 0 : Regions.back().End; }

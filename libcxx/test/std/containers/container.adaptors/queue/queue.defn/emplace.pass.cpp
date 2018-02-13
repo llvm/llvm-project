@@ -29,7 +29,7 @@ void test_return_type() {
 	typedef typename Queue::container_type Container;
 	typedef typename Container::value_type value_type;
 	typedef decltype(std::declval<Queue>().emplace(std::declval<value_type &>()))	  queue_return_type;
-	
+
 #if TEST_STD_VER > 14
 	typedef decltype(std::declval<Container>().emplace_back(std::declval<value_type>())) container_return_type;
 	static_assert(std::is_same<queue_return_type, container_return_type>::value, "");
@@ -42,7 +42,7 @@ int main()
 {
 	test_return_type<std::queue<int> > ();
 	test_return_type<std::queue<int, std::list<int> > > ();
-	
+
 	typedef Emplaceable T;
 	std::queue<Emplaceable> q;
 #if TEST_STD_VER > 14

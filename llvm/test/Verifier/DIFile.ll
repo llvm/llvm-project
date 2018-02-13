@@ -1,7 +1,6 @@
 ; RUN: llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 ; The lengths for None and MD5 are wrong; SHA1 has a non-hex digit.
-; CHECK: invalid checksum length
 ; CHECK: invalid checksum{{$}}
 ; CHECK: invalid checksum length
 ; CHECK: warning: ignoring invalid debug info in <stdin>
@@ -16,7 +15,7 @@
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "t1", scope: !2, file: !10, line: 1, type: !9, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (trunk 322159)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
-!3 = !DIFile(filename: "t.c", directory: "/scratch", checksumkind: CSK_None, checksum: "00")
+!3 = !DIFile(filename: "t.c", directory: "/scratch")
 !4 = !{}
 !5 = !{!0, !6}
 !6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())

@@ -809,6 +809,44 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
   }
 }
 
+/// If the BasicBlock has an edge from itself, ensure that the PHI WRITEs for
+/// the incoming values from this block are executed after the PHI READ.
+///
+/// Otherwise it could overwrite the incoming value from before the BB with the
+/// value for the next execution. This can happen if the PHI WRITE is added to
+/// the statement with the instruction that defines the incoming value (instead
+/// of the last statement of the same BB). To ensure that the PHI READ and WRITE
+/// are in order, we put both into the statement. PHI WRITEs are always executed
+/// after PHI READs when they are in the same statement.
+///
+/// TODO: This is an overpessimization. We only have to ensure that the PHI
+/// WRITE is not put into a statement containing the PHI itself. That could also
+/// be done by
+/// - having all (strongly connected) PHIs in a single statement,
+/// - unite only the PHIs in the operand tree of the PHI WRITE (because it only
+///   has a chance of being lifted before a PHI by being in a statement with a
+///   PHI that comes before in the basic block), or
+/// - when uniting statements, ensure that no (relevant) PHIs are overtaken.
+static void joinOrderedPHIs(EquivalenceClasses<Instruction *> &UnionFind,
+                            ArrayRef<Instruction *> ModeledInsts) {
+  for (Instruction *Inst : ModeledInsts) {
+    PHINode *PHI = dyn_cast<PHINode>(Inst);
+    if (!PHI)
+      continue;
+
+    int Idx = PHI->getBasicBlockIndex(PHI->getParent());
+    if (Idx < 0)
+      continue;
+
+    Instruction *IncomingVal =
+        dyn_cast<Instruction>(PHI->getIncomingValue(Idx));
+    if (!IncomingVal)
+      continue;
+
+    UnionFind.unionSets(PHI, IncomingVal);
+  }
+}
+
 void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   Loop *L = LI.getLoopFor(BB);
 
@@ -835,6 +873,7 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
 
   joinOperandTree(UnionFind, ModeledInsts);
   joinOrderedInstructions(UnionFind, ModeledInsts);
+  joinOrderedPHIs(UnionFind, ModeledInsts);
 
   // The list of instructions for statement (statement represented by the leader
   // instruction). The order of statements instructions is reversed such that

@@ -26,7 +26,7 @@ declare <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double>, <2 x double
 define <2 x double> @test_rndscale_sd(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: test_rndscale_sd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vrndscalesd $11, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vroundsd $11, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %a, <2 x double> %b, <2 x double> undef, i8 -1, i32 11, i32 4)
   ret <2 x double>%res
@@ -70,7 +70,7 @@ declare <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float>, <4 x float>, 
 define <4 x float> @test_rndscale_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_rndscale_ss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vrndscaless $11, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $11, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> undef, i8 -1, i32 11, i32 4)
   ret <4 x float>%res
@@ -79,7 +79,7 @@ define <4 x float> @test_rndscale_ss(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @test_rndscale_ss_load(<4 x float> %a, <4 x float>* %bptr) {
 ; CHECK-LABEL: test_rndscale_ss_load:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vrndscaless $11, (%rdi), %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %b = load <4 x float>, <4 x float>* %bptr
   %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> undef, i8 -1, i32 11, i32 4)

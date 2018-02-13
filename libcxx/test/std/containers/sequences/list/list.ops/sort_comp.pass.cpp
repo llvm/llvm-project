@@ -24,18 +24,18 @@ template <typename T>
 struct throwingLess {
     throwingLess() : num_(1) {}
     throwingLess(int num) : num_(num) {}
-    
+
     bool operator() (const T& lhs, const T& rhs) const
     {
     if ( --num_ == 0) throw 1;
     return lhs < rhs;
     }
-    
+
     mutable int num_;
     };
 #endif
-    
-    
+
+
 int main()
 {
     {

@@ -526,7 +526,7 @@ declare x86_mmx @llvm.x86.sse.cvttps2pi(<4 x float>) nounwind readnone
 define void @test_emms() optsize {
 ; GENERIC-LABEL: test_emms:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    emms
+; GENERIC-NEXT:    emms # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_emms:
@@ -536,12 +536,12 @@ define void @test_emms() optsize {
 ;
 ; SLM-LABEL: test_emms:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    emms
+; SLM-NEXT:    emms # sched: [100:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_emms:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    emms
+; SANDY-NEXT:    emms # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_emms:
@@ -566,12 +566,12 @@ define void @test_emms() optsize {
 ;
 ; BTVER2-LABEL: test_emms:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    emms
+; BTVER2-NEXT:    emms # sched: [100:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_emms:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    emms
+; ZNVER1-NEXT:    emms # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.mmx.emms()
   ret void

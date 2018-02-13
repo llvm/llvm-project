@@ -587,10 +587,10 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 void DWARFFormValue::dumpString(raw_ostream &OS) const {
   Optional<const char *> DbgStr = getAsCString();
   if (DbgStr.hasValue()) {
-    raw_ostream &COS = WithColor(OS, syntax::String);
-    COS << '"';
-    COS.write_escaped(DbgStr.getValue());
-    COS << '"';
+    auto COS = WithColor(OS, syntax::String);
+    COS.get() << '"';
+    COS.get().write_escaped(DbgStr.getValue());
+    COS.get() << '"';
   }
 }
 

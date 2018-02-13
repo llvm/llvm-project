@@ -85,6 +85,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_ADD:            return "AtomicLoadAdd";
   case ISD::ATOMIC_LOAD_SUB:            return "AtomicLoadSub";
   case ISD::ATOMIC_LOAD_AND:            return "AtomicLoadAnd";
+  case ISD::ATOMIC_LOAD_CLR:            return "AtomicLoadClr";
   case ISD::ATOMIC_LOAD_OR:             return "AtomicLoadOr";
   case ISD::ATOMIC_LOAD_XOR:            return "AtomicLoadXor";
   case ISD::ATOMIC_LOAD_NAND:           return "AtomicLoadNand";

@@ -164,7 +164,7 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
 }
 
 // Do any custom cleanup needed to finalize the conversion.
-static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
+static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   (void)NewOpc;
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -197,7 +197,31 @@ static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
     Imm.setImm(0x20 | ((ImmVal & 2) << 3) | (ImmVal & 1));
     break;
   }
+  case X86::VRNDSCALEPDZ128rri:
+  case X86::VRNDSCALEPDZ128rmi:
+  case X86::VRNDSCALEPSZ128rri:
+  case X86::VRNDSCALEPSZ128rmi:
+  case X86::VRNDSCALEPDZ256rri:
+  case X86::VRNDSCALEPDZ256rmi:
+  case X86::VRNDSCALEPSZ256rri:
+  case X86::VRNDSCALEPSZ256rmi:
+  case X86::VRNDSCALESDr:
+  case X86::VRNDSCALESDm:
+  case X86::VRNDSCALESSr:
+  case X86::VRNDSCALESSm:
+  case X86::VRNDSCALESDr_Int:
+  case X86::VRNDSCALESDm_Int:
+  case X86::VRNDSCALESSr_Int:
+  case X86::VRNDSCALESSm_Int:
+    const MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
+    int64_t ImmVal = Imm.getImm();
+    // Ensure that only bits 3:0 of the immediate are used.
+    if ((ImmVal & 0xf) != ImmVal)
+      return false;
+    break;
   }
+
+  return true;
 }
 
 
@@ -260,7 +284,8 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   if (usesExtendedRegister(MI))
     return false;
 
-  performCustomAdjustments(MI, NewOpc);
+  if (!performCustomAdjustments(MI, NewOpc))
+    return false;
 
   MI.setDesc(TII->get(NewOpc));
   MI.setAsmPrinterFlag(AC_EVEX_2_VEX);
