@@ -968,8 +968,8 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
     if (auto *C = dyn_cast<llvm::ConstantInt>(VlaSize.NumElts))
       Dimensions.emplace_back(C, Type1D.getUnqualifiedType());
     else {
-      auto SizeExprAddr =
-          CreateDefaultAlignTempAlloca(VlaSize.NumElts->getType(), "vla_expr");
+      auto SizeExprAddr = CreateDefaultAlignTempAlloca(
+          VlaSize.NumElts->getType(), "__vla_expr");
       Builder.CreateStore(VlaSize.NumElts, SizeExprAddr);
       Dimensions.emplace_back(SizeExprAddr.getPointer(),
                               Type1D.getUnqualifiedType());
@@ -998,6 +998,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
           getContext(), const_cast<DeclContext *>(D.getDeclContext()),
           D.getLocation(), D.getLocation(), &NameIdent, QT,
           getContext().CreateTypeSourceInfo(QT), SC_Auto);
+      ArtificialDecl->setImplicit();
 
       MD = DI->EmitDeclareOfAutoVariable(ArtificialDecl, VlaSize.NumElts,
                                          Builder);
