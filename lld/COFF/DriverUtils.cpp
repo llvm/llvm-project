@@ -128,13 +128,19 @@ void parseVersion(StringRef Arg, uint32_t *Major, uint32_t *Minor) {
     fatal("invalid number: " + S2);
 }
 
-void parseGuard(StringRef Arg) {
-  if (Arg.equals_lower("no"))
-    Config->GuardCF = false;
-  else if (Arg.equals_lower("cf"))
-    Config->GuardCF = true;
-  else
-    fatal("invalid argument to /GUARD: " + Arg);
+void parseGuard(StringRef FullArg) {
+  SmallVector<StringRef, 1> SplitArgs;
+  FullArg.split(SplitArgs, ",");
+  for (StringRef Arg : SplitArgs) {
+    if (Arg.equals_lower("no"))
+      Config->GuardCF = GuardCFLevel::Off;
+    else if (Arg.equals_lower("nolongjmp"))
+      Config->GuardCF = GuardCFLevel::NoLongJmp;
+    else if (Arg.equals_lower("cf") || Arg.equals_lower("longjmp"))
+      Config->GuardCF = GuardCFLevel::Full;
+    else
+      fatal("invalid argument to /GUARD: " + Arg);
+  }
 }
 
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
