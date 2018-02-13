@@ -1468,6 +1468,15 @@ void llvm::salvageDebugInfo(Instruction &I) {
       case Instruction::Sub:
         applyOffset(DII, -int64_t(Val));
         break;
+      case Instruction::Mul:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
+        break;
+      case Instruction::SDiv:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
+        break;
+      case Instruction::SRem:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
+        break;
       case Instruction::Or:
         applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
         break;

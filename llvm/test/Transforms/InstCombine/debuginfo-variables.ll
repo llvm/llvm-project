@@ -59,6 +59,27 @@ define void @test_ashr(i64 %A) {
   ret void
 }
 
+define void @test_mul(i64 %A) {
+; CHECK-LABEL: @test_mul(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !52, metadata !DIExpression(DW_OP_constu, 7, DW_OP_mul, DW_OP_stack_value)), !dbg !53
+  %1 = mul i64 %A, 7
+  ret void
+}
+
+define void @test_sdiv(i64 %A) {
+; CHECK-LABEL: @test_sdiv(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !57, metadata !DIExpression(DW_OP_constu, 7, DW_OP_div, DW_OP_stack_value)), !dbg !58
+  %1 = sdiv i64 %A, 7
+  ret void
+}
+
+define void @test_srem(i64 %A) {
+; CHECK-LABEL: @test_srem(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !62, metadata !DIExpression(DW_OP_constu, 7, DW_OP_mod, DW_OP_stack_value)), !dbg !63
+  %1 = srem i64 %A, 7
+  ret void
+}
+
 ; CHECK: !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
 ; CHECK: !10 = !DILocalVariable(name: "2", scope: !5, file: !1, line: 2, type: !11)
 ; CHECK: !12 = !DILocation(line: 2, column: 1, scope: !5)
@@ -84,3 +105,12 @@ define void @test_ashr(i64 %A) {
 
 ; CHECK: !47 = !DILocalVariable(name: "9", scope: !45, file: !1, line: 16, type: !11)
 ; CHECK: !48 = !DILocation(line: 16, column: 1, scope: !45)
+
+; CHECK: !52 = !DILocalVariable(name: "10", scope: !50, file: !1, line: 18, type: !11)
+; CHECK: !53 = !DILocation(line: 18, column: 1, scope: !50)
+
+; CHECK: !57 = !DILocalVariable(name: "11", scope: !55, file: !1, line: 20, type: !11)
+; CHECK: !58 = !DILocation(line: 20, column: 1, scope: !55)
+
+; CHECK: !62 = !DILocalVariable(name: "12", scope: !60, file: !1, line: 22, type: !11)
+; CHECK: !63 = !DILocation(line: 22, column: 1, scope: !60)
