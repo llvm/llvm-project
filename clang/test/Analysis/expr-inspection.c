@@ -18,6 +18,8 @@ void foo(int x) {
 // CHECK: Store (direct and default bindings)
 // CHECK-NEXT: (y,0,direct) : 1 S32b
 
-// CHECK: Expressions:
+// CHECK: Expressions by stack frame:
+// CHECK-NEXT: #0 Calling foo
 // CHECK-NEXT: clang_analyzer_printState : &code{clang_analyzer_printState}
-// CHECK-NEXT: {{(Ranges are empty.)|(Constraints:[[:space:]]*$)}}
+
+// CHECK: {{(Ranges are empty.)|(Constraints:[[:space:]]*$)}}

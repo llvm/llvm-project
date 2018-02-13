@@ -2768,12 +2768,6 @@ struct DOTGraphTraits<ExplodedNode*> :
         << "\\l";
     }
   }
-  static void printLocation2(raw_ostream &Out, SourceLocation SLoc) {
-    if (SLoc.isFileID() && GraphPrintSourceManager->isInMainFile(SLoc))
-      Out << "line " << GraphPrintSourceManager->getExpansionLineNumber(SLoc);
-    else
-      SLoc.print(Out, *GraphPrintSourceManager);
-  }
 
   static std::string getNodeLabel(const ExplodedNode *N, void*){
 
@@ -2948,40 +2942,7 @@ struct DOTGraphTraits<ExplodedNode*> :
     Out << "\\|StateID: " << (const void*) state.get()
         << " NodeID: " << (const void*) N << "\\|";
 
-    // Analysis stack backtrace.
-    Out << "Location context stack (from current to outer):\\l";
-    const LocationContext *LC = Loc.getLocationContext();
-    unsigned Idx = 0;
-    for (; LC; LC = LC->getParent(), ++Idx) {
-      Out << Idx << ". (" << (const void *)LC << ") ";
-      switch (LC->getKind()) {
-      case LocationContext::StackFrame:
-        if (const NamedDecl *D = dyn_cast<NamedDecl>(LC->getDecl()))
-          Out << "Calling " << D->getQualifiedNameAsString();
-        else
-          Out << "Calling anonymous code";
-        if (const Stmt *S = cast<StackFrameContext>(LC)->getCallSite()) {
-          Out << " at ";
-          printLocation2(Out, S->getLocStart());
-        }
-        break;
-      case LocationContext::Block:
-        Out << "Invoking block";
-        if (const Decl *D = cast<BlockInvocationContext>(LC)->getBlockDecl()) {
-          Out << " defined at ";
-          printLocation2(Out, D->getLocStart());
-        }
-        break;
-      case LocationContext::Scope:
-        Out << "Entering scope";
-        // FIXME: Add more info once ScopeContext is activated.
-        break;
-      }
-      Out << "\\l";
-    }
-    Out << "\\l";
-
-    state->printDOT(Out);
+    state->printDOT(Out, N->getLocationContext());
 
     Out << "\\l";
 
