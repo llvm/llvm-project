@@ -1248,6 +1248,52 @@ void CodeGenModule::setAliasAttributes(const Decl *D,
     GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
 }
 
+bool CodeGenModule::GetCPUAndFeaturesAttributes(const Decl *D,
+                                                llvm::AttrBuilder &Attrs) {
+  // Add target-cpu and target-features attributes to functions. If
+  // we have a decl for the function and it has a target attribute then
+  // parse that and add it to the feature set.
+  StringRef TargetCPU = getTarget().getTargetOpts().CPU;
+  std::vector<std::string> Features;
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+  FD = FD ? FD->getMostRecentDecl() : FD;
+  const auto *TD = FD ? FD->getAttr<TargetAttr>() : nullptr;
+  bool AddedAttr = false;
+  if (TD) {
+    llvm::StringMap<bool> FeatureMap;
+    getFunctionFeatureMap(FeatureMap, FD);
+
+    // Produce the canonical string for this set of features.
+    for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
+      Features.push_back((Entry.getValue() ? "+" : "-") + Entry.getKey().str());
+
+    // Now add the target-cpu and target-features to the function.
+    // While we populated the feature map above, we still need to
+    // get and parse the target attribute so we can get the cpu for
+    // the function.
+    TargetAttr::ParsedTargetAttr ParsedAttr = TD->parse();
+    if (ParsedAttr.Architecture != "" &&
+        getTarget().isValidCPUName(ParsedAttr.Architecture))
+      TargetCPU = ParsedAttr.Architecture;
+  } else {
+    // Otherwise just add the existing target cpu and target features to the
+    // function.
+    Features = getTarget().getTargetOpts().Features;
+  }
+
+  if (TargetCPU != "") {
+    Attrs.addAttribute("target-cpu", TargetCPU);
+    AddedAttr = true;
+  }
+  if (!Features.empty()) {
+    std::sort(Features.begin(), Features.end());
+    Attrs.addAttribute("target-features", llvm::join(Features, ","));
+    AddedAttr = true;
+  }
+
+  return AddedAttr;
+}
+
 void CodeGenModule::setNonAliasAttributes(const Decl *D,
                                           llvm::GlobalObject *GO) {
   SetCommonAttributes(D, GO);
@@ -1266,6 +1312,16 @@ void CodeGenModule::setNonAliasAttributes(const Decl *D,
       if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
         if (!D->getAttr<SectionAttr>())
           F->addFnAttr("implicit-section-name", SA->getName());
+
+      llvm::AttrBuilder Attrs;
+      if (GetCPUAndFeaturesAttributes(D, Attrs)) {
+        // We know that GetCPUAndFeaturesAttributes will always have the
+        // newest set, since it has the newest possible FunctionDecl, so the
+        // new ones should replace the old.
+        F->removeFnAttr("target-cpu");
+        F->removeFnAttr("target-features");
+        F->addAttributes(llvm::AttributeList::FunctionIndex, Attrs);
+      }
     }
 
     if (const SectionAttr *SA = D->getAttr<SectionAttr>())

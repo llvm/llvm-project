@@ -599,7 +599,7 @@ define <4 x double> @test_x86_avx_round_pd_256(<4 x double> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx_round_pd_256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vrndscalepd $7, %ymm0, %ymm0 # encoding: [0x62,0xf3,0xfd,0x28,0x09,0xc0,0x07]
+; AVX512VL-NEXT:    vroundpd $7, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x09,0xc0,0x07]
 ; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %a0, i32 7) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
@@ -615,7 +615,7 @@ define <8 x float> @test_x86_avx_round_ps_256(<8 x float> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx_round_ps_256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vrndscaleps $7, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x08,0xc0,0x07]
+; AVX512VL-NEXT:    vroundps $7, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x08,0xc0,0x07]
 ; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %a0, i32 7) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res

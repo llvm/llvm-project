@@ -220,7 +220,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
-// CHECK:     5: [B1.4] (CXXConstructExpr, class A)
+// WARNINGS:     5: [B1.4] (CXXConstructExpr, class A)
+// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.7], class A)
 // CHECK:     6: ~A() (Temporary object destructor)
 // CHECK:     7: return [B1.5];
 // CHECK:     Preds (1): B2
@@ -278,7 +279,8 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     2: [B1.1] (BindTemporary)
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     4: [B1.3]
-// CHECK:     5: [B1.4] (CXXConstructExpr, class A)
+// WARNINGS:     5: [B1.4] (CXXConstructExpr, class A)
+// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.7], class A)
 // CHECK:     6: ~A() (Temporary object destructor)
 // CHECK:     7: return [B1.5];
 // CHECK:     Preds (1): B2

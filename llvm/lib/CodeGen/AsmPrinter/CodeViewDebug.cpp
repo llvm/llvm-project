@@ -165,14 +165,21 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
   auto Insertion = FileIdMap.insert(std::make_pair(FullPath, NextId));
   if (Insertion.second) {
     // We have to compute the full filepath and emit a .cv_file directive.
-    std::string Checksum = fromHex(F->getChecksum());
-    void *CKMem = OS.getContext().allocate(Checksum.size(), 1);
-    memcpy(CKMem, Checksum.data(), Checksum.size());
-    ArrayRef<uint8_t> ChecksumAsBytes(reinterpret_cast<const uint8_t *>(CKMem),
-                                      Checksum.size());
-    DIFile::ChecksumKind ChecksumKind = F->getChecksumKind();
+    ArrayRef<uint8_t> ChecksumAsBytes;
+    FileChecksumKind CSKind = FileChecksumKind::None;
+    if (F->getChecksum()) {
+      std::string Checksum = fromHex(F->getChecksum()->Value);
+      void *CKMem = OS.getContext().allocate(Checksum.size(), 1);
+      memcpy(CKMem, Checksum.data(), Checksum.size());
+      ChecksumAsBytes = ArrayRef<uint8_t>(
+          reinterpret_cast<const uint8_t *>(CKMem), Checksum.size());
+      switch (F->getChecksum()->Kind) {
+      case DIFile::CSK_MD5:  CSKind = FileChecksumKind::MD5; break;
+      case DIFile::CSK_SHA1: CSKind = FileChecksumKind::SHA1; break;
+      }
+    }
     bool Success = OS.EmitCVFileDirective(NextId, FullPath, ChecksumAsBytes,
-                                          static_cast<unsigned>(ChecksumKind));
+                                          static_cast<unsigned>(CSKind));
     (void)Success;
     assert(Success && ".cv_file directive failed");
   }

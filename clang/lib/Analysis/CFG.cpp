@@ -2575,6 +2575,8 @@ CFGBlock *CFGBuilder::VisitReturnStmt(ReturnStmt *R) {
 
   addAutomaticObjHandling(ScopePos, LocalScope::const_iterator(), R);
 
+  EnterConstructionContextIfNecessary(R, R->getRetValue());
+
   // If the one of the destructors does not return, we already have the Exit
   // block as a successor.
   if (!Block->hasNoReturnElement())

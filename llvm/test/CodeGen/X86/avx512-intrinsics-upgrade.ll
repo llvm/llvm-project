@@ -8,7 +8,7 @@ define i16 @unpckbw_test(i16 %a0, i16 %a1) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
+; CHECK-NEXT:    kunpckbw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq

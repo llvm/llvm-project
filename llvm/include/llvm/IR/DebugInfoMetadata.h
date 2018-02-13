@@ -396,36 +396,38 @@ class DIEnumerator : public DINode {
   friend class MDNode;
 
   int64_t Value;
-
   DIEnumerator(LLVMContext &C, StorageType Storage, int64_t Value,
-               ArrayRef<Metadata *> Ops)
+               bool IsUnsigned, ArrayRef<Metadata *> Ops)
       : DINode(C, DIEnumeratorKind, Storage, dwarf::DW_TAG_enumerator, Ops),
-        Value(Value) {}
+        Value(Value) {
+    SubclassData32 = IsUnsigned;
+  }
   ~DIEnumerator() = default;
 
   static DIEnumerator *getImpl(LLVMContext &Context, int64_t Value,
-                               StringRef Name, StorageType Storage,
-                               bool ShouldCreate = true) {
-    return getImpl(Context, Value, getCanonicalMDString(Context, Name), Storage,
-                   ShouldCreate);
+                               bool IsUnsigned, StringRef Name,
+                               StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Value, IsUnsigned,
+                   getCanonicalMDString(Context, Name), Storage, ShouldCreate);
   }
   static DIEnumerator *getImpl(LLVMContext &Context, int64_t Value,
-                               MDString *Name, StorageType Storage,
-                               bool ShouldCreate = true);
+                               bool IsUnsigned, MDString *Name,
+                               StorageType Storage, bool ShouldCreate = true);
 
   TempDIEnumerator cloneImpl() const {
-    return getTemporary(getContext(), getValue(), getName());
+    return getTemporary(getContext(), getValue(), isUnsigned(), getName());
   }
 
 public:
-  DEFINE_MDNODE_GET(DIEnumerator, (int64_t Value, StringRef Name),
-                    (Value, Name))
-  DEFINE_MDNODE_GET(DIEnumerator, (int64_t Value, MDString *Name),
-                    (Value, Name))
+  DEFINE_MDNODE_GET(DIEnumerator, (int64_t Value, bool IsUnsigned, StringRef Name),
+                    (Value, IsUnsigned, Name))
+  DEFINE_MDNODE_GET(DIEnumerator, (int64_t Value, bool IsUnsigned, MDString *Name),
+                    (Value, IsUnsigned, Name))
 
   TempDIEnumerator clone() const { return cloneImpl(); }
 
   int64_t getValue() const { return Value; }
+  bool isUnsigned() const { return SubclassData32; }
   StringRef getName() const { return getStringOperand(0); }
 
   MDString *getRawName() const { return getOperandAs<MDString>(0); }
@@ -497,63 +499,93 @@ class DIFile : public DIScope {
   friend class MDNode;
 
 public:
-  // These values must be explictly set, as they end up in the final object
-  // file.
+  /// Which algorithm (e.g. MD5) a checksum was generated with.
+  ///
+  /// The encoding is explicit because it is used directly in Bitcode. The
+  /// value 0 is reserved to indicate the absence of a checksum in Bitcode.
   enum ChecksumKind {
-    CSK_None = 0,
+    // The first variant was originally CSK_None, encoded as 0. The new
+    // internal representation removes the need for this by wrapping the
+    // ChecksumInfo in an Optional, but to preserve Bitcode compatibility the 0
+    // encoding is reserved.
     CSK_MD5 = 1,
     CSK_SHA1 = 2,
     CSK_Last = CSK_SHA1 // Should be last enumeration.
   };
 
-private:
-  ChecksumKind CSKind;
+  /// A single checksum, represented by a \a Kind and a \a Value (a string).
+  template <typename T>
+  struct ChecksumInfo {
+    /// The kind of checksum which \a Value encodes.
+    ChecksumKind Kind;
+    /// The string value of the checksum.
+    T Value;
 
-  DIFile(LLVMContext &C, StorageType Storage, ChecksumKind CSK,
+    ChecksumInfo(ChecksumKind Kind, T Value) : Kind(Kind), Value(Value) { }
+    ~ChecksumInfo() = default;
+    bool operator==(const ChecksumInfo<T> &X) const {
+      return Kind == X.Kind && Value == X.Value;
+    }
+    bool operator!=(const ChecksumInfo<T> &X) const { return !(*this == X); }
+    StringRef getKindAsString() const { return getChecksumKindAsString(Kind); }
+  };
+
+private:
+  Optional<ChecksumInfo<MDString *>> Checksum;
+
+  DIFile(LLVMContext &C, StorageType Storage,
+         Optional<ChecksumInfo<MDString *>> CS,
          ArrayRef<Metadata *> Ops)
       : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
-        CSKind(CSK) {}
+        Checksum(CS) {}
   ~DIFile() = default;
 
   static DIFile *getImpl(LLVMContext &Context, StringRef Filename,
-                         StringRef Directory, ChecksumKind CSK, StringRef CS,
+                         StringRef Directory,
+                         Optional<ChecksumInfo<StringRef>> CS,
                          StorageType Storage, bool ShouldCreate = true) {
+    Optional<ChecksumInfo<MDString *>> MDChecksum;
+    if (CS)
+      MDChecksum.emplace(CS->Kind, getCanonicalMDString(Context, CS->Value));
     return getImpl(Context, getCanonicalMDString(Context, Filename),
-                   getCanonicalMDString(Context, Directory), CSK,
-                   getCanonicalMDString(Context, CS), Storage, ShouldCreate);
+                   getCanonicalMDString(Context, Directory), MDChecksum,
+                   Storage, ShouldCreate);
   }
   static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
-                         MDString *Directory, ChecksumKind CSK, MDString *CS,
+                         MDString *Directory,
+                         Optional<ChecksumInfo<MDString *>> CS,
                          StorageType Storage, bool ShouldCreate = true);
 
   TempDIFile cloneImpl() const {
     return getTemporary(getContext(), getFilename(), getDirectory(),
-                        getChecksumKind(), getChecksum());
+                        getChecksum());
   }
 
 public:
   DEFINE_MDNODE_GET(DIFile, (StringRef Filename, StringRef Directory,
-                             ChecksumKind CSK = CSK_None,
-                             StringRef CS = StringRef()),
-                    (Filename, Directory, CSK, CS))
+                             Optional<ChecksumInfo<StringRef>> CS = None),
+                    (Filename, Directory, CS))
   DEFINE_MDNODE_GET(DIFile, (MDString * Filename, MDString *Directory,
-                             ChecksumKind CSK = CSK_None,
-                             MDString *CS = nullptr),
-                    (Filename, Directory, CSK, CS))
+                             Optional<ChecksumInfo<MDString *>> CS = None),
+                    (Filename, Directory, CS))
 
   TempDIFile clone() const { return cloneImpl(); }
 
   StringRef getFilename() const { return getStringOperand(0); }
   StringRef getDirectory() const { return getStringOperand(1); }
-  StringRef getChecksum() const { return getStringOperand(2); }
-  ChecksumKind getChecksumKind() const { return CSKind; }
-  StringRef getChecksumKindAsString() const;
+  Optional<ChecksumInfo<StringRef>> getChecksum() const {
+    Optional<ChecksumInfo<StringRef>> StringRefChecksum;
+    if (Checksum)
+      StringRefChecksum.emplace(Checksum->Kind, Checksum->Value->getString());
+    return StringRefChecksum;
+  }
 
   MDString *getRawFilename() const { return getOperandAs<MDString>(0); }
   MDString *getRawDirectory() const { return getOperandAs<MDString>(1); }
-  MDString *getRawChecksum() const { return getOperandAs<MDString>(2); }
+  Optional<ChecksumInfo<MDString *>> getRawChecksum() const { return Checksum; }
 
-  static ChecksumKind getChecksumKind(StringRef CSKindStr);
+  static StringRef getChecksumKindAsString(ChecksumKind CSKind);
+  static Optional<ChecksumKind> getChecksumKind(StringRef CSKindStr);
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIFileKind;

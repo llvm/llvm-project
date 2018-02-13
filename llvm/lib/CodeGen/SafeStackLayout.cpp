@@ -42,6 +42,7 @@ LLVM_DUMP_METHOD void StackLayout::print(raw_ostream &OS) {
 void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
                             const StackColoring::LiveRange &Range) {
   StackObjects.push_back({V, Size, Alignment, Range});
+  ObjectAlignments[V] = Alignment;
   MaxAlignment = std::max(MaxAlignment, Alignment);
 }
 

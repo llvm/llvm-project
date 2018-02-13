@@ -2437,44 +2437,12 @@ bool X86DAGToDAGISel::matchBEXTRFromAnd(SDNode *Node) {
   if (Shift + MaskSize > NVT.getSizeInBits())
     return false;
 
-  SDValue New = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
-  unsigned ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
-  unsigned MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
-
-  // BMI requires the immediate to placed in a register.
-  if (!Subtarget->hasTBM()) {
-    ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
-    MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
-    New = SDValue(CurDAG->getMachineNode(X86::MOV32ri, dl, NVT, New), 0);
-    if (NVT == MVT::i64) {
-      New =
-          SDValue(CurDAG->getMachineNode(
-                      TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                      CurDAG->getTargetConstant(0, dl, MVT::i64), New,
-                      CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
-                  0);
-    }
-  }
-
-  MachineSDNode *NewNode;
-  SDValue Input = N0->getOperand(0);
-  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  if (tryFoldLoad(Node, N0.getNode(), Input, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
-    SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, New, Input.getOperand(0) };
-    SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
-    NewNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
-    // Update the chain.
-    ReplaceUses(Input.getValue(1), SDValue(NewNode, 1));
-    // Record the mem-refs
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = cast<LoadSDNode>(Input)->getMemOperand();
-    NewNode->setMemRefs(MemOp, MemOp + 1);
-  } else {
-    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, Input, New);
-  }
-
-  ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
-  CurDAG->RemoveDeadNode(Node);
+  // Create a BEXTR node and run it through selection.
+  SDValue C = CurDAG->getConstant(Shift | (MaskSize << 8), dl, NVT);
+  SDValue New = CurDAG->getNode(X86ISD::BEXTR, dl, NVT,
+                                N0->getOperand(0), C);
+  ReplaceNode(Node, New.getNode());
+  SelectCode(New.getNode());
   return true;
 }
 

@@ -354,13 +354,17 @@ template <> struct MDNodeKeyImpl<DISubrange> {
 template <> struct MDNodeKeyImpl<DIEnumerator> {
   int64_t Value;
   MDString *Name;
+  bool IsUnsigned;
 
-  MDNodeKeyImpl(int64_t Value, MDString *Name) : Value(Value), Name(Name) {}
+  MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
+      : Value(Value), Name(Name), IsUnsigned(IsUnsigned) {}
   MDNodeKeyImpl(const DIEnumerator *N)
-      : Value(N->getValue()), Name(N->getRawName()) {}
+      : Value(N->getValue()), Name(N->getRawName()),
+        IsUnsigned(N->isUnsigned()) {}
 
   bool isKeyOf(const DIEnumerator *RHS) const {
-    return Value == RHS->getValue() && Name == RHS->getRawName();
+    return Value == RHS->getValue() && IsUnsigned == RHS->isUnsigned() &&
+           Name == RHS->getRawName();
   }
 
   unsigned getHashValue() const { return hash_combine(Value, Name); }
@@ -570,26 +574,25 @@ template <> struct MDNodeKeyImpl<DISubroutineType> {
 template <> struct MDNodeKeyImpl<DIFile> {
   MDString *Filename;
   MDString *Directory;
-  DIFile::ChecksumKind CSKind;
-  MDString *Checksum;
+  Optional<DIFile::ChecksumInfo<MDString *>> Checksum;
 
   MDNodeKeyImpl(MDString *Filename, MDString *Directory,
-                DIFile::ChecksumKind CSKind, MDString *Checksum)
-      : Filename(Filename), Directory(Directory), CSKind(CSKind),
-        Checksum(Checksum) {}
+                Optional<DIFile::ChecksumInfo<MDString *>> Checksum)
+      : Filename(Filename), Directory(Directory), Checksum(Checksum) {}
   MDNodeKeyImpl(const DIFile *N)
       : Filename(N->getRawFilename()), Directory(N->getRawDirectory()),
-        CSKind(N->getChecksumKind()), Checksum(N->getRawChecksum()) {}
+        Checksum(N->getRawChecksum()) {}
 
   bool isKeyOf(const DIFile *RHS) const {
     return Filename == RHS->getRawFilename() &&
            Directory == RHS->getRawDirectory() &&
-           CSKind == RHS->getChecksumKind() &&
            Checksum == RHS->getRawChecksum();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Filename, Directory, CSKind, Checksum);
+    if (Checksum)
+      return hash_combine(Filename, Directory, Checksum->Kind, Checksum->Value);
+    return hash_combine(Filename, Directory);
   }
 };
 

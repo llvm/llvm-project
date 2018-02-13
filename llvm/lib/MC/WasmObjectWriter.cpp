@@ -111,26 +111,10 @@ struct WasmDataSegment {
   SmallVector<char, 4> Data;
 };
 
-// A wasm import to be written into the import section.
-struct WasmImport {
-  StringRef ModuleName;
-  StringRef FieldName;
-  unsigned Kind;
-  int32_t Type;
-  bool IsMutable;
-};
-
 // A wasm function to be written into the function section.
 struct WasmFunction {
   int32_t Type;
   const MCSymbolWasm *Sym;
-};
-
-// A wasm export to be written into the export section.
-struct WasmExport {
-  StringRef FieldName;
-  unsigned Kind;
-  uint32_t Index;
 };
 
 // A wasm global to be written into the global section.
@@ -270,11 +254,11 @@ private:
   }
 
   void writeTypeSection(ArrayRef<WasmFunctionType> FunctionTypes);
-  void writeImportSection(ArrayRef<WasmImport> Imports, uint32_t DataSize,
+  void writeImportSection(ArrayRef<wasm::WasmImport> Imports, uint32_t DataSize,
                           uint32_t NumElements);
   void writeFunctionSection(ArrayRef<WasmFunction> Functions);
   void writeGlobalSection();
-  void writeExportSection(ArrayRef<WasmExport> Exports);
+  void writeExportSection(ArrayRef<wasm::WasmExport> Exports);
   void writeElemSection(ArrayRef<uint32_t> TableElems);
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         ArrayRef<WasmFunction> Functions);
@@ -659,7 +643,7 @@ void WasmObjectWriter::writeTypeSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports,
+void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
                                           uint32_t DataSize,
                                           uint32_t NumElements) {
   if (Imports.empty())
@@ -671,26 +655,25 @@ void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports,
   startSection(Section, wasm::WASM_SEC_IMPORT);
 
   encodeULEB128(Imports.size(), getStream());
-  for (const WasmImport &Import : Imports) {
-    writeString(Import.ModuleName);
-    writeString(Import.FieldName);
-
+  for (const wasm::WasmImport &Import : Imports) {
+    writeString(Import.Module);
+    writeString(Import.Field);
     encodeULEB128(Import.Kind, getStream());
 
     switch (Import.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
-      encodeULEB128(Import.Type, getStream());
+      encodeULEB128(Import.SigIndex, getStream());
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
-      encodeSLEB128(int32_t(Import.Type), getStream());
-      encodeULEB128(int32_t(Import.IsMutable), getStream());
+      encodeSLEB128(Import.Global.Type, getStream());
+      encodeULEB128(uint32_t(Import.Global.Mutable), getStream());
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       encodeULEB128(0, getStream()); // flags
       encodeULEB128(NumPages, getStream()); // initial
       break;
     case wasm::WASM_EXTERNAL_TABLE:
-      encodeSLEB128(int32_t(Import.Type), getStream());
+      encodeSLEB128(Import.Table.ElemType, getStream());
       encodeULEB128(0, getStream()); // flags
       encodeULEB128(NumElements, getStream()); // initial
       break;
@@ -736,7 +719,7 @@ void WasmObjectWriter::writeGlobalSection() {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeExportSection(ArrayRef<WasmExport> Exports) {
+void WasmObjectWriter::writeExportSection(ArrayRef<wasm::WasmExport> Exports) {
   if (Exports.empty())
     return;
 
@@ -744,8 +727,8 @@ void WasmObjectWriter::writeExportSection(ArrayRef<WasmExport> Exports) {
   startSection(Section, wasm::WASM_SEC_EXPORT);
 
   encodeULEB128(Exports.size(), getStream());
-  for (const WasmExport &Export : Exports) {
-    writeString(Export.FieldName);
+  for (const wasm::WasmExport &Export : Exports) {
+    writeString(Export.Name);
     encodeSLEB128(Export.Kind, getStream());
     encodeULEB128(Export.Index, getStream());
   }
@@ -963,8 +946,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // Collect information from the available symbols.
   SmallVector<WasmFunction, 4> Functions;
   SmallVector<uint32_t, 4> TableElems;
-  SmallVector<WasmImport, 4> Imports;
-  SmallVector<WasmExport, 4> Exports;
+  SmallVector<wasm::WasmImport, 4> Imports;
+  SmallVector<wasm::WasmExport, 4> Exports;
   SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags;
   SmallVector<std::pair<uint16_t, uint32_t>, 2> InitFuncs;
   std::map<StringRef, std::vector<WasmComdatEntry>> Comdats;
@@ -976,9 +959,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // it if there are no loads or stores.
   MCSymbolWasm *MemorySym =
       cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__linear_memory"));
-  WasmImport MemImport;
-  MemImport.ModuleName = MemorySym->getModuleName();
-  MemImport.FieldName = MemorySym->getName();
+  wasm::WasmImport MemImport;
+  MemImport.Module = MemorySym->getModuleName();
+  MemImport.Field = MemorySym->getName();
   MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
   Imports.push_back(MemImport);
 
@@ -987,11 +970,11 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // it if there are no indirect calls.
   MCSymbolWasm *TableSym =
       cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__indirect_function_table"));
-  WasmImport TableImport;
-  TableImport.ModuleName = TableSym->getModuleName();
-  TableImport.FieldName = TableSym->getName();
+  wasm::WasmImport TableImport;
+  TableImport.Module = TableSym->getModuleName();
+  TableImport.Field = TableSym->getName();
   TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
-  TableImport.Type = wasm::WASM_TYPE_ANYFUNC;
+  TableImport.Table.ElemType = wasm::WASM_TYPE_ANYFUNC;
   Imports.push_back(TableImport);
 
   // Populate FunctionTypeIndices and Imports.
@@ -1009,25 +992,25 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     // If the symbol is not defined in this translation unit, import it.
     if ((!WS.isDefined() && !WS.isComdat()) ||
         WS.isVariable()) {
-      WasmImport Import;
-      Import.ModuleName = WS.getModuleName();
-      Import.FieldName = WS.getName();
+      wasm::WasmImport Import;
+      Import.Module = WS.getModuleName();
+      Import.Field = WS.getName();
 
       if (WS.isFunction()) {
         Import.Kind = wasm::WASM_EXTERNAL_FUNCTION;
-        Import.Type = getFunctionType(WS);
+        Import.SigIndex = getFunctionType(WS);
         SymbolIndices[&WS] = NumFunctionImports;
         ++NumFunctionImports;
       } else {
         Import.Kind = wasm::WASM_EXTERNAL_GLOBAL;
-        Import.Type = PtrType;
-        Import.IsMutable = false;
-        SymbolIndices[&WS] = NumGlobalImports;
-
+        Import.Global.Type = PtrType;
         // If this global is the stack pointer, make it mutable.
         if (WS.getName() == "__stack_pointer")
-          Import.IsMutable = true;
+          Import.Global.Mutable = true;
+        else
+          Import.Global.Mutable = false;
 
+        SymbolIndices[&WS] = NumGlobalImports;
         ++NumGlobalImports;
       }
 
@@ -1148,8 +1131,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     // If the symbol is visible outside this translation unit, export it.
     if (WS.isDefined()) {
-      WasmExport Export;
-      Export.FieldName = WS.getName();
+      wasm::WasmExport Export;
+      Export.Name = WS.getName();
       Export.Index = Index;
       if (WS.isFunction())
         Export.Kind = wasm::WASM_EXTERNAL_FUNCTION;
@@ -1187,8 +1170,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     uint32_t Index = SymbolIndices.find(ResolvedSym)->second;
     DEBUG(dbgs() << "  -> index:" << Index << "\n");
 
-    WasmExport Export;
-    Export.FieldName = WS.getName();
+    wasm::WasmExport Export;
+    Export.Name = WS.getName();
     Export.Index = Index;
     if (WS.isFunction())
       Export.Kind = wasm::WASM_EXTERNAL_FUNCTION;

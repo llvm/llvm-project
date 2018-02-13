@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 47
+#define CINDEX_VERSION_MINOR 48
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -6092,6 +6092,9 @@ typedef struct {
 
 /**
  * \brief Data for IndexerCallbacks#indexEntityReference.
+ *
+ * This may be deprecated in a future version as this duplicates
+ * the \c CXSymbolRole_Implicit bit in \c CXSymbolRole.
  */
 typedef enum {
   /**
@@ -6104,6 +6107,25 @@ typedef enum {
    */
   CXIdxEntityRef_Implicit = 2
 } CXIdxEntityRefKind;
+
+/**
+ * \brief Roles that are attributed to symbol occurrences.
+ *
+ * Internal: this currently mirrors low 9 bits of clang::index::SymbolRole with
+ * higher bits zeroed. These high bits may be exposed in the future.
+ */
+typedef enum {
+  CXSymbolRole_None = 0,
+  CXSymbolRole_Declaration = 1 << 0,
+  CXSymbolRole_Definition = 1 << 1,
+  CXSymbolRole_Reference = 1 << 2,
+  CXSymbolRole_Read = 1 << 3,
+  CXSymbolRole_Write = 1 << 4,
+  CXSymbolRole_Call = 1 << 5,
+  CXSymbolRole_Dynamic = 1 << 6,
+  CXSymbolRole_AddressOf = 1 << 7,
+  CXSymbolRole_Implicit = 1 << 8
+} CXSymbolRole;
 
 /**
  * \brief Data for IndexerCallbacks#indexEntityReference.
@@ -6135,6 +6157,10 @@ typedef struct {
    * \brief Lexical container context of the reference.
    */
   const CXIdxContainerInfo *container;
+  /**
+   * \brief Sets of symbol roles of the reference.
+   */
+  CXSymbolRole role;
 } CXIdxEntityRefInfo;
 
 /**

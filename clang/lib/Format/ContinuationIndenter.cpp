@@ -200,6 +200,7 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
     // global scope.
     State.Stack.back().AvoidBinPacking = true;
     State.Stack.back().BreakBeforeParameter = true;
+    State.Stack.back().AlignColons = false;
   }
 
   // The first token has already been indented and thus consumed.

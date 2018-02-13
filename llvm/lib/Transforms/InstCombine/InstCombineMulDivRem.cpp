@@ -95,41 +95,6 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
   return MadeChange ? V : nullptr;
 }
 
-/// True if the multiply can not be expressed in an int this size.
-static bool MultiplyOverflows(const APInt &C1, const APInt &C2, APInt &Product,
-                              bool IsSigned) {
-  bool Overflow;
-  if (IsSigned)
-    Product = C1.smul_ov(C2, Overflow);
-  else
-    Product = C1.umul_ov(C2, Overflow);
-
-  return Overflow;
-}
-
-/// \brief True if C2 is a multiple of C1. Quotient contains C2/C1.
-static bool IsMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
-                       bool IsSigned) {
-  assert(C1.getBitWidth() == C2.getBitWidth() &&
-         "Inconsistent width of constants!");
-
-  // Bail if we will divide by zero.
-  if (C2.isMinValue())
-    return false;
-
-  // Bail if we would divide INT_MIN by -1.
-  if (IsSigned && C1.isMinSignedValue() && C2.isAllOnesValue())
-    return false;
-
-  APInt Remainder(C1.getBitWidth(), /*Val=*/0ULL, IsSigned);
-  if (IsSigned)
-    APInt::sdivrem(C1, C2, Quotient, Remainder);
-  else
-    APInt::udivrem(C1, C2, Quotient, Remainder);
-
-  return Remainder.isMinValue();
-}
-
 /// \brief A helper routine of InstCombiner::visitMul().
 ///
 /// If C is a scalar/vector of known powers of 2, then this function returns
@@ -734,8 +699,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   }
 
   // sqrt(a) * sqrt(b) -> sqrt(a * b)
-  if (AllowReassociate &&
-      Op0->hasOneUse() && Op1->hasOneUse()) {
+  if (AllowReassociate && Op0->hasOneUse() && Op1->hasOneUse()) {
     Value *Opnd0 = nullptr;
     Value *Opnd1 = nullptr;
     if (match(Op0, m_Intrinsic<Intrinsic::sqrt>(m_Value(Opnd0))) &&
@@ -889,6 +853,36 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
   return true;
 }
 
+/// True if the multiply can not be expressed in an int this size.
+static bool multiplyOverflows(const APInt &C1, const APInt &C2, APInt &Product,
+                              bool IsSigned) {
+  bool Overflow;
+  Product = IsSigned ? C1.smul_ov(C2, Overflow) : C1.umul_ov(C2, Overflow);
+  return Overflow;
+}
+
+/// True if C2 is a multiple of C1. Quotient contains C2/C1.
+static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
+                       bool IsSigned) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Constant widths not equal");
+
+  // Bail if we will divide by zero.
+  if (C2.isNullValue())
+    return false;
+
+  // Bail if we would divide INT_MIN by -1.
+  if (IsSigned && C1.isMinSignedValue() && C2.isAllOnesValue())
+    return false;
+
+  APInt Remainder(C1.getBitWidth(), /*Val=*/0ULL, IsSigned);
+  if (IsSigned)
+    APInt::sdivrem(C1, C2, Quotient, Remainder);
+  else
+    APInt::udivrem(C1, C2, Quotient, Remainder);
+
+  return Remainder.isMinValue();
+}
+
 /// This function implements the transforms common to both integer division
 /// instructions (udiv and sdiv). It is called by the visitors to those integer
 /// division instructions.
@@ -909,78 +903,72 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
-  if (auto *LHS = dyn_cast<Instruction>(Op0)) {
-    const APInt *C2;
-    if (match(Op1, m_APInt(C2))) {
-      Value *X;
-      const APInt *C1;
+  const APInt *C2;
+  if (match(Op1, m_APInt(C2))) {
+    Value *X;
+    const APInt *C1;
 
-      // (X / C1) / C2  -> X / (C1*C2)
-      if ((IsSigned && match(LHS, m_SDiv(m_Value(X), m_APInt(C1)))) ||
-          (!IsSigned && match(LHS, m_UDiv(m_Value(X), m_APInt(C1))))) {
-        APInt Product(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
-        if (!MultiplyOverflows(*C1, *C2, Product, IsSigned))
-          return BinaryOperator::Create(I.getOpcode(), X,
-                                        ConstantInt::get(Ty, Product));
-      }
-
-      if ((IsSigned && match(LHS, m_NSWMul(m_Value(X), m_APInt(C1)))) ||
-          (!IsSigned && match(LHS, m_NUWMul(m_Value(X), m_APInt(C1))))) {
-        APInt Quotient(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
-
-        // (X * C1) / C2 -> X / (C2 / C1) if C2 is a multiple of C1.
-        if (IsMultiple(*C2, *C1, Quotient, IsSigned)) {
-          BinaryOperator *BO = BinaryOperator::Create(
-              I.getOpcode(), X, ConstantInt::get(Ty, Quotient));
-          BO->setIsExact(I.isExact());
-          return BO;
-        }
-
-        // (X * C1) / C2 -> X * (C1 / C2) if C1 is a multiple of C2.
-        if (IsMultiple(*C1, *C2, Quotient, IsSigned)) {
-          BinaryOperator *BO = BinaryOperator::Create(
-              Instruction::Mul, X, ConstantInt::get(Ty, Quotient));
-          BO->setHasNoUnsignedWrap(
-              !IsSigned &&
-              cast<OverflowingBinaryOperator>(LHS)->hasNoUnsignedWrap());
-          BO->setHasNoSignedWrap(
-              cast<OverflowingBinaryOperator>(LHS)->hasNoSignedWrap());
-          return BO;
-        }
-      }
-
-      if ((IsSigned && match(LHS, m_NSWShl(m_Value(X), m_APInt(C1))) &&
-           *C1 != C1->getBitWidth() - 1) ||
-          (!IsSigned && match(LHS, m_NUWShl(m_Value(X), m_APInt(C1))))) {
-        APInt Quotient(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
-        APInt C1Shifted = APInt::getOneBitSet(
-            C1->getBitWidth(), static_cast<unsigned>(C1->getLimitedValue()));
-
-        // (X << C1) / C2 -> X / (C2 >> C1) if C2 is a multiple of C1.
-        if (IsMultiple(*C2, C1Shifted, Quotient, IsSigned)) {
-          auto *BO = BinaryOperator::Create(I.getOpcode(), X,
-                                            ConstantInt::get(Ty, Quotient));
-          BO->setIsExact(I.isExact());
-          return BO;
-        }
-
-        // (X << C1) / C2 -> X * (C2 >> C1) if C1 is a multiple of C2.
-        if (IsMultiple(C1Shifted, *C2, Quotient, IsSigned)) {
-          auto *BO = BinaryOperator::Create(Instruction::Mul, X,
-                                            ConstantInt::get(Ty, Quotient));
-          BO->setHasNoUnsignedWrap(
-              !IsSigned &&
-              cast<OverflowingBinaryOperator>(LHS)->hasNoUnsignedWrap());
-          BO->setHasNoSignedWrap(
-              cast<OverflowingBinaryOperator>(LHS)->hasNoSignedWrap());
-          return BO;
-        }
-      }
-
-      if (!C2->isNullValue()) // avoid X udiv 0
-        if (Instruction *FoldedDiv = foldOpWithConstantIntoOperand(I))
-          return FoldedDiv;
+    // (X / C1) / C2  -> X / (C1*C2)
+    if ((IsSigned && match(Op0, m_SDiv(m_Value(X), m_APInt(C1)))) ||
+        (!IsSigned && match(Op0, m_UDiv(m_Value(X), m_APInt(C1))))) {
+      APInt Product(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
+      if (!multiplyOverflows(*C1, *C2, Product, IsSigned))
+        return BinaryOperator::Create(I.getOpcode(), X,
+                                      ConstantInt::get(Ty, Product));
     }
+
+    if ((IsSigned && match(Op0, m_NSWMul(m_Value(X), m_APInt(C1)))) ||
+        (!IsSigned && match(Op0, m_NUWMul(m_Value(X), m_APInt(C1))))) {
+      APInt Quotient(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
+
+      // (X * C1) / C2 -> X / (C2 / C1) if C2 is a multiple of C1.
+      if (isMultiple(*C2, *C1, Quotient, IsSigned)) {
+        auto *NewDiv = BinaryOperator::Create(I.getOpcode(), X,
+                                              ConstantInt::get(Ty, Quotient));
+        NewDiv->setIsExact(I.isExact());
+        return NewDiv;
+      }
+
+      // (X * C1) / C2 -> X * (C1 / C2) if C1 is a multiple of C2.
+      if (isMultiple(*C1, *C2, Quotient, IsSigned)) {
+        auto *Mul = BinaryOperator::Create(Instruction::Mul, X,
+                                           ConstantInt::get(Ty, Quotient));
+        auto *OBO = cast<OverflowingBinaryOperator>(Op0);
+        Mul->setHasNoUnsignedWrap(!IsSigned && OBO->hasNoUnsignedWrap());
+        Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
+        return Mul;
+      }
+    }
+
+    if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
+         *C1 != C1->getBitWidth() - 1) ||
+        (!IsSigned && match(Op0, m_NUWShl(m_Value(X), m_APInt(C1))))) {
+      APInt Quotient(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
+      APInt C1Shifted = APInt::getOneBitSet(
+          C1->getBitWidth(), static_cast<unsigned>(C1->getLimitedValue()));
+
+      // (X << C1) / C2 -> X / (C2 >> C1) if C2 is a multiple of C1.
+      if (isMultiple(*C2, C1Shifted, Quotient, IsSigned)) {
+        auto *BO = BinaryOperator::Create(I.getOpcode(), X,
+                                          ConstantInt::get(Ty, Quotient));
+        BO->setIsExact(I.isExact());
+        return BO;
+      }
+
+      // (X << C1) / C2 -> X * (C2 >> C1) if C1 is a multiple of C2.
+      if (isMultiple(C1Shifted, *C2, Quotient, IsSigned)) {
+        auto *Mul = BinaryOperator::Create(Instruction::Mul, X,
+                                           ConstantInt::get(Ty, Quotient));
+        auto *OBO = cast<OverflowingBinaryOperator>(Op0);
+        Mul->setHasNoUnsignedWrap(!IsSigned && OBO->hasNoUnsignedWrap());
+        Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
+        return Mul;
+      }
+    }
+
+    if (!C2->isNullValue()) // avoid X udiv 0
+      if (Instruction *FoldedDiv = foldOpWithConstantIntoOperand(I))
+        return FoldedDiv;
   }
 
   if (match(Op0, m_One())) {
@@ -1527,13 +1515,21 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     }
   }
 
-  Value *LHS;
-  Value *RHS;
+  // -X / -Y -> X / Y
+  Value *X, *Y;
+  if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_FNeg(m_Value(Y)))) {
+    I.setOperand(0, X);
+    I.setOperand(1, Y);
+    return &I;
+  }
 
-  // -x / -y -> x / y
-  if (match(Op0, m_FNeg(m_Value(LHS))) && match(Op1, m_FNeg(m_Value(RHS)))) {
-    I.setOperand(0, LHS);
-    I.setOperand(1, RHS);
+  // X / (X * Y) --> 1.0 / Y
+  // Reassociate to (X / X -> 1.0) is legal when NaNs are not allowed.
+  // We can ignore the possibility that X is infinity because INF/INF is NaN.
+  if (I.hasNoNaNs() && I.hasAllowReassoc() &&
+      match(Op1, m_c_FMul(m_Specific(Op0), m_Value(Y)))) {
+    I.setOperand(0, ConstantFP::get(I.getType(), 1.0));
+    I.setOperand(1, Y);
     return &I;
   }
 

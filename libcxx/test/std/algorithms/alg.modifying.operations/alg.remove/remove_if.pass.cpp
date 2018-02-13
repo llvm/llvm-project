@@ -29,7 +29,7 @@ TEST_CONSTEXPR bool equal2 ( int i ) { return i == 2; }
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 5, 2, 5, 6};
-    
+
     auto it = std::remove_if(std::begin(ia), std::end(ia), equal2);
 
     return (std::begin(ia) + std::size(ia) - 1) == it  // we removed one element

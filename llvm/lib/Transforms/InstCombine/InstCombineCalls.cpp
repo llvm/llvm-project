@@ -184,14 +184,18 @@ InstCombiner::SimplifyElementUnorderedAtomicMemCpy(AtomicMemCpyInst *AMI) {
 }
 
 Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
-  unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, &AC, &DT);
-  unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, &AC, &DT);
-  unsigned MinAlign = std::min(DstAlign, SrcAlign);
-  unsigned CopyAlign = MI->getAlignment();
+  unsigned DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
+  unsigned CopyDstAlign = MI->getDestAlignment();
+  if (CopyDstAlign < DstAlign){
+    MI->setDestAlignment(DstAlign);
+    return MI;
+  }
 
-  // FIXME: Check & simplify source & dest alignments separately
-  if (CopyAlign < MinAlign) {
-    MI->setAlignment(MinAlign);
+  auto* MTI = cast<MemTransferInst>(MI);
+  unsigned SrcAlign = getKnownAlignment(MTI->getRawSource(), DL, MI, &AC, &DT);
+  unsigned CopySrcAlign = MTI->getSourceAlignment();
+  if (CopySrcAlign < SrcAlign) {
+    MTI->setSourceAlignment(SrcAlign);
     return MI;
   }
 
@@ -235,15 +239,11 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
       CopyMD = cast<MDNode>(M->getOperand(2));
   }
 
-  // If the memcpy/memmove provides better alignment info than we can
-  // infer, use it.
-  SrcAlign = std::max(SrcAlign, CopyAlign);
-  DstAlign = std::max(DstAlign, CopyAlign);
-
   Value *Src = Builder.CreateBitCast(MI->getArgOperand(1), NewSrcPtrTy);
   Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
   LoadInst *L = Builder.CreateLoad(Src, MI->isVolatile());
-  L->setAlignment(SrcAlign);
+  // Alignment from the mem intrinsic will be better, so use it.
+  L->setAlignment(CopySrcAlign);
   if (CopyMD)
     L->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   MDNode *LoopMemParallelMD =
@@ -252,7 +252,8 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
     L->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
 
   StoreInst *S = Builder.CreateStore(L, Dest, MI->isVolatile());
-  S->setAlignment(DstAlign);
+  // Alignment from the mem intrinsic will be better, so use it.
+  S->setAlignment(CopyDstAlign);
   if (CopyMD)
     S->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   if (LoopMemParallelMD)

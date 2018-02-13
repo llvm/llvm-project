@@ -164,7 +164,7 @@ public:
   // Compilers emit zlib-compressed debug sections if the -gz option
   // is given. This function checks if this section is compressed, and
   // if so, decompress in memory.
-  void maybeUncompress();
+  void maybeDecompress();
 
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);
@@ -189,9 +189,9 @@ public:
   }
 
 private:
-  // A pointer that owns uncompressed data if a section is compressed by zlib.
+  // A pointer that owns decompressed data if a section is compressed by zlib.
   // Since the feature is not used often, this is usually a nullptr.
-  std::unique_ptr<char[]> UncompressBuf;
+  std::unique_ptr<char[]> DecompressBuf;
 };
 
 // SectionPiece represents a piece of splittable section contents.
