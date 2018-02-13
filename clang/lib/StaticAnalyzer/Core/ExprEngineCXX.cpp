@@ -114,12 +114,14 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
-  // See if we're constructing an existing region by looking at the next
-  // element in the CFG.
-
-  if (auto Elem = findElementDirectlyInitializedByCurrentConstructor()) {
-    if (Optional<CFGStmt> StmtElem = Elem->getAs<CFGStmt>()) {
-      if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(StmtElem->getStmt())) {
+  // See if we're constructing an existing region by looking at the
+  // current construction context.
+  const NodeBuilderContext &CurrBldrCtx = getBuilderContext();
+  const CFGBlock *B = CurrBldrCtx.getBlock();
+  const CFGElement &E = (*B)[currStmtIdx];
+  if (auto CC = E.getAs<CFGConstructor>()) {
+    if (const Stmt *TriggerStmt = CC->getTriggerStmt()) {
+      if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(TriggerStmt)) {
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
           // TODO: Detect when the allocator returns a null pointer.
           // Constructor shall not be called in this case.
@@ -135,7 +137,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
             return MR;
           }
         }
-      } else if (auto *DS = dyn_cast<DeclStmt>(StmtElem->getStmt())) {
+      } else if (auto *DS = dyn_cast<DeclStmt>(TriggerStmt)) {
         if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
           if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
             SVal LValue = State->getLValue(Var, LCtx);
@@ -145,11 +147,9 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
             return LValue.getAsRegion();
           }
         }
-      } else {
-        llvm_unreachable("Unexpected directly initialized element!");
       }
-    } else if (Optional<CFGInitializer> InitElem = Elem->getAs<CFGInitializer>()) {
-      const CXXCtorInitializer *Init = InitElem->getInitializer();
+      // TODO: Consider other directly initialized elements.
+    } else if (const CXXCtorInitializer *Init = CC->getTriggerInit()) {
       assert(Init->isAnyMemberInitializer());
       const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
       Loc ThisPtr =
@@ -183,53 +183,6 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   return MRMgr.getCXXTempObjectRegion(CE, LCtx);
 }
 
-/// Returns true if the initializer for \Elem can be a direct
-/// constructor.
-static bool canHaveDirectConstructor(CFGElement Elem){
-  // DeclStmts and CXXCtorInitializers for fields can be directly constructed.
-
-  if (Optional<CFGStmt> StmtElem = Elem.getAs<CFGStmt>()) {
-    if (isa<DeclStmt>(StmtElem->getStmt())) {
-      return true;
-    }
-    if (isa<CXXNewExpr>(StmtElem->getStmt())) {
-      return true;
-    }
-  }
-
-  if (Elem.getKind() == CFGElement::Initializer) {
-    return true;
-  }
-
-  return false;
-}
-
-Optional<CFGElement>
-ExprEngine::findElementDirectlyInitializedByCurrentConstructor() {
-  const NodeBuilderContext &CurrBldrCtx = getBuilderContext();
-  // See if we're constructing an existing region by looking at the next
-  // element in the CFG.
-  const CFGBlock *B = CurrBldrCtx.getBlock();
-  assert(isa<CXXConstructExpr>(((*B)[currStmtIdx]).castAs<CFGStmt>().getStmt()));
-  unsigned int NextStmtIdx = currStmtIdx + 1;
-  if (NextStmtIdx >= B->size())
-    return None;
-
-  CFGElement Next = (*B)[NextStmtIdx];
-
-  // Is this a destructor? If so, we might be in the middle of an assignment
-  // to a local or member: look ahead one more element to see what we find.
-  while (Next.getAs<CFGImplicitDtor>() && NextStmtIdx + 1 < B->size()) {
-    ++NextStmtIdx;
-    Next = (*B)[NextStmtIdx];
-  }
-
-  if (canHaveDirectConstructor(Next))
-    return Next;
-
-  return None;
-}
-
 const CXXConstructExpr *
 ExprEngine::findDirectConstructorForCurrentCFGElement() {
   // Go backward in the CFG to see if the previous element (ignoring
@@ -241,7 +194,6 @@ ExprEngine::findDirectConstructorForCurrentCFGElement() {
     return nullptr;
 
   const CFGBlock *B = getBuilderContext().getBlock();
-  assert(canHaveDirectConstructor((*B)[currStmtIdx]));
 
   unsigned int PreviousStmtIdx = currStmtIdx - 1;
   CFGElement Previous = (*B)[PreviousStmtIdx];
