@@ -388,7 +388,7 @@ public:
 bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  std::unique_ptr<Module> M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   SmallPtrSet<BasicBlock *, 8> Blocks;
@@ -406,31 +406,32 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   outs() << ": ";
 
   // Loop over and delete any hack up any blocks that are not listed...
-  for (Module::iterator I = M->begin(), E = M->end(); I != E; ++I)
-    for (Function::iterator BB = I->begin(), E = I->end(); BB != E; ++BB)
-      if (!Blocks.count(&*BB) && BB->getTerminator()->getNumSuccessors()) {
+  for (Function &F : M->functions()) {
+    for (BasicBlock &BB : F) {
+      if (!Blocks.count(&BB) && BB.getTerminator()->getNumSuccessors()) {
         // Loop over all of the successors of this block, deleting any PHI nodes
         // that might include it.
-        for (succ_iterator SI = succ_begin(&*BB), E = succ_end(&*BB); SI != E;
-             ++SI)
-          (*SI)->removePredecessor(&*BB);
+        for (BasicBlock *Succ : successors(&BB))
+          Succ->removePredecessor(&BB);
 
-        TerminatorInst *BBTerm = BB->getTerminator();
+        TerminatorInst *BBTerm = BB.getTerminator();
         if (BBTerm->isEHPad() || BBTerm->getType()->isTokenTy())
           continue;
         if (!BBTerm->getType()->isVoidTy())
           BBTerm->replaceAllUsesWith(Constant::getNullValue(BBTerm->getType()));
 
         // Replace the old terminator instruction.
-        BB->getInstList().pop_back();
-        new UnreachableInst(BB->getContext(), &*BB);
+        BB.getInstList().pop_back();
+        new UnreachableInst(BB.getContext(), &BB);
       }
+    }
+  }
 
   // The CFG Simplifier pass may delete one of the basic blocks we are
   // interested in.  If it does we need to take the block out of the list.  Make
   // a "persistent mapping" by turning basic blocks into <function, name> pairs.
   // This won't work well if blocks are unnamed, but that is just the risk we
-  // have to take.
+  // have to take. FIXME: Can we just name the blocks?
   std::vector<std::pair<std::string, std::string>> BlockInfo;
 
   for (BasicBlock *BB : Blocks)
@@ -447,31 +448,30 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   // Verify we didn't break anything
   std::vector<std::string> Passes;
   Passes.push_back("verify");
-  std::unique_ptr<Module> New = BD.runPassesOn(M, Passes);
-  delete M;
+  std::unique_ptr<Module> New = BD.runPassesOn(M.get(), Passes);
   if (!New) {
     errs() << "verify failed!\n";
     exit(1);
   }
-  M = New.release();
+  M = std::move(New);
 
   // Try running on the hacked up program...
-  if (TestFn(BD, M)) {
-    BD.setNewProgram(M); // It crashed, keep the trimmed version...
+  if (TestFn(BD, M.get())) {
+    BD.setNewProgram(M.release()); // It crashed, keep the trimmed version...
 
     // Make sure to use basic block pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     BBs.clear();
-    const ValueSymbolTable &GST = M->getValueSymbolTable();
-    for (unsigned i = 0, e = BlockInfo.size(); i != e; ++i) {
-      Function *F = cast<Function>(GST.lookup(BlockInfo[i].first));
-      Value *V = F->getValueSymbolTable()->lookup(BlockInfo[i].second);
+    const ValueSymbolTable &GST = BD.getProgram()->getValueSymbolTable();
+    for (const auto &BI : BlockInfo) {
+      Function *F = cast<Function>(GST.lookup(BI.first));
+      Value *V = F->getValueSymbolTable()->lookup(BI.second);
       if (V && V->getType() == Type::getLabelTy(V->getContext()))
         BBs.push_back(cast<BasicBlock>(V));
     }
     return true;
   }
-  delete M; // It didn't crash, try something else.
+  // It didn't crash, try something else.
   return false;
 }
 
@@ -507,7 +507,7 @@ bool ReduceCrashingConditionals::TestBlocks(
     std::vector<const BasicBlock *> &BBs) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  std::unique_ptr<Module> M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   SmallPtrSet<const BasicBlock *, 8> Blocks;
@@ -555,22 +555,21 @@ bool ReduceCrashingConditionals::TestBlocks(
   // Verify we didn't break anything
   std::vector<std::string> Passes;
   Passes.push_back("verify");
-  std::unique_ptr<Module> New = BD.runPassesOn(M, Passes);
-  delete M;
+  std::unique_ptr<Module> New = BD.runPassesOn(M.get(), Passes);
   if (!New) {
     errs() << "verify failed!\n";
     exit(1);
   }
-  M = New.release();
+  M = std::move(New);
 
   // Try running on the hacked up program...
-  if (TestFn(BD, M)) {
-    BD.setNewProgram(M); // It crashed, keep the trimmed version...
+  if (TestFn(BD, M.get())) {
+    BD.setNewProgram(M.release()); // It crashed, keep the trimmed version...
 
     // Make sure to use basic block pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     BBs.clear();
-    const ValueSymbolTable &GST = M->getValueSymbolTable();
+    const ValueSymbolTable &GST = BD.getProgram()->getValueSymbolTable();
     for (auto &BI : BlockInfo) {
       auto *F = cast<Function>(GST.lookup(BI.first));
       Value *V = F->getValueSymbolTable()->lookup(BI.second);
@@ -579,7 +578,7 @@ bool ReduceCrashingConditionals::TestBlocks(
     }
     return true;
   }
-  delete M; // It didn't crash, try something else.
+  // It didn't crash, try something else.
   return false;
 }
 
@@ -612,7 +611,7 @@ public:
 bool ReduceSimplifyCFG::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  std::unique_ptr<Module> M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   SmallPtrSet<const BasicBlock *, 8> Blocks;
@@ -648,22 +647,21 @@ bool ReduceSimplifyCFG::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   // Verify we didn't break anything
   std::vector<std::string> Passes;
   Passes.push_back("verify");
-  std::unique_ptr<Module> New = BD.runPassesOn(M, Passes);
-  delete M;
+  std::unique_ptr<Module> New = BD.runPassesOn(M.get(), Passes);
   if (!New) {
     errs() << "verify failed!\n";
     exit(1);
   }
-  M = New.release();
+  M = std::move(New);
 
   // Try running on the hacked up program...
-  if (TestFn(BD, M)) {
-    BD.setNewProgram(M); // It crashed, keep the trimmed version...
+  if (TestFn(BD, M.get())) {
+    BD.setNewProgram(M.release()); // It crashed, keep the trimmed version...
 
     // Make sure to use basic block pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     BBs.clear();
-    const ValueSymbolTable &GST = M->getValueSymbolTable();
+    const ValueSymbolTable &GST = BD.getProgram()->getValueSymbolTable();
     for (auto &BI : BlockInfo) {
       auto *F = cast<Function>(GST.lookup(BI.first));
       Value *V = F->getValueSymbolTable()->lookup(BI.second);
@@ -672,7 +670,7 @@ bool ReduceSimplifyCFG::TestBlocks(std::vector<const BasicBlock *> &BBs) {
     }
     return true;
   }
-  delete M; // It didn't crash, try something else.
+  // It didn't crash, try something else.
   return false;
 }
 
@@ -1168,15 +1166,12 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
   // Try to clean up the testcase by running funcresolve and globaldce...
   if (!BugpointIsInterrupted) {
     outs() << "\n*** Attempting to perform final cleanups: ";
-    Module *M = CloneModule(BD.getProgram()).release();
-    M = BD.performFinalCleanups(M, true).release();
+    std::unique_ptr<Module> M = CloneModule(BD.getProgram());
+    M = BD.performFinalCleanups(M.release(), true);
 
     // Find out if the pass still crashes on the cleaned up program...
-    if (TestFn(BD, M)) {
-      BD.setNewProgram(M); // Yup, it does, keep the reduced version...
-    } else {
-      delete M;
-    }
+    if (M && TestFn(BD, M.get()))
+      BD.setNewProgram(M.release()); // Yup, it does, keep the reduced version...
   }
 
   BD.EmitProgressBitcode(BD.getProgram(), "reduced-simplified");
