@@ -38,6 +38,27 @@ define void @test_sub_pos(i64 %A) {
   ret void
 }
 
+define void @test_shl(i64 %A) {
+; CHECK-LABEL: @test_shl(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !37, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shl, DW_OP_stack_value)), !dbg !38
+  %1 = shl i64 %A, 7
+  ret void
+}
+
+define void @test_lshr(i64 %A) {
+; CHECK-LABEL: @test_lshr(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !42, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shr, DW_OP_stack_value)), !dbg !43
+  %1 = lshr i64 %A, 7
+  ret void
+}
+
+define void @test_ashr(i64 %A) {
+; CHECK-LABEL: @test_ashr(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !47, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shra, DW_OP_stack_value)), !dbg !48
+  %1 = ashr i64 %A, 7
+  ret void
+}
+
 ; CHECK: !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
 ; CHECK: !10 = !DILocalVariable(name: "2", scope: !5, file: !1, line: 2, type: !11)
 ; CHECK: !12 = !DILocation(line: 2, column: 1, scope: !5)
@@ -54,3 +75,12 @@ define void @test_sub_pos(i64 %A) {
 
 ; CHECK: !32 = !DILocalVariable(name: "6", scope: !30, file: !1, line: 10, type: !11)
 ; CHECK: !33 = !DILocation(line: 10, column: 1, scope: !30)
+
+; CHECK: !37 = !DILocalVariable(name: "7", scope: !35, file: !1, line: 12, type: !11)
+; CHECK: !38 = !DILocation(line: 12, column: 1, scope: !35)
+
+; CHECK: !42 = !DILocalVariable(name: "8", scope: !40, file: !1, line: 14, type: !11)
+; CHECK: !43 = !DILocation(line: 14, column: 1, scope: !40)
+
+; CHECK: !47 = !DILocalVariable(name: "9", scope: !45, file: !1, line: 16, type: !11)
+; CHECK: !48 = !DILocation(line: 16, column: 1, scope: !45)
