@@ -115,6 +115,9 @@ deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
     Instruction *DeadInst = NowDeadInsts.pop_back_val();
     ++NumFastOther;
 
+    // Try to preserve debug information attached to the dead instruction.
+    salvageDebugInfo(*DeadInst);
+
     // This instruction is dead, zap it, in stages.  Start by removing it from
     // MemDep, which needs to know the operands and needs it to be in the
     // function.
