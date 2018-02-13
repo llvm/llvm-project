@@ -1455,17 +1455,27 @@ void llvm::salvageDebugInfo(Instruction &I) {
       for (auto *DII : DbgUsers)
         applyOffset(DII, Offset.getSExtValue());
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
-    if (BI->getOpcode() == Instruction::Add ||
-        BI->getOpcode() == Instruction::Or)
-      if (auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1)))
-        if (ConstInt->getBitWidth() <= 64) {
-          uint64_t Val = ConstInt->getSExtValue();
-          for (auto *DII : DbgUsers)
-            if (BI->getOpcode() == Instruction::Add)
-              applyOffset(DII, Val);
-            else if (BI->getOpcode() == Instruction::Or)
-              applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
-        }
+    auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1));
+    if (!ConstInt || ConstInt->getBitWidth() > 64)
+      return;
+
+    uint64_t Val = ConstInt->getSExtValue();
+    for (auto *DII : DbgUsers) {
+      switch (BI->getOpcode()) {
+      case Instruction::Add:
+        applyOffset(DII, Val);
+        break;
+      case Instruction::Or:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
+        break;
+      case Instruction::Xor:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
+        break;
+      default:
+        // TODO: Salvage constants from each kind of binop we know about.
+        continue;
+      }
+    }
   } else if (isa<LoadInst>(&I)) {
     MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
     for (auto *DII : DbgUsers) {
