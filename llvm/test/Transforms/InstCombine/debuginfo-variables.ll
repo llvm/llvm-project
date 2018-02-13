@@ -17,6 +17,13 @@ define void @test_or(i64 %A) {
   ret void
 }
 
+define void @test_xor(i32 %A) {
+; CHECK-LABEL: @test_xor(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 %A, metadata !22, metadata !DIExpression(DW_OP_constu, 1, DW_OP_xor, DW_OP_stack_value)), !dbg !23
+  %1 = xor i32 %A, 1
+  ret void
+}
+
 ; CHECK: !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
 ; CHECK: !10 = !DILocalVariable(name: "2", scope: !5, file: !1, line: 2, type: !11)
 ; CHECK: !12 = !DILocation(line: 2, column: 1, scope: !5)
@@ -24,3 +31,6 @@ define void @test_or(i64 %A) {
 
 ; CHECK: !17 = !DILocalVariable(name: "3", scope: !15, file: !1, line: 4, type: !11)
 ; CHECK: !18 = !DILocation(line: 4, column: 1, scope: !15)
+
+; CHECK: !22 = !DILocalVariable(name: "4", scope: !20, file: !1, line: 6, type: !9)
+; CHECK: !23 = !DILocation(line: 6, column: 1, scope: !20)
