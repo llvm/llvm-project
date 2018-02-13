@@ -325,5 +325,66 @@ TEST_F(FormatTestTextProto, KeepsCommentsIndentedInList) {
                "cccccccccccccccccccccccc: 3849");
 }
 
+TEST_F(FormatTestTextProto, FormatsExtensions) {
+  verifyFormat("[type] { key: value }");
+  verifyFormat("[type] {\n"
+               "  keyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy: value\n"
+               "}");
+  verifyFormat("[type.type] { key: value }");
+  verifyFormat("[type.type] < key: value >");
+  verifyFormat("[type.type/type.type] { key: value }");
+  verifyFormat("msg {\n"
+               "  [type.type] { key: value }\n"
+               "}");
+  verifyFormat("msg {\n"
+               "  [type.type] {\n"
+               "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
+               "  }\n"
+               "}");
+  verifyFormat("key: value\n"
+               "[a.b] { key: value }");
+  verifyFormat("msg: <\n"
+               "  key: value\n"
+               "  [a.b.c/d.e]: < key: value >\n"
+               "  [f.g]: <\n"
+               "    key: valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\n"
+               "    key: {}\n"
+               "  >\n"
+               "  key {}\n"
+               "  [h.i.j] < key: value >\n"
+               "  [a]: {\n"
+               "    [b.c]: {}\n"
+               "    [d] <>\n"
+               "    [e/f]: 1\n"
+               "  }\n"
+               ">");
+  verifyFormat("[longg.long.long.long.long.long.long.long.long.long.long\n"
+               "     .longg.longlong] { key: value }");
+  verifyFormat("[longg.long.long.long.long.long.long.long.long.long.long\n"
+               "     .longg.longlong] {\n"
+               "  key: value\n"
+               "  key: value\n"
+               "  key: value\n"
+               "  key: value\n"
+               "}");
+  verifyFormat("[longg.long.long.long.long.long.long.long.long.long\n"
+               "     .long/longg.longlong] { key: value }");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/\n"
+               " bbbbbbbbbbbbbb] { key: value }");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "] { key: value }");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "] {\n"
+               "  [type.type] {\n"
+               "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
+               "  }\n"
+               "}");
+  verifyFormat("[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/\n"
+               " bbbbbbb] {\n"
+               "  [type.type] {\n"
+               "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
+               "  }\n"
+               "}");
+}
 } // end namespace tooling
 } // end namespace clang

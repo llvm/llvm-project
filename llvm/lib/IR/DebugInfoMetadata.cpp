@@ -708,7 +708,13 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_mul:
+    case dwarf::DW_OP_div:
+    case dwarf::DW_OP_mod:
     case dwarf::DW_OP_or:
+    case dwarf::DW_OP_xor:
+    case dwarf::DW_OP_shl:
+    case dwarf::DW_OP_shr:
+    case dwarf::DW_OP_shra:
     case dwarf::DW_OP_deref:
     case dwarf::DW_OP_xderef:
       break;

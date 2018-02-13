@@ -176,27 +176,16 @@ define <4 x float> @test3(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X64-NEXT:    roundss $4, (%rdi), %xmm0
 ; X64-NEXT:    retq
 ;
-; X32_AVX1-LABEL: test3:
-; X32_AVX1:       ## %bb.0:
-; X32_AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32_AVX1-NEXT:    vroundss $4, (%eax), %xmm0, %xmm0
-; X32_AVX1-NEXT:    retl
+; X32_AVX-LABEL: test3:
+; X32_AVX:       ## %bb.0:
+; X32_AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32_AVX-NEXT:    vroundss $4, (%eax), %xmm0, %xmm0
+; X32_AVX-NEXT:    retl
 ;
-; X64_AVX1-LABEL: test3:
-; X64_AVX1:       ## %bb.0:
-; X64_AVX1-NEXT:    vroundss $4, (%rdi), %xmm0, %xmm0
-; X64_AVX1-NEXT:    retq
-;
-; X32_AVX512-LABEL: test3:
-; X32_AVX512:       ## %bb.0:
-; X32_AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32_AVX512-NEXT:    vrndscaless $4, (%eax), %xmm0, %xmm0
-; X32_AVX512-NEXT:    retl
-;
-; X64_AVX512-LABEL: test3:
-; X64_AVX512:       ## %bb.0:
-; X64_AVX512-NEXT:    vrndscaless $4, (%rdi), %xmm0, %xmm0
-; X64_AVX512-NEXT:    retq
+; X64_AVX-LABEL: test3:
+; X64_AVX:       ## %bb.0:
+; X64_AVX-NEXT:    vroundss $4, (%rdi), %xmm0, %xmm0
+; X64_AVX-NEXT:    retq
   %a = load float , float *%b
   %B = insertelement <4 x float> undef, float %a, i32 0
   %X = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %A, <4 x float> %B, i32 4)
@@ -254,7 +243,7 @@ define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X32_AVX512-NEXT:    vmovaps %xmm0, (%esp) ## 16-byte Spill
 ; X32_AVX512-NEXT:    calll _f
 ; X32_AVX512-NEXT:    vmovaps (%esp), %xmm1 ## 16-byte Reload
-; X32_AVX512-NEXT:    vrndscaless $4, %xmm1, %xmm0, %xmm0
+; X32_AVX512-NEXT:    vroundss $4, %xmm1, %xmm0, %xmm0
 ; X32_AVX512-NEXT:    addl $28, %esp
 ; X32_AVX512-NEXT:    retl
 ;
@@ -265,7 +254,7 @@ define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X64_AVX512-NEXT:    vmovaps %xmm0, (%rsp) ## 16-byte Spill
 ; X64_AVX512-NEXT:    callq _f
 ; X64_AVX512-NEXT:    vmovaps (%rsp), %xmm1 ## 16-byte Reload
-; X64_AVX512-NEXT:    vrndscaless $4, %xmm1, %xmm0, %xmm0
+; X64_AVX512-NEXT:    vroundss $4, %xmm1, %xmm0, %xmm0
 ; X64_AVX512-NEXT:    addq $24, %rsp
 ; X64_AVX512-NEXT:    retq
   %a = load float , float *%b

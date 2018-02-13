@@ -16,7 +16,7 @@ define float @test1(float %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test1:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscaless $9, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call float @floorf(float %x) nounwind readnone
   ret float %call
@@ -37,7 +37,7 @@ define double @test2(double %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test2:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscalesd $9, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call double @floor(double %x) nounwind readnone
   ret double %call
@@ -58,7 +58,7 @@ define float @test3(float %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test3:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscaless $12, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call float @nearbyintf(float %x) nounwind readnone
   ret float %call
@@ -79,7 +79,7 @@ define double @test4(double %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test4:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscalesd $12, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call double @nearbyint(double %x) nounwind readnone
   ret double %call
@@ -100,7 +100,7 @@ define float @test5(float %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test5:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscaless $10, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call float @ceilf(float %x) nounwind readnone
   ret float %call
@@ -121,7 +121,7 @@ define double @test6(double %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test6:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscalesd $10, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call double @ceil(double %x) nounwind readnone
   ret double %call
@@ -142,7 +142,7 @@ define float @test7(float %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test7:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscaless $4, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call float @rintf(float %x) nounwind readnone
   ret float %call
@@ -163,7 +163,7 @@ define double @test8(double %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test8:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscalesd $4, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $4, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call double @rint(double %x) nounwind readnone
   ret double %call
@@ -184,7 +184,7 @@ define float @test9(float %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test9:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscaless $11, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call float @truncf(float %x) nounwind readnone
   ret float %call
@@ -205,7 +205,7 @@ define double @test10(double %x) nounwind  {
 ;
 ; CHECK-AVX512-LABEL: test10:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vrndscalesd $11, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %call = tail call double @trunc(double %x) nounwind readnone
   ret double %call

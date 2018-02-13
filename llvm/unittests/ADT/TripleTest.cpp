@@ -1027,8 +1027,13 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::ELF, Triple("i686-pc-windows-msvc-elf").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("i686-pc-cygwin-elf").getObjectFormat());
 
-  EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown-wasm").getObjectFormat());
-  EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown-wasm").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown").getObjectFormat());
+
+  EXPECT_EQ(Triple::ELF,
+            Triple("wasm32-unknown-unknown-elf").getObjectFormat());
+  EXPECT_EQ(Triple::ELF,
+            Triple("wasm64-unknown-unknown-elf").getObjectFormat());
 
   Triple MSVCNormalized(Triple::normalize("i686-pc-windows-msvc-elf"));
   EXPECT_EQ(Triple::ELF, MSVCNormalized.getObjectFormat());

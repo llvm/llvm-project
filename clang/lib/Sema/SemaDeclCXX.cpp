@@ -5476,7 +5476,7 @@ static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
   }
 }
 
-static void ReferenceDllExportedMethods(Sema &S, CXXRecordDecl *Class) {
+static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
   Attr *ClassAttr = getDLLAttr(Class);
   if (!ClassAttr)
     return;
@@ -5491,6 +5491,16 @@ static void ReferenceDllExportedMethods(Sema &S, CXXRecordDecl *Class) {
     return;
 
   for (Decl *Member : Class->decls()) {
+    // Defined static variables that are members of an exported base
+    // class must be marked export too. Push them to implicit instantiation
+    // queue.
+    auto *VD = dyn_cast<VarDecl>(Member);
+    if (VD && Member->getAttr<DLLExportAttr>() &&
+        VD->getStorageClass() == SC_Static &&
+        TSK == TSK_ImplicitInstantiation)
+      S.PendingLocalImplicitInstantiations.push_back(
+          std::make_pair(VD, VD->getLocation()));
+
     auto *MD = dyn_cast<CXXMethodDecl>(Member);
     if (!MD)
       continue;
@@ -10902,12 +10912,12 @@ void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
 
 void Sema::referenceDLLExportedClassMethods() {
   if (!DelayedDllExportClasses.empty()) {
-    // Calling ReferenceDllExportedMethods might cause the current function to
+    // Calling ReferenceDllExportedMembers might cause the current function to
     // be called again, so use a local copy of DelayedDllExportClasses.
     SmallVector<CXXRecordDecl *, 4> WorkList;
     std::swap(DelayedDllExportClasses, WorkList);
     for (CXXRecordDecl *Class : WorkList)
-      ReferenceDllExportedMethods(*this, Class);
+      ReferenceDllExportedMembers(*this, Class);
   }
 }
 
