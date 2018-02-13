@@ -194,7 +194,7 @@ public:
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
                          unsigned StmtIdx, NodeBuilderContext *Ctx) override;
 
-  void ProcessStmt(const CFGStmt S, ExplodedNode *Pred);
+  void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
   void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
 

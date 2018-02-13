@@ -231,6 +231,9 @@ private:
   /// \sa IncludeLoopExitInCFG
   Optional<bool> IncludeLoopExitInCFG;
 
+  /// \sa IncludeRichConstructorsInCFG
+  Optional<bool> IncludeRichConstructorsInCFG;
+
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
   
@@ -443,6 +446,13 @@ public:
   /// This is controlled by the 'cfg-loopexit' config option, which accepts
   /// the values "true" and "false".
   bool includeLoopExitInCFG();
+
+  /// Returns whether or not construction site information should be included
+  /// in the CFG C++ constructor elements.
+  ///
+  /// This is controlled by the 'cfg-rich-constructors' config options,
+  /// which accepts the values "true" and "false".
+  bool includeRichConstructorsInCFG();
 
   /// Returns whether or not C++ standard library functions may be considered
   /// for inlining.

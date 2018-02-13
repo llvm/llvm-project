@@ -439,6 +439,7 @@ public:
                              bool synthesizeBodies = false,
                              bool addStaticInitBranches = false,
                              bool addCXXNewAllocator = true,
+                             bool addRichCXXConstructors = true,
                              CodeInjector *injector = nullptr);
 
   AnalysisDeclContext *getContext(const Decl *D);
