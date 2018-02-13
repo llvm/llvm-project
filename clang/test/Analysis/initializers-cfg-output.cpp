@@ -63,13 +63,17 @@ class TestDelegating {
 // CHECK:  [B2 (ENTRY)]
 // CHECK:    Succs (1): B1
 // CHECK:  [B1]
-// CHECK:    1:  (CXXConstructExpr, class A)
+// WARNINGS:    1:  (CXXConstructExpr, class A)
+// ANALYZER:    1:  (CXXConstructExpr, A() (Base initializer), class A)
 // CHECK:    2: A([B1.1]) (Base initializer)
-// CHECK:    3:  (CXXConstructExpr, class C)
+// WARNINGS:    3:  (CXXConstructExpr, class C)
+// ANALYZER:    3:  (CXXConstructExpr, C() (Base initializer), class C)
 // CHECK:    4: C([B1.3]) (Base initializer)
-// CHECK:    5:  (CXXConstructExpr, class B)
+// WARNINGS:    5:  (CXXConstructExpr, class B)
+// ANALYZER:    5:  (CXXConstructExpr, B() (Base initializer), class B)
 // CHECK:    6: B([B1.5]) (Base initializer)
-// CHECK:    7:  (CXXConstructExpr, class A)
+// WARNINGS:    7:  (CXXConstructExpr, class A)
+// ANALYZER:    7:  (CXXConstructExpr, A() (Base initializer), class A)
 // CHECK:    8: A([B1.7]) (Base initializer)
 // CHECK:    9: /*implicit*/(int)0
 // CHECK:   10: i([B1.9]) (Member initializer)
@@ -118,7 +122,8 @@ class TestDelegating {
 // CHECK:  [B1]
 // CHECK:    1: 2
 // CHECK:    2: 3
-// CHECK:    3: [B1.1], [B1.2] (CXXConstructExpr, class TestDelegating)
+// WARNINGS:    3: [B1.1], [B1.2] (CXXConstructExpr, class TestDelegating)
+// ANALYZER:    3: [B1.1], [B1.2] (CXXConstructExpr, TestDelegating([B1.1], [B1.2]) (Delegating initializer), class TestDelegating)
 // CHECK:    4: TestDelegating([B1.3]) (Delegating initializer)
 // CHECK:    Preds (1): B2
 // CHECK:    Succs (1): B0

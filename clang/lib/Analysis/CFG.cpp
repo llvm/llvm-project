@@ -654,7 +654,8 @@ private:
   // to the trigger statement. The construction context will be unset once
   // it is consumed when the CFG building procedure processes the
   // construct-expression and adds the respective CFGConstructor element.
-  void EnterConstructionContextIfNecessary(Stmt *Trigger, Stmt *Child);
+  void EnterConstructionContextIfNecessary(
+      ConstructionContext::TriggerTy Trigger, Stmt *Child);
   // Unset the construction context after consuming it. This is done immediately
   // after adding the CFGConstructor element, so there's no need to
   // do this manually in every Visit... function.
@@ -1147,8 +1148,8 @@ static const VariableArrayType *FindVA(const Type *t) {
   return nullptr;
 }
 
-void CFGBuilder::EnterConstructionContextIfNecessary(Stmt *Trigger,
-                                                     Stmt *Child) {
+void CFGBuilder::EnterConstructionContextIfNecessary(
+    ConstructionContext::TriggerTy Trigger, Stmt *Child) {
   if (!BuildOpts.AddRichCXXConstructors)
     return;
   if (!Child)
@@ -1294,6 +1295,8 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   appendInitializer(Block, I);
 
   if (Init) {
+    EnterConstructionContextIfNecessary(I, Init);
+
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
       // generating destructors for the second time.
@@ -4605,6 +4608,27 @@ public:
 
 } // namespace
 
+static void print_initializer(raw_ostream &OS, StmtPrinterHelper &Helper,
+                              const CXXCtorInitializer *I) {
+  if (I->isBaseInitializer())
+    OS << I->getBaseClass()->getAsCXXRecordDecl()->getName();
+  else if (I->isDelegatingInitializer())
+    OS << I->getTypeSourceInfo()->getType()->getAsCXXRecordDecl()->getName();
+  else
+    OS << I->getAnyMember()->getName();
+  OS << "(";
+  if (Expr *IE = I->getInit())
+    IE->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
+  OS << ")";
+
+  if (I->isBaseInitializer())
+    OS << " (Base initializer)";
+  else if (I->isDelegatingInitializer())
+    OS << " (Delegating initializer)";
+  else
+    OS << " (Member initializer)";
+}
+
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
                        const CFGElement &E) {
   if (Optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
@@ -4643,6 +4667,8 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
         if (const Stmt *S = CE->getTriggerStmt())
           Helper.handledStmt((const_cast<Stmt *>(S)), OS);
+        else if (const CXXCtorInitializer *I = CE->getTriggerInit())
+          print_initializer(OS, Helper, I);
         else
           llvm_unreachable("Unexpected trigger kind!");
         OS << ", ";
@@ -4659,23 +4685,8 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     if (isa<Expr>(S))
       OS << '\n';
   } else if (Optional<CFGInitializer> IE = E.getAs<CFGInitializer>()) {
-    const CXXCtorInitializer *I = IE->getInitializer();
-    if (I->isBaseInitializer())
-      OS << I->getBaseClass()->getAsCXXRecordDecl()->getName();
-    else if (I->isDelegatingInitializer())
-      OS << I->getTypeSourceInfo()->getType()->getAsCXXRecordDecl()->getName();
-    else OS << I->getAnyMember()->getName();
-
-    OS << "(";
-    if (Expr *IE = I->getInit())
-      IE->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
-    OS << ")";
-
-    if (I->isBaseInitializer())
-      OS << " (Base initializer)\n";
-    else if (I->isDelegatingInitializer())
-      OS << " (Delegating initializer)\n";
-    else OS << " (Member initializer)\n";
+    print_initializer(OS, Helper, IE->getInitializer());
+    OS << '\n';
   } else if (Optional<CFGAutomaticObjDtor> DE =
                  E.getAs<CFGAutomaticObjDtor>()) {
     const VarDecl *VD = DE->getVarDecl();
