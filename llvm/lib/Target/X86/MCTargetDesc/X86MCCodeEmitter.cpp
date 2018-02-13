@@ -396,10 +396,14 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
 
     // rip-relative addressing is actually relative to the *next* instruction.
     // Since an immediate can follow the mod/rm byte for an instruction, this
-    // means that we need to bias the immediate field of the instruction with
-    // the size of the immediate field.  If we have this case, add it into the
+    // means that we need to bias the displacement field of the instruction with
+    // the size of the immediate field. If we have this case, add it into the
     // expression to emit.
-    int ImmSize = X86II::hasImm(TSFlags) ? X86II::getSizeOfImm(TSFlags) : 0;
+    // Note: rip-relative addressing using immediate displacement values should
+    // not be adjusted, assuming it was the user's intent.
+    int ImmSize = !Disp.isImm() && X86II::hasImm(TSFlags)
+                      ? X86II::getSizeOfImm(TSFlags)
+                      : 0;
 
     EmitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(FixupKind),
                   CurByte, OS, Fixups, -ImmSize);
