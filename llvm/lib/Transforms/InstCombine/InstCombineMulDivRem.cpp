@@ -102,9 +102,8 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
 /// Return a null pointer otherwise.
 static Constant *getLogBase2(Type *Ty, Constant *C) {
   const APInt *IVal;
-  if (const auto *CI = dyn_cast<ConstantInt>(C))
-    if (match(CI, m_APInt(IVal)) && IVal->isPowerOf2())
-      return ConstantInt::get(Ty, IVal->logBase2());
+  if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
+    return ConstantInt::get(Ty, IVal->logBase2());
 
   if (!Ty->isVectorTy())
     return nullptr;

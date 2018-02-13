@@ -77,6 +77,10 @@ public:
       PathRef File,
       UniqueFunction<void(llvm::Expected<InputsAndPreamble>)> Action);
 
+  /// Wait until there are no scheduled or running tasks.
+  /// Mostly useful for synchronizing tests.
+  bool blockUntilIdle(Deadline D) const;
+
 private:
   /// This class stores per-file data in the Files map.
   struct FileData;
@@ -88,7 +92,8 @@ private:
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   // None when running tasks synchronously and non-None when running tasks
   // asynchronously.
-  llvm::Optional<AsyncTaskRunner> Tasks;
+  llvm::Optional<AsyncTaskRunner> PreambleTasks;
+  llvm::Optional<AsyncTaskRunner> WorkerThreads;
 };
 } // namespace clangd
 } // namespace clang

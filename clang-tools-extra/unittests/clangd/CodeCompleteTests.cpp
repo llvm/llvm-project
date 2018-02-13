@@ -121,7 +121,8 @@ CompletionList completions(StringRef Text,
                       /*StorePreamblesInMemory=*/true);
   auto File = getVirtualTestFilePath("foo.cpp");
   Annotations Test(Text);
-  Server.addDocument(File, Test.code()).wait();
+  Server.addDocument(File, Test.code());
+  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
   auto CompletionList = runCodeComplete(Server, File, Test.point(), Opts).Value;
   // Sanity-check that filterText is valid.
   EXPECT_THAT(CompletionList.items, Each(NameContainsFilter()));
@@ -551,12 +552,9 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
       void f() { ns::^; }
       void f() { ns::preamble().$2^; }
   )cpp");
-  Server.addDocument(File, Test.code()).wait();
+  Server.addDocument(File, Test.code());
+  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
   clangd::CodeCompleteOptions Opts = {};
-
-  auto WithoutIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
-  EXPECT_THAT(WithoutIndex.items,
-              UnorderedElementsAre(Named("local"), Named("preamble")));
 
   auto I = memIndex({var("ns::index")});
   Opts.Index = I.get();
@@ -566,6 +564,12 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   auto ClassFromPreamble =
       runCodeComplete(Server, File, Test.point("2"), Opts).Value;
   EXPECT_THAT(ClassFromPreamble.items, Contains(Named("member")));
+
+  Opts.Index = nullptr;
+  auto WithoutIndex = runCodeComplete(Server, File, Test.point(), Opts).Value;
+  EXPECT_THAT(WithoutIndex.items,
+              UnorderedElementsAre(Named("local"), Named("preamble")));
+
 }
 
 TEST(CompletionTest, DynamicIndexMultiFile) {
@@ -576,11 +580,10 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
                       /*StorePreamblesInMemory=*/true,
                       /*BuildDynamicSymbolIndex=*/true);
 
-  Server
-      .addDocument(getVirtualTestFilePath("foo.cpp"), R"cpp(
+  Server.addDocument(getVirtualTestFilePath("foo.cpp"), R"cpp(
       namespace ns { class XYZ {}; void foo(int x) {} }
-  )cpp")
-      .wait();
+  )cpp");
+  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
 
   auto File = getVirtualTestFilePath("bar.cpp");
   Annotations Test(R"cpp(
@@ -591,7 +594,8 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
       }
       void f() { ns::^ }
   )cpp");
-  Server.addDocument(File, Test.code()).wait();
+  Server.addDocument(File, Test.code());
+  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
 
   auto Results = runCodeComplete(Server, File, Test.point(), {}).Value;
   // "XYZ" and "foo" are not included in the file being completed but are still
@@ -621,6 +625,7 @@ SignatureHelp signatures(StringRef Text) {
   auto File = getVirtualTestFilePath("foo.cpp");
   Annotations Test(Text);
   Server.addDocument(File, Test.code());
+  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
   auto R = Server.signatureHelp(File, Test.point());
   assert(R);
   return R.get().Value;

@@ -695,3 +695,27 @@ entry:
 
 ; CHECK-HARDFP-FULLFP16:       vsub.f16  s0, s0, s1
 }
+
+; Check for VSTRH with a FCONSTH, this checks that addressing mode
+; AddrMode5FP16 is supported.
+define i32 @ThumbAddrMode5FP16(i32 %A.coerce) {
+entry:
+  %S = alloca half, align 2
+  %tmp.0.extract.trunc = trunc i32 %A.coerce to i16
+  %0 = bitcast i16 %tmp.0.extract.trunc to half
+  %S.0.S.0..sroa_cast = bitcast half* %S to i8*
+  store volatile half 0xH3C00, half* %S, align 2
+  %S.0.S.0. = load volatile half, half* %S, align 2
+  %add = fadd half %S.0.S.0., %0
+  %1 = bitcast half %add to i16
+  %tmp2.0.insert.ext = zext i16 %1 to i32
+  ret i32 %tmp2.0.insert.ext
+
+; CHECK-LABEL:            ThumbAddrMode5FP16
+
+; CHECK-SOFTFP-FULLFP16:  vmov.f16    [[S0:s[0-9]]], #1.000000e+00
+; CHECK-SOFTFP-FULLFP16:  vstr.16     [[S0]], [sp, #{{.}}]
+; CHECK-SOFTFP-FULLFP16:  vmov.f16    [[S0_2:s[0-9]]], r0
+; CHECK-SOFTFP-FULLFP16:  vldr.16     [[S2:s[0-9]]], [sp, #{{.}}]
+; CHECK-SOFTFP-FULLFP16:  vadd.f16    s{{.}}, [[S2]], [[S0_2]]
+}

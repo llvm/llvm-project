@@ -7,8 +7,8 @@
 @a = external local_unnamed_addr global i32, align 4
 @b = external local_unnamed_addr global i32, align 4
 
-define void @main() {
-; CHECK-LABEL: main:
+define void @foo() {
+; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
