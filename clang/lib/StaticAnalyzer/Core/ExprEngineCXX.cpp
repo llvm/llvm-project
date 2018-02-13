@@ -123,25 +123,16 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
           // TODO: Detect when the allocator returns a null pointer.
           // Constructor shall not be called in this case.
-          if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
-                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
-            if (CNE->isArray()) {
-              // TODO: In fact, we need to call the constructor for every
-              // allocated element, not just the first one!
-              CallOpts.IsArrayConstructorOrDestructor = true;
-              return getStoreManager().GetElementZeroRegion(
-                  MR, CNE->getType()->getPointeeType());
-            }
+          if (const MemRegion *MR =
+                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())
             return MR;
-          }
         }
       } else if (auto *DS = dyn_cast<DeclStmt>(StmtElem->getStmt())) {
         if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
           if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
             SVal LValue = State->getLValue(Var, LCtx);
             QualType Ty = Var->getType();
-            LValue = makeZeroElementRegion(
-                State, LValue, Ty, CallOpts.IsArrayConstructorOrDestructor);
+            LValue = makeZeroElementRegion(State, LValue, Ty);
             return LValue.getAsRegion();
           }
         }
@@ -492,46 +483,23 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
 
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
-  for (auto I : DstPreCall) {
-    // FIXME: Provide evalCall for checkers?
+  for (auto I : DstPreCall)
     defaultEvalCall(CallBldr, I, *Call);
-  }
-  // If the call is inlined, DstPostCall will be empty and we bail out now.
 
   // Store return value of operator new() for future use, until the actual
   // CXXNewExpr gets processed.
   ExplodedNodeSet DstPostValue;
   StmtNodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
   for (auto I : DstPostCall) {
-    // FIXME: Because CNE serves as the "call site" for the allocator (due to
-    // lack of a better expression in the AST), the conjured return value symbol
-    // is going to be of the same type (C++ object pointer type). Technically
-    // this is not correct because the operator new's prototype always says that
-    // it returns a 'void *'. So we should change the type of the symbol,
-    // and then evaluate the cast over the symbolic pointer from 'void *' to
-    // the object pointer type. But without changing the symbol's type it
-    // is breaking too much to evaluate the no-op symbolic cast over it, so we
-    // skip it for now.
     ProgramStateRef State = I->getState();
-    SVal RetVal = State->getSVal(CNE, LCtx);
-
-    // If this allocation function is not declared as non-throwing, failures
-    // /must/ be signalled by exceptions, and thus the return value will never
-    // be NULL. -fno-exceptions does not influence this semantics.
-    // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
-    // where new can return NULL. If we end up supporting that option, we can
-    // consider adding a check for it here.
-    // C++11 [basic.stc.dynamic.allocation]p3.
-    if (const FunctionDecl *FD = CNE->getOperatorNew()) {
-      QualType Ty = FD->getType();
-      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow(getContext()))
-          State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
-    }
-
-    ValueBldr.generateNode(CNE, I,
-                           setCXXNewAllocatorValue(State, CNE, LCtx, RetVal));
+    ValueBldr.generateNode(
+        CNE, I,
+        setCXXNewAllocatorValue(State, CNE, LCtx, State->getSVal(CNE, LCtx)));
   }
+
+  getCheckerManager().runCheckersForPostCall(Dst, DstPostValue,
+                                             *Call, *this);
+}
 
   ExplodedNodeSet DstPostPostCallCallback;
   getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
@@ -565,6 +533,14 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     State = clearCXXNewAllocatorValue(State, CNE, LCtx);
   }
 
+  ProgramStateRef State = Pred->getState();
+
+  // Retrieve the stored operator new() return value.
+  if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
+    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
+  }
+
   // We assume all standard global 'operator new' functions allocate memory in
   // heap. We realize this is an approximation that might not correctly model
   // a custom global allocator.
@@ -587,21 +563,21 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     State = Call->invalidateRegions(blockCount);
     if (!State)
       return;
+  }
 
-    // If this allocation function is not declared as non-throwing, failures
-    // /must/ be signalled by exceptions, and thus the return value will never
-    // be NULL. -fno-exceptions does not influence this semantics.
-    // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
-    // where new can return NULL. If we end up supporting that option, we can
-    // consider adding a check for it here.
-    // C++11 [basic.stc.dynamic.allocation]p3.
-    if (FD) {
-      QualType Ty = FD->getType();
-      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow(getContext()))
-          if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
-            State = State->assume(*dSymVal, true);
-    }
+  // If this allocation function is not declared as non-throwing, failures
+  // /must/ be signalled by exceptions, and thus the return value will never be
+  // NULL. -fno-exceptions does not influence this semantics.
+  // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
+  // where new can return NULL. If we end up supporting that option, we can
+  // consider adding a check for it here.
+  // C++11 [basic.stc.dynamic.allocation]p3.
+  if (FD) {
+    QualType Ty = FD->getType();
+    if (const FunctionProtoType *ProtoType = Ty->getAs<FunctionProtoType>())
+      if (!ProtoType->isNothrow(getContext()))
+        if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
+          State = State->assume(*dSymVal, true);
   }
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);

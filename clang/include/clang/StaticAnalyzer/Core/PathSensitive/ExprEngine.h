@@ -676,8 +676,7 @@ private:
   /// When the lookahead fails, a temporary region is returned, and the
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred,
-                                                 EvalCallOptions &CallOpts);
+                                                 ExplodedNode *Pred);
 
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be
