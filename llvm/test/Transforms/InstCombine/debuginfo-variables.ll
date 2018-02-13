@@ -80,6 +80,13 @@ define void @test_srem(i64 %A) {
   ret void
 }
 
+define void @test_ptrtoint(i64* %P) {
+; CHECK-LABEL: @test_ptrtoint
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64* %P, metadata !67, metadata !DIExpression()), !dbg !68
+  %1 = ptrtoint i64* %P to i64
+  ret void
+}
+
 ; CHECK: !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
 ; CHECK: !10 = !DILocalVariable(name: "2", scope: !5, file: !1, line: 2, type: !11)
 ; CHECK: !12 = !DILocation(line: 2, column: 1, scope: !5)
@@ -114,3 +121,6 @@ define void @test_srem(i64 %A) {
 
 ; CHECK: !62 = !DILocalVariable(name: "12", scope: !60, file: !1, line: 22, type: !11)
 ; CHECK: !63 = !DILocation(line: 22, column: 1, scope: !60)
+
+; CHECK: !67 = !DILocalVariable(name: "13", scope: !65, file: !1, line: 24, type: !11)
+; CHECK: !68 = !DILocation(line: 24, column: 1, scope: !65)
