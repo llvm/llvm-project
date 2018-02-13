@@ -63,6 +63,7 @@ AnalyzerOptions::getExplorationStrategy() {
     ExplorationStrategy = llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
       .Case("dfs", ExplorationStrategyKind::DFS)
       .Case("bfs", ExplorationStrategyKind::BFS)
+      .Case("loopstack_priority", ExplorationStrategyKind::LoopstackPriority)
       .Case("bfs_block_dfs_contents", ExplorationStrategyKind::BFSBlockDFSContents)
       .Default(ExplorationStrategyKind::NotSet);
     assert(ExplorationStrategy != ExplorationStrategyKind::NotSet
