@@ -111,3 +111,5 @@ void _Exit(int status) __attribute__ ((__noreturn__));
 #define __DARWIN_NULL 0
 #define NULL __DARWIN_NULL
 #endif
+
+#define offsetof(t, d) __builtin_offsetof(t, d)
