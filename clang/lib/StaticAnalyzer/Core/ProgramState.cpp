@@ -450,7 +450,7 @@ void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
   Mgr.getConstraintManager().print(this, Out, NL, Sep);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine()->printState(Out, this, NL, Sep);
+  Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
 }
 
 void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LC) const {

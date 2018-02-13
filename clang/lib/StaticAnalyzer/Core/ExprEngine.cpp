@@ -383,8 +383,62 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
                                                          LCtx, Call);
 }
 
+static void printInitializedTemporariesForContext(raw_ostream &Out,
+                                                  ProgramStateRef State,
+                                                  const char *NL,
+                                                  const char *Sep,
+                                                  const LocationContext *LC) {
+  PrintingPolicy PP =
+      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+  for (auto I : State->get<InitializedTemporariesSet>()) {
+    if (I.second != LC)
+      continue;
+    Out << '(' << I.second << ',' << I.first << ") ";
+    I.first->printPretty(Out, nullptr, PP);
+    Out << NL;
+  }
+}
+
+static void printCXXNewAllocatorValuesForContext(raw_ostream &Out,
+                                                 ProgramStateRef State,
+                                                 const char *NL,
+                                                 const char *Sep,
+                                                 const LocationContext *LC) {
+  PrintingPolicy PP =
+      LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+
+  for (auto I : State->get<CXXNewAllocatorValues>()) {
+    std::pair<const CXXNewExpr *, const LocationContext *> Key = I.first;
+    SVal Value = I.second;
+    if (Key.second != LC)
+      continue;
+    Out << '(' << Key.second << ',' << Key.first << ") ";
+    Key.first->printPretty(Out, nullptr, PP);
+    Out << " : " << Value << NL;
+  }
+}
+
 void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
-                            const char *NL, const char *Sep) {
+                            const char *NL, const char *Sep,
+                            const LocationContext *LCtx) {
+  if (LCtx) {
+    if (!State->get<InitializedTemporariesSet>().isEmpty()) {
+      Out << Sep << "Initialized temporaries:" << NL;
+
+      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+        printInitializedTemporariesForContext(Out, State, NL, Sep, LC);
+      });
+    }
+
+    if (!State->get<CXXNewAllocatorValues>().isEmpty()) {
+      Out << Sep << "operator new() allocator return values:" << NL;
+
+      LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
+        printCXXNewAllocatorValuesForContext(Out, State, NL, Sep, LC);
+      });
+    }
+  }
+
   getCheckerManager().runCheckersForPrintState(Out, State, NL, Sep);
 }
 
