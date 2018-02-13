@@ -493,6 +493,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_SUB:
   case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_LOAD_XOR:
   case ISD::ATOMIC_LOAD_NAND:
@@ -4666,19 +4667,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::FSUB:
       case ISD::FDIV:
       case ISD::FREM:
-      case ISD::SRA:
         return N1;     // fold op(undef, arg2) -> undef
       case ISD::UDIV:
       case ISD::SDIV:
       case ISD::UREM:
       case ISD::SREM:
+      case ISD::SRA:
       case ISD::SRL:
       case ISD::SHL:
-        if (!VT.isVector())
-          return getConstant(0, DL, VT);    // fold op(undef, arg2) -> 0
-        // For vectors, we can't easily build an all zero vector, just return
-        // the LHS.
-        return N2;
+        return getConstant(0, DL, VT);    // fold op(undef, arg2) -> 0
       }
     }
   }
@@ -4700,6 +4697,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
+    case ISD::SRA:
+    case ISD::SRL:
+    case ISD::SHL:
       return N2;       // fold op(arg1, undef) -> undef
     case ISD::FADD:
     case ISD::FSUB:
@@ -4711,21 +4711,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       break;
     case ISD::MUL:
     case ISD::AND:
-    case ISD::SRL:
-    case ISD::SHL:
-      if (!VT.isVector())
-        return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
-      // For vectors, we can't easily build an all zero vector, just return
-      // the LHS.
-      return N1;
+      return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
     case ISD::OR:
-      if (!VT.isVector())
-        return getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), DL, VT);
-      // For vectors, we can't easily build an all one vector, just return
-      // the LHS.
-      return N1;
-    case ISD::SRA:
-      return N1;
+      return getAllOnesConstant(DL, VT);
     }
   }
 
@@ -5755,6 +5743,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   assert((Opcode == ISD::ATOMIC_LOAD_ADD ||
           Opcode == ISD::ATOMIC_LOAD_SUB ||
           Opcode == ISD::ATOMIC_LOAD_AND ||
+          Opcode == ISD::ATOMIC_LOAD_CLR ||
           Opcode == ISD::ATOMIC_LOAD_OR ||
           Opcode == ISD::ATOMIC_LOAD_XOR ||
           Opcode == ISD::ATOMIC_LOAD_NAND ||

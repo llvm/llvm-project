@@ -488,8 +488,6 @@
 		268900BE13353E5F00698AC0 /* DWARFDebugLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89C310F57C5600BB2B04 /* DWARFDebugLine.cpp */; };
 		268900BF13353E5F00698AC0 /* DWARFDebugMacinfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89C510F57C5600BB2B04 /* DWARFDebugMacinfo.cpp */; };
 		268900C013353E5F00698AC0 /* DWARFDebugMacinfoEntry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89C710F57C5600BB2B04 /* DWARFDebugMacinfoEntry.cpp */; };
-		268900C113353E5F00698AC0 /* DWARFDebugPubnames.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89C910F57C5600BB2B04 /* DWARFDebugPubnames.cpp */; };
-		268900C213353E5F00698AC0 /* DWARFDebugPubnamesSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89CB10F57C5600BB2B04 /* DWARFDebugPubnamesSet.cpp */; };
 		268900C313353E5F00698AC0 /* DWARFDebugRanges.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89CD10F57C5600BB2B04 /* DWARFDebugRanges.cpp */; };
 		268900C413353E5F00698AC0 /* DWARFDefines.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89CF10F57C5600BB2B04 /* DWARFDefines.cpp */; };
 		268900C513353E5F00698AC0 /* DWARFDIECollection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89D110F57C5600BB2B04 /* DWARFDIECollection.cpp */; };
@@ -1491,10 +1489,6 @@
 		260C89C610F57C5600BB2B04 /* DWARFDebugMacinfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugMacinfo.h; sourceTree = "<group>"; };
 		260C89C710F57C5600BB2B04 /* DWARFDebugMacinfoEntry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDebugMacinfoEntry.cpp; sourceTree = "<group>"; };
 		260C89C810F57C5600BB2B04 /* DWARFDebugMacinfoEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugMacinfoEntry.h; sourceTree = "<group>"; };
-		260C89C910F57C5600BB2B04 /* DWARFDebugPubnames.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDebugPubnames.cpp; sourceTree = "<group>"; };
-		260C89CA10F57C5600BB2B04 /* DWARFDebugPubnames.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugPubnames.h; sourceTree = "<group>"; };
-		260C89CB10F57C5600BB2B04 /* DWARFDebugPubnamesSet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDebugPubnamesSet.cpp; sourceTree = "<group>"; };
-		260C89CC10F57C5600BB2B04 /* DWARFDebugPubnamesSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugPubnamesSet.h; sourceTree = "<group>"; };
 		260C89CD10F57C5600BB2B04 /* DWARFDebugRanges.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDebugRanges.cpp; sourceTree = "<group>"; };
 		260C89CE10F57C5600BB2B04 /* DWARFDebugRanges.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugRanges.h; sourceTree = "<group>"; };
 		260C89CF10F57C5600BB2B04 /* DWARFDefines.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = DWARFDefines.cpp; sourceTree = "<group>"; };
@@ -3907,10 +3901,6 @@
 				260C89C810F57C5600BB2B04 /* DWARFDebugMacinfoEntry.h */,
 				23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */,
 				23E77CD71C20F29F007192AD /* DWARFDebugMacro.h */,
-				260C89C910F57C5600BB2B04 /* DWARFDebugPubnames.cpp */,
-				260C89CA10F57C5600BB2B04 /* DWARFDebugPubnames.h */,
-				260C89CB10F57C5600BB2B04 /* DWARFDebugPubnamesSet.cpp */,
-				260C89CC10F57C5600BB2B04 /* DWARFDebugPubnamesSet.h */,
 				260C89CD10F57C5600BB2B04 /* DWARFDebugRanges.cpp */,
 				260C89CE10F57C5600BB2B04 /* DWARFDebugRanges.h */,
 				26B1EFAC154638AF00E2DAC7 /* DWARFDeclContext.cpp */,
@@ -7702,8 +7692,6 @@
 				268900BE13353E5F00698AC0 /* DWARFDebugLine.cpp in Sources */,
 				268900BF13353E5F00698AC0 /* DWARFDebugMacinfo.cpp in Sources */,
 				268900C013353E5F00698AC0 /* DWARFDebugMacinfoEntry.cpp in Sources */,
-				268900C113353E5F00698AC0 /* DWARFDebugPubnames.cpp in Sources */,
-				268900C213353E5F00698AC0 /* DWARFDebugPubnamesSet.cpp in Sources */,
 				268900C313353E5F00698AC0 /* DWARFDebugRanges.cpp in Sources */,
 				25EF23781AC09B3700908DF0 /* AdbClient.cpp in Sources */,
 				238F2BA81D2C85FA001FF92A /* StructuredDataDarwinLog.cpp in Sources */,
@@ -8996,15 +8984,7 @@
 					Foundation,
 				);
 				PRODUCT_NAME = LLDB;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -9077,15 +9057,7 @@
 					Foundation,
 				);
 				PRODUCT_NAME = LLDB;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -9200,15 +9172,7 @@
 				PRODUCT_NAME = "lib$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -9267,15 +9231,7 @@
 				PRODUCT_NAME = "lib$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -9334,15 +9290,7 @@
 				PRODUCT_NAME = "lib$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -9478,12 +9426,7 @@
 				);
 				PRODUCT_NAME = lldb;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -9558,15 +9501,7 @@
 				);
 				PRODUCT_NAME = LLDB;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -9603,15 +9538,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -9648,15 +9575,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;
@@ -9689,15 +9608,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -9745,15 +9656,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -9899,15 +9802,7 @@
 				);
 				PRODUCT_NAME = "lldb-server";
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = Debug;
 		};
@@ -9978,15 +9873,7 @@
 				);
 				PRODUCT_NAME = "lldb-server";
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = Release;
 		};
@@ -10058,15 +9945,7 @@
 				PRODUCT_NAME = "lldb-server";
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = BuildAndIntegration;
 		};
@@ -10095,12 +9974,7 @@
 					"-Wl,-rpath,@loader_path",
 				);
 				PRODUCT_NAME = lldb;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -10128,12 +10002,7 @@
 					"-Wl,-rpath,@loader_path",
 				);
 				PRODUCT_NAME = lldb;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -10284,12 +10153,7 @@
 					"-Wl,-rpath,@loader_path",
 				);
 				PRODUCT_NAME = lldb;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;
@@ -10362,15 +10226,7 @@
 					Foundation,
 				);
 				PRODUCT_NAME = LLDB;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;
@@ -10442,15 +10298,7 @@
 				PRODUCT_NAME = "lib$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;
@@ -10524,15 +10372,7 @@
 				);
 				PRODUCT_NAME = "lldb-server";
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = DebugClang;
 		};
@@ -10622,15 +10462,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = Debug;
 		};
@@ -10696,15 +10528,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = DebugClang;
 		};
@@ -10767,15 +10591,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = Release;
 		};
@@ -10841,15 +10657,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/include",
-					"$(SRCROOT)/source",
-					"$(LLVM_SOURCE_DIR)/include",
-					"$(LLVM_SOURCE_DIR)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
-					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
-				);
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = BuildAndIntegration;
 		};

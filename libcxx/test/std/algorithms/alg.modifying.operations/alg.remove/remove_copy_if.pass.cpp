@@ -28,7 +28,7 @@ TEST_CONSTEXPR bool equalToTwo(int v) { return v == 2; }
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 5, 2, 5, 6};
     int ib[std::size(ia)] = {0};
-    
+
     auto it = std::remove_copy_if(std::begin(ia), std::end(ia), std::begin(ib), equalToTwo);
 
     return std::distance(std::begin(ib), it) == (std::size(ia) - 1)   // we removed one element

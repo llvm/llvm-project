@@ -60,7 +60,7 @@ define void @test2() {
 ; CHECK-NEXT: getelementptr inbounds [124 x i8], [124 x i8]*
 
 ; use @G instead of %A
-; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 %{{.*}}, i8* align 8 getelementptr inbounds (%T, %T* @G, i64 0, i32 0)
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 %{{.*}}, i8* align 16 getelementptr inbounds (%T, %T* @G, i64 0, i32 0)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 bitcast (%T* @G to i8*), i64 124, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %b, i8* align 4 %a, i64 124, i1 false)
   call void @bar(i8* %b)

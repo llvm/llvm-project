@@ -9,7 +9,7 @@ define i32@test_int_x86_avx512_kunpck_wd(i32 %x0, i32 %x1) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %edi, %k0
 ; AVX512BW-NEXT:    kmovd %esi, %k1
-; AVX512BW-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX512BW-NEXT:    kunpckwd %k1, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    retq
 ;
@@ -17,7 +17,7 @@ define i32@test_int_x86_avx512_kunpck_wd(i32 %x0, i32 %x1) {
 ; AVX512F-32:       # %bb.0:
 ; AVX512F-32-NEXT:    kmovw {{[0-9]+}}(%esp), %k0
 ; AVX512F-32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; AVX512F-32-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX512F-32-NEXT:    kunpckwd %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kmovd %k0, %eax
 ; AVX512F-32-NEXT:    retl
   %res = call i32 @llvm.x86.avx512.kunpck.wd(i32 %x0, i32 %x1)
@@ -31,14 +31,14 @@ define i64@test_int_x86_avx512_kunpck_qd(i64 %x0, i64 %x1) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovq %rdi, %k0
 ; AVX512BW-NEXT:    kmovq %rsi, %k1
-; AVX512BW-NEXT:    kunpckdq %k0, %k1, %k0
+; AVX512BW-NEXT:    kunpckdq %k1, %k0, %k0
 ; AVX512BW-NEXT:    kmovq %k0, %rax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_kunpck_qd:
 ; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    retl
   %res = call i64 @llvm.x86.avx512.kunpck.dq(i64 %x0, i64 %x1)
   ret i64 %res

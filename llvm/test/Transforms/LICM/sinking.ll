@@ -670,6 +670,67 @@ try.cont:
   ret void
 }
 
+; The sinkable call should be sunk into an exit block split. After splitting
+; the exit block, BlockColor for new blocks should be added properly so
+; that we should be able to access valid ColorVector.
+;
+; CHECK-LABEL:@test21_pr36184
+; CHECK-LABEL: Loop
+; CHECK-NOT: %sinkableCall
+; CHECK-LABEL:Out.split.loop.exit
+; CHECK: %sinkableCall
+define i32 @test21_pr36184(i8* %P) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  br label %loop.ph
+
+loop.ph:
+  br label %Loop
+
+Loop:
+  %sinkableCall = call i32 @strlen( i8* %P ) readonly
+  br i1 undef, label %ContLoop, label %Out
+
+ContLoop:
+  br i1 undef, label %Loop, label %Out
+
+Out:
+  %idx = phi i32 [ %sinkableCall, %Loop ], [0, %ContLoop ]
+  ret i32 %idx
+}
+
+; We do not support splitting a landingpad block if BlockColors is not empty.
+; CHECK-LABEL: @test22
+; CHECK-LABEL: while.body2
+; CHECK-LABEL: %mul
+; CHECK-NOT: lpadBB.split{{.*}}
+define void @test22(i1 %b, i32 %v1, i32 %v2) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  br label %while.cond
+while.cond:
+  br i1 %b, label %try.cont, label %while.body
+
+while.body:
+  invoke void @may_throw()
+          to label %while.body2 unwind label %lpadBB
+
+while.body2:
+  %v = call i32 @getv()
+  %mul = mul i32 %v, %v2
+  invoke void @may_throw2()
+          to label %while.cond unwind label %lpadBB
+lpadBB:
+  %.lcssa1 = phi i32 [ 0, %while.body ], [ %mul, %while.body2 ]
+  landingpad { i8*, i32 }
+               catch i8* null
+  br label %lpadBBSucc1
+
+lpadBBSucc1:
+  ret void
+
+try.cont:
+  ret void
+}
+
 declare void @may_throw()
 declare void @may_throw2()
 declare i32 @__CxxFrameHandler3(...)

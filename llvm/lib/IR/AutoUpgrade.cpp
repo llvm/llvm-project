@@ -1155,7 +1155,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       RHS = Builder.CreateShuffleVector(RHS, RHS,
                                         makeArrayRef(Indices, NumElts / 2));
       // Concat the vectors.
-      Rep = Builder.CreateShuffleVector(LHS, RHS,
+      // NOTE: Operands have to be swapped to match intrinsic definition.
+      Rep = Builder.CreateShuffleVector(RHS, LHS,
                                         makeArrayRef(Indices, NumElts));
       Rep = Builder.CreateBitCast(Rep, CI->getType());
     } else if (IsX86 && Name == "avx512.kand.w") {

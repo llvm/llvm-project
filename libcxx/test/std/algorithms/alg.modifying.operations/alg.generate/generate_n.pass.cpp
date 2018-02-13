@@ -38,7 +38,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ib[] = {0, 0, 0, 0, 0, 0}; // one bigger than N
 
     auto it = std::generate_n(std::begin(ib), N, gen_test());
-    
+
     return it == (std::begin(ib) + N)
         && std::all_of(std::begin(ib), it, [](int x) { return x == 2; })
         && *it == 0 // don't overwrite the last value in the output array

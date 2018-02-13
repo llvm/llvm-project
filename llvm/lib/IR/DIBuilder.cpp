@@ -204,8 +204,8 @@ DIImportedEntity *DIBuilder::createImportedDeclaration(DIScope *Context,
 }
 
 DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
-                              DIFile::ChecksumKind CSKind, StringRef Checksum) {
-  return DIFile::get(VMContext, Filename, Directory, CSKind, Checksum);
+                              Optional<DIFile::ChecksumInfo<StringRef>> CS) {
+  return DIFile::get(VMContext, Filename, Directory, CS);
 }
 
 DIMacro *DIBuilder::createMacro(DIMacroFile *Parent, unsigned LineNumber,
@@ -233,9 +233,10 @@ DIMacroFile *DIBuilder::createTempMacroFile(DIMacroFile *Parent,
   return MF;
 }
 
-DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val) {
+DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val,
+                                          bool IsUnsigned) {
   assert(!Name.empty() && "Unable to create enumerator without name");
-  return DIEnumerator::get(VMContext, Val, Name);
+  return DIEnumerator::get(VMContext, Val, IsUnsigned, Name);
 }
 
 DIBasicType *DIBuilder::createUnspecifiedType(StringRef Name) {
@@ -492,11 +493,12 @@ DISubroutineType *DIBuilder::createSubroutineType(DITypeRefArray ParameterTypes,
 DICompositeType *DIBuilder::createEnumerationType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
-    DIType *UnderlyingType, StringRef UniqueIdentifier) {
+    DIType *UnderlyingType, StringRef UniqueIdentifier, bool IsFixed) {
   auto *CTy = DICompositeType::get(
       VMContext, dwarf::DW_TAG_enumeration_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), UnderlyingType, SizeInBits, AlignInBits, 0,
-      DINode::FlagZero, Elements, 0, nullptr, nullptr, UniqueIdentifier);
+      IsFixed ? DINode::FlagFixedEnum : DINode::FlagZero, Elements, 0, nullptr,
+      nullptr, UniqueIdentifier);
   AllEnumTypes.push_back(CTy);
   trackIfUnresolved(CTy);
   return CTy;

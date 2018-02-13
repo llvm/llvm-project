@@ -25,7 +25,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {0, 1, 2, 3, 4};
 
     std::fill(std::begin(ia), std::end(ia), 5);
-    
+
     return std::all_of(std::begin(ia), std::end(ia), [](int a) {return a == 5; })
         ;
     }

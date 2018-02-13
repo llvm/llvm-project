@@ -83,6 +83,7 @@ public:
   static std::unique_ptr<WorkList> makeDFS();
   static std::unique_ptr<WorkList> makeBFS();
   static std::unique_ptr<WorkList> makeBFSBlockDFSContents();
+  static std::unique_ptr<WorkList> makeUnexploredFirst();
 };
 
 } // end GR namespace

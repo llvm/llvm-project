@@ -3326,6 +3326,27 @@ static void printProtocolList(const CXIdxObjCProtocolRefListInfo *ProtoInfo,
   }
 }
 
+static void printSymbolRole(CXSymbolRole role) {
+  if (role & CXSymbolRole_Declaration)
+    printf(" decl");
+  if (role & CXSymbolRole_Definition)
+    printf(" def");
+  if (role & CXSymbolRole_Reference)
+    printf(" ref");
+  if (role & CXSymbolRole_Read)
+    printf(" read");
+  if (role & CXSymbolRole_Write)
+    printf(" write");
+  if (role & CXSymbolRole_Call)
+    printf(" call");
+  if (role & CXSymbolRole_Dynamic)
+    printf(" dyn");
+  if (role & CXSymbolRole_AddressOf)
+    printf(" addr");
+  if (role & CXSymbolRole_Implicit)
+    printf(" implicit");
+}
+
 static void index_diagnostic(CXClientData client_data,
                              CXDiagnosticSet diagSet, void *reserved) {
   CXString str;
@@ -3544,9 +3565,11 @@ static void index_indexEntityReference(CXClientData client_data,
   printCXIndexContainer(info->container);
   printf(" | refkind: ");
   switch (info->kind) {
-  case CXIdxEntityRef_Direct: printf("direct"); break;
-  case CXIdxEntityRef_Implicit: printf("implicit"); break;
+    case CXIdxEntityRef_Direct: printf("direct"); break;
+    case CXIdxEntityRef_Implicit: printf("implicit"); break;
   }
+  printf(" | role:");
+  printSymbolRole(info->role);
   printf("\n");
 }
 

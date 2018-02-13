@@ -32,7 +32,7 @@
 //           int ib[]       = {2, 4, 6, 8};
 //           int ic[]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 //     const int expected[] = {0, 1, 2, 2, 3, 4, 4, 6, 8};
-// 
+//
 //     auto it = std::merge(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib), std::begin(ic));
 //     return std::distance(std::begin(ic), it) == (std::size(ia) + std::size(ib))
 //         && *it == 0

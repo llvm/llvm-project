@@ -31,7 +31,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     const int expected[] = {0, 1, 5, 3, 4};
 
     auto it = std::replace_copy(std::begin(ia), std::end(ia), std::begin(ib), 2, 5);
-    
+
     return it == (std::begin(ib) + std::size(ia))
         && *it == 0 // don't overwrite the last value in the output array
         && std::equal(std::begin(ib), it, std::begin(expected), std::end(expected))

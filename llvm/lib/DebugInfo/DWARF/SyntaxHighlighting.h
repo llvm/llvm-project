@@ -34,6 +34,8 @@ enum HighlightColor {
 /// specific color.
 class WithColor {
   raw_ostream &OS;
+  /// Determine whether colors should be displayed.
+  bool colorsEnabled(raw_ostream &OS);
 
 public:
   /// To be used like this: WithColor(OS, syntax::String) << "text";
