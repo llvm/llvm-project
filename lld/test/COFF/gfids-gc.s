@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -opt:noref -entry:main
+# RUN: lld-link %t.obj -guard:nolongjmp -out:%t.exe -opt:noref -entry:main
 # RUN: llvm-readobj -file-headers -coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK-NOGC
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -opt:ref -entry:main
+# RUN: lld-link %t.obj -guard:nolongjmp -out:%t.exe -opt:ref -entry:main
 # RUN: llvm-readobj -file-headers -coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK-GC
 
 # This assembly is meant to mimic what CL emits for this kind of C code when
