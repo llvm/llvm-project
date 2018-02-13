@@ -379,7 +379,11 @@ CppFile::rebuild(ParseInputs &&Inputs) {
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
 
-  Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory);
+  if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
+    log("Couldn't set working directory");
+    // We run parsing anyway, our lit-tests rely on results for non-existing
+    // working dirs.
+  }
 
   // Prepare CompilerInvocation.
   std::unique_ptr<CompilerInvocation> CI;
