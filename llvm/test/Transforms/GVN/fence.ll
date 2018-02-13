@@ -1,4 +1,4 @@
-; RUN: opt -S -basicaa -gvn < %s | FileCheck %s
+; RUN: opt -S -debugify -basicaa -gvn < %s | FileCheck %s
 
 @a = external constant i32
 ; We can value forward across the fence since we can (semantically) 
@@ -19,6 +19,8 @@ define i32 @test(i32* %addr.i) {
 define i32 @test2(i32* %addr.i) {
 ; CHECK-LABEL: @test2
 ; CHECK-NEXT: fence
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %addr.i, metadata [[var_a:![0-9]+]], metadata !DIExpression(DW_OP_deref))
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %addr.i, metadata [[var_a2:![0-9]+]], metadata !DIExpression(DW_OP_deref))
 ; CHECK-NOT: load
 ; CHECK: ret
   %a = load i32, i32* %addr.i, align 4
@@ -87,3 +89,5 @@ define i32 @test4(i32* %addr) {
 ; Given we chose to forward across the release fence, we clearly can't forward
 ; across the acquire fence as well.
 
+; CHECK: [[var_a]] = !DILocalVariable
+; CHECK-NEXT: [[var_a2]] = !DILocalVariable
