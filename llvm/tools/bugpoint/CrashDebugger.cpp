@@ -122,16 +122,15 @@ ReducePassList::doTest(std::vector<std::string> &Prefix,
 using BugTester = bool (*)(const BugDriver &, Module *);
 
 namespace {
-/// ReduceCrashingGlobalVariables - This works by removing the global
-/// variable's initializer and seeing if the program still crashes. If it
-/// does, then we keep that program and try again.
-///
-class ReduceCrashingGlobalVariables : public ListReducer<GlobalVariable *> {
+/// ReduceCrashingGlobalInitializers - This works by removing global variable
+/// initializers and seeing if the program still crashes. If it does, then we
+/// keep that program and try again.
+class ReduceCrashingGlobalInitializers : public ListReducer<GlobalVariable *> {
   BugDriver &BD;
   BugTester TestFn;
 
 public:
-  ReduceCrashingGlobalVariables(BugDriver &bd, BugTester testFn)
+  ReduceCrashingGlobalInitializers(BugDriver &bd, BugTester testFn)
       : BD(bd), TestFn(testFn) {}
 
   Expected<TestResult> doTest(std::vector<GlobalVariable *> &Prefix,
@@ -147,11 +146,11 @@ public:
 };
 }
 
-bool ReduceCrashingGlobalVariables::TestGlobalVariables(
+bool ReduceCrashingGlobalInitializers::TestGlobalVariables(
     std::vector<GlobalVariable *> &GVs) {
   // Clone the program to try hacking it apart...
   ValueToValueMapTy VMap;
-  Module *M = CloneModule(BD.getProgram(), VMap).release();
+  std::unique_ptr<Module> M = CloneModule(BD.getProgram(), VMap);
 
   // Convert list to set for fast lookup...
   std::set<GlobalVariable *> GVSet;
@@ -176,8 +175,8 @@ bool ReduceCrashingGlobalVariables::TestGlobalVariables(
     }
 
   // Try running the hacked up program...
-  if (TestFn(BD, M)) {
-    BD.setNewProgram(M); // It crashed, keep the trimmed version...
+  if (TestFn(BD, M.get())) {
+    BD.setNewProgram(M.release()); // It crashed, keep the trimmed version...
 
     // Make sure to use global variable pointers that point into the now-current
     // module.
@@ -185,7 +184,6 @@ bool ReduceCrashingGlobalVariables::TestGlobalVariables(
     return true;
   }
 
-  delete M;
   return false;
 }
 
@@ -896,58 +894,58 @@ bool ReduceCrashingNamedMDOps::TestNamedMDOps(
   return false;
 }
 
+/// Attempt to eliminate as many global initializers as possible.
 static Error ReduceGlobalInitializers(BugDriver &BD, BugTester TestFn) {
-  if (BD.getProgram()->global_begin() != BD.getProgram()->global_end()) {
-    // Now try to reduce the number of global variable initializers in the
-    // module to something small.
-    Module *M = CloneModule(BD.getProgram()).release();
-    bool DeletedInit = false;
+  Module *OrigM = BD.getProgram();
+  if (OrigM->global_empty())
+    return Error::success();
 
-    for (Module::global_iterator I = M->global_begin(), E = M->global_end();
-         I != E; ++I)
-      if (I->hasInitializer()) {
-        DeleteGlobalInitializer(&*I);
-        I->setLinkage(GlobalValue::ExternalLinkage);
-        I->setComdat(nullptr);
-        DeletedInit = true;
-      }
+  // Now try to reduce the number of global variable initializers in the
+  // module to something small.
+  std::unique_ptr<Module> M = CloneModule(OrigM);
+  bool DeletedInit = false;
 
-    if (!DeletedInit) {
-      delete M; // No change made...
-    } else {
-      // See if the program still causes a crash...
-      outs() << "\nChecking to see if we can delete global inits: ";
-
-      if (TestFn(BD, M)) { // Still crashes?
-        BD.setNewProgram(M);
-        outs() << "\n*** Able to remove all global initializers!\n";
-      } else { // No longer crashes?
-        outs() << "  - Removing all global inits hides problem!\n";
-        delete M;
-
-        std::vector<GlobalVariable *> GVs;
-
-        for (Module::global_iterator I = BD.getProgram()->global_begin(),
-                                     E = BD.getProgram()->global_end();
-             I != E; ++I)
-          if (I->hasInitializer())
-            GVs.push_back(&*I);
-
-        if (GVs.size() > 1 && !BugpointIsInterrupted) {
-          outs() << "\n*** Attempting to reduce the number of global "
-                 << "variables in the testcase\n";
-
-          unsigned OldSize = GVs.size();
-          Expected<bool> Result =
-              ReduceCrashingGlobalVariables(BD, TestFn).reduceList(GVs);
-          if (Error E = Result.takeError())
-            return E;
-
-          if (GVs.size() < OldSize)
-            BD.EmitProgressBitcode(BD.getProgram(), "reduced-global-variables");
-        }
-      }
+  for (GlobalVariable &GV : M->globals()) {
+    if (GV.hasInitializer()) {
+      DeleteGlobalInitializer(&GV);
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      GV.setComdat(nullptr);
+      DeletedInit = true;
     }
+  }
+
+  if (!DeletedInit)
+    return Error::success();
+
+  // See if the program still causes a crash...
+  outs() << "\nChecking to see if we can delete global inits: ";
+
+  if (TestFn(BD, M.get())) { // Still crashes?
+    BD.setNewProgram(M.release());
+    outs() << "\n*** Able to remove all global initializers!\n";
+    return Error::success();
+  }
+
+  // No longer crashes.
+  outs() << "  - Removing all global inits hides problem!\n";
+
+  std::vector<GlobalVariable *> GVs;
+  for (GlobalVariable &GV : OrigM->globals())
+    if (GV.hasInitializer())
+      GVs.push_back(&GV);
+
+  if (GVs.size() > 1 && !BugpointIsInterrupted) {
+    outs() << "\n*** Attempting to reduce the number of global initializers "
+           << "in the testcase\n";
+
+    unsigned OldSize = GVs.size();
+    Expected<bool> Result =
+        ReduceCrashingGlobalInitializers(BD, TestFn).reduceList(GVs);
+    if (Error E = Result.takeError())
+      return E;
+
+    if (GVs.size() < OldSize)
+      BD.EmitProgressBitcode(BD.getProgram(), "reduced-global-variables");
   }
   return Error::success();
 }
