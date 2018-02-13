@@ -112,6 +112,7 @@ public:
   ArrayRef<SectionChunk *> getDebugChunks() { return DebugChunks; }
   ArrayRef<SectionChunk *> getSXDataChunks() { return SXDataChunks; }
   ArrayRef<SectionChunk *> getGuardFidChunks() { return GuardFidChunks; }
+  ArrayRef<SectionChunk *> getGuardLJmpChunks() { return GuardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
   // Returns a Symbol object for the SymbolIndex'th symbol in the
@@ -175,9 +176,10 @@ private:
   // 32-bit x86.
   std::vector<SectionChunk *> SXDataChunks;
 
-  // Chunks containing symbol table indices of address taken symbols.  These are
-  // not linked into the final binary when /guard:cf is set.
+  // Chunks containing symbol table indices of address taken symbols and longjmp
+  // targets.  These are not linked into the final binary when /guard:cf is set.
   std::vector<SectionChunk *> GuardFidChunks;
+  std::vector<SectionChunk *> GuardLJmpChunks;
 
   // This vector contains the same chunks as Chunks, but they are
   // indexed such that you can get a SectionChunk by section index.

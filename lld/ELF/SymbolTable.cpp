@@ -186,7 +186,7 @@ void SymbolTable::applySymbolWrap() {
     // First, make a copy of __real_sym.
     Symbol *Real = nullptr;
     if (W.Real->isDefined()) {
-      Real = (Symbol *)make<SymbolUnion>();
+      Real = reinterpret_cast<Symbol *>(make<SymbolUnion>());
       memcpy(Real, W.Real, sizeof(SymbolUnion));
     }
 
@@ -234,7 +234,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
 
   Symbol *Sym;
   if (IsNew) {
-    Sym = (Symbol *)make<SymbolUnion>();
+    Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
     Sym->InVersionScript = false;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;

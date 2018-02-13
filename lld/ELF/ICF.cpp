@@ -391,7 +391,7 @@ void ICF<ELFT>::forEachClass(std::function<void(size_t, size_t)> Fn) {
   ++Cnt;
 }
 
-static void Print(const Twine &Prefix, InputSection *S) {
+static void print(const Twine &Prefix, InputSection *S) {
   if (!Config->PrintIcfSections)
     return;
   std::string File = S->File ? S->File->getName() : "<internal>";
@@ -435,9 +435,9 @@ template <class ELFT> void ICF<ELFT>::run() {
   forEachClassRange(0, Sections.size(), [&](size_t Begin, size_t End) {
     if (End - Begin == 1)
       return;
-    Print("selected", Sections[Begin]);
+    print("selected", Sections[Begin]);
     for (size_t I = Begin + 1; I < End; ++I) {
-      Print("  removing identical", Sections[I]);
+      print("  removing identical", Sections[I]);
       Sections[Begin]->replace(Sections[I]);
     }
   });

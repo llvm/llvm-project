@@ -763,7 +763,10 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
 }
 
 uptr GetRSS() {
-  return 0;
+  PROCESS_MEMORY_COUNTERS counters;
+  if (!GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))
+    return 0;
+  return counters.WorkingSetSize;
 }
 
 void *internal_start_thread(void (*func)(void *arg), void *arg) { return 0; }

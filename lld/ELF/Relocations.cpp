@@ -92,9 +92,8 @@ static unsigned handleMipsTlsRelocation(RelType Type, Symbol &Sym,
                                         int64_t Addend, RelExpr Expr) {
   if (Expr == R_MIPS_TLSLD) {
     if (InX::MipsGot->addTlsIndex() && Config->Pic)
-      InX::RelaDyn->addReloc({Target->TlsModuleIndexRel, InX::MipsGot,
-                              InX::MipsGot->getTlsIndexOff(), false, nullptr,
-                              0});
+      InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::MipsGot,
+                             InX::MipsGot->getTlsIndexOff(), nullptr);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
   }
@@ -102,11 +101,11 @@ static unsigned handleMipsTlsRelocation(RelType Type, Symbol &Sym,
   if (Expr == R_MIPS_TLSGD) {
     if (InX::MipsGot->addDynTlsEntry(Sym) && Sym.IsPreemptible) {
       uint64_t Off = InX::MipsGot->getGlobalDynOffset(Sym);
-      InX::RelaDyn->addReloc(
-          {Target->TlsModuleIndexRel, InX::MipsGot, Off, false, &Sym, 0});
+      InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::MipsGot, Off,
+                             &Sym);
       if (Sym.IsPreemptible)
-        InX::RelaDyn->addReloc({Target->TlsOffsetRel, InX::MipsGot,
-                                Off + Config->Wordsize, false, &Sym, 0});
+        InX::RelaDyn->addReloc(Target->TlsOffsetRel, InX::MipsGot,
+                               Off + Config->Wordsize, &Sym);
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
@@ -140,7 +139,7 @@ static unsigned handleARMTlsRelocation(RelType Type, Symbol &Sym,
 
   auto AddTlsReloc = [&](uint64_t Off, RelType Type, Symbol *Dest, bool Dyn) {
     if (Dyn)
-      InX::RelaDyn->addReloc({Type, InX::Got, Off, false, Dest, 0});
+      InX::RelaDyn->addReloc(Type, InX::Got, Off, Dest);
     else
       InX::Got->Relocations.push_back({R_ABS, Type, Off, 0, Dest});
   };
@@ -208,8 +207,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
       return 2;
     }
     if (InX::Got->addTlsIndex())
-      InX::RelaDyn->addReloc({Target->TlsModuleIndexRel, InX::Got,
-                              InX::Got->getTlsIndexOff(), false, nullptr, 0});
+      InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::Got,
+                             InX::Got->getTlsIndexOff(), nullptr);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
   }
@@ -225,15 +224,14 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     if (Config->Shared) {
       if (InX::Got->addDynTlsEntry(Sym)) {
         uint64_t Off = InX::Got->getGlobalDynOffset(Sym);
-        InX::RelaDyn->addReloc(
-            {Target->TlsModuleIndexRel, InX::Got, Off, false, &Sym, 0});
+        InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::Got, Off, &Sym);
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
         uint64_t OffsetOff = Off + Config->Wordsize;
         if (Sym.IsPreemptible)
-          InX::RelaDyn->addReloc(
-              {Target->TlsOffsetRel, InX::Got, OffsetOff, false, &Sym, 0});
+          InX::RelaDyn->addReloc(Target->TlsOffsetRel, InX::Got, OffsetOff,
+                                 &Sym);
         else
           InX::Got->Relocations.push_back(
               {R_ABS, Target->TlsOffsetRel, OffsetOff, 0, &Sym});
@@ -250,8 +248,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
            Offset, Addend, &Sym});
       if (!Sym.isInGot()) {
         InX::Got->addEntry(Sym);
-        InX::RelaDyn->addReloc(
-            {Target->TlsGotRel, InX::Got, Sym.getGotOffset(), false, &Sym, 0});
+        InX::RelaDyn->addReloc(Target->TlsGotRel, InX::Got, Sym.getGotOffset(),
+                               &Sym);
       }
     } else {
       C.Relocations.push_back(
@@ -531,7 +529,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
     Sym->Used = true;
   }
 
-  InX::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, &SS, 0});
+  InX::RelaDyn->addReloc(Target->CopyRel, Sec, 0, &SS);
 }
 
 // MIPS has an odd notion of "paired" relocations to calculate addends.
@@ -978,8 +976,8 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
       InX::MipsGot->addEntry(Sym, Addend, Expr);
       if (Sym.isTls() && Sym.IsPreemptible)
-        InX::RelaDyn->addReloc({Target->TlsGotRel, InX::MipsGot,
-                                Sym.getGotOffset(), false, &Sym, 0});
+        InX::RelaDyn->addReloc(Target->TlsGotRel, InX::MipsGot,
+                               Sym.getGotOffset(), &Sym);
     } else if (!Sym.isInGot()) {
       addGotEntry<ELFT>(Sym);
     }

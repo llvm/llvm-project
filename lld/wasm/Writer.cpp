@@ -662,14 +662,11 @@ void Writer::calculateExports() {
         continue;
       if (Sym->isGlobal())
         continue;
-      if (Sym->getChunk()->Discarded)
+      if (!Sym->getChunk()->Live)
         continue;
 
       if ((Sym->isHidden() || Sym->isLocal()) && !ExportHidden)
         continue;
-
-      // We should never be exporting a non-live symbol
-      assert(Sym->getChunk()->Live);
       ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
     }
   }
@@ -759,7 +756,7 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
     for (InputFunction *Func : File->Functions) {
-      if (Func->Discarded || !Func->Live)
+      if (!Func->Live)
         continue;
       DefinedFunctions.emplace_back(Func);
       Func->setOutputIndex(FunctionIndex++);
@@ -769,7 +766,7 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Handle relocs: " << File->getName() << "\n");
     auto HandleRelocs = [&](InputChunk *Chunk) {
-      if (Chunk->Discarded)
+      if (!Chunk->Live)
         return;
       ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
       for (const WasmRelocation& Reloc : Chunk->getRelocations()) {
@@ -813,7 +810,7 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
 void Writer::createOutputSegments() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     for (InputSegment *Segment : File->Segments) {
-      if (Segment->Discarded || !Segment->Live)
+      if (!Segment->Live)
         continue;
       StringRef Name = getOutputDataSegmentName(Segment->getName());
       OutputSegment *&S = SegmentMap[Name];
