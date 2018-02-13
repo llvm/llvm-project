@@ -165,6 +165,7 @@ public:
     KQualType,
     KConversionOperatorType,
     KPostfixQualifiedType,
+    KElaboratedTypeSpefType,
     KNameType,
     KAbiTagAttr,
     KObjCProtoName,
@@ -197,6 +198,8 @@ public:
     KUnnamedTypeName,
     KLambdaTypeName,
     KExpr,
+    KBracedExpr,
+    KBracedRangeExpr,
   };
 
   static constexpr unsigned NoParameterPack =
@@ -441,6 +444,22 @@ public:
   StringView getBaseName() const override { return Name; }
 
   void printLeft(OutputStream &s) const override { s += Name; }
+};
+
+class ElaboratedTypeSpefType : public Node {
+  StringView Kind;
+  Node *Child;
+public:
+  ElaboratedTypeSpefType(StringView Kind_, Node *Child_)
+      : Node(KElaboratedTypeSpefType), Kind(Kind_), Child(Child_) {
+    ParameterPackSize = Child->ParameterPackSize;
+  }
+
+  void printLeft(OutputStream &S) const override {
+    S += Kind;
+    S += ' ';
+    Child->print(S);
+  }
 };
 
 class AbiTagAttr final : public Node {
@@ -1305,7 +1324,7 @@ public:
 // -- Expression Nodes --
 
 struct Expr : public Node {
-  Expr() : Node(KExpr) {}
+  Expr(Kind K = KExpr) : Node(K) {}
 };
 
 class BinaryExpr : public Expr {
@@ -1603,6 +1622,70 @@ public:
     S += ")(";
     Expressions.printWithComma(S);
     S += ")";
+  }
+};
+
+class InitListExpr : public Expr {
+  Node *Ty;
+  NodeArray Inits;
+public:
+  InitListExpr(Node *Ty_, NodeArray Inits_)
+      : Ty(Ty_), Inits(Inits_) {
+    if (Ty)
+      ParameterPackSize = Ty->ParameterPackSize;
+    for (Node *I : Inits)
+      ParameterPackSize = std::min(I->ParameterPackSize, ParameterPackSize);
+  }
+
+  void printLeft(OutputStream &S) const override {
+    if (Ty)
+      Ty->print(S);
+    S += '{';
+    Inits.printWithComma(S);
+    S += '}';
+  }
+};
+
+class BracedExpr : public Expr {
+  Node *Elem;
+  Node *Init;
+  bool IsArray;
+public:
+  BracedExpr(Node *Elem_, Node *Init_, bool IsArray_)
+      : Expr(KBracedExpr), Elem(Elem_), Init(Init_), IsArray(IsArray_) {}
+
+  void printLeft(OutputStream &S) const override {
+    if (IsArray) {
+      S += '[';
+      Elem->print(S);
+      S += ']';
+    } else {
+      S += '.';
+      Elem->print(S);
+    }
+    if (Init->getKind() != KBracedExpr && Init->getKind() != KBracedRangeExpr)
+      S += " = ";
+    Init->print(S);
+  }
+};
+
+class BracedRangeExpr : public Expr {
+  Node *First;
+  Node *Last;
+  Node *Init;
+public:
+  BracedRangeExpr(Node *First_, Node *Last_, Node *Init_)
+      : Expr(KBracedRangeExpr), First(First_), Last(Last_), Init(Init_) {}
+
+  void printLeft(OutputStream &S) const override {
+    S += '[';
+    First->print(S);
+    S += " ... ";
+    Last->print(S);
+    S += ']';
+    if (Init->getKind() != KBracedExpr && Init->getKind() != KBracedRangeExpr)
+      S += " = ";
+    Init->print(S);
   }
 };
 
@@ -1968,6 +2051,7 @@ struct Db {
   Node *parseFunctionParam();
   Node *parseNewExpr();
   Node *parseConversionExpr();
+  Node *parseBracedExpr();
 
   /// Parse the <type> production.
   Node *parseType();
@@ -1977,6 +2061,7 @@ struct Db {
   Node *parseArrayType();
   Node *parsePointerToMemberType();
   Node *parseClassEnumType();
+  Node *parseQualifiedType(bool &AppliesToFunction);
 
   // FIXME: remove this when all the parse_* functions have been rewritten.
   template <const char *(*parse_fn)(const char *, const char *, Db &)>
@@ -2052,6 +2137,7 @@ const char *parse_name(const char *first, const char *last, Db &db,
 const char *parse_template_args(const char *first, const char *last, Db &db);
 const char *parse_template_param(const char *, const char *, Db &);
 const char *parse_operator_name(const char *first, const char *last, Db &db);
+const char *parse_source_name(const char *, const char *, Db &);
 const char *parse_unqualified_name(const char *first, const char *last, Db &db);
 const char *parse_decltype(const char *first, const char *last, Db &db);
 const char *parse_unresolved_name(const char *, const char *, Db &);
@@ -2234,8 +2320,68 @@ Node *Db::parsePointerToMemberType() {
 //                   ::= Tu <name>  # dependent elaborated type specifier using 'union'
 //                   ::= Te <name>  # dependent elaborated type specifier using 'enum'
 Node *Db::parseClassEnumType() {
-  // FIXME: try to parse the elaborated type specifiers here!
-  return legacyParse<parse_name>();
+  StringView ElabSpef;
+  if (consumeIf("Ts"))
+    ElabSpef = "struct";
+  else if (consumeIf("Tu"))
+    ElabSpef = "union";
+  else if (consumeIf("Te"))
+    ElabSpef = "enum";
+
+  Node *Name = legacyParse<parse_name>();
+  if (Name == nullptr)
+    return nullptr;
+
+  if (!ElabSpef.empty())
+    return make<ElaboratedTypeSpefType>(ElabSpef, Name);
+
+  return Name;
+}
+
+// <qualified-type>     ::= <qualifiers> <type>
+// <qualifiers> ::= <extended-qualifier>* <CV-qualifiers>
+// <extended-qualifier> ::= U <source-name> [<template-args>] # vendor extended type qualifier
+Node *Db::parseQualifiedType(bool &AppliesToFunction) {
+  if (consumeIf('U')) {
+    StringView Qual = parseBareSourceName();
+    if (Qual.empty())
+      return nullptr;
+
+    // FIXME parse the optional <template-args> here!
+
+    // extension            ::= U <objc-name> <objc-type>  # objc-type<identifier>
+    if (Qual.startsWith("objcproto")) {
+      StringView ProtoSourceName = Qual.dropFront(std::strlen("objcproto"));
+      StringView Proto;
+      {
+        SwapAndRestore<const char *> SaveFirst(First, ProtoSourceName.begin()),
+                                     SaveLast(Last, ProtoSourceName.end());
+        Proto = parseBareSourceName();
+      }
+      if (Proto.empty())
+        return nullptr;
+      Node *Child = parseQualifiedType(AppliesToFunction);
+      if (Child == nullptr)
+        return nullptr;
+      return make<ObjCProtoName>(Child, Proto);
+    }
+
+    Node *Child = parseQualifiedType(AppliesToFunction);
+    if (Child == nullptr)
+      return nullptr;
+    return make<VendorExtQualType>(Child, Qual);
+  }
+
+  Qualifiers Quals = parseCVQualifiers();
+  AppliesToFunction = look() == 'F';
+  Node *Ty = parseType();
+  if (Ty == nullptr)
+    return nullptr;
+  if (Quals != QualNone) {
+    return AppliesToFunction ?
+      make<FunctionQualType>(Ty, Quals) : make<QualType>(Ty, Quals);
+  }
+  return Ty;
 }
 
 // <type>      ::= <builtin-type>
@@ -2265,57 +2411,16 @@ Node *Db::parseType() {
   //             ::= <qualified-type>
   case 'r':
   case 'V':
-  case 'K': {
-    Qualifiers Q = parseCVQualifiers();
-    bool AppliesToFunction = look() == 'F';
-
-    Node *Child = parseType();
-    if (Child == nullptr)
-      return nullptr;
-
-    if (AppliesToFunction)
-      Result = make<FunctionQualType>(Child, Q);
-    else
-      Result = make<QualType>(Child, Q);
+  case 'K':
+  case 'U': {
+    bool AppliesToFunction = false;
+    Result = parseQualifiedType(AppliesToFunction);
 
     // Itanium C++ ABI 5.1.5.3:
     //   For the purposes of substitution, the CV-qualifiers and ref-qualifier
     //   of a function type are an indivisible part of the type.
     if (AppliesToFunction)
       return Result;
-    break;
-  }
-  // <extended-qualifier> ::= U <source-name> [<template-args>] # vendor extended type qualifier
-  case 'U': {
-    // FIXME: We should fold this into the cvr qualifier parsing above. This
-    // currently adds too many entries into the substitution table if multiple
-    // qualifiers are present on the same type, as all the qualifiers on a type
-    // should just get one entry in the substitution table.
-    ++First;
-    StringView Qual = parseBareSourceName();
-    if (Qual.empty())
-      return nullptr;
-
-    // FIXME parse the optional <template-args> here!
-
-    Result = parseType();
-    if (Result == nullptr)
-      return nullptr;
-
-    // extension   ::= U <objc-name> <objc-type>  # objc-type<identifier>
-    if (Qual.startsWith("objcproto")) {
-      StringView ProtoSourceName = Qual.dropFront(std::strlen("objcproto"));
-      StringView Proto;
-      {
-        SwapAndRestore<const char *> SaveFirst(First, ProtoSourceName.begin()),
-                                     SaveLast(Last, ProtoSourceName.end());
-        Proto = parseBareSourceName();
-      }
-      if (Proto.empty())
-        return nullptr;
-      Result = make<ObjCProtoName>(Result, Proto);
-    } else
-      Result = make<VendorExtQualType>(Result, Qual);
     break;
   }
   // <builtin-type> ::= v    # void
@@ -2489,6 +2594,12 @@ Node *Db::parseType() {
   }
   //             ::= <template-param>
   case 'T': {
+    // This could be an elaborate type specifier on a <class-enum-type>.
+    if (look(1) == 's' || look(1) == 'u' || look(1) == 'e') {
+      Result = parseClassEnumType();
+      break;
+    }
+
     Result = legacyParse<parse_template_param>();
     if (Result == nullptr)
       return nullptr;
@@ -2827,6 +2938,51 @@ Node *Db::parseExprPrimary() {
   }
 }
 
+// <braced-expression> ::= <expression>
+//                     ::= di <field source-name> <braced-expression>    # .name = expr
+//                     ::= dx <index expression> <braced-expression>     # [expr] = expr
+//                     ::= dX <range begin expression> <range end expression> <braced-expression>
+Node *Db::parseBracedExpr() {
+  if (look() == 'd') {
+    switch (look(1)) {
+    case 'i': {
+      First += 2;
+      Node *Field = legacyParse<parse_source_name>();
+      if (Field == nullptr)
+        return nullptr;
+      Node *Init = parseBracedExpr();
+      if (Init == nullptr)
+        return nullptr;
+      return make<BracedExpr>(Field, Init, /*isArray=*/false);
+    }
+    case 'x': {
+      First += 2;
+      Node *Index = parseExpr();
+      if (Index == nullptr)
+        return nullptr;
+      Node *Init = parseBracedExpr();
+      if (Init == nullptr)
+        return nullptr;
+      return make<BracedExpr>(Index, Init, /*isArray=*/true);
+    }
+    case 'X': {
+      First += 2;
+      Node *RangeBegin = parseExpr();
+      if (RangeBegin == nullptr)
+        return nullptr;
+      Node *RangeEnd = parseExpr();
+      if (RangeEnd == nullptr)
+        return nullptr;
+      Node *Init = parseBracedExpr();
+      if (Init == nullptr)
+        return nullptr;
+      return make<BracedRangeExpr>(RangeBegin, RangeEnd, Init);
+    }
+    }
+  }
+  return parseExpr();
+}
+
 // <expression> ::= <unary operator-name> <expression>
 //              ::= <binary operator-name> <expression> <expression>
 //              ::= <ternary operator-name> <expression> <expression> <expression>
@@ -3036,7 +3192,8 @@ Node *Db::parseExpr() {
     }
     return nullptr;
   case 'i':
-    if (First[1] == 'x') {
+    switch (First[1]) {
+    case 'x': {
       First += 2;
       Node *Base = parseExpr();
       if (Base == nullptr)
@@ -3045,6 +3202,18 @@ Node *Db::parseExpr() {
       if (Index == nullptr)
         return Index;
       return make<ArraySubscriptExpr>(Base, Index);
+    }
+    case 'l': {
+      First += 2;
+      size_t InitsBegin = Names.size();
+      while (!consumeIf('E')) {
+        Node *E = parseBracedExpr();
+        if (E == nullptr)
+          return nullptr;
+        Names.push_back(E);
+      }
+      return make<InitListExpr>(nullptr, popTrailingNodeArray(InitsBegin));
+    }
     }
     return nullptr;
   case 'l':
@@ -3266,6 +3435,20 @@ Node *Db::parseExpr() {
       if (Ty == nullptr)
         return Ty;
       return make<EnclosingExpr>("typeid (", Ty, ")");
+    }
+    case 'l': {
+      First += 2;
+      Node *Ty = parseType();
+      if (Ty == nullptr)
+        return nullptr;
+      size_t InitsBegin = Names.size();
+      while (!consumeIf('E')) {
+        Node *E = parseBracedExpr();
+        if (E == nullptr)
+          return nullptr;
+        Names.push_back(E);
+      }
+      return make<InitListExpr>(Ty, popTrailingNodeArray(InitsBegin));
     }
     case 'r':
       First += 2;

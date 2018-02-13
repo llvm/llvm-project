@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, zlib
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/gdb-index.s -o %t2.o
 # RUN: ld.lld --gdb-index %t1.o %t2.o -o %t
