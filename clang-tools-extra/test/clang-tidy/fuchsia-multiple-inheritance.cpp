@@ -131,3 +131,6 @@ struct D8 : V13, V14 {};
 
 template<typename T> struct A : T {};
 template<typename T> struct B : virtual T {};
+
+template<typename> struct C {};
+template<typename T> struct D : C<T> {};
