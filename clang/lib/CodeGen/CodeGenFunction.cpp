@@ -1751,9 +1751,12 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
     if (const VariableArrayType *vlaType =
           dyn_cast_or_null<VariableArrayType>(
                                           getContext().getAsArrayType(Ty))) {
-      auto VlaSize = getVLASize(vlaType);
-      SizeVal = VlaSize.NumElts;
-      CharUnits eltSize = getContext().getTypeSizeInChars(VlaSize.Type);
+      QualType eltType;
+      llvm::Value *numElts;
+      std::tie(numElts, eltType) = getVLASize(vlaType);
+
+      SizeVal = numElts;
+      CharUnits eltSize = getContext().getTypeSizeInChars(eltType);
       if (!eltSize.isOne())
         SizeVal = Builder.CreateNUWMul(SizeVal, CGM.getSize(eltSize));
       vla = vlaType;
@@ -1836,7 +1839,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
   // this is the size of the VLA in bytes, not its size in elements.
   llvm::Value *numVLAElements = nullptr;
   if (isa<VariableArrayType>(arrayType)) {
-    numVLAElements = getVLASize(cast<VariableArrayType>(arrayType)).NumElts;
+    numVLAElements = getVLASize(cast<VariableArrayType>(arrayType)).first;
 
     // Walk into all VLAs.  This doesn't require changes to addr,
     // which has type T* where T is the first non-VLA element type.
@@ -1917,13 +1920,14 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
   return numElements;
 }
 
-CodeGenFunction::VlaSizePair CodeGenFunction::getVLASize(QualType type) {
+std::pair<llvm::Value*, QualType>
+CodeGenFunction::getVLASize(QualType type) {
   const VariableArrayType *vla = getContext().getAsVariableArrayType(type);
   assert(vla && "type was not a variable array type!");
   return getVLASize(vla);
 }
 
-CodeGenFunction::VlaSizePair
+std::pair<llvm::Value*, QualType>
 CodeGenFunction::getVLASize(const VariableArrayType *type) {
   // The number of elements so far; always size_t.
   llvm::Value *numElements = nullptr;
@@ -1944,22 +1948,7 @@ CodeGenFunction::getVLASize(const VariableArrayType *type) {
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 
-  return { numElements, elementType };
-}
-
-CodeGenFunction::VlaSizePair
-CodeGenFunction::getVLAElements1D(QualType type) {
-  const VariableArrayType *vla = getContext().getAsVariableArrayType(type);
-  assert(vla && "type was not a variable array type!");
-  return getVLAElements1D(vla);
-}
-
-CodeGenFunction::VlaSizePair
-CodeGenFunction::getVLAElements1D(const VariableArrayType *Vla) {
-  llvm::Value *VlaSize = VLASizeMap[Vla->getSizeExpr()];
-  assert(VlaSize && "no size for VLA!");
-  assert(VlaSize->getType() == SizeTy);
-  return { VlaSize, Vla->getElementType() };
+  return std::pair<llvm::Value*,QualType>(numElements, elementType);
 }
 
 void CodeGenFunction::EmitVariablyModifiedType(QualType type) {

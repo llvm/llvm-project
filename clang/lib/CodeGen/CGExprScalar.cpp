@@ -1975,7 +1975,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // VLA types don't have constant size.
     if (const VariableArrayType *vla
           = CGF.getContext().getAsVariableArrayType(type)) {
-      llvm::Value *numElts = CGF.getVLASize(vla).NumElts;
+      llvm::Value *numElts = CGF.getVLASize(vla).first;
       if (!isInc) numElts = Builder.CreateNSWNeg(numElts, "vla.negsize");
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(value, numElts, "vla.inc");
@@ -2273,13 +2273,16 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
         CGF.EmitIgnoredExpr(E->getArgumentExpr());
       }
 
-      auto VlaSize = CGF.getVLASize(VAT);
-      llvm::Value *size = VlaSize.NumElts;
+      QualType eltType;
+      llvm::Value *numElts;
+      std::tie(numElts, eltType) = CGF.getVLASize(VAT);
+
+      llvm::Value *size = numElts;
 
       // Scale the number of non-VLA elements by the non-VLA element size.
-      CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
+      CharUnits eltSize = CGF.getContext().getTypeSizeInChars(eltType);
       if (!eltSize.isOne())
-        size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), size);
+        size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), numElts);
 
       return size;
     }
@@ -2766,7 +2769,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   if (const VariableArrayType *vla
         = CGF.getContext().getAsVariableArrayType(elementType)) {
     // The element count here is the total number of non-VLA elements.
-    llvm::Value *numElements = CGF.getVLASize(vla).NumElts;
+    llvm::Value *numElements = CGF.getVLASize(vla).first;
 
     // Effectively, the multiply by the VLA size is part of the GEP.
     // GEP indexes are signed, and scaling an index isn't permitted to
@@ -2961,9 +2964,10 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // For a variable-length array, this is going to be non-constant.
   if (const VariableArrayType *vla
         = CGF.getContext().getAsVariableArrayType(elementType)) {
-    auto VlaSize = CGF.getVLASize(vla);
-    elementType = VlaSize.Type;
-    divisor = VlaSize.NumElts;
+    llvm::Value *numElements;
+    std::tie(numElements, elementType) = CGF.getVLASize(vla);
+
+    divisor = numElements;
 
     // Scale the number of non-VLA elements by the non-VLA element size.
     CharUnits eltSize = CGF.getContext().getTypeSizeInChars(elementType);
