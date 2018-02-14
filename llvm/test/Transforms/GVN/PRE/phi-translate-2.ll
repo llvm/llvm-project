@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -debugify -gvn -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @a = common global [100 x i64] zeroinitializer, align 16
@@ -142,6 +142,8 @@ critedge.loopexit:
 ; CHECK: if.end3:
 ; CHECK: %[[PREPHI:.*]] = phi i64 [ %sub.ptr.sub, %if.else ], [ %[[SUB]], %if.then2 ], [ %sub.ptr.sub, %entry ]
 ; CHECK: %[[DIV:.*]] = ashr exact i64 %[[PREPHI]], 2
+; CHECK: call void @llvm.dbg.value(metadata i32* %p.0, metadata [[var_p0:![0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata i32* %p.0, metadata [[var_sub_ptr:![0-9]+]], metadata !DIExpression())
 ; CHECK: ret i64 %[[DIV]]
 
 declare void @bar(...) local_unnamed_addr #1
@@ -174,3 +176,6 @@ if.end3:                                          ; preds = %if.then2, %if.else,
   %sub.ptr.div7 = ashr exact i64 %sub.ptr.sub6, 2
   ret i64 %sub.ptr.div7
 }
+
+; CHECK: [[var_p0]] = !DILocalVariable
+; CHECK: [[var_sub_ptr]] = !DILocalVariable

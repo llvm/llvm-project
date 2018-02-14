@@ -345,7 +345,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
-  %ptr = load <8 x i32> addrspace(1)*, <8 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr = load <8 x i32> addrspace(1)*, <8 x i32> addrspace(1)* addrspace(4)* undef
   %val = load <8 x i32>, <8 x i32> addrspace(1)* %ptr
   call void @external_void_func_v8i32(<8 x i32> %val)
   ret void
@@ -359,7 +359,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
-  %ptr = load <16 x i32> addrspace(1)*, <16 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr = load <16 x i32> addrspace(1)*, <16 x i32> addrspace(1)* addrspace(4)* undef
   %val = load <16 x i32>, <16 x i32> addrspace(1)* %ptr
   call void @external_void_func_v16i32(<16 x i32> %val)
   ret void
@@ -377,7 +377,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
-  %ptr = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
   %val = load <32 x i32>, <32 x i32> addrspace(1)* %ptr
   call void @external_void_func_v32i32(<32 x i32> %val)
   ret void
@@ -405,7 +405,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
-  %ptr0 = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr0 = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
   %val0 = load <32 x i32>, <32 x i32> addrspace(1)* %ptr0
   %val1 = load i32, i32 addrspace(1)* undef
   call void @external_void_func_v32i32_i32(<32 x i32> %val0, i32 %val1)
@@ -430,7 +430,7 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(i32 addrspace(1)*
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
-  %ptr0 = load { i8, i32 } addrspace(1)*, { i8, i32 } addrspace(1)* addrspace(2)* undef
+  %ptr0 = load { i8, i32 } addrspace(1)*, { i8, i32 } addrspace(1)* addrspace(4)* undef
   %val = load { i8, i32 }, { i8, i32 } addrspace(1)* %ptr0
   call void @external_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -516,7 +516,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_v16i8:
 define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
-  %ptr = load <16 x i8> addrspace(1)*, <16 x i8> addrspace(1)* addrspace(2)* undef
+  %ptr = load <16 x i8> addrspace(1)*, <16 x i8> addrspace(1)* addrspace(4)* undef
   %val = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
   call void @external_void_func_v16i8(<16 x i8> %val)
   ret void

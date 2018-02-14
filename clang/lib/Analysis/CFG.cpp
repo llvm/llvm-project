@@ -2134,7 +2134,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   bool OmitArguments = false;
 
   if (FunctionDecl *FD = C->getDirectCallee()) {
-    if (FD->isNoReturn())
+    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;

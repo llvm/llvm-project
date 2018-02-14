@@ -510,7 +510,6 @@ ARMConstantIslands::doInitialConstPlacement(std::vector<MachineInstr*> &CPEMIs) 
   const DataLayout &TD = MF->getDataLayout();
   for (unsigned i = 0, e = CPs.size(); i != e; ++i) {
     unsigned Size = TD.getTypeAllocSize(CPs[i].getType());
-    assert(Size >= 4 && "Too small constant pool entry");
     unsigned Align = CPs[i].getAlignment();
     assert(isPowerOf2_32(Align) && "Invalid alignment");
     // Verify that all constant pool entries are a multiple of their alignment.
@@ -818,6 +817,11 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           case ARM::VLDRS:
             Bits = 8;
             Scale = 4;  // +-(offset_8*4)
+            NegOk = true;
+            break;
+          case ARM::VLDRH:
+            Bits = 8;
+            Scale = 2;  // +-(offset_8*2)
             NegOk = true;
             break;
 
@@ -1421,6 +1425,10 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
         assert(!isThumb || getITInstrPredicate(*MI, PredReg) == ARMCC::AL));
 
   NewMBB = splitBlockBeforeInstr(&*MI);
+
+  // 4 byte align the next block after the constant pool when the CPE is a
+  // 16-bit value in ARM mode, and 2 byte for Thumb.
+  NewMBB->setAlignment(isThumb ? 1 : 2);
 }
 
 /// handleConstantPoolUser - Analyze the specified user, checking to see if it

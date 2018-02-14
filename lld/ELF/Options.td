@@ -324,6 +324,10 @@ defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols">;
 
+defm warn_symbol_ordering : B<"warn-symbol-ordering",
+    "Warn about problems with the symbol ordering file",
+    "Do not warn about problems with the symbol ordering file">;
+
 def warn_unresolved_symbols: F<"warn-unresolved-symbols">,
   HelpText<"Report unresolved symbols as warnings">;
 

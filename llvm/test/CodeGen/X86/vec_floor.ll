@@ -16,7 +16,7 @@ define <2 x double> @floor_v2f64(<2 x double> %p) {
 ;
 ; AVX512-LABEL: floor_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $9, %xmm0, %xmm0
+; AVX512-NEXT:    vroundpd $9, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
   ret <2 x double> %t
@@ -36,7 +36,7 @@ define <4 x float> @floor_v4f32(<4 x float> %p) {
 ;
 ; AVX512-LABEL: floor_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $9, %xmm0, %xmm0
+; AVX512-NEXT:    vroundps $9, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
   ret <4 x float> %t
@@ -57,7 +57,7 @@ define <4 x double> @floor_v4f64(<4 x double> %p){
 ;
 ; AVX512-LABEL: floor_v4f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $9, %ymm0, %ymm0
+; AVX512-NEXT:    vroundpd $9, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
   ret <4 x double> %t
@@ -78,7 +78,7 @@ define <8 x float> @floor_v8f32(<8 x float> %p) {
 ;
 ; AVX512-LABEL: floor_v8f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $9, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $9, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
   ret <8 x float> %t
@@ -146,7 +146,7 @@ define <2 x double> @ceil_v2f64(<2 x double> %p) {
 ;
 ; AVX512-LABEL: ceil_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $10, %xmm0, %xmm0
+; AVX512-NEXT:    vroundpd $10, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
   ret <2 x double> %t
@@ -166,7 +166,7 @@ define <4 x float> @ceil_v4f32(<4 x float> %p) {
 ;
 ; AVX512-LABEL: ceil_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $10, %xmm0, %xmm0
+; AVX512-NEXT:    vroundps $10, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
   ret <4 x float> %t
@@ -187,7 +187,7 @@ define <4 x double> @ceil_v4f64(<4 x double> %p) {
 ;
 ; AVX512-LABEL: ceil_v4f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $10, %ymm0, %ymm0
+; AVX512-NEXT:    vroundpd $10, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
   ret <4 x double> %t
@@ -208,7 +208,7 @@ define <8 x float> @ceil_v8f32(<8 x float> %p) {
 ;
 ; AVX512-LABEL: ceil_v8f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $10, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $10, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
   ret <8 x float> %t
@@ -276,7 +276,7 @@ define <2 x double> @trunc_v2f64(<2 x double> %p) {
 ;
 ; AVX512-LABEL: trunc_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $11, %xmm0, %xmm0
+; AVX512-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
   ret <2 x double> %t
@@ -296,7 +296,7 @@ define <4 x float> @trunc_v4f32(<4 x float> %p) {
 ;
 ; AVX512-LABEL: trunc_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $11, %xmm0, %xmm0
+; AVX512-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
   ret <4 x float> %t
@@ -317,7 +317,7 @@ define <4 x double> @trunc_v4f64(<4 x double> %p) {
 ;
 ; AVX512-LABEL: trunc_v4f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $11, %ymm0, %ymm0
+; AVX512-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
   ret <4 x double> %t
@@ -338,7 +338,7 @@ define <8 x float> @trunc_v8f32(<8 x float> %p) {
 ;
 ; AVX512-LABEL: trunc_v8f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $11, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $11, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
   ret <8 x float> %t
@@ -406,7 +406,7 @@ define <2 x double> @rint_v2f64(<2 x double> %p) {
 ;
 ; AVX512-LABEL: rint_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $4, %xmm0, %xmm0
+; AVX512-NEXT:    vroundpd $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
   ret <2 x double> %t
@@ -426,7 +426,7 @@ define <4 x float> @rint_v4f32(<4 x float> %p) {
 ;
 ; AVX512-LABEL: rint_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $4, %xmm0, %xmm0
+; AVX512-NEXT:    vroundps $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
   ret <4 x float> %t
@@ -447,7 +447,7 @@ define <4 x double> @rint_v4f64(<4 x double> %p) {
 ;
 ; AVX512-LABEL: rint_v4f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $4, %ymm0, %ymm0
+; AVX512-NEXT:    vroundpd $4, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
   ret <4 x double> %t
@@ -468,7 +468,7 @@ define <8 x float> @rint_v8f32(<8 x float> %p) {
 ;
 ; AVX512-LABEL: rint_v8f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $4, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $4, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
   ret <8 x float> %t
@@ -536,7 +536,7 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %p) {
 ;
 ; AVX512-LABEL: nearbyint_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $12, %xmm0, %xmm0
+; AVX512-NEXT:    vroundpd $12, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
   ret <2 x double> %t
@@ -556,7 +556,7 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %p) {
 ;
 ; AVX512-LABEL: nearbyint_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $12, %xmm0, %xmm0
+; AVX512-NEXT:    vroundps $12, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
   ret <4 x float> %t
@@ -577,7 +577,7 @@ define <4 x double> @nearbyint_v4f64(<4 x double> %p) {
 ;
 ; AVX512-LABEL: nearbyint_v4f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscalepd $12, %ymm0, %ymm0
+; AVX512-NEXT:    vroundpd $12, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
   ret <4 x double> %t
@@ -598,7 +598,7 @@ define <8 x float> @nearbyint_v8f32(<8 x float> %p) {
 ;
 ; AVX512-LABEL: nearbyint_v8f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vrndscaleps $12, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $12, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
   ret <8 x float> %t

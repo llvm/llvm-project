@@ -1065,7 +1065,7 @@ Currently, only the following parameter attributes are defined:
     for return values.
 
 .. _attr_align:
-    
+
 ``align <n>``
     This indicates that the pointer value may be assumed by the optimizer to
     have the specified alignment.
@@ -1908,10 +1908,12 @@ as follows:
 ``A<address space>``
     Specifies the address space of  objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>:<pref>``
+``p[n]:<size>:<abi>:<pref>:<idx>``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. All sizes are in
-    bits. The address space, ``n``, is optional, and if not specified,
+    ``<pref>``\erred alignments for address space ``n``. The fourth parameter
+    ``<idx>`` is a size of index that used for address calculation. If not
+    specified, the default index size is equal to the pointer size. All sizes
+    are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^23).
 ``i<size>:<abi>:<pref>``
@@ -2281,7 +2283,7 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`) and :ref:`call <i_call>`
-may use the following flags to enable otherwise unsafe 
+may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
 ``nnan``
@@ -2308,11 +2310,11 @@ floating-point transformations.
 
 ``afn``
    Approximate functions - Allow substitution of approximate calculations for
-   functions (sin, log, sqrt, etc). See floating-point intrinsic definitions 
-   for places where this can apply to LLVM's intrinsic math functions. 
+   functions (sin, log, sqrt, etc). See floating-point intrinsic definitions
+   for places where this can apply to LLVM's intrinsic math functions.
 
 ``reassoc``
-   Allow reassociation transformations for floating-point instructions. 
+   Allow reassociation transformations for floating-point instructions.
    This may dramatically change results in floating point.
 
 ``fast``
@@ -6853,10 +6855,10 @@ Both arguments must have identical types.
 Semantics:
 """"""""""
 
-Return the same value as a libm '``fmod``' function but without trapping or 
+Return the same value as a libm '``fmod``' function but without trapping or
 setting ``errno``.
 
-The remainder has the same sign as the dividend. This instruction can also 
+The remainder has the same sign as the dividend. This instruction can also
 take any number of :ref:`fast-math flags <fastmath>`, which are optimization
 hints to enable otherwise unsafe floating-point optimizations:
 
@@ -10504,7 +10506,7 @@ Semantics:
 """"""""""
 
 The '``llvm.memset.*``' intrinsics fill "len" bytes of memory starting
-at the destination location. 
+at the destination location.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10538,10 +10540,10 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``sqrt``' function but without
-trapping or setting ``errno``. For types specified by IEEE-754, the result 
+trapping or setting ``errno``. For types specified by IEEE-754, the result
 matches a conforming libm implementation.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.powi.*``' Intrinsic
@@ -10616,7 +10618,7 @@ Semantics:
 Return the same value as a corresponding libm '``sin``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.cos.*``' Intrinsic
@@ -10653,7 +10655,7 @@ Semantics:
 Return the same value as a corresponding libm '``cos``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.pow.*``' Intrinsic
@@ -10691,7 +10693,7 @@ Semantics:
 Return the same value as a corresponding libm '``pow``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.exp.*``' Intrinsic
@@ -10729,7 +10731,7 @@ Semantics:
 Return the same value as a corresponding libm '``exp``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.exp2.*``' Intrinsic
@@ -10767,7 +10769,7 @@ Semantics:
 Return the same value as a corresponding libm '``exp2``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.log.*``' Intrinsic
@@ -10805,7 +10807,7 @@ Semantics:
 Return the same value as a corresponding libm '``log``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.log10.*``' Intrinsic
@@ -10843,7 +10845,7 @@ Semantics:
 Return the same value as a corresponding libm '``log10``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.log2.*``' Intrinsic
@@ -10881,7 +10883,7 @@ Semantics:
 Return the same value as a corresponding libm '``log2``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.fma.*``' Intrinsic
@@ -10918,7 +10920,7 @@ Semantics:
 Return the same value as a corresponding libm '``fma``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.fabs.*``' Intrinsic
@@ -14558,4 +14560,3 @@ lowered to a call to the symbol ``__llvm_memset_element_unordered_atomic_*``. Wh
 is replaced with an actual element size.
 
 The optimizer is allowed to inline the memory assignment when it's profitable to do so.
-

@@ -5398,7 +5398,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are setcc
-  if (isOneConstant(N1) && VT == MVT::i1 &&
+  if (isOneConstant(N1) && VT == MVT::i1 && N0.hasOneUse() &&
       (N0.getOpcode() == ISD::OR || N0.getOpcode() == ISD::AND)) {
     SDValue LHS = N0.getOperand(0), RHS = N0.getOperand(1);
     if (isOneUseSetCC(RHS) || isOneUseSetCC(LHS)) {
@@ -5410,7 +5410,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are constants
-  if (isAllOnesConstant(N1) &&
+  if (isAllOnesConstant(N1) && N0.hasOneUse() &&
       (N0.getOpcode() == ISD::OR || N0.getOpcode() == ISD::AND)) {
     SDValue LHS = N0.getOperand(0), RHS = N0.getOperand(1);
     if (isa<ConstantSDNode>(RHS) || isa<ConstantSDNode>(LHS)) {

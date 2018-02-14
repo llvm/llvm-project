@@ -906,3 +906,17 @@ entry:
   %and = and i64 %x1, 4611686018427387903
   ret i64 %and
 }
+
+; Make sure the mask doesn't break our matching of blcic
+define  i64 @masked_blcic(i64) {
+; CHECK-LABEL: masked_blcic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    blcicl %eax, %eax
+; CHECK-NEXT:    retq
+  %2 = and i64 %0, 65535
+  %3 = xor i64 %2, -1
+  %4 = add nuw nsw i64 %2, 1
+  %5 = and i64 %4, %3
+  ret i64 %5
+}

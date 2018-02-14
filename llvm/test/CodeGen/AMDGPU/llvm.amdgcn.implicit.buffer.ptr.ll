@@ -10,9 +10,9 @@
 define amdgpu_ps i32 @test_ps() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
-  %implicit_buffer_ptr = call i8 addrspace(2)* @llvm.amdgcn.implicit.buffer.ptr()
-  %buffer_ptr = bitcast i8 addrspace(2)* %implicit_buffer_ptr to i32 addrspace(2)*
-  %value = load volatile i32, i32 addrspace(2)* %buffer_ptr
+  %implicit_buffer_ptr = call i8 addrspace(4)* @llvm.amdgcn.implicit.buffer.ptr()
+  %buffer_ptr = bitcast i8 addrspace(4)* %implicit_buffer_ptr to i32 addrspace(4)*
+  %value = load volatile i32, i32 addrspace(4)* %buffer_ptr
   ret i32 %value
 }
 
@@ -23,13 +23,13 @@ define amdgpu_ps i32 @test_ps() #1 {
 define amdgpu_cs i32 @test_cs() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
-  %implicit_buffer_ptr = call i8 addrspace(2)* @llvm.amdgcn.implicit.buffer.ptr()
-  %buffer_ptr = bitcast i8 addrspace(2)* %implicit_buffer_ptr to i32 addrspace(2)*
-  %value = load volatile i32, i32 addrspace(2)* %buffer_ptr
+  %implicit_buffer_ptr = call i8 addrspace(4)* @llvm.amdgcn.implicit.buffer.ptr()
+  %buffer_ptr = bitcast i8 addrspace(4)* %implicit_buffer_ptr to i32 addrspace(4)*
+  %value = load volatile i32, i32 addrspace(4)* %buffer_ptr
   ret i32 %value
 }
 
-declare i8 addrspace(2)* @llvm.amdgcn.implicit.buffer.ptr() #0
+declare i8 addrspace(4)* @llvm.amdgcn.implicit.buffer.ptr() #0
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }

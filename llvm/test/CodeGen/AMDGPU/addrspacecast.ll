@@ -100,8 +100,8 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(i32 addrspace(1)* %p
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
 ; HSA: flat_load_dword v{{[0-9]+}}, v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}
-define amdgpu_kernel void @use_constant_to_flat_addrspacecast(i32 addrspace(2)* %ptr) #0 {
-  %stof = addrspacecast i32 addrspace(2)* %ptr to i32*
+define amdgpu_kernel void @use_constant_to_flat_addrspacecast(i32 addrspace(4)* %ptr) #0 {
+  %stof = addrspacecast i32 addrspace(4)* %ptr to i32*
   %ld = load volatile i32, i32* %stof
   ret void
 }
@@ -160,8 +160,8 @@ define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32* %ptr) #0 {
 ; HSA: s_load_dwordx2 s{{\[}}[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]{{\]}}, s[4:5], 0x0
 ; HSA: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTRLO]]:[[PTRHI]]{{\]}}, 0x0
 define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32* %ptr) #0 {
-  %ftos = addrspacecast i32* %ptr to i32 addrspace(2)*
-  load volatile i32, i32 addrspace(2)* %ftos
+  %ftos = addrspacecast i32* %ptr to i32 addrspace(4)*
+  load volatile i32, i32 addrspace(4)* %ftos
   ret void
 }
 

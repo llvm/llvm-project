@@ -10230,6 +10230,8 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
       if (!isThumb() && (MissingFeatures & Feature_IsThumb2) &&
           (MissingFeatures & ~(Feature_IsThumb2 | Feature_IsThumb)))
         break;
+      if (isMClass() && (MissingFeatures & Feature_HasNEON))
+        break;
 
       NearMissMessage Message;
       Message.Loc = IDLoc;

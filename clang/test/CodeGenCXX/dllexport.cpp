@@ -28,6 +28,7 @@ struct External { int v; };
 
 // The vftable for struct W is comdat largest because we have RTTI.
 // M32-DAG: $"\01??_7W@@6B@" = comdat largest
+// M32-DAG: $"\01?smember@?$Base@H@PR32992@@0HA" = comdat any
 
 
 //===----------------------------------------------------------------------===//
@@ -977,3 +978,21 @@ class __declspec(dllexport) ACE_Service_Object : public ACE_Shared_Object {};
 // MSVC2015-DAG: define weak_odr dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
 // The declarations should not be exported.
 // MSVC2013-NOT: define weak_odr dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
+
+namespace PR32992 {
+// Static data members of a instantiated base class should be exported.
+template <class T>
+class Base {
+  virtual void myfunc() {}
+  static int smember;
+};
+// MS-DAG:  @"\01?smember@?$Base@H@PR32992@@0HA" = weak_odr dllexport global i32 77, comdat, align 4
+template <class T> int Base<T>::smember = 77;
+template <class T>
+class __declspec(dllexport) Derived2 : Base<T> {
+  void myfunc() {}
+};
+class Derived : public Derived2<int> {
+  void myfunc() {}
+};
+}  // namespace PR32992

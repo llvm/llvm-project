@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8 %s
 
-; CHECK-LABEL: {{^}}system_monotonic
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}system_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @system_monotonic(
     i32* %out, i32 %in) {
 entry:
@@ -13,11 +13,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}system_acquire
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}system_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_acquire(
     i32* %out, i32 %in) {
 entry:
@@ -25,11 +25,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}system_release
-; CHECK:       s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}system_release:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:    buffer_wbinvl1_vol
 define amdgpu_kernel void @system_release(
     i32* %out, i32 %in) {
 entry:
@@ -37,11 +37,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}system_acq_rel
-; CHECK:       s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}system_acq_rel:
+; GCN:         s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:    flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NEXT:    s_waitcnt vmcnt(0){{$}}
+; GFX8-NEXT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @system_acq_rel(
     i32* %out, i32 %in) {
 entry:
@@ -49,11 +49,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}system_seq_cst
-; CHECK:       s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}system_seq_cst:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @system_seq_cst(
     i32* %out, i32 %in) {
 entry:
@@ -61,11 +61,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}singlethread_monotonic
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}singlethread_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_monotonic(
     i32* %out, i32 %in) {
 entry:
@@ -73,11 +73,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}singlethread_acquire
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}singlethread_acquire:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_acquire(
     i32* %out, i32 %in) {
 entry:
@@ -85,11 +85,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}singlethread_release
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}singlethread_release:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_release(
     i32* %out, i32 %in) {
 entry:
@@ -97,11 +97,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}singlethread_acq_rel
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}singlethread_acq_rel:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_acq_rel(
     i32* %out, i32 %in) {
 entry:
@@ -109,11 +109,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}singlethread_seq_cst
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}singlethread_seq_cst:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @singlethread_seq_cst(
     i32* %out, i32 %in) {
 entry:
@@ -121,11 +121,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}agent_monotonic
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}agent_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_monotonic(
     i32* %out, i32 %in) {
 entry:
@@ -133,11 +133,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}agent_acquire
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}agent_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_acquire(
     i32* %out, i32 %in) {
 entry:
@@ -145,11 +145,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}agent_release
-; CHECK:       s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}agent_release:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:    buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_release(
     i32* %out, i32 %in) {
 entry:
@@ -157,11 +157,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}agent_acq_rel
-; CHECK:       s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}agent_acq_rel:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_acq_rel(
     i32* %out, i32 %in) {
 entry:
@@ -169,11 +169,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}agent_seq_cst
-; CHECK:       s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NEXT:  s_waitcnt vmcnt(0){{$}}
-; CHECK-NEXT:  buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}agent_seq_cst:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NEXT:  buffer_wbinvl1_vol
 define amdgpu_kernel void @agent_seq_cst(
     i32* %out, i32 %in) {
 entry:
@@ -181,11 +181,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}workgroup_monotonic
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}workgroup_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_monotonic(
     i32* %out, i32 %in) {
 entry:
@@ -193,11 +193,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}workgroup_acquire
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}workgroup_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GFX8-NOT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_acquire(
     i32* %out, i32 %in) {
 entry:
@@ -205,11 +205,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}workgroup_release
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}workgroup_release:
+; GFX8-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:    buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_release(
     i32* %out, i32 %in) {
 entry:
@@ -217,11 +217,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}workgroup_acq_rel
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}workgroup_acq_rel:
+; GFX8-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GFX8-NOT:   s_waitcnt vmcnt(0){{$}}
+; GFX8-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_acq_rel(
     i32* %out, i32 %in) {
 entry:
@@ -229,11 +229,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}workgroup_seq_cst
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}workgroup_seq_cst:
+; GFX8-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GFX8-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @workgroup_seq_cst(
     i32* %out, i32 %in) {
 entry:
@@ -241,11 +241,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}wavefront_monotonic
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}wavefront_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_monotonic(
     i32* %out, i32 %in) {
 entry:
@@ -253,11 +253,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}wavefront_acquire
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}wavefront_acquire:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_acquire(
     i32* %out, i32 %in) {
 entry:
@@ -265,11 +265,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}wavefront_release
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}wavefront_release:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_release(
     i32* %out, i32 %in) {
 entry:
@@ -277,11 +277,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}wavefront_acq_rel
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}wavefront_acq_rel:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_acq_rel(
     i32* %out, i32 %in) {
 entry:
@@ -289,11 +289,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: {{^}}wavefront_seq_cst
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
-; CHECK-NOT:   s_waitcnt vmcnt(0){{$}}
-; CHECK-NOT:   buffer_wbinvl1_vol
+; GCN-LABEL: {{^}}wavefront_seq_cst:
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN:       flat_atomic_swap v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}{{$}}
+; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
+; GCN-NOT:   buffer_wbinvl1_vol
 define amdgpu_kernel void @wavefront_seq_cst(
     i32* %out, i32 %in) {
 entry:

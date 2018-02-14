@@ -26,16 +26,17 @@ void Semaphore::unlock() {
   SlotsChanged.notify_one();
 }
 
-AsyncTaskRunner::~AsyncTaskRunner() { waitForAll(); }
+AsyncTaskRunner::~AsyncTaskRunner() { wait(); }
 
-void AsyncTaskRunner::waitForAll() {
+bool AsyncTaskRunner::wait(Deadline D) const {
   std::unique_lock<std::mutex> Lock(Mutex);
-  TasksReachedZero.wait(Lock, [&]() { return InFlightTasks == 0; });
+  return clangd::wait(Lock, TasksReachedZero, D,
+                      [&] { return InFlightTasks == 0; });
 }
 
 void AsyncTaskRunner::runAsync(UniqueFunction<void()> Action) {
   {
-    std::unique_lock<std::mutex> Lock(Mutex);
+    std::lock_guard<std::mutex> Lock(Mutex);
     ++InFlightTasks;
   }
 
@@ -59,5 +60,14 @@ void AsyncTaskRunner::runAsync(UniqueFunction<void()> Action) {
       std::move(Action), std::move(CleanupTask))
       .detach();
 }
+
+Deadline timeoutSeconds(llvm::Optional<double> Seconds) {
+  using namespace std::chrono;
+  if (!Seconds)
+    return llvm::None;
+  return steady_clock::now() +
+         duration_cast<steady_clock::duration>(duration<double>(*Seconds));
+}
+
 } // namespace clangd
 } // namespace clang

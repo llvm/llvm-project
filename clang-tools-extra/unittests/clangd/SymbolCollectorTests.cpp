@@ -48,15 +48,12 @@ MATCHER_P(Snippet, S, "") {
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
 MATCHER_P(DeclRange, Offsets, "") {
-  // Offset range in SymbolLocation is [start, end] while in Clangd is [start,
-  // end).
-  // FIXME: SymbolLocation should be [start, end).
   return arg.CanonicalDeclaration.StartOffset == Offsets.first &&
-      arg.CanonicalDeclaration.EndOffset == Offsets.second - 1;
+      arg.CanonicalDeclaration.EndOffset == Offsets.second;
 }
 MATCHER_P(DefRange, Offsets, "") {
   return arg.Definition.StartOffset == Offsets.first &&
-         arg.Definition.EndOffset == Offsets.second - 1;
+         arg.Definition.EndOffset == Offsets.second;
 }
 
 namespace clang {
@@ -177,25 +174,23 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
 }
 
 TEST_F(SymbolCollectorTest, Locations) {
-  // FIXME: the behavior here is bad: chopping tokens, including more than the
-  // ident range, using half-open ranges. See fixmes in getSymbolLocation().
   CollectorOpts.IndexMainFiles = true;
   Annotations Header(R"cpp(
     // Declared in header, defined in main.
-    $xdecl[[extern int X]];
-    $clsdecl[[class C]]ls;
-    $printdecl[[void print()]];
+    extern int $xdecl[[X]];
+    class $clsdecl[[Cls]];
+    void $printdecl[[print]]();
 
     // Declared in header, defined nowhere.
-    $zdecl[[extern int Z]];
+    extern int $zdecl[[Z]];
   )cpp");
   Annotations Main(R"cpp(
-    $xdef[[int X = 4]]2;
-    $clsdef[[class Cls {}]];
-    $printdef[[void print() {}]]
+    int $xdef[[X]] = 42;
+    class $clsdef[[Cls]] {};
+    void $printdef[[print]]() {}
 
     // Declared/defined in main only.
-    $y[[int Y]];
+    int $y[[Y]];
   )cpp");
   runSymbolCollector(Header.code(), Main.code());
   EXPECT_THAT(
@@ -304,10 +299,10 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
     #define FF(name) \
       class name##_Test {};
 
-    $expansion[[FF(abc)]];
+    $expansion[[FF]](abc);
 
     #define FF2() \
-      $spelling[[class Test {}]];
+      class $spelling[[Test]] {};
 
     FF2();
   )");
@@ -329,10 +324,10 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacroInMainFile) {
     #define FF(name) \
       class name##_Test {};
 
-    $expansion[[FF(abc)]];
+    $expansion[[FF]](abc);
 
     #define FF2() \
-      $spelling[[class Test {}]];
+      class $spelling[[Test]] {};
 
     FF2();
   )");
@@ -351,7 +346,7 @@ TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
 
   Annotations Header(R"(
     #ifdef NAME
-    $expansion[[class NAME {}]];
+    class $expansion[[NAME]] {};
     #endif
   )");
 

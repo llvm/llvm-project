@@ -240,7 +240,7 @@ public:
     bool IsJTAllowed = TLI->areJTsAllowed(SI.getParent()->getParent());
 
     // Early exit if both a jump table and bit test are not allowed.
-    if (N < 1 || (!IsJTAllowed && DL.getPointerSizeInBits() < N))
+    if (N < 1 || (!IsJTAllowed && DL.getIndexSizeInBits(0u) < N))
       return N;
 
     APInt MaxCaseVal = SI.case_begin()->getCaseValue()->getValue();
@@ -254,7 +254,7 @@ public:
     }
 
     // Check if suitable for a bit test
-    if (N <= DL.getPointerSizeInBits()) {
+    if (N <= DL.getIndexSizeInBits(0u)) {
       SmallPtrSet<const BasicBlock *, 4> Dests;
       for (auto I : SI.cases())
         Dests.insert(I.getCaseSuccessor());

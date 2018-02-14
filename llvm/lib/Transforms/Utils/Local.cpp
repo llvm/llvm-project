@@ -1518,16 +1518,19 @@ void llvm::salvageDebugInfo(Instruction &I) {
     doSalvage(DII, Ops);
   };
 
-  if (isa<BitCastInst>(&I) || isa<IntToPtrInst>(&I)) {
-    // Bitcasts are entirely irrelevant for debug info. Rewrite dbg.value,
-    // dbg.addr, and dbg.declare to use the cast's source.
+  if (auto *CI = dyn_cast<CastInst>(&I)) {
+    if (!CI->isNoopCast(M.getDataLayout()))
+      return;
+
+    // No-op casts are irrelevant for debug info.
+    MetadataAsValue *CastSrc = wrapMD(I.getOperand(0));
     for (auto *DII : DbgUsers) {
-      DII->setOperand(0, wrapMD(I.getOperand(0)));
+      DII->setOperand(0, CastSrc);
       DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
-        M.getDataLayout().getPointerSizeInBits(GEP->getPointerAddressSpace());
+        M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
     // Rewrite a constant GEP into a DIExpression.  Since we are performing
     // arithmetic to compute the variable's *value* in the DIExpression, we
     // need to mark the expression with a DW_OP_stack_value.
@@ -1560,6 +1563,9 @@ void llvm::salvageDebugInfo(Instruction &I) {
         break;
       case Instruction::Or:
         applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
+        break;
+      case Instruction::And:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
         break;
       case Instruction::Xor:
         applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
@@ -2154,7 +2160,7 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
   if (!NewTy->isPointerTy())
     return;
 
-  unsigned BitWidth = DL.getTypeSizeInBits(NewTy);
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(NewTy);
   if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
     MDNode *NN = MDNode::get(OldLI.getContext(), None);
     NewLI.setMetadata(LLVMContext::MD_nonnull, NN);

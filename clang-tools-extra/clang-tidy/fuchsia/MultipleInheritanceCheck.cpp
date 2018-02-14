@@ -66,7 +66,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   for (const auto &I : Node->bases()) {
     if (I.isVirtual()) continue;
     const auto *Ty = I.getType()->getAs<RecordType>();
-    assert(Ty && "RecordType of base class is unknown");
+    if (!Ty) continue;
     const RecordDecl *D = Ty->getDecl()->getDefinition();
     if (!D) continue;
     const auto *Base = cast<CXXRecordDecl>(D);
@@ -96,9 +96,9 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     // concrete classes
     unsigned NumConcrete = 0;
     for (const auto &I : D->bases()) {
-      if (I.isVirtual() || I.getType()->getAs<TemplateTypeParmType>()) continue;
+      if (I.isVirtual()) continue;
       const auto *Ty = I.getType()->getAs<RecordType>();
-      assert(Ty && "RecordType of base class is unknown");
+      if (!Ty) continue;
       const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!isInterface(Base)) NumConcrete++;
     }
@@ -107,7 +107,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     // non-virtual base.
     for (const auto &V : D->vbases()) {
       const auto *Ty = V.getType()->getAs<RecordType>();
-      assert(Ty && "RecordType of base class is unknown");
+      if (!Ty) continue;
       const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!isInterface(Base)) NumConcrete++;
     }

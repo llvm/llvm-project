@@ -324,6 +324,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo &TII = *getParent()->getSubtarget().getInstrInfo();
   if (!livein_empty() && MRI.tracksLiveness()) {
     if (Indexes) OS << '\t';
     OS.indent(2) << "liveins: ";
@@ -384,18 +385,33 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << '\n';
   }
 
-  for (auto &I : instrs()) {
+  bool IsInBundle = false;
+  for (const MachineInstr &MI : instrs()) {
     if (Indexes) {
-      if (Indexes->hasIndex(I))
-        OS << Indexes->getInstructionIndex(I);
+      if (Indexes->hasIndex(MI))
+        OS << Indexes->getInstructionIndex(MI);
       OS << '\t';
     }
-    OS << '\t';
-    if (I.isInsideBundle())
-      OS << "  * ";
-    I.print(OS, MST, IsStandalone);
+
+    if (IsInBundle && !MI.isInsideBundle()) {
+      OS.indent(2) << "}\n";
+      IsInBundle = false;
+    }
+
+    OS.indent(IsInBundle ? 4 : 2);
+    MI.print(OS, MST, IsStandalone, /*SkipOpers=*/false, /*SkipDebugLoc=*/false,
+             &TII);
+
+    if (!IsInBundle && MI.getFlag(MachineInstr::BundledSucc)) {
+      OS << " {";
+      IsInBundle = true;
+    }
+
     OS << '\n';
   }
+
+  if (IsInBundle)
+    OS.indent(2) << "}\n";
 
   if (IrrLoopHeaderWeight) {
     if (Indexes) OS << '\t';

@@ -83,6 +83,7 @@ public:
               UniqueFunction<void(llvm::Optional<std::vector<DiagWithFixIts>>)>
                   OnUpdated);
   void runWithAST(UniqueFunction<void(llvm::Expected<InputsAndAST>)> Action);
+  bool blockUntilIdle(Deadline Timeout) const;
 
   std::shared_ptr<const PreambleData> getPossiblyStalePreamble() const;
   std::size_t getUsedBytes() const;
@@ -117,7 +118,7 @@ private:
   // Only set when last request is an update. This allows us to cancel an update
   // that was never read, if a subsequent update comes in.
   llvm::Optional<CancellationFlag> LastUpdateCF; /* GUARDED_BY(Mutex) */
-  std::condition_variable RequestsCV;
+  mutable std::condition_variable RequestsCV;
 };
 
 /// A smart-pointer-like class that points to an active ASTWorker.
@@ -253,7 +254,7 @@ void ASTWorker::stop() {
     assert(!Done && "stop() called twice");
     Done = true;
   }
-  RequestsCV.notify_one();
+  RequestsCV.notify_all();
 }
 
 void ASTWorker::startTask(UniqueFunction<void()> Task, bool isUpdate,
@@ -282,7 +283,7 @@ void ASTWorker::startTask(UniqueFunction<void()> Task, bool isUpdate,
     }
     Requests.emplace(std::move(Task), Context::current().clone());
   } // unlock Mutex.
-  RequestsCV.notify_one();
+  RequestsCV.notify_all();
 }
 
 void ASTWorker::run() {
@@ -299,14 +300,26 @@ void ASTWorker::run() {
       // before exiting the processing loop.
 
       Req = std::move(Requests.front());
-      Requests.pop();
+      // Leave it on the queue for now, so waiters don't see an empty queue.
     } // unlock Mutex
 
     std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext Guard(std::move(Req.second));
     Req.first();
+
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      Requests.pop();
+    }
+    RequestsCV.notify_all();
   }
 }
+
+bool ASTWorker::blockUntilIdle(Deadline Timeout) const {
+  std::unique_lock<std::mutex> Lock(Mutex);
+  return wait(Lock, RequestsCV, Timeout, [&] { return Requests.empty(); });
+}
+
 } // namespace
 
 unsigned getDefaultAsyncThreadsCount() {
@@ -331,8 +344,10 @@ TUScheduler::TUScheduler(unsigned AsyncThreadsCount,
     : StorePreamblesInMemory(StorePreamblesInMemory),
       PCHOps(std::make_shared<PCHContainerOperations>()),
       ASTCallback(std::move(ASTCallback)), Barrier(AsyncThreadsCount) {
-  if (0 < AsyncThreadsCount)
-    Tasks.emplace();
+  if (0 < AsyncThreadsCount) {
+    PreambleTasks.emplace();
+    WorkerThreads.emplace();
+  }
 }
 
 TUScheduler::~TUScheduler() {
@@ -340,8 +355,20 @@ TUScheduler::~TUScheduler() {
   Files.clear();
 
   // Wait for all in-flight tasks to finish.
-  if (Tasks)
-    Tasks->waitForAll();
+  if (PreambleTasks)
+    PreambleTasks->wait();
+  if (WorkerThreads)
+    WorkerThreads->wait();
+}
+
+bool TUScheduler::blockUntilIdle(Deadline D) const {
+  for (auto &File : Files)
+    if (!File.getValue()->Worker->blockUntilIdle(D))
+      return false;
+  if (PreambleTasks)
+    if (!PreambleTasks->wait(D))
+      return false;
+  return true;
 }
 
 void TUScheduler::update(
@@ -352,7 +379,7 @@ void TUScheduler::update(
   if (!FD) {
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker = ASTWorker::Create(
-        Tasks ? Tasks.getPointer() : nullptr, Barrier,
+        WorkerThreads ? WorkerThreads.getPointer() : nullptr, Barrier,
         CppFile(File, StorePreamblesInMemory, PCHOps, ASTCallback));
     FD = std::unique_ptr<FileData>(new FileData{Inputs, std::move(Worker)});
   } else {
@@ -392,7 +419,7 @@ void TUScheduler::runWithPreamble(
     return;
   }
 
-  if (!Tasks) {
+  if (!PreambleTasks) {
     std::shared_ptr<const PreambleData> Preamble =
         It->second->Worker->getPossiblyStalePreamble();
     Action(InputsAndPreamble{It->second->Inputs, Preamble.get()});
@@ -410,7 +437,7 @@ void TUScheduler::runWithPreamble(
     Action(InputsAndPreamble{InputsCopy, Preamble.get()});
   };
 
-  Tasks->runAsync(
+  PreambleTasks->runAsync(
       BindWithForward(Task, Context::current().clone(), std::move(Action)));
 }
 

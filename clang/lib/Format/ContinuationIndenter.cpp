@@ -943,6 +943,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment))
     return ContinuationIndent;
+  if (Current.is(TT_ProtoExtensionLSquare))
+    return State.Stack.back().Indent;
   if (State.Stack.back().Indent == State.FirstIndent && PreviousNonComment &&
       PreviousNonComment->isNot(tok::r_brace))
     // Ensure that we fall back to the continuation indent width instead of

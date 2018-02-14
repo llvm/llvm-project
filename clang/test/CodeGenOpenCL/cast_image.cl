@@ -4,7 +4,7 @@
 #ifdef __AMDGCN__
 
 constant int* convert(image2d_t img) {
-  // AMDGCN: bitcast %opencl.image2d_ro_t addrspace(2)* %img to i32 addrspace(2)*
+  // AMDGCN: bitcast %opencl.image2d_ro_t addrspace(4)* %img to i32 addrspace(4)*
   return __builtin_astype(img, constant int*);
 }
 

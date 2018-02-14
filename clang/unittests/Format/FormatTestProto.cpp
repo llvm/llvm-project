@@ -421,5 +421,16 @@ TEST_F(FormatTestProto, KeepsLongStringLiteralsOnSameLine) {
       "}");
 }
 
+TEST_F(FormatTestProto, FormatsOptionsExtensions) {
+  verifyFormat("option (MyProto.options) = {\n"
+               "  msg_field: { field_d: 123 }\n"
+               "  [ext.t/u] { key: value }\n"
+               "  key: value\n"
+               "  [t.u/v] <\n"
+               "    [ext] { key: value }\n"
+               "  >\n"
+               "};");
+}
+
 } // end namespace tooling
 } // end namespace clang

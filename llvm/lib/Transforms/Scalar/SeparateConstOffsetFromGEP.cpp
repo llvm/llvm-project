@@ -1295,7 +1295,7 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
 
   // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
   const DataLayout &DAL = First->getModule()->getDataLayout();
-  APInt Offset(DAL.getPointerSizeInBits(
+  APInt Offset(DAL.getIndexSizeInBits(
                    cast<PointerType>(First->getType())->getAddressSpace()),
                0);
   Value *NewBase =

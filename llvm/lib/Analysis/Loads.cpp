@@ -80,7 +80,7 @@ static bool isDereferenceableAndAlignedPointer(
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
     const Value *Base = GEP->getPointerOperand();
 
-    APInt Offset(DL.getPointerTypeSizeInBits(GEP->getType()), 0);
+    APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
     if (!GEP->accumulateConstantOffset(DL, Offset) || Offset.isNegative() ||
         !Offset.urem(APInt(Offset.getBitWidth(), Align)).isMinValue())
       return false;
@@ -146,7 +146,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
 
   SmallPtrSet<const Value *, 32> Visited;
   return ::isDereferenceableAndAlignedPointer(
-      V, Align, APInt(DL.getTypeSizeInBits(VTy), DL.getTypeStoreSize(Ty)), DL,
+      V, Align, APInt(DL.getIndexTypeSizeInBits(VTy), DL.getTypeStoreSize(Ty)), DL,
       CtxI, DT, Visited);
 }
 

@@ -18,28 +18,28 @@ define amdgpu_vs void @test_f32(float %arg0) {
 }
 
 ; CHECK-LABEL: name: test_ptr2_byval
-; CHECK: [[S01:%[0-9]+]]:_(p2) = COPY $sgpr0_sgpr1
+; CHECK: [[S01:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
 ; CHECK: G_LOAD [[S01]]
-define amdgpu_vs void @test_ptr2_byval(i32 addrspace(2)* byval %arg0) {
-   %tmp0 = load volatile i32, i32 addrspace(2)* %arg0
+define amdgpu_vs void @test_ptr2_byval(i32 addrspace(4)* byval %arg0) {
+   %tmp0 = load volatile i32, i32 addrspace(4)* %arg0
   ret void
 }
 
 ; CHECK-LABEL: name: test_ptr2_inreg
-; CHECK: [[S01:%[0-9]+]]:_(p2) = COPY $sgpr0_sgpr1
+; CHECK: [[S01:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
 ; CHECK: G_LOAD [[S01]]
-define amdgpu_vs void @test_ptr2_inreg(i32 addrspace(2)* inreg %arg0) {
-  %tmp0 = load volatile i32, i32 addrspace(2)* %arg0
+define amdgpu_vs void @test_ptr2_inreg(i32 addrspace(4)* inreg %arg0) {
+  %tmp0 = load volatile i32, i32 addrspace(4)* %arg0
   ret void
 }
 
 ; CHECK-LABEL: name: test_sgpr_alignment0
 ; CHECK: [[S0:%[0-9]+]]:_(s32) = COPY $sgpr0
-; CHECK: [[S23:%[0-9]+]]:_(p2) = COPY $sgpr2_sgpr3
+; CHECK: [[S23:%[0-9]+]]:_(p4) = COPY $sgpr2_sgpr3
 ; CHECK: G_LOAD [[S23]]
 ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), %{{[0-9]+}}(s32), %{{[0-9]+}}(s32), [[S0]]
-define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(2)* inreg %arg1) {
-  %tmp0 = load volatile i32, i32 addrspace(2)* %arg1
+define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(4)* inreg %arg1) {
+  %tmp0 = load volatile i32, i32 addrspace(4)* %arg1
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }

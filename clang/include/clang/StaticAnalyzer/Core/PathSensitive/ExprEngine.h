@@ -393,7 +393,7 @@ public:
   void VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred, 
                            ExplodedNodeSet &Dst);
 
-  /// VisitMemberExpr - Transfer function for builtin atomic expressions
+  /// VisitAtomicExpr - Transfer function for builtin atomic expressions
   void VisitAtomicExpr(const AtomicExpr *E, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst);
 

@@ -429,3 +429,17 @@ void test27(ushort16 constants) {
     ushort16 crCbScale = pairedConstants.s4; // expected-warning {{implicit conversion loses integer precision: 'uint32_t' (aka 'unsigned int') to 'ushort16'}}
     ushort16 brBias = pairedConstants.s6; // expected-warning {{implicit conversion loses integer precision: 'uint32_t' (aka 'unsigned int') to 'ushort16'}}
 }
+
+
+float double2float_test1(double a) {
+    return a; // expected-warning {{implicit conversion loses floating-point precision: 'double' to 'float'}}
+}
+
+void double2float_test2(double a, float *b) {
+    *b += a;
+}
+
+float sinf (float x);
+double double2float_test3(double a) {
+    return sinf(a); // expected-warning {{implicit conversion loses floating-point precision: 'double' to 'float'}}
+}

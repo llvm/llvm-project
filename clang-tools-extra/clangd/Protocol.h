@@ -78,10 +78,10 @@ bool fromJSON(const json::Expr &, TextDocumentIdentifier &);
 
 struct Position {
   /// Line position in a document (zero-based).
-  int line;
+  int line = 0;
 
   /// Character offset on a line in a document (zero-based).
-  int character;
+  int character = 0;
 
   friend bool operator==(const Position &LHS, const Position &RHS) {
     return std::tie(LHS.line, LHS.character) ==
@@ -160,7 +160,7 @@ struct TextDocumentItem {
   std::string languageId;
 
   /// The version number of this document (it will strictly increase after each
-  int version;
+  int version = 0;
 
   /// The content of the opened text document.
   std::string text;
@@ -255,7 +255,7 @@ struct FileEvent {
   /// The file's URI.
   URIForFile uri;
   /// The change type.
-  FileChangeType type;
+  FileChangeType type = FileChangeType::Created;
 };
 bool fromJSON(const json::Expr &, FileEvent &);
 
@@ -267,10 +267,10 @@ bool fromJSON(const json::Expr &, DidChangeWatchedFilesParams &);
 
 struct FormattingOptions {
   /// Size of a tab in spaces.
-  int tabSize;
+  int tabSize = 0;
 
   /// Prefer spaces over tabs.
-  bool insertSpaces;
+  bool insertSpaces = false;
 };
 bool fromJSON(const json::Expr &, FormattingOptions &);
 json::Expr toJSON(const FormattingOptions &);
@@ -317,7 +317,7 @@ struct Diagnostic {
 
   /// The diagnostic's severity. Can be omitted. If omitted it is up to the
   /// client to interpret diagnostics as error, warning, info or hint.
-  int severity;
+  int severity = 0;
 
   /// The diagnostic's code. Can be omitted.
   /// Note: Not currently used by clangd
@@ -388,7 +388,6 @@ struct ExecuteCommandParams {
   std::string command;
 
   // Arguments
-
   llvm::Optional<WorkspaceEdit> workspaceEdit;
 };
 bool fromJSON(const json::Expr &, ExecuteCommandParams &);
@@ -453,10 +452,13 @@ enum class InsertTextFormat {
 /// user keeps typing.
 /// This is a clangd extension.
 struct CompletionItemScores {
-  float finalScore;  /// The score that items are ranked by.
-                     /// This is filterScore * symbolScore.
-  float filterScore; /// How the partial identifier matched filterText. [0-1]
-  float symbolScore; /// How the symbol fits, ignoring the partial identifier.
+  /// The score that items are ranked by.
+  /// This is filterScore * symbolScore.
+  float finalScore = 0.f;
+  /// How the partial identifier matched filterText. [0-1]
+  float filterScore = 0.f;
+  /// How the symbol fits, ignoring the partial identifier.
+  float symbolScore = 0.f;
 };
 
 struct CompletionItem {
@@ -588,13 +590,10 @@ enum class DocumentHighlightKind { Text = 1, Read = 2, Write = 3 };
 /// the background color of its range.
 
 struct DocumentHighlight {
-
   /// The range this highlight applies to.
-
   Range range;
 
   /// The highlight kind, default is DocumentHighlightKind.Text.
-
   DocumentHighlightKind kind = DocumentHighlightKind::Text;
 
   friend bool operator<(const DocumentHighlight &LHS,

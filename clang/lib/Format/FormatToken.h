@@ -88,6 +88,7 @@ namespace format {
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
+  TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \

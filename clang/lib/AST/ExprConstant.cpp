@@ -48,6 +48,8 @@
 #include <cstring>
 #include <functional>
 
+#define DEBUG_TYPE "exprconstant"
+
 using namespace clang;
 using llvm::APSInt;
 using llvm::APFloat;
@@ -6780,6 +6782,22 @@ static bool EvaluateArray(const Expr *E, const LValue &This,
   return ArrayExprEvaluator(Info, This, Result).Visit(E);
 }
 
+// Return true iff the given array filler may depend on the element index.
+static bool MaybeElementDependentArrayFiller(const Expr *FillerExpr) {
+  // For now, just whitelist non-class value-initialization and initialization
+  // lists comprised of them.
+  if (isa<ImplicitValueInitExpr>(FillerExpr))
+    return false;
+  if (const InitListExpr *ILE = dyn_cast<InitListExpr>(FillerExpr)) {
+    for (unsigned I = 0, E = ILE->getNumInits(); I != E; ++I) {
+      if (MaybeElementDependentArrayFiller(ILE->getInit(I)))
+        return true;
+    }
+    return false;
+  }
+  return true;
+}
+
 bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(E->getType());
   if (!CAT)
@@ -6809,9 +6827,12 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   const Expr *FillerExpr = E->hasArrayFiller() ? E->getArrayFiller() : nullptr;
 
   // If the initializer might depend on the array index, run it for each
-  // array element. For now, just whitelist non-class value-initialization.
-  if (NumEltsToInit != NumElts && !isa<ImplicitValueInitExpr>(FillerExpr))
+  // array element.
+  if (NumEltsToInit != NumElts && MaybeElementDependentArrayFiller(FillerExpr))
     NumEltsToInit = NumElts;
+
+  DEBUG(llvm::dbgs() << "The number of elements to initialize: " <<
+        NumEltsToInit << ".\n");
 
   Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
 
