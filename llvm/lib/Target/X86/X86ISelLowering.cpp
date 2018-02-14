@@ -26250,28 +26250,57 @@ static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
 
 static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
                                       unsigned Reg) {
+  if (Subtarget.useRetpolineExternalThunk()) {
+    // When using an external thunk for retpolines, we pick names that match the
+    // names GCC happens to use as well. This helps simplify the implementation
+    // of the thunks for kernels where they have no easy ability to create
+    // aliases and are doing non-trivial configuration of the thunk's body. For
+    // example, the Linux kernel will do boot-time hot patching of the thunk
+    // bodies and cannot easily export aliases of these to loaded modules.
+    //
+    // Note that at any point in the future, we may need to change the semantics
+    // of how we implement retpolines and at that time will likely change the
+    // name of the called thunk. Essentially, there is no hard guarantee that
+    // LLVM will generate calls to specific thunks, we merely make a best-effort
+    // attempt to help out kernels and other systems where duplicating the
+    // thunks is costly.
+    switch (Reg) {
+    case X86::EAX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_eax";
+    case X86::ECX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_ecx";
+    case X86::EDX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_edx";
+    case X86::EDI:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_edi";
+    case X86::R11:
+      assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+      return "__x86_indirect_thunk_r11";
+    }
+    llvm_unreachable("unexpected reg for retpoline");
+  }
+
+  // When targeting an internal COMDAT thunk use an LLVM-specific name.
   switch (Reg) {
-  case 0:
-    assert(!Subtarget.is64Bit() && "R11 should always be available on x64");
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_push"
-               : "__llvm_retpoline_push";
   case X86::EAX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_eax"
-               : "__llvm_retpoline_eax";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_eax";
   case X86::ECX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_ecx"
-               : "__llvm_retpoline_ecx";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_ecx";
   case X86::EDX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_edx"
-               : "__llvm_retpoline_edx";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_edx";
+  case X86::EDI:
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_edi";
   case X86::R11:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_r11"
-               : "__llvm_retpoline_r11";
+    assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+    return "__llvm_retpoline_r11";
   }
   llvm_unreachable("unexpected reg for retpoline");
 }
@@ -26290,15 +26319,13 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
   // just use R11, but we scan for uses anyway to ensure we don't generate
   // incorrect code. On 32-bit, we use one of EAX, ECX, or EDX that isn't
   // already a register use operand to the call to hold the callee. If none
-  // are available, push the callee instead. This is less efficient, but is
-  // necessary for functions using 3 regparms. Such function calls are
-  // (currently) not eligible for tail call optimization, because there is no
-  // scratch register available to hold the address of the callee.
+  // are available, use EDI instead. EDI is chosen because EBX is the PIC base
+  // register and ESI is the base pointer to realigned stack frames with VLAs.
   SmallVector<unsigned, 3> AvailableRegs;
   if (Subtarget.is64Bit())
     AvailableRegs.push_back(X86::R11);
   else
-    AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX});
+    AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX, X86::EDI});
 
   // Zero out any registers that are already used.
   for (const auto &MO : MI.operands()) {
@@ -26316,30 +26343,18 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
       break;
     }
   }
+  if (!AvailableReg)
+    report_fatal_error("calling convention incompatible with retpoline, no "
+                       "available registers");
 
   const char *Symbol = getRetpolineSymbol(Subtarget, AvailableReg);
 
-  if (AvailableReg == 0) {
-    // No register available. Use PUSH. This must not be a tailcall, and this
-    // must not be x64.
-    if (Subtarget.is64Bit())
-      report_fatal_error(
-          "Cannot make an indirect call on x86-64 using both retpoline and a "
-          "calling convention that preservers r11");
-    if (Opc != X86::CALLpcrel32)
-      report_fatal_error("Cannot make an indirect tail call on x86 using "
-                         "retpoline without a preserved register");
-    BuildMI(*BB, MI, DL, TII->get(X86::PUSH32r)).addReg(CalleeVReg);
-    MI.getOperand(0).ChangeToES(Symbol);
-    MI.setDesc(TII->get(Opc));
-  } else {
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
-        .addReg(CalleeVReg);
-    MI.getOperand(0).ChangeToES(Symbol);
-    MI.setDesc(TII->get(Opc));
-    MachineInstrBuilder(*BB->getParent(), &MI)
-        .addReg(AvailableReg, RegState::Implicit | RegState::Kill);
-  }
+  BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
+      .addReg(CalleeVReg);
+  MI.getOperand(0).ChangeToES(Symbol);
+  MI.setDesc(TII->get(Opc));
+  MachineInstrBuilder(*BB->getParent(), &MI)
+      .addReg(AvailableReg, RegState::Implicit | RegState::Kill);
   return BB;
 }
 
