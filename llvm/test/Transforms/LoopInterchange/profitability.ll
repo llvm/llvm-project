@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
 ;; We test profitability model in these test cases.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

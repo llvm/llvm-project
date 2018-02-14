@@ -1022,25 +1022,58 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   if (Config->SymbolOrderingFile.empty())
     return SectionOrder;
 
+  struct SymbolOrderEntry {
+    int Priority;
+    bool Present;
+  };
+
   // Build a map from symbols to their priorities. Symbols that didn't
   // appear in the symbol ordering file have the lowest priority 0.
   // All explicitly mentioned symbols have negative (higher) priorities.
-  DenseMap<StringRef, int> SymbolOrder;
+  DenseMap<StringRef, SymbolOrderEntry> SymbolOrder;
   int Priority = -Config->SymbolOrderingFile.size();
   for (StringRef S : Config->SymbolOrderingFile)
-    SymbolOrder.insert({S, Priority++});
+    SymbolOrder.insert({S, {Priority++, false}});
 
   // Build a map from sections to their priorities.
   for (InputFile *File : ObjectFiles) {
     for (Symbol *Sym : File->getSymbols()) {
-      if (auto *D = dyn_cast<Defined>(Sym)) {
-        if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
-          int &Priority = SectionOrder[Sec];
-          Priority = std::min(Priority, SymbolOrder.lookup(D->getName()));
-        }
+      auto It = SymbolOrder.find(Sym->getName());
+      if (It == SymbolOrder.end())
+        continue;
+      SymbolOrderEntry &Ent = It->second;
+      Ent.Present = true;
+
+      auto *D = dyn_cast<Defined>(Sym);
+      if (Config->WarnSymbolOrdering) {
+        if (Sym->isUndefined())
+          warn(File->getName() +
+               ": unable to order undefined symbol: " + Sym->getName());
+        else if (Sym->isShared())
+          warn(File->getName() +
+               ": unable to order shared symbol: " + Sym->getName());
+        else if (D && !D->Section)
+          warn(File->getName() +
+               ": unable to order absolute symbol: " + Sym->getName());
+        else if (D && !D->Section->Live)
+          warn(File->getName() +
+               ": unable to order discarded symbol: " + Sym->getName());
+      }
+      if (!D)
+        continue;
+
+      if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
+        int &Priority = SectionOrder[Sec];
+        Priority = std::min(Priority, Ent.Priority);
       }
     }
   }
+
+  if (Config->WarnSymbolOrdering)
+    for (auto OrderEntry : SymbolOrder)
+      if (!OrderEntry.second.Present)
+        warn("symbol ordering file: no such symbol: " + OrderEntry.first);
+
   return SectionOrder;
 }
 
