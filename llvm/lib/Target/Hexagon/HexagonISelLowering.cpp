@@ -1727,6 +1727,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
   case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
   case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
+  case HexagonISD::VALIGNADDR:    return "HexagonISD::VALIGNADDR";
   case HexagonISD::OP_END:        break;
   }
   return nullptr;
@@ -1819,6 +1820,16 @@ HexagonTargetLowering::getPreferredVectorAction(EVT VT) const {
     }
   }
   return TargetLoweringBase::TypeSplitVector;
+}
+
+std::pair<SDValue, int>
+HexagonTargetLowering::getBaseAndOffset(SDValue Addr) const {
+  if (Addr.getOpcode() == ISD::ADD) {
+    SDValue Op1 = Addr.getOperand(1);
+    if (auto *CN = dyn_cast<const ConstantSDNode>(Op1.getNode()))
+      return { Addr.getOperand(0), CN->getSExtValue() };
+  }
+  return { Addr, 0 };
 }
 
 // Lower a vector shuffle (V1, V2, V3).  V1 and V2 are the two vectors

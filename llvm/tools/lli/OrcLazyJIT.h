@@ -63,16 +63,15 @@ public:
       : ES(SSP), TM(std::move(TM)), DL(this->TM->createDataLayout()),
         CCMgr(std::move(CCMgr)),
         ObjectLayer(ES,
-                    [](orc::VModuleKey) {
-                      return std::make_shared<SectionMemoryManager>();
-                    },
-                    [&](orc::VModuleKey K) {
+                    [this](orc::VModuleKey K) {
                       auto ResolverI = Resolvers.find(K);
                       assert(ResolverI != Resolvers.end() &&
                              "Missing resolver for module K");
                       auto Resolver = std::move(ResolverI->second);
                       Resolvers.erase(ResolverI);
-                      return Resolver;
+                      return ObjLayerT::Resources{
+                          std::make_shared<SectionMemoryManager>(),
+                          std::move(Resolver)};
                     }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(*this->TM)),
         IRDumpLayer(CompileLayer, createDebugDumper()),
@@ -174,9 +173,9 @@ public:
             }
             return std::move(*NotFoundViaLegacyLookup);
           },
-          [LegacyLookup](orc::AsynchronousSymbolQuery &Query,
+          [LegacyLookup](std::shared_ptr<orc::AsynchronousSymbolQuery> Query,
                          orc::SymbolNameSet Symbols) {
-            return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
+            return lookupWithLegacyFn(*Query, Symbols, LegacyLookup);
           });
 
       // Add the module to the JIT.

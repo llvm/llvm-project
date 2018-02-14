@@ -4,7 +4,7 @@
 // FIXME: A bug in ParsedAttributes causes the order of the attributes to be
 // reversed. The checks are consequently in the reverse order below.
 
-// CHECK: #pragma clang loop interleave_count(8)
+// CHECK: #pragma clang loop interleave_count(8){{$}}
 // CHECK-NEXT: #pragma clang loop vectorize_width(4)
 
 void test(int *List, int Length) {
@@ -61,7 +61,7 @@ void test_templates(int *List, int Length) {
 
 #ifdef MS_EXT
 #pragma init_seg(compiler)
-// MS-EXT: #pragma init_seg (.CRT$XCC)
+// MS-EXT: #pragma init_seg (.CRT$XCC){{$}}
 // MS-EXT-NEXT: int x = 3 __declspec(thread);
 int __declspec(thread) x = 3;
 #endif //MS_EXT

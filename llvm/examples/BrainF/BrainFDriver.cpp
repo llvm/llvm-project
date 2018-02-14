@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
     // is unmanageable because stdout linkage name depends on stdlib implementation.
     fflush(stdout);
   } else {
-    WriteBitcodeToFile(Mod.get(), *out);
+    WriteBitcodeToFile(*Mod, *out);
   }
 
   //Clean up

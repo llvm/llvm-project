@@ -1210,15 +1210,15 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
   Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, dl, LoMemVT, DAG,
                                    MLD->isExpandingLoad());
+  unsigned HiOffset = LoMemVT.getStoreSize();
 
-  MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MLD->getPointerInfo(),
-                         MachineMemOperand::MOLoad,  HiMemVT.getStoreSize(),
-                         SecondHalfAlignment, MLD->getAAInfo(), MLD->getRanges());
+  MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MLD->getPointerInfo().getWithOffset(HiOffset), MachineMemOperand::MOLoad,
+      HiMemVT.getStoreSize(), SecondHalfAlignment, MLD->getAAInfo(),
+      MLD->getRanges());
 
   Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, MaskHi, Src0Hi, HiMemVT, MMO,
                          ExtType, MLD->isExpandingLoad());
-
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -1928,10 +1928,12 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
 
   Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, DL, LoMemVT, DAG,
                                    N->isCompressingStore());
-  MMO = DAG.getMachineFunction().
-    getMachineMemOperand(N->getPointerInfo(),
-                         MachineMemOperand::MOStore,  HiMemVT.getStoreSize(),
-                         SecondHalfAlignment, N->getAAInfo(), N->getRanges());
+  unsigned HiOffset = LoMemVT.getStoreSize();
+
+  MMO = DAG.getMachineFunction().getMachineMemOperand(
+      N->getPointerInfo().getWithOffset(HiOffset), MachineMemOperand::MOStore,
+      HiMemVT.getStoreSize(), SecondHalfAlignment, N->getAAInfo(),
+      N->getRanges());
 
   Hi = DAG.getMaskedStore(Ch, DL, DataHi, Ptr, MaskHi, HiMemVT, MMO,
                           N->isTruncatingStore(), N->isCompressingStore());

@@ -79,6 +79,8 @@ namespace HexagonISD {
       VZERO,
       TYPECAST,    // No-op that's used to convert between different legal
                    // types in a register.
+      VALIGNADDR,  // Align vector address: Op & -HwLen, except when it is
+                   // an address in a vector load, then it's a no-op.
       OP_END
     };
 
@@ -299,6 +301,7 @@ namespace HexagonISD {
 
   private:
     void initializeHVXLowering();
+    std::pair<SDValue,int> getBaseAndOffset(SDValue Addr) const;
 
     bool getBuildVectorConstInts(ArrayRef<SDValue> Values, MVT VecTy,
                                  SelectionDAG &DAG,
@@ -415,8 +418,10 @@ namespace HexagonISD {
     SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
+    SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;
 
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)

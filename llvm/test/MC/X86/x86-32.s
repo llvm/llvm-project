@@ -770,13 +770,13 @@ pshufw $90, %mm4, %mm0
 // CHECK:  encoding: [0x66,0xca,0xce,0x7a]
         	lretw	$0x7ace
 
-// CHECK: bound	2(%eax), %bx
+// CHECK: bound	%bx, 2(%eax)
 // CHECK:  encoding: [0x66,0x62,0x58,0x02]
-        	bound	2(%eax),%bx
+        	bound	%bx,2(%eax)
 
-// CHECK: bound	4(%ebx), %ecx
+// CHECK: bound	%ecx, 4(%ebx)
 // CHECK:  encoding: [0x62,0x4b,0x04]
-        	bound	4(%ebx),%ecx
+        	bound	%ecx,4(%ebx)
 
 // CHECK: arpl	%bx, %bx
 // CHECK:  encoding: [0x63,0xdb]

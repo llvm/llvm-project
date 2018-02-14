@@ -10,8 +10,13 @@
 #include "HexagonISelLowering.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+static cl::opt<bool> ExpandUnalignedLoads("hvx-expand-unaligned-loads",
+  cl::Hidden, cl::init(true),
+  cl::desc("Expand unaligned HVX loads into a pair of aligned loads"));
 
 static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
 static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
@@ -83,6 +88,7 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
     }
 
+    setOperationAction(ISD::LOAD,               T, Custom);
     setOperationAction(ISD::MUL,                T, Custom);
     setOperationAction(ISD::MULHS,              T, Custom);
     setOperationAction(ISD::MULHU,              T, Custom);
@@ -150,6 +156,9 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,  T, Custom);
     setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
     setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+
+    setOperationAction(ISD::LOAD,     T, Custom);
+    setOperationAction(ISD::STORE,    T, Custom);
 
     setOperationAction(ISD::ADD,      T, Legal);
     setOperationAction(ISD::SUB,      T, Legal);
@@ -1287,6 +1296,59 @@ HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::LowerHvxUnalignedLoad(SDValue Op, SelectionDAG &DAG)
+      const {
+  LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  unsigned HaveAlign = LN->getAlignment();
+  MVT VecTy = ty(Op);
+  Type *Ty = EVT(VecTy).getTypeForEVT(*DAG.getContext());
+  const DataLayout &DL = DAG.getDataLayout();
+  unsigned NeedAlign = DL.getABITypeAlignment(Ty);
+  if (HaveAlign >= NeedAlign || !ExpandUnalignedLoads)
+    return Op;
+
+  unsigned HwLen = Subtarget.getVectorLength();
+
+  SDValue Base = LN->getBasePtr();
+  SDValue Chain = LN->getChain();
+  auto BO = getBaseAndOffset(Base);
+  unsigned BaseOpc = BO.first.getOpcode();
+  if (BaseOpc == HexagonISD::VALIGNADDR && BO.second % HwLen == 0)
+    return Op;
+
+  const SDLoc &dl(Op);
+  if (BO.second % HwLen != 0) {
+    BO.first = DAG.getNode(ISD::ADD, dl, MVT::i32, BO.first,
+                           DAG.getConstant(BO.second % HwLen, dl, MVT::i32));
+    BO.second -= BO.second % HwLen;
+  }
+  SDValue BaseNoOff = (BaseOpc != HexagonISD::VALIGNADDR)
+      ? DAG.getNode(HexagonISD::VALIGNADDR, dl, MVT::i32, BO.first)
+      : BO.first;
+  SDValue Base0 = DAG.getMemBasePlusOffset(BaseNoOff, BO.second, dl);
+  SDValue Base1 = DAG.getMemBasePlusOffset(BaseNoOff, BO.second+HwLen, dl);
+
+  MachineMemOperand *WideMMO = nullptr;
+  if (MachineMemOperand *MMO = LN->getMemOperand()) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    WideMMO = MF.getMachineMemOperand(MMO->getPointerInfo(), MMO->getFlags(),
+                    2*HwLen, HwLen, MMO->getAAInfo(), MMO->getRanges(),
+                    MMO->getSyncScopeID(), MMO->getOrdering(),
+                    MMO->getFailureOrdering());
+  }
+
+  SDValue Load0 = DAG.getLoad(VecTy, dl, Chain, Base0, WideMMO);
+  SDValue Load1 = DAG.getLoad(VecTy, dl, Chain, Base1, WideMMO);
+
+  SDValue Aligned = getInstr(Hexagon::V6_valignb, dl, VecTy,
+                             {Load1, Load0, BaseNoOff.getOperand(0)}, DAG);
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                                 Load0.getValue(1), Load1.getValue(1));
+  SDValue M = DAG.getMergeValues({Aligned, NewChain}, dl);
+  return M;
+}
+
+SDValue
 HexagonTargetLowering::SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const {
   assert(!Op.isMachineOpcode());
   SmallVector<SDValue,2> OpsL, OpsH;
@@ -1320,6 +1382,49 @@ HexagonTargetLowering::SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
+  LSBaseSDNode *BN = cast<LSBaseSDNode>(Op.getNode());
+  assert(BN->isUnindexed());
+  MVT MemTy = BN->getMemoryVT().getSimpleVT();
+  if (!isHvxPairTy(MemTy))
+    return Op;
+
+  const SDLoc &dl(Op);
+  unsigned HwLen = Subtarget.getVectorLength();
+  MVT SingleTy = typeSplit(MemTy).first;
+  SDValue Chain = BN->getChain();
+  SDValue Base0 = BN->getBasePtr();
+  SDValue Base1 = DAG.getMemBasePlusOffset(Base0, HwLen, dl);
+
+  MachineMemOperand *MOp0 = nullptr, *MOp1 = nullptr;
+  if (MachineMemOperand *MMO = BN->getMemOperand()) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    MOp0 = MF.getMachineMemOperand(MMO, 0, HwLen);
+    MOp1 = MF.getMachineMemOperand(MMO, HwLen, HwLen);
+  }
+
+  unsigned MemOpc = BN->getOpcode();
+  SDValue NewOp;
+
+  if (MemOpc == ISD::LOAD) {
+    SDValue Load0 = DAG.getLoad(SingleTy, dl, Chain, Base0, MOp0);
+    SDValue Load1 = DAG.getLoad(SingleTy, dl, Chain, Base1, MOp1);
+    NewOp = DAG.getMergeValues(
+              { DAG.getNode(ISD::CONCAT_VECTORS, dl, MemTy, Load0, Load1),
+                DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                            Load0.getValue(1), Load1.getValue(1)) }, dl);
+  } else {
+    assert(MemOpc == ISD::STORE);
+    VectorPair Vals = opSplit(cast<StoreSDNode>(Op)->getValue(), dl, DAG);
+    SDValue Store0 = DAG.getStore(Chain, dl, Vals.first, Base0, MOp0);
+    SDValue Store1 = DAG.getStore(Chain, dl, Vals.second, Base1, MOp1);
+    NewOp = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store0, Store1);
+  }
+
+  return NewOp;
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   bool IsPairOp = isHvxPairTy(ty(Op)) ||
@@ -1331,6 +1436,9 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     switch (Opc) {
       default:
         break;
+      case ISD::LOAD:
+      case ISD::STORE:
+        return SplitHvxMemOp(Op, DAG);
       case ISD::MUL:
       case ISD::MULHS:
       case ISD::MULHU:
@@ -1350,25 +1458,26 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Opc) {
     default:
       break;
-    case ISD::BUILD_VECTOR:             return LowerHvxBuildVector(Op, DAG);
-    case ISD::CONCAT_VECTORS:           return LowerHvxConcatVectors(Op, DAG);
-    case ISD::INSERT_SUBVECTOR:         return LowerHvxInsertSubvector(Op, DAG);
-    case ISD::INSERT_VECTOR_ELT:        return LowerHvxInsertElement(Op, DAG);
-    case ISD::EXTRACT_SUBVECTOR:        return LowerHvxExtractSubvector(Op, DAG);
-    case ISD::EXTRACT_VECTOR_ELT:       return LowerHvxExtractElement(Op, DAG);
+    case ISD::BUILD_VECTOR:            return LowerHvxBuildVector(Op, DAG);
+    case ISD::CONCAT_VECTORS:          return LowerHvxConcatVectors(Op, DAG);
+    case ISD::INSERT_SUBVECTOR:        return LowerHvxInsertSubvector(Op, DAG);
+    case ISD::INSERT_VECTOR_ELT:       return LowerHvxInsertElement(Op, DAG);
+    case ISD::EXTRACT_SUBVECTOR:       return LowerHvxExtractSubvector(Op, DAG);
+    case ISD::EXTRACT_VECTOR_ELT:      return LowerHvxExtractElement(Op, DAG);
 
-    case ISD::ANY_EXTEND:               return LowerHvxAnyExt(Op, DAG);
-    case ISD::SIGN_EXTEND:              return LowerHvxSignExt(Op, DAG);
-    case ISD::ZERO_EXTEND:              return LowerHvxZeroExt(Op, DAG);
+    case ISD::LOAD:                    return LowerHvxUnalignedLoad(Op, DAG);
+    case ISD::ANY_EXTEND:              return LowerHvxAnyExt(Op, DAG);
+    case ISD::SIGN_EXTEND:             return LowerHvxSignExt(Op, DAG);
+    case ISD::ZERO_EXTEND:             return LowerHvxZeroExt(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
-    case ISD::SRL:                      return LowerHvxShift(Op, DAG);
-    case ISD::MUL:                      return LowerHvxMul(Op, DAG);
+    case ISD::SRL:                     return LowerHvxShift(Op, DAG);
+    case ISD::MUL:                     return LowerHvxMul(Op, DAG);
     case ISD::MULHS:
-    case ISD::MULHU:                    return LowerHvxMulh(Op, DAG);
-    case ISD::ANY_EXTEND_VECTOR_INREG:  return LowerHvxExtend(Op, DAG);
+    case ISD::MULHU:                   return LowerHvxMulh(Op, DAG);
+    case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
     case ISD::SETCC:
-    case ISD::INTRINSIC_VOID:           return Op;
+    case ISD::INTRINSIC_VOID:          return Op;
   }
 #ifndef NDEBUG
   Op.dumpr(&DAG);

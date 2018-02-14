@@ -114,9 +114,9 @@ public:
     }
   }
 
-  SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+  SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                        SymbolNameSet Symbols) final {
-    return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
+    return lookupWithLegacyFn(*Query, Symbols, LegacyLookup);
   }
 
 private:

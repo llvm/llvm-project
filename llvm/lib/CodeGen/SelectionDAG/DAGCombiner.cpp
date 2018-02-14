@@ -6835,12 +6835,12 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 
     Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, DL, LoMemVT, DAG,
                                      MST->isCompressingStore());
+    unsigned HiOffset = LoMemVT.getStoreSize();
 
-    MMO = DAG.getMachineFunction().
-      getMachineMemOperand(MST->getPointerInfo(),
-                           MachineMemOperand::MOStore,  HiMemVT.getStoreSize(),
-                           SecondHalfAlignment, MST->getAAInfo(),
-                           MST->getRanges());
+    MMO = DAG.getMachineFunction().getMachineMemOperand(
+        MST->getPointerInfo().getWithOffset(HiOffset),
+        MachineMemOperand::MOStore, HiMemVT.getStoreSize(), SecondHalfAlignment,
+        MST->getAAInfo(), MST->getRanges());
 
     Hi = DAG.getMaskedStore(Chain, DL, DataHi, Ptr, MaskHi, HiMemVT, MMO,
                             MST->isTruncatingStore(),
@@ -6985,11 +6985,12 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
 
     Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, DL, LoMemVT, DAG,
                                      MLD->isExpandingLoad());
+    unsigned HiOffset = LoMemVT.getStoreSize();
 
-    MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MLD->getPointerInfo(),
-                         MachineMemOperand::MOLoad,  HiMemVT.getStoreSize(),
-                         SecondHalfAlignment, MLD->getAAInfo(), MLD->getRanges());
+    MMO = DAG.getMachineFunction().getMachineMemOperand(
+        MLD->getPointerInfo().getWithOffset(HiOffset),
+        MachineMemOperand::MOLoad, HiMemVT.getStoreSize(), SecondHalfAlignment,
+        MLD->getAAInfo(), MLD->getRanges());
 
     Hi = DAG.getMaskedLoad(HiVT, DL, Chain, Ptr, MaskHi, Src0Hi, HiMemVT, MMO,
                            ISD::NON_EXTLOAD, MLD->isExpandingLoad());

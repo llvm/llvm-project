@@ -108,7 +108,7 @@ T tmain(T argc) {
   for (int i=0; i < 2; ++i)
     a = 2;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for
+// CHECK-NEXT: #pragma omp teams distribute parallel for{{$}}
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp target

@@ -50,7 +50,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: T b = argc, c, d, e, f, g;
 // CHECK-NEXT: static T a;
 // CHECK-NEXT: S<T> s;
-// CHECK-NEXT: #pragma omp target teams
+// CHECK-NEXT: #pragma omp target teams{{$}}
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp target teams default(none) private(argc,b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(C) thread_limit(d * C)
 // CHECK-NEXT: foo()

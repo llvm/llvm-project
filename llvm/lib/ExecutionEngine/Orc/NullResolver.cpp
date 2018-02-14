@@ -19,8 +19,9 @@ SymbolNameSet NullResolver::lookupFlags(SymbolFlagsMap &Flags,
   return Symbols;
 }
 
-SymbolNameSet NullResolver::lookup(AsynchronousSymbolQuery &Query,
-                                   SymbolNameSet Symbols) {
+SymbolNameSet
+NullResolver::lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
+                     SymbolNameSet Symbols) {
   assert(Symbols.empty() && "Null resolver: Symbols must be empty");
   return Symbols;
 }

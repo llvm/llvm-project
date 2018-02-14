@@ -4112,7 +4112,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   auto *VD = cast<VarDecl>(D);
   // extern __shared__ is only allowed on arrays with no length (e.g.
   // "int x[]").
-  if (VD->hasExternalStorage() && !isa<IncompleteArrayType>(VD->getType())) {
+  if (!S.getLangOpts().CUDARelocatableDeviceCode && VD->hasExternalStorage() &&
+      !isa<IncompleteArrayType>(VD->getType())) {
     S.Diag(Attr.getLoc(), diag::err_cuda_extern_shared) << VD;
     return;
   }

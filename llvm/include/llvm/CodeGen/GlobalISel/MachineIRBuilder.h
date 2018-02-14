@@ -375,6 +375,10 @@ public:
   ///      with the same (scalar or vector) type).
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
+  template <typename DstTy, typename... UseArgsTy>
+  MachineInstrBuilder buildOr(DstTy &&Dst, UseArgsTy &&... UseArgs) {
+    return buildOr(getDestFromArg(Dst), getRegFromArg(UseArgs)...);
+  }
   MachineInstrBuilder buildOr(unsigned Res, unsigned Op0, unsigned Op1);
 
   /// Build and insert \p Res = G_ANYEXT \p Op0
@@ -441,6 +445,10 @@ public:
   /// \pre \p Op must be a generic virtual register with scalar or vector type.
   ///
   /// \return The newly created instruction.
+  template <typename DstTy, typename UseArgTy>
+  MachineInstrBuilder buildSExtOrTrunc(DstTy &&Dst, UseArgTy &&Use) {
+    return buildSExtOrTrunc(getDestFromArg(Dst), getRegFromArg(Use));
+  }
   MachineInstrBuilder buildSExtOrTrunc(unsigned Res, unsigned Op);
 
   /// Build and insert \p Res = G_ZEXT \p Op, \p Res = G_TRUNC \p Op, or
@@ -451,6 +459,10 @@ public:
   /// \pre \p Op must be a generic virtual register with scalar or vector type.
   ///
   /// \return The newly created instruction.
+  template <typename DstTy, typename UseArgTy>
+  MachineInstrBuilder buildZExtOrTrunc(DstTy &&Dst, UseArgTy &&Use) {
+    return buildZExtOrTrunc(getDestFromArg(Dst), getRegFromArg(Use));
+  }
   MachineInstrBuilder buildZExtOrTrunc(unsigned Res, unsigned Op);
 
   // Build and insert \p Res = G_ANYEXT \p Op, \p Res = G_TRUNC \p Op, or
@@ -480,6 +492,10 @@ public:
                                       unsigned Op);
 
   /// Build and insert an appropriate cast between two registers of equal size.
+  template <typename DstType, typename ArgType>
+  MachineInstrBuilder buildCast(DstType &&Res, ArgType &&Arg) {
+    return buildCast(getDestFromArg(Res), getRegFromArg(Arg));
+  }
   MachineInstrBuilder buildCast(unsigned Dst, unsigned Src);
 
   /// Build and insert G_BR \p Dest
@@ -550,6 +566,10 @@ public:
   /// \pre \p Res must be a generic virtual register with scalar type.
   ///
   /// \return The newly created instruction.
+  template <typename DstType>
+  MachineInstrBuilder buildFConstant(DstType &&Res, const ConstantFP &Val) {
+    return buildFConstant(getDestFromArg(Res), Val);
+  }
   MachineInstrBuilder buildFConstant(unsigned Res, const ConstantFP &Val);
 
   /// Build and insert \p Res = COPY Op
@@ -598,6 +618,9 @@ public:
   MachineInstrBuilder buildExtract(unsigned Res, unsigned Src, uint64_t Index);
 
   /// Build and insert \p Res = IMPLICIT_DEF.
+  template <typename DstType> MachineInstrBuilder buildUndef(DstType &&Res) {
+    return buildUndef(getDestFromArg(Res));
+  }
   MachineInstrBuilder buildUndef(unsigned Dst);
 
   /// Build and insert instructions to put \p Ops together at the specified p
@@ -667,6 +690,10 @@ public:
   /// \pre \p Res must be smaller than \p Op
   ///
   /// \return The newly created instruction.
+  template <typename DstType, typename SrcType>
+  MachineInstrBuilder buildFPTrunc(DstType &&Res, SrcType &&Src) {
+    return buildFPTrunc(getDestFromArg(Res), getRegFromArg(Src));
+  }
   MachineInstrBuilder buildFPTrunc(unsigned Res, unsigned Op);
 
   /// Build and insert \p Res = G_TRUNC \p Op

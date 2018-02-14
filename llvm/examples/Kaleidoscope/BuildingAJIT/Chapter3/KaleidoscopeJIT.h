@@ -63,13 +63,14 @@ private:
   CompileOnDemandLayer<decltype(OptimizeLayer)> CODLayer;
 
 public:
-
   KaleidoscopeJIT()
       : ES(SSP), TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(
-            ES,
-            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
-            [&](orc::VModuleKey K) { return Resolvers[K]; }),
+        ObjectLayer(ES,
+                    [this](VModuleKey K) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                          std::make_shared<SectionMemoryManager>(),
+                          Resolvers[K]};
+                    }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {

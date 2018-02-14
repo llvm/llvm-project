@@ -1368,7 +1368,7 @@ writePrettyPrintFunction(Record &R,
       "    OS << \"" << Prefix << Spelling;
 
     if (Variety == "Pragma") {
-      OS << " \";\n";
+      OS << "\";\n";
       OS << "    printPrettyPragma(OS, Policy);\n";
       OS << "    OS << \"\\n\";";
       OS << "    break;\n";

@@ -26,7 +26,7 @@ public:
   SymbolNameSet lookupFlags(SymbolFlagsMap &Flags,
                             const SymbolNameSet &Symbols) override;
 
-  SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+  SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                        SymbolNameSet Symbols) override;
 };
 

@@ -28,7 +28,7 @@ T tmain(T argc) {
   return a + argc;
 }
 // CHECK:      static T a;
-// CHECK-NEXT: #pragma omp barrier
+// CHECK-NEXT: #pragma omp barrier{{$}}
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp barrier
 // CHECK:      static char a;

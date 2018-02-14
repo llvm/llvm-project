@@ -784,7 +784,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite) {
       raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::F_None);
       if (EC)
         message(LDPL_FATAL, "Failed to write the output file.");
-      WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ false);
+      WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ false);
       return false;
     };
     break;

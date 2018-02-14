@@ -462,7 +462,7 @@ static void writeModuleToFile(Module &TheModule, StringRef Filename) {
   raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
   error(EC, "error opening the file '" + Filename + "'");
   maybeVerifyModule(TheModule);
-  WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
+  WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
 class ThinLTOProcessing {

@@ -85,7 +85,7 @@ static void WriteOutputFile(const Module *M) {
   }
 
   if (Force || !CheckBitcodeOutputToConsole(Out->os(), true))
-    WriteBitcodeToFile(M, Out->os(), PreserveBitcodeUseListOrder, nullptr,
+    WriteBitcodeToFile(*M, Out->os(), PreserveBitcodeUseListOrder, nullptr,
                        EmitModuleHash);
 
   // Declare success.

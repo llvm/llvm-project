@@ -213,23 +213,20 @@ private:
   }
 
 public:
+  struct Resources {
+    std::shared_ptr<RuntimeDyld::MemoryManager> MemMgr;
+    std::shared_ptr<SymbolResolver> Resolver;
+  };
 
-  /// @brief Functor for creating memory managers.
-  using MemoryManagerGetter =
-      std::function<std::shared_ptr<RuntimeDyld::MemoryManager>(VModuleKey)>;
-
-  using ResolverGetter =
-      std::function<std::shared_ptr<SymbolResolver>(VModuleKey)>;
+  using ResourcesGetter = std::function<Resources(VModuleKey)>;
 
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
   RTDyldObjectLinkingLayer(
-      ExecutionSession &ES, MemoryManagerGetter GetMemMgr,
-      ResolverGetter GetResolver,
+      ExecutionSession &ES, ResourcesGetter GetResources,
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor())
-      : ES(ES), GetMemMgr(std::move(GetMemMgr)),
-        GetResolver(std::move(GetResolver)),
+      : ES(ES), GetResources(std::move(GetResources)),
         NotifyLoaded(std::move(NotifyLoaded)),
         NotifyFinalized(std::move(NotifyFinalized)), ProcessAllSections(false) {
   }
@@ -270,9 +267,11 @@ public:
 
     assert(!LinkedObjects.count(K) && "VModuleKey already in use");
 
-    LinkedObjects[K] =
-        createLinkedObject(ES, std::move(Obj), GetMemMgr(K), GetResolver(K),
-                           std::move(Finalizer), ProcessAllSections);
+    auto R = GetResources(K);
+
+    LinkedObjects[K] = createLinkedObject(
+        ES, std::move(Obj), std::move(R.MemMgr), std::move(R.Resolver),
+        std::move(Finalizer), ProcessAllSections);
 
     return Error::success();
   }
@@ -339,8 +338,7 @@ private:
   ExecutionSession &ES;
 
   std::map<VModuleKey, std::unique_ptr<LinkedObject>> LinkedObjects;
-  MemoryManagerGetter GetMemMgr;
-  ResolverGetter GetResolver;
+  ResourcesGetter GetResources;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
   bool ProcessAllSections = false;

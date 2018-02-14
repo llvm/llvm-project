@@ -60,8 +60,8 @@ main_body:
 
 ; GCN-LABEL: {{^}}image_store_v2f16
 
-; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
+; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}]{{$}}
 ; UNPACKED: image_store v{{\[}}[[LO]]:[[HI]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x3 unorm d16
 
 ; PACKED: image_store v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x3 unorm d16
@@ -73,10 +73,10 @@ main_body:
 
 ; GCN-LABEL: {{^}}image_store_v4f16
 
-; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
+; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}]{{$}}
 ; UNPACKED: image_store v{{\[}}[[LO]]:[[HI]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf unorm d16
 
 ; GFX81: v_or_b32_e32 v[[HI:[0-9]+]]
@@ -94,10 +94,10 @@ main_body:
 
 ; GCN-LABEL: {{^}}image_store_mip_v4f16
 
-; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
+; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]{{$}}
+; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}]{{$}}
 ; UNPACKED: image_store_mip v{{\[}}[[LO]]:[[HI]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf unorm d16
 
 ; GFX81: v_or_b32_e32 v[[HI:[0-9]+]]

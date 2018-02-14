@@ -452,8 +452,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bound (%esi), %ax
-; GENERIC-NEXT:    bound (%edx), %ecx
+; GENERIC-NEXT:    bound %ax, (%esi)
+; GENERIC-NEXT:    bound %ecx, (%edx)
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    popl %esi
 ; GENERIC-NEXT:    retl
@@ -468,8 +468,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bound (%esi), %ax # sched: [11:5.50]
-; ATOM-NEXT:    bound (%edx), %ecx # sched: [11:5.50]
+; ATOM-NEXT:    bound %ax, (%esi) # sched: [11:5.50]
+; ATOM-NEXT:    bound %ecx, (%edx) # sched: [11:5.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    popl %esi # sched: [1:1.00]
 ; ATOM-NEXT:    retl # sched: [79:39.50]
@@ -484,8 +484,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bound (%esi), %ax # sched: [100:1.00]
-; SLM-NEXT:    bound (%edx), %ecx # sched: [100:1.00]
+; SLM-NEXT:    bound %ax, (%esi) # sched: [100:1.00]
+; SLM-NEXT:    bound %ecx, (%edx) # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    popl %esi # sched: [3:1.00]
 ; SLM-NEXT:    retl # sched: [4:1.00]
@@ -500,8 +500,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bound (%esi), %ax # sched: [100:0.33]
-; SANDY-NEXT:    bound (%edx), %ecx # sched: [100:0.33]
+; SANDY-NEXT:    bound %ax, (%esi) # sched: [100:0.33]
+; SANDY-NEXT:    bound %ecx, (%edx) # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    popl %esi # sched: [6:0.50]
 ; SANDY-NEXT:    retl # sched: [5:1.00]
@@ -516,8 +516,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bound (%esi), %ax # sched: [1:?]
-; HASWELL-NEXT:    bound (%edx), %ecx # sched: [1:?]
+; HASWELL-NEXT:    bound %ax, (%esi) # sched: [1:?]
+; HASWELL-NEXT:    bound %ecx, (%edx) # sched: [1:?]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    popl %esi # sched: [6:0.50]
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
@@ -532,8 +532,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bound (%esi), %ax # sched: [100:0.25]
-; BROADWELL-NEXT:    bound (%edx), %ecx # sched: [100:0.25]
+; BROADWELL-NEXT:    bound %ax, (%esi) # sched: [100:0.25]
+; BROADWELL-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    popl %esi # sched: [6:0.50]
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
@@ -548,8 +548,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bound (%esi), %ax # sched: [100:0.25]
-; SKYLAKE-NEXT:    bound (%edx), %ecx # sched: [100:0.25]
+; SKYLAKE-NEXT:    bound %ax, (%esi) # sched: [100:0.25]
+; SKYLAKE-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    popl %esi # sched: [6:0.50]
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
@@ -564,8 +564,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bound (%esi), %ax # sched: [100:0.25]
-; SKX-NEXT:    bound (%edx), %ecx # sched: [100:0.25]
+; SKX-NEXT:    bound %ax, (%esi) # sched: [100:0.25]
+; SKX-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    popl %esi # sched: [6:0.50]
 ; SKX-NEXT:    retl # sched: [6:0.50]
@@ -580,8 +580,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bound (%esi), %ax # sched: [100:0.17]
-; BTVER2-NEXT:    bound (%edx), %ecx # sched: [100:0.17]
+; BTVER2-NEXT:    bound %ax, (%esi) # sched: [100:0.17]
+; BTVER2-NEXT:    bound %ecx, (%edx) # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    popl %esi # sched: [5:1.00]
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
@@ -596,12 +596,12 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bound (%esi), %ax # sched: [100:?]
-; ZNVER1-NEXT:    bound (%edx), %ecx # sched: [100:?]
+; ZNVER1-NEXT:    bound %ax, (%esi) # sched: [100:?]
+; ZNVER1-NEXT:    bound %ecx, (%edx) # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    popl %esi # sched: [8:0.50]
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
-  call void asm sideeffect "bound $1, $0 \0A\09 bound $3, $2", "r,*m,r,*m"(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3)
+  call void asm sideeffect "bound $0, $1 \0A\09 bound $2, $3", "r,*m,r,*m"(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3)
   ret void
 }
 

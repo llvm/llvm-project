@@ -41,7 +41,7 @@ public:
   }
 };
 
-// CHECK: #pragma omp distribute parallel for private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp distribute parallel for private(this->a) private(this->a) private(T::a){{$}}
 // CHECK: #pragma omp distribute parallel for private(this->a) private(this->a)
 // CHECK: #pragma omp distribute parallel for private(this->a) private(this->a) private(this->S::a)
 

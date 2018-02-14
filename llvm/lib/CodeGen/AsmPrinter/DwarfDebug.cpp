@@ -1176,7 +1176,9 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     return;
 
   // Check if source location changes, but ignore DBG_VALUE and CFI locations.
-  if (MI->isMetaInstruction())
+  // If the instruction is part of the function frame setup code, do not emit
+  // any line record, as there is no correspondence with any user code.
+  if (MI->isMetaInstruction() || MI->getFlag(MachineInstr::FrameSetup))
     return;
   const DebugLoc &DL = MI->getDebugLoc();
   // When we emit a line-0 record, we don't update PrevInstLoc; so look at
