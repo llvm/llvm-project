@@ -698,24 +698,20 @@ struct SemiNCAInfo {
       return;
 
     // Recalculate the set of roots.
-    DT.Roots = FindRoots(DT, BUI);
-    for (const NodePtr R : DT.Roots) {
-      const TreeNodePtr TN = DT.getNode(R);
-      // A CFG node was selected as a tree root, but the corresponding tree node
-      // is not connected to the virtual root. This is because the incremental
-      // algorithm does not really know or use the set of roots and can make a
-      // different (implicit) decision about which nodes within an infinite loop
-      // becomes a root.
-      if (TN && !DT.isVirtualRoot(TN->getIDom())) {
-        DEBUG(dbgs() << "Root " << BlockNamePrinter(R)
-                     << " is not virtual root's child\n"
-                     << "The entire tree needs to be rebuilt\n");
-        // It should be possible to rotate the subtree instead of recalculating
-        // the whole tree, but this situation happens extremely rarely in
-        // practice.
-        CalculateFromScratch(DT, BUI);
-        return;
-      }
+    auto Roots = FindRoots(DT, BUI);
+    if (DT.Roots.size() != Roots.size() ||
+        !std::is_permutation(DT.Roots.begin(), DT.Roots.end(), Roots.begin())) {
+      // The roots chosen in the CFG have changed. This is because the
+      // incremental algorithm does not really know or use the set of roots and
+      // can make a different (implicit) decision about which node within an
+      // infinite loop becomes a root.
+
+      DEBUG(dbgs() << "Roots are different in updated trees\n"
+                   << "The entire tree needs to be rebuilt\n");
+      // It may be possible to update the tree without recalculating it, but
+      // we do not know yet how to do it, and it happens rarely in practise.
+      CalculateFromScratch(DT, BUI);
+      return;
     }
   }
 
