@@ -572,18 +572,18 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 $(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -o "$(EXE)"
+	$(SWIFTCC) $^ $(SWIFTFLAGS) -o "$(EXE)"
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
-	$(LD) $(OBJECTS) $(ARCHIVE_NAME) -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
+	$(LD) $^ -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
 else
 EXE = $(DYLIB_FILENAME)
 endif
 else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
-	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+	$(LD) $(LDFLAGS) $^ -o "$(EXE)"
 endif
 endif
 #----------------------------------------------------------------------
