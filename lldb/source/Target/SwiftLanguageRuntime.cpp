@@ -713,11 +713,6 @@ const std::string SwiftLanguageRuntime::GetCurrentMangledName(const char *mangle
 #endif
 }
 
-uint32_t SwiftLanguageRuntime::FindEquivalentNames(
-    ConstString type_name, std::vector<ConstString> &equivalents) {
-  return 0;
-}
-
 void SwiftLanguageRuntime::MethodName::Clear() {
   m_full.Clear();
   m_basename = llvm::StringRef();
