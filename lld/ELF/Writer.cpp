@@ -1017,8 +1017,8 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 }
 
 // Builds section order for handling --symbol-ordering-file.
-static DenseMap<SectionBase *, int> buildSectionOrder() {
-  DenseMap<SectionBase *, int> SectionOrder;
+static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
+  DenseMap<const InputSectionBase *, int> SectionOrder;
   if (Config->SymbolOrderingFile.empty())
     return SectionOrder;
 
@@ -1033,18 +1033,19 @@ static DenseMap<SectionBase *, int> buildSectionOrder() {
   // Build a map from sections to their priorities.
   for (InputFile *File : ObjectFiles) {
     for (Symbol *Sym : File->getSymbols()) {
-      auto *D = dyn_cast<Defined>(Sym);
-      if (!D || !D->Section)
-        continue;
-      int &Priority = SectionOrder[D->Section];
-      Priority = std::min(Priority, SymbolOrder.lookup(D->getName()));
+      if (auto *D = dyn_cast<Defined>(Sym)) {
+        if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
+          int &Priority = SectionOrder[Sec];
+          Priority = std::min(Priority, SymbolOrder.lookup(D->getName()));
+        }
+      }
     }
   }
   return SectionOrder;
 }
 
 static void sortSection(OutputSection *Sec,
-                        const DenseMap<SectionBase *, int> &Order) {
+                        const DenseMap<const InputSectionBase *, int> &Order) {
   if (!Sec->Live)
     return;
   StringRef Name = Sec->Name;
@@ -1078,7 +1079,7 @@ static void sortSection(OutputSection *Sec,
 // sorting for special input sections. This also handles --symbol-ordering-file.
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
   // Build the order once since it is expensive.
-  DenseMap<SectionBase *, int> Order = buildSectionOrder();
+  DenseMap<const InputSectionBase *, int> Order = buildSectionOrder();
   for (BaseCommand *Base : Script->SectionCommands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       sortSection(Sec, Order);
