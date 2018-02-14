@@ -17,6 +17,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -123,12 +124,6 @@ static llvm::cl::opt<Path> InputMirrorFile(
         "Mirror all LSP input to the specified file. Useful for debugging."),
     llvm::cl::init(""), llvm::cl::Hidden);
 
-static llvm::cl::opt<Path> TraceFile(
-    "trace",
-    llvm::cl::desc(
-        "Trace internal events and timestamps in chrome://tracing JSON format"),
-    llvm::cl::init(""), llvm::cl::Hidden);
-
 static llvm::cl::opt<bool> EnableIndexBasedCompletion(
     "enable-index-based-completion",
     llvm::cl::desc(
@@ -176,15 +171,18 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Setup tracing facilities.
+  // Setup tracing facilities if CLANGD_TRACE is set. In practice enabling a
+  // trace flag in your editor's config is annoying, launching with
+  // `CLANGD_TRACE=trace.json vim` is easier.
   llvm::Optional<llvm::raw_fd_ostream> TraceStream;
   std::unique_ptr<trace::EventTracer> Tracer;
-  if (!TraceFile.empty()) {
+  if (auto *TraceFile = getenv("CLANGD_TRACE")) {
     std::error_code EC;
     TraceStream.emplace(TraceFile, /*ref*/ EC, llvm::sys::fs::F_RW);
     if (EC) {
-      TraceFile.reset();
-      llvm::errs() << "Error while opening trace file: " << EC.message();
+      TraceStream.reset();
+      llvm::errs() << "Error while opening trace file " << TraceFile << ": "
+                   << EC.message();
     } else {
       Tracer = trace::createJSONTracer(*TraceStream, PrettyPrint);
     }

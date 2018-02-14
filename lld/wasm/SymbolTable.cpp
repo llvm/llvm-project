@@ -14,8 +14,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-
-#include <unordered_set>
+#include "llvm/ADT/SetVector.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -35,7 +34,7 @@ void SymbolTable::addFile(InputFile *File) {
 }
 
 void SymbolTable::reportRemainingUndefines() {
-  std::unordered_set<Symbol *> Undefs;
+  SetVector<Symbol *> Undefs;
   for (Symbol *Sym : SymVector) {
     if (Sym->isUndefined() && !Sym->isWeak() &&
         Config->AllowUndefinedSymbols.count(Sym->getName()) == 0) {

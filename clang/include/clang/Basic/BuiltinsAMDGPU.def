@@ -21,9 +21,9 @@
 // SI+ only builtins.
 //===----------------------------------------------------------------------===//
 
-BUILTIN(__builtin_amdgcn_dispatch_ptr, "Uc*2", "nc")
-BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*2", "nc")
-BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*2", "nc")
+BUILTIN(__builtin_amdgcn_dispatch_ptr, "Uc*4", "nc")
+BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*4", "nc")
+BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*4", "nc")
 
 BUILTIN(__builtin_amdgcn_workgroup_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_id_y, "Ui", "nc")

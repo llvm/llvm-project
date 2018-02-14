@@ -23,8 +23,10 @@ intptr_t test_ptrtoint_global(global char* x) {
 
 //SZ32: define{{.*}} i32 @test_ptrtoint_constant(i8 addrspace(2)* %x)
 //SZ32: ptrtoint i8 addrspace(2)* %{{.*}} to i32
-//SZ64: define{{.*}} i64 @test_ptrtoint_constant(i8 addrspace(2)* %x)
-//SZ64: ptrtoint i8 addrspace(2)* %{{.*}} to i64
+//SZ64ONLY: define{{.*}} i64 @test_ptrtoint_constant(i8 addrspace(2)* %x)
+//SZ64ONLY: ptrtoint i8 addrspace(2)* %{{.*}} to i64
+//AMDGCN: define{{.*}} i64 @test_ptrtoint_constant(i8 addrspace(4)* %x)
+//AMDGCN: ptrtoint i8 addrspace(4)* %{{.*}} to i64
 uintptr_t test_ptrtoint_constant(constant char* x) {
   return (uintptr_t)x;
 }

@@ -966,8 +966,11 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   if (!Canonical)
     VisitNestedNameSpecifier(S->getQualifier());
   VisitDecl(S->getDecl());
-  if (!Canonical)
-    VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
+  if (!Canonical) {
+    ID.AddBoolean(S->hasExplicitTemplateArgs());
+    if (S->hasExplicitTemplateArgs())
+      VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
+  }
 }
 
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {

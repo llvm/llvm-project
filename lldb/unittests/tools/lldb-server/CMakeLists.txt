@@ -13,7 +13,7 @@ add_lldb_test_executable(thread_inferior inferior/thread_inferior.cpp)
 add_lldb_test_executable(environment_check inferior/environment_check.cpp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  add_definitions(-DLLDB_SERVER="$<TARGET_FILE:debugserver>" -DLLDB_SERVER_IS_DEBUGSERVER=1)
+  add_definitions(-DLLDB_SERVER="${DEBUGSERVER_PATH}" -DLLDB_SERVER_IS_DEBUGSERVER=1)
 else()
   add_definitions(-DLLDB_SERVER="$<TARGET_FILE:lldb-server>" -DLLDB_SERVER_IS_DEBUGSERVER=0)
 endif()
