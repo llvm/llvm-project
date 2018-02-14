@@ -43,7 +43,7 @@ static const char R11ThunkName[]    = "__llvm_retpoline_r11";
 static const char EAXThunkName[]    = "__llvm_retpoline_eax";
 static const char ECXThunkName[]    = "__llvm_retpoline_ecx";
 static const char EDXThunkName[]    = "__llvm_retpoline_edx";
-static const char PushThunkName[]   = "__llvm_retpoline_push";
+static const char EDIThunkName[]    = "__llvm_retpoline_edi";
 
 namespace {
 class X86RetpolineThunks : public MachineFunctionPass {
@@ -127,7 +127,7 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
       createThunkFunction(M, R11ThunkName);
     else
       for (StringRef Name :
-           {EAXThunkName, ECXThunkName, EDXThunkName, PushThunkName})
+           {EAXThunkName, ECXThunkName, EDXThunkName, EDIThunkName})
         createThunkFunction(M, Name);
     InsertedThunks = true;
     return true;
@@ -151,9 +151,8 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
     populateThunk(MF, X86::R11);
   } else {
     // For 32-bit targets we need to emit a collection of thunks for various
-    // possible scratch registers as well as a fallback that is used when
-    // there are no scratch registers and assumes the retpoline target has
-    // been pushed.
+    // possible scratch registers as well as a fallback that uses EDI, which is
+    // normally callee saved.
     //   __llvm_retpoline_eax:
     //         calll .Leax_call_target
     //   .Leax_capture_spec:
@@ -174,32 +173,18 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
     //         movl %edx, (%esp)
     //         retl
     //
-    // This last one is a bit more special and so needs a little extra
-    // handling.
-    // __llvm_retpoline_push:
-    //         calll .Lpush_call_target
-    // .Lpush_capture_spec:
-    //         pause
-    //         lfence
-    //         jmp .Lpush_capture_spec
-    // .align 16
-    // .Lpush_call_target:
-    //         # Clear pause_loop return address.
-    //         addl $4, %esp
-    //         # Top of stack words are: Callee, RA. Exchange Callee and RA.
-    //         pushl 4(%esp)  # Push callee
-    //         pushl 4(%esp)  # Push RA
-    //         popl 8(%esp)   # Pop RA to final RA
-    //         popl (%esp)    # Pop callee to next top of stack
-    //         retl           # Ret to callee
+    //   __llvm_retpoline_edi:
+    //   ... # Same setup
+    //         movl %edi, (%esp)
+    //         retl
     if (MF.getName() == EAXThunkName)
       populateThunk(MF, X86::EAX);
     else if (MF.getName() == ECXThunkName)
       populateThunk(MF, X86::ECX);
     else if (MF.getName() == EDXThunkName)
       populateThunk(MF, X86::EDX);
-    else if (MF.getName() == PushThunkName)
-      populateThunk(MF);
+    else if (MF.getName() == EDIThunkName)
+      populateThunk(MF, X86::EDI);
     else
       llvm_unreachable("Invalid thunk name on x86-32!");
   }
@@ -301,11 +286,6 @@ void X86RetpolineThunks::populateThunk(MachineFunction &MF,
   CaptureSpec->addSuccessor(CaptureSpec);
 
   CallTarget->setAlignment(4);
-  if (Reg) {
-    insertRegReturnAddrClobber(*CallTarget, *Reg);
-  } else {
-    assert(!Is64Bit && "We only support non-reg thunks on 32-bit x86!");
-    insert32BitPushReturnAddrClobber(*CallTarget);
-  }
+  insertRegReturnAddrClobber(*CallTarget, *Reg);
   BuildMI(CallTarget, DebugLoc(), TII->get(RetOpc));
 }
