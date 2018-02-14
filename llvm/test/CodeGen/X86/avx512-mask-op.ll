@@ -2775,3 +2775,99 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
   %ret = bitcast <8 x i1> %m2 to i8
   ret i8 %ret
 }
+
+; Make sure we don't emit a ktest for signed comparisons.
+define void @ktest_signed(<16 x i32> %x, <16 x i32> %y) {
+; KNL-LABEL: ktest_signed:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    pushq %rax
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testw %ax, %ax
+; KNL-NEXT:    jle LBB63_1
+; KNL-NEXT:  ## %bb.2: ## %bb.2
+; KNL-NEXT:    popq %rax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+; KNL-NEXT:  LBB63_1: ## %bb.1
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    callq _foo
+; KNL-NEXT:    popq %rax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ktest_signed:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    pushq %rax
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    testw %ax, %ax
+; SKX-NEXT:    jle LBB63_1
+; SKX-NEXT:  ## %bb.2: ## %bb.2
+; SKX-NEXT:    popq %rax
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+; SKX-NEXT:  LBB63_1: ## %bb.1
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    callq _foo
+; SKX-NEXT:    popq %rax
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: ktest_signed:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    pushq %rax
+; AVX512BW-NEXT:    .cfi_def_cfa_offset 16
+; AVX512BW-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    testw %ax, %ax
+; AVX512BW-NEXT:    jle LBB63_1
+; AVX512BW-NEXT:  ## %bb.2: ## %bb.2
+; AVX512BW-NEXT:    popq %rax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:  LBB63_1: ## %bb.1
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    callq _foo
+; AVX512BW-NEXT:    popq %rax
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: ktest_signed:
+; AVX512DQ:       ## %bb.0:
+; AVX512DQ-NEXT:    pushq %rax
+; AVX512DQ-NEXT:    .cfi_def_cfa_offset 16
+; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQ-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    testw %ax, %ax
+; AVX512DQ-NEXT:    jle LBB63_1
+; AVX512DQ-NEXT:  ## %bb.2: ## %bb.2
+; AVX512DQ-NEXT:    popq %rax
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+; AVX512DQ-NEXT:  LBB63_1: ## %bb.1
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    callq _foo
+; AVX512DQ-NEXT:    popq %rax
+; AVX512DQ-NEXT:    retq
+  %a = icmp eq <16 x i32> %x, zeroinitializer
+  %b = icmp eq <16 x i32> %y, zeroinitializer
+  %c = and <16 x i1> %a, %b
+  %d = bitcast <16 x i1> %c to i16
+  %e = icmp sgt i16 %d, 0
+  br i1 %e, label %bb.2, label %bb.1
+bb.1:
+  call void @foo()
+  br label %bb.2
+bb.2:
+  ret void
+}
+declare void @foo()
+
