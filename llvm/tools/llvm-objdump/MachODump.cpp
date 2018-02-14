@@ -2149,19 +2149,22 @@ void llvm::ParseInputMachO(StringRef Filename) {
 
 // The block of info used by the Symbolizer call backs.
 struct DisassembleInfo {
+  DisassembleInfo(MachOObjectFile *O, SymbolAddressMap *AddrMap,
+                  std::vector<SectionRef> *Sections, bool verbose)
+    : verbose(verbose), O(O), AddrMap(AddrMap), Sections(Sections) {}
   bool verbose;
   MachOObjectFile *O;
   SectionRef S;
   SymbolAddressMap *AddrMap;
   std::vector<SectionRef> *Sections;
-  const char *class_name;
-  const char *selector_name;
-  char *method;
-  char *demangled_name;
-  uint64_t adrp_addr;
-  uint32_t adrp_inst;
+  const char *class_name = nullptr;
+  const char *selector_name = nullptr;
+  char *method = nullptr;
+  char *demangled_name = nullptr;
+  uint64_t adrp_addr = 0;
+  uint32_t adrp_inst = 0;
   std::unique_ptr<SymbolAddressMap> bindtable;
-  uint32_t depth;
+  uint32_t depth = 0;
 };
 
 // SymbolizerGetOpInfo() is the operand information call back function.
@@ -2757,10 +2760,10 @@ static void method_reference(struct DisassembleInfo *info,
     if (strcmp(*ReferenceName, "_objc_msgSend") == 0) {
       if (info->selector_name != nullptr) {
         if (info->method != nullptr)
-          free(info->method);
+          delete[] info->method;
         if (info->class_name != nullptr) {
-          info->method = (char *)malloc(5 + strlen(info->class_name) +
-                                        strlen(info->selector_name));
+          info->method = new char[5 + strlen(info->class_name) +
+                                  strlen(info->selector_name)];
           if (info->method != nullptr) {
             strcpy(info->method, "+[");
             strcat(info->method, info->class_name);
@@ -2771,7 +2774,7 @@ static void method_reference(struct DisassembleInfo *info,
             *ReferenceType = LLVMDisassembler_ReferenceType_Out_Objc_Message;
           }
         } else {
-          info->method = (char *)malloc(9 + strlen(info->selector_name));
+          info->method = new char[9 + strlen(info->selector_name)];
           if (info->method != nullptr) {
             if (Arch == Triple::x86_64)
               strcpy(info->method, "-[%rdi ");
@@ -2790,8 +2793,8 @@ static void method_reference(struct DisassembleInfo *info,
     } else if (strcmp(*ReferenceName, "_objc_msgSendSuper2") == 0) {
       if (info->selector_name != nullptr) {
         if (info->method != nullptr)
-          free(info->method);
-        info->method = (char *)malloc(17 + strlen(info->selector_name));
+          delete[] info->method;
+        info->method = new char[17 + strlen(info->selector_name)];
         if (info->method != nullptr) {
           if (Arch == Triple::x86_64)
             strcpy(info->method, "-[[%rdi super] ");
@@ -5675,21 +5678,8 @@ static void printObjc2_64bit_MetaData(MachOObjectFile *O, bool verbose) {
     Sections.push_back(Section);
   }
 
-  struct DisassembleInfo info;
-  // Set up the block of info used by the Symbolizer call backs.
-  info.verbose = verbose;
-  info.O = O;
-  info.AddrMap = &AddrMap;
-  info.Sections = &Sections;
-  info.class_name = nullptr;
-  info.selector_name = nullptr;
-  info.method = nullptr;
-  info.demangled_name = nullptr;
-  info.bindtable = nullptr;
-  info.adrp_addr = 0;
-  info.adrp_inst = 0;
+  struct DisassembleInfo info(O, &AddrMap, &Sections, verbose);
 
-  info.depth = 0;
   SectionRef CL = get_section(O, "__OBJC2", "__class_list");
   if (CL == SectionRef())
     CL = get_section(O, "__DATA", "__objc_classlist");
@@ -5773,19 +5763,7 @@ static void printObjc2_32bit_MetaData(MachOObjectFile *O, bool verbose) {
     Sections.push_back(Section);
   }
 
-  struct DisassembleInfo info;
-  // Set up the block of info used by the Symbolizer call backs.
-  info.verbose = verbose;
-  info.O = O;
-  info.AddrMap = &AddrMap;
-  info.Sections = &Sections;
-  info.class_name = nullptr;
-  info.selector_name = nullptr;
-  info.method = nullptr;
-  info.demangled_name = nullptr;
-  info.bindtable = nullptr;
-  info.adrp_addr = 0;
-  info.adrp_inst = 0;
+  struct DisassembleInfo info(O, &AddrMap, &Sections, verbose);
 
   SectionRef CL = get_section(O, "__OBJC2", "__class_list");
   if (CL == SectionRef())
@@ -5883,19 +5861,7 @@ static bool printObjc1_32bit_MetaData(MachOObjectFile *O, bool verbose) {
     Sections.push_back(Section);
   }
 
-  struct DisassembleInfo info;
-  // Set up the block of info used by the Symbolizer call backs.
-  info.verbose = verbose;
-  info.O = O;
-  info.AddrMap = &AddrMap;
-  info.Sections = &Sections;
-  info.class_name = nullptr;
-  info.selector_name = nullptr;
-  info.method = nullptr;
-  info.demangled_name = nullptr;
-  info.bindtable = nullptr;
-  info.adrp_addr = 0;
-  info.adrp_inst = 0;
+  struct DisassembleInfo info(O, &AddrMap, &Sections, verbose);
 
   for (i = 0; i < S.getSize(); i += sizeof(struct objc_module_t)) {
     p = S.getAddress() + i;
@@ -6056,19 +6022,7 @@ static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
     Sections.push_back(Section);
   }
 
-  struct DisassembleInfo info;
-  // Set up the block of info used by the Symbolizer call backs.
-  info.verbose = true;
-  info.O = O;
-  info.AddrMap = &AddrMap;
-  info.Sections = &Sections;
-  info.class_name = nullptr;
-  info.selector_name = nullptr;
-  info.method = nullptr;
-  info.demangled_name = nullptr;
-  info.bindtable = nullptr;
-  info.adrp_addr = 0;
-  info.adrp_inst = 0;
+  struct DisassembleInfo info(O, &AddrMap, &Sections, true);
 
   const char *p;
   struct objc_protocol_t protocol;
@@ -6833,7 +6787,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   std::unique_ptr<MCSymbolizer> Symbolizer;
-  struct DisassembleInfo SymbolizerInfo;
+  struct DisassembleInfo SymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> RelInfo(
       TheTarget->createMCRelocationInfo(TripleName, Ctx));
   if (RelInfo) {
@@ -6871,7 +6825,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<MCInstPrinter> ThumbIP;
   std::unique_ptr<MCContext> ThumbCtx;
   std::unique_ptr<MCSymbolizer> ThumbSymbolizer;
-  struct DisassembleInfo ThumbSymbolizerInfo;
+  struct DisassembleInfo ThumbSymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> ThumbRelInfo;
   if (ThumbTarget) {
     ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTripleName));
@@ -7019,26 +6973,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     SymbolizerInfo.S = Sections[SectIdx];
     SymbolizerInfo.AddrMap = &AddrMap;
     SymbolizerInfo.Sections = &Sections;
-    SymbolizerInfo.class_name = nullptr;
-    SymbolizerInfo.selector_name = nullptr;
-    SymbolizerInfo.method = nullptr;
-    SymbolizerInfo.demangled_name = nullptr;
-    SymbolizerInfo.bindtable = nullptr;
-    SymbolizerInfo.adrp_addr = 0;
-    SymbolizerInfo.adrp_inst = 0;
     // Same for the ThumbSymbolizer
     ThumbSymbolizerInfo.verbose = !NoSymbolicOperands;
     ThumbSymbolizerInfo.O = MachOOF;
     ThumbSymbolizerInfo.S = Sections[SectIdx];
     ThumbSymbolizerInfo.AddrMap = &AddrMap;
     ThumbSymbolizerInfo.Sections = &Sections;
-    ThumbSymbolizerInfo.class_name = nullptr;
-    ThumbSymbolizerInfo.selector_name = nullptr;
-    ThumbSymbolizerInfo.method = nullptr;
-    ThumbSymbolizerInfo.demangled_name = nullptr;
-    ThumbSymbolizerInfo.bindtable = nullptr;
-    ThumbSymbolizerInfo.adrp_addr = 0;
-    ThumbSymbolizerInfo.adrp_inst = 0;
 
     unsigned int Arch = MachOOF->getArch();
 
@@ -7310,11 +7250,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbTripleName = "";
 
     if (SymbolizerInfo.method != nullptr)
-      free(SymbolizerInfo.method);
+      delete[] SymbolizerInfo.method;
     if (SymbolizerInfo.demangled_name != nullptr)
       free(SymbolizerInfo.demangled_name);
     if (ThumbSymbolizerInfo.method != nullptr)
-      free(ThumbSymbolizerInfo.method);
+      delete[] ThumbSymbolizerInfo.method;
     if (ThumbSymbolizerInfo.demangled_name != nullptr)
       free(ThumbSymbolizerInfo.demangled_name);
   }

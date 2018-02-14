@@ -1330,10 +1330,11 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
 
 SubstNonTypeTemplateParmPackExpr::
 SubstNonTypeTemplateParmPackExpr(QualType T, 
+                                 ExprValueKind ValueKind,
                                  NonTypeTemplateParmDecl *Param,
                                  SourceLocation NameLoc,
                                  const TemplateArgument &ArgPack)
-    : Expr(SubstNonTypeTemplateParmPackExprClass, T, VK_RValue, OK_Ordinary,
+    : Expr(SubstNonTypeTemplateParmPackExprClass, T, ValueKind, OK_Ordinary,
            true, true, true, true),
       Param(Param), Arguments(ArgPack.pack_begin()),
       NumArguments(ArgPack.pack_size()), NameLoc(NameLoc) {}

@@ -56,6 +56,22 @@ if (NOT LLDB_DISABLE_PYTHON)
 
   add_subdirectory(scripts)
 endif ()
+
+if(CMAKE_HOST_APPLE)
+  if(LLDB_CODESIGN_IDENTITY)
+    set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver>)
+  else()
+    execute_process(
+      COMMAND xcode-select -p
+      OUTPUT_VARIABLE XCODE_DEV_DIR)
+    string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
+    set(DEBUGSERVER_PATH
+      "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver")
+    set(SKIP_DEBUGSERVER True)
+  endif()
+  message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")
+endif()
+
 add_subdirectory(source)
 add_subdirectory(tools)
 
