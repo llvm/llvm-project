@@ -16,7 +16,7 @@
 //   constexpr auto operator-(const reverse_iterator<Iter1>& x, const reverse_iterator<Iter2>& y)
 //   -> decltype(y.base() - x.base());
 //
-// constexpr in c++17
+// constexpr in C++17
 
 #include <iterator>
 #include <cstddef>

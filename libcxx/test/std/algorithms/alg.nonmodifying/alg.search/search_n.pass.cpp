@@ -66,7 +66,7 @@ test()
     assert(std::search_n(Iter(ic), Iter(ic+sc), 4, 0) == Iter(ic+sc));
 
     // Check that we properly convert the size argument to an integral.
-    std::search_n(Iter(ic), Iter(ic+sc), UserDefinedIntegral<unsigned>(0), 0);
+    (void)std::search_n(Iter(ic), Iter(ic+sc), UserDefinedIntegral<unsigned>(0), 0);
 }
 
 int main()

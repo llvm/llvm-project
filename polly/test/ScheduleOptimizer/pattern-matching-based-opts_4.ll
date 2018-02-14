@@ -36,6 +36,7 @@
 ; PATTERN-MATCHING-OPTS-NEXT:        for (int c3 = 0; c3 <= 127; c3 += 1)
 ; PATTERN-MATCHING-OPTS-NEXT:          for (int c4 = 0; c4 <= min(23, -24 * c2 + 255); c4 += 1)
 ; PATTERN-MATCHING-OPTS-NEXT:            for (int c5 = 0; c5 <= 255; c5 += 1) {
+; PATTERN-MATCHING-OPTS-NEXT:              // Loop Vectorizer Disabled
 ; PATTERN-MATCHING-OPTS-NEXT:              // Register tiling - Points
 ; PATTERN-MATCHING-OPTS-NEXT:              {
 ; PATTERN-MATCHING-OPTS-NEXT:                Stmt_for_body6(96 * c2 + 4 * c4, 256 * c1 + c5, 8 * c3);

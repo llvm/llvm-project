@@ -64,7 +64,7 @@ X
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-macro.cpp:9:2"
 // CHECK-NEXT:   IfLoc: "{{.*}}{{[/\\]}}pp-trace-macro.cpp:8:2"
 // CHECK-NEXT: - Callback: SourceRangeSkipped
-// CHECK-NEXT:   Range: ["{{.*}}{{[/\\]}}pp-trace-macro.cpp:8:2", "{{.*}}{{[/\\]}}pp-trace-macro.cpp:9:2"]
+// CHECK-NEXT:   Range: ["{{.*}}{{[/\\]}}pp-trace-macro.cpp:8:1", "{{.*}}{{[/\\]}}pp-trace-macro.cpp:9:2"]
 // CHECK-NEXT: - Callback: MacroDefined
 // CHECK-NEXT:   MacroNameTok: FUNCMACRO
 // CHECK-NEXT:   MacroDirective: MD_Define

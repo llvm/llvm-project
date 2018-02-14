@@ -49,7 +49,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_LOCALE__L_EXTENSIONS) || defined(_LIBCPP_MSVCRT)
+#if !defined(_LIBCPP_LOCALE__L_EXTENSIONS)
 struct __libcpp_locale_guard {
   _LIBCPP_INLINE_VISIBILITY
   __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
@@ -64,6 +64,32 @@ struct __libcpp_locale_guard {
 private:
   __libcpp_locale_guard(__libcpp_locale_guard const&);
   __libcpp_locale_guard& operator=(__libcpp_locale_guard const&);
+};
+#elif defined(_LIBCPP_MSVCRT_LIKE)
+struct __libcpp_locale_guard {
+    __libcpp_locale_guard(locale_t __l) :
+        __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)),
+        __locale_collate(setlocale(LC_COLLATE, __l.__get_locale())),
+        __locale_ctype(setlocale(LC_CTYPE, __l.__get_locale())),
+        __locale_monetary(setlocale(LC_MONETARY, __l.__get_locale())),
+        __locale_numeric(setlocale(LC_NUMERIC, __l.__get_locale())),
+        __locale_time(setlocale(LC_TIME, __l.__get_locale()))
+        // LC_MESSAGES is not supported on Windows.
+    {}
+    ~__libcpp_locale_guard() {
+        setlocale(LC_COLLATE, __locale_collate);
+        setlocale(LC_CTYPE, __locale_ctype);
+        setlocale(LC_MONETARY, __locale_monetary);
+        setlocale(LC_NUMERIC, __locale_numeric);
+        setlocale(LC_TIME, __locale_time);
+        _configthreadlocale(__status);
+    }
+    int __status;
+    char* __locale_collate;
+    char* __locale_ctype;
+    char* __locale_monetary;
+    char* __locale_numeric;
+    char* __locale_time;
 };
 #endif
 

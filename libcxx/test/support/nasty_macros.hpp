@@ -52,4 +52,7 @@
 #define __out NASTY_MACRO
 #endif
 
+#define __output NASTY_MACRO
+#define __input NASTY_MACRO
+
 #endif // SUPPORT_NASTY_MACROS_HPP

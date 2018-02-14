@@ -189,6 +189,8 @@
 #define LIBCPP_ONLY(...) ((void)0)
 #endif
 
+#define TEST_IGNORE_NODISCARD (void)
+
 namespace test_macros_detail {
 template <class T, class U>
 struct is_same { enum { value = 0};} ;

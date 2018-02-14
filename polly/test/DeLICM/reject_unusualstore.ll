@@ -1,8 +1,11 @@
-; RUN: opt %loadPolly -polly-delicm -analyze -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-delicm -analyze< %s | FileCheck %s
+; RUN: opt %loadPolly -polly-delicm -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=STATS
+; REQUIRES: asserts
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
-;        memset(A[j], 0, sizeof(double));
+;        A[j] = 21.0;
+;        A[j] = 42.0;
 ;        double phi = 0.0;
 ;        for (int i = 0; i < 4; i += 1) /* reduction */
 ;          phi += 4.2;
@@ -10,8 +13,6 @@
 ;      }
 ;    }
 ;
-
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 
 define void @func(double* noalias nonnull %A) {
 entry:
@@ -28,8 +29,8 @@ outer.for:
 
     reduction.preheader:
       %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      %tmp = bitcast double* %A_idx to i8*
-      call void @llvm.memset.p0i8.i64(i8* %tmp, i8 0, i64 8, i32 1, i1 false)
+      store double 21.0, double* %A_idx
+      store double 42.0, double* %A_idx
       br label %reduction.for
 
     reduction.for:
@@ -68,4 +69,5 @@ return:
 }
 
 
-; CHECK: encountered write that is not a StoreInst: call void @llvm.memset.p0i8.i64(i8* %tmp, i8 0, i64 8, i32 1, i1 false)
+; CHECK: No modification has been made
+; STATS: 1 polly-zone       - Number of not zone-analyzable arrays

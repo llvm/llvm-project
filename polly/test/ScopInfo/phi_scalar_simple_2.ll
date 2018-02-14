@@ -16,10 +16,10 @@
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> [i0, 0, 0, 0] : i0 <= N; Stmt_for_cond[0] -> [0, 0, 0, 0] : N < 0 };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0__phi[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N, c] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [N, c] -> { Stmt_for_body[i0] : 0 <= i0 < N };

@@ -37,10 +37,10 @@ void test(T& t)
 
 int main()
 {
-	int i = 3;
-	double d = 4.0;
-	S s{2};
-	test(i);
-	test(d);
-	test(s);
+    int i = 3;
+    double d = 4.0;
+    S s{2};
+    test(i);
+    test(d);
+    test(s);
 }

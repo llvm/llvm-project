@@ -1,9 +1,11 @@
 .. title:: clang-tidy - hicpp-function-size
+.. meta::
+   :http-equiv=refresh: 5;URL=readability-function-size.html
 
 hicpp-function-size
 ===================
 
-This check is an alias for `readability-function-size <readability-function-size.hml>`_.
+This check is an alias for `readability-function-size <readability-function-size.html>`_.
 Useful to enforce multiple sections on function complexity.
 
 - `rule 8.2.2 <http://www.codingstandard.com/rule/8-2-2-do-not-declare-functions-with-an-excessive-number-of-parameters/>`_

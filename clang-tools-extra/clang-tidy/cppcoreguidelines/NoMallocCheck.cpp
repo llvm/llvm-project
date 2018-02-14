@@ -29,7 +29,7 @@ Matcher<FunctionDecl> hasAnyListedName(const std::string &FunctionNames) {
       utils::options::parseStringList(FunctionNames);
   return hasAnyName(std::vector<StringRef>(NameList.begin(), NameList.end()));
 }
-}
+} // namespace
 
 void NoMallocCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Allocations", AllocList);

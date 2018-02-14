@@ -16,6 +16,7 @@ add_extra_unittest(ClangMoveTests
   )
 
 target_link_libraries(ClangMoveTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

@@ -88,8 +88,8 @@ run_tests () {
 	done
 }
 
-run_tests ppcg --target=c
-run_tests ppcg_live "--target=c --no-live-range-reordering"
+run_tests ppcg "--target=c --tile"
+run_tests ppcg_live "--target=c --no-live-range-reordering --tile"
 
 # Test OpenMP code, if compiler supports openmp
 if [ $HAVE_OPENMP = "yes" ]; then

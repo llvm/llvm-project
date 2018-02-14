@@ -1,11 +1,14 @@
 /*
  * Copyright 2012 INRIA Paris-Rocquencourt
+ * Copyright 2012 Ecole Normale Superieure
  *
  * Use of this software is governed by the MIT license
  *
  * Written by Tobias Grosser, INRIA Paris-Rocquencourt,
  * Domaine de Voluceau, Rocquenqourt, B.P. 105,
  * 78153 Le Chesnay Cedex France
+ * and Sven Verdoolaege,
+ * Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  */
 
 #include <limits.h>
@@ -14,14 +17,19 @@
 
 #include <isl/aff.h>
 #include <isl/ctx.h>
+#include <isl/flow.h>
 #include <isl/map.h>
 #include <isl/ast_build.h>
+#include <isl/schedule.h>
+#include <isl/schedule_node.h>
 #include <pet.h>
 
 #include "ppcg.h"
 #include "ppcg_options.h"
 #include "cpu.h"
 #include "print.h"
+#include "schedule.h"
+#include "util.h"
 
 /* Representation of a statement inside a generated AST.
  *
@@ -39,7 +47,6 @@ struct ppcg_stmt {
 static void ppcg_stmt_free(void *user)
 {
 	struct ppcg_stmt *stmt = user;
-	int i;
 
 	if (!stmt)
 		return;
@@ -118,7 +125,7 @@ struct ast_build_userinfo {
 static int ast_schedule_dim_is_parallel(__isl_keep isl_ast_build *build,
 	struct ppcg_scop *scop)
 {
-	isl_union_map *schedule_node, *schedule, *deps;
+	isl_union_map *schedule, *deps;
 	isl_map *schedule_deps, *test;
 	isl_space *schedule_space;
 	unsigned i, dimension, is_parallel;
@@ -228,8 +235,10 @@ static __isl_give isl_id *ast_build_before_for(
  * 	  that is marked as openmp parallel.
  *
  */
-static __isl_give isl_ast_node *ast_build_after_for(__isl_take isl_ast_node *node,
-        __isl_keep isl_ast_build *build, void *user) {
+static __isl_give isl_ast_node *ast_build_after_for(
+	__isl_take isl_ast_node *node, __isl_keep isl_ast_build *build,
+	void *user)
+{
 	isl_id *id;
 	struct ast_build_userinfo *build_info;
 	struct ast_node_userinfo *info;
@@ -327,7 +336,6 @@ static __isl_give isl_printer *print_for(__isl_take isl_printer *p,
 	__isl_take isl_ast_print_options *print_options,
 	__isl_keep isl_ast_node *node, void *user)
 {
-	struct ppcg_print_info *print_info;
 	isl_id *id;
 	int openmp;
 
@@ -416,29 +424,75 @@ error:
 	return isl_ast_node_free(node);
 }
 
-/* Set *depth to the number of scheduling dimensions
- * for the schedule of the first domain.
- * We assume here that this number is the same for all domains.
+/* Set *depth (initialized to 0 by the caller) to the maximum
+ * of the schedule depths of the leaf nodes for which this function is called.
  */
-static isl_stat set_depth(__isl_take isl_map *map, void *user)
+static isl_bool update_depth(__isl_keep isl_schedule_node *node, void *user)
 {
-	unsigned *depth = user;
+	int *depth = user;
+	int node_depth;
 
-	*depth = isl_map_dim(map, isl_dim_out);
+	if (isl_schedule_node_get_type(node) != isl_schedule_node_leaf)
+		return isl_bool_true;
+	node_depth = isl_schedule_node_get_schedule_depth(node);
+	if (node_depth > *depth)
+		*depth = node_depth;
 
-	isl_map_free(map);
-	return isl_stat_error;
+	return isl_bool_false;
 }
 
-/* Code generate the scop 'scop' and print the corresponding C code to 'p'.
+/* This function is called for each node in a CPU AST.
+ * In case of a user node, print the macro definitions required
+ * for printing the AST expressions in the annotation, if any.
+ * For other nodes, return true such that descendants are also
+ * visited.
+ *
+ * In particular, print the macro definitions needed for the substitutions
+ * of the original user statements.
+ */
+static isl_bool at_node(__isl_keep isl_ast_node *node, void *user)
+{
+	struct ppcg_stmt *stmt;
+	isl_id *id;
+	isl_printer **p = user;
+
+	if (isl_ast_node_get_type(node) != isl_ast_node_user)
+		return isl_bool_true;
+
+	id = isl_ast_node_get_annotation(node);
+	stmt = isl_id_get_user(id);
+	isl_id_free(id);
+
+	if (!stmt)
+		return isl_bool_error;
+
+	*p = ppcg_print_body_macros(*p, stmt->ref2expr);
+	if (!*p)
+		return isl_bool_error;
+
+	return isl_bool_false;
+}
+
+/* Print the required macros for the CPU AST "node" to "p",
+ * including those needed for the user statements inside the AST.
+ */
+static __isl_give isl_printer *cpu_print_macros(__isl_take isl_printer *p,
+	__isl_keep isl_ast_node *node)
+{
+	if (isl_ast_node_foreach_descendant_top_down(node, &at_node, &p) < 0)
+		return isl_printer_free(p);
+	p = ppcg_print_macros(p, node);
+	return p;
+}
+
+/* Code generate the scop 'scop' using "schedule"
+ * and print the corresponding C code to 'p'.
  */
 static __isl_give isl_printer *print_scop(struct ppcg_scop *scop,
-	__isl_take isl_printer *p, struct ppcg_options *options)
+	__isl_take isl_schedule *schedule, __isl_take isl_printer *p,
+	struct ppcg_options *options)
 {
 	isl_ctx *ctx = isl_printer_get_ctx(p);
-	isl_set *context;
-	isl_union_set *domain_set;
-	isl_union_map *schedule_map;
 	isl_ast_build *build;
 	isl_ast_print_options *print_options;
 	isl_ast_node *tree;
@@ -446,14 +500,12 @@ static __isl_give isl_printer *print_scop(struct ppcg_scop *scop,
 	struct ast_build_userinfo build_info;
 	int depth;
 
-	context = isl_set_copy(scop->context);
-	domain_set = isl_union_set_copy(scop->domain);
-	schedule_map = isl_schedule_get_map(scop->schedule);
-	schedule_map = isl_union_map_intersect_domain(schedule_map, domain_set);
+	depth = 0;
+	if (isl_schedule_foreach_schedule_node_top_down(schedule, &update_depth,
+						&depth) < 0)
+		goto error;
 
-	isl_union_map_foreach_map(schedule_map, &set_depth, &depth);
-
-	build = isl_ast_build_from_context(context);
+	build = isl_ast_build_alloc(ctx);
 	iterators = ppcg_scop_generate_names(scop, depth, "c");
 	build = isl_ast_build_set_iterators(build, iterators);
 	build = isl_ast_build_set_at_each_domain(build, &at_each_domain, scop);
@@ -470,7 +522,7 @@ static __isl_give isl_printer *print_scop(struct ppcg_scop *scop,
 							&build_info);
 	}
 
-	tree = isl_ast_build_node_from_schedule_map(build, schedule_map);
+	tree = isl_ast_build_node_from_schedule(build, schedule);
 	isl_ast_build_free(build);
 
 	print_options = isl_ast_print_options_alloc(ctx);
@@ -480,10 +532,212 @@ static __isl_give isl_printer *print_scop(struct ppcg_scop *scop,
 	print_options = isl_ast_print_options_set_print_for(print_options,
 							&print_for, NULL);
 
-	p = ppcg_print_macros(p, tree);
+	p = cpu_print_macros(p, tree);
 	p = isl_ast_node_print(tree, p, print_options);
 
 	isl_ast_node_free(tree);
+
+	return p;
+error:
+	isl_schedule_free(schedule);
+	isl_printer_free(p);
+	return NULL;
+}
+
+/* Tile the band node "node" with tile sizes "sizes" and
+ * mark all members of the resulting tile node as "atomic".
+ */
+static __isl_give isl_schedule_node *tile(__isl_take isl_schedule_node *node,
+	__isl_take isl_multi_val *sizes)
+{
+	node = isl_schedule_node_band_tile(node, sizes);
+	node = ppcg_set_schedule_node_type(node, isl_ast_loop_atomic);
+
+	return node;
+}
+
+/* Tile "node", if it is a band node with at least 2 members.
+ * The tile sizes are set from the "tile_size" option.
+ */
+static __isl_give isl_schedule_node *tile_band(
+	__isl_take isl_schedule_node *node, void *user)
+{
+	struct ppcg_scop *scop = user;
+	int n;
+	isl_space *space;
+	isl_multi_val *sizes;
+
+	if (isl_schedule_node_get_type(node) != isl_schedule_node_band)
+		return node;
+
+	n = isl_schedule_node_band_n_member(node);
+	if (n <= 1)
+		return node;
+
+	space = isl_schedule_node_band_get_space(node);
+	sizes = ppcg_multi_val_from_int(space, scop->options->tile_size);
+
+	return tile(node, sizes);
+}
+
+/* Construct schedule constraints from the dependences in ps
+ * for the purpose of computing a schedule for a CPU.
+ *
+ * The proximity constraints are set to the flow dependences.
+ *
+ * If live-range reordering is allowed then the conditional validity
+ * constraints are set to the order dependences with the flow dependences
+ * as condition.  That is, a live-range (flow dependence) will be either
+ * local to an iteration of a band or all adjacent order dependences
+ * will be respected by the band.
+ * The validity constraints are set to the union of the flow dependences
+ * and the forced dependences, while the coincidence constraints
+ * are set to the union of the flow dependences, the forced dependences and
+ * the order dependences.
+ *
+ * If live-range reordering is not allowed, then both the validity
+ * and the coincidence constraints are set to the union of the flow
+ * dependences and the false dependences.
+ *
+ * Note that the coincidence constraints are only set when the "openmp"
+ * options is set.  Even though the way openmp pragmas are introduced
+ * does not rely on the coincident property of the schedule band members,
+ * the coincidence constraints do affect the way the schedule is constructed,
+ * such that more schedule dimensions should be detected as parallel
+ * by ast_schedule_dim_is_parallel.
+ * Since the order dependences are also taken into account by
+ * ast_schedule_dim_is_parallel, they are also added to
+ * the coincidence constraints.  If the openmp handling learns
+ * how to privatize some memory, then the corresponding order
+ * dependences can be removed from the coincidence constraints.
+ */
+static __isl_give isl_schedule_constraints *construct_cpu_schedule_constraints(
+	struct ppcg_scop *ps)
+{
+	isl_schedule_constraints *sc;
+	isl_union_map *validity, *coincidence;
+
+	sc = isl_schedule_constraints_on_domain(isl_union_set_copy(ps->domain));
+	if (ps->options->live_range_reordering) {
+		sc = isl_schedule_constraints_set_conditional_validity(sc,
+				isl_union_map_copy(ps->tagged_dep_flow),
+				isl_union_map_copy(ps->tagged_dep_order));
+		validity = isl_union_map_copy(ps->dep_flow);
+		validity = isl_union_map_union(validity,
+				isl_union_map_copy(ps->dep_forced));
+		if (ps->options->openmp) {
+			coincidence = isl_union_map_copy(validity);
+			coincidence = isl_union_map_union(coincidence,
+					isl_union_map_copy(ps->dep_order));
+		}
+	} else {
+		validity = isl_union_map_copy(ps->dep_flow);
+		validity = isl_union_map_union(validity,
+				isl_union_map_copy(ps->dep_false));
+		if (ps->options->openmp)
+			coincidence = isl_union_map_copy(validity);
+	}
+	if (ps->options->openmp)
+		sc = isl_schedule_constraints_set_coincidence(sc, coincidence);
+	sc = isl_schedule_constraints_set_validity(sc, validity);
+	sc = isl_schedule_constraints_set_proximity(sc,
+					isl_union_map_copy(ps->dep_flow));
+
+	return sc;
+}
+
+/* Compute a schedule for the scop "ps".
+ *
+ * First derive the appropriate schedule constraints from the dependences
+ * in "ps" and then compute a schedule from those schedule constraints,
+ * possibly grouping statement instances based on the input schedule.
+ */
+static __isl_give isl_schedule *compute_cpu_schedule(struct ppcg_scop *ps)
+{
+	isl_schedule_constraints *sc;
+	isl_schedule *schedule;
+
+	if (!ps)
+		return NULL;
+
+	sc = construct_cpu_schedule_constraints(ps);
+
+	if (ps->options->debug->dump_schedule_constraints)
+		isl_schedule_constraints_dump(sc);
+	schedule = ppcg_compute_schedule(sc, ps->schedule, ps->options);
+
+	return schedule;
+}
+
+/* Compute a new schedule to the scop "ps" if the reschedule option is set.
+ * Otherwise, return a copy of the original schedule.
+ */
+static __isl_give isl_schedule *optionally_compute_schedule(void *user)
+{
+	struct ppcg_scop *ps = user;
+
+	if (!ps)
+		return NULL;
+	if (!ps->options->reschedule)
+		return isl_schedule_copy(ps->schedule);
+	return compute_cpu_schedule(ps);
+}
+
+/* Compute a schedule based on the dependences in "ps" and
+ * tile it if requested by the user.
+ */
+static __isl_give isl_schedule *get_schedule(struct ppcg_scop *ps,
+	struct ppcg_options *options)
+{
+	isl_ctx *ctx;
+	isl_schedule *schedule;
+
+	if (!ps)
+		return NULL;
+
+	ctx = isl_union_set_get_ctx(ps->domain);
+	schedule = ppcg_get_schedule(ctx, options,
+				    &optionally_compute_schedule, ps);
+	if (ps->options->tile)
+		schedule = isl_schedule_map_schedule_node_bottom_up(schedule,
+							&tile_band, ps);
+
+	return schedule;
+}
+
+/* Generate CPU code for the scop "ps" using "schedule" and
+ * print the corresponding C code to "p", including variable declarations.
+ */
+static __isl_give isl_printer *print_cpu_with_schedule(
+	__isl_take isl_printer *p, struct ppcg_scop *ps,
+	__isl_take isl_schedule *schedule, struct ppcg_options *options)
+{
+	int hidden;
+	isl_set *context;
+
+	p = isl_printer_start_line(p);
+	p = isl_printer_print_str(p, "/* ppcg generated CPU code */");
+	p = isl_printer_end_line(p);
+
+	p = isl_printer_start_line(p);
+	p = isl_printer_end_line(p);
+
+	p = ppcg_set_macro_names(p);
+	p = ppcg_print_exposed_declarations(p, ps);
+	hidden = ppcg_scop_any_hidden_declarations(ps);
+	if (hidden) {
+		p = ppcg_start_block(p);
+		p = ppcg_print_hidden_declarations(p, ps);
+	}
+
+	context = isl_set_copy(ps->context);
+	context = isl_set_from_params(context);
+	schedule = isl_schedule_insert_context(schedule, context);
+	if (options->debug->dump_final_schedule)
+		isl_schedule_dump(schedule);
+	p = print_scop(ps, schedule, p, options);
+	if (hidden)
+		p = ppcg_end_block(p);
 
 	return p;
 }
@@ -494,39 +748,35 @@ static __isl_give isl_printer *print_scop(struct ppcg_scop *scop,
 __isl_give isl_printer *print_cpu(__isl_take isl_printer *p,
 	struct ppcg_scop *ps, struct ppcg_options *options)
 {
-	int hidden;
+	isl_schedule *schedule;
 
-	p = isl_printer_start_line(p);
-	p = isl_printer_print_str(p, "/* ppcg generated CPU code */");
-	p = isl_printer_end_line(p);
-
-	p = isl_printer_start_line(p);
-	p = isl_printer_end_line(p);
-
-	p = isl_ast_op_type_print_macro(isl_ast_op_fdiv_q, p);
-	p = ppcg_print_exposed_declarations(p, ps);
-	hidden = ppcg_scop_any_hidden_declarations(ps);
-	if (hidden) {
-		p = ppcg_start_block(p);
-		p = ppcg_print_hidden_declarations(p, ps);
-	}
-	if (options->debug->dump_final_schedule)
-		isl_schedule_dump(ps->schedule);
-	p = print_scop(ps, p, options);
-	if (hidden)
-		p = ppcg_end_block(p);
-
-	return p;
+	schedule = isl_schedule_copy(ps->schedule);
+	return print_cpu_with_schedule(p, ps, schedule, options);
 }
 
-/* Wrapper around print_cpu for use as a ppcg_transform callback.
+/* Generate CPU code for "scop" and print it to "p".
+ *
+ * First obtain a schedule for "scop" and then print code for "scop"
+ * using that schedule.
+ */
+static __isl_give isl_printer *generate(__isl_take isl_printer *p,
+	struct ppcg_scop *scop, struct ppcg_options *options)
+{
+	isl_schedule *schedule;
+
+	schedule = get_schedule(scop, options);
+
+	return print_cpu_with_schedule(p, scop, schedule, options);
+}
+
+/* Wrapper around generate for use as a ppcg_transform callback.
  */
 static __isl_give isl_printer *print_cpu_wrap(__isl_take isl_printer *p,
 	struct ppcg_scop *scop, void *user)
 {
 	struct ppcg_options *options = user;
 
-	return print_cpu(p, scop, options);
+	return generate(p, scop, options);
 }
 
 /* Transform the code in the file called "input" by replacing

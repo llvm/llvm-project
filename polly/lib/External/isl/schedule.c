@@ -10,6 +10,7 @@
  * prints a schedule that satisfies those constraints.
  */
 
+#include <stdlib.h>
 #include <isl/options.h>
 #include <isl/schedule.h>
 
@@ -37,5 +38,5 @@ int main(int argc, char **argv)
 
 	isl_ctx_free(ctx);
 
-	return 0;
+	return p ? EXIT_SUCCESS : EXIT_FAILURE;
 }

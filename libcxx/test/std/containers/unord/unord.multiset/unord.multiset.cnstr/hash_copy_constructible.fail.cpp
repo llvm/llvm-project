@@ -16,14 +16,14 @@
 
 template <class T>
 struct Hash {
-	std::size_t operator () (const T& lhs) const { return 0; }
+    std::size_t operator () (const T& lhs) const { return 0; }
 
-	Hash () {}
+    Hash () {}
 private:
-	Hash (const Hash &); // declared but not defined
-	};
+    Hash (const Hash &); // declared but not defined
+    };
 
 
 int main() {
-	std::unordered_multiset<int, Hash<int> > m;
+    std::unordered_multiset<int, Hash<int> > m;
 }

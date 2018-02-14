@@ -30,12 +30,11 @@
 ; IR-NEXT:   store i64 %p_add4, i64* %p_arrayidx3
 ;
 ; IR:      polly.loop_preheader:
-; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i64 1
+; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i32 1
 ; IR-NEXT:   %10 = add i64 %val, 1
 ; IR-NEXT:   br label %polly.loop_header
 ;
-;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-p:32:32:32-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i64* %A, i64* %ptr, i64 %val) {
 entry:

@@ -16,7 +16,8 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-/// Detect useless or suspicious redundant expressions.
+/// The checker detects expressions that are redundant, because they contain
+/// ineffective, useless parts.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html

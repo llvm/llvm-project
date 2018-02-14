@@ -18,7 +18,7 @@
 #include "ElseAfterReturnCheck.h"
 #include "FunctionSizeCheck.h"
 #include "IdentifierNamingCheck.h"
-#include "ImplicitBoolCastCheck.h"
+#include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
@@ -32,6 +32,7 @@
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
 #include "SimplifyBooleanExprCheck.h"
+#include "StaticAccessedThroughInstanceCheck.h"
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 
@@ -58,8 +59,8 @@ public:
         "readability-function-size");
     CheckFactories.registerCheck<IdentifierNamingCheck>(
         "readability-identifier-naming");
-    CheckFactories.registerCheck<ImplicitBoolCastCheck>(
-        "readability-implicit-bool-cast");
+    CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
+        "readability-implicit-bool-conversion");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
     CheckFactories.registerCheck<MisleadingIndentationCheck>(
@@ -70,6 +71,8 @@ public:
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<StaticAccessedThroughInstanceCheck>(
+        "readability-static-accessed-through-instance");
     CheckFactories.registerCheck<StaticDefinitionInAnonymousNamespaceCheck>(
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(

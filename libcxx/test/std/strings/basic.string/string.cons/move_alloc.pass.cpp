@@ -41,9 +41,9 @@ int main()
     typedef test_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{})), "" );
+    static_assert((noexcept(S{})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "" );
+    static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "" );
 #endif
     test(S(), A(3));
     test(S("1"), A(5));
@@ -55,9 +55,9 @@ int main()
     typedef test_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{})), "" );
+    static_assert((noexcept(S{})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "" );
+    static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "" );
 #endif
     S s1 ( "Twas brillig, and the slivy toves did gyre and gymbal in the wabe" );
     S s2 (std::move(s1), A(1));
@@ -67,9 +67,9 @@ int main()
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{})), "" );
+    static_assert((noexcept(S{})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "" );
+    static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "" );
 #endif
     test(S(), A());
     test(S("1"), A());

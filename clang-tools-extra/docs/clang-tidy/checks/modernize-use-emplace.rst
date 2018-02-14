@@ -102,6 +102,18 @@ Options
    Semicolon-separated list of class names of custom containers that support
    ``push_back``.
 
+.. option:: IgnoreImplicitConstructors
+
+    When non-zero, the check will ignore implicitly constructed arguments of
+    ``push_back``, e.g.
+
+    .. code-block:: c++
+
+        std::vector<std::string> v;
+        v.push_back("a"); // Ignored when IgnoreImplicitConstructors is ``1``.
+
+    Default is ``0``.
+
 .. option:: SmartPointers
 
    Semicolon-separated list of class names of custom smart pointers.

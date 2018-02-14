@@ -46,8 +46,8 @@ public:
 class C
 {
 public:
-	virtual ~C() {}
-	C * operator&() const { assert(false); return nullptr; } // should not be called
+    virtual ~C() {}
+    C * operator&() const { assert(false); return nullptr; } // should not be called
 };
 
 class D : private std::nested_exception {};

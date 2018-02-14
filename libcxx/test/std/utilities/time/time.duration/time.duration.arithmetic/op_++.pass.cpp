@@ -11,7 +11,7 @@
 
 // duration
 
-// constexpr duration& operator++();  // constexpr in c++17
+// constexpr duration& operator++();  // constexpr in C++17
 
 #include <chrono>
 #include <cassert>

@@ -18,7 +18,7 @@ namespace std
 {
 
 struct allocator_arg_t { };
-constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+inline constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 
 template <class T, class Alloc> struct uses_allocator;
 
@@ -45,6 +45,9 @@ struct pointer_traits<T*>
 
     static pointer pointer_to(<details>) noexcept;
 };
+
+template <class T> constexpr T* to_address(T* p) noexcept; // C++20
+template <class Ptr> auto to_address(const Ptr& p) noexcept; // C++20
 
 template <class Alloc>
 struct allocator_traits
@@ -81,8 +84,8 @@ struct allocator_traits
     template <class T> using rebind_alloc  = Alloc::rebind<U>::other | Alloc<T, Args...>;
     template <class T> using rebind_traits = allocator_traits<rebind_alloc<T>>;
 
-    static pointer allocate(allocator_type& a, size_type n);
-    static pointer allocate(allocator_type& a, size_type n, const_void_pointer hint);
+    static pointer allocate(allocator_type& a, size_type n);                          // [[nodiscard]] in C++20
+    static pointer allocate(allocator_type& a, size_type n, const_void_pointer hint); // [[nodiscard]] in C++20
 
     static void deallocate(allocator_type& a, pointer p, size_type n) noexcept;
 
@@ -384,6 +387,9 @@ template<class T, class... Args> unique_ptr<T> make_unique(Args&&... args);     
 template<class T>                unique_ptr<T> make_unique(size_t n);           // C++14
 template<class T, class... Args> unspecified   make_unique(Args&&...) = delete; // C++14, T == U[N]
 
+template<class E, class T, class Y, class D>
+    basic_ostream<E, T>& operator<< (basic_ostream<E, T>& os, unique_ptr<Y, D> const& p);
+
 template<class T>
 class shared_ptr
 {
@@ -625,6 +631,9 @@ template <class T> struct hash;
 template <class T, class D> struct hash<unique_ptr<T, D> >;
 template <class T> struct hash<shared_ptr<T> >;
 
+template <class T, class Alloc>
+  inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
+
 // Pointer safety
 enum class pointer_safety { relaxed, preferred, strict };
 void declare_reachable(void *p);
@@ -724,7 +733,7 @@ template <class _Tp, class = void>
 struct __has_element_type : false_type {};
 
 template <class _Tp>
-struct __has_element_type<_Tp, 
+struct __has_element_type<_Tp,
               typename __void_t<typename _Tp::element_type>::type> : true_type {};
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
@@ -808,7 +817,7 @@ template <class _Tp, class = void>
 struct __has_difference_type : false_type {};
 
 template <class _Tp>
-struct __has_difference_type<_Tp, 
+struct __has_difference_type<_Tp,
             typename __void_t<typename _Tp::difference_type>::type> : true_type {};
 
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
@@ -994,7 +1003,7 @@ template <class _Tp, class = void>
 struct __has_pointer_type : false_type {};
 
 template <class _Tp>
-struct __has_pointer_type<_Tp, 
+struct __has_pointer_type<_Tp,
           typename __void_t<typename _Tp::pointer>::type> : true_type {};
 
 namespace __pointer_type_imp
@@ -1024,7 +1033,7 @@ template <class _Tp, class = void>
 struct __has_const_pointer : false_type {};
 
 template <class _Tp>
-struct __has_const_pointer<_Tp, 
+struct __has_const_pointer<_Tp,
             typename __void_t<typename _Tp::const_pointer>::type> : true_type {};
 
 template <class _Tp, class _Ptr, class _Alloc, bool = __has_const_pointer<_Alloc>::value>
@@ -1047,7 +1056,7 @@ template <class _Tp, class = void>
 struct __has_void_pointer : false_type {};
 
 template <class _Tp>
-struct __has_void_pointer<_Tp, 
+struct __has_void_pointer<_Tp,
                typename __void_t<typename _Tp::void_pointer>::type> : true_type {};
 
 template <class _Ptr, class _Alloc, bool = __has_void_pointer<_Alloc>::value>
@@ -1070,7 +1079,7 @@ template <class _Tp, class = void>
 struct __has_const_void_pointer : false_type {};
 
 template <class _Tp>
-struct __has_const_void_pointer<_Tp, 
+struct __has_const_void_pointer<_Tp,
             typename __void_t<typename _Tp::const_void_pointer>::type> : true_type {};
 
 template <class _Ptr, class _Alloc, bool = __has_const_void_pointer<_Alloc>::value>
@@ -1090,13 +1099,14 @@ struct __const_void_pointer<_Ptr, _Alloc, false>
 };
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp*
 __to_raw_pointer(_Tp* __p) _NOEXCEPT
 {
     return __p;
 }
 
+#if _LIBCPP_STD_VER <= 17
 template <class _Pointer>
 inline _LIBCPP_INLINE_VISIBILITY
 typename pointer_traits<_Pointer>::element_type*
@@ -1104,6 +1114,41 @@ __to_raw_pointer(_Pointer __p) _NOEXCEPT
 {
     return _VSTD::__to_raw_pointer(__p.operator->());
 }
+#else
+template <class _Pointer>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+__to_raw_pointer(const _Pointer& __p) _NOEXCEPT
+-> decltype(pointer_traits<_Pointer>::to_address(__p))
+{
+    return pointer_traits<_Pointer>::to_address(__p);
+}
+
+template <class _Pointer, class... _None>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+__to_raw_pointer(const _Pointer& __p, _None...) _NOEXCEPT
+{
+    return _VSTD::__to_raw_pointer(__p.operator->());
+}
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+_Tp*
+to_address(_Tp* __p) _NOEXCEPT
+{
+    static_assert(!is_function_v<_Tp>, "_Tp is a function type");
+    return __p;
+}
+
+template <class _Pointer>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+to_address(const _Pointer& __p) _NOEXCEPT
+{
+    return _VSTD::__to_raw_pointer(__p);
+}
+#endif
 
 template <class _Tp, class = void>
 struct __has_size_type : false_type {};
@@ -1148,7 +1193,7 @@ template <class _Tp, class = void>
 struct __has_propagate_on_container_move_assignment : false_type {};
 
 template <class _Tp>
-struct __has_propagate_on_container_move_assignment<_Tp, 
+struct __has_propagate_on_container_move_assignment<_Tp,
            typename __void_t<typename _Tp::propagate_on_container_move_assignment>::type>
                : true_type {};
 
@@ -1168,7 +1213,7 @@ template <class _Tp, class = void>
 struct __has_propagate_on_container_swap : false_type {};
 
 template <class _Tp>
-struct __has_propagate_on_container_swap<_Tp, 
+struct __has_propagate_on_container_swap<_Tp,
            typename __void_t<typename _Tp::propagate_on_container_swap>::type>
                : true_type {};
 
@@ -1188,7 +1233,7 @@ template <class _Tp, class = void>
 struct __has_is_always_equal : false_type {};
 
 template <class _Tp>
-struct __has_is_always_equal<_Tp, 
+struct __has_is_always_equal<_Tp,
            typename __void_t<typename _Tp::is_always_equal>::type>
                : true_type {};
 
@@ -1302,7 +1347,7 @@ struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1, _A2>, _Up, false>
 template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 auto
 __has_allocate_hint_test(_Alloc&& __a, _SizeType&& __sz, _ConstVoidPtr&& __p)
-    -> decltype(__a.allocate(__sz, __p), true_type());
+    -> decltype((void)__a.allocate(__sz, __p), true_type());
 
 template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 auto
@@ -1313,7 +1358,7 @@ template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 struct __has_allocate_hint
     : integral_constant<bool,
         is_same<
-            decltype(__has_allocate_hint_test(declval<_Alloc>(),
+            decltype(_VSTD::__has_allocate_hint_test(declval<_Alloc>(),
                                           declval<_SizeType>(),
                                           declval<_ConstVoidPtr>())),
             true_type>::value>
@@ -1346,7 +1391,7 @@ template <class _Alloc, class _Pointer, class ..._Args>
 struct __has_construct
     : integral_constant<bool,
         is_same<
-            decltype(__has_construct_test(declval<_Alloc>(),
+            decltype(_VSTD::__has_construct_test(declval<_Alloc>(),
                                           declval<_Pointer>(),
                                           declval<_Args>()...)),
             true_type>::value>
@@ -1367,7 +1412,7 @@ template <class _Alloc, class _Pointer>
 struct __has_destroy
     : integral_constant<bool,
         is_same<
-            decltype(__has_destroy_test(declval<_Alloc>(),
+            decltype(_VSTD::__has_destroy_test(declval<_Alloc>(),
                                         declval<_Pointer>())),
             true_type>::value>
 {
@@ -1387,7 +1432,7 @@ template <class _Alloc>
 struct __has_max_size
     : integral_constant<bool,
         is_same<
-            decltype(__has_max_size_test(declval<_Alloc&>())),
+            decltype(_VSTD::__has_max_size_test(declval<_Alloc&>())),
             true_type>::value>
 {
 };
@@ -1406,7 +1451,7 @@ template <class _Alloc>
 struct __has_select_on_container_copy_construction
     : integral_constant<bool,
         is_same<
-            decltype(__has_select_on_container_copy_construction_test(declval<_Alloc&>())),
+            decltype(_VSTD::__has_select_on_container_copy_construction_test(declval<_Alloc&>())),
             true_type>::value>
 {
 };
@@ -1497,10 +1542,10 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         {typedef allocator_traits<typename rebind_alloc<_Tp>::other> other;};
 #endif  // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     static pointer allocate(allocator_type& __a, size_type __n)
         {return __a.allocate(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     static pointer allocate(allocator_type& __a, size_type __n, const_void_pointer __hint)
         {return __allocate(__a, __n, __hint,
             __has_allocate_hint<allocator_type, size_type, const_void_pointer>());}
@@ -1688,10 +1733,10 @@ private:
             }
 
     _LIBCPP_INLINE_VISIBILITY
-    static size_type __max_size(true_type, const allocator_type& __a)
+    static size_type __max_size(true_type, const allocator_type& __a) _NOEXCEPT
             {return __a.max_size();}
     _LIBCPP_INLINE_VISIBILITY
-    static size_type __max_size(false_type, const allocator_type&)
+    static size_type __max_size(false_type, const allocator_type&) _NOEXCEPT
             {return numeric_limits<size_type>::max() / sizeof(value_type);}
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1739,7 +1784,8 @@ public:
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
-    _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY 
+    pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
         {
         if (__n > max_size())
             __throw_length_error("allocator<T>::allocate(size_t n)"
@@ -1941,7 +1987,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator  operator++(int)
         {raw_storage_iterator __t(*this); ++__x_; return __t;}
 #if _LIBCPP_STD_VER >= 14
-    _LIBCPP_INLINE_VISIBILITY _OutputIterator base() const { return __x_; } 
+    _LIBCPP_INLINE_VISIBILITY _OutputIterator base() const { return __x_; }
 #endif
 };
 
@@ -2040,11 +2086,12 @@ struct __compressed_pair_elem {
   typedef const _Tp& const_reference;
 
 #ifndef _LIBCPP_CXX03_LANG
-  constexpr __compressed_pair_elem() : __value_() {}
+  _LIBCPP_INLINE_VISIBILITY constexpr __compressed_pair_elem() : __value_() {}
 
   template <class _Up, class = typename enable_if<
       !is_same<__compressed_pair_elem, typename decay<_Up>::type>::value
   >::type>
+  _LIBCPP_INLINE_VISIBILITY
   constexpr explicit
   __compressed_pair_elem(_Up&& __u)
       : __value_(_VSTD::forward<_Up>(__u)){};
@@ -2055,11 +2102,13 @@ struct __compressed_pair_elem {
                          __tuple_indices<_Indexes...>)
       : __value_(_VSTD::forward<_Args>(_VSTD::get<_Indexes>(__args))...) {}
 #else
-  __compressed_pair_elem() : __value_() {}
+  _LIBCPP_INLINE_VISIBILITY __compressed_pair_elem() : __value_() {}
+  _LIBCPP_INLINE_VISIBILITY
   __compressed_pair_elem(_ParamT __p) : __value_(std::forward<_ParamT>(__p)) {}
 #endif
 
-  reference __get() _NOEXCEPT { return __value_; }
+  _LIBCPP_INLINE_VISIBILITY reference __get() _NOEXCEPT { return __value_; }
+  _LIBCPP_INLINE_VISIBILITY
   const_reference __get() const _NOEXCEPT { return __value_; }
 
 private:
@@ -2074,11 +2123,12 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   typedef _Tp __value_type;
 
 #ifndef _LIBCPP_CXX03_LANG
-  constexpr __compressed_pair_elem() = default;
+  _LIBCPP_INLINE_VISIBILITY constexpr __compressed_pair_elem() = default;
 
   template <class _Up, class = typename enable_if<
         !is_same<__compressed_pair_elem, typename decay<_Up>::type>::value
   >::type>
+  _LIBCPP_INLINE_VISIBILITY
   constexpr explicit
   __compressed_pair_elem(_Up&& __u)
       : __value_type(_VSTD::forward<_Up>(__u)){};
@@ -2089,12 +2139,14 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
                          __tuple_indices<_Indexes...>)
       : __value_type(_VSTD::forward<_Args>(_VSTD::get<_Indexes>(__args))...) {}
 #else
-  __compressed_pair_elem() : __value_type() {}
+  _LIBCPP_INLINE_VISIBILITY __compressed_pair_elem() : __value_type() {}
+  _LIBCPP_INLINE_VISIBILITY
   __compressed_pair_elem(_ParamT __p)
       : __value_type(std::forward<_ParamT>(__p)) {}
 #endif
 
-  reference __get() _NOEXCEPT { return *this; }
+  _LIBCPP_INLINE_VISIBILITY reference __get() _NOEXCEPT { return *this; }
+  _LIBCPP_INLINE_VISIBILITY
   const_reference __get() const _NOEXCEPT { return *this; }
 };
 
@@ -3850,7 +3902,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         _Dp* __get_deleter() const _NOEXCEPT
             {return static_cast<_Dp*>(__cntrl_
-                    ? const_cast<void *>(__cntrl_->__get_deleter(typeid(_Dp))) 
+                    ? const_cast<void *>(__cntrl_->__get_deleter(typeid(_Dp)))
                       : nullptr);}
 #endif  // _LIBCPP_NO_RTTI
 
@@ -4216,6 +4268,7 @@ template<class ..._Args>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_Args&& ...__args)
 {
+    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _A2;
     typedef __allocator_destructor<_A2> _D2;
@@ -4234,6 +4287,7 @@ template<class _Alloc, class ..._Args>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
+    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
     typedef __allocator_destructor<_A2> _D2;
@@ -4254,6 +4308,7 @@ template<class _Tp>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared()
 {
+    static_assert((is_constructible<_Tp>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4272,6 +4327,7 @@ template<class _A0>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_A0& __a0)
 {
+    static_assert((is_constructible<_Tp, _A0>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4290,6 +4346,7 @@ template<class _A0, class _A1>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_A0& __a0, _A1& __a1)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4308,6 +4365,7 @@ template<class _A0, class _A1, class _A2>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_A0& __a0, _A1& __a1, _A2& __a2)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1, _A2>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4326,6 +4384,7 @@ template<class _Alloc>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a)
 {
+    static_assert((is_constructible<_Tp>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4345,6 +4404,7 @@ template<class _Alloc, class _A0>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _A0& __a0)
 {
+    static_assert((is_constructible<_Tp, _A0>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4364,6 +4424,7 @@ template<class _Alloc, class _A0, class _A1>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _A0& __a0, _A1& __a1)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4383,6 +4444,7 @@ template<class _Alloc, class _A0, class _A1, class _A2>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _A0& __a0, _A1& __a1, _A2& __a2)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1, _A2>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4477,7 +4539,7 @@ inline
 typename enable_if
 <
     !is_array<_Yp>::value &&
-    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, 
+    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer,
                    typename shared_ptr<_Tp>::element_type*>::value,
     shared_ptr<_Tp>&
 >::type
@@ -4512,7 +4574,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
     !is_array<_Yp>::value &&
-    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, 
+    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer,
                    typename shared_ptr<_Tp>::element_type*>::value,
     shared_ptr<_Tp>&
 >::type
@@ -5311,7 +5373,7 @@ atomic_load(const shared_ptr<_Tp>* __p)
     __m.unlock();
     return __q;
 }
-  
+
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
@@ -5352,7 +5414,7 @@ atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
     __m.unlock();
     return __r;
 }
-  
+
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
@@ -5484,7 +5546,7 @@ void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
     _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
 #endif
 {
-    __swap_allocator(__a1, __a2, 
+    __swap_allocator(__a1, __a2,
       integral_constant<bool, _VSTD::allocator_traits<_Alloc>::propagate_on_container_swap::value>());
 }
 
@@ -5506,7 +5568,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 void __swap_allocator(_Alloc &, _Alloc &, false_type) _NOEXCEPT {}
 
 template <typename _Alloc, typename _Traits=allocator_traits<_Alloc> >
-struct __noexcept_move_assign_container : public integral_constant<bool, 
+struct __noexcept_move_assign_container : public integral_constant<bool,
     _Traits::propagate_on_container_move_assignment::value
 #if _LIBCPP_STD_VER > 14
         || _Traits::is_always_equal::value
@@ -5520,17 +5582,17 @@ struct __noexcept_move_assign_container : public integral_constant<bool,
 template <class _Tp, class _Alloc>
 struct __temp_value {
     typedef allocator_traits<_Alloc> _Traits;
-    
+
     typename aligned_storage<sizeof(_Tp), alignof(_Tp)>::type __v;
     _Alloc &__a;
 
     _Tp *__addr() { return reinterpret_cast<_Tp *>(addressof(__v)); }
     _Tp &   get() { return *__addr(); }
-        
+
     template<class... _Args>
     __temp_value(_Alloc &__alloc, _Args&& ... __args) : __a(__alloc)
     { _Traits::construct(__a, __addr(), _VSTD::forward<_Args>(__args)...); }
-    
+
     ~__temp_value() { _Traits::destroy(__a, __addr()); }
     };
 #endif

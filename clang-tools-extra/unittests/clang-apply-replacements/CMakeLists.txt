@@ -13,6 +13,7 @@ add_extra_unittest(ClangApplyReplacementsTests
   )
 
 target_link_libraries(ClangApplyReplacementsTests
+  PRIVATE
   clangApplyReplacements
   clangBasic
   clangToolingCore

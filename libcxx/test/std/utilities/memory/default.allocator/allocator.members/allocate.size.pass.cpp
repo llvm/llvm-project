@@ -23,7 +23,7 @@ void test_max(size_t count)
 {
     std::allocator<T> a;
     try {
-        a.allocate(count);
+        TEST_IGNORE_NODISCARD a.allocate(count);
         assert(false);
     } catch (const std::exception &) {
     }

@@ -14,7 +14,7 @@
 // requires RandomAccessIterator<Iter>
 //   constexpr reverse_iterator operator+(difference_type n) const;
 //
-// constexpr in c++17
+// constexpr in C++17
 
 #include <iterator>
 #include <cassert>

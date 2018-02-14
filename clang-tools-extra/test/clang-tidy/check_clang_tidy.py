@@ -17,6 +17,7 @@ This script runs clang-tidy in fix mode and verify fixes, messages or both.
 
 Usage:
   check_clang_tidy.py [-resource-dir <resource-dir>] \
+    [-assume-filename <file-with-source-extension>] \
     <source-file> <check-name> <temp-file> \
     -- [optional clang-tidy arguments]
 
@@ -25,6 +26,7 @@ Example:
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -38,6 +40,7 @@ def write_file(file_name, text):
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-resource-dir')
+  parser.add_argument('-assume-filename')
   parser.add_argument('input_file_name')
   parser.add_argument('check_name')
   parser.add_argument('temp_file_name')
@@ -45,21 +48,25 @@ def main():
   args, extra_args = parser.parse_known_args()
 
   resource_dir = args.resource_dir
+  assume_file_name = args.assume_filename
   input_file_name = args.input_file_name
   check_name = args.check_name
   temp_file_name = args.temp_file_name
 
-  extension = '.cpp'
-  if (input_file_name.endswith('.c')):
-    extension = '.c'
-  if (input_file_name.endswith('.hpp')):
-    extension = '.hpp'
+  file_name_with_extension = assume_file_name or input_file_name
+  _, extension = os.path.splitext(file_name_with_extension)
+  if extension not in ['.c', '.hpp', '.m', '.mm']:
+    extension = '.cpp'
   temp_file_name = temp_file_name + extension
 
   clang_tidy_extra_args = extra_args
   if len(clang_tidy_extra_args) == 0:
-    clang_tidy_extra_args = ['--', '--std=c++11'] \
-        if extension == '.cpp' or extension == '.hpp' else ['--']
+    clang_tidy_extra_args = ['--']
+    if extension in ['.cpp', '.hpp', '.mm']:
+      clang_tidy_extra_args.append('--std=c++11')
+    if extension in ['.m', '.mm']:
+      clang_tidy_extra_args.extend(
+          ['-fobjc-abi-version=2', '-fobjc-arc'])
 
   # Tests should not rely on STL being available, and instead provide mock
   # implementations of relevant APIs.

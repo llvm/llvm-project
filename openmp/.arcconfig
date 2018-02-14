@@ -1,4 +1,4 @@
 {
-  "project_id" : "openmp",
+  "repository.callsign" : "OMP",
   "conduit_uri" : "https://reviews.llvm.org/"
 }

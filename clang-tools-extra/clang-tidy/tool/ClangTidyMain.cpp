@@ -18,6 +18,7 @@
 #include "../ClangTidy.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::driver;
@@ -392,16 +393,20 @@ static int clangTidyMain(int argc, const char **argv) {
   if (EnabledChecks.empty()) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
-    return 1;
+    return 0;
   }
 
   if (PathList.empty()) {
     llvm::errs() << "Error: no input files specified.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
-    return 1;
+    return 0;
   }
 
   ProfileData Profile;
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   ClangTidyContext Context(std::move(OwningOptionsProvider));
   runClangTidy(Context, OptionsParser.getCompilations(), PathList,
@@ -478,6 +483,11 @@ static int LLVM_ATTRIBUTE_UNUSED CppCoreGuidelinesModuleAnchorDestination =
     CppCoreGuidelinesModuleAnchorSource;
 
 // This anchor is used to force the linker to link the GoogleModule.
+extern volatile int FuchsiaModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED FuchsiaModuleAnchorDestination =
+    FuchsiaModuleAnchorSource;
+
+// This anchor is used to force the linker to link the GoogleModule.
 extern volatile int GoogleModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED GoogleModuleAnchorDestination =
     GoogleModuleAnchorSource;
@@ -511,6 +521,11 @@ static int LLVM_ATTRIBUTE_UNUSED PerformanceModuleAnchorDestination =
 extern volatile int ReadabilityModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
+
+// This anchor is used to force the linker to link the ObjCModule.
+extern volatile int ObjCModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED ObjCModuleAnchorDestination =
+    ObjCModuleAnchorSource;
 
 // This anchor is used to force the linker to link the HICPPModule.
 extern volatile int HICPPModuleAnchorSource;

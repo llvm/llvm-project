@@ -22,7 +22,7 @@ namespace std {
 
   // 23.6.4, no-value state indicator
   struct nullopt_t{see below };
-  constexpr nullopt_t nullopt(unspecified );
+  inline constexpr nullopt_t nullopt(unspecified );
 
   // 23.6.5, class bad_optional_access
   class bad_optional_access;
@@ -57,17 +57,17 @@ namespace std {
 
   // 23.6.8, comparison with T
   template <class T, class U> constexpr bool operator==(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator==(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator==(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator!=(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator!=(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator!=(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator<(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator<(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator<(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator<=(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator<=(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator<=(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator>(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator>(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator>(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator>=(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator>=(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator>=(const T&, const optional<U>&);
 
   // 23.6.9, specialized algorithms
   template <class T> void swap(optional<T>&, optional<T>&) noexcept(see below );
@@ -195,7 +195,7 @@ struct nullopt_t
     _LIBCPP_INLINE_VISIBILITY constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
 };
 
-/* inline */ constexpr nullopt_t nullopt{nullopt_t::__secret_tag{}, nullopt_t::__secret_tag{}};
+_LIBCPP_INLINE_VAR constexpr nullopt_t nullopt{nullopt_t::__secret_tag{}, nullopt_t::__secret_tag{}};
 
 template <class _Tp, bool = is_trivially_destructible<_Tp>::value>
 struct __optional_destruct_base;

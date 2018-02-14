@@ -16,7 +16,7 @@
 ; CHECK-NEXT:    [N, tmp, M] -> { : N < 0 or (N > 0 and tmp >= 128) or (N > 0 and tmp < 0) or (N > 0 and M < 0) }
 ;
 ; CHECK:         Domain :=
-; CHECK-NEXT:    [N, tmp, M] -> { Stmt_if_then[i0] : M > tmp and 0 <= i0 < N };
+; CHECK-NEXT:    [N, tmp, M] -> { Stmt_if_then[i0] : tmp >= 0 and M > tmp and 0 <= i0 < N };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

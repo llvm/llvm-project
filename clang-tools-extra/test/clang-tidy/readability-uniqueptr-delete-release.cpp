@@ -24,6 +24,11 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer '= nullptr' to 'delete x.release()' to reset unique_ptr<> objects [readability-uniqueptr-delete-release]
   // CHECK-FIXES: {{^}}  P = nullptr;
 
+  auto P2 = P;
+  delete P2.release();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer '= nullptr' to 'delete x.release()' to reset unique_ptr<> objects [readability-uniqueptr-delete-release]
+  // CHECK-FIXES: {{^}}  P2 = nullptr;
+
   std::unique_ptr<int> Array[20];
   delete Array[4].release();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer '= nullptr' to 'delete

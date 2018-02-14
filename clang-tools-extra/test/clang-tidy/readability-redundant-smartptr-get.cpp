@@ -97,6 +97,12 @@ void Positive() {
   // CHECK-MESSAGES: int i = *ip.get();
   // CHECK-FIXES: int i = *ip;
 
+  auto ip2 = ip;
+  i = *ip2.get();
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+  // CHECK-MESSAGES: i = *ip2.get();
+  // CHECK-FIXES: i = *ip2;
+
   std::unique_ptr<int> uu;
   std::shared_ptr<double> *ss;
   bool bb = uu.get() == nullptr;

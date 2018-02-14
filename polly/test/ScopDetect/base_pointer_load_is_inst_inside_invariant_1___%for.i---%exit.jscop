@@ -17,10 +17,6 @@
       {
          "accesses" : [
             {
-               "kind" : "read",
-               "relation" : "[n] -> { Stmt_S1[i0] -> MemRef_A[0] }"
-            },
-            {
                "kind" : "write",
                "relation" : "[n] -> { Stmt_S1[i0] -> MemRef_ptr[i0+1] }"
             }

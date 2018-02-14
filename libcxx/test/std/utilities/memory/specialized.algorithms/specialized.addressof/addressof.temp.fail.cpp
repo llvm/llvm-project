@@ -19,7 +19,7 @@
 int main()
 {
 #if TEST_STD_VER > 14
-	const int *p = std::addressof<const int>(0);
+    const int *p = std::addressof<const int>(0);
 #else
 #error
 #endif

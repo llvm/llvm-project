@@ -33,4 +33,13 @@ public:
         {return data_ == c.data_;}
 };
 
+
+template <class C>
+class non_const_compare
+{
+//	operator() deliberately not marked as 'const'
+    bool operator()(const C& x,const C&y) { return x < y; }
+};
+
+
 #endif  // TEST_COMPARE_H

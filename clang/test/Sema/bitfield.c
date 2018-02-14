@@ -82,3 +82,7 @@ typedef __typeof__(+(t5.n--)) Unsigned; // also act like compound-assignment.
 struct Test6 {
   : 0.0; // expected-error{{type name requires a specifier or qualifier}}
 };
+
+struct PR36157 {
+  int n : 1 ? 1 : implicitly_declare_function(); // expected-warning {{invalid in C99}}
+};

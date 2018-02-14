@@ -16,6 +16,6 @@ struct D {
 
   // This should not produce a diagnostic because it is not covered under
   // the CERT guideline for OOP11-CPP. However, this will produce a diagnostic
-  // under misc-move-constructor-init.
+  // under performance-move-constructor-init.
   D(B b) : b(b) {}
 };

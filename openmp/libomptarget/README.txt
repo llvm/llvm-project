@@ -22,12 +22,12 @@ $ mkdir build && cd build
 $ cmake path/to/openmp -DCMAKE_C_COMPILER=<C compiler> -DCMAKE_CXX_COMPILER=<C++ compiler>
 $ make
 
-For details about building, please look at Build_With_CMake.txt
+For details about building, please look at README.rst in the parent directory.
 
 Architectures Supported
 =======================
-The current library has been only tested in Linux operating system and the 
-following host architectures: 
+The current library has been only tested in Linux operating system and the
+following host architectures:
 * Intel(R) 64 architecture
 * IBM(R) Power architecture (big endian)
 * IBM(R) Power architecture (little endian)
@@ -58,17 +58,16 @@ Front-end Compilers that work with this RTL
 ===========================================
 
 The following compilers are known to do compatible code generation for
-this RTL: 
+this RTL:
   - clang (from https://github.com/clang-ykt )
-  - clang (development branch at http://clang.llvm.org - several features still 
+  - clang (development branch at http://clang.llvm.org - several features still
     under development)
 
 -----------------------------------------------------------------------
 
 Notices
 =======
-This library and related compiler support is still under development, so the 
+This library and related compiler support is still under development, so the
 employed interface is likely to change in the future.
 
 *Other names and brands may be claimed as the property of others.
-

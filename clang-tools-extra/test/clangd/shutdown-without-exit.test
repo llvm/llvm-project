@@ -1,0 +1,6 @@
+# RUN: not clangd -run-synchronously < %s
+# vim: fileformat=dos
+# It is absolutely vital that this file has CRLF line endings.
+Content-Length: 33
+
+{"jsonrpc":"2.0":"method":"exit"}

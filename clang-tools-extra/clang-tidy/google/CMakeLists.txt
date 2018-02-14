@@ -2,10 +2,12 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyGoogleModule
   AvoidCStyleCastsCheck.cpp
+  AvoidThrowingObjCExceptionCheck.cpp
   DefaultArgumentsCheck.cpp
   ExplicitConstructorCheck.cpp
   ExplicitMakePairCheck.cpp
   GlobalNamesInHeadersCheck.cpp
+  GlobalVariableDeclarationCheck.cpp
   GoogleTidyModule.cpp
   IntegerTypesCheck.cpp
   NonConstReferences.cpp

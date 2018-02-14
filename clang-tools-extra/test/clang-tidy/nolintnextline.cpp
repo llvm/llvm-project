@@ -4,8 +4,24 @@ class A { A(int i); };
 // NOLINTNEXTLINE
 class B { B(int i); };
 
-// NOLINTNEXTLINE(we-dont-care-about-categories-yet)
+// NOLINTNEXTLINE(for-some-other-check)
 class C { C(int i); };
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: single-argument constructors must be marked explicit
+
+// NOLINTNEXTLINE(*)
+class C1 { C1(int i); };
+
+// NOLINTNEXTLINE(not-closed-bracket-is-treated-as-skip-all
+class C2 { C2(int i); };
+
+// NOLINTNEXTLINE(google-explicit-constructor)
+class C3 { C3(int i); };
+
+// NOLINTNEXTLINE(some-check, google-explicit-constructor)
+class C4 { C4(int i); };
+
+// NOLINTNEXTLINE without-brackets-skip-all, another-check
+class C5 { C5(int i); };
 
 
 // NOLINTNEXTLINE
@@ -28,6 +44,6 @@ MACRO(G)
 // NOLINTNEXTLINE
 MACRO_NOARG
 
-// CHECK-MESSAGES: Suppressed 4 warnings (4 NOLINT)
+// CHECK-MESSAGES: Suppressed 8 warnings (8 NOLINT)
 
 // RUN: %check_clang_tidy %s google-explicit-constructor %t --

@@ -14,9 +14,9 @@ entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  tail call void @llvm.dbg.value(metadata float* %A, i64 0, metadata !14, metadata !DIExpression()), !dbg !15
-  tail call void @llvm.dbg.value(metadata i64 %N, i64 0, metadata !16, metadata !DIExpression()), !dbg !15
-  tail call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !18, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata float* %A, metadata !14, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata i64 %N, metadata !16, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata i64 0, metadata !18, metadata !DIExpression()), !dbg !20
   %cmp1 = icmp sgt i64 %N, 0, !dbg !20
   br i1 %cmp1, label %for.body.lr.ph, label %for.end, !dbg !20
 
@@ -29,7 +29,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %conv = sitofp i64 %0 to float, !dbg !21
   store float %conv, float* %arrayidx, align 4, !dbg !21
   %1 = add nsw i64 %0, 1, !dbg !20
-  tail call void @llvm.dbg.value(metadata i64 %1, i64 0, metadata !18, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata i64 %1, metadata !18, metadata !DIExpression()), !dbg !20
   %exitcond = icmp ne i64 %1, %N, !dbg !20
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge, !dbg !20
 
@@ -52,7 +52,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

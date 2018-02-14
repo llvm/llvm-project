@@ -12,7 +12,7 @@
 // template<Returnable S, ClassType T, CopyConstructible A>
 //   const_mem_fun1_ref_t<S,T,A>
 //   mem_fun_ref(S (T::*f)(A) const);
-// Removed in c++1z
+// Removed in c++17
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
 #include <functional>

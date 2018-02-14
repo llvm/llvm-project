@@ -17,20 +17,14 @@
 #include <stdlib.h>
 
 #include "config.h"
-#include "unwind_ext.h"
 
-//
-// 32-bit iOS uses setjump/longjump based C++ exceptions.
-// Other architectures use "zero cost" exceptions.
-//
-// With SJLJ based exceptions, any function that has a catch clause or needs to
-// do any clean up when an exception propagates through it, needs to call 
-// _Unwind_SjLj_Register() at the start of the function and 
-// _Unwind_SjLj_Unregister() at the end.  The register function is called with 
-// the address of a block of memory in the function's stack frame.  The runtime
-// keeps a linked list (stack) of these blocks - one per thread.  The calling 
-// function also sets the personality and lsda fields of the block.
-//
+/// With SJLJ based exceptions, any function that has a catch clause or needs to
+/// do any clean up when an exception propagates through it, needs to call
+/// \c _Unwind_SjLj_Register at the start of the function and
+/// \c _Unwind_SjLj_Unregister at the end.  The register function is called with
+/// the address of a block of memory in the function's stack frame.  The runtime
+/// keeps a linked list (stack) of these blocks - one per thread.  The calling
+/// function also sets the personality and lsda fields of the block.
 
 #if defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 
@@ -39,10 +33,10 @@ struct _Unwind_FunctionContext {
   struct _Unwind_FunctionContext *prev;
 
   // set by calling function before registering to be the landing pad
-  uintptr_t                       resumeLocation;
+  uint32_t                        resumeLocation;
 
   // set by personality handler to be parameters passed to landing pad function
-  uintptr_t                       resumeParameters[4];
+  uint32_t                        resumeParameters[4];
 
   // set by calling function before registering
   __personality_routine           personality; // arm offset=24
@@ -52,6 +46,48 @@ struct _Unwind_FunctionContext {
   // 0 = r7, 1 = pc, 2 = sp
   void                           *jbuf[];
 };
+
+#if defined(_LIBUNWIND_HAS_NO_THREADS)
+# define _LIBUNWIND_THREAD_LOCAL
+#else
+# if __STDC_VERSION__ >= 201112L
+#  define _LIBUNWIND_THREAD_LOCAL _Thread_local
+# elif defined(_WIN32)
+#  define _LIBUNWIND_THREAD_LOCAL __declspec(thread)
+# elif defined(__GNUC__) || defined(__clang__)
+#  define _LIBUNWIND_THREAD_LOCAL __thread
+# else
+#  error Unable to create thread local storage
+# endif
+#endif
+
+
+#if !defined(FOR_DYLD)
+
+#if defined(__APPLE__)
+#include <System/pthread_machdep.h>
+#else
+static _LIBUNWIND_THREAD_LOCAL struct _Unwind_FunctionContext *stack = NULL;
+#endif
+
+static struct _Unwind_FunctionContext *__Unwind_SjLj_GetTopOfFunctionStack() {
+#if defined(__APPLE__)
+  return _pthread_getspecific_direct(__PTK_LIBC_DYLD_Unwind_SjLj_Key);
+#else
+  return stack;
+#endif
+}
+
+static void
+__Unwind_SjLj_SetTopOfFunctionStack(struct _Unwind_FunctionContext *fc) {
+#if defined(__APPLE__)
+  _pthread_setspecific_direct(__PTK_LIBC_DYLD_Unwind_SjLj_Key, fc);
+#else
+  stack = fc;
+#endif
+}
+
+#endif
 
 
 /// Called at start of each function that catches exceptions

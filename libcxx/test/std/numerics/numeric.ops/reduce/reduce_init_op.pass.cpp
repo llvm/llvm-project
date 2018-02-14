@@ -65,10 +65,10 @@ int main()
     test<random_access_iterator<const int*> >();
     test<const int*>();
 
-//	Make sure the math is done using the correct type
+//  Make sure the math is done using the correct type
     {
     auto v = {1, 2, 3, 4, 5, 6, 7, 8};
     unsigned res = std::reduce(v.begin(), v.end(), 1U, std::multiplies<>());
-    assert(res == 40320);		// 8! will not fit into a char
+    assert(res == 40320);       // 8! will not fit into a char
     }
 }

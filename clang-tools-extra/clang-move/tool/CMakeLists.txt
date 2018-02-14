@@ -5,6 +5,7 @@ add_clang_executable(clang-move
   )
 
 target_link_libraries(clang-move
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

@@ -15,7 +15,7 @@
 //   ForwardIterator search(ForwardIterator first, ForwardIterator last,
 //                          const Searcher& searcher);
 //
-//		returns searcher.operator(first, last).first
+//      returns searcher.operator(first, last).first
 //
 
 #include <experimental/algorithm>

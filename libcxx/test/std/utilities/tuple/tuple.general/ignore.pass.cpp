@@ -48,9 +48,7 @@ int main() {
     {
         static_assert(test_ignore_constexpr(), "");
     }
-#if defined(_LIBCPP_VERSION)
     {
-        static_assert(std::is_trivial<decltype(std::ignore)>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_trivial<decltype(std::ignore)>::value, "");
     }
-#endif
 }

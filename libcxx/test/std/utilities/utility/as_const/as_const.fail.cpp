@@ -18,5 +18,5 @@ struct S {int i;};
 
 int main()
 {
-	std::as_const(S{});
+    std::as_const(S{});
 }

@@ -30,10 +30,16 @@ int main()
 {
     {
     typedef std::multimap<int, double, transparent_less> M;
-    M().equal_range(C2Int{5});
+    typedef std::pair<typename M::iterator, typename M::iterator> P;
+    M example;
+    P result = example.equal_range(C2Int{5});
+    assert(result.first == result.second);
     }
     {
     typedef std::multimap<int, double, transparent_less_not_referenceable> M;
-    M().equal_range(C2Int{5});
+    typedef std::pair<typename M::iterator, typename M::iterator> P;
+    M example;
+    P result = example.equal_range(C2Int{5});
+    assert(result.first == result.second);
     }
 }

@@ -60,10 +60,10 @@ public:
     IslCtx = S.getSharedIslCtx();
 
     DEBUG(dbgs() << "Going to flatten old schedule:\n");
-    OldSchedule = give(S.getSchedule());
+    OldSchedule = S.getSchedule();
     DEBUG(printSchedule(dbgs(), OldSchedule, 2));
 
-    auto Domains = give(S.getDomains());
+    auto Domains = S.getDomains();
     auto RestrictedOldSchedule = OldSchedule.intersect_domain(Domains);
     DEBUG(dbgs() << "Old schedule with domains:\n");
     DEBUG(printSchedule(dbgs(), RestrictedOldSchedule, 2));
@@ -77,7 +77,7 @@ public:
     DEBUG(dbgs() << "Gisted, flattened new schedule:\n");
     DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 
-    S.setSchedule(NewSchedule.take());
+    S.setSchedule(NewSchedule);
     return false;
   }
 
@@ -87,7 +87,7 @@ public:
     OS << "}\n\n";
 
     OS << "Schedule after flattening {\n";
-    printSchedule(OS, give(S.getSchedule()), 4);
+    printSchedule(OS, S.getSchedule(), 4);
     OS << "}\n";
   }
 

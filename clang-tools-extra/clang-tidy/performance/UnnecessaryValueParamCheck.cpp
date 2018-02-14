@@ -58,13 +58,25 @@ bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
   return Matches.empty();
 }
 
+bool isExplicitTemplateSpecialization(const FunctionDecl &Function) {
+  if (const auto *SpecializationInfo = Function.getTemplateSpecializationInfo())
+    if (SpecializationInfo->getTemplateSpecializationKind() ==
+        TSK_ExplicitSpecialization)
+      return true;
+  if (const auto *Method = llvm::dyn_cast<CXXMethodDecl>(&Function))
+    if (Method->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization &&
+        Method->getMemberSpecializationInfo()->isExplicitSpecialization())
+      return true;
+  return false;
+}
+
 } // namespace
 
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.get("IncludeStyle", "llvm"))) {}
+          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl =
@@ -133,9 +145,11 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // 2. the function is virtual as it might break overrides
   // 3. the function is referenced outside of a call expression within the
   //    compilation unit as the signature change could introduce build errors.
+  // 4. the function is an explicit template specialization.
   const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Function);
   if (Param->getLocStart().isMacroID() || (Method && Method->isVirtual()) ||
-      isReferencedOutsideOfCallExpr(*Function, *Result.Context))
+      isReferencedOutsideOfCallExpr(*Function, *Result.Context) ||
+      isExplicitTemplateSpecialization(*Function))
     return;
   for (const auto *FunctionDecl = Function; FunctionDecl != nullptr;
        FunctionDecl = FunctionDecl->getPreviousDecl()) {

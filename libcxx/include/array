@@ -183,7 +183,7 @@ struct _LIBCPP_TEMPLATE_VIS array
     _LIBCPP_CONSTEXPR size_type size() const _NOEXCEPT {return _Size;}
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR size_type max_size() const _NOEXCEPT {return _Size;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT {return _Size == 0;}
 
     // element access:

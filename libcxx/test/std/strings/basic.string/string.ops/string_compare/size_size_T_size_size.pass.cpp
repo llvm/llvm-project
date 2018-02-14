@@ -45,7 +45,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
     {
         try
         {
-            s.compare(pos1, n1, sv, pos2, n2);
+            TEST_IGNORE_NODISCARD s.compare(pos1, n1, sv, pos2, n2);
             assert(false);
         }
         catch (const std::out_of_range&)
@@ -69,7 +69,7 @@ test_npos(const S& s, typename S::size_type pos1, typename S::size_type n1,
     {
         try
         {
-            s.compare(pos1, n1, sv, pos2);
+            TEST_IGNORE_NODISCARD s.compare(pos1, n1, sv, pos2);
             assert(false);
         }
         catch (const std::out_of_range&)

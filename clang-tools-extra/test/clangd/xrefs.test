@@ -1,0 +1,67 @@
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 165
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"int x = 0;\nint y = x;"}}}
+
+Content-Length: 148
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":8}}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 9,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 0,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+Content-Length: 155
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/documentHighlight","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":8}}}
+#      CHECK: "id": 1
+# CHECK-NEXT: "jsonrpc": "2.0",
+# CHECK-NEXT: "result": [
+# CHECK-NEXT:   {
+# CHECK-NEXT:     "kind": 1,
+# CHECK-NEXT:     "range": {
+# CHECK-NEXT:       "end": {
+# CHECK-NEXT:         "character": 5,
+# CHECK-NEXT:         "line": 0
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "start": {
+# CHECK-NEXT:         "character": 4,
+# CHECK-NEXT:         "line": 0
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   },
+# CHECK-NEXT:   {
+# CHECK-NEXT:     "kind": 2,
+# CHECK-NEXT:     "range": {
+# CHECK-NEXT:       "end": {
+# CHECK-NEXT:         "character": 9,
+# CHECK-NEXT:         "line": 1
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "start": {
+# CHECK-NEXT:         "character": 8,
+# CHECK-NEXT:         "line": 1
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+Content-Length: 48
+
+{"jsonrpc":"2.0","id":10000,"method":"shutdown"}

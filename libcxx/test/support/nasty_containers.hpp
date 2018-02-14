@@ -291,9 +291,9 @@ public:
      nasty_mutex() TEST_NOEXCEPT {}
      ~nasty_mutex() {}
 
-	nasty_mutex *operator& ()   { assert(false); return nullptr; }
-	template <typename T>
-	void operator, (const T &) { assert(false); }
+    nasty_mutex *operator& ()   { assert(false); return nullptr; }
+    template <typename T>
+    void operator, (const T &) { assert(false); }
 
 private:
     nasty_mutex(const nasty_mutex&)            { assert(false); }

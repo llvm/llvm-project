@@ -15,7 +15,7 @@ that never materialized (e.g. remote unwinding).
 
 The unwinder has two levels of API. The high level APIs are the `_Unwind_*`
 functions which implement functionality required by `__cxa_*` exception
-funcionts. The low level APIs are the `unw_*` functions which are an interface
+functions. The low level APIs are the `unw_*` functions which are an interface
 defined by the old HP libunwind project.
 
 Getting Started with libunwind
@@ -41,16 +41,19 @@ Platform and Compiler Support
 
 libunwind is known to work on the following platforms:
 
-============ ==================== ============ ========================
-OS           Arch                 Compilers    Unwind Info
-============ ==================== ============ ========================
-Mac OS X     i386, x86_64         Clang, GCC   DWARF CFI
-iOS          ARM                  Clang        SjLj
-Linux        i386, x86_64         Clang, GCC   DWARF CFI
-Linux        ARM                  Clang, GCC   EHABI
-Bare Metal   ARM                  Clang, GCC   EHABI
-NetBSD       x86_64               Clang, GCC   DWARF CFI
-============ ==================== ============ ========================
+============ ======================== ============ ========================
+OS           Arch                     Compilers    Unwind Info
+============ ======================== ============ ========================
+Any          i386, x86_64, ARM        Clang        SjLj
+Bare Metal   ARM                      Clang, GCC   EHABI
+FreeBSD      i386, x86_64, ARM64      Clang        DWARF CFI
+iOS          ARM                      Clang        SjLj
+Linux        ARM                      Clang, GCC   EHABI
+Linux        i386, x86_64, ARM64      Clang, GCC   DWARF CFI
+Mac OS X     i386, x86_64             Clang, GCC   DWARF CFI
+NetBSD       x86_64                   Clang, GCC   DWARF CFI
+Windows      i386, x86_64, ARM, ARM64 Clang        DWARF CFI
+============ ======================== ============ ========================
 
 The following minimum compiler versions are strongly recommended.
 

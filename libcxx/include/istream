@@ -1069,16 +1069,18 @@ basic_istream<_CharT, _Traits>::getline(char_type* __s, streamsize __n, char_typ
                 this->rdbuf()->sbumpc();
                 ++__gc_;
             }
-            if (__n > 0)
-                *__s = char_type();
             if (__gc_ == 0)
                __err |= ios_base::failbit;
             this->setstate(__err);
         }
+        if (__n > 0)
+            *__s = char_type();
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
     {
+        if (__n > 0)
+            *__s = char_type();
         this->__set_badbit_and_consider_rethrow();
     }
 #endif  // _LIBCPP_NO_EXCEPTIONS

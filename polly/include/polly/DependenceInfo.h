@@ -92,6 +92,8 @@ struct Dependences {
     TYPE_TC_RED = 1 << 4,
   };
 
+  const std::shared_ptr<isl_ctx> &getSharedIslCtx() const { return IslCtx; }
+
   /// Get the dependences of type @p Kinds.
   ///
   /// @param Kinds This integer defines the different kinds of dependences

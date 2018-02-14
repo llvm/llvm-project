@@ -1,5 +1,0 @@
-omp_num_threads
-omp_workshare
-omp_time
-omp_ticks_time
-single_copyprivate

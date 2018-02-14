@@ -31,29 +31,36 @@ using namespace llvm;
 
 /// Create a scalar do/for-style loop.
 ///
-/// @param LowerBound The starting value of the induction variable.
-/// @param UpperBound The upper bound of the induction variable.
-/// @param Stride     The value by which the induction variable is incremented.
+/// @param LowerBound         The starting value of the induction variable.
+/// @param UpperBound         The upper bound of the induction variable.
+/// @param Stride             The value by which the induction variable
+///                           is incremented.
 ///
-/// @param Builder    The builder used to create the loop.
-/// @param P          A pointer to the pass that uses this function. It is used
-///                   to update analysis information.
-/// @param LI         The loop info for the current function
-/// @param DT         The dominator tree we need to update
-/// @param ExitBlock  The block the loop will exit to.
-/// @param Predicate  The predicate used to generate the upper loop bound.
-/// @param Annotator  This function can (optionally) take a ScopAnnotator which
-///                   annotates loops and alias information in the SCoP.
-/// @param Parallel   If this loop should be marked parallel in the Annotator.
-/// @param UseGuard   Create a guard in front of the header to check if the
-///                   loop is executed at least once, otherwise just assume it.
+/// @param Builder            The builder used to create the loop.
+/// @param P                  A pointer to the pass that uses this function.
+///                           It is used to update analysis information.
+/// @param LI                 The loop info for the current function
+/// @param DT                 The dominator tree we need to update
+/// @param ExitBlock          The block the loop will exit to.
+/// @param Predicate          The predicate used to generate the upper loop
+///                           bound.
+/// @param Annotator          This function can (optionally) take
+///                           a ScopAnnotator which
+///                           annotates loops and alias information in the SCoP.
+/// @param Parallel           If this loop should be marked parallel in
+///                           the Annotator.
+/// @param UseGuard           Create a guard in front of the header to check if
+///                           the loop is executed at least once, otherwise just
+///                           assume it.
+/// @param LoopVectDisabled   If the Loop vectorizer should be disabled for this
+///                           loop.
 ///
 /// @return Value*    The newly created induction variable for this loop.
 Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
                   PollyIRBuilder &Builder, LoopInfo &LI, DominatorTree &DT,
                   BasicBlock *&ExitBlock, ICmpInst::Predicate Predicate,
                   ScopAnnotator *Annotator = NULL, bool Parallel = false,
-                  bool UseGuard = true);
+                  bool UseGuard = true, bool LoopVectDisabled = false);
 
 /// The ParallelLoopGenerator allows to create parallelized loops
 ///

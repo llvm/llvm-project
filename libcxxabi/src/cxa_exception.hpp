@@ -60,22 +60,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     // previously adding padded to 64-bit align unwindHeader.
     size_t referenceCount;
 #endif
-
-    // This field is annotated with attribute aligned so that the exception
-    // object following the field is sufficiently aligned and there is no
-    // gap between the field and the exception object. r276215 made a change to
-    // annotate _Unwind_Exception in unwind.h with __attribute__((aligned)), but
-    // we cannot incorporate the fix on Darwin since it is an ABI-breaking
-    // change, which is why we need the attribute on this field.
-    //
-    // For ARM EHABI, we do not align this field since _Unwind_Exception is an
-    // alias of _Unwind_Control_Block, which is not annotated with
-    // __attribute__((aligned).
-#if defined(_LIBCXXABI_ARM_EHABI)
     _Unwind_Exception unwindHeader;
-#else
-    _Unwind_Exception unwindHeader __attribute__((aligned));
-#endif
 };
 
 // http://sourcery.mentor.com/archives/cxx-abi-dev/msg01924.html
@@ -109,14 +94,7 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 #if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
     void* primaryException;
 #endif
-
-    // See the comment in __cxa_exception as to why this field has attribute
-    // aligned.
-#if defined(_LIBCXXABI_ARM_EHABI)
     _Unwind_Exception unwindHeader;
-#else
-    _Unwind_Exception unwindHeader __attribute__((aligned));
-#endif
 };
 
 struct _LIBCXXABI_HIDDEN __cxa_eh_globals {

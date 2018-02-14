@@ -22,7 +22,7 @@ test1()
 {
     typedef std::independent_bits_engine<std::ranlux24, 32, unsigned> E;
     E e1(2);
-    e1();
+    (void)e1();
     E e2(5);
     e2 = e1;
     assert(e1 == e2);
@@ -38,7 +38,7 @@ test2()
 {
     typedef std::independent_bits_engine<std::ranlux48, 64, unsigned long long> E;
     E e1(3);
-    e1();
+    (void)e1();
     E e2(5);
     e2 = e1;
     assert(e1 == e2);

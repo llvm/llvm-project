@@ -29,13 +29,13 @@
 // CHECK-NEXT: 102d:	cc 	int3
 // CHECK-NEXT: 102e:	cc 	int3
 // CHECK-NEXT: 102f:	cc 	int3
-// CHECK-NEXT: 1030:    4c 8b 1d b1 10 00 00 movq 4273(%rip), %r11
+// CHECK-NEXT: 1030:	4c 8b 1d c1 10 00 00 	movq	4289(%rip), %r11
 // CHECK-NEXT: 1037:	e9 d4 ff ff ff 	jmp	-44 <.plt>
 // CHECK-NEXT: 103c:	cc 	int3
 // CHECK-NEXT: 103d:	cc 	int3
 // CHECK-NEXT: 103e:	cc 	int3
 // CHECK-NEXT: 103f:	cc 	int3
-// CHECK-NEXT: 1040:    4c 8b 1d a9 10 00 00 movq 4265(%rip), %r11
+// CHECK-NEXT: 1040:	4c 8b 1d b9 10 00 00 	movq	4281(%rip), %r11
 // CHECK-NEXT: 1047:	e9 c4 ff ff ff 	jmp	-60 <.plt>
 // CHECK-NEXT: 104c:	cc 	int3
 // CHECK-NEXT: 104d:	cc 	int3
@@ -43,9 +43,9 @@
 // CHECK-NEXT: 104f:	cc 	int3
 
 // CHECK:      Contents of section .got.plt:
-// CHECK-NEXT: 20d0 00200000 00000000 00000000 00000000
-// CHECK-NEXT: 20e0 00000000 00000000 00000000 00000000
-// CHECK-NEXT: 20f0 00000000 00000000
+// CHECK-NEXT: 20e0 00200000 00000000 00000000 00000000
+// CHECK-NEXT: 20f0 00000000 00000000 00000000 00000000
+// CHECK-NEXT: 2100 00000000 00000000
 
 .global _start
 _start:

@@ -77,7 +77,8 @@ void RedundantStringCStrCheck::registerMatchers(
     return;
 
   // Match expressions of type 'string' or 'string*'.
-  const auto StringDecl = cxxRecordDecl(hasName("::std::basic_string"));
+  const auto StringDecl = type(hasUnqualifiedDesugaredType(recordType(
+      hasDeclaration(cxxRecordDecl(hasName("::std::basic_string"))))));
   const auto StringExpr =
       expr(anyOf(hasType(StringDecl), hasType(qualType(pointsTo(StringDecl)))));
 

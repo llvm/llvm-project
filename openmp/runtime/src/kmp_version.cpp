@@ -2,7 +2,6 @@
  * kmp_version.cpp
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_io.h"
@@ -50,6 +48,8 @@
 #define KMP_COMPILER "Intel C++ Compiler 16.0"
 #elif __INTEL_COMPILER == 1700
 #define KMP_COMPILER "Intel C++ Compiler 17.0"
+#elif __INTEL_COMPILER == 1800
+#define KMP_COMPILER "Intel C++ Compiler 18.0"
 #elif __INTEL_COMPILER == 9998
 #define KMP_COMPILER "Intel C++ Compiler mainline"
 #elif __INTEL_COMPILER == 9999
@@ -130,7 +130,7 @@ static int __kmp_version_1_printed = FALSE;
 void __kmp_print_version_1(void) {
   if (__kmp_version_1_printed) {
     return;
-  }; // if
+  }
   __kmp_version_1_printed = TRUE;
 
 #ifndef KMP_STUB
@@ -167,7 +167,7 @@ void __kmp_print_version_1(void) {
         KMP_VERSION_PREF_STR, __kmp_barrier_type_name[i],
         __kmp_barrier_gather_branch_bits[i],
         __kmp_barrier_release_branch_bits[i]); // __kmp_str_buf_print
-  }; // for i
+  }
   for (int i = bs_plain_barrier; i < bs_last_barrier; ++i) {
     __kmp_str_buf_print(
         &buffer, "%s%s barrier pattern: gather=%s, release=%s\n",
@@ -175,7 +175,7 @@ void __kmp_print_version_1(void) {
         __kmp_barrier_pattern_name[__kmp_barrier_gather_pattern[i]],
         __kmp_barrier_pattern_name
             [__kmp_barrier_release_pattern[i]]); // __kmp_str_buf_print
-  }; // for i
+  }
   __kmp_str_buf_print(&buffer, "%s\n",
                       &__kmp_version_lock[KMP_VERSION_MAGIC_LEN]);
 #endif
@@ -201,7 +201,7 @@ static int __kmp_version_2_printed = FALSE;
 void __kmp_print_version_2(void) {
   if (__kmp_version_2_printed) {
     return;
-  }; // if
+  }
   __kmp_version_2_printed = TRUE;
 } // __kmp_print_version_2
 

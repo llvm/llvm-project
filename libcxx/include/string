@@ -301,6 +301,13 @@ public:
     int compare(size_type pos1, size_type n1, const value_type* s) const;
     int compare(size_type pos1, size_type n1, const value_type* s, size_type n2) const;
 
+    bool starts_with(basic_string_view<charT, traits> sv) const noexcept; // C++2a
+    bool starts_with(charT c) const noexcept;                             // C++2a
+    bool starts_with(const charT* s) const;                               // C++2a
+    bool ends_with(basic_string_view<charT, traits> sv) const noexcept;   // C++2a
+    bool ends_with(charT c) const noexcept;                               // C++2a
+    bool ends_with(const charT* s) const;                                 // C++2a
+
     bool __invariants() const;
 };
 
@@ -608,7 +615,7 @@ struct __libcpp_string_gets_noexcept_iterator
 
 template <class _CharT, class _Traits, class _Tp>
 struct __can_be_converted_to_string_view : public _LIBCPP_BOOL_CONSTANT(
-	( is_convertible<const _Tp&, basic_string_view<_CharT, _Traits> >::value &&
+    ( is_convertible<const _Tp&, basic_string_view<_CharT, _Traits> >::value &&
      !is_convertible<const _Tp&, const _CharT*>::value)) {};
 
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
@@ -670,7 +677,7 @@ private:
         size_type __cap_;
     };
 
-#if _LIBCPP_BIG_ENDIAN
+#ifdef _LIBCPP_BIG_ENDIAN
     static const size_type __short_mask = 0x01;
     static const size_type __long_mask  = 0x1ul;
 #else  // _LIBCPP_BIG_ENDIAN
@@ -700,7 +707,7 @@ private:
         pointer   __data_;
     };
 
-#if _LIBCPP_BIG_ENDIAN
+#ifdef _LIBCPP_BIG_ENDIAN
     static const size_type __short_mask = 0x80;
     static const size_type __long_mask  = ~(size_type(~0) >> 1);
 #else  // _LIBCPP_BIG_ENDIAN
@@ -901,7 +908,8 @@ public:
     void shrink_to_fit() _NOEXCEPT {reserve();}
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY bool empty() const _NOEXCEPT {return size() == 0;}
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    bool empty() const _NOEXCEPT {return size() == 0;}
 
     _LIBCPP_INLINE_VISIBILITY const_reference operator[](size_type __pos) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY reference       operator[](size_type __pos)       _NOEXCEPT;
@@ -1127,7 +1135,7 @@ public:
     const value_type* c_str() const _NOEXCEPT {return data();}
     _LIBCPP_INLINE_VISIBILITY
     const value_type* data() const _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER > 14 || defined(_LIBCPP_BUILDING_LIBRARY)
     _LIBCPP_INLINE_VISIBILITY
     value_type* data()             _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
 #endif
@@ -1214,6 +1222,32 @@ public:
     int compare(size_type __pos1, size_type __n1, const value_type* __s) const;
     int compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const;
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(__self_view __sv) const _NOEXCEPT
+    { return __self_view(data(), size()).starts_with(__sv); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(value_type __c) const _NOEXCEPT
+    { return !empty() && _Traits::eq(front(), __c); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(const value_type* __s) const _NOEXCEPT
+    { return starts_with(__self_view(__s)); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(__self_view __sv) const _NOEXCEPT
+    { return __self_view(data(), size()).ends_with( __sv); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(value_type __c) const _NOEXCEPT
+    { return !empty() && _Traits::eq(back(), __c); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(const value_type* __s) const _NOEXCEPT
+    { return ends_with(__self_view(__s)); }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY bool __invariants() const;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1241,7 +1275,7 @@ private:
 
     _LIBCPP_INLINE_VISIBILITY
     void __set_short_size(size_type __s) _NOEXCEPT
-#   if _LIBCPP_BIG_ENDIAN
+#   ifdef _LIBCPP_BIG_ENDIAN
         {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
 #   else
         {__r_.first().__s.__size_ = (unsigned char)(__s);}
@@ -1249,7 +1283,7 @@ private:
 
     _LIBCPP_INLINE_VISIBILITY
     size_type __get_short_size() const _NOEXCEPT
-#   if _LIBCPP_BIG_ENDIAN
+#   ifdef _LIBCPP_BIG_ENDIAN
         {return __r_.first().__s.__size_ >> 1;}
 #   else
         {return __r_.first().__s.__size_;}
@@ -1259,7 +1293,7 @@ private:
 
     _LIBCPP_INLINE_VISIBILITY
     void __set_short_size(size_type __s) _NOEXCEPT
-#   if _LIBCPP_BIG_ENDIAN
+#   ifdef _LIBCPP_BIG_ENDIAN
         {__r_.first().__s.__size_ = (unsigned char)(__s);}
 #   else
         {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
@@ -1267,7 +1301,7 @@ private:
 
     _LIBCPP_INLINE_VISIBILITY
     size_type __get_short_size() const _NOEXCEPT
-#   if _LIBCPP_BIG_ENDIAN
+#   ifdef _LIBCPP_BIG_ENDIAN
         {return __r_.first().__s.__size_;}
 #   else
         {return __r_.first().__s.__size_ >> 1;}
@@ -1756,10 +1790,10 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
              const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a,
-			 typename enable_if<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value, void>::type *)
+             typename enable_if<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value, void>::type *)
     : __r_(__second_tag(), __a)
 {
-	__self_view __sv = __self_view(__t).substr(__pos, __n);
+    __self_view __sv = __self_view(__t).substr(__pos, __n);
     __init(__sv.data(), __sv.size());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -2145,7 +2179,7 @@ template <class _Tp>
 typename enable_if
 <
     __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	basic_string<_CharT, _Traits, _Allocator>&
+    basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp & __t, size_type __pos, size_type __n)
 {
@@ -2493,7 +2527,7 @@ template <class _Tp>
 typename enable_if
 <
     __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	basic_string<_CharT, _Traits, _Allocator>&
+    basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const _Tp& __t,
                                                   size_type __pos2, size_type __n)
@@ -2682,8 +2716,8 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp>
 typename enable_if
 <
-	__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	basic_string<_CharT, _Traits, _Allocator>&
+    __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+    basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, const _Tp& __t,
                                                    size_type __pos2, size_type __n2)
@@ -2870,7 +2904,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::max_size() const _NOEXCEPT
 {
     size_type __m = __alloc_traits::max_size(__alloc());
-#if _LIBCPP_BIG_ENDIAN
+#ifdef _LIBCPP_BIG_ENDIAN
     return (__m <= ~__long_mask ? __m : __m/2) - __alignment;
 #else
     return __m - __alignment;
@@ -3462,8 +3496,8 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp>
 typename enable_if
 <
-	__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	int
+    __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+    int
 >::type
 basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    size_type __n1,

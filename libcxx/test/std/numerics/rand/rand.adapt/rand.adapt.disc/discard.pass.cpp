@@ -25,9 +25,9 @@ test1()
     assert(e1 == e2);
     e1.discard(3);
     assert(e1 != e2);
-    e2();
-    e2();
-    e2();
+    (void)e2();
+    (void)e2();
+    (void)e2();
     assert(e1 == e2);
 }
 
@@ -39,9 +39,9 @@ test2()
     assert(e1 == e2);
     e1.discard(3);
     assert(e1 != e2);
-    e2();
-    e2();
-    e2();
+    (void)e2();
+    (void)e2();
+    (void)e2();
     assert(e1 == e2);
 }
 

@@ -35,7 +35,7 @@
 
 #include "test_macros.h"
 
-constexpr auto OverAligned = alignof(std::max_align_t) * 2;
+constexpr auto OverAligned = __STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2;
 
 bool A_constructed = false;
 

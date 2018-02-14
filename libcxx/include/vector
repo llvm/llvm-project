@@ -634,7 +634,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_type capacity() const _NOEXCEPT
         {return __base::capacity();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT
         {return this->__begin_ == this->__end_;}
     size_type max_size() const _NOEXCEPT;
@@ -2290,7 +2290,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const _NOEXCEPT
         {return __size_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT
         {return __size_ == 0;}
     void reserve(size_type __n);

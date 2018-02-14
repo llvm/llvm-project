@@ -314,15 +314,21 @@ message(STATUS "PPCG version: ${PPCG_GIT_HEAD_ID}")
 set (PPCG_FILES
      ppcg/cuda.c
      ppcg/cuda_common.c
+     ppcg/external.c
      ppcg/gpu_array_tile.c
      ppcg/gpu.c
+     ppcg/gpu_array_tile.c
      ppcg/gpu_group.c
+     ppcg/gpu_hybrid.c
      ppcg/gpu_print.c
      ppcg/gpu_tree.c
+     ppcg/grouping.c
+     ppcg/hybrid.c
      ppcg/ppcg.c
      ppcg/ppcg_options.c
+     ppcg/print.c
      ppcg/schedule.c
-     ppcg/external.c
+     ppcg/util.c
      )
 
 include_directories(BEFORE

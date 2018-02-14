@@ -19,14 +19,14 @@
 
 template <class T>
 struct Comp {
-	bool operator () (const T& lhs, const T& rhs) const { return lhs == rhs; }
+    bool operator () (const T& lhs, const T& rhs) const { return lhs == rhs; }
 
-	Comp () {}
+    Comp () {}
 private:
-	Comp (const Comp &); // declared but not defined
-	};
+    Comp (const Comp &); // declared but not defined
+    };
 
 
 int main() {
-	std::unordered_multimap<int, int, std::hash<int>, Comp<int> > m;
+    std::unordered_multimap<int, int, std::hash<int>, Comp<int> > m;
 }

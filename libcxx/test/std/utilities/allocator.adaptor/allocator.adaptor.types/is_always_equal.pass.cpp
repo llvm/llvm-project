@@ -26,12 +26,12 @@ int main()
 {
     // sanity checks
     static_assert( (std::is_same<
-    		std::allocator_traits<A1<int>>::is_always_equal, std::false_type>::value
-    		), "" );
+            std::allocator_traits<A1<int>>::is_always_equal, std::false_type>::value
+            ), "" );
 
     static_assert( (std::is_same<
-    		std::allocator_traits<min_allocator<int>>::is_always_equal, std::true_type>::value
-    		), "" );
+            std::allocator_traits<min_allocator<int>>::is_always_equal, std::true_type>::value
+            ), "" );
 
     // wrapping one allocator
     static_assert(

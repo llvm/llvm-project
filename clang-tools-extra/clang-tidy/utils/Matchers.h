@@ -17,6 +17,10 @@ namespace clang {
 namespace tidy {
 namespace matchers {
 
+AST_MATCHER(BinaryOperator, isAssignmentOperator) {
+  return Node.isAssignmentOp();
+}
+
 AST_MATCHER(BinaryOperator, isRelationalOperator) {
   return Node.isRelationalOp();
 }

@@ -22,7 +22,7 @@ test1()
 {
     typedef std::ranlux24 E;
     E e1(2);
-    e1();
+    (void)e1();
     E e2(5);
     e2 = e1;
     assert(e1 == e2);
@@ -38,7 +38,7 @@ test2()
 {
     typedef std::ranlux48 E;
     E e1(3);
-    e1();
+    (void)e1();
     E e2(5);
     e2 = e1;
     assert(e1 == e2);

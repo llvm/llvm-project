@@ -44,6 +44,21 @@
 
   <table id="news">
   <tr><td><b>2017</b></td></tr>
+  <tr><td width="120"><p>September</p></td>
+  <td>
+    <h4>High-Performance Generalized Matrix Multiplication</h4>
+    Polly automatically detects and optimizes generalized matrix
+    multiplication, the computation C &larr; &alpha; &otimes; C &oplus; &beta;
+    &otimes; A &otimes; B, where A, B, and C are three appropriately sized
+    matrices, &oplus; and &otimes; operations are originating from the
+    corresponding matrix semiring, and &alpha; and &beta; are constants, and
+    beta is not equal to zero. It allows to obtain the highly optimized form
+    structured similar to the expert implementation of GEMM that can be found
+    in GotoBLAS and its successors.
+    <h4>The performance evaluation of GEMM</h4>
+    <img src="images/GEMM_double.png" /><br />
+  </td>
+  <tr><td><b>2017</b></td></tr>
   <tr><td width="120"><p>January</p></td>
   <td>
   <a href="http://impact.gforge.inria.fr/impact2017">IMPACT 2017</a> program

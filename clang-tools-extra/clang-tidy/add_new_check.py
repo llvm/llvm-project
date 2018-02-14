@@ -51,7 +51,7 @@ def write_header(module_path, module, check_name, check_name_camel):
   print('Creating %s...' % filename)
   with open(filename, 'wb') as f:
     header_guard = ('LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_' + module.upper() + '_'
-                    + check_name.upper().replace('-', '_') + '_H')
+                    + check_name_camel.upper() + '_H')
     f.write('//===--- ')
     f.write(os.path.basename(filename))
     f.write(' - clang-tidy')

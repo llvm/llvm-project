@@ -10,6 +10,7 @@
 // test operator new nothrow by replacing only operator new
 
 // UNSUPPORTED: sanitizer-new-delete
+// XFAIL: libcpp-no-vcruntime
 
 #include <new>
 #include <cstddef>

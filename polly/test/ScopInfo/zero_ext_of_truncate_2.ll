@@ -15,7 +15,7 @@
 ; CHECK-NEXT:    [N, tmp] -> { : N > 0 and (tmp < 0 or tmp >= 2147483648) }
 ;
 ; CHECK:         Domain :=
-; CHECK-NEXT:    [N, tmp] -> { Stmt_if_then[i0] : i0 > tmp and 0 <= i0 < N };
+; CHECK-NEXT:    [N, tmp] -> { Stmt_if_then[i0] : tmp >= 0 and tmp < i0 < N };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

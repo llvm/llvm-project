@@ -2,7 +2,6 @@
  * kmp_version.h -- version number for this release
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_VERSION_H
 #define KMP_VERSION_H

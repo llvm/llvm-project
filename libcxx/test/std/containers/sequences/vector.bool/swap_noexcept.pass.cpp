@@ -72,7 +72,7 @@ int main()
     {
 #if TEST_STD_VER >= 14
 #if defined(_LIBCPP_VERSION)
-    //  In c++14, if POCS is set, swapping the allocator is required not to throw
+    //  In C++14, if POCS is set, swapping the allocator is required not to throw
         typedef std::vector<bool, some_alloc<bool>> C;
         static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #endif // _LIBCPP_VERSION

@@ -24,9 +24,9 @@ test()
 {
     {
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{})), "" );
+    static_assert((noexcept(S{})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S()) == noexcept(typename S::allocator_type())), "" );
+    static_assert((noexcept(S()) == noexcept(typename S::allocator_type())), "" );
 #endif
     S s;
     LIBCPP_ASSERT(s.__invariants());
@@ -37,9 +37,9 @@ test()
     }
     {
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{typename S::allocator_type{}})), "" );
+    static_assert((noexcept(S{typename S::allocator_type{}})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S(typename S::allocator_type())) == std::is_nothrow_copy_constructible<typename S::allocator_type>::value), "" );
+    static_assert((noexcept(S(typename S::allocator_type())) == std::is_nothrow_copy_constructible<typename S::allocator_type>::value), "" );
 #endif
     S s(typename S::allocator_type(5));
     LIBCPP_ASSERT(s.__invariants());
@@ -58,9 +58,9 @@ test2()
 {
     {
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{})), "" );
+    static_assert((noexcept(S{})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S()) == noexcept(typename S::allocator_type())), "" );
+    static_assert((noexcept(S()) == noexcept(typename S::allocator_type())), "" );
 #endif
     S s;
     LIBCPP_ASSERT(s.__invariants());
@@ -71,9 +71,9 @@ test2()
     }
     {
 #if TEST_STD_VER > 14
-	static_assert((noexcept(S{typename S::allocator_type{}})), "" );
+    static_assert((noexcept(S{typename S::allocator_type{}})), "" );
 #elif TEST_STD_VER >= 11
-	static_assert((noexcept(S(typename S::allocator_type())) == std::is_nothrow_copy_constructible<typename S::allocator_type>::value), "" );
+    static_assert((noexcept(S(typename S::allocator_type())) == std::is_nothrow_copy_constructible<typename S::allocator_type>::value), "" );
 #endif
     S s(typename S::allocator_type{});
     LIBCPP_ASSERT(s.__invariants());

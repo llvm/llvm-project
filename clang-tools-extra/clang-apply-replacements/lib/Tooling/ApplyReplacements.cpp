@@ -288,13 +288,12 @@ bool mergeAndDeduplicate(const TUReplacements &TUs,
     for (const tooling::Replacement &R : TU.Replacements) {
       // Use the file manager to deduplicate paths. FileEntries are
       // automatically canonicalized.
-      const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath());
-      if (!Entry && Warned.insert(R.getFilePath()).second) {
-        errs() << "Described file '" << R.getFilePath()
-               << "' doesn't exist. Ignoring...\n";
-        continue;
+      if (const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath())) {
+        GroupedReplacements[Entry].push_back(R);
+      } else if (Warned.insert(R.getFilePath()).second) {
+          errs() << "Described file '" << R.getFilePath()
+                 << "' doesn't exist. Ignoring...\n";
       }
-      GroupedReplacements[Entry].push_back(R);
     }
   }
 
@@ -314,13 +313,12 @@ bool mergeAndDeduplicate(const TUDiagnostics &TUs,
         for (const tooling::Replacement &R : Fix.second) {
           // Use the file manager to deduplicate paths. FileEntries are
           // automatically canonicalized.
-          const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath());
-          if (!Entry && Warned.insert(R.getFilePath()).second) {
-            errs() << "Described file '" << R.getFilePath()
-                   << "' doesn't exist. Ignoring...\n";
-            continue;
+          if (const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath())) {
+            GroupedReplacements[Entry].push_back(R);
+          } else if (Warned.insert(R.getFilePath()).second) {
+              errs() << "Described file '" << R.getFilePath()
+                     << "' doesn't exist. Ignoring...\n";
           }
-          GroupedReplacements[Entry].push_back(R);
         }
       }
     }

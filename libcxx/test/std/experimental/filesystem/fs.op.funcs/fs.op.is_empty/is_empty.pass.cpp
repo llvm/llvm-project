@@ -12,7 +12,7 @@
 // <experimental/filesystem>
 
 // bool is_empty(path const& p);
-// bool is_empty(path const& p, std::error_code& ec) noexcept;
+// bool is_empty(path const& p, std::error_code& ec);
 
 #include <experimental/filesystem>
 #include <type_traits>
@@ -30,7 +30,7 @@ TEST_CASE(signature_test)
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
-    ASSERT_NOEXCEPT(is_empty(p, ec));
+    ASSERT_NOT_NOEXCEPT(is_empty(p, ec));
     ASSERT_NOT_NOEXCEPT(is_empty(p));
 }
 

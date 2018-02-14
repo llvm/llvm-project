@@ -176,12 +176,13 @@ void f(const char *p) {
   if (!p)
     f("\
 ");
-  // CHECK-MESSAGES: :[[@LINE-3]]:10: warning: statement should be inside braces
-  // CHECK-FIXES:      {{^  }}if (!p) {{{$}}
-  // CHECK-FIXES-NEXT: {{^    }}f("\{{$}}
-  // CHECK-FIXES-_NEXT: {{^}}");{{$}} FIXME: This breaks (http://llvm.org/PR26228)
-  // CHECK-FIXES-_NEXT: {{^}}}{{$}}
-}
+} // end of f
+// CHECK-MESSAGES: :[[@LINE-4]]:10: warning: statement should be inside braces
+// CHECK-FIXES:      {{^}}  if (!p) {{{$}}
+// CHECK-FIXES-NEXT: {{^}}    f("\{{$}}
+// CHECK-FIXES-NEXT: {{^}}");{{$}}
+// CHECK-FIXES-NEXT: {{^}}}{{$}}
+// CHECK-FIXES-NEXT: {{^}}} // end of f{{$}}
 
 #define M(x) x
 

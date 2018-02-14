@@ -32,7 +32,7 @@ int main()
     using namespace std::experimental;
     non_copyable nc;
     any a;
-    a = static_cast<non_copyable &&>(nc); // expected-error@experimental/any:* 2 {{static_assert failed "_ValueType must be CopyConstructible."}}
+    a = static_cast<non_copyable &&>(nc); // expected-error-re@experimental/any:* 2 {{static_assert failed{{.*}} "_ValueType must be CopyConstructible."}}
         // expected-error@experimental/any:* {{calling a private constructor of class 'non_copyable'}}
 
 }

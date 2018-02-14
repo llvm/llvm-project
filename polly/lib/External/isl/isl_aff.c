@@ -2284,6 +2284,18 @@ __isl_give isl_set *isl_aff_ge_set(__isl_take isl_aff *aff1,
 	return isl_set_from_basic_set(isl_aff_ge_basic_set(aff1, aff2));
 }
 
+/* Return a set containing those elements in the shared domain space
+ * of aff1 and aff2 where aff1 is greater than aff2.
+ *
+ * If either of the two inputs is NaN, then the result is empty,
+ * as comparisons with NaN always return false.
+ */
+__isl_give isl_set *isl_aff_gt_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2)
+{
+	return isl_set_from_basic_set(isl_aff_gt_basic_set(aff1, aff2));
+}
+
 /* Return a basic set containing those elements in the shared space
  * of aff1 and aff2 where aff1 is smaller than or equal to aff2.
  */
@@ -2338,6 +2350,23 @@ __isl_give isl_set *isl_aff_eq_set(__isl_take isl_aff *aff1,
 	__isl_take isl_aff *aff2)
 {
 	return isl_set_from_basic_set(isl_aff_eq_basic_set(aff1, aff2));
+}
+
+/* Return a set containing those elements in the shared domain space
+ * of aff1 and aff2 where aff1 and aff2 are not equal.
+ *
+ * If either of the two inputs is NaN, then the result is empty,
+ * as comparisons with NaN always return false.
+ */
+__isl_give isl_set *isl_aff_ne_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2)
+{
+	isl_set *set_lt, *set_gt;
+
+	set_lt = isl_aff_lt_set(isl_aff_copy(aff1),
+				isl_aff_copy(aff2));
+	set_gt = isl_aff_gt_set(aff1, aff2);
+	return isl_set_union_disjoint(set_lt, set_gt);
 }
 
 __isl_give isl_aff *isl_aff_add_on_domain(__isl_keep isl_set *dom,

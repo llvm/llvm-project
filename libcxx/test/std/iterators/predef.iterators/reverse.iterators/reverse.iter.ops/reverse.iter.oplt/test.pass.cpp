@@ -16,7 +16,7 @@
 //   constexpr bool
 //   operator<(const reverse_iterator<Iter1>& x, const reverse_iterator<Iter2>& y);
 //
-//   constexpr in c++17
+//   constexpr in C++17
 
 #include <iterator>
 #include <cassert>

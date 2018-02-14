@@ -24,7 +24,10 @@ struct dummy_char_traits : public std::char_traits<char> {};
 
 template<typename CharT, typename Traits>
 void test ( const std::basic_string<CharT, Traits> &str ) {
-    std::basic_string_view<CharT, Traits> sv1 ( str );
+    typedef std::basic_string_view<CharT, Traits> SV;
+    ASSERT_NOEXCEPT(SV(str));
+
+    SV sv1 ( str );
     assert ( sv1.size() == str.size());
     assert ( sv1.data() == str.data());
 }

@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
-// REQUIRES: c++11 || c++14
 
 // <functional>
 
@@ -25,5 +24,7 @@ struct S : public std::function<void()> { using function::function; };
 int main() {
     S s( [](){} );
     S f1( s );
+#if TEST_STD_VER <= 14
     S f2(std::allocator_arg, std::allocator<int>{}, s);
+#endif
 }

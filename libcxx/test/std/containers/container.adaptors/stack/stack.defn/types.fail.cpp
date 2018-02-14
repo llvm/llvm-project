@@ -31,5 +31,5 @@
 int main()
 {
 //  LWG#2566 says that the first template param must match the second one's value type
-	std::stack<double, std::deque<int>> t;
+    std::stack<double, std::deque<int>> t;
 }

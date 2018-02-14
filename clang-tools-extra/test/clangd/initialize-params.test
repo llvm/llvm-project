@@ -1,0 +1,52 @@
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Test initialize request parameters with rootUri
+Content-Length: 143
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
+#      CHECK:  "id": 0,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "capabilities": {
+# CHECK-NEXT:      "codeActionProvider": true,
+# CHECK-NEXT:      "completionProvider": {
+# CHECK-NEXT:        "resolveProvider": false,
+# CHECK-NEXT:        "triggerCharacters": [
+# CHECK-NEXT:          ".",
+# CHECK-NEXT:          ">",
+# CHECK-NEXT:          ":"
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "definitionProvider": true,
+# CHECK-NEXT:      "documentFormattingProvider": true,
+# CHECK-NEXT:      "documentHighlightProvider": true,
+# CHECK-NEXT:      "documentOnTypeFormattingProvider": {
+# CHECK-NEXT:        "firstTriggerCharacter": "}",
+# CHECK-NEXT:        "moreTriggerCharacter": []
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "documentRangeFormattingProvider": true,
+# CHECK-NEXT:      "executeCommandProvider": {
+# CHECK-NEXT:        "commands": [
+# CHECK-NEXT:          "clangd.applyFix"
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "renameProvider": true,
+# CHECK-NEXT:      "signatureHelpProvider": {
+# CHECK-NEXT:        "triggerCharacters": [
+# CHECK-NEXT:          "(",
+# CHECK-NEXT:          ","
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "textDocumentSync": 1
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": null
+Content-Length: 33
+
+{"jsonrpc":"2.0":"method":"exit"}

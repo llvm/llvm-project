@@ -2,7 +2,6 @@
  * z_Windows_NT_util.cpp -- platform specific routines.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -592,7 +590,7 @@ void __kmp_runtime_initialize(void) {
 
   if (__kmp_init_runtime) {
     return;
-  };
+  }
 
 #if KMP_DYNAMIC_LIB
   /* Pin dynamic library for the lifetime of application */
@@ -618,7 +616,7 @@ void __kmp_runtime_initialize(void) {
 #if (KMP_ARCH_X86 || KMP_ARCH_X86_64)
   if (!__kmp_cpuinfo.initialized) {
     __kmp_query_cpuid(&__kmp_cpuinfo);
-  }; // if
+  }
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
 /* Set up minimum number of threads to switch to TLS gtid */
@@ -662,7 +660,7 @@ void __kmp_runtime_initialize(void) {
     __kmp_str_buf_reserve(&path, path_size);
     path_size = GetSystemDirectory(path.str, path.size);
     KMP_DEBUG_ASSERT(path_size > 0);
-  }; // if
+  }
   if (path_size > 0 && path_size < path.size) {
     // Now we have system directory name in the buffer.
     // Append backslash and name of dll to form full path,
@@ -848,9 +846,8 @@ void __kmp_initialize_system_tick(void) {
     status = QueryPerformanceFrequency(&freq);
     if (!status) {
       DWORD error = GetLastError();
-      __kmp_msg(kmp_ms_fatal,
-                KMP_MSG(FunctionError, "QueryPerformanceFrequency()"),
-                KMP_ERR(error), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(FunctionError, "QueryPerformanceFrequency()"),
+                  KMP_ERR(error), __kmp_msg_null);
 
     } else {
       __kmp_win32_tick = ((double)1.0) / (double)freq.QuadPart;
@@ -966,8 +963,7 @@ void *__stdcall __kmp_launch_monitor(void *arg) {
   status = SetThreadPriority(monitor, THREAD_PRIORITY_HIGHEST);
   if (!status) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetThreadPriority), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetThreadPriority), KMP_ERR(error), __kmp_msg_null);
   }
 
   /* register us as monitor */
@@ -1008,8 +1004,7 @@ void *__stdcall __kmp_launch_monitor(void *arg) {
   status = SetThreadPriority(monitor, THREAD_PRIORITY_NORMAL);
   if (!status) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetThreadPriority), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetThreadPriority), KMP_ERR(error), __kmp_msg_null);
   }
 
   if (__kmp_global.g.g_abort != 0) {
@@ -1109,8 +1104,7 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
 
     if (handle == 0) {
       DWORD error = GetLastError();
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCreateThread), KMP_ERR(error),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantCreateThread), KMP_ERR(error), __kmp_msg_null);
     } else {
       th->th.th_info.ds.ds_thread = handle;
     }
@@ -1147,9 +1141,8 @@ void __kmp_create_monitor(kmp_info_t *th) {
   __kmp_monitor_ev = CreateEvent(NULL, TRUE, FALSE, NULL);
   if (__kmp_monitor_ev == NULL) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCreateEvent), KMP_ERR(error),
-              __kmp_msg_null);
-  }; // if
+    __kmp_fatal(KMP_MSG(CantCreateEvent), KMP_ERR(error), __kmp_msg_null);
+  }
 #if USE_ITT_BUILD
   __kmp_itt_system_object_created(__kmp_monitor_ev, "Event");
 #endif /* USE_ITT_BUILD */
@@ -1177,8 +1170,7 @@ void __kmp_create_monitor(kmp_info_t *th) {
                    STACK_SIZE_PARAM_IS_A_RESERVATION, &idThread);
   if (handle == 0) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCreateThread), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantCreateThread), KMP_ERR(error), __kmp_msg_null);
   } else
     th->th.th_info.ds.ds_thread = handle;
 
@@ -1200,9 +1192,9 @@ int __kmp_is_thread_alive(kmp_info_t *th, DWORD *exit_val) {
   rc = GetExitCodeThread(th->th.th_info.ds.ds_thread, exit_val);
   if (rc == 0) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "GetExitCodeThread()"),
-              KMP_ERR(error), __kmp_msg_null);
-  }; // if
+    __kmp_fatal(KMP_MSG(FunctionError, "GetExitCodeThread()"), KMP_ERR(error),
+                __kmp_msg_null);
+  }
   return (*exit_val == STILL_ACTIVE);
 }
 
@@ -1250,7 +1242,7 @@ static void __kmp_reap_common(kmp_info_t *th) {
       KMP_FSYNC_CANCEL(obj);
     } else {
       KMP_FSYNC_SPIN_ACQUIRED(obj);
-    }; // if
+    }
 #endif /* USE_ITT_BUILD */
   }
 
@@ -1263,7 +1255,7 @@ static void __kmp_reap_common(kmp_info_t *th) {
     KA_TRACE(1, ("__kmp_reap_common: thread still active.\n"));
   } else if ((void *)exit_val != (void *)th) {
     KA_TRACE(1, ("__kmp_reap_common: ExitProcess / TerminateThread used?\n"));
-  }; // if
+  }
 
   KA_TRACE(10,
            ("__kmp_reap_common: done reaping (%d), handle = %" KMP_UINTPTR_SPEC
@@ -1292,15 +1284,14 @@ void __kmp_reap_monitor(kmp_info_t *th) {
   if (th->th.th_info.ds.ds_gtid != KMP_GTID_MONITOR) {
     KA_TRACE(10, ("__kmp_reap_monitor: monitor did not start, returning\n"));
     return;
-  }; // if
+  }
 
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
   status = SetEvent(__kmp_monitor_ev);
   if (status == FALSE) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetEvent), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetEvent), KMP_ERR(error), __kmp_msg_null);
   }
   KA_TRACE(10, ("__kmp_reap_monitor: reaping thread (%d)\n",
                 th->th.th_info.ds.ds_gtid));
@@ -1325,7 +1316,7 @@ static void __kmp_team_handler(int signo) {
     // Stage 1 signal handler, let's shut down all of the threads.
     if (__kmp_debug_buf) {
       __kmp_dump_debug_buffer();
-    }; // if
+    }
     KMP_MB(); // Flush all pending memory write invalidates.
     TCW_4(__kmp_global.g.g_abort, signo);
     KMP_MB(); // Flush all pending memory write invalidates.
@@ -1338,9 +1329,9 @@ static sig_func_t __kmp_signal(int signum, sig_func_t handler) {
   sig_func_t old = signal(signum, handler);
   if (old == SIG_ERR) {
     int error = errno;
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "signal"), KMP_ERR(error),
-              __kmp_msg_null);
-  }; // if
+    __kmp_fatal(KMP_MSG(FunctionError, "signal"), KMP_ERR(error),
+                __kmp_msg_null);
+  }
   return old;
 }
 
@@ -1356,7 +1347,7 @@ static void __kmp_install_one_handler(int sig, sig_func_t handler,
       __kmp_siginstalled[sig] = 1;
     } else { // Restore/keep user's handler if one previously installed.
       old = __kmp_signal(sig, old);
-    }; // if
+    }
   } else {
     // Save initial/system signal handlers to see if user handlers installed.
     // 2009-09-23: It is a dead code. On Windows* OS __kmp_install_signals
@@ -1364,7 +1355,7 @@ static void __kmp_install_one_handler(int sig, sig_func_t handler,
     old = __kmp_signal(sig, SIG_DFL);
     __kmp_sighldrs[sig] = old;
     __kmp_signal(sig, old);
-  }; // if
+  }
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 } // __kmp_install_one_handler
 
@@ -1379,11 +1370,11 @@ static void __kmp_remove_one_handler(int sig) {
                     "restoring: sig=%d\n",
                     sig));
       old = __kmp_signal(sig, old);
-    }; // if
+    }
     __kmp_sighldrs[sig] = NULL;
     __kmp_siginstalled[sig] = 0;
     KMP_MB(); // Flush all pending memory write invalidates.
-  }; // if
+  }
 } // __kmp_remove_one_handler
 
 void __kmp_install_signals(int parallel_init) {
@@ -1392,7 +1383,7 @@ void __kmp_install_signals(int parallel_init) {
     KB_TRACE(10, ("__kmp_install_signals: KMP_HANDLE_SIGNALS is false - "
                   "handlers not installed\n"));
     return;
-  }; // if
+  }
   __kmp_install_one_handler(SIGINT, __kmp_team_handler, parallel_init);
   __kmp_install_one_handler(SIGILL, __kmp_team_handler, parallel_init);
   __kmp_install_one_handler(SIGABRT, __kmp_team_handler, parallel_init);
@@ -1406,7 +1397,7 @@ void __kmp_remove_signals(void) {
   KB_TRACE(10, ("__kmp_remove_signals: called\n"));
   for (sig = 1; sig < NSIG; ++sig) {
     __kmp_remove_one_handler(sig);
-  }; // for sig
+  }
 } // __kmp_remove_signals
 
 #endif // KMP_HANDLE_SIGNALS
@@ -1418,8 +1409,8 @@ void __kmp_thread_sleep(int millis) {
   status = SleepEx((DWORD)millis, FALSE);
   if (status) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "SleepEx()"), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(FunctionError, "SleepEx()"), KMP_ERR(error),
+                __kmp_msg_null);
   }
 }
 
@@ -1453,8 +1444,7 @@ void __kmp_free_handle(kmp_thread_t tHandle) {
   rc = CloseHandle(tHandle);
   if (!rc) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCloseHandle), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantCloseHandle), KMP_ERR(error), __kmp_msg_null);
   }
 }
 
@@ -1488,11 +1478,11 @@ int __kmp_get_load_balance(int max) {
   if (NtQuerySystemInformation == NULL) {
     running_threads = -1;
     goto finish;
-  }; // if
+  }
 
   if (max <= 0) {
     max = INT_MAX;
-  }; // if
+  }
 
   do {
 
@@ -1506,7 +1496,7 @@ int __kmp_get_load_balance(int max) {
     if (buffer == NULL) {
       running_threads = -1;
       goto finish;
-    }; // if
+    }
     status = NtQuerySystemInformation(SystemProcessInformation, buffer,
                                       buff_size, &info_size);
     first_time = 0;
@@ -1539,7 +1529,7 @@ int __kmp_get_load_balance(int max) {
     if (spi->NextEntryOffset != 0) {
       CHECK(spi_size <=
             spi->NextEntryOffset); // And do not overlap with the next record.
-    }; // if
+    }
     // pid == 0 corresponds to the System Idle Process. It always has running
     // threads on all cores. So, we don't consider the running threads of this
     // process.
@@ -1555,14 +1545,14 @@ int __kmp_get_load_balance(int max) {
           if (running_threads >= max) {
             goto finish;
           }
-        } // if
-      }; // for i
-    } // if
+        }
+      }
+    }
     if (spi->NextEntryOffset == 0) {
       break;
-    }; // if
+    }
     spi = PSYSTEM_PROCESS_INFORMATION(uintptr_t(spi) + spi->NextEntryOffset);
-  }; // forever
+  }
 
 #undef CHECK
 
@@ -1570,7 +1560,7 @@ finish: // Clean up and exit.
 
   if (buffer != NULL) {
     KMP_INTERNAL_FREE(buffer);
-  }; // if
+  }
 
   glb_running_threads = running_threads;
 

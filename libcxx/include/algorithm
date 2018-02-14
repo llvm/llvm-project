@@ -734,15 +734,15 @@ struct __less<_T1, const _T1>
 };
 
 template <class _Predicate>
-class __negate
+class __invert // invert the sense of a comparison
 {
 private:
     _Predicate __p_;
 public:
-    _LIBCPP_INLINE_VISIBILITY __negate() {}
+    _LIBCPP_INLINE_VISIBILITY __invert() {}
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __negate(_Predicate __p) : __p_(__p) {}
+    explicit __invert(_Predicate __p) : __p_(__p) {}
 
     template <class _T1>
     _LIBCPP_INLINE_VISIBILITY
@@ -750,7 +750,7 @@ public:
 
     template <class _T1, class _T2>
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(const _T1& __x, const _T2& __y) {return !__p_(__x, __y);}
+    bool operator()(const _T1& __x, const _T2& __y) {return __p_(__y, __x);}
 };
 
 #ifdef _LIBCPP_DEBUG
@@ -797,7 +797,7 @@ unsigned __ctz(unsigned __x) {
   unsigned long where;
   // Search from LSB to MSB for first set bit.
   // Returns zero if no set bit is found.
-  if (_BitScanForward(&where, mask))
+  if (_BitScanForward(&where, __x))
     return where;
   return 32;
 #endif
@@ -823,15 +823,15 @@ unsigned long long __ctz(unsigned long long __x) {
 // Returns zero if no set bit is found.
 #if defined(_LIBCPP_HAS_BITSCAN64)
     (defined(_M_AMD64) || defined(__x86_64__))
-  if (_BitScanForward64(&where, mask))
+  if (_BitScanForward64(&where, __x))
     return static_cast<int>(where);
 #else
   // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
   // Scan the Low Word.
-  if (_BitScanForward(&where, static_cast<unsigned long>(mask)))
+  if (_BitScanForward(&where, static_cast<unsigned long>(__x)))
     return where;
   // Scan the High Word.
-  if (_BitScanForward(&where, static_cast<unsigned long>(mask >> 32)))
+  if (_BitScanForward(&where, static_cast<unsigned long>(__x >> 32)))
     return where + 32; // Create a bit offset from the LSB.
 #endif
   return 64;
@@ -849,7 +849,7 @@ unsigned __clz(unsigned __x) {
   unsigned long where;
   // Search from LSB to MSB for first set bit.
   // Returns zero if no set bit is found.
-  if (_BitScanReverse(&where, mask))
+  if (_BitScanReverse(&where, __x))
     return 31 - where;
   return 32; // Undefined Behavior.
 #endif
@@ -874,14 +874,14 @@ unsigned long long __clz(unsigned long long __x) {
 // BitScanReverse scans from MSB to LSB for first set bit.
 // Returns 0 if no set bit is found.
 #if defined(_LIBCPP_HAS_BITSCAN64)
-  if (_BitScanReverse64(&where, mask))
+  if (_BitScanReverse64(&where, __x))
     return static_cast<int>(63 - where);
 #else
   // Scan the high 32 bits.
-  if (_BitScanReverse(&where, static_cast<unsigned long>(mask >> 32)))
+  if (_BitScanReverse(&where, static_cast<unsigned long>(__x >> 32)))
     return 63 - (where + 32); // Create a bit offset from the MSB.
   // Scan the low 32 bits.
-  if (_BitScanReverse(&where, static_cast<unsigned long>(mask)))
+  if (_BitScanReverse(&where, static_cast<unsigned long>(__x)))
     return 63 - where;
 #endif
   return 64; // Undefined Behavior.
@@ -3210,28 +3210,28 @@ template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
 _LIBCPP_INLINE_VISIBILITY
 _SampleIterator __sample(_PopulationIterator __first,
-                         _PopulationIterator __last, _SampleIterator __output,
+                         _PopulationIterator __last, _SampleIterator __output_iter,
                          _Distance __n,
                          _UniformRandomNumberGenerator & __g,
                          input_iterator_tag) {
 
   _Distance __k = 0;
   for (; __first != __last && __k < __n; ++__first, (void)++__k)
-    __output[__k] = *__first;
+    __output_iter[__k] = *__first;
   _Distance __sz = __k;
   for (; __first != __last; ++__first, (void)++__k) {
     _Distance __r = _VSTD::uniform_int_distribution<_Distance>(0, __k)(__g);
     if (__r < __sz)
-      __output[__r] = *__first;
+      __output_iter[__r] = *__first;
   }
-  return __output + _VSTD::min(__n, __k);
+  return __output_iter + _VSTD::min(__n, __k);
 }
 
 template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
 _LIBCPP_INLINE_VISIBILITY
 _SampleIterator __sample(_PopulationIterator __first,
-                         _PopulationIterator __last, _SampleIterator __output,
+                         _PopulationIterator __last, _SampleIterator __output_iter,
                          _Distance __n,
                          _UniformRandomNumberGenerator& __g,
                          forward_iterator_tag) {
@@ -3240,18 +3240,18 @@ _SampleIterator __sample(_PopulationIterator __first,
     _Distance __r =
         _VSTD::uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
     if (__r < __n) {
-      *__output++ = *__first;
+      *__output_iter++ = *__first;
       --__n;
     }
   }
-  return __output;
+  return __output_iter;
 }
 
 template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
 _LIBCPP_INLINE_VISIBILITY
 _SampleIterator __sample(_PopulationIterator __first,
-                         _PopulationIterator __last, _SampleIterator __output,
+                         _PopulationIterator __last, _SampleIterator __output_iter,
                          _Distance __n, _UniformRandomNumberGenerator& __g) {
   typedef typename iterator_traits<_PopulationIterator>::iterator_category
         _PopCategory;
@@ -3263,7 +3263,7 @@ _SampleIterator __sample(_PopulationIterator __first,
   typedef typename common_type<_Distance, _Difference>::type _CommonType;
   _LIBCPP_ASSERT(__n >= 0, "N must be a positive number.");
   return _VSTD::__sample(
-      __first, __last, __output, _CommonType(__n),
+      __first, __last, __output_iter, _CommonType(__n),
       __g, _PopCategory());
 }
 
@@ -3272,9 +3272,9 @@ template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
 inline _LIBCPP_INLINE_VISIBILITY
 _SampleIterator sample(_PopulationIterator __first,
-                       _PopulationIterator __last, _SampleIterator __output,
+                       _PopulationIterator __last, _SampleIterator __output_iter,
                        _Distance __n, _UniformRandomNumberGenerator&& __g) {
-    return _VSTD::__sample(__first, __last, __output, __n, __g);
+    return _VSTD::__sample(__first, __last, __output_iter, __n, __g);
 }
 #endif // _LIBCPP_STD_VER > 14
 
@@ -4568,7 +4568,7 @@ __buffered_inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator 
         typedef reverse_iterator<value_type*> _Rv;
         __half_inplace_merge(_Rv(__p), _Rv(__buff),
                              _RBi(__middle), _RBi(__first),
-                             _RBi(__last), __negate<_Compare>(__comp));
+                             _RBi(__last), __invert<_Compare>(__comp));
     }
 }
 
@@ -5547,9 +5547,9 @@ __set_union(_InputIterator1 __first1, _InputIterator1 __last1,
         }
         else
         {
-            *__result = *__first1;
             if (!__comp(*__first1, *__first2))
                 ++__first2;
+            *__result = *__first1;
             ++__first1;
         }
     }

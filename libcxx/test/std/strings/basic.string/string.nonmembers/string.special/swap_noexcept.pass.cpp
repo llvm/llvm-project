@@ -68,7 +68,7 @@ int main()
     {
         typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
 #if TEST_STD_VER >= 14
-    //  In c++14, if POCS is set, swapping the allocator is required not to throw
+    //  In C++14, if POCS is set, swapping the allocator is required not to throw
         static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #else
         static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");

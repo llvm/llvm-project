@@ -47,11 +47,9 @@ function(libomp_check_architecture_flag flag retval)
 endfunction()
 
 # Checking C, CXX, Linker Flags
-check_cxx_compiler_flag(-std=c++11 LIBOMP_HAVE_STD_CPP11_FLAG)
 check_cxx_compiler_flag(-fno-exceptions LIBOMP_HAVE_FNO_EXCEPTIONS_FLAG)
 check_cxx_compiler_flag(-fno-rtti LIBOMP_HAVE_FNO_RTTI_FLAG)
 check_c_compiler_flag("-x c++" LIBOMP_HAVE_X_CPP_FLAG)
-check_c_compiler_flag(-Werror LIBOMP_HAVE_WERROR_FLAG)
 check_c_compiler_flag(-Wunused-function LIBOMP_HAVE_WNO_UNUSED_FUNCTION_FLAG)
 check_c_compiler_flag(-Wunused-local-typedef LIBOMP_HAVE_WNO_UNUSED_LOCAL_TYPEDEF_FLAG)
 check_c_compiler_flag(-Wunused-value LIBOMP_HAVE_WNO_UNUSED_VALUE_FLAG)
@@ -223,7 +221,7 @@ endif()
 
 # Check if OMPT support is available
 # Currently, __builtin_frame_address() is required for OMPT
-# Weak attribute is required for Unices, LIBPSAPI is used for Windows
+# Weak attribute is required for Unices (except Darwin), LIBPSAPI is used for Windows
 check_c_source_compiles("int main(int argc, char** argv) {
   void* p = __builtin_frame_address(0);
   return 0;}" LIBOMP_HAVE___BUILTIN_FRAME_ADDRESS)
@@ -238,7 +236,15 @@ endif()
 if(NOT LIBOMP_HAVE___BUILTIN_FRAME_ADDRESS)
   set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
 else()
-  if(LIBOMP_HAVE_WEAK_ATTRIBUTE OR LIBOMP_HAVE_PSAPI)
+  if( # hardware architecture supported?
+     ((LIBOMP_ARCH STREQUAL x86_64) OR
+      (LIBOMP_ARCH STREQUAL i386) OR
+#      (LIBOMP_ARCH STREQUAL arm) OR
+      (LIBOMP_ARCH STREQUAL aarch64) OR
+      (LIBOMP_ARCH STREQUAL ppc64le) OR
+      (LIBOMP_ARCH STREQUAL ppc64))
+     AND # OS supported?
+     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

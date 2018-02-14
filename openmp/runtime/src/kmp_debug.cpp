@@ -2,7 +2,6 @@
  * kmp_debug.cpp -- debug utilities for the Guide library
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_debug.h" /* really necessary? */
@@ -49,8 +47,8 @@ int __kmp_debug_assert(char const *msg, char const *file, int line) {
     char const *slash = strrchr(file, '/');
     if (slash != NULL) {
       file = slash + 1;
-    }; // if
-  }; // if
+    }
+  }
 
 #ifdef KMP_DEBUG
   __kmp_acquire_bootstrap_lock(&__kmp_stdio_lock);
@@ -74,8 +72,8 @@ int __kmp_debug_assert(char const *msg, char const *file, int line) {
 #endif // USE_ASSERT_SEG
 #endif
 
-  __kmp_msg(kmp_ms_fatal, KMP_MSG(AssertionFailure, file, line),
-            KMP_HNT(SubmitBugReport), __kmp_msg_null);
+  __kmp_fatal(KMP_MSG(AssertionFailure, file, line), KMP_HNT(SubmitBugReport),
+              __kmp_msg_null);
 
   return 0;
 

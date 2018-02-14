@@ -16,8 +16,8 @@
 //
 // explicit recursive_directory_iterator(const path& p);
 // recursive_directory_iterator(const path& p, directory_options options);
-// recursive_directory_iterator(const path& p, error_code& ec) noexcept;
-// recursive_directory_iterator(const path& p, directory_options options, error_code& ec) noexcept;
+// recursive_directory_iterator(const path& p, error_code& ec);
+// recursive_directory_iterator(const path& p, directory_options options, error_code& ec);
 
 
 #include <experimental/filesystem>
@@ -44,15 +44,19 @@ TEST_CASE(test_constructor_signatures)
     static_assert(std::is_constructible<D, path>::value, "");
     static_assert(!std::is_nothrow_constructible<D, path>::value, "");
 
-    // directory_iterator(path const&, error_code&) noexcept
-    static_assert(std::is_nothrow_constructible<D, path, std::error_code&>::value, "");
+    // directory_iterator(path const&, error_code&)
+    static_assert(std::is_constructible<D, path,
+        std::error_code&>::value, "");
+    static_assert(!std::is_nothrow_constructible<D, path,
+        std::error_code&>::value, "");
 
     // directory_iterator(path const&, directory_options);
     static_assert(std::is_constructible<D, path, directory_options>::value, "");
     static_assert(!std::is_nothrow_constructible<D, path, directory_options>::value, "");
 
-    // directory_iterator(path const&, directory_options, error_code&) noexcept
-    static_assert(std::is_nothrow_constructible<D, path, directory_options, std::error_code&>::value, "");
+    // directory_iterator(path const&, directory_options, error_code&)
+    static_assert(std::is_constructible<D, path, directory_options, std::error_code&>::value, "");
+    static_assert(!std::is_nothrow_constructible<D, path, directory_options, std::error_code&>::value, "");
 }
 
 TEST_CASE(test_construction_from_bad_path)

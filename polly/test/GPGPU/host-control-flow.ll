@@ -14,9 +14,7 @@
 
 ; REQUIRES: pollyacc
 
-; CODE: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (2) * (100) * sizeof(float), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (2) * (100) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   for (int c0 = 0; c0 <= 99; c0 += 1)
 ; CODE-NEXT:     {
 ; CODE-NEXT:       dim3 k0_dimBlock(32);
@@ -26,13 +24,14 @@
 ; CODE-NEXT:     }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (2) * (100) * sizeof(float), cudaMemcpyDeviceToHost));
+; CODE-NEXT: cudaCheckReturn(cudaFree(dev_MemRef_A));
 ; CODE-NEXT: }
 
 ; IR-LABEL: polly.loop_header:                                ; preds = %polly.loop_header, %polly.loop_preheader
 ; IR-NEXT:   %polly.indvar = phi i64 [ 0, %polly.loop_preheader ], [ %polly.indvar_next, %polly.loop_header ]
 ; ...
 ; IR:  store i64 %polly.indvar, i64* %polly_launch_0_param_1
-; IR-NEXT:  [[REGA:%.+]] = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT:  [[REGA:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
 ; IR-NEXT:  [[REGB:%.+]] = bitcast i64* %polly_launch_0_param_1 to i8*
 ; IR-NEXT:  store i8* [[REGB]], i8** [[REGA]]
 ; IR: call i8* @polly_getKernel

@@ -4,7 +4,7 @@
 ; Make sure that if -polly-acc-fail-on-verify-module-failure is on, we actually
 ; fail on an illegal module.
 
-; REQUIRES: pollyacc
+; REQUIRES: pollyacc, asserts
 ; XFAIL: *
 ;
 ;    void foo(long A[1024], long B[1024]) {

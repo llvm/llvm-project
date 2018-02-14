@@ -91,6 +91,7 @@ else()
   add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
 endif()
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
+add_library_flags_if(MINGW "${MINGW_LIBRARIES}")
 
 # Add the unwinder library.
 if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -269,6 +270,7 @@ if (LIBCXX_ENABLE_STATIC)
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
     ARGS
       -o $<TARGET_LINKER_FILE:cxx_static>
+      --ar "${CMAKE_AR}"
       "$<TARGET_LINKER_FILE:cxx_static>"
       "${MERGE_ARCHIVES_ABI_TARGET}"
       "${MERGE_ARCHIVES_SEARCH_PATHS}"
@@ -386,6 +388,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
                               ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
+                      -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+    add_custom_target(install-cxx-stripped
+                      DEPENDS ${lib_install_target}
+                              ${experimental_lib_install_target}
+                              ${header_install_target}
+                      COMMAND "${CMAKE_COMMAND}"
+                      -DCMAKE_INSTALL_COMPONENT=cxx
+                      -DCMAKE_INSTALL_DO_STRIP=1
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
     add_custom_target(install-libcxx DEPENDS install-cxx)
 endif()

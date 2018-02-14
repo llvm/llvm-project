@@ -182,6 +182,23 @@
     extern void   __KAI_KMPC_CONVENTION  kmp_set_warnings_on(void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_warnings_off(void);
 
+    /* OpenMP 5.0 Tool Control */
+    typedef enum omp_control_tool_result_t {
+        omp_control_tool_notool = -2,
+        omp_control_tool_nocallback = -1,
+        omp_control_tool_success = 0,
+        omp_control_tool_ignored = 1
+    } omp_control_tool_result_t;
+
+    typedef enum omp_control_tool_t {
+        omp_control_tool_start = 1,
+        omp_control_tool_pause = 2,
+        omp_control_tool_flush = 3,
+        omp_control_tool_end = 4
+    } omp_control_tool_t;
+    
+    extern int __KAI_KMPC_CONVENTION omp_control_tool(int, int, void*);
+
 #   undef __KAI_KMPC_CONVENTION
 
     /* Warning:

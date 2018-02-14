@@ -8,13 +8,21 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "CodeComplete.h"
+#include "SourceCode.h"
+#include "XRefs.h"
 #include "clang/Format/Format.h"
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
 
@@ -23,85 +31,87 @@ using namespace clang::clangd;
 
 namespace {
 
-std::vector<tooling::Replacement> formatCode(StringRef Code, StringRef Filename,
-                                             ArrayRef<tooling::Range> Ranges) {
-  // Call clang-format.
-  // FIXME: Don't ignore style.
-  format::FormatStyle Style = format::getLLVMStyle();
-  auto Result = format::reformat(Style, Code, Ranges, Filename);
-
-  return std::vector<tooling::Replacement>(Result.begin(), Result.end());
-}
-
 std::string getStandardResourceDir() {
   static int Dummy; // Just an address in this process.
   return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
 }
 
-} // namespace
-
-size_t clangd::positionToOffset(StringRef Code, Position P) {
-  size_t Offset = 0;
-  for (int I = 0; I != P.line; ++I) {
-    // FIXME: \r\n
-    // FIXME: UTF-8
-    size_t F = Code.find('\n', Offset);
-    if (F == StringRef::npos)
-      return 0; // FIXME: Is this reasonable?
-    Offset = F + 1;
+class RefactoringResultCollector final
+    : public tooling::RefactoringResultConsumer {
+public:
+  void handleError(llvm::Error Err) override {
+    assert(!Result.hasValue());
+    // FIXME: figure out a way to return better message for DiagnosticError.
+    // clangd uses llvm::toString to convert the Err to string, however, for
+    // DiagnosticError, only "clang diagnostic" will be generated.
+    Result = std::move(Err);
   }
-  return (Offset == 0 ? 0 : (Offset - 1)) + P.character;
-}
 
-/// Turn an offset in Code into a [line, column] pair.
-Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
-  StringRef JustBefore = Code.substr(0, Offset);
-  // FIXME: \r\n
-  // FIXME: UTF-8
-  int Lines = JustBefore.count('\n');
-  int Cols = JustBefore.size() - JustBefore.rfind('\n') - 1;
-  return {Lines, Cols};
-}
+  // Using the handle(SymbolOccurrences) from parent class.
+  using tooling::RefactoringResultConsumer::handle;
+
+  void handle(tooling::AtomicChanges SourceReplacements) override {
+    assert(!Result.hasValue());
+    Result = std::move(SourceReplacements);
+  }
+
+  Optional<Expected<tooling::AtomicChanges>> Result;
+};
+
+} // namespace
 
 Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
 RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
-ClangdScheduler::ClangdScheduler(bool RunSynchronously)
-    : RunSynchronously(RunSynchronously) {
+unsigned clangd::getDefaultAsyncThreadsCount() {
+  unsigned HardwareConcurrency = std::thread::hardware_concurrency();
+  // C++ standard says that hardware_concurrency()
+  // may return 0, fallback to 1 worker thread in
+  // that case.
+  if (HardwareConcurrency == 0)
+    return 1;
+  return HardwareConcurrency;
+}
+
+ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
+    : RunSynchronously(AsyncThreadsCount == 0) {
   if (RunSynchronously) {
     // Don't start the worker thread if we're running synchronously
     return;
   }
 
-  // Initialize Worker in ctor body, rather than init list to avoid potentially
-  // using not-yet-initialized members
-  Worker = std::thread([this]() {
-    while (true) {
-      std::function<void()> Request;
+  Workers.reserve(AsyncThreadsCount);
+  for (unsigned I = 0; I < AsyncThreadsCount; ++I) {
+    Workers.push_back(std::thread([this, I]() {
+      llvm::set_thread_name(llvm::formatv("scheduler/{0}", I));
+      while (true) {
+        UniqueFunction<void()> Request;
 
-      // Pick request from the queue
-      {
-        std::unique_lock<std::mutex> Lock(Mutex);
-        // Wait for more requests.
-        RequestCV.wait(Lock, [this] { return !RequestQueue.empty() || Done; });
-        if (Done)
-          return;
+        // Pick request from the queue
+        {
+          std::unique_lock<std::mutex> Lock(Mutex);
+          // Wait for more requests.
+          RequestCV.wait(Lock,
+                         [this] { return !RequestQueue.empty() || Done; });
+          if (Done)
+            return;
 
-        assert(!RequestQueue.empty() && "RequestQueue was empty");
+          assert(!RequestQueue.empty() && "RequestQueue was empty");
 
-        // We process requests starting from the front of the queue. Users of
-        // ClangdScheduler have a way to prioritise their requests by putting
-        // them to the either side of the queue (using either addToEnd or
-        // addToFront).
-        Request = std::move(RequestQueue.front());
-        RequestQueue.pop_front();
-      } // unlock Mutex
+          // We process requests starting from the front of the queue. Users of
+          // ClangdScheduler have a way to prioritise their requests by putting
+          // them to the either side of the queue (using either addToEnd or
+          // addToFront).
+          Request = std::move(RequestQueue.front());
+          RequestQueue.pop_front();
+        } // unlock Mutex
 
-      Request();
-    }
-  });
+        Request();
+      }
+    }));
+  }
 }
 
 ClangdScheduler::~ClangdScheduler() {
@@ -113,136 +123,265 @@ ClangdScheduler::~ClangdScheduler() {
     // Wake up the worker thread
     Done = true;
   } // unlock Mutex
-  RequestCV.notify_one();
-  Worker.join();
-}
+  RequestCV.notify_all();
 
-void ClangdScheduler::addToFront(std::function<void()> Request) {
-  if (RunSynchronously) {
-    Request();
-    return;
-  }
-
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    RequestQueue.push_front(Request);
-  }
-  RequestCV.notify_one();
-}
-
-void ClangdScheduler::addToEnd(std::function<void()> Request) {
-  if (RunSynchronously) {
-    Request();
-    return;
-  }
-
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    RequestQueue.push_back(Request);
-  }
-  RequestCV.notify_one();
+  for (auto &Worker : Workers)
+    Worker.join();
 }
 
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           bool RunSynchronously,
+                           unsigned AsyncThreadsCount,
+                           bool StorePreamblesInMemory,
+                           bool BuildDynamicSymbolIndex,
                            llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+      FileIdx(BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      // Pass a callback into `Units` to extract symbols from a newly parsed
+      // file and rebuild the file index synchronously each time an AST is
+      // parsed.
+      // FIXME(ioeric): this can be slow and we may be able to index on less
+      // critical paths.
+      Units(FileIdx
+                ? [this](const Context &Ctx, PathRef Path,
+                         ParsedAST *AST) { FileIdx->update(Ctx, Path, AST); }
+                : ASTParsedCallback()),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(RunSynchronously) {}
+      StorePreamblesInMemory(StorePreamblesInMemory),
+      WorkScheduler(AsyncThreadsCount) {}
 
-void ClangdServer::addDocument(PathRef File, StringRef Contents) {
+void ClangdServer::setRootPath(PathRef RootPath) {
+  std::string NewRootPath = llvm::sys::path::convert_to_slash(
+      RootPath, llvm::sys::path::Style::posix);
+  if (llvm::sys::fs::is_directory(NewRootPath))
+    this->RootPath = NewRootPath;
+}
+
+std::future<Context> ClangdServer::addDocument(Context Ctx, PathRef File,
+                                               StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
-  Path FileStr = File;
-  WorkScheduler.addToFront([this, FileStr, Version]() {
-    auto FileContents = DraftMgr.getDraft(FileStr);
-    if (FileContents.Version != Version)
-      return; // This request is outdated, do nothing
 
-    assert(FileContents.Draft &&
-           "No contents inside a file that was scheduled for reparse");
-    auto TaggedFS = FSProvider.getTaggedFileSystem(FileStr);
-    Units.runOnUnit(
-        FileStr, *FileContents.Draft, ResourceDir, CDB, PCHs, TaggedFS.Value,
-        [&](ClangdUnit const &Unit) {
-          DiagConsumer.onDiagnosticsReady(
-              FileStr, make_tagged(Unit.getLocalDiagnostics(), TaggedFS.Tag));
-        });
-  });
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  std::shared_ptr<CppFile> Resources = Units.getOrCreateFile(
+      File, ResourceDir, CDB, StorePreamblesInMemory, PCHs);
+  return scheduleReparseAndDiags(std::move(Ctx), File,
+                                 VersionedDraft{Version, Contents.str()},
+                                 std::move(Resources), std::move(TaggedFS));
 }
 
-void ClangdServer::removeDocument(PathRef File) {
-  auto Version = DraftMgr.removeDraft(File);
-  Path FileStr = File;
-  WorkScheduler.addToFront([this, FileStr, Version]() {
-    if (Version != DraftMgr.getVersion(FileStr))
-      return; // This request is outdated, do nothing
-
-    Units.removeUnitIfPresent(FileStr);
-  });
+std::future<Context> ClangdServer::removeDocument(Context Ctx, PathRef File) {
+  DraftMgr.removeDraft(File);
+  std::shared_ptr<CppFile> Resources = Units.removeIfPresent(File);
+  return scheduleCancelRebuild(std::move(Ctx), std::move(Resources));
 }
 
-void ClangdServer::forceReparse(PathRef File) {
-  // The addDocument schedules the reparse even if the contents of the file
-  // never changed, so we just call it here.
-  addDocument(File, getDocument(File));
+std::future<Context> ClangdServer::forceReparse(Context Ctx, PathRef File) {
+  auto FileContents = DraftMgr.getDraft(File);
+  assert(FileContents.Draft &&
+         "forceReparse() was called for non-added document");
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  auto Recreated = Units.recreateFileIfCompileCommandChanged(
+      File, ResourceDir, CDB, StorePreamblesInMemory, PCHs);
+
+  // Note that std::future from this cleanup action is ignored.
+  scheduleCancelRebuild(Ctx.clone(), std::move(Recreated.RemovedFile));
+  // Schedule a reparse.
+  return scheduleReparseAndDiags(std::move(Ctx), File, std::move(FileContents),
+                                 std::move(Recreated.FileInCollection),
+                                 std::move(TaggedFS));
 }
 
-Tagged<std::vector<CompletionItem>>
-ClangdServer::codeComplete(PathRef File, Position Pos,
-                           llvm::Optional<StringRef> OverridenContents) {
-  std::string DraftStorage;
-  if (!OverridenContents) {
+std::future<std::pair<Context, Tagged<CompletionList>>>
+ClangdServer::codeComplete(Context Ctx, PathRef File, Position Pos,
+                           const clangd::CodeCompleteOptions &Opts,
+                           llvm::Optional<StringRef> OverridenContents,
+                           IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  using ResultType = std::pair<Context, Tagged<CompletionList>>;
+
+  std::promise<ResultType> ResultPromise;
+
+  auto Callback = [](std::promise<ResultType> ResultPromise, Context Ctx,
+                     Tagged<CompletionList> Result) -> void {
+    ResultPromise.set_value({std::move(Ctx), std::move(Result)});
+  };
+
+  std::future<ResultType> ResultFuture = ResultPromise.get_future();
+  codeComplete(std::move(Ctx), File, Pos, Opts,
+               BindWithForward(Callback, std::move(ResultPromise)),
+               OverridenContents, UsedFS);
+  return ResultFuture;
+}
+
+void ClangdServer::codeComplete(
+    Context Ctx, PathRef File, Position Pos,
+    const clangd::CodeCompleteOptions &Opts,
+    UniqueFunction<void(Context, Tagged<CompletionList>)> Callback,
+    llvm::Optional<StringRef> OverridenContents,
+    IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  using CallbackType = UniqueFunction<void(Context, Tagged<CompletionList>)>;
+
+  std::string Contents;
+  if (OverridenContents) {
+    Contents = *OverridenContents;
+  } else {
     auto FileContents = DraftMgr.getDraft(File);
     assert(FileContents.Draft &&
            "codeComplete is called for non-added document");
+
+    Contents = std::move(*FileContents.Draft);
+  }
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  if (UsedFS)
+    *UsedFS = TaggedFS.Value;
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  assert(Resources && "Calling completion on non-added file");
+
+  // Remember the current Preamble and use it when async task starts executing.
+  // At the point when async task starts executing, we may have a different
+  // Preamble in Resources. However, we assume the Preamble that we obtain here
+  // is reusable in completion more often.
+  std::shared_ptr<const PreambleData> Preamble =
+      Resources->getPossiblyStalePreamble();
+  // Copy completion options for passing them to async task handler.
+  auto CodeCompleteOpts = Opts;
+  if (FileIdx)
+    CodeCompleteOpts.Index = FileIdx.get();
+  // A task that will be run asynchronously.
+  auto Task =
+      // 'mutable' to reassign Preamble variable.
+      [=](Context Ctx, CallbackType Callback) mutable {
+        if (!Preamble) {
+          // Maybe we built some preamble before processing this request.
+          Preamble = Resources->getPossiblyStalePreamble();
+        }
+        // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
+        // both the old and the new version in case only one of them matches.
+
+        CompletionList Result = clangd::codeComplete(
+            Ctx, File, Resources->getCompileCommand(),
+            Preamble ? &Preamble->Preamble : nullptr, Contents, Pos,
+            TaggedFS.Value, PCHs, CodeCompleteOpts);
+
+        Callback(std::move(Ctx),
+                 make_tagged(std::move(Result), std::move(TaggedFS.Tag)));
+      };
+
+  WorkScheduler.addToFront(std::move(Task), std::move(Ctx),
+                           std::move(Callback));
+}
+
+llvm::Expected<Tagged<SignatureHelp>>
+ClangdServer::signatureHelp(const Context &Ctx, PathRef File, Position Pos,
+                            llvm::Optional<StringRef> OverridenContents,
+                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  std::string DraftStorage;
+  if (!OverridenContents) {
+    auto FileContents = DraftMgr.getDraft(File);
+    if (!FileContents.Draft)
+      return llvm::make_error<llvm::StringError>(
+          "signatureHelp is called for non-added document",
+          llvm::errc::invalid_argument);
 
     DraftStorage = std::move(*FileContents.Draft);
     OverridenContents = DraftStorage;
   }
 
-  std::vector<CompletionItem> Result;
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  // It would be nice to use runOnUnitWithoutReparse here, but we can't
-  // guarantee the correctness of code completion cache here if we don't do the
-  // reparse.
-  Units.runOnUnit(File, *OverridenContents, ResourceDir, CDB, PCHs,
-                  TaggedFS.Value, [&](ClangdUnit &Unit) {
-                    Result = Unit.codeComplete(*OverridenContents, Pos,
-                                               TaggedFS.Value);
-                  });
+  if (UsedFS)
+    *UsedFS = TaggedFS.Value;
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  if (!Resources)
+    return llvm::make_error<llvm::StringError>(
+        "signatureHelp is called for non-added document",
+        llvm::errc::invalid_argument);
+
+  auto Preamble = Resources->getPossiblyStalePreamble();
+  auto Result =
+      clangd::signatureHelp(Ctx, File, Resources->getCompileCommand(),
+                            Preamble ? &Preamble->Preamble : nullptr,
+                            *OverridenContents, Pos, TaggedFS.Value, PCHs);
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
-std::vector<tooling::Replacement> ClangdServer::formatRange(PathRef File,
-                                                            Range Rng) {
-  std::string Code = getDocument(File);
-
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatRange(StringRef Code, PathRef File, Range Rng) {
   size_t Begin = positionToOffset(Code, Rng.start);
   size_t Len = positionToOffset(Code, Rng.end) - Begin;
   return formatCode(Code, File, {tooling::Range(Begin, Len)});
 }
 
-std::vector<tooling::Replacement> ClangdServer::formatFile(PathRef File) {
+llvm::Expected<tooling::Replacements> ClangdServer::formatFile(StringRef Code,
+                                                               PathRef File) {
   // Format everything.
-  std::string Code = getDocument(File);
   return formatCode(Code, File, {tooling::Range(0, Code.size())});
 }
 
-std::vector<tooling::Replacement> ClangdServer::formatOnType(PathRef File,
-                                                             Position Pos) {
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
   // Look for the previous opening brace from the character position and
   // format starting from there.
-  std::string Code = getDocument(File);
   size_t CursorPos = positionToOffset(Code, Pos);
   size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
   if (PreviousLBracePos == StringRef::npos)
     PreviousLBracePos = CursorPos;
-  size_t Len = 1 + CursorPos - PreviousLBracePos;
+  size_t Len = CursorPos - PreviousLBracePos;
 
   return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
+}
+
+Expected<std::vector<tooling::Replacement>>
+ClangdServer::rename(const Context &Ctx, PathRef File, Position Pos,
+                     llvm::StringRef NewName) {
+  std::string Code = getDocument(File);
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  RefactoringResultCollector ResultCollector;
+  Resources->getAST().get()->runUnderLock([&](ParsedAST *AST) {
+    const SourceManager &SourceMgr = AST->getASTContext().getSourceManager();
+    const FileEntry *FE =
+        SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+    if (!FE)
+      return;
+    SourceLocation SourceLocationBeg =
+        clangd::getBeginningOfIdentifier(*AST, Pos, FE);
+    tooling::RefactoringRuleContext Context(
+        AST->getASTContext().getSourceManager());
+    Context.setASTContext(AST->getASTContext());
+    auto Rename = clang::tooling::RenameOccurrences::initiate(
+        Context, SourceRange(SourceLocationBeg), NewName.str());
+    if (!Rename) {
+      ResultCollector.Result = Rename.takeError();
+      return;
+    }
+    Rename->invoke(ResultCollector, Context);
+  });
+  assert(ResultCollector.Result.hasValue());
+  if (!ResultCollector.Result.getValue())
+    return ResultCollector.Result->takeError();
+
+  std::vector<tooling::Replacement> Replacements;
+  for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
+    tooling::Replacements ChangeReps = Change.getReplacements();
+    for (const auto &Rep : ChangeReps) {
+      // FIXME: Right now we only support renaming the main file, so we drop
+      // replacements not for the main file. In the future, we might consider to
+      // support:
+      //   * rename in any included header
+      //   * rename only in the "main" header
+      //   * provide an error if there are symbols we won't rename (e.g.
+      //     std::vector)
+      //   * rename globally in project
+      //   * rename in open files
+      if (Rep.getFilePath() == File)
+        Replacements.push_back(Rep);
+    }
+  }
+  return Replacements;
 }
 
 std::string ClangdServer::getDocument(PathRef File) {
@@ -252,37 +391,225 @@ std::string ClangdServer::getDocument(PathRef File) {
 }
 
 std::string ClangdServer::dumpAST(PathRef File) {
-  std::promise<std::string> DumpPromise;
-  auto DumpFuture = DumpPromise.get_future();
-  auto Version = DraftMgr.getVersion(File);
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  assert(Resources && "dumpAST is called for non-added document");
 
-  WorkScheduler.addToEnd([this, &DumpPromise, File, Version]() {
-    assert(DraftMgr.getVersion(File) == Version && "Version has changed");
-    (void)Version;
-
-    Units.runOnExistingUnit(File, [&DumpPromise](ClangdUnit &Unit) {
-      std::string Result;
-
-      llvm::raw_string_ostream ResultOS(Result);
-      Unit.dumpAST(ResultOS);
-      ResultOS.flush();
-
-      DumpPromise.set_value(std::move(Result));
-    });
+  std::string Result;
+  Resources->getAST().get()->runUnderLock([&Result](ParsedAST *AST) {
+    llvm::raw_string_ostream ResultOS(Result);
+    if (AST) {
+      clangd::dumpAST(*AST, ResultOS);
+    } else {
+      ResultOS << "<no-ast>";
+    }
+    ResultOS.flush();
   });
-  return DumpFuture.get();
+  return Result;
 }
 
-Tagged<std::vector<Location>>
-ClangdServer::findDefinitions(PathRef File, Position Pos) {
-  auto FileContents = DraftMgr.getDraft(File);
-  assert(FileContents.Draft && "findDefinitions is called for non-added document");
+llvm::Expected<Tagged<std::vector<Location>>>
+ClangdServer::findDefinitions(const Context &Ctx, PathRef File, Position Pos) {
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  if (!Resources)
+    return llvm::make_error<llvm::StringError>(
+        "findDefinitions called on non-added file",
+        llvm::errc::invalid_argument);
 
   std::vector<Location> Result;
-  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  Units.runOnUnit(File, *FileContents.Draft, ResourceDir, CDB, PCHs,
-      TaggedFS.Value, [&](ClangdUnit &Unit) {
-        Result = Unit.findDefinitions(Pos);
-      });
+  Resources->getAST().get()->runUnderLock([Pos, &Result, &Ctx](ParsedAST *AST) {
+    if (!AST)
+      return;
+    Result = clangd::findDefinitions(Ctx, *AST, Pos);
+  });
   return make_tagged(std::move(Result), TaggedFS.Tag);
+}
+
+llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
+
+  StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
+                                  ".c++", ".m", ".mm"};
+  StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
+
+  StringRef PathExt = llvm::sys::path::extension(Path);
+
+  // Lookup in a list of known extensions.
+  auto SourceIter =
+      std::find_if(std::begin(SourceExtensions), std::end(SourceExtensions),
+                   [&PathExt](PathRef SourceExt) {
+                     return SourceExt.equals_lower(PathExt);
+                   });
+  bool IsSource = SourceIter != std::end(SourceExtensions);
+
+  auto HeaderIter =
+      std::find_if(std::begin(HeaderExtensions), std::end(HeaderExtensions),
+                   [&PathExt](PathRef HeaderExt) {
+                     return HeaderExt.equals_lower(PathExt);
+                   });
+
+  bool IsHeader = HeaderIter != std::end(HeaderExtensions);
+
+  // We can only switch between extensions known extensions.
+  if (!IsSource && !IsHeader)
+    return llvm::None;
+
+  // Array to lookup extensions for the switch. An opposite of where original
+  // extension was found.
+  ArrayRef<StringRef> NewExts;
+  if (IsSource)
+    NewExts = HeaderExtensions;
+  else
+    NewExts = SourceExtensions;
+
+  // Storage for the new path.
+  SmallString<128> NewPath = StringRef(Path);
+
+  // Instance of vfs::FileSystem, used for file existence checks.
+  auto FS = FSProvider.getTaggedFileSystem(Path).Value;
+
+  // Loop through switched extension candidates.
+  for (StringRef NewExt : NewExts) {
+    llvm::sys::path::replace_extension(NewPath, NewExt);
+    if (FS->exists(NewPath))
+      return NewPath.str().str(); // First str() to convert from SmallString to
+                                  // StringRef, second to convert from StringRef
+                                  // to std::string
+
+    // Also check NewExt in upper-case, just in case.
+    llvm::sys::path::replace_extension(NewPath, NewExt.upper());
+    if (FS->exists(NewPath))
+      return NewPath.str().str();
+  }
+
+  return llvm::None;
+}
+
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
+                         ArrayRef<tooling::Range> Ranges) {
+  // Call clang-format.
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  auto StyleOrError =
+      format::getStyle("file", File, "LLVM", Code, TaggedFS.Value.get());
+  if (!StyleOrError) {
+    return StyleOrError.takeError();
+  } else {
+    return format::reformat(StyleOrError.get(), Code, Ranges, File);
+  }
+}
+
+llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
+ClangdServer::findDocumentHighlights(const Context &Ctx, PathRef File,
+                                     Position Pos) {
+  auto FileContents = DraftMgr.getDraft(File);
+  if (!FileContents.Draft)
+    return llvm::make_error<llvm::StringError>(
+        "findDocumentHighlights called on non-added file",
+        llvm::errc::invalid_argument);
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  if (!Resources)
+    return llvm::make_error<llvm::StringError>(
+        "findDocumentHighlights called on non-added file",
+        llvm::errc::invalid_argument);
+
+  std::vector<DocumentHighlight> Result;
+  llvm::Optional<llvm::Error> Err;
+  Resources->getAST().get()->runUnderLock([Pos, &Ctx, &Err,
+                                           &Result](ParsedAST *AST) {
+    if (!AST) {
+      Err = llvm::make_error<llvm::StringError>("Invalid AST",
+                                                llvm::errc::invalid_argument);
+      return;
+    }
+    Result = clangd::findDocumentHighlights(Ctx, *AST, Pos);
+  });
+
+  if (Err)
+    return std::move(*Err);
+  return make_tagged(Result, TaggedFS.Tag);
+}
+
+std::future<Context> ClangdServer::scheduleReparseAndDiags(
+    Context Ctx, PathRef File, VersionedDraft Contents,
+    std::shared_ptr<CppFile> Resources,
+    Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
+
+  assert(Contents.Draft && "Draft must have contents");
+  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(const Context &)>
+      DeferredRebuild =
+          Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
+  std::promise<Context> DonePromise;
+  std::future<Context> DoneFuture = DonePromise.get_future();
+
+  DocVersion Version = Contents.Version;
+  Path FileStr = File;
+  VFSTag Tag = TaggedFS.Tag;
+  auto ReparseAndPublishDiags =
+      [this, FileStr, Version,
+       Tag](UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(
+                const Context &)>
+                DeferredRebuild,
+            std::promise<Context> DonePromise, Context Ctx) -> void {
+    auto Guard = onScopeExit([&]() { DonePromise.set_value(std::move(Ctx)); });
+
+    auto CurrentVersion = DraftMgr.getVersion(FileStr);
+    if (CurrentVersion != Version)
+      return; // This request is outdated
+
+    auto Diags = DeferredRebuild(Ctx);
+    if (!Diags)
+      return; // A new reparse was requested before this one completed.
+
+    // We need to serialize access to resulting diagnostics to avoid calling
+    // `onDiagnosticsReady` in the wrong order.
+    std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
+    DocVersion &LastReportedDiagsVersion = ReportedDiagnosticVersions[FileStr];
+    // FIXME(ibiryukov): get rid of '<' comparison here. In the current
+    // implementation diagnostics will not be reported after version counters'
+    // overflow. This should not happen in practice, since DocVersion is a
+    // 64-bit unsigned integer.
+    if (Version < LastReportedDiagsVersion)
+      return;
+    LastReportedDiagsVersion = Version;
+
+    DiagConsumer.onDiagnosticsReady(FileStr,
+                                    make_tagged(std::move(*Diags), Tag));
+  };
+
+  WorkScheduler.addToFront(std::move(ReparseAndPublishDiags),
+                           std::move(DeferredRebuild), std::move(DonePromise),
+                           std::move(Ctx));
+  return DoneFuture;
+}
+
+std::future<Context>
+ClangdServer::scheduleCancelRebuild(Context Ctx,
+                                    std::shared_ptr<CppFile> Resources) {
+  std::promise<Context> DonePromise;
+  std::future<Context> DoneFuture = DonePromise.get_future();
+  if (!Resources) {
+    // No need to schedule any cleanup.
+    DonePromise.set_value(std::move(Ctx));
+    return DoneFuture;
+  }
+
+  UniqueFunction<void()> DeferredCancel = Resources->deferCancelRebuild();
+  auto CancelReparses = [Resources](std::promise<Context> DonePromise,
+                                    UniqueFunction<void()> DeferredCancel,
+                                    Context Ctx) {
+    DeferredCancel();
+    DonePromise.set_value(std::move(Ctx));
+  };
+  WorkScheduler.addToFront(std::move(CancelReparses), std::move(DonePromise),
+                           std::move(DeferredCancel), std::move(Ctx));
+  return DoneFuture;
+}
+
+void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+  // FIXME: Do nothing for now. This will be used for indexing and potentially
+  // invalidating other caches.
 }

@@ -121,7 +121,7 @@ const Scop *PolyhedralInfo::getScopContainingLoop(Loop *L) const {
 //    Stmt[i0, i1] -> [i0, i1]
 __isl_give isl_union_map *PolyhedralInfo::getScheduleForLoop(const Scop *S,
                                                              Loop *L) const {
-  isl_union_map *Schedule = isl_union_map_empty(S->getParamSpace());
+  isl_union_map *Schedule = isl_union_map_empty(S->getParamSpace().release());
   int CurrDim = S->getRelativeLoopDepth(L);
   DEBUG(dbgs() << "Relative loop depth:\t" << CurrDim << "\n");
   assert(CurrDim >= 0 && "Loop in region should have at least depth one");
@@ -131,15 +131,15 @@ __isl_give isl_union_map *PolyhedralInfo::getScheduleForLoop(const Scop *S,
 
       unsigned int MaxDim = SS.getNumIterators();
       DEBUG(dbgs() << "Maximum depth of Stmt:\t" << MaxDim << "\n");
-      auto *ScheduleMap = SS.getSchedule();
+      isl_map *ScheduleMap = SS.getSchedule().release();
       assert(
           ScheduleMap &&
           "Schedules that contain extension nodes require special handling.");
 
       ScheduleMap = isl_map_project_out(ScheduleMap, isl_dim_out, CurrDim + 1,
                                         MaxDim - CurrDim - 1);
-      ScheduleMap =
-          isl_map_set_tuple_id(ScheduleMap, isl_dim_in, SS.getDomainId());
+      ScheduleMap = isl_map_set_tuple_id(ScheduleMap, isl_dim_in,
+                                         SS.getDomainId().release());
       Schedule =
           isl_union_map_union(Schedule, isl_union_map_from_map(ScheduleMap));
     }

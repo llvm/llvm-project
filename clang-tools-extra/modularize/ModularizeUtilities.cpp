@@ -399,14 +399,15 @@ bool ModularizeUtilities::collectUmbrellaHeaders(StringRef UmbrellaDirName,
   SmallString<256> Directory(UmbrellaDirName);
   // Walk the directory.
   std::error_code EC;
-  llvm::sys::fs::file_status Status;
   for (llvm::sys::fs::directory_iterator I(Directory.str(), EC), E; I != E;
     I.increment(EC)) {
     if (EC)
       return false;
     std::string File(I->path());
-    I->status(Status);
-    llvm::sys::fs::file_type Type = Status.type();
+    llvm::ErrorOr<llvm::sys::fs::basic_file_status> Status = I->status();
+    if (!Status)
+      return false;
+    llvm::sys::fs::file_type Type = Status->type();
     // If the file is a directory, ignore the name and recurse.
     if (Type == llvm::sys::fs::file_type::directory_file) {
       if (!collectUmbrellaHeaders(File, Dependents))

@@ -167,8 +167,10 @@ struct AllocatorConstructController {
   // Return true if the construction was expected and false otherwise.
   // This should only be called by 'Allocator.construct'.
   bool check(detail::TypeID const& tid) {
-    if (!m_expected_args)
+    if (!m_expected_args) {
       assert(m_allow_unchecked);
+      return m_allow_unchecked;
+    }
     bool res = *m_expected_args == tid;
     if (m_expected_count == -1 || --m_expected_count == -1)
       m_expected_args = nullptr;

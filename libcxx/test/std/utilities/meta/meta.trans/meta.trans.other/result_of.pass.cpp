@@ -42,15 +42,45 @@ struct HasType : std::false_type {};
 template <class T>
 struct HasType<T, typename Voider<typename T::type>::type> : std::true_type {};
 
+#if TEST_STD_VER > 14
+template <typename T, typename U>
+struct test_invoke_result;
+
+template <typename Fn, typename ...Args, typename Ret>
+struct test_invoke_result<Fn(Args...), Ret>
+{
+    static void call()
+    {
+        static_assert(std::is_invocable<Fn, Args...>::value, "");
+        static_assert(std::is_invocable_r<Ret, Fn, Args...>::value, "");
+        static_assert((std::is_same<typename std::invoke_result<Fn, Args...>::type, Ret>::value), "");
+    }
+};
+#endif
+
 template <class T, class U>
 void test_result_of()
 {
-#if TEST_STD_VER > 14
-    static_assert(std::is_callable<T>::value, "");
-    static_assert(std::is_callable<T, U>::value, "");
-#endif
     static_assert((std::is_same<typename std::result_of<T>::type, U>::value), "");
+#if TEST_STD_VER > 14
+    test_invoke_result<T, U>::call();
+#endif
 }
+
+#if TEST_STD_VER > 14
+template <typename T>
+struct test_invoke_no_result;
+
+template <typename Fn, typename ...Args>
+struct test_invoke_no_result<Fn(Args...)>
+{
+    static void call()
+    {
+        static_assert(std::is_invocable<Fn, Args...>::value == false, "");
+        static_assert((!HasType<std::invoke_result<Fn, Args...> >::value), "");
+    }
+};
+#endif
 
 template <class T>
 void test_no_result()
@@ -59,7 +89,7 @@ void test_no_result()
     static_assert((!HasType<std::result_of<T> >::value), "");
 #endif
 #if TEST_STD_VER > 14
-    static_assert(std::is_callable<T>::value == false, "");
+    test_invoke_no_result<T>::call();
 #endif
 }
 

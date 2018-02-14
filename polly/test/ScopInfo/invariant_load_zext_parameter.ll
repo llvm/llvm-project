@@ -22,7 +22,7 @@
 ; CODEGEN:      polly.preload.begin:
 ; CODEGEN-NEXT:   %polly.access.I0 = getelementptr i32, i32* %I0, i64 0
 ; CODEGEN-NEXT:   %polly.access.I0.load = load i32, i32* %polly.access.I0
-; CODEGEN-NEXT:   store i32 %polly.access.I0.load, i32* %loadI0.preload.s2a
+; CODEGEN-NEXT:   store i32 %polly.access.I0.load, i32* %loadI1a.preload.s2a
 ; CODEGEN-NEXT:   %0 = sext i32 %polly.access.I0.load to i64
 ; CODEGEN-NEXT:   %1 = icmp eq i64 %0, 0
 ; CODEGEN-NEXT:   br label %polly.preload.cond

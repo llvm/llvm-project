@@ -23,7 +23,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 5.0.0)
+  set(PACKAGE_VERSION 6.0.0)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -99,6 +99,9 @@ cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 set(LIBCXX_ABI_VERSION 1 CACHE STRING "ABI version of libc++.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
+option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
+option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
+set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
 if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
@@ -132,6 +135,9 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
   elseif (APPLE)
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_SYSTEM 1)
+  elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+    set(LIBCXX_CXX_ABI_LIBNAME "libcxxrt")
+    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
   else()
     set(LIBCXX_CXX_ABI_LIBNAME "default")
   endif()
@@ -336,6 +342,10 @@ if (LIBCXX_HAS_MUSL_LIBC AND NOT LIBCXX_INSTALL_SUPPORT_HEADERS)
   message(FATAL_ERROR "LIBCXX_INSTALL_SUPPORT_HEADERS can not be turned off"
                       "when building for Musl with LIBCXX_HAS_MUSL_LIBC.")
 endif()
+
+if (LIBCXX_ABI_FORCE_ITANIUM AND LIBCXX_ABI_FORCE_MICROSOFT)
+  message(FATAL_ERROR "Only one of LIBCXX_ABI_FORCE_ITANIUM and LIBCXX_ABI_FORCE_MICROSOFT can be specified.")
+endif ()
 
 #===============================================================================
 # Configure System
@@ -594,6 +604,8 @@ if (NOT LIBCXX_ABI_VERSION EQUAL "1")
   config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 endif()
 config_define_if(LIBCXX_ABI_UNSTABLE _LIBCPP_ABI_UNSTABLE)
+config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
+config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
 
 config_define_if_not(LIBCXX_ENABLE_GLOBAL_FILESYSTEM_NAMESPACE _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE)
 config_define_if_not(LIBCXX_ENABLE_STDIN _LIBCPP_HAS_NO_STDIN)
@@ -606,6 +618,19 @@ config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
+config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
+
+if (LIBCXX_ABI_DEFINES)
+  set(abi_defines)
+  foreach (abi_define ${LIBCXX_ABI_DEFINES})
+    if (NOT abi_define MATCHES "^_LIBCPP_ABI_")
+      message(SEND_ERROR "Invalid ABI macro ${abi_define} in LIBCXX_ABI_DEFINES")
+    endif()
+    list(APPEND abi_defines "#define ${abi_define}")
+  endforeach()
+  string(REPLACE ";" "\n" abi_defines "${abi_defines}")
+  config_define(${abi_defines} _LIBCPP_ABI_DEFINES)
+endif()
 
 # By default libc++ on Windows expects to use a shared library, which requires
 # the headers to use DLL import/export semantics. However when building a
@@ -615,9 +640,10 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
+set(site_config_path "${LIBCXX_BINARY_DIR}/__config_site")
 if (LIBCXX_NEEDS_SITE_CONFIG)
   configure_file("include/__config_site.in"
-                 "${LIBCXX_BINARY_DIR}/__config_site"
+                 "${site_config_path}"
                  @ONLY)
 
   # Provide the config definitions by included the generated __config_site
@@ -626,6 +652,11 @@ if (LIBCXX_NEEDS_SITE_CONFIG)
     add_compile_flags("/FI\"${LIBCXX_BINARY_DIR}/__config_site\"")
   else()
     add_compile_flags("-include ${LIBCXX_BINARY_DIR}/__config_site")
+  endif()
+else()
+  if (EXISTS "${site_config_path}")
+    message(STATUS "Removing stale site configuration ${site_config_path}")
+    file(REMOVE "${site_config_path}")
   endif()
 endif()
 
@@ -647,11 +678,22 @@ endif()
 #
 # However, since some submission systems strip test/ subdirectories, check for
 # it before adding it.
+
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test")
   add_subdirectory(test)
 endif()
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(lib/abi)
+endif()
+
+if (LIBCXX_STANDALONE_BUILD AND EXISTS "${LLVM_MAIN_SRC_DIR}/utils/llvm-lit")
+  include(AddLLVM) # for get_llvm_lit_path
+  # Make sure the llvm-lit script is generated into the bin directory, and do
+  # it after adding all tests, since the generated script will only work
+  # correctly discovered tests against test locations from the source tree that
+  # have already been discovered.
+  add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
+                   ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
 endif()
 
 if (LIBCXX_INCLUDE_DOCS)

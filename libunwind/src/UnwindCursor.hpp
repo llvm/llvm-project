@@ -16,9 +16,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef _LIBUNWIND_HAS_NO_THREADS
-  #include <pthread.h>
-#endif
 #include <unwind.h>
 
 #ifdef __APPLE__
@@ -34,6 +31,7 @@
 #include "EHHeaderParser.hpp"
 #include "libunwind.h"
 #include "Registers.hpp"
+#include "RWMutex.hpp"
 #include "Unwind-EHABI.h"
 
 namespace libunwind {
@@ -62,9 +60,7 @@ private:
 
   // These fields are all static to avoid needing an initializer.
   // There is only one instance of this class per process.
-#ifndef _LIBUNWIND_HAS_NO_THREADS
-  static pthread_rwlock_t _lock;
-#endif
+  static RWMutex _lock;
 #ifdef __APPLE__
   static void dyldUnloadHook(const struct mach_header *mh, intptr_t slide);
   static bool _registeredForDyldUnloads;
@@ -91,10 +87,8 @@ DwarfFDECache<A>::_bufferEnd = &_initialBuffer[64];
 template <typename A>
 typename DwarfFDECache<A>::entry DwarfFDECache<A>::_initialBuffer[64];
 
-#ifndef _LIBUNWIND_HAS_NO_THREADS
 template <typename A>
-pthread_rwlock_t DwarfFDECache<A>::_lock = PTHREAD_RWLOCK_INITIALIZER;
-#endif
+RWMutex DwarfFDECache<A>::_lock;
 
 #ifdef __APPLE__
 template <typename A>
@@ -104,7 +98,7 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 template <typename A>
 typename A::pint_t DwarfFDECache<A>::findFDE(pint_t mh, pint_t pc) {
   pint_t result = 0;
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_rdlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
     if ((mh == p->mh) || (mh == 0)) {
       if ((p->ip_start <= pc) && (pc < p->ip_end)) {
@@ -113,7 +107,7 @@ typename A::pint_t DwarfFDECache<A>::findFDE(pint_t mh, pint_t pc) {
       }
     }
   }
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_unlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.unlock_shared());
   return result;
 }
 
@@ -121,7 +115,7 @@ template <typename A>
 void DwarfFDECache<A>::add(pint_t mh, pint_t ip_start, pint_t ip_end,
                            pint_t fde) {
 #if !defined(_LIBUNWIND_NO_HEAP)
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_wrlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.lock());
   if (_bufferUsed >= _bufferEnd) {
     size_t oldSize = (size_t)(_bufferEnd - _buffer);
     size_t newSize = oldSize * 4;
@@ -145,13 +139,13 @@ void DwarfFDECache<A>::add(pint_t mh, pint_t ip_start, pint_t ip_end,
     _registeredForDyldUnloads = true;
   }
 #endif
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_unlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.unlock());
 #endif
 }
 
 template <typename A>
 void DwarfFDECache<A>::removeAllIn(pint_t mh) {
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_wrlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.lock());
   entry *d = _buffer;
   for (const entry *s = _buffer; s < _bufferUsed; ++s) {
     if (s->mh != mh) {
@@ -161,7 +155,7 @@ void DwarfFDECache<A>::removeAllIn(pint_t mh) {
     }
   }
   _bufferUsed = d;
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_unlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.unlock());
 }
 
 #ifdef __APPLE__
@@ -174,11 +168,11 @@ void DwarfFDECache<A>::dyldUnloadHook(const struct mach_header *mh, intptr_t ) {
 template <typename A>
 void DwarfFDECache<A>::iterateCacheEntries(void (*func)(
     unw_word_t ip_start, unw_word_t ip_end, unw_word_t fde, unw_word_t mh)) {
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_wrlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.lock());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
     (*func)(p->ip_start, p->ip_end, p->fde, p->mh);
   }
-  _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_unlock(&_lock));
+  _LIBUNWIND_LOG_IF_FALSE(_lock.unlock());
 }
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
@@ -507,10 +501,29 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  int stepWithCompactEncoding(Registers_ppc64 &) {
+    return UNW_EINVAL;
+  }
+#endif
+
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   int stepWithCompactEncoding(Registers_arm64 &) {
     return CompactUnwinder_arm64<A>::stepWithCompactEncoding(
         _info.format, _info.start_ip, _addressSpace, _registers);
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_O32)
+  int stepWithCompactEncoding(Registers_mips_o32 &) {
+    return UNW_EINVAL;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_N64)
+  int stepWithCompactEncoding(Registers_mips_n64 &) {
+    return UNW_EINVAL;
   }
 #endif
 
@@ -547,6 +560,12 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  bool compactSaysUseDwarf(Registers_ppc64 &, uint32_t *) const {
+    return true;
+  }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool compactSaysUseDwarf(Registers_arm64 &, uint32_t *offset) const {
     if ((_info.format & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_DWARF) {
@@ -555,6 +574,18 @@ private:
       return true;
     }
     return false;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_O32)
+  bool compactSaysUseDwarf(Registers_mips_o32 &, uint32_t *) const {
+    return true;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_N64)
+  bool compactSaysUseDwarf(Registers_mips_n64 &, uint32_t *) const {
+    return true;
   }
 #endif
 #endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
@@ -583,14 +614,38 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  compact_unwind_encoding_t dwarfEncoding(Registers_ppc64 &) const {
+    return 0;
+  }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   compact_unwind_encoding_t dwarfEncoding(Registers_arm64 &) const {
     return UNWIND_ARM64_MODE_DWARF;
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_ARM)
+  compact_unwind_encoding_t dwarfEncoding(Registers_arm &) const {
+    return 0;
+  }
+#endif
+
 #if defined (_LIBUNWIND_TARGET_OR1K)
   compact_unwind_encoding_t dwarfEncoding(Registers_or1k &) const {
+    return 0;
+  }
+#endif
+
+#if defined (_LIBUNWIND_TARGET_MIPS_O32)
+  compact_unwind_encoding_t dwarfEncoding(Registers_mips_o32 &) const {
+    return 0;
+  }
+#endif
+
+#if defined (_LIBUNWIND_TARGET_MIPS_N64)
+  compact_unwind_encoding_t dwarfEncoding(Registers_mips_n64 &) const {
     return 0;
   }
 #endif

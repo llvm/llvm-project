@@ -13,7 +13,7 @@
 
 //  Hashing a struct w/o a defined hash should *not* fail, but it should
 // create a type that is not constructible and not callable.
-// See also: http://cplusplus.github.io/LWG/lwg-active.html#2543
+// See also: https://cplusplus.github.io/LWG/lwg-defects.html#2543
 
 #include <functional>
 #include <cassert>
@@ -32,7 +32,7 @@ int main()
     static_assert(!std::is_copy_assignable<H>::value, "");
     static_assert(!std::is_move_assignable<H>::value, "");
 #if TEST_STD_VER > 14
-    static_assert(!std::is_callable<H(X&)>::value, "");
-    static_assert(!std::is_callable<H(X const&)>::value, "");
+    static_assert(!std::is_invocable<H, X&>::value, "");
+    static_assert(!std::is_invocable<H, X const&>::value, "");
 #endif
 }

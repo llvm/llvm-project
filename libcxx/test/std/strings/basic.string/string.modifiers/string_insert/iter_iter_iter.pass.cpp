@@ -39,7 +39,7 @@ void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
 {
     typename S::const_iterator p = s.cbegin() + pos;
-	S aCopy = s;
+    S aCopy = s;
     try {
         s.insert(p, first, last);
         assert(false);
@@ -145,7 +145,7 @@ int main()
     }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-	{ // test iterator operations that throw
+    { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
     typedef input_iterator<TIter> IIter;
@@ -157,7 +157,7 @@ int main()
     test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 6, TIter::TAComparison), TIter());
-	}
+    }
 #endif
 #if _LIBCPP_DEBUG >= 1
     {
@@ -170,30 +170,30 @@ int main()
     }
 #endif
 
-	{ // test inserting into self
+    { // test inserting into self
     typedef std::string S;
-	S s_short = "123/";
-	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+    S s_short = "123/";
+    S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
 
-	s_short.insert(s_short.begin(), s_short.begin(), s_short.end());
-	assert(s_short == "123/123/");
-	s_short.insert(s_short.begin(), s_short.begin(), s_short.end());
-	assert(s_short == "123/123/123/123/");
-	s_short.insert(s_short.begin(), s_short.begin(), s_short.end());
-	assert(s_short == "123/123/123/123/123/123/123/123/");
+    s_short.insert(s_short.begin(), s_short.begin(), s_short.end());
+    assert(s_short == "123/123/");
+    s_short.insert(s_short.begin(), s_short.begin(), s_short.end());
+    assert(s_short == "123/123/123/123/");
+    s_short.insert(s_short.begin(), s_short.begin(), s_short.end());
+    assert(s_short == "123/123/123/123/123/123/123/123/");
 
-	s_long.insert(s_long.begin(), s_long.begin(), s_long.end());
-	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-	}
+    s_long.insert(s_long.begin(), s_long.begin(), s_long.end());
+    assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+    }
 
-	{ // test assigning a different type
+    { // test assigning a different type
     typedef std::string S;
     const uint8_t p[] = "ABCD";
 
     S s;
     s.insert(s.begin(), p, p + 4);
     assert(s == "ABCD");
-	}
+    }
 
   { // test with a move iterator that returns char&&
     typedef input_iterator<const char*> It;

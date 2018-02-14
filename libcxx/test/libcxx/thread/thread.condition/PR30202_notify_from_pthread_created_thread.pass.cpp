@@ -20,7 +20,7 @@
 //   notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk);
 
 // Test that this function works with threads that were not created by
-// std::thread. See http://llvm.org/PR30202.
+// std::thread. See: https://bugs.llvm.org/show_bug.cgi?id=30202
 
 
 #include <condition_variable>

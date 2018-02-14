@@ -2,7 +2,6 @@
  * kmp_wait_release.cpp -- Wait/Release implementation
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

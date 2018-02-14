@@ -16,27 +16,42 @@
 #include <functional>
 #include <type_traits>
 
+template <class Arg, class Result>
+struct my_unary_function
+{ // std::unary_function was removed in C++17
+    typedef Arg argument_type;
+    typedef Result result_type;
+};
+
+template <class Arg1, class Arg2, class Result>
+struct my_binary_function
+{ // std::binary_function was removed in C++17
+    typedef Arg1 first_argument_type;
+    typedef Arg2 second_argument_type;
+    typedef Result result_type;
+};
+
 class functor1
-    : public std::unary_function<int, char>
+    : public my_unary_function<int, char>
 {
 };
 
 class functor2
-    : public std::binary_function<char, int, double>
+    : public my_binary_function<char, int, double>
 {
 };
 
 class functor3
-    : public std::unary_function<char, int>,
-      public std::binary_function<char, int, double>
+    : public my_unary_function<char, int>,
+      public my_binary_function<char, int, double>
 {
 public:
     typedef float result_type;
 };
 
 class functor4
-    : public std::unary_function<char, int>,
-      public std::binary_function<char, int, double>
+    : public my_unary_function<char, int>,
+      public my_binary_function<char, int, double>
 {
 public:
 };

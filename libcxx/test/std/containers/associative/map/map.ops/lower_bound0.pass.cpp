@@ -30,10 +30,12 @@ int main()
 {
     {
     typedef std::map<int, double, transparent_less> M;
-    M().lower_bound(C2Int{5});
+    M example;
+    assert(example.lower_bound(C2Int{5}) == example.end());
     }
     {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
-    M().lower_bound(C2Int{5});
+    M example;
+    assert(example.lower_bound(C2Int{5}) == example.end());
     }
 }

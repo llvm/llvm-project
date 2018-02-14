@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_SOCKET_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_SOCKET_H
 
-#include "../ClangTidy.h"
+#include "CloexecCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -20,10 +20,10 @@ namespace android {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-socket.html
-class CloexecSocketCheck : public ClangTidyCheck {
+class CloexecSocketCheck : public CloexecCheck {
 public:
   CloexecSocketCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : CloexecCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };

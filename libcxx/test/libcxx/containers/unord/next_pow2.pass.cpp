@@ -54,12 +54,12 @@ test_next_pow2()
         assert(std::__next_hash_pow2(pow2) == pow2);
     }
 
-	test_next_pow2_val(3);
-	test_next_pow2_val(7);
-	test_next_pow2_val(9);
-	test_next_pow2_val(15);
-	test_next_pow2_val(127);
-	test_next_pow2_val(129);
+    test_next_pow2_val(3);
+    test_next_pow2_val(7);
+    test_next_pow2_val(9);
+    test_next_pow2_val(15);
+    test_next_pow2_val(127);
+    test_next_pow2_val(129);
 }
 
 // Note: this is only really useful when run with -fsanitize=undefined.

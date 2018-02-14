@@ -728,7 +728,7 @@ public:
     const_iterator cbefore_begin() const _NOEXCEPT
         {return const_iterator(base::__before_begin());}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT
         {return base::__before_begin()->__next_ == nullptr;}
     _LIBCPP_INLINE_VISIBILITY

@@ -16,6 +16,27 @@ void positive() {
   // CHECK-FIXES: (*p)(2);
 }
 
+template<typename T>
+void invoke(const T& fn) {
+  fn(0); // 1
+  (*fn)(0); // 2
+  // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: redundant repeated
+  // CHECK-FIXES: fn(0); // 1
+  // CHECK-FIXES: (fn)(0); // 2
+  // FIXME: Remove unnecessary parentheses.
+}
+
+void f1(int);
+void f2(double);
+void f3(char);
+
+void instantiate() {
+  invoke(f1);
+  invoke(f2);
+  invoke(f3);
+  invoke([](unsigned) {});
+}
+
 void negative() {
   void (*q)(int) = &f;
 

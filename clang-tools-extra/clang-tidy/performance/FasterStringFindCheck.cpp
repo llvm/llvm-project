@@ -74,9 +74,11 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
           callee(functionDecl(StringFindFunctions).bind("func")),
           anyOf(argumentCountIs(1), argumentCountIs(2)),
           hasArgument(0, SingleChar),
-          on(expr(hasType(recordDecl(hasAnyName(SmallVector<StringRef, 4>(
-                      StringLikeClasses.begin(), StringLikeClasses.end())))),
-                  unless(hasSubstitutedType())))),
+          on(expr(
+              hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+                  recordDecl(hasAnyName(SmallVector<StringRef, 4>(
+                      StringLikeClasses.begin(), StringLikeClasses.end()))))))),
+              unless(hasSubstitutedType())))),
       this);
 }
 

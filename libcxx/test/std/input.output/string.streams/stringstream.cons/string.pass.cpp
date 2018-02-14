@@ -57,12 +57,12 @@ int main()
         assert(ss.str() == L"456 1236 ");
     }
     { // This is https://bugs.llvm.org/show_bug.cgi?id=33727
-		typedef std::basic_string   <char, std::char_traits<char>, NoDefaultAllocator<char> > S;
-		typedef std::basic_stringbuf<char, std::char_traits<char>, NoDefaultAllocator<char> > SB;
+        typedef std::basic_string   <char, std::char_traits<char>, NoDefaultAllocator<char> > S;
+        typedef std::basic_stringbuf<char, std::char_traits<char>, NoDefaultAllocator<char> > SB;
 
-		S s(NoDefaultAllocator<char>(1));
-		SB sb(s);
-	//	This test is not required by the standard, but *where else* could it get the allocator?
-		assert(sb.str().get_allocator() == s.get_allocator());
+        S s(NoDefaultAllocator<char>(1));
+        SB sb(s);
+    //  This test is not required by the standard, but *where else* could it get the allocator?
+        assert(sb.str().get_allocator() == s.get_allocator());
     }
 }

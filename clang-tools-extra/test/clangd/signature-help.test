@@ -1,0 +1,37 @@
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# It is absolutely vital that this file has CRLF line endings.
+
+# Start a session.
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 172
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"void x(int);\nint main(){\nx("}}}
+
+Content-Length: 151
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":2}}}
+#      CHECK: "id": 1,
+# CHECK-NEXT: "jsonrpc": "2.0",
+# CHECK-NEXT: "result": {
+# CHECK-NEXT:   "activeParameter": 0,
+# CHECK-NEXT:   "activeSignature": 0,
+# CHECK-NEXT:   "signatures": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "label": "x(int) -> void",
+# CHECK-NEXT:       "parameters": [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           "label": "int"
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
+
+# Shutdown.
+Content-Length: 49
+
+{"jsonrpc":"2.0","id":100000,"method":"shutdown"}
+Content-Length: 33

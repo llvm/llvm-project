@@ -82,7 +82,7 @@ int main()
         assert(c.max_load_factor() == 1);
         }
         {
-    	A a;
+        A a;
         C c(a);
         LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());

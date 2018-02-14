@@ -34,6 +34,7 @@ int main()
 {
     assert(error_badbackref_thrown("\\1abc"));      // no references
     assert(error_badbackref_thrown("ab(c)\\2def")); // only one reference
+    assert(error_badbackref_thrown("\\800000000000000000000000000000")); // overflows
 
 //  this should NOT throw, because we only should look at the '1'
 //  See https://bugs.llvm.org/show_bug.cgi?id=31387

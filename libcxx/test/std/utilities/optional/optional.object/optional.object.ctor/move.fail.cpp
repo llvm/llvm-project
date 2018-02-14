@@ -21,12 +21,12 @@
 #include "test_macros.h"
 
 struct S {
-	constexpr S()   : v_(0) {}
-	S(int v)        : v_(v) {}
-	constexpr S(const S  &rhs) : v_(rhs.v_) {} // not trivially moveable
-	constexpr S(const S &&rhs) : v_(rhs.v_) {} // not trivially moveable
-	int v_;
-	};
+    constexpr S()   : v_(0) {}
+    S(int v)        : v_(v) {}
+    constexpr S(const S  &rhs) : v_(rhs.v_) {} // not trivially moveable
+    constexpr S(const S &&rhs) : v_(rhs.v_) {} // not trivially moveable
+    int v_;
+    };
 
 
 int main()

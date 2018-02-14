@@ -20,13 +20,13 @@ _LIBCPP_SAFE_STATIC static std::unexpected_handler __unexpected_handler;
 unexpected_handler
 set_unexpected(unexpected_handler func) _NOEXCEPT
 {
-  return __sync_lock_test_and_set(&__unexpected_handler, func);
+  return __libcpp_atomic_exchange(&__unexpected_handler, func);
 }
 
 unexpected_handler
 get_unexpected() _NOEXCEPT
 {
-  return __sync_fetch_and_add(&__unexpected_handler, (unexpected_handler)0);
+  return __libcpp_atomic_load(&__unexpected_handler);
 
 }
 
@@ -41,14 +41,13 @@ void unexpected()
 terminate_handler
 set_terminate(terminate_handler func) _NOEXCEPT
 {
-  return __sync_lock_test_and_set(&__terminate_handler, func);
+  return __libcpp_atomic_exchange(&__terminate_handler, func);
 }
 
 terminate_handler
 get_terminate() _NOEXCEPT
 {
-  return __sync_fetch_and_add(&__terminate_handler, (terminate_handler)0);
-
+  return __libcpp_atomic_load(&__terminate_handler);
 }
 
 #ifndef __EMSCRIPTEN__ // We provide this in JS

@@ -30,8 +30,7 @@ has its own description. (At least, that's the ambition, we may not be there yet
 For the impatient, we cover building the runtime as the first topic here.
 
 CMake is used to build the OpenMP runtime.  For details and a full list of options for the CMake build system,
-see <tt>Build_With_CMake.txt</tt> inside the <tt>runtime/</tt> subdirectory.  These
-instructions will provide the most typical build.
+see <tt>README.rst</tt> in the source code repository.  These instructions will provide the most typical build.
 
 In-LLVM-tree build:.
 @code
@@ -46,7 +45,7 @@ Out-of-LLVM-tree build:
 @code
 $ cd where-you-want-to-live
 Check out openmp
-$ cd where-you-want-to-live/openmp/runtime
+$ cd where-you-want-to-live/openmp
 $ mkdir build && cd build
 $ cmake path/to/openmp -DCMAKE_C_COMPILER=<C compiler> -DCMAKE_CXX_COMPILER=<C++ compiler>
 $ make

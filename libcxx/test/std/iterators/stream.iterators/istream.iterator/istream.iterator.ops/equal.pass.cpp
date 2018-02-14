@@ -49,4 +49,7 @@ int main()
 
     assert(i4 == i4);
     assert(i4 == i5);
+
+    assert(std::operator==(i1, i2));
+    assert(std::operator!=(i1, i3));
 }

@@ -38,7 +38,7 @@ Language "English"
 Country  "USA"
 LangId   "1033"
 Version  "2"
-Revision "20161216"
+Revision "20170523"
 
 
 
@@ -103,6 +103,7 @@ DisplayEnvBegin		     "OPENMP DISPLAY ENVIRONMENT BEGIN"
 DisplayEnvEnd		     "OPENMP DISPLAY ENVIRONMENT END"
 Device			     "[device]"
 Host			     "[host]"
+Tile                         "tile"
 
 
 
@@ -114,7 +115,7 @@ Info                         "OMP: Info #%1$d: %2$s\n"
 Warning                      "OMP: Warning #%1$d: %2$s\n"
 Fatal                        "OMP: Error #%1$d: %2$s\n"
 SysErr                       "OMP: System error #%1$d: %2$s\n"
-Hint                         "OMP: Hint: %2$s\n"
+Hint                         "OMP: Hint %1$s\n"
 
 Pragma                       "%1$s pragma (at %2$s:%3$s():%4$s)"
     # %1 is pragma name (like "parallel" or "master",
@@ -325,6 +326,13 @@ StgIgnored                   "%1$s: ignored because %2$s has been defined"
                                  # %1, -- name of ignored variable, %2 -- name of variable with higher priority.
 OBSOLETE                     "%1$s: overrides %3$s specified before"
                                  # %1, %2 -- name and value of the overriding variable, %3 -- name of overriden variable.
+AffTilesNoHWLOC              "%1$s: Tiles are only supported if KMP_TOPOLOGY_METHOD=hwloc, using granularity=package instead"
+AffTilesNoTiles              "%1$s: Tiles requested but were not detected on this HW, using granularity=package instead"
+TopologyExtraTile            "%1$s: %2$d packages x %3$d tiles/pkg x %4$d cores/tile x %5$d threads/core (%6$d total cores)"
+TopologyExtraNode            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d cores/node x %5$d threads/core (%6$d total cores)"
+TopologyExtraNoTi            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d tiles/node x %5$d cores/tile x %6$d threads/core (%7$d total cores)"
+OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the default (loop) instead. "
+                             "This issue is fixed in an up-to-date compiler."
 
 # --- OpenMP errors detected at runtime ---
 #
@@ -433,7 +441,7 @@ SubmitBugReport              "Please submit a bug report with this message, comp
 OBSOLETE                     "Check NLSPATH environment variable, its value is \"%1$s\"."
 ChangeStackLimit             "Please try changing the shell stack limit or adjusting the "
                              "OMP_STACKSIZE environment variable."
-Unset_ALL_THREADS            "Consider unsetting KMP_ALL_THREADS and OMP_THREAD_LIMIT (if either is set)."
+Unset_ALL_THREADS            "Consider unsetting KMP_DEVICE_THREAD_LIMIT (KMP_ALL_THREADS), KMP_TEAMS_THREAD_LIMIT, and OMP_THREAD_LIMIT (if any are set)."
 Set_ALL_THREADPRIVATE        "Consider setting KMP_ALL_THREADPRIVATE to a value larger than %1$d."
 PossibleSystemLimitOnThreads "This could also be due to a system-related limit on the number of threads."
 DuplicateLibrary             "This means that multiple copies of the OpenMP runtime have been "

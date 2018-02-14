@@ -18,6 +18,6 @@ void foo ( const string &s ) {}
 
 int main()
 {
-	std::string_view sv = "ABCDE";
-	foo(sv);	// requires implicit conversion from string_view to string
+    std::string_view sv = "ABCDE";
+    foo(sv);    // requires implicit conversion from string_view to string
 }

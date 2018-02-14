@@ -24,3 +24,11 @@ After:
   using MyPtrType = void (Class::*)() const;
 
 This check requires using C++11 or higher to run.
+
+Options
+-------
+
+.. option:: IgnoreMacros
+
+   If set to non-zero, the check will not give warnings inside macros. Default
+   is `1`.

@@ -30,6 +30,7 @@ int main()
         assert(it == T());
 #if TEST_STD_VER >= 11
         constexpr T it2;
+        (void)it2;
 #endif
     }
     {
@@ -38,6 +39,7 @@ int main()
         assert(it == T());
 #if TEST_STD_VER >= 11
         constexpr T it2;
+        (void)it2;
 #endif
     }
 }

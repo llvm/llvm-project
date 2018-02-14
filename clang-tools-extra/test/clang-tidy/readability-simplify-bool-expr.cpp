@@ -281,6 +281,8 @@ static constexpr bool truthy() {
 }
 
 #define HAS_XYZ_FEATURE true
+#define M1(what) M2(true, what)
+#define M2(condition, what) if (condition) what
 
 void macros_and_constexprs(int i = 0) {
   bool b = (i == 1);
@@ -295,8 +297,14 @@ void macros_and_constexprs(int i = 0) {
     // inline the macro first.
     i = 3;
   }
+  if (HAS_XYZ_FEATURE) {
+    i = 5;
+  }
   i = 4;
+  M1(i = 7);
 }
+
+#undef HAS_XYZ_FEATURE
 
 bool conditional_return_statements(int i) {
   if (i == 0) return true; else return false;

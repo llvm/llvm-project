@@ -71,7 +71,7 @@ int main()
     std::uninitialized_copy(b, b+2, bp);
     for (int i = 0; i < 2; ++i)
         assert(bp[i].data_ == 1);
-	assert(B::population_ == N + 2);
+    assert(B::population_ == N + 2);
     }
 
     {

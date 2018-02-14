@@ -199,7 +199,7 @@
           subroutine omp_get_place_proc_ids(place_num, ids)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) place_num
-            integer (kind=kmp_pointer_kind) ids(*)
+            integer (kind=omp_integer_kind) ids(*)
           end subroutine omp_get_place_proc_ids
 
           function omp_get_place_num()
@@ -214,7 +214,7 @@
 
           subroutine omp_get_partition_place_nums(place_nums)
             use omp_lib_kinds
-            integer (kind=kmp_pointer_kind) place_nums(*)
+            integer (kind=omp_integer_kind) place_nums(*)
           end subroutine omp_get_partition_place_nums
 
           function omp_get_wtime()

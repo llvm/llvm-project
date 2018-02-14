@@ -4,7 +4,6 @@
  *              This is for information about runtime library structures.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -13,7 +12,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 /* THIS FILE SHOULD NOT BE MODIFIED IN IDB INTERFACE LIBRARY CODE
    It should instead be modified in the OpenMP runtime and copied to the

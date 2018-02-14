@@ -25,10 +25,8 @@ public:
   typedef llvm::StringMap<std::string> HeaderMap;
   typedef std::vector<std::pair<const char *, const char *>> RegexHeaderMap;
 
-  HeaderMapCollector() : RegexHeaderMappingTable(nullptr) {}
-
-  explicit HeaderMapCollector(const RegexHeaderMap *RegexHeaderMappingTable)
-      : RegexHeaderMappingTable(RegexHeaderMappingTable) {}
+  HeaderMapCollector() = default;
+  explicit HeaderMapCollector(const RegexHeaderMap *RegexHeaderMappingTable);
 
   void addHeaderMapping(llvm::StringRef OrignalHeaderPath,
                         llvm::StringRef MappingHeaderPath) {
@@ -47,8 +45,10 @@ private:
   HeaderMap HeaderMappingTable;
 
   // A map from header patterns to header names.
-  // This is a reference to a hard-coded map.
-  const RegexHeaderMap *const RegexHeaderMappingTable;
+  // The header names are not owned. This is only threadsafe because the regexes
+  // never fail.
+  mutable std::vector<std::pair<llvm::Regex, const char *>>
+      RegexHeaderMappingTable;
 };
 
 } // namespace find_all_symbols

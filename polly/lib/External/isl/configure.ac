@@ -36,7 +36,9 @@ CXX11FLAGS=${CXX#$ac_save_CXX}
 CXX="$ac_save_CXX"
 CXXCPP="$ac_save_CXXCPP"
 
+AC_PROG_GREP
 AC_PROG_LIBTOOL
+AC_PROG_SED
 
 AC_CHECK_PROG(PERL, perl, perl, [])
 AC_CHECK_PROG(PDFLATEX, pdflatex, pdflatex, [])
@@ -138,6 +140,7 @@ AC_CONFIG_FILES([bound_test.sh], [chmod +x bound_test.sh])
 AC_CONFIG_FILES([codegen_test.sh], [chmod +x codegen_test.sh])
 AC_CONFIG_FILES([pip_test.sh], [chmod +x pip_test.sh])
 AC_CONFIG_FILES([flow_test.sh], [chmod +x flow_test.sh])
+AC_CONFIG_FILES([schedule_test.sh], [chmod +x schedule_test.sh])
 AC_CONFIG_COMMANDS_POST([
 	dnl pass on arguments to subdir configures, but don't
 	dnl add them to config.status

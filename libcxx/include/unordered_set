@@ -450,7 +450,7 @@ public:
     allocator_type get_allocator() const _NOEXCEPT
         {return allocator_type(__table_.__node_alloc());}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool      empty() const _NOEXCEPT {return __table_.size() == 0;}
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const _NOEXCEPT  {return __table_.size();}
@@ -968,7 +968,7 @@ public:
     allocator_type get_allocator() const _NOEXCEPT
         {return allocator_type(__table_.__node_alloc());}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool      empty() const _NOEXCEPT {return __table_.size() == 0;}
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const _NOEXCEPT  {return __table_.size();}

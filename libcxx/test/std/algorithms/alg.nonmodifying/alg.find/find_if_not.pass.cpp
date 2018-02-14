@@ -21,10 +21,10 @@
 #include "test_iterators.h"
 
 struct ne {
-	ne (int val) : v(val) {}
-	bool operator () (int v2) const { return v != v2; }
-	int v;
-	};
+    ne (int val) : v(val) {}
+    bool operator () (int v2) const { return v != v2; }
+    int v;
+    };
 
 
 int main()

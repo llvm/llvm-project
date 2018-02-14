@@ -259,6 +259,16 @@ class Configuration(object):
                            compile_flags=compile_flags,
                            link_flags=link_flags)
 
+    def _dump_macros_verbose(self, *args, **kwargs):
+        macros_or_error = self.cxx.dumpMacros(*args, **kwargs)
+        if isinstance(macros_or_error, tuple):
+            cmd, out, err, rc = macros_or_error
+            report = libcxx.util.makeReport(cmd, out, err, rc)
+            report += "Compiler failed unexpectedly when dumping macros!"
+            self.lit_config.fatal(report)
+            return None
+        assert isinstance(macros_or_error, dict)
+        return macros_or_error
 
     def configure_src_root(self):
         self.libcxx_src_root = self.get_lit_conf(
@@ -446,7 +456,7 @@ class Configuration(object):
         if self.get_lit_bool('has_libatomic', False):
             self.config.available_features.add('libatomic')
 
-        macros = self.cxx.dumpMacros()
+        macros = self._dump_macros_verbose()
         if '__cpp_if_constexpr' not in macros:
             self.config.available_features.add('libcpp-no-if-constexpr')
 
@@ -469,7 +479,7 @@ class Configuration(object):
         # Attempt to detect the glibc version by querying for __GLIBC__
         # in 'features.h'.
         macros = self.cxx.dumpMacros(flags=['-include', 'features.h'])
-        if macros is not None and '__GLIBC__' in macros:
+        if isinstance(macros, dict) and '__GLIBC__' in macros:
             maj_v, min_v = (macros['__GLIBC__'], macros['__GLIBC_MINOR__'])
             self.config.available_features.add('glibc')
             self.config.available_features.add('glibc-%s' % maj_v)
@@ -507,7 +517,8 @@ class Configuration(object):
         std = self.get_lit_conf('std')
         if not std:
             # Choose the newest possible language dialect if none is given.
-            possible_stds = ['c++1z', 'c++14', 'c++11', 'c++03']
+            possible_stds = ['c++2a', 'c++17', 'c++1z', 'c++14', 'c++11',
+                             'c++03']
             if self.cxx.type == 'gcc':
                 maj_v, _, _ = self.cxx.version
                 maj_v = int(maj_v)
@@ -528,7 +539,9 @@ class Configuration(object):
                     'Failed to infer a supported language dialect from one of %r'
                     % possible_stds)
         self.cxx.compile_flags += ['-std={0}'.format(std)]
-        self.config.available_features.add(std.replace('gnu++', 'c++'))
+        std_feature = std.replace('gnu++', 'c++')
+        std_feature = std.replace('1z', '17')
+        self.config.available_features.add(std_feature)
         # Configure include paths
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
@@ -566,6 +579,9 @@ class Configuration(object):
         # Disable availability unless explicitely requested
         if not self.with_availability:
             self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
+        # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
+        # template depth with older Clang versions.
+        self.cxx.addFlagIfSupported('-ftemplate-depth=270')
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
@@ -627,8 +643,8 @@ class Configuration(object):
         """
         # Parse the macro contents of __config_site by dumping the macros
         # using 'c++ -dM -E' and filtering the predefines.
-        predefines = self.cxx.dumpMacros()
-        macros = self.cxx.dumpMacros(header)
+        predefines = self._dump_macros_verbose()
+        macros = self._dump_macros_verbose(header)
         feature_macros_keys = set(macros.keys()) - set(predefines.keys())
         feature_macros = {}
         for k in feature_macros_keys:
@@ -658,7 +674,10 @@ class Configuration(object):
                 self.config.available_features.add('libcpp-abi-version-v%s'
                     % feature_macros[m])
                 continue
-            assert m.startswith('_LIBCPP_HAS_') or m == '_LIBCPP_ABI_UNSTABLE'
+            if m == '_LIBCPP_NO_VCRUNTIME':
+                self.config.available_features.add('libcpp-no-vcruntime')
+                continue
+            assert m.startswith('_LIBCPP_HAS_') or m.startswith('_LIBCPP_ABI_')
             m = m.lower()[1:].replace('_', '-')
             self.config.available_features.add(m)
         return feature_macros
@@ -873,7 +892,7 @@ class Configuration(object):
         # Turn on warnings by default for Clang based compilers when C++ >= 11
         default_enable_warnings = self.cxx.type in ['clang', 'apple-clang'] \
             and len(self.config.available_features.intersection(
-                ['c++11', 'c++14', 'c++1z'])) != 0
+                ['c++11', 'c++14', 'c++17', 'c++2a'])) != 0
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
         self.cxx.useWarnings(enable_warnings)
@@ -980,7 +999,7 @@ class Configuration(object):
 
     def configure_coroutines(self):
         if self.cxx.hasCompileFlag('-fcoroutines-ts'):
-            macros = self.cxx.dumpMacros(flags=['-fcoroutines-ts'])
+            macros = self._dump_macros_verbose(flags=['-fcoroutines-ts'])
             if '__cpp_coroutines' not in macros:
                 self.lit_config.warning('-fcoroutines-ts is supported but '
                     '__cpp_coroutines is not defined')

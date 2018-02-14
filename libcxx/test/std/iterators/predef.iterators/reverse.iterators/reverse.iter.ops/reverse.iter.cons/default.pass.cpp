@@ -13,7 +13,7 @@
 
 // constexpr reverse_iterator();
 //
-// constexpr in c++17
+// constexpr in C++17
 
 #include <iterator>
 
@@ -25,6 +25,7 @@ void
 test()
 {
     std::reverse_iterator<It> r;
+    (void)r;
 }
 
 int main()
@@ -37,6 +38,7 @@ int main()
 #if TEST_STD_VER > 14
     {
         constexpr std::reverse_iterator<const char *> it;
+        (void)it;
     }
 #endif
 }

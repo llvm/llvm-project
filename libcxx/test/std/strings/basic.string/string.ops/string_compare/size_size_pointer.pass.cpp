@@ -40,7 +40,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
     {
         try
         {
-            s.compare(pos1, n1, str);
+            TEST_IGNORE_NODISCARD s.compare(pos1, n1, str);
             assert(false);
         }
         catch (std::out_of_range&)

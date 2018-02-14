@@ -30,10 +30,10 @@ int main()
 {
     {
     typedef std::map<int, double, transparent_less> M;
-    M().count(C2Int{5});
+    assert(M().count(C2Int{5}) == 0);
     }
     {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
-    M().count(C2Int{5});
+    assert(M().count(C2Int{5}) == 0);
     }
 }

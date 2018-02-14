@@ -219,19 +219,19 @@ int main()
     }
 #endif
 
-	{ // test inserting into self
+    { // test inserting into self
     typedef std::string S;
-	S s_short = "123/";
-	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+    S s_short = "123/";
+    S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
 
-	s_short.insert(0, s_short.c_str());
-	assert(s_short == "123/123/");
-	s_short.insert(0, s_short.c_str());
-	assert(s_short == "123/123/123/123/");
-	s_short.insert(0, s_short.c_str());
-	assert(s_short == "123/123/123/123/123/123/123/123/");
+    s_short.insert(0, s_short.c_str());
+    assert(s_short == "123/123/");
+    s_short.insert(0, s_short.c_str());
+    assert(s_short == "123/123/123/123/");
+    s_short.insert(0, s_short.c_str());
+    assert(s_short == "123/123/123/123/123/123/123/123/");
 
-	s_long.insert(0, s_long.c_str());
-	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-	}
+    s_long.insert(0, s_long.c_str());
+    assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+    }
 }

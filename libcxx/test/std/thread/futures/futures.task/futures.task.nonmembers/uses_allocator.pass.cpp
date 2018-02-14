@@ -16,6 +16,8 @@
 // XFAIL: c++98, c++03
 
 // <future>
+// REQUIRES: c++11 || c++14
+// packaged_task allocator support was removed in C++17 (LWG 2976)
 
 // class packaged_task<R(ArgTypes...)>
 

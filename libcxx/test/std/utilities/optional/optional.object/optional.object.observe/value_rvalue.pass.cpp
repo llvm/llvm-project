@@ -67,7 +67,7 @@ int main()
         optional<X> opt;
         try
         {
-            std::move(opt).value();
+            (void)std::move(opt).value();
             assert(false);
         }
         catch (const bad_optional_access&)

@@ -13,6 +13,7 @@ add_extra_unittest(FindAllSymbolsTests
   )
 
 target_link_libraries(FindAllSymbolsTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

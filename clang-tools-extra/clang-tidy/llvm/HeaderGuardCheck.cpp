@@ -15,20 +15,7 @@ namespace llvm {
 
 LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
                                            ClangTidyContext *Context)
-    : HeaderGuardCheck(Name, Context),
-      RawStringHeaderFileExtensions(
-          Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
-  utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                   HeaderFileExtensions, ',');
-}
-
-void LLVMHeaderGuardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
-
-bool LLVMHeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) {
-  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
-}
+    : HeaderGuardCheck(Name, Context) {}
 
 std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
                                                  StringRef OldGuard) {

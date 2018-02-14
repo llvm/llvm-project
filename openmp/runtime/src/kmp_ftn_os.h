@@ -2,7 +2,6 @@
  * kmp_ftn_os.h -- KPTS Fortran defines header file.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_FTN_OS_H
 #define KMP_FTN_OS_H
@@ -135,6 +133,10 @@
 #endif
 #endif
 
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL omp_control_tool
+#endif
+
 #endif /* KMP_FTN_PLAIN */
 
 /* ------------------------------------------------------------------------ */
@@ -228,7 +230,6 @@
 #define FTN_IS_INITIAL_DEVICE omp_is_initial_device_
 #endif
 
-
 #if OMP_40_ENABLED
 #define FTN_GET_CANCELLATION omp_get_cancellation_
 #define FTN_GET_CANCELLATION_STATUS kmp_get_cancellation_status_
@@ -252,6 +253,10 @@
 #define FTN_TARGET_ASSOCIATE_PTR omp_target_associate_ptr_
 #define FTN_TARGET_DISASSOCIATE_PTR omp_target_disassociate_ptr_
 #endif
+#endif
+
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -347,7 +352,6 @@
 #define FTN_IS_INITIAL_DEVICE OMP_IS_INITIAL_DEVICE
 #endif
 
-
 #if OMP_40_ENABLED
 #define FTN_GET_CANCELLATION OMP_GET_CANCELLATION
 #define FTN_GET_CANCELLATION_STATUS KMP_GET_CANCELLATION_STATUS
@@ -371,6 +375,10 @@
 #define FTN_TARGET_ASSOCIATE_PTR OMP_TARGET_ASSOCIATE_PTR
 #define FTN_TARGET_DISASSOCIATE_PTR OMP_TARGET_DISASSOCIATE_PTR
 #endif
+#endif
+
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -466,7 +474,6 @@
 #define FTN_IS_INITIAL_DEVICE OMP_IS_INITIAL_DEVICE_
 #endif
 
-
 #if OMP_40_ENABLED
 #define FTN_GET_CANCELLATION OMP_GET_CANCELLATION_
 #define FTN_GET_CANCELLATION_STATUS KMP_GET_CANCELLATION_STATUS_
@@ -490,6 +497,10 @@
 #define FTN_TARGET_ASSOCIATE_PTR OMP_TARGET_ASSOCIATE_PTR_
 #define FTN_TARGET_DISASSOCIATE_PTR OMP_TARGET_DISASSOCIATE_PTR_
 #endif
+#endif
+
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */
@@ -601,44 +612,5 @@
 #define KMP_API_NAME_GOMP_TARGET_END_DATA GOMP_target_end_data
 #define KMP_API_NAME_GOMP_TARGET_UPDATE GOMP_target_update
 #define KMP_API_NAME_GOMP_TEAMS GOMP_teams
-
-#ifdef KMP_USE_VERSION_SYMBOLS
-#define xstr(x) str(x)
-#define str(x) #x
-
-// If Linux, xexpand prepends __kmp_api_ to the real API name
-#define xexpand(api_name) expand(api_name)
-#define expand(api_name) __kmp_api_##api_name
-
-#define xaliasify(api_name, ver) aliasify(api_name, ver)
-#define aliasify(api_name, ver)                                                \
-  __typeof__(__kmp_api_##api_name) __kmp_api_##api_name##_##ver##_alias        \
-      __attribute__((alias(xstr(__kmp_api_##api_name))))
-
-#define xversionify(api_name, version_num, version_str)                        \
-  versionify(api_name, version_num, version_str, "VERSION")
-#define versionify(api_name, version_num, version_str, default_ver)            \
-  __asm__(                                                                     \
-      ".symver " xstr(__kmp_api_##api_name##_##version_num##_alias) "," xstr(  \
-          api_name) "@" version_str "\n\t");                                   \
-  __asm__(".symver " xstr(__kmp_api_##api_name) "," xstr(                      \
-      api_name) "@@" default_ver "\n\t")
-
-#else // KMP_USE_VERSION_SYMBOLS
-#define xstr(x) /* Nothing */
-#define str(x) /* Nothing */
-
-// if Windows or Mac, xexpand does no name transformation
-#define xexpand(api_name) expand(api_name)
-#define expand(api_name) api_name
-
-#define xaliasify(api_name, ver) /* Nothing */
-#define aliasify(api_name, ver) /* Nothing */
-
-#define xversionify(api_name, version_num, version_str) /* Nothing */
-#define versionify(api_name, version_num, version_str,                         \
-                   default_ver) /* Nothing */
-
-#endif // KMP_USE_VERSION_SYMBOLS
 
 #endif /* KMP_FTN_OS_H */

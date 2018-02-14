@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm-partial-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm-partial-writes=false  -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
 ; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-partial-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=PARTIAL
 ;
 ;    void func(double *A {

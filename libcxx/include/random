@@ -2308,6 +2308,7 @@ template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
 void
 mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b,
     __t, __c, __l, __f>::seed(result_type __sd)
+    _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {   // __w >= 2
     __x_[0] = __sd & _Max;
     for (size_t __i = 1; __i < __n; ++__i)

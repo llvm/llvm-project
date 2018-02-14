@@ -29,6 +29,7 @@
 #include <iterator>
 #include <type_traits>
 #include <vector>
+#include "test_macros.h"
 
 template <class C>
 struct find_members
@@ -38,7 +39,7 @@ struct find_members
     void test()
     {
         this->container = 0;
-        (void)(this->iter == this->iter);
+        TEST_IGNORE_NODISCARD (this->iter == this->iter);
     }
 };
 

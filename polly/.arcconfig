@@ -1,5 +1,5 @@
 {
-  "project_id" : "polly",
+  "repository.callsign" : "PLO",
   "conduit_uri" : "https://reviews.llvm.org/",
   "history.immutable" : true,
   "load" : [

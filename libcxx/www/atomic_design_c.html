@@ -12,7 +12,7 @@
 <body>
 <div id="menu">
   <div>
-    <a href="http://llvm.org/">LLVM Home</a>
+    <a href="https://llvm.org/">LLVM Home</a>
   </div>
 
   <div class="submenu">
@@ -22,11 +22,11 @@
 
   <div class="submenu">
     <label>Quick Links</label>
-    <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a>
-    <a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a>
+    <a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a>
+    <a href="https://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a>
     <a href="https://bugs.llvm.org/">Bug Reports</a>
-    <a href="http://llvm.org/svn/llvm-project/libcxx/trunk/">Browse SVN</a>
-    <a href="http://llvm.org/viewvc/llvm-project/libcxx/trunk/">Browse ViewVC</a>
+    <a href="https://llvm.org/svn/llvm-project/libcxx/trunk/">Browse SVN</a>
+    <a href="https://llvm.org/viewvc/llvm-project/libcxx/trunk/">Browse ViewVC</a>
   </div>
 </div>
 
@@ -115,7 +115,7 @@ __has_feature(__atomic_flag) == 1
 __has_feature(__atomic_exchange_seq_cst_j) == 1
 __has_feature(__atomic_store_seq_cst_j) == 1
 
-typedef unsigned int __atomic_flag__; 
+typedef unsigned int __atomic_flag__;
 
 unsigned int __atomic_exchange_seq_cst(unsigned int volatile*, unsigned int)
 {
@@ -328,7 +328,7 @@ void __atomic_signal_fence_seq_cst()
 
 <p>
 One should consult the (currently draft)
-<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3126.pdf">C++ standard</a>
+<a href="https://wg21.link/n3126">C++ standard</a>
 for the details of the definitions for these operations.  For example
 <tt>__atomic_compare_exchange_weak_seq_cst_seq_cst</tt> is allowed to fail
 spuriously while <tt>__atomic_compare_exchange_strong_seq_cst_seq_cst</tt> is
@@ -370,7 +370,7 @@ memory_order_relaxed
 
 <p>
 (See the
-<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3126.pdf">C++ standard</a>
+<a href="https://wg21.link/n3126">C++ standard</a>
 for the detailed definitions of each of these orderings).
 </p>
 

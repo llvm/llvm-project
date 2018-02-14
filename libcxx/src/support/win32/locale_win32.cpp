@@ -18,21 +18,7 @@ using std::__libcpp_locale_guard;
 // FIXME: base currently unused. Needs manual work to construct the new locale
 locale_t newlocale( int mask, const char * locale, locale_t /*base*/ )
 {
-    return _create_locale( mask, locale );
-}
-
-locale_t uselocale( locale_t newloc )
-{
-    locale_t old_locale = _get_current_locale();
-    if ( newloc == NULL )
-        return old_locale;
-    // uselocale sets the thread's locale by definition, so unconditionally use thread-local locale
-    _configthreadlocale( _ENABLE_PER_THREAD_LOCALE );
-    // uselocale sets all categories
-    // disable setting locale on Windows temporarily because the structure is opaque (PR31516)
-    //setlocale( LC_ALL, newloc->locinfo->lc_category[LC_ALL].locale );
-    // uselocale returns the old locale_t
-    return old_locale;
+    return {_create_locale( LC_ALL, locale ), locale};
 }
 
 decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l )

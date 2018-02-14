@@ -82,8 +82,8 @@ private:
 };
 } // namespace
 
-static void printVersion() {
-  outs() << "clang-apply-replacements version " CLANG_VERSION_STRING << "\n";
+static void printVersion(raw_ostream &OS) {
+  OS << "clang-apply-replacements version " CLANG_VERSION_STRING << "\n";
 }
 
 /// \brief Convenience function to get rewritten content for \c Filename from
@@ -199,7 +199,7 @@ applyFormatting(const std::vector<tooling::Replacement> &Replacements,
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(makeArrayRef(VisibleCategories));
 
-  cl::SetVersionPrinter(&printVersion);
+  cl::SetVersionPrinter(printVersion);
   cl::ParseCommandLineOptions(argc, argv);
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());

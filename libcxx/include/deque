@@ -1314,7 +1314,7 @@ public:
     void resize(size_type __n);
     void resize(size_type __n, const value_type& __v);
     void shrink_to_fit() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT {return __base::size() == 0;}
 
     // element access:

@@ -37,7 +37,7 @@ template <class T>
 struct C
 {
     typedef T value_type;
-	int not_empty_;  // some random member variable
+    int not_empty_;  // some random member variable
 };
 
 int main()

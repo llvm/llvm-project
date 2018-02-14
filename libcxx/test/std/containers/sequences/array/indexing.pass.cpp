@@ -27,7 +27,7 @@
 constexpr bool check_idx( size_t idx, double val )
 {
     std::array<double, 3> arr = {1, 2, 3.5};
-	return arr[idx] == val;
+    return arr[idx] == val;
 }
 #endif
 

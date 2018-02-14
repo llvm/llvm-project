@@ -130,7 +130,7 @@ just specify a toolset.
           -DCMAKE_SYSTEM_NAME=Windows                                                 ^
           -DCMAKE_C_COMPILER=clang-cl                                                 ^
           -DCMAKE_C_FLAGS="-fms-compatibility-version=19.00 --target=i686--windows"   ^
-          -DCMAKE_CXX_COMPILER=clang-c                                                ^
+          -DCMAKE_CXX_COMPILER=clang-cl                                                ^
           -DCMAKE_CXX_FLAGS="-fms-compatibility-version=19.00 --target=i686--windows" ^
           -DLLVM_PATH=/path/to/llvm/tree                                              ^
           -DLIBCXX_ENABLE_SHARED=YES                                                  ^
@@ -346,6 +346,13 @@ The following options allow building libc++ for a different ABI version.
 
   Build the "unstable" ABI version of libc++. Includes all ABI changing features
   on top of the current stable version.
+
+.. option:: LIBCXX_ABI_DEFINES:STRING
+
+  **Default**: ``""``
+
+  A semicolon-separated list of ABI macros to persist in the site config header.
+  See ``include/__config`` for the list of ABI macros.
 
 .. _LLVM-specific variables:
 

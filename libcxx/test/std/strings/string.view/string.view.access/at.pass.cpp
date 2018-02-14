@@ -32,7 +32,7 @@ void test ( const CharT *s, size_t len ) {
     }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try { sv.at(len); } catch ( const std::out_of_range & ) { return ; }
+    try { (void)sv.at(len); } catch ( const std::out_of_range & ) { return ; }
     assert ( false );
 #endif
 }

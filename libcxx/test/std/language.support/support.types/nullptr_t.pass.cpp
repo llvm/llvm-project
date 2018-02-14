@@ -91,7 +91,7 @@ int main()
     {
 #ifdef _LIBCPP_HAS_NO_NULLPTR
         static_assert(!has_less<std::nullptr_t>::value, "");
-        // FIXME: our c++03 nullptr emulation still allows for comparisons
+        // FIXME: our C++03 nullptr emulation still allows for comparisons
         // with other pointer types by way of the conversion operator.
         //static_assert(!has_less<void*>::value, "");
 #else

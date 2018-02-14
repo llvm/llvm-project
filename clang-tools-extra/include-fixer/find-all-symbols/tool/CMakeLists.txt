@@ -5,6 +5,7 @@ add_clang_executable(find-all-symbols
   )
 
 target_link_libraries(find-all-symbols
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

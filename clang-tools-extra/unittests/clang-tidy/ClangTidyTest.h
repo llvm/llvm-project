@@ -18,6 +18,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Path.h"
 #include <map>
 #include <memory>
 
@@ -83,12 +84,19 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
 
-  std::vector<std::string> ArgCXX11(1, "clang-tidy");
-  ArgCXX11.push_back("-fsyntax-only");
-  ArgCXX11.push_back("-std=c++11");
-  ArgCXX11.push_back("-Iinclude");
-  ArgCXX11.insert(ArgCXX11.end(), ExtraArgs.begin(), ExtraArgs.end());
-  ArgCXX11.push_back(Filename.str());
+  std::vector<std::string> Args(1, "clang-tidy");
+  Args.push_back("-fsyntax-only");
+  std::string extension(llvm::sys::path::extension(Filename.str()));
+  if (extension == ".m" || extension == ".mm") {
+    Args.push_back("-fobjc-abi-version=2");
+    Args.push_back("-fobjc-arc");
+  }
+  if (extension == ".cc" || extension == ".cpp" || extension == ".mm") {
+    Args.push_back("-std=c++11");
+  }
+  Args.push_back("-Iinclude");
+  Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
+  Args.push_back(Filename.str());
 
   ast_matchers::MatchFinder Finder;
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -99,7 +107,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
   SmallVector<std::unique_ptr<ClangTidyCheck>, 1> Checks;
   CheckFactory<CheckList...>::createChecks(&Context, Checks);
   tooling::ToolInvocation Invocation(
-      ArgCXX11, new TestClangTidyAction(Checks, Finder, Context), Files.get());
+      Args, new TestClangTidyAction(Checks, Finder, Context), Files.get());
   InMemoryFileSystem->addFile(Filename, 0,
                               llvm::MemoryBuffer::getMemBuffer(Code));
   for (const auto &FileContent : PathsToContent) {

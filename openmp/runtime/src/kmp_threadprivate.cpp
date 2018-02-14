@@ -2,7 +2,6 @@
  * kmp_threadprivate.cpp -- OpenMP threadprivate support library
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_i18n.h"
@@ -451,10 +449,6 @@ struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
 
   tn->link = __kmp_threads[gtid]->th.th_pri_head;
   __kmp_threads[gtid]->th.th_pri_head = tn;
-
-#ifdef BUILD_TV
-  __kmp_tv_threadprivate_store(__kmp_threads[gtid], tn->gbl_addr, tn->par_addr);
-#endif
 
   if ((__kmp_foreign_tp) ? (KMP_INITIAL_GTID(gtid)) : (KMP_UBER_GTID(gtid)))
     return tn;

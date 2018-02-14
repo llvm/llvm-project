@@ -506,10 +506,6 @@ public:
       if (AllowLoops)
         return true;
 
-      if (!Scope) {
-        HasInRegionDeps = true;
-        return false;
-      }
       auto *L = AddRec->getLoop();
       if (R->contains(L) && !L->contains(Scope)) {
         HasInRegionDeps = true;
@@ -738,5 +734,46 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
       LeftOvers.push_back(Op);
 
   return std::make_pair(ConstPart, SE.getMulExpr(LeftOvers));
+}
+
+const SCEV *tryForwardThroughPHI(const SCEV *Expr, Region &R,
+                                 ScalarEvolution &SE, LoopInfo &LI,
+                                 const DominatorTree &DT) {
+  if (auto *Unknown = dyn_cast<SCEVUnknown>(Expr)) {
+    Value *V = Unknown->getValue();
+    auto *PHI = dyn_cast<PHINode>(V);
+    if (!PHI)
+      return Expr;
+
+    Value *Final = nullptr;
+
+    for (unsigned i = 0; i < PHI->getNumIncomingValues(); i++) {
+      BasicBlock *Incoming = PHI->getIncomingBlock(i);
+      if (isErrorBlock(*Incoming, R, LI, DT) && R.contains(Incoming))
+        continue;
+      if (Final)
+        return Expr;
+      Final = PHI->getIncomingValue(i);
+    }
+
+    if (Final)
+      return SE.getSCEV(Final);
+  }
+  return Expr;
+}
+
+Value *getUniqueNonErrorValue(PHINode *PHI, Region *R, LoopInfo &LI,
+                              const DominatorTree &DT) {
+  Value *V = nullptr;
+  for (unsigned i = 0; i < PHI->getNumIncomingValues(); i++) {
+    BasicBlock *BB = PHI->getIncomingBlock(i);
+    if (!isErrorBlock(*BB, *R, LI, DT)) {
+      if (V)
+        return nullptr;
+      V = PHI->getIncomingValue(i);
+    }
+  }
+
+  return V;
 }
 } // namespace polly

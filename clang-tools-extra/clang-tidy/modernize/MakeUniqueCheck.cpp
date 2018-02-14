@@ -21,18 +21,19 @@ MakeUniqueCheck::MakeUniqueCheck(StringRef Name,
 
 MakeUniqueCheck::SmartPtrTypeMatcher
 MakeUniqueCheck::getSmartPointerTypeMatcher() const {
-  return qualType(hasDeclaration(classTemplateSpecializationDecl(
-      hasName("::std::unique_ptr"), templateArgumentCountIs(2),
-      hasTemplateArgument(
-          0, templateArgument(refersToType(qualType().bind(PointerType)))),
-      hasTemplateArgument(
-          1,
-          templateArgument(refersToType(
-              qualType(hasDeclaration(classTemplateSpecializationDecl(
-                  hasName("::std::default_delete"), templateArgumentCountIs(1),
-                  hasTemplateArgument(
-                      0, templateArgument(refersToType(
-                             qualType(equalsBoundNode(PointerType))))))))))))));
+  return qualType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(classTemplateSpecializationDecl(
+          hasName("::std::unique_ptr"), templateArgumentCountIs(2),
+          hasTemplateArgument(
+              0, templateArgument(refersToType(qualType().bind(PointerType)))),
+          hasTemplateArgument(
+              1, templateArgument(refersToType(
+                     qualType(hasDeclaration(classTemplateSpecializationDecl(
+                         hasName("::std::default_delete"),
+                         templateArgumentCountIs(1),
+                         hasTemplateArgument(
+                             0, templateArgument(refersToType(qualType(
+                                    equalsBoundNode(PointerType))))))))))))))));
 }
 
 } // namespace modernize

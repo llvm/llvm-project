@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-delicm -analyze -pass-remarks-analysis=polly-delicm -polly-delicm-max-ops=1 < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-delicm -polly-dependences -analyze -polly-delicm-max-ops=1 -polly-dependences-computeout=0 < %s | FileCheck %s -check-prefix=DEP
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -63,3 +64,16 @@ return:
 
 
 ; CHECK: maximal number of operations exceeded during zone analysis
+
+; Check that even if the quota was exceeded in DeLICM, DependenceInfo is still
+; successfull since it uses a different operations counter.
+;
+; DEP:     RAW dependences:
+; DEP-NOT:        n/a
+; DEP:     WAR dependences:
+; DEP-NOT:        n/a
+; DEP:     WAW dependences:
+; DEP-NOT:        n/a
+; DEP:     Reduction dependences:
+; DEP-NOT:        n/a
+; DEP:     Transitive closure of reduction dependences:

@@ -54,7 +54,7 @@ int trigger() {
   int emptytest = EmptyVal | B;
   if (bestDay() | A)
     return 1;
-  // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: enum values are from different enum types 
+  // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: enum values are from different enum types
   if (I | Y)
     return 1;
   // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: enum values are from different enum types
@@ -87,4 +87,10 @@ int dont_trigger() {
   if (H + I + L == 42)
     return 1;
   return 42;
+}
+
+namespace PR34400 {
+enum { E1 = 0 };
+enum { E2 = -1 };
+enum { l = E1 | E2 };
 }

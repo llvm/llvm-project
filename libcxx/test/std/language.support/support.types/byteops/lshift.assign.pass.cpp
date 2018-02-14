@@ -19,18 +19,18 @@
 
 
 constexpr std::byte test(std::byte b) {
-	return b <<= 2;
-	}
+    return b <<= 2;
+    }
 
 
 int main () {
-	std::byte b;  // not constexpr, just used in noexcept check
-	constexpr std::byte b2{static_cast<std::byte>(2)};
-	constexpr std::byte b3{static_cast<std::byte>(3)};
+    std::byte b;  // not constexpr, just used in noexcept check
+    constexpr std::byte b2{static_cast<std::byte>(2)};
+    constexpr std::byte b3{static_cast<std::byte>(3)};
 
-	static_assert(noexcept(b <<= 2), "" );
+    static_assert(noexcept(b <<= 2), "" );
 
-	static_assert(std::to_integer<int>(test(b2)) ==  8, "" );
-	static_assert(std::to_integer<int>(test(b3)) == 12, "" );
+    static_assert(std::to_integer<int>(test(b2)) ==  8, "" );
+    static_assert(std::to_integer<int>(test(b3)) == 12, "" );
 
 }

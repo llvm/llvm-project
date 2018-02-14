@@ -97,9 +97,11 @@ noinst_PROGRAMS = isl_test$(EXEEXT) isl_polyhedron_sample$(EXEEXT) \
 	isl_polyhedron_detect_equalities$(EXEEXT) isl_cat$(EXEEXT) \
 	isl_closure$(EXEEXT) isl_bound$(EXEEXT) isl_schedule$(EXEEXT) \
 	isl_codegen$(EXEEXT) isl_test_int$(EXEEXT) isl_flow$(EXEEXT) \
-	isl_flow_cmp$(EXEEXT) $(am__EXEEXT_1)
+	isl_flow_cmp$(EXEEXT) isl_schedule_cmp$(EXEEXT) \
+	$(am__EXEEXT_1)
 TESTS = isl_test$(EXEEXT) codegen_test.sh pip_test.sh bound_test.sh \
-	isl_test_int$(EXEEXT) flow_test.sh $(am__EXEEXT_1)
+	isl_test_int$(EXEEXT) flow_test.sh schedule_test.sh \
+	$(am__EXEEXT_1)
 @IMATH_FOR_MP_TRUE@am__append_1 = isl_test_imath
 @IMATH_FOR_MP_TRUE@am__append_2 = isl_test_imath
 @IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@am__append_3 = isl_int_sioimath.h \
@@ -139,7 +141,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = isl_config.h
 CONFIG_CLEAN_FILES = isl_srcdir.c bound_test.sh codegen_test.sh \
-	pip_test.sh flow_test.sh
+	pip_test.sh flow_test.sh schedule_test.sh
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -324,6 +326,13 @@ isl_schedule_DEPENDENCIES = libisl.la
 isl_schedule_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(isl_schedule_LDFLAGS) $(LDFLAGS) -o $@
+am_isl_schedule_cmp_OBJECTS = schedule_cmp.$(OBJEXT)
+isl_schedule_cmp_OBJECTS = $(am_isl_schedule_cmp_OBJECTS)
+isl_schedule_cmp_DEPENDENCIES = libisl.la
+isl_schedule_cmp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(AM_CFLAGS) $(CFLAGS) $(isl_schedule_cmp_LDFLAGS) $(LDFLAGS) \
+	-o $@
 isl_test_SOURCES = isl_test.c
 isl_test_OBJECTS = isl_test.$(OBJEXT)
 isl_test_DEPENDENCIES = libisl.la
@@ -383,8 +392,8 @@ SOURCES = $(libisl_la_SOURCES) $(isl_bound_SOURCES) $(isl_cat_SOURCES) \
 	$(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
-	$(isl_schedule_SOURCES) isl_test.c isl_test_imath.c \
-	isl_test_int.c
+	$(isl_schedule_SOURCES) $(isl_schedule_cmp_SOURCES) isl_test.c \
+	isl_test_imath.c isl_test_int.c
 DIST_SOURCES = $(am__libisl_la_SOURCES_DIST) $(isl_bound_SOURCES) \
 	$(isl_cat_SOURCES) $(isl_closure_SOURCES) \
 	$(isl_codegen_SOURCES) $(isl_flow_SOURCES) \
@@ -392,8 +401,8 @@ DIST_SOURCES = $(am__libisl_la_SOURCES_DIST) $(isl_bound_SOURCES) \
 	$(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
-	$(isl_schedule_SOURCES) isl_test.c isl_test_imath.c \
-	isl_test_int.c
+	$(isl_schedule_SOURCES) $(isl_schedule_cmp_SOURCES) isl_test.c \
+	isl_test_imath.c isl_test_int.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -642,9 +651,9 @@ TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/bound_test.sh.in \
 	$(srcdir)/codegen_test.sh.in $(srcdir)/flow_test.sh.in \
 	$(srcdir)/isl_config.h.in $(srcdir)/isl_srcdir.c.in \
-	$(srcdir)/pip_test.sh.in AUTHORS ChangeLog README compile \
-	config.guess config.sub depcomp install-sh ltmain.sh missing \
-	test-driver
+	$(srcdir)/pip_test.sh.in $(srcdir)/schedule_test.sh.in AUTHORS \
+	ChangeLog README compile config.guess config.sub depcomp \
+	install-sh ltmain.sh missing test-driver
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -1008,6 +1017,11 @@ isl_schedule_LDADD = libisl.la @MP_LIBS@
 isl_schedule_SOURCES = \
 	schedule.c
 
+isl_schedule_cmp_LDFLAGS = @MP_LDFLAGS@
+isl_schedule_cmp_LDADD = libisl.la @MP_LIBS@
+isl_schedule_cmp_SOURCES = \
+	schedule_cmp.c
+
 isl_flow_LDFLAGS = @MP_LDFLAGS@
 isl_flow_LDADD = libisl.la @MP_LIBS@
 isl_flow_SOURCES = \
@@ -1261,6 +1275,8 @@ pip_test.sh: $(top_builddir)/config.status $(srcdir)/pip_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 flow_test.sh: $(top_builddir)/config.status $(srcdir)/flow_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
+schedule_test.sh: $(top_builddir)/config.status $(srcdir)/schedule_test.sh.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 
 install-libLTLIBRARIES: $(lib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
@@ -1368,6 +1384,10 @@ isl_polytope_scan$(EXEEXT): $(isl_polytope_scan_OBJECTS) $(isl_polytope_scan_DEP
 isl_schedule$(EXEEXT): $(isl_schedule_OBJECTS) $(isl_schedule_DEPENDENCIES) $(EXTRA_isl_schedule_DEPENDENCIES) 
 	@rm -f isl_schedule$(EXEEXT)
 	$(AM_V_CCLD)$(isl_schedule_LINK) $(isl_schedule_OBJECTS) $(isl_schedule_LDADD) $(LIBS)
+
+isl_schedule_cmp$(EXEEXT): $(isl_schedule_cmp_OBJECTS) $(isl_schedule_cmp_DEPENDENCIES) $(EXTRA_isl_schedule_cmp_DEPENDENCIES) 
+	@rm -f isl_schedule_cmp$(EXEEXT)
+	$(AM_V_CCLD)$(isl_schedule_cmp_LINK) $(isl_schedule_cmp_OBJECTS) $(isl_schedule_cmp_LDADD) $(LIBS)
 
 isl_test$(EXEEXT): $(isl_test_OBJECTS) $(isl_test_DEPENDENCIES) $(EXTRA_isl_test_DEPENDENCIES) 
 	@rm -f isl_test$(EXEEXT)
@@ -1486,6 +1506,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polytope_scan.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/print.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/schedule.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/schedule_cmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@imath_wrap/$(DEPDIR)/gmp_compat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@imath_wrap/$(DEPDIR)/imath.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@imath_wrap/$(DEPDIR)/imrat.Plo@am__quote@
@@ -1893,6 +1914,13 @@ isl_test_int.log: isl_test_int$(EXEEXT)
 flow_test.sh.log: flow_test.sh
 	@p='flow_test.sh'; \
 	b='flow_test.sh'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+schedule_test.sh.log: schedule_test.sh
+	@p='schedule_test.sh'; \
+	b='schedule_test.sh'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
