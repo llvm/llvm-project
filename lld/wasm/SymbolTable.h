@@ -49,7 +49,7 @@ public:
   Symbol *find(StringRef Name);
   ObjFile *findComdat(StringRef Name) const;
 
-  Symbol *addDefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
+  Symbol *addDefined(bool IsFunction, StringRef Name, uint32_t Flags,
                      InputFile *F, InputChunk *Chunk = nullptr,
                      uint32_t Address = 0);
   Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
@@ -58,9 +58,10 @@ public:
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
   bool addComdat(StringRef Name, ObjFile *);
 
-  Symbol *addSyntheticGlobal(StringRef Name);
-  Symbol *addSyntheticFunction(StringRef Name, const WasmSignature *Type,
-                               uint32_t Flags);
+  DefinedGlobal *addSyntheticGlobal(StringRef Name, uint32_t Flags = 0);
+  DefinedFunction *addSyntheticFunction(StringRef Name,
+                                        const WasmSignature *Type,
+                                        uint32_t Flags = 0);
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 

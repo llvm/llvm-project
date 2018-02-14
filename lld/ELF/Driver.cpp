@@ -803,12 +803,17 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
         readDynamicList(*Buffer);
 
-    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol)) {
+    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
       Config->DynamicList.push_back(
           {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
-      Config->Undefined.push_back(Arg->getValue());
-    }
   }
+
+  // If --export-dynamic-symbol=foo is given and symbol foo is defined in
+  // an object file in an archive file, that object file should be pulled
+  // out and linked. (It doesn't have to behave like that from technical
+  // point of view, but this is needed for compatibility with GNU.)
+  for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
+    Config->Undefined.push_back(Arg->getValue());
 
   for (auto *Arg : Args.filtered(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
