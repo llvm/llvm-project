@@ -145,7 +145,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
   if (Sym)
     return {Sym, false};
-  Sym = (Symbol *)make<SymbolUnion>();
+  Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   Sym->IsUsedInRegularObj = false;
   Sym->PendingArchiveLoad = false;
   return {Sym, true};

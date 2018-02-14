@@ -183,8 +183,10 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // linked in the regular manner.
   if (C->isCodeView())
     DebugChunks.push_back(C);
-  else if (Config->GuardCF && Name == ".gfids$y")
+  else if (Config->GuardCF != GuardCFLevel::Off && Name == ".gfids$y")
     GuardFidChunks.push_back(C);
+  else if (Config->GuardCF != GuardCFLevel::Off && Name == ".gljmp$y")
+    GuardLJmpChunks.push_back(C);
   else if (Name == ".sxdata")
     SXDataChunks.push_back(C);
   else
