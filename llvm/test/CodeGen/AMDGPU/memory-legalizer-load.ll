@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX8 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX8 %s
-; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8,GFX89 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8,GFX89 %s
+; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX89 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-; GCN-LABEL: {{^}}system_unordered
+; GCN-LABEL: {{^}}system_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -19,9 +19,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}system_monotonic
+; GCN-LABEL: {{^}}system_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:   buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
@@ -33,12 +33,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}system_acquire
-; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
-; GCN-NEXT:  s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT:  buffer_wbinvl1_vol
-; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+; GCN-LABEL: {{^}}system_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @system_acquire(
     i32* %in, i32* %out) {
 entry:
@@ -47,12 +47,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}system_seq_cst
-; GCN:       s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT:  flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
-; GCN-NEXT:  s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT:  buffer_wbinvl1_vol
-; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+; GCN-LABEL: {{^}}system_seq_cst:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @system_seq_cst(
     i32* %in, i32* %out) {
 entry:
@@ -61,7 +61,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_unordered
+; GCN-LABEL: {{^}}singlethread_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -75,7 +75,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_monotonic
+; GCN-LABEL: {{^}}singlethread_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -89,7 +89,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_acquire
+; GCN-LABEL: {{^}}singlethread_acquire:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -103,7 +103,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_seq_cst
+; GCN-LABEL: {{^}}singlethread_seq_cst:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -117,7 +117,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_unordered
+; GCN-LABEL: {{^}}agent_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -131,9 +131,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_monotonic
+; GCN-LABEL: {{^}}agent_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:   buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
@@ -145,12 +145,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_acquire
-; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
-; GCN-NEXT:  s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT:  buffer_wbinvl1_vol
-; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+; GCN-LABEL: {{^}}agent_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GCN:        flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @agent_acquire(
     i32* %in, i32* %out) {
 entry:
@@ -159,12 +159,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_seq_cst
-; GCN:       s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT:  flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
-; GCN-NEXT:  s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT:  buffer_wbinvl1_vol
-; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+; GCN-LABEL: {{^}}agent_seq_cst:
+; GCN:        s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @agent_seq_cst(
     i32* %in, i32* %out) {
 entry:
@@ -173,9 +173,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_unordered
+; GCN-LABEL: {{^}}workgroup_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:   buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
@@ -187,9 +187,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_monotonic
+; GCN-LABEL: {{^}}workgroup_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:   buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
@@ -201,12 +201,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_acquire
-; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
-; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
-; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+; GCN-LABEL: {{^}}workgroup_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
+; GFX89:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
+; GFX89-NOT:  buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @workgroup_acquire(
     i32* %in, i32* %out) {
 entry:
@@ -215,12 +215,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_seq_cst
-; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
-; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
-; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+; GCN-LABEL: {{^}}workgroup_seq_cst:
+; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
+; GFX89:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
+; GFX89-NOT:  buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @workgroup_seq_cst(
     i32* %in, i32* %out) {
 entry:
@@ -229,7 +229,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_unordered
+; GCN-LABEL: {{^}}wavefront_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -243,7 +243,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_monotonic
+; GCN-LABEL: {{^}}wavefront_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -257,7 +257,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_acquire
+; GCN-LABEL: {{^}}wavefront_acquire:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -271,7 +271,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_seq_cst
+; GCN-LABEL: {{^}}wavefront_seq_cst:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
@@ -285,8 +285,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_private_0
-; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
+; GCN-LABEL: {{^}}nontemporal_private_0:
+; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
 define amdgpu_kernel void @nontemporal_private_0(
     i32 addrspace(5)* %in, i32* %out) {
 entry:
@@ -295,8 +295,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_private_1
-; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
+; GCN-LABEL: {{^}}nontemporal_private_1:
+; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
 define amdgpu_kernel void @nontemporal_private_1(
     i32 addrspace(5)* %in, i32* %out) {
 entry:
@@ -307,7 +307,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_global_0
+; GCN-LABEL: {{^}}nontemporal_global_0:
 ; GCN: s_load_dword s{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0x0{{$}}
 define amdgpu_kernel void @nontemporal_global_0(
     i32 addrspace(1)* %in, i32* %out) {
@@ -317,9 +317,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_global_1
-; GFX8: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
-; GFX9: global_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], off glc slc{{$}}
+; GCN-LABEL: {{^}}nontemporal_global_1:
+; GFX8:  flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
+; GFX9:  global_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], off glc slc{{$}}
 define amdgpu_kernel void @nontemporal_global_1(
     i32 addrspace(1)* %in, i32* %out) {
 entry:
@@ -330,7 +330,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_local_0
+; GCN-LABEL: {{^}}nontemporal_local_0:
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @nontemporal_local_0(
     i32 addrspace(3)* %in, i32* %out) {
@@ -340,7 +340,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_local_1
+; GCN-LABEL: {{^}}nontemporal_local_1:
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @nontemporal_local_1(
     i32 addrspace(3)* %in, i32* %out) {
@@ -352,8 +352,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_flat_0
-; GCN: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
+; GCN-LABEL: {{^}}nontemporal_flat_0:
+; GFX89: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
 define amdgpu_kernel void @nontemporal_flat_0(
     i32* %in, i32* %out) {
 entry:
@@ -362,8 +362,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}nontemporal_flat_1
-; GCN: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
+; GCN-LABEL: {{^}}nontemporal_flat_1:
+; GFX89: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
 define amdgpu_kernel void @nontemporal_flat_1(
     i32* %in, i32* %out) {
 entry:

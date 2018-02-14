@@ -102,9 +102,8 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
 /// Return a null pointer otherwise.
 static Constant *getLogBase2(Type *Ty, Constant *C) {
   const APInt *IVal;
-  if (const auto *CI = dyn_cast<ConstantInt>(C))
-    if (match(CI, m_APInt(IVal)) && IVal->isPowerOf2())
-      return ConstantInt::get(Ty, IVal->logBase2());
+  if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
+    return ConstantInt::get(Ty, IVal->logBase2());
 
   if (!Ty->isVectorTy())
     return nullptr;
@@ -341,28 +340,25 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
   }
 
-  // If one of the operands of the multiply is a cast from a boolean value, then
-  // we know the bool is either zero or one, so this is a 'masking' multiply.
-  //   X * Y (where Y is 0 or 1) -> X & (0-Y)
-  if (!I.getType()->isVectorTy()) {
-    // -2 is "-1 << 1" so it is all bits set except the low one.
-    APInt Negative2(I.getType()->getPrimitiveSizeInBits(), (uint64_t)-2, true);
+  // (bool X) * Y --> X ? Y : 0
+  // Y * (bool X) --> X ? Y : 0
+  Value *X;
+  if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(X, Op1, ConstantInt::get(I.getType(), 0));
+  if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(X, Op0, ConstantInt::get(I.getType(), 0));
 
-    Value *BoolCast = nullptr, *OtherOp = nullptr;
-    if (MaskedValueIsZero(Op0, Negative2, 0, &I)) {
-      BoolCast = Op0;
-      OtherOp = Op1;
-    } else if (MaskedValueIsZero(Op1, Negative2, 0, &I)) {
-      BoolCast = Op1;
-      OtherOp = Op0;
-    }
-
-    if (BoolCast) {
-      Value *V = Builder.CreateSub(Constant::getNullValue(I.getType()),
-                                    BoolCast);
-      return BinaryOperator::CreateAnd(V, OtherOp);
-    }
-  }
+  // (lshr X, 31) * Y --> (ashr X, 31) & Y
+  // Y * (lshr X, 31) --> (ashr X, 31) & Y
+  // TODO: We are not checking one-use because the elimination of the multiply
+  //       is better for analysis?
+  // TODO: Should we canonicalize to '(X < 0) ? Y : 0' instead? That would be
+  //       more similar to what we're doing above.
+  const APInt *C;
+  if (match(Op0, m_LShr(m_Value(X), m_APInt(C))) && *C == C->getBitWidth() - 1)
+    return BinaryOperator::CreateAnd(Builder.CreateAShr(X, *C), Op1);
+  if (match(Op1, m_LShr(m_Value(X), m_APInt(C))) && *C == C->getBitWidth() - 1)
+    return BinaryOperator::CreateAnd(Builder.CreateAShr(X, *C), Op0);
 
   // Check for (mul (sext x), y), see if we can merge this into an
   // integer mul followed by a sext.

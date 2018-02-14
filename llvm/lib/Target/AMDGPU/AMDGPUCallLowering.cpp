@@ -116,7 +116,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   if (Info->hasKernargSegmentPtr()) {
     unsigned InputPtrReg = Info->addKernargSegmentPtr(*TRI);
-    const LLT P2 = LLT::pointer(2, 64);
+    const LLT P2 = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
     unsigned VReg = MRI.createGenericVirtualRegister(P2);
     MRI.addLiveIn(InputPtrReg, VReg);
     MIRBuilder.getMBB().addLiveIn(InputPtrReg);

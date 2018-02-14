@@ -60,6 +60,10 @@ bool isPrintable(int UCS);
 ///   * 1 for each of the remaining characters.
 int columnWidthUTF8(StringRef Text);
 
+/// Fold input unicode character according the the Simple unicode case folding
+/// rules.
+int foldCharSimple(int C);
+
 } // namespace unicode
 } // namespace sys
 } // namespace llvm

@@ -27,9 +27,9 @@ define amdgpu_kernel void @v_test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 
 ; VI: s_sub_i32
 ; VI: s_sub_i32
-define amdgpu_kernel void @s_test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(2)* %in0, <2 x i16> addrspace(2)* %in1) #1 {
-  %a = load <2 x i16>, <2 x i16> addrspace(2)* %in0
-  %b = load <2 x i16>, <2 x i16> addrspace(2)* %in1
+define amdgpu_kernel void @s_test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %in0, <2 x i16> addrspace(4)* %in1) #1 {
+  %a = load <2 x i16>, <2 x i16> addrspace(4)* %in0
+  %b = load <2 x i16>, <2 x i16> addrspace(4)* %in1
   %add = sub <2 x i16> %a, %b
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out
   ret void
@@ -38,8 +38,8 @@ define amdgpu_kernel void @s_test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; GCN-LABEL: {{^}}s_test_sub_self_v2i16:
 ; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]]
 ; GCN: buffer_store_dword [[ZERO]]
-define amdgpu_kernel void @s_test_sub_self_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(2)* %in0) #1 {
-  %a = load <2 x i16>, <2 x i16> addrspace(2)* %in0
+define amdgpu_kernel void @s_test_sub_self_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %in0) #1 {
+  %a = load <2 x i16>, <2 x i16> addrspace(4)* %in0
   %add = sub <2 x i16> %a, %a
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out
   ret void

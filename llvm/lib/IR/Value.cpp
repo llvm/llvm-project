@@ -587,9 +587,9 @@ Value::stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
   if (!getType()->isPointerTy())
     return this;
 
-  assert(Offset.getBitWidth() == DL.getPointerSizeInBits(cast<PointerType>(
+  assert(Offset.getBitWidth() == DL.getIndexSizeInBits(cast<PointerType>(
                                      getType())->getAddressSpace()) &&
-         "The offset must have exactly as many bits as our pointer.");
+         "The offset bit width does not match the DL specification.");
 
   // Even though we don't look through PHI nodes, we could be called on an
   // instruction in an unreachable block, which may be on a cycle.

@@ -4,7 +4,7 @@
 ; fsub -0.0, (fsub -0.0, X) ==> X
 define float @fsub_-0_-0_x(float %a) {
 ; CHECK-LABEL: @fsub_-0_-0_x(
-; CHECK-NEXT:    ret float %a
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %t1 = fsub float -0.0, %a
   %ret = fsub float -0.0, %t1
@@ -14,7 +14,7 @@ define float @fsub_-0_-0_x(float %a) {
 ; fsub 0.0, (fsub -0.0, X) != X
 define float @fsub_0_-0_x(float %a) {
 ; CHECK-LABEL: @fsub_0_-0_x(
-; CHECK-NEXT:    [[T1:%.*]] = fsub float 0.000000e+00, %a
+; CHECK-NEXT:    [[T1:%.*]] = fsub float 0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = fsub float -0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
@@ -26,7 +26,7 @@ define float @fsub_0_-0_x(float %a) {
 ; fsub -0.0, (fsub 0.0, X) != X
 define float @fsub_-0_0_x(float %a) {
 ; CHECK-LABEL: @fsub_-0_0_x(
-; CHECK-NEXT:    [[T1:%.*]] = fsub float -0.000000e+00, %a
+; CHECK-NEXT:    [[T1:%.*]] = fsub float -0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = fsub float 0.000000e+00, [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
@@ -38,7 +38,7 @@ define float @fsub_-0_0_x(float %a) {
 ; fsub X, 0 ==> X
 define float @fsub_x_0(float %a) {
 ; CHECK-LABEL: @fsub_x_0(
-; CHECK-NEXT:    ret float %a
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = fsub float %a, 0.0
   ret float %ret
@@ -47,7 +47,7 @@ define float @fsub_x_0(float %a) {
 ; fadd X, -0 ==> X
 define float @fadd_x_n0(float %a) {
 ; CHECK-LABEL: @fadd_x_n0(
-; CHECK-NEXT:    ret float %a
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = fadd float %a, -0.0
   ret float %ret
@@ -56,16 +56,25 @@ define float @fadd_x_n0(float %a) {
 ; fmul X, 1.0 ==> X
 define double @fmul_X_1(double %a) {
 ; CHECK-LABEL: @fmul_X_1(
-; CHECK-NEXT:    ret double %a
+; CHECK-NEXT:    ret double [[A:%.*]]
 ;
-  %b = fmul double 1.000000e+00, %a
+  %b = fmul double 1.0, %a
   ret double %b
+}
+
+; PR2642
+define <4 x float> @fmul_X_1_vec(<4 x float> %x) {
+; CHECK-LABEL: @fmul_X_1_vec(
+; CHECK-NEXT:    ret <4 x float> [[X:%.*]]
+;
+  %m = fmul <4 x float> %x, <float 1.0, float 1.0, float 1.0, float 1.0>
+  ret <4 x float> %m
 }
 
 ; fdiv X, 1.0 ==> X
 define float @fdiv_x_1(float %a) {
 ; CHECK-LABEL: @fdiv_x_1(
-; CHECK-NEXT:    ret float %a
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = fdiv float %a, 1.0
   ret float %ret
@@ -84,7 +93,7 @@ declare float @sqrtf(float)
 
 define float @PR22688(float %x) {
 ; CHECK-LABEL: @PR22688(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @sqrtf(float %x)
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @sqrtf(float [[X:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call float @sqrtf(float [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call float @sqrtf(float [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @sqrtf(float [[TMP3]])
@@ -106,144 +115,176 @@ define float @PR22688(float %x) {
 declare float @llvm.fabs.f32(float)
 declare float @llvm.sqrt.f32(float)
 
-; CHECK-LABEL: @fabs_select_positive_constants(
-; CHECK: %select = select i1 %cmp, float 1.000000e+00, float 2.000000e+00
-; CHECK-NEXT: ret float %select
 define float @fabs_select_positive_constants(i32 %c) {
+; CHECK-LABEL: @fabs_select_positive_constants(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT:    ret float [[SELECT]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 1.0, float 2.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_constant_variable(
-; CHECK: %select = select i1 %cmp, float 1.000000e+00, float %x
-; CHECK-NEXT: %fabs = call float @llvm.fabs.f32(float %select)
 define float @fabs_select_constant_variable(i32 %c, float %x) {
+; CHECK-LABEL: @fabs_select_constant_variable(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 1.000000e+00, float [[X:%.*]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 1.0, float %x
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_neg0_pos0(
-; CHECK: %select = select i1 %cmp, float -0.000000e+00, float 0.000000e+00
-; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
-; CHECK-NEXT: ret float %fabs
 define float @fabs_select_neg0_pos0(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_neg0_pos0(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float -0.000000e+00, float 0.000000e+00
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float -0.0, float 0.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_neg0_neg1(
-; CHECK: %select = select i1 %cmp, float -0.000000e+00, float -1.000000e+00
-; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
 define float @fabs_select_neg0_neg1(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_neg0_neg1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float -0.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float -0.0, float -1.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_nan_nan(
-; CHECK: %select = select i1 %cmp, float 0x7FF8000000000000, float 0x7FF8000100000000
-; CHECK-NEXT: ret float %select
 define float @fabs_select_nan_nan(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_nan_nan(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0x7FF8000000000000, float 0x7FF8000100000000
+; CHECK-NEXT:    ret float [[SELECT]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 0x7FF8000000000000, float 0x7FF8000100000000
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_negnan_nan(
-; CHECK: %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000000000000
-; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
 define float @fabs_select_negnan_nan(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_negnan_nan(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0xFFF8000000000000, float 0x7FF8000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000000000000
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_negnan_negnan(
-; CHECK:  %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000100000000
-; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
 define float @fabs_select_negnan_negnan(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_negnan_negnan(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0xFFF8000000000000, float 0x7FF8000100000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000100000000
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_negnan_negzero(
-; CHECK: %select = select i1 %cmp, float 0xFFF8000000000000, float -0.000000e+00
-; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
 define float @fabs_select_negnan_negzero(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_negnan_negzero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0xFFF8000000000000, float -0.000000e+00
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 0xFFF8000000000000, float -0.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_select_negnan_zero(
-; CHECK: %select = select i1 %cmp, float 0xFFF8000000000000, float 0.000000e+00
-; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
 define float @fabs_select_negnan_zero(float addrspace(1)* %out, i32 %c) {
+; CHECK-LABEL: @fabs_select_negnan_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0xFFF8000000000000, float 0.000000e+00
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 0xFFF8000000000000, float 0.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_sqrt
-; CHECK: call float @llvm.sqrt.f32
-; CHECK: call float @llvm.fabs.f32
-define float @fabs_sqrt(float %a) {
 ; The fabs can't be eliminated because llvm.sqrt.f32 may return -0 or NaN with
 ; an arbitrary sign bit.
+define float @fabs_sqrt(float %a) {
+; CHECK-LABEL: @fabs_sqrt(
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %sqrt = call float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_sqrt_nnan
-; CHECK: call nnan float @llvm.sqrt.f32
-; CHECK: call float @llvm.fabs.f32
-define float @fabs_sqrt_nnan(float %a) {
 ; The fabs can't be eliminated because the nnan sqrt may still return -0.
+define float @fabs_sqrt_nnan(float %a) {
+; CHECK-LABEL: @fabs_sqrt_nnan(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %sqrt = call nnan float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_sqrt_nsz
-; CHECK: call nsz float @llvm.sqrt.f32
-; CHECK: call float @llvm.fabs.f32
-define float @fabs_sqrt_nsz(float %a) {
 ; The fabs can't be eliminated because the nsz sqrt may still return NaN.
+define float @fabs_sqrt_nsz(float %a) {
+; CHECK-LABEL: @fabs_sqrt_nsz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %sqrt = call nsz float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_sqrt_nnan_nsz
-; CHECK: call nnan nsz float @llvm.sqrt.f32
-; CHECK-NOT: call float @llvm.fabs.f32
-define float @fabs_sqrt_nnan_nsz(float %a) {
 ; The fabs can be eliminated because we're nsz and nnan.
+define float @fabs_sqrt_nnan_nsz(float %a) {
+; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
   %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
 
-; CHECK-LABEL: @fabs_sqrt_nnan_fabs
-; CHECK: call float @llvm.fabs.f32
-; CHECK: call nnan float @llvm.sqrt.f32
-; CHECK-NOT: call float @llvm.fabs.f32
-define float @fabs_sqrt_nnan_fabs(float %a) {
 ; The second fabs can be eliminated because the operand to sqrt cannot be -0.
+define float @fabs_sqrt_nnan_fabs(float %a) {
+; CHECK-LABEL: @fabs_sqrt_nnan_fabs(
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[B]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
   %b = call float @llvm.fabs.f32(float %a)
   %sqrt = call nnan float @llvm.sqrt.f32(float %b)
   %fabs = call float @llvm.fabs.f32(float %sqrt)

@@ -270,27 +270,17 @@ LLVM Address Space number is used throughout LLVM (for example, in LLVM IR).
   .. table:: Address Space Mapping
      :name: amdgpu-address-space-mapping-table
 
-     ================== ================= =================
+     ================== =================
      LLVM Address Space Memory Space
-     ------------------ -----------------------------------
-     \                  Current Default   Future Default
-     ================== ================= =================
-     0                  Generic (Flat)    Generic (Flat)
-     1                  Global            Global
-     2                  Constant          Region (GDS)
-     3                  Local (group/LDS) Local (group/LDS)
-     4                  Region (GDS)      Constant
-     5                  Private (Scratch) Private (Scratch)
-     6                  Constant 32-bit   Constant 32-bit
-     ================== ================= =================
-
-Current Default
-  This is the current default address space mapping used for all languages.
-  This will shortly be deprecated.
-
-Future Default
-  This will shortly be the only address space mapping for all languages using
-  AMDGPU backend.
+     ================== =================
+     0                  Generic (Flat)
+     1                  Global
+     2                  Region (GDS)
+     3                  Local (group/LDS)
+     4                  Constant
+     5                  Private (Scratch)
+     6                  Constant 32-bit
+     ================== =================
 
 .. _amdgpu-memory-scopes:
 

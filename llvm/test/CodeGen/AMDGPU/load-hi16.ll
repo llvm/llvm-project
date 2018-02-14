@@ -473,10 +473,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: flat_load_ushort
-define void @load_constant_hi_v2i16_reglo_vreg(i16 addrspace(2)* %in, i16 %reg) #0 {
+define void @load_constant_hi_v2i16_reglo_vreg(i16 addrspace(4)* %in, i16 %reg) #0 {
 entry:
-  %gep = getelementptr inbounds i16, i16 addrspace(2)* %in, i64 -2047
-  %load = load i16, i16 addrspace(2)* %gep
+  %gep = getelementptr inbounds i16, i16 addrspace(4)* %in, i64 -2047
+  %load = load i16, i16 addrspace(4)* %gep
   %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -492,10 +492,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: flat_load_ushort
-define void @load_constant_hi_v2f16_reglo_vreg(half addrspace(2)* %in, half %reg) #0 {
+define void @load_constant_hi_v2f16_reglo_vreg(half addrspace(4)* %in, half %reg) #0 {
 entry:
-  %gep = getelementptr inbounds half, half addrspace(2)* %in, i64 -2047
-  %load = load half, half addrspace(2)* %gep
+  %gep = getelementptr inbounds half, half addrspace(4)* %in, i64 -2047
+  %load = load half, half addrspace(4)* %gep
   %build0 = insertelement <2 x half> undef, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
@@ -625,11 +625,11 @@ entry:
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: v_mov_b32_e32 v0, v2
 ; GFX9-NEXT: s_setpc_b64
-define <2 x i16> @load_constant_v2i16_split(i16 addrspace(2)* %in) #0 {
+define <2 x i16> @load_constant_v2i16_split(i16 addrspace(4)* %in) #0 {
 entry:
-  %gep = getelementptr inbounds i16, i16 addrspace(2)* %in, i64 1
-  %load0 = load volatile i16, i16 addrspace(2)* %in
-  %load1 = load volatile i16, i16 addrspace(2)* %gep
+  %gep = getelementptr inbounds i16, i16 addrspace(4)* %in, i64 1
+  %load0 = load volatile i16, i16 addrspace(4)* %in
+  %load1 = load volatile i16, i16 addrspace(4)* %gep
   %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   ret <2 x i16> %build1
