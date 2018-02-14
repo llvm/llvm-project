@@ -107,9 +107,7 @@ CompilerType GetBuiltinTypeForPDBEncodingAndBitSize(
   case PDB_BuiltinType::None:
     return CompilerType();
   case PDB_BuiltinType::Void:
-    // FIXME: where is non-zero size of `void` from?
-    if (width == 0)
-      return clang_ast->GetBasicType(eBasicTypeVoid);
+    return clang_ast->GetBasicType(eBasicTypeVoid);
   case PDB_BuiltinType::Bool:
     return clang_ast->GetBasicType(eBasicTypeBool);
   case PDB_BuiltinType::Long:
