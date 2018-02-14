@@ -6,13 +6,13 @@
 # RUN: ld.lld %t %t1 -o %t2 --icf=all --no-print-icf-sections --print-icf-sections | FileCheck %s
 # RUN: ld.lld %t %t1 -o %t2 --icf=all --print-icf-sections --no-print-icf-sections | FileCheck -allow-empty -check-prefix=PRINT %s
 
-# CHECK: selected section '.text.f2' from file [[T:'.*']]
-# CHECK:   removing identical section '.text.f4' from file [[T]]
-# CHECK:   removing identical section '.text.f7' from file [[T1:'.*']]
-# CHECK: selected section '.text.f1' from file [[T]]
-# CHECK:   removing identical section '.text.f3' from file [[T]]
-# CHECK:   removing identical section '.text.f5' from file [[T]]
-# CHECK:   removing identical section '.text.f6' from file [[T1]]
+# CHECK: selected section {{.*}}:(.text.f2)
+# CHECK:   removing identical section {{.*}}:(.text.f4)
+# CHECK:   removing identical section {{.*}}:(.text.f7)
+# CHECK: selected section {{.*}}:(.text.f1)
+# CHECK:   removing identical section {{.*}}:(.text.f3)
+# CHECK:   removing identical section {{.*}}:(.text.f5)
+# CHECK:   removing identical section {{.*}}:(.text.f6)
 
 # PRINT-NOT: selected
 # PRINT-NOT: removing

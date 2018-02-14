@@ -66,14 +66,14 @@ bool applyDebugifyMetadata(Module &M) {
 
   // Visit each instruction.
   for (Function &F : M) {
-    if (F.isDeclaration())
+    if (F.isDeclaration() || !F.hasExactDefinition())
       continue;
 
     auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
     bool IsLocalToUnit = F.hasPrivateLinkage() || F.hasInternalLinkage();
     auto SP =
         DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine, SPType,
-                           IsLocalToUnit, F.hasExactDefinition(), NextLine,
+                           IsLocalToUnit, /*isDefinition=*/true, NextLine,
                            DINode::FlagZero, /*isOptimized=*/true);
     F.setSubprogram(SP);
     for (BasicBlock &BB : F) {

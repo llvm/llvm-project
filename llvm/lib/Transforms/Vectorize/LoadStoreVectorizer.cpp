@@ -323,7 +323,8 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 
   APInt Size(PtrBitWidth, DL.getTypeStoreSize(PtrATy));
 
-  APInt OffsetA(PtrBitWidth, 0), OffsetB(PtrBitWidth, 0);
+  unsigned IdxWidth = DL.getIndexSizeInBits(ASA);
+  APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 

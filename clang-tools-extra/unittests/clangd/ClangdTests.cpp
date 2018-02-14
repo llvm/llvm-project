@@ -280,15 +280,13 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   // thread.
   FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position{0, 0}, CCOpts).Tag,
-            FS.Tag);
+  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position(), CCOpts).Tag, FS.Tag);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position{0, 0}, CCOpts).Tag,
-            FS.Tag);
+  EXPECT_EQ(runCodeComplete(Server, FooCpp, Position(), CCOpts).Tag, FS.Tag);
 }
 
 // Only enable this test on Unix
@@ -451,16 +449,16 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   Server.addDocument(FooCpp, "int main() {}");
 
   EXPECT_EQ(Server.dumpAST(FooCpp), "<no-ast>");
-  EXPECT_ERROR(Server.findDefinitions(FooCpp, Position{0, 0}));
-  EXPECT_ERROR(Server.findDocumentHighlights(FooCpp, Position{0, 0}));
-  EXPECT_ERROR(Server.rename(FooCpp, Position{0, 0}, "new_name"));
+  EXPECT_ERROR(Server.findDefinitions(FooCpp, Position()));
+  EXPECT_ERROR(Server.findDocumentHighlights(FooCpp, Position()));
+  EXPECT_ERROR(Server.rename(FooCpp, Position(), "new_name"));
   // FIXME: codeComplete and signatureHelp should also return errors when they
   // can't parse the file.
-  EXPECT_THAT(runCodeComplete(Server, FooCpp, Position{0, 0},
-                              clangd::CodeCompleteOptions())
-                  .Value.items,
-              IsEmpty());
-  auto SigHelp = Server.signatureHelp(FooCpp, Position{0, 0});
+  EXPECT_THAT(
+      runCodeComplete(Server, FooCpp, Position(), clangd::CodeCompleteOptions())
+          .Value.items,
+      IsEmpty());
+  auto SigHelp = Server.signatureHelp(FooCpp, Position());
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
   EXPECT_THAT(SigHelp->Value.signatures, IsEmpty());
 }
@@ -642,7 +640,9 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
+      Position Pos;
+      Pos.line = LineDist(RandGen);
+      Pos.character = ColumnDist(RandGen);
       // FIXME(ibiryukov): Also test async completion requests.
       // Simply putting CodeCompletion into async requests now would make
       // tests slow, since there's no way to cancel previous completion
@@ -659,7 +659,10 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
+      Position Pos;
+      Pos.line = LineDist(RandGen);
+      Pos.character = ColumnDist(RandGen);
+
       ASSERT_TRUE(!!Server.findDefinitions(FilePaths[FileIndex], Pos));
     };
 

@@ -1581,7 +1581,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       // if size - offset meets the size threshold.
       if (!Arg->getType()->isPointerTy())
         continue;
-      APInt Offset(DL->getPointerSizeInBits(
+      APInt Offset(DL->getIndexSizeInBits(
                        cast<PointerType>(Arg->getType())->getAddressSpace()),
                    0);
       Value *Val = Arg->stripAndAccumulateInBoundsConstantOffsets(*DL, Offset);

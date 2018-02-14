@@ -89,7 +89,7 @@ static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
   if (unsigned BitWidth = Ty->getScalarSizeInBits())
     return BitWidth;
 
-  return DL.getPointerTypeSizeInBits(Ty);
+  return DL.getIndexTypeSizeInBits(Ty);
 }
 
 namespace {
@@ -1101,7 +1101,10 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
     unsigned SrcBitWidth;
     // Note that we handle pointer operands here because of inttoptr/ptrtoint
     // which fall through here.
-    SrcBitWidth = Q.DL.getTypeSizeInBits(SrcTy->getScalarType());
+    Type *ScalarTy = SrcTy->getScalarType();
+    SrcBitWidth = ScalarTy->isPointerTy() ?
+      Q.DL.getIndexTypeSizeInBits(ScalarTy) :
+      Q.DL.getTypeSizeInBits(ScalarTy);
 
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.zextOrTrunc(SrcBitWidth);
@@ -1555,9 +1558,13 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
   assert((V->getType()->isIntOrIntVectorTy(BitWidth) ||
           V->getType()->isPtrOrPtrVectorTy()) &&
          "Not integer or pointer type!");
-  assert(Q.DL.getTypeSizeInBits(V->getType()->getScalarType()) == BitWidth &&
-         "V and Known should have same BitWidth");
+
+  Type *ScalarTy = V->getType()->getScalarType();
+  unsigned ExpectedWidth = ScalarTy->isPointerTy() ?
+    Q.DL.getIndexTypeSizeInBits(ScalarTy) : Q.DL.getTypeSizeInBits(ScalarTy);
+  assert(ExpectedWidth == BitWidth && "V and Known should have same BitWidth");
   (void)BitWidth;
+  (void)ExpectedWidth;
 
   const APInt *C;
   if (match(V, m_APInt(C))) {
@@ -2194,7 +2201,11 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
   // in V, so for undef we have to conservatively return 1.  We don't have the
   // same behavior for poison though -- that's a FIXME today.
 
-  unsigned TyBits = Q.DL.getTypeSizeInBits(V->getType()->getScalarType());
+  Type *ScalarTy = V->getType()->getScalarType();
+  unsigned TyBits = ScalarTy->isPointerTy() ?
+    Q.DL.getIndexTypeSizeInBits(ScalarTy) :
+    Q.DL.getTypeSizeInBits(ScalarTy);
+
   unsigned Tmp, Tmp2;
   unsigned FirstAnswer = 1;
 
@@ -3091,7 +3102,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
 /// pointer plus a constant offset. Return the base and offset to the caller.
 Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
                                               const DataLayout &DL) {
-  unsigned BitWidth = DL.getPointerTypeSizeInBits(Ptr->getType());
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(Ptr->getType());
   APInt ByteOffset(BitWidth, 0);
 
   // We walk up the defs but use a visited set to handle unreachable code. In
@@ -3109,7 +3120,7 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
       // means when we construct GEPOffset, we need to use the size
       // of GEP's pointer type rather than the size of the original
       // pointer type.
-      APInt GEPOffset(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
+      APInt GEPOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
       if (!GEP->accumulateConstantOffset(DL, GEPOffset))
         break;
 

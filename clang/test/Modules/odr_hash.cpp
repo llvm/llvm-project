@@ -2924,6 +2924,21 @@ int I10 = F10();
 // expected-note@first.h:* {{but in 'FirstModule' found a different body}}
 }  // namespace FunctionDecl
 
+namespace DeclTemplateArguments {
+#if defined(FIRST)
+int foo() { return 1; }
+int bar() { return foo(); }
+#elif defined(SECOND)
+template <class T = int>
+int foo() { return 2; }
+int bar() { return foo<>(); }
+#else
+int num = bar();
+// expected-error@second.h:* {{'DeclTemplateArguments::bar' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+#endif
+}
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST

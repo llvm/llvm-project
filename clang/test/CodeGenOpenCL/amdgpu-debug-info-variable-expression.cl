@@ -54,7 +54,7 @@ kernel void kernel1(
     // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* {{.*}}, metadata ![[KERNELARG0]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
     global int *KernelArg0,
     // CHECK-DAG: ![[KERNELARG1:[0-9]+]] = !DILocalVariable(name: "KernelArg1", arg: {{[0-9]+}}, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-    // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(2)* addrspace(5)* {{.*}}, metadata ![[KERNELARG1]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
+    // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(4)* addrspace(5)* {{.*}}, metadata ![[KERNELARG1]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
     constant int *KernelArg1,
     // CHECK-DAG: ![[KERNELARG2:[0-9]+]] = !DILocalVariable(name: "KernelArg2", arg: {{[0-9]+}}, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
     // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(3)* addrspace(5)* {{.*}}, metadata ![[KERNELARG2]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
@@ -66,7 +66,7 @@ kernel void kernel1(
   // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR0]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
   global int *FuncVar0 = KernelArg0;
   // CHECK-DAG: ![[FUNCVAR1:[0-9]+]] = !DILocalVariable(name: "FuncVar1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(2)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR1]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
+  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(4)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR1]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
   constant int *FuncVar1 = KernelArg1;
   // CHECK-DAG: ![[FUNCVAR2:[0-9]+]] = !DILocalVariable(name: "FuncVar2", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
   // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(3)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR2]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
@@ -114,7 +114,7 @@ kernel void kernel1(
   // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR15]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
   global int *private FuncVar15 = KernelArg0;
   // CHECK-DAG: ![[FUNCVAR16:[0-9]+]] = !DILocalVariable(name: "FuncVar16", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(2)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR16]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
+  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(4)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR16]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}
   constant int *private FuncVar16 = KernelArg1;
   // CHECK-DAG: ![[FUNCVAR17:[0-9]+]] = !DILocalVariable(name: "FuncVar17", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
   // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(3)* addrspace(5)* {{.*}}, metadata ![[FUNCVAR17]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !{{[0-9]+}}

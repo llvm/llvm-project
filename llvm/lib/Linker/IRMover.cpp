@@ -682,6 +682,14 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
   return NewGV;
 }
 
+static StringRef getTypeNamePrefix(StringRef Name) {
+  size_t DotPos = Name.rfind('.');
+  return (DotPos == 0 || DotPos == StringRef::npos || Name.back() == '.' ||
+          !isdigit(static_cast<unsigned char>(Name[DotPos + 1])))
+             ? Name
+             : Name.substr(0, DotPos);
+}
+
 /// Loop over all of the linked values to compute type mappings.  For example,
 /// if we link "extern Foo *x" and "Foo *x = NULL", then we have two struct
 /// types 'Foo' but one got renamed when the module was loaded into the same
@@ -728,15 +736,12 @@ void IRLinker::computeTypeMapping() {
       continue;
     }
 
-    // Check to see if there is a dot in the name followed by a digit.
-    size_t DotPos = ST->getName().rfind('.');
-    if (DotPos == 0 || DotPos == StringRef::npos ||
-        ST->getName().back() == '.' ||
-        !isdigit(static_cast<unsigned char>(ST->getName()[DotPos + 1])))
+    auto STTypePrefix = getTypeNamePrefix(ST->getName());
+    if (STTypePrefix.size()== ST->getName().size())
       continue;
 
     // Check to see if the destination module has a struct with the prefix name.
-    StructType *DST = DstM.getTypeByName(ST->getName().substr(0, DotPos));
+    StructType *DST = DstM.getTypeByName(STTypePrefix);
     if (!DST)
       continue;
 

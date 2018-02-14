@@ -197,9 +197,15 @@ m_GMul(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_FADD> m_GFAdd(const LHS &L,
-                                                              const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_FADD>(L, R);
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_FADD, true>
+m_GFAdd(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_FADD, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_FMUL, true>
+m_GFMul(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_FMUL, true>(L, R);
 }
 
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc

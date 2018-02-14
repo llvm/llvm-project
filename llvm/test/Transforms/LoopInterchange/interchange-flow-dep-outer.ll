@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
 ;; We test the complete .ll for adjustment in outer loop header/latch and inner loop header/latch.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

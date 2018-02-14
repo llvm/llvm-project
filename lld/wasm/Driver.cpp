@@ -225,6 +225,11 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
   return Arg->getValue();
 }
 
+static Symbol* addUndefinedFunction(StringRef Name, const WasmSignature *Type) {
+  return Symtab->addUndefined(Name, Symbol::UndefinedFunctionKind, 0, nullptr,
+                              Type);
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   WasmOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -292,19 +297,22 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
-    static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
+    static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
+
+    // Add synthetic symbols before any others
+    WasmSym::CallCtors = Symtab->addSyntheticFunction(
+        "__wasm_call_ctors", &NullSignature, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    WasmSym::StackPointer = Symtab->addSyntheticGlobal("__stack_pointer");
+    WasmSym::HeapBase = Symtab->addSyntheticGlobal("__heap_base");
+    WasmSym::DsoHandle = Symtab->addSyntheticGlobal("__dso_handle");
+    WasmSym::DataEnd = Symtab->addSyntheticGlobal("__data_end");
+
     if (!Config->Entry.empty())
-      EntrySym = Symtab->addUndefinedFunction(Config->Entry, &Signature);
+      EntrySym = addUndefinedFunction(Config->Entry, &NullSignature);
 
     // Handle the `--undefined <sym>` options.
     for (auto* Arg : Args.filtered(OPT_undefined))
-      Symtab->addUndefinedFunction(Arg->getValue(), nullptr);
-    WasmSym::CallCtors = Symtab->addDefinedFunction(
-        "__wasm_call_ctors", &Signature, WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::StackPointer = Symtab->addDefinedGlobal("__stack_pointer");
-    WasmSym::HeapBase = Symtab->addDefinedGlobal("__heap_base");
-    WasmSym::DsoHandle = Symtab->addDefinedGlobal("__dso_handle");
-    WasmSym::DataEnd = Symtab->addDefinedGlobal("__data_end");
+      addUndefinedFunction(Arg->getValue(), nullptr);
   }
 
   createFiles(Args);

@@ -907,17 +907,12 @@ entry:
   ret i64 %and
 }
 
-; This should select blcic
-; TODO: the xor is being combined with the mask and creating an or that's breaking this. Looks like a missing one use check.
+; Make sure the mask doesn't break our matching of blcic
 define  i64 @masked_blcic(i64) {
 ; CHECK-LABEL: masked_blcic:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    orq $-65536, %rdi # imm = 0xFFFF0000
-; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    blcicl %eax, %eax
 ; CHECK-NEXT:    retq
   %2 = and i64 %0, 65535
   %3 = xor i64 %2, -1

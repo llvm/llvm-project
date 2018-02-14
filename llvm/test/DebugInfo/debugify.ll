@@ -30,6 +30,12 @@ define i32 @bar() {
   ret i32 0
 }
 
+; CHECK-LABEL: define weak_odr zeroext i1 @baz
+define weak_odr zeroext i1 @baz() {
+; CHECK-NOT: !dbg
+  ret i1 false
+}
+
 ; CHECK-DAG: !llvm.dbg.cu = !{![[CU:.*]]}
 ; CHECK-DAG: !llvm.debugify = !{![[NUM_INSTS:.*]], ![[NUM_VARS:.*]]}
 

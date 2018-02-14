@@ -2357,6 +2357,10 @@ public:
   SourceLocation getLocStart() const LLVM_READONLY;
   SourceLocation getLocEnd() const LLVM_READONLY;
 
+  /// Return true if this is a call to __assume() or __builtin_assume() with
+  /// a non-value-dependent constant parameter evaluating as false.
+  bool isBuiltinAssumeFalse(const ASTContext &Ctx) const;
+
   bool isCallToStdMove() const {
     const FunctionDecl* FD = getDirectCallee();
     return getNumArgs() == 1 && FD && FD->isInStdNamespace() &&

@@ -119,12 +119,6 @@ namespace {
     unsigned getNumNamedVarArgParams() const { return NumNamedVarArgParams; }
   };
 
-  enum StridedLoadKind {
-    Even = 0,
-    Odd,
-    NoPattern
-  };
-
 } // end anonymous namespace
 
 
@@ -548,66 +542,34 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          InVals, OutVals, Callee);
 }
 
-static bool getIndexedAddressParts(SDNode *Ptr, EVT VT,
-                                   SDValue &Base, SDValue &Offset,
-                                   bool &IsInc, SelectionDAG &DAG) {
-  if (Ptr->getOpcode() != ISD::ADD)
-    return false;
-
-  auto &HST = static_cast<const HexagonSubtarget&>(DAG.getSubtarget());
-
-  bool ValidHVX128BType =
-      HST.useHVX128BOps() && (VT == MVT::v32i32 ||
-                              VT == MVT::v64i16 || VT == MVT::v128i8);
-  bool ValidHVXType =
-      HST.useHVX64BOps() && (VT == MVT::v16i32 ||
-                             VT == MVT::v32i16 || VT == MVT::v64i8);
-
-  if (ValidHVX128BType || ValidHVXType || VT == MVT::i64 || VT == MVT::i32 ||
-      VT == MVT::i16 || VT == MVT::i8) {
-    IsInc = (Ptr->getOpcode() == ISD::ADD);
-    Base = Ptr->getOperand(0);
-    Offset = Ptr->getOperand(1);
-    // Ensure that Offset is a constant.
-    return isa<ConstantSDNode>(Offset);
-  }
-
-  return false;
-}
-
-/// getPostIndexedAddressParts - returns true by value, base pointer and
-/// offset pointer and addressing mode by reference if this node can be
-/// combined with a load / store to form a post-indexed load / store.
+/// Returns true by value, base pointer and offset pointer and addressing
+/// mode by reference if this node can be combined with a load / store to
+/// form a post-indexed load / store.
 bool HexagonTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
-                                                       SDValue &Base,
-                                                       SDValue &Offset,
-                                                       ISD::MemIndexedMode &AM,
-                                                       SelectionDAG &DAG) const
-{
-  EVT VT;
-
-  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
-    VT  = LD->getMemoryVT();
-  } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
-    VT  = ST->getMemoryVT();
-    if (ST->getValue().getValueType() == MVT::i64 && ST->isTruncatingStore())
-      return false;
-  } else {
+      SDValue &Base, SDValue &Offset, ISD::MemIndexedMode &AM,
+      SelectionDAG &DAG) const {
+  LSBaseSDNode *LSN = dyn_cast<LSBaseSDNode>(N);
+  if (!LSN)
     return false;
-  }
+  EVT VT = LSN->getMemoryVT();
+  if (!VT.isSimple())
+    return false;
+  bool IsLegalType = VT == MVT::i8 || VT == MVT::i16 ||
+                     VT == MVT::i32 || VT == MVT::i64 ||
+                     Subtarget.isHVXVectorType(VT.getSimpleVT());
+  if (!IsLegalType)
+    return false;
 
-  bool IsInc = false;
-  bool isLegal = getIndexedAddressParts(Op, VT, Base, Offset, IsInc, DAG);
-  if (isLegal) {
-    auto &HII = *Subtarget.getInstrInfo();
-    int32_t OffsetVal = cast<ConstantSDNode>(Offset.getNode())->getSExtValue();
-    if (HII.isValidAutoIncImm(VT, OffsetVal)) {
-      AM = IsInc ? ISD::POST_INC : ISD::POST_DEC;
-      return true;
-    }
-  }
+  if (Op->getOpcode() != ISD::ADD)
+    return false;
+  Base = Op->getOperand(0);
+  Offset = Op->getOperand(1);
+  if (!isa<ConstantSDNode>(Offset.getNode()))
+    return false;
+  AM = ISD::POST_INC;
 
-  return false;
+  int32_t V = cast<ConstantSDNode>(Offset.getNode())->getSExtValue();
+  return Subtarget.getInstrInfo()->isValidAutoIncImm(VT, V);
 }
 
 SDValue
@@ -973,8 +935,7 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   else if (isVTi1Type)
     T = DAG.getTargetConstantPool(CVal, ValTy, Align, Offset, TF);
   else
-    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset,
-                                  TF);
+    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset, TF);
 
   assert(cast<ConstantPoolSDNode>(T)->getTargetFlags() == TF &&
          "Inconsistent target flag encountered");
@@ -1811,17 +1772,13 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 }
 
 bool HexagonTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
-  EVT MTy1 = EVT::getEVT(Ty1);
-  EVT MTy2 = EVT::getEVT(Ty2);
-  if (!MTy1.isSimple() || !MTy2.isSimple())
-    return false;
-  return (MTy1.getSimpleVT() == MVT::i64) && (MTy2.getSimpleVT() == MVT::i32);
+  return isTruncateFree(EVT::getEVT(Ty1), EVT::getEVT(Ty2));
 }
 
 bool HexagonTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isSimple() || !VT2.isSimple())
     return false;
-  return (VT1.getSimpleVT() == MVT::i64) && (VT2.getSimpleVT() == MVT::i32);
+  return VT1.getSimpleVT() == MVT::i64 && VT2.getSimpleVT() == MVT::i32;
 }
 
 bool HexagonTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
@@ -2815,9 +2772,9 @@ bool HexagonTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
                                  SDValue Callee,
                                  CallingConv::ID CalleeCC,
-                                 bool isVarArg,
-                                 bool isCalleeStructRet,
-                                 bool isCallerStructRet,
+                                 bool IsVarArg,
+                                 bool IsCalleeStructRet,
+                                 bool IsCallerStructRet,
                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -2848,12 +2805,12 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
   }
 
   // Do not tail call optimize vararg calls.
-  if (isVarArg)
+  if (IsVarArg)
     return false;
 
   // Also avoid tail call optimization if either caller or callee uses struct
   // return semantics.
-  if (isCalleeStructRet || isCallerStructRet)
+  if (IsCalleeStructRet || IsCallerStructRet)
     return false;
 
   // In addition to the cases above, we also disable Tail Call Optimization if
@@ -2896,54 +2853,25 @@ bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
       unsigned AS, unsigned Align, bool *Fast) const {
   if (Fast)
     *Fast = false;
-
-  switch (VT.getSimpleVT().SimpleTy) {
-  default:
-    return false;
-  case MVT::v64i8:
-  case MVT::v128i8:
-  case MVT::v256i8:
-  case MVT::v32i16:
-  case MVT::v64i16:
-  case MVT::v128i16:
-  case MVT::v16i32:
-  case MVT::v32i32:
-  case MVT::v64i32:
-    return true;
-  }
-  return false;
+  return Subtarget.isHVXVectorType(VT.getSimpleVT());
 }
 
 std::pair<const TargetRegisterClass*, uint8_t>
 HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
       MVT VT) const {
-  const TargetRegisterClass *RRC = nullptr;
+  if (Subtarget.isHVXVectorType(VT, true)) {
+    unsigned BitWidth = VT.getSizeInBits();
+    unsigned VecWidth = Subtarget.getVectorLength() * 8;
 
-  uint8_t Cost = 1;
-  switch (VT.SimpleTy) {
-  default:
-    return TargetLowering::findRepresentativeClass(TRI, VT);
-  case MVT::v64i8:
-  case MVT::v32i16:
-  case MVT::v16i32:
-    RRC = &Hexagon::HvxVRRegClass;
-    break;
-  case MVT::v128i8:
-  case MVT::v64i16:
-  case MVT::v32i32:
-    if (Subtarget.hasV60TOps() && Subtarget.useHVXOps() &&
-        Subtarget.useHVX128BOps())
-      RRC = &Hexagon::HvxVRRegClass;
-    else
-      RRC = &Hexagon::HvxWRRegClass;
-    break;
-  case MVT::v256i8:
-  case MVT::v128i16:
-  case MVT::v64i32:
-    RRC = &Hexagon::HvxWRRegClass;
-    break;
+    if (VT.getVectorElementType() == MVT::i1)
+      return std::make_pair(&Hexagon::HvxQRRegClass, 1);
+    if (BitWidth == VecWidth)
+      return std::make_pair(&Hexagon::HvxVRRegClass, 1);
+    assert(BitWidth == 2 * VecWidth);
+    return std::make_pair(&Hexagon::HvxWRRegClass, 1);
   }
-  return std::make_pair(RRC, Cost);
+
+  return TargetLowering::findRepresentativeClass(TRI, VT);
 }
 
 Value *HexagonTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,

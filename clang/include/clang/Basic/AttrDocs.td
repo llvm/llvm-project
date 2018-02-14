@@ -3273,3 +3273,13 @@ For more information see
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
 }];
 }
+
+def ArtificialDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``artificial`` attribute is used with inline functions to treat the inline 
+function as a unit while debugging. For more information see GCC_ documentation.
+
+.. _GCC: https://gcc.gnu.org/onlinedocs/gcc-4.6.4/gcc/Function-Attributes.html
+  }];
+}

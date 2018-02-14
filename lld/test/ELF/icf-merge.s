@@ -10,10 +10,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/icf-merge3.s -o %t3
 # RUN: ld.lld %t %t3 -o %t3.out --icf=all --print-icf-sections | FileCheck --check-prefix=NOMERGE %s
 
-# CHECK: selected section '.text.f1' from file
-# CHECK:   removing identical section '.text.f2' from file
+# CHECK: selected section {{.*}}:(.text.f1)
+# CHECK:   removing identical section {{.*}}:(.text.f2)
 
-# NOMERGE-NOT: selected section '.text.f
+# NOMERGE-NOT: selected section {{.*}}:(.text.f)
 
 .section .rodata.str,"aMS",@progbits,1
 foo:

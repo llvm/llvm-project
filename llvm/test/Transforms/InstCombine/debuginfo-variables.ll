@@ -87,6 +87,13 @@ define void @test_ptrtoint(i64* %P) {
   ret void
 }
 
+define void @test_and(i64 %A) {
+; CHECK-LABEL: @test_and(
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !72, metadata !DIExpression(DW_OP_constu, 256, DW_OP_and, DW_OP_stack_value)), !dbg !73
+  %1 = and i64 %A, 256
+  ret void
+}
+
 ; CHECK: !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
 ; CHECK: !10 = !DILocalVariable(name: "2", scope: !5, file: !1, line: 2, type: !11)
 ; CHECK: !12 = !DILocation(line: 2, column: 1, scope: !5)
@@ -124,3 +131,6 @@ define void @test_ptrtoint(i64* %P) {
 
 ; CHECK: !67 = !DILocalVariable(name: "13", scope: !65, file: !1, line: 24, type: !11)
 ; CHECK: !68 = !DILocation(line: 24, column: 1, scope: !65)
+
+; CHECK: !72 = !DILocalVariable(name: "14", scope: !70, file: !1, line: 26, type: !11)
+; CHECK: !73 = !DILocation(line: 26, column: 1, scope: !70)

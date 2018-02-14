@@ -3,7 +3,7 @@
 
 declare void @llvm.memcpy.p3i8.p3i8.i32(i8 addrspace(3)* nocapture, i8 addrspace(3)* nocapture, i32, i1) nounwind
 declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(2)* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(4)* nocapture, i64, i1) nounwind
 
 
 ; FUNC-LABEL: {{^}}test_small_memcpy_i64_lds_to_lds_align1:
@@ -328,8 +328,8 @@ define amdgpu_kernel void @test_small_memcpy_i64_global_to_global_align16(i64 ad
 }
 
 ; Test shouldConvertConstantLoadToIntImm
-@hello.align4 = private unnamed_addr addrspace(2) constant [16 x i8] c"constant string\00", align 4
-@hello.align1 = private unnamed_addr addrspace(2) constant [16 x i8] c"constant string\00", align 1
+@hello.align4 = private unnamed_addr addrspace(4) constant [16 x i8] c"constant string\00", align 4
+@hello.align1 = private unnamed_addr addrspace(4) constant [16 x i8] c"constant string\00", align 1
 
 ; FUNC-LABEL: {{^}}test_memcpy_const_string_align4:
 ; SI: s_getpc_b64
@@ -341,8 +341,8 @@ define amdgpu_kernel void @test_small_memcpy_i64_global_to_global_align16(i64 ad
 ; SI-DAG: buffer_store_dwordx4
 ; SI-DAG: buffer_store_dwordx4
 define amdgpu_kernel void @test_memcpy_const_string_align4(i8 addrspace(1)* noalias %out) nounwind {
-  %str = bitcast [16 x i8] addrspace(2)* @hello.align4 to i8 addrspace(2)*
-  call void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* align 4 %out, i8 addrspace(2)* align 4 %str, i64 32, i1 false)
+  %str = bitcast [16 x i8] addrspace(4)* @hello.align4 to i8 addrspace(4)*
+  call void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* align 4 %out, i8 addrspace(4)* align 4 %str, i64 32, i1 false)
   ret void
 }
 
@@ -366,7 +366,7 @@ define amdgpu_kernel void @test_memcpy_const_string_align4(i8 addrspace(1)* noal
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
 define amdgpu_kernel void @test_memcpy_const_string_align1(i8 addrspace(1)* noalias %out) nounwind {
-  %str = bitcast [16 x i8] addrspace(2)* @hello.align1 to i8 addrspace(2)*
-  call void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* %out, i8 addrspace(2)* %str, i64 32, i1 false)
+  %str = bitcast [16 x i8] addrspace(4)* @hello.align1 to i8 addrspace(4)*
+  call void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* %out, i8 addrspace(4)* %str, i64 32, i1 false)
   ret void
 }

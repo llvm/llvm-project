@@ -340,10 +340,10 @@ latch:
 ; X86-NEXT:          movl    %edx, (%esp)
 ; X86-NEXT:          retl
 ;
-; X86-LABEL:         .section        .text.__llvm_retpoline_push,{{.*}},__llvm_retpoline_push,comdat
-; X86-NEXT:          .hidden __llvm_retpoline_push
-; X86-NEXT:          .weak   __llvm_retpoline_push
-; X86:       __llvm_retpoline_push:
+; X86-LABEL:         .section        .text.__llvm_retpoline_edi,{{.*}},__llvm_retpoline_edi,comdat
+; X86-NEXT:          .hidden __llvm_retpoline_edi
+; X86-NEXT:          .weak   __llvm_retpoline_edi
+; X86:       __llvm_retpoline_edi:
 ; X86-NEXT:  # {{.*}}                                # %entry
 ; X86-NEXT:          calll   [[CALL_TARGET:.*]]
 ; X86-NEXT:  [[CAPTURE_SPEC:.*]]:                    # Block address taken
@@ -355,11 +355,7 @@ latch:
 ; X86-NEXT:          .p2align        4, 0x90
 ; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
 ; X86-NEXT:                                          # %entry
-; X86-NEXT:          addl    $4, %esp
-; X86-NEXT:          pushl   4(%esp)
-; X86-NEXT:          pushl   4(%esp)
-; X86-NEXT:          popl    8(%esp)
-; X86-NEXT:          popl    (%esp)
+; X86-NEXT:          movl    %edi, (%esp)
 ; X86-NEXT:          retl
 
 

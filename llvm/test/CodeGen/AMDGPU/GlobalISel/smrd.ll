@@ -9,10 +9,10 @@
 ; GCN-LABEL: {{^}}smrd0:
 ; SICI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x1 ; encoding: [0x01
 ; VI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x4
-define amdgpu_kernel void @smrd0(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {
+define amdgpu_kernel void @smrd0(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) {
 entry:
-  %0 = getelementptr i32, i32 addrspace(2)* %ptr, i64 1
-  %1 = load i32, i32 addrspace(2)* %0
+  %0 = getelementptr i32, i32 addrspace(4)* %ptr, i64 1
+  %1 = load i32, i32 addrspace(4)* %0
   store i32 %1, i32 addrspace(1)* %out
   ret void
 }
@@ -21,10 +21,10 @@ entry:
 ; GCN-LABEL: {{^}}smrd1:
 ; SICI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xff ; encoding: [0xff,0x{{[0-9]+[137]}}
 ; VI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3fc
-define amdgpu_kernel void @smrd1(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {
+define amdgpu_kernel void @smrd1(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) {
 entry:
-  %0 = getelementptr i32, i32 addrspace(2)* %ptr, i64 255
-  %1 = load i32, i32 addrspace(2)* %0
+  %0 = getelementptr i32, i32 addrspace(4)* %ptr, i64 255
+  %1 = load i32, i32 addrspace(4)* %0
   store i32 %1, i32 addrspace(1)* %out
   ret void
 }
@@ -36,10 +36,10 @@ entry:
 ; CI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x100
 ; VI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x400
 ; GCN: s_endpgm
-define amdgpu_kernel void @smrd2(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {
+define amdgpu_kernel void @smrd2(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) {
 entry:
-  %0 = getelementptr i32, i32 addrspace(2)* %ptr, i64 256
-  %1 = load i32, i32 addrspace(2)* %0
+  %0 = getelementptr i32, i32 addrspace(4)* %ptr, i64 256
+  %1 = load i32, i32 addrspace(4)* %0
   store i32 %1, i32 addrspace(1)* %out
   ret void
 }
@@ -51,10 +51,10 @@ entry:
 ; XSI: s_load_dwordx2 s[{{[0-9]:[0-9]}}], s[{{[0-9]:[0-9]}}], 0xb ; encoding: [0x0b
 ; TODO: Add VI checks
 ; XGCN: s_endpgm
-define amdgpu_kernel void @smrd3(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {
+define amdgpu_kernel void @smrd3(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) {
 entry:
-  %0 = getelementptr i32, i32 addrspace(2)* %ptr, i64 4294967296 ; 2 ^ 32
-  %1 = load i32, i32 addrspace(2)* %0
+  %0 = getelementptr i32, i32 addrspace(4)* %ptr, i64 4294967296 ; 2 ^ 32
+  %1 = load i32, i32 addrspace(4)* %0
   store i32 %1, i32 addrspace(1)* %out
   ret void
 }
@@ -65,10 +65,10 @@ entry:
 ; SI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
 ; CI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3ffff
 ; VI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xffffc
-define amdgpu_kernel void @smrd4(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {
+define amdgpu_kernel void @smrd4(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) {
 entry:
-  %0 = getelementptr i32, i32 addrspace(2)* %ptr, i64 262143
-  %1 = load i32, i32 addrspace(2)* %0
+  %0 = getelementptr i32, i32 addrspace(4)* %ptr, i64 262143
+  %1 = load i32, i32 addrspace(4)* %0
   store i32 %1, i32 addrspace(1)* %out
   ret void
 }
@@ -79,10 +79,10 @@ entry:
 ; SIVI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
 ; CI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x40000
 ; GCN: s_endpgm
-define amdgpu_kernel void @smrd5(i32 addrspace(1)* %out, i32 addrspace(2)* %ptr) {
+define amdgpu_kernel void @smrd5(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) {
 entry:
-  %0 = getelementptr i32, i32 addrspace(2)* %ptr, i64 262144
-  %1 = load i32, i32 addrspace(2)* %0
+  %0 = getelementptr i32, i32 addrspace(4)* %ptr, i64 262144
+  %1 = load i32, i32 addrspace(4)* %0
   store i32 %1, i32 addrspace(1)* %out
   ret void
 }

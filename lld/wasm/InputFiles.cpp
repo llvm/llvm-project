@@ -252,7 +252,7 @@ void ObjFile::initializeSymbols() {
         S = createDefined(WasmSym, Symbol::Kind::DefinedFunctionKind, Function);
         break;
       } else {
-        Function->Discarded = true;
+        Function->Live = false;
         LLVM_FALLTHROUGH; // Exclude function, and add the symbol as undefined
       }
     }
@@ -267,7 +267,7 @@ void ObjFile::initializeSymbols() {
                           getGlobalValue(WasmSym));
         break;
       } else {
-        Segment->Discarded = true;
+        Segment->Live = false;
         LLVM_FALLTHROUGH; // Exclude global, and add the symbol as undefined
       }
     }

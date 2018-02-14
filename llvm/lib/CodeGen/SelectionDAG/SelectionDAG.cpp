@@ -4667,7 +4667,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::FSUB:
       case ISD::FDIV:
       case ISD::FREM:
-        return N1;     // fold op(undef, arg2) -> undef
+        return getUNDEF(VT);     // fold op(undef, arg2) -> undef
       case ISD::UDIV:
       case ISD::SDIV:
       case ISD::UREM:
@@ -4700,7 +4700,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SRA:
     case ISD::SRL:
     case ISD::SHL:
-      return N2;       // fold op(arg1, undef) -> undef
+      return getUNDEF(VT);       // fold op(arg1, undef) -> undef
     case ISD::FADD:
     case ISD::FSUB:
     case ISD::FMUL:
@@ -7977,8 +7977,8 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
   const GlobalValue *GV;
   int64_t GVOffset = 0;
   if (TLI->isGAPlusOffset(Ptr.getNode(), GV, GVOffset)) {
-    unsigned PtrWidth = getDataLayout().getPointerTypeSizeInBits(GV->getType());
-    KnownBits Known(PtrWidth);
+    unsigned IdxWidth = getDataLayout().getIndexTypeSizeInBits(GV->getType());
+    KnownBits Known(IdxWidth);
     llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     unsigned Align = AlignBits ? 1 << std::min(31U, AlignBits) : 0;

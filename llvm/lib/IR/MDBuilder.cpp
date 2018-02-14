@@ -233,7 +233,7 @@ MDNode *MDBuilder::createTBAAAccessTag(MDNode *BaseType, MDNode *AccessType,
 }
 
 MDNode *MDBuilder::createMutableTBAAAccessTag(MDNode *Tag) {
-  MDNode *BaseType = cast<MDNode>(Tag->getOperand(1));
+  MDNode *BaseType = cast<MDNode>(Tag->getOperand(0));
   MDNode *AccessType = cast<MDNode>(Tag->getOperand(1));
   Metadata *OffsetNode = Tag->getOperand(2);
   uint64_t Offset = mdconst::extract<ConstantInt>(OffsetNode)->getZExtValue();

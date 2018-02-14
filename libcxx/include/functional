@@ -2497,8 +2497,7 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
 
 // default searcher
 template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>
-_LIBCPP_TYPE_VIS
-class default_searcher {
+class _LIBCPP_TYPE_VIS default_searcher {
 public:
     _LIBCPP_INLINE_VISIBILITY
     default_searcher(_ForwardIterator __f, _ForwardIterator __l, 
