@@ -74,7 +74,6 @@ private:
 
   void createThunkFunction(Module &M, StringRef Name);
   void insertRegReturnAddrClobber(MachineBasicBlock &MBB, unsigned Reg);
-  void insert32BitPushReturnAddrClobber(MachineBasicBlock &MBB);
   void populateThunk(MachineFunction &MF, Optional<unsigned> Reg = None);
 };
 
@@ -223,31 +222,6 @@ void X86RetpolineThunks::insertRegReturnAddrClobber(MachineBasicBlock &MBB,
   const unsigned SPReg = Is64Bit ? X86::RSP : X86::ESP;
   addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(MovOpc)), SPReg, false, 0)
       .addReg(Reg);
-}
-
-void X86RetpolineThunks::insert32BitPushReturnAddrClobber(
-    MachineBasicBlock &MBB) {
-  // The instruction sequence we use to replace the return address without
-  // a scratch register is somewhat complicated:
-  //   # Clear capture_spec from return address.
-  //   addl $4, %esp
-  //   # Top of stack words are: Callee, RA. Exchange Callee and RA.
-  //   pushl 4(%esp)  # Push callee
-  //   pushl 4(%esp)  # Push RA
-  //   popl 8(%esp)   # Pop RA to final RA
-  //   popl (%esp)    # Pop callee to next top of stack
-  //   retl           # Ret to callee
-  BuildMI(&MBB, DebugLoc(), TII->get(X86::ADD32ri), X86::ESP)
-      .addReg(X86::ESP)
-      .addImm(4);
-  addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(X86::PUSH32rmm)), X86::ESP,
-               false, 4);
-  addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(X86::PUSH32rmm)), X86::ESP,
-               false, 4);
-  addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(X86::POP32rmm)), X86::ESP,
-               false, 8);
-  addRegOffset(BuildMI(&MBB, DebugLoc(), TII->get(X86::POP32rmm)), X86::ESP,
-               false, 0);
 }
 
 void X86RetpolineThunks::populateThunk(MachineFunction &MF,
