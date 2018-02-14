@@ -6,15 +6,15 @@
 
 ; GCN-LABEL: {{^}}main:
 ; GCN: image_sample_b v{{\[[0-9]:[0-9]\]}}, v{{\[[0-9]:[0-9]\]}}, s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf
-define amdgpu_ps void @main(<4 x i32> addrspace(2)* inreg %arg, <4 x i32> addrspace(2)* inreg %arg1, <8 x i32> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
+define amdgpu_ps void @main(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <8 x i32> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
-  %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %arg, i32 0
-  %tmp20 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp, !tbaa !0
+  %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
+  %tmp20 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
   %tmp21 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 16)
-  %tmp22 = getelementptr <8 x i32>, <8 x i32> addrspace(2)* %arg2, i32 0
-  %tmp23 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp22, !tbaa !0
-  %tmp24 = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %arg1, i32 0
-  %tmp25 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp24, !tbaa !0
+  %tmp22 = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %arg2, i32 0
+  %tmp23 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp22, !tbaa !0
+  %tmp24 = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg1, i32 0
+  %tmp25 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp24, !tbaa !0
   %i.i = extractelement <2 x i32> %arg5, i32 0
   %j.i = extractelement <2 x i32> %arg5, i32 1
   %i.f.i = bitcast i32 %i.i to float

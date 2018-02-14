@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
 
 @A10 = local_unnamed_addr global [3 x [3 x i32]] zeroinitializer, align 16
 

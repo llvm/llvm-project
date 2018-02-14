@@ -682,7 +682,7 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
   // 4. Emit GEPs to get the original pointers.
   // 5. Remove the original instructions.
   Type *IndexType = IntegerType::get(
-      Base->getContext(), DL.getPointerTypeSizeInBits(Start->getType()));
+      Base->getContext(), DL.getIndexTypeSizeInBits(Start->getType()));
 
   DenseMap<Value *, Value *> NewInsts;
   NewInsts[Base] = ConstantInt::getNullValue(IndexType);
@@ -790,7 +790,7 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
 static std::pair<Value *, Value *>
 getAsConstantIndexedAddress(Value *V, const DataLayout &DL) {
   Type *IndexType = IntegerType::get(V->getContext(),
-                                     DL.getPointerTypeSizeInBits(V->getType()));
+                                     DL.getIndexTypeSizeInBits(V->getType()));
 
   Constant *Index = ConstantInt::getNullValue(IndexType);
   while (true) {
@@ -4031,7 +4031,7 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   // Get scalar or pointer size.
   unsigned BitWidth = Ty->isIntOrIntVectorTy()
                           ? Ty->getScalarSizeInBits()
-                          : DL.getTypeSizeInBits(Ty->getScalarType());
+                          : DL.getIndexTypeSizeInBits(Ty->getScalarType());
 
   if (!BitWidth)
     return nullptr;

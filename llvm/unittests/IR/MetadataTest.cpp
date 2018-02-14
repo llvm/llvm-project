@@ -981,7 +981,7 @@ TEST_F(DIEnumeratorTest, get) {
   auto *N = DIEnumerator::get(Context, 7, false, "name");
   EXPECT_EQ(dwarf::DW_TAG_enumerator, N->getTag());
   EXPECT_EQ(7, N->getValue());
-  EXPECT_EQ(false, N->isUnsigned());
+  EXPECT_FALSE(N->isUnsigned());
   EXPECT_EQ("name", N->getName());
   EXPECT_EQ(N, DIEnumerator::get(Context, 7, false, "name"));
 

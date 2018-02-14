@@ -195,7 +195,15 @@ if("${LLDB_CODESIGN_IDENTITY}" STREQUAL "lldb_codesign")
 endif()
 option(LLDB_USE_ENTITLEMENTS "Use entitlements when codesigning (Defaults Off when using lldb_codesign identity, otherwise On)" ${LLDB_USE_ENTITLEMENTS_Default})
 
-if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
+if ("${LLDB_CODESIGN_IDENTITY}" STREQUAL "")
+  if (CMAKE_HOST_APPLE)
+    # If we haven't built a signed debugserver, copy the one from the system.
+    add_custom_target(debugserver
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEBUGSERVER_PATH} ${CMAKE_BINARY_DIR}/bin
+      VERBATIM
+      COMMENT "Copying the system debugserver to LLDB's binaries directory.")
+  endif()
+else()
   if(LLDB_USE_ENTITLEMENTS)
     set(entitlements_flags --entitlements ${entitlements_xml})
   endif()

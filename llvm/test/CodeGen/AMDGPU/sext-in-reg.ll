@@ -528,8 +528,8 @@ define amdgpu_kernel void @v_sext_in_reg_i32_to_i64_move_use(i64 addrspace(1)* %
 ; GFX89: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 15
 ; GFX89: s_sext_i32_i16 s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX89: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 15
-define amdgpu_kernel void @s_sext_in_reg_i1_i16(i16 addrspace(1)* %out, i32 addrspace(2)* %ptr) #0 {
-  %ld = load i32, i32 addrspace(2)* %ptr
+define amdgpu_kernel void @s_sext_in_reg_i1_i16(i16 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
+  %ld = load i32, i32 addrspace(4)* %ptr
   %in = trunc i32 %ld to i16
   %shl = shl i16 %in, 15
   %sext = ashr i16 %shl, 15
@@ -547,8 +547,8 @@ define amdgpu_kernel void @s_sext_in_reg_i1_i16(i16 addrspace(1)* %out, i32 addr
 ; GFX89: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 14
 ; GFX89: s_sext_i32_i16 s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX89: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 14
-define amdgpu_kernel void @s_sext_in_reg_i2_i16(i16 addrspace(1)* %out, i32 addrspace(2)* %ptr) #0 {
-  %ld = load i32, i32 addrspace(2)* %ptr
+define amdgpu_kernel void @s_sext_in_reg_i2_i16(i16 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
+  %ld = load i32, i32 addrspace(4)* %ptr
   %in = trunc i32 %ld to i16
   %shl = shl i16 %in, 14
   %sext = ashr i16 %shl, 14

@@ -542,20 +542,32 @@ TEST(ImportExpr, ImportCXXDependentScopeMemberExpr) {
 
 TEST(ImportType, ImportTypeAliasTemplate) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <int K>"
-             "struct dummy { static const int i = K; };"
-             "template <int K> using dummy2 = dummy<K>;"
-             "int declToImport() { return dummy2<3>::i; }",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     returnStmt(
-                       has(
-                         implicitCastExpr(
-                           has(
-                             declRefExpr())))))))));
+  testImport(
+      "template <int K>"
+      "struct dummy { static const int i = K; };"
+      "template <int K> using dummy2 = dummy<K>;"
+      "int declToImport() { return dummy2<3>::i; }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+      functionDecl(
+          hasBody(compoundStmt(
+              has(returnStmt(has(implicitCastExpr(has(declRefExpr()))))))),
+          unless(hasAncestor(translationUnitDecl(has(typeAliasDecl()))))));
+}
+
+const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateSpecializationDecl>
+    varTemplateSpecializationDecl;
+
+TEST(ImportDecl, ImportVarTemplate) {
+  MatchVerifier<Decl> Verifier;
+  testImport(
+      "template <typename T>"
+      "T pi = T(3.1415926535897932385L);"
+      "void declToImport() { pi<int>; }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+      functionDecl(
+          hasBody(has(declRefExpr(to(varTemplateSpecializationDecl())))),
+          unless(hasAncestor(translationUnitDecl(has(varDecl(
+              hasName("pi"), unless(varTemplateSpecializationDecl()))))))));
 }
 
 TEST(ImportType, ImportPackExpansion) {

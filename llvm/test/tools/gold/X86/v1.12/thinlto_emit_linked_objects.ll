@@ -3,8 +3,8 @@
 
 ; First generate bitcode with a module summary index for each file
 ; RUN: opt -module-summary %s -o %t1.o
-; RUN: opt -module-summary %p/Inputs/thinlto_emit_linked_objects.ll -o %t2.o
-; RUN: opt %s -o %t3.o
+; RUN: opt -module-summary %p/Inputs/thinlto_emit_linked_objects2.ll -o %t2.o
+; RUN: opt %p/Inputs/thinlto_emit_linked_objects3.ll -o %t3.o
 
 ; Next do the ThinLink step, specifying thinlto-index-only so that the gold
 ; plugin exits after generating individual indexes. The objects the linker

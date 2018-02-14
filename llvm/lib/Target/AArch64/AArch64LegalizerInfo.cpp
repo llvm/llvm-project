@@ -240,7 +240,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
         .legalForCartesianProduct({s8, s16, s32, s64}, {p0});
   }
-  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG);
 
   if (ST.hasLSE()) {
     for (auto Ty : {s8, s16, s32, s64}) {

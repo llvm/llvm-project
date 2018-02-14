@@ -124,7 +124,8 @@ private:
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable(OutputSection *RData);
-  void createGFIDTable(OutputSection *RData);
+  void createGuardCFTables(OutputSection *RData);
+  void createGLJmpTable(OutputSection *RData);
   void markSymbolsForRVATable(ObjFile *File,
                               ArrayRef<SectionChunk *> SymIdxChunks,
                               SymbolRVASet &TableSymbols);
@@ -440,9 +441,9 @@ void Writer::createMiscChunks() {
   if (Config->Machine == I386)
     createSEHTable(RData);
 
-  // Create the guard function id table if requested.
-  if (Config->GuardCF)
-    createGFIDTable(RData);
+  // Create /guard:cf tables if requested.
+  if (Config->GuardCF != GuardCFLevel::Off)
+    createGuardCFTables(RData);
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -734,7 +735,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NX_COMPAT;
   if (!Config->AllowIsolation)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION;
-  if (Config->GuardCF)
+  if (Config->GuardCF != GuardCFLevel::Off)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_GUARD_CF;
   if (Config->Machine == I386 && !SEHTable &&
       !Symtab->findUnderscore("_load_config_used"))
@@ -896,17 +897,21 @@ static void markSymbolsWithRelocations(ObjFile *File,
 // Create the guard function id table. This is a table of RVAs of all
 // address-taken functions. It is sorted and uniqued, just like the safe SEH
 // table.
-void Writer::createGFIDTable(OutputSection *RData) {
+void Writer::createGuardCFTables(OutputSection *RData) {
   SymbolRVASet AddressTakenSyms;
+  SymbolRVASet LongJmpTargets;
   for (ObjFile *File : ObjFile::Instances) {
-    // If the object was compiled with /guard:cf, the address taken symbols are
-    // in the .gfids$y sections. Otherwise, we approximate the set of address
-    // taken symbols by checking which symbols were used by relocations in live
-    // sections.
-    if (File->hasGuardCF())
+    // If the object was compiled with /guard:cf, the address taken symbols
+    // are in .gfids$y sections, and the longjmp targets are in .gljmp$y
+    // sections. If the object was not compiled with /guard:cf, we assume there
+    // were no setjmp targets, and that all code symbols with relocations are
+    // possibly address-taken.
+    if (File->hasGuardCF()) {
       markSymbolsForRVATable(File, File->getGuardFidChunks(), AddressTakenSyms);
-    else
+      markSymbolsForRVATable(File, File->getGuardLJmpChunks(), LongJmpTargets);
+    } else {
       markSymbolsWithRelocations(File, AddressTakenSyms);
+    }
   }
 
   // Mark the image entry as address-taken.
@@ -916,10 +921,17 @@ void Writer::createGFIDTable(OutputSection *RData) {
   maybeAddRVATable(RData, std::move(AddressTakenSyms), "__guard_fids_table",
                    "__guard_fids_count");
 
+  // Add the longjmp target table unless the user told us not to.
+  if (Config->GuardCF == GuardCFLevel::Full)
+    maybeAddRVATable(RData, std::move(LongJmpTargets), "__guard_longjmp_table",
+                     "__guard_longjmp_count");
+
   // Set __guard_flags, which will be used in the load config to indicate that
   // /guard:cf was enabled.
   uint32_t GuardFlags = uint32_t(coff_guard_flags::CFInstrumented) |
                         uint32_t(coff_guard_flags::HasFidTable);
+  if (Config->GuardCF == GuardCFLevel::Full)
+    GuardFlags |= uint32_t(coff_guard_flags::HasLongJmpTable);
   Symbol *FlagSym = Symtab->findUnderscore("__guard_flags");
   cast<DefinedAbsolute>(FlagSym)->setVA(GuardFlags);
 }

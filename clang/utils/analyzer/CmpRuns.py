@@ -26,6 +26,7 @@ Usage:
 
 """
 
+import sys
 import os
 import plistlib
 from math import log
@@ -264,7 +265,8 @@ def compareResults(A, B, opts):
     return res
 
 
-def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True):
+def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
+                             Stdout=sys.stdout):
     # Load the run results.
     resultsA = loadResults(dirA, opts, opts.rootA, deleteEmpty)
     resultsB = loadResults(dirB, opts, opts.rootB, deleteEmpty)
@@ -282,30 +284,30 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True):
     for res in diff:
         a, b = res
         if a is None:
-            print "ADDED: %r" % b.getReadableName()
+            Stdout.write("ADDED: %r\n" % b.getReadableName())
             foundDiffs += 1
             totalAdded += 1
             if auxLog:
-                print >>auxLog, ("('ADDED', %r, %r)" % (b.getReadableName(),
-                                                        b.getReport()))
+                auxLog.write("('ADDED', %r, %r)\n" % (b.getReadableName(),
+                                                      b.getReport()))
         elif b is None:
-            print "REMOVED: %r" % a.getReadableName()
+            Stdout.write("REMOVED: %r\n" % a.getReadableName())
             foundDiffs += 1
             totalRemoved += 1
             if auxLog:
-                print >>auxLog, ("('REMOVED', %r, %r)" % (a.getReadableName(),
-                                                          a.getReport()))
+                auxLog.write("('REMOVED', %r, %r)\n" % (a.getReadableName(),
+                                                        a.getReport()))
         else:
             pass
 
     TotalReports = len(resultsB.diagnostics)
-    print "TOTAL REPORTS: %r" % TotalReports
-    print "TOTAL DIFFERENCES: %r" % foundDiffs
-    print "TOTAL ADDED: %r" % totalAdded
-    print "TOTAL REMOVED: %r" % totalRemoved
+    Stdout.write("TOTAL REPORTS: %r\n" % TotalReports)
+    Stdout.write("TOTAL ADDED: %r\n" % totalAdded)
+    Stdout.write("TOTAL REMOVED: %r\n" % totalRemoved)
     if auxLog:
-        print >>auxLog, "('TOTAL NEW REPORTS', %r)" % TotalReports
-        print >>auxLog, "('TOTAL DIFFERENCES', %r)" % foundDiffs
+        auxLog.write("('TOTAL NEW REPORTS', %r)\n" % TotalReports)
+        auxLog.write("('TOTAL DIFFERENCES', %r)\n" % foundDiffs)
+        auxLog.close()
 
     return foundDiffs, len(resultsA.diagnostics), len(resultsB.diagnostics)
 

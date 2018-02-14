@@ -1908,12 +1908,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
     if ((Cond == ISD::SETLT || Cond == ISD::SETULT) && C1 == MinVal)
       return DAG.getBoolConstant(false, dl, VT, OpVT); // X < MIN --> false
-    if ((Cond == ISD::SETGE || Cond == ISD::SETUGE) && C1 == MinVal)
-      return DAG.getBoolConstant(true, dl, VT, OpVT);  // X >= MIN --> true
     if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MaxVal)
       return DAG.getBoolConstant(false, dl, VT, OpVT); // X > MAX --> false
-    if ((Cond == ISD::SETLE || Cond == ISD::SETULE) && C1 == MaxVal)
-      return DAG.getBoolConstant(true, dl, VT, OpVT);  // X <= MAX --> true
 
     // Canonicalize setgt X, Min --> setne X, Min
     if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MinVal)

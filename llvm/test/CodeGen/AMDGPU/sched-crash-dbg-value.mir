@@ -15,11 +15,11 @@
   bb:
     %0 = getelementptr i32, i32 addrspace(1)* %arg1, i64 0, !amdgpu.uniform !3, !amdgpu.noclobber !3
     %tmp5 = alloca %struct.wombat, align 16, addrspace(5)
-    %1 = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-    %2 = bitcast i8 addrspace(2)* %1 to i32 addrspace(2)*
-    %3 = getelementptr inbounds i32, i32 addrspace(2)* %2, i64 1
-    %4 = bitcast i32 addrspace(2)* %3 to <2 x i32> addrspace(2)*, !amdgpu.uniform !3, !amdgpu.noclobber !3
-    %5 = load <2 x i32>, <2 x i32> addrspace(2)* %4, align 4, !invariant.load !3
+    %1 = call noalias nonnull dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+    %2 = bitcast i8 addrspace(4)* %1 to i32 addrspace(4)*
+    %3 = getelementptr inbounds i32, i32 addrspace(4)* %2, i64 1
+    %4 = bitcast i32 addrspace(4)* %3 to <2 x i32> addrspace(4)*, !amdgpu.uniform !3, !amdgpu.noclobber !3
+    %5 = load <2 x i32>, <2 x i32> addrspace(4)* %4, align 4, !invariant.load !3
     %6 = extractelement <2 x i32> %5, i32 0
     %7 = extractelement <2 x i32> %5, i32 1
     %8 = lshr i32 %6, 16
@@ -32,7 +32,7 @@
     %15 = add i32 %13, %14
     %16 = add i32 %15, %11
     %17 = getelementptr inbounds [256 x [16 x i8]], [256 x [16 x i8]] addrspace(3)* @sched_dbg_value_crash.tmp6, i32 0, i32 %16
-    %tmp7 = load i64, i64 addrspace(2)* null, align 536870912
+    %tmp7 = load i64, i64 addrspace(4)* null, align 536870912
     %tmp8 = tail call i32 @llvm.amdgcn.workitem.id.x() #3, !range !4
     %tmp9 = zext i32 %tmp8 to i64
     %tmp10 = add i64 %tmp7, %tmp9
@@ -141,7 +141,7 @@
   declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
   declare i32 @llvm.amdgcn.workitem.id.x() #1
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-  declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
+  declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
   declare i32 @llvm.amdgcn.workitem.id.y() #1
   declare i32 @llvm.amdgcn.workitem.id.z() #1
   declare void @llvm.memcpy.p1i8.p5i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(5)* nocapture readonly, i64, i32, i1) #0
@@ -199,9 +199,9 @@ body:             |
     %2:vgpr_32 = COPY $vgpr2
     %1:vgpr_32 = COPY $vgpr1
     %0:vgpr_32 = COPY $vgpr0
-    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %6:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 8, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 16, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %6:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 8, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 16, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 24, 0
     %9:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4, 32, 0
     %10:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 4, 0

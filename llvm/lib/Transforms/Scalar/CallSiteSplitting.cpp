@@ -269,7 +269,6 @@ static void splitCallSite(
   // here.
   ValueToValueMapTy ValueToValueMaps[2];
   for (unsigned i = 0; i < Preds.size(); i++) {
-    new (&ValueToValueMaps[i]) ValueToValueMapTy;
     BasicBlock *PredBB = Preds[i].first;
     BasicBlock *SplitBlock = DuplicateInstructionsInSplitBetween(
         TailBB, PredBB, &*std::next(Instr->getIterator()), ValueToValueMaps[i]);
@@ -330,9 +329,6 @@ static void splitCallSite(
     if (CurrentI == OriginalBegin)
       break;
   }
-
-  ValueToValueMaps[0].clear();
-  ValueToValueMaps[1].clear();
 
   NumCallSiteSplit++;
 }

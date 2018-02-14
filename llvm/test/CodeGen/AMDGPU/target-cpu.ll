@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
-declare i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #1
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
@@ -15,10 +15,10 @@ declare void @llvm.amdgcn.s.dcache.wb() #0
 ; CHECK: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSETREG]]
 ; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
 define amdgpu_kernel void @target_none() #0 {
-  %kernargs = call i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(2)* %kernargs, i64 1024
-  %kernargs.gep.cast = bitcast i8 addrspace(2)* %kernargs.gep to i32 addrspace(1)* addrspace(2)*
-  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %kernargs.gep.cast
+  %kernargs = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(4)* %kernargs, i64 1024
+  %kernargs.gep.cast = bitcast i8 addrspace(4)* %kernargs.gep to i32 addrspace(1)* addrspace(4)*
+  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %kernargs.gep.cast
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %ptr, i64 %id.ext
@@ -31,10 +31,10 @@ define amdgpu_kernel void @target_none() #0 {
 ; CHECK: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSETREG]]
 ; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
 define amdgpu_kernel void @target_tahiti() #1 {
-  %kernargs = call i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(2)* %kernargs, i64 1024
-  %kernargs.gep.cast = bitcast i8 addrspace(2)* %kernargs.gep to i32 addrspace(1)* addrspace(2)*
-  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %kernargs.gep.cast
+  %kernargs = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(4)* %kernargs, i64 1024
+  %kernargs.gep.cast = bitcast i8 addrspace(4)* %kernargs.gep to i32 addrspace(1)* addrspace(4)*
+  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %kernargs.gep.cast
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %ptr, i64 %id.ext
@@ -47,10 +47,10 @@ define amdgpu_kernel void @target_tahiti() #1 {
 ; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
 ; CHECK: s_dcache_inv_vol
 define amdgpu_kernel void @target_bonaire() #3 {
-  %kernargs = call i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(2)* %kernargs, i64 1024
-  %kernargs.gep.cast = bitcast i8 addrspace(2)* %kernargs.gep to i32 addrspace(1)* addrspace(2)*
-  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %kernargs.gep.cast
+  %kernargs = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(4)* %kernargs, i64 1024
+  %kernargs.gep.cast = bitcast i8 addrspace(4)* %kernargs.gep to i32 addrspace(1)* addrspace(4)*
+  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %kernargs.gep.cast
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %ptr, i64 %id.ext
@@ -64,10 +64,10 @@ define amdgpu_kernel void @target_bonaire() #3 {
 ; CHECK: flat_store_dword
 ; CHECK: s_dcache_wb{{$}}
 define amdgpu_kernel void @target_fiji() #4 {
-  %kernargs = call i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(2)* %kernargs, i64 1024
-  %kernargs.gep.cast = bitcast i8 addrspace(2)* %kernargs.gep to i32 addrspace(1)* addrspace(2)*
-  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %kernargs.gep.cast
+  %kernargs = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+  %kernargs.gep = getelementptr inbounds i8, i8 addrspace(4)* %kernargs, i64 1024
+  %kernargs.gep.cast = bitcast i8 addrspace(4)* %kernargs.gep to i32 addrspace(1)* addrspace(4)*
+  %ptr = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %kernargs.gep.cast
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %ptr, i64 %id.ext

@@ -48,12 +48,12 @@
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0
 
 
-; HSAOPT: [[DISPATCH_PTR:%[0-9]+]] = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-; HSAOPT: [[CAST_DISPATCH_PTR:%[0-9]+]] = bitcast i8 addrspace(2)* [[DISPATCH_PTR]] to i32 addrspace(2)*
-; HSAOPT: [[GEP0:%[0-9]+]] = getelementptr inbounds i32, i32 addrspace(2)* [[CAST_DISPATCH_PTR]], i64 1
-; HSAOPT: [[LDXY:%[0-9]+]] = load i32, i32 addrspace(2)* [[GEP0]], align 4, !invariant.load !0
-; HSAOPT: [[GEP1:%[0-9]+]] = getelementptr inbounds i32, i32 addrspace(2)* [[CAST_DISPATCH_PTR]], i64 2
-; HSAOPT: [[LDZU:%[0-9]+]] = load i32, i32 addrspace(2)* [[GEP1]], align 4, !range !1, !invariant.load !0
+; HSAOPT: [[DISPATCH_PTR:%[0-9]+]] = call noalias nonnull dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+; HSAOPT: [[CAST_DISPATCH_PTR:%[0-9]+]] = bitcast i8 addrspace(4)* [[DISPATCH_PTR]] to i32 addrspace(4)*
+; HSAOPT: [[GEP0:%[0-9]+]] = getelementptr inbounds i32, i32 addrspace(4)* [[CAST_DISPATCH_PTR]], i64 1
+; HSAOPT: [[LDXY:%[0-9]+]] = load i32, i32 addrspace(4)* [[GEP0]], align 4, !invariant.load !0
+; HSAOPT: [[GEP1:%[0-9]+]] = getelementptr inbounds i32, i32 addrspace(4)* [[CAST_DISPATCH_PTR]], i64 2
+; HSAOPT: [[LDZU:%[0-9]+]] = load i32, i32 addrspace(4)* [[GEP1]], align 4, !range !1, !invariant.load !0
 ; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
 
 ; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.x(), !range !2

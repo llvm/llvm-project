@@ -1127,11 +1127,11 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   if (CheckType && PtrA->getType() != PtrB->getType())
     return false;
 
-  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
+  unsigned IdxWidth = DL.getIndexSizeInBits(ASA);
   Type *Ty = cast<PointerType>(PtrA->getType())->getElementType();
-  APInt Size(PtrBitWidth, DL.getTypeStoreSize(Ty));
+  APInt Size(IdxWidth, DL.getTypeStoreSize(Ty));
 
-  APInt OffsetA(PtrBitWidth, 0), OffsetB(PtrBitWidth, 0);
+  APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 

@@ -670,7 +670,7 @@ protected:
     void set_rdbuf(basic_streambuf<char_type, traits_type>* __sb);
 private:
     basic_ostream<char_type, traits_type>* __tie_;
-     mutable int_type __fill_;
+    mutable int_type __fill_;
 };
 
 template <class _CharT, class _Traits>

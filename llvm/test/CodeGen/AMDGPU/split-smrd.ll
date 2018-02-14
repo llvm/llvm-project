@@ -6,7 +6,7 @@
 
 ; GCN-LABEL: {{^}}split_smrd_add_worklist:
 ; GCN: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
-define amdgpu_ps void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(2)* byval %arg) #0 {
+define amdgpu_ps void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(4)* byval %arg) #0 {
 bb:
   %tmp = call float @llvm.SI.load.const.v4i32(<4 x i32> undef, i32 96)
   %tmp1 = bitcast float %tmp to i32
@@ -19,8 +19,8 @@ bb3:                                              ; preds = %bb
   %tmp4 = bitcast float %tmp to i32
   %tmp5 = add i32 %tmp4, 4
   %tmp6 = sext i32 %tmp5 to i64
-  %tmp7 = getelementptr [34 x <8 x i32>], [34 x <8 x i32>] addrspace(2)* %arg, i64 0, i64 %tmp6
-  %tmp8 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp7, align 32, !tbaa !0
+  %tmp7 = getelementptr [34 x <8 x i32>], [34 x <8 x i32>] addrspace(4)* %arg, i64 0, i64 %tmp6
+  %tmp8 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp7, align 32, !tbaa !0
   %tmp9 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> <float bitcast (i32 1061158912 to float), float bitcast (i32 1048576000 to float)>, <8 x i32> %tmp8, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp10 = extractelement <4 x float> %tmp9, i32 0
   %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)

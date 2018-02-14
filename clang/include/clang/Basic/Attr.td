@@ -111,6 +111,9 @@ def SharedVar : SubsetSubject<Var,
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
+def InlineFunction : SubsetSubject<Function,
+                             [{S->isInlineSpecified()}], "inline functions">;
+
 // FIXME: this hack is needed because DeclNodes.td defines the base Decl node
 // type to be a class, not a definition. This makes it impossible to create an
 // attribute subject which accepts a Decl. Normally, this is not a problem,
@@ -586,6 +589,12 @@ def AlwaysInline : InheritableAttr {
   let Spellings = [GCC<"always_inline">, Keyword<"__forceinline">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
+}
+
+def Artificial : InheritableAttr {
+  let Spellings = [GCC<"artificial">];
+  let Subjects = SubjectList<[InlineFunction], WarnDiag>;
+  let Documentation = [ArtificialDocs];
 }
 
 def XRayInstrument : InheritableAttr {

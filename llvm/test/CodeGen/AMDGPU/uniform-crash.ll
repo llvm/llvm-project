@@ -35,7 +35,7 @@ bb2:                                              ; preds = %bb
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %bb2
-  %val = load volatile i32, i32 addrspace(2)* undef
+  %val = load volatile i32, i32 addrspace(4)* undef
   %tmp4 = icmp eq i32 %val, %arg1
   br i1 %tmp4, label %bb5, label %bb3
 

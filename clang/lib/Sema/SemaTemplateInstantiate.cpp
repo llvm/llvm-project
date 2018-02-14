@@ -1212,11 +1212,11 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
                                               NTTP->getDeclName());
       if (TargetType.isNull())
         return ExprError();
-      
-      return new (SemaRef.Context) SubstNonTypeTemplateParmPackExpr(TargetType,
-                                                                    NTTP, 
-                                                              E->getLocation(),
-                                                                    Arg);
+
+      return new (SemaRef.Context) SubstNonTypeTemplateParmPackExpr(
+          TargetType.getNonLValueExprType(SemaRef.Context),
+          TargetType->isReferenceType() ? VK_LValue : VK_RValue, NTTP,
+          E->getLocation(), Arg);
     }
     
     Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);

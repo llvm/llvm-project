@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-interchange -S | FileCheck %s
+; RUN: opt < %s -loop-interchange -verify-dom-info -S | FileCheck %s
 ;; Checks the order of the inner phi nodes does not cause havoc.
 ;; The inner loop has a reduction into c. The IV is not the first phi.
 

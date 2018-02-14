@@ -11,6 +11,7 @@
 #include "URI.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
+#include "llvm/Support/Path.h"
 namespace clang {
 namespace clangd {
 using namespace llvm;
@@ -138,10 +139,17 @@ getDeclarationLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   Range R = {Begin, End};
   Location L;
 
-  StringRef FilePath = F->tryGetRealPathName();
+  SmallString<64> FilePath = F->tryGetRealPathName();
   if (FilePath.empty())
     FilePath = F->getName();
-  L.uri.file = FilePath;
+  if (!llvm::sys::path::is_absolute(FilePath)) {
+    if (!SourceMgr.getFileManager().makeAbsolutePath(FilePath)) {
+      log("Could not turn relative path to absolute: " + FilePath);
+      return llvm::None;
+    }
+  }
+
+  L.uri.file = FilePath.str();
   L.range = R;
   return L;
 }

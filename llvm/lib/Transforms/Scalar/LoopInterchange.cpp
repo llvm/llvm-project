@@ -453,6 +453,8 @@ struct LoopInterchange : public FunctionPass {
     AU.addRequiredID(LoopSimplifyID);
     AU.addRequiredID(LCSSAID);
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
@@ -462,8 +464,7 @@ struct LoopInterchange : public FunctionPass {
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DI = &getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    DT = DTWP ? &DTWP->getDomTree() : nullptr;
+    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
@@ -573,7 +574,6 @@ struct LoopInterchange : public FunctionPass {
 
       // Update the DependencyMatrix
       interChangeDependencies(DependencyMatrix, i, i - 1);
-      DT->recalculate(F);
 #ifdef DUMP_DEP_MATRICIES
       DEBUG(dbgs() << "Dependence after interchange\n");
       printDepMatrix(DependencyMatrix);
@@ -1265,8 +1265,31 @@ void LoopInterchangeTransform::updateIncomingBlock(BasicBlock *CurrBlock,
   }
 }
 
+/// \brief Update BI to jump to NewBB instead of OldBB. Records updates to
+/// the dominator tree in DTUpdates, if DT should be preserved.
+static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
+                            BasicBlock *NewBB,
+                            std::vector<DominatorTree::UpdateType> &DTUpdates) {
+  assert(llvm::count_if(BI->successors(),
+                        [OldBB](BasicBlock *BB) { return BB == OldBB; }) < 2 &&
+         "BI must jump to OldBB at most once.");
+  for (unsigned i = 0, e = BI->getNumSuccessors(); i < e; ++i) {
+    if (BI->getSuccessor(i) == OldBB) {
+      BI->setSuccessor(i, NewBB);
+
+      DTUpdates.push_back(
+          {DominatorTree::UpdateKind::Insert, BI->getParent(), NewBB});
+      DTUpdates.push_back(
+          {DominatorTree::UpdateKind::Delete, BI->getParent(), OldBB});
+      break;
+    }
+  }
+}
+
 bool LoopInterchangeTransform::adjustLoopBranches() {
   DEBUG(dbgs() << "adjustLoopBranches called\n");
+  std::vector<DominatorTree::UpdateType> DTUpdates;
+
   // Adjust the loop preheader
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
@@ -1306,27 +1329,18 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
     return false;
 
   // Adjust Loop Preheader and headers
-
-  unsigned NumSucc = OuterLoopPredecessorBI->getNumSuccessors();
-  for (unsigned i = 0; i < NumSucc; ++i) {
-    if (OuterLoopPredecessorBI->getSuccessor(i) == OuterLoopPreHeader)
-      OuterLoopPredecessorBI->setSuccessor(i, InnerLoopPreHeader);
-  }
-
-  NumSucc = OuterLoopHeaderBI->getNumSuccessors();
-  for (unsigned i = 0; i < NumSucc; ++i) {
-    if (OuterLoopHeaderBI->getSuccessor(i) == OuterLoopLatch)
-      OuterLoopHeaderBI->setSuccessor(i, LoopExit);
-    else if (OuterLoopHeaderBI->getSuccessor(i) == InnerLoopPreHeader)
-      OuterLoopHeaderBI->setSuccessor(i, InnerLoopHeaderSuccessor);
-  }
+  updateSuccessor(OuterLoopPredecessorBI, OuterLoopPreHeader,
+                  InnerLoopPreHeader, DTUpdates);
+  updateSuccessor(OuterLoopHeaderBI, OuterLoopLatch, LoopExit, DTUpdates);
+  updateSuccessor(OuterLoopHeaderBI, InnerLoopPreHeader,
+                  InnerLoopHeaderSuccessor, DTUpdates);
 
   // Adjust reduction PHI's now that the incoming block has changed.
   updateIncomingBlock(InnerLoopHeaderSuccessor, InnerLoopHeader,
                       OuterLoopHeader);
 
-  BranchInst::Create(OuterLoopPreHeader, InnerLoopHeaderBI);
-  InnerLoopHeaderBI->eraseFromParent();
+  updateSuccessor(InnerLoopHeaderBI, InnerLoopHeaderSuccessor,
+                  OuterLoopPreHeader, DTUpdates);
 
   // -------------Adjust loop latches-----------
   if (InnerLoopLatchBI->getSuccessor(0) == InnerLoopHeader)
@@ -1334,11 +1348,8 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   else
     InnerLoopLatchSuccessor = InnerLoopLatchBI->getSuccessor(0);
 
-  NumSucc = InnerLoopLatchPredecessorBI->getNumSuccessors();
-  for (unsigned i = 0; i < NumSucc; ++i) {
-    if (InnerLoopLatchPredecessorBI->getSuccessor(i) == InnerLoopLatch)
-      InnerLoopLatchPredecessorBI->setSuccessor(i, InnerLoopLatchSuccessor);
-  }
+  updateSuccessor(InnerLoopLatchPredecessorBI, InnerLoopLatch,
+                  InnerLoopLatchSuccessor, DTUpdates);
 
   // Adjust PHI nodes in InnerLoopLatchSuccessor. Update all uses of PHI with
   // the value and remove this PHI node from inner loop.
@@ -1358,19 +1369,14 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   else
     OuterLoopLatchSuccessor = OuterLoopLatchBI->getSuccessor(0);
 
-  if (InnerLoopLatchBI->getSuccessor(1) == InnerLoopLatchSuccessor)
-    InnerLoopLatchBI->setSuccessor(1, OuterLoopLatchSuccessor);
-  else
-    InnerLoopLatchBI->setSuccessor(0, OuterLoopLatchSuccessor);
+  updateSuccessor(InnerLoopLatchBI, InnerLoopLatchSuccessor,
+                  OuterLoopLatchSuccessor, DTUpdates);
+  updateSuccessor(OuterLoopLatchBI, OuterLoopLatchSuccessor, InnerLoopLatch,
+                  DTUpdates);
 
   updateIncomingBlock(OuterLoopLatchSuccessor, OuterLoopLatch, InnerLoopLatch);
 
-  if (OuterLoopLatchBI->getSuccessor(0) == OuterLoopLatchSuccessor) {
-    OuterLoopLatchBI->setSuccessor(0, InnerLoopLatch);
-  } else {
-    OuterLoopLatchBI->setSuccessor(1, InnerLoopLatch);
-  }
-
+  DT->applyUpdates(DTUpdates);
   return true;
 }
 

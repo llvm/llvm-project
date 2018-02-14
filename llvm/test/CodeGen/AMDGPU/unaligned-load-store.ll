@@ -418,8 +418,8 @@ define amdgpu_kernel void @local_store_i64_align_4_with_split_offset(i64 addrspa
 ; UNALIGNED: s_load_dword
 
 ; SI: buffer_store_dword
-define amdgpu_kernel void @constant_unaligned_load_i32(i32 addrspace(2)* %p, i32 addrspace(1)* %r) #0 {
-  %v = load i32, i32 addrspace(2)* %p, align 1
+define amdgpu_kernel void @constant_unaligned_load_i32(i32 addrspace(4)* %p, i32 addrspace(1)* %r) #0 {
+  %v = load i32, i32 addrspace(4)* %p, align 1
   store i32 %v, i32 addrspace(1)* %r, align 4
   ret void
 }
@@ -430,8 +430,8 @@ define amdgpu_kernel void @constant_unaligned_load_i32(i32 addrspace(2)* %p, i32
 
 ; UNALIGNED: s_load_dword
 ; UNALIGNED: buffer_store_dword
-define amdgpu_kernel void @constant_align2_load_i32(i32 addrspace(2)* %p, i32 addrspace(1)* %r) #0 {
-  %v = load i32, i32 addrspace(2)* %p, align 2
+define amdgpu_kernel void @constant_align2_load_i32(i32 addrspace(4)* %p, i32 addrspace(1)* %r) #0 {
+  %v = load i32, i32 addrspace(4)* %p, align 2
   store i32 %v, i32 addrspace(1)* %r, align 4
   ret void
 }
@@ -444,8 +444,8 @@ define amdgpu_kernel void @constant_align2_load_i32(i32 addrspace(2)* %p, i32 ad
 
 ; UNALIGNED: s_load_dwordx2
 ; UNALIGNED: buffer_store_dwordx2
-define amdgpu_kernel void @constant_align2_load_i64(i64 addrspace(2)* %p, i64 addrspace(1)* %r) #0 {
-  %v = load i64, i64 addrspace(2)* %p, align 2
+define amdgpu_kernel void @constant_align2_load_i64(i64 addrspace(4)* %p, i64 addrspace(1)* %r) #0 {
+  %v = load i64, i64 addrspace(4)* %p, align 2
   store i64 %v, i64 addrspace(1)* %r, align 4
   ret void
 }
@@ -453,8 +453,8 @@ define amdgpu_kernel void @constant_align2_load_i64(i64 addrspace(2)* %p, i64 ad
 ; SI-LABEL: {{^}}constant_align4_load_i64:
 ; SI: s_load_dwordx2
 ; SI: buffer_store_dwordx2
-define amdgpu_kernel void @constant_align4_load_i64(i64 addrspace(2)* %p, i64 addrspace(1)* %r) #0 {
-  %v = load i64, i64 addrspace(2)* %p, align 4
+define amdgpu_kernel void @constant_align4_load_i64(i64 addrspace(4)* %p, i64 addrspace(1)* %r) #0 {
+  %v = load i64, i64 addrspace(4)* %p, align 4
   store i64 %v, i64 addrspace(1)* %r, align 4
   ret void
 }
@@ -462,8 +462,8 @@ define amdgpu_kernel void @constant_align4_load_i64(i64 addrspace(2)* %p, i64 ad
 ; SI-LABEL: {{^}}constant_align4_load_v4i32:
 ; SI: s_load_dwordx4
 ; SI: buffer_store_dwordx4
-define amdgpu_kernel void @constant_align4_load_v4i32(<4 x i32> addrspace(2)* %p, <4 x i32> addrspace(1)* %r) #0 {
-  %v = load <4 x i32>, <4 x i32> addrspace(2)* %p, align 4
+define amdgpu_kernel void @constant_align4_load_v4i32(<4 x i32> addrspace(4)* %p, <4 x i32> addrspace(1)* %r) #0 {
+  %v = load <4 x i32>, <4 x i32> addrspace(4)* %p, align 4
   store <4 x i32> %v, <4 x i32> addrspace(1)* %r, align 4
   ret void
 }
@@ -482,8 +482,8 @@ define amdgpu_kernel void @constant_align4_load_v4i32(<4 x i32> addrspace(2)* %p
 ; UNALIGNED: buffer_load_dwordx2
 
 ; SI: buffer_store_dwordx2
-define amdgpu_kernel void @constant_unaligned_load_v2i32(<2 x i32> addrspace(2)* %p, <2 x i32> addrspace(1)* %r) #0 {
-  %v = load <2 x i32>, <2 x i32> addrspace(2)* %p, align 1
+define amdgpu_kernel void @constant_unaligned_load_v2i32(<2 x i32> addrspace(4)* %p, <2 x i32> addrspace(1)* %r) #0 {
+  %v = load <2 x i32>, <2 x i32> addrspace(4)* %p, align 1
   store <2 x i32> %v, <2 x i32> addrspace(1)* %r, align 4
   ret void
 }
@@ -512,8 +512,8 @@ define amdgpu_kernel void @constant_unaligned_load_v2i32(<2 x i32> addrspace(2)*
 ; UNALIGNED: buffer_load_dwordx4
 
 ; SI: buffer_store_dwordx4
-define amdgpu_kernel void @constant_unaligned_load_v4i32(<4 x i32> addrspace(2)* %p, <4 x i32> addrspace(1)* %r) #0 {
-  %v = load <4 x i32>, <4 x i32> addrspace(2)* %p, align 1
+define amdgpu_kernel void @constant_unaligned_load_v4i32(<4 x i32> addrspace(4)* %p, <4 x i32> addrspace(1)* %r) #0 {
+  %v = load <4 x i32>, <4 x i32> addrspace(4)* %p, align 1
   store <4 x i32> %v, <4 x i32> addrspace(1)* %r, align 4
   ret void
 }
@@ -521,8 +521,8 @@ define amdgpu_kernel void @constant_unaligned_load_v4i32(<4 x i32> addrspace(2)*
 ; SI-LABEL: {{^}}constant_align4_load_i8:
 ; SI: s_load_dword
 ; SI: buffer_store_byte
-define amdgpu_kernel void @constant_align4_load_i8(i8 addrspace(2)* %p, i8 addrspace(1)* %r) #0 {
-  %v = load i8, i8 addrspace(2)* %p, align 4
+define amdgpu_kernel void @constant_align4_load_i8(i8 addrspace(4)* %p, i8 addrspace(1)* %r) #0 {
+  %v = load i8, i8 addrspace(4)* %p, align 4
   store i8 %v, i8 addrspace(1)* %r, align 4
   ret void
 }
@@ -530,8 +530,8 @@ define amdgpu_kernel void @constant_align4_load_i8(i8 addrspace(2)* %p, i8 addrs
 ; SI-LABEL: {{^}}constant_align2_load_i8:
 ; SI: buffer_load_ubyte
 ; SI: buffer_store_byte
-define amdgpu_kernel void @constant_align2_load_i8(i8 addrspace(2)* %p, i8 addrspace(1)* %r) #0 {
-  %v = load i8, i8 addrspace(2)* %p, align 2
+define amdgpu_kernel void @constant_align2_load_i8(i8 addrspace(4)* %p, i8 addrspace(1)* %r) #0 {
+  %v = load i8, i8 addrspace(4)* %p, align 2
   store i8 %v, i8 addrspace(1)* %r, align 2
   ret void
 }
@@ -541,10 +541,10 @@ define amdgpu_kernel void @constant_align2_load_i8(i8 addrspace(2)* %p, i8 addrs
 ; SI-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[LO]]
 ; SI-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[HI]]
 ; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
-define amdgpu_kernel void @constant_align4_merge_load_2_i32(i32 addrspace(2)* %p, i32 addrspace(1)* %r) #0 {
-  %gep0 = getelementptr i32, i32 addrspace(2)* %p, i64 1
-  %v0 = load i32, i32 addrspace(2)* %p, align 4
-  %v1 = load i32, i32 addrspace(2)* %gep0, align 4
+define amdgpu_kernel void @constant_align4_merge_load_2_i32(i32 addrspace(4)* %p, i32 addrspace(1)* %r) #0 {
+  %gep0 = getelementptr i32, i32 addrspace(4)* %p, i64 1
+  %v0 = load i32, i32 addrspace(4)* %p, align 4
+  %v1 = load i32, i32 addrspace(4)* %gep0, align 4
 
   %gep1 = getelementptr i32, i32 addrspace(1)* %r, i64 1
   store i32 %v0, i32 addrspace(1)* %r, align 4

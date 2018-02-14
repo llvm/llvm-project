@@ -14,8 +14,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-
-#include <unordered_set>
+#include "llvm/ADT/SetVector.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -35,7 +34,7 @@ void SymbolTable::addFile(InputFile *File) {
 }
 
 void SymbolTable::reportRemainingUndefines() {
-  std::unordered_set<Symbol *> Undefs;
+  SetVector<Symbol *> Undefs;
   for (Symbol *Sym : SymVector) {
     if (Sym->isUndefined() && !Sym->isWeak() &&
         Config->AllowUndefinedSymbols.count(Sym->getName()) == 0) {
@@ -127,38 +126,26 @@ static void checkSymbolTypes(const Symbol &Existing, const InputFile &F,
   return checkSymbolTypes(Existing, F, Kind, Sig);
 }
 
-Symbol *SymbolTable::addDefinedFunction(StringRef Name,
-                                        const WasmSignature *Type,
-                                        uint32_t Flags) {
-  DEBUG(dbgs() << "addDefinedFunction: " << Name << "\n");
+Symbol *SymbolTable::addSyntheticFunction(StringRef Name,
+                                          const WasmSignature *Type,
+                                          uint32_t Flags) {
+  DEBUG(dbgs() << "addSyntheticFunction: " << Name << "\n");
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
-  if (WasInserted) {
-    S->update(Symbol::DefinedFunctionKind, nullptr, Flags);
-    S->setFunctionType(Type);
-  } else if (!S->isFunction()) {
-    error("symbol type mismatch: " + Name);
-  } else if (!S->isDefined()) {
-    DEBUG(dbgs() << "resolving existing undefined function: " << Name << "\n");
-    S->update(Symbol::DefinedFunctionKind, nullptr, Flags);
-  }
+  assert(WasInserted);
+  S->update(Symbol::DefinedFunctionKind, nullptr, Flags);
+  S->setFunctionType(Type);
   return S;
 }
 
-Symbol *SymbolTable::addDefinedGlobal(StringRef Name) {
-  DEBUG(dbgs() << "addDefinedGlobal: " << Name << "\n");
+Symbol *SymbolTable::addSyntheticGlobal(StringRef Name) {
+  DEBUG(dbgs() << "addSyntheticGlobal: " << Name << "\n");
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
-  if (WasInserted) {
-    S->update(Symbol::DefinedGlobalKind);
-  } else if (!S->isGlobal()) {
-    error("symbol type mismatch: " + Name);
-  } else {
-    DEBUG(dbgs() << "resolving existing undefined global: " << Name << "\n");
-    S->update(Symbol::DefinedGlobalKind);
-  }
+  assert(WasInserted);
+  S->update(Symbol::DefinedGlobalKind);
   return S;
 }
 

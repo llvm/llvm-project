@@ -177,7 +177,7 @@ bool AMDGPUPrintfRuntimeBinding::shouldPrintAsStr(char Specifier,
   if (!PT) {
     return false;
   }
-  if (PT->getAddressSpace() != 2) {
+  if (PT->getAddressSpace() != 4) {
     return false;
   }
   Type* ElemType = PT->getContainedType(0);
