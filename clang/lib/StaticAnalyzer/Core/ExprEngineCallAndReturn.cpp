@@ -652,7 +652,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // initializers for array fields in default move/copy constructors.
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
-    if (CallOpts.IsArrayConstructorOrDestructor)
+    if (CallOpts.IsArrayCtorOrDtor)
       return CIP_DisallowedOnce;
 
     // Inlining constructors requires including initializers in the CFG.
@@ -672,14 +672,14 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete) {
       // If we don't handle temporary destructors, we shouldn't inline
       // their constructors.
-      if (CallOpts.IsConstructorIntoTemporary &&
+      if (CallOpts.IsTemporaryCtorOrDtor &&
           !Opts.includeTemporaryDtorsInCFG())
         return CIP_DisallowedOnce;
 
-      // If we did not construct the correct this-region, it would be pointless
+      // If we did not find the correct this-region, it would be pointless
       // to inline the constructor. Instead we will simply invalidate
       // the fake temporary target.
-      if (CallOpts.IsConstructorWithImproperlyModeledTargetRegion)
+      if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
     }
 
@@ -702,11 +702,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     (void)ADC;
 
     // FIXME: We don't handle constructors or destructors for arrays properly.
-    if (CallOpts.IsArrayConstructorOrDestructor)
-      return CIP_DisallowedOnce;
-
-    // Allow disabling temporary destructor inlining with a separate option.
-    if (CallOpts.IsTemporaryCtorOrDtor && !Opts.mayInlineCXXTemporaryDtors())
+    if (CallOpts.IsArrayCtorOrDtor)
       return CIP_DisallowedOnce;
 
     // If we did not find the correct this-region, it would be pointless

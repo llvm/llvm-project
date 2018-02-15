@@ -940,24 +940,12 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   ExplodedNode *CleanPred =
       CleanDtorState.empty() ? Pred : *CleanDtorState.begin();
 
+  // FIXME: Inlining of temporary destructors is not supported yet anyway, so
+  // we just put a NULL region for now. This will need to be changed later.
   EvalCallOptions CallOpts;
   CallOpts.IsTemporaryCtorOrDtor = true;
-  if (!MR) {
-    CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
-
-    // If we have no MR, we still need to unwrap the array to avoid destroying
-    // the whole array at once. Regardless, we'd eventually need to model array
-    // destructors properly, element-by-element.
-    while (const ArrayType *AT = getContext().getAsArrayType(T)) {
-      T = AT->getElementType();
-      CallOpts.IsArrayCtorOrDtor = true;
-    }
-  } else {
-    // We'd eventually need to makeZeroElementRegion() trick here,
-    // but for now we don't have the respective construction contexts,
-    // so MR would always be null in this case. Do nothing for now.
-  }
-  VisitCXXDestructor(T, MR, D.getBindTemporaryExpr(),
+  CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
+  VisitCXXDestructor(varType, nullptr, D.getBindTemporaryExpr(),
                      /*IsBase=*/false, CleanPred, Dst, CallOpts);
 }
 
