@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-throw-keyword-missing %t
+// RUN: %check_clang_tidy %s bugprone-throw-keyword-missing %t -- -- -fexceptions
 
 namespace std {
 
