@@ -23,6 +23,9 @@ namespace wasm {
 class InputFile;
 class InputChunk;
 
+#define INVALID_INDEX UINT32_MAX
+
+// The base class for real symbol classes.
 class Symbol {
 public:
   enum Kind {
@@ -37,9 +40,7 @@ public:
     InvalidKind,
   };
 
-  Symbol(StringRef Name, uint32_t Flags) : Flags(Flags), Name(Name) {}
-
-  Kind getKind() const { return SymbolKind; }
+  Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isDefined() const { return SymbolKind <= LastDefinedKind; }
@@ -63,9 +64,6 @@ public:
   InputFile *getFile() const { return File; }
   InputChunk *getChunk() const { return Chunk; }
 
-  bool hasFunctionType() const { return FunctionType != nullptr; }
-  const WasmSignature &getFunctionType() const;
-  void setFunctionType(const WasmSignature *Type);
   void setHidden(bool IsHidden);
 
   uint32_t getOutputIndex() const;
@@ -77,6 +75,28 @@ public:
   // space of the output object.
   void setOutputIndex(uint32_t Index);
 
+protected:
+  Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F, InputChunk *C)
+      : Name(Name), SymbolKind(K), Flags(Flags), File(F), Chunk(C) {}
+
+  StringRef Name;
+  Kind SymbolKind;
+  uint32_t Flags;
+  InputFile *File;
+  InputChunk *Chunk;
+  uint32_t OutputIndex = INVALID_INDEX;
+};
+
+class FunctionSymbol : public Symbol {
+public:
+  static bool classof(const Symbol *S) {
+    return S->kind() == DefinedFunctionKind ||
+           S->kind() == UndefinedFunctionKind;
+  }
+
+  bool hasFunctionType() const { return FunctionType != nullptr; }
+  const WasmSignature &getFunctionType() const;
+
   uint32_t getTableIndex() const;
 
   // Returns true if a table index has been set for this symbol
@@ -85,30 +105,99 @@ public:
   // Set the table index of the symbol
   void setTableIndex(uint32_t Index);
 
-  // Returns the virtual address of a defined global.
-  // Only works for globals, not functions.
+protected:
+  void setFunctionType(const WasmSignature *Type);
+
+  FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
+                 InputChunk *C)
+      : Symbol(Name, K, Flags, F, C) {}
+
+  uint32_t TableIndex = INVALID_INDEX;
+
+  // Explict function type, needed for undefined or synthetic functions only.
+  const WasmSignature *FunctionType = nullptr;
+};
+
+class DefinedFunction : public FunctionSymbol {
+public:
+  DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
+                  InputChunk *C = nullptr)
+      : FunctionSymbol(Name, DefinedFunctionKind, Flags, F, C) {}
+
+  DefinedFunction(StringRef Name, uint32_t Flags, const WasmSignature *Type)
+      : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, nullptr) {
+    setFunctionType(Type);
+  }
+
+  static bool classof(const Symbol *S) {
+    return S->kind() == DefinedFunctionKind;
+  }
+};
+
+class UndefinedFunction : public FunctionSymbol {
+public:
+  UndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File = nullptr,
+                    const WasmSignature *Type = nullptr)
+      : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, nullptr) {
+    setFunctionType(Type);
+  }
+
+  static bool classof(const Symbol *S) {
+    return S->kind() == UndefinedFunctionKind;
+  }
+};
+
+class GlobalSymbol : public Symbol {
+public:
+  static bool classof(const Symbol *S) {
+    return S->kind() == DefinedGlobalKind || S->kind() == UndefinedGlobalKind;
+  }
+
+protected:
+  GlobalSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
+               InputChunk *C)
+      : Symbol(Name, K, Flags, F, C) {}
+};
+
+class DefinedGlobal : public GlobalSymbol {
+public:
+  DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
+                InputChunk *C = nullptr, uint32_t Address = 0)
+      : GlobalSymbol(Name, DefinedGlobalKind, Flags, F, C),
+        VirtualAddress(Address) {}
+
+  static bool classof(const Symbol *S) {
+    return S->kind() == DefinedGlobalKind;
+  }
+
   uint32_t getVirtualAddress() const;
 
   void setVirtualAddress(uint32_t VA);
 
-  void update(Kind K, InputFile *F = nullptr, uint32_t Flags = 0,
-              InputChunk *chunk = nullptr, uint32_t Address = UINT32_MAX);
+protected:
+  uint32_t VirtualAddress;
+};
 
-  void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
+class UndefinedGlobal : public GlobalSymbol {
+public:
+  UndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File = nullptr)
+      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File, nullptr) {}
+  static bool classof(const Symbol *S) {
+    return S->kind() == UndefinedGlobalKind;
+  }
+};
+
+class LazySymbol : public Symbol {
+public:
+  LazySymbol(StringRef Name, InputFile *File, const Archive::Symbol &Sym)
+      : Symbol(Name, LazyKind, 0, File, nullptr), ArchiveSymbol(Sym) {}
+
+  static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
+
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
 
 protected:
-  uint32_t Flags;
-  uint32_t VirtualAddress = 0;
-
-  StringRef Name;
-  Archive::Symbol ArchiveSymbol = {nullptr, 0, 0};
-  Kind SymbolKind = InvalidKind;
-  InputFile *File = nullptr;
-  InputChunk *Chunk = nullptr;
-  llvm::Optional<uint32_t> OutputIndex;
-  llvm::Optional<uint32_t> TableIndex;
-  const WasmSignature *FunctionType = nullptr;
+  Archive::Symbol ArchiveSymbol;
 };
 
 // linker-generated symbols
@@ -116,26 +205,49 @@ struct WasmSym {
   // __stack_pointer
   // Global that holds the address of the top of the explicit value stack in
   // linear memory.
-  static Symbol *StackPointer;
+  static DefinedGlobal *StackPointer;
 
   // __data_end
   // Symbol marking the end of the data and bss.
-  static Symbol *DataEnd;
+  static DefinedGlobal *DataEnd;
 
   // __heap_base
   // Symbol marking the end of the data, bss and explicit stack.  Any linear
   // memory following this address is not used by the linked code and can
   // therefore be used as a backing store for brk()/malloc() implementations.
-  static Symbol *HeapBase;
+  static DefinedGlobal *HeapBase;
 
   // __wasm_call_ctors
   // Function that directly calls all ctors in priority order.
-  static Symbol *CallCtors;
+  static DefinedFunction *CallCtors;
 
   // __dso_handle
   // Global used in calls to __cxa_atexit to determine current DLL
-  static Symbol *DsoHandle;
+  static DefinedGlobal *DsoHandle;
 };
+
+// A buffer class that is large enough to hold any Symbol-derived
+// object. We allocate memory using this class and instantiate a symbol
+// using the placement new.
+union SymbolUnion {
+  alignas(DefinedFunction) char A[sizeof(DefinedFunction)];
+  alignas(DefinedGlobal) char B[sizeof(DefinedGlobal)];
+  alignas(LazySymbol) char C[sizeof(LazySymbol)];
+  alignas(UndefinedFunction) char D[sizeof(UndefinedFunction)];
+  alignas(UndefinedGlobal) char E[sizeof(UndefinedFunction)];
+};
+
+template <typename T, typename... ArgT>
+T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
+  static_assert(std::is_trivially_destructible<T>(),
+                "Symbol types must be trivially destructible");
+  static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
+  static_assert(alignof(T) <= alignof(SymbolUnion),
+                "SymbolUnion not aligned enough");
+  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a Symbol");
+  return new (S) T(std::forward<ArgT>(Arg)...);
+}
 
 } // namespace wasm
 

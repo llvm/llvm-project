@@ -463,7 +463,8 @@ class Configuration(object):
         if '__cpp_structured_bindings' not in macros:
             self.config.available_features.add('libcpp-no-structured-bindings')
 
-        if '__cpp_deduction_guides' not in macros:
+        if '__cpp_deduction_guides' not in macros or \
+                int(macros['__cpp_deduction_guides']) < 201611:
             self.config.available_features.add('libcpp-no-deduction-guides')
 
         if self.is_windows:
