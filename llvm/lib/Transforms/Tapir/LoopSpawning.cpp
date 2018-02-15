@@ -45,7 +45,7 @@
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Tapir.h"
-#include "llvm/Transforms/Tapir/TapirUtils.h"
+#include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
@@ -288,40 +288,83 @@ Value* LoopOutline::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
 /// Unlink the specified loop, and update analysis accordingly.  The heavy
 /// lifting of deleting the loop is carried out by a run of LoopDeletion after
 /// this pass.
+///
+/// Much of this code is borrowed from deleteDeadLoop in
+/// Transforms/Utils/LoopUtils.cpp.  There are minor differences between this
+/// routine and deleteDeadLoop, however, so we duplicate the logic here in the
+/// interest of keeping Tapir-specific code separate.
 void LoopOutline::unlinkLoop() {
   Loop *L = OrigLoop;
 
   // Get components of the old loop.
   BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *Header = L->getHeader();
   assert(Preheader && "Loop does not have a unique preheader.");
   BasicBlock *Latch = L->getLoopLatch();
 
   // Invalidate the analysis of the old loop.
   SE.forgetLoop(L);
 
-  // Redirect the preheader to branch directly to loop exit.
-  assert(1 == Preheader->getTerminator()->getNumSuccessors() &&
-         "Preheader does not have a unique successor.");
-  Preheader->getTerminator()->replaceUsesOfWith(L->getHeader(),
-                                                ExitBlock);
+  auto *OldBr = dyn_cast<BranchInst>(Preheader->getTerminator());
+  assert(OldBr && "Preheader must end with a branch");
+  assert(OldBr->isUnconditional() && "Preheader must have a single successor");
+
+  // Connect the preheader to the exit block. Keep the old edge to the header
+  // around to perform the dominator tree update in two separate steps
+  // -- #1 insertion of the edge preheader -> exit and #2 deletion of the edge
+  // preheader -> header.
+  //
+  //
+  // 0.  Preheader          1.  Preheader           2.  Preheader
+  //        |                    |   |                   |
+  //        V                    |   V                   |
+  //      Header <--\            | Header <--\           | Header <--\
+  //       |  |     |            |  |  |     |           |  |  |     |
+  //       |  V     |            |  |  V     |           |  |  V     |
+  //       | Body --/            |  | Body --/           |  | Body --/
+  //       V                     V  V                    V  V
+  //      Exit                   Exit                    Exit
+  //
+  // By doing this is two separate steps we can perform the dominator tree
+  // update without using the batch update API.
+  //
+  // Even when the loop is never executed, we cannot remove the edge from the
+  // source block to the exit block. Consider the case where the unexecuted loop
+  // branches back to an outer loop. If we deleted the loop and removed the edge
+  // coming to this inner loop, this will break the outer loop structure (by
+  // deleting the backedge of the outer loop). If the outer loop is indeed a
+  // non-loop, it will be deleted in a future iteration of loop deletion pass.
+  IRBuilder<> Builder(OldBr);
+  Builder.CreateCondBr(Builder.getFalse(), Header, ExitBlock);
+  // Remove the old branch. The conditional branch becomes a new terminator.
+  OldBr->eraseFromParent();
 
   // Rewrite phis in the exit block to get their inputs from
   // the preheader instead of the exiting block.
-  BasicBlock::iterator BI = ExitBlock->begin();
-  while (PHINode *P = dyn_cast<PHINode>(BI)) {
-    int j = P->getBasicBlockIndex(Latch);
+  for (PHINode &P : ExitBlock->phis()) {
+    int j = P.getBasicBlockIndex(Latch);
     assert(j >= 0 && "Can't find exiting block in exit block's phi node!");
-    P->setIncomingBlock(j, Preheader);
-    P->removeIncomingValue(Latch);
-    ++BI;
+    P.setIncomingBlock(j, Preheader);
+    P.removeIncomingValue(Latch);
   }
+
+  // Disconnect the loop body by branching directly to its exit.
+  Builder.SetInsertPoint(Preheader->getTerminator());
+  Builder.CreateBr(ExitBlock);
+  // Remove the old branch.
+  Preheader->getTerminator()->eraseFromParent();
 
   // Rewrite phis in the header block to not receive an input from
   // the preheader.
-  BI = L->getHeader()->begin();
-  while (PHINode *P = dyn_cast<PHINode>(BI)) {
-    P->removeIncomingValue(Preheader);
-    ++BI;
+  for (PHINode &P : Header->phis())
+    P.removeIncomingValue(Preheader);
+
+  if (DT) {
+    // Update the dominator tree by informing it about the new edge from the
+    // preheader to the exit.
+    DT->insertEdge(Preheader, ExitBlock);
+    // Inform the dominator tree about the removed edge.
+    DT->deleteEdge(Preheader, Header);
   }
 }
 
@@ -520,8 +563,8 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
             Ctx, CallUnwind->getName()+".unreachable", Helper);
         Builder.CreateInvoke(
             Intrinsic::getDeclaration(M, Intrinsic::detached_rethrow,
-                                      LPad->getType()),
-            DRUnreachable, DetachUnwind, { LPad });
+                                      { LPad->getType() }),
+            DRUnreachable, DetachUnwind, { SyncRegion, LPad });
 
         Builder.SetInsertPoint(DRUnreachable);
         Builder.CreateUnreachable();
@@ -576,7 +619,7 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
 
 /// Helper routine to get all exit blocks of a loop that are unreachable.
 static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
-                       const BasicBlock *DetachUnwind,
+                       const BasicBlock *DetachUnwind, const Value *SyncRegion,
                        SmallVectorImpl<BasicBlock *> &EHExits) {
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
@@ -603,7 +646,7 @@ static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
     assert(!L->contains(BB) &&
            "Exception handling blocks re-enter loop.");
 
-    if (isDetachedRethrow(BB->getTerminator()))
+    if (isDetachedRethrow(BB->getTerminator(), SyncRegion))
       continue;
 
     for (BasicBlock *Succ : successors(BB)) {
@@ -685,14 +728,16 @@ bool DACLoopSpawning::processLoop() {
 
   // Get the unwind destination of the detach in the header.
   BasicBlock *DetachUnwind = nullptr;
+  Value *SyncRegion = nullptr;
   {
     DetachInst *DI = cast<DetachInst>(Header->getTerminator());
+    SyncRegion = DI->getSyncRegion();
     if (DI->hasUnwindDest())
       DetachUnwind = DI->getUnwindDest();
   }
   // Get special exits from this loop.
   SmallVector<BasicBlock *, 4> EHExits;
-  getEHExits(L, ExitBlock, DetachUnwind, EHExits);
+  getEHExits(L, ExitBlock, DetachUnwind, SyncRegion, EHExits);
 
   // Check the exit blocks of the loop.
   SmallVector<BasicBlock *, 4> ExitBlocks;
@@ -1075,7 +1120,7 @@ bool DACLoopSpawning::processLoop() {
 
   }
   for (BasicBlock *BB : HandledExits) {
-    if (!isDetachedRethrow(BB->getTerminator())) continue;
+    if (!isDetachedRethrow(BB->getTerminator(), InputSyncRegion)) continue;
     assert(isa<ResumeInst>(cast<BasicBlock>(VMap[BB])->getTerminator()));
     SyncInst *NewSync =
       insertSyncBeforeEscape(cast<BasicBlock>(VMap[BB]),
@@ -1259,6 +1304,21 @@ bool DACLoopSpawning::processLoop() {
                                         DT, LI);
       InvokeInst *TopCall = InvokeInst::Create(Helper, CallDest, DetachUnwind,
                                                ArrayRef<Value *>(TopCallArgs));
+      // Update PHI nodes in DetachUnwind
+      for (PHINode &P : DetachUnwind->phis()) {
+        int j = P.getBasicBlockIndex(Header);
+        assert(j >= 0 && "Can't find exiting block in exit block's phi node!");
+        DEBUG({
+            if (Instruction *I = dyn_cast<Instruction>(P.getIncomingValue(j)))
+              assert(I->getParent() != Header &&
+                     "DetachUnwind PHI node uses value from header!");
+          });
+        P.addIncoming(P.getIncomingValue(j), Preheader);
+      }
+      // Update the dominator tree by informing it about the new edge from the
+      // preheader to the detach unwind destination.
+      if (DT)
+        DT->insertEdge(Preheader, DetachUnwind);
       ReplaceInstWithInst(Preheader->getTerminator(), TopCall);
       // Use a fast calling convention for the helper.
       TopCall->setCallingConv(CallingConv::Fast);
@@ -1327,7 +1387,7 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
   const BasicBlock *Latch = L->getLoopLatch();
   // const BasicBlock *Exit = L->getExitBlock();
 
-  // DEBUG(dbgs() << "LS checking if Tapir loop: " << *L);
+  DEBUG(dbgs() << "LS checking if loop is Tapir loop: " << *L);
 
   // Header must be terminated by a detach.
   if (!isa<DetachInst>(Header->getTerminator())) {

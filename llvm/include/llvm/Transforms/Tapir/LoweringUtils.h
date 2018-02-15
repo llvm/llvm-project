@@ -1,4 +1,4 @@
-//===- TapirUtils.h - Utility functions for handling Tapir -----*- C++ -*--===//
+//===- LoweringUtils.h - Utility functions for lowering Tapir --*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements several utility functions for operating with Tapir.
+// This file implements several utility functions for lowering Tapir.
 //
 //===----------------------------------------------------------------------===//
 

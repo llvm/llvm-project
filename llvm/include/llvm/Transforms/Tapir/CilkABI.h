@@ -15,7 +15,7 @@
 #define CILK_ABI_H_
 
 #include "llvm/Transforms/Tapir/LoopSpawning.h"
-#include "llvm/Transforms/Tapir/TapirUtils.h"
+#include "llvm/Transforms/Tapir/LoweringUtils.h"
 
 namespace llvm {
 

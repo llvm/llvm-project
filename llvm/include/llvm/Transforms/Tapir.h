@@ -15,12 +15,11 @@
 #ifndef LLVM_TRANSFORMS_TAPIR_H
 #define LLVM_TRANSFORMS_TAPIR_H
 
-#include "llvm/Transforms/Tapir/TapirUtils.h"
-
 namespace llvm {
 class Pass;
 class ModulePass;
 class FunctionPass;
+class TapirTarget;
 
 //===----------------------------------------------------------------------===//
 //

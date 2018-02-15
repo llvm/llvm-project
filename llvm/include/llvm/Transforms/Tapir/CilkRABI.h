@@ -14,7 +14,7 @@
 #ifndef CILK_RABI_H_
 #define CILK_RABI_H_
 
-#include "llvm/Transforms/Tapir/TapirUtils.h"
+#include "llvm/Transforms/Tapir/LoweringUtils.h"
 
 namespace llvm {
 

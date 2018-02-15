@@ -1,4 +1,4 @@
-//===- TapirUtils.cpp - Utility functions for handling Tapir --------------===//
+//===- LoweringUtils.cpp - Utility functions for lowering Tapir -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -46,6 +46,7 @@ bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
                              bool error) {
   BasicBlock *Spawned  = Detach.getDetached();
   BasicBlock *Continue = Detach.getContinue();
+  Value *SyncRegion = Detach.getSyncRegion();
   BasicBlockEdge DetachEdge(Detach.getParent(), Spawned);
 
   SmallVector<BasicBlock *, 32> Todo;
@@ -67,8 +68,10 @@ bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
       continue;
     } else if (DetachInst* Inst = dyn_cast<DetachInst>(Term)) {
       assert(Inst != &Detach && "Found recursive Detach!");
-      Todo.push_back(Inst->getSuccessor(0));
-      Todo.push_back(Inst->getSuccessor(1));
+      Todo.push_back(Inst->getDetached());
+      Todo.push_back(Inst->getContinue());
+      if (Inst->hasUnwindDest())
+        Todo.push_back(Inst->getUnwindDest());
       continue;
     } else if (SyncInst* Inst = dyn_cast<SyncInst>(Term)) {
       // Only sync inner elements, consider as branch
@@ -76,7 +79,7 @@ bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
       continue;
     } else if (isa<BranchInst>(Term) || isa<SwitchInst>(Term) ||
                isa<InvokeInst>(Term)) {
-      if (isDetachedRethrow(Term))
+      if (isDetachedRethrow(Term, SyncRegion))
         continue;
       else {
         for (BasicBlock *Succ : successors(BB)) {
@@ -125,6 +128,10 @@ bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
                    "Exit block reaches a reattach to the continuation.");
         });
 
+      // Stop searching down this path upon finding a detached rethrow.
+      if (isDetachedRethrow(BB->getTerminator(), SyncRegion))
+        continue;
+
       for (BasicBlock *Succ : successors(BB))
         WorkListEH.push_back(Succ);
     }
@@ -143,6 +150,7 @@ bool llvm::populateDetachedCFG(
 
   BasicBlock *Detached = Detach.getDetached();
   BasicBlock *Continue = Detach.getContinue();
+  Value *SyncRegion = Detach.getSyncRegion();
   BasicBlockEdge DetachEdge(Detach.getParent(), Detached);
   Todo.push_back(Detached);
 
@@ -164,10 +172,12 @@ bool llvm::populateDetachedCFG(
       // the task.
       ReplaceInstWithInst(Term, BranchInst::Create(Continue));
       continue;
-    } else if (isa<DetachInst>(Term)) {
-      assert(Term != &Detach && "Found recursive Detach!");
-      Todo.push_back(Term->getSuccessor(0));
-      Todo.push_back(Term->getSuccessor(1));
+    } else if (DetachInst* Inst = dyn_cast<DetachInst>(Term)) {
+      assert(Inst != &Detach && "Found recursive Detach!");
+      Todo.push_back(Inst->getDetached());
+      Todo.push_back(Inst->getContinue());
+      if (Inst->hasUnwindDest())
+        Todo.push_back(Inst->getUnwindDest());
       continue;
     } else if (isa<SyncInst>(Term)) {
       // Only sync inner elements, consider as branch
@@ -175,7 +185,7 @@ bool llvm::populateDetachedCFG(
       continue;
     } else if (isa<BranchInst>(Term) || isa<SwitchInst>(Term) ||
                isa<InvokeInst>(Term)) {
-      if (isDetachedRethrow(Term)) {
+      if (isDetachedRethrow(Term, SyncRegion)) {
         DEBUG(dbgs() << "  Exit block " << BB->getName() << "\n");
         ExitBlocks.insert(BB);
       } else {
@@ -187,6 +197,7 @@ bool llvm::populateDetachedCFG(
             ExitBlocks.insert(Succ);
             WorkListEH.push_back(Succ);
           } else {
+            DEBUG(dbgs() << "Adding successor " << Succ->getName() << "\n");
             Todo.push_back(Succ);
           }
         }
@@ -234,7 +245,7 @@ bool llvm::populateDetachedCFG(
         });
 
       // Stop searching down this path upon finding a detached rethrow.
-      if (isDetachedRethrow(BB->getTerminator()))
+      if (isDetachedRethrow(BB->getTerminator(), SyncRegion))
         continue;
 
       for (BasicBlock *Succ : successors(BB)) {
@@ -320,7 +331,7 @@ Function *llvm::extractDetachBodyToFunction(
       DEBUG({
           if (!(FunctionPieces.count(Pred) || !DT.isReachableFromEntry(Pred)))
             dbgs() << "Problem block found: " << *BB
-                   << "  reachable via " << *Pred;
+                   << "reachable via " << *Pred;
         });
       assert((FunctionPieces.count(Pred) || !DT.isReachableFromEntry(Pred)) &&
              "Block inside of detached task is reachable from outside the task");

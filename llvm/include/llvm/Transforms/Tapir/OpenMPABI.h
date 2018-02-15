@@ -14,7 +14,7 @@
 #ifndef OMP_ABI_H_
 #define OMP_ABI_H_
 
-#include "llvm/Transforms/Tapir/TapirUtils.h"
+#include "llvm/Transforms/Tapir/LoweringUtils.h"
 
 namespace llvm {
 

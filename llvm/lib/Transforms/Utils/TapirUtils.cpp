@@ -24,11 +24,12 @@ using namespace llvm;
 
 /// Returns true if the given instruction performs a detached rethrow, false
 /// otherwise.
-bool llvm::isDetachedRethrow(const Instruction *I) {
+bool llvm::isDetachedRethrow(const Instruction *I, const Value *SyncRegion) {
   if (const InvokeInst *II = dyn_cast<InvokeInst>(I))
     if (const Function *Called = II->getCalledFunction())
       if (Intrinsic::detached_rethrow == Called->getIntrinsicID())
-        return true;
+        if (!SyncRegion || (SyncRegion == II->getArgOperand(0)))
+          return true;
   return false;
 }
 

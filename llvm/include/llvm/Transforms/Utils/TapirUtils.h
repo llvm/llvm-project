@@ -22,11 +22,13 @@ namespace llvm {
 class BasicBlock;
 class DetachInst;
 class DominatorTree;
+class Loop;
+class OptimizationRemarkEmitter;
 class TerminatorInst;
 
 /// Returns true if the given instruction performs a detached rethrow, false
 /// otherwise.
-bool isDetachedRethrow(const Instruction *I);
+bool isDetachedRethrow(const Instruction *I, const Value *SyncRegion = nullptr);
 
 /// Move static allocas in a block into the specified entry block.  Leave
 /// lifetime markers behind for those static allocas.  Returns true if the

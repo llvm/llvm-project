@@ -131,7 +131,7 @@ pfor.inc:                                         ; preds = %pfor.detach, %pfor.
 lpad:                                             ; preds = %invoke.cont, %pfor.body
   %1 = landingpad { i8*, i32 }
           catch i8* null
-  invoke void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 } %1)
+  invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg, { i8*, i32 } %1)
           to label %det.rethrow.unreachable unwind label %lpad7.loopexit.split-lp
 
 det.rethrow.unreachable:                          ; preds = %lpad
@@ -159,7 +159,7 @@ sync.continue12:                                  ; preds = %lpad7
 }
 
 ; Function Attrs: argmemonly
-declare void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 }) #10
+declare void @llvm.detached.rethrow.sl_p0i8i32s(token, { i8*, i32 }) #10
 
 ; Function Attrs: uwtable
 define void @_Z20parallelfor_tryblocki(i32 %n) local_unnamed_addr #5 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -227,7 +227,7 @@ pfor.inc26:                                       ; preds = %pfor.detach14, %pfo
 lpad:                                             ; preds = %invoke.cont, %pfor.body19
   %1 = landingpad { i8*, i32 }
           catch i8* null
-  invoke void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 } %1)
+  invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg3, { i8*, i32 } %1)
           to label %det.rethrow.unreachable unwind label %lpad28.loopexit.split-lp
 
 det.rethrow.unreachable:                          ; preds = %lpad
@@ -390,7 +390,7 @@ lpad:                                             ; preds = %pfor.body
 
 lpad.body:                                        ; preds = %eh.resume.i, %lpad
   %eh.lpad-body = phi { i8*, i32 } [ %11, %lpad ], [ %lpad.val5.i, %eh.resume.i ]
-  invoke void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 } %eh.lpad-body)
+  invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg, { i8*, i32 } %eh.lpad-body)
           to label %det.rethrow.unreachable unwind label %lpad7.loopexit.split-lp
 
 det.rethrow.unreachable:                          ; preds = %lpad.body
@@ -508,7 +508,7 @@ terminate.lpad:                                   ; preds = %lpad18
 ; CHECK: [[TASKLPAD]]:
 ; CHECK-NEXT: landingpad [[LPADTYPE]]
 ; CHECK: invoke void @llvm.detached.rethrow
-; CHECK: ([[LPADTYPE]] %{{.+}})
+; CHECK: (token %[[SYNCREG]], [[LPADTYPE]] %{{.+}})
 
 
 ; CHECK-LABEL: define internal fastcc void @_Z20parallelfor_tryblocki_pfor.detach.ls(
@@ -552,7 +552,7 @@ terminate.lpad:                                   ; preds = %lpad18
 ; CHECK: [[TASKLPAD]]:
 ; CHECK-NEXT: landingpad [[LPADTYPE]]
 ; CHECK: invoke void @llvm.detached.rethrow
-; CHECK: ([[LPADTYPE]] %{{.+}})
+; CHECK: (token %[[SYNCREG]], [[LPADTYPE]] %{{.+}})
 
 
 ; CHECK-LABEL: define internal fastcc void @_Z27parallelfor_tryblock_inlinei_pfor.detach.ls(
@@ -595,7 +595,7 @@ terminate.lpad:                                   ; preds = %lpad18
 ; CHECK: [[TASKLPAD]]:
 ; CHECK-NEXT: landingpad [[LPADTYPE]]
 ; CHECK: invoke void @llvm.detached.rethrow
-; CHECK: ([[LPADTYPE]] %{{.+}})
+; CHECK: (token %[[SYNCREG]], [[LPADTYPE]] %{{.+}})
 
 attributes #0 = { alwaysinline uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

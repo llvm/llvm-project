@@ -91,7 +91,7 @@ declare void @_ZSt9terminatev() local_unnamed_addr
 declare token @llvm.syncregion.start() #9
 
 ; Function Attrs: argmemonly
-declare void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 }) #10
+declare void @llvm.detached.rethrow.sl_p0i8i32s(token, { i8*, i32 }) #10
 
 ; Function Attrs: uwtable
 define void @_Z12spawn_excepti(i32 %n) local_unnamed_addr #5 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -132,7 +132,7 @@ sync.continue9:                                   ; preds = %det.cont
 lpad1:                                            ; preds = %det.achd
   %1 = landingpad { i8*, i32 }
           catch i8* null
-  invoke void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 } %1)
+  invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg, { i8*, i32 } %1)
           to label %det.rethrow.unreachable unwind label %lpad6
 
 det.rethrow.unreachable:                          ; preds = %lpad1
@@ -225,7 +225,7 @@ lpad1.body:                                       ; preds = %lpad.i, %lpad1.i
   %exn.slot.0.i = phi i8* [ %9, %lpad1.i ], [ %2, %lpad.i ]
   %lpad.val.i = insertvalue { i8*, i32 } undef, i8* %exn.slot.0.i, 0
   %lpad.val5.i = insertvalue { i8*, i32 } %lpad.val.i, i32 %ehselector.slot.0.i, 1
-  invoke void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 } %lpad.val5.i)
+  invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg, { i8*, i32 } %lpad.val5.i)
           to label %det.rethrow.unreachable unwind label %lpad6
 
 det.rethrow.unreachable:                          ; preds = %lpad1.body
@@ -334,7 +334,7 @@ lpad:                                             ; preds = %det.cont
 lpad5:                                            ; preds = %det.achd4
   %5 = landingpad { i8*, i32 }
           catch i8* null
-  invoke void @llvm.detached.rethrow.sl_p0i8i32s({ i8*, i32 } %5)
+  invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg, { i8*, i32 } %5)
           to label %det.rethrow.unreachable unwind label %lpad11
 
 det.rethrow.unreachable:                          ; preds = %lpad5

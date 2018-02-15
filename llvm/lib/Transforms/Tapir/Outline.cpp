@@ -170,7 +170,7 @@ void llvm::CloneIntoFunction(
       // terminator with a resume.
       if (isDetachedRethrow(EB->getTerminator())) {
         InvokeInst *II = cast<InvokeInst>(ClonedEB->getTerminator());
-        Value *RethrowArg = II->getArgOperand(0);
+        Value *RethrowArg = II->getArgOperand(1);
         ReplaceInstWithInst(ClonedEB->getTerminator(),
                             ResumeInst::Create(RethrowArg));
       }
