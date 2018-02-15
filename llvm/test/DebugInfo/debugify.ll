@@ -1,9 +1,16 @@
 ; RUN: opt -debugify -S -o - < %s | FileCheck %s
+; RUN: opt -passes=debugify -S -o - < %s | FileCheck %s
 
 ; RUN: opt -debugify -debugify -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
+; RUN: opt -passes=debugify,debugify -S -o - < %s 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
 
 ; RUN: opt -debugify -check-debugify -S -o - < %s | \
+; RUN:   FileCheck %s -implicit-check-not="CheckDebugify: FAIL"
+; RUN: opt -passes=debugify,check-debugify -S -o - < %s | \
+; RUN:   FileCheck %s -implicit-check-not="CheckDebugify: FAIL"
+; RUN: opt -enable-debugify -passes=verify -S -o - < %s | \
 ; RUN:   FileCheck %s -implicit-check-not="CheckDebugify: FAIL"
 
 ; RUN: opt -debugify -strip -check-debugify -S -o - < %s | \

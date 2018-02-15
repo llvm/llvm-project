@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "PassPrinters.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/BasicBlock.h"
@@ -206,7 +207,18 @@ struct CheckDebugifyPass : public ModulePass {
 
 ModulePass *createDebugifyPass() { return new DebugifyPass(); }
 
+PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
+  applyDebugifyMetadata(M);
+  return PreservedAnalyses::all();
+}
+
 ModulePass *createCheckDebugifyPass() { return new CheckDebugifyPass(); }
+
+PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
+                                              ModuleAnalysisManager &) {
+  checkDebugifyMetadata(M);
+  return PreservedAnalyses::all();
+}
 
 char DebugifyPass::ID = 0;
 static RegisterPass<DebugifyPass> X("debugify",
