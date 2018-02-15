@@ -78,8 +78,6 @@ static cl::opt<TapirTargetType> ClTapirTarget(
                           "cilkr", "CilkR")));
 
 namespace {
-// Forward declarations.
-class LoopSpawningHints;
 
 // /// \brief This modifies LoopAccessReport to initialize message with
 // /// tapir-loop-specific part.
@@ -96,210 +94,6 @@ class LoopSpawningHints;
 //                          R.getInstr()) {}
 // };
 
-
-/// Utility class for getting and setting loop spawning hints in the form
-/// of loop metadata.
-/// This class keeps a number of loop annotations locally (as member variables)
-/// and can, upon request, write them back as metadata on the loop. It will
-/// initially scan the loop for existing metadata, and will update the local
-/// values based on information in the loop.
-class LoopSpawningHints {
-public:
-  enum SpawningStrategy {
-    ST_SEQ,
-    ST_DAC,
-    ST_END,
-  };
-
-private:
-  enum HintKind { HK_STRATEGY, HK_GRAINSIZE };
-
-  /// Hint - associates name and validation with the hint value.
-  struct Hint {
-    const char *Name;
-    unsigned Value; // This may have to change for non-numeric values.
-    HintKind Kind;
-
-    Hint(const char *Name, unsigned Value, HintKind Kind)
-        : Name(Name), Value(Value), Kind(Kind) {}
-
-    bool validate(unsigned Val) {
-      switch (Kind) {
-      case HK_STRATEGY:
-        return (Val < ST_END);
-      case HK_GRAINSIZE:
-        return true;
-      }
-      return false;
-    }
-  };
-
-  /// Spawning strategy
-  Hint Strategy;
-  /// Grainsize
-  Hint Grainsize;
-
-  /// Return the loop metadata prefix.
-  static StringRef Prefix() { return "tapir.loop."; }
-
-public:
-  static std::string printStrategy(enum SpawningStrategy Strat) {
-    switch(Strat) {
-    case LoopSpawningHints::ST_SEQ:
-      return "Spawn iterations sequentially";
-    case LoopSpawningHints::ST_DAC:
-      return "Use divide-and-conquer";
-    case LoopSpawningHints::ST_END:
-    default:
-      return "Unknown";
-    }
-  }
-
-  LoopSpawningHints(const Loop *L, OptimizationRemarkEmitter &ORE)
-      : Strategy("spawn.strategy", ST_SEQ, HK_STRATEGY),
-        Grainsize("grainsize", 0, HK_GRAINSIZE),
-        TheLoop(L), ORE(ORE) {
-    // Populate values with existing loop metadata.
-    getHintsFromMetadata();
-  }
-
-  // /// Dumps all the hint information.
-  // std::string emitRemark() const {
-  //   LoopSpawningReport R;
-  //   R << "Strategy = " << printStrategy(getStrategy());
-
-  //   return R.str();
-  // }
-
-  enum SpawningStrategy getStrategy() const {
-    return (SpawningStrategy)Strategy.Value;
-  }
-
-  unsigned getGrainsize() const {
-    return Grainsize.Value;
-  }
-
-private:
-  /// Find hints specified in the loop metadata and update local values.
-  void getHintsFromMetadata() {
-    MDNode *LoopID = TheLoop->getLoopID();
-    if (!LoopID)
-      return;
-
-    // First operand should refer to the loop id itself.
-    assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
-    assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
-
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-      const MDString *S = nullptr;
-      SmallVector<Metadata *, 4> Args;
-
-      // The expected hint is either a MDString or a MDNode with the first
-      // operand a MDString.
-      if (const MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i))) {
-        if (!MD || MD->getNumOperands() == 0)
-          continue;
-        S = dyn_cast<MDString>(MD->getOperand(0));
-        for (unsigned i = 1, ie = MD->getNumOperands(); i < ie; ++i)
-          Args.push_back(MD->getOperand(i));
-      } else {
-        S = dyn_cast<MDString>(LoopID->getOperand(i));
-        assert(Args.size() == 0 && "too many arguments for MDString");
-      }
-
-      if (!S)
-        continue;
-
-      // Check if the hint starts with the loop metadata prefix.
-      StringRef Name = S->getString();
-      if (Args.size() == 1)
-        setHint(Name, Args[0]);
-    }
-  }
-
-  /// Checks string hint with one operand and set value if valid.
-  void setHint(StringRef Name, Metadata *Arg) {
-    if (!Name.startswith(Prefix()))
-      return;
-    Name = Name.substr(Prefix().size(), StringRef::npos);
-
-    const ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Arg);
-    if (!C)
-      return;
-    unsigned Val = C->getZExtValue();
-
-    Hint *Hints[] = {&Strategy, &Grainsize};
-    for (auto H : Hints) {
-      if (Name == H->Name) {
-        if (H->validate(Val))
-          H->Value = Val;
-        else
-          DEBUG(dbgs() << LS_NAME << " ignoring invalid hint '" <<
-                Name << "'\n");
-        break;
-      }
-    }
-  }
-
-  /// Create a new hint from name / value pair.
-  MDNode *createHintMetadata(StringRef Name, unsigned V) const {
-    LLVMContext &Context = TheLoop->getHeader()->getContext();
-    Metadata *MDs[] = {MDString::get(Context, Name),
-                       ConstantAsMetadata::get(
-                           ConstantInt::get(Type::getInt32Ty(Context), V))};
-    return MDNode::get(Context, MDs);
-  }
-
-  /// Matches metadata with hint name.
-  bool matchesHintMetadataName(MDNode *Node, ArrayRef<Hint> HintTypes) {
-    MDString *Name = dyn_cast<MDString>(Node->getOperand(0));
-    if (!Name)
-      return false;
-
-    for (auto H : HintTypes)
-      if (Name->getString().endswith(H.Name))
-        return true;
-    return false;
-  }
-
-  /// Sets current hints into loop metadata, keeping other values intact.
-  void writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
-    if (HintTypes.size() == 0)
-      return;
-
-    // Reserve the first element to LoopID (see below).
-    SmallVector<Metadata *, 4> MDs(1);
-    // If the loop already has metadata, then ignore the existing operands.
-    MDNode *LoopID = TheLoop->getLoopID();
-    if (LoopID) {
-      for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-        MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
-        // If node in update list, ignore old value.
-        if (!matchesHintMetadataName(Node, HintTypes))
-          MDs.push_back(Node);
-      }
-    }
-
-    // Now, add the missing hints.
-    for (auto H : HintTypes)
-      MDs.push_back(createHintMetadata(Twine(Prefix(), H.Name).str(), H.Value));
-
-    // Replace current metadata node with new one.
-    LLVMContext &Context = TheLoop->getHeader()->getContext();
-    MDNode *NewLoopID = MDNode::get(Context, MDs);
-    // Set operand 0 to refer to the loop id itself.
-    NewLoopID->replaceOperandWith(0, NewLoopID);
-
-    TheLoop->setLoopID(NewLoopID);
-  }
-
-  /// The loop these hints belong to.
-  const Loop *TheLoop;
-
-  /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter &ORE;
-};
-
 // static void emitAnalysisDiag(const Loop *TheLoop,
 //                              OptimizationRemarkEmitter &ORE,
 //                              const LoopAccessReport &Message) {
@@ -308,28 +102,28 @@ private:
 // }
 
 static void emitMissedWarning(Function *F, Loop *L,
-                              const LoopSpawningHints &LH,
+                              const TapirLoopHints &LH,
                               OptimizationRemarkEmitter *ORE) {
   // ORE->emit(OptimizationRemarkMissed(
   //               LS_NAME, "LSHint", L->getStartLoc(), L->getHeader())
   //           << "Strategy = "
-  //           << LoopSpawningHints::printStrategy(LH.getStrategy()));
+  //           << TapirLoopHints::printStrategy(LH.getStrategy()));
   switch (LH.getStrategy()) {
-  case LoopSpawningHints::ST_DAC:
+  case TapirLoopHints::ST_DAC:
     ORE->emit(DiagnosticInfoOptimizationFailure(
                   DEBUG_TYPE, "FailedRequestedSpawning",
                   L->getStartLoc(), L->getHeader())
               << "Tapir loop not transformed: "
               << "failed to use divide-and-conquer loop spawning");
     break;
-  case LoopSpawningHints::ST_SEQ:
+  case TapirLoopHints::ST_SEQ:
     ORE->emit(DiagnosticInfoOptimizationFailure(
                   DEBUG_TYPE, "SpawningDisabled",
                   L->getStartLoc(), L->getHeader())
               << "Tapir loop not transformed: "
               << "loop-spawning transformation disabled");
     break;
-  case LoopSpawningHints::ST_END:
+  case TapirLoopHints::ST_END:
     ORE->emit(DiagnosticInfoOptimizationFailure(
                   DEBUG_TYPE, "FailedRequestedSpawning",
                   L->getStartLoc(), L->getHeader())
@@ -1603,21 +1397,21 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
 /// pre-order traversal of the tree of loops and pushes each Tapir loop found
 /// onto the end of the vector.
 void LoopSpawningImpl::addTapirLoop(Loop *L, SmallVectorImpl<Loop *> &V) {
-  if (isTapirLoop(L)) {
-    V.push_back(L);
-    return;
-  }
-
-  LoopSpawningHints Hints(L, ORE);
+  TapirLoopHints Hints(L, ORE);
 
   DEBUG(dbgs() << "LS: Loop hints:"
                << " strategy = " << Hints.printStrategy(Hints.getStrategy())
                << " grainsize = " << Hints.getGrainsize()
                << "\n");
 
+  if (isTapirLoop(L)) {
+    V.push_back(L);
+    return;
+  }
+
   using namespace ore;
 
-  if (LoopSpawningHints::ST_SEQ != Hints.getStrategy()) {
+  if (TapirLoopHints::ST_SEQ != Hints.getStrategy()) {
     DEBUG(dbgs() << "LS: Marked loop is not a valid Tapir loop.\n"
           << "\tLoop hints:"
           << " strategy = " << Hints.printStrategy(Hints.getStrategy())
@@ -1687,7 +1481,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
                << L->getHeader()->getParent()->getName() << "\" from "
         << DebugLocStr << ": " << *L << "\n");
 
-  LoopSpawningHints Hints(L, ORE);
+  TapirLoopHints Hints(L, ORE);
 
   DEBUG(dbgs() << "LS: Loop hints:"
                << " strategy = " << Hints.printStrategy(Hints.getStrategy())
@@ -1716,10 +1510,10 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
   }
 
   switch(Hints.getStrategy()) {
-  case LoopSpawningHints::ST_SEQ:
+  case TapirLoopHints::ST_SEQ:
     DEBUG(dbgs() << "LS: Hints dictate sequential spawning.\n");
     break;
-  case LoopSpawningHints::ST_DAC:
+  case TapirLoopHints::ST_DAC:
     DEBUG(dbgs() << "LS: Hints dictate DAC spawning.\n");
     {
       DebugLoc DLoc = L->getStartLoc();
@@ -1748,7 +1542,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
       }
     }
     break;
-  case LoopSpawningHints::ST_END:
+  case TapirLoopHints::ST_END:
     dbgs() << "LS: Hints specify unknown spawning strategy.\n";
     break;
   }

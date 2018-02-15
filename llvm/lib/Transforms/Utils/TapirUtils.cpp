@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/TapirUtils.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -340,4 +341,119 @@ bool llvm::canDetach(const Function *F) {
     if (isa<DetachInst>(BB.getTerminator()))
       return true;
   return false;
+}
+
+/// Find hints specified in the loop metadata and update local values.
+void llvm::TapirLoopHints::getHintsFromMetadata() {
+  MDNode *LoopID = TheLoop->getLoopID();
+  if (!LoopID)
+    return;
+
+  // First operand should refer to the loop id itself.
+  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
+  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
+
+  for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+    const MDString *S = nullptr;
+    SmallVector<Metadata *, 4> Args;
+
+    // The expected hint is either a MDString or a MDNode with the first
+    // operand a MDString.
+    if (const MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i))) {
+      if (!MD || MD->getNumOperands() == 0)
+        continue;
+      S = dyn_cast<MDString>(MD->getOperand(0));
+      for (unsigned i = 1, ie = MD->getNumOperands(); i < ie; ++i)
+        Args.push_back(MD->getOperand(i));
+    } else {
+      S = dyn_cast<MDString>(LoopID->getOperand(i));
+      assert(Args.size() == 0 && "too many arguments for MDString");
+    }
+
+    if (!S)
+      continue;
+
+    // Check if the hint starts with the loop metadata prefix.
+    StringRef Name = S->getString();
+    if (Args.size() == 1)
+      setHint(Name, Args[0]);
+  }
+}
+
+/// Checks string hint with one operand and set value if valid.
+void llvm::TapirLoopHints::setHint(StringRef Name, Metadata *Arg) {
+  if (!Name.startswith(Prefix()))
+    return;
+  Name = Name.substr(Prefix().size(), StringRef::npos);
+
+  const ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Arg);
+  if (!C)
+    return;
+  unsigned Val = C->getZExtValue();
+
+  Hint *Hints[] = {&Strategy, &Grainsize};
+  for (auto H : Hints) {
+    if (Name == H->Name) {
+      if (H->validate(Val))
+        H->Value = Val;
+      else
+        DEBUG(dbgs() << "Tapir: ignoring invalid hint '" <<
+              Name << "'\n");
+      break;
+    }
+  }
+}
+
+/// Create a new hint from name / value pair.
+MDNode *llvm::TapirLoopHints::createHintMetadata(
+    StringRef Name, unsigned V) const {
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  Metadata *MDs[] = {MDString::get(Context, Name),
+                     ConstantAsMetadata::get(
+                         ConstantInt::get(Type::getInt32Ty(Context), V))};
+  return MDNode::get(Context, MDs);
+}
+
+/// Matches metadata with hint name.
+bool llvm::TapirLoopHints::matchesHintMetadataName(
+    MDNode *Node, ArrayRef<Hint> HintTypes) const {
+  MDString *Name = dyn_cast<MDString>(Node->getOperand(0));
+  if (!Name)
+    return false;
+
+  for (auto H : HintTypes)
+    if (Name->getString().endswith(H.Name))
+      return true;
+  return false;
+}
+
+/// Sets current hints into loop metadata, keeping other values intact.
+void llvm::TapirLoopHints::writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
+  if (HintTypes.size() == 0)
+    return;
+
+  // Reserve the first element to LoopID (see below).
+  SmallVector<Metadata *, 4> MDs(1);
+  // If the loop already has metadata, then ignore the existing operands.
+  MDNode *LoopID = TheLoop->getLoopID();
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
+      // If node in update list, ignore old value.
+      if (!matchesHintMetadataName(Node, HintTypes))
+        MDs.push_back(Node);
+    }
+  }
+
+  // Now, add the missing hints.
+  for (auto H : HintTypes)
+    MDs.push_back(createHintMetadata(Twine(Prefix(), H.Name).str(), H.Value));
+
+  // Replace current metadata node with new one.
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+
+  TheLoop->setLoopID(NewLoopID);
 }

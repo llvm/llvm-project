@@ -1,4 +1,4 @@
-//===---- LoopSpawning.h ----------------------------------------*- C++ -*-===//
+//===---- LoopSpawning.h - Spawn loop iterations efficiently ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
