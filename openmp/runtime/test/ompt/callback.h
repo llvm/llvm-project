@@ -74,8 +74,10 @@ do {\
     #define print_frame_from_outlined_fn(level) print_frame(level)
   #endif
 
-  #warning "Clang 5.0 and later add an additional wrapper function for tasks when compiling with debug information."
-  #warning "Please define -DDEBUG iff you manually pass in -g!"
+  #if defined(__clang__) && __clang_major__ >= 5
+    #warning "Clang 5.0 and later add an additional wrapper for outlined functions when compiling with debug information."
+    #warning "Please define -DDEBUG iff you manually pass in -g to make the tests succeed!"
+  #endif
 #endif
 
 // This macro helps to define a label at the current position that can be used

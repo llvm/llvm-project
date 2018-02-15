@@ -85,7 +85,7 @@ T tmain(T argc) {
 #pragma omp target teams distribute
   for (int i=0; i < 2; ++i)
     a = 2;
-// CHECK: #pragma omp target teams distribute
+// CHECK: #pragma omp target teams distribute{{$}}
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp target teams distribute private(argc, b), firstprivate(c, d), collapse(2)

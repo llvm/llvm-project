@@ -31,6 +31,7 @@ set(sources
   X86FastISel.cpp
   X86FixupBWInsts.cpp
   X86FixupLEAs.cpp
+  X86FixupSFB.cpp
   X86FixupSetCC.cpp
   X86FloatingPoint.cpp
   X86FrameLowering.cpp

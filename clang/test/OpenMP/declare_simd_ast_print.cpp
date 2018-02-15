@@ -84,8 +84,8 @@ private:
 // CHECK-NEXT: float taddpf(float *a, T *&b) {
 // CHECK-NEXT: return *a + *b;
 // CHECK-NEXT: }
-// CHECK: #pragma omp declare simd
-// CHECK-NEXT: #pragma omp declare simd
+// CHECK: #pragma omp declare simd uniform(this, b)
+// CHECK-NEXT: #pragma omp declare simd{{$}}
 // CHECK-NEXT: int tadd(int b) {
 // CHECK-NEXT: return this->x[b] + b;
 // CHECK-NEXT: }

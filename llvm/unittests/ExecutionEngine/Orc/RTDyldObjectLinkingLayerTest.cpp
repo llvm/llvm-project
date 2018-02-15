@@ -70,9 +70,10 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   SymbolStringPool SSP;
   ExecutionSession ES(SSP);
 
-  RTDyldObjectLinkingLayer ObjLayer(
-      ES, [&MM](VModuleKey) { return MM; },
-      [](orc::VModuleKey) { return std::make_shared<NullResolver>(); });
+  RTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey) {
+    return RTDyldObjectLinkingLayer::Resources{
+        MM, std::make_shared<NullResolver>()};
+  });
 
   LLVMContext Context;
   auto M = llvm::make_unique<Module>("", Context);
@@ -131,15 +132,13 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
 
   std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
 
-  RTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey) { return MM; },
-                                    [&](VModuleKey K) {
-                                      auto I = Resolvers.find(K);
-                                      assert(I != Resolvers.end() &&
-                                             "Missing resolver");
-                                      auto R = std::move(I->second);
-                                      Resolvers.erase(I);
-                                      return R;
-                                    });
+  RTDyldObjectLinkingLayer ObjLayer(ES, [&](VModuleKey K) {
+    auto I = Resolvers.find(K);
+    assert(I != Resolvers.end() && "Missing resolver");
+    auto R = std::move(I->second);
+    Resolvers.erase(I);
+    return RTDyldObjectLinkingLayer::Resources{MM, std::move(R)};
+  });
   SimpleCompiler Compile(*TM);
 
   // Create a pair of modules that will trigger recursive finalization:
@@ -196,8 +195,9 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
         return cantFail(
             lookupFlagsWithLegacyFn(SymbolFlags, Symbols, LegacyLookup));
       },
-      [&](AsynchronousSymbolQuery &Query, const SymbolNameSet &Symbols) {
-        return lookupWithLegacyFn(Query, Symbols, LegacyLookup);
+      [&](std::shared_ptr<AsynchronousSymbolQuery> Query,
+          const SymbolNameSet &Symbols) {
+        return lookupWithLegacyFn(*Query, Symbols, LegacyLookup);
       });
 
   cantFail(ObjLayer.addObject(K2, std::move(Obj2)));
@@ -219,9 +219,10 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
 
-  RTDyldObjectLinkingLayer ObjLayer(
-      ES, [&MM](VModuleKey) { return MM; },
-      [](VModuleKey) { return std::make_shared<NullResolver>(); });
+  RTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey K) {
+    return RTDyldObjectLinkingLayer::Resources{
+        MM, std::make_shared<NullResolver>()};
+  });
   SimpleCompiler Compile(*TM);
 
   // Create a pair of unrelated modules:
@@ -282,8 +283,11 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
   SymbolStringPool SSP;
   ExecutionSession ES(SSP);
   RTDyldObjectLinkingLayer ObjLayer(
-      ES, [](VModuleKey) { return nullptr; },
-      [](VModuleKey) { return std::make_shared<NullResolver>(); },
+      ES,
+      [](VModuleKey) {
+        return RTDyldObjectLinkingLayer::Resources{
+            nullptr, std::make_shared<NullResolver>()};
+      },
       [](VModuleKey, const RTDyldObjectLinkingLayer::ObjectPtr &obj,
          const RuntimeDyld::LoadedObjectInfo &info) {});
 }

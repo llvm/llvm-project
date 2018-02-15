@@ -565,7 +565,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // in the future.
     SmallVector<char, 0> CompileTwiceBuffer;
     if (CompileTwice) {
-      std::unique_ptr<Module> M2(llvm::CloneModule(M.get()));
+      std::unique_ptr<Module> M2(llvm::CloneModule(*M));
       PM.run(*M2);
       CompileTwiceBuffer = Buffer;
       Buffer.clear();

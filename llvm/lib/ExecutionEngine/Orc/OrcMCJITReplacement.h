@@ -166,32 +166,32 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return UnresolvedSymbols;
     }
 
-    SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+    SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                          SymbolNameSet Symbols) override {
       SymbolNameSet UnresolvedSymbols;
 
       for (auto &S : Symbols) {
         if (auto Sym = M.findMangledSymbol(*S)) {
           if (auto Addr = Sym.getAddress())
-            Query.setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
+            Query->setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           else {
-            Query.setFailed(Addr.takeError());
+            Query->setFailed(Addr.takeError());
             return SymbolNameSet();
           }
         } else if (auto Err = Sym.takeError()) {
-          Query.setFailed(std::move(Err));
+          Query->setFailed(std::move(Err));
           return SymbolNameSet();
         } else {
           if (auto Sym2 = M.ClientResolver->findSymbol(*S)) {
             if (auto Addr = Sym2.getAddress())
-              Query.setDefinition(S,
-                                  JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
+              Query->setDefinition(S,
+                                   JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
             else {
-              Query.setFailed(Addr.takeError());
+              Query->setFailed(Addr.takeError());
               return SymbolNameSet();
             }
           } else if (auto Err = Sym2.takeError()) {
-            Query.setFailed(std::move(Err));
+            Query->setFailed(std::move(Err));
             return SymbolNameSet();
           } else
             UnresolvedSymbols.insert(S);
@@ -229,9 +229,12 @@ public:
         Resolver(std::make_shared<LinkingORCResolver>(*this)),
         ClientResolver(std::move(ClientResolver)), NotifyObjectLoaded(*this),
         NotifyFinalized(*this),
-        ObjectLayer(ES, [this](VModuleKey K) { return this->MemMgr; },
-                    [this](VModuleKey K) { return this->Resolver; },
-                    NotifyObjectLoaded, NotifyFinalized),
+        ObjectLayer(
+            ES,
+            [this](VModuleKey K) {
+              return ObjectLayerT::Resources{this->MemMgr, this->Resolver};
+            },
+            NotifyObjectLoaded, NotifyFinalized),
         CompileLayer(ObjectLayer, SimpleCompiler(*this->TM)),
         LazyEmitLayer(CompileLayer) {}
 

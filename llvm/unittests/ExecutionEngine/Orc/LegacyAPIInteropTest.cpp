@@ -14,31 +14,6 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-class SimpleORCResolver : public SymbolResolver {
-public:
-  using LookupFlagsFn = std::function<SymbolNameSet(SymbolFlagsMap &SymbolFlags,
-                                                    const SymbolNameSet &)>;
-  using LookupFn = std::function<SymbolNameSet(AsynchronousSymbolQuery &Q,
-                                               SymbolNameSet Symbols)>;
-
-  SimpleORCResolver(LookupFlagsFn LookupFlags, LookupFn Lookup)
-      : LookupFlags(std::move(LookupFlags)), Lookup(std::move(Lookup)) {}
-
-  SymbolNameSet lookupFlags(SymbolFlagsMap &SymbolFlags,
-                            const SymbolNameSet &Symbols) override {
-    return LookupFlags(SymbolFlags, Symbols);
-  }
-
-  SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
-                       SymbolNameSet Symbols) override {
-    return Lookup(Query, std::move(Symbols));
-  };
-
-private:
-  LookupFlagsFn LookupFlags;
-  LookupFn Lookup;
-};
-
 namespace {
 
 TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
@@ -58,16 +33,17 @@ TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
     return V.lookupFlags(SymbolFlags, Names);
   };
 
-  auto Lookup = [&](AsynchronousSymbolQuery &Query, SymbolNameSet Symbols) {
-    auto R = V.lookup(Query, Symbols);
+  auto Lookup = [&](std::shared_ptr<AsynchronousSymbolQuery> Query,
+                    SymbolNameSet Symbols) {
+    auto R = V.lookup(std::move(Query), Symbols);
     EXPECT_TRUE(R.MaterializationWork.empty())
         << "Query resulted in unexpected materialization work";
     return std::move(R.UnresolvedSymbols);
   };
 
-  SimpleORCResolver UnderlyingResolver(std::move(LookupFlags),
-                                       std::move(Lookup));
-  JITSymbolResolverAdapter Resolver(ES, UnderlyingResolver);
+  auto UnderlyingResolver =
+      createSymbolResolver(std::move(LookupFlags), std::move(Lookup));
+  JITSymbolResolverAdapter Resolver(ES, *UnderlyingResolver);
 
   JITSymbolResolver::LookupSet Names{StringRef("foo")};
 

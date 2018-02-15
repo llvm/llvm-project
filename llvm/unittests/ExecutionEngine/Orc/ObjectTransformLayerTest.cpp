@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/NullResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Object/ObjectFile.h"
@@ -281,12 +282,11 @@ TEST(ObjectTransformLayerTest, Main) {
   };
 
   // Construct the jit layers.
-  RTDyldObjectLinkingLayer BaseLayer(
-      ES,
-      [](VModuleKey) { return std::make_shared<llvm::SectionMemoryManager>(); },
-      [](VModuleKey) -> std::shared_ptr<SymbolResolver> {
-        llvm_unreachable("Should never be called");
-      });
+  RTDyldObjectLinkingLayer BaseLayer(ES, [](VModuleKey) {
+    return RTDyldObjectLinkingLayer::Resources{
+        std::make_shared<llvm::SectionMemoryManager>(),
+        std::make_shared<NullResolver>()};
+  });
 
   auto IdentityTransform =
     [](std::shared_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>

@@ -11,7 +11,7 @@
 #define HEADER
 
 #pragma omp declare reduction(+ : int, char : omp_out *= omp_in)
-// CHECK: #pragma omp declare reduction (+ : int : omp_out *= omp_in)
+// CHECK: #pragma omp declare reduction (+ : int : omp_out *= omp_in){{$}}
 // CHECK-NEXT: #pragma omp declare reduction (+ : char : omp_out *= omp_in)
 
 #pragma omp declare reduction(fun : float : omp_out += omp_in) initializer(omp_priv = omp_orig + 15)

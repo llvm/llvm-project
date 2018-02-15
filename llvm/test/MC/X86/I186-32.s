@@ -1,28 +1,28 @@
 // RUN: llvm-mc -triple i386-unknown-unknown --show-encoding %s | FileCheck %s
 
-// CHECK: bound 3809469200(%edx,%eax,4), %eax 
+// CHECK: bound %eax, 3809469200(%edx,%eax,4)
 // CHECK: encoding: [0x62,0x84,0x82,0x10,0xe3,0x0f,0xe3]        
-bound 3809469200(%edx,%eax,4), %eax 
+bound %eax, 3809469200(%edx,%eax,4)
 
-// CHECK: bound 485498096, %eax 
+// CHECK: bound %eax, 485498096
 // CHECK: encoding: [0x62,0x05,0xf0,0x1c,0xf0,0x1c]        
-bound 485498096, %eax 
+bound %eax, 485498096
 
-// CHECK: bound 485498096(%edx,%eax,4), %eax 
+// CHECK: bound %eax, 485498096(%edx,%eax,4)
 // CHECK: encoding: [0x62,0x84,0x82,0xf0,0x1c,0xf0,0x1c]        
-bound 485498096(%edx,%eax,4), %eax 
+bound %eax, 485498096(%edx,%eax,4)
 
-// CHECK: bound 485498096(%edx), %eax 
+// CHECK: bound %eax, 485498096(%edx)
 // CHECK: encoding: [0x62,0x82,0xf0,0x1c,0xf0,0x1c]        
-bound 485498096(%edx), %eax 
+bound %eax, 485498096(%edx)
 
-// CHECK: bound 64(%edx,%eax), %eax 
+// CHECK: bound %eax, 64(%edx,%eax)
 // CHECK: encoding: [0x62,0x44,0x02,0x40]        
-bound 64(%edx,%eax), %eax 
+bound %eax, 64(%edx,%eax)
 
-// CHECK: bound (%edx), %eax 
+// CHECK: bound %eax, (%edx)
 // CHECK: encoding: [0x62,0x02]        
-bound (%edx), %eax 
+bound %eax, (%edx)
 
 // CHECK: enter $0, $0 
 // CHECK: encoding: [0xc8,0x00,0x00,0x00]        

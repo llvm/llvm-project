@@ -58,7 +58,7 @@ T tmain (T argc) {
 // CHECK: static T a;
 // CHECK-NEXT: #pragma omp for ordered
 // CHECK-NEXT: for (int i = 0; i < argc; ++i)
-// CHECK-NEXT: #pragma omp ordered
+// CHECK-NEXT: #pragma omp ordered{{$}}
 // CHECK-NEXT: {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: }

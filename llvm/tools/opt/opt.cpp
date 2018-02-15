@@ -765,10 +765,10 @@ int main(int argc, char **argv) {
   // If requested, run all passes again with the same pass manager to catch
   // bugs caused by persistent state in the passes
   if (RunTwice) {
-      std::unique_ptr<Module> M2(CloneModule(M.get()));
-      Passes.run(*M2);
-      CompileTwiceBuffer = Buffer;
-      Buffer.clear();
+    std::unique_ptr<Module> M2(CloneModule(*M));
+    Passes.run(*M2);
+    CompileTwiceBuffer = Buffer;
+    Buffer.clear();
   }
 
   // Now that we have all of the passes ready, run them.
