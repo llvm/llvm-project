@@ -110,6 +110,7 @@ set(SANITIZER_HEADERS
   sanitizer_flags.h
   sanitizer_flags.inc
   sanitizer_fuchsia.h
+  sanitizer_interceptors_ioctl_netbsd.inc
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h
   sanitizer_lfstack.h

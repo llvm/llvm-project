@@ -96,7 +96,7 @@ std::string replacePtrsInDump(std::string const &Dump) {
 }
 
 std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
-  auto DumpWithMemLocs = Server.dumpAST(File);
+  auto DumpWithMemLocs = runDumpAST(Server, File);
   return replacePtrsInDump(DumpWithMemLocs);
 }
 
@@ -432,17 +432,17 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   // Clang can't parse command args in that case, but we shouldn't crash.
   Server.addDocument(FooCpp, "int main() {}");
 
-  EXPECT_EQ(Server.dumpAST(FooCpp), "<no-ast>");
-  EXPECT_ERROR(Server.findDefinitions(FooCpp, Position()));
-  EXPECT_ERROR(Server.findDocumentHighlights(FooCpp, Position()));
-  EXPECT_ERROR(Server.rename(FooCpp, Position(), "new_name"));
+  EXPECT_EQ(runDumpAST(Server, FooCpp), "<no-ast>");
+  EXPECT_ERROR(runFindDefinitions(Server, FooCpp, Position()));
+  EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
+  EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name"));
   // FIXME: codeComplete and signatureHelp should also return errors when they
   // can't parse the file.
   EXPECT_THAT(
       runCodeComplete(Server, FooCpp, Position(), clangd::CodeCompleteOptions())
           .Value.items,
       IsEmpty());
-  auto SigHelp = Server.signatureHelp(FooCpp, Position());
+  auto SigHelp = runSignatureHelp(Server, FooCpp, Position());
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
   EXPECT_THAT(SigHelp->Value.signatures, IsEmpty());
 }
@@ -646,7 +646,7 @@ int d;
       Pos.line = LineDist(RandGen);
       Pos.character = ColumnDist(RandGen);
 
-      ASSERT_TRUE(!!Server.findDefinitions(FilePaths[FileIndex], Pos));
+      ASSERT_TRUE(!!runFindDefinitions(Server, FilePaths[FileIndex], Pos));
     };
 
     std::vector<std::function<void()>> AsyncRequests = {
@@ -768,8 +768,8 @@ TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
   public:
     std::atomic<int> Count = {0};
 
-     NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
-         : StartSecondReparse(std::move(StartSecondReparse)) {}
+    NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
+        : StartSecondReparse(std::move(StartSecondReparse)) {}
 
     void onDiagnosticsReady(PathRef,
                             Tagged<std::vector<DiagWithFixIts>>) override {

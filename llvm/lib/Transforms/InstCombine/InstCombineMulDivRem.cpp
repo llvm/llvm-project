@@ -1319,21 +1319,19 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 
 /// Try to convert X/C into X * (1/C).
 static Instruction *foldFDivConstantDivisor(BinaryOperator &FDiv) {
-  // TODO: Handle vector constants.
-  ConstantFP *CFP;
-  if (!match(FDiv.getOperand(1), m_ConstantFP(CFP)))
+  // TODO: Handle non-splat vector constants.
+  const APFloat *C;
+  if (!match(FDiv.getOperand(1), m_APFloat(C)))
     return nullptr;
 
-  const APFloat &FpVal = CFP->getValueAPF();
-  APFloat Reciprocal(FpVal.getSemantics());
-
   // This returns false if the inverse would be a denormal.
-  bool HasRecip = FpVal.getExactInverse(&Reciprocal);
+  APFloat Reciprocal(C->getSemantics());
+  bool HasRecip = C->getExactInverse(&Reciprocal);
   // If the inverse is not exact, we may still be able to convert if we are
   // not operating with strict math.
-  if (!HasRecip && FDiv.hasAllowReciprocal() && FpVal.isFiniteNonZero()) {
-    Reciprocal = APFloat(FpVal.getSemantics(), 1.0f);
-    Reciprocal.divide(FpVal, APFloat::rmNearestTiesToEven);
+  if (!HasRecip && FDiv.hasAllowReciprocal() && C->isFiniteNonZero()) {
+    Reciprocal = APFloat(C->getSemantics(), 1.0f);
+    Reciprocal.divide(*C, APFloat::rmNearestTiesToEven);
     // Disallow denormal constants because we don't know what would happen
     // on all targets.
     // TODO: Function attributes can tell us that denorms are flushed?
@@ -1343,7 +1341,7 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &FDiv) {
   if (!HasRecip)
     return nullptr;
 
-  auto *RecipCFP = ConstantFP::get(FDiv.getContext(), Reciprocal);
+  auto *RecipCFP = ConstantFP::get(FDiv.getType(), Reciprocal);
   return BinaryOperator::CreateFMul(FDiv.getOperand(0), RecipCFP);
 }
 

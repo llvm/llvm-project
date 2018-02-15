@@ -594,9 +594,9 @@ def VCMPEZS : ASuI<0b11101, 0b11, 0b0101, 0b11, 0,
 }
 
 def VCMPEZH : AHuI<0b11101, 0b11, 0b0101, 0b11, 0,
-                   (outs), (ins SPR:$Sd),
+                   (outs), (ins HPR:$Sd),
                    IIC_fpCMP16, "vcmpe", ".f16\t$Sd, #0",
-                   []> {
+                   [(arm_cmpfp0 HPR:$Sd, (i32 1))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 }
@@ -622,9 +622,9 @@ def VCMPZS  : ASuI<0b11101, 0b11, 0b0101, 0b01, 0,
 }
 
 def VCMPZH  : AHuI<0b11101, 0b11, 0b0101, 0b01, 0,
-                   (outs), (ins SPR:$Sd),
+                   (outs), (ins HPR:$Sd),
                    IIC_fpCMP16, "vcmp", ".f16\t$Sd, #0",
-                   []> {
+                   [(arm_cmpfp0 HPR:$Sd, (i32 0))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 }

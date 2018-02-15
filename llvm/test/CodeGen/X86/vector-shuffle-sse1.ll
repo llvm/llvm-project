@@ -237,8 +237,6 @@ define <4 x float> @insert_mem_lo_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 ; SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE1-NEXT:    xorps %xmm2, %xmm2
-; SSE1-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; SSE1-NEXT:    movaps %xmm1, %xmm0
 ; SSE1-NEXT:    retq
@@ -258,8 +256,6 @@ define <4 x float> @insert_mem_hi_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 ; SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE1-NEXT:    xorps %xmm2, %xmm2
-; SSE1-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE1-NEXT:    retq
   %a = load <2 x float>, <2 x float>* %ptr

@@ -39,6 +39,10 @@ inc_threshold("machine-combiner-inc-threshold", cl::Hidden,
               cl::desc("Incremental depth computation will be used for basic "
                        "blocks with more instructions."), cl::init(500));
 
+static cl::opt<bool> dump_intrs("machine-combiner-dump-subst-intrs", cl::Hidden,
+                                cl::desc("Dump all substituted intrs"),
+                                cl::init(false));
+
 #ifdef EXPENSIVE_CHECKS
 static cl::opt<bool> VerifyPatternOrder(
     "machine-combiner-verify-pattern-order", cl::Hidden,
@@ -55,6 +59,7 @@ static cl::opt<bool> VerifyPatternOrder(
 
 namespace {
 class MachineCombiner : public MachineFunctionPass {
+  const TargetSubtargetInfo *STI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MCSchedModel SchedModel;
@@ -162,9 +167,6 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
   for (auto *InstrPtr : InsInstrs) { // for each Use
     unsigned IDepth = 0;
-    DEBUG(dbgs() << "NEW INSTR ";
-          InstrPtr->print(dbgs(), TII);
-          dbgs() << "\n";);
     for (const MachineOperand &MO : InstrPtr->operands()) {
       // Check for virtual register operand.
       if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
@@ -306,17 +308,20 @@ bool MachineCombiner::improvesCriticalPathLen(
   unsigned NewRootDepth = getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace);
   unsigned RootDepth = BlockTrace.getInstrCycles(*Root).Depth;
 
-  DEBUG(dbgs() << "DEPENDENCE DATA FOR " << *Root << "\n";
-        dbgs() << " NewRootDepth: " << NewRootDepth << "\n";
-        dbgs() << " RootDepth: " << RootDepth << "\n");
+  DEBUG(dbgs() << "  Dependence data for " << *Root << "\tNewRootDepth: "
+               << NewRootDepth << "\tRootDepth: " << RootDepth);
 
   // For a transform such as reassociation, the cost equation is
   // conservatively calculated so that we must improve the depth (data
   // dependency cycles) in the critical path to proceed with the transform.
   // Being conservative also protects against inaccuracies in the underlying
   // machine trace metrics and CPU models.
-  if (getCombinerObjective(Pattern) == CombinerObjective::MustReduceDepth)
+  if (getCombinerObjective(Pattern) == CombinerObjective::MustReduceDepth) {
+    DEBUG(dbgs() << "\tIt MustReduceDepth ");
+    DEBUG(NewRootDepth < RootDepth ? dbgs() << "\t  and it does it\n"
+                                   : dbgs() << "\t  but it does NOT do it\n");
     return NewRootDepth < RootDepth;
+  }
 
   // A more flexible cost calculation for the critical path includes the slack
   // of the original code sequence. This may allow the transform to proceed
@@ -329,17 +334,19 @@ bool MachineCombiner::improvesCriticalPathLen(
 
   unsigned RootSlack = BlockTrace.getInstrSlack(*Root);
   unsigned NewCycleCount = NewRootDepth + NewRootLatency;
-  unsigned OldCycleCount = RootDepth + RootLatency +
-                           (SlackIsAccurate ? RootSlack : 0);
-  DEBUG(dbgs() << " NewRootLatency: " << NewRootLatency << "\n";
-        dbgs() << " RootLatency: " << RootLatency << "\n";
-        dbgs() << " RootSlack: " << RootSlack << " SlackIsAccurate="
-               << SlackIsAccurate << "\n";
-        dbgs() << " NewRootDepth + NewRootLatency = "
-               << NewCycleCount << "\n";
-        dbgs() << " RootDepth + RootLatency + RootSlack = "
-               << OldCycleCount << "\n";
-        );
+  unsigned OldCycleCount =
+      RootDepth + RootLatency + (SlackIsAccurate ? RootSlack : 0);
+  DEBUG(dbgs() << "\n\tNewRootLatency: " << NewRootLatency << "\tRootLatency: "
+               << RootLatency << "\n\tRootSlack: " << RootSlack
+               << " SlackIsAccurate=" << SlackIsAccurate
+               << "\n\tNewRootDepth + NewRootLatency = " << NewCycleCount
+               << "\n\tRootDepth + RootLatency + RootSlack = "
+               << OldCycleCount;);
+  DEBUG(NewCycleCount <= OldCycleCount
+            ? dbgs() << "\n\t  It IMPROVES PathLen because"
+            : dbgs() << "\n\t  It DOES NOT improve PathLen because");
+  DEBUG(dbgs() << "\n\t\tNewCycleCount = " << NewCycleCount
+               << ", OldCycleCount = " << OldCycleCount << "\n");
 
   return NewCycleCount <= OldCycleCount;
 }
@@ -385,9 +392,14 @@ bool MachineCombiner::preservesResourceLen(
   unsigned ResLenAfterCombine =
       BlockTrace.getResourceLength(MBBarr, MSCInsArr, MSCDelArr);
 
-  DEBUG(dbgs() << "RESOURCE DATA: \n";
-        dbgs() << " resource len before: " << ResLenBeforeCombine
-               << " after: " << ResLenAfterCombine << "\n";);
+  DEBUG(dbgs() << "\t\tResource length before replacement: "
+               << ResLenBeforeCombine << " and after: " << ResLenAfterCombine
+               << "\n";);
+  DEBUG(
+      ResLenAfterCombine <= ResLenBeforeCombine
+          ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
+          : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
+                      "Length\n");
 
   return ResLenAfterCombine <= ResLenBeforeCombine;
 }
@@ -495,8 +507,6 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
-
-    DEBUG(dbgs() << "INSTR "; MI.dump(); dbgs() << "\n";);
     SmallVector<MachineCombinerPattern, 16> Patterns;
     // The motivating example is:
     //
@@ -544,6 +554,21 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       // in a single instruction.
       if (!NewInstCount)
         continue;
+
+      DEBUG(if (dump_intrs) {
+        dbgs() << "\tFor the Pattern (" << (int)P << ") these instructions could be removed\n";
+        for (auto const *InstrPtr : DelInstrs) {
+          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
+          InstrPtr->print(dbgs(), false, false, TII);
+          dbgs() << "\n";
+        }
+        dbgs() << "\tThese instructions could replace the removed ones\n";
+        for (auto const *InstrPtr : InsInstrs) {
+          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
+          InstrPtr->print(dbgs(), false, false, TII);
+          dbgs() << "\n";
+        }
+      });
 
       bool SubstituteAlways = false;
       if (ML && TII->isThroughputPattern(P))
@@ -606,11 +631,11 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 }
 
 bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  SchedModel = STI.getSchedModel();
-  TSchedModel.init(SchedModel, &STI, TII);
+  STI = &MF.getSubtarget();
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
+  SchedModel = STI->getSchedModel();
+  TSchedModel.init(SchedModel, STI, TII);
   MRI = &MF.getRegInfo();
   MLI = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
