@@ -15,7 +15,6 @@ void test() {
       }
 }
 
-// CHECK: define void @_Z4testv()
 // CHECK: call void @llvm.dbg.declare(metadata %struct.vec** {{.*}}, metadata ![[RANGE1:[0-9]+]]
 // CHECK: call void @llvm.dbg.declare(metadata i32** {{.*}}, metadata ![[BEGIN1:[0-9]+]]
 // CHECK: call void @llvm.dbg.declare(metadata i32** {{.*}}, metadata ![[END1:[0-9]+]]

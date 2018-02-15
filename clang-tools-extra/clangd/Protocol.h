@@ -179,6 +179,51 @@ inline bool fromJSON(const json::Expr &, NoParams &) { return true; }
 using ShutdownParams = NoParams;
 using ExitParams = NoParams;
 
+struct CompletionItemClientCapabilities {
+  /// Client supports snippets as insert text.
+  bool snippetSupport = false;
+  /// Client supports commit characters on a completion item.
+  bool commitCharacterSupport = false;
+  // Client supports the follow content formats for the documentation property.
+  // The order describes the preferred format of the client.
+  // NOTE: not used by clangd at the moment.
+  // std::vector<MarkupKind> documentationFormat;
+};
+bool fromJSON(const json::Expr &, CompletionItemClientCapabilities &);
+
+struct CompletionClientCapabilities {
+  /// Whether completion supports dynamic registration.
+  bool dynamicRegistration = false;
+  /// The client supports the following `CompletionItem` specific capabilities.
+  CompletionItemClientCapabilities completionItem;
+  // NOTE: not used by clangd at the moment.
+  // llvm::Optional<CompletionItemKindCapabilities> completionItemKind;
+
+  /// The client supports to send additional context information for a
+  /// `textDocument/completion` request.
+  bool contextSupport = false;
+};
+bool fromJSON(const json::Expr &, CompletionClientCapabilities &);
+
+// FIXME: most of the capabilities are missing from this struct. Only the ones
+// used by clangd are currently there.
+struct TextDocumentClientCapabilities {
+  /// Capabilities specific to the `textDocument/completion`
+  CompletionClientCapabilities completion;
+};
+bool fromJSON(const json::Expr &, TextDocumentClientCapabilities &);
+
+struct ClientCapabilities {
+  // Workspace specific client capabilities.
+  // NOTE: not used by clangd at the moment.
+  // WorkspaceClientCapabilities workspace;
+
+  // Text document specific client capabilities.
+  TextDocumentClientCapabilities textDocument;
+};
+
+bool fromJSON(const json::Expr &, ClientCapabilities &);
+
 struct InitializeParams {
   /// The process Id of the parent process that started
   /// the server. Is null if the process has not been started by another
@@ -201,8 +246,7 @@ struct InitializeParams {
   // initializationOptions?: any;
 
   /// The capabilities provided by the client (editor or tool)
-  /// Note: Not currently used by clangd
-  // ClientCapabilities capabilities;
+  ClientCapabilities capabilities;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   llvm::Optional<TraceLevel> trace;

@@ -50,8 +50,8 @@ public:
   // We stash a Span object in the context. It will record the start/end,
   // and this also allows us to look up the parent Span's information.
   Context beginSpan(llvm::StringRef Name, json::obj *Args) override {
-    return Context::current().derive(SpanKey,
-                                     make_unique<JSONSpan>(this, Name, Args));
+    return Context::current().derive(
+        SpanKey, llvm::make_unique<JSONSpan>(this, Name, Args));
   }
 
   // Trace viewer requires each thread to properly stack events.
