@@ -54,7 +54,7 @@ namespace __xray_fdr_internal {
 
 /// Writes the new buffer record and wallclock time that begin a buffer for the
 /// current thread.
-static void writeNewBufferPreamble(pid_t Tid, timespec TS);
+static void writeNewBufferPreamble(tid_t Tid, timespec TS);
 
 /// Writes a Function Record to the buffer associated with the current thread.
 static void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
@@ -185,7 +185,7 @@ public:
 
 } // namespace
 
-static void writeNewBufferPreamble(pid_t Tid,
+static void writeNewBufferPreamble(tid_t Tid,
                                    timespec TS) XRAY_NEVER_INSTRUMENT {
   static constexpr int InitRecordsCount = 2;
   auto &TLD = getThreadLocalData();
@@ -195,11 +195,12 @@ static void writeNewBufferPreamble(pid_t Tid,
     // buffer, associated with a particular thread, with a new CPU.  For the
     // data, we have 15 bytes to squeeze as much information as we can.  At this
     // point we only write down the following bytes:
-    //   - Thread ID (pid_t, 4 bytes)
+    //   - Thread ID (tid_t, cast to 4 bytes type due to Darwin being 8 bytes)
     auto &NewBuffer = Metadata[0];
     NewBuffer.Type = uint8_t(RecordType::Metadata);
     NewBuffer.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewBuffer);
-    std::memcpy(&NewBuffer.Data, &Tid, sizeof(pid_t));
+    int32_t tid = static_cast<int32_t>(Tid);
+    std::memcpy(&NewBuffer.Data, &tid, sizeof(tid));
   }
 
   // Also write the WalltimeMarker record.
@@ -236,7 +237,7 @@ inline void setupNewBuffer(int (*wall_clock_reader)(
   auto &TLD = getThreadLocalData();
   auto &B = TLD.Buffer;
   TLD.RecordPtr = static_cast<char *>(B.Data);
-  pid_t Tid = syscall(SYS_gettid);
+  tid_t Tid = __sanitizer::GetTid();
   timespec TS{0, 0};
   // This is typically clock_gettime, but callers have injection ability.
   wall_clock_reader(CLOCK_MONOTONIC, &TS);

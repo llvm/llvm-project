@@ -1429,7 +1429,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     Value *NewInst = nullptr;
     Instruction *SimpR = nullptr;
 
-    if (Op0->hasOneUse() && match(Op0, m_FDiv(m_Value(X), m_Value(Y)))) {
+    if (match(Op0, m_OneUse(m_FDiv(m_Value(X), m_Value(Y))))) {
       // (X/Y) / Z => X / (Y*Z)
       if (!isa<Constant>(Y) || !isa<Constant>(Op1)) {
         NewInst = Builder.CreateFMul(Y, Op1);
@@ -1440,7 +1440,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         }
         SimpR = BinaryOperator::CreateFDiv(X, NewInst);
       }
-    } else if (Op1->hasOneUse() && match(Op1, m_FDiv(m_Value(X), m_Value(Y)))) {
+    } else if (match(Op1, m_OneUse(m_FDiv(m_Value(X), m_Value(Y))))) {
       // Z / (X/Y) => Z*Y / X
       if (!isa<Constant>(Y) || !isa<Constant>(Op0)) {
         NewInst = Builder.CreateFMul(Op0, Y);
@@ -1461,8 +1461,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     }
   }
 
-  if (AllowReassociate &&
-      Op0->hasOneUse() && Op1->hasOneUse()) {
+  if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse()) {
     Value *A;
     // sin(a) / cos(a) -> tan(a)
     if (match(Op0, m_Intrinsic<Intrinsic::sin>(m_Value(A))) &&

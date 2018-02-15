@@ -546,6 +546,8 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_L2_W_XD_KZ_B:
   case IC_EVEX_L2_W_OPSIZE_KZ_B:
     return false;
+  case IC_3DNOW:
+    return false;
   default:
     errs() << "Unknown instruction class: " <<
       stringForContext((InstructionContext)parent) << "\n";
@@ -888,7 +890,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
 }
 
 void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
-  const unsigned int tableSize = 16384;
+  const unsigned int tableSize = 32768;
   o.indent(i * 2) << "static const uint8_t " CONTEXTS_STR
                      "[" << tableSize << "] = {\n";
   i++;
@@ -896,7 +898,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   for (unsigned index = 0; index < tableSize; ++index) {
     o.indent(i * 2);
 
-    if (index & ATTR_EVEX) {
+    if (index & ATTR_3DNOW)
+      o << "IC_3DNOW";
+    else if (index & ATTR_EVEX) {
       o << "IC_EVEX";
       if (index & ATTR_EVEXL2)
         o << "_L2";

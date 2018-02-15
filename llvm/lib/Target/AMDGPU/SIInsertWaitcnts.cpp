@@ -406,6 +406,8 @@ public:
   MachineBasicBlock *loopBottom(const MachineLoop *Loop);
   void insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block);
   void insertWaitcntBeforeCF(MachineBasicBlock &Block, MachineInstr *Inst);
+  bool isWaitcntStronger(unsigned LHS, unsigned RHS);
+  unsigned combineWaitcnt(unsigned LHS, unsigned RHS);
 };
 
 } // end anonymous namespace
@@ -789,6 +791,29 @@ static bool readsVCCZ(const MachineInstr &MI) {
          !MI.getOperand(1).isUndef();
 }
 
+/// \brief Given wait count encodings checks if LHS is stronger than RHS.
+bool SIInsertWaitcnts::isWaitcntStronger(unsigned LHS, unsigned RHS) {
+  if (AMDGPU::decodeVmcnt(IV, LHS) > AMDGPU::decodeVmcnt(IV, RHS))
+    return false;
+  if (AMDGPU::decodeLgkmcnt(IV, LHS) > AMDGPU::decodeLgkmcnt(IV, RHS))
+    return false;
+  if (AMDGPU::decodeExpcnt(IV, LHS) > AMDGPU::decodeExpcnt(IV, RHS))
+    return false;
+  return true;
+}
+
+/// \brief Given wait count encodings create a new encoding which is stronger
+/// or equal to both.
+unsigned SIInsertWaitcnts::combineWaitcnt(unsigned LHS, unsigned RHS) {
+  unsigned VmCnt = std::min(AMDGPU::decodeVmcnt(IV, LHS),
+                            AMDGPU::decodeVmcnt(IV, RHS));
+  unsigned LgkmCnt = std::min(AMDGPU::decodeLgkmcnt(IV, LHS),
+                              AMDGPU::decodeLgkmcnt(IV, RHS));
+  unsigned ExpCnt = std::min(AMDGPU::decodeExpcnt(IV, LHS),
+                             AMDGPU::decodeExpcnt(IV, RHS));
+  return AMDGPU::encodeWaitcnt(IV, VmCnt, ExpCnt, LgkmCnt);
+}
+
 ///  \brief Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
 ///  but instructions of different types can complete out of order.
@@ -1134,18 +1159,30 @@ void SIInsertWaitcnts::generateSWaitCntInstBefore(
       // whomever. e.g., for memory model, inserted the prev waitcnt really
       // wants it there.
       bool insertSWaitInst = true;
-      if (MI.getIterator() != MI.getParent()->begin()) {
-        MachineInstr *MIPrevInst = &*std::prev(MI.getIterator());
-        if (MIPrevInst &&
-            MIPrevInst->getOpcode() == AMDGPU::S_WAITCNT &&
-            MIPrevInst->getOperand(0).getImm() == Enc) {
-          insertSWaitInst = false;
+      for (MachineBasicBlock::iterator I = MI.getIterator(),
+                                       B = MI.getParent()->begin();
+           insertSWaitInst && I != B; --I) {
+        if (I ==  MI.getIterator())
+          continue;
+
+        switch (I->getOpcode()) {
+        case AMDGPU::S_WAITCNT:
+          if (isWaitcntStronger(I->getOperand(0).getImm(), Enc))
+            insertSWaitInst = false;
+          else if (!OldWaitcnt) {
+            OldWaitcnt = &*I;
+            Enc = combineWaitcnt(I->getOperand(0).getImm(), Enc);
+          }
+          break;
+        // TODO: skip over instructions which never require wait.
         }
+        break;
       }
       if (insertSWaitInst) {
         if (OldWaitcnt && OldWaitcnt->getOpcode() == AMDGPU::S_WAITCNT) {
           OldWaitcnt->getOperand(0).setImm(Enc);
-          MI.getParent()->insert(MI, OldWaitcnt);
+          if (!OldWaitcnt->getParent())
+            MI.getParent()->insert(MI, OldWaitcnt);
 
           DEBUG(dbgs() << "updateWaitcntInBlock\n"
                        << "Old Instr: " << MI << '\n'

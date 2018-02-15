@@ -325,6 +325,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo &TII = *getParent()->getSubtarget().getInstrInfo();
+  bool HasLineAttributes = false;
 
   // Print the preds of this block according to the CFG.
   if (!pred_empty()) {
@@ -337,6 +338,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << printMBBReference(**I);
     }
     OS << '\n';
+    HasLineAttributes = true;
   }
 
   if (!succ_empty()) {
@@ -366,8 +368,10 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
                          100.0)
            << ')';
       }
-      OS << '\n';
     }
+
+    OS << '\n';
+    HasLineAttributes = true;
   }
 
   if (!livein_empty() && MRI.tracksLiveness()) {
@@ -384,7 +388,11 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << ":0x" << PrintLaneMask(LI.LaneMask);
     }
     OS << '\n';
+    HasLineAttributes = true;
   }
+
+  if (HasLineAttributes)
+    OS << '\n';
 
   bool IsInBundle = false;
   for (const MachineInstr &MI : instrs()) {
@@ -416,9 +424,8 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   if (IrrLoopHeaderWeight) {
     if (Indexes) OS << '\t';
-    OS << "    Irreducible loop header weight: "
-       << IrrLoopHeaderWeight.getValue();
-    OS << '\n';
+    OS.indent(2) << "; Irreducible loop header weight: "
+                 << IrrLoopHeaderWeight.getValue() << '\n';
   }
 }
 

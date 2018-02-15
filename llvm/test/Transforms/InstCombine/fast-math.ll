@@ -477,30 +477,6 @@ define float @fdiv4(float %x) {
   ret float %div
 }
 
-; (X/Y)/Z = > X/(Y*Z)
-define float @fdiv5(float %f1, float %f2, float %f3) {
-; CHECK-LABEL: @fdiv5(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[F2:%.*]], [[F3:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[F1:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fdiv float %f1, %f2
-  %t2 = fdiv fast float %t1, %f3
-  ret float %t2
-}
-
-; Z/(X/Y) = > (Z*Y)/X
-define float @fdiv6(float %f1, float %f2, float %f3) {
-; CHECK-LABEL: @fdiv6(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[F3:%.*]], [[F2:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[TMP1]], [[F1:%.*]]
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fdiv float %f1, %f2
-  %t2 = fdiv fast float %f3, %t1
-  ret float %t2
-}
-
 ; C1/(X*C2) => (C1/C2) / X
 define float @fdiv7(float %x) {
 ; CHECK-LABEL: @fdiv7(

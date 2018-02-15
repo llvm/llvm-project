@@ -102,6 +102,7 @@ SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 const MemRegion *
 ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
                                           ExplodedNode *Pred,
+                                          const ConstructionContext *CC,
                                           EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
@@ -109,10 +110,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
 
   // See if we're constructing an existing region by looking at the
   // current construction context.
-  const NodeBuilderContext &CurrBldrCtx = getBuilderContext();
-  const CFGBlock *B = CurrBldrCtx.getBlock();
-  const CFGElement &E = (*B)[currStmtIdx];
-  if (auto CC = E.getAs<CFGConstructor>()) {
+  if (CC) {
     if (const Stmt *TriggerStmt = CC->getTriggerStmt()) {
       if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(TriggerStmt)) {
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
@@ -137,7 +135,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         LValue = makeZeroElementRegion(State, LValue, Ty,
                                        CallOpts.IsArrayCtorOrDtor);
         return LValue.getAsRegion();
-      } else if (auto *RS = dyn_cast<ReturnStmt>(TriggerStmt)) {
+      } else if (isa<ReturnStmt>(TriggerStmt)) {
         // TODO: We should construct into a CXXBindTemporaryExpr or a
         // MaterializeTemporaryExpr around the call-expression on the previous
         // stack frame. Currently we re-bind the temporary to the correct region
@@ -148,7 +146,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         // construction context that'd give us the right temporary expression.
         CallOpts.IsTemporaryCtorOrDtor = true;
         return MRMgr.getCXXTempObjectRegion(CE, LCtx);
-      } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(TriggerStmt)) {
+      } else if (isa<CXXBindTemporaryExpr>(TriggerStmt)) {
         CallOpts.IsTemporaryCtorOrDtor = true;
         return MRMgr.getCXXTempObjectRegion(CE, LCtx);
       }
@@ -228,10 +226,20 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   // the entire array).
 
   EvalCallOptions CallOpts;
+  auto C = getCurrentCFGElement().getAs<CFGConstructor>();
+  const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
+
+  const CXXBindTemporaryExpr *BTE = nullptr;
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    Target = getRegionForConstructedObject(CE, Pred, CallOpts);
+    Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
+    if (CC && AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG() &&
+        !CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion &&
+        CallOpts.IsTemporaryCtorOrDtor) {
+      // May as well be a ReturnStmt.
+      BTE = dyn_cast<CXXBindTemporaryExpr>(CC->getTriggerStmt());
+    }
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -299,17 +307,18 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   ExplodedNodeSet DstPreVisit;
   getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, CE, *this);
 
+  // FIXME: Is it possible and/or useful to do this before PreStmt?
   ExplodedNodeSet PreInitialized;
   {
     StmtNodeBuilder Bldr(DstPreVisit, PreInitialized, *currBldrCtx);
-    if (CE->requiresZeroInitialization()) {
-      // Type of the zero doesn't matter.
-      SVal ZeroVal = svalBuilder.makeZeroVal(getContext().CharTy);
+    for (ExplodedNodeSet::iterator I = DstPreVisit.begin(),
+                                   E = DstPreVisit.end();
+         I != E; ++I) {
+      ProgramStateRef State = (*I)->getState();
+      if (CE->requiresZeroInitialization()) {
+        // Type of the zero doesn't matter.
+        SVal ZeroVal = svalBuilder.makeZeroVal(getContext().CharTy);
 
-      for (ExplodedNodeSet::iterator I = DstPreVisit.begin(),
-                                     E = DstPreVisit.end();
-           I != E; ++I) {
-        ProgramStateRef State = (*I)->getState();
         // FIXME: Once we properly handle constructors in new-expressions, we'll
         // need to invalidate the region before setting a default value, to make
         // sure there aren't any lingering bindings around. This probably needs
@@ -323,9 +332,15 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
         State = State->bindDefault(loc::MemRegionVal(Target), ZeroVal, LCtx);
-        Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
-                          ProgramPoint::PreStmtKind);
       }
+
+      if (BTE) {
+        State = addInitializedTemporary(State, BTE, LCtx,
+                                        cast<CXXTempObjectRegion>(Target));
+      }
+
+      Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
+                        ProgramPoint::PreStmtKind);
     }
   }
 

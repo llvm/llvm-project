@@ -10,6 +10,7 @@
 // This file is a part of XRay, a function call tracing system.
 //
 //===----------------------------------------------------------------------===//
+#include "sanitizer_common/sanitizer_common.h"
 #include "xray_fdr_logging.h"
 #include "gtest/gtest.h"
 
@@ -154,12 +155,12 @@ TEST(FDRLoggingTest, MultiThreadedCycling) {
   // Now we want to create one thread, do some logging, then create another one,
   // in succession and making sure that we're able to get thread records from
   // the latest thread (effectively being able to recycle buffers).
-  std::array<pid_t, 2> Threads;
+  std::array<tid_t, 2> Threads;
   for (uint64_t I = 0; I < 2; ++I) {
     std::thread t{[I, &Threads] {
       fdrLoggingHandleArg0(I + 1, XRayEntryType::ENTRY);
       fdrLoggingHandleArg0(I + 1, XRayEntryType::EXIT);
-      Threads[I] = syscall(SYS_gettid);
+      Threads[I] = __sanitizer::GetTid();
     }};
     t.join();
   }
@@ -192,9 +193,9 @@ TEST(FDRLoggingTest, MultiThreadedCycling) {
   ASSERT_EQ(MDR0.RecordKind,
             uint8_t(MetadataRecord::RecordKinds::BufferExtents));
   ASSERT_EQ(MDR1.RecordKind, uint8_t(MetadataRecord::RecordKinds::NewBuffer));
-  pid_t Latest = 0;
-  memcpy(&Latest, MDR1.Data, sizeof(pid_t));
-  ASSERT_EQ(Latest, Threads[1]);
+  int32_t Latest = 0;
+  memcpy(&Latest, MDR1.Data, sizeof(int32_t));
+  ASSERT_EQ(Latest, static_cast<int32_t>(Threads[1]));
 }
 
 } // namespace

@@ -217,6 +217,7 @@ Clang-Tidy Checks
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
    readability-redundant-string-init
+   readability-simd-intrinsics
    readability-simplify-boolean-expr
    readability-static-accessed-through-instance
    readability-static-definition-in-anonymous-namespace

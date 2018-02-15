@@ -23,6 +23,7 @@
 
 namespace clang {
 
+class BlockExpr;
 class Expr;
 class VarDecl;
 
@@ -39,8 +40,9 @@ protected:
 
   /// Structure for enqueued block information.
   struct EnqueuedBlockInfo {
-    llvm::Function *Kernel; /// Enqueued block kernel.
-    llvm::Value *BlockArg;  /// The first argument to enqueued block kernel.
+    llvm::Function *InvokeFunc; /// Block invoke function.
+    llvm::Function *Kernel;     /// Enqueued block kernel.
+    llvm::Value *BlockArg;      /// The first argument to enqueued block kernel.
   };
   /// Maps block expression to block information.
   llvm::DenseMap<const Expr *, EnqueuedBlockInfo> EnqueuedBlockMap;
@@ -76,6 +78,15 @@ public:
   /// \return enqueued block information for enqueued block.
   EnqueuedBlockInfo emitOpenCLEnqueuedBlock(CodeGenFunction &CGF,
                                             const Expr *E);
+
+  /// \brief Record invoke function and block literal emitted during normal
+  /// codegen for a block expression. The information is used by
+  /// emitOpenCLEnqueuedBlock to emit wrapper kernel.
+  ///
+  /// \param InvokeF invoke function emitted for the block expression.
+  /// \param Block block literal emitted for the block expression.
+  void recordBlockInfo(const BlockExpr *E, llvm::Function *InvokeF,
+                       llvm::Value *Block);
 };
 
 }
