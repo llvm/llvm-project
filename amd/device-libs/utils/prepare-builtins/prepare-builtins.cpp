@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  WriteBitcodeToFile(M, Out->os());
+  WriteBitcodeToFile(*M, Out->os());
 
   // Declare success.
   Out->keep();
