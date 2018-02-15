@@ -114,6 +114,7 @@ SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 const MemRegion *
 ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
                                           ExplodedNode *Pred,
+                                          const ConstructionContext *CC,
                                           EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
@@ -121,7 +122,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
 
   // See if we're constructing an existing region by looking at the
   // current construction context.
-  if (auto CC = getCurrentCFGElement().getAs<CFGConstructor>()) {
+  if (CC) {
     if (const Stmt *TriggerStmt = CC->getTriggerStmt()) {
       if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(TriggerStmt)) {
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
@@ -284,10 +285,20 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   // the entire array).
 
   EvalCallOptions CallOpts;
+  auto C = getCurrentCFGElement().getAs<CFGConstructor>();
+  const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
+
+  const CXXBindTemporaryExpr *BTE = nullptr;
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    Target = getRegionForConstructedObject(CE, Pred, CallOpts);
+    Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
+    if (CC && AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG() &&
+        !CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion &&
+        CallOpts.IsTemporaryCtorOrDtor) {
+      // May as well be a ReturnStmt.
+      BTE = dyn_cast<CXXBindTemporaryExpr>(CC->getTriggerStmt());
+    }
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -385,11 +396,6 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       if (BTE) {
         State = addInitializedTemporary(State, BTE, LCtx,
                                         cast<CXXTempObjectRegion>(Target));
-      }
-
-      if (MTE) {
-        State = addTemporaryMaterialization(State, MTE, LCtx,
-                                            cast<CXXTempObjectRegion>(Target));
       }
 
       Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
