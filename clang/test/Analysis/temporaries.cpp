@@ -779,3 +779,116 @@ void test(int coin) {
 }
 
 } // namespace test_temporary_object_expr
+
+namespace test_match_constructors_and_destructors {
+class C {
+public:
+  int &x, &y;
+  C(int &_x, int &_y) : x(_x), y(_y) { ++x; }
+  C(const C &c): x(c.x), y(c.y) { ++x; }
+  ~C() { ++y; }
+};
+
+void test_simple_temporary() {
+  int x = 0, y = 0;
+  {
+    const C &c = C(x, y);
+  }
+  // One constructor and one destructor.
+  clang_analyzer_eval(x == 1);
+  clang_analyzer_eval(y == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+}
+
+void test_simple_temporary_with_copy() {
+  int x = 0, y = 0;
+  {
+    C c = C(x, y);
+  }
+  // Two constructors (temporary object expr and copy) and two destructors.
+  clang_analyzer_eval(x == 2);
+  clang_analyzer_eval(y == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+}
+
+void test_ternary_temporary(int coin) {
+  int x = 0, y = 0, z = 0, w = 0;
+  {
+    const C &c = coin ? C(x, y) : C(z, w);
+  }
+  // This time each branch contains an additional elidable copy constructor.
+  if (coin) {
+    clang_analyzer_eval(x == 2);
+    clang_analyzer_eval(y == 2);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+    clang_analyzer_eval(z == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(w == 0); // expected-warning{{TRUE}}
+
+  } else {
+    clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(z == 2);
+    clang_analyzer_eval(w == 2);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+  }
+}
+
+void test_ternary_temporary_with_copy(int coin) {
+  int x = 0, y = 0, z = 0, w = 0;
+  {
+    C c = coin ? C(x, y) : C(z, w);
+  }
+  // Temporary expression, elidable copy within branch,
+  // constructor for variable - 3 total.
+  if (coin) {
+    clang_analyzer_eval(x == 3);
+    clang_analyzer_eval(y == 3);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+    clang_analyzer_eval(z == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(w == 0); // expected-warning{{TRUE}}
+
+  } else {
+    clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(z == 3);
+    clang_analyzer_eval(w == 3);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-3{{TRUE}}
+    // expected-warning@-3{{TRUE}}
+#else
+    // expected-warning@-6{{UNKNOWN}}
+    // expected-warning@-6{{UNKNOWN}}
+#endif
+  }
+}
+} // namespace test_match_constructors_and_destructors

@@ -330,9 +330,6 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     bool isNew;
     ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
 
-    // See if we have any stale C++ allocator values.
-    assert(areCXXNewAllocatorValuesClear(CEEState, calleeCtx, callerCtx));
-
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
     CEENode->addPredecessor(*I, G);
     if (!isNew)
@@ -694,6 +691,10 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 
     // FIXME: We don't handle constructors or destructors for arrays properly.
     if (CallOpts.IsArrayCtorOrDtor)
+      return CIP_DisallowedOnce;
+
+    // Allow disabling temporary destructor inlining with a separate option.
+    if (CallOpts.IsTemporaryCtorOrDtor && !Opts.mayInlineCXXTemporaryDtors())
       return CIP_DisallowedOnce;
 
     // If we did not find the correct this-region, it would be pointless

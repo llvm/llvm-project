@@ -448,10 +448,6 @@ public:
                                        ExplodedNode *Pred,
                                        ExplodedNodeSet &Dst);
 
-  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
-                                 ExplodedNodeSet &PreVisit,
-                                 ExplodedNodeSet &Dst);
-
   void VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
@@ -696,7 +692,21 @@ private:
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
                                                  ExplodedNode *Pred,
+                                                 const ConstructionContext *CC,
                                                  EvalCallOptions &CallOpts);
+
+  /// Store the region of a C++ temporary object corresponding to a
+  /// CXXBindTemporaryExpr for later destruction.
+  static ProgramStateRef addInitializedTemporary(
+      ProgramStateRef State, const CXXBindTemporaryExpr *BTE,
+      const LocationContext *LC, const CXXTempObjectRegion *R);
+
+  /// Check if all initialized temporary regions are clear for the given
+  /// context range (including FromLC, not including ToLC).
+  /// This is useful for assertions.
+  static bool areInitializedTemporariesClear(ProgramStateRef State,
+                                             const LocationContext *FromLC,
+                                             const LocationContext *ToLC);
 
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be
