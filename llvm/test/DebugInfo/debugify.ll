@@ -19,6 +19,8 @@
 ; RUN: opt -enable-debugify -strip -S -o - < %s | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
 
+; RUN: opt -enable-debugify -S -o - < %s | FileCheck %s -check-prefix=PASS
+
 ; CHECK-LABEL: define void @foo
 define void @foo() {
 ; CHECK: ret void, !dbg ![[RET1:.*]]
@@ -79,3 +81,5 @@ define weak_odr zeroext i1 @baz() {
 ; CHECK-FAIL: WARNING: Missing line 4
 ; CHECK-FAIL: ERROR: Missing variable 1
 ; CHECK-FAIL: CheckDebugify: FAIL
+
+; PASS: CheckDebugify: PASS

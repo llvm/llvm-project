@@ -35,6 +35,10 @@ using namespace llvm;
 
 namespace {
 
+bool isFunctionSkipped(Function &F) {
+  return F.isDeclaration() || !F.hasExactDefinition();
+}
+
 bool applyDebugifyMetadata(Module &M) {
   // Skip modules with debug info.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
@@ -67,7 +71,7 @@ bool applyDebugifyMetadata(Module &M) {
 
   // Visit each instruction.
   for (Function &F : M) {
-    if (F.isDeclaration() || !F.hasExactDefinition())
+    if (isFunctionSkipped(F))
       continue;
 
     auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
@@ -134,6 +138,9 @@ void checkDebugifyMetadata(Module &M) {
   // Find missing lines.
   BitVector MissingLines{OriginalNumLines, true};
   for (Function &F : M) {
+    if (isFunctionSkipped(F))
+      continue;
+
     for (Instruction &I : instructions(F)) {
       if (isa<DbgValueInst>(&I))
         continue;
@@ -156,6 +163,9 @@ void checkDebugifyMetadata(Module &M) {
   // Find missing variables.
   BitVector MissingVars{OriginalNumVars, true};
   for (Function &F : M) {
+    if (isFunctionSkipped(F))
+      continue;
+
     for (Instruction &I : instructions(F)) {
       auto *DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
