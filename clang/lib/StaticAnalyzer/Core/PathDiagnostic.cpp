@@ -579,8 +579,14 @@ getLocationForCaller(const StackFrameContext *SFC,
     const CFGNewAllocator &Alloc = Source.castAs<CFGNewAllocator>();
     return PathDiagnosticLocation(Alloc.getAllocatorExpr(), SM, CallerCtx);
   }
-  case CFGElement::TemporaryDtor:
-    llvm_unreachable("not yet implemented!");
+  case CFGElement::TemporaryDtor: {
+    // Temporary destructors are for temporaries. They die immediately at around
+    // the location of CXXBindTemporaryExpr. If they are lifetime-extended,
+    // they'd be dealt with via an AutomaticObjectDtor instead.
+    const auto &Dtor = Source.castAs<CFGTemporaryDtor>();
+    return PathDiagnosticLocation::createEnd(Dtor.getBindTemporaryExpr(), SM,
+                                             CallerCtx);
+  }
   case CFGElement::LifetimeEnds:
   case CFGElement::LoopExit:
     llvm_unreachable("CFGElement kind should not be on callsite!");
