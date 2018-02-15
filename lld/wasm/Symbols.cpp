@@ -31,19 +31,20 @@ DefinedGlobal *WasmSym::StackPointer;
 bool Symbol::hasOutputIndex() const {
   if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
     return F->hasOutputIndex();
-  return OutputIndex.hasValue();
+  return OutputIndex != INVALID_INDEX;
 }
 
 uint32_t Symbol::getOutputIndex() const {
   if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
     return F->getOutputIndex();
-  return OutputIndex.getValue();
+  assert(OutputIndex != INVALID_INDEX);
+  return OutputIndex;
 }
 
 void Symbol::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
   assert(!dyn_cast_or_null<InputFunction>(Chunk));
-  assert(!OutputIndex.hasValue());
+  assert(OutputIndex == INVALID_INDEX);
   OutputIndex = Index;
 }
 
@@ -85,13 +86,14 @@ void FunctionSymbol::setFunctionType(const WasmSignature *Type) {
 uint32_t FunctionSymbol::getTableIndex() const {
   if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
     return F->getTableIndex();
-  return TableIndex.getValue();
+  assert(TableIndex != INVALID_INDEX);
+  return TableIndex;
 }
 
 bool FunctionSymbol::hasTableIndex() const {
   if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
     return F->hasTableIndex();
-  return TableIndex.hasValue();
+  return TableIndex != INVALID_INDEX;
 }
 
 void FunctionSymbol::setTableIndex(uint32_t Index) {
@@ -103,7 +105,7 @@ void FunctionSymbol::setTableIndex(uint32_t Index) {
     return;
   }
   DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
-  assert(!TableIndex.hasValue());
+  assert(TableIndex == INVALID_INDEX);
   TableIndex = Index;
 }
 

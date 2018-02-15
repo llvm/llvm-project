@@ -4,9 +4,9 @@
 // CHECK: encoding: [0x0f,0x01,0xdd]          
 clgi 
 
-// CHECK: invlpga %ecx, %rax 
+// CHECK: invlpga %rax, %ecx 
 // CHECK: encoding: [0x0f,0x01,0xdf]        
-invlpga %ecx, %rax 
+invlpga %rax, %ecx 
 
 // CHECK: skinit %eax 
 // CHECK: encoding: [0x0f,0x01,0xde]         

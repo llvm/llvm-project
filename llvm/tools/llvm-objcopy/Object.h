@@ -238,6 +238,7 @@ public:
   Segment *ParentSegment = nullptr;
 
   Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
+  Segment() {}
 
   const SectionBase *firstSection() const {
     if (!Sections.empty())
@@ -511,11 +512,14 @@ using object::ELFObjectFile;
 
 template <class ELFT> class ELFBuilder {
 private:
+  using Elf_Addr = typename ELFT::Addr;
   using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Ehdr = typename ELFT::Ehdr;
 
   const ELFFile<ELFT> &ElfFile;
   Object &Obj;
 
+  void setParentSegment(Segment &Child);
   void readProgramHeaders();
   void initSymbolTable(SymbolTableSection *SymTab);
   void readSectionHeaders();
@@ -556,6 +560,15 @@ public:
   template <class T>
   using ConstRange = iterator_range<pointee_iterator<
       typename std::vector<std::unique_ptr<T>>::const_iterator>>;
+
+  // It is often the case that the ELF header and the program header table are
+  // not present in any segment. This could be a problem during file layout,
+  // because other segments may get assigned an offset where either of the
+  // two should reside, which will effectively corrupt the resulting binary.
+  // Other than that we use these segments to track program header offsets
+  // when they may not follow the ELF header.
+  Segment ElfHdrSegment;
+  Segment ProgramHdrSegment;
 
   uint8_t Ident[16];
   uint64_t Entry;

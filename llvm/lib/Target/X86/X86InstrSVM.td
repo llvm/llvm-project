@@ -56,8 +56,8 @@ def VMSAVE64 : I<0x01, MRM_DB, (outs), (ins),
 // 0F 01 DF
 let Uses = [EAX, ECX] in
 def INVLPGA32 : I<0x01, MRM_DF, (outs), (ins),
-                "invlpga\t{%ecx, %eax|eax, ecx}", [], IIC_INVLPG>, TB, Requires<[Not64BitMode]>;
+                "invlpga\t{%eax, %ecx|eax, ecx}", [], IIC_INVLPG>, TB, Requires<[Not64BitMode]>;
 let Uses = [RAX, ECX] in
 def INVLPGA64 : I<0x01, MRM_DF, (outs), (ins),
-                "invlpga\t{%ecx, %rax|rax, ecx}", [], IIC_INVLPG>, TB, Requires<[In64BitMode]>;
+                "invlpga\t{%rax, %ecx|rax, ecx}", [], IIC_INVLPG>, TB, Requires<[In64BitMode]>;
 } // SchedRW

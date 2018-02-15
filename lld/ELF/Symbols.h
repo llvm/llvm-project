@@ -355,8 +355,8 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
-  static_assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr,
-                "Not a Symbol");
+  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a Symbol");
 
   Symbol Sym = *S;
 

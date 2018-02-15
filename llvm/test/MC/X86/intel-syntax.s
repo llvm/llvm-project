@@ -875,3 +875,11 @@ punpcklwd mm0, dword ptr [rsp]
 // CHECK:   punpckldq
 punpckldq mm0, dword ptr [rsp]
 
+// CHECK: lslq (%eax), %rbx
+lsl rbx, word ptr [eax]
+
+// CHECK: lsll (%eax), %ebx
+lsl ebx, word ptr [eax]
+
+// CHECK: lslw (%eax), %bx
+lsl bx, word ptr [eax]
