@@ -17,6 +17,7 @@ add_clang_library(clangTidyBugproneModule
   MultipleStatementMacroCheck.cpp
   StringConstructorCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
+  ThrowKeywordMissingCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UseAfterMoveCheck.cpp
   VirtualNearMissCheck.cpp

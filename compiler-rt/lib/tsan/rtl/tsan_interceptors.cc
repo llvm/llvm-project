@@ -2517,6 +2517,7 @@ static void syscall_post_fork(uptr pc, int pid) {
   syscall_post_fork(GET_CALLER_PC(), res)
 
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
+#include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #ifdef NEED_TLS_GET_ADDR
 // Define own interceptor instead of sanitizer_common's for three reasons:

@@ -821,8 +821,6 @@ void PhdrEntry::add(OutputSection *Sec) {
   p_align = std::max(p_align, Sec->Alignment);
   if (p_type == PT_LOAD)
     Sec->PtLoad = this;
-  if (Sec->LMAExpr)
-    ASectionHasLMA = true;
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -1697,9 +1695,11 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
     // different flags or is loaded at a discontiguous address using AT linker
-    // script command.
+    // script command. At the same time, we don't want to create a separate
+    // load segment for the headers, even if the first output section has
+    // an AT attribute.
     uint64_t NewFlags = computeFlags(Sec->getPhdrFlags());
-    if ((Sec->LMAExpr && Load->ASectionHasLMA) ||
+    if ((Sec->LMAExpr && Load->LastSec != Out::ProgramHeaders) ||
         Sec->MemRegion != Load->FirstSec->MemRegion || Flags != NewFlags) {
 
       Load = AddHdr(PT_LOAD, NewFlags);

@@ -66,16 +66,27 @@ define float @not_exact_but_allow_recip_but_denorm(float %x) {
   ret float %div
 }
 
-; FIXME: Vector neglect.
-
 define <2 x float> @exact_inverse_splat(<2 x float> %x) {
 ; CHECK-LABEL: @exact_inverse_splat(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.000000e+00, float 4.000000e+00>
+; CHECK-NEXT:    [[DIV:%.*]] = fmul <2 x float> [[X:%.*]], <float 2.500000e-01, float 2.500000e-01>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 4.0, float 4.0>
   ret <2 x float> %div
 }
+
+; Fast math allows us to replace this fdiv.
+
+define <2 x float> @not_exact_but_allow_recip_splat(<2 x float> %x) {
+; CHECK-LABEL: @not_exact_but_allow_recip_splat(
+; CHECK-NEXT:    [[DIV:%.*]] = fmul arcp <2 x float> [[X:%.*]], <float 0x3FD5555560000000, float 0x3FD5555560000000>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %div = fdiv arcp <2 x float> %x, <float 3.0, float 3.0>
+  ret <2 x float> %div
+}
+
+; FIXME: Vector neglect.
 
 define <2 x float> @exact_inverse_vec(<2 x float> %x) {
 ; CHECK-LABEL: @exact_inverse_vec(

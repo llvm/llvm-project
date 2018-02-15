@@ -17,7 +17,9 @@ namespace {
 ///    T Result;
 ///    someAsyncFunc(Param1, Param2, /*Callback=*/capture(Result));
 template <typename T> struct CaptureProxy {
-  CaptureProxy(T &Target) : Target(&Target) {}
+  CaptureProxy(llvm::Optional<T> &Target) : Target(&Target) {
+    assert(!Target.hasValue());
+  }
 
   CaptureProxy(const CaptureProxy &) = delete;
   CaptureProxy &operator=(const CaptureProxy &) = delete;
@@ -39,16 +41,17 @@ template <typename T> struct CaptureProxy {
     if (!Target)
       return;
     assert(Future.valid() && "conversion to callback was not called");
-    *Target = Future.get();
+    assert(!Target->hasValue());
+    Target->emplace(Future.get());
   }
 
 private:
-  T *Target;
+  llvm::Optional<T> *Target;
   std::promise<T> Promise;
   std::future<T> Future;
 };
 
-template <typename T> CaptureProxy<T> capture(T &Target) {
+template <typename T> CaptureProxy<T> capture(llvm::Optional<T> &Target) {
   return CaptureProxy<T>(Target);
 }
 } // namespace
@@ -57,9 +60,44 @@ Tagged<CompletionList>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
                 clangd::CodeCompleteOptions Opts,
                 llvm::Optional<StringRef> OverridenContents) {
-  Tagged<CompletionList> Result;
+  llvm::Optional<Tagged<CompletionList>> Result;
   Server.codeComplete(File, Pos, Opts, capture(Result), OverridenContents);
-  return Result;
+  return std::move(*Result);
+}
+
+llvm::Expected<Tagged<SignatureHelp>>
+runSignatureHelp(ClangdServer &Server, PathRef File, Position Pos,
+                 llvm::Optional<StringRef> OverridenContents) {
+  llvm::Optional<llvm::Expected<Tagged<SignatureHelp>>> Result;
+  Server.signatureHelp(File, Pos, capture(Result), OverridenContents);
+  return std::move(*Result);
+}
+
+llvm::Expected<Tagged<std::vector<Location>>>
+runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<Tagged<std::vector<Location>>>> Result;
+  Server.findDefinitions(File, Pos, capture(Result));
+  return std::move(*Result);
+}
+
+llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
+runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<Tagged<std::vector<DocumentHighlight>>>> Result;
+  Server.findDocumentHighlights(File, Pos, capture(Result));
+  return std::move(*Result);
+}
+
+llvm::Expected<std::vector<tooling::Replacement>>
+runRename(ClangdServer &Server, PathRef File, Position Pos, StringRef NewName) {
+  llvm::Optional<llvm::Expected<std::vector<tooling::Replacement>>> Result;
+  Server.rename(File, Pos, NewName, capture(Result));
+  return std::move(*Result);
+}
+
+std::string runDumpAST(ClangdServer &Server, PathRef File) {
+  llvm::Optional<std::string> Result;
+  Server.dumpAST(File, capture(Result));
+  return std::move(*Result);
 }
 
 } // namespace clangd

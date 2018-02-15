@@ -311,7 +311,8 @@ void testArrayNull() {
 void testArrayDestr() {
   NoReturnDtor *p = new NoReturnDtor[2];
   delete[] p; // Calls the base destructor which aborts, checked below
-  clang_analyzer_eval(true); // no-warning
+   //TODO: clang_analyzer_eval should not be called
+  clang_analyzer_eval(true); // expected-warning{{TRUE}}
 }
 
 // Invalidate Region even in case of default destructor

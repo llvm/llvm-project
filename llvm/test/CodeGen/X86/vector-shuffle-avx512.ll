@@ -511,10 +511,9 @@ define <8 x float> @expand14(<4 x float> %a) {
 ;
 ; KNL64-LABEL: expand14:
 ; KNL64:       # %bb.0:
-; KNL64-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,3,0,0]
-; KNL64-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,1]
 ; KNL64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4],ymm1[5,6,7]
 ; KNL64-NEXT:    retq
 ;
@@ -528,10 +527,9 @@ define <8 x float> @expand14(<4 x float> %a) {
 ;
 ; KNL32-LABEL: expand14:
 ; KNL32:       # %bb.0:
-; KNL32-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,3,0,0]
-; KNL32-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,1]
 ; KNL32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4],ymm1[5,6,7]
 ; KNL32-NEXT:    retl
    %addV = fadd <4 x float> <float 0.0,float 1.0,float 2.0,float 0.0> , <float 0.0,float 1.0,float 2.0,float 0.0>

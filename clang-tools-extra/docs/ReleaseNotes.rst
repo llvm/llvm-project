@@ -94,6 +94,11 @@ Improvements to clang-tidy
   `cppcoreguidelines-avoid-goto <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html>`_
   added.
 
+- New `bugprone-throw-keyword-missing
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-throw-keyword-missing.html>`_ check
+
+  Diagnoses when a temporary object that appears to be an exception is constructed but not thrown.
+
 Improvements to include-fixer
 -----------------------------
 
