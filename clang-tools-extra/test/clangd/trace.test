@@ -2,18 +2,22 @@
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
-#      CHECK: {"displayTimeUnit":"ns","traceEvents":[
-# Start opening the doc.
-#      CHECK: "name": "textDocument/didOpen"
-#      CHECK: "ph": "B"
-# Start building the preamble.
-#      CHECK: "name": "Preamble"
-#      CHECK: },
-# Finish building the preamble, with filename.
-#      CHECK: "File": "{{.*(/|\\)}}foo.c"
-# CHECK-NEXT: },
-# CHECK-NEXT: "ph": "E"
-# Start building the file.
-#      CHECK: "name": "Build"
+# These assertions are a bit loose, to avoid brittleness.
+# CHECK: {"displayTimeUnit":"ns","traceEvents":[
+# CHECK: {
+# CHECK:   "args": {
+# CHECK:     "File": "{{.*(/|\\)}}foo.c"
+# CHECK:   },
+# CHECK:   "name": "Preamble",
+# CHECK:   "ph": "X",
+# CHECK: }
+# CHECK: {
+# CHECK:   "args": {
+# CHECK:     "File": "{{.*(/|\\)}}foo.c"
+# CHECK:   },
+# CHECK:   "name": "Build",
+# CHECK:   "ph": "X",
+# CHECK: }
+# CHECK: },
 ---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
