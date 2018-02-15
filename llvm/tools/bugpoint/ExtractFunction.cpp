@@ -156,7 +156,7 @@ std::unique_ptr<Module> BugDriver::extractLoop(Module *M) {
   std::unique_ptr<Module> NewM = runPassesOn(M, LoopExtractPasses);
   if (!NewM) {
     outs() << "*** Loop extraction failed: ";
-    EmitProgressBitcode(M, "loopextraction", true);
+    EmitProgressBitcode(*M, "loopextraction", true);
     outs() << "*** Sorry. :(  Please report a bug!\n";
     return nullptr;
   }
@@ -377,7 +377,7 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
     outs() << "*** Basic Block extraction failed!\n";
     errs() << "Error creating temporary file: " << toString(Temp.takeError())
            << "\n";
-    EmitProgressBitcode(M, "basicblockextractfail", true);
+    EmitProgressBitcode(*M, "basicblockextractfail", true);
     return nullptr;
   }
   DiscardTemp Discard{*Temp};
@@ -401,7 +401,7 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
   OS.flush();
   if (OS.has_error()) {
     errs() << "Error writing list of blocks to not extract\n";
-    EmitProgressBitcode(M, "basicblockextractfail", true);
+    EmitProgressBitcode(*M, "basicblockextractfail", true);
     OS.clear_error();
     return nullptr;
   }
@@ -416,7 +416,7 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
 
   if (!Ret) {
     outs() << "*** Basic Block extraction failed, please report a bug!\n";
-    EmitProgressBitcode(M, "basicblockextractfail", true);
+    EmitProgressBitcode(*M, "basicblockextractfail", true);
   }
   return Ret;
 }

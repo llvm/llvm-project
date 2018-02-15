@@ -41,9 +41,10 @@ JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
                           "legacy resolver received on-ready error:\n");
   };
 
-  AsynchronousSymbolQuery Query(InternedSymbols, OnResolve, OnReady);
+  auto Query = std::make_shared<AsynchronousSymbolQuery>(InternedSymbols,
+                                                         OnResolve, OnReady);
 
-  auto UnresolvedSymbols = R.lookup(Query, InternedSymbols);
+  auto UnresolvedSymbols = R.lookup(std::move(Query), InternedSymbols);
 
   if (!UnresolvedSymbols.empty()) {
     std::string ErrorMsg = "Unresolved symbols: ";

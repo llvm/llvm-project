@@ -5071,6 +5071,56 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
   return Ret;
 }
 
+static void
+parseWholeProgramDevirtResolutionByArg(ArrayRef<uint64_t> Record, size_t &Slot,
+                                       WholeProgramDevirtResolution &Wpd) {
+  uint64_t ArgNum = Record[Slot++];
+  WholeProgramDevirtResolution::ByArg &B =
+      Wpd.ResByArg[{Record.begin() + Slot, Record.begin() + Slot + ArgNum}];
+  Slot += ArgNum;
+
+  B.TheKind =
+      static_cast<WholeProgramDevirtResolution::ByArg::Kind>(Record[Slot++]);
+  B.Info = Record[Slot++];
+  B.Byte = Record[Slot++];
+  B.Bit = Record[Slot++];
+}
+
+static void parseWholeProgramDevirtResolution(ArrayRef<uint64_t> Record,
+                                              StringRef Strtab, size_t &Slot,
+                                              TypeIdSummary &TypeId) {
+  uint64_t Id = Record[Slot++];
+  WholeProgramDevirtResolution &Wpd = TypeId.WPDRes[Id];
+
+  Wpd.TheKind = static_cast<WholeProgramDevirtResolution::Kind>(Record[Slot++]);
+  Wpd.SingleImplName = {Strtab.data() + Record[Slot],
+                        static_cast<size_t>(Record[Slot + 1])};
+  Slot += 2;
+
+  uint64_t ResByArgNum = Record[Slot++];
+  for (uint64_t I = 0; I != ResByArgNum; ++I)
+    parseWholeProgramDevirtResolutionByArg(Record, Slot, Wpd);
+}
+
+static void parseTypeIdSummaryRecord(ArrayRef<uint64_t> Record,
+                                     StringRef Strtab,
+                                     ModuleSummaryIndex &TheIndex) {
+  size_t Slot = 0;
+  TypeIdSummary &TypeId = TheIndex.getOrInsertTypeIdSummary(
+      {Strtab.data() + Record[Slot], static_cast<size_t>(Record[Slot + 1])});
+  Slot += 2;
+
+  TypeId.TTRes.TheKind = static_cast<TypeTestResolution::Kind>(Record[Slot++]);
+  TypeId.TTRes.SizeM1BitWidth = Record[Slot++];
+  TypeId.TTRes.AlignLog2 = Record[Slot++];
+  TypeId.TTRes.SizeM1 = Record[Slot++];
+  TypeId.TTRes.BitMask = Record[Slot++];
+  TypeId.TTRes.InlineBits = Record[Slot++];
+
+  while (Slot < Record.size())
+    parseWholeProgramDevirtResolution(Record, Strtab, Slot, TypeId);
+}
+
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
 Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
@@ -5388,6 +5438,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
       break;
     }
+
     case bitc::FS_CFI_FUNCTION_DECLS: {
       std::set<std::string> &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
@@ -5395,6 +5446,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
       break;
     }
+
+    case bitc::FS_TYPE_ID:
+      parseTypeIdSummaryRecord(Record, Strtab, TheIndex);
+      break;
     }
   }
   llvm_unreachable("Exit infinite loop");

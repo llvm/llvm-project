@@ -2168,11 +2168,12 @@ def DAS : I<0x2F, RawFrm, (outs), (ins), "das", [], IIC_DAS>,
 
 let SchedRW = [WriteSystem] in {
 // Check Array Index Against Bounds
+// Note: "bound" does not have reversed operands in at&t syntax.
 def BOUNDS16rm : I<0x62, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                   "bound\t{$src, $dst|$dst, $src}", [], IIC_BOUND>, OpSize16,
+                   "bound\t$dst, $src", [], IIC_BOUND>, OpSize16,
                    Requires<[Not64BitMode]>;
 def BOUNDS32rm : I<0x62, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                   "bound\t{$src, $dst|$dst, $src}", [], IIC_BOUND>, OpSize32,
+                   "bound\t$dst, $src", [], IIC_BOUND>, OpSize32,
                    Requires<[Not64BitMode]>;
 
 // Adjust RPL Field of Segment Selector
@@ -3171,15 +3172,15 @@ def : InstAlias<"imul{q}\t{$imm, $r|$r, $imm}", (IMUL64rri8 GR64:$r, GR64:$r, i6
 
 // ins aliases. Accept the mnemonic suffix being omitted because it's implicit
 // in the destination.
-def : InstAlias<"ins\t{%dx, $dst|$dst, dx}", (INSB dstidx8:$dst),  0>;
-def : InstAlias<"ins\t{%dx, $dst|$dst, dx}", (INSW dstidx16:$dst),  0>;
-def : InstAlias<"ins\t{%dx, $dst|$dst, dx}", (INSL dstidx32:$dst),  0>;
+def : InstAlias<"ins{b}\t{%dx, $dst|$dst, dx}", (INSB dstidx8:$dst),  0>;
+def : InstAlias<"ins{w}\t{%dx, $dst|$dst, dx}", (INSW dstidx16:$dst),  0>;
+def : InstAlias<"ins{l}\t{%dx, $dst|$dst, dx}", (INSL dstidx32:$dst),  0>;
 
 // outs aliases. Accept the mnemonic suffix being omitted because it's implicit
 // in the source.
-def : InstAlias<"outs\t{$src, %dx|dx, $src}", (OUTSB srcidx8:$src),  0>;
-def : InstAlias<"outs\t{$src, %dx|dx, $src}", (OUTSW srcidx16:$src),  0>;
-def : InstAlias<"outs\t{$src, %dx|dx, $src}", (OUTSL srcidx32:$src),  0>;
+def : InstAlias<"outs{b}\t{$src, %dx|dx, $src}", (OUTSB srcidx8:$src),  0>;
+def : InstAlias<"outs{w}\t{$src, %dx|dx, $src}", (OUTSW srcidx16:$src),  0>;
+def : InstAlias<"outs{l}\t{$src, %dx|dx, $src}", (OUTSL srcidx32:$src),  0>;
 
 // inb %dx -> inb %al, %dx
 def : InstAlias<"inb\t{%dx|dx}", (IN8rr), 0>;

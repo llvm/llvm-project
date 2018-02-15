@@ -92,6 +92,7 @@
 #define localtime __locatime50
 #define localtime_r __localtime_r50
 #define mktime __mktime50
+#define lstat __lstat50
 #define opendir __opendir30
 #define readdir __readdir30
 #define readdir_r __readdir_r30
@@ -6277,6 +6278,22 @@ INTERCEPTOR(int, stat, const char *path, void *buf) {
 #define INIT_STAT
 #endif
 
+#if SANITIZER_INTERCEPT_LSTAT
+INTERCEPTOR(int, lstat, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, lstat, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(lstat)(path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT_LSTAT COMMON_INTERCEPT_FUNCTION(lstat)
+#else
+#define INIT_LSTAT
+#endif
+
 #if SANITIZER_INTERCEPT___XSTAT
 INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
   void *ctx;
@@ -6991,6 +7008,7 @@ static void InitializeCommonInterceptors() {
   INIT_SEND_SENDTO;
   INIT_STAT;
   INIT_EVENTFD_READ_WRITE;
+  INIT_LSTAT;
   INIT___XSTAT;
   INIT___XSTAT64;
   INIT___LXSTAT;

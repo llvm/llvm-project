@@ -3923,6 +3923,8 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E,
     autoCreateBlock();
     appendStmt(Block, E);
 
+    EnterConstructionContextIfNecessary(E, E->getSubExpr());
+
     // We do not want to propagate the AlwaysAdd property.
     asc = asc.withAlwaysAdd(false);
   }
@@ -3992,7 +3994,7 @@ CFGBlock *CFGBuilder::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *E,
 CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *C,
                                                   AddStmtChoice asc) {
   autoCreateBlock();
-  appendStmt(Block, C);
+  appendConstructor(Block, C);
   return VisitChildren(C);
 }
 

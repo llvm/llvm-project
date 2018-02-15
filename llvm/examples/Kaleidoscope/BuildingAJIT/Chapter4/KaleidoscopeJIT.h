@@ -89,7 +89,6 @@ private:
   std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
 
 public:
-
   KaleidoscopeJIT()
       : ES(SSP),
         Resolver(createLegacyLookupResolver(
@@ -107,10 +106,11 @@ public:
             },
             [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
         TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(
-            ES,
-            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
-            [&](VModuleKey K) { return Resolver; }),
+        ObjectLayer(ES,
+                    [this](VModuleKey K) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                          std::make_shared<SectionMemoryManager>(), Resolver};
+                    }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {
