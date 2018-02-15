@@ -2425,6 +2425,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.MatchingParen && Left.MatchingParen->is(TT_ProtoExtensionLSquare) &&
         Right.isOneOf(tok::l_brace, tok::less))
       return !Style.Cpp11BracedListStyle;
+    // A percent is probably part of a formatting specification, such as %lld.
+    if (Left.is(tok::percent))
+      return false;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;

@@ -147,20 +147,21 @@ private:
       return SymbolsNotFound;
     }
 
-    orc::SymbolNameSet lookup(orc::AsynchronousSymbolQuery &Query,
-                              orc::SymbolNameSet Symbols) override {
+    orc::SymbolNameSet
+    lookup(std::shared_ptr<orc::AsynchronousSymbolQuery> Query,
+           orc::SymbolNameSet Symbols) override {
       orc::SymbolNameSet UnresolvedSymbols;
 
       for (auto &S : Symbols) {
         if (auto Sym = findSymbol(*S)) {
           if (auto Addr = Sym.getAddress())
-            Query.setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
+            Query->setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           else {
-            Query.setFailed(Addr.takeError());
+            Query->setFailed(Addr.takeError());
             return orc::SymbolNameSet();
           }
         } else if (auto Err = Sym.takeError()) {
-          Query.setFailed(std::move(Err));
+          Query->setFailed(std::move(Err));
           return orc::SymbolNameSet();
         } else
           UnresolvedSymbols.insert(S);
@@ -204,16 +205,14 @@ public:
       : ES(SSP), DL(TM.createDataLayout()),
         IndirectStubsMgr(IndirectStubsMgrBuilder()), CCMgr(std::move(CCMgr)),
         ObjectLayer(ES,
-                    [](orc::VModuleKey K) {
-                      return std::make_shared<SectionMemoryManager>();
-                    },
                     [this](orc::VModuleKey K) {
                       auto ResolverI = Resolvers.find(K);
                       assert(ResolverI != Resolvers.end() &&
                              "No resolver for module K");
                       auto Resolver = std::move(ResolverI->second);
                       Resolvers.erase(ResolverI);
-                      return Resolver;
+                      return ObjLayerT::Resources{
+                          std::make_shared<SectionMemoryManager>(), Resolver};
                     }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
         CODLayer(ES, CompileLayer,

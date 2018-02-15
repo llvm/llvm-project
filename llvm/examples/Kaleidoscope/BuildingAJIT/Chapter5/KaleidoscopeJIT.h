@@ -95,7 +95,6 @@ private:
   MyRemote &Remote;
 
 public:
-
   KaleidoscopeJIT(MyRemote &Remote)
       : ES(SSP),
         Resolver(createLegacyLookupResolver(
@@ -115,10 +114,11 @@ public:
                                         "", SmallVector<std::string, 0>())),
         DL(TM->createDataLayout()),
         ObjectLayer(ES,
-                    [&Remote](VModuleKey) {
-                      return cantFail(Remote.createRemoteMemoryManager());
-                    },
-                    [this](VModuleKey) { return Resolver; }),
+                    [this](VModuleKey K) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                          cantFail(this->Remote.createRemoteMemoryManager()),
+                          Resolver};
+                    }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {

@@ -15,7 +15,7 @@
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]{{$}}
 
 define amdgpu_kernel void @i8_arg(i32 addrspace(1)* nocapture %out, i8 %in) nounwind {
 entry:
@@ -34,7 +34,7 @@ entry:
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]{{$}}
 
 define amdgpu_kernel void @i8_zext_arg(i32 addrspace(1)* nocapture %out, i8 zeroext %in) nounwind {
 entry:
@@ -53,7 +53,7 @@ entry:
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_sbyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_sbyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]{{$}}
 
 define amdgpu_kernel void @i8_sext_arg(i32 addrspace(1)* nocapture %out, i8 signext %in) nounwind {
 entry:
@@ -73,7 +73,7 @@ entry:
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]{{$}}
 
 define amdgpu_kernel void @i16_arg(i32 addrspace(1)* nocapture %out, i16 %in) nounwind {
 entry:
@@ -92,7 +92,7 @@ entry:
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]{{$}}
 
 define amdgpu_kernel void @i16_zext_arg(i32 addrspace(1)* nocapture %out, i16 zeroext %in) nounwind {
 entry:
@@ -111,7 +111,7 @@ entry:
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_sshort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_sshort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]{{$}}
 
 define amdgpu_kernel void @i16_sext_arg(i32 addrspace(1)* nocapture %out, i16 signext %in) nounwind {
 entry:

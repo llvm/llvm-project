@@ -1122,7 +1122,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
     break;
   case Backend_EmitBC:
     Conf.PreCodeGenModuleHook = [&](size_t Task, const Module &Mod) {
-      WriteBitcodeToFile(M, *OS, CGOpts.EmitLLVMUseLists);
+      WriteBitcodeToFile(*M, *OS, CGOpts.EmitLLVMUseLists);
       return false;
     };
     break;
@@ -1252,7 +1252,7 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
       // If the input is LLVM Assembly, bitcode is produced by serializing
       // the module. Use-lists order need to be perserved in this case.
       llvm::raw_string_ostream OS(Data);
-      llvm::WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ true);
+      llvm::WriteBitcodeToFile(*M, OS, /* ShouldPreserveUseListOrder */ true);
       ModuleData =
           ArrayRef<uint8_t>((const uint8_t *)OS.str().data(), OS.str().size());
     } else

@@ -42,7 +42,7 @@ public:
 };
 
 // CHECK: #pragma omp taskgroup task_reduction(+: this->b)
-// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a) in_reduction(+: this->b)
+// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a) in_reduction(+: this->b){{$}}
 // CHECK: #pragma omp task private(this->a) private(this->a)
 // CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a)
 

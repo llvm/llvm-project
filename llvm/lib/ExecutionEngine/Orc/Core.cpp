@@ -64,9 +64,9 @@ void AsynchronousSymbolQuery::notifySymbolFinalized() {
     NotifySymbolsReady(Error::success());
 }
 
-VSO::MaterializationInfo::MaterializationInfo(JITSymbolFlags Flags,
-                                              AsynchronousSymbolQuery &Query)
-    : Flags(std::move(Flags)), PendingResolution({&Query}) {}
+VSO::MaterializationInfo::MaterializationInfo(
+    JITSymbolFlags Flags, std::shared_ptr<AsynchronousSymbolQuery> Query)
+    : Flags(std::move(Flags)), PendingResolution({std::move(Query)}) {}
 
 JITSymbolFlags VSO::MaterializationInfo::getFlags() const { return Flags; }
 
@@ -74,13 +74,13 @@ JITTargetAddress VSO::MaterializationInfo::getAddress() const {
   return Address;
 }
 
-void VSO::MaterializationInfo::query(SymbolStringPtr Name,
-                                     AsynchronousSymbolQuery &Query) {
+void VSO::MaterializationInfo::query(
+    SymbolStringPtr Name, std::shared_ptr<AsynchronousSymbolQuery> Query) {
   if (Address != 0) {
-    Query.setDefinition(Name, JITEvaluatedSymbol(Address, Flags));
-    PendingFinalization.push_back(&Query);
+    Query->setDefinition(Name, JITEvaluatedSymbol(Address, Flags));
+    PendingFinalization.push_back(std::move(Query));
   } else
-    PendingResolution.push_back(&Query);
+    PendingResolution.push_back(std::move(Query));
 }
 
 void VSO::MaterializationInfo::resolve(SymbolStringPtr Name,
@@ -88,15 +88,15 @@ void VSO::MaterializationInfo::resolve(SymbolStringPtr Name,
   // FIXME: Sanity check flags?
   Flags = Sym.getFlags();
   Address = Sym.getAddress();
-  for (auto *Query : PendingResolution) {
+  for (auto &Query : PendingResolution) {
     Query->setDefinition(Name, std::move(Sym));
-    PendingFinalization.push_back(Query);
+    PendingFinalization.push_back(std::move(Query));
   }
   PendingResolution = {};
 }
 
 void VSO::MaterializationInfo::finalize() {
-  for (auto *Query : PendingFinalization)
+  for (auto &Query : PendingFinalization)
     Query->notifySymbolFinalized();
   PendingFinalization = {};
 }
@@ -140,19 +140,20 @@ void VSO::SymbolTableEntry::replaceWithSource(VSO &V, SymbolStringPtr Name,
   this->Source = &NewSource;
 }
 
-SymbolSource *VSO::SymbolTableEntry::query(SymbolStringPtr Name,
-                                           AsynchronousSymbolQuery &Query) {
+SymbolSource *
+VSO::SymbolTableEntry::query(SymbolStringPtr Name,
+                             std::shared_ptr<AsynchronousSymbolQuery> Query) {
   if (Flags.isMaterializing()) {
-    MatInfo->query(std::move(Name), Query);
+    MatInfo->query(std::move(Name), std::move(Query));
     return nullptr;
   } else if (Flags.isMaterialized()) {
-    Query.setDefinition(std::move(Name), JITEvaluatedSymbol(Address, Flags));
-    Query.notifySymbolFinalized();
+    Query->setDefinition(std::move(Name), JITEvaluatedSymbol(Address, Flags));
+    Query->notifySymbolFinalized();
     return nullptr;
   }
   SymbolSource *S = Source;
   new (&MatInfo) std::unique_ptr<MaterializationInfo>(
-      llvm::make_unique<MaterializationInfo>(Flags, Query));
+      llvm::make_unique<MaterializationInfo>(Flags, std::move(Query)));
   Flags |= JITSymbolFlags::Materializing;
   return S;
 }
@@ -307,7 +308,7 @@ SymbolNameSet VSO::lookupFlags(SymbolFlagsMap &Flags, SymbolNameSet Names) {
   return Names;
 }
 
-VSO::LookupResult VSO::lookup(AsynchronousSymbolQuery &Query,
+VSO::LookupResult VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                               SymbolNameSet Names) {
   SourceWorkMap MaterializationWork;
 

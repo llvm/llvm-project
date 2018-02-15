@@ -430,6 +430,21 @@ cplusplus
 cplusplus11
   C++11 support is available.
 
+cplusplus14
+  C++14 support is available.
+
+cplusplus17
+  C++17 support is available.
+
+c99
+  C99 support is available.
+
+c11
+  C11 support is available.
+
+c17
+  C17 support is available.
+
 freestanding
   A freestanding environment is available.
 

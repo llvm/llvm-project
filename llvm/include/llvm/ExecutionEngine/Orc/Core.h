@@ -107,7 +107,7 @@ public:
 
   /// @brief For each symbol in Symbols that can be found, assigns that symbols
   ///        value in Query. Returns the set of symbols that could not be found.
-  virtual SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+  virtual SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                                SymbolNameSet Symbols) = 0;
 
 private:
@@ -129,9 +129,9 @@ public:
     return LookupFlags(Flags, Symbols);
   }
 
-  SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+  SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
                        SymbolNameSet Symbols) final {
-    return Lookup(Query, std::move(Symbols));
+    return Lookup(std::move(Query), std::move(Symbols));
   }
 
 private:
@@ -258,23 +258,26 @@ public:
   ///
   /// Any symbols not found in this VSO will be returned in the
   /// UnresolvedSymbols field of the LookupResult.
-  LookupResult lookup(AsynchronousSymbolQuery &Query, SymbolNameSet Symbols);
+  LookupResult lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
+                      SymbolNameSet Symbols);
 
 private:
   class MaterializationInfo {
   public:
-    MaterializationInfo(JITSymbolFlags Flags, AsynchronousSymbolQuery &Query);
+    MaterializationInfo(JITSymbolFlags Flags,
+                        std::shared_ptr<AsynchronousSymbolQuery> Query);
     JITSymbolFlags getFlags() const;
     JITTargetAddress getAddress() const;
-    void query(SymbolStringPtr Name, AsynchronousSymbolQuery &Query);
+    void query(SymbolStringPtr Name,
+               std::shared_ptr<AsynchronousSymbolQuery> Query);
     void resolve(SymbolStringPtr Name, JITEvaluatedSymbol Sym);
     void finalize();
 
   private:
     JITSymbolFlags Flags;
     JITTargetAddress Address = 0;
-    std::vector<AsynchronousSymbolQuery *> PendingResolution;
-    std::vector<AsynchronousSymbolQuery *> PendingFinalization;
+    std::vector<std::shared_ptr<AsynchronousSymbolQuery>> PendingResolution;
+    std::vector<std::shared_ptr<AsynchronousSymbolQuery>> PendingFinalization;
   };
 
   class SymbolTableEntry {
@@ -286,7 +289,8 @@ private:
     JITSymbolFlags getFlags() const;
     void replaceWithSource(VSO &V, SymbolStringPtr Name, JITSymbolFlags Flags,
                            SymbolSource &NewSource);
-    SymbolSource *query(SymbolStringPtr Name, AsynchronousSymbolQuery &Query);
+    SymbolSource *query(SymbolStringPtr Name,
+                        std::shared_ptr<AsynchronousSymbolQuery> Query);
     void resolve(VSO &V, SymbolStringPtr Name, JITEvaluatedSymbol Sym);
     void finalize();
 

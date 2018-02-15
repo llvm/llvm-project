@@ -170,12 +170,12 @@ protected:
 public:
   /// Constructs a ModuleBitcodeWriterBase object for the given Module,
   /// writing to the provided \p Buffer.
-  ModuleBitcodeWriterBase(const Module *M, StringTableBuilder &StrtabBuilder,
+  ModuleBitcodeWriterBase(const Module &M, StringTableBuilder &StrtabBuilder,
                           BitstreamWriter &Stream,
                           bool ShouldPreserveUseListOrder,
                           const ModuleSummaryIndex *Index)
-      : BitcodeWriterBase(Stream, StrtabBuilder), M(*M),
-        VE(*M, ShouldPreserveUseListOrder), Index(Index) {
+      : BitcodeWriterBase(Stream, StrtabBuilder), M(M),
+        VE(M, ShouldPreserveUseListOrder), Index(Index) {
     // Assign ValueIds to any callee values in the index that came from
     // indirect call profiles and were recorded as a GUID not a Value*
     // (which would have been assigned an ID by the ValueEnumerator).
@@ -254,7 +254,7 @@ class ModuleBitcodeWriter : public ModuleBitcodeWriterBase {
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
-  ModuleBitcodeWriter(const Module *M, SmallVectorImpl<char> &Buffer,
+  ModuleBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
                       StringTableBuilder &StrtabBuilder,
                       BitstreamWriter &Stream, bool ShouldPreserveUseListOrder,
                       const ModuleSummaryIndex *Index, bool GenerateHash,
@@ -4038,7 +4038,7 @@ void BitcodeWriter::copyStrtab(StringRef Strtab) {
   WroteStrtab = true;
 }
 
-void BitcodeWriter::writeModule(const Module *M,
+void BitcodeWriter::writeModule(const Module &M,
                                 bool ShouldPreserveUseListOrder,
                                 const ModuleSummaryIndex *Index,
                                 bool GenerateHash, ModuleHash *ModHash) {
@@ -4048,8 +4048,8 @@ void BitcodeWriter::writeModule(const Module *M,
   // Modules in case it needs to materialize metadata. But the bitcode writer
   // requires that the module is materialized, so we can cast to non-const here,
   // after checking that it is in fact materialized.
-  assert(M->isMaterialized());
-  Mods.push_back(const_cast<Module *>(M));
+  assert(M.isMaterialized());
+  Mods.push_back(const_cast<Module *>(&M));
 
   ModuleBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream,
                                    ShouldPreserveUseListOrder, Index,
@@ -4065,9 +4065,8 @@ void BitcodeWriter::writeIndex(
   IndexWriter.write();
 }
 
-/// WriteBitcodeToFile - Write the specified module to the specified output
-/// stream.
-void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
+/// Write the specified module to the specified output stream.
+void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
                               bool ShouldPreserveUseListOrder,
                               const ModuleSummaryIndex *Index,
                               bool GenerateHash, ModuleHash *ModHash) {
@@ -4076,7 +4075,7 @@ void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
 
   // If this is darwin or another generic macho target, reserve space for the
   // header.
-  Triple TT(M->getTargetTriple());
+  Triple TT(M.getTargetTriple());
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
@@ -4133,7 +4132,7 @@ class ThinLinkBitcodeWriter : public ModuleBitcodeWriterBase {
   const ModuleHash *ModHash;
 
 public:
-  ThinLinkBitcodeWriter(const Module *M, StringTableBuilder &StrtabBuilder,
+  ThinLinkBitcodeWriter(const Module &M, StringTableBuilder &StrtabBuilder,
                         BitstreamWriter &Stream,
                         const ModuleSummaryIndex &Index,
                         const ModuleHash &ModHash)
@@ -4251,7 +4250,7 @@ void ThinLinkBitcodeWriter::write() {
   Stream.ExitBlock();
 }
 
-void BitcodeWriter::writeThinLinkBitcode(const Module *M,
+void BitcodeWriter::writeThinLinkBitcode(const Module &M,
                                          const ModuleSummaryIndex &Index,
                                          const ModuleHash &ModHash) {
   assert(!WroteStrtab);
@@ -4260,8 +4259,8 @@ void BitcodeWriter::writeThinLinkBitcode(const Module *M,
   // Modules in case it needs to materialize metadata. But the bitcode writer
   // requires that the module is materialized, so we can cast to non-const here,
   // after checking that it is in fact materialized.
-  assert(M->isMaterialized());
-  Mods.push_back(const_cast<Module *>(M));
+  assert(M.isMaterialized());
+  Mods.push_back(const_cast<Module *>(&M));
 
   ThinLinkBitcodeWriter ThinLinkWriter(M, StrtabBuilder, *Stream, Index,
                                        ModHash);
@@ -4271,7 +4270,7 @@ void BitcodeWriter::writeThinLinkBitcode(const Module *M,
 // Write the specified thin link bitcode file to the given raw output stream,
 // where it will be written in a new bitcode block. This is used when
 // writing the per-module index file for ThinLTO.
-void llvm::WriteThinLinkBitcodeToFile(const Module *M, raw_ostream &Out,
+void llvm::WriteThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
                                       const ModuleSummaryIndex &Index,
                                       const ModuleHash &ModHash) {
   SmallVector<char, 0> Buffer;

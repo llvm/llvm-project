@@ -49,9 +49,6 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   if (MF->getSubtarget().getRegisterInfo() != TRI) {
     TRI = MF->getSubtarget().getRegisterInfo();
     RegClass.reset(new RCInfo[TRI->getNumRegClasses()]);
-    unsigned NumPSets = TRI->getNumRegPressureSets();
-    PSetLimits.reset(new unsigned[NumPSets]);
-    std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
     Update = true;
   }
 
@@ -80,8 +77,12 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   }
 
   // Invalidate cached information from previous function.
-  if (Update)
+  if (Update) {
+    unsigned NumPSets = TRI->getNumRegPressureSets();
+    PSetLimits.reset(new unsigned[NumPSets]);
+    std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
     ++Tag;
+  }
 }
 
 /// compute - Compute the preferred allocation order for RC with reserved

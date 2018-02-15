@@ -109,16 +109,6 @@ def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
 }]>;
 
-def IsVecOff : PatLeaf<(i32 imm), [{
-  int32_t V = N->getSExtValue();
-  int32_t VecSize = HRI->getSpillSize(Hexagon::HvxVRRegClass);
-  assert(isPowerOf2_32(VecSize));
-  if ((uint32_t(V) & (uint32_t(VecSize)-1)) != 0)
-    return false;
-  int32_t L = Log2_32(VecSize);
-  return isInt<4>(V >> L);
-}]>;
-
 def IsPow2_32: PatLeaf<(i32 imm), [{
   uint32_t V = N->getZExtValue();
   return isPowerOf2_32(V);
@@ -247,23 +237,6 @@ def Sext64: PatLeaf<(i64 Usxtw:$Rs)>;
 
 def: Pat<(IsOrAdd (i32 AddrFI:$Rs), s32_0ImmPred:$off),
          (PS_fi (i32 AddrFI:$Rs), imm:$off)>;
-
-
-def alignedload: PatFrag<(ops node:$a), (load $a), [{
-  return isAlignedMemNode(dyn_cast<MemSDNode>(N));
-}]>;
-
-def unalignedload: PatFrag<(ops node:$a), (load $a), [{
-  return !isAlignedMemNode(dyn_cast<MemSDNode>(N));
-}]>;
-
-def alignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
-  return isAlignedMemNode(dyn_cast<MemSDNode>(N));
-}]>;
-
-def unalignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
-  return !isAlignedMemNode(dyn_cast<MemSDNode>(N));
-}]>;
 
 
 // Converters from unary/binary SDNode to PatFrag.

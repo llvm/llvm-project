@@ -26,7 +26,7 @@ struct SA {
 };
 // CHECK: struct SA
 // CHECK: void func(
-// CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->k)
+// CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->k){{$}}
 // CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->z)
 struct SB {
   unsigned A;

@@ -76,22 +76,6 @@ private:
   VFSTag LastVFSTag = VFSTag();
 };
 
-class ConstantFSProvider : public FileSystemProvider {
-public:
-  ConstantFSProvider(IntrusiveRefCntPtr<vfs::FileSystem> FS,
-                     VFSTag Tag = VFSTag())
-      : FS(std::move(FS)), Tag(std::move(Tag)) {}
-
-  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
-  getTaggedFileSystem(PathRef File) override {
-    return make_tagged(FS, Tag);
-  }
-
-private:
-  IntrusiveRefCntPtr<vfs::FileSystem> FS;
-  VFSTag Tag;
-};
-
 /// Replaces all patterns of the form 0x123abc with spaces
 std::string replacePtrsInDump(std::string const &Dump) {
   llvm::Regex RE("0x[0-9a-fA-F]+");
@@ -500,11 +484,10 @@ int d;
     FilePaths.push_back(getVirtualTestFilePath(std::string("Foo") +
                                                std::to_string(I) + ".cpp"));
   // Mark all of those files as existing.
-  llvm::StringMap<std::string> FileContents;
+  MockFSProvider FS;
   for (auto &&FilePath : FilePaths)
-    FileContents[FilePath] = "";
+    FS.Files[FilePath] = "";
 
-  ConstantFSProvider FS(buildTestFS(FileContents));
 
   struct FileStat {
     unsigned HitsWithoutErrors = 0;

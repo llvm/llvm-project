@@ -2168,11 +2168,12 @@ def DAS : I<0x2F, RawFrm, (outs), (ins), "das", [], IIC_DAS>,
 
 let SchedRW = [WriteSystem] in {
 // Check Array Index Against Bounds
+// Note: "bound" does not have reversed operands in at&t syntax.
 def BOUNDS16rm : I<0x62, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                   "bound\t{$src, $dst|$dst, $src}", [], IIC_BOUND>, OpSize16,
+                   "bound\t$dst, $src", [], IIC_BOUND>, OpSize16,
                    Requires<[Not64BitMode]>;
 def BOUNDS32rm : I<0x62, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                   "bound\t{$src, $dst|$dst, $src}", [], IIC_BOUND>, OpSize32,
+                   "bound\t$dst, $src", [], IIC_BOUND>, OpSize32,
                    Requires<[Not64BitMode]>;
 
 // Adjust RPL Field of Segment Selector

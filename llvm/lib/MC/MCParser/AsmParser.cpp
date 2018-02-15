@@ -84,27 +84,6 @@ namespace {
 typedef std::vector<AsmToken> MCAsmMacroArgument;
 typedef std::vector<MCAsmMacroArgument> MCAsmMacroArguments;
 
-struct MCAsmMacroParameter {
-  StringRef Name;
-  MCAsmMacroArgument Value;
-  bool Required = false;
-  bool Vararg = false;
-
-  MCAsmMacroParameter() = default;
-};
-
-typedef std::vector<MCAsmMacroParameter> MCAsmMacroParameters;
-
-struct MCAsmMacro {
-  StringRef Name;
-  StringRef Body;
-  MCAsmMacroParameters Parameters;
-
-public:
-  MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)
-      : Name(N), Body(B), Parameters(std::move(P)) {}
-};
-
 /// \brief Helper class for storing information about an active macro
 /// instantiation.
 struct MacroInstantiation {
@@ -164,9 +143,6 @@ private:
   /// extensions. Extensions register themselves in this map by calling
   /// addDirectiveHandler.
   StringMap<ExtensionDirectiveHandler> ExtensionDirectiveMap;
-
-  /// \brief Map of currently defined macros.
-  StringMap<MCAsmMacro> MacroMap;
 
   /// \brief Stack of active macro instantiations.
   std::vector<MacroInstantiation*> ActiveMacros;
@@ -308,17 +284,6 @@ private:
 
   /// \brief Control a flag in the parser that enables or disables macros.
   void setMacrosEnabled(bool Flag) {MacrosEnabledFlag = Flag;}
-
-  /// \brief Lookup a previously defined macro.
-  /// \param Name Macro name.
-  /// \returns Pointer to macro. NULL if no such macro was defined.
-  const MCAsmMacro* lookupMacro(StringRef Name);
-
-  /// \brief Define a new macro with the given name and information.
-  void defineMacro(StringRef Name, MCAsmMacro Macro);
-
-  /// \brief Undefine a macro. If no such macro was defined, it's a no-op.
-  void undefineMacro(StringRef Name);
 
   /// \brief Are we inside a macro instantiation?
   bool isInsideMacroInstantiation() {return !ActiveMacros.empty();}
@@ -1842,7 +1807,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
   // If macros are enabled, check to see if this is a macro instantiation.
   if (areMacrosEnabled())
-    if (const MCAsmMacro *M = lookupMacro(IDVal)) {
+    if (const MCAsmMacro *M = getContext().lookupMacro(IDVal)) {
       return handleMacroEntry(M, IDLoc);
     }
 
@@ -2720,17 +2685,6 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
 
   return TokError("too many positional arguments");
 }
-
-const MCAsmMacro *AsmParser::lookupMacro(StringRef Name) {
-  StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);
-  return (I == MacroMap.end()) ? nullptr : &I->getValue();
-}
-
-void AsmParser::defineMacro(StringRef Name, MCAsmMacro Macro) {
-  MacroMap.insert(std::make_pair(Name, std::move(Macro)));
-}
-
-void AsmParser::undefineMacro(StringRef Name) { MacroMap.erase(Name); }
 
 bool AsmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc) {
   // Arbitrarily limit macro nesting depth (default matches 'as'). We can
@@ -4274,7 +4228,7 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
     eatToEndOfStatement();
   }
 
-  if (lookupMacro(Name)) {
+  if (getContext().lookupMacro(Name)) {
     return Error(DirectiveLoc, "macro '" + Name + "' is already defined");
   }
 
@@ -4282,7 +4236,7 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
   const char *BodyEnd = EndToken.getLoc().getPointer();
   StringRef Body = StringRef(BodyStart, BodyEnd - BodyStart);
   checkForBadMacro(DirectiveLoc, Name, Body, Parameters);
-  defineMacro(Name, MCAsmMacro(Name, Body, std::move(Parameters)));
+  getContext().defineMacro(Name, MCAsmMacro(Name, Body, std::move(Parameters)));
   return false;
 }
 
@@ -4441,10 +4395,10 @@ bool AsmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
                  "unexpected token in '.purgem' directive"))
     return true;
 
-  if (!lookupMacro(Name))
+  if (!getContext().lookupMacro(Name))
     return Error(DirectiveLoc, "macro '" + Name + "' is not defined");
 
-  undefineMacro(Name);
+  getContext().undefineMacro(Name);
   return false;
 }
 

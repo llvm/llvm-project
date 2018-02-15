@@ -248,6 +248,7 @@ flagsNeedToBePreservedBeforeTheTerminators(const MachineBasicBlock &MBB) {
 /// stack pointer by a constant value.
 void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator &MBBI,
+                                    const DebugLoc &DL,
                                     int64_t NumBytes, bool InEpilogue) const {
   bool isSub = NumBytes < 0;
   uint64_t Offset = isSub ? -NumBytes : NumBytes;
@@ -255,7 +256,6 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
       isSub ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
 
   uint64_t Chunk = (1LL << 31) - 1;
-  DebugLoc DL = MBB.findDebugLoc(MBBI);
 
   if (Offset > Chunk) {
     // Rather than emit a long series of instructions for large offsets,
@@ -998,7 +998,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       Fn.arg_size() == 2) {
     StackSize += 8;
     MFI.setStackSize(StackSize);
-    emitSPUpdate(MBB, MBBI, -8, /*InEpilogue=*/false);
+    emitSPUpdate(MBB, MBBI, DL, -8, /*InEpilogue=*/false);
   }
 
   // If this is x86-64 and the Red Zone is not disabled, if we are a leaf
@@ -1259,7 +1259,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       MBB.insert(MBBI, MI);
     }
   } else if (NumBytes) {
-    emitSPUpdate(MBB, MBBI, -(int64_t)NumBytes, /*InEpilogue=*/false);
+    emitSPUpdate(MBB, MBBI, DL, -(int64_t)NumBytes, /*InEpilogue=*/false);
   }
 
   if (NeedsWinCFI && NumBytes) {
@@ -1649,7 +1649,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     }
   } else if (NumBytes) {
     // Adjust stack pointer back: ESP += numbytes.
-    emitSPUpdate(MBB, MBBI, NumBytes, /*InEpilogue=*/true);
+    emitSPUpdate(MBB, MBBI, DL, NumBytes, /*InEpilogue=*/true);
     --MBBI;
   }
 
@@ -1669,7 +1669,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
       Offset += mergeSPUpdates(MBB, Terminator, true);
-      emitSPUpdate(MBB, Terminator, Offset, /*InEpilogue=*/true);
+      emitSPUpdate(MBB, Terminator, DL, Offset, /*InEpilogue=*/true);
     }
   }
 }

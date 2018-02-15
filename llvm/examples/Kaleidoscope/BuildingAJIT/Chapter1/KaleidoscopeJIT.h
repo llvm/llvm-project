@@ -47,7 +47,6 @@ private:
   IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
 public:
-
   KaleidoscopeJIT()
       : ES(SSP),
         Resolver(createLegacyLookupResolver(
@@ -63,10 +62,11 @@ public:
             },
             [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
         TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(
-            ES,
-            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
-            [this](VModuleKey K) { return Resolver; }),
+        ObjectLayer(ES,
+                    [this](VModuleKey) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                          std::make_shared<SectionMemoryManager>(), Resolver};
+                    }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
