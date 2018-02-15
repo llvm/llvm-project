@@ -577,6 +577,12 @@ public:
                  ExplodedNode *Pred, ProgramStateRef St, SVal TargetLV, SVal Val,
                  const ProgramPointTag *tag = nullptr);
 
+  /// Return the CFG element corresponding to the worklist element
+  /// that is currently being processed by ExprEngine.
+  CFGElement getCurrentCFGElement() {
+    return (*currBldrCtx->getBlock())[currStmtIdx];
+  }
+
   /// \brief Create a new state in which the call return value is binded to the
   /// call origin expression.
   ProgramStateRef bindReturnValue(const CallEvent &Call,
