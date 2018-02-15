@@ -32,9 +32,11 @@ template <typename T> struct CaptureProxy {
   operator UniqueFunction<void(T)>() && {
     assert(!Future.valid() && "conversion to callback called multiple times");
     Future = Promise.get_future();
-    return BindWithForward([](std::promise<T> Promise,
-                              T Value) { Promise.set_value(std::move(Value)); },
-                           std::move(Promise));
+    return BindWithForward(
+        [](std::promise<std::shared_ptr<T>> Promise, T Value) {
+          Promise.set_value(std::make_shared<T>(std::move(Value)));
+        },
+        std::move(Promise));
   }
 
   ~CaptureProxy() {
@@ -42,13 +44,16 @@ template <typename T> struct CaptureProxy {
       return;
     assert(Future.valid() && "conversion to callback was not called");
     assert(!Target->hasValue());
-    Target->emplace(Future.get());
+    Target->emplace(std::move(*Future.get()));
   }
 
 private:
   llvm::Optional<T> *Target;
-  std::promise<T> Promise;
-  std::future<T> Future;
+  // Using shared_ptr to workaround compilation errors with MSVC.
+  // MSVC only allows default-construcitble and copyable objects as future<>
+  // arguments.
+  std::promise<std::shared_ptr<T>> Promise;
+  std::future<std::shared_ptr<T>> Future;
 };
 
 template <typename T> CaptureProxy<T> capture(llvm::Optional<T> &Target) {
