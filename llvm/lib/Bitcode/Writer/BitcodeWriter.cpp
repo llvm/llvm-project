@@ -3366,6 +3366,51 @@ static void writeFunctionTypeMetadataRecords(BitstreamWriter &Stream,
                      FS->type_checked_load_const_vcalls());
 }
 
+static void writeWholeProgramDevirtResolutionByArg(
+    SmallVector<uint64_t, 64> &NameVals, const std::vector<uint64_t> &args,
+    const WholeProgramDevirtResolution::ByArg &ByArg) {
+  NameVals.push_back(args.size());
+  NameVals.insert(NameVals.end(), args.begin(), args.end());
+
+  NameVals.push_back(ByArg.TheKind);
+  NameVals.push_back(ByArg.Info);
+  NameVals.push_back(ByArg.Byte);
+  NameVals.push_back(ByArg.Bit);
+}
+
+static void writeWholeProgramDevirtResolution(
+    SmallVector<uint64_t, 64> &NameVals, StringTableBuilder &StrtabBuilder,
+    uint64_t Id, const WholeProgramDevirtResolution &Wpd) {
+  NameVals.push_back(Id);
+
+  NameVals.push_back(Wpd.TheKind);
+  NameVals.push_back(StrtabBuilder.add(Wpd.SingleImplName));
+  NameVals.push_back(Wpd.SingleImplName.size());
+
+  NameVals.push_back(Wpd.ResByArg.size());
+  for (auto &A : Wpd.ResByArg)
+    writeWholeProgramDevirtResolutionByArg(NameVals, A.first, A.second);
+}
+
+static void writeTypeIdSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
+                                     StringTableBuilder &StrtabBuilder,
+                                     const std::string &Id,
+                                     const TypeIdSummary &Summary) {
+  NameVals.push_back(StrtabBuilder.add(Id));
+  NameVals.push_back(Id.size());
+
+  NameVals.push_back(Summary.TTRes.TheKind);
+  NameVals.push_back(Summary.TTRes.SizeM1BitWidth);
+  NameVals.push_back(Summary.TTRes.AlignLog2);
+  NameVals.push_back(Summary.TTRes.SizeM1);
+  NameVals.push_back(Summary.TTRes.BitMask);
+  NameVals.push_back(Summary.TTRes.InlineBits);
+
+  for (auto &W : Summary.WPDRes)
+    writeWholeProgramDevirtResolution(NameVals, StrtabBuilder, W.first,
+                                      W.second);
+}
+
 // Helper to emit a single function summary record.
 void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
@@ -3781,6 +3826,14 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     }
     Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
     NameVals.clear();
+  }
+
+  if (!Index.typeIds().empty()) {
+    for (auto &S : Index.typeIds()) {
+      writeTypeIdSummaryRecord(NameVals, StrtabBuilder, S.first, S.second);
+      Stream.EmitRecord(bitc::FS_TYPE_ID, NameVals);
+      NameVals.clear();
+    }
   }
 
   Stream.ExitBlock();

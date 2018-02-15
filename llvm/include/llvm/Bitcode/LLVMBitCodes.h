@@ -263,6 +263,11 @@ enum GlobalValueSummarySymtabCodes {
   FS_PERMODULE_RELBF = 19,
   // Index-wide flags
   FS_FLAGS = 20,
+  // Maps type identifier to summary information for that type identifier.
+  // TYPE_ID: [typeid, kind, bitwidth, align, size, bitmask, inlinebits,
+  //           n x (typeid, kind, name, numrba,
+  //                numrba x (numarg, numarg x arg, kind, info, byte, bit))]
+  FS_TYPE_ID = 21,
 };
 
 enum MetadataCodes {
