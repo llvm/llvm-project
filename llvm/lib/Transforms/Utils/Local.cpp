@@ -1564,6 +1564,9 @@ void llvm::salvageDebugInfo(Instruction &I) {
       case Instruction::Or:
         applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
         break;
+      case Instruction::And:
+        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
+        break;
       case Instruction::Xor:
         applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
         break;

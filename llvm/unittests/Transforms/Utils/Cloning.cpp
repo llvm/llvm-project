@@ -527,7 +527,7 @@ protected:
     DBuilder.finalize();
   }
 
-  void CreateNewModule() { NewM = llvm::CloneModule(OldM).release(); }
+  void CreateNewModule() { NewM = llvm::CloneModule(*OldM).release(); }
 
   LLVMContext C;
   Module *OldM;

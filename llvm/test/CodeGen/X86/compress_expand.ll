@@ -388,11 +388,11 @@ define void @test18(double* %base, <16 x double> %V, <16 x i1> %mask) {
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
 ; KNL-NEXT:    kshiftrw $8, %k1, %k2
+; KNL-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    popcntl %eax, %eax
 ; KNL-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
-; KNL-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; KNL-NEXT:    retq
   call void @llvm.masked.compressstore.v16f64(<16 x double> %V, double* %base, <16 x i1> %mask)
   ret void

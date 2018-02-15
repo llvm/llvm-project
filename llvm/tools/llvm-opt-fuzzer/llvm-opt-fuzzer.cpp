@@ -77,7 +77,7 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
   std::string Buf;
   {
     raw_string_ostream OS(Buf);
-    WriteBitcodeToFile(M.get(), OS);
+    WriteBitcodeToFile(*M, OS);
   }
   if (Buf.size() > MaxSize)
     return 0;

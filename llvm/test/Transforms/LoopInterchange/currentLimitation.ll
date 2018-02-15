@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
 ;; These are test that fail to interchange due to current limitation. This will go off once we extend the loop interchange pass.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

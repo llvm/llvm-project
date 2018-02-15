@@ -118,7 +118,8 @@ TEST(CoreAPIsTest, SimpleAsynchronousSymbolQueryAgainstVSO) {
     OnReadyRun = true;
   };
 
-  AsynchronousSymbolQuery Q(Names, OnResolution, OnReady);
+  auto Q =
+      std::make_shared<AsynchronousSymbolQuery>(Names, OnResolution, OnReady);
   VSO V;
 
   SymbolMap Defs;
@@ -241,9 +242,10 @@ TEST(CoreAPIsTest, AddAndMaterializeLazySymbol) {
     OnReadyRun = true;
   };
 
-  AsynchronousSymbolQuery Q(Names, OnResolution, OnReady);
+  auto Q =
+      std::make_shared<AsynchronousSymbolQuery>(Names, OnResolution, OnReady);
 
-  auto LR = V.lookup(Q, Names);
+  auto LR = V.lookup(std::move(Q), Names);
 
   for (auto &SWKV : LR.MaterializationWork)
     cantFail(SWKV.first->materialize(V, std::move(SWKV.second)));
@@ -271,8 +273,8 @@ TEST(CoreAPIsTest, TestLambdaSymbolResolver) {
       [&](SymbolFlagsMap &SymbolFlags, const SymbolNameSet &Symbols) {
         return V.lookupFlags(SymbolFlags, Symbols);
       },
-      [&](AsynchronousSymbolQuery &Q, SymbolNameSet Symbols) {
-        auto LR = V.lookup(Q, Symbols);
+      [&](std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Symbols) {
+        auto LR = V.lookup(std::move(Q), Symbols);
         assert(LR.MaterializationWork.empty() &&
                "Test generated unexpected materialization "
                "work?");
@@ -314,8 +316,9 @@ TEST(CoreAPIsTest, TestLambdaSymbolResolver) {
     EXPECT_FALSE(!!Err) << "Finalization should never fail in this test";
   };
 
-  AsynchronousSymbolQuery Q({Foo, Bar}, OnResolved, OnReady);
-  auto Unresolved = Resolver->lookup(Q, Symbols);
+  auto Q = std::make_shared<AsynchronousSymbolQuery>(SymbolNameSet({Foo, Bar}),
+                                                     OnResolved, OnReady);
+  auto Unresolved = Resolver->lookup(std::move(Q), Symbols);
 
   EXPECT_EQ(Unresolved.size(), 1U) << "Expected one unresolved symbol";
   EXPECT_EQ(Unresolved.count(Baz), 1U) << "Expected baz to not be resolved";

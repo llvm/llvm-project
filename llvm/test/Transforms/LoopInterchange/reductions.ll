@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S | FileCheck %s
 
 @A = common global [500 x [500 x i32]] zeroinitializer
 @X = common global i32 0

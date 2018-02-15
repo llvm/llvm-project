@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     }
 
     verifyModule(*MPart);
-    WriteBitcodeToFile(MPart.get(), Out->os());
+    WriteBitcodeToFile(*MPart, Out->os());
 
     // Declare success.
     Out->keep();

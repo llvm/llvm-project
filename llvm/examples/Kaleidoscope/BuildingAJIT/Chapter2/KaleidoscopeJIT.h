@@ -56,7 +56,6 @@ private:
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
 public:
-
   KaleidoscopeJIT()
       : ES(SSP),
         Resolver(createLegacyLookupResolver(
@@ -72,10 +71,11 @@ public:
             },
             [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
         TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(
-            ES,
-            [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); },
-            [this](VModuleKey K) { return Resolver; }),
+        ObjectLayer(ES,
+                    [this](VModuleKey) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                          std::make_shared<SectionMemoryManager>(), Resolver};
+                    }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer, [this](std::shared_ptr<Module> M) {
           return optimizeModule(std::move(M));

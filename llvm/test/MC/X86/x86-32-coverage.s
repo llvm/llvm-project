@@ -10223,9 +10223,6 @@
 // CHECK: 	jmp	305419896
         	jmp	0x12345678
 
-// CHECK: 	jmp	-77129852792157442
-        	jmp	0xfeedfacebabecafe
-
 // CHECK: 	jmpl	*3735928559(%ebx,%ecx,8)
         	jmp	*0xdeadbeef(%ebx,%ecx,8)
 
@@ -10280,9 +10277,6 @@
 // CHECK: 	jo	305419896
         	jo	0x12345678
 
-// CHECK: 	jo	-77129852792157442
-        	jo	0xfeedfacebabecafe
-
 // CHECK: 	jno	32493
         	jno	0x7eed
 
@@ -10291,9 +10285,6 @@
 
 // CHECK: 	jno	305419896
         	jno	0x12345678
-
-// CHECK: 	jno	-77129852792157442
-        	jno	0xfeedfacebabecafe
 
 // CHECK: 	jb	32493
         	jb	0x7eed
@@ -10304,9 +10295,6 @@
 // CHECK: 	jb	305419896
         	jb	0x12345678
 
-// CHECK: 	jb	-77129852792157442
-        	jb	0xfeedfacebabecafe
-
 // CHECK: 	jae	32493
         	jae	0x7eed
 
@@ -10315,9 +10303,6 @@
 
 // CHECK: 	jae	305419896
         	jae	0x12345678
-
-// CHECK: 	jae	-77129852792157442
-        	jae	0xfeedfacebabecafe
 
 // CHECK: 	je	32493
         	je	0x7eed
@@ -10328,9 +10313,6 @@
 // CHECK: 	je	305419896
         	je	0x12345678
 
-// CHECK: 	je	-77129852792157442
-        	je	0xfeedfacebabecafe
-
 // CHECK: 	jne	32493
         	jne	0x7eed
 
@@ -10339,9 +10321,6 @@
 
 // CHECK: 	jne	305419896
         	jne	0x12345678
-
-// CHECK: 	jne	-77129852792157442
-        	jne	0xfeedfacebabecafe
 
 // CHECK: 	jbe	32493
         	jbe	0x7eed
@@ -10352,9 +10331,6 @@
 // CHECK: 	jbe	305419896
         	jbe	0x12345678
 
-// CHECK: 	jbe	-77129852792157442
-        	jbe	0xfeedfacebabecafe
-
 // CHECK: 	ja	32493
         	ja	0x7eed
 
@@ -10363,9 +10339,6 @@
 
 // CHECK: 	ja	305419896
         	ja	0x12345678
-
-// CHECK: 	ja	-77129852792157442
-        	ja	0xfeedfacebabecafe
 
 // CHECK: 	js	32493
         	js	0x7eed
@@ -10376,9 +10349,6 @@
 // CHECK: 	js	305419896
         	js	0x12345678
 
-// CHECK: 	js	-77129852792157442
-        	js	0xfeedfacebabecafe
-
 // CHECK: 	jns	32493
         	jns	0x7eed
 
@@ -10387,9 +10357,6 @@
 
 // CHECK: 	jns	305419896
         	jns	0x12345678
-
-// CHECK: 	jns	-77129852792157442
-        	jns	0xfeedfacebabecafe
 
 // CHECK: 	jp	32493
         	jp	0x7eed
@@ -10400,9 +10367,6 @@
 // CHECK: 	jp	305419896
         	jp	0x12345678
 
-// CHECK: 	jp	-77129852792157442
-        	jp	0xfeedfacebabecafe
-
 // CHECK: 	jnp	32493
         	jnp	0x7eed
 
@@ -10411,9 +10375,6 @@
 
 // CHECK: 	jnp	305419896
         	jnp	0x12345678
-
-// CHECK: 	jnp	-77129852792157442
-        	jnp	0xfeedfacebabecafe
 
 // CHECK: 	jl	32493
         	jl	0x7eed
@@ -10424,9 +10385,6 @@
 // CHECK: 	jl	305419896
         	jl	0x12345678
 
-// CHECK: 	jl	-77129852792157442
-        	jl	0xfeedfacebabecafe
-
 // CHECK: 	jge	32493
         	jge	0x7eed
 
@@ -10435,9 +10393,6 @@
 
 // CHECK: 	jge	305419896
         	jge	0x12345678
-
-// CHECK: 	jge	-77129852792157442
-        	jge	0xfeedfacebabecafe
 
 // CHECK: 	jle	32493
         	jle	0x7eed
@@ -10448,9 +10403,6 @@
 // CHECK: 	jle	305419896
         	jle	0x12345678
 
-// CHECK: 	jle	-77129852792157442
-        	jle	0xfeedfacebabecafe
-
 // CHECK: 	jg	32493
         	jg	0x7eed
 
@@ -10459,9 +10411,6 @@
 
 // CHECK: 	jg	305419896
         	jg	0x12345678
-
-// CHECK: 	jg	-77129852792157442
-        	jg	0xfeedfacebabecafe
 
 // CHECK: 	int	$127
         	int	$0x7f
@@ -10532,8 +10481,8 @@
 // CHECK: 	skinit %eax
         	skinit %eax
 
-// CHECK: 	invlpga %ecx, %eax
-        	invlpga %ecx, %eax
+// CHECK: 	invlpga %eax, %ecx
+        	invlpga %eax, %ecx
 
 // CHECK:   blendvps	%xmm0, (%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]
             blendvps (%eax), %xmm1

@@ -169,7 +169,7 @@ size_t llvm::writeModule(const Module &M, uint8_t *Dest, size_t MaxSize) {
   std::string Buf;
   {
     raw_string_ostream OS(Buf);
-    WriteBitcodeToFile(&M, OS);
+    WriteBitcodeToFile(M, OS);
   }
   if (Buf.size() > MaxSize)
       return 0;

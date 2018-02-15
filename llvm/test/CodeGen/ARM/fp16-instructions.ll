@@ -11,6 +11,10 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+vfp4        | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FP16
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+fullfp16    | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-FULLFP16
 
+; Test fast-isel
+; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+fullfp16 -O0 | FileCheck %s --check-prefixes=CHECK-SPILL-RELOAD
+; RUN: llc < %s -mtriple=thumbv7-none-eabi -mattr=+fullfp16 -O0 | FileCheck %s --check-prefixes=CHECK-SPILL-RELOAD
+
 ; HARD:
 ; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+vfp3      | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-VFP3
 ; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+vfp4      | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FP16
@@ -94,7 +98,7 @@ entry:
 }
 
 ; 3. VCMP
-define zeroext i1 @VCMP(float %F.coerce, float %G.coerce) {
+define zeroext i1 @VCMP1(float %F.coerce, float %G.coerce) {
 entry:
   %0 = bitcast float %F.coerce to i32
   %tmp.0.extract.trunc = trunc i32 %0 to i16
@@ -102,45 +106,66 @@ entry:
   %2 = bitcast float %G.coerce to i32
   %tmp1.0.extract.trunc = trunc i32 %2 to i16
   %3 = bitcast i16 %tmp1.0.extract.trunc to half
-  %cmp = fcmp ogt half %1, %3
+  %cmp = fcmp une half %1, %3
   ret i1 %cmp
 
-; CHECK-LABEL:            VCMP:
+; CHECK-LABEL:            VCMP1:
 
-; CHECK-SOFT:             bl  __aeabi_fcmpgt
+; CHECK-SOFT:             bl  __aeabi_fcmpeq
 
 ; CHECK-SOFTFP-VFP3:      bl  __aeabi_h2f
 ; CHECK-SOFTFP-VFP3:      bl  __aeabi_h2f
-; CHECK-SOFTFP-VFP3:      vcmpe.f32 s{{.}}, s{{.}}
+; CHECK-SOFTFP-VFP3:      vcmp.f32 s{{.}}, s{{.}}
 
 ; CHECK-SOFTFP-FP16:      vcvtb.f32.f16 s{{.}}, s{{.}}
 ; CHECK-SOFTFP-FP16:      vcvtb.f32.f16 s{{.}}, s{{.}}
-; CHECK-SOFTFP-FP16:      vcmpe.f32 s{{.}}, s{{.}}
+; CHECK-SOFTFP-FP16:      vcmp.f32 s{{.}}, s{{.}}
 
 ; CHECK-SOFTFP-FULLFP16:  vmov.f16  [[S2:s[0-9]]], r0
 ; CHECK-SOFTFP-FULLFP16:  vmov.f16 [[S0:s[0-9]]], r1
-; CHECK-SOFTFP-FULLFP16:  vcmpe.f16 [[S2]], [[S0]]
+; CHECK-SOFTFP-FULLFP16:  vcmp.f16 [[S2]], [[S0]]
 
-; CHECK-SOFTFP-FULLFP16-NOT:  vmov.f16  s{{.}}, r0
-; CHECK-SOFTFP-FULLFP16-NOT:  vmov.f16  s{{.}}, r1
-; CHECK-HARDFP-FULLFP16:      vcmpe.f16  s0, s1
+; CHECK-HARDFP-FULLFP16-NOT:  vmov.f16  s{{.}}, r0
+; CHECK-HARDFP-FULLFP16-NOT:  vmov.f16  s{{.}}, r1
+; CHECK-HARDFP-FULLFP16:      vcmp.f16  s0, s1
+}
+
+; Check VCMPZH
+define zeroext i1 @VCMP2(float %F.coerce) {
+entry:
+  %0 = bitcast float %F.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %cmp = fcmp une half %1, 0.000000e+00 
+  ret i1 %cmp
+
+; CHECK-LABEL:             VCMP2:
+
+; CHECK-SOFT:              bl __aeabi_fcmpeq
+; CHECK-SOFTFP-FP16:       vcmp.f32        s0, #0
+; CHECK-SOFTFP-FULLFP16:   vcmp.f16        s0, #0
+; CHECK-HARDFP-FULLFP16:   vcmp.f16        s0, #0
 }
 
 ; 4. VCMPE
+define i32 @VCMPE1(float %F.coerce) {
+entry:
+  %0 = bitcast float %F.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %tmp = fcmp olt half %1, 0.000000e+00
+  %tmp1 = zext i1 %tmp to i32
+  ret i32 %tmp1
 
-; FIXME: enable when constant pool is fixed
-;
-;define i32 @VCMPE_IMM(float %F.coerce) {
-;entry:
-;  %0 = bitcast float %F.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %tmp = fcmp olt half %1, 1.000000e+00
-;  %tmp1 = zext i1 %tmp to i32
-;  ret i32 %tmp1
-;}
+; CHECK-LABEL:             VCMPE1:
 
-define i32 @VCMPE(float %F.coerce, float %G.coerce) {
+; CHECK-SOFT:              bl  __aeabi_fcmplt
+; CHECK-SOFTFP-FP16:       vcmpe.f32 s0, #0
+; CHECK-SOFTFP-FULLFP16:   vcmpe.f16 s0, #0
+; CHECK-HARDFP-FULLFP16:   vcmpe.f16 s0, #0
+}
+
+define i32 @VCMPE2(float %F.coerce, float %G.coerce) {
 entry:
   %0 = bitcast float %F.coerce to i32
   %tmp.0.extract.trunc = trunc i32 %0 to i16
@@ -152,7 +177,12 @@ entry:
   %tmp1 = zext i1 %tmp to i32
   ret i32 %tmp1
 
-; CHECK-LABEL:  VCMPE:
+; CHECK-LABEL:  VCMPE2:
+
+; CHECK-SOFT:              bl  __aeabi_fcmplt
+; CHECK-SOFTFP-FP16:       vcmpe.f32 s{{.}}, s{{.}}
+; CHECK-SOFTFP-FULLFP16:   vcmpe.f16 s{{.}}, s{{.}}
+; CHECK-HARDFP-FULLFP16:   vcmpe.f16 s{{.}}, s{{.}}
 }
 
 ; 5. VCVT (between floating-point and fixed-point)
@@ -719,3 +749,25 @@ entry:
 ; CHECK-SOFTFP-FULLFP16:  vldr.16     [[S2:s[0-9]]], [sp, #{{.}}]
 ; CHECK-SOFTFP-FULLFP16:  vadd.f16    s{{.}}, [[S2]], [[S0_2]]
 }
+
+; Test function calls to check store/load reg to/from stack
+define i32 @fn1() {
+entry:
+  %coerce = alloca half, align 2
+  %tmp2 = alloca i32, align 4
+  store half 0xH7C00, half* %coerce, align 2
+  %0 = load i32, i32* %tmp2, align 4
+  %call = call i32 bitcast (i32 (...)* @fn2 to i32 (i32)*)(i32 %0)
+  store half 0xH7C00, half* %coerce, align 2
+  %1 = load i32, i32* %tmp2, align 4
+  %call3 = call i32 bitcast (i32 (...)* @fn3 to i32 (i32)*)(i32 %1)
+  ret i32 %call3
+
+; CHECK-SPILL-RELOAD-LABEL: fn1:
+; CHECK-SPILL-RELOAD:       vstr.16 s0, [sp, #{{.}}]  @ 2-byte Spill
+; CHECK-SPILL-RELOAD-NEXT:  bl  fn2
+; CHECK-SPILL-RELOAD-NEXT:  vldr.16 s0, [sp, #{{.}}]  @ 2-byte Reload
+}
+
+declare dso_local i32 @fn2(...)
+declare dso_local i32 @fn3(...)

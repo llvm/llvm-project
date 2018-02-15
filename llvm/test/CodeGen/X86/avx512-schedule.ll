@@ -6745,9 +6745,9 @@ define i32 @mask8_zext(i8 %x) {
 define void @mask16_mem(i16* %ptr) {
 ; GENERIC-LABEL: mask16_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovw (%rdi), %k0
+; GENERIC-NEXT:    kmovw (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    knotw %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovw %k0, (%rdi)
+; GENERIC-NEXT:    kmovw %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask16_mem:
@@ -6767,9 +6767,9 @@ define void @mask16_mem(i16* %ptr) {
 define void @mask8_mem(i8* %ptr) {
 ; GENERIC-LABEL: mask8_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovb (%rdi), %k0
+; GENERIC-NEXT:    kmovb (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    knotb %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask8_mem:
@@ -6816,8 +6816,8 @@ define i16 @mand16(i16 %x, i16 %y) {
 define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; GENERIC-LABEL: mand16_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovw (%rdi), %k0
-; GENERIC-NEXT:    kmovw (%rsi), %k1
+; GENERIC-NEXT:    kmovw (%rdi), %k0 # sched: [4:0.50]
+; GENERIC-NEXT:    kmovw (%rsi), %k1 # sched: [4:0.50]
 ; GENERIC-NEXT:    kandw %k1, %k0, %k2 # sched: [1:1.00]
 ; GENERIC-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    korw %k0, %k2, %k0 # sched: [1:1.00]
@@ -6946,7 +6946,7 @@ define i8 @conv1(<8 x i1>* %R) {
 ; GENERIC-LABEL: conv1:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    kxnorw %k0, %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    movb $-2, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
 ; GENERIC-NEXT:    movb $-2, %al # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -7362,7 +7362,7 @@ define void @vmov_test22(<4 x i1> %a, <4 x i1>* %addr) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpslld $31, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vptestmd %xmm0, %xmm0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vmov_test22:
@@ -7380,7 +7380,7 @@ define void @vmov_test23(<2 x i1> %a, <2 x i1>* %addr) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllq $63, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vptestmq %xmm0, %xmm0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vmov_test23:
@@ -7399,7 +7399,7 @@ define void @store_v1i1(<1 x i1> %c , <1 x i1>* %ptr) {
 ; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kxnorw %k0, %k0, %k1 # sched: [1:1.00]
 ; GENERIC-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rsi)
+; GENERIC-NEXT:    kmovb %k0, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_v1i1:
@@ -7420,7 +7420,7 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ; GENERIC-NEXT:    vpsllq $63, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vptestmq %xmm0, %xmm0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    knotw %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_v2i1:
@@ -7441,7 +7441,7 @@ define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ; GENERIC-NEXT:    vpslld $31, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vptestmd %xmm0, %xmm0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    knotw %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_v4i1:
@@ -7462,7 +7462,7 @@ define void @store_v8i1(<8 x i1> %c , <8 x i1>* %ptr) {
 ; GENERIC-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    knotb %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_v8i1:
@@ -7483,7 +7483,7 @@ define void @store_v16i1(<16 x i1> %c , <16 x i1>* %ptr) {
 ; GENERIC-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    knotw %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kmovw %k0, (%rdi)
+; GENERIC-NEXT:    kmovw %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_v16i1:
@@ -7746,7 +7746,7 @@ End:
 define <8 x i64> @load_8i1(<8 x i1>* %a) {
 ; GENERIC-LABEL: load_8i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovb (%rdi), %k0
+; GENERIC-NEXT:    kmovb (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vpmovm2q %k0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7763,7 +7763,7 @@ define <8 x i64> @load_8i1(<8 x i1>* %a) {
 define <16 x i32> @load_16i1(<16 x i1>* %a) {
 ; GENERIC-LABEL: load_16i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovw (%rdi), %k0
+; GENERIC-NEXT:    kmovw (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vpmovm2d %k0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7780,7 +7780,7 @@ define <16 x i32> @load_16i1(<16 x i1>* %a) {
 define <2 x i16> @load_2i1(<2 x i1>* %a) {
 ; GENERIC-LABEL: load_2i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovb (%rdi), %k0
+; GENERIC-NEXT:    kmovb (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7797,7 +7797,7 @@ define <2 x i16> @load_2i1(<2 x i1>* %a) {
 define <4 x i16> @load_4i1(<4 x i1>* %a) {
 ; GENERIC-LABEL: load_4i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovb (%rdi), %k0
+; GENERIC-NEXT:    kmovb (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7814,7 +7814,7 @@ define <4 x i16> @load_4i1(<4 x i1>* %a) {
 define <32 x i16> @load_32i1(<32 x i1>* %a) {
 ; GENERIC-LABEL: load_32i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovd (%rdi), %k0
+; GENERIC-NEXT:    kmovd (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vpmovm2w %k0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7831,7 +7831,7 @@ define <32 x i16> @load_32i1(<32 x i1>* %a) {
 define <64 x i8> @load_64i1(<64 x i1>* %a) {
 ; GENERIC-LABEL: load_64i1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovq (%rdi), %k0
+; GENERIC-NEXT:    kmovq (%rdi), %k0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vpmovm2b %k0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7850,7 +7850,7 @@ define void @store_8i1(<8 x i1>* %a, <8 x i1> %v) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_8i1:
@@ -7868,7 +7868,7 @@ define void @store_8i1_1(<8 x i1>* %a, <8 x i16> %v) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovb %k0, (%rdi)
+; GENERIC-NEXT:    kmovb %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_8i1_1:
@@ -7887,7 +7887,7 @@ define void @store_16i1(<16 x i1>* %a, <16 x i1> %v) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovw %k0, (%rdi)
+; GENERIC-NEXT:    kmovw %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_16i1:
@@ -7905,7 +7905,7 @@ define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %ymm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovd %k0, (%rdi)
+; GENERIC-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7925,7 +7925,7 @@ define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $15, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovw2m %zmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovd %k0, (%rdi)
+; GENERIC-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7948,7 +7948,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovb2m %zmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovq %k0, (%rdi)
+; GENERIC-NEXT:    kmovq %k0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

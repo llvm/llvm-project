@@ -963,6 +963,17 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MFI.getObjectSize(FI), Align);
 
   switch (TRI->getSpillSize(*RC)) {
+    case 2:
+      if (ARM::HPRRegClass.hasSubClassEq(RC)) {
+        BuildMI(MBB, I, DL, get(ARM::VSTRH))
+            .addReg(SrcReg, getKillRegState(isKill))
+            .addFrameIndex(FI)
+            .addImm(0)
+            .addMemOperand(MMO)
+            .add(predOps(ARMCC::AL));
+      } else
+        llvm_unreachable("Unknown reg class!");
+      break;
     case 4:
       if (ARM::GPRRegClass.hasSubClassEq(RC)) {
         BuildMI(MBB, I, DL, get(ARM::STRi12))
@@ -1161,6 +1172,16 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MFI.getObjectSize(FI), Align);
 
   switch (TRI->getSpillSize(*RC)) {
+  case 2:
+    if (ARM::HPRRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, I, DL, get(ARM::VLDRH), DestReg)
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO)
+          .add(predOps(ARMCC::AL));
+    } else
+      llvm_unreachable("Unknown reg class!");
+    break;
   case 4:
     if (ARM::GPRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::LDRi12), DestReg)
@@ -1168,7 +1189,6 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
           .addImm(0)
           .addMemOperand(MMO)
           .add(predOps(ARMCC::AL));
-
     } else if (ARM::SPRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::VLDRS), DestReg)
           .addFrameIndex(FI)

@@ -25,6 +25,7 @@
 #include "MultipleStatementMacroCheck.h"
 #include "StringConstructorCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
+#include "ThrowKeywordMissingCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UseAfterMoveCheck.h"
 #include "VirtualNearMissCheck.h"
@@ -66,6 +67,8 @@ public:
         "bugprone-string-constructor");
     CheckFactories.registerCheck<SuspiciousMemsetUsageCheck>(
         "bugprone-suspicious-memset-usage");
+    CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
+        "bugprone-throw-keyword-missing");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UseAfterMoveCheck>(

@@ -270,15 +270,20 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
   }
 
-  if (Value *Op0v = dyn_castNegVal(Op0)) {   // -X * -Y = X*Y
-    if (Value *Op1v = dyn_castNegVal(Op1)) {
-      BinaryOperator *BO = BinaryOperator::CreateMul(Op0v, Op1v);
-      if (I.hasNoSignedWrap() &&
-          match(Op0, m_NSWSub(m_Value(), m_Value())) &&
-          match(Op1, m_NSWSub(m_Value(), m_Value())))
-        BO->setHasNoSignedWrap();
-      return BO;
-    }
+  // -X * C --> X * -C
+  Value *X, *Y;
+  Constant *Op1C;
+  if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Constant(Op1C)))
+    return BinaryOperator::CreateMul(X, ConstantExpr::getNeg(Op1C));
+
+  // -X * -Y --> X * Y
+  if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Neg(m_Value(Y)))) {
+    auto *NewMul = BinaryOperator::CreateMul(X, Y);
+    if (I.hasNoSignedWrap() &&
+        cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap() &&
+        cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap())
+      NewMul->setHasNoSignedWrap();
+    return NewMul;
   }
 
   // (X / Y) *  Y = X - (X % Y)
@@ -342,7 +347,6 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
 
   // (bool X) * Y --> X ? Y : 0
   // Y * (bool X) --> X ? Y : 0
-  Value *X;
   if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op1, ConstantInt::get(I.getType(), 0));
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
@@ -503,22 +507,14 @@ static bool isNormalFp(Constant *C) {
   return isa<ConstantFP>(C) && cast<ConstantFP>(C)->getValueAPF().isNormal();
 }
 
-/// Helper function of InstCombiner::visitFMul(BinaryOperator(). It returns
-/// true iff the given value is FMul or FDiv with one and only one operand
-/// being a normal constant (i.e. not Zero/NaN/Infinity).
+/// Helper function of InstCombiner::visitFMul(). Return true iff the given
+/// value is FMul or FDiv with one and only one operand being a finite-non-zero
+/// constant (i.e. not Zero/NaN/Infinity).
 static bool isFMulOrFDivWithConstant(Value *V) {
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I || (I->getOpcode() != Instruction::FMul &&
-             I->getOpcode() != Instruction::FDiv))
-    return false;
-
-  Constant *C0 = dyn_cast<Constant>(I->getOperand(0));
-  Constant *C1 = dyn_cast<Constant>(I->getOperand(1));
-
-  if (C0 && C1)
-    return false;
-
-  return (C0 && isFiniteNonZeroFp(C0)) || (C1 && isFiniteNonZeroFp(C1));
+  Constant *C;
+  return (match(V, m_FMul(m_Value(), m_Constant(C))) ||
+          match(V, m_FDiv(m_Value(), m_Constant(C))) ||
+          match(V, m_FDiv(m_Constant(C), m_Value()))) && isFiniteNonZeroFp(C);
 }
 
 /// foldFMulConst() is a helper routine of InstCombiner::visitFMul().
@@ -592,19 +588,18 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   bool AllowReassociate = I.isFast();
 
   // Simplify mul instructions with a constant RHS.
-  if (isa<Constant>(Op1)) {
+  if (auto *C = dyn_cast<Constant>(Op1)) {
     if (Instruction *FoldedMul = foldOpWithConstantIntoOperand(I))
       return FoldedMul;
 
     // (fmul X, -1.0) --> (fsub -0.0, X)
-    if (match(Op1, m_SpecificFP(-1.0))) {
+    if (match(C, m_SpecificFP(-1.0))) {
       Constant *NegZero = ConstantFP::getNegativeZero(Op1->getType());
       Instruction *RI = BinaryOperator::CreateFSub(NegZero, Op0);
       RI->copyFastMathFlags(&I);
       return RI;
     }
 
-    Constant *C = cast<Constant>(Op1);
     if (AllowReassociate && isFiniteNonZeroFp(C)) {
       // Let MDC denote an expression in one of these forms:
       // X * C, C/X, X/C, where C is a constant.
@@ -1322,33 +1317,34 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   return nullptr;
 }
 
-/// CvtFDivConstToReciprocal tries to convert X/C into X*1/C if C not a special
-/// FP value and:
-///    1) 1/C is exact, or
-///    2) reciprocal is allowed.
-/// If the conversion was successful, the simplified expression "X * 1/C" is
-/// returned; otherwise, nullptr is returned.
-static Instruction *CvtFDivConstToReciprocal(Value *Dividend, Constant *Divisor,
-                                             bool AllowReciprocal) {
-  if (!isa<ConstantFP>(Divisor)) // TODO: handle vectors.
+/// Try to convert X/C into X * (1/C).
+static Instruction *foldFDivConstantDivisor(BinaryOperator &FDiv) {
+  // TODO: Handle vector constants.
+  ConstantFP *CFP;
+  if (!match(FDiv.getOperand(1), m_ConstantFP(CFP)))
     return nullptr;
 
-  const APFloat &FpVal = cast<ConstantFP>(Divisor)->getValueAPF();
+  const APFloat &FpVal = CFP->getValueAPF();
   APFloat Reciprocal(FpVal.getSemantics());
-  bool Cvt = FpVal.getExactInverse(&Reciprocal);
 
-  if (!Cvt && AllowReciprocal && FpVal.isFiniteNonZero()) {
+  // This returns false if the inverse would be a denormal.
+  bool HasRecip = FpVal.getExactInverse(&Reciprocal);
+  // If the inverse is not exact, we may still be able to convert if we are
+  // not operating with strict math.
+  if (!HasRecip && FDiv.hasAllowReciprocal() && FpVal.isFiniteNonZero()) {
     Reciprocal = APFloat(FpVal.getSemantics(), 1.0f);
-    (void)Reciprocal.divide(FpVal, APFloat::rmNearestTiesToEven);
-    Cvt = !Reciprocal.isDenormal();
+    Reciprocal.divide(FpVal, APFloat::rmNearestTiesToEven);
+    // Disallow denormal constants because we don't know what would happen
+    // on all targets.
+    // TODO: Function attributes can tell us that denorms are flushed?
+    HasRecip = !Reciprocal.isDenormal();
   }
 
-  if (!Cvt)
+  if (!HasRecip)
     return nullptr;
 
-  ConstantFP *R;
-  R = ConstantFP::get(Dividend->getType()->getContext(), Reciprocal);
-  return BinaryOperator::CreateFMul(Dividend, R);
+  auto *RecipCFP = ConstantFP::get(FDiv.getContext(), Reciprocal);
+  return BinaryOperator::CreateFMul(FDiv.getOperand(0), RecipCFP);
 }
 
 Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
@@ -1361,14 +1357,17 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
+  if (Instruction *FMul = foldFDivConstantDivisor(I)) {
+    FMul->copyFastMathFlags(&I);
+    return FMul;
+  }
+
   if (isa<Constant>(Op0))
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
   bool AllowReassociate = I.isFast();
-  bool AllowReciprocal = I.hasAllowReciprocal();
-
   if (Constant *Op1C = dyn_cast<Constant>(Op1)) {
     if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
       if (Instruction *R = FoldOpIntoSelect(I, SI))
@@ -1382,18 +1381,14 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
 
       if (match(Op0, m_FMul(m_Value(X), m_Constant(C1)))) {
         // (X*C1)/C2 => X * (C1/C2)
-        //
         Constant *C = ConstantExpr::getFDiv(C1, C2);
         if (isNormalFp(C))
           Res = BinaryOperator::CreateFMul(X, C);
       } else if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
-        // (X/C1)/C2 => X /(C2*C1) [=> X * 1/(C2*C1) if reciprocal is allowed]
+        // (X/C1)/C2 => X /(C2*C1)
         Constant *C = ConstantExpr::getFMul(C1, C2);
-        if (isNormalFp(C)) {
-          Res = CvtFDivConstToReciprocal(X, C, AllowReciprocal);
-          if (!Res)
-            Res = BinaryOperator::CreateFDiv(X, C);
-        }
+        if (isNormalFp(C))
+          Res = BinaryOperator::CreateFDiv(X, C);
       }
 
       if (Res) {
@@ -1401,13 +1396,6 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         return Res;
       }
     }
-
-    // X / C => X * 1/C
-    if (Instruction *T = CvtFDivConstToReciprocal(Op0, Op1C, AllowReciprocal)) {
-      T->copyFastMathFlags(&I);
-      return T;
-    }
-
     return nullptr;
   }
 

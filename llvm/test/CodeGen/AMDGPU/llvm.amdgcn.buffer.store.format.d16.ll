@@ -13,8 +13,8 @@ main_body:
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_xy:
 
-; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
+; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] ;
+; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] ;
 ; UNPACKED: buffer_store_format_d16_xy v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 
 ; PACKED: buffer_store_format_d16_xy v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
@@ -26,10 +26,10 @@ main_body:
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_xyzw:
 
-; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] glc slc
-; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc slc
+; UNPACKED: flat_load_ushort v[[HI:[0-9]+]], v[{{[0-9]+:[0-9]+}}] ;
+; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] ;
+; UNPACKED: flat_load_ushort v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}] ;
+; UNPACKED: flat_load_ushort v[[LO:[0-9]+]], v[{{[0-9]+:[0-9]+}}] ;
 ; UNPACKED: buffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 
 ; GFX81: v_or_b32_e32 v[[HI:[0-9]+]]
