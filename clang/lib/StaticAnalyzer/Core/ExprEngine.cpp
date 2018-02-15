@@ -990,9 +990,22 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
 
   EvalCallOptions CallOpts;
   CallOpts.IsTemporaryCtorOrDtor = true;
-  if (!MR)
+  if (!MR) {
     CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
-  VisitCXXDestructor(varType, MR, D.getBindTemporaryExpr(),
+
+    // If we have no MR, we still need to unwrap the array to avoid destroying
+    // the whole array at once. Regardless, we'd eventually need to model array
+    // destructors properly, element-by-element.
+    while (const ArrayType *AT = getContext().getAsArrayType(T)) {
+      T = AT->getElementType();
+      CallOpts.IsArrayCtorOrDtor = true;
+    }
+  } else {
+    // We'd eventually need to makeZeroElementRegion() trick here,
+    // but for now we don't have the respective construction contexts,
+    // so MR would always be null in this case. Do nothing for now.
+  }
+  VisitCXXDestructor(T, MR, D.getBindTemporaryExpr(),
                      /*IsBase=*/false, CleanPred, Dst, CallOpts);
 }
 
