@@ -10,6 +10,7 @@
 #include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Matchers.h"
+#include "SyncAPI.h"
 #include "TestFS.h"
 #include "XRefs.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -249,7 +250,8 @@ int baz = f^oo;
   FS.Files[FooCpp] = "";
 
   Server.addDocument(FooCpp, SourceAnnotations.code());
-  auto Locations = Server.findDefinitions(FooCpp, SourceAnnotations.point());
+  auto Locations =
+      runFindDefinitions(Server, FooCpp, SourceAnnotations.point());
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
 
   EXPECT_THAT(Locations->Value,

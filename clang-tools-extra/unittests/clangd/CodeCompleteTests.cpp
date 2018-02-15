@@ -626,7 +626,7 @@ SignatureHelp signatures(StringRef Text) {
   Annotations Test(Text);
   Server.addDocument(File, Test.code());
   EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
-  auto R = Server.signatureHelp(File, Test.point());
+  auto R = runSignatureHelp(Server, File, Test.point());
   assert(R);
   return R.get().Value;
 }

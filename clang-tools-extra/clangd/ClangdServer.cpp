@@ -31,36 +31,6 @@ using namespace clang::clangd;
 
 namespace {
 
-// Issues an async read of AST and waits for results.
-template <class Ret, class Func>
-Ret blockingRunWithAST(TUScheduler &S, PathRef File, Func &&F) {
-  // Using shared_ptr to workaround MSVC bug. It requires future<> arguments to
-  // have default and copy ctor.
-  auto SharedPtrFunc = [&](llvm::Expected<InputsAndAST> Arg) {
-    return std::make_shared<Ret>(F(std::move(Arg)));
-  };
-  std::packaged_task<std::shared_ptr<Ret>(llvm::Expected<InputsAndAST>)> Task(
-      SharedPtrFunc);
-  auto Future = Task.get_future();
-  S.runWithAST(File, std::move(Task));
-  return std::move(*Future.get());
-}
-
-// Issues an async read of preamble and waits for results.
-template <class Ret, class Func>
-Ret blockingRunWithPreamble(TUScheduler &S, PathRef File, Func &&F) {
-  // Using shared_ptr to workaround MSVC bug. It requires future<> arguments to
-  // have default and copy ctor.
-  auto SharedPtrFunc = [&](llvm::Expected<InputsAndPreamble> Arg) {
-    return std::make_shared<Ret>(F(std::move(Arg)));
-  };
-  std::packaged_task<std::shared_ptr<Ret>(llvm::Expected<InputsAndPreamble>)>
-      Task(SharedPtrFunc);
-  auto Future = Task.get_future();
-  S.runWithPreamble(File, std::move(Task));
-  return std::move(*Future.get());
-}
-
 void ignoreError(llvm::Error Err) {
   handleAllErrors(std::move(Err), [](const llvm::ErrorInfoBase &) {});
 }
@@ -213,10 +183,11 @@ void ClangdServer::codeComplete(
                                                       std::move(Callback)));
 }
 
-llvm::Expected<Tagged<SignatureHelp>>
-ClangdServer::signatureHelp(PathRef File, Position Pos,
-                            llvm::Optional<StringRef> OverridenContents,
-                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+void ClangdServer::signatureHelp(
+    PathRef File, Position Pos,
+    UniqueFunction<void(llvm::Expected<Tagged<SignatureHelp>>)> Callback,
+    llvm::Optional<StringRef> OverridenContents,
+    IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   if (UsedFS)
     *UsedFS = TaggedFS.Value;
@@ -227,27 +198,30 @@ ClangdServer::signatureHelp(PathRef File, Position Pos,
   } else {
     VersionedDraft Latest = DraftMgr.getDraft(File);
     if (!Latest.Draft)
-      return llvm::make_error<llvm::StringError>(
+      return Callback(llvm::make_error<llvm::StringError>(
           "signatureHelp is called for non-added document",
-          llvm::errc::invalid_argument);
+          llvm::errc::invalid_argument));
     Contents = std::move(*Latest.Draft);
   }
 
-  auto Action = [=](llvm::Expected<InputsAndPreamble> IP)
-      -> Expected<Tagged<SignatureHelp>> {
+  auto PCHs = this->PCHs;
+  auto Action = [Contents, Pos, TaggedFS,
+                 PCHs](Path File, decltype(Callback) Callback,
+                       llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
-      return IP.takeError();
+      return Callback(IP.takeError());
+
     auto PreambleData = IP->Preamble;
     auto &Command = IP->Inputs.CompileCommand;
-
-    return make_tagged(
+    Callback(make_tagged(
         clangd::signatureHelp(File, Command,
                               PreambleData ? &PreambleData->Preamble : nullptr,
                               Contents, Pos, TaggedFS.Value, PCHs),
-        TaggedFS.Tag);
+        TaggedFS.Tag));
   };
-  return blockingRunWithPreamble<Expected<Tagged<SignatureHelp>>>(WorkScheduler,
-                                                                  File, Action);
+
+  WorkScheduler.runWithPreamble(
+      File, BindWithForward(Action, File.str(), std::move(Callback)));
 }
 
 llvm::Expected<tooling::Replacements>
@@ -276,12 +250,15 @@ ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
   return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
 }
 
-Expected<std::vector<tooling::Replacement>>
-ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName) {
-  using RetType = Expected<std::vector<tooling::Replacement>>;
-  auto Action = [=](Expected<InputsAndAST> InpAST) -> RetType {
+void ClangdServer::rename(
+    PathRef File, Position Pos, llvm::StringRef NewName,
+    UniqueFunction<void(Expected<std::vector<tooling::Replacement>>)>
+        Callback) {
+  auto Action = [Pos](Path File, std::string NewName,
+                      decltype(Callback) Callback,
+                      Expected<InputsAndAST> InpAST) {
     if (!InpAST)
-      return InpAST.takeError();
+      return Callback(InpAST.takeError());
     auto &AST = InpAST->AST;
 
     RefactoringResultCollector ResultCollector;
@@ -289,23 +266,24 @@ ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName) {
     const FileEntry *FE =
         SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
     if (!FE)
-      return llvm::make_error<llvm::StringError>(
-          "rename called for non-added document", llvm::errc::invalid_argument);
+      return Callback(llvm::make_error<llvm::StringError>(
+          "rename called for non-added document",
+          llvm::errc::invalid_argument));
     SourceLocation SourceLocationBeg =
         clangd::getBeginningOfIdentifier(AST, Pos, FE);
     tooling::RefactoringRuleContext Context(
         AST.getASTContext().getSourceManager());
     Context.setASTContext(AST.getASTContext());
     auto Rename = clang::tooling::RenameOccurrences::initiate(
-        Context, SourceRange(SourceLocationBeg), NewName.str());
+        Context, SourceRange(SourceLocationBeg), NewName);
     if (!Rename)
-      return Rename.takeError();
+      return Callback(Rename.takeError());
 
     Rename->invoke(ResultCollector, Context);
 
     assert(ResultCollector.Result.hasValue());
     if (!ResultCollector.Result.getValue())
-      return ResultCollector.Result->takeError();
+      return Callback(ResultCollector.Result->takeError());
 
     std::vector<tooling::Replacement> Replacements;
     for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
@@ -324,9 +302,12 @@ ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName) {
           Replacements.push_back(Rep);
       }
     }
-    return Replacements;
+    return Callback(Replacements);
   };
-  return blockingRunWithAST<RetType>(WorkScheduler, File, std::move(Action));
+
+  WorkScheduler.runWithAST(
+      File,
+      BindWithForward(Action, File.str(), NewName.str(), std::move(Callback)));
 }
 
 llvm::Optional<std::string> ClangdServer::getDocument(PathRef File) {
@@ -336,37 +317,40 @@ llvm::Optional<std::string> ClangdServer::getDocument(PathRef File) {
   return std::move(*Latest.Draft);
 }
 
-std::string ClangdServer::dumpAST(PathRef File) {
-  auto Action = [](llvm::Expected<InputsAndAST> InpAST) -> std::string {
+void ClangdServer::dumpAST(PathRef File,
+                           UniqueFunction<void(std::string)> Callback) {
+  auto Action = [](decltype(Callback) Callback,
+                   llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST) {
       ignoreError(InpAST.takeError());
-      return "<no-ast>";
+      return Callback("<no-ast>");
     }
-
     std::string Result;
 
     llvm::raw_string_ostream ResultOS(Result);
     clangd::dumpAST(InpAST->AST, ResultOS);
     ResultOS.flush();
 
-    return Result;
+    Callback(Result);
   };
-  return blockingRunWithAST<std::string>(WorkScheduler, File,
-                                         std::move(Action));
+
+  WorkScheduler.runWithAST(File, BindWithForward(Action, std::move(Callback)));
 }
 
-llvm::Expected<Tagged<std::vector<Location>>>
-ClangdServer::findDefinitions(PathRef File, Position Pos) {
+void ClangdServer::findDefinitions(
+    PathRef File, Position Pos,
+    UniqueFunction<void(llvm::Expected<Tagged<std::vector<Location>>>)>
+        Callback) {
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-
-  using RetType = llvm::Expected<Tagged<std::vector<Location>>>;
-  auto Action = [=](llvm::Expected<InputsAndAST> InpAST) -> RetType {
+  auto Action = [Pos, TaggedFS](decltype(Callback) Callback,
+                                llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
-      return InpAST.takeError();
+      return Callback(InpAST.takeError());
     auto Result = clangd::findDefinitions(InpAST->AST, Pos);
-    return make_tagged(std::move(Result), TaggedFS.Tag);
+    Callback(make_tagged(std::move(Result), TaggedFS.Tag));
   };
-  return blockingRunWithAST<RetType>(WorkScheduler, File, Action);
+
+  WorkScheduler.runWithAST(File, BindWithForward(Action, std::move(Callback)));
 }
 
 llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
@@ -442,24 +426,27 @@ ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
   }
 }
 
-llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
-ClangdServer::findDocumentHighlights(PathRef File, Position Pos) {
+void ClangdServer::findDocumentHighlights(
+    PathRef File, Position Pos,
+    UniqueFunction<void(llvm::Expected<Tagged<std::vector<DocumentHighlight>>>)>
+        Callback) {
   auto FileContents = DraftMgr.getDraft(File);
   if (!FileContents.Draft)
-    return llvm::make_error<llvm::StringError>(
+    return Callback(llvm::make_error<llvm::StringError>(
         "findDocumentHighlights called on non-added file",
-        llvm::errc::invalid_argument);
+        llvm::errc::invalid_argument));
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
 
-  using RetType = llvm::Expected<Tagged<std::vector<DocumentHighlight>>>;
-  auto Action = [=](llvm::Expected<InputsAndAST> InpAST) -> RetType {
+  auto Action = [TaggedFS, Pos](decltype(Callback) Callback,
+                                llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
-      return InpAST.takeError();
+      return Callback(InpAST.takeError());
     auto Result = clangd::findDocumentHighlights(InpAST->AST, Pos);
-    return make_tagged(std::move(Result), TaggedFS.Tag);
+    Callback(make_tagged(std::move(Result), TaggedFS.Tag));
   };
-  return blockingRunWithAST<RetType>(WorkScheduler, File, Action);
+
+  WorkScheduler.runWithAST(File, BindWithForward(Action, std::move(Callback)));
 }
 
 void ClangdServer::scheduleReparseAndDiags(
