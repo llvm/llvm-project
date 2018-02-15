@@ -97,6 +97,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-bcanalyzer
     llvm-cat
     llvm-dis
+    llvm-lto2
     llvm-modextract
     llvm-nm
     llvm-objdump

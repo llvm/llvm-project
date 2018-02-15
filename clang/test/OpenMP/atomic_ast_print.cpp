@@ -48,7 +48,7 @@ T foo(T argc) {
 }
 
 // CHECK: T a = T();
-// CHECK-NEXT: #pragma omp atomic
+// CHECK-NEXT: #pragma omp atomic{{$}}
 // CHECK-NEXT: a++;
 // CHECK-NEXT: #pragma omp atomic read
 // CHECK-NEXT: a = argc;

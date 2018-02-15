@@ -161,7 +161,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     if (CPU.empty())
       CPU = "tahiti";
 
-    switch (parseAMDGCNName(CPU)) {
+    switch (parseAMDGCNName(CPU).Kind) {
     case GK_GFX6:
     case GK_GFX7:
       break;
@@ -184,7 +184,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     if (CPU.empty())
       CPU = "r600";
 
-    switch (parseR600Name(CPU)) {
+    switch (parseR600Name(CPU).Kind) {
     case GK_R600:
     case GK_R700:
     case GK_EVERGREEN:
@@ -228,37 +228,37 @@ void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
     TargetOpts.Features.push_back("+fp64-fp16-denormals");
 }
 
-
-constexpr AMDGPUTargetInfo::NameGPUKind AMDGPUTargetInfo::R600Names[];
-constexpr AMDGPUTargetInfo::NameGPUKind AMDGPUTargetInfo::AMDGCNNames[];
-AMDGPUTargetInfo::GPUKind AMDGPUTargetInfo::parseR600Name(StringRef Name) {
+constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::InvalidGPU;
+constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::R600Names[];
+constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::AMDGCNNames[];
+AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::parseR600Name(StringRef Name) {
   const auto *Result = llvm::find_if(
-      R600Names, [Name](const NameGPUKind &Kind) { return Kind.Name == Name; });
+      R600Names, [Name](const GPUInfo &GPU) { return GPU.Name == Name; });
 
   if (Result == std::end(R600Names))
-    return GK_NONE;
-  return Result->Kind;
+    return InvalidGPU;
+  return *Result;
 }
 
-AMDGPUTargetInfo::GPUKind AMDGPUTargetInfo::parseAMDGCNName(StringRef Name) {
+AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::parseAMDGCNName(StringRef Name) {
   const auto *Result =
-      llvm::find_if(AMDGCNNames, [Name](const NameGPUKind &Kind) {
-        return Kind.Name == Name;
+      llvm::find_if(AMDGCNNames, [Name](const GPUInfo &GPU) {
+        return GPU.Name == Name;
       });
 
   if (Result == std::end(AMDGCNNames))
-    return GK_NONE;
-  return Result->Kind;
+    return InvalidGPU;
+  return *Result;
 }
 
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   if (getTriple().getArch() == llvm::Triple::amdgcn)
-    llvm::for_each(AMDGCNNames, [&Values](const NameGPUKind &Kind) {
-                   Values.emplace_back(Kind.Name);});
+    llvm::for_each(AMDGCNNames, [&Values](const GPUInfo &GPU) {
+                   Values.emplace_back(GPU.Name);});
   else
-    llvm::for_each(R600Names, [&Values](const NameGPUKind &Kind) {
-                   Values.emplace_back(Kind.Name);});
+    llvm::for_each(R600Names, [&Values](const GPUInfo &GPU) {
+                   Values.emplace_back(GPU.Name);});
 }
 
 void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {
@@ -273,17 +273,17 @@ void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {
 
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
-    : TargetInfo(Triple),
-      GPU(isAMDGCN(Triple) ? GK_GFX6 : parseR600Name(Opts.CPU)),
-      hasFP64(false), hasFMAF(false), hasLDEXPF(false),
-      AS(isGenericZero(Triple)) {
+  : TargetInfo(Triple),
+    GPU(isAMDGCN(Triple) ? AMDGCNNames[0] : parseR600Name(Opts.CPU)),
+    hasFP64(false), hasFMAF(false), hasLDEXPF(false),
+    AS(isGenericZero(Triple)) {
   if (getTriple().getArch() == llvm::Triple::amdgcn) {
     hasFP64 = true;
     hasFMAF = true;
     hasLDEXPF = true;
   }
   if (getTriple().getArch() == llvm::Triple::r600) {
-    if (GPU == GK_EVERGREEN_DOUBLE_OPS || GPU == GK_CAYMAN) {
+    if (GPU.Kind == GK_EVERGREEN_DOUBLE_OPS || GPU.Kind == GK_CAYMAN) {
       hasFMAF = true;
     }
   }
@@ -324,10 +324,16 @@ ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {
 
 void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                                         MacroBuilder &Builder) const {
+  Builder.defineMacro("__AMD__");
+  Builder.defineMacro("__AMDGPU__");
+
   if (getTriple().getArch() == llvm::Triple::amdgcn)
     Builder.defineMacro("__AMDGCN__");
   else
     Builder.defineMacro("__R600__");
+
+  if (GPU.Kind != GK_NONE)
+    Builder.defineMacro(Twine("__") + Twine(GPU.CanonicalName) + Twine("__"));
 
   if (hasFMAF)
     Builder.defineMacro("__HAS_FMAF__");

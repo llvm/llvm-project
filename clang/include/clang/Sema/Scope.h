@@ -259,6 +259,9 @@ public:
   Scope *getTemplateParamParent() { return TemplateParamParent; }
   const Scope *getTemplateParamParent() const { return TemplateParamParent; }
 
+  /// Returns the depth of this scope. The translation-unit has scope depth 0.
+  unsigned getDepth() const { return Depth; }
+
   /// Returns the number of function prototype scopes in this scope
   /// chain.
   unsigned getFunctionPrototypeDepth() const {

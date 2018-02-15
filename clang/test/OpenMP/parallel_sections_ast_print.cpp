@@ -58,7 +58,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: T b = argc, c, d, e, f, g;
 // CHECK-NEXT: static T a;
 // CHECK-NEXT: S<T> s;
-// CHECK-NEXT: #pragma omp parallel sections
+// CHECK-NEXT: #pragma omp parallel sections{{$}}
 // CHECK-NEXT: {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: }
