@@ -23,6 +23,8 @@ namespace wasm {
 class InputFile;
 class InputChunk;
 
+#define INVALID_INDEX UINT32_MAX
+
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -82,7 +84,7 @@ protected:
   uint32_t Flags;
   InputFile *File;
   InputChunk *Chunk;
-  llvm::Optional<uint32_t> OutputIndex;
+  uint32_t OutputIndex = INVALID_INDEX;
 };
 
 class FunctionSymbol : public Symbol {
@@ -110,7 +112,7 @@ protected:
                  InputChunk *C)
       : Symbol(Name, K, Flags, F, C) {}
 
-  llvm::Optional<uint32_t> TableIndex;
+  uint32_t TableIndex = INVALID_INDEX;
 
   // Explict function type, needed for undefined or synthetic functions only.
   const WasmSignature *FunctionType = nullptr;
@@ -237,11 +239,13 @@ union SymbolUnion {
 
 template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
+  static_assert(std::is_trivially_destructible<T>(),
+                "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
-  static_assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr,
-                "Not a Symbol");
+  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a Symbol");
   return new (S) T(std::forward<ArgT>(Arg)...);
 }
 

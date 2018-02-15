@@ -65,8 +65,8 @@
 	skinit %eax
 // CHECK: skinit %eax
 // CHECK: encoding: [0x0f,0x01,0xde]
-	invlpga %ecx, %eax
-// CHECK: invlpga %ecx, %eax
+	invlpga %eax, %ecx
+// CHECK: invlpga %eax, %ecx
 // CHECK: encoding: [0x0f,0x01,0xdf]
 
 	rdtscp
@@ -644,8 +644,6 @@ inl	(%dx), %eax
 
 //PR15455
 
-outs	(%esi), (%dx)
-// CHECK: outsw	(%esi), %dx
 outsb	(%esi), (%dx)
 // CHECK: outsb	(%esi), %dx
 outsw	(%esi), (%dx)
@@ -653,8 +651,6 @@ outsw	(%esi), (%dx)
 outsl	(%esi), (%dx)
 // CHECK: outsl	(%esi), %dx
 
-ins 	(%dx), %es:(%edi)
-// CHECK: insw	%dx, %es:(%edi)
 insb	(%dx), %es:(%edi)
 // CHECK: insb	%dx, %es:(%edi)
 insw	(%dx), %es:(%edi)

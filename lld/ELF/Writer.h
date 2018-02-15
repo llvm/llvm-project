@@ -45,11 +45,6 @@ struct PhdrEntry {
   OutputSection *LastSec = nullptr;
   bool HasLMA = false;
 
-  // True if one of the sections in this program header has a LMA specified via
-  // linker script: AT(addr). We never allow 2 or more sections with LMA in the
-  // same program header.
-  bool ASectionHasLMA = false;
-
   uint64_t LMAOffset = 0;
 };
 

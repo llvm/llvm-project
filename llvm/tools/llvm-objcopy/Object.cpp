@@ -31,11 +31,10 @@ using namespace object;
 using namespace ELF;
 
 template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
-  using Elf_Ehdr = typename ELFT::Ehdr;
   using Elf_Phdr = typename ELFT::Phdr;
 
   uint8_t *Buf = BufPtr->getBufferStart();
-  Buf += sizeof(Elf_Ehdr) + Seg.Index * sizeof(Elf_Phdr);
+  Buf += Obj.ProgramHdrSegment.Offset + Seg.Index * sizeof(Elf_Phdr);
   Elf_Phdr &Phdr = *reinterpret_cast<Elf_Phdr *>(Buf);
   Phdr.p_type = Seg.Type;
   Phdr.p_flags = Seg.Flags;
@@ -456,6 +455,23 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
   return A->Index < B->Index;
 }
 
+template <class ELFT>
+void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
+  for (auto &Parent : Obj.segments()) {
+    // Every segment will overlap with itself but we don't want a segment to
+    // be it's own parent so we avoid that situation.
+    if (&Child != &Parent && segmentOverlapsSegment(Child, Parent)) {
+      // We want a canonical "most parental" segment but this requires
+      // inspecting the ParentSegment.
+      if (compareSegmentsByOffset(&Parent, &Child))
+        if (Child.ParentSegment == nullptr ||
+            compareSegmentsByOffset(&Parent, Child.ParentSegment)) {
+          Child.ParentSegment = &Parent;
+        }
+    }
+  }
+}
+
 template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   uint32_t Index = 0;
   for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
@@ -482,23 +498,40 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
       }
     }
   }
+
+  auto &ElfHdr = Obj.ElfHdrSegment;
+  // Creating multiple PT_PHDR segments technically is not valid, but PT_LOAD
+  // segments must not overlap, and other types fit even less.
+  ElfHdr.Type = PT_PHDR;
+  ElfHdr.Flags = 0;
+  ElfHdr.OriginalOffset = ElfHdr.Offset = 0;
+  ElfHdr.VAddr = 0;
+  ElfHdr.PAddr = 0;
+  ElfHdr.FileSize = ElfHdr.MemSize = sizeof(Elf_Ehdr);
+  ElfHdr.Align = 0;
+  ElfHdr.Index = Index++;
+
+  const auto &Ehdr = *ElfFile.getHeader();
+  auto &PrHdr = Obj.ProgramHdrSegment;
+  PrHdr.Type = PT_PHDR;
+  PrHdr.Flags = 0;
+  // The spec requires us to have p_vaddr % p_align == p_offset % p_align.
+  // Whereas this works automatically for ElfHdr, here OriginalOffset is
+  // always non-zero and to ensure the equation we assign the same value to
+  // VAddr as well.
+  PrHdr.OriginalOffset = PrHdr.Offset = PrHdr.VAddr = Ehdr.e_phoff;
+  PrHdr.PAddr = 0;
+  PrHdr.FileSize = PrHdr.MemSize = Ehdr.e_phentsize * Ehdr.e_phnum;
+  // The spec requires us to naturally align all the fields. 
+  PrHdr.Align = sizeof(Elf_Addr);
+  PrHdr.Index = Index++;
+
   // Now we do an O(n^2) loop through the segments in order to match up
   // segments.
-  for (auto &Child : Obj.segments()) {
-    for (auto &Parent : Obj.segments()) {
-      // Every segment will overlap with itself but we don't want a segment to
-      // be it's own parent so we avoid that situation.
-      if (&Child != &Parent && segmentOverlapsSegment(Child, Parent)) {
-        // We want a canonical "most parental" segment but this requires
-        // inspecting the ParentSegment.
-        if (compareSegmentsByOffset(&Parent, &Child))
-          if (Child.ParentSegment == nullptr ||
-              compareSegmentsByOffset(&Parent, Child.ParentSegment)) {
-            Child.ParentSegment = &Parent;
-          }
-      }
-    }
-  }
+  for (auto &Child : Obj.segments())
+    setParentSegment(Child);
+  setParentSegment(ElfHdr);
+  setParentSegment(PrHdr);
 }
 
 template <class ELFT>
@@ -739,7 +772,7 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_machine = Obj.Machine;
   Ehdr.e_version = Obj.Version;
   Ehdr.e_entry = Obj.Entry;
-  Ehdr.e_phoff = sizeof(Elf_Ehdr);
+  Ehdr.e_phoff = Obj.ProgramHdrSegment.Offset;
   Ehdr.e_flags = Obj.Flags;
   Ehdr.e_ehsize = sizeof(Elf_Ehdr);
   Ehdr.e_phentsize = sizeof(Elf_Phdr);
@@ -913,17 +946,13 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
   std::vector<Segment *> OrderedSegments;
   for (auto &Segment : Obj.segments())
     OrderedSegments.push_back(&Segment);
+  OrderedSegments.push_back(&Obj.ElfHdrSegment);
+  OrderedSegments.push_back(&Obj.ProgramHdrSegment);
   OrderSegments(OrderedSegments);
-  // The size of ELF + program headers will not change so it is ok to assume
-  // that the first offset of the first segment is a good place to start
-  // outputting sections. This covers both the standard case and the PT_PHDR
-  // case.
-  uint64_t Offset;
-  if (!OrderedSegments.empty()) {
-    Offset = OrderedSegments[0]->Offset;
-  } else {
-    Offset = sizeof(Elf_Ehdr);
-  }
+  // Offset is used as the start offset of the first segment to be laid out.
+  // Since the ELF Header (ElfHdrSegment) must be at the start of the file,
+  // we start at offset 0.
+  uint64_t Offset = 0;
   Offset = LayoutSegments(OrderedSegments, Offset);
   Offset = LayoutSections(Obj.sections(), Offset);
   // If we need to write the section header table out then we need to align the
