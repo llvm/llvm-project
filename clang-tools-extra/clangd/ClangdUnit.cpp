@@ -439,8 +439,10 @@ CppFile::rebuild(ParseInputs &&Inputs) {
     Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),
                        NewAST->getDiagnostics().end());
   }
-  if (ASTCallback && NewAST)
+  if (ASTCallback && NewAST) {
+    trace::Span Tracer("Running ASTCallback");
     ASTCallback(FileName, NewAST.getPointer());
+  }
 
   // Write the results of rebuild into class fields.
   Preamble = std::move(NewPreamble);
