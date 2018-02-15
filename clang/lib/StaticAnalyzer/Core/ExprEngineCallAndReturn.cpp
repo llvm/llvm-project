@@ -638,10 +638,8 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 
     const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
 
-    // FIXME: ParentMap is slow and ugly. The callee should provide the
-    // necessary context. Ideally as part of the call event, or maybe as part of
-    // location context.
-    const Stmt *ParentExpr = CurLC->getParentMap().getParent(CtorExpr);
+    auto CC = getCurrentCFGElement().getAs<CFGConstructor>();
+    const Stmt *ParentExpr = CC ? CC->getTriggerStmt() : nullptr;
 
     if (ParentExpr && isa<CXXNewExpr>(ParentExpr) &&
         !Opts.mayInlineCXXAllocator())
