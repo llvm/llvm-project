@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 -w %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 class C {
@@ -8,6 +8,7 @@ public:
   C(int, int);
 
   static C get();
+  operator bool() const;
 };
 
 typedef __typeof(sizeof(int)) size_t;
@@ -226,7 +227,7 @@ public:
 
 } // end namespace ctor_initializers
 
-namespace return_stmt {
+namespace return_stmt_without_dtor {
 
 // CHECK: C returnVariable()
 // CHECK:          1:  (CXXConstructExpr, [B1.2], class C)
@@ -315,4 +316,140 @@ C returnChainOfCopies() {
   return C(C::get());
 }
 
-} // end namespace return_stmt
+} // end namespace return_stmt_without_dtor
+
+namespace return_stmt_with_dtor {
+
+class D {
+public:
+  D();
+  ~D();
+};
+
+// CHECK:  return_stmt_with_dtor::D returnTemporary()
+// CHECK:          1: return_stmt_with_dtor::D() (CXXConstructExpr, [B1.2], class return_stmt_with_dtor::D)
+// CHECK-NEXT:     2: [B1.1] (BindTemporary)
+// CHECK-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class return_stmt_with_dtor::D)
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], class return_stmt_with_dtor::D)
+// CHECK-NEXT:     6: ~return_stmt_with_dtor::D() (Temporary object destructor)
+// CHECK-NEXT:     7: return [B1.5];
+D returnTemporary() {
+  return D();
+}
+
+} // end namespace return_stmt_with_dtor
+
+namespace temporary_object_expr_without_dtors {
+
+// TODO: Should provide construction context for the constructor,
+// even if there is no specific trigger statement here.
+// CHECK: void simpleTemporary()
+// CHECK           1: C() (CXXConstructExpr, class C)
+void simpleTemporary() {
+  C();
+}
+
+// TODO: Should provide construction context for the constructor,
+// CHECK: void temporaryInCondition()
+// CHECK:          1: C() (CXXConstructExpr, class C)
+// CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, NoOp, const class C)
+// CHECK-NEXT:     3: [B2.2].operator bool
+// CHECK-NEXT:     4: [B2.2]
+// CHECK-NEXT:     5: [B2.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:     T: if [B2.5]
+void temporaryInCondition() {
+  if (C());
+}
+
+} // end namespace temporary_object_expr_without_dtors
+
+namespace temporary_object_expr_with_dtors {
+
+class D {
+public:
+  D();
+  D(int);
+  ~D();
+
+  static D get();
+
+  operator bool() const;
+};
+
+// CHECK: void simpleTemporary()
+// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B1.2], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B1.1] (BindTemporary)
+// CHECK-NEXT:     3: ~temporary_object_expr_with_dtors::D() (Temporary object destructor)
+void simpleTemporary() {
+  D();
+}
+
+// CHECK:  void temporaryInCondition()
+// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B2.2], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B2.1] (BindTemporary)
+// CHECK-NEXT:     3: [B2.2] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     4: [B2.3].operator bool
+// CHECK-NEXT:     5: [B2.3]
+// CHECK-NEXT:     6: [B2.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:     7: ~temporary_object_expr_with_dtors::D() (Temporary object destructor)
+// CHECK-NEXT:     T: if [B2.6]
+void temporaryInCondition() {
+  if (D());
+}
+
+// CHECK: void referenceVariableWithConstructor()
+// CHECK:          1: 0
+// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.3], const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     3: [B1.2] (BindTemporary)
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: const temporary_object_expr_with_dtors::D &d(0);
+// CHECK-NEXT:     6: [B1.5].~D() (Implicit destructor)
+void referenceVariableWithConstructor() {
+  const D &d(0);
+}
+
+// CHECK: void referenceVariableWithInitializer()
+// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B1.2], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B1.1] (BindTemporary)
+// CHECK-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     4: [B1.3]
+// CHECK-NEXT:     5: const temporary_object_expr_with_dtors::D &d = temporary_object_expr_with_dtors::D();
+// CHECK-NEXT:     6: [B1.5].~D() (Implicit destructor)
+void referenceVariableWithInitializer() {
+  const D &d = D();
+}
+
+// CHECK: void referenceVariableWithTernaryOperator(bool coin)
+// CHECK:        [B4]
+// CHECK-NEXT:     1: [B7.2] ? [B5.8] : [B6.8]
+// CHECK-NEXT:     2: [B4.1] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     3: [B4.2]
+// CHECK-NEXT:     4: const temporary_object_expr_with_dtors::D &d = coin ? D::get() : temporary_object_expr_with_dtors::D(0);
+// CHECK-NEXT:     T: (Temp Dtor) [B6.3]
+// CHECK:        [B5]
+// CHECK-NEXT:     1: D::get
+// CHECK-NEXT:     2: [B5.1] (ImplicitCastExpr, FunctionToPointerDecay, class temporary_object_expr_with_dtors::D (*)(void))
+// CHECK-NEXT:     3: [B5.2]()
+// CHECK-NEXT:     4: [B5.3] (BindTemporary)
+// CHECK-NEXT:     5: [B5.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     6: [B5.5]
+// CHECK-NEXT:     7: [B5.6] (CXXConstructExpr, [B5.8], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     8: [B5.7] (BindTemporary)
+// CHECK:        [B6]
+// CHECK-NEXT:     1: 0
+// CHECK-NEXT:     2: [B6.1] (CXXConstructExpr, [B6.3], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     3: [B6.2] (BindTemporary)
+// CHECK-NEXT:     4: temporary_object_expr_with_dtors::D([B6.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     5: [B6.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     6: [B6.5]
+// CHECK-NEXT:     7: [B6.6] (CXXConstructExpr, [B6.8], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     8: [B6.7] (BindTemporary)
+// CHECK:        [B7]
+// CHECK-NEXT:     1: coin
+// CHECK-NEXT:     2: [B7.1] (ImplicitCastExpr, LValueToRValue, _Bool)
+// CHECK-NEXT:     T: [B7.2] ? ... : ...
+void referenceVariableWithTernaryOperator(bool coin) {
+  const D &d = coin ? D::get() : D(0);
+}
+} // end namespace temporary_object_expr_with_dtors

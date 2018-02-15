@@ -162,13 +162,26 @@
 !42 = !{!43, !44}
 !43 = !DIEnumerator(name: "A8", value: -128)
 !44 = !DIEnumerator(name: "B8", value: 127)
-!45 = !{!0, !46, !48, !50, !52, !54, !56, !58, !60}
 ; CHECK:         DW_TAG_enumeration_type
 ; CHECK-DW2-NOT:   DW_AT_type
 ; CHECK-DW4:       DW_AT_type{{.*}}"int"
 ; CHECK-NOT:       DW_AT_enum_class
 ; CHECK:           DW_AT_name      ("E8")
 
+; Test enumeration without a fixed underlying type, but with the DIFlagFixedEnum
+; set. The DW_AT_enum_class attribute should be absent. This behaviour is
+; intented to keep compatibilty with existing DWARF consumers, which may imply
+; the type is present whenever DW_AT_enum_class is set.
+!63 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E9", file: !3, line: 63, size: 32, flags: DIFlagFixedEnum,  elements: !64, identifier: "_ZTS2E9")
+!64 = !{!65, !66}
+!65 = !DIEnumerator(name: "A9", value: -128)
+!66 = !DIEnumerator(name: "B9", value: 127)
+; CHECK:     DW_TAG_enumeration_type
+; CHECK-NOT:   DW_AT_type
+; CHECK-NOT:   DW_AT_enum_class
+; CHECK:       DW_AT_name      ("E9")
+
+!45 = !{!0, !46, !48, !50, !52, !54, !56, !58, !60, !67}
 !46 = !DIGlobalVariableExpression(var: !47, expr: !DIExpression())
 !47 = distinct !DIGlobalVariable(name: "x1", scope: !2, file: !3, line: 12, type: !10, isLocal: false, isDefinition: true)
 !48 = !DIGlobalVariableExpression(var: !49, expr: !DIExpression())
@@ -185,4 +198,6 @@
 !59 = distinct !DIGlobalVariable(name: "x7", scope: !2, file: !3, line: 57, type: !37, isLocal: false, isDefinition: true)
 !60 = !DIGlobalVariableExpression(var: !61, expr: !DIExpression())
 !61 = distinct !DIGlobalVariable(name: "x8", scope: !2, file: !3, line: 63, type: !41, isLocal: false, isDefinition: true)
+!67 = !DIGlobalVariableExpression(var: !68, expr: !DIExpression())
+!68 = distinct !DIGlobalVariable(name: "x9", scope: !2, file: !3, line: 63, type: !63, isLocal: false, isDefinition: true)
 !62 = !{i32 2, !"Debug Info Version", i32 3}

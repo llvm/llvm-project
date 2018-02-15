@@ -114,12 +114,10 @@ TEST(TraceTest, SmokeTest) {
     ASSERT_NE(++Event, Events->end()) << "Expected thread name";
     EXPECT_TRUE(VerifyObject(*Event, {{"ph", "M"}, {"name", "thread_name"}}));
   }
-  ASSERT_NE(++Event, Events->end()) << "Expected span start";
-  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "B"}, {"name", "A"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected log message";
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "i"}, {"name", "Log"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected span end";
-  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "E"}}));
+  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "X"}, {"name", "A"}}));
   ASSERT_EQ(++Event, Events->end());
   ASSERT_EQ(++Prop, Root->end());
 }

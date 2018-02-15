@@ -514,6 +514,7 @@ INTERCEPTOR(SIZE_T, __strxfrm_l, char *dest, const char *src, SIZE_T n,
 
 #define INTERCEPTOR_STRFTIME_BODY(char_type, ret_type, func, s, ...) \
   ENSURE_MSAN_INITED();                                              \
+  InterceptorScope interceptor_scope;                                \
   ret_type res = REAL(func)(s, __VA_ARGS__);                         \
   if (s) __msan_unpoison(s, sizeof(char_type) * (res + 1));          \
   return res;
@@ -779,6 +780,7 @@ INTERCEPTOR(int, socketpair, int domain, int type, int protocol, int sv[2]) {
 
 INTERCEPTOR(char *, fgets, char *s, int size, void *stream) {
   ENSURE_MSAN_INITED();
+  InterceptorScope interceptor_scope;
   char *res = REAL(fgets)(s, size, stream);
   if (res)
     __msan_unpoison(s, REAL(strlen)(s) + 1);
@@ -1392,6 +1394,7 @@ static uptr signal_impl(int signo, uptr cb) {
   } while (false)
 #define COMMON_SYSCALL_POST_WRITE_RANGE(p, s) __msan_unpoison(p, s)
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
+#include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 struct dlinfo {
   char *dli_fname;

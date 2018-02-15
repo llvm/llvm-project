@@ -180,23 +180,25 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
 }
 
 void ClangdLSPServer::onRename(RenameParams &Params) {
-  auto File = Params.textDocument.uri.file;
-  auto Code = Server.getDocument(File);
+  Path File = Params.textDocument.uri.file;
+  llvm::Optional<std::string> Code = Server.getDocument(File);
   if (!Code)
     return replyError(ErrorCode::InvalidParams,
                       "onRename called for non-added file");
 
-  auto Replacements = Server.rename(File, Params.position, Params.newName);
-  if (!Replacements) {
-    replyError(ErrorCode::InternalError,
-               llvm::toString(Replacements.takeError()));
-    return;
-  }
+  Server.rename(
+      File, Params.position, Params.newName,
+      [File, Code,
+       Params](llvm::Expected<std::vector<tooling::Replacement>> Replacements) {
+        if (!Replacements)
+          return replyError(ErrorCode::InternalError,
+                            llvm::toString(Replacements.takeError()));
 
-  std::vector<TextEdit> Edits = replacementsToEdits(*Code, *Replacements);
-  WorkspaceEdit WE;
-  WE.changes = {{Params.textDocument.uri.uri(), Edits}};
-  reply(WE);
+        std::vector<TextEdit> Edits = replacementsToEdits(*Code, *Replacements);
+        WorkspaceEdit WE;
+        WE.changes = {{Params.textDocument.uri.uri(), Edits}};
+        reply(WE);
+      });
 }
 
 void ClangdLSPServer::onDocumentDidClose(DidCloseTextDocumentParams &Params) {
@@ -280,21 +282,25 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
 }
 
 void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams &Params) {
-  auto SignatureHelp =
-      Server.signatureHelp(Params.textDocument.uri.file, Params.position);
-  if (!SignatureHelp)
-    return replyError(ErrorCode::InvalidParams,
-                      llvm::toString(SignatureHelp.takeError()));
-  reply(SignatureHelp->Value);
+  Server.signatureHelp(Params.textDocument.uri.file, Params.position,
+                       [](llvm::Expected<Tagged<SignatureHelp>> SignatureHelp) {
+                         if (!SignatureHelp)
+                           return replyError(
+                               ErrorCode::InvalidParams,
+                               llvm::toString(SignatureHelp.takeError()));
+                         reply(SignatureHelp->Value);
+                       });
 }
 
 void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams &Params) {
-  auto Items =
-      Server.findDefinitions(Params.textDocument.uri.file, Params.position);
-  if (!Items)
-    return replyError(ErrorCode::InvalidParams,
-                      llvm::toString(Items.takeError()));
-  reply(json::ary(Items->Value));
+  Server.findDefinitions(
+      Params.textDocument.uri.file, Params.position,
+      [](llvm::Expected<Tagged<std::vector<Location>>> Items) {
+        if (!Items)
+          return replyError(ErrorCode::InvalidParams,
+                            llvm::toString(Items.takeError()));
+        reply(json::ary(Items->Value));
+      });
 }
 
 void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier &Params) {
@@ -303,16 +309,14 @@ void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier &Params) {
 }
 
 void ClangdLSPServer::onDocumentHighlight(TextDocumentPositionParams &Params) {
-  auto Highlights = Server.findDocumentHighlights(Params.textDocument.uri.file,
-                                                  Params.position);
-
-  if (!Highlights) {
-    replyError(ErrorCode::InternalError,
-               llvm::toString(Highlights.takeError()));
-    return;
-  }
-
-  reply(json::ary(Highlights->Value));
+  Server.findDocumentHighlights(
+      Params.textDocument.uri.file, Params.position,
+      [](llvm::Expected<Tagged<std::vector<DocumentHighlight>>> Highlights) {
+        if (!Highlights)
+          return replyError(ErrorCode::InternalError,
+                            llvm::toString(Highlights.takeError()));
+        reply(json::ary(Highlights->Value));
+      });
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

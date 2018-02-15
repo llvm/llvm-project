@@ -34212,7 +34212,9 @@ static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  EVT SVT = VT.getScalarType();
   EVT InVT = In.getValueType();
+  EVT InSVT = InVT.getScalarType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isTypeLegal(InVT) && TLI.isTypeLegal(VT) &&
       isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
@@ -34221,16 +34223,19 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
     if (auto USatVal = detectUSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
   }
-  if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
-      ((VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) ||
-       (VT.getScalarType() == MVT::i16 && InVT.getScalarType() == MVT::i32))) {
-    if (auto SSatVal = detectSSatPattern(In, VT))
-      return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
-                                    Subtarget);
-    if (Subtarget.hasSSE41() || VT.getScalarType() == MVT::i8)
+  if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements())) {
+    if ((SVT == MVT::i8 || SVT == MVT::i16) &&
+        (InSVT == MVT::i16 || InSVT == MVT::i32)) {
+      if (auto SSatVal = detectSSatPattern(In, VT))
+        return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
+                                      Subtarget);
+    }
+    if ((SVT == MVT::i8 && InSVT == MVT::i16) ||
+        (SVT == MVT::i16 && InSVT == MVT::i32 && Subtarget.hasSSE41())) {
       if (auto USatVal = detectSSatPattern(In, VT, true))
         return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
                                       Subtarget);
+    }
   }
   return SDValue();
 }

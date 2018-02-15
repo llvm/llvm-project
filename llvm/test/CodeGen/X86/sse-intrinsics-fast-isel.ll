@@ -917,8 +917,6 @@ define <4 x float> @test_mm_loadh_pi(<4 x float> %a0, x86_mmx* %a1) {
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X64-NEXT:    xorps %xmm2, %xmm2
-; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %ptr = bitcast x86_mmx* %a1 to <2 x float>*
@@ -948,8 +946,6 @@ define <4 x float> @test_mm_loadl_pi(<4 x float> %a0, x86_mmx* %a1) {
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X64-NEXT:    xorps %xmm2, %xmm2
-; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq

@@ -176,7 +176,7 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
     if (kp == nullptr || (error != 0 && errno == ENOMEM)) {
       // Add extra space in case threads are added before next call.
       len += sizeof(*kp) + len / 10;
-      nkp = (struct kinfo_proc *)realloc(kp, len);
+      nkp = (struct kinfo_proc *)::realloc(kp, len);
       if (nkp == nullptr) {
         free(kp);
         return;

@@ -32,6 +32,7 @@ Clang-Tidy Checks
    bugprone-multiple-statement-macro
    bugprone-string-constructor
    bugprone-suspicious-memset-usage
+   bugprone-throw-keyword-missing
    bugprone-undefined-memory-manipulation
    bugprone-use-after-move
    bugprone-virtual-near-miss

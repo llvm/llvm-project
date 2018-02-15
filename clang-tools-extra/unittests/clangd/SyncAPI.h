@@ -22,6 +22,22 @@ Tagged<CompletionList>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
                 clangd::CodeCompleteOptions Opts,
                 llvm::Optional<StringRef> OverridenContents = llvm::None);
+
+llvm::Expected<Tagged<SignatureHelp>>
+runSignatureHelp(ClangdServer &Server, PathRef File, Position Pos,
+                 llvm::Optional<StringRef> OverridenContents = llvm::None);
+
+llvm::Expected<Tagged<std::vector<Location>>>
+runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos);
+
+llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
+runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos);
+
+llvm::Expected<std::vector<tooling::Replacement>>
+runRename(ClangdServer &Server, PathRef File, Position Pos, StringRef NewName);
+
+std::string runDumpAST(ClangdServer &Server, PathRef File);
+
 } // namespace clangd
 } // namespace clang
 
