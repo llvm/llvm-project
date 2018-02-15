@@ -67,7 +67,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
-#include "llvm/Transforms/Tapir/TapirUtils.h"
+#include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <memory>
