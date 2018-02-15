@@ -166,10 +166,6 @@ class LLDBTestResult(unittest2.TextTestResult):
                 configuration.skip_tests, test.id()):
             self.hardMarkAsSkipped(test)
 
-        configuration.setCrashInfoHook(
-            "%s at %s" %
-            (str(test), inspect.getfile(
-                test.__class__)))
         self.counter += 1
         test.test_number = self.counter
         if self.showAll:

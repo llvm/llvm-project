@@ -178,6 +178,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
     (void)(s);                                \
   } while (false)
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
+#include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 struct ThreadStartParam {
   atomic_uintptr_t t;

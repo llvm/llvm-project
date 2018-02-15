@@ -119,12 +119,12 @@ private:
 
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
-  std::vector<const Symbol *> ImportedFunctions;
-  std::vector<const Symbol *> ImportedGlobals;
+  std::vector<const FunctionSymbol *> ImportedFunctions;
+  std::vector<const GlobalSymbol *> ImportedGlobals;
   std::vector<WasmExportEntry> ExportedSymbols;
-  std::vector<const Symbol *> DefinedGlobals;
+  std::vector<const DefinedGlobal *> DefinedGlobals;
   std::vector<InputFunction *> DefinedFunctions;
-  std::vector<const Symbol *> IndirectFunctions;
+  std::vector<const FunctionSymbol *> IndirectFunctions;
   std::vector<WasmInitFunc> InitFunctions;
 
   // Elements that are used to construct the final output
@@ -164,7 +164,7 @@ void Writer::createImportSection() {
 
   writeUleb128(OS, NumImports, "import count");
 
-  for (const Symbol *Sym : ImportedFunctions) {
+  for (const FunctionSymbol *Sym : ImportedFunctions) {
     WasmImport Import;
     Import.Module = "env";
     Import.Field = Sym->getName();
@@ -234,7 +234,7 @@ void Writer::createGlobalSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, DefinedGlobals.size(), "global count");
-  for (const Symbol *Sym : DefinedGlobals) {
+  for (const DefinedGlobal *Sym : DefinedGlobals) {
     WasmGlobal Global;
     Global.Type.Type = WASM_TYPE_I32;
     Global.Type.Mutable = Sym == WasmSym::StackPointer;
@@ -316,7 +316,7 @@ void Writer::createElemSection() {
   writeUleb128(OS, IndirectFunctions.size(), "elem count");
 
   uint32_t TableIndex = kInitialTableOffset;
-  for (const Symbol *Sym : IndirectFunctions) {
+  for (const FunctionSymbol *Sym : IndirectFunctions) {
     assert(Sym->getTableIndex() == TableIndex);
     writeUleb128(OS, Sym->getOutputIndex(), "function index");
     ++TableIndex;
@@ -619,12 +619,12 @@ void Writer::calculateImports() {
     if (!Sym->isUndefined() || (Sym->isWeak() && !Config->Relocatable))
       continue;
 
-    if (Sym->isFunction()) {
-      Sym->setOutputIndex(ImportedFunctions.size());
-      ImportedFunctions.push_back(Sym);
-    } else {
-      Sym->setOutputIndex(ImportedGlobals.size());
-      ImportedGlobals.push_back(Sym);
+    if (auto *F = dyn_cast<FunctionSymbol>(Sym)) {
+      F->setOutputIndex(ImportedFunctions.size());
+      ImportedFunctions.push_back(F);
+    } else if (auto *G = dyn_cast<GlobalSymbol>(Sym)) {
+      G->setOutputIndex(ImportedGlobals.size());
+      ImportedGlobals.push_back(G);
     }
   }
 }
@@ -712,7 +712,7 @@ void Writer::calculateTypes() {
         File->TypeMap[I] = registerType(Types[I]);
   }
 
-  for (const Symbol *Sym : ImportedFunctions)
+  for (const FunctionSymbol *Sym : ImportedFunctions)
     registerType(Sym->getFunctionType());
 
   for (const InputFunction *F : DefinedFunctions)
@@ -723,7 +723,7 @@ void Writer::assignIndexes() {
   uint32_t GlobalIndex = ImportedGlobals.size() + DefinedGlobals.size();
   uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
 
-  auto AddDefinedGlobal = [&](Symbol* Sym) {
+  auto AddDefinedGlobal = [&](DefinedGlobal *Sym) {
     if (Sym) {
       DefinedGlobals.emplace_back(Sym);
       Sym->setOutputIndex(GlobalIndex++);
@@ -743,12 +743,10 @@ void Writer::assignIndexes() {
       DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
       for (Symbol *Sym : File->getSymbols()) {
         // Create wasm globals for data symbols defined in this file
-        if (!Sym->isDefined() || File != Sym->getFile())
+        if (File != Sym->getFile())
           continue;
-        if (Sym->isFunction())
-          continue;
-
-        AddDefinedGlobal(Sym);
+        if (auto *G = dyn_cast<DefinedGlobal>(Sym))
+          AddDefinedGlobal(G);
       }
     }
   }
@@ -772,7 +770,7 @@ void Writer::assignIndexes() {
       for (const WasmRelocation& Reloc : Chunk->getRelocations()) {
         if (Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_I32 ||
             Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_SLEB) {
-          Symbol *Sym = File->getFunctionSymbol(Reloc.Index);
+          FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
           if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
             continue;
           Sym->setTableIndex(TableIndex++);

@@ -107,11 +107,13 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return Symbols; }
 
-  Symbol *getFunctionSymbol(uint32_t Index) const {
-    return FunctionSymbols[Index];
+  FunctionSymbol *getFunctionSymbol(uint32_t Index) const {
+    return cast<FunctionSymbol>(FunctionSymbols[Index]);
   }
 
-  Symbol *getGlobalSymbol(uint32_t Index) const { return GlobalSymbols[Index]; }
+  GlobalSymbol *getGlobalSymbol(uint32_t Index) const {
+    return cast<GlobalSymbol>(GlobalSymbols[Index]);
+  }
 
 private:
   uint32_t relocateVirtualAddress(uint32_t Index) const;
@@ -119,9 +121,9 @@ private:
   uint32_t relocateGlobalIndex(uint32_t Original) const;
   uint32_t relocateTableIndex(uint32_t Original) const;
 
-  Symbol *createDefined(const WasmSymbol &Sym, Symbol::Kind Kind,
-                        InputChunk *Chunk = nullptr,
-                        uint32_t Address = UINT32_MAX);
+  Symbol *createDefinedGlobal(const WasmSymbol &Sym, InputChunk *Chunk,
+                              uint32_t Address);
+  Symbol *createDefinedFunction(const WasmSymbol &Sym, InputChunk *Chunk);
   Symbol *createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                           const WasmSignature *Signature = nullptr);
   void initializeSymbols();

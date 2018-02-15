@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
   char symlink_path[PATH_MAX];
   snprintf(symlink_path, sizeof(symlink_path), "%s_%d.symlink", argv[0],
            getpid());
+  remove(symlink_path);
   int res = symlink(argv[0], symlink_path);
   assert(!res);
 

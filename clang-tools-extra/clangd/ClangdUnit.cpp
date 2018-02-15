@@ -136,10 +136,16 @@ bool locationInRange(SourceLocation L, CharSourceRange R,
 // Note that clang also uses closed source ranges, which this can't handle!
 Range toRange(CharSourceRange R, const SourceManager &M) {
   // Clang is 1-based, LSP uses 0-based indexes.
-  return {{static_cast<int>(M.getSpellingLineNumber(R.getBegin())) - 1,
-           static_cast<int>(M.getSpellingColumnNumber(R.getBegin())) - 1},
-          {static_cast<int>(M.getSpellingLineNumber(R.getEnd())) - 1,
-           static_cast<int>(M.getSpellingColumnNumber(R.getEnd())) - 1}};
+  Position Begin;
+  Begin.line = static_cast<int>(M.getSpellingLineNumber(R.getBegin())) - 1;
+  Begin.character =
+      static_cast<int>(M.getSpellingColumnNumber(R.getBegin())) - 1;
+
+  Position End;
+  End.line = static_cast<int>(M.getSpellingLineNumber(R.getEnd())) - 1;
+  End.character = static_cast<int>(M.getSpellingColumnNumber(R.getEnd())) - 1;
+
+  return {Begin, End};
 }
 
 // Clang diags have a location (shown as ^) and 0 or more ranges (~~~~).
@@ -534,8 +540,11 @@ SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
   // token. If so, Take the beginning of this token.
   // (It should be the same identifier because you can't have two adjacent
   // identifiers without another token in between.)
-  SourceLocation PeekBeforeLocation = getMacroArgExpandedLocation(
-      SourceMgr, FE, Position{Pos.line, Pos.character - 1});
+  Position PosCharBehind = Pos;
+  --PosCharBehind.character;
+
+  SourceLocation PeekBeforeLocation =
+      getMacroArgExpandedLocation(SourceMgr, FE, PosCharBehind);
   Token Result;
   if (Lexer::getRawToken(PeekBeforeLocation, Result, SourceMgr,
                          AST.getLangOpts(), false)) {

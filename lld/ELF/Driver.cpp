@@ -45,6 +45,7 @@
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -589,6 +590,16 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
   return V;
 }
 
+// Parse the symbol ordering file and warn for any duplicate entries.
+static std::vector<StringRef> getSymbolOrderingFile(MemoryBufferRef MB) {
+  SetVector<StringRef> Names;
+  for (StringRef S : args::getLines(MB))
+    if (!Names.insert(S) && Config->WarnSymbolOrdering)
+      warn(MB.getBufferIdentifier() + ": duplicate ordered symbol: " + S);
+
+  return Names.takeVector();
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
@@ -677,6 +688,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
+  Config->WarnSymbolOrdering =
+      Args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
@@ -767,7 +780,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      Config->SymbolOrderingFile = args::getLines(*Buffer);
+      Config->SymbolOrderingFile = getSymbolOrderingFile(*Buffer);
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
@@ -790,12 +803,17 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
         readDynamicList(*Buffer);
 
-    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol)) {
+    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
       Config->DynamicList.push_back(
           {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
-      Config->Undefined.push_back(Arg->getValue());
-    }
   }
+
+  // If --export-dynamic-symbol=foo is given and symbol foo is defined in
+  // an object file in an archive file, that object file should be pulled
+  // out and linked. (It doesn't have to behave like that from technical
+  // point of view, but this is needed for compatibility with GNU.)
+  for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
+    Config->Undefined.push_back(Arg->getValue());
 
   for (auto *Arg : Args.filtered(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
@@ -1086,7 +1104,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Script->declareSymbols();
 
   // Apply version scripts.
-  Symtab->scanVersionScript();
+  //
+  // For a relocatable output, version scripts don't make sense, and
+  // parsing a symbol version string (e.g. dropping "@ver1" from a symbol
+  // name "foo@ver1") rather do harm, so we don't call this if -r is given.
+  if (!Config->Relocatable)
+    Symtab->scanVersionScript();
 
   // Create wrapped symbols for -wrap option.
   for (auto *Arg : Args.filtered(OPT_wrap))

@@ -152,6 +152,7 @@ struct Configuration {
   bool UndefinedVersion;
   bool WarnCommon;
   bool WarnMissingEntry;
+  bool WarnSymbolOrdering;
   bool WriteAddends;
   bool ZCombreloc;
   bool ZExecstack;

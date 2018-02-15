@@ -110,6 +110,7 @@ set(SANITIZER_HEADERS
   sanitizer_flags.h
   sanitizer_flags.inc
   sanitizer_fuchsia.h
+  sanitizer_interceptors_ioctl_netbsd.inc
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h
   sanitizer_lfstack.h
@@ -143,6 +144,7 @@ set(SANITIZER_HEADERS
   sanitizer_syscall_generic.inc
   sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscall_linux_aarch64.inc
+  sanitizer_syscalls_netbsd.inc
   sanitizer_thread_registry.h
   sanitizer_vector.h
   sanitizer_win.h)
