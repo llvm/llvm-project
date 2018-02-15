@@ -607,22 +607,37 @@ void test() {
   clang_analyzer_eval(c3.getY() == 2); // expected-warning{{TRUE}}
 
   C c4 = returnTemporaryWithConstruction();
-  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
-  // in the inlined function is supported.
-  clang_analyzer_eval(c4.getX() == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(c4.getY() == 2); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(c4.getX() == 1);
+  clang_analyzer_eval(c4.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
 
   C c5 = returnTemporaryWithAnotherFunctionWithConstruction();
-  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
-  // in the inlined function is supported.
-  clang_analyzer_eval(c5.getX() == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(c5.getY() == 2); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(c5.getX() == 1);
+  clang_analyzer_eval(c5.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
 
   C c6 = returnTemporaryWithCopyConstructionWithConstruction();
-  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
-  // in the inlined function is supported.
-  clang_analyzer_eval(c5.getX() == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(c5.getY() == 2); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(c5.getX() == 1);
+  clang_analyzer_eval(c5.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
 
 #if __cplusplus >= 201103L
 
@@ -683,10 +698,84 @@ void test() {
   // expected-warning@-6{{UNKNOWN}}
 #endif
 
-  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
-  // in the inlined function is supported.
   D d3 = returnTemporaryWithCopyConstructionWithVariableAndNonTrivialCopy();
-  clang_analyzer_eval(d3.getX() == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(d3.getY() == 2); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(d3.getX() == 1);
+  clang_analyzer_eval(d3.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
 }
 } // namespace test_return_temporary
+
+
+namespace test_temporary_object_expr_without_dtor {
+class C {
+  int x;
+public:
+  C(int x) : x(x) {}
+  int getX() const { return x; }
+};
+
+void test() {
+  clang_analyzer_eval(C(3).getX() == 3); // expected-warning{{TRUE}}
+};
+}
+
+namespace test_temporary_object_expr_with_dtor {
+class C {
+  int x;
+
+public:
+  C(int x) : x(x) {}
+  ~C() {}
+  int getX() const { return x; }
+};
+
+void test(int coin) {
+  clang_analyzer_eval(C(3).getX() == 3);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  const C &c1 = coin ? C(1) : C(2);
+  if (coin) {
+    clang_analyzer_eval(c1.getX() == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  } else {
+    clang_analyzer_eval(c1.getX() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  }
+
+  C c2 = coin ? C(1) : C(2);
+  if (coin) {
+    clang_analyzer_eval(c2.getX() == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  } else {
+    clang_analyzer_eval(c2.getX() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+  }
+}
+
+} // namespace test_temporary_object_expr
