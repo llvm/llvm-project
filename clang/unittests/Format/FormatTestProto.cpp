@@ -432,5 +432,11 @@ TEST_F(FormatTestProto, FormatsOptionsExtensions) {
                "};");
 }
 
+TEST_F(FormatTestProto, NoSpaceAfterPercent) {
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: %lld\n"
+               "};");
+}
+
 } // end namespace tooling
 } // end namespace clang

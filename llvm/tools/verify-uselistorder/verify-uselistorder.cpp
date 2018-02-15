@@ -132,7 +132,7 @@ bool TempFile::writeBitcode(const Module &M) const {
     return true;
   }
 
-  WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
+  WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ true);
   return false;
 }
 

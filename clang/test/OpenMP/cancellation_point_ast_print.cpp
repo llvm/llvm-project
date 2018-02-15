@@ -18,7 +18,7 @@ int main (int argc, char **argv) {
 }
 // CHECK: #pragma omp parallel
 // CHECK-NEXT: {
-// CHECK-NEXT: #pragma omp cancellation point parallel
+// CHECK-NEXT: #pragma omp cancellation point parallel{{$}}
 // CHECK-NEXT: }
 #pragma omp sections
 {

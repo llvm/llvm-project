@@ -85,7 +85,7 @@ std::unique_ptr<Module>
 BugDriver::deleteInstructionFromProgram(const Instruction *I,
                                         unsigned Simplification) {
   // FIXME, use vmap?
-  std::unique_ptr<Module> Clone = CloneModule(Program);
+  std::unique_ptr<Module> Clone = CloneModule(*Program);
 
   const BasicBlock *PBB = I->getParent();
   const Function *PF = PBB->getParent();
@@ -318,7 +318,7 @@ llvm::SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
   }
 
   ValueToValueMapTy NewVMap;
-  std::unique_ptr<Module> New = CloneModule(M, NewVMap);
+  std::unique_ptr<Module> New = CloneModule(*M, NewVMap);
 
   // Remove the Test functions from the Safe module
   std::set<Function *> TestFunctions;

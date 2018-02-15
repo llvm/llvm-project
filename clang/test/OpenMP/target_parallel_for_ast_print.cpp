@@ -39,7 +39,7 @@ public:
   }
 };
 
-// CHECK: #pragma omp target parallel for private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp target parallel for private(this->a) private(this->a) private(T::a){{$}}
 // CHECK: #pragma omp target parallel for private(this->a) private(this->a)
 // CHECK: #pragma omp target parallel for private(this->a) private(this->a) private(this->S::a)
 

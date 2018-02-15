@@ -82,7 +82,7 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   if (EC)
     report_fatal_error(Twine("Failed to open ") + SaveTempPath +
                        " to save optimized bitcode\n");
-  WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
+  WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
 static const GlobalValueSummary *
@@ -476,7 +476,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
       raw_svector_ostream OS(OutputBuffer);
       ProfileSummaryInfo PSI(TheModule);
       auto Index = buildModuleSummaryIndex(TheModule, nullptr, &PSI);
-      WriteBitcodeToFile(&TheModule, OS, true, &Index);
+      WriteBitcodeToFile(TheModule, OS, true, &Index);
     }
     return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
   }

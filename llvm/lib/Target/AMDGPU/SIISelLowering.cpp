@@ -1205,7 +1205,6 @@ SDValue SITargetLowering::lowerKernargMemParameter(
 
   SDValue Ptr = lowerKernArgParameterPtr(DAG, SL, Chain, Offset);
   SDValue Load = DAG.getLoad(MemVT, SL, Chain, Ptr, PtrInfo, Align,
-                             MachineMemOperand::MONonTemporal |
                              MachineMemOperand::MODereferenceable |
                              MachineMemOperand::MOInvariant);
 

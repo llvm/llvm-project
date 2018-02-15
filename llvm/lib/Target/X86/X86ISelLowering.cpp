@@ -16626,7 +16626,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   // Pack to the largest type possible:
   // vXi64/vXi32 -> PACK*SDW and vXi16 -> PACK*SWB.
   EVT InVT = MVT::i16, OutVT = MVT::i8;
-  if (DstVT.getScalarSizeInBits() > 8 &&
+  if (SrcVT.getScalarSizeInBits() > 16 &&
       (Opcode == X86ISD::PACKSS || Subtarget.hasSSE41())) {
     InVT = MVT::i32;
     OutVT = MVT::i16;
@@ -34214,16 +34214,16 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       const X86Subtarget &Subtarget) {
   EVT InVT = In.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isTypeLegal(InVT) || !TLI.isTypeLegal(VT))
-    return SDValue();
-  if (isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
+  if (TLI.isTypeLegal(InVT) && TLI.isTypeLegal(VT) &&
+      isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
     if (auto SSatVal = detectSSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
     if (auto USatVal = detectUSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
   }
-  if ((VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) ||
-      (VT.getScalarType() == MVT::i16 && InVT.getScalarType() == MVT::i32)) {
+  if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
+      ((VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) ||
+       (VT.getScalarType() == MVT::i16 && InVT.getScalarType() == MVT::i32))) {
     if (auto SSatVal = detectSSatPattern(In, VT))
       return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
                                     Subtarget);

@@ -230,8 +230,8 @@ static Expected<std::unique_ptr<Module>> testMergedProgram(const BugDriver &BD,
                                                            const Module &M2,
                                                            bool &Broken) {
   // Resulting merge of M1 and M2.
-  auto Merged = CloneModule(&M1);
-  if (Linker::linkModules(*Merged, CloneModule(&M2)))
+  auto Merged = CloneModule(M1);
+  if (Linker::linkModules(*Merged, CloneModule(M2)))
     // TODO: Shouldn't we thread the error up instead of exiting?
     exit(1);
 
@@ -243,10 +243,9 @@ static Expected<std::unique_ptr<Module>> testMergedProgram(const BugDriver &BD,
   return std::move(Merged);
 }
 
-/// TestFuncs - split functions in a Module into two groups: those that are
-/// under consideration for miscompilation vs. those that are not, and test
+/// split functions in a Module into two groups: those that are under
+/// consideration for miscompilation vs. those that are not, and test
 /// accordingly. Each group of functions becomes a separate Module.
-///
 Expected<bool>
 ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function *> &Funcs) {
   // Test to see if the function is misoptimized if we ONLY run it on the
@@ -266,8 +265,8 @@ ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function *> &Funcs) {
   //   we can conclude that a function triggers the bug when in fact one
   //   needs a larger set of original functions to do so.
   ValueToValueMapTy VMap;
-  Module *Clone = CloneModule(BD.getProgram(), VMap).release();
-  Module *Orig = BD.swapProgramIn(Clone);
+  std::unique_ptr<Module> Clone = CloneModule(*BD.getProgram(), VMap);
+  std::unique_ptr<Module> Orig(BD.swapProgramIn(Clone.release()));
 
   std::vector<Function *> FuncsOnClone;
   for (unsigned i = 0, e = Funcs.size(); i != e; ++i) {
@@ -277,14 +276,14 @@ ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function *> &Funcs) {
 
   // Split the module into the two halves of the program we want.
   VMap.clear();
-  std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
+  std::unique_ptr<Module> ToNotOptimize = CloneModule(*BD.getProgram(), VMap);
   std::unique_ptr<Module> ToOptimize =
       SplitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
 
   Expected<bool> Broken =
       TestFn(BD, std::move(ToOptimize), std::move(ToNotOptimize));
 
-  delete BD.swapProgramIn(Orig);
+  delete BD.swapProgramIn(Orig.release());
 
   return Broken;
 }
@@ -316,18 +315,15 @@ ExtractLoops(BugDriver &BD,
       return MadeChange;
 
     ValueToValueMapTy VMap;
-    std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
-    Module *ToOptimize = SplitFunctionsOutOfModule(ToNotOptimize.get(),
-                                                   MiscompiledFunctions, VMap)
-                             .release();
+    std::unique_ptr<Module> ToNotOptimize = CloneModule(*BD.getProgram(), VMap);
+    std::unique_ptr<Module> ToOptimize = SplitFunctionsOutOfModule(
+        ToNotOptimize.get(), MiscompiledFunctions, VMap);
     std::unique_ptr<Module> ToOptimizeLoopExtracted =
-        BD.extractLoop(ToOptimize);
-    if (!ToOptimizeLoopExtracted) {
+        BD.extractLoop(ToOptimize.get());
+    if (!ToOptimizeLoopExtracted)
       // If the loop extractor crashed or if there were no extractible loops,
       // then this chapter of our odyssey is over with.
-      delete ToOptimize;
       return MadeChange;
-    }
 
     errs() << "Extracted a loop from the breaking portion of the program.\n";
 
@@ -346,10 +342,9 @@ ExtractLoops(BugDriver &BD,
       return false;
 
     // Delete the original and set the new program.
-    Module *Old = BD.swapProgramIn(New->release());
+    std::unique_ptr<Module> Old(BD.swapProgramIn(New->release()));
     for (unsigned i = 0, e = MiscompiledFunctions.size(); i != e; ++i)
       MiscompiledFunctions[i] = cast<Function>(VMap[MiscompiledFunctions[i]]);
-    delete Old;
 
     if (Failure) {
       BD.switchToInterpreter(AI);
@@ -362,23 +357,21 @@ ExtractLoops(BugDriver &BD,
       BD.writeProgramToFile(OutputPrefix + "-loop-extract-fail-tno.bc",
                             ToNotOptimize.get());
       BD.writeProgramToFile(OutputPrefix + "-loop-extract-fail-to.bc",
-                            ToOptimize);
+                            ToOptimize.get());
       BD.writeProgramToFile(OutputPrefix + "-loop-extract-fail-to-le.bc",
                             ToOptimizeLoopExtracted.get());
 
       errs() << "Please submit the " << OutputPrefix
              << "-loop-extract-fail-*.bc files.\n";
-      delete ToOptimize;
       return MadeChange;
     }
-    delete ToOptimize;
     BD.switchToInterpreter(AI);
 
     outs() << "  Testing after loop extraction:\n";
     // Clone modules, the tester function will free them.
     std::unique_ptr<Module> TOLEBackup =
-        CloneModule(ToOptimizeLoopExtracted.get(), VMap);
-    std::unique_ptr<Module> TNOBackup = CloneModule(ToNotOptimize.get(), VMap);
+        CloneModule(*ToOptimizeLoopExtracted, VMap);
+    std::unique_ptr<Module> TNOBackup = CloneModule(*ToNotOptimize, VMap);
 
     for (unsigned i = 0, e = MiscompiledFunctions.size(); i != e; ++i)
       MiscompiledFunctions[i] = cast<Function>(VMap[MiscompiledFunctions[i]]);
@@ -508,7 +501,7 @@ ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock *> &BBs) {
 
   // Split the module into the two halves of the program we want.
   ValueToValueMapTy VMap;
-  Module *Clone = CloneModule(BD.getProgram(), VMap).release();
+  Module *Clone = CloneModule(*BD.getProgram(), VMap).release();
   Module *Orig = BD.swapProgramIn(Clone);
   std::vector<Function *> FuncsOnClone;
   std::vector<BasicBlock *> BBsOnClone;
@@ -522,7 +515,7 @@ ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock *> &BBs) {
   }
   VMap.clear();
 
-  std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
+  std::unique_ptr<Module> ToNotOptimize = CloneModule(*BD.getProgram(), VMap);
   std::unique_ptr<Module> ToOptimize =
       SplitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
 
@@ -577,23 +570,19 @@ ExtractBlocks(BugDriver &BD,
   }
 
   ValueToValueMapTy VMap;
-  Module *ProgClone = CloneModule(BD.getProgram(), VMap).release();
-  Module *ToExtract =
-      SplitFunctionsOutOfModule(ProgClone, MiscompiledFunctions, VMap)
-          .release();
+  std::unique_ptr<Module> ProgClone = CloneModule(*BD.getProgram(), VMap);
+  std::unique_ptr<Module> ToExtract =
+      SplitFunctionsOutOfModule(ProgClone.get(), MiscompiledFunctions, VMap);
   std::unique_ptr<Module> Extracted =
-      BD.extractMappedBlocksFromModule(Blocks, ToExtract);
+      BD.extractMappedBlocksFromModule(Blocks, ToExtract.get());
   if (!Extracted) {
     // Weird, extraction should have worked.
     errs() << "Nondeterministic problem extracting blocks??\n";
-    delete ProgClone;
-    delete ToExtract;
     return false;
   }
 
   // Otherwise, block extraction succeeded.  Link the two program fragments back
   // together.
-  delete ToExtract;
 
   std::vector<std::pair<std::string, FunctionType *>> MisCompFunctions;
   for (Module::iterator I = Extracted->begin(), E = Extracted->end(); I != E;
@@ -605,7 +594,7 @@ ExtractBlocks(BugDriver &BD,
     exit(1);
 
   // Set the new program and delete the old one.
-  BD.setNewProgram(ProgClone);
+  BD.setNewProgram(ProgClone.release());
 
   // Update the list of miscompiled functions.
   MiscompiledFunctions.clear();
@@ -770,7 +759,7 @@ Error BugDriver::debugMiscompilation() {
   // Output a bunch of bitcode files for the user...
   outs() << "Outputting reduced bitcode files which expose the problem:\n";
   ValueToValueMapTy VMap;
-  Module *ToNotOptimize = CloneModule(getProgram(), VMap).release();
+  Module *ToNotOptimize = CloneModule(*getProgram(), VMap).release();
   Module *ToOptimize =
       SplitFunctionsOutOfModule(ToNotOptimize, *MiscompiledFunctions, VMap)
           .release();
@@ -1037,7 +1026,7 @@ Error BugDriver::debugCodeGenerator() {
 
   // Split the module into the two halves of the program we want.
   ValueToValueMapTy VMap;
-  std::unique_ptr<Module> ToNotCodeGen = CloneModule(getProgram(), VMap);
+  std::unique_ptr<Module> ToNotCodeGen = CloneModule(*getProgram(), VMap);
   std::unique_ptr<Module> ToCodeGen =
       SplitFunctionsOutOfModule(ToNotCodeGen.get(), *Funcs, VMap);
 

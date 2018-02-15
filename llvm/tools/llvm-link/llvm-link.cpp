@@ -398,7 +398,7 @@ int main(int argc, char **argv) {
   if (OutputAssembly) {
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os(), true))
-    WriteBitcodeToFile(Composite.get(), Out.os(), PreserveBitcodeUseListOrder);
+    WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
 
   // Declare success.
   Out.keep();

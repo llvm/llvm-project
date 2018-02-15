@@ -162,7 +162,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: static T a;
 // CHECK-NEXT: S<T> s;
 // CHECK-NEXT: T arr[C][10], arr1[C];
-// CHECK-NEXT: #pragma omp parallel
+// CHECK-NEXT: #pragma omp parallel{{$}}
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS,thrp) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
 // CHECK-NEXT: foo()

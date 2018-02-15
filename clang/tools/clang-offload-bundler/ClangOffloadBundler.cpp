@@ -563,7 +563,7 @@ public:
           errs() << "error: unable to open temporary file.\n";
           return true;
         }
-        WriteBitcodeToFile(AuxModule.get(), BitcodeFile);
+        WriteBitcodeToFile(*AuxModule, BitcodeFile);
       }
 
       bool Failed = sys::ExecuteAndWait(ClangBinary.get(), ClangArgs);

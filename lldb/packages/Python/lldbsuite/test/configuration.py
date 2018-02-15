@@ -133,10 +133,6 @@ rerun_max_file_threhold = 0
 # same base name.
 all_tests = set()
 
-# safe default
-setCrashInfoHook = lambda x: None
-
-
 def shouldSkipBecauseOfCategories(test_categories):
     if useCategories:
         if len(test_categories) == 0 or len(

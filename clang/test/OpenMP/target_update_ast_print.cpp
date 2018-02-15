@@ -25,7 +25,7 @@ T foo(T targ, U uarg) {
 // CHECK:      static T a;
 // CHECK-NEXT: U b;
 // CHECK-NEXT: int l;
-// CHECK-NEXT: #pragma omp target update to(a) if(l > 5) device(l) nowait depend(inout : l)
+// CHECK-NEXT: #pragma omp target update to(a) if(l > 5) device(l) nowait depend(inout : l){{$}}
 // CHECK-NEXT: #pragma omp target update from(b) if(l < 5) device(l - 1) nowait depend(inout : l)
 // CHECK:      static int a;
 // CHECK-NEXT: float b;

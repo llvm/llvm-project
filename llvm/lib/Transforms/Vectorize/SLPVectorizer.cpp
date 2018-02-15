@@ -1629,15 +1629,16 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             break;
           }
 
-      BS.cancelScheduling(VL, VL0);
-      newTreeEntry(VL, false, UserTreeIdx, ReuseShuffleIndicies);
-
       if (ReverseConsecutive) {
         --NumOpsWantToKeepOrder[S.Opcode];
-        DEBUG(dbgs() << "SLP: Gathering reversed loads.\n");
-      } else {
-        DEBUG(dbgs() << "SLP: Gathering non-consecutive loads.\n");
+        newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
+        DEBUG(dbgs() << "SLP: added a vector of reversed loads.\n");
+        return;
       }
+
+      DEBUG(dbgs() << "SLP: Gathering non-consecutive loads.\n");
+      BS.cancelScheduling(VL, VL0);
+      newTreeEntry(VL, false, UserTreeIdx, ReuseShuffleIndicies);
       return;
     }
     case Instruction::ZExt:
@@ -2245,6 +2246,10 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
           TTI->getMemoryOpCost(Instruction::Load, ScalarTy, alignment, 0, VL0);
       int VecLdCost = TTI->getMemoryOpCost(Instruction::Load,
                                            VecTy, alignment, 0, VL0);
+      if (!isConsecutiveAccess(VL[0], VL[1], *DL, *SE)) {
+        VecLdCost += TTI->getShuffleCost(
+            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+      }
       return ReuseShuffleCost + VecLdCost - ScalarLdCost;
     }
     case Instruction::Store: {
@@ -3199,6 +3204,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::Load: {
       // Loads are inserted at the head of the tree because we don't want to
       // sink them all the way down past store instructions.
+      bool IsReversed =
+          !isConsecutiveAccess(E->Scalars[0], E->Scalars[1], *DL, *SE);
+      if (IsReversed)
+        VL0 = cast<Instruction>(E->Scalars.back());
       setInsertPointAfterBundle(E->Scalars, VL0);
 
       LoadInst *LI = cast<LoadInst>(VL0);
@@ -3222,6 +3231,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       LI->setAlignment(Alignment);
       Value *V = propagateMetadata(LI, E->Scalars);
+      if (IsReversed) {
+        SmallVector<uint32_t, 4> Mask(E->Scalars.size());
+        std::iota(Mask.rbegin(), Mask.rend(), 0);
+        V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()), Mask);
+      }
       if (NeedToShuffleReuses) {
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
                                         E->ReuseShuffleIndices, "shuffle");

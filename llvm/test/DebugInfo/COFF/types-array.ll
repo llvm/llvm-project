@@ -73,9 +73,9 @@
 ; CHECK:       OffsetInParent: 0
 ; CHECK:       BasePointerOffset: -20
 ; CHECK:       LocalVariableAddrRange {
-; CHECK:         OffsetStart: .text+0x3
+; CHECK:         OffsetStart: .text+0x6
 ; CHECK:         ISectStart: 0x0
-; CHECK:         Range: 0x36
+; CHECK:         Range: 0x33
 ; CHECK:       }
 ; CHECK:     }
 ; CHECK:     ProcEnd {

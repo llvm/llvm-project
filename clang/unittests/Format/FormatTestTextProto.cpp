@@ -386,5 +386,9 @@ TEST_F(FormatTestTextProto, FormatsExtensions) {
                "  }\n"
                "}");
 }
+
+TEST_F(FormatTestTextProto, NoSpaceAfterPercent) {
+  verifyFormat("key: %d");
+}
 } // end namespace tooling
 } // end namespace clang

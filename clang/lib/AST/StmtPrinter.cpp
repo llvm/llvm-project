@@ -1030,8 +1030,8 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
   for (ArrayRef<OMPClause *>::iterator I = Clauses.begin(), E = Clauses.end();
        I != E; ++I)
     if (*I && !(*I)->isImplicit()) {
-      Printer.Visit(*I);
       OS << ' ';
+      Printer.Visit(*I);
     }
   OS << "\n";
   if (!ForceNoStmt && S->hasAssociatedStmt())
@@ -1039,27 +1039,27 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
-  Indent() << "#pragma omp parallel ";
+  Indent() << "#pragma omp parallel";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPSimdDirective(OMPSimdDirective *Node) {
-  Indent() << "#pragma omp simd ";
+  Indent() << "#pragma omp simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
-  Indent() << "#pragma omp for ";
+  Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPForSimdDirective(OMPForSimdDirective *Node) {
-  Indent() << "#pragma omp for simd ";
+  Indent() << "#pragma omp for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPSectionsDirective(OMPSectionsDirective *Node) {
-  Indent() << "#pragma omp sections ";
+  Indent() << "#pragma omp sections";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1069,7 +1069,7 @@ void StmtPrinter::VisitOMPSectionDirective(OMPSectionDirective *Node) {
 }
 
 void StmtPrinter::VisitOMPSingleDirective(OMPSingleDirective *Node) {
-  Indent() << "#pragma omp single ";
+  Indent() << "#pragma omp single";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1085,29 +1085,28 @@ void StmtPrinter::VisitOMPCriticalDirective(OMPCriticalDirective *Node) {
     Node->getDirectiveName().printName(OS);
     OS << ")";
   }
-  OS << " ";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPParallelForDirective(OMPParallelForDirective *Node) {
-  Indent() << "#pragma omp parallel for ";
+  Indent() << "#pragma omp parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPParallelForSimdDirective(
     OMPParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp parallel for simd ";
+  Indent() << "#pragma omp parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *Node) {
-  Indent() << "#pragma omp parallel sections ";
+  Indent() << "#pragma omp parallel sections";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTaskDirective(OMPTaskDirective *Node) {
-  Indent() << "#pragma omp task ";
+  Indent() << "#pragma omp task";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1127,61 +1126,61 @@ void StmtPrinter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *Node) {
 }
 
 void StmtPrinter::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *Node) {
-  Indent() << "#pragma omp taskgroup ";
+  Indent() << "#pragma omp taskgroup";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPFlushDirective(OMPFlushDirective *Node) {
-  Indent() << "#pragma omp flush ";
+  Indent() << "#pragma omp flush";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
-  Indent() << "#pragma omp ordered ";
+  Indent() << "#pragma omp ordered";
   PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
-  Indent() << "#pragma omp atomic ";
+  Indent() << "#pragma omp atomic";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetDirective(OMPTargetDirective *Node) {
-  Indent() << "#pragma omp target ";
+  Indent() << "#pragma omp target";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetDataDirective(OMPTargetDataDirective *Node) {
-  Indent() << "#pragma omp target data ";
+  Indent() << "#pragma omp target data";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetEnterDataDirective(
     OMPTargetEnterDataDirective *Node) {
-  Indent() << "#pragma omp target enter data ";
+  Indent() << "#pragma omp target enter data";
   PrintOMPExecutableDirective(Node, /*ForceNoStmt=*/true);
 }
 
 void StmtPrinter::VisitOMPTargetExitDataDirective(
     OMPTargetExitDataDirective *Node) {
-  Indent() << "#pragma omp target exit data ";
+  Indent() << "#pragma omp target exit data";
   PrintOMPExecutableDirective(Node, /*ForceNoStmt=*/true);
 }
 
 void StmtPrinter::VisitOMPTargetParallelDirective(
     OMPTargetParallelDirective *Node) {
-  Indent() << "#pragma omp target parallel ";
+  Indent() << "#pragma omp target parallel";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetParallelForDirective(
     OMPTargetParallelForDirective *Node) {
-  Indent() << "#pragma omp target parallel for ";
+  Indent() << "#pragma omp target parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
-  Indent() << "#pragma omp teams ";
+  Indent() << "#pragma omp teams";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1194,111 +1193,111 @@ void StmtPrinter::VisitOMPCancellationPointDirective(
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion()) << " ";
+           << getOpenMPDirectiveName(Node->getCancelRegion());
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *Node) {
-  Indent() << "#pragma omp taskloop ";
+  Indent() << "#pragma omp taskloop";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTaskLoopSimdDirective(
     OMPTaskLoopSimdDirective *Node) {
-  Indent() << "#pragma omp taskloop simd ";
+  Indent() << "#pragma omp taskloop simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
-  Indent() << "#pragma omp distribute ";
+  Indent() << "#pragma omp distribute";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetUpdateDirective(
     OMPTargetUpdateDirective *Node) {
-  Indent() << "#pragma omp target update ";
+  Indent() << "#pragma omp target update";
   PrintOMPExecutableDirective(Node, /*ForceNoStmt=*/true);
 }
 
 void StmtPrinter::VisitOMPDistributeParallelForDirective(
     OMPDistributeParallelForDirective *Node) {
-  Indent() << "#pragma omp distribute parallel for ";
+  Indent() << "#pragma omp distribute parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPDistributeParallelForSimdDirective(
     OMPDistributeParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp distribute parallel for simd ";
+  Indent() << "#pragma omp distribute parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPDistributeSimdDirective(
     OMPDistributeSimdDirective *Node) {
-  Indent() << "#pragma omp distribute simd ";
+  Indent() << "#pragma omp distribute simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetParallelForSimdDirective(
     OMPTargetParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp target parallel for simd ";
+  Indent() << "#pragma omp target parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetSimdDirective(OMPTargetSimdDirective *Node) {
-  Indent() << "#pragma omp target simd ";
+  Indent() << "#pragma omp target simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeDirective(
     OMPTeamsDistributeDirective *Node) {
-  Indent() << "#pragma omp teams distribute ";
+  Indent() << "#pragma omp teams distribute";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeSimdDirective(
     OMPTeamsDistributeSimdDirective *Node) {
-  Indent() << "#pragma omp teams distribute simd ";
+  Indent() << "#pragma omp teams distribute simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeParallelForSimdDirective(
     OMPTeamsDistributeParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp teams distribute parallel for simd ";
+  Indent() << "#pragma omp teams distribute parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeParallelForDirective(
     OMPTeamsDistributeParallelForDirective *Node) {
-  Indent() << "#pragma omp teams distribute parallel for ";
+  Indent() << "#pragma omp teams distribute parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDirective(OMPTargetTeamsDirective *Node) {
-  Indent() << "#pragma omp target teams ";
+  Indent() << "#pragma omp target teams";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeDirective(
     OMPTargetTeamsDistributeDirective *Node) {
-  Indent() << "#pragma omp target teams distribute ";
+  Indent() << "#pragma omp target teams distribute";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeParallelForDirective(
     OMPTargetTeamsDistributeParallelForDirective *Node) {
-  Indent() << "#pragma omp target teams distribute parallel for ";
+  Indent() << "#pragma omp target teams distribute parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
     OMPTargetTeamsDistributeParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp target teams distribute parallel for simd ";
+  Indent() << "#pragma omp target teams distribute parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeSimdDirective(
     OMPTargetTeamsDistributeSimdDirective *Node) {
-  Indent() << "#pragma omp target teams distribute simd ";
+  Indent() << "#pragma omp target teams distribute simd";
   PrintOMPExecutableDirective(Node);
 }
 

@@ -52,7 +52,7 @@ static cl::opt<std::string>
 /// file.  If an error occurs, true is returned.
 ///
 static bool writeProgramToFileAux(ToolOutputFile &Out, const Module *M) {
-  WriteBitcodeToFile(M, Out.os(), PreserveBitcodeUseListOrder);
+  WriteBitcodeToFile(*M, Out.os(), PreserveBitcodeUseListOrder);
   Out.os().close();
   if (!Out.os().has_error()) {
     Out.keep();
@@ -69,7 +69,7 @@ bool BugDriver::writeProgramToFile(const std::string &Filename, int FD,
 
 bool BugDriver::writeProgramToFile(int FD, const Module *M) const {
   raw_fd_ostream OS(FD, /*shouldClose*/ false);
-  WriteBitcodeToFile(M, OS, PreserveBitcodeUseListOrder);
+  WriteBitcodeToFile(*M, OS, PreserveBitcodeUseListOrder);
   OS.flush();
   if (!OS.has_error())
     return false;
@@ -158,7 +158,7 @@ bool BugDriver::runPasses(Module *Program,
   DiscardTemp Discard{*Temp};
   raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
 
-  WriteBitcodeToFile(Program, OS, PreserveBitcodeUseListOrder);
+  WriteBitcodeToFile(*Program, OS, PreserveBitcodeUseListOrder);
   OS.flush();
   if (OS.has_error()) {
     errs() << "Error writing bitcode file: " << Temp->TmpName << "\n";
