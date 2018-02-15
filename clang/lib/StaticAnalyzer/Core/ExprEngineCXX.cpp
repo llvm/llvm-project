@@ -135,7 +135,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         LValue = makeZeroElementRegion(State, LValue, Ty,
                                        CallOpts.IsArrayCtorOrDtor);
         return LValue.getAsRegion();
-      } else if (auto *RS = dyn_cast<ReturnStmt>(TriggerStmt)) {
+      } else if (isa<ReturnStmt>(TriggerStmt)) {
         // TODO: We should construct into a CXXBindTemporaryExpr or a
         // MaterializeTemporaryExpr around the call-expression on the previous
         // stack frame. Currently we re-bind the temporary to the correct region
@@ -146,7 +146,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         // construction context that'd give us the right temporary expression.
         CallOpts.IsTemporaryCtorOrDtor = true;
         return MRMgr.getCXXTempObjectRegion(CE, LCtx);
-      } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(TriggerStmt)) {
+      } else if (isa<CXXBindTemporaryExpr>(TriggerStmt)) {
         CallOpts.IsTemporaryCtorOrDtor = true;
         return MRMgr.getCXXTempObjectRegion(CE, LCtx);
       }
