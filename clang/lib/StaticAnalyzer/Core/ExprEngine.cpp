@@ -802,8 +802,15 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
     varType = cast<TypedValueRegion>(Region)->getValueType();
   }
 
+  // FIXME: We need to run the same destructor on every element of the array.
+  // This workaround will just run the first destructor (which will still
+  // invalidate the entire array).
+  EvalCallOptions CallOpts;
+  Region = makeZeroElementRegion(state, loc::MemRegionVal(Region), varType,
+                                 CallOpts.IsArrayCtorOrDtor).getAsRegion();
+
   VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(), /*IsBase=*/ false,
-                     Pred, Dst);
+                     Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
@@ -813,12 +820,12 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
   const LocationContext *LCtx = Pred->getLocationContext();
   const CXXDeleteExpr *DE = Dtor.getDeleteExpr();
   const Stmt *Arg = DE->getArgument();
+  QualType DTy = DE->getDestroyedType();
   SVal ArgVal = State->getSVal(Arg, LCtx);
 
   // If the argument to delete is known to be a null value,
   // don't run destructor.
   if (State->isNull(ArgVal).isConstrainedTrue()) {
-    QualType DTy = DE->getDestroyedType();
     QualType BTy = getContext().getBaseElementType(DTy);
     const CXXRecordDecl *RD = BTy->getAsCXXRecordDecl();
     const CXXDestructorDecl *Dtor = RD->getDestructor();
@@ -829,10 +836,19 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
     return;
   }
 
-  VisitCXXDestructor(DE->getDestroyedType(),
-                     ArgVal.getAsRegion(),
-                     DE, /*IsBase=*/ false,
-                     Pred, Dst);
+  EvalCallOptions CallOpts;
+  const MemRegion *ArgR = ArgVal.getAsRegion();
+  if (DE->isArrayForm()) {
+    // FIXME: We need to run the same destructor on every element of the array.
+    // This workaround will just run the first destructor (which will still
+    // invalidate the entire array).
+    CallOpts.IsArrayCtorOrDtor = true;
+    if (ArgR)
+      ArgR = getStoreManager().GetElementZeroRegion(cast<SubRegion>(ArgR), DTy);
+  }
+
+  VisitCXXDestructor(DE->getDestroyedType(), ArgR, DE, /*IsBase=*/false,
+                     Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,
@@ -851,12 +867,13 @@ void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,
                                                      Base->isVirtual());
 
   VisitCXXDestructor(BaseTy, BaseVal.castAs<loc::MemRegionVal>().getRegion(),
-                     CurDtor->getBody(), /*IsBase=*/ true, Pred, Dst);
+                     CurDtor->getBody(), /*IsBase=*/ true, Pred, Dst, {});
 }
 
 void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   const FieldDecl *Member = D.getFieldDecl();
+  QualType T = Member->getType();
   ProgramStateRef State = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
 
@@ -866,9 +883,15 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   SVal FieldVal =
       State->getLValue(Member, State->getSVal(ThisVal).castAs<Loc>());
 
-  VisitCXXDestructor(Member->getType(),
-                     FieldVal.castAs<loc::MemRegionVal>().getRegion(),
-                     CurDtor->getBody(), /*IsBase=*/false, Pred, Dst);
+  // FIXME: We need to run the same destructor on every element of the array.
+  // This workaround will just run the first destructor (which will still
+  // invalidate the entire array).
+  EvalCallOptions CallOpts;
+  FieldVal = makeZeroElementRegion(State, FieldVal, T,
+                                   CallOpts.IsArrayCtorOrDtor);
+
+  VisitCXXDestructor(T, FieldVal.castAs<loc::MemRegionVal>().getRegion(),
+                     CurDtor->getBody(), /*IsBase=*/false, Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
@@ -892,10 +915,14 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   assert(CleanDtorState.size() <= 1);
   ExplodedNode *CleanPred =
       CleanDtorState.empty() ? Pred : *CleanDtorState.begin();
+
   // FIXME: Inlining of temporary destructors is not supported yet anyway, so
   // we just put a NULL region for now. This will need to be changed later.
+  EvalCallOptions CallOpts;
+  CallOpts.IsTemporaryCtorOrDtor = true;
+  CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
   VisitCXXDestructor(varType, nullptr, D.getBindTemporaryExpr(),
-                     /*IsBase=*/false, CleanPred, Dst);
+                     /*IsBase=*/false, CleanPred, Dst, CallOpts);
 }
 
 void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,

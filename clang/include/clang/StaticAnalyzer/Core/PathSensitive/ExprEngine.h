@@ -55,6 +55,20 @@ public:
     Inline_Minimal = 0x1
   };
 
+  /// Hints for figuring out of a call should be inlined during evalCall().
+  struct EvalCallOptions {
+    /// This call is a constructor or a destructor for which we do not currently
+    /// compute the this-region correctly.
+    bool IsCtorOrDtorWithImproperlyModeledTargetRegion = false;
+    /// This call is a constructor or a destructor for a single element within
+    /// an array, a part of array construction or destruction.
+    bool IsArrayCtorOrDtor = false;
+    /// This call is a constructor or a destructor of a temporary value.
+    bool IsTemporaryCtorOrDtor = false;
+
+    EvalCallOptions() {}
+  };
+
 private:
   AnalysisManager &AMgr;
   
@@ -449,7 +463,8 @@ public:
 
   void VisitCXXDestructor(QualType ObjectType, const MemRegion *Dest,
                           const Stmt *S, bool IsBaseDtor,
-                          ExplodedNode *Pred, ExplodedNodeSet &Dst);
+                          ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                          const EvalCallOptions &Options);
 
   void VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                 ExplodedNode *Pred,
@@ -568,14 +583,6 @@ public:
                                   const LocationContext *LCtx,
                                   ProgramStateRef State);
 
-  struct EvalCallOptions {
-    bool IsConstructorWithImproperlyModeledTargetRegion = false;
-    bool IsArrayConstructorOrDestructor = false;
-    bool IsConstructorIntoTemporary = false;
-
-    EvalCallOptions() {}
-  };
-
   /// Evaluate a call, running pre- and post-call checks and allowing checkers
   /// to be responsible for handling the evaluation of the call itself.
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -658,6 +665,17 @@ private:
                                                 const LocationContext *LC,
                                                 const Expr *InitWithAdjustments,
                                                 const Expr *Result = nullptr);
+
+  /// Returns a region representing the first element of a (possibly
+  /// multi-dimensional) array, for the purposes of element construction or
+  /// destruction.
+  ///
+  /// On return, \p Ty will be set to the base type of the array.
+  ///
+  /// If the type is not an array type at all, the original value is returned.
+  /// Otherwise the "IsArray" flag is set.
+  static SVal makeZeroElementRegion(ProgramStateRef State, SVal LValue,
+                                    QualType &Ty, bool &IsArray);
 
   /// For a DeclStmt or CXXInitCtorInitializer, walk backward in the current CFG
   /// block to find the constructor expression that directly constructed into
