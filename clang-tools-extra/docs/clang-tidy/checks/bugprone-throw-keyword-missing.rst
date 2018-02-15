@@ -10,6 +10,7 @@ object's type derives from (or is the same as) a class that has 'EXCEPTION', 'Ex
 Example:
 
 .. code-block:: c++
+
   void f(int i) {
     if (i < 0) {
       // Exception is created but is not thrown.
