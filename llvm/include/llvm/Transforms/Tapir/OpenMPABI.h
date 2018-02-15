@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass is a simple pass wrapper around the PromoteMemToReg function call
-// exposed by the Utils library.
+// This file implements the OpenMP ABI to converts Tapir instructions to calls
+// into the OpenMP runtime system.
 //
 //===----------------------------------------------------------------------===//
 #ifndef OMP_ABI_H_

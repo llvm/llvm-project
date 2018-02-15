@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the CilkABI interface, which is used to convert Tapir
-// instructions -- detach, reattach, and sync -- to calls into the Cilk
-// runtime system.  This interface does the low-level dirty work of passes
-// such as LowerToCilk.
+// This file implements the Cilk ABI to converts Tapir instructions to calls
+// into the Cilk runtime system.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1305,7 +1303,8 @@ static bool makeFunctionDetachable(
   // Scan function to see if it detaches.
   DEBUG({
       bool SimpleHelper = !canDetach(&Extracted);
-      assert(SimpleHelper && "Detachable helper function itself detaches.\n");
+      if (!SimpleHelper)
+        dbgs() << "NOTE: Detachable helper function itself detaches.\n";
     });
 
   BasicBlock::iterator InsertPt = ++SF->getIterator();

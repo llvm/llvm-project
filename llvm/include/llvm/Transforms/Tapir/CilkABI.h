@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass is a simple pass wrapper around the PromoteMemToReg function call
-// exposed by the Utils library.
+// This file implements the Cilk ABI to converts Tapir instructions to calls
+// into the Cilk runtime system.
 //
 //===----------------------------------------------------------------------===//
 #ifndef CILK_ABI_H_

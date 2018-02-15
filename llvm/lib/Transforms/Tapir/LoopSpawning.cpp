@@ -47,7 +47,6 @@
 #include "llvm/Transforms/Tapir.h"
 #include "llvm/Transforms/Tapir/TapirUtils.h"
 #include "llvm/Transforms/Tapir/Outline.h"
-#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -1447,6 +1446,7 @@ bool LoopSpawningImpl::run() {
   // the act of vectorizing or partially unrolling a loop creates new loops
   // and can invalidate iterators across the loops.
   SmallVector<Loop *, 8> Worklist;
+  bool Changed = false;
 
   // Examine all top-level loops in this function, and call addTapirLoop to push
   // those loops onto the work list.
@@ -1456,7 +1456,6 @@ bool LoopSpawningImpl::run() {
   LoopsAnalyzed += Worklist.size();
 
   // Now walk the identified inner loops.
-  bool Changed = false;
   while (!Worklist.empty())
     // Process the work list of loops backwards.  For each tree of loops in this
     // function, addTapirLoop pushed those loops onto the work list according to
@@ -1523,7 +1522,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
       // DACLoopSpawning DLS(L, SE, LI, DT, TLI, TTI, ORE);
       if (DLS.processLoop()) {
         DEBUG({
-            if (verifyFunction(*L->getHeader()->getParent())) {
+            if (verifyFunction(*F, &dbgs())) {
               dbgs() << "Transformed function is invalid.\n";
               return false;
             }
@@ -1585,12 +1584,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
 PreservedAnalyses LoopSpawningPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
   // Determine if function detaches.
-  bool DetachingFunction = false;
-  for (BasicBlock &BB : F)
-    if (isa<DetachInst>(BB.getTerminator()))
-      DetachingFunction = true;
-
-  if (!DetachingFunction)
+  if (!canDetach(&F))
     return PreservedAnalyses::all();
 
   auto &LI = AM.getResult<LoopAnalysis>(F);
@@ -1631,12 +1625,7 @@ struct LoopSpawning : public FunctionPass {
     if (skipFunction(F))
       return false;
 
-    bool DetachingFunction = false;
-    for (BasicBlock &BB : F)
-      if (isa<DetachInst>(BB.getTerminator()))
-        DetachingFunction = true;
-
-    if (!DetachingFunction)
+    if (!canDetach(&F))
       return false;
 
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();

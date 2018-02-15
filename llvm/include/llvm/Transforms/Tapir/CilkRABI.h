@@ -1,4 +1,4 @@
-//===- CilkRABI.h - Interface to the Intel Cilk Plus runtime ---*- C++ -*--===//
+//===- CilkRABI.h - Interface to the CilkR runtime system ------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// This file implements the CilkR ABI to converts Tapir instructions to calls
+// into the CilkR runtime system.
 //
 //===----------------------------------------------------------------------===//
 #ifndef CILK_RABI_H_

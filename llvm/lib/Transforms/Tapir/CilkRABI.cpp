@@ -1,4 +1,4 @@
-//===- CilkRABI.cpp - Lower Tapir into CilkR runtime system calls ----------===//
+//===- CilkRABI.cpp - Interface to the CilkR runtime system ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the CilkRABI interface, which is used to convert Tapir
-// instructions -- detach, reattach, and sync -- to calls into the Cilk
-// runtime system.  This interface does the low-level dirty work of passes
-// such as LowerToCilk.
+// This file implements the CilkR ABI to converts Tapir instructions to calls
+// into the CilkR runtime system.
 //
 //===----------------------------------------------------------------------===//
 

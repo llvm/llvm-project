@@ -1,4 +1,4 @@
-//===- OpenMPABI.cpp - Lower Tapir into Cilk runtime system calls -----------===//
+//===- OpenMPABI.cpp - Interface to the OpenMP runtime system -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the CilkABI interface, which is used to convert Tapir
-// instructions -- detach, reattach, and sync -- to calls into the Cilk
-// runtime system.  This interface does the low-level dirty work of passes
-// such as LowerToCilk.
+// This file implements the OpenMP ABI to converts Tapir instructions to calls
+// into the OpenMP runtime system.
 //
 //===----------------------------------------------------------------------===//
 
