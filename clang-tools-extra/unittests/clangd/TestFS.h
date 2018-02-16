@@ -29,7 +29,8 @@ public:
   Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
   getTaggedFileSystem(PathRef File) override;
 
-  llvm::Optional<SmallString<32>> ExpectedFile;
+  llvm::Optional<std::string> ExpectedFile;
+  // If relative paths are used, they are resolved with testPath().
   llvm::StringMap<std::string> Files;
   VFSTag Tag = VFSTag();
 };
@@ -49,10 +50,10 @@ public:
 };
 
 // Returns an absolute (fake) test directory for this OS.
-const char *getVirtualTestRoot();
+const char *testRoot();
 
 // Returns a suitable absolute path for this OS.
-llvm::SmallString<32> getVirtualTestFilePath(PathRef File);
+std::string testPath(PathRef File);
 
 } // namespace clangd
 } // namespace clang
