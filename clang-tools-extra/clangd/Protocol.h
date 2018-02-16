@@ -480,6 +480,27 @@ struct TextDocumentPositionParams {
 };
 bool fromJSON(const json::Expr &, TextDocumentPositionParams &);
 
+enum class MarkupKind {
+  PlainText,
+  Markdown,
+};
+
+struct MarkupContent {
+  MarkupKind Kind = MarkupKind::PlainText;
+  std::string Value;
+};
+json::Expr toJSON(const MarkupContent &MC);
+
+struct Hover {
+  /// The hover's content
+  MarkupContent Contents;
+
+  /// An optional range is a range inside a text document
+  /// that is used to visualize a hover, e.g. by changing the background color.
+  llvm::Optional<Range> Range;
+};
+json::Expr toJSON(const Hover &H);
+
 /// The kind of a completion entry.
 enum class CompletionItemKind {
   Missing = 0,

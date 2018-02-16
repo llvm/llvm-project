@@ -386,6 +386,35 @@ bool fromJSON(const json::Expr &Params, TextDocumentPositionParams &R) {
          O.map("position", R.position);
 }
 
+static StringRef toTextKind(MarkupKind Kind) {
+  switch (Kind) {
+  case MarkupKind::PlainText:
+    return "plaintext";
+  case MarkupKind::Markdown:
+    return "markdown";
+  }
+  llvm_unreachable("Invalid MarkupKind");
+}
+
+json::Expr toJSON(const MarkupContent &MC) {
+  if (MC.Value.empty())
+    return nullptr;
+
+  return json::obj{
+      {"kind", toTextKind(MC.Kind)},
+      {"value", MC.Value},
+  };
+}
+
+json::Expr toJSON(const Hover &H) {
+  json::obj Result{{"contents", toJSON(H.Contents)}};
+
+  if (H.Range.hasValue())
+    Result["range"] = toJSON(*H.Range);
+
+  return std::move(Result);
+}
+
 json::Expr toJSON(const CompletionItem &CI) {
   assert(!CI.label.empty() && "completion item label is required");
   json::obj Result{{"label", CI.label}};

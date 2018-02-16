@@ -258,6 +258,311 @@ int baz = f^oo;
       ElementsAre(Location{URIForFile{FooCpp}, SourceAnnotations.range()}));
 }
 
+TEST(Hover, All) {
+  struct OneTest {
+    StringRef Input;
+    StringRef ExpectedHover;
+  };
+
+  OneTest Tests[] = {
+      {
+          R"cpp(// Local variable
+            int main() {
+              int bonjour;
+              ^bonjour = 2;
+              int test1 = bonjour;
+            }
+          )cpp",
+          "Declared in function main\n\nint bonjour",
+      },
+      {
+          R"cpp(// Local variable in method
+            struct s {
+              void method() {
+                int bonjour;
+                ^bonjour = 2;
+              }
+            };
+          )cpp",
+          "Declared in function s::method\n\nint bonjour",
+      },
+      {
+          R"cpp(// Struct
+            namespace ns1 {
+              struct MyClass {};
+            } // namespace ns1
+            int main() {
+              ns1::My^Class* Params;
+            }
+          )cpp",
+          "Declared in namespace ns1\n\nstruct MyClass {}",
+      },
+      {
+          R"cpp(// Class
+            namespace ns1 {
+              class MyClass {};
+            } // namespace ns1
+            int main() {
+              ns1::My^Class* Params;
+            }
+          )cpp",
+          "Declared in namespace ns1\n\nclass MyClass {}",
+      },
+      {
+          R"cpp(// Union
+            namespace ns1 {
+              union MyUnion { int x; int y; };
+            } // namespace ns1
+            int main() {
+              ns1::My^Union Params;
+            }
+          )cpp",
+          "Declared in namespace ns1\n\nunion MyUnion {}",
+      },
+      {
+          R"cpp(// Function definition via pointer
+            int foo(int) {}
+            int main() {
+              auto *X = &^foo;
+            }
+          )cpp",
+          "Declared in global namespace\n\nint foo(int)",
+      },
+      {
+          R"cpp(// Function declaration via call
+            int foo(int);
+            int main() {
+              return ^foo(42);
+            }
+          )cpp",
+          "Declared in global namespace\n\nint foo(int)",
+      },
+      {
+          R"cpp(// Field
+            struct Foo { int x; };
+            int main() {
+              Foo bar;
+              bar.^x;
+            }
+          )cpp",
+          "Declared in struct Foo\n\nint x",
+      },
+      {
+          R"cpp(// Field with initialization
+            struct Foo { int x = 5; };
+            int main() {
+              Foo bar;
+              bar.^x;
+            }
+          )cpp",
+          "Declared in struct Foo\n\nint x = 5",
+      },
+      {
+          R"cpp(// Static field
+            struct Foo { static int x; };
+            int main() {
+              Foo::^x;
+            }
+          )cpp",
+          "Declared in struct Foo\n\nstatic int x",
+      },
+      {
+          R"cpp(// Field, member initializer
+            struct Foo {
+              int x;
+              Foo() : ^x(0) {}
+            };
+          )cpp",
+          "Declared in struct Foo\n\nint x",
+      },
+      {
+          R"cpp(// Field, GNU old-style field designator
+            struct Foo { int x; };
+            int main() {
+              Foo bar = { ^x : 1 };
+            }
+          )cpp",
+          "Declared in struct Foo\n\nint x",
+      },
+      {
+          R"cpp(// Field, field designator
+            struct Foo { int x; };
+            int main() {
+              Foo bar = { .^x = 2 };
+            }
+          )cpp",
+          "Declared in struct Foo\n\nint x",
+      },
+      {
+          R"cpp(// Method call
+            struct Foo { int x(); };
+            int main() {
+              Foo bar;
+              bar.^x();
+            }
+          )cpp",
+          "Declared in struct Foo\n\nint x()",
+      },
+      {
+          R"cpp(// Static method call
+            struct Foo { static int x(); };
+            int main() {
+              Foo::^x();
+            }
+          )cpp",
+          "Declared in struct Foo\n\nstatic int x()",
+      },
+      {
+          R"cpp(// Typedef
+            typedef int Foo;
+            int main() {
+              ^Foo bar;
+            }
+          )cpp",
+          "Declared in global namespace\n\ntypedef int Foo",
+      },
+      {
+          R"cpp(// Namespace
+            namespace ns {
+            struct Foo { static void bar(); }
+            } // namespace ns
+            int main() { ^ns::Foo::bar(); }
+          )cpp",
+          "Declared in global namespace\n\nnamespace ns {\n}",
+      },
+      {
+          R"cpp(// Anonymous namespace
+            namespace ns {
+              namespace {
+                int foo;
+              } // anonymous namespace
+            } // namespace ns
+            int main() { ns::f^oo++; }
+          )cpp",
+          "Declared in namespace ns::(anonymous)\n\nint foo",
+      },
+      {
+          R"cpp(// Macro
+            #define MACRO 0
+            #define MACRO 1
+            int main() { return ^MACRO; }
+            #define MACRO 2
+            #undef macro
+          )cpp",
+          "#define MACRO",
+      },
+      {
+          R"cpp(// Forward class declaration
+            class Foo;
+            class Foo {};
+            F^oo* foo();
+          )cpp",
+          "Declared in global namespace\n\nclass Foo {}",
+      },
+      {
+          R"cpp(// Function declaration
+            void foo();
+            void g() { f^oo(); }
+            void foo() {}
+          )cpp",
+          "Declared in global namespace\n\nvoid foo()",
+      },
+      {
+          R"cpp(// Enum declaration
+            enum Hello {
+              ONE, TWO, THREE,
+            };
+            void foo() {
+              Hel^lo hello = ONE;
+            }
+          )cpp",
+          "Declared in global namespace\n\nenum Hello {\n}",
+      },
+      {
+          R"cpp(// Enumerator
+            enum Hello {
+              ONE, TWO, THREE,
+            };
+            void foo() {
+              Hello hello = O^NE;
+            }
+          )cpp",
+          "Declared in enum Hello\n\nONE",
+      },
+      {
+          R"cpp(// Enumerator in anonymous enum
+            enum {
+              ONE, TWO, THREE,
+            };
+            void foo() {
+              int hello = O^NE;
+            }
+          )cpp",
+          "Declared in enum (anonymous)\n\nONE",
+      },
+      {
+          R"cpp(// Global variable
+            static int hey = 10;
+            void foo() {
+              he^y++;
+            }
+          )cpp",
+          "Declared in global namespace\n\nstatic int hey = 10",
+      },
+      {
+          R"cpp(// Global variable in namespace
+            namespace ns1 {
+              static int hey = 10;
+            }
+            void foo() {
+              ns1::he^y++;
+            }
+          )cpp",
+          "Declared in namespace ns1\n\nstatic int hey = 10",
+      },
+      {
+          R"cpp(// Field in anonymous struct
+            static struct {
+              int hello;
+            } s;
+            void foo() {
+              s.he^llo++;
+            }
+          )cpp",
+          "Declared in struct (anonymous)\n\nint hello",
+      },
+      {
+          R"cpp(// Templated function
+            template <typename T>
+            T foo() {
+              return 17;
+            }
+            void g() { auto x = f^oo<int>(); }
+          )cpp",
+          "Declared in global namespace\n\ntemplate <typename T> T foo()",
+      },
+      {
+          R"cpp(// Anonymous union
+            struct outer {
+              union {
+                int abc, def;
+              } v;
+            };
+            void g() { struct outer o; o.v.d^ef++; }
+          )cpp",
+          "Declared in union outer::(anonymous)\n\nint def",
+      },
+  };
+
+  for (const OneTest &Test : Tests) {
+    Annotations T(Test.Input);
+    auto AST = build(T.code());
+    Hover H = getHover(AST, T.point());
+
+    EXPECT_EQ(H.Contents.Value, Test.ExpectedHover) << Test.Input;
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

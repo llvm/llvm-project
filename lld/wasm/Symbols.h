@@ -40,7 +40,7 @@ public:
     InvalidKind,
   };
 
-  Kind kind() const { return static_cast<Kind>(SymbolKind); }
+  Kind kind() const { return SymbolKind; }
 
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isDefined() const { return SymbolKind <= LastDefinedKind; }

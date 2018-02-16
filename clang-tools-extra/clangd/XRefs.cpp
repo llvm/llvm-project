@@ -9,6 +9,7 @@
 #include "XRefs.h"
 #include "Logger.h"
 #include "URI.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
 #include "llvm/Support/Path.h"
@@ -31,10 +32,15 @@ const Decl* GetDefinition(const Decl* D) {
   return nullptr;
 }
 
+struct MacroDecl {
+  StringRef Name;
+  const MacroInfo *Info;
+};
+
 /// Finds declarations locations that a given source location refers to.
 class DeclarationAndMacrosFinder : public index::IndexDataConsumer {
   std::vector<const Decl *> Decls;
-  std::vector<const MacroInfo *> MacroInfos;
+  std::vector<MacroDecl> MacroInfos;
   const SourceLocation &SearchedLocation;
   const ASTContext &AST;
   Preprocessor &PP;
@@ -54,10 +60,17 @@ public:
     return std::move(Decls);
   }
 
-  std::vector<const MacroInfo *> takeMacroInfos() {
+  std::vector<MacroDecl> takeMacroInfos() {
     // Don't keep the same Macro info multiple times.
-    std::sort(MacroInfos.begin(), MacroInfos.end());
-    auto Last = std::unique(MacroInfos.begin(), MacroInfos.end());
+    std::sort(MacroInfos.begin(), MacroInfos.end(),
+              [](const MacroDecl &Left, const MacroDecl &Right) {
+                return Left.Info < Right.Info;
+              });
+
+    auto Last = std::unique(MacroInfos.begin(), MacroInfos.end(),
+                            [](const MacroDecl &Left, const MacroDecl &Right) {
+                              return Left.Info == Right.Info;
+                            });
     MacroInfos.erase(Last, MacroInfos.end());
     return std::move(MacroInfos);
   }
@@ -111,7 +124,7 @@ private:
             PP.getMacroDefinitionAtLoc(IdentifierInfo, BeforeSearchedLocation);
         MacroInfo *MacroInf = MacroDef.getMacroInfo();
         if (MacroInf) {
-          MacroInfos.push_back(MacroInf);
+          MacroInfos.push_back(MacroDecl{IdentifierInfo->getName(), MacroInf});
         }
       }
     }
@@ -176,8 +189,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
                      DeclMacrosFinder, IndexOpts);
 
   std::vector<const Decl *> Decls = DeclMacrosFinder->takeDecls();
-  std::vector<const MacroInfo *> MacroInfos =
-      DeclMacrosFinder->takeMacroInfos();
+  std::vector<MacroDecl> MacroInfos = DeclMacrosFinder->takeMacroInfos();
   std::vector<Location> Result;
 
   for (auto Item : Decls) {
@@ -187,7 +199,8 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   }
 
   for (auto Item : MacroInfos) {
-    SourceRange SR(Item->getDefinitionLoc(), Item->getDefinitionEndLoc());
+    SourceRange SR(Item.Info->getDefinitionLoc(),
+                   Item.Info->getDefinitionEndLoc());
     auto L = getDeclarationLocation(AST, SR);
     if (L)
       Result.push_back(*L);
@@ -297,6 +310,139 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                      DocHighlightsFinder, IndexOpts);
 
   return DocHighlightsFinder->takeHighlights();
+}
+
+static PrintingPolicy PrintingPolicyForDecls(PrintingPolicy Base) {
+  PrintingPolicy Policy(Base);
+
+  Policy.AnonymousTagLocations = false;
+  Policy.TerseOutput = true;
+  Policy.PolishForDeclaration = true;
+  Policy.ConstantsAsWritten = true;
+  Policy.SuppressTagKeyword = false;
+
+  return Policy;
+}
+
+/// Return a string representation (e.g. "class MyNamespace::MyClass") of
+/// the type declaration \p TD.
+static std::string TypeDeclToString(const TypeDecl *TD) {
+  QualType Type = TD->getASTContext().getTypeDeclType(TD);
+
+  PrintingPolicy Policy =
+      PrintingPolicyForDecls(TD->getASTContext().getPrintingPolicy());
+
+  std::string Name;
+  llvm::raw_string_ostream Stream(Name);
+  Type.print(Stream, Policy);
+
+  return Stream.str();
+}
+
+/// Return a string representation (e.g. "namespace ns1::ns2") of
+/// the named declaration \p ND.
+static std::string NamedDeclQualifiedName(const NamedDecl *ND,
+                                          StringRef Prefix) {
+  PrintingPolicy Policy =
+      PrintingPolicyForDecls(ND->getASTContext().getPrintingPolicy());
+
+  std::string Name;
+  llvm::raw_string_ostream Stream(Name);
+  Stream << Prefix << ' ';
+  ND->printQualifiedName(Stream, Policy);
+
+  return Stream.str();
+}
+
+/// Given a declaration \p D, return a human-readable string representing the
+/// scope in which it is declared.  If the declaration is in the global scope,
+/// return the string "global namespace".
+static llvm::Optional<std::string> getScopeName(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+
+  if (const TranslationUnitDecl *TUD = dyn_cast<TranslationUnitDecl>(DC))
+    return std::string("global namespace");
+
+  if (const TypeDecl *TD = dyn_cast<TypeDecl>(DC))
+    return TypeDeclToString(TD);
+  else if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))
+    return NamedDeclQualifiedName(ND, "namespace");
+  else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
+    return NamedDeclQualifiedName(FD, "function");
+
+  return llvm::None;
+}
+
+/// Generate a \p Hover object given the declaration \p D.
+static Hover getHoverContents(const Decl *D) {
+  Hover H;
+  llvm::Optional<std::string> NamedScope = getScopeName(D);
+
+  // Generate the "Declared in" section.
+  if (NamedScope) {
+    assert(!NamedScope->empty());
+
+    H.Contents.Value += "Declared in ";
+    H.Contents.Value += *NamedScope;
+    H.Contents.Value += "\n\n";
+  }
+
+  // We want to include the template in the Hover.
+  if (TemplateDecl *TD = D->getDescribedTemplate())
+    D = TD;
+
+  std::string DeclText;
+  llvm::raw_string_ostream OS(DeclText);
+
+  PrintingPolicy Policy =
+      PrintingPolicyForDecls(D->getASTContext().getPrintingPolicy());
+
+  D->print(OS, Policy);
+
+  OS.flush();
+
+  H.Contents.Value += DeclText;
+  return H;
+}
+
+/// Generate a \p Hover object given the macro \p MacroInf.
+static Hover getHoverContents(StringRef MacroName) {
+  Hover H;
+
+  H.Contents.Value = "#define ";
+  H.Contents.Value += MacroName;
+
+  return H;
+}
+
+Hover getHover(ParsedAST &AST, Position Pos) {
+  const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
+  const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+  if (FE == nullptr)
+    return Hover();
+
+  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
+  auto DeclMacrosFinder = std::make_shared<DeclarationAndMacrosFinder>(
+      llvm::errs(), SourceLocationBeg, AST.getASTContext(),
+      AST.getPreprocessor());
+
+  index::IndexingOptions IndexOpts;
+  IndexOpts.SystemSymbolFilter =
+      index::IndexingOptions::SystemSymbolFilterKind::All;
+  IndexOpts.IndexFunctionLocals = true;
+
+  indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
+                     DeclMacrosFinder, IndexOpts);
+
+  std::vector<MacroDecl> Macros = DeclMacrosFinder->takeMacroInfos();
+  if (!Macros.empty())
+    return getHoverContents(Macros[0].Name);
+
+  std::vector<const Decl *> Decls = DeclMacrosFinder->takeDecls();
+  if (!Decls.empty())
+    return getHoverContents(Decls[0]);
+
+  return Hover();
 }
 
 } // namespace clangd

@@ -254,10 +254,9 @@ void ObjFile::initializeSymbols() {
       if (!isExcludedByComdat(Function)) {
         S = createDefinedFunction(WasmSym, Function);
         break;
-      } else {
-        Function->Live = false;
-        LLVM_FALLTHROUGH; // Exclude function, and add the symbol as undefined
       }
+      Function->Live = false;
+      LLVM_FALLTHROUGH; // Exclude function, and add the symbol as undefined
     }
     case WasmSymbol::SymbolType::FUNCTION_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedFunctionKind,
@@ -268,10 +267,9 @@ void ObjFile::initializeSymbols() {
       if (!isExcludedByComdat(Segment)) {
         S = createDefinedGlobal(WasmSym, Segment, getGlobalValue(WasmSym));
         break;
-      } else {
-        Segment->Live = false;
-        LLVM_FALLTHROUGH; // Exclude global, and add the symbol as undefined
       }
+      Segment->Live = false;
+      LLVM_FALLTHROUGH; // Exclude global, and add the symbol as undefined
     }
     case WasmSymbol::SymbolType::GLOBAL_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedGlobalKind);

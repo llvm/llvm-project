@@ -27,6 +27,9 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos);
 std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos);
 
+/// Get the hover information when hovering at \p Pos.
+Hover getHover(ParsedAST &AST, Position Pos);
+
 } // namespace clangd
 } // namespace clang
 #endif

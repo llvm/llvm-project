@@ -10,6 +10,7 @@
 #ifndef LLD_WASM_WRITERUTILS_H
 #define LLD_WASM_WRITERUTILS_H
 
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,23 +37,21 @@ struct OutputRelocation {
   uint32_t Value;
 };
 
-void debugWrite(uint64_t Offset, llvm::Twine Msg);
+void debugWrite(uint64_t Offset, const Twine &Msg);
 
-void writeUleb128(raw_ostream &OS, uint32_t Number, const char *Msg);
+void writeUleb128(raw_ostream &OS, uint32_t Number, StringRef Msg);
 
-void writeSleb128(raw_ostream &OS, int32_t Number, const char *Msg);
+void writeSleb128(raw_ostream &OS, int32_t Number, StringRef Msg);
 
-void writeBytes(raw_ostream &OS, const char *Bytes, size_t count,
-                const char *Msg = nullptr);
+void writeBytes(raw_ostream &OS, const char *Bytes, size_t count, StringRef Msg);
 
-void writeStr(raw_ostream &OS, const llvm::StringRef String,
-              const char *Msg = nullptr);
+void writeStr(raw_ostream &OS, StringRef String, StringRef Msg);
 
-void writeU8(raw_ostream &OS, uint8_t byte, const char *Msg);
+void writeU8(raw_ostream &OS, uint8_t byte, StringRef Msg);
 
-void writeU32(raw_ostream &OS, uint32_t Number, const char *Msg);
+void writeU32(raw_ostream &OS, uint32_t Number, StringRef Msg);
 
-void writeValueType(raw_ostream &OS, int32_t Type, const char *Msg);
+void writeValueType(raw_ostream &OS, int32_t Type, StringRef Msg);
 
 void writeSig(raw_ostream &OS, const llvm::wasm::WasmSignature &Sig);
 
