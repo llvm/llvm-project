@@ -151,7 +151,9 @@ void LPPassManager::markLoopAsDeleted(Loop &L) {
 bool LPPassManager::runOnFunction(Function &F) {
   auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
   LI = &LIWP.getLoopInfo();
+#ifndef NDEBUG
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+#endif
   bool Changed = false;
 
   // Collect inherited analysis from Module level pass manager.
@@ -226,7 +228,7 @@ bool LPPassManager::runOnFunction(Function &F) {
         // form (LoopPassPrinter for example). We should skip verification for
         // such passes.
         if (mustPreserveAnalysisID(LCSSAVerificationPass::ID))
-          CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI);
+          assert(CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI));
 
         // Then call the regular verifyAnalysis functions.
         verifyPreservedAnalysis(P);
