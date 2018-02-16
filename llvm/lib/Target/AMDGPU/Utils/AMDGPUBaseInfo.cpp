@@ -871,24 +871,6 @@ bool isArgPassedInSGPR(const Argument *A) {
   }
 }
 
-// TODO: Should largely merge with AMDGPUTTIImpl::isSourceOfDivergence.
-bool isUniformMMO(const MachineMemOperand *MMO) {
-  const Value *Ptr = MMO->getValue();
-  // UndefValue means this is a load of a kernel input.  These are uniform.
-  // Sometimes LDS instructions have constant pointers.
-  // If Ptr is null, then that means this mem operand contains a
-  // PseudoSourceValue like GOT.
-  if (!Ptr || isa<UndefValue>(Ptr) ||
-      isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
-    return true;
-
-  if (const Argument *Arg = dyn_cast<Argument>(Ptr))
-    return isArgPassedInSGPR(Arg);
-
-  const Instruction *I = dyn_cast<Instruction>(Ptr);
-  return I && I->getMetadata("amdgpu.uniform");
-}
-
 int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
   if (isGCN3Encoding(ST))
     return ByteOffset;

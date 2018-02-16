@@ -1461,7 +1461,8 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   if (!Name.empty())
     addString(MemberDie, dwarf::DW_AT_name, Name);
 
-  addType(MemberDie, resolve(DT->getBaseType()));
+  if (DIType *Resolved = resolve(DT->getBaseType()))
+    addType(MemberDie, Resolved);
 
   addSourceLine(MemberDie, DT);
 
