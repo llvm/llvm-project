@@ -191,6 +191,8 @@ private:
   bool HasEVEX_KZ;
   /// The hasEVEX_B field from the record
   bool HasEVEX_B;
+  /// The has3DNow0F0FOpcode field from the record
+  bool Has3DNow0F0FOpcode;
   /// Indicates that the instruction uses the L and L' fields for RC.
   bool EncodeRC;
   /// The isCodeGenOnly field from the record
@@ -210,12 +212,12 @@ private:
   /// Indicates whether the instruction should be emitted into the decode
   /// tables; regardless, it will be emitted into the instruction info table
   bool ShouldBeEmitted;
-  
+
   /// The operands of the instruction, as listed in the CodeGenInstruction.
   /// They are not one-to-one with operands listed in the MCInst; for example,
   /// memory operands expand to 5 operands in the MCInst
   const std::vector<CGIOperandList::OperandInfo>* Operands;
-  
+
   /// The description of the instruction that is emitted into the instruction
   /// info table
   InstructionSpecifier* Spec;
@@ -283,7 +285,7 @@ private:
   ///                               operand exists.
   /// @param operandIndex         - The index into the generated operand table.
   ///                               Incremented by this function one or more
-  ///                               times to reflect possible duplicate 
+  ///                               times to reflect possible duplicate
   ///                               operands).
   /// @param physicalOperandIndex - The index of the current operand into the
   ///                               set of non-duplicate ('physical') operands.
@@ -314,12 +316,12 @@ private:
   bool shouldBeEmitted() const {
     return ShouldBeEmitted;
   }
-  
+
   /// emitInstructionSpecifier - Loads the instruction specifier for the current
   ///   instruction into a DisassemblerTables.
   ///
   void emitInstructionSpecifier();
-  
+
   /// emitDecodePath - Populates the proper fields in the decode tables
   ///   corresponding to the decode paths for this instruction.
   ///
@@ -349,7 +351,7 @@ public:
                            const CodeGenInstruction &insn,
                            InstrUID uid);
 };
-  
+
 } // namespace X86Disassembler
 
 } // namespace llvm

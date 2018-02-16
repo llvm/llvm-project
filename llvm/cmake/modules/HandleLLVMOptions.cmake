@@ -353,11 +353,18 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-  # Generate PDB even in release for profiling.
-  if (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+  # Allow users to request PDBs in release mode. CMake offeres the
+  # RelWithDebInfo configuration, but it uses different optimization settings
+  # (/Ob1 vs /Ob2 or -O2 vs -O3). LLVM provides this flag so that users can get
+  # PDBs without changing codegen.
+  option(LLVM_ENABLE_PDB OFF)
+  if (LLVM_ENABLE_PDB AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
     append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    append("/DEBUG" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  endif (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+    # /DEBUG disables linker GC and ICF, but we want those in Release mode.
+    append("/DEBUG /OPT:REF /OPT:ICF"
+          CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+  endif()
 
   # /Zc:strictStrings is incompatible with VS12's (Visual Studio 2013's)
   # debug mode headers. Instead of only enabling them in VS2013's debug mode,

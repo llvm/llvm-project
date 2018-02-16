@@ -641,6 +641,14 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
   for (const RelTy &Rel : Rels) {
     RelType Type = Rel.getType(Config->IsMips64EL);
+
+    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
+    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed
+    // in 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we
+    // need to keep this bug-compatible code for a while.
+    if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
+      continue;
+
     uint64_t Offset = getOffset(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
     int64_t Addend = getAddend<ELFT>(Rel);
@@ -651,17 +659,27 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
-    if (Expr != R_ABS) {
-      // GCC 8.0 or earlier have a bug that it emits R_386_GOTPC relocations
-      // against _GLOBAL_OFFSET_TABLE for .debug_info. The bug seems to have
-      // been fixed in 2017: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630,
-      // but we need to keep this bug-compatible code for a while.
-      if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
-        continue;
 
-      error(getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
-            toString(Type) + " against symbol '" + toString(Sym) + "'");
-      return;
+    if (Expr != R_ABS) {
+      std::string Msg = getLocation<ELFT>(Offset) +
+                        ": has non-ABS relocation " + toString(Type) +
+                        " against symbol '" + toString(Sym) + "'";
+      if (Expr != R_PC) {
+        error(Msg);
+        return;
+      }
+
+      // If the control reaches here, we found a PC-relative relocation in a
+      // non-ALLOC section. Since non-ALLOC section is not loaded into memory
+      // at runtime, the notion of PC-relative doesn't make sense here. So,
+      // this is a usage error. However, GNU linkers historically accept such
+      // relocations without any errors and relocate them as if they were at
+      // address 0. For bug-compatibilty, we accept them with warnings. We
+      // know Steel Bank Common Lisp as of 2018 have this bug.
+      warn(Msg);
+      Target->relocateOne(BufLoc, Type,
+                          SignExtend64<Bits>(Sym.getVA(Addend - Offset)));
+      continue;
     }
 
     if (Sym.isTls() && !Out::TlsPhdr)

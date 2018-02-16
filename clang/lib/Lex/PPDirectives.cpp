@@ -115,6 +115,24 @@ static bool isReservedId(StringRef Text, const LangOptions &Lang) {
   return false;
 }
 
+// The -fmodule-name option (represented here by \p CurrentModule) tells the
+// compiler to textually include headers in the specified module, meaning clang
+// won't build the specified module. This is useful in a number of situations,
+// for instance, when building a library that vends a module map, one might want
+// to avoid hitting intermediate build products containig the the module map or
+// avoid finding the system installed modulemap for that library.
+static bool isForModuleBuilding(Module *M, StringRef CurrentModule) {
+  StringRef TopLevelName = M->getTopLevelModuleName();
+
+  // When building framework Foo, we wanna make sure that Foo *and* Foo_Private
+  // are textually included and no modules are built for both.
+  if (M->getTopLevelModule()->IsFramework &&
+      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+    TopLevelName = TopLevelName.drop_back(8);
+
+  return TopLevelName == CurrentModule;
+}
+
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   StringRef Text = II->getName();
@@ -1856,8 +1874,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
   if (ShouldEnter && File && SuggestedModule && getLangOpts().Modules &&
-      SuggestedModule.getModule()->getTopLevelModuleName() !=
-          getLangOpts().CurrentModule) {
+      !isForModuleBuilding(SuggestedModule.getModule(),
+                           getLangOpts().CurrentModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -2004,7 +2022,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       // ShouldEnter is false because we are skipping the header. In that
       // case, We are not importing the specified module.
       if (SkipHeader && getLangOpts().CompilingPCH &&
-          M->getTopLevelModuleName() == getLangOpts().CurrentModule)
+          isForModuleBuilding(M, getLangOpts().CurrentModule))
         return;
 
       makeModuleVisible(M, HashLoc);
@@ -2045,7 +2063,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     // include headers in the specified module. We are not building the
     // specified module.
     if (getLangOpts().CompilingPCH &&
-        M->getTopLevelModuleName() == getLangOpts().CurrentModule)
+        isForModuleBuilding(M, getLangOpts().CurrentModule))
       return;
 
     assert(!CurLexerSubmodule && "should not have marked this as a module yet");
