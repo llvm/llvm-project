@@ -2707,6 +2707,30 @@ public:
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                             DAGCombinerInfo &DCI) const;
 
+  /// Look at Vector Op. At this point, we know that only the DemandedElts
+  /// elements of the result of Op are ever used downstream.  If we can use
+  /// this information to simplify Op, create a new simplified DAG node and
+  /// return true, storing the original and new nodes in TLO.
+  /// Otherwise, analyze the expression and return a mask of KnownUndef and
+  /// KnownZero elements for the expression (used to simplify the caller).
+  /// The KnownUndef/Zero elements may only be accurate for those bits
+  /// in the DemandedMask.
+  /// \p AssumeSingleUse When this parameter is true, this function will
+  ///    attempt to simplify \p Op even if there are multiple uses.
+  ///    Callers are responsible for correctly updating the DAG based on the
+  ///    results of this function, because simply replacing replacing TLO.Old
+  ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
+  ///    has multiple uses.
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
+                                  APInt &KnownUndef, APInt &KnownZero,
+                                  TargetLoweringOpt &TLO, unsigned Depth = 0,
+                                  bool AssumeSingleUse = false) const;
+
+  /// Helper wrapper around SimplifyDemandedVectorElts
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
+                                  APInt &KnownUndef, APInt &KnownZero,
+                                  DAGCombinerInfo &DCI) const;
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
@@ -2734,6 +2758,15 @@ public:
                                                    const APInt &DemandedElts,
                                                    const SelectionDAG &DAG,
                                                    unsigned Depth = 0) const;
+
+  /// Attempt to simplify any target nodes based on the demanded vector
+  /// elements, returning true on success. Otherwise, analyze the expression and
+  /// return a mask of KnownUndef and KnownZero elements for the expression
+  /// (used to simplify the caller). The KnownUndef/Zero elements may only be
+  /// accurate for those bits in the DemandedMask
+  virtual bool SimplifyDemandedVectorEltsForTargetNode(
+      SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
+      APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
 
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.

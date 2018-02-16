@@ -176,10 +176,10 @@ TEST(URITest, Resolve) {
 }
 
 TEST(URITest, Platform) {
-  auto Path = getVirtualTestFilePath("x");
+  auto Path = testPath("x");
   auto U = URI::create(Path, "file");
   EXPECT_TRUE(static_cast<bool>(U));
-  EXPECT_THAT(resolveOrDie(*U), Path.str());
+  EXPECT_THAT(resolveOrDie(*U), Path);
 }
 
 TEST(URITest, ResolveFailed) {

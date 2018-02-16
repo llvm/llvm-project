@@ -368,6 +368,11 @@ namespace {
       return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
     }
 
+    /// Return a target constant with the specified value, of type i64.
+    inline SDValue getI64Imm(uint64_t Imm, const SDLoc &DL) {
+      return CurDAG->getTargetConstant(Imm, DL, MVT::i64);
+    }
+
     SDValue getExtractVEXTRACTImmediate(SDNode *N, unsigned VecWidth,
                                         const SDLoc &DL) {
       assert((VecWidth == 128 || VecWidth == 256) && "Unexpected vector width");

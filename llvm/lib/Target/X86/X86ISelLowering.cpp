@@ -17709,12 +17709,15 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
     if (AndRHSVal == 1 && AndLHS.getOpcode() == ISD::SRL) {
       LHS = AndLHS.getOperand(0);
       RHS = AndLHS.getOperand(1);
-    }
-
-    // Use BT if the immediate can't be encoded in a TEST instruction.
-    if (!isUInt<32>(AndRHSVal) && isPowerOf2_64(AndRHSVal)) {
-      LHS = AndLHS;
-      RHS = DAG.getConstant(Log2_64_Ceil(AndRHSVal), dl, LHS.getValueType());
+    } else {
+      // Use BT if the immediate can't be encoded in a TEST instruction or we
+      // are optimizing for size and the immedaite won't fit in a byte.
+      bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+      if ((!isUInt<32>(AndRHSVal) || (OptForSize && !isUInt<8>(AndRHSVal))) &&
+          isPowerOf2_64(AndRHSVal)) {
+        LHS = AndLHS;
+        RHS = DAG.getConstant(Log2_64_Ceil(AndRHSVal), dl, LHS.getValueType());
+      }
     }
   }
 
@@ -34212,7 +34215,9 @@ static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  EVT SVT = VT.getScalarType();
   EVT InVT = In.getValueType();
+  EVT InSVT = InVT.getScalarType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isTypeLegal(InVT) && TLI.isTypeLegal(VT) &&
       isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
@@ -34222,15 +34227,25 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
   }
   if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
-      ((VT.getScalarType() == MVT::i8 && InVT.getScalarType() == MVT::i16) ||
-       (VT.getScalarType() == MVT::i16 && InVT.getScalarType() == MVT::i32))) {
+      (SVT == MVT::i8 || SVT == MVT::i16) &&
+      (InSVT == MVT::i16 || InSVT == MVT::i32)) {
     if (auto SSatVal = detectSSatPattern(In, VT))
       return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
                                     Subtarget);
-    if (Subtarget.hasSSE41() || VT.getScalarType() == MVT::i8)
-      if (auto USatVal = detectSSatPattern(In, VT, true))
+    if (auto USatVal = detectSSatPattern(In, VT, true)) {
+      // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
+      if (SVT == MVT::i8 && InSVT == MVT::i32) {
+        EVT MidVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
+                                     VT.getVectorNumElements());
+        SDValue Mid = truncateVectorWithPACK(X86ISD::PACKSS, MidVT, USatVal, DL,
+                                             DAG, Subtarget);
+        if (Mid)
+          return truncateVectorWithPACK(X86ISD::PACKUS, VT, Mid, DL, DAG,
+                                        Subtarget);
+      } else if (SVT == MVT::i8 || Subtarget.hasSSE41())
         return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
                                       Subtarget);
+    }
   }
   return SDValue();
 }
@@ -36013,7 +36028,7 @@ static SDValue getDivRem8(SDNode *N, SelectionDAG &DAG) {
 //         promotion).
 static SDValue combineToExtendCMOV(SDNode *Extend, SelectionDAG &DAG) {
   SDValue CMovN = Extend->getOperand(0);
-  if (CMovN.getOpcode() != X86ISD::CMOV)
+  if (CMovN.getOpcode() != X86ISD::CMOV || !CMovN.hasOneUse())
     return SDValue();
 
   EVT TargetVT = Extend->getValueType(0);
@@ -36024,20 +36039,36 @@ static SDValue combineToExtendCMOV(SDNode *Extend, SelectionDAG &DAG) {
   SDValue CMovOp0 = CMovN.getOperand(0);
   SDValue CMovOp1 = CMovN.getOperand(1);
 
-  bool DoPromoteCMOV =
-      (VT == MVT::i16 && (TargetVT == MVT::i32 || TargetVT == MVT::i64)) &&
-      CMovN.hasOneUse() &&
-      (isa<ConstantSDNode>(CMovOp0.getNode()) &&
-       isa<ConstantSDNode>(CMovOp1.getNode()));
-
-  if (!DoPromoteCMOV)
+  if (!isa<ConstantSDNode>(CMovOp0.getNode()) ||
+      !isa<ConstantSDNode>(CMovOp0.getNode()))
     return SDValue();
 
-  CMovOp0 = DAG.getNode(ExtendOpcode, DL, TargetVT, CMovOp0);
-  CMovOp1 = DAG.getNode(ExtendOpcode, DL, TargetVT, CMovOp1);
+  // Only extend to i32 or i64.
+  if (TargetVT != MVT::i32 && TargetVT != MVT::i64)
+    return SDValue();
 
-  return DAG.getNode(X86ISD::CMOV, DL, TargetVT, CMovOp0, CMovOp1,
-                     CMovN.getOperand(2), CMovN.getOperand(3));
+  // Only extend from i16 unless its a sign_extend from i32. Zext/aext from i32
+  // are free.
+  if (VT != MVT::i16 && !(ExtendOpcode == ISD::SIGN_EXTEND && VT == MVT::i32))
+    return SDValue();
+
+  // If this a zero extend to i64, we should only extend to i32 and use a free
+  // zero extend to finish.
+  EVT ExtendVT = TargetVT;
+  if (TargetVT == MVT::i64 && ExtendOpcode != ISD::SIGN_EXTEND)
+    ExtendVT = MVT::i32;
+
+  CMovOp0 = DAG.getNode(ExtendOpcode, DL, ExtendVT, CMovOp0);
+  CMovOp1 = DAG.getNode(ExtendOpcode, DL, ExtendVT, CMovOp1);
+
+  SDValue Res = DAG.getNode(X86ISD::CMOV, DL, ExtendVT, CMovOp0, CMovOp1,
+                            CMovN.getOperand(2), CMovN.getOperand(3));
+
+  // Finish extending if needed.
+  if (ExtendVT != TargetVT)
+    Res = DAG.getNode(ExtendOpcode, DL, TargetVT, Res);
+
+  return Res;
 }
 
 // Convert (vXiY *ext(vXi1 bitcast(iX))) to extend_in_reg(broadcast(iX)).

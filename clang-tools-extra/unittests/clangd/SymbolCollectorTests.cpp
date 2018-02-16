@@ -83,8 +83,8 @@ public:
 class SymbolCollectorTest : public ::testing::Test {
 public:
   SymbolCollectorTest()
-      : TestHeaderName(getVirtualTestFilePath("symbol.h").str()),
-        TestFileName(getVirtualTestFilePath("symbol.cc").str()) {
+      : TestHeaderName(testPath("symbol.h")),
+        TestFileName(testPath("symbol.cc")) {
     TestHeaderURI = URI::createFile(TestHeaderName).toString();
     TestFileURI = URI::createFile(TestFileName).toString();
   }
@@ -218,9 +218,8 @@ TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
   CollectorOpts.IndexMainFiles = false;
   TestHeaderName = "x.h";
   TestFileName = "x.cpp";
-  TestHeaderURI =
-      URI::createFile(getVirtualTestFilePath(TestHeaderName)).toString();
-  CollectorOpts.FallbackDir = getVirtualTestRoot();
+  TestHeaderURI = URI::createFile(testPath(TestHeaderName)).toString();
+  CollectorOpts.FallbackDir = testRoot();
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
@@ -231,8 +230,8 @@ TEST_F(SymbolCollectorTest, CustomURIScheme) {
   CollectorOpts.IndexMainFiles = false;
   // Use test URI scheme from URITests.cpp
   CollectorOpts.URISchemes.insert(CollectorOpts.URISchemes.begin(), "unittest");
-  TestHeaderName = getVirtualTestFilePath("test-root/x.h").str();
-  TestFileName = getVirtualTestFilePath("test-root/x.cpp").str();
+  TestHeaderName = testPath("test-root/x.h");
+  TestFileName = testPath("test-root/x.cpp");
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(QName("Foo"), DeclURI("unittest:x.h"))));

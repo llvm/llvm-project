@@ -784,7 +784,7 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
 /**
  * Sets the cache pruning interval (in seconds). A negative value disables the
  * pruning. An unspecified default value will be applied, and a value of 0 will
- * be ignored.
+ * force prunning to occur.
  *
  * \since LTO_API_VERSION=18
  */

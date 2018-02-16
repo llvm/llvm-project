@@ -14,8 +14,8 @@ entry:
 define double @double_in_reg(double %a, double %b) {
 entry:
 ; CHECK-LABEL: double_in_reg:
-; SOFT: mov r0, r2
 ; SOFT: mov r1, r3
+; SOFT: mov r0, r2
 ; SP: vmov.f32  s0, s2
 ; SP: vmov.f32  s1, s3
 ; DP: vmov.f64  d0, d1

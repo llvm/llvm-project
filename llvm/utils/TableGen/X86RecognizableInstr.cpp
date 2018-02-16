@@ -80,19 +80,20 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   Form     = byteFromRec(Rec, "FormBits");
   Encoding = byteFromRec(Rec, "OpEncBits");
 
-  OpSize           = byteFromRec(Rec, "OpSizeBits");
-  AdSize           = byteFromRec(Rec, "AdSizeBits");
-  HasREX_WPrefix   = Rec->getValueAsBit("hasREX_WPrefix");
-  HasVEX_4V        = Rec->getValueAsBit("hasVEX_4V");
-  VEX_WPrefix      = byteFromRec(Rec,"VEX_WPrefix");
-  IgnoresVEX_L     = Rec->getValueAsBit("ignoresVEX_L");
-  HasEVEX_L2Prefix = Rec->getValueAsBit("hasEVEX_L2");
-  HasEVEX_K        = Rec->getValueAsBit("hasEVEX_K");
-  HasEVEX_KZ       = Rec->getValueAsBit("hasEVEX_Z");
-  HasEVEX_B        = Rec->getValueAsBit("hasEVEX_B");
-  IsCodeGenOnly    = Rec->getValueAsBit("isCodeGenOnly");
-  ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
-  CD8_Scale        = byteFromRec(Rec, "CD8_Scale");
+  OpSize             = byteFromRec(Rec, "OpSizeBits");
+  AdSize             = byteFromRec(Rec, "AdSizeBits");
+  HasREX_WPrefix     = Rec->getValueAsBit("hasREX_WPrefix");
+  HasVEX_4V          = Rec->getValueAsBit("hasVEX_4V");
+  VEX_WPrefix        = byteFromRec(Rec,"VEX_WPrefix");
+  IgnoresVEX_L       = Rec->getValueAsBit("ignoresVEX_L");
+  HasEVEX_L2Prefix   = Rec->getValueAsBit("hasEVEX_L2");
+  HasEVEX_K          = Rec->getValueAsBit("hasEVEX_K");
+  HasEVEX_KZ         = Rec->getValueAsBit("hasEVEX_Z");
+  HasEVEX_B          = Rec->getValueAsBit("hasEVEX_B");
+  Has3DNow0F0FOpcode = Rec->getValueAsBit("has3DNow0F0FOpcode");
+  IsCodeGenOnly      = Rec->getValueAsBit("isCodeGenOnly");
+  ForceDisassemble   = Rec->getValueAsBit("ForceDisassemble");
+  CD8_Scale          = byteFromRec(Rec, "CD8_Scale");
 
   Name      = Rec->getName();
 
@@ -288,6 +289,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       errs() << "Instruction does not use a prefix: " << Name << "\n";
       llvm_unreachable("Invalid prefix");
     }
+  } else if (Has3DNow0F0FOpcode) {
+    insnContext = IC_3DNOW;
   } else if (Is64Bit || HasREX_WPrefix || AdSize == X86Local::AdSize64) {
     if (HasREX_WPrefix && (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD))
       insnContext = IC_64BIT_REXW_OPSIZE;

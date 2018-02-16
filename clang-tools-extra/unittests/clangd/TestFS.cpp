@@ -12,14 +12,17 @@
 
 namespace clang {
 namespace clangd {
+using namespace llvm;
+
 IntrusiveRefCntPtr<vfs::FileSystem>
-buildTestFS(llvm::StringMap<std::string> const &Files) {
+buildTestFS(StringMap<std::string> const &Files) {
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
       new vfs::InMemoryFileSystem);
-  for (auto &FileAndContents : Files)
+  for (auto &FileAndContents : Files) {
     MemFS->addFile(FileAndContents.first(), time_t(),
-                   llvm::MemoryBuffer::getMemBuffer(FileAndContents.second,
-                                                    FileAndContents.first()));
+                   MemoryBuffer::getMemBuffer(FileAndContents.second,
+                                              FileAndContents.first()));
+  }
   return MemFS;
 }
 
@@ -38,20 +41,20 @@ MockCompilationDatabase::MockCompilationDatabase(bool UseRelPaths)
   // -ffreestanding avoids implicit stdc-predef.h.
 }
 
-llvm::Optional<tooling::CompileCommand>
+Optional<tooling::CompileCommand>
 MockCompilationDatabase::getCompileCommand(PathRef File) const {
   if (ExtraClangFlags.empty())
-    return llvm::None;
+    return None;
 
   auto CommandLine = ExtraClangFlags;
-  auto FileName = llvm::sys::path::filename(File);
+  auto FileName = sys::path::filename(File);
   CommandLine.insert(CommandLine.begin(), "clang");
   CommandLine.insert(CommandLine.end(), UseRelPaths ? FileName : File);
-  return {tooling::CompileCommand(llvm::sys::path::parent_path(File), FileName,
+  return {tooling::CompileCommand(sys::path::parent_path(File), FileName,
                                   std::move(CommandLine), "")};
 }
 
-const char *getVirtualTestRoot() {
+const char *testRoot() {
 #ifdef LLVM_ON_WIN32
   return "C:\\clangd-test";
 #else
@@ -59,12 +62,12 @@ const char *getVirtualTestRoot() {
 #endif
 }
 
-llvm::SmallString<32> getVirtualTestFilePath(PathRef File) {
-  assert(llvm::sys::path::is_relative(File) && "FileName should be relative");
+std::string testPath(PathRef File) {
+  assert(sys::path::is_relative(File) && "FileName should be relative");
 
-  llvm::SmallString<32> Path;
-  llvm::sys::path::append(Path, getVirtualTestRoot(), File);
-  return Path;
+  SmallString<32> Path;
+  sys::path::append(Path, testRoot(), File);
+  return Path.str();
 }
 
 } // namespace clangd

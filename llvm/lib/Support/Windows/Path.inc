@@ -822,6 +822,8 @@ std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
 
 std::error_code mapped_file_region::init(int FD, uint64_t Offset,
                                          mapmode Mode) {
+  this->FD = FD;
+  this->Mode = Mode;
   HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   if (FileHandle == INVALID_HANDLE_VALUE)
     return make_error_code(errc::bad_file_descriptor);
@@ -887,8 +889,20 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 }
 
 mapped_file_region::~mapped_file_region() {
-  if (Mapping)
+  if (Mapping) {
     ::UnmapViewOfFile(Mapping);
+
+    if (Mode == mapmode::readwrite) {
+      // There is a Windows kernel bug, the exact trigger conditions of which
+      // are not well understood.  When triggered, dirty pages are not properly
+      // flushed and subsequent process's attempts to read a file can return
+      // invalid data.  Calling FlushFileBuffers on the write handle is
+      // sufficient to ensure that this bug is not triggered.
+      HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+      if (FileHandle != INVALID_HANDLE_VALUE)
+        ::FlushFileBuffers(FileHandle);
+    }
+  }
 }
 
 size_t mapped_file_region::size() const {
