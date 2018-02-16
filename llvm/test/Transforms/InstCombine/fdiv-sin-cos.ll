@@ -14,86 +14,86 @@ define double @fdiv_sin_cos(double %a) {
   ret double %div
 }
 
-define double @fdiv_strict_sin_strict_cos_fast(double %a) {
-; CHECK-LABEL: @fdiv_strict_sin_strict_cos_fast(
+define double @fdiv_strict_sin_strict_cos_reassoc(double %a) {
+; CHECK-LABEL: @fdiv_strict_sin_strict_cos_reassoc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sin.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
   %1 = call double @llvm.sin.f64(double %a)
-  %2 = call fast double @llvm.cos.f64(double %a)
+  %2 = call reassoc double @llvm.cos.f64(double %a)
   %div = fdiv double %1, %2
   ret double %div
 }
 
-define double @fdiv_fast_sin_strict_cos_strict(double %a, i32* dereferenceable(2) %dummy) {
-; CHECK-LABEL: @fdiv_fast_sin_strict_cos_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]]) #1
+define double @fdiv_reassoc_sin_strict_cos_strict(double %a, i32* dereferenceable(2) %dummy) {
+; CHECK-LABEL: @fdiv_reassoc_sin_strict_cos_strict(
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    ret double [[TAN]]
 ;
   %1 = call double @llvm.sin.f64(double %a)
   %2 = call double @llvm.cos.f64(double %a)
-  %div = fdiv fast double %1, %2
+  %div = fdiv reassoc double %1, %2
   ret double %div
 }
 
-define double @fdiv_fast_sin_fast_cos_strict(double %a) {
-; CHECK-LABEL: @fdiv_fast_sin_fast_cos_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]]) #1
+define double @fdiv_reassoc_sin_reassoc_cos_strict(double %a) {
+; CHECK-LABEL: @fdiv_reassoc_sin_reassoc_cos_strict(
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    ret double [[TAN]]
 ;
-  %1 = call fast double @llvm.sin.f64(double %a)
+  %1 = call reassoc double @llvm.sin.f64(double %a)
   %2 = call double @llvm.cos.f64(double %a)
-  %div = fdiv fast double %1, %2
+  %div = fdiv reassoc double %1, %2
   ret double %div
 }
 
-define double @fdiv_sin_cos_fast_multiple_uses(double %a) {
-; CHECK-LABEL: @fdiv_sin_cos_fast_multiple_uses(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.sin.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[TMP1]], [[TMP2]]
+define double @fdiv_sin_cos_reassoc_multiple_uses(double %a) {
+; CHECK-LABEL: @fdiv_sin_cos_reassoc_multiple_uses(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.sin.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    call void @use(double [[TMP2]])
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
-  %1 = call fast double @llvm.sin.f64(double %a)
-  %2 = call fast double @llvm.cos.f64(double %a)
-  %div = fdiv fast double %1, %2
+  %1 = call reassoc double @llvm.sin.f64(double %a)
+  %2 = call reassoc double @llvm.cos.f64(double %a)
+  %div = fdiv reassoc double %1, %2
   call void @use(double %2)
   ret double %div
 }
 
-define double @fdiv_sin_cos_fast(double %a) {
-; CHECK-LABEL: @fdiv_sin_cos_fast(
-; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]]) #1
+define double @fdiv_sin_cos_reassoc(double %a) {
+; CHECK-LABEL: @fdiv_sin_cos_reassoc(
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    ret double [[TAN]]
 ;
-  %1 = call fast double @llvm.sin.f64(double %a)
-  %2 = call fast double @llvm.cos.f64(double %a)
-  %div = fdiv fast double %1, %2
+  %1 = call reassoc double @llvm.sin.f64(double %a)
+  %2 = call reassoc double @llvm.cos.f64(double %a)
+  %div = fdiv reassoc double %1, %2
   ret double %div
 }
 
-define float @fdiv_sinf_cosf_fast(float %a) {
-; CHECK-LABEL: @fdiv_sinf_cosf_fast(
-; CHECK-NEXT:    [[TANF:%.*]] = call fast float @tanf(float [[A:%.*]]) #1
+define float @fdiv_sinf_cosf_reassoc(float %a) {
+; CHECK-LABEL: @fdiv_sinf_cosf_reassoc(
+; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]]) #1
 ; CHECK-NEXT:    ret float [[TANF]]
 ;
-  %1 = call fast float @llvm.sin.f32(float %a)
-  %2 = call fast float @llvm.cos.f32(float %a)
-  %div = fdiv fast float %1, %2
+  %1 = call reassoc float @llvm.sin.f32(float %a)
+  %2 = call reassoc float @llvm.cos.f32(float %a)
+  %div = fdiv reassoc float %1, %2
   ret float %div
 }
 
-define fp128 @fdiv_sinfp128_cosfp128_fast(fp128 %a) {
-; CHECK-LABEL: @fdiv_sinfp128_cosfp128_fast(
-; CHECK-NEXT:    [[TANL:%.*]] = call fast fp128 @tanl(fp128 [[A:%.*]]) #1
+define fp128 @fdiv_sinfp128_cosfp128_reassoc(fp128 %a) {
+; CHECK-LABEL: @fdiv_sinfp128_cosfp128_reassoc(
+; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]]) #1
 ; CHECK-NEXT:    ret fp128 [[TANL]]
 ;
-  %1 = call fast fp128 @llvm.sin.fp128(fp128 %a)
-  %2 = call fast fp128 @llvm.cos.fp128(fp128 %a)
-  %div = fdiv fast fp128 %1, %2
+  %1 = call reassoc fp128 @llvm.sin.fp128(fp128 %a)
+  %2 = call reassoc fp128 @llvm.cos.fp128(fp128 %a)
+  %div = fdiv reassoc fp128 %1, %2
   ret fp128 %div
 }
 

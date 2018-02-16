@@ -740,27 +740,19 @@ void CodeGenFunction::destroyBlockInfos(CGBlockInfo *head) {
 }
 
 /// Emit a block literal expression in the current function.
-llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr,
-                                               llvm::Function **InvokeF) {
+llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
   // If the block has no captures, we won't have a pre-computed
   // layout for it.
   if (!blockExpr->getBlockDecl()->hasCaptures()) {
     // The block literal is emitted as a global variable, and the block invoke
     // function has to be extracted from its initializer.
     if (llvm::Constant *Block = CGM.getAddrOfGlobalBlockIfEmitted(blockExpr)) {
-      if (InvokeF) {
-        auto *GV = cast<llvm::GlobalVariable>(
-            cast<llvm::Constant>(Block)->stripPointerCasts());
-        auto *BlockInit = cast<llvm::ConstantStruct>(GV->getInitializer());
-        *InvokeF = cast<llvm::Function>(
-            BlockInit->getAggregateElement(2)->stripPointerCasts());
-      }
       return Block;
     }
     CGBlockInfo blockInfo(blockExpr->getBlockDecl(), CurFn->getName());
     computeBlockInfo(CGM, this, blockInfo);
     blockInfo.BlockExpression = blockExpr;
-    return EmitBlockLiteral(blockInfo, InvokeF);
+    return EmitBlockLiteral(blockInfo);
   }
 
   // Find the block info for this block and take ownership of it.
@@ -769,11 +761,10 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr,
                                          blockExpr->getBlockDecl()));
 
   blockInfo->BlockExpression = blockExpr;
-  return EmitBlockLiteral(*blockInfo, InvokeF);
+  return EmitBlockLiteral(*blockInfo);
 }
 
-llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo,
-                                               llvm::Function **InvokeF) {
+llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
   bool IsOpenCL = CGM.getContext().getLangOpts().OpenCL;
   auto GenVoidPtrTy =
       IsOpenCL ? CGM.getOpenCLRuntime().getGenericVoidPointerType() : VoidPtrTy;
@@ -788,8 +779,6 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo,
   BlockCGF.SanOpts = SanOpts;
   auto *InvokeFn = BlockCGF.GenerateBlockFunction(
       CurGD, blockInfo, LocalDeclMap, isLambdaConv, blockInfo.CanBeGlobal);
-  if (InvokeF)
-    *InvokeF = InvokeFn;
   auto *blockFn = llvm::ConstantExpr::getPointerCast(InvokeFn, GenVoidPtrTy);
 
   // If there is nothing to capture, we can emit this as a global block.
@@ -1023,6 +1012,11 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo,
   // unfortunately) to be a pointer to function type.
   llvm::Value *result = Builder.CreatePointerCast(
       blockAddr.getPointer(), ConvertType(blockInfo.getBlockExpr()->getType()));
+
+  if (IsOpenCL) {
+    CGM.getOpenCLRuntime().recordBlockInfo(blockInfo.BlockExpression, InvokeFn,
+                                           result);
+  }
 
   return result;
 }
@@ -1287,6 +1281,10 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
   llvm::Constant *Result =
       llvm::ConstantExpr::getPointerCast(literal, RequiredType);
   CGM.setAddrOfGlobalBlock(blockInfo.BlockExpression, Result);
+  if (CGM.getContext().getLangOpts().OpenCL)
+    CGM.getOpenCLRuntime().recordBlockInfo(
+        blockInfo.BlockExpression,
+        cast<llvm::Function>(blockFn->stripPointerCasts()), Result);
   return Result;
 }
 

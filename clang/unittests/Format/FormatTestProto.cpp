@@ -438,5 +438,35 @@ TEST_F(FormatTestProto, NoSpaceAfterPercent) {
                "};");
 }
 
+TEST_F(FormatTestProto, FormatsRepeatedListInitializersInOptions) {
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: item\n"
+               "  keys: [\n"
+               "    'ala',\n"
+               "    'bala',\n"
+               "    'porto',\n"
+               "    'kala',\n"
+               "    'too',\n"
+               "    'long',\n"
+               "    'long',\n"
+               "    'long'\n"
+               "  ]\n"
+               "  key: [ item ]\n"
+               "  msg {\n"
+               "    key: item\n"
+               "    keys: [\n"
+               "      'ala',\n"
+               "      'bala',\n"
+               "      'porto',\n"
+               "      'kala',\n"
+               "      'too',\n"
+               "      'long',\n"
+               "      'long'\n"
+               "    ]\n"
+               "  }\n"
+               "  key: value\n"
+               "};");
+}
+
 } // end namespace tooling
 } // end namespace clang

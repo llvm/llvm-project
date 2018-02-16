@@ -58,13 +58,6 @@ static llvm::cl::opt<unsigned>
                        llvm::cl::desc("Number of async workers used by clangd"),
                        llvm::cl::init(getDefaultAsyncThreadsCount()));
 
-static llvm::cl::opt<bool> EnableSnippets(
-    "enable-snippets",
-    llvm::cl::desc(
-        "Present snippet completions instead of plaintext completions. "
-        "This also enables code pattern results." /* FIXME: should it? */),
-    llvm::cl::init(clangd::CodeCompleteOptions().EnableSnippets));
-
 // FIXME: Flags are the wrong mechanism for user preferences.
 // We should probably read a dotfile or similar.
 static llvm::cl::opt<bool> IncludeIneligibleResults(
@@ -237,7 +230,6 @@ int main(int argc, char *argv[]) {
   if (EnableIndexBasedCompletion && !YamlSymbolFile.empty())
     StaticIdx = BuildStaticIndex(YamlSymbolFile);
   clangd::CodeCompleteOptions CCOpts;
-  CCOpts.EnableSnippets = EnableSnippets;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   CCOpts.Limit = LimitCompletionResult;
   // Initialize and run ClangdLSPServer.

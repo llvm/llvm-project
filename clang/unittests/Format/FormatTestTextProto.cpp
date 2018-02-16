@@ -31,14 +31,18 @@ protected:
     return *Result;
   }
 
-  static std::string format(llvm::StringRef Code) {
-    FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-    Style.ColumnLimit = 60; // To make writing tests easier.
+  static std::string format(llvm::StringRef Code, const FormatStyle &Style) {
     return format(Code, 0, Code.size(), Style);
   }
 
+  static void verifyFormat(llvm::StringRef Code, const FormatStyle &Style) {
+    EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
+  }
+
   static void verifyFormat(llvm::StringRef Code) {
-    EXPECT_EQ(Code.str(), format(test::messUp(Code)));
+    FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+    Style.ColumnLimit = 60; // To make writing tests easier.
+    verifyFormat(Code, Style);
   }
 };
 
@@ -389,6 +393,44 @@ TEST_F(FormatTestTextProto, FormatsExtensions) {
 
 TEST_F(FormatTestTextProto, NoSpaceAfterPercent) {
   verifyFormat("key: %d");
+}
+
+TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {
+  verifyFormat("keys: []");
+  verifyFormat("keys: [ 1 ]");
+  verifyFormat("keys: [ 'ala', 'bala' ]");
+  verifyFormat("keys:\n"
+               "    [ 'ala', 'bala', 'porto', 'kala', 'too', 'long', 'ng' ]");
+  verifyFormat("key: item\n"
+               "keys: [\n"
+               "  'ala',\n"
+               "  'bala',\n"
+               "  'porto',\n"
+               "  'kala',\n"
+               "  'too',\n"
+               "  'long',\n"
+               "  'long',\n"
+               "  'long'\n"
+               "]\n"
+               "key: item\n"
+               "msg {\n"
+               "  key: item\n"
+               "  keys: [\n"
+               "    'ala',\n"
+               "    'bala',\n"
+               "    'porto',\n"
+               "    'kala',\n"
+               "    'too',\n"
+               "    'long',\n"
+               "    'long'\n"
+               "  ]\n"
+               "}\n"
+               "key: value"
+               );
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+  Style.ColumnLimit = 60; // To make writing tests easier.
+  Style.Cpp11BracedListStyle = true;
+  verifyFormat("keys: [1]", Style);
 }
 } // end namespace tooling
 } // end namespace clang

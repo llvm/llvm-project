@@ -7306,12 +7306,12 @@ static SDNode *tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
 // "fold ({s|z|a}ext (load x)) -> ({s|z|a}ext (truncate ({s|z|a}extload x)))"
 // transformation. Returns true if extension are possible and the above
 // mentioned transformation is profitable.
-static bool ExtendUsesToFormExtLoad(SDNode *N, SDValue N0,
+static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
                                     unsigned ExtOpc,
                                     SmallVectorImpl<SDNode *> &ExtendNodes,
                                     const TargetLowering &TLI) {
   bool HasCopyToRegUses = false;
-  bool isTruncFree = TLI.isTruncateFree(N->getValueType(0), N0.getValueType());
+  bool isTruncFree = TLI.isTruncateFree(VT, N0.getValueType());
   for (SDNode::use_iterator UI = N0.getNode()->use_begin(),
                             UE = N0.getNode()->use_end();
        UI != UE; ++UI) {
@@ -7425,7 +7425,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 4> SetCCs;
-  if (!ExtendUsesToFormExtLoad(N, N0, N->getOpcode(), SetCCs, TLI))
+  if (!ExtendUsesToFormExtLoad(DstVT, N, N0, N->getOpcode(), SetCCs, TLI))
     return SDValue();
 
   ISD::LoadExtType ExtType =
@@ -7604,7 +7604,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     bool DoXform = true;
     SmallVector<SDNode*, 4> SetCCs;
     if (!N0.hasOneUse())
-      DoXform = ExtendUsesToFormExtLoad(N, N0, ISD::SIGN_EXTEND, SetCCs, TLI);
+      DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ISD::SIGN_EXTEND, SetCCs,
+                                        TLI);
     if (VT.isVector())
       DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
     if (DoXform) {
@@ -7660,11 +7661,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     EVT MemVT = LN00->getMemoryVT();
     if (TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, MemVT) &&
       LN00->getExtensionType() != ISD::ZEXTLOAD && LN00->isUnindexed()) {
-      bool DoXform = true;
       SmallVector<SDNode*, 4> SetCCs;
-      if (!N0.hasOneUse())
-        DoXform = ExtendUsesToFormExtLoad(N, N0.getOperand(0), ISD::SIGN_EXTEND,
-                                          SetCCs, TLI);
+      bool DoXform = ExtendUsesToFormExtLoad(VT, N0.getNode(), N0.getOperand(0),
+                                             ISD::SIGN_EXTEND, SetCCs, TLI);
       if (DoXform) {
         SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, SDLoc(LN00), VT,
                                          LN00->getChain(), LN00->getBasePtr(),
@@ -7913,7 +7912,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     bool DoXform = true;
     SmallVector<SDNode*, 4> SetCCs;
     if (!N0.hasOneUse())
-      DoXform = ExtendUsesToFormExtLoad(N, N0, ISD::ZERO_EXTEND, SetCCs, TLI);
+      DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ISD::ZERO_EXTEND, SetCCs,
+                                        TLI);
     if (VT.isVector())
       DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
     if (DoXform) {
@@ -7966,10 +7966,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
           if (isAndLoadExtLoad(AndC, LN00, LoadResultTy, ExtVT))
             DoXform = false;
         }
-        if (DoXform)
-          DoXform = ExtendUsesToFormExtLoad(N, N0.getOperand(0),
-                                            ISD::ZERO_EXTEND, SetCCs, TLI);
       }
+      if (DoXform)
+        DoXform = ExtendUsesToFormExtLoad(VT, N0.getNode(), N0.getOperand(0),
+                                          ISD::ZERO_EXTEND, SetCCs, TLI);
       if (DoXform) {
         SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN00), VT,
                                          LN00->getChain(), LN00->getBasePtr(),
@@ -8157,7 +8157,8 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     bool DoXform = true;
     SmallVector<SDNode*, 4> SetCCs;
     if (!N0.hasOneUse())
-      DoXform = ExtendUsesToFormExtLoad(N, N0, ISD::ANY_EXTEND, SetCCs, TLI);
+      DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ISD::ANY_EXTEND, SetCCs,
+                                        TLI);
     if (DoXform) {
       LoadSDNode *LN0 = cast<LoadSDNode>(N0);
       SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT,

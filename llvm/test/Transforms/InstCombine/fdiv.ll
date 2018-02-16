@@ -115,25 +115,59 @@ define <2 x float> @not_exact_inverse_vec(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-define float @test5(float %x, float %y, float %z) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[Y:%.*]], [[Z:%.*]]
+; (X / Y) / Z --> X / (Y * Z)
+
+define float @div_with_div_numerator(float %x, float %y, float %z) {
+; CHECK-LABEL: @div_with_div_numerator(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
-  %div1 = fdiv fast float %x, %y
+  %div1 = fdiv float %x, %y
   %div2 = fdiv fast float %div1, %z
   ret float %div2
 }
 
-define float @test6(float %x, float %y, float %z) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[TMP1]], [[X:%.*]]
+; Z / (X / Y) --> (Z * Y) / X
+
+define <2 x float> @div_with_div_denominator(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @div_with_div_denominator(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast <2 x float> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[DIV2]]
+;
+  %div1 = fdiv <2 x float> %x, %y
+  %div2 = fdiv fast <2 x float> %z, %div1
+  ret <2 x float> %div2
+}
+
+; Don't create an extra multiply if we can't eliminate the first div.
+
+declare void @use_f32(float)
+
+define float @div_with_div_numerator_extra_use(float %x, float %y, float %z) {
+; CHECK-LABEL: @div_with_div_numerator_extra_use(
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[DIV1]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use_f32(float [[DIV1]])
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
-  %div1 = fdiv fast float %x, %y
+  %div1 = fdiv float %x, %y
+  %div2 = fdiv fast float %div1, %z
+  call void @use_f32(float %div1)
+  ret float %div2
+}
+
+define float @div_with_div_denominator_extra_use(float %x, float %y, float %z) {
+; CHECK-LABEL: @div_with_div_denominator_extra_use(
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[Z:%.*]], [[DIV1]]
+; CHECK-NEXT:    call void @use_f32(float [[DIV1]])
+; CHECK-NEXT:    ret float [[DIV2]]
+;
+  %div1 = fdiv float %x, %y
   %div2 = fdiv fast float %z, %div1
+  call void @use_f32(float %div1)
   ret float %div2
 }
 

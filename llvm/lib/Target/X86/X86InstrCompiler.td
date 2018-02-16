@@ -1471,6 +1471,37 @@ def : Pat<(and GR64:$src, 0xff),
 } // AddedComplexity = 1
 
 
+// Try to use BTS/BTR/BTC for single bit operations on the upper 32-bits.
+
+def BTRXForm : SDNodeXForm<imm, [{
+  // Transformation function: Find the lowest 0.
+  return getI64Imm((uint8_t)N->getAPIntValue().countTrailingOnes(), SDLoc(N));
+}]>;
+
+def BTCBTSXForm : SDNodeXForm<imm, [{
+  // Transformation function: Find the lowest 1.
+  return getI64Imm((uint8_t)N->getAPIntValue().countTrailingZeros(), SDLoc(N));
+}]>;
+
+def BTRMask64 : ImmLeaf<i64, [{
+  return !isUInt<32>(Imm) && !isInt<32>(Imm) && isPowerOf2_64(~Imm);
+}]>;
+
+def BTCBTSMask64 : ImmLeaf<i64, [{
+  return !isInt<32>(Imm) && isPowerOf2_64(Imm);
+}]>;
+
+// For now only do this for optsize.
+let AddedComplexity = 1, Predicates=[OptForSize] in {
+  def : Pat<(and GR64:$src1, BTRMask64:$mask),
+            (BTR64ri8 GR64:$src1, (BTRXForm imm:$mask))>;
+  def : Pat<(or GR64:$src1, BTCBTSMask64:$mask),
+            (BTS64ri8 GR64:$src1, (BTCBTSXForm imm:$mask))>;
+  def : Pat<(xor GR64:$src1, BTCBTSMask64:$mask),
+            (BTC64ri8 GR64:$src1, (BTCBTSXForm imm:$mask))>;
+}
+
+
 // sext_inreg patterns
 def : Pat<(sext_inreg GR32:$src, i16),
           (MOVSX32rr16 (EXTRACT_SUBREG GR32:$src, sub_16bit))>;

@@ -3654,8 +3654,8 @@ ARM and ARM's Thumb2 mode:
   ``d0-d31``, or ``q0-q15``.
 - ``x``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s15``,
   ``d0-d7``, or ``q0-q3``.
-- ``t``: A floating-point/SIMD register, only supports 32-bit values:
-  ``s0-s31``.
+- ``t``: A low floating-point/SIMD register: ``s0-s31``, ``d0-d16``, or
+  ``q0-q8``.
 
 ARM's Thumb1 mode:
 
@@ -3674,8 +3674,8 @@ ARM's Thumb1 mode:
   ``d0-d31``, or ``q0-q15``.
 - ``x``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s15``,
   ``d0-d7``, or ``q0-q3``.
-- ``t``: A floating-point/SIMD register, only supports 32-bit values:
-  ``s0-s31``.
+- ``t``: A low floating-point/SIMD register: ``s0-s31``, ``d0-d16``, or
+  ``q0-q8``.
 
 
 Hexagon:

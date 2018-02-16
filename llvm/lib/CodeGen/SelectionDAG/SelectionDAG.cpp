@@ -3054,7 +3054,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   if (!DemandedElts)
     return 1;  // No demanded elts, better to assume we don't know anything.
 
-  switch (Op.getOpcode()) {
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
   default: break;
   case ISD::AssertSext:
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getSizeInBits();
@@ -3241,7 +3242,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       unsigned RotAmt = C->getAPIntValue().urem(VTBits);
 
       // Handle rotate right by N like a rotate left by 32-N.
-      if (Op.getOpcode() == ISD::ROTR)
+      if (Opcode == ISD::ROTR)
         RotAmt = (VTBits - RotAmt) % VTBits;
 
       // If we aren't rotating out all of the known-in sign bits, return the
@@ -3439,10 +3440,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
 
   // Allow the target to implement this method for its nodes.
-  if (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
-      Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
-      Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
-      Op.getOpcode() == ISD::INTRINSIC_VOID) {
+  if (Opcode >= ISD::BUILTIN_OP_END ||
+      Opcode == ISD::INTRINSIC_WO_CHAIN ||
+      Opcode == ISD::INTRINSIC_W_CHAIN ||
+      Opcode == ISD::INTRINSIC_VOID) {
     unsigned NumBits =
         TLI->ComputeNumSignBitsForTargetNode(Op, DemandedElts, *this, Depth);
     if (NumBits > 1)

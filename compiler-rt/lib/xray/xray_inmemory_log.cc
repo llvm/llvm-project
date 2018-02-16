@@ -60,7 +60,7 @@ struct alignas(64) ThreadLocalData {
   size_t StackSize = 0;
   size_t StackEntries = 0;
   int Fd = -1;
-  pid_t TID = 0;
+  tid_t TID = 0;
 };
 
 static pthread_key_t PThreadKey;

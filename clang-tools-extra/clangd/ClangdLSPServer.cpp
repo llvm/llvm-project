@@ -87,6 +87,14 @@ std::vector<TextEdit> replacementsToEdits(StringRef Code,
 } // namespace
 
 void ClangdLSPServer::onInitialize(InitializeParams &Params) {
+  if (Params.rootUri && !Params.rootUri->file.empty())
+    Server.setRootPath(Params.rootUri->file);
+  else if (Params.rootPath && !Params.rootPath->empty())
+    Server.setRootPath(*Params.rootPath);
+
+  CCOpts.EnableSnippets =
+      Params.capabilities.textDocument.completion.completionItem.snippetSupport;
+
   reply(json::obj{
       {{"capabilities",
         json::obj{
@@ -116,10 +124,6 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
                  {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
              }},
         }}}});
-  if (Params.rootUri && !Params.rootUri->file.empty())
-    Server.setRootPath(Params.rootUri->file);
-  else if (Params.rootPath && !Params.rootPath->empty())
-    Server.setRootPath(*Params.rootPath);
 }
 
 void ClangdLSPServer::onShutdown(ShutdownParams &Params) {

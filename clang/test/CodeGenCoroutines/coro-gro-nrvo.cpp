@@ -41,7 +41,7 @@ coro f(int) {
 
 // CHECK: {{.*}}[[CoroInit]]:
 // CHECK: store i1 false, i1* %gro.active
-// CHECK-NEXT: call void @{{.*get_return_objectEv}}(%struct.coro* sret %agg.result
+// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro* sret %agg.result
 // CHECK-NEXT: store i1 true, i1* %gro.active
   co_return;
 }
@@ -78,7 +78,7 @@ struct coro_two {
 
 // CHECK: {{.*}}[[InitOnSuccess]]:
 // CHECK: store i1 false, i1* %gro.active
-// CHECK-NEXT: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret %agg.result
+// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret %agg.result
 // CHECK-NEXT: store i1 true, i1* %gro.active
 
 // CHECK: [[RetLabel]]:

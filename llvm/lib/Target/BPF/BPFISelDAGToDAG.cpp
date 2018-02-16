@@ -65,9 +65,9 @@ private:
   bool SelectFIAddr(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   // Node preprocessing cases
-  void PreprocessLoad(SDNode *Node, SelectionDAG::allnodes_iterator I);
+  void PreprocessLoad(SDNode *Node, SelectionDAG::allnodes_iterator &I);
   void PreprocessCopyToReg(SDNode *Node);
-  void PreprocessTrunc(SDNode *Node, SelectionDAG::allnodes_iterator I);
+  void PreprocessTrunc(SDNode *Node, SelectionDAG::allnodes_iterator &I);
 
   // Find constants from a constant structure
   typedef std::vector<unsigned char> val_vec_type;
@@ -238,7 +238,7 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
 }
 
 void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
-                                     SelectionDAG::allnodes_iterator I) {
+                                     SelectionDAG::allnodes_iterator &I) {
   union {
     uint8_t c[8];
     uint16_t s;
@@ -511,7 +511,7 @@ void BPFDAGToDAGISel::PreprocessCopyToReg(SDNode *Node) {
 }
 
 void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
-                                      SelectionDAG::allnodes_iterator I) {
+                                      SelectionDAG::allnodes_iterator &I) {
   ConstantSDNode *MaskN = dyn_cast<ConstantSDNode>(Node->getOperand(1));
   if (!MaskN)
     return;

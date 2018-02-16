@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "PassPrinters.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/BasicBlock.h"
@@ -33,6 +34,10 @@
 using namespace llvm;
 
 namespace {
+
+bool isFunctionSkipped(Function &F) {
+  return F.isDeclaration() || !F.hasExactDefinition();
+}
 
 bool applyDebugifyMetadata(Module &M) {
   // Skip modules with debug info.
@@ -66,7 +71,7 @@ bool applyDebugifyMetadata(Module &M) {
 
   // Visit each instruction.
   for (Function &F : M) {
-    if (F.isDeclaration() || !F.hasExactDefinition())
+    if (isFunctionSkipped(F))
       continue;
 
     auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
@@ -133,6 +138,9 @@ void checkDebugifyMetadata(Module &M) {
   // Find missing lines.
   BitVector MissingLines{OriginalNumLines, true};
   for (Function &F : M) {
+    if (isFunctionSkipped(F))
+      continue;
+
     for (Instruction &I : instructions(F)) {
       if (isa<DbgValueInst>(&I))
         continue;
@@ -155,6 +163,9 @@ void checkDebugifyMetadata(Module &M) {
   // Find missing variables.
   BitVector MissingVars{OriginalNumVars, true};
   for (Function &F : M) {
+    if (isFunctionSkipped(F))
+      continue;
+
     for (Instruction &I : instructions(F)) {
       auto *DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
@@ -206,7 +217,18 @@ struct CheckDebugifyPass : public ModulePass {
 
 ModulePass *createDebugifyPass() { return new DebugifyPass(); }
 
+PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
+  applyDebugifyMetadata(M);
+  return PreservedAnalyses::all();
+}
+
 ModulePass *createCheckDebugifyPass() { return new CheckDebugifyPass(); }
+
+PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
+                                              ModuleAnalysisManager &) {
+  checkDebugifyMetadata(M);
+  return PreservedAnalyses::all();
+}
 
 char DebugifyPass::ID = 0;
 static RegisterPass<DebugifyPass> X("debugify",

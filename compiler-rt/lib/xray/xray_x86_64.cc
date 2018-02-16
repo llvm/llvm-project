@@ -3,6 +3,10 @@
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
 
+#if SANITIZER_FREEBSD
+#include <sys/sysctl.h>
+#endif
+
 #include <atomic>
 #include <cstdint>
 #include <errno.h>
@@ -14,6 +18,7 @@
 
 namespace __xray {
 
+#if SANITIZER_LINUX
 static std::pair<ssize_t, bool>
 retryingReadSome(int Fd, char *Begin, char *End) XRAY_NEVER_INSTRUMENT {
   auto BytesToRead = std::distance(Begin, End);
@@ -71,6 +76,27 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
   }
   return TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
 }
+#elif SANITIZER_FREEBSD
+uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
+    long long TSCFrequency = -1;
+    size_t tscfreqsz = sizeof(TSCFrequency);
+
+    if (sysctlbyname("machdep.tsc_freq", &TSCFrequency, &tscfreqsz,
+        NULL, 0) != -1) {
+        return static_cast<uint64_t>(TSCFrequency);
+    } else {
+      Report("Unable to determine CPU frequency for TSC accounting.\n");
+    }
+
+    return 0;
+    
+}
+#else
+uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
+    /* Not supported */
+    return 0;
+}
+#endif
 
 static constexpr uint8_t CallOpCode = 0xe8;
 static constexpr uint16_t MovR10Seq = 0xba41;
@@ -259,7 +285,8 @@ bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
   // We check whether rdtscp support is enabled. According to the x86_64 manual,
   // level should be set at 0x80000001, and we should have a look at bit 27 in
   // EDX. That's 0x8000000 (or 1u << 27).
-  __get_cpuid(0x80000001, &EAX, &EBX, &ECX, &EDX);
+  __asm__ __volatile__("cpuid" : "=a"(EAX), "=b"(EBX), "=c"(ECX), "=d"(EDX)
+    : "0"(0x80000001));
   if (!(EDX & (1u << 27))) {
     Report("Missing rdtscp support.\n");
     return false;
