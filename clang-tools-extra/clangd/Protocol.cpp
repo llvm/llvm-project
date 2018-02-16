@@ -397,20 +397,20 @@ static StringRef toTextKind(MarkupKind Kind) {
 }
 
 json::Expr toJSON(const MarkupContent &MC) {
-  if (MC.Value.empty())
+  if (MC.value.empty())
     return nullptr;
 
   return json::obj{
-      {"kind", toTextKind(MC.Kind)},
-      {"value", MC.Value},
+      {"kind", toTextKind(MC.kind)},
+      {"value", MC.value},
   };
 }
 
 json::Expr toJSON(const Hover &H) {
-  json::obj Result{{"contents", toJSON(H.Contents)}};
+  json::obj Result{{"contents", toJSON(H.contents)}};
 
-  if (H.Range.hasValue())
-    Result["range"] = toJSON(*H.Range);
+  if (H.range.hasValue())
+    Result["range"] = toJSON(*H.range);
 
   return std::move(Result);
 }

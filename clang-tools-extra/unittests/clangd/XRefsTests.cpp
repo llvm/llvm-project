@@ -559,7 +559,7 @@ TEST(Hover, All) {
     auto AST = build(T.code());
     Hover H = getHover(AST, T.point());
 
-    EXPECT_EQ(H.Contents.Value, Test.ExpectedHover) << Test.Input;
+    EXPECT_EQ(H.contents.value, Test.ExpectedHover) << Test.Input;
   }
 }
 

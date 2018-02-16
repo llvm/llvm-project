@@ -486,18 +486,18 @@ enum class MarkupKind {
 };
 
 struct MarkupContent {
-  MarkupKind Kind = MarkupKind::PlainText;
-  std::string Value;
+  MarkupKind kind = MarkupKind::PlainText;
+  std::string value;
 };
 json::Expr toJSON(const MarkupContent &MC);
 
 struct Hover {
   /// The hover's content
-  MarkupContent Contents;
+  MarkupContent contents;
 
   /// An optional range is a range inside a text document
   /// that is used to visualize a hover, e.g. by changing the background color.
-  llvm::Optional<Range> Range;
+  llvm::Optional<Range> range;
 };
 json::Expr toJSON(const Hover &H);
 

@@ -382,9 +382,9 @@ static Hover getHoverContents(const Decl *D) {
   if (NamedScope) {
     assert(!NamedScope->empty());
 
-    H.Contents.Value += "Declared in ";
-    H.Contents.Value += *NamedScope;
-    H.Contents.Value += "\n\n";
+    H.contents.value += "Declared in ";
+    H.contents.value += *NamedScope;
+    H.contents.value += "\n\n";
   }
 
   // We want to include the template in the Hover.
@@ -401,7 +401,7 @@ static Hover getHoverContents(const Decl *D) {
 
   OS.flush();
 
-  H.Contents.Value += DeclText;
+  H.contents.value += DeclText;
   return H;
 }
 
@@ -409,8 +409,8 @@ static Hover getHoverContents(const Decl *D) {
 static Hover getHoverContents(StringRef MacroName) {
   Hover H;
 
-  H.Contents.Value = "#define ";
-  H.Contents.Value += MacroName;
+  H.contents.value = "#define ";
+  H.contents.value += MacroName;
 
   return H;
 }
