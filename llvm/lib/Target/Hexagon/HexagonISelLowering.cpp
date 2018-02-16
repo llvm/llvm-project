@@ -107,15 +107,14 @@ static cl::opt<int> MaxStoresPerMemsetOptSizeCL("max-store-memset-Os",
 namespace {
 
   class HexagonCCState : public CCState {
-    unsigned NumNamedVarArgParams;
+    unsigned NumNamedVarArgParams = 0;
 
   public:
     HexagonCCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
                    SmallVectorImpl<CCValAssign> &locs, LLVMContext &C,
-                   int NumNamedVarArgParams)
+                   unsigned NumNamedArgs)
         : CCState(CC, IsVarArg, MF, locs, C),
-          NumNamedVarArgParams(NumNamedVarArgParams) {}
-
+          NumNamedVarArgParams(NumNamedArgs) {}
     unsigned getNumNamedVarArgParams() const { return NumNamedVarArgParams; }
   };
 
@@ -318,30 +317,21 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsVarArg                         = CLI.IsVarArg;
   bool DoesNotReturn                    = CLI.DoesNotReturn;
 
-  bool IsStructRet    = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
+  bool IsStructRet    = Outs.empty() ? false : Outs[0].Flags.isSRet();
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto PtrVT = getPointerTy(MF.getDataLayout());
 
-  // Check for varargs.
-  unsigned NumNamedVarArgParams = 0;
-
-  if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    const GlobalValue *GV = GAN->getGlobal();
-    Callee = DAG.getTargetGlobalAddress(GV, dl, MVT::i32);
-    if (const Function* F = dyn_cast<Function>(GV)) {
-      // If a function has zero args and is a vararg function, that's
-      // disallowed so it must be an undeclared function.  Do not assume
-      // varargs if the callee is undefined.
-      if (F->isVarArg() && F->getFunctionType()->getNumParams() != 0)
-        NumNamedVarArgParams = F->getFunctionType()->getNumParams();
-    }
-  }
+  unsigned NumParams = CLI.CS.getInstruction()
+                        ? CLI.CS.getFunctionType()->getNumParams()
+                        : 0;
+  if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(Callee))
+    Callee = DAG.getTargetGlobalAddress(GAN->getGlobal(), dl, MVT::i32);
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  HexagonCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
-                        ArgLocs, *DAG.getContext(), NumNamedVarArgParams);
+  HexagonCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext(),
+                        NumParams);
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
@@ -698,8 +688,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
+  HexagonCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext(),
+                        MF.getFunction().getFunctionType()->getNumParams());
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);

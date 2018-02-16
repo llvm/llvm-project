@@ -654,13 +654,28 @@ getNotRelocatableInstructions(CoroBeginInst *CoroBegin,
   // set.
   do {
     Instruction *Current = Work.pop_back_val();
+    DEBUG(dbgs() << "CoroSplit: Will not relocate: " << *Current << "\n");
     DoNotRelocate.insert(Current);
     for (Value *U : Current->operands()) {
       auto *I = dyn_cast<Instruction>(U);
       if (!I)
         continue;
-      if (isa<AllocaInst>(U))
+
+      if (auto *A = dyn_cast<AllocaInst>(I)) {
+        // Stores to alloca instructions that occur before the coroutine frame
+        // is allocated should not be moved; the stored values may be used by
+        // the coroutine frame allocator. The operands to those stores must also
+        // remain in place.
+        for (const auto &User : A->users())
+          if (auto *SI = dyn_cast<llvm::StoreInst>(User))
+            if (RelocBlocks.count(SI->getParent()) != 0 &&
+                DoNotRelocate.count(SI) == 0) {
+              Work.push_back(SI);
+              DoNotRelocate.insert(SI);
+            }
         continue;
+      }
+
       if (DoNotRelocate.count(I) == 0) {
         Work.push_back(I);
         DoNotRelocate.insert(I);

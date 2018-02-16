@@ -8,6 +8,7 @@ class TestTargetXMLArch(GDBRemoteTestBase):
 
     @skipIf(hostoslist=no_match(lldbplatformutil.getDarwinOSTriples()))
     @expectedFailureAll(archs=["i386"])
+    @skipIfRemote
     def test(self):
         """
         Test lldb's parsing of the <architecture> tag in the target.xml register

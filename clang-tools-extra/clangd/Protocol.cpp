@@ -150,6 +150,41 @@ bool fromJSON(const json::Expr &E, TraceLevel &Out) {
   return false;
 }
 
+bool fromJSON(const json::Expr &Params, CompletionItemClientCapabilities &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+  O.map("snippetSupport", R.snippetSupport);
+  O.map("commitCharacterSupport", R.commitCharacterSupport);
+  return true;
+}
+
+bool fromJSON(const json::Expr &Params, CompletionClientCapabilities &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+  O.map("dynamicRegistration", R.dynamicRegistration);
+  O.map("completionItem", R.completionItem);
+  O.map("contextSupport", R.contextSupport);
+  return true;
+}
+
+bool fromJSON(const json::Expr &Params, TextDocumentClientCapabilities &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+  O.map("completion", R.completion);
+  return true;
+}
+
+bool fromJSON(const json::Expr &Params, ClientCapabilities &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+  O.map("textDocument", R.textDocument);
+  return true;
+}
+
 bool fromJSON(const json::Expr &Params, InitializeParams &R) {
   json::ObjectMapper O(Params);
   if (!O)
@@ -159,6 +194,7 @@ bool fromJSON(const json::Expr &Params, InitializeParams &R) {
   O.map("processId", R.processId);
   O.map("rootUri", R.rootUri);
   O.map("rootPath", R.rootPath);
+  O.map("capabilities", R.capabilities);
   O.map("trace", R.trace);
   // initializationOptions, capabilities unused
   return true;

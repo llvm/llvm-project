@@ -13467,8 +13467,14 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
         return RCPair(0U, &ARM::QPR_8RegClass);
       break;
     case 't':
+      if (VT == MVT::Other)
+        break;
       if (VT == MVT::f32 || VT == MVT::i32)
         return RCPair(0U, &ARM::SPRRegClass);
+      if (VT.getSizeInBits() == 64)
+        return RCPair(0U, &ARM::DPR_VFP2RegClass);
+      if (VT.getSizeInBits() == 128)
+        return RCPair(0U, &ARM::QPR_VFP2RegClass);
       break;
     }
   }

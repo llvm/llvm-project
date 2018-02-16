@@ -15,7 +15,6 @@
 #include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/ParentMap.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -331,9 +330,6 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     bool isNew;
     ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
 
-    // See if we have any stale C++ allocator values.
-    assert(areCXXNewAllocatorValuesClear(CEEState, calleeCtx, callerCtx));
-
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
     CEENode->addPredecessor(*I, G);
     if (!isNew)
@@ -639,10 +635,8 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 
     const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
 
-    // FIXME: ParentMap is slow and ugly. The callee should provide the
-    // necessary context. Ideally as part of the call event, or maybe as part of
-    // location context.
-    const Stmt *ParentExpr = CurLC->getParentMap().getParent(CtorExpr);
+    auto CC = getCurrentCFGElement().getAs<CFGConstructor>();
+    const Stmt *ParentExpr = CC ? CC->getTriggerStmt() : nullptr;
 
     if (ParentExpr && isa<CXXNewExpr>(ParentExpr) &&
         !Opts.mayInlineCXXAllocator())
@@ -697,6 +691,10 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 
     // FIXME: We don't handle constructors or destructors for arrays properly.
     if (CallOpts.IsArrayCtorOrDtor)
+      return CIP_DisallowedOnce;
+
+    // Allow disabling temporary destructor inlining with a separate option.
+    if (CallOpts.IsTemporaryCtorOrDtor && !Opts.mayInlineCXXTemporaryDtors())
       return CIP_DisallowedOnce;
 
     // If we did not find the correct this-region, it would be pointless

@@ -424,5 +424,7 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
   }
+  if (IsX86_64)
+    Res |= SanitizerKind::Memory;
   return Res;
 }
