@@ -984,7 +984,7 @@ static Optional<StringRef> getArchiveName(InputFile *File) {
   if (isa<ArchiveFile>(File))
     return File->getName();
   if (!File->ArchiveName.empty())
-    return File->ArchiveName;
+    return StringRef(File->ArchiveName);
   return None;
 }
 
@@ -1104,7 +1104,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Script->declareSymbols();
 
   // Apply version scripts.
-  Symtab->scanVersionScript();
+  //
+  // For a relocatable output, version scripts don't make sense, and
+  // parsing a symbol version string (e.g. dropping "@ver1" from a symbol
+  // name "foo@ver1") rather do harm, so we don't call this if -r is given.
+  if (!Config->Relocatable)
+    Symtab->scanVersionScript();
 
   // Create wrapped symbols for -wrap option.
   for (auto *Arg : Args.filtered(OPT_wrap))
