@@ -94,7 +94,7 @@ public:
            S->kind() == UndefinedFunctionKind;
   }
 
-  bool hasFunctionType() const { return FunctionType != nullptr; }
+  bool hasFunctionType() const { return Chunk || FunctionType; }
   const WasmSignature &getFunctionType() const;
 
   uint32_t getTableIndex() const;

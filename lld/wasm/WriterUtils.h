@@ -36,23 +36,23 @@ struct OutputRelocation {
   uint32_t Value;
 };
 
-void debugWrite(uint64_t offset, llvm::Twine msg);
+void debugWrite(uint64_t Offset, llvm::Twine Msg);
 
-void writeUleb128(raw_ostream &OS, uint32_t Number, const char *msg);
+void writeUleb128(raw_ostream &OS, uint32_t Number, const char *Msg);
 
-void writeSleb128(raw_ostream &OS, int32_t Number, const char *msg);
+void writeSleb128(raw_ostream &OS, int32_t Number, const char *Msg);
 
-void writeBytes(raw_ostream &OS, const char *bytes, size_t count,
-                const char *msg = nullptr);
+void writeBytes(raw_ostream &OS, const char *Bytes, size_t count,
+                const char *Msg = nullptr);
 
 void writeStr(raw_ostream &OS, const llvm::StringRef String,
-              const char *msg = nullptr);
+              const char *Msg = nullptr);
 
-void writeU8(raw_ostream &OS, uint8_t byte, const char *msg);
+void writeU8(raw_ostream &OS, uint8_t byte, const char *Msg);
 
-void writeU32(raw_ostream &OS, uint32_t Number, const char *msg);
+void writeU32(raw_ostream &OS, uint32_t Number, const char *Msg);
 
-void writeValueType(raw_ostream &OS, int32_t Type, const char *msg);
+void writeValueType(raw_ostream &OS, int32_t Type, const char *Msg);
 
 void writeSig(raw_ostream &OS, const llvm::wasm::WasmSignature &Sig);
 

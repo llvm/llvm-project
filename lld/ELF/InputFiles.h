@@ -91,7 +91,7 @@ public:
   // function on files of other types.
   ArrayRef<Symbol *> getSymbols() {
     assert(FileKind == BinaryKind || FileKind == ObjKind ||
-           FileKind == BitcodeKind || FileKind == ArchiveKind);
+           FileKind == BitcodeKind);
     return Symbols;
   }
 

@@ -39,61 +39,61 @@ static const char *valueTypeToString(int32_t Type) {
 
 namespace lld {
 
-void wasm::debugWrite(uint64_t offset, Twine msg) {
-  DEBUG(dbgs() << format("  | %08" PRIx64 ": ", offset) << msg << "\n");
+void wasm::debugWrite(uint64_t Offset, Twine Msg) {
+  DEBUG(dbgs() << format("  | %08" PRIx64 ": ", Offset) << Msg << "\n");
 }
 
-void wasm::writeUleb128(raw_ostream &OS, uint32_t Number, const char *msg) {
-  if (msg)
-    debugWrite(OS.tell(), msg + formatv(" [{0:x}]", Number));
+void wasm::writeUleb128(raw_ostream &OS, uint32_t Number, const char *Msg) {
+  if (Msg)
+    debugWrite(OS.tell(), Msg + formatv(" [{0:x}]", Number));
   encodeULEB128(Number, OS);
 }
 
-void wasm::writeSleb128(raw_ostream &OS, int32_t Number, const char *msg) {
-  if (msg)
-    debugWrite(OS.tell(), msg + formatv(" [{0:x}]", Number));
+void wasm::writeSleb128(raw_ostream &OS, int32_t Number, const char *Msg) {
+  if (Msg)
+    debugWrite(OS.tell(), Msg + formatv(" [{0:x}]", Number));
   encodeSLEB128(Number, OS);
 }
 
-void wasm::writeBytes(raw_ostream &OS, const char *bytes, size_t count,
-                      const char *msg) {
-  if (msg)
-    debugWrite(OS.tell(), msg + formatv(" [data[{0}]]", count));
-  OS.write(bytes, count);
+void wasm::writeBytes(raw_ostream &OS, const char *Bytes, size_t Count,
+                      const char *Msg) {
+  if (Msg)
+    debugWrite(OS.tell(), Msg + formatv(" [data[{0}]]", Count));
+  OS.write(Bytes, Count);
 }
 
-void wasm::writeStr(raw_ostream &OS, const StringRef String, const char *msg) {
-  if (msg)
+void wasm::writeStr(raw_ostream &OS, const StringRef String, const char *Msg) {
+  if (Msg)
     debugWrite(OS.tell(),
-               msg + formatv(" [str[{0}]: {1}]", String.size(), String));
+               Msg + formatv(" [str[{0}]: {1}]", String.size(), String));
   writeUleb128(OS, String.size(), nullptr);
   writeBytes(OS, String.data(), String.size());
 }
 
-void wasm::writeU8(raw_ostream &OS, uint8_t byte, const char *msg) {
+void wasm::writeU8(raw_ostream &OS, uint8_t byte, const char *Msg) {
   OS << byte;
 }
 
-void wasm::writeU32(raw_ostream &OS, uint32_t Number, const char *msg) {
-  debugWrite(OS.tell(), msg + formatv("[{0:x}]", Number));
+void wasm::writeU32(raw_ostream &OS, uint32_t Number, const char *Msg) {
+  debugWrite(OS.tell(), Msg + formatv("[{0:x}]", Number));
   support::endian::Writer<support::little>(OS).write(Number);
 }
 
-void wasm::writeValueType(raw_ostream &OS, int32_t Type, const char *msg) {
-  debugWrite(OS.tell(), msg + formatv("[type: {0}]", valueTypeToString(Type)));
+void wasm::writeValueType(raw_ostream &OS, int32_t Type, const char *Msg) {
+  debugWrite(OS.tell(), Msg + formatv("[type: {0}]", valueTypeToString(Type)));
   writeSleb128(OS, Type, nullptr);
 }
 
 void wasm::writeSig(raw_ostream &OS, const WasmSignature &Sig) {
   writeSleb128(OS, WASM_TYPE_FUNC, "signature type");
-  writeUleb128(OS, Sig.ParamTypes.size(), "param count");
+  writeUleb128(OS, Sig.ParamTypes.size(), "param Count");
   for (int32_t ParamType : Sig.ParamTypes) {
     writeValueType(OS, ParamType, "param type");
   }
   if (Sig.ReturnType == WASM_TYPE_NORESULT) {
-    writeUleb128(OS, 0, "result count");
+    writeUleb128(OS, 0, "result Count");
   } else {
-    writeUleb128(OS, 1, "result count");
+    writeUleb128(OS, 1, "result Count");
     writeValueType(OS, Sig.ReturnType, "result type");
   }
 }
