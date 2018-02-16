@@ -11,6 +11,7 @@
 #include "../CodeCompletionStrings.h"
 #include "../Logger.h"
 #include "../URI.h"
+#include "CanonicalIncludes.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
@@ -125,6 +126,51 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
     return true;
 
   return false;
+}
+
+// We only collect #include paths for symbols that are suitable for global code
+// completion, except for namespaces since #include path for a namespace is hard
+// to define.
+bool shouldCollectIncludePath(index::SymbolKind Kind) {
+  using SK = index::SymbolKind;
+  switch (Kind) {
+  case SK::Macro:
+  case SK::Enum:
+  case SK::Struct:
+  case SK::Class:
+  case SK::Union:
+  case SK::TypeAlias:
+  case SK::Using:
+  case SK::Function:
+  case SK::Variable:
+  case SK::EnumConstant:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Gets a canonical include (<header>  or "header") for header of \p Loc.
+/// Returns None if the header has no canonical include.
+/// FIXME: we should handle .inc files whose symbols are expected be exported by
+/// their containing headers.
+llvm::Optional<std::string>
+getIncludeHeader(const SourceManager &SM, SourceLocation Loc,
+                 const SymbolCollector::Options &Opts) {
+  llvm::StringRef FilePath = SM.getFilename(Loc);
+  if (FilePath.empty())
+    return llvm::None;
+  if (Opts.Includes) {
+    llvm::StringRef Mapped = Opts.Includes->mapHeader(FilePath);
+    if (Mapped != FilePath)
+      return (Mapped.startswith("<") || Mapped.startswith("\""))
+                 ? Mapped.str()
+                 : ("\"" + Mapped + "\"").str();
+  }
+  // If the header path is the same as the file path of the declaration, we skip
+  // storing the #include path; users can use the URI in declaration location to
+  // calculate the #include path.
+  return llvm::None;
 }
 
 // Return the symbol location of the given declaration `D`.
@@ -252,6 +298,14 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   std::string Documentation = getDocumentation(*CCS);
   std::string CompletionDetail = getDetail(*CCS);
 
+  std::string Include;
+  if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
+    // Use the expansion location to get the #include header since this is
+    // where the symbol is exposed.
+    if (auto Header =
+            getIncludeHeader(SM, SM.getExpansionLoc(ND.getLocation()), Opts))
+      Include = std::move(*Header);
+  }
   S.CompletionFilterText = FilterText;
   S.CompletionLabel = Label;
   S.CompletionPlainInsertText = PlainInsertText;
@@ -259,6 +313,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   Symbol::Details Detail;
   Detail.Documentation = Documentation;
   Detail.CompletionDetail = CompletionDetail;
+  Detail.IncludeHeader = Include;
   S.Detail = &Detail;
 
   Symbols.insert(S);

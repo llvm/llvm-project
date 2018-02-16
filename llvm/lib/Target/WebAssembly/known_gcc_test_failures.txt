@@ -11,7 +11,8 @@
 # to wasm object files (.o).
 
 # Computed gotos are not supported (Cannot select BlockAddress/BRIND)
-20071220-1.c wasm-o,O0
+20071220-1.c wasm-o
+20071220-2.c wasm-o
 20040302-1.c
 20041214-1.c O0
 20071210-1.c
@@ -96,9 +97,6 @@ devirt-13.C  # bad main signature
 devirt-14.C  # bad main signature
 devirt-21.C  # bad main signature
 devirt-23.C  # bad main signature
-
-# Untriaged: Assertion failure in WasmObjectWriter::applyRelocations
-20071220-2.c wasm-o,O0
 
 # Untriaged C++ failures
 spec5.C

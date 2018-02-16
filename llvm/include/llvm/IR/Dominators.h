@@ -335,6 +335,9 @@ public:
   /// \brief Returns true if DelBB is awaiting deletion at a flush() event.
   bool pendingDeletedBB(BasicBlock *DelBB);
 
+  /// \brief Returns true if pending DT updates are queued for a flush() event.
+  bool pending();
+
   /// \brief Flushes all pending updates and block deletions. Returns a
   /// correct DominatorTree reference to be used by the caller for analysis.
   DominatorTree &flush();

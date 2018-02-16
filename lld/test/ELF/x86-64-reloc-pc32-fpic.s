@@ -7,4 +7,5 @@
 # CHECK: >>> referenced by {{.*}}:(.data+0x1)
 
 .data
-call _shared
+ .byte 0xe8
+ .long _shared - .

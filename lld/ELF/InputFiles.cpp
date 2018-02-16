@@ -707,9 +707,8 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
       File(std::move(File)) {}
 
 template <class ELFT> void ArchiveFile::parse() {
-  Symbols.reserve(File->getNumberOfSymbols());
   for (const Archive::Symbol &Sym : File->symbols())
-    Symbols.push_back(Symtab->addLazyArchive<ELFT>(Sym.getName(), *this, Sym));
+    Symtab->addLazyArchive<ELFT>(Sym.getName(), *this, Sym);
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

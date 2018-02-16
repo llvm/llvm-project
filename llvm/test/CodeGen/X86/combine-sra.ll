@@ -197,9 +197,7 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_ashr_trunc_lshr:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psrlq $32, %xmm1
-; SSE-NEXT:    psrlq $32, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm1

@@ -686,7 +686,7 @@ define <2 x i64> @_clearupper2xi64b(<2 x i64>) nounwind {
 define <4 x i64> @_clearupper4xi64b(<4 x i64>) nounwind {
 ; SSE2-LABEL: _clearupper4xi64b:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
+; SSE2-NEXT:    movaps {{.*#+}} xmm2
 ; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    andps %xmm2, %xmm1
 ; SSE2-NEXT:    retq

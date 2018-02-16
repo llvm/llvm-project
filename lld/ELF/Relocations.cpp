@@ -725,8 +725,8 @@ template <class ELFT> static void addGotEntry(Symbol &Sym) {
     Type = Target->RelativeRel;
   else
     Type = Target->GotRel;
-  InX::RelaDyn->addReloc(Type, InX::Got, Off, !Sym.IsPreemptible, &Sym, 0,
-                         R_ABS, Target->GotRel);
+  InX::RelaDyn->addReloc(Type, InX::Got, Off, &Sym, 0,
+                         Sym.IsPreemptible ? R_ADDEND : R_ABS, Target->GotRel);
 }
 
 // Return true if we can define a symbol in the executable that
@@ -776,12 +776,12 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     bool IsPreemptibleValue = Sym.IsPreemptible && Expr != R_GOT;
 
     if (!IsPreemptibleValue) {
-      InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, true, &Sym,
-                             Addend, Expr, Type);
+      InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, &Sym, Addend,
+                             Expr, Type);
       return Expr;
     } else if (Target->isPicRel(Type)) {
-      InX::RelaDyn->addReloc(Target->getDynRel(Type), &Sec, Offset, false, &Sym,
-                             Addend, Expr, Type);
+      InX::RelaDyn->addReloc(Target->getDynRel(Type), &Sec, Offset, &Sym,
+                             Addend, R_ADDEND, Type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries

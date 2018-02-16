@@ -1025,7 +1025,7 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
         D, [](OpenMPClauseKind C) -> bool { return C == OMPC_firstprivate; },
         MatchesAlways, FromParent);
     if (DVarTemp.CKind == OMPC_firstprivate && DVarTemp.RefExpr)
-      return DVar;
+      return DVarTemp;
 
     DVar.CKind = OMPC_shared;
     return DVar;

@@ -1209,18 +1209,14 @@ void RelocationBaseSection::addReloc(RelType DynType, InputSectionBase *IS,
 
 void RelocationBaseSection::addReloc(RelType DynType,
                                      InputSectionBase *InputSec,
-                                     uint64_t OffsetInSec, bool UseSymVA,
-                                     Symbol *Sym, int64_t Addend, RelExpr Expr,
+                                     uint64_t OffsetInSec, Symbol *Sym,
+                                     int64_t Addend, RelExpr Expr,
                                      RelType Type) {
   // Write the addends to the relocated address if required. We skip
   // it if the written value would be zero.
-  if (Config->WriteAddends && (UseSymVA || Addend != 0)) {
-    // If UseSymVA is true we have to write the symbol address, otherwise just
-    // the addend.
-    Expr = UseSymVA ? Expr : R_ADDEND;
+  if (Config->WriteAddends && (Expr != R_ADDEND || Addend != 0))
     InputSec->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
-  }
-  addReloc({DynType, InputSec, OffsetInSec, UseSymVA, Sym, Addend});
+  addReloc({DynType, InputSec, OffsetInSec, Expr != R_ADDEND, Sym, Addend});
 }
 
 void RelocationBaseSection::addReloc(const DynamicReloc &Reloc) {

@@ -1458,6 +1458,31 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    ZeroRHS, TLO, Depth + 1))
       return true;
 
+    // Simplify mask using undef elements from LHS/RHS.
+    bool Updated = false;
+    bool IdentityLHS = true, IdentityRHS = true;
+    SmallVector<int, 32> NewMask(ShuffleMask.begin(), ShuffleMask.end());
+    for (unsigned i = 0; i != NumElts; ++i) {
+      int &M = NewMask[i];
+      if (M < 0)
+        continue;
+      if (!DemandedElts[i] || (M < (int)NumElts && UndefLHS[M]) ||
+          (M >= (int)NumElts && UndefRHS[M - NumElts])) {
+        Updated = true;
+        M = -1;
+      }
+      IdentityLHS &= (M < 0) || (M == (int)i);
+      IdentityRHS &= (M < 0) || ((M - NumElts) == i);
+    }
+
+    // Update legal shuffle masks based on demanded elements if it won't reduce
+    // to Identity which can cause premature removal of the shuffle mask.
+    if (Updated && !IdentityLHS && !IdentityRHS && !TLO.LegalOps &&
+        isShuffleMaskLegal(NewMask, VT))
+      return TLO.CombineTo(Op,
+                           TLO.DAG.getVectorShuffle(VT, DL, Op.getOperand(0),
+                                                    Op.getOperand(1), NewMask));
+
     // Propagate undef/zero elements from LHS/RHS.
     for (unsigned i = 0; i != NumElts; ++i) {
       int M = ShuffleMask[i];
