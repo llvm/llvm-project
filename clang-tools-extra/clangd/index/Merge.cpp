@@ -90,6 +90,8 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
         Scratch->Documentation = O.Detail->Documentation;
       if (Scratch->CompletionDetail == "")
         Scratch->CompletionDetail = O.Detail->CompletionDetail;
+      if (Scratch->IncludeHeader == "")
+        Scratch->IncludeHeader = O.Detail->IncludeHeader;
       S.Detail = Scratch;
     } else
       S.Detail = O.Detail;
