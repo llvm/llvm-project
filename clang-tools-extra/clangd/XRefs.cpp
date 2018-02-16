@@ -149,7 +149,7 @@ getDeclarationLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
     }
   }
 
-  L.uri.file = FilePath.str();
+  L.uri = URIForFile(FilePath.str());
   L.range = R;
   return L;
 }
