@@ -448,6 +448,9 @@ bool DeferredDominance::pendingDeletedBB(BasicBlock *DelBB) {
   return DeletedBBs.count(DelBB) != 0;
 }
 
+/// \brief Returns true if pending DT updates are queued for a flush() event.
+bool DeferredDominance::pending() { return !PendUpdates.empty(); }
+
 /// \brief Flushes all pending updates and block deletions. Returns a
 /// correct DominatorTree reference to be used by the caller for analysis.
 DominatorTree &DeferredDominance::flush() {

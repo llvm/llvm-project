@@ -8,69 +8,85 @@ void *f0()
 }
 
 void f1(char *a, char *b) {
+  // CHECK: call {{.*}} @__clear_cache
 	__clear_cache(a,b);
 }
 
-// CHECK: call {{.*}} @__clear_cache
+float test_vcvtrf0(float f) {
+  // CHECK: call float @llvm.arm.vcvtr.f32(float %f)
+  return __builtin_arm_vcvtr_f(f, 0);
+}
+
+float test_vcvtrf1(float f) {
+  // CHECK: call float @llvm.arm.vcvtru.f32(float %f)
+  return __builtin_arm_vcvtr_f(f, 1);
+}
+
+double test_vcvtrd0(double d) {
+  // CHECK: call float @llvm.arm.vcvtr.f64(double %d)
+  return __builtin_arm_vcvtr_d(d, 0);
+}
+
+double test_vcvtrd1(double d) {
+  // call float @llvm.arm.vcvtru.f64(double %d)
+  return __builtin_arm_vcvtr_d(d, 1);
+}
 
 void test_eh_return_data_regno()
 {
+  // CHECK: store volatile i32 0
+  // CHECK: store volatile i32 1
   volatile int res;
-  res = __builtin_eh_return_data_regno(0);  // CHECK: store volatile i32 0
-  res = __builtin_eh_return_data_regno(1);  // CHECK: store volatile i32 1
+  res = __builtin_eh_return_data_regno(0);
+  res = __builtin_eh_return_data_regno(1);
 }
 
 void nop() {
+  // CHECK: call {{.*}} @llvm.arm.hint(i32 0)
   __builtin_arm_nop();
 }
 
-// CHECK: call {{.*}} @llvm.arm.hint(i32 0)
-
 void yield() {
+  // CHECK: call {{.*}} @llvm.arm.hint(i32 1)
   __builtin_arm_yield();
 }
 
-// CHECK: call {{.*}} @llvm.arm.hint(i32 1)
-
 void wfe() {
+  // CHECK: call {{.*}} @llvm.arm.hint(i32 2)
   __builtin_arm_wfe();
 }
 
-// CHECK: call {{.*}} @llvm.arm.hint(i32 2)
-
 void wfi() {
+  // CHECK: call {{.*}} @llvm.arm.hint(i32 3)
   __builtin_arm_wfi();
 }
 
-// CHECK: call {{.*}} @llvm.arm.hint(i32 3)
-
 void sev() {
+  // CHECK: call {{.*}} @llvm.arm.hint(i32 4)
   __builtin_arm_sev();
 }
 
-// CHECK: call {{.*}} @llvm.arm.hint(i32 4)
-
 void sevl() {
+  // CHECK: call {{.*}} @llvm.arm.hint(i32 5)
   __builtin_arm_sevl();
 }
 
-// CHECK: call {{.*}} @llvm.arm.hint(i32 5)
-
 void dbg() {
+  // CHECK: call {{.*}} @llvm.arm.dbg(i32 0)
   __builtin_arm_dbg(0);
 }
 
-// CHECK: call {{.*}} @llvm.arm.dbg(i32 0)
-
 void test_barrier() {
-  __builtin_arm_dmb(1); //CHECK: call {{.*}} @llvm.arm.dmb(i32 1)
-  __builtin_arm_dsb(2); //CHECK: call {{.*}} @llvm.arm.dsb(i32 2)
-  __builtin_arm_isb(3); //CHECK: call {{.*}} @llvm.arm.isb(i32 3)
+  //CHECK: call {{.*}} @llvm.arm.dmb(i32 1)
+  //CHECK: call {{.*}} @llvm.arm.dsb(i32 2)
+  //CHECK: call {{.*}} @llvm.arm.isb(i32 3)
+  __builtin_arm_dmb(1);
+  __builtin_arm_dsb(2);
+  __builtin_arm_isb(3);
 }
 
-// CHECK: call {{.*}} @llvm.bitreverse.i32(i32 %a)
-
 unsigned rbit(unsigned a) {
+  // CHECK: call {{.*}} @llvm.bitreverse.i32(i32 %a)
   return __builtin_arm_rbit(a);
 }
 

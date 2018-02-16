@@ -22,6 +22,14 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+namespace {
+struct IdentityTraits {
+  static uint32_t hash(uint32_t K, const HashTable &Ctx) { return K; }
+  static uint32_t realKey(uint32_t K, const HashTable &Ctx) { return K; }
+  static uint32_t lowerKey(uint32_t K, const HashTable &Ctx) { return K; }
+};
+} // namespace
+
 HashTable::HashTable() : HashTable(8) {}
 
 HashTable::HashTable(uint32_t Capacity) { Buckets.resize(Capacity); }
@@ -119,69 +127,15 @@ HashTableIterator HashTable::end() const {
   return HashTableIterator(*this, 0, true);
 }
 
-HashTableIterator HashTable::find(uint32_t K) {
-  uint32_t H = K % capacity();
-  uint32_t I = H;
-  Optional<uint32_t> FirstUnused;
-  do {
-    if (isPresent(I)) {
-      if (Buckets[I].first == K)
-        return HashTableIterator(*this, I, false);
-    } else {
-      if (!FirstUnused)
-        FirstUnused = I;
-      // Insertion occurs via linear probing from the slot hint, and will be
-      // inserted at the first empty / deleted location.  Therefore, if we are
-      // probing and find a location that is neither present nor deleted, then
-      // nothing must have EVER been inserted at this location, and thus it is
-      // not possible for a matching value to occur later.
-      if (!isDeleted(I))
-        break;
-    }
-    I = (I + 1) % capacity();
-  } while (I != H);
-
-  // The only way FirstUnused would not be set is if every single entry in the
-  // table were Present.  But this would violate the load factor constraints
-  // that we impose, so it should never happen.
-  assert(FirstUnused);
-  return HashTableIterator(*this, *FirstUnused, true);
+HashTableIterator HashTable::find(uint32_t K) const {
+  return find_as<IdentityTraits>(K, *this);
 }
 
 void HashTable::set(uint32_t K, uint32_t V) {
-  auto Entry = find(K);
-  if (Entry != end()) {
-    assert(isPresent(Entry.index()));
-    assert(Buckets[Entry.index()].first == K);
-    // We're updating, no need to do anything special.
-    Buckets[Entry.index()].second = V;
-    return;
-  }
-
-  auto &B = Buckets[Entry.index()];
-  assert(!isPresent(Entry.index()));
-  assert(Entry.isEnd());
-  B.first = K;
-  B.second = V;
-  Present.set(Entry.index());
-  Deleted.reset(Entry.index());
-
-  grow();
-
-  assert(find(K) != end());
+  set_as<IdentityTraits, uint32_t>(K, V, *this);
 }
 
-void HashTable::remove(uint32_t K) {
-  auto Iter = find(K);
-  // It wasn't here to begin with, just exit.
-  if (Iter == end())
-    return;
-
-  assert(Present.test(Iter.index()));
-  assert(!Deleted.test(Iter.index()));
-  Deleted.set(Iter.index());
-  Present.reset(Iter.index());
-}
+void HashTable::remove(uint32_t K) { remove_as<IdentityTraits>(K, *this); }
 
 uint32_t HashTable::get(uint32_t K) {
   auto I = find(K);
@@ -190,30 +144,6 @@ uint32_t HashTable::get(uint32_t K) {
 }
 
 uint32_t HashTable::maxLoad(uint32_t capacity) { return capacity * 2 / 3 + 1; }
-
-void HashTable::grow() {
-  uint32_t S = size();
-  if (S < maxLoad(capacity()))
-    return;
-  assert(capacity() != UINT32_MAX && "Can't grow Hash table!");
-
-  uint32_t NewCapacity =
-      (capacity() <= INT32_MAX) ? capacity() * 2 : UINT32_MAX;
-
-  // Growing requires rebuilding the table and re-hashing every item.  Make a
-  // copy with a larger capacity, insert everything into the copy, then swap
-  // it in.
-  HashTable NewMap(NewCapacity);
-  for (auto I : Present) {
-    NewMap.set(Buckets[I].first, Buckets[I].second);
-  }
-
-  Buckets.swap(NewMap.Buckets);
-  std::swap(Present, NewMap.Present);
-  std::swap(Deleted, NewMap.Deleted);
-  assert(capacity() == NewCapacity);
-  assert(size() == S);
-}
 
 Error HashTable::readSparseBitVector(BinaryStreamReader &Stream,
                                      SparseBitVector<> &V) {

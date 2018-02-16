@@ -1,5 +1,5 @@
-; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -march=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=ASM %s
+; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=IR %s
+; RUN: llc -march=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=ASM %s
 
 ; IR-LABEL: define amdgpu_vs void @promote_alloca_shaders(i32 addrspace(1)* inreg %out, i32 addrspace(1)* inreg %in) #0 {
 ; IR: alloca [5 x i32]
@@ -32,7 +32,7 @@ entry:
 
 ; ASM-LABEL: {{^}}promote_to_vector_call_c:
 ; ASM-NOT: LDSByteSize
-; ASM: ; ScratchSize: 0
+; ASM: ; ScratchSize: 12
 define void @promote_to_vector_call_c(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)

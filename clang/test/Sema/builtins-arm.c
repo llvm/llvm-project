@@ -320,3 +320,18 @@ void test_9_5_10_parallel_16bit_multiplication(int16x2_t a, int16x2_t b,
   x = __builtin_arm_smusd(a, b);
   x = __builtin_arm_smusdx(a, b);
 }
+
+void test_VFP(float f, double d) {
+  float fr;
+  double dr;
+
+  fr = __builtin_arm_vcvtr_f(f, 0);
+  fr = __builtin_arm_vcvtr_f(f, 1);
+  fr = __builtin_arm_vcvtr_f(f, -1); // expected-error {{argument should be a value from 0 to 1}}
+  fr = __builtin_arm_vcvtr_f(f, 2);  // expected-error {{argument should be a value from 0 to 1}}
+
+  dr = __builtin_arm_vcvtr_f(d, 0);
+  dr = __builtin_arm_vcvtr_f(d, 1);
+  dr = __builtin_arm_vcvtr_f(d, -1); // expected-error {{argument should be a value from 0 to 1}}
+  dr = __builtin_arm_vcvtr_f(d, 2);  // expected-error {{argument should be a value from 0 to 1}}
+}

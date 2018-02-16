@@ -82,6 +82,7 @@ struct TextDocumentIdentifier {
   /// The text document's URI.
   URIForFile uri;
 };
+json::Expr toJSON(const TextDocumentIdentifier &);
 bool fromJSON(const json::Expr &, TextDocumentIdentifier &);
 
 struct Position {
@@ -424,6 +425,17 @@ struct WorkspaceEdit {
 bool fromJSON(const json::Expr &, WorkspaceEdit &);
 json::Expr toJSON(const WorkspaceEdit &WE);
 
+struct IncludeInsertion {
+  /// The document in which the command was invoked.
+  TextDocumentIdentifier textDocument;
+
+  /// The header to be inserted. This could be either a URI ir a literal string
+  /// quoted with <> or "" that can be #included directly.
+  std::string header;
+};
+bool fromJSON(const json::Expr &, IncludeInsertion &);
+json::Expr toJSON(const IncludeInsertion &II);
+
 /// Exact commands are not specified in the protocol so we define the
 /// ones supported by Clangd here. The protocol specifies the command arguments
 /// to be "any[]" but to make this safer and more manageable, each command we
@@ -435,14 +447,24 @@ json::Expr toJSON(const WorkspaceEdit &WE);
 struct ExecuteCommandParams {
   // Command to apply fix-its. Uses WorkspaceEdit as argument.
   const static llvm::StringLiteral CLANGD_APPLY_FIX_COMMAND;
+  // Command to insert an #include into code.
+  const static llvm::StringLiteral CLANGD_INSERT_HEADER_INCLUDE;
 
   /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
   std::string command;
 
   // Arguments
   llvm::Optional<WorkspaceEdit> workspaceEdit;
+
+  llvm::Optional<IncludeInsertion> includeInsertion;
 };
 bool fromJSON(const json::Expr &, ExecuteCommandParams &);
+
+struct Command : public ExecuteCommandParams {
+  std::string title;
+};
+
+json::Expr toJSON(const Command &C);
 
 struct ApplyWorkspaceEditParams {
   WorkspaceEdit edit;
@@ -560,11 +582,9 @@ struct CompletionItem {
   /// themselves.
   std::vector<TextEdit> additionalTextEdits;
 
+  llvm::Optional<Command> command;
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
-  //
-  // command?: Command - An optional command that is executed *after* inserting
-  //                     this completion.
   //
   // data?: any - A data entry field that is preserved on a completion item
   //              between a completion and a completion resolve request.

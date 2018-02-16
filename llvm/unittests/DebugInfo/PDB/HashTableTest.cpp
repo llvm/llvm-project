@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
+#include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -165,4 +166,44 @@ TEST(HashTableTest, Serialization) {
   EXPECT_EQ(Table.Buckets, Table2.Buckets);
   EXPECT_EQ(Table.Present, Table2.Present);
   EXPECT_EQ(Table.Deleted, Table2.Deleted);
+}
+
+TEST(HashTableTest, NamedStreamMap) {
+  std::vector<StringRef> Streams = {"One",  "Two", "Three", "Four",
+                                    "Five", "Six", "Seven"};
+  StringMap<uint32_t> ExpectedIndices;
+  for (uint32_t I = 0; I < Streams.size(); ++I)
+    ExpectedIndices[Streams[I]] = I + 1;
+
+  // To verify the hash table actually works, we want to verify that insertion
+  // order doesn't matter.  So try inserting in every possible order of 7 items.
+  do {
+    NamedStreamMap NSM;
+    for (StringRef S : Streams)
+      NSM.set(S, ExpectedIndices[S]);
+
+    EXPECT_EQ(Streams.size(), NSM.size());
+
+    uint32_t N;
+    EXPECT_TRUE(NSM.get("One", N));
+    EXPECT_EQ(1, N);
+
+    EXPECT_TRUE(NSM.get("Two", N));
+    EXPECT_EQ(2, N);
+
+    EXPECT_TRUE(NSM.get("Three", N));
+    EXPECT_EQ(3, N);
+
+    EXPECT_TRUE(NSM.get("Four", N));
+    EXPECT_EQ(4, N);
+
+    EXPECT_TRUE(NSM.get("Five", N));
+    EXPECT_EQ(5, N);
+
+    EXPECT_TRUE(NSM.get("Six", N));
+    EXPECT_EQ(6, N);
+
+    EXPECT_TRUE(NSM.get("Seven", N));
+    EXPECT_EQ(7, N);
+  } while (std::next_permutation(Streams.begin(), Streams.end()));
 }

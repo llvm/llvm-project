@@ -401,6 +401,7 @@ namespace {
     AssumptionCache *AC;  ///< A pointer to the cache of @llvm.assume calls.
     const DataLayout &DL; ///< A mandatory DataLayout
     DominatorTree *DT;    ///< An optional DT pointer.
+    DominatorTree *DisabledDT; ///< Stores DT if it's disabled.
 
   ValueLatticeElement getBlockValue(Value *Val, BasicBlock *BB);
   bool getEdgeValue(Value *V, BasicBlock *F, BasicBlock *T,
@@ -463,13 +464,30 @@ namespace {
       TheCache.eraseBlock(BB);
     }
 
+    /// Disables use of the DominatorTree within LVI.
+    void disableDT() {
+      if (DT) {
+        assert(!DisabledDT && "Both DT and DisabledDT are not nullptr!");
+        std::swap(DT, DisabledDT);
+      }
+    }
+
+    /// Enables use of the DominatorTree within LVI. Does nothing if the class
+    /// instance was initialized without a DT pointer.
+    void enableDT() {
+      if (DisabledDT) {
+        assert(!DT && "Both DT and DisabledDT are not nullptr!");
+        std::swap(DT, DisabledDT);
+      }
+    }
+
     /// This is the update interface to inform the cache that an edge from
     /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
     void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
     LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
                        DominatorTree *DT = nullptr)
-        : AC(AC), DL(DL), DT(DT) {}
+        : AC(AC), DL(DL), DT(DT), DisabledDT(nullptr) {}
   };
 } // end anonymous namespace
 
@@ -1789,6 +1807,16 @@ void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS)
   if (PImpl) {
     getImpl(PImpl, AC, DL, DT).printLVI(F, DTree, OS);
   }
+}
+
+void LazyValueInfo::disableDT() {
+  if (PImpl)
+    getImpl(PImpl, AC, DL, DT).disableDT();
+}
+
+void LazyValueInfo::enableDT() {
+  if (PImpl)
+    getImpl(PImpl, AC, DL, DT).enableDT();
 }
 
 // Print the LVI for the function arguments at the start of each basic block.

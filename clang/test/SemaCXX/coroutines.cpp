@@ -787,7 +787,7 @@ struct good_promise_custom_new_operator {
   suspend_always final_suspend();
   void return_void();
   void unhandled_exception();
-  void *operator new(unsigned long, double, float, int);
+  void *operator new(SizeT, double, float, int);
 };
 
 coro<good_promise_custom_new_operator>
@@ -803,7 +803,7 @@ struct good_promise_nonstatic_member_custom_new_operator {
   suspend_always final_suspend();
   void return_void();
   void unhandled_exception();
-  void *operator new(unsigned long, coroutine_nonstatic_member_struct &, double);
+  void *operator new(SizeT, coroutine_nonstatic_member_struct &, double);
 };
 
 struct bad_promise_nonstatic_member_mismatched_custom_new_operator {
@@ -813,7 +813,7 @@ struct bad_promise_nonstatic_member_mismatched_custom_new_operator {
   void return_void();
   void unhandled_exception();
   // expected-note@+1 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
-  void *operator new(unsigned long, double);
+  void *operator new(SizeT, double);
 };
 
 struct coroutine_nonstatic_member_struct {
@@ -836,7 +836,7 @@ struct bad_promise_mismatched_custom_new_operator {
   void return_void();
   void unhandled_exception();
   // expected-note@+1 {{candidate function not viable: requires 4 arguments, but 1 was provided}}
-  void *operator new(unsigned long, double, float, int);
+  void *operator new(SizeT, double, float, int);
 };
 
 coro<bad_promise_mismatched_custom_new_operator>
@@ -853,7 +853,7 @@ struct bad_promise_throwing_custom_new_operator {
   void return_void();
   void unhandled_exception();
   // expected-error@+1 {{'operator new' is required to have a non-throwing noexcept specification when the promise type declares 'get_return_object_on_allocation_failure()'}}
-  void *operator new(unsigned long, double, float, int);
+  void *operator new(SizeT, double, float, int);
 };
 
 coro<bad_promise_throwing_custom_new_operator>
@@ -869,7 +869,7 @@ struct good_promise_noexcept_custom_new_operator {
   suspend_always final_suspend();
   void return_void();
   void unhandled_exception();
-  void *operator new(unsigned long, double, float, int) noexcept;
+  void *operator new(SizeT, double, float, int) noexcept;
 };
 
 coro<good_promise_noexcept_custom_new_operator>

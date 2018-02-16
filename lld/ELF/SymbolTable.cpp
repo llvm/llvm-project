@@ -530,29 +530,28 @@ Symbol *SymbolTable::find(StringRef Name) {
 }
 
 template <class ELFT>
-Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
-                                    const object::Archive::Symbol Sym) {
+void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
+                                 const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceSymbol<LazyArchive>(S, F, Sym, Symbol::UnknownType);
-    return S;
+    return;
   }
   if (!S->isUndefined())
-    return S;
+    return;
 
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
   if (S->isWeak()) {
     replaceSymbol<LazyArchive>(S, F, Sym, S->Type);
     S->Binding = STB_WEAK;
-    return S;
+    return;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F.getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
     addFile<ELFT>(createObjectFile(MBInfo.first, F.getName(), MBInfo.second));
-  return S;
 }
 
 template <class ELFT>
@@ -797,16 +796,16 @@ template void SymbolTable::addCombinedLTOObject<ELF32BE>();
 template void SymbolTable::addCombinedLTOObject<ELF64LE>();
 template void SymbolTable::addCombinedLTOObject<ELF64BE>();
 
-template Symbol *
+template void
 SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
-template Symbol *
+template void
 SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
-template Symbol *
+template void
 SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
-template Symbol *
+template void
 SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 

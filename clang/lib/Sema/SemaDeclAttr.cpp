@@ -3024,15 +3024,16 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature;
   }
 
-  return true;
+  return false;
 }
 
 static void handleTargetAttr(Sema &S, Decl *D, const AttributeList &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      !S.checkTargetAttr(LiteralLoc, Str))
+      S.checkTargetAttr(LiteralLoc, Str))
     return;
+
   unsigned Index = AL.getAttributeSpellingListIndex();
   TargetAttr *NewAttr =
       ::new (S.Context) TargetAttr(AL.getRange(), S.Context, Str, Index);

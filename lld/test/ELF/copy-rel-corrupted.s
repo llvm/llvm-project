@@ -7,4 +7,4 @@
 
 .global _start
 _start:
-        call x
+        .long x - .
