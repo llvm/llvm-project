@@ -1072,7 +1072,7 @@ def warn_pragma_expected_colon_r_paren : Warning<
 def err_omp_unknown_directive : Error<
   "expected an OpenMP directive">;
 def err_omp_unexpected_directive : Error<
-  "unexpected OpenMP directive '#pragma omp %0'">;
+  "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
 def err_omp_unexpected_clause : Error<

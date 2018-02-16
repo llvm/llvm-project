@@ -65,6 +65,11 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<bool> DisablePromoteAllocaToVector(
+  "disable-promote-alloca-to-vector",
+  cl::desc("Disable promote alloca to vector"),
+  cl::init(false));
+
 // FIXME: This can create globals so should be a module pass.
 class AMDGPUPromoteAlloca : public FunctionPass {
 private:
@@ -337,6 +342,12 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
 }
 
 static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
+
+  if (DisablePromoteAllocaToVector) {
+    DEBUG(dbgs() << "  Promotion alloca to vector is disabled\n");
+    return false;
+  }
+
   ArrayType *AllocaTy = dyn_cast<ArrayType>(Alloca->getAllocatedType());
 
   DEBUG(dbgs() << "Alloca candidate for vectorization\n");
@@ -346,7 +357,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
   // FIXME: We also reject alloca's of the form [ 2 x [ 2 x i32 ]] or equivalent. Potentially these
   // could also be promoted but we don't currently handle this case
   if (!AllocaTy ||
-      AllocaTy->getNumElements() > 4 ||
+      AllocaTy->getNumElements() > 16 ||
       AllocaTy->getNumElements() < 2 ||
       !VectorType::isValidElementType(AllocaTy->getElementType())) {
     DEBUG(dbgs() << "  Cannot convert type to vector\n");

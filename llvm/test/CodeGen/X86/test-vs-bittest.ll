@@ -6,8 +6,8 @@ define void @test64(i64 inreg %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    btl $11, %edi
-; CHECK-NEXT:    jb .LBB0_2
+; CHECK-NEXT:    testl $2048, %edi # imm = 0x800
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:  .LBB0_2: # %no
@@ -47,6 +47,11 @@ no:
   ret void
 }
 
+; This test is identical to test64 above with only the destination of the br
+; reversed. This somehow causes the two functions to get slightly different
+; initial IR. One has an extra invert of the setcc. This previous caused one
+; the functions to use a BT while the other used a TEST due to another DAG
+; combine messing with an expected canonical form.
 define void @test64_2(i64 inreg %x) {
 ; CHECK-LABEL: test64_2:
 ; CHECK:       # %bb.0:
@@ -190,8 +195,8 @@ define void @test32(i32 inreg %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    btl $11, %edi
-; CHECK-NEXT:    jb .LBB8_2
+; CHECK-NEXT:    testl $2048, %edi # imm = 0x800
+; CHECK-NEXT:    jne .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:  .LBB8_2: # %no
@@ -282,8 +287,8 @@ define void @test16(i16 inreg %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    btl $11, %edi
-; CHECK-NEXT:    jb .LBB12_2
+; CHECK-NEXT:    testl $2048, %edi # imm = 0x800
+; CHECK-NEXT:    jne .LBB12_2
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:  .LBB12_2: # %no

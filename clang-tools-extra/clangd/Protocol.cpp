@@ -57,6 +57,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const URIForFile &U) {
   return OS << U.uri();
 }
 
+json::Expr toJSON(const TextDocumentIdentifier &R) {
+  return json::obj{{"uri", R.uri}};
+}
+
 bool fromJSON(const json::Expr &Params, TextDocumentIdentifier &R) {
   json::ObjectMapper O(Params);
   return O && O.map("uri", R.uri);
@@ -326,6 +330,8 @@ bool fromJSON(const json::Expr &Params, WorkspaceEdit &R) {
 
 const llvm::StringLiteral ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
     "clangd.applyFix";
+const llvm::StringLiteral ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE =
+    "clangd.insertInclude";
 
 bool fromJSON(const json::Expr &Params, ExecuteCommandParams &R) {
   json::ObjectMapper O(Params);
@@ -336,8 +342,20 @@ bool fromJSON(const json::Expr &Params, ExecuteCommandParams &R) {
   if (R.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND) {
     return Args && Args->size() == 1 &&
            fromJSON(Args->front(), R.workspaceEdit);
+  } else if (R.command == ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE) {
+    return Args && Args->size() == 1 &&
+           fromJSON(Args->front(), R.includeInsertion);
   }
   return false; // Unrecognized command.
+}
+
+json::Expr toJSON(const Command &C) {
+  auto Cmd = json::obj{{"title", C.title}, {"command", C.command}};
+  if (C.workspaceEdit)
+    Cmd["arguments"] = {*C.workspaceEdit};
+  else if (C.includeInsertion)
+    Cmd["arguments"] = {*C.includeInsertion};
+  return std::move(Cmd);
 }
 
 json::Expr toJSON(const WorkspaceEdit &WE) {
@@ -347,6 +365,15 @@ json::Expr toJSON(const WorkspaceEdit &WE) {
   for (auto &Change : *WE.changes)
     FileChanges[Change.first] = json::ary(Change.second);
   return json::obj{{"changes", std::move(FileChanges)}};
+}
+
+bool fromJSON(const json::Expr &II, IncludeInsertion &R) {
+  json::ObjectMapper O(II);
+  return O && O.map("textDocument", R.textDocument) &&
+         O.map("header", R.header);
+}
+json::Expr toJSON(const IncludeInsertion &II) {
+  return json::obj{{"textDocument", II.textDocument}, {"header", II.header}};
 }
 
 json::Expr toJSON(const ApplyWorkspaceEditParams &Params) {
@@ -380,6 +407,8 @@ json::Expr toJSON(const CompletionItem &CI) {
     Result["textEdit"] = *CI.textEdit;
   if (!CI.additionalTextEdits.empty())
     Result["additionalTextEdits"] = json::ary(CI.additionalTextEdits);
+  if (CI.command)
+    Result["command"] = *CI.command;
   return std::move(Result);
 }
 

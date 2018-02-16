@@ -64,6 +64,7 @@ template <> struct MappingTraits<Symbol::Details> {
   static void mapping(IO &io, Symbol::Details &Detail) {
     io.mapOptional("Documentation", Detail.Documentation);
     io.mapOptional("CompletionDetail", Detail.CompletionDetail);
+    io.mapOptional("IncludeHeader", Detail.IncludeHeader);
   }
 };
 

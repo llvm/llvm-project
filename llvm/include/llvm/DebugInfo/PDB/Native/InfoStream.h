@@ -51,7 +51,7 @@ public:
   BinarySubstreamRef getNamedStreamsBuffer() const;
 
   uint32_t getNamedStreamIndex(llvm::StringRef Name) const;
-  iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
+  StringMap<uint32_t> named_streams() const;
 
 private:
   std::unique_ptr<msf::MappedBlockStream> Stream;

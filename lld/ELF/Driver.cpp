@@ -985,14 +985,6 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
   return Ret;
 }
 
-static Optional<StringRef> getArchiveName(InputFile *File) {
-  if (isa<ArchiveFile>(File))
-    return File->getName();
-  if (!File->ArchiveName.empty())
-    return StringRef(File->ArchiveName);
-  return None;
-}
-
 // Handles the -exclude-libs option. If a static library file is specified
 // by the -exclude-libs option, all public symbols from the archive become
 // private unless otherwise specified by version scripts or something.
@@ -1000,15 +992,15 @@ static Optional<StringRef> getArchiveName(InputFile *File) {
 //
 // This is not a popular option, but some programs such as bionic libc use it.
 template <class ELFT>
-static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
+static void excludeLibs(opt::InputArgList &Args) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
 
-  for (InputFile *File : Files)
-    if (Optional<StringRef> Archive = getArchiveName(File))
-      if (All || Libs.count(path::filename(*Archive)))
+  for (InputFile *File : ObjectFiles)
+    if (!File->ArchiveName.empty())
+      if (All || Libs.count(path::filename(File->ArchiveName)))
         for (Symbol *Sym : File->getSymbols())
-          if (!Sym->isLocal())
+          if (!Sym->isLocal() && Sym->File == File)
             Sym->VersionId = VER_NDX_LOCAL;
 }
 
@@ -1093,7 +1085,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
-    excludeLibs<ELFT>(Args, Files);
+    excludeLibs<ELFT>(Args);
 
   // Create ElfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.

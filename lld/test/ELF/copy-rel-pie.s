@@ -7,8 +7,10 @@
 
 .global _start
 _start:
-        call bar
-        call foo
+        .byte 0xe8
+        .long bar - . -4
+        .byte 0xe8
+        .long foo - . -4
 
 // CHECK:      Name: .plt
 // CHECK-NEXT: Type: SHT_PROGBITS

@@ -12,6 +12,7 @@
 #include "Matchers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "URI.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -99,8 +100,6 @@ std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
   auto DumpWithMemLocs = runDumpAST(Server, File);
   return replacePtrsInDump(DumpWithMemLocs);
 }
-
-} // namespace
 
 class ClangdVFSTest : public ::testing::Test {
 protected:
@@ -819,5 +818,38 @@ int d;
   ASSERT_EQ(DiagConsumer.Count, 2); // Sanity check - we actually ran both?
 }
 
+TEST_F(ClangdVFSTest, InsertIncludes) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true);
+
+  // No need to sync reparses, because reparses are performed on the calling
+  // thread.
+  auto FooCpp = testPath("foo.cpp");
+  const auto Code = R"cpp(
+#include "x.h"
+
+void f() {}
+)cpp";
+  FS.Files[FooCpp] = Code;
+  Server.addDocument(FooCpp, Code);
+
+  auto Inserted = [&](llvm::StringRef Header, llvm::StringRef Expected) {
+    auto Replaces = Server.insertInclude(FooCpp, Code, Header);
+    EXPECT_TRUE(static_cast<bool>(Replaces));
+    auto Changed = tooling::applyAllReplacements(Code, *Replaces);
+    EXPECT_TRUE(static_cast<bool>(Changed));
+    return llvm::StringRef(*Changed).contains(
+        (llvm::Twine("#include ") + Expected + "").str());
+  };
+
+  EXPECT_TRUE(Inserted("\"y.h\"", "\"y.h\""));
+  EXPECT_TRUE(Inserted("<string>", "<string>"));
+}
+
+} // namespace
 } // namespace clangd
 } // namespace clang

@@ -121,7 +121,9 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
             {"renameProvider", true},
             {"executeCommandProvider",
              json::obj{
-                 {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
+                 {"commands",
+                  {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND,
+                   ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE}},
              }},
         }}}});
 }
@@ -155,6 +157,14 @@ void ClangdLSPServer::onFileEvent(DidChangeWatchedFilesParams &Params) {
 }
 
 void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
+  auto ApplyEdit = [](WorkspaceEdit WE) {
+    ApplyWorkspaceEditParams Edit;
+    Edit.edit = std::move(WE);
+    // We don't need the response so id == 1 is OK.
+    // Ideally, we would wait for the response and if there is no error, we
+    // would reply success/failure to the original RPC.
+    call("workspace/applyEdit", Edit);
+  };
   if (Params.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND &&
       Params.workspaceEdit) {
     // The flow for "apply-fix" :
@@ -166,13 +176,35 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
     // 6. The editor applies the changes (applyEdit), and sends us a reply (but
     // we ignore it)
 
-    ApplyWorkspaceEditParams ApplyEdit;
-    ApplyEdit.edit = *Params.workspaceEdit;
     reply("Fix applied.");
-    // We don't need the response so id == 1 is OK.
-    // Ideally, we would wait for the response and if there is no error, we
-    // would reply success/failure to the original RPC.
-    call("workspace/applyEdit", ApplyEdit);
+    ApplyEdit(*Params.workspaceEdit);
+  } else if (Params.command ==
+             ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE) {
+    auto &FileURI = Params.includeInsertion->textDocument.uri;
+    auto Code = Server.getDocument(FileURI.file());
+    if (!Code)
+      return replyError(ErrorCode::InvalidParams,
+                        ("command " +
+                         ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE +
+                         " called on non-added file " + FileURI.file())
+                            .str());
+    auto Replaces = Server.insertInclude(FileURI.file(), *Code,
+                                         Params.includeInsertion->header);
+    if (!Replaces) {
+      std::string ErrMsg =
+          ("Failed to generate include insertion edits for adding " +
+           Params.includeInsertion->header + " into " + FileURI.file())
+              .str();
+      log(ErrMsg + ":" + llvm::toString(Replaces.takeError()));
+      replyError(ErrorCode::InternalError, ErrMsg);
+      return;
+    }
+    auto Edits = replacementsToEdits(*Code, *Replaces);
+    WorkspaceEdit WE;
+    WE.changes = {{FileURI.uri(), Edits}};
+
+    reply("Inserted header " + Params.includeInsertion->header);
+    ApplyEdit(std::move(WE));
   } else {
     // We should not get here because ExecuteCommandParams would not have
     // parsed in the first place and this handler should not be called. But if
