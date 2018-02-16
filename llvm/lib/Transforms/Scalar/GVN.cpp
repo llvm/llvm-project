@@ -2321,7 +2321,6 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   VN.eraseTranslateCacheEntry(ValNo, *CurrentBlock);
   addToLeaderTable(ValNo, Phi, CurrentBlock);
   Phi->setDebugLoc(CurInst->getDebugLoc());
-  salvageDebugInfo(*CurInst);
   CurInst->replaceAllUsesWith(Phi);
   if (MD && Phi->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(Phi);
