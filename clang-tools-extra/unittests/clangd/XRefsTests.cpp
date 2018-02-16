@@ -46,9 +46,8 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
 
 // FIXME: this is duplicated with FileIndexTests. Share it.
 ParsedAST build(StringRef Code) {
-  auto TestFile = getVirtualTestFilePath("Foo.cpp");
-  auto CI =
-      createInvocationFromCommandLine({"clang", "-xc++", TestFile.c_str()});
+  auto CI = createInvocationFromCommandLine(
+      {"clang", "-xc++", testPath("Foo.cpp").c_str()});
   auto Buf = MemoryBuffer::getMemBuffer(Code);
   auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
                               std::make_shared<PCHContainerOperations>(),
@@ -246,7 +245,7 @@ int baz = f^oo;
   ClangdServer Server(CDB, DiagConsumer, FS, /*AsyncThreadsCount=*/0,
                       /*StorePreambleInMemory=*/true);
 
-  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  auto FooCpp = testPath("foo.cpp");
   FS.Files[FooCpp] = "";
 
   Server.addDocument(FooCpp, SourceAnnotations.code());
@@ -254,9 +253,9 @@ int baz = f^oo;
       runFindDefinitions(Server, FooCpp, SourceAnnotations.point());
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
 
-  EXPECT_THAT(Locations->Value,
-              ElementsAre(Location{URIForFile{FooCpp.str()},
-                                   SourceAnnotations.range()}));
+  EXPECT_THAT(
+      Locations->Value,
+      ElementsAre(Location{URIForFile{FooCpp}, SourceAnnotations.range()}));
 }
 
 } // namespace

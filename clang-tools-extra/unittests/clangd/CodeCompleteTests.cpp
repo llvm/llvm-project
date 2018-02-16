@@ -119,7 +119,7 @@ CompletionList completions(StringRef Text,
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true);
-  auto File = getVirtualTestFilePath("foo.cpp");
+  auto File = testPath("foo.cpp");
   Annotations Test(Text);
   Server.addDocument(File, Test.code());
   EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
@@ -344,7 +344,7 @@ TEST(CompletionTest, CheckContentsOverride) {
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true);
-  auto File = getVirtualTestFilePath("foo.cpp");
+  auto File = testPath("foo.cpp");
   Server.addDocument(File, "ignored text!");
 
   Annotations Example("int cbc; int b = ^;");
@@ -543,9 +543,9 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true);
 
-  FS.Files[getVirtualTestFilePath("bar.h")] =
+  FS.Files[testPath("bar.h")] =
       R"cpp(namespace ns { struct preamble { int member; }; })cpp";
-  auto File = getVirtualTestFilePath("foo.cpp");
+  auto File = testPath("foo.cpp");
   Annotations Test(R"cpp(
       #include "bar.h"
       namespace ns { int local; }
@@ -580,12 +580,12 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
                       /*StorePreamblesInMemory=*/true,
                       /*BuildDynamicSymbolIndex=*/true);
 
-  Server.addDocument(getVirtualTestFilePath("foo.cpp"), R"cpp(
+  Server.addDocument(testPath("foo.cpp"), R"cpp(
       namespace ns { class XYZ {}; void foo(int x) {} }
   )cpp");
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
 
-  auto File = getVirtualTestFilePath("bar.cpp");
+  auto File = testPath("bar.cpp");
   Annotations Test(R"cpp(
       namespace ns {
       class XXX {};
@@ -622,7 +622,7 @@ SignatureHelp signatures(StringRef Text) {
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true);
-  auto File = getVirtualTestFilePath("foo.cpp");
+  auto File = testPath("foo.cpp");
   Annotations Test(Text);
   Server.addDocument(File, Test.code());
   EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";

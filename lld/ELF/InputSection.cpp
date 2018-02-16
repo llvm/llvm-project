@@ -277,7 +277,7 @@ std::string InputSectionBase::getObjMsg(uint64_t Off) {
 
   std::string Archive;
   if (!File->ArchiveName.empty())
-    Archive = (" in archive " + File->ArchiveName).str();
+    Archive = " in archive " + File->ArchiveName;
 
   // Find a symbol that encloses a given location.
   for (Symbol *B : File->getSymbols())
@@ -474,6 +474,8 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Sym.getVA(A);
+  case R_ADDEND:
+    return A;
   case R_ARM_SBREL:
     return Sym.getVA(A) - getARMStaticBase(Sym);
   case R_GOT:

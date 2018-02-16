@@ -1212,12 +1212,14 @@ void RelocationBaseSection::addReloc(RelType DynType,
                                      uint64_t OffsetInSec, bool UseSymVA,
                                      Symbol *Sym, int64_t Addend, RelExpr Expr,
                                      RelType Type) {
-  // We store the addends for dynamic relocations for both REL and RELA
-  // relocations for compatibility with GNU Linkers. There is some system
-  // software such as the Bionic dynamic linker that uses the addend prior
-  // to dynamic relocation resolution.
-  if (Config->WriteAddends && UseSymVA)
+  // Write the addends to the relocated address if required. We skip
+  // it if the written value would be zero.
+  if (Config->WriteAddends && (UseSymVA || Addend != 0)) {
+    // If UseSymVA is true we have to write the symbol address, otherwise just
+    // the addend.
+    Expr = UseSymVA ? Expr : R_ADDEND;
     InputSec->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
+  }
   addReloc({DynType, InputSec, OffsetInSec, UseSymVA, Sym, Addend});
 }
 
