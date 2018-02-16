@@ -568,9 +568,12 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
     return;
 
   // See comment for addLazyArchive above.
-  if (S->isWeak())
+  if (S->isWeak()) {
     replaceSymbol<LazyObject>(S, Obj, Name, S->Type);
-  else if (InputFile *F = Obj.fetch())
+    S->Binding = STB_WEAK;
+    return;
+  }
+  if (InputFile *F = Obj.fetch())
     addFile<ELFT>(F);
 }
 

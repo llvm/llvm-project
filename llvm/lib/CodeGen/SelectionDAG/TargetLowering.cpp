@@ -1411,6 +1411,26 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownZero.insertBits(SubZero, SubIdx);
     break;
   }
+  case ISD::VSELECT: {
+    APInt DemandedLHS(DemandedElts);
+    APInt DemandedRHS(DemandedElts);
+
+    // TODO - add support for constant vselect masks.
+
+    // See if we can simplify either vselect operand.
+    APInt UndefLHS, ZeroLHS;
+    APInt UndefRHS, ZeroRHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedLHS, UndefLHS,
+                                   ZeroLHS, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedRHS, UndefRHS,
+                                   ZeroRHS, TLO, Depth + 1))
+      return true;
+
+    KnownUndef = UndefLHS & UndefRHS;
+    KnownZero = ZeroLHS & ZeroRHS;
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
 

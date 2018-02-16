@@ -276,8 +276,9 @@ _mm_hadd_pi32(__m64 __a, __m64 __b)
 }
 
 /// \brief Horizontally adds the adjacent pairs of values contained in 2 packed
-///    128-bit vectors of [8 x i16]. Positive sums greater than 7FFFh are
-///    saturated to 7FFFh. Negative sums less than 8000h are saturated to 8000h.
+///    128-bit vectors of [8 x i16]. Positive sums greater than 0x7FFF are
+///    saturated to 0x7FFF. Negative sums less than 0x8000 are saturated to
+///    0x8000.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -300,8 +301,9 @@ _mm_hadds_epi16(__m128i __a, __m128i __b)
 }
 
 /// \brief Horizontally adds the adjacent pairs of values contained in 2 packed
-///    64-bit vectors of [4 x i16]. Positive sums greater than 7FFFh are
-///    saturated to 7FFFh. Negative sums less than 8000h are saturated to 8000h.
+///    64-bit vectors of [4 x i16]. Positive sums greater than 0x7FFF are
+///    saturated to 0x7FFF. Negative sums less than 0x8000 are saturated to
+///    0x8000.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -417,8 +419,8 @@ _mm_hsub_pi32(__m64 __a, __m64 __b)
 
 /// \brief Horizontally subtracts the adjacent pairs of values contained in 2
 ///    packed 128-bit vectors of [8 x i16]. Positive differences greater than
-///    7FFFh are saturated to 7FFFh. Negative differences less than 8000h are
-///    saturated to 8000h.
+///    0x7FFF are saturated to 0x7FFF. Negative differences less than 0x8000 are
+///    saturated to 0x8000.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -442,8 +444,8 @@ _mm_hsubs_epi16(__m128i __a, __m128i __b)
 
 /// \brief Horizontally subtracts the adjacent pairs of values contained in 2
 ///    packed 64-bit vectors of [4 x i16]. Positive differences greater than
-///    7FFFh are saturated to 7FFFh. Negative differences less than 8000h are
-///    saturated to 8000h.
+///    0x7FFF are saturated to 0x7FFF. Negative differences less than 0x8000 are
+///    saturated to 0x8000.
 ///
 /// \headerfile <x86intrin.h>
 ///

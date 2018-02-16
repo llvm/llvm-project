@@ -100,6 +100,7 @@ public:
   std::string Location;
   std::string MemoryRegionName;
   std::string LMARegionName;
+  bool NonAlloc = false;
   bool Noload = false;
 
   template <class ELFT> void finalize();

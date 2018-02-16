@@ -49,12 +49,17 @@ enum class ErrorCode {
 };
 
 struct URIForFile {
-  std::string file;
+  URIForFile() = default;
+  explicit URIForFile(std::string AbsPath);
 
-  std::string uri() const { return URI::createFile(file).toString(); }
+  /// Retrieves absolute path to the file.
+  llvm::StringRef file() const { return File; }
+
+  explicit operator bool() const { return !File.empty(); }
+  std::string uri() const { return URI::createFile(File).toString(); }
 
   friend bool operator==(const URIForFile &LHS, const URIForFile &RHS) {
-    return LHS.file == RHS.file;
+    return LHS.File == RHS.File;
   }
 
   friend bool operator!=(const URIForFile &LHS, const URIForFile &RHS) {
@@ -62,8 +67,11 @@ struct URIForFile {
   }
 
   friend bool operator<(const URIForFile &LHS, const URIForFile &RHS) {
-    return LHS.file < RHS.file;
+    return LHS.File < RHS.File;
   }
+
+private:
+  std::string File;
 };
 
 /// Serialize/deserialize \p URIForFile to/from a string URI.
