@@ -1059,7 +1059,8 @@ public:
     bool isUsed() const {
       return DetachedRethrowBlock && !DetachedRethrowBlock->use_empty();
     }
-    void emitIfUsed(llvm::Value *ExnSlot, llvm::Value *SelSlot);
+    void emitIfUsed(llvm::Value *ExnSlot, llvm::Value *SelSlot,
+                    llvm::Value *SyncRegion);
   };
 
   /// \brief RAII object to manage creation of detach/reattach instructions.

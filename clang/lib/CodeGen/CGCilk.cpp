@@ -64,7 +64,7 @@ llvm::BasicBlock *CodeGenFunction::DetachedRethrowHandler::get() {
 }
 
 void CodeGenFunction::DetachedRethrowHandler::emitIfUsed(
-    llvm::Value *ExnSlot, llvm::Value *SelSlot) {
+    llvm::Value *ExnSlot, llvm::Value *SelSlot, llvm::Value *SyncRegion) {
   if (!isUsed())
     return;
 
@@ -92,10 +92,12 @@ void CodeGenFunction::DetachedRethrowHandler::emitIfUsed(
 
   // Insert an invoke of the detached_rethrow intrinsic.
   llvm::BasicBlock *InvokeDest = CGF.getInvokeDest();
-  CGF.Builder.CreateInvoke(
-      CGF.CGM.getIntrinsic(llvm::Intrinsic::detached_rethrow,
-                           LPadVal->getType()),
-      DetachedRethrowResumeBlock, InvokeDest, { LPadVal });
+  llvm::Function *DetachedRethrow =
+    CGF.CGM.getIntrinsic(llvm::Intrinsic::detached_rethrow,
+                         { LPadVal->getType() });
+  llvm::InvokeInst *II = CGF.Builder.CreateInvoke(
+      DetachedRethrow, DetachedRethrowResumeBlock, InvokeDest,
+      { SyncRegion, LPadVal });
 
   // The detached_rethrow intrinsic is just a placeholder, so the ordinary
   // destination should of the invoke should be unreachable.
@@ -224,7 +226,8 @@ void CodeGenFunction::DetachScope::FinishDetach() {
   CleanupsScope->ForceCleanup();
   CGF.EmitBlock(ContinueBlock);
 
-  DetRethrow.emitIfUsed(DetExnSlot, DetSelSlot);
+  DetRethrow.emitIfUsed(DetExnSlot, DetSelSlot,
+                        CGF.CurSyncRegion->getSyncRegionStart());
   // If the detached-rethrow handler is used, add an unwind destination to the
   // detach.
   if (DetRethrow.isUsed()) {
@@ -505,7 +508,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   EmitStmt(Inc);
 
   {
-    DetRethrow.emitIfUsed(DetExnSlot, DetSelSlot);
+    DetRethrow.emitIfUsed(DetExnSlot, DetSelSlot, SyncRegionStart);
     // If the detached-rethrow handler is used, add an unwind destination to the
     // detach.
     if (DetRethrow.isUsed()) {

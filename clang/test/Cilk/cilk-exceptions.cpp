@@ -95,7 +95,7 @@ void parallelfor_noexcept(int n) {
 // CHECK-NEXT: landingpad [[LPADTYPE]]
 // CHECK-NEXT: catch {{.+}} null
 // CHECK: invoke void @llvm.detached.rethrow
-// CHECK: ([[LPADTYPE]] {{.+}})
+// CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
 // CHECK-NEXT: to label %[[DRUNREACH:.+]] unwind label %[[DUNWIND]]
 // CHECK: [[DRUNREACH]]:
 // CHECK-NEXT: unreachable
@@ -125,7 +125,7 @@ void parallelfor_tryblock(int n) {
       // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
       // CHECK-NEXT: catch {{.+}} null
       // CHECK: invoke void @llvm.detached.rethrow
-      // CHECK: ([[LPADTYPE]] {{.+}})
+      // CHECK: (token %[[SYNCREG2]], [[LPADTYPE]] {{.+}})
       // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
       // CHECK: [[DUNWIND]]:
       // CHECK: landingpad [[LPADTYPE]]
@@ -161,7 +161,7 @@ void parallelfor_tryblock_inline(int n) {
       // CHECK: br i1 {{.+}}, label {{.+}}, label %[[CATCHRESUME:.+]]
       // CHECK: [[CATCHRESUME]]:
       // CHECK: invoke void @llvm.detached.rethrow
-      // CHECK: ([[LPADTYPE]] {{.+}})
+      // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
       // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
       // CHECK: [[DUNWIND]]:
       // CHECK: landingpad [[LPADTYPE]]
@@ -205,7 +205,7 @@ void spawn_except(int n) {
   // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
   // CHECK-NEXT: catch {{.+}} null
   // CHECK: invoke void @llvm.detached.rethrow
-  // CHECK: ([[LPADTYPE]] {{.+}})
+  // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
   // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
   // CHECK: [[DUNWIND]]:
   // CHECK: landingpad [[LPADTYPE]]
@@ -229,7 +229,7 @@ void spawn_throw_inline(int n) {
   // CHECK: br i1 {{.+}}, label {{.+}}, label %[[CATCHRESUME:.+]]
   // CHECK: [[CATCHRESUME]]:
   // CHECK: invoke void @llvm.detached.rethrow
-  // CHECK: ([[LPADTYPE]] {{.+}})
+  // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
   // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
   // CHECK: [[DUNWIND]]:
   // CHECK: landingpad [[LPADTYPE]]
@@ -273,7 +273,7 @@ void spawn_tryblock(int n) {
   // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
   // CHECK-NEXT: catch {{.+}} null
   // CHECK: invoke void @llvm.detached.rethrow
-  // CHECK: ([[LPADTYPE]] {{.+}})
+  // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
   // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
   // CHECK: [[DUNWIND]]:
   // CHECK: landingpad [[LPADTYPE]]
