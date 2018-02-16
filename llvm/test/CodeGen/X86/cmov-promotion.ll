@@ -115,7 +115,7 @@ define i64 @cmov_zpromotion_16_to_64(i1 %c) {
 ; CMOV-NEXT:    testb $1, %dil
 ; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
 ; CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; CMOV-NEXT:    cmovneq %rcx, %rax
+; CMOV-NEXT:    cmovnel %ecx, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_64:
@@ -294,10 +294,9 @@ define i64 @cmov_spromotion_32_to_64(i1 %c) {
 ; CMOV-LABEL: cmov_spromotion_32_to_64:
 ; CMOV:       # %bb.0:
 ; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; CMOV-NEXT:    movl $-1, %ecx
-; CMOV-NEXT:    cmovnel %eax, %ecx
-; CMOV-NEXT:    movslq %ecx, %rax
+; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
+; CMOV-NEXT:    movq $-1, %rax
+; CMOV-NEXT:    cmovneq %rcx, %rax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_32_to_64:

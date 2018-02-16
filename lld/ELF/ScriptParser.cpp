@@ -617,12 +617,14 @@ uint32_t ScriptParser::readFill() {
   return V;
 }
 
-// Reads an expression and/or the special directive "(NOLOAD)" for an
-// output section definition.
+// Reads an expression and/or the special directive for an output
+// section definition. Directive is one of following: "(NOLOAD)",
+// "(COPY)", "(INFO)" or "(OVERLAY)".
 //
 // An output section name can be followed by an address expression
-// and/or by "(NOLOAD)". This grammar is not LL(1) because "(" can be
-// interpreted as either the beginning of some expression or "(NOLOAD)".
+// and/or directive. This grammar is not LL(1) because "(" can be
+// interpreted as either the beginning of some expression or beginning
+// of directive.
 //
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
@@ -631,6 +633,11 @@ void ScriptParser::readSectionAddressType(OutputSection *Cmd) {
     if (consume("NOLOAD")) {
       expect(")");
       Cmd->Noload = true;
+      return;
+    }
+    if (consume("COPY") || consume("INFO") || consume("OVERLAY")) {
+      expect(")");
+      Cmd->NonAlloc = true;
       return;
     }
     Cmd->AddrExpr = readExpr();

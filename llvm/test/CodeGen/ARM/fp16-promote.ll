@@ -170,8 +170,10 @@ define void @test_select(half* %p, half* %q, i1 zeroext %c) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-VFP: vcmp.f32
 ; CHECK-NOVFP: bl __aeabi_fcmpeq
-; CHECK-FP16: vmrs APSR_nzcv, fpscr
-; CHECK-ALL: movw{{ne|eq}}
+; CHECK-VFP-NEXT: vmrs APSR_nzcv, fpscr
+; CHECK-VFP-NEXT: movwne
+; CHECK-NOVFP-NEXT: clz r0, r0
+; CHECK-NOVFP-NEXT: lsr r0, r0, #5
 define i1 @test_fcmp_une(half* %p, half* %q) #0 {
   %a = load half, half* %p, align 2
   %b = load half, half* %q, align 2

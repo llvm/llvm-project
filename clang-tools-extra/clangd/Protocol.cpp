@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol.h"
-#include "URI.h"
 #include "Logger.h"
+#include "URI.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
@@ -23,6 +23,11 @@
 
 namespace clang {
 namespace clangd {
+
+URIForFile::URIForFile(std::string AbsPath) {
+  assert(llvm::sys::path::is_absolute(AbsPath) && "the path is relative");
+  File = std::move(AbsPath);
+}
 
 bool fromJSON(const json::Expr &E, URIForFile &R) {
   if (auto S = E.asString()) {
@@ -40,15 +45,13 @@ bool fromJSON(const json::Expr &E, URIForFile &R) {
       log(llvm::toString(Path.takeError()));
       return false;
     }
-    R.file = *Path;
+    R = URIForFile(*Path);
     return true;
   }
   return false;
 }
 
-json::Expr toJSON(const URIForFile &U) {
-  return U.uri();
-}
+json::Expr toJSON(const URIForFile &U) { return U.uri(); }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const URIForFile &U) {
   return OS << U.uri();

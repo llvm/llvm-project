@@ -37,6 +37,12 @@
 # RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-gc.txt --gc-sections --unresolved-symbols=ignore-all 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=WARN,GC
 
+# Check that a warning is emitted for the symbol removed due to --icf.
+# RUN: echo "icf1" > %t-order-icf.txt
+# RUN: echo "icf2" >> %t-order-icf.txt
+# RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-icf.txt --icf=all --unresolved-symbols=ignore-all 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN,ICF
+
 # Check that a warning is emitted for symbols discarded due to a linker script /DISCARD/ section.
 # RUN: echo "discard" > %t-order-discard.txt
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.text.discard) } }" > %t.script
@@ -101,6 +107,7 @@
 # WARN-NOT:    warning:
 # MISSING:     warning: symbol ordering file: no such symbol: missing
 # MISSING2:    warning: symbol ordering file: no such symbol: missing_sym
+# ICF:         warning: {{.*}}1.o: unable to order discarded symbol: icf2
 # COMDAT:      warning: {{.*}}1.o: unable to order discarded symbol: comdat
 # COMDAT-NEXT: warning: {{.*}}2.o: unable to order discarded symbol: comdat
 # MULTI:       warning: {{.*}}2.o: unable to order absolute symbol: multi
@@ -129,12 +136,23 @@ comdat:
 glob_or_wk:
   nop
 
-.text
+.section .text._start,"ax",@progbits
 .global _start
 _start:
   movq  %rax, absolute
   callq shared
 
+.section .text.icf1,"ax",@progbits
+.global icf1
+icf1:
+    ret
+
+.section .text.icf2,"ax",@progbits
+.global icf2
+icf2:
+    ret
+
 # This is a "good" instance of the symbol
+.section .text.multi,"ax",@progbits
 multi:
   nop

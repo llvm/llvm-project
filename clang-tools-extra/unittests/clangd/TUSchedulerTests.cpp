@@ -33,12 +33,9 @@ protected:
                        std::move(Contents)};
   }
 
-  void changeFile(PathRef File, std::string Contents) {
-    Files[File] = Contents;
-  }
+  llvm::StringMap<std::string> Files;
 
 private:
-  llvm::StringMap<std::string> Files;
   MockCompilationDatabase CDB;
 };
 
@@ -47,11 +44,11 @@ TEST_F(TUSchedulerTests, MissingFiles) {
                 /*StorePreamblesInMemory=*/true,
                 /*ASTParsedCallback=*/nullptr);
 
-  auto Added = getVirtualTestFilePath("added.cpp");
-  changeFile(Added, "");
+  auto Added = testPath("added.cpp");
+  Files[Added] = "";
 
-  auto Missing = getVirtualTestFilePath("missing.cpp");
-  changeFile(Missing, "");
+  auto Missing = testPath("missing.cpp");
+  Files[Missing] = "";
 
   S.update(Added, getInputs(Added, ""), ignoreUpdate);
 
@@ -106,9 +103,9 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
     std::vector<std::string> Files;
     for (int I = 0; I < FilesCount; ++I) {
-      Files.push_back(
-          getVirtualTestFilePath("foo" + std::to_string(I) + ".cpp").str());
-      changeFile(Files.back(), "");
+      std::string Name = "foo" + std::to_string(I) + ".cpp";
+      Files.push_back(testPath(Name));
+      this->Files[Files.back()] = "";
     }
 
     llvm::StringRef Contents1 = R"cpp(int a;)cpp";
