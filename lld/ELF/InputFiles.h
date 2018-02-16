@@ -98,7 +98,7 @@ public:
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
   // string for creating error messages.
-  StringRef ArchiveName;
+  std::string ArchiveName;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.

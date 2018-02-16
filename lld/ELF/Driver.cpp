@@ -984,7 +984,7 @@ static Optional<StringRef> getArchiveName(InputFile *File) {
   if (isa<ArchiveFile>(File))
     return File->getName();
   if (!File->ArchiveName.empty())
-    return File->ArchiveName;
+    return StringRef(File->ArchiveName);
   return None;
 }
 
