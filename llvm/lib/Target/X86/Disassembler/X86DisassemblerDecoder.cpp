@@ -588,11 +588,44 @@ static int readPrefixes(struct InternalInstruction* insn) {
                 insn->vectorExtensionPrefix[0], insn->vectorExtensionPrefix[1],
                 insn->vectorExtensionPrefix[2]);
     }
+  } else if (byte == 0x0f) {
+    uint8_t byte1;
+
+    // Check for AMD 3DNow without a REX prefix
+    if (consumeByte(insn, &byte1)) {
+      unconsumeByte(insn);
+    } else {
+      if (byte1 != 0x0f) {
+        unconsumeByte(insn);
+        unconsumeByte(insn);
+      } else {
+        dbgprintf(insn, "Found AMD 3DNow prefix 0f0f");
+        insn->vectorExtensionType = TYPE_3DNOW;
+      }
+    }
   } else if (isREX(insn, byte)) {
     if (lookAtByte(insn, &nextByte))
       return -1;
     insn->rexPrefix = byte;
     dbgprintf(insn, "Found REX prefix 0x%hhx", byte);
+
+    // Check for AMD 3DNow with a REX prefix
+    if (nextByte == 0x0f) {
+      consumeByte(insn, &nextByte);
+      uint8_t byte1;
+
+      if (consumeByte(insn, &byte1)) {
+        unconsumeByte(insn);
+      } else {
+        if (byte1 != 0x0f) {
+          unconsumeByte(insn);
+          unconsumeByte(insn);
+        } else {
+          dbgprintf(insn, "Found AMD 3DNow prefix 0f0f");
+          insn->vectorExtensionType = TYPE_3DNOW;
+        }
+      }
+    }
   } else
     unconsumeByte(insn);
 
@@ -622,6 +655,8 @@ static int readPrefixes(struct InternalInstruction* insn) {
 
   return 0;
 }
+
+static int readModRM(struct InternalInstruction* insn);
 
 /*
  * readOpcode - Reads the opcode (excepting the ModR/M byte in the case of
@@ -690,6 +725,12 @@ static int readOpcode(struct InternalInstruction* insn) {
       insn->opcodeType = XOPA_MAP;
       return consumeByte(insn, &insn->opcode);
     }
+  } else if (insn->vectorExtensionType == TYPE_3DNOW) {
+    // Consume operands before the opcode to comply with the 3DNow encoding
+    if (readModRM(insn))
+      return -1;
+    insn->opcodeType = TWOBYTE;
+    return consumeByte(insn, &insn->opcode);
   }
 
   if (consumeByte(insn, &current))
@@ -734,8 +775,6 @@ static int readOpcode(struct InternalInstruction* insn) {
 
   return 0;
 }
-
-static int readModRM(struct InternalInstruction* insn);
 
 /*
  * getIDWithAttrMask - Determines the ID of an instruction, consuming
@@ -912,6 +951,8 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
 
       if (lFromXOP3of3(insn->vectorExtensionPrefix[2]))
         attrMask |= ATTR_VEXL;
+    } else if (insn->vectorExtensionType == TYPE_3DNOW) {
+      attrMask |= ATTR_3DNOW;
     } else {
       return -1;
     }

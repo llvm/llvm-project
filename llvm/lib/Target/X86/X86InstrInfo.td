@@ -2407,7 +2407,7 @@ def BEXTRMaskXForm : SDNodeXForm<imm, [{
 }]>;
 
 def AndMask64 : ImmLeaf<i64, [{
-  return isMask_64(Imm) && Imm > UINT32_MAX;
+  return isMask_64(Imm) && !isUInt<32>(Imm);
 }]>;
 
 // Use BEXTR for 64-bit 'and' with large immediate 'mask'.

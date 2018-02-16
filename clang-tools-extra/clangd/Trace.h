@@ -40,6 +40,12 @@ public:
   /// whose destructor records the end of the event.
   /// The args are *Args, only complete when the event ends.
   virtual Context beginSpan(llvm::StringRef Name, json::obj *Args) = 0;
+  // Called when a Span is destroyed (it may still be active on other threads).
+  // beginSpan() and endSpan() will always form a proper stack on each thread.
+  // The Context returned by beginSpan is active, but Args is not ready.
+  // Tracers should not override this unless they need to observe strict
+  // per-thread nesting. Instead they should observe context destruction.
+  virtual void endSpan() {};
 
   /// Called for instant events.
   virtual void instant(llvm::StringRef Name, json::obj &&Args) = 0;
@@ -77,6 +83,7 @@ void log(const llvm::Twine &Name);
 class Span {
 public:
   Span(llvm::StringRef Name);
+  ~Span();
 
   /// Mutable metadata, if this span is interested.
   /// Prefer to use SPAN_ATTACH rather than accessing this directly.

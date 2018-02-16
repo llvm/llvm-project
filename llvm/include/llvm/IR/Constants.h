@@ -283,6 +283,11 @@ public:
   /// for simple constant values like 2.0/1.0 etc, that are known-valid both as
   /// host double and as the target format.
   static Constant *get(Type* Ty, double V);
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantFP for the given value.
+  static Constant *get(Type *Ty, const APFloat &V);
+
   static Constant *get(Type* Ty, StringRef Str);
   static ConstantFP *get(LLVMContext &Context, const APFloat &V);
   static Constant *getNaN(Type *Ty, bool Negative = false, unsigned type = 0);

@@ -1319,21 +1319,19 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 
 /// Try to convert X/C into X * (1/C).
 static Instruction *foldFDivConstantDivisor(BinaryOperator &FDiv) {
-  // TODO: Handle vector constants.
-  ConstantFP *CFP;
-  if (!match(FDiv.getOperand(1), m_ConstantFP(CFP)))
+  // TODO: Handle non-splat vector constants.
+  const APFloat *C;
+  if (!match(FDiv.getOperand(1), m_APFloat(C)))
     return nullptr;
 
-  const APFloat &FpVal = CFP->getValueAPF();
-  APFloat Reciprocal(FpVal.getSemantics());
-
   // This returns false if the inverse would be a denormal.
-  bool HasRecip = FpVal.getExactInverse(&Reciprocal);
+  APFloat Reciprocal(C->getSemantics());
+  bool HasRecip = C->getExactInverse(&Reciprocal);
   // If the inverse is not exact, we may still be able to convert if we are
   // not operating with strict math.
-  if (!HasRecip && FDiv.hasAllowReciprocal() && FpVal.isFiniteNonZero()) {
-    Reciprocal = APFloat(FpVal.getSemantics(), 1.0f);
-    Reciprocal.divide(FpVal, APFloat::rmNearestTiesToEven);
+  if (!HasRecip && FDiv.hasAllowReciprocal() && C->isFiniteNonZero()) {
+    Reciprocal = APFloat(C->getSemantics(), 1.0f);
+    Reciprocal.divide(*C, APFloat::rmNearestTiesToEven);
     // Disallow denormal constants because we don't know what would happen
     // on all targets.
     // TODO: Function attributes can tell us that denorms are flushed?
@@ -1343,7 +1341,7 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &FDiv) {
   if (!HasRecip)
     return nullptr;
 
-  auto *RecipCFP = ConstantFP::get(FDiv.getContext(), Reciprocal);
+  auto *RecipCFP = ConstantFP::get(FDiv.getType(), Reciprocal);
   return BinaryOperator::CreateFMul(FDiv.getOperand(0), RecipCFP);
 }
 
@@ -1431,7 +1429,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     Value *NewInst = nullptr;
     Instruction *SimpR = nullptr;
 
-    if (Op0->hasOneUse() && match(Op0, m_FDiv(m_Value(X), m_Value(Y)))) {
+    if (match(Op0, m_OneUse(m_FDiv(m_Value(X), m_Value(Y))))) {
       // (X/Y) / Z => X / (Y*Z)
       if (!isa<Constant>(Y) || !isa<Constant>(Op1)) {
         NewInst = Builder.CreateFMul(Y, Op1);
@@ -1442,7 +1440,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         }
         SimpR = BinaryOperator::CreateFDiv(X, NewInst);
       }
-    } else if (Op1->hasOneUse() && match(Op1, m_FDiv(m_Value(X), m_Value(Y)))) {
+    } else if (match(Op1, m_OneUse(m_FDiv(m_Value(X), m_Value(Y))))) {
       // Z / (X/Y) => Z*Y / X
       if (!isa<Constant>(Y) || !isa<Constant>(Op0)) {
         NewInst = Builder.CreateFMul(Op0, Y);
@@ -1463,8 +1461,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     }
   }
 
-  if (AllowReassociate &&
-      Op0->hasOneUse() && Op1->hasOneUse()) {
+  if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse()) {
     Value *A;
     // sin(a) / cos(a) -> tan(a)
     if (match(Op0, m_Intrinsic<Intrinsic::sin>(m_Value(A))) &&

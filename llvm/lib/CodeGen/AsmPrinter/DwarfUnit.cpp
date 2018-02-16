@@ -1430,11 +1430,11 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   const DIType *DTy = resolve(CTy->getBaseType());
   bool IsUnsigned = DTy && isUnsignedDIType(DD, DTy);
-  if (DTy && DD->getDwarfVersion() >= 3)
-    addType(Buffer, DTy);
-  if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagFixedEnum)) {
-    assert(DTy);
-    addFlag(Buffer, dwarf::DW_AT_enum_class);
+  if (DTy) {
+    if (DD->getDwarfVersion() >= 3)
+      addType(Buffer, DTy);
+    if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagFixedEnum))
+      addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
 
   DINodeArray Elements = CTy->getElements();

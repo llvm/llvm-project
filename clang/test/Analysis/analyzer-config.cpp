@@ -12,7 +12,9 @@ void foo() {
 
 class Foo {
 public:
-	void bar() {}
+  ~Foo() {}
+  void baz();
+	void bar() { const Foo &f = Foo(); }
 	void foo() { bar(); }
 };
 

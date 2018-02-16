@@ -1279,6 +1279,197 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
   return false;
 }
 
+bool TargetLowering::SimplifyDemandedVectorElts(SDValue Op,
+                                                const APInt &DemandedElts,
+                                                APInt &KnownUndef,
+                                                APInt &KnownZero,
+                                                DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                        !DCI.isBeforeLegalizeOps());
+
+  bool Simplified =
+      SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero, TLO);
+  if (Simplified)
+    DCI.CommitTargetLoweringOpt(TLO);
+  return Simplified;
+}
+
+bool TargetLowering::SimplifyDemandedVectorElts(
+    SDValue Op, const APInt &DemandedEltMask, APInt &KnownUndef,
+    APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth,
+    bool AssumeSingleUse) const {
+  EVT VT = Op.getValueType();
+  APInt DemandedElts = DemandedEltMask;
+  unsigned NumElts = DemandedElts.getBitWidth();
+  assert(VT.isVector() && "Expected vector op");
+  assert(VT.getVectorNumElements() == NumElts &&
+         "Mask size mismatches value type element count!");
+
+  KnownUndef = KnownZero = APInt::getNullValue(NumElts);
+
+  // Undef operand.
+  if (Op.isUndef()) {
+    KnownUndef.setAllBits();
+    return false;
+  }
+
+  // If Op has other users, assume that all elements are needed.
+  if (!Op.getNode()->hasOneUse() && !AssumeSingleUse)
+    DemandedElts.setAllBits();
+
+  // Not demanding any elements from Op.
+  if (DemandedElts == 0) {
+    KnownUndef.setAllBits();
+    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+  }
+
+  // Limit search depth.
+  if (Depth >= 6)
+    return false;
+
+  SDLoc DL(Op);
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+
+  switch (Op.getOpcode()) {
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!DemandedElts[0]) {
+      KnownUndef.setAllBits();
+      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+    }
+    KnownUndef.setHighBits(NumElts - 1);
+    break;
+  }
+  case ISD::BUILD_VECTOR: {
+    // Check all elements and simplify any unused elements with UNDEF.
+    if (!DemandedElts.isAllOnesValue()) {
+      // Don't simplify BROADCASTS.
+      if (llvm::any_of(Op->op_values(),
+                       [&](SDValue Elt) { return Op.getOperand(0) != Elt; })) {
+        SmallVector<SDValue, 32> Ops(Op->op_begin(), Op->op_end());
+        bool Updated = false;
+        for (unsigned i = 0; i != NumElts; ++i) {
+          if (!DemandedElts[i] && !Ops[i].isUndef()) {
+            Ops[i] = TLO.DAG.getUNDEF(Ops[0].getValueType());
+            KnownUndef.setBit(i);
+            Updated = true;
+          }
+        }
+        if (Updated)
+          return TLO.CombineTo(Op, TLO.DAG.getBuildVector(VT, DL, Ops));
+      }
+    }
+    for (unsigned i = 0; i != NumElts; ++i) {
+      SDValue SrcOp = Op.getOperand(i);
+      if (SrcOp.isUndef()) {
+        KnownUndef.setBit(i);
+      } else if (EltSizeInBits == SrcOp.getScalarValueSizeInBits() &&
+                 (isNullConstant(SrcOp) || isNullFPConstant(SrcOp))) {
+        KnownZero.setBit(i);
+      }
+    }
+    break;
+  }
+  case ISD::CONCAT_VECTORS: {
+    EVT SubVT = Op.getOperand(0).getValueType();
+    unsigned NumSubVecs = Op.getNumOperands();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    for (unsigned i = 0; i != NumSubVecs; ++i) {
+      SDValue SubOp = Op.getOperand(i);
+      APInt SubElts = DemandedElts.extractBits(NumSubElts, i * NumSubElts);
+      APInt SubUndef, SubZero;
+      if (SimplifyDemandedVectorElts(SubOp, SubElts, SubUndef, SubZero, TLO,
+                                     Depth + 1))
+        return true;
+      KnownUndef.insertBits(SubUndef, i * NumSubElts);
+      KnownZero.insertBits(SubZero, i * NumSubElts);
+    }
+    break;
+  }
+  case ISD::INSERT_SUBVECTOR: {
+    if (!isa<ConstantSDNode>(Op.getOperand(2)))
+      break;
+    SDValue Base = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    EVT SubVT = Sub.getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    APInt Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
+    if (Idx.uge(NumElts - NumSubElts))
+      break;
+    unsigned SubIdx = Idx.getZExtValue();
+    APInt SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
+    APInt SubUndef, SubZero;
+    if (SimplifyDemandedVectorElts(Sub, SubElts, SubUndef, SubZero, TLO,
+                                   Depth + 1))
+      return true;
+    APInt BaseElts = DemandedElts;
+    BaseElts.insertBits(APInt::getNullValue(NumSubElts), SubIdx);
+    if (SimplifyDemandedVectorElts(Base, BaseElts, KnownUndef, KnownZero, TLO,
+                                   Depth + 1))
+      return true;
+    KnownUndef.insertBits(SubUndef, SubIdx);
+    KnownZero.insertBits(SubZero, SubIdx);
+    break;
+  }
+  case ISD::VECTOR_SHUFFLE: {
+    ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
+
+    // Collect demanded elements from shuffle operands..
+    APInt DemandedLHS(NumElts, 0);
+    APInt DemandedRHS(NumElts, 0);
+    for (unsigned i = 0; i != NumElts; ++i) {
+      int M = ShuffleMask[i];
+      if (M < 0 || !DemandedElts[i])
+        continue;
+      assert(0 <= M && M < (int)(2 * NumElts) && "Shuffle index out of range");
+      if (M < (int)NumElts)
+        DemandedLHS.setBit(M);
+      else
+        DemandedRHS.setBit(M - NumElts);
+    }
+
+    // See if we can simplify either shuffle operand.
+    APInt UndefLHS, ZeroLHS;
+    APInt UndefRHS, ZeroRHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedLHS, UndefLHS,
+                                   ZeroLHS, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedRHS, UndefRHS,
+                                   ZeroRHS, TLO, Depth + 1))
+      return true;
+
+    // Propagate undef/zero elements from LHS/RHS.
+    for (unsigned i = 0; i != NumElts; ++i) {
+      int M = ShuffleMask[i];
+      if (M < 0) {
+        KnownUndef.setBit(i);
+      } else if (M < (int)NumElts) {
+        if (UndefLHS[M])
+          KnownUndef.setBit(i);
+        if (ZeroLHS[M])
+          KnownZero.setBit(i);
+      } else {
+        if (UndefRHS[M - NumElts])
+          KnownUndef.setBit(i);
+        if (ZeroRHS[M - NumElts])
+          KnownZero.setBit(i);
+      }
+    }
+    break;
+  }
+  default: {
+    if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
+      if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts, KnownUndef,
+                                                  KnownZero, TLO, Depth))
+        return true;
+    break;
+  }
+  }
+
+  assert((KnownUndef & KnownZero) == 0 && "Elements flagged as undef AND zero");
+  return false;
+}
+
 /// Determine which of the bits specified in Mask are known to be either zero or
 /// one and return them in the Known.
 void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
@@ -1321,6 +1512,18 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
          "Should use ComputeNumSignBits if you don't know whether Op"
          " is a target node!");
   return 1;
+}
+
+bool TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, APInt &KnownUndef, APInt &KnownZero,
+    TargetLoweringOpt &TLO, unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use SimplifyDemandedVectorElts if you don't know whether Op"
+         " is a target node!");
+  return false;
 }
 
 // FIXME: Ideally, this would use ISD::isConstantSplatVector(), but that must

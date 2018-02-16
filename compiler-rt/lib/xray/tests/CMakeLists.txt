@@ -15,6 +15,10 @@ set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 macro(add_xray_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
   if(UNIX AND NOT APPLE)
+    set(CMAKE_DL_LIBS_INIT "")
+    foreach(lib ${CMAKE_DL_LIBS})
+      list(APPEND CMAKE_DL_LIBS_INIT -l${lib})
+    endforeach()
     foreach(arch ${XRAY_TEST_ARCH})
       set(TEST_OBJECTS)
       generate_compiler_rt_tests(TEST_OBJECTS
@@ -25,8 +29,7 @@ macro(add_xray_unittest testname)
         LINK_FLAGS -fxray-instrument
           ${TARGET_LINK_FLAGS}
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
-          -lpthread
-          -ldl -lrt)
+          ${CMAKE_DL_LIBS_INIT} -lrt)
       set_target_properties(XRayUnitTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
   endif()

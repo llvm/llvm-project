@@ -69,12 +69,12 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: store i32 %val, i32* %[[ValAddr:.+]]
 
   // CHECK: call i8* @llvm.coro.begin(
-  // CHECK-NEXT: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* %[[MoCopy]], %struct.MoveOnly* dereferenceable(4) %[[MoParam]])
+  // CHECK: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* %[[MoCopy]], %struct.MoveOnly* dereferenceable(4) %[[MoParam]])
   // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(%struct.MoveAndCopy* %[[McCopy]], %struct.MoveAndCopy* dereferenceable(4) %[[McParam]]) #
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
-  // CHECK: %[[IntParam:.+]] = load i32, i32* %val.addr
+  // CHECK: %[[IntParam:.+]] = load i32, i32* %val1
   // CHECK: %[[MoGep:.+]] = getelementptr inbounds %struct.MoveOnly, %struct.MoveOnly* %[[MoCopy]], i32 0, i32 0
   // CHECK: %[[MoVal:.+]] = load i32, i32* %[[MoGep]]
   // CHECK: %[[McGep:.+]] =  getelementptr inbounds %struct.MoveAndCopy, %struct.MoveAndCopy* %[[McCopy]], i32 0, i32 0
@@ -150,9 +150,9 @@ struct std::experimental::coroutine_traits<void, promise_matching_constructor, i
 
 // CHECK-LABEL: void @_Z38coroutine_matching_promise_constructor28promise_matching_constructorifd(i32, float, double)
 void coroutine_matching_promise_constructor(promise_matching_constructor, int, float, double) {
-  // CHECK: %[[INT:.+]] = load i32, i32* %.addr, align 4
-  // CHECK: %[[FLOAT:.+]] = load float, float* %.addr1, align 4
-  // CHECK: %[[DOUBLE:.+]] = load double, double* %.addr2, align 8
+  // CHECK: %[[INT:.+]] = load i32, i32* %5, align 4
+  // CHECK: %[[FLOAT:.+]] = load float, float* %6, align 4
+  // CHECK: %[[DOUBLE:.+]] = load double, double* %7, align 8
   // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJv28promise_matching_constructorifdEE12promise_typeC1ES1_ifd(%"struct.std::experimental::coroutine_traits<void, promise_matching_constructor, int, float, double>::promise_type"* %__promise, i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
   co_return;
 }

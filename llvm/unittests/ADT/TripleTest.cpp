@@ -1030,6 +1030,11 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown").getObjectFormat());
 
+  EXPECT_EQ(Triple::Wasm,
+            Triple("wasm32-unknown-unknown-wasm").getObjectFormat());
+  EXPECT_EQ(Triple::Wasm,
+            Triple("wasm64-unknown-unknown-wasm").getObjectFormat());
+
   EXPECT_EQ(Triple::ELF,
             Triple("wasm32-unknown-unknown-elf").getObjectFormat());
   EXPECT_EQ(Triple::ELF,

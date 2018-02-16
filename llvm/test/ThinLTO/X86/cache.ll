@@ -59,6 +59,27 @@
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-pruning-interval -1
 ; RUN: ls %t.cache/llvmcache-foo
 
+; Verify that the pruner doesn't run and a cache file is not deleted when: 
+; default values for pruning interval and cache expiration are used, 
+; llvmcache.timestamp is current, 
+; cache file is older than default cache expiration value.
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: touch -t 197001011200 %t.cache/llvmcache-foo
+; RUN: touch %t.cache/llvmcache.timestamp
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache
+; RUN: ls %t.cache/llvmcache-foo
+
+; Verify that the pruner runs and a cache file is deleted when:
+; pruning interval has value 0 (i.e. run garbage collector now)
+; default value for cache expiration is used,
+; llvmcache.timestamp is current,
+; cache file is older than default cache expiration value.
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: touch -t 197001011200 %t.cache/llvmcache-foo
+; RUN: touch %t.cache/llvmcache.timestamp
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-pruning-interval 0
+; RUN: not ls %t.cache/llvmcache-foo
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 

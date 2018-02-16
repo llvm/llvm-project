@@ -88,11 +88,22 @@ Improvements to clang-tidy
   Functions that have trailing returns are disallowed, except for those 
   using decltype specifiers and lambda with otherwise unutterable 
   return types.
+
+- New `readability-simd-intrinsics
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-simd-intrinsics.html>`_ check
+
+  Warns if SIMD intrinsics are used which can be replaced by
+  ``std::experimental::simd`` operations.
     
 - New alias `hicpp-avoid-goto
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-avoid-goto.html>`_ to 
   `cppcoreguidelines-avoid-goto <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html>`_
   added.
+
+- New `bugprone-throw-keyword-missing
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-throw-keyword-missing.html>`_ check
+
+  Diagnoses when a temporary object that appears to be an exception is constructed but not thrown.
 
 Improvements to include-fixer
 -----------------------------

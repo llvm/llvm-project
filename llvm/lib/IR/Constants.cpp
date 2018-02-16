@@ -635,6 +635,17 @@ Constant *ConstantFP::get(Type *Ty, double V) {
   return C;
 }
 
+Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
+  ConstantFP *C = get(Ty->getContext(), V);
+  assert(C->getType() == Ty->getScalarType() &&
+         "ConstantFP type doesn't match the type implied by its value!");
+
+  // For vectors, broadcast the value.
+  if (auto *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getNumElements(), C);
+
+  return C;
+}
 
 Constant *ConstantFP::get(Type *Ty, StringRef Str) {
   LLVMContext &Context = Ty->getContext();

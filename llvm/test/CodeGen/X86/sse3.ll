@@ -379,16 +379,12 @@ entry:
 define <16 x i8> @t16(<16 x i8> %T0) nounwind readnone {
 ; X86-LABEL: t16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0]
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:    pslld $16, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t16:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    pslld $16, %xmm0
 ; X64-NEXT:    retq
 entry:
   %tmp8 = shufflevector <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 1, i8 1, i8 1, i8 1, i8 0, i8 0, i8 0, i8 0,  i8 0, i8 0, i8 0, i8 0>, <16 x i8> %T0, <16 x i32> < i32 0, i32 1, i32 16, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef , i32 undef >

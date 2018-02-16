@@ -32,6 +32,7 @@ Clang-Tidy Checks
    bugprone-multiple-statement-macro
    bugprone-string-constructor
    bugprone-suspicious-memset-usage
+   bugprone-throw-keyword-missing
    bugprone-undefined-memory-manipulation
    bugprone-use-after-move
    bugprone-virtual-near-miss
@@ -216,6 +217,7 @@ Clang-Tidy Checks
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
    readability-redundant-string-init
+   readability-simd-intrinsics
    readability-simplify-boolean-expr
    readability-static-accessed-through-instance
    readability-static-definition-in-anonymous-namespace

@@ -710,7 +710,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [9,6,1,0,3,7,7,1]
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [18446744073709551615,18446744073709551615,0,0,18446744073709551615,18446744073709551615,0,0]
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [18446744073709551615,18446744073709551615,0,0,0,0,0,0]
 ; AVX512F-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vptestmq %zmm2, %zmm2, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax

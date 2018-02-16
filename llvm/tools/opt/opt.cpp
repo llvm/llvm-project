@@ -257,9 +257,6 @@ static cl::opt<std::string>
                     cl::desc("YAML output filename for pass remarks"),
                     cl::value_desc("filename"));
 
-extern ModulePass *createDebugifyPass();
-extern ModulePass *createCheckDebugifyPass();
-
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
   PM.add(P);
@@ -555,7 +552,7 @@ int main(int argc, char **argv) {
                            OptRemarkFile.get(), PassPipeline, OK, VK,
                            PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
-                           EmitModuleHash)
+                           EmitModuleHash, EnableDebugify)
                ? 0
                : 1;
   }
