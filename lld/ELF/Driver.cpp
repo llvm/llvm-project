@@ -842,6 +842,11 @@ static void setConfigs(opt::InputArgList &Args) {
       (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
   Config->Pic = Config->Pie || Config->Shared;
   Config->Wordsize = Config->Is64 ? 8 : 4;
+  // If the output uses REL relocations we must store the dynamic relocation
+  // addends to the output sections. We also store addends for RELA relocations
+  // if --apply-dynamic-relocs is used.
+  // We default to not writing the addends when using RELA relocations since
+  // any standard conforming tool can find it in r_addend.
   Config->WriteAddends = Args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !Config->IsRela;
