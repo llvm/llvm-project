@@ -17017,24 +17017,6 @@ static bool hasNonFlagsUse(SDValue Op) {
   return false;
 }
 
-// Emit KTEST instruction for bit vectors on AVX-512
-static SDValue EmitKTEST(SDValue Op, SelectionDAG &DAG,
-                         const X86Subtarget &Subtarget) {
-  if (Op.getOpcode() == ISD::BITCAST) {
-    auto hasKTEST = [&](MVT VT) {
-      unsigned SizeInBits = VT.getSizeInBits();
-      return (Subtarget.hasDQI() && (SizeInBits == 8 || SizeInBits == 16)) ||
-        (Subtarget.hasBWI() && (SizeInBits == 32 || SizeInBits == 64));
-    };
-    SDValue Op0 = Op.getOperand(0);
-    MVT Op0VT = Op0.getValueType().getSimpleVT();
-    if (Op0VT.isVector() && Op0VT.getVectorElementType() == MVT::i1 &&
-        hasKTEST(Op0VT))
-      return DAG.getNode(X86ISD::KTEST, SDLoc(Op), Op0VT, Op0, Op0);
-  }
-  return SDValue();
-}
-
 /// Emit nodes that will be selected as "test Op0,Op0", or something
 /// equivalent.
 SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
@@ -17079,9 +17061,6 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   // doing a separate TEST. TEST always sets OF and CF to 0, so unless
   // we prove that the arithmetic won't overflow, we can't use OF or CF.
   if (Op.getResNo() != 0 || NeedOF || NeedCF) {
-    // Emit KTEST for bit vectors
-    if (auto Node = EmitKTEST(Op, DAG, Subtarget))
-      return Node;
     // Emit a CMP with 0, which is the TEST pattern.
     return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op,
                        DAG.getConstant(0, dl, Op.getValueType()));
@@ -17310,10 +17289,6 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   }
 
   if (Opcode == 0) {
-    // Emit KTEST for bit vectors
-    if (auto Node = EmitKTEST(Op, DAG, Subtarget))
-      return Node;
-
     // Emit a CMP with 0, which is the TEST pattern.
     return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op,
                        DAG.getConstant(0, dl, Op.getValueType()));
@@ -18093,6 +18068,34 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   return Result;
 }
 
+// Try to select this as a KTEST+SETCC if possible.
+static SDValue EmitKTEST(SDValue Op0, SDValue Op1, ISD::CondCode CC,
+                         const SDLoc &dl, SelectionDAG &DAG,
+                         const X86Subtarget &Subtarget) {
+  // Only support equality comparisons.
+  if (CC != ISD::SETEQ && CC != ISD::SETNE)
+    return SDValue();
+
+  // Must be a bitcast from vXi1.
+  if (Op0.getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  Op0 = Op0.getOperand(0);
+  MVT VT = Op0.getSimpleValueType();
+  if (!(Subtarget.hasDQI() && (VT == MVT::v8i1  || VT == MVT::v16i1)) &&
+      !(Subtarget.hasBWI() && (VT == MVT::v32i1 || VT == MVT::v64i1)))
+    return SDValue();
+
+  X86::CondCode X86CC;
+  if (isNullConstant(Op1)) {
+    X86CC = CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE;
+  } else
+    return SDValue();
+
+  SDValue KTEST = DAG.getNode(X86ISD::KTEST, dl, MVT::i32, Op0, Op0);
+  return getSETCC(X86CC, KTEST, dl, DAG);
+}
+
 SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   MVT VT = Op.getSimpleValueType();
@@ -18114,6 +18117,10 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (SDValue NewSetCC = LowerAndToBT(Op0, CC, dl, DAG))
       return NewSetCC;
   }
+
+  // Try to lower using KTEST.
+  if (SDValue NewSetCC = EmitKTEST(Op0, Op1, CC, dl, DAG, Subtarget))
+    return NewSetCC;
 
   // Look for X == 0, X == 1, X != 0, or X != 1.  We can simplify some forms of
   // these.
@@ -20524,6 +20531,18 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                     Mask.getSimpleValueType().getSizeInBits());
       Mask = DAG.getBitcast(MaskVT, Mask);
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Mask);
+    }
+    case KUNPCK: {
+      MVT VT = Op.getSimpleValueType();
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getSizeInBits()/2);
+
+      SDValue Src1 = getMaskNode(Op.getOperand(1), MaskVT, Subtarget, DAG, dl);
+      SDValue Src2 = getMaskNode(Op.getOperand(2), MaskVT, Subtarget, DAG, dl);
+      // Arguments should be swapped.
+      SDValue Res = DAG.getNode(IntrData->Opc0, dl,
+                                MVT::getVectorVT(MVT::i1, VT.getSizeInBits()),
+                                Src2, Src1);
+      return DAG.getBitcast(VT, Res);
     }
     case MASK_BINOP: {
       MVT VT = Op.getSimpleValueType();
@@ -27094,28 +27113,57 @@ static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
 
 static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
                                       unsigned Reg) {
+  if (Subtarget.useRetpolineExternalThunk()) {
+    // When using an external thunk for retpolines, we pick names that match the
+    // names GCC happens to use as well. This helps simplify the implementation
+    // of the thunks for kernels where they have no easy ability to create
+    // aliases and are doing non-trivial configuration of the thunk's body. For
+    // example, the Linux kernel will do boot-time hot patching of the thunk
+    // bodies and cannot easily export aliases of these to loaded modules.
+    //
+    // Note that at any point in the future, we may need to change the semantics
+    // of how we implement retpolines and at that time will likely change the
+    // name of the called thunk. Essentially, there is no hard guarantee that
+    // LLVM will generate calls to specific thunks, we merely make a best-effort
+    // attempt to help out kernels and other systems where duplicating the
+    // thunks is costly.
+    switch (Reg) {
+    case X86::EAX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_eax";
+    case X86::ECX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_ecx";
+    case X86::EDX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_edx";
+    case X86::EDI:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__x86_indirect_thunk_edi";
+    case X86::R11:
+      assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+      return "__x86_indirect_thunk_r11";
+    }
+    llvm_unreachable("unexpected reg for retpoline");
+  }
+
+  // When targeting an internal COMDAT thunk use an LLVM-specific name.
   switch (Reg) {
-  case 0:
-    assert(!Subtarget.is64Bit() && "R11 should always be available on x64");
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_push"
-               : "__llvm_retpoline_push";
   case X86::EAX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_eax"
-               : "__llvm_retpoline_eax";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_eax";
   case X86::ECX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_ecx"
-               : "__llvm_retpoline_ecx";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_ecx";
   case X86::EDX:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_edx"
-               : "__llvm_retpoline_edx";
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_edx";
+  case X86::EDI:
+    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+    return "__llvm_retpoline_edi";
   case X86::R11:
-    return Subtarget.useRetpolineExternalThunk()
-               ? "__llvm_external_retpoline_r11"
-               : "__llvm_retpoline_r11";
+    assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+    return "__llvm_retpoline_r11";
   }
   llvm_unreachable("unexpected reg for retpoline");
 }
@@ -27134,15 +27182,13 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
   // just use R11, but we scan for uses anyway to ensure we don't generate
   // incorrect code. On 32-bit, we use one of EAX, ECX, or EDX that isn't
   // already a register use operand to the call to hold the callee. If none
-  // are available, push the callee instead. This is less efficient, but is
-  // necessary for functions using 3 regparms. Such function calls are
-  // (currently) not eligible for tail call optimization, because there is no
-  // scratch register available to hold the address of the callee.
+  // are available, use EDI instead. EDI is chosen because EBX is the PIC base
+  // register and ESI is the base pointer to realigned stack frames with VLAs.
   SmallVector<unsigned, 3> AvailableRegs;
   if (Subtarget.is64Bit())
     AvailableRegs.push_back(X86::R11);
   else
-    AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX});
+    AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX, X86::EDI});
 
   // Zero out any registers that are already used.
   for (const auto &MO : MI.operands()) {
@@ -27160,30 +27206,18 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
       break;
     }
   }
+  if (!AvailableReg)
+    report_fatal_error("calling convention incompatible with retpoline, no "
+                       "available registers");
 
   const char *Symbol = getRetpolineSymbol(Subtarget, AvailableReg);
 
-  if (AvailableReg == 0) {
-    // No register available. Use PUSH. This must not be a tailcall, and this
-    // must not be x64.
-    if (Subtarget.is64Bit())
-      report_fatal_error(
-          "Cannot make an indirect call on x86-64 using both retpoline and a "
-          "calling convention that preservers r11");
-    if (Opc != X86::CALLpcrel32)
-      report_fatal_error("Cannot make an indirect tail call on x86 using "
-                         "retpoline without a preserved register");
-    BuildMI(*BB, MI, DL, TII->get(X86::PUSH32r)).addReg(CalleeVReg);
-    MI.getOperand(0).ChangeToES(Symbol);
-    MI.setDesc(TII->get(Opc));
-  } else {
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
-        .addReg(CalleeVReg);
-    MI.getOperand(0).ChangeToES(Symbol);
-    MI.setDesc(TII->get(Opc));
-    MachineInstrBuilder(*BB->getParent(), &MI)
-        .addReg(AvailableReg, RegState::Implicit | RegState::Kill);
-  }
+  BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
+      .addReg(CalleeVReg);
+  MI.getOperand(0).ChangeToES(Symbol);
+  MI.setDesc(TII->get(Opc));
+  MachineInstrBuilder(*BB->getParent(), &MI)
+      .addReg(AvailableReg, RegState::Implicit | RegState::Kill);
   return BB;
 }
 
@@ -30431,53 +30465,6 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   EVT VT = BitCast.getValueType();
   SDValue N0 = BitCast.getOperand(0);
   EVT VecVT = N0->getValueType(0);
-
-  if (VT.isVector() && VecVT.isScalarInteger() && Subtarget.hasAVX512() &&
-      N0->getOpcode() == ISD::OR) {
-    SDValue Op0 = N0->getOperand(0);
-    SDValue Op1 = N0->getOperand(1);
-    MVT TrunckVT;
-    MVT BitcastVT;
-    switch (VT.getSimpleVT().SimpleTy) {
-    default:
-      return SDValue();
-    case MVT::v16i1:
-      TrunckVT = MVT::i8;
-      BitcastVT = MVT::v8i1;
-      break;
-    case MVT::v32i1:
-      TrunckVT = MVT::i16;
-      BitcastVT = MVT::v16i1;
-      break;
-    case MVT::v64i1:
-      TrunckVT = MVT::i32;
-      BitcastVT = MVT::v32i1;
-      break;
-    }
-    bool isArg0UndefRight = Op0->getOpcode() == ISD::SHL;
-    bool isArg0UndefLeft =
-        Op0->getOpcode() == ISD::ZERO_EXTEND || Op0->getOpcode() == ISD::AND;
-    bool isArg1UndefRight = Op1->getOpcode() == ISD::SHL;
-    bool isArg1UndefLeft =
-        Op1->getOpcode() == ISD::ZERO_EXTEND || Op1->getOpcode() == ISD::AND;
-    SDValue OpLeft;
-    SDValue OpRight;
-    if (isArg0UndefRight && isArg1UndefLeft) {
-      OpLeft = Op0;
-      OpRight = Op1;
-    } else if (isArg1UndefRight && isArg0UndefLeft) {
-      OpLeft = Op1;
-      OpRight = Op0;
-    } else
-      return SDValue();
-    SDLoc DL(BitCast);
-    SDValue Shr = OpLeft->getOperand(0);
-    SDValue Trunc1 = DAG.getNode(ISD::TRUNCATE, DL, TrunckVT, Shr);
-    SDValue Bitcast1 = DAG.getBitcast(BitcastVT, Trunc1);
-    SDValue Trunc2 = DAG.getNode(ISD::TRUNCATE, DL, TrunckVT, OpRight);
-    SDValue Bitcast2 = DAG.getBitcast(BitcastVT, Trunc2);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Bitcast1, Bitcast2);
-  }
 
   if (!VT.isScalarInteger() || !VecVT.isSimple())
     return SDValue();

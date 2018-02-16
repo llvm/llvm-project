@@ -132,7 +132,7 @@ bb21:
   %tmp24 = call i32 @__cxa_atexit(void (i8*)* bitcast (%struct.ham* (%struct.ham*)* @bar to void (i8*)*), i8* bitcast (%struct.ham* @global.11 to i8*), i8* @global) #0
   store i32 49, i32* getelementptr  (%struct.ham, %struct.ham* @global.12, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   store i32 37, i32* getelementptr  (%struct.ham, %struct.ham* @global.13, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1)
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.14 to i8*), i8 0, i32 12, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.14 to i8*), i8 0, i32 12, i32 1, i1 false)
   %tmp25 = call i8* @_Znwm(i32 48)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp25, i8* align 1 getelementptr  ([40 x i8], [40 x i8]* @global.6, i32 0, i32 0), i32 39, i32 1, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 undef, i8* align 1 getelementptr  ([47 x i8], [47 x i8]* @global.4, i32 0, i32 0), i32 46, i32 1, i1 false)
@@ -182,21 +182,21 @@ bb33:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp39, i8* align 1 getelementptr  ([45 x i8], [45 x i8]* @global.28, i32 0, i32 0), i32 44, i32 1, i1 false)
   %tmp40 = getelementptr  i8, i8* %tmp39, i32 44
   store i8 0, i8* %tmp40
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.29 to i8*), i8 0, i32 12, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.29 to i8*), i8 0, i32 12, i32 1, i1 false)
   %tmp41 = call i8* @_Znwm(i32 32)
   store i32 23, i32* getelementptr  (%struct.ham, %struct.ham* @global.30, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp41, i8* align 1 getelementptr  ([24 x i8], [24 x i8]* @global.31, i32 0, i32 0), i32 23, i32 1, i1 false)
   %tmp42 = getelementptr  i8, i8* %tmp41, i32 23
   store i8 0, i8* %tmp42
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.32 to i8*), i8 0, i32 12, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.32 to i8*), i8 0, i32 12, i32 1, i1 false)
   store i8 16, i8* bitcast (%struct.ham* @global.32 to i8*)
   %tmp43 = call i32 @__cxa_atexit(void (i8*)* bitcast (%struct.ham* (%struct.ham*)* @bar to void (i8*)*), i8* bitcast (%struct.ham* @global.33 to i8*), i8* @global) #0
   %tmp44 = call i8* @_Znwm(i32 16)
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.34 to i8*), i8 0, i32 12, i32 0, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.9 to i8*), i8 0, i32 12, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.34 to i8*), i8 0, i32 12, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.9 to i8*), i8 0, i32 12, i32 1, i1 false)
   %tmp45 = call i8* @_Znwm(i32 32)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp45, i8* align 1 getelementptr  ([27 x i8], [27 x i8]* @global.36, i32 0, i32 0), i32 26, i32 1, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.37 to i8*), i8 0, i32 12, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.ham* @global.37 to i8*), i8 0, i32 12, i32 1, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr (%struct.snork, %struct.snork* bitcast (%struct.ham* @global.37 to %struct.snork*), i32 0, i32 1, i32 0), i8* align 1 getelementptr  ([10 x i8], [10 x i8]* @global.38, i32 0, i32 0), i32 9, i32 1, i1 false)
   store i32 17, i32* getelementptr  (%struct.ham, %struct.ham* @global.39, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp46 = call i32 @__cxa_atexit(void (i8*)* bitcast (%struct.ham* (%struct.ham*)* @bar to void (i8*)*), i8* bitcast (%struct.ham* @global.40 to i8*), i8* @global) #0

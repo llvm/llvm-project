@@ -87,6 +87,28 @@ During this release the ARM target has:
   isn't the default.
 
 
+Changes to the Hexagon Target
+-----------------------------
+
+* The Hexagon backend now supports V65 ISA.
+
+* The ``-mhvx`` option now takes an optional value that specified the ISA
+  version of the HVX coprocessor.  The available values are v60, v62 and v65.
+  By default, the value is set to be the same as the CPU version.
+
+* The compiler option ``-mhvx-double`` is deprecated and will be removed in
+  the next release of the compiler. Programmers should use ``-mhvx-length``
+  option to specify the desired vector length: ``-mhvx-length=64b`` for
+  64-byte vectors and ``-mhvx-length=128b`` for 128-byte vectors. While the
+  current default vector length is 64 bytes, users should always specify the
+  length explicitly, since the default value may change in the future.
+
+* The target feature ``hvx-double`` is deprecated and will be removed in the
+  next release. LLVM IR generators should use target features ``hvx-length64b``
+  and ``hvx-length128b`` to indicate the vector length. The length should
+  always be specified when HVX code generation is enabled.
+
+
 Changes to the MIPS Target
 --------------------------
 
@@ -97,6 +119,15 @@ Changes to the PowerPC Target
 -----------------------------
 
  During this release ...
+
+Changes to the SystemZ Target
+-----------------------------
+
+During this release the SystemZ target has:
+
+* Added support for 128-bit atomic operations.
+
+* Added support for the "o" constraint for inline asm statements.
 
 Changes to the X86 Target
 -------------------------
