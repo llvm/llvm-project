@@ -40,6 +40,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm-c/Analysis.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -59,6 +60,7 @@
 #include "swift/AST/Module.h"
 #include "swift/AST/ModuleLoader.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Frontend/Frontend.h"
@@ -1193,6 +1195,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       generate_debug_info ? swift::IRGenDebugInfoKind::Normal
                           : swift::IRGenDebugInfoKind::None);
   swift::IRGenOptions &ir_gen_options = m_swift_ast_context->GetIRGenOptions();
+  std::string mainInputFilename;
 
   if (generate_debug_info) {
     std::string temp_source_path;
@@ -1203,7 +1206,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       if (error_or_buffer_ap.getError() == std::error_condition()) {
         buffer_id = m_swift_ast_context->GetSourceManager().addNewSourceBuffer(
             std::move(error_or_buffer_ap.get()));
-        ir_gen_options.MainInputFilename = temp_source_path;
+        mainInputFilename = temp_source_path;
 
         llvm::SmallString<256> source_dir(temp_source_path);
         llvm::sys::path::remove_filename(source_dir);
@@ -1216,7 +1219,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   if (!created_main_file) {
     const char *filename = repl ? "<REPL>" : "<EXPR>";
-    ir_gen_options.MainInputFilename = filename;
+    mainInputFilename = filename;
     std::unique_ptr<llvm::MemoryBuffer> expr_buffer(
         llvm::MemoryBuffer::getMemBufferCopy(m_expr.Text(), filename));
     buffer_id = m_swift_ast_context->GetSourceManager().addNewSourceBuffer(
@@ -1781,7 +1784,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
     m_module = swift::performIRGeneration(
         m_swift_ast_context->GetIRGenOptions(), module, std::move(sil_module),
-        "lldb_module", SwiftASTContext::GetGlobalLLVMContext());
+        "lldb_module", swift::PrimarySpecificPaths("", mainInputFilename),
+        SwiftASTContext::GetGlobalLLVMContext(), llvm::ArrayRef<std::string>());
   }
 
   if (m_swift_ast_context->HasErrors()) {
