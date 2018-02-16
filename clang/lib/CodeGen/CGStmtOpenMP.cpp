@@ -2230,6 +2230,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       incrementProfileCounter(&S);
     }
 
+    RunCleanupsScope DoacrossCleanupScope(*this);
     bool Ordered = false;
     if (auto *OrderedClause = S.getSingleClause<OMPOrderedClause>()) {
       if (OrderedClause->getNumForLoops())
@@ -2366,6 +2367,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       return CGF.Builder.CreateIsNotNull(
           CGF.EmitLoadOfScalar(IL, S.getLocStart()));
     });
+    DoacrossCleanupScope.ForceCleanup();
     // We're now done with the loop, so jump to the continuation block.
     if (ContBlock) {
       EmitBranch(ContBlock);

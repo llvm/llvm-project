@@ -157,7 +157,8 @@ static cl::opt<std::string>
     ThinLTOCacheDir("thinlto-cache-dir", cl::desc("Enable ThinLTO caching."));
 
 static cl::opt<int>
-    ThinLTOCachePruningInterval("thinlto-cache-pruning-interval", cl::desc("Set ThinLTO cache pruning interval."));
+    ThinLTOCachePruningInterval("thinlto-cache-pruning-interval",
+    cl::init(1200), cl::desc("Set ThinLTO cache pruning interval."));
 
 static cl::opt<std::string> ThinLTOSaveTempsPrefix(
     "thinlto-save-temps",
