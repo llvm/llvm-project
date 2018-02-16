@@ -106,6 +106,34 @@ extern "C" void f1(promise_new_tag ) {
   co_return;
 }
 
+struct promise_matching_placement_new_tag {};
+
+template<>
+struct std::experimental::coroutine_traits<void, promise_matching_placement_new_tag, int, float, double> {
+  struct promise_type {
+    void *operator new(unsigned long, promise_matching_placement_new_tag,
+                       int, float, double);
+    void get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+  };
+};
+
+// CHECK-LABEL: f1a(
+extern "C" void f1a(promise_matching_placement_new_tag, int x, float y , double z) {
+  // CHECK: store i32 %x, i32* %x.addr, align 4
+  // CHECK: store float %y, float* %y.addr, align 4
+  // CHECK: store double %z, double* %z.addr, align 8
+  // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: %[[INT:.+]] = load i32, i32* %x.addr, align 4
+  // CHECK: %[[FLOAT:.+]] = load float, float* %y.addr, align 4
+  // CHECK: %[[DOUBLE:.+]] = load double, double* %z.addr, align 8
+  // CHECK: call i8* @_ZNSt12experimental16coroutine_traitsIJv34promise_matching_placement_new_tagifdEE12promise_typenwEmS1_ifd(i64 %[[SIZE]], i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
+  co_return;
+}
+
 struct promise_delete_tag {};
 
 template<>

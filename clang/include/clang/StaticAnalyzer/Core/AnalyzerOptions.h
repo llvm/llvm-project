@@ -250,6 +250,9 @@ private:
   /// \sa mayInlineCXXSharedPtrDtor
   Optional<bool> InlineCXXSharedPtrDtor;
 
+  /// \sa mayInlineCXXTemporaryDtors
+  Optional<bool> InlineCXXTemporaryDtors;
+
   /// \sa mayInlineObjCMethod
   Optional<bool> ObjCInliningMode;
 
@@ -492,6 +495,17 @@ public:
   /// This is controlled by the 'c++-shared_ptr-inlining' config option, which
   /// accepts the values "true" and "false".
   bool mayInlineCXXSharedPtrDtor();
+
+  /// Returns true if C++ temporary destructors should be inlined during
+  /// analysis.
+  ///
+  /// If temporary destructors are disabled in the CFG via the
+  /// 'cfg-temporary-dtors' option, temporary destructors would not be
+  /// inlined anyway.
+  ///
+  /// This is controlled by the 'c++-temp-dtor-inlining' config option, which
+  /// accepts the values "true" and "false".
+  bool mayInlineCXXTemporaryDtors();
 
   /// Returns whether or not paths that go through null returns should be
   /// suppressed.
