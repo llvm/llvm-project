@@ -705,13 +705,16 @@ class Base(unittest2.TestCase):
         """Return the full path to the current test."""
         return os.path.join(os.environ["LLDB_TEST"], self.mydir)
 
+    def getBuildDirBasename(self):
+        return self.__class__.__module__ + "." + self.testMethodName
+
     def getBuildDir(self):
         """Return the full path to the current test."""
         variant = self.getDebugInfo()
         if variant is None:
             variant = 'default'
         return os.path.join(os.environ["LLDB_BUILD"], self.mydir,
-                            self.testMethodName)
+                            self.getBuildDirBasename())
     
      
     def makeBuildDir(self):
@@ -1504,7 +1507,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build the default binaries."""
         testdir = self.mydir
-        testname = self.testMethodName
+        testname = self.getBuildDirBasename()
         if self.getDebugInfo():
             raise Exception("buildDefault tests must set NO_DEBUG_INFO_TESTCASE")
         module = builder_module()
@@ -1522,7 +1525,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with dsym info."""
         testdir = self.mydir
-        testname = self.testMethodName
+        testname = self.getBuildDirBasename()
         if self.getDebugInfo() != "dsym":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
@@ -1540,7 +1543,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with dwarf maps."""
         testdir = self.mydir
-        testname = self.testMethodName
+        testname = self.getBuildDirBasename()
         if self.getDebugInfo() != "dwarf":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
@@ -1558,7 +1561,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with dwarf maps."""
         testdir = self.mydir
-        testname = self.testMethodName
+        testname = self.getBuildDirBasename()
         if self.getDebugInfo() != "dwo":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 
@@ -1576,7 +1579,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with gmodules info."""
         testdir = self.mydir
-        testname = self.testMethodName
+        testname = self.getBuildDirBasename()
         if self.getDebugInfo() != "gmodules":
             raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
 

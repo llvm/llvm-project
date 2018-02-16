@@ -436,6 +436,8 @@ void LinkerScript::processSectionCommands() {
       Sec->SectionIndex = I++;
       if (Sec->Noload)
         Sec->Type = SHT_NOBITS;
+      if (Sec->NonAlloc)
+        Sec->Flags &= ~(uint64_t)SHF_ALLOC;
     }
   }
   Ctx = nullptr;

@@ -7,8 +7,8 @@ entry:
 ; CHECK-NOT: mvn
 ; CHECK:     cmn
   %cmp = icmp sgt i32 %a, -78
-  %. = zext i1 %cmp to i32
-  ret i32 %.
+  %ret = select i1 %cmp, i32 42, i32 24
+  ret i32 %ret
 }
 
 define i32 @compare_r_eq(i32 %a, i32 %b) {
@@ -17,6 +17,6 @@ entry:
 ; CHECK: cmn
   %sub = sub nsw i32 0, %b
   %cmp = icmp eq i32 %a, %sub
-  %. = zext i1 %cmp to i32
-  ret i32 %.
+  %ret = select i1 %cmp, i32 42, i32 24
+  ret i32 %ret
 }

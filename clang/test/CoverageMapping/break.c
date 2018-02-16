@@ -31,3 +31,14 @@ int main() {         // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
     ++cnt;
   }
 }
+
+// CHECK-LABEL: break_continue_in_increment:
+// CHECK:  [[@LINE+6]]:11 -> [[@LINE+6]]:45 = #1
+// CHECK:  [[@LINE+5]]:18 -> [[@LINE+5]]:19 = #1
+// CHECK:  [[@LINE+4]]:21 -> [[@LINE+4]]:26 = #2
+// CHECK:  [[@LINE+3]]:33 -> [[@LINE+3]]:41 = (#1 - #2)
+// CHECK:  [[@LINE+3]]:5 -> [[@LINE+3]]:6 = #1
+void break_continue_in_increment(int x) {
+  for (;; ({ if (x) break; else continue; }))
+    ;
+}

@@ -337,20 +337,20 @@ define i64 @MACLongTest14(i32 %a, i32 %b, i64 %c)  {
 @global_b = external global i16, align 2
 ;CHECK-LABEL: MACLongTest15
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlaltb r2, r3, r0, r1
+;CHECK-T2-DSP: mov r1, r3
+;CHECK-T2-DSP: smlaltb r2, r1, r0, r3
 ;CHECK-T2-DSP-NEXT: mov r0, r2
-;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlaltb r2, r3, r0, r1
+;CHECK-V5TE: mov r1, r3
+;CHECK-V5TE: smlaltb r2, r1, r0, r3
 ;CHECK-V5TE-NEXT: mov r0, r2
-;CHECK-V5TE-NEXT: mov r1, r3
 ;CHECK-V7-LE-NOT: {{asr|lsr}}
-;CHECK-V7-LE: smlaltb r2, r3, r0, r1
+;CHECK-V7-LE: mov r1, r3
+;CHECK-V7-LE: smlaltb r2, r1, r0, r3
 ;CHECK-V7-LE-NEXT: mov r0, r2
-;CHECK-V7-LE-NEXT: mov r1, r3
-;CHECK-V7-THUMB-BE: smlaltb r3, r2, r0, r1
+;CHECK-V7-THUMB-BE: mov r1, r3
+;CHECK-V7-THUMB-BE: smlaltb r1, r2, r0, r3
 ;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlaltb
 ;CHECK-BE-NOT: smlaltb
 ;CHECK-V6M-THUMB-NOT: smlaltb
@@ -368,19 +368,19 @@ entry:
 
 ;CHECK-LABEL: MACLongTest16
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlalbt r2, r3, r1, r0
+;CHECK-T2-DSP: mov r1, r3
+;CHECK-T2-DSP: smlalbt r2, r1, r3, r0
 ;CHECK-T2-DSP-NEXT: mov r0, r2
-;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlalbt r2, r3, r1, r0
+;CHECK-V5TE: mov r1, r3
+;CHECK-V5TE: smlalbt r2, r1, r3, r0
 ;CHECK-V5TE-NEXT: mov r0, r2
-;CHECK-V5TE-NEXT: mov r1, r3
-;CHECK-V7-LE: smlalbt r2, r3, r1, r0
+;CHECK-V7-LE: mov r1, r3
+;CHECK-V7-LE: smlalbt r2, r1, r3, r0
 ;CHECK-V7-LE-NEXT: mov r0, r2
-;CHECK-V7-LE-NEXT: mov r1, r3
-;CHECK-V7-THUMB-BE: smlalbt r3, r2, r1, r0
+;CHECK-V7-THUMB-BE: mov r1, r3
+;CHECK-V7-THUMB-BE: smlalbt r1, r2, r3, r0
 ;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlalbt
 ;CHECK-BE-NOT: smlalbt
 ;CHECK-V6M-THUMB-NOT: smlalbt
