@@ -28,9 +28,7 @@
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "isIncomplete": {{.*}}
 # CHECK-NEXT:    "items": [
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "int",
-# CHECK-NEXT:      "filterText": "func_with_args",
+# CHECK:           "filterText": "func_with_args",
 # CHECK-NEXT:      "insertText": "func_with_args(${1:int a}, ${2:int b})",
 # CHECK-NEXT:      "insertTextFormat": 2,
 # CHECK-NEXT:      "kind": 3,

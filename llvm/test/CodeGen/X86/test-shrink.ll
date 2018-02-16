@@ -6,8 +6,8 @@
 define void @g64xh(i64 inreg %x) nounwind {
 ; CHECK-LINUX64-LABEL: g64xh:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    btl $11, %edi
-; CHECK-LINUX64-NEXT:    jb .LBB0_2
+; CHECK-LINUX64-NEXT:    testl $2048, %edi # imm = 0x800
+; CHECK-LINUX64-NEXT:    jne .LBB0_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
 ; CHECK-LINUX64-NEXT:    callq bar
@@ -18,8 +18,8 @@ define void @g64xh(i64 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: g64xh:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    btl $11, %ecx
-; CHECK-WIN32-64-NEXT:    jb .LBB0_2
+; CHECK-WIN32-64-NEXT:    testl $2048, %ecx # imm = 0x800
+; CHECK-WIN32-64-NEXT:    jne .LBB0_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
 ; CHECK-WIN32-64-NEXT:  .LBB0_2: # %no
@@ -28,8 +28,8 @@ define void @g64xh(i64 inreg %x) nounwind {
 ;
 ; CHECK-X86-LABEL: g64xh:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    btl $11, %eax
-; CHECK-X86-NEXT:    jb .LBB0_2
+; CHECK-X86-NEXT:    testl $2048, %eax # imm = 0x800
+; CHECK-X86-NEXT:    jne .LBB0_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar
 ; CHECK-X86-NEXT:  .LBB0_2: # %no
@@ -90,8 +90,8 @@ no:
 define void @g32xh(i32 inreg %x) nounwind {
 ; CHECK-LINUX64-LABEL: g32xh:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    btl $11, %edi
-; CHECK-LINUX64-NEXT:    jb .LBB2_2
+; CHECK-LINUX64-NEXT:    testl $2048, %edi # imm = 0x800
+; CHECK-LINUX64-NEXT:    jne .LBB2_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
 ; CHECK-LINUX64-NEXT:    callq bar
@@ -102,8 +102,8 @@ define void @g32xh(i32 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: g32xh:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    btl $11, %ecx
-; CHECK-WIN32-64-NEXT:    jb .LBB2_2
+; CHECK-WIN32-64-NEXT:    testl $2048, %ecx # imm = 0x800
+; CHECK-WIN32-64-NEXT:    jne .LBB2_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
 ; CHECK-WIN32-64-NEXT:  .LBB2_2: # %no
@@ -112,8 +112,8 @@ define void @g32xh(i32 inreg %x) nounwind {
 ;
 ; CHECK-X86-LABEL: g32xh:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    btl $11, %eax
-; CHECK-X86-NEXT:    jb .LBB2_2
+; CHECK-X86-NEXT:    testl $2048, %eax # imm = 0x800
+; CHECK-X86-NEXT:    jne .LBB2_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar
 ; CHECK-X86-NEXT:  .LBB2_2: # %no
@@ -174,8 +174,8 @@ no:
 define void @g16xh(i16 inreg %x) nounwind {
 ; CHECK-LINUX64-LABEL: g16xh:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    btl $11, %edi
-; CHECK-LINUX64-NEXT:    jb .LBB4_2
+; CHECK-LINUX64-NEXT:    testl $2048, %edi # imm = 0x800
+; CHECK-LINUX64-NEXT:    jne .LBB4_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
 ; CHECK-LINUX64-NEXT:    callq bar
@@ -186,8 +186,8 @@ define void @g16xh(i16 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: g16xh:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    btl $11, %ecx
-; CHECK-WIN32-64-NEXT:    jb .LBB4_2
+; CHECK-WIN32-64-NEXT:    testl $2048, %ecx # imm = 0x800
+; CHECK-WIN32-64-NEXT:    jne .LBB4_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
 ; CHECK-WIN32-64-NEXT:  .LBB4_2: # %no
@@ -196,8 +196,8 @@ define void @g16xh(i16 inreg %x) nounwind {
 ;
 ; CHECK-X86-LABEL: g16xh:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    btl $11, %eax
-; CHECK-X86-NEXT:    jb .LBB4_2
+; CHECK-X86-NEXT:    testl $2048, %eax # imm = 0x800
+; CHECK-X86-NEXT:    jne .LBB4_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar
 ; CHECK-X86-NEXT:  .LBB4_2: # %no

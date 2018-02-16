@@ -676,7 +676,7 @@ class Base(unittest2.TestCase):
         if not lldb.remote_platform or not configuration.lldb_platform_working_dir:
             return
 
-        components = [str(self.test_number)] + self.mydir.split(os.path.sep)
+        components = self.mydir.split(os.path.sep) + [str(self.test_number), self.getBuildDirBasename()]
         remote_test_dir = configuration.lldb_platform_working_dir
         for c in components:
             remote_test_dir = lldbutil.join_remote_paths(remote_test_dir, c)

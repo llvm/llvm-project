@@ -40,7 +40,7 @@ public:
     InvalidKind,
   };
 
-  Kind kind() const { return static_cast<Kind>(SymbolKind); }
+  Kind kind() const { return SymbolKind; }
 
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isDefined() const { return SymbolKind <= LastDefinedKind; }
@@ -94,7 +94,7 @@ public:
            S->kind() == UndefinedFunctionKind;
   }
 
-  bool hasFunctionType() const { return FunctionType != nullptr; }
+  bool hasFunctionType() const { return Chunk || FunctionType; }
   const WasmSignature &getFunctionType() const;
 
   uint32_t getTableIndex() const;

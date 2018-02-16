@@ -1793,11 +1793,6 @@ Sema::AccessResult Sema::CheckAddressOfMemberAccess(Expr *OvlExpr,
 
   AccessTarget Entity(Context, AccessTarget::Member, NamingClass, Found,
                       /*no instance context*/ QualType());
-
-  if (IsAccessible(*this, EffectiveContext(CurScope->getEntity()), Entity) ==
-      ::AR_accessible)
-    return AR_accessible;
-
   Entity.setDiag(diag::err_access)
     << Ovl->getSourceRange();
 

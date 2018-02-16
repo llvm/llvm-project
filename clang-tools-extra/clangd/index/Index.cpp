@@ -80,6 +80,7 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
     // Intern the actual strings.
     Intern(Detail->Documentation);
     Intern(Detail->CompletionDetail);
+    Intern(Detail->IncludeHeader);
     // Replace the detail pointer with our copy.
     S.Detail = Detail;
   }

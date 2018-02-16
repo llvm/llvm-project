@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -disable-promote-alloca-to-vector -verify-machineinstrs < %s | FileCheck %s
 
 declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #1
 

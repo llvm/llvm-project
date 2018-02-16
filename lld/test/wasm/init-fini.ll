@@ -23,8 +23,8 @@ entry:
   ret void
 }
 
-define void @__cxa_atexit() {
-  ret void
+define i32 @__cxa_atexit(i32 %func, i32 %arg, i32 %dso_handle) {
+  ret i32 0
 }
 
 define hidden void @_start() {
@@ -52,9 +52,9 @@ entry:
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
-; CHECK-NEXT:         Functions:       [ 6, 9, 13, 15, 17 ]
+; CHECK-NEXT:         Functions:       [ 6, 8, 12, 14, 16 ]
 
-; CHECK:              Body:            100010011007100B100E100B10101000100A100B10120B
+; CHECK:              Body:            100010011007100A100D100A100F10001009100A10110B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
@@ -78,28 +78,26 @@ entry:
 ; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.101
 ; CHECK-NEXT:       - Index:           8
-; CHECK-NEXT:         Name:            .Lbitcast
-; CHECK-NEXT:       - Index:           9
 ; CHECK-NEXT:         Name:            .Lcall_dtors.1001
-; CHECK-NEXT:       - Index:           10
+; CHECK-NEXT:       - Index:           9
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.1001
-; CHECK-NEXT:       - Index:           11
+; CHECK-NEXT:       - Index:           10
 ; CHECK-NEXT:         Name:            myctor
-; CHECK-NEXT:       - Index:           12
+; CHECK-NEXT:       - Index:           11
 ; CHECK-NEXT:         Name:            mydtor
-; CHECK-NEXT:       - Index:           13
+; CHECK-NEXT:       - Index:           12
 ; CHECK-NEXT:         Name:            .Lcall_dtors.101
-; CHECK-NEXT:       - Index:           14
+; CHECK-NEXT:       - Index:           13
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.101
-; CHECK-NEXT:       - Index:           15
+; CHECK-NEXT:       - Index:           14
 ; CHECK-NEXT:         Name:            .Lcall_dtors.202
-; CHECK-NEXT:       - Index:           16
+; CHECK-NEXT:       - Index:           15
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.202
-; CHECK-NEXT:       - Index:           17
+; CHECK-NEXT:       - Index:           16
 ; CHECK-NEXT:         Name:            .Lcall_dtors.2002
-; CHECK-NEXT:       - Index:           18
+; CHECK-NEXT:       - Index:           17
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.2002
-; CHECK-NEXT:       - Index:           19
+; CHECK-NEXT:       - Index:           18
 ; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...
 
@@ -125,8 +123,6 @@ entry:
 ; RELOC-NEXT:       - Name:            .Lcall_dtors.101
 ; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
 ; RELOC-NEXT:       - Name:            .Lregister_call_dtors.101
-; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
-; RELOC-NEXT:       - Name:            .Lbitcast
 ; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
 ; RELOC-NEXT:       - Name:            .Lcall_dtors.1001
 ; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
@@ -156,21 +152,21 @@ entry:
 ; RELOC-NEXT:       - Priority:        101
 ; RELOC-NEXT:         FunctionIndex:   7
 ; RELOC-NEXT:       - Priority:        101
-; RELOC-NEXT:         FunctionIndex:   11
+; RELOC-NEXT:         FunctionIndex:   10
 ; RELOC-NEXT:       - Priority:        101
-; RELOC-NEXT:         FunctionIndex:   14
+; RELOC-NEXT:         FunctionIndex:   13
 ; RELOC-NEXT:       - Priority:        202
-; RELOC-NEXT:         FunctionIndex:   11
+; RELOC-NEXT:         FunctionIndex:   10
 ; RELOC-NEXT:       - Priority:        202
-; RELOC-NEXT:         FunctionIndex:   16
+; RELOC-NEXT:         FunctionIndex:   15
 ; RELOC-NEXT:       - Priority:        1001
 ; RELOC-NEXT:         FunctionIndex:   0
 ; RELOC-NEXT:       - Priority:        1001
+; RELOC-NEXT:         FunctionIndex:   9
+; RELOC-NEXT:       - Priority:        2002
 ; RELOC-NEXT:         FunctionIndex:   10
 ; RELOC-NEXT:       - Priority:        2002
-; RELOC-NEXT:         FunctionIndex:   11
-; RELOC-NEXT:       - Priority:        2002
-; RELOC-NEXT:         FunctionIndex:   18
+; RELOC-NEXT:         FunctionIndex:   17
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            name
 ; RELOC-NEXT:     FunctionNames:
@@ -191,25 +187,23 @@ entry:
 ; RELOC-NEXT:       - Index:           7
 ; RELOC-NEXT:         Name:            .Lregister_call_dtors.101
 ; RELOC-NEXT:       - Index:           8
-; RELOC-NEXT:         Name:            .Lbitcast
-; RELOC-NEXT:       - Index:           9
 ; RELOC-NEXT:         Name:            .Lcall_dtors.1001
-; RELOC-NEXT:       - Index:           10
+; RELOC-NEXT:       - Index:           9
 ; RELOC-NEXT:         Name:            .Lregister_call_dtors.1001
-; RELOC-NEXT:       - Index:           11
+; RELOC-NEXT:       - Index:           10
 ; RELOC-NEXT:         Name:            myctor
-; RELOC-NEXT:       - Index:           12
+; RELOC-NEXT:       - Index:           11
 ; RELOC-NEXT:         Name:            mydtor
-; RELOC-NEXT:       - Index:           13
+; RELOC-NEXT:       - Index:           12
 ; RELOC-NEXT:         Name:            .Lcall_dtors.101
-; RELOC-NEXT:       - Index:           14
+; RELOC-NEXT:       - Index:           13
 ; RELOC-NEXT:         Name:            .Lregister_call_dtors.101
-; RELOC-NEXT:       - Index:           15
+; RELOC-NEXT:       - Index:           14
 ; RELOC-NEXT:         Name:            .Lcall_dtors.202
-; RELOC-NEXT:       - Index:           16
+; RELOC-NEXT:       - Index:           15
 ; RELOC-NEXT:         Name:            .Lregister_call_dtors.202
-; RELOC-NEXT:       - Index:           17
+; RELOC-NEXT:       - Index:           16
 ; RELOC-NEXT:         Name:            .Lcall_dtors.2002
-; RELOC-NEXT:       - Index:           18
+; RELOC-NEXT:       - Index:           17
 ; RELOC-NEXT:         Name:            .Lregister_call_dtors.2002
 ; RELOC-NEXT: ...

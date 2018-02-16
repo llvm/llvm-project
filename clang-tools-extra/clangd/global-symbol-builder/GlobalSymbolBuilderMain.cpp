@@ -13,10 +13,12 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "index/Merge.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolYAML.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -57,11 +59,19 @@ public:
     class WrappedIndexAction : public WrapperFrontendAction {
     public:
       WrappedIndexAction(std::shared_ptr<SymbolCollector> C,
+                         std::unique_ptr<CanonicalIncludes> Includes,
                          const index::IndexingOptions &Opts,
                          tooling::ExecutionContext *Ctx)
           : WrapperFrontendAction(
                 index::createIndexingAction(C, Opts, nullptr)),
-            Ctx(Ctx), Collector(C) {}
+            Ctx(Ctx), Collector(C), Includes(std::move(Includes)),
+            PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
+
+      std::unique_ptr<ASTConsumer>
+      CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
+        CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
+        return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
+      }
 
       void EndSourceFileAction() override {
         WrapperFrontendAction::EndSourceFileAction();
@@ -78,6 +88,8 @@ public:
     private:
       tooling::ExecutionContext *Ctx;
       std::shared_ptr<SymbolCollector> Collector;
+      std::unique_ptr<CanonicalIncludes> Includes;
+      std::unique_ptr<CommentHandler> PragmaHandler;
     };
 
     index::IndexingOptions IndexOpts;
@@ -86,9 +98,13 @@ public:
     IndexOpts.IndexFunctionLocals = false;
     auto CollectorOpts = SymbolCollector::Options();
     CollectorOpts.FallbackDir = AssumedHeaderDir;
+    CollectorOpts.CollectIncludePath = true;
+    auto Includes = llvm::make_unique<CanonicalIncludes>();
+    addSystemHeadersMapping(Includes.get());
+    CollectorOpts.Includes = Includes.get();
     return new WrappedIndexAction(
-        std::make_shared<SymbolCollector>(std::move(CollectorOpts)), IndexOpts,
-        Ctx);
+        std::make_shared<SymbolCollector>(std::move(CollectorOpts)),
+        std::move(Includes), IndexOpts, Ctx);
   }
 
   tooling::ExecutionContext *Ctx;

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CanonicalIncludes.h"
 #include "Index.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -39,6 +40,10 @@ public:
     /// in symbols. The list of schemes will be tried in order until a working
     /// scheme is found. If no scheme works, symbol location will be dropped.
     std::vector<std::string> URISchemes = {"file"};
+    bool CollectIncludePath = false;
+    /// If set, this is used to map symbol #include path to a potentially
+    /// different #include path.
+    const CanonicalIncludes *Includes = nullptr;
   };
 
   SymbolCollector(Options Opts);
