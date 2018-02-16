@@ -88,6 +88,12 @@ Improvements to clang-tidy
   Functions that have trailing returns are disallowed, except for those 
   using decltype specifiers and lambda with otherwise unutterable 
   return types.
+
+- New `readability-simd-intrinsics
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-simd-intrinsics.html>`_ check
+
+  Warns if SIMD intrinsics are used which can be replaced by
+  ``std::experimental::simd`` operations.
     
 - New alias `hicpp-avoid-goto
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-avoid-goto.html>`_ to 
