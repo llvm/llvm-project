@@ -491,6 +491,29 @@ void ClangdServer::findDocumentHighlights(
   WorkScheduler.runWithAST(File, BindWithForward(Action, std::move(Callback)));
 }
 
+void ClangdServer::findHover(
+    PathRef File, Position Pos,
+    UniqueFunction<void(llvm::Expected<Tagged<Hover>>)> Callback) {
+  Hover FinalHover;
+  auto FileContents = DraftMgr.getDraft(File);
+  if (!FileContents.Draft)
+    return Callback(llvm::make_error<llvm::StringError>(
+        "findHover called on non-added file", llvm::errc::invalid_argument));
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+
+  auto Action = [Pos, TaggedFS](decltype(Callback) Callback,
+                                llvm::Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return Callback(InpAST.takeError());
+
+    Hover Result = clangd::getHover(InpAST->AST, Pos);
+    Callback(make_tagged(std::move(Result), TaggedFS.Tag));
+  };
+
+  WorkScheduler.runWithAST(File, BindWithForward(Action, std::move(Callback)));
+}
+
 void ClangdServer::scheduleReparseAndDiags(
     PathRef File, VersionedDraft Contents,
     Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {

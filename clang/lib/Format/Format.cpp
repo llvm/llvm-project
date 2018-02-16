@@ -715,6 +715,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
       {
           "pb",
           "PB",
+          "proto",
+          "PROTO",
       },
       /*EnclosingFunctionNames=*/
       {},

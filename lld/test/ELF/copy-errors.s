@@ -19,5 +19,7 @@
 
 .global _start
 _start:
-call bar
-call zed
+.byte 0xe8
+.long bar - .
+.byte 0xe8
+.long zed - .

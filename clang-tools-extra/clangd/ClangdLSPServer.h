@@ -75,6 +75,7 @@ private:
   void onFileEvent(DidChangeWatchedFilesParams &Params) override;
   void onCommand(ExecuteCommandParams &Params) override;
   void onRename(RenameParams &Parames) override;
+  void onHover(TextDocumentPositionParams &Params) override;
 
   std::vector<TextEdit> getFixIts(StringRef File, const clangd::Diagnostic &D);
 

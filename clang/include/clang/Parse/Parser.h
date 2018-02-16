@@ -379,15 +379,15 @@ private:
 
   /// isTokenParen - Return true if the cur token is '(' or ')'.
   bool isTokenParen() const {
-    return Tok.getKind() == tok::l_paren || Tok.getKind() == tok::r_paren;
+    return Tok.isOneOf(tok::l_paren, tok::r_paren);
   }
   /// isTokenBracket - Return true if the cur token is '[' or ']'.
   bool isTokenBracket() const {
-    return Tok.getKind() == tok::l_square || Tok.getKind() == tok::r_square;
+    return Tok.isOneOf(tok::l_square, tok::r_square);
   }
   /// isTokenBrace - Return true if the cur token is '{' or '}'.
   bool isTokenBrace() const {
-    return Tok.getKind() == tok::l_brace || Tok.getKind() == tok::r_brace;
+    return Tok.isOneOf(tok::l_brace, tok::r_brace);
   }
   /// isTokenStringLiteral - True if this token is a string-literal.
   bool isTokenStringLiteral() const {

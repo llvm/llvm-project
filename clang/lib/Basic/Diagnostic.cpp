@@ -1,4 +1,4 @@
-//===--- Diagnostic.cpp - C Language Family Diagnostic Handling -----------===//
+//===- Diagnostic.cpp - C Language Family Diagnostic Handling -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,15 +14,30 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticError.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 
@@ -61,23 +76,9 @@ DiagnosticsEngine::DiagnosticsEngine(
     IntrusiveRefCntPtr<DiagnosticIDs> diags,
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, DiagnosticConsumer *client,
     bool ShouldOwnClient)
-    : Diags(std::move(diags)), DiagOpts(std::move(DiagOpts)), Client(nullptr),
-      SourceMgr(nullptr) {
+    : Diags(std::move(diags)), DiagOpts(std::move(DiagOpts)) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
-  ArgToStringCookie = nullptr;
-
-  AllExtensionsSilenced = 0;
-  SuppressAfterFatalError = true;
-  SuppressAllDiagnostics = false;
-  ElideType = true;
-  PrintTemplateTree = false;
-  ShowColors = false;
-  ShowOverloads = Ovl_All;
-
-  ErrorLimit = 0;
-  TemplateBacktraceLimit = 0;
-  ConstexprBacktraceLimit = 0;
 
   Reset();
 }
@@ -121,7 +122,7 @@ void DiagnosticsEngine::Reset() {
   TrapNumErrorsOccurred = 0;
   TrapNumUnrecoverableErrorsOccurred = 0;
   
-  CurDiagID = ~0U;
+  CurDiagID = std::numeric_limits<unsigned>::max();
   LastDiagLevel = DiagnosticIDs::Ignored;
   DelayedDiagID = 0;
 
@@ -152,8 +153,7 @@ void DiagnosticsEngine::ReportDelayed() {
   Report(ID) << DelayedDiagArg1 << DelayedDiagArg2;
 }
 
-void DiagnosticsEngine::DiagStateMap::appendFirst(
-                                             DiagState *State) {
+void DiagnosticsEngine::DiagStateMap::appendFirst(DiagState *State) {
   assert(Files.empty() && "not first");
   FirstDiagState = CurDiagState = State;
   CurDiagStateLoc = SourceLocation();
@@ -463,7 +463,8 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
-  assert(CurDiagID == ~0U && "Multiple diagnostics in flight at once!");
+  assert(CurDiagID == std::numeric_limits<unsigned>::max() &&
+         "Multiple diagnostics in flight at once!");
 
   CurDiagLoc = storedDiag.getLocation();
   CurDiagID = storedDiag.getID();
@@ -484,7 +485,7 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
       ++NumWarnings;
   }
 
-  CurDiagID = ~0U;
+  CurDiagID = std::numeric_limits<unsigned>::max();
 }
 
 bool DiagnosticsEngine::EmitCurrentDiagnostic(bool Force) {
@@ -519,8 +520,7 @@ bool DiagnosticsEngine::EmitCurrentDiagnostic(bool Force) {
   return Emitted;
 }
 
-
-DiagnosticConsumer::~DiagnosticConsumer() {}
+DiagnosticConsumer::~DiagnosticConsumer() = default;
 
 void DiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                         const Diagnostic &Info) {
@@ -537,7 +537,7 @@ void DiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 template <std::size_t StrLen>
 static bool ModifierIs(const char *Modifier, unsigned ModifierLen,
                        const char (&Str)[StrLen]) {
-  return StrLen-1 == ModifierLen && !memcmp(Modifier, Str, StrLen-1);
+  return StrLen-1 == ModifierLen && memcmp(Modifier, Str, StrLen-1) == 0;
 }
 
 /// ScanForward - Scans forward, looking for the given character, skipping
@@ -617,7 +617,6 @@ static void HandleOrdinalModifier(unsigned ValNo,
   Out << ValNo << llvm::getOrdinalSuffix(ValNo);
 }
 
-
 /// PluralNumber - Parse an unsigned integer and advance Start.
 static unsigned PluralNumber(const char *&Start, const char *End) {
   // Programming 101: Parse a decimal number :-)
@@ -653,7 +652,7 @@ static bool EvalPluralExpr(unsigned ValNo, const char *Start, const char *End) {
   if (*Start == ':')
     return true;
 
-  while (1) {
+  while (true) {
     char C = *Start;
     if (C == '%') {
       // Modulo expression
@@ -718,7 +717,7 @@ static void HandlePluralModifier(const Diagnostic &DInfo, unsigned ValNo,
                                  const char *Argument, unsigned ArgumentLen,
                                  SmallVectorImpl<char> &OutStr) {
   const char *ArgumentEnd = Argument + ArgumentLen;
-  while (1) {
+  while (true) {
     assert(Argument < ArgumentEnd && "Plural expression didn't match.");
     const char *ExprEnd = Argument;
     while (*ExprEnd != ':') {
@@ -769,7 +768,6 @@ FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
 void Diagnostic::
 FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                  SmallVectorImpl<char> &OutStr) const {
-
   // When the diagnostic string is only "%0", the entire string is being given
   // by an outside source.  Remove unprintable characters from this string
   // and skip all the other string processing.
@@ -989,7 +987,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                                      FormattedArgs,
                                      OutStr, QualTypeVals);
       break;
-    case DiagnosticsEngine::ak_qualtype_pair:
+    case DiagnosticsEngine::ak_qualtype_pair: {
       // Create a struct with all the info needed for printing.
       TemplateDiffTypes TDT;
       TDT.FromType = getRawArg(ArgNo);
@@ -1057,6 +1055,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       FormatDiagnostic(SecondDollar + 1, Pipe, OutStr);
       break;
     }
+    }
     
     // Remember this argument info for subsequent formatting operations.  Turn
     // std::strings into a null terminated string to make it be the same case as
@@ -1068,7 +1067,6 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     else
       FormattedArgs.push_back(std::make_pair(DiagnosticsEngine::ak_c_string,
                                         (intptr_t)getArgStdStr(ArgNo).c_str()));
-    
   }
 
   // Append the type tree to the end of the diagnostics.
@@ -1077,12 +1075,11 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
 
 StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                                    StringRef Message)
-  : ID(ID), Level(Level), Loc(), Message(Message) { }
+    : ID(ID), Level(Level), Message(Message) {}
 
 StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, 
                                    const Diagnostic &Info)
-  : ID(Info.getID()), Level(Level) 
-{
+    : ID(Info.getID()), Level(Level) {
   assert((Info.getLocation().isInvalid() || Info.hasSourceManager()) &&
        "Valid source location without setting a source manager for diagnostic");
   if (Info.getLocation().isValid())
@@ -1098,8 +1095,8 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                                    StringRef Message, FullSourceLoc Loc,
                                    ArrayRef<CharSourceRange> Ranges,
                                    ArrayRef<FixItHint> FixIts)
-  : ID(ID), Level(Level), Loc(Loc), Message(Message), 
-    Ranges(Ranges.begin(), Ranges.end()), FixIts(FixIts.begin(), FixIts.end())
+    : ID(ID), Level(Level), Loc(Loc), Message(Message),
+      Ranges(Ranges.begin(), Ranges.end()), FixIts(FixIts.begin(), FixIts.end())
 {
 }
 
@@ -1109,9 +1106,9 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
 ///  reported by DiagnosticsEngine.
 bool DiagnosticConsumer::IncludeInDiagnosticCounts() const { return true; }
 
-void IgnoringDiagConsumer::anchor() { }
+void IgnoringDiagConsumer::anchor() {}
 
-ForwardingDiagnosticConsumer::~ForwardingDiagnosticConsumer() {}
+ForwardingDiagnosticConsumer::~ForwardingDiagnosticConsumer() = default;
 
 void ForwardingDiagnosticConsumer::HandleDiagnostic(
        DiagnosticsEngine::Level DiagLevel,

@@ -13,6 +13,7 @@
 #include "Trace.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/SourceMgr.h"
 #include <istream>
 
@@ -60,20 +61,19 @@ void JSONOutput::writeMessage(const json::Expr &Message) {
     OS << Message;
   OS.flush();
 
-  std::lock_guard<std::mutex> Guard(StreamMutex);
-  // Log without headers.
-  Logs << "--> " << S << '\n';
-  Logs.flush();
-
-  // Emit message with header.
-  Outs << "Content-Length: " << S.size() << "\r\n\r\n" << S;
-  Outs.flush();
+  {
+    std::lock_guard<std::mutex> Guard(StreamMutex);
+    Outs << "Content-Length: " << S.size() << "\r\n\r\n" << S;
+    Outs.flush();
+  }
+  log(llvm::Twine("--> ") + S);
 }
 
 void JSONOutput::log(const Twine &Message) {
+  llvm::sys::TimePoint<> Timestamp = std::chrono::system_clock::now();
   trace::log(Message);
   std::lock_guard<std::mutex> Guard(StreamMutex);
-  Logs << Message << '\n';
+  Logs << llvm::formatv("[{0:%H:%M:%S.%L}] {1}\n", Timestamp, Message);
   Logs.flush();
 }
 
