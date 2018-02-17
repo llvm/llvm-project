@@ -35,7 +35,7 @@ jobs:
           command: |
             git clone https://github.com/CilkHub/cilkrts.git
             cd cilkrts
-            git checkout tags/v0.1
+            git checkout tags/v0.1.1
             mkdir build
             cd build
             cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
@@ -76,7 +76,7 @@ jobs:
           command: |
             git clone https://github.com/CilkHub/cilkrts.git
             cd cilkrts
-            git checkout tags/v0.1
+            git checkout tags/v0.1.1
             mkdir build
             cd build
             cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
