@@ -653,7 +653,7 @@ define i32 @sad_avx64i8() nounwind {
 ; SSE2-NEXT:    paddd %xmm7, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm13, %xmm1
-; SSE2-NEXT:    movdqa %xmm13, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1

@@ -1982,8 +1982,8 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         << "&>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
   CvtOS << "      break;\n";
   CvtOS << "    case CVT_Tied: {\n";
-  CvtOS << "      assert(OpIdx < (std::end(TiedAsmOperandTable) -\n";
-  CvtOS << "                      std::begin(TiedAsmOperandTable)) &&\n";
+  CvtOS << "      assert(OpIdx < (size_t)(std::end(TiedAsmOperandTable) -\n";
+  CvtOS << "                          std::begin(TiedAsmOperandTable)) &&\n";
   CvtOS << "             \"Tied operand not found\");\n";
   CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[OpIdx][0];\n";
   CvtOS << "      Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
@@ -2982,8 +2982,8 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "    switch (*p) {\n";
   OS << "    case CVT_Tied: {\n";
   OS << "      unsigned OpIdx = *(p+1);\n";
-  OS << "      assert(OpIdx < (std::end(TiedAsmOperandTable) -\n";
-  OS << "                     std::begin(TiedAsmOperandTable)) &&\n";
+  OS << "      assert(OpIdx < (size_t)(std::end(TiedAsmOperandTable) -\n";
+  OS << "                              std::begin(TiedAsmOperandTable)) &&\n";
   OS << "             \"Tied operand not found\");\n";
   OS << "      unsigned OpndNum1 = TiedAsmOperandTable[OpIdx][1];\n";
   OS << "      unsigned OpndNum2 = TiedAsmOperandTable[OpIdx][2];\n";

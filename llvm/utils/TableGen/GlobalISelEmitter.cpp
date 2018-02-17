@@ -2594,6 +2594,10 @@ private:
   /// GISDNodeXFormEquiv.
   DenseMap<const Record *, const Record *> SDNodeXFormEquivs;
 
+  /// Keep track of Scores of PatternsToMatch similar to how the DAG does.
+  /// This adds compatibility for RuleMatchers to use this for ordering rules.
+  DenseMap<uint64_t, int> RuleMatcherScores;
+
   // Map of predicates to their subtarget features.
   SubtargetFeatureInfoMap SubtargetFeatures;
 
@@ -3378,7 +3382,9 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
 
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // Keep track of the matchers and actions to emit.
+  int Score = P.getPatternComplexity(CGP);
   RuleMatcher M(P.getSrcRecord()->getLoc());
+  RuleMatcherScores[M.getRuleID()] = Score;
   M.addAction<DebugCommentAction>(llvm::to_string(*P.getSrcPattern()) +
                                   "  =>  " +
                                   llvm::to_string(*P.getDstPattern()));
@@ -3934,6 +3940,12 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   std::stable_sort(Rules.begin(), Rules.end(), [&](const RuleMatcher &A,
                                                    const RuleMatcher &B) {
+    int ScoreA = RuleMatcherScores[A.getRuleID()];
+    int ScoreB = RuleMatcherScores[B.getRuleID()];
+    if (ScoreA > ScoreB)
+      return true;
+    if (ScoreB > ScoreA)
+      return false;
     if (A.isHigherPriorityThan(B)) {
       assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
                                            "and less important at "

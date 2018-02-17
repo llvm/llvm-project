@@ -52,7 +52,6 @@ public:
 
   uint32_t getOutputOffset() const { return OutputOffset; }
   ArrayRef<WasmRelocation> getRelocations() const { return Relocations; }
-  StringRef getFileName() const { return File->getName(); }
 
   virtual StringRef getComdat() const = 0;
   virtual StringRef getName() const = 0;

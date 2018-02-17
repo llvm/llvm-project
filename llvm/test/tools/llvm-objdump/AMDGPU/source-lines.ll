@@ -1,7 +1,7 @@
 ; RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %s > %t.ll
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx800 -filetype=obj -O0 -o %t.o %t.ll
-; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx800 -disassemble -line-numbers %t.o | FileCheck --check-prefix=LINE %t.ll
-; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx800 -disassemble -source %t.o | FileCheck --check-prefix=SOURCE %t.ll
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx802 -filetype=obj -O0 -o %t.o %t.ll
+; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx802 -disassemble -line-numbers %t.o | FileCheck --check-prefix=LINE %t.ll
+; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx802 -disassemble -source %t.o | FileCheck --check-prefix=SOURCE %t.ll
 
 ; Prologue.
 ; LINE:      source_lines_test:

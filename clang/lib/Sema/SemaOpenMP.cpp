@@ -12798,7 +12798,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
                                      Sema &SemaRef, Decl *D) {
   if (!D)
     return;
-  Decl *LD = nullptr;
+  const Decl *LD = nullptr;
   if (isa<TagDecl>(D)) {
     LD = cast<TagDecl>(D)->getDefinition();
   } else if (isa<VarDecl>(D)) {
@@ -12814,22 +12814,29 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
         ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
       return;
     }
-
-  } else if (isa<FunctionDecl>(D)) {
+  } else if (auto *F = dyn_cast<FunctionDecl>(D)) {
     const FunctionDecl *FD = nullptr;
-    if (cast<FunctionDecl>(D)->hasBody(FD))
-      LD = const_cast<FunctionDecl *>(FD);
-
-    // If the definition is associated with the current declaration in the
-    // target region (it can be e.g. a lambda) that is legal and we do not need
-    // to do anything else.
-    if (LD == D) {
-      Attr *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-          SemaRef.Context, OMPDeclareTargetDeclAttr::MT_To);
-      D->addAttr(A);
-      if (ASTMutationListener *ML = SemaRef.Context.getASTMutationListener())
-        ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
-      return;
+    if (cast<FunctionDecl>(D)->hasBody(FD)) {
+      LD = FD;
+      // If the definition is associated with the current declaration in the
+      // target region (it can be e.g. a lambda) that is legal and we do not
+      // need to do anything else.
+      if (LD == D) {
+        Attr *A = OMPDeclareTargetDeclAttr::CreateImplicit(
+            SemaRef.Context, OMPDeclareTargetDeclAttr::MT_To);
+        D->addAttr(A);
+        if (ASTMutationListener *ML = SemaRef.Context.getASTMutationListener())
+          ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
+        return;
+      }
+    } else if (F->isFunctionTemplateSpecialization() &&
+               F->getTemplateSpecializationKind() ==
+                   TSK_ImplicitInstantiation) {
+      // Check if the function is implicitly instantiated from the template
+      // defined in the declare target region.
+      const FunctionTemplateDecl *FTD = F->getPrimaryTemplate();
+      if (FTD && FTD->hasAttr<OMPDeclareTargetDeclAttr>())
+        return;
     }
   }
   if (!LD)
@@ -12841,7 +12848,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
       SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
       SemaRef.Diag(SL, diag::note_used_here) << SR;
     } else {
-      DeclContext *DC = LD->getDeclContext();
+      const DeclContext *DC = LD->getDeclContext();
       while (DC) {
         if (isa<FunctionDecl>(DC) &&
             cast<FunctionDecl>(DC)->hasAttr<OMPDeclareTargetDeclAttr>())
@@ -12894,7 +12901,8 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
     if ((E || !VD->getType()->isIncompleteType()) &&
         !checkValueDeclInTarget(SL, SR, *this, DSAStack, VD)) {
       // Mark decl as declared target to prevent further diagnostic.
-      if (isa<VarDecl>(VD) || isa<FunctionDecl>(VD)) {
+      if (isa<VarDecl>(VD) || isa<FunctionDecl>(VD) ||
+          isa<FunctionTemplateDecl>(VD)) {
         Attr *A = OMPDeclareTargetDeclAttr::CreateImplicit(
             Context, OMPDeclareTargetDeclAttr::MT_To);
         VD->addAttr(A);
@@ -12914,10 +12922,21 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
       return;
     }
   }
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D)) {
+    if (FTD->hasAttr<OMPDeclareTargetDeclAttr>() &&
+        (FTD->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() ==
+         OMPDeclareTargetDeclAttr::MT_Link)) {
+      assert(IdLoc.isValid() && "Source location is expected");
+      Diag(IdLoc, diag::err_omp_function_in_link_clause);
+      Diag(FTD->getLocation(), diag::note_defined_here) << FTD;
+      return;
+    }
+  }
   if (!E) {
     // Checking declaration inside declare target region.
     if (!D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-        (isa<VarDecl>(D) || isa<FunctionDecl>(D))) {
+        (isa<VarDecl>(D) || isa<FunctionDecl>(D) ||
+         isa<FunctionTemplateDecl>(D))) {
       Attr *A = OMPDeclareTargetDeclAttr::CreateImplicit(
           Context, OMPDeclareTargetDeclAttr::MT_To);
       D->addAttr(A);

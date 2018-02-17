@@ -823,7 +823,8 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
     switch (message.type) {
     case kmp_mt_hint: {
       format = kmp_i18n_fmt_Hint;
-      // we cannot skip %1$ and only use %2$ to print the message without the number
+      // we cannot skip %1$ and only use %2$ to print the message without the
+      // number
       fmsg = __kmp_msg_format(format, message.str);
     } break;
     case kmp_mt_syserr: {

@@ -25,6 +25,6 @@ declare void @_Z7CapturePi(i32*)
 
 ; CALL: callq __safestack_pointer_address
 ; CALL: movq %rax, %[[A:.*]]
-; CALL: movq (%rax), %[[B:.*]]
+; CALL: movq (%[[A]]), %[[B:.*]]
 ; CALL: leaq -16(%[[B]]), %[[C:.*]]
 ; CALL: movq %[[C]], (%[[A]])
