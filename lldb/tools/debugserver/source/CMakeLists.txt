@@ -89,33 +89,35 @@ set(lldbDebugserverCommonSources
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE})
 
-add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
-
-
-if (APPLE)
-  if(IOS)
-    find_library(COCOA_LIBRARY UIKit)
-    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY} ${CORE_FOUNDATION_LIBRARY} ${FOUNDATION_LIBRARY})
-  else()
-    find_library(COCOA_LIBRARY Cocoa)
-    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY})
+if (NOT SKIP_DEBUGSERVER)
+  add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
+  
+  
+  if (APPLE)
+    if(IOS)
+      find_library(COCOA_LIBRARY UIKit)
+      target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY} ${CORE_FOUNDATION_LIBRARY} ${FOUNDATION_LIBRARY})
+    else()
+      find_library(COCOA_LIBRARY Cocoa)
+      target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY})
+    endif()
   endif()
+  
+  target_link_libraries(lldbDebugserverCommon
+                        INTERFACE ${COCOA_LIBRARY}
+                        ${CORE_FOUNDATION_LIBRARY}
+                        ${FOUNDATION_LIBRARY}
+                        lldbDebugserverArchSupport
+                        lldbDebugserverDarwin_DarwinLog)
+  
+  set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
+  add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
+    debugserver.cpp
+  
+    LINK_LIBS
+      lldbDebugserverCommon
+    )
 endif()
-
-target_link_libraries(lldbDebugserverCommon
-                      INTERFACE ${COCOA_LIBRARY}
-                      ${CORE_FOUNDATION_LIBRARY}
-                      ${FOUNDATION_LIBRARY}
-                      lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog)
-
-set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
-add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
-  debugserver.cpp
-
-  LINK_LIBS
-    lldbDebugserverCommon
-  )
 
 set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
