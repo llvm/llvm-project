@@ -654,6 +654,13 @@ void llvm::thinLTOResolveWeakForLinkerModule(
         GlobalValue::isInterposableLinkage(GV.getLinkage()))
       ConvertToDeclaration(GV);
     else {
+      // If the original symbols has global unnamed addr and linkonce_odr linkage,
+      // it should be an auto hide symbol. Add hidden visibility to the symbol to
+      // preserve the property.
+      if (GV.hasLinkOnceODRLinkage() && GV.hasGlobalUnnamedAddr() &&
+          NewLinkage == GlobalValue::WeakODRLinkage)
+        GV.setVisibility(GlobalValue::HiddenVisibility);
+
       DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
                    << GV.getLinkage() << " to " << NewLinkage << "\n");
       GV.setLinkage(NewLinkage);
