@@ -468,6 +468,6 @@ class LLVMConfig(object):
         self.config.substitutions.append(
             (r"\bld.lld\b", 'ld.lld --full-shutdown'))
 
-        tool_patterns = ['ld.lld', 'lld-link', 'lld']
+        tool_patterns = ['lld', 'ld.lld', 'lld-link', 'ld64.lld', 'wasm-ld']
 
         self.add_tool_substitutions(tool_patterns, tool_dirs)

@@ -1,4 +1,4 @@
-//===--- LangOptions.h - C Language Family Language Options -----*- C++ -*-===//
+//===- LangOptions.h - C Language Family Language Options -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the clang::LangOptions interface.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_LANGOPTIONS_H
@@ -20,6 +20,8 @@
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/Visibility.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include <string>
 #include <vector>
 
@@ -47,22 +49,32 @@ protected:
 /// enabled, which controls the dialect of C or C++ that is accepted.
 class LangOptions : public LangOptionsBase {
 public:
-  typedef clang::Visibility Visibility;
+  using Visibility = clang::Visibility;
   
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
   
   enum SignedOverflowBehaviorTy {
-    SOB_Undefined,  // Default C standard behavior.
-    SOB_Defined,    // -fwrapv
-    SOB_Trapping    // -ftrapv
+    // Default C standard behavior.
+    SOB_Undefined,
+
+    // -fwrapv
+    SOB_Defined,
+
+    // -ftrapv
+    SOB_Trapping
   };
 
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
-    CMK_None,           ///< Not compiling a module interface at all.
-    CMK_ModuleMap,      ///< Compiling a module from a module map.
-    CMK_ModuleInterface ///< Compiling a C++ modules TS module interface unit.
+    /// Not compiling a module interface at all.
+    CMK_None,
+
+    /// Compiling a module from a module map.
+    CMK_ModuleMap,
+
+    /// Compiling a C++ modules TS module interface unit.
+    CMK_ModuleInterface
   };
 
   enum PragmaMSPointersToMembersKind {
@@ -91,9 +103,14 @@ public:
   };
 
   enum FPContractModeKind {
-    FPC_Off,        // Form fused FP ops only where result will not be affected.
-    FPC_On,         // Form fused FP ops according to FP_CONTRACT rules.
-    FPC_Fast        // Aggressively fuse FP ops (E.g. FMA).
+    // Form fused FP ops only where result will not be affected.
+    FPC_Off,
+
+    // Form fused FP ops according to FP_CONTRACT rules.
+    FPC_On,
+
+    // Aggressively fuse FP ops (E.g. FMA).
+    FPC_Fast
   };
 
 public:
@@ -152,7 +169,7 @@ public:
 
   /// \brief Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).
-  bool IsHeaderFile;
+  bool IsHeaderFile = false;
 
   LangOptions();
 
@@ -219,15 +236,19 @@ public:
   bool allowFPContractWithinStatement() const {
     return fp_contract == LangOptions::FPC_On;
   }
+
   bool allowFPContractAcrossStatement() const {
     return fp_contract == LangOptions::FPC_Fast;
   }
+
   void setAllowFPContractWithinStatement() {
     fp_contract = LangOptions::FPC_On;
   }
+
   void setAllowFPContractAcrossStatement() {
     fp_contract = LangOptions::FPC_Fast;
   }
+
   void setDisallowFPContract() { fp_contract = LangOptions::FPC_Off; }
 
   /// Used to serialize this.
@@ -242,13 +263,15 @@ private:
 enum TranslationUnitKind {
   /// \brief The translation unit is a complete translation unit.
   TU_Complete,
+
   /// \brief The translation unit is a prefix to a translation unit, and is
   /// not complete.
   TU_Prefix,
+
   /// \brief The translation unit is a module.
   TU_Module
 };
   
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_BASIC_LANGOPTIONS_H

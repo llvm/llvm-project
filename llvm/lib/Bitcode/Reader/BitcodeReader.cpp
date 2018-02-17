@@ -5186,11 +5186,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_FLAGS: {  // [flags]
       uint64_t Flags = Record[0];
       // Scan flags (set only on the combined index).
-      assert(Flags <= 1 && "Unexpected bits in flag");
+      assert(Flags <= 0x3 && "Unexpected bits in flag");
 
       // 1 bit: WithGlobalValueDeadStripping flag.
       if (Flags & 0x1)
         TheIndex.setWithGlobalValueDeadStripping();
+      // 1 bit: SkipModuleByDistributedBackend flag.
+      if (Flags & 0x2)
+        TheIndex.setSkipModuleByDistributedBackend();
       break;
     }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]

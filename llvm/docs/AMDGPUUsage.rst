@@ -100,23 +100,23 @@ names from both the *Processor* and *Alternative Processor* can be used.
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
      -----------------------------------------------------------------------------------
      ``cedar``                   ``r600``     dGPU
+     ``cypress``                 ``r600``     dGPU
+     ``juniper``                 ``r600``     dGPU
      ``redwood``                 ``r600``     dGPU
      ``sumo``                    ``r600``     dGPU
-     ``juniper``                 ``r600``     dGPU
-     ``cypress``                 ``r600``     dGPU
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
      -----------------------------------------------------------------------------------
      ``barts``                   ``r600``     dGPU
-     ``turks``                   ``r600``     dGPU
      ``caicos``                  ``r600``     dGPU
      ``cayman``                  ``r600``     dGPU
+     ``turks``                   ``r600``     dGPU
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
      -----------------------------------------------------------------------------------
      ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU
-     ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU
-                 - ``verde``
+     ``gfx601``  - ``hainan``    ``amdgcn``   dGPU
                  - ``oland``
-                 - ``hainan``
+                 - ``pitcairn``
+                 - ``verde``
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
      -----------------------------------------------------------------------------------
      ``gfx700``  - ``kaveri``    ``amdgcn``   APU                     - A6-7000
@@ -170,8 +170,8 @@ names from both the *Processor* and *Alternative Processor* can be used.
      \                           ``amdgcn``   APU   - xnack           - E2-9010
                                                       [on]            - A6-9210
                                                                       - A9-9410
-     ``gfx802``  - ``tonga``     ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
-                 - ``iceland``                        [off]           - FirePro S7100
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
+                 - ``tonga``                          [off]           - FirePro S7100
                                                                       - FirePro W7100
                                                                       - Radeon R285
                                                                       - Radeon R9 380
@@ -514,39 +514,42 @@ The AMDGPU backend uses the following ELF header:
      Name                              Value      Description (see
                                                   :ref:`amdgpu-processor-table`)
      ================================= ========== =============================
-     ``EF_AMDGPU_MACH_NONE``           0          *not specified*
-     ``EF_AMDGPU_MACH_R600_R600``      1          ``r600``
-     ``EF_AMDGPU_MACH_R600_R630``      2          ``r630``
-     ``EF_AMDGPU_MACH_R600_RS880``     3          ``rs880``
-     ``EF_AMDGPU_MACH_R600_RV670``     4          ``rv670``
-     ``EF_AMDGPU_MACH_R600_RV710``     5          ``rv710``
-     ``EF_AMDGPU_MACH_R600_RV730``     6          ``rv730``
-     ``EF_AMDGPU_MACH_R600_RV770``     7          ``rv770``
-     ``EF_AMDGPU_MACH_R600_CEDAR``     8          ``cedar``
-     ``EF_AMDGPU_MACH_R600_REDWOOD``   9          ``redwood``
-     ``EF_AMDGPU_MACH_R600_SUMO``      10         ``sumo``
-     ``EF_AMDGPU_MACH_R600_JUNIPER``   11         ``juniper``
-     ``EF_AMDGPU_MACH_R600_CYPRESS``   12         ``cypress``
-     ``EF_AMDGPU_MACH_R600_BARTS``     13         ``barts``
-     ``EF_AMDGPU_MACH_R600_TURKS``     14         ``turks``
-     ``EF_AMDGPU_MACH_R600_CAICOS``    15         ``caicos``
-     ``EF_AMDGPU_MACH_R600_CAYMAN``    16         ``cayman``
-     *reserved*                        17-31      Reserved for ``r600``
-                                                  architecture processors.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX600``  32         ``gfx600``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX601``  33         ``gfx601``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX700``  34         ``gfx700``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX701``  35         ``gfx701``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX702``  36         ``gfx702``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX703``  37         ``gfx703``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX704``  38         ``gfx704``
-     *reserved*                        39         Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  40         ``gfx801``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  41         ``gfx802``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  42         ``gfx803``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  43         ``gfx810``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  44         ``gfx900``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  45         ``gfx902``
+     ``EF_AMDGPU_MACH_NONE``           0x000      *not specified*
+     ``EF_AMDGPU_MACH_R600_R600``      0x001      ``r600``
+     ``EF_AMDGPU_MACH_R600_R630``      0x002      ``r630``
+     ``EF_AMDGPU_MACH_R600_RS880``     0x003      ``rs880``
+     ``EF_AMDGPU_MACH_R600_RV670``     0x004      ``rv670``
+     ``EF_AMDGPU_MACH_R600_RV710``     0x005      ``rv710``
+     ``EF_AMDGPU_MACH_R600_RV730``     0x006      ``rv730``
+     ``EF_AMDGPU_MACH_R600_RV770``     0x007      ``rv770``
+     ``EF_AMDGPU_MACH_R600_CEDAR``     0x008      ``cedar``
+     ``EF_AMDGPU_MACH_R600_CYPRESS``   0x009      ``cypress``
+     ``EF_AMDGPU_MACH_R600_JUNIPER``   0x00a      ``juniper``
+     ``EF_AMDGPU_MACH_R600_REDWOOD``   0x00b      ``redwood``
+     ``EF_AMDGPU_MACH_R600_SUMO``      0x00c      ``sumo``
+     ``EF_AMDGPU_MACH_R600_BARTS``     0x00d      ``barts``
+     ``EF_AMDGPU_MACH_R600_CAICOS``    0x00e      ``caicos``
+     ``EF_AMDGPU_MACH_R600_CAYMAN``    0x00f      ``cayman``
+     ``EF_AMDGPU_MACH_R600_TURKS``     0x010      ``turks``
+     *reserved*                        0x011 -    Reserved for ``r600``
+                                       0x01f      architecture processors.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX600``  0x020      ``gfx600``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX601``  0x021      ``gfx601``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX700``  0x022      ``gfx700``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX701``  0x023      ``gfx701``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX702``  0x024      ``gfx702``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX703``  0x025      ``gfx703``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX704``  0x026      ``gfx704``
+     *reserved*                        0x027      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  0x028      ``gfx801``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  0x029      ``gfx802``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  0x02a      ``gfx803``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  0x02b      ``gfx810``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  0x02c      ``gfx900``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  0x02d      ``gfx902``
+     *reserved*                        0x02e      Reserved.
+     *reserved*                        0x02f      Reserved.
+     *reserved*                        0x030      Reserved.
      ================================= ========== =============================
 
 Sections

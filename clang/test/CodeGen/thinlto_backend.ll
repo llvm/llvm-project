@@ -20,6 +20,12 @@
 ; CHECK-OBJ-IGNORE-EMPTY: T f1
 ; CHECK-OBJ-IGNORE-EMPTY: U f2
 
+; Ensure we don't fail with index and non-ThinLTO object file, and output must
+; be empty file.
+; RUN: opt -o %t5.o %s
+; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t4.o -x ir %t5.o -c -fthinlto-index=%t.thinlto.bc
+; RUN: llvm-nm %t4.o | count 0
+
 ; Ensure f2 was imported
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc
 ; RUN: llvm-nm %t3.o | FileCheck --check-prefix=CHECK-OBJ %s

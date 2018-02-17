@@ -811,9 +811,14 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite) {
 // final link. Frequently the distributed build system will want to
 // confirm that all expected outputs are created based on all of the
 // modules provided to the linker.
+// If SkipModule is true then .thinlto.bc should contain just
+// SkipModuleByDistributedBackend flag which requests distributed backend
+// to skip the compilation of the corresponding module and produce an empty
+// object file.
 static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
                                               const std::string &OldPrefix,
-                                              const std::string &NewPrefix) {
+                                              const std::string &NewPrefix,
+                                              bool SkipModule) {
   std::string NewModulePath =
       getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
   std::error_code EC;
@@ -823,6 +828,12 @@ static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
     if (EC)
       message(LDPL_FATAL, "Failed to write '%s': %s",
               (NewModulePath + ".thinlto.bc").c_str(), EC.message().c_str());
+
+    if (SkipModule) {
+      ModuleSummaryIndex Index(false);
+      Index.setSkipModuleByDistributedBackend();
+      WriteIndexToFile(Index, OS, nullptr);
+    }
   }
   if (options::thinlto_emit_imports_files) {
     raw_fd_ostream OS(NewModulePath + ".imports", EC,
@@ -878,6 +889,11 @@ static ld_plugin_status allSymbolsReadHook() {
     assert(ObjFilename.second);
     if (const void *View = getSymbolsAndView(F))
       addModule(*Lto, F, View, ObjFilename.first->first());
+    else if (options::thinlto_index_only) {
+      ObjFilename.first->second = true;
+      writeEmptyDistributedBuildOutputs(Identifier, OldPrefix, NewPrefix,
+                                        /* SkipModule */ true);
+    }
   }
 
   SmallString<128> Filename;
@@ -895,7 +911,7 @@ static ld_plugin_status allSymbolsReadHook() {
   auto AddStream =
       [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
     IsTemporary[Task] = !SaveTemps;
-    int FD = getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps,
+    int FD = getOutputFileName(Filename, /* TempOutFile */ !SaveTemps,
                                Filenames[Task], Task);
     return llvm::make_unique<lto::NativeObjectStream>(
         llvm::make_unique<llvm::raw_fd_ostream>(FD, true));
@@ -920,7 +936,7 @@ static ld_plugin_status allSymbolsReadHook() {
     for (auto &Identifier : ObjectToIndexFileState)
       if (!Identifier.getValue())
         writeEmptyDistributedBuildOutputs(Identifier.getKey(), OldPrefix,
-                                          NewPrefix);
+                                          NewPrefix, /* SkipModule */ false);
 
   if (options::TheOutputType == options::OT_DISABLE ||
       options::TheOutputType == options::OT_BC_ONLY)

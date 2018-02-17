@@ -1,4 +1,4 @@
-//===--- DiagnosticOptions.cpp - C Language Family Diagnostic Handling ----===//
+//===- DiagnosticOptions.cpp - C Language Family Diagnostic Handling ------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,6 +13,7 @@
 
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 namespace clang {
 
@@ -21,4 +22,4 @@ raw_ostream &operator<<(raw_ostream &Out, DiagnosticLevelMask M) {
   return Out << static_cast<UT>(M);
 }
 
-} // end namespace clang
+} // namespace clang

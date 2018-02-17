@@ -118,6 +118,7 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
              }},
             {"definitionProvider", true},
             {"documentHighlightProvider", true},
+            {"hoverProvider", true},
             {"renameProvider", true},
             {"executeCommandProvider",
              json::obj{
@@ -353,6 +354,19 @@ void ClangdLSPServer::onDocumentHighlight(TextDocumentPositionParams &Params) {
                             llvm::toString(Highlights.takeError()));
         reply(json::ary(Highlights->Value));
       });
+}
+
+void ClangdLSPServer::onHover(TextDocumentPositionParams &Params) {
+  Server.findHover(Params.textDocument.uri.file(), Params.position,
+                   [](llvm::Expected<Tagged<Hover>> H) {
+                     if (!H) {
+                       replyError(ErrorCode::InternalError,
+                                  llvm::toString(H.takeError()));
+                       return;
+                     }
+
+                     reply(H->Value);
+                   });
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

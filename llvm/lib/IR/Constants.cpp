@@ -202,6 +202,32 @@ bool Constant::isNotMinSignedValue() const {
   return false;
 }
 
+bool Constant::isFiniteNonZeroFP() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->getValueAPF().isFiniteNonZero();
+  if (!getType()->isVectorTy())
+    return false;
+  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
+    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
+    if (!CFP || !CFP->getValueAPF().isFiniteNonZero())
+      return false;
+  }
+  return true;
+}
+
+bool Constant::isNormalFP() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->getValueAPF().isNormal();
+  if (!getType()->isVectorTy())
+    return false;
+  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
+    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
+    if (!CFP || !CFP->getValueAPF().isNormal())
+      return false;
+  }
+  return true;
+}
+
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
