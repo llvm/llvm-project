@@ -2,6 +2,10 @@
 # RUN: | llvm-dwarfdump --debug-loc - \
 # RUN: | FileCheck %s
 
+# RUN: llvm-mc %s -filetype obj -triple x86_64-linux-elf -o - \
+# RUN: | llvm-dwarfdump --verify - \
+# RUN: | FileCheck %s --check-prefix VERIFY
+
 # CHECK: .debug_loc contents:
 
 # CHECK: 0x00000000:
@@ -11,6 +15,9 @@
 # CHECK: 0x00000036:
 # CHECK-NEXT: [0x0000000000000010, 0x0000000000000013): DW_OP_reg5 RDI
 # CHECK-NEXT: [0x0000000000000013, 0x0000000000000014): DW_OP_reg0 RAX
+
+# VERIFY: Verifying .debug_info Unit Header Chain
+# VERIFY-NOT: DIE has invalid DW_AT_location encoding
 
 # Source:
 #   int* foo(int* i) { return i; }
