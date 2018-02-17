@@ -169,7 +169,7 @@ void Writer::createImportSection() {
     Import.Module = "env";
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_FUNCTION;
-    Import.SigIndex = lookupType(Sym->getFunctionType());
+    Import.SigIndex = lookupType(*Sym->getFunctionType());
     writeImport(OS, Import);
   }
 
@@ -290,7 +290,7 @@ void Writer::createExportSection() {
     WasmExport Export;
     Export.Name = E.FieldName;
     Export.Index = E.Sym->getOutputIndex();
-    if (E.Sym->isFunction())
+    if (isa<FunctionSymbol>(E.Sym))
       Export.Kind = WASM_EXTERNAL_FUNCTION;
     else
       Export.Kind = WASM_EXTERNAL_GLOBAL;
@@ -660,7 +660,7 @@ void Writer::calculateExports() {
     for (Symbol *Sym : File->getSymbols()) {
       if (!Sym->isDefined() || File != Sym->getFile())
         continue;
-      if (Sym->isGlobal())
+      if (isa<GlobalSymbol>(Sym))
         continue;
       if (!Sym->getChunk()->Live)
         continue;
@@ -713,7 +713,7 @@ void Writer::calculateTypes() {
   }
 
   for (const FunctionSymbol *Sym : ImportedFunctions)
-    registerType(Sym->getFunctionType());
+    registerType(*Sym->getFunctionType());
 
   for (const InputFunction *F : DefinedFunctions)
     registerType(F->Signature);

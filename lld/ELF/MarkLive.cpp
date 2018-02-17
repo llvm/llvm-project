@@ -305,8 +305,7 @@ template <class ELFT> void elf::markLive() {
   if (Config->PrintGcSections)
     for (InputSectionBase *Sec : InputSections)
       if (!Sec->Live)
-        message("removing unused section from '" + Sec->Name + "' in file '" +
-                Sec->File->getName() + "'");
+        message("removing unused section " + toString(Sec));
 }
 
 template void elf::markLive<ELF32LE>();

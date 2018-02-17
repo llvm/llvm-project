@@ -254,10 +254,9 @@ void ObjFile::initializeSymbols() {
       if (!isExcludedByComdat(Function)) {
         S = createDefinedFunction(WasmSym, Function);
         break;
-      } else {
-        Function->Live = false;
-        LLVM_FALLTHROUGH; // Exclude function, and add the symbol as undefined
       }
+      Function->Live = false;
+      LLVM_FALLTHROUGH; // Exclude function, and add the symbol as undefined
     }
     case WasmSymbol::SymbolType::FUNCTION_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedFunctionKind,
@@ -268,10 +267,9 @@ void ObjFile::initializeSymbols() {
       if (!isExcludedByComdat(Segment)) {
         S = createDefinedGlobal(WasmSym, Segment, getGlobalValue(WasmSym));
         break;
-      } else {
-        Segment->Live = false;
-        LLVM_FALLTHROUGH; // Exclude global, and add the symbol as undefined
       }
+      Segment->Live = false;
+      LLVM_FALLTHROUGH; // Exclude global, and add the symbol as undefined
     }
     case WasmSymbol::SymbolType::GLOBAL_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedGlobalKind);
@@ -305,17 +303,17 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
 }
 
 Symbol *ObjFile::createDefinedFunction(const WasmSymbol &Sym,
-                                       InputChunk *Chunk) {
+                                       InputFunction *Function) {
   if (Sym.isBindingLocal())
-    return make<DefinedFunction>(Sym.Name, Sym.Flags, this, Chunk);
-  return Symtab->addDefined(true, Sym.Name, Sym.Flags, this, Chunk);
+    return make<DefinedFunction>(Sym.Name, Sym.Flags, this, Function);
+  return Symtab->addDefined(true, Sym.Name, Sym.Flags, this, Function);
 }
 
-Symbol *ObjFile::createDefinedGlobal(const WasmSymbol &Sym, InputChunk *Chunk,
-                                     uint32_t Address) {
+Symbol *ObjFile::createDefinedGlobal(const WasmSymbol &Sym,
+                                     InputSegment *Segment, uint32_t Address) {
   if (Sym.isBindingLocal())
-    return make<DefinedGlobal>(Sym.Name, Sym.Flags, this, Chunk, Address);
-  return Symtab->addDefined(false, Sym.Name, Sym.Flags, this, Chunk, Address);
+    return make<DefinedGlobal>(Sym.Name, Sym.Flags, this, Segment, Address);
+  return Symtab->addDefined(false, Sym.Name, Sym.Flags, this, Segment, Address);
 }
 
 void ArchiveFile::parse() {

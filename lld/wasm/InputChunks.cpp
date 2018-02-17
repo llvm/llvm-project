@@ -18,6 +18,7 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
+using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::wasm;
 
@@ -66,7 +67,7 @@ static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
     break;
   case R_WEBASSEMBLY_TABLE_INDEX_I32:
   case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    support::endian::write32<support::little>(Buf, Reloc.Value);
+    write32le(Buf, Reloc.Value);
     break;
   default:
     llvm_unreachable("unknown relocation type");

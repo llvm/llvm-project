@@ -366,8 +366,8 @@ public:
   // Add a dynamic relocation that might need an addend. This takes care of
   // writing the addend to the output section if needed.
   void addReloc(RelType DynType, InputSectionBase *InputSec,
-                uint64_t OffsetInSec, bool UseSymVA, Symbol *Sym,
-                int64_t Addend, RelExpr Expr, RelType Type);
+                uint64_t OffsetInSec, Symbol *Sym, int64_t Addend, RelExpr Expr,
+                RelType Type);
   void addReloc(const DynamicReloc &Reloc);
   bool empty() const override { return Relocs.empty(); }
   size_t getSize() const override { return Relocs.size() * this->Entsize; }

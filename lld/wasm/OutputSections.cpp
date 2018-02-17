@@ -15,6 +15,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/LEB128.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -72,7 +73,7 @@ std::string SubSection::getSectionName() const {
 void OutputSection::createHeader(size_t BodySize) {
   raw_string_ostream OS(Header);
   debugWrite(OS.tell(), "section type [" + Twine(getSectionName()) + "]");
-  writeUleb128(OS, Type, nullptr);
+  encodeULEB128(Type, OS);
   writeUleb128(OS, BodySize, "section size");
   OS.flush();
   log("createHeader: " + toString(*this) + " body=" + Twine(BodySize) +

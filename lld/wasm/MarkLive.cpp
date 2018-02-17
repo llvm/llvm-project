@@ -59,9 +59,9 @@ void lld::wasm::markLive() {
     if (!Sym->isHidden())
       Enqueue(Sym);
 
-  // The ctor fuctions are all used the synthetic __wasm_call_ctors function,
-  // but since this function is created in-place it doesn't contain reloctations
-  // which mean we have to manually mark the ctors.
+  // The ctor functions are all used in the synthetic __wasm_call_ctors
+  // function, but since this function is created in-place it doesn't contain
+  // reloctations which mean we have to manually mark the ctors.
   for (const ObjFile *Obj : Symtab->ObjectFiles) {
     const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions)
@@ -94,7 +94,7 @@ void lld::wasm::markLive() {
     auto CheckChunk = [](const InputChunk *C) {
       if (!C->Live)
         message("removing unused section '" + C->getName() + "' in file '" +
-                C->getFileName() + "'");
+                C->File->getName() + "'");
     };
 
     for (const ObjFile *Obj : Symtab->ObjectFiles) {

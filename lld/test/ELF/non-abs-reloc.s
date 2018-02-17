@@ -15,5 +15,7 @@ _start:
   nop
 
 .section .nonalloc
-  call _start
-  call _start
+  .byte 0xe8
+  .long _start - . - 4
+  .byte 0xe8
+  .long _start - . - 4
