@@ -126,9 +126,9 @@ bb:
 ; GCN-LABEL: {{^}}vgpr_ps_addr119:
 ; GCN-DAG: v_mov_b32_e32 v0, v2
 ; GCN-DAG: v_mov_b32_e32 v1, v3
-; GCN: v_mov_b32_e32 v2, v6
-; GCN: v_mov_b32_e32 v3, v8
-; GCN: v_mov_b32_e32 v4, v12
+; GCN-DAG: v_mov_b32_e32 v2, v6
+; GCN-DAG: v_mov_b32_e32 v3, v8
+; GCN-DAG: v_mov_b32_e32 v4, v12
 ; GCN-NOT: s_endpgm
 define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr119([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #3 {
 bb:
@@ -178,8 +178,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}sgpr:
-; GCN: s_add_i32 s0, s3, 2
 ; GCN: s_mov_b32 s2, s3
+; GCN: s_add_i32 s0, s2, 2
 ; GCN-NOT: s_endpgm
 define amdgpu_vs { i32, i32, i32 } @sgpr([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:

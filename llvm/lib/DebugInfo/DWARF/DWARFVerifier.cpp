@@ -410,22 +410,27 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
   case DW_AT_location: {
-    Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock();
-    if (!Expr) {
-      ReportError("DIE has invalid DW_AT_location encoding:");
-      break;
+    auto VerifyLocation = [&](StringRef D) {
+      DWARFUnit *U = Die.getDwarfUnit();
+      DataExtractor Data(D, DCtx.isLittleEndian(), 0);
+      DWARFExpression Expression(Data, U->getVersion(),
+                                 U->getAddressByteSize());
+      bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
+        return Op.isError();
+      });
+      if (Error)
+        ReportError("DIE contains invalid DWARF expression:");
+    };
+    if (Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock()) {
+      // Verify inlined location.
+      VerifyLocation(llvm::toStringRef(*Expr));
+    } else if (auto LocOffset = AttrValue.Value.getAsUnsignedConstant()) {
+      // Verify location list.
+      if (auto DebugLoc = DCtx.getDebugLoc())
+        if (auto LocList = DebugLoc->getLocationListAtOffset(*LocOffset))
+          for (const auto &Entry : LocList->Entries)
+            VerifyLocation({Entry.Loc.data(), Entry.Loc.size()});
     }
-
-    DWARFUnit *U = Die.getDwarfUnit();
-    DataExtractor Data(
-        StringRef(reinterpret_cast<const char *>(Expr->data()), Expr->size()),
-        DCtx.isLittleEndian(), 0);
-    DWARFExpression Expression(Data, U->getVersion(), U->getAddressByteSize());
-    bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
-      return Op.isError();
-    });
-    if (Error)
-      ReportError("DIE contains invalid DWARF expression:");
     break;
   }
 

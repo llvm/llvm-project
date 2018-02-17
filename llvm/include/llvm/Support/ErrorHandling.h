@@ -100,6 +100,8 @@ void install_bad_alloc_error_handler(fatal_error_handler_t handler,
 /// Restores default bad alloc error handling behavior.
 void remove_bad_alloc_error_handler();
 
+void install_out_of_memory_new_handler();
+
 /// Reports a bad alloc error, calling any user defined bad alloc
 /// error handler. In contrast to the generic 'report_fatal_error'
 /// functions, this function is expected to return, e.g. the user
