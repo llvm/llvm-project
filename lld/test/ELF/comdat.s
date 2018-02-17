@@ -9,10 +9,10 @@
 // reclaimed sections on stderr.
 // RUN: ld.lld --gc-sections --print-gc-sections -shared %t.o %t.o %t2.o -o %t \
 // RUN:   2>&1 | FileCheck --check-prefix=GC %s
-// GC: removing unused section from '.text' in file
-// GC: removing unused section from '.text3' in file
-// GC: removing unused section from '.text' in file
-// GC: removing unused section from '.text' in file
+// GC: removing unused section {{.*}}.o:(.text)
+// GC: removing unused section {{.*}}.o:(.text3)
+// GC: removing unused section {{.*}}.o:(.text)
+// GC: removing unused section {{.*}}.o:(.text)
 
         .section	.text2,"axG",@progbits,foo,comdat,unique,0
 foo:

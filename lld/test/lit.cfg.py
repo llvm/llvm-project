@@ -73,6 +73,7 @@ llvm_config.feature_config(
 
 # Set a fake constant version so that we get consitent output.
 config.environment['LLD_VERSION'] = 'LLD 1.0'
+config.environment['LLD_IN_TEST'] = '1'
 
 # Indirectly check if the mt.exe Microsoft utility exists by searching for
 # cvtres, which always accompanies it.  Alternatively, check if we can use

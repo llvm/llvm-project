@@ -69,19 +69,9 @@ void Symbol::setHidden(bool IsHidden) {
     Flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
 }
 
-const WasmSignature &FunctionSymbol::getFunctionType() const {
-  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
-    return F->Signature;
-
-  assert(FunctionType != nullptr);
-  return *FunctionType;
-}
-
-void FunctionSymbol::setFunctionType(const WasmSignature *Type) {
-  assert(FunctionType == nullptr);
-  assert(!Chunk);
-  FunctionType = Type;
-}
+FunctionSymbol::FunctionSymbol(StringRef Name, Kind K, uint32_t Flags,
+                               InputFile *F, InputFunction *Function)
+    : Symbol(Name, K, Flags, F, Function), FunctionType(&Function->Signature) {}
 
 uint32_t FunctionSymbol::getTableIndex() const {
   if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
@@ -110,7 +100,6 @@ void FunctionSymbol::setTableIndex(uint32_t Index) {
 }
 
 uint32_t DefinedGlobal::getVirtualAddress() const {
-  assert(isGlobal());
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   return Chunk ? dyn_cast<InputSegment>(Chunk)->translateVA(VirtualAddress)
                : VirtualAddress;
@@ -118,7 +107,6 @@ uint32_t DefinedGlobal::getVirtualAddress() const {
 
 void DefinedGlobal::setVirtualAddress(uint32_t Value) {
   DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
-  assert(isGlobal());
   VirtualAddress = Value;
 }
 

@@ -22,6 +22,7 @@ namespace wasm {
 
 class InputFile;
 class InputChunk;
+class InputFunction;
 
 #define INVALID_INDEX UINT32_MAX
 
@@ -40,7 +41,7 @@ public:
     InvalidKind,
   };
 
-  Kind kind() const { return static_cast<Kind>(SymbolKind); }
+  Kind kind() const { return SymbolKind; }
 
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isDefined() const { return SymbolKind <= LastDefinedKind; }
@@ -48,11 +49,6 @@ public:
     return SymbolKind == UndefinedGlobalKind ||
            SymbolKind == UndefinedFunctionKind;
   }
-  bool isFunction() const {
-    return SymbolKind == DefinedFunctionKind ||
-           SymbolKind == UndefinedFunctionKind;
-  }
-  bool isGlobal() const { return !isFunction(); }
   bool isLocal() const;
   bool isWeak() const;
   bool isHidden() const;
@@ -94,8 +90,7 @@ public:
            S->kind() == UndefinedFunctionKind;
   }
 
-  bool hasFunctionType() const { return FunctionType != nullptr; }
-  const WasmSignature &getFunctionType() const;
+  const WasmSignature *getFunctionType() const { return FunctionType; }
 
   uint32_t getTableIndex() const;
 
@@ -106,28 +101,26 @@ public:
   void setTableIndex(uint32_t Index);
 
 protected:
-  void setFunctionType(const WasmSignature *Type);
+  FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
+                 InputFunction *Function);
 
   FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-                 InputChunk *C)
-      : Symbol(Name, K, Flags, F, C) {}
+                 const WasmSignature* Type)
+      : Symbol(Name, K, Flags, F, nullptr), FunctionType(Type) {}
 
   uint32_t TableIndex = INVALID_INDEX;
 
-  // Explict function type, needed for undefined or synthetic functions only.
-  const WasmSignature *FunctionType = nullptr;
+  const WasmSignature *FunctionType;
 };
 
 class DefinedFunction : public FunctionSymbol {
 public:
-  DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
-                  InputChunk *C = nullptr)
-      : FunctionSymbol(Name, DefinedFunctionKind, Flags, F, C) {}
+  DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
+                  InputFunction *Function)
+      : FunctionSymbol(Name, DefinedFunctionKind, Flags, F, Function) {}
 
   DefinedFunction(StringRef Name, uint32_t Flags, const WasmSignature *Type)
-      : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, nullptr) {
-    setFunctionType(Type);
-  }
+      : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, Type) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == DefinedFunctionKind;
@@ -138,9 +131,7 @@ class UndefinedFunction : public FunctionSymbol {
 public:
   UndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File = nullptr,
                     const WasmSignature *Type = nullptr)
-      : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, nullptr) {
-    setFunctionType(Type);
-  }
+      : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, Type) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedFunctionKind;

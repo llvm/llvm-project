@@ -121,9 +121,9 @@ private:
   uint32_t relocateGlobalIndex(uint32_t Original) const;
   uint32_t relocateTableIndex(uint32_t Original) const;
 
-  Symbol *createDefinedGlobal(const WasmSymbol &Sym, InputChunk *Chunk,
+  Symbol *createDefinedGlobal(const WasmSymbol &Sym, InputSegment *Segment,
                               uint32_t Address);
-  Symbol *createDefinedFunction(const WasmSymbol &Sym, InputChunk *Chunk);
+  Symbol *createDefinedFunction(const WasmSymbol &Sym, InputFunction *Function);
   Symbol *createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                           const WasmSignature *Signature = nullptr);
   void initializeSymbols();

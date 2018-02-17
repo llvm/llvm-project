@@ -60,7 +60,7 @@ public:
   SyntheticSection(uint32_t Type, std::string Name = "")
       : OutputSection(Type, Name), BodyOutputStream(Body) {
     if (!Name.empty())
-      writeStr(BodyOutputStream, Name);
+      writeStr(BodyOutputStream, Name, "section name");
   }
 
   void writeTo(uint8_t *Buf) override {
@@ -96,8 +96,8 @@ public:
 
   std::string getSectionName() const;
   void writeToStream(raw_ostream &OS) {
-    writeBytes(OS, Header.data(), Header.size());
-    writeBytes(OS, Body.data(), Body.size());
+    OS.write(Header.data(), Header.size());
+    OS.write(Body.data(), Body.size());
   }
 };
 
