@@ -682,6 +682,13 @@ private:
   /// considered live.
   bool WithGlobalValueDeadStripping = false;
 
+  /// Indicates that distributed backend should skip compilation of the
+  /// module. Flag is suppose to be set by distributed ThinLTO indexing
+  /// when it detected that the module is not needed during the final
+  /// linking. As result distributed backend should just output a minimal
+  /// valid object file.
+  bool SkipModuleByDistributedBackend = false;
+
   /// If true then we're performing analysis of IR module, filling summary
   /// accordingly. The value of 'false' means we're reading summary from
   /// BC or YAML source. Affects the type of value stored in NameOrGV union
@@ -716,6 +723,13 @@ public:
   }
   void setWithGlobalValueDeadStripping() {
     WithGlobalValueDeadStripping = true;
+  }
+
+  bool skipModuleByDistributedBackend() const {
+    return SkipModuleByDistributedBackend;
+  }
+  void setSkipModuleByDistributedBackend() {
+    SkipModuleByDistributedBackend = true;
   }
 
   bool isGlobalValueLive(const GlobalValueSummary *GVS) const {

@@ -4075,10 +4075,6 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultTFE() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyTFE);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultD16() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyD16);
-}
-
 void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                const OperandVector &Operands,
                                bool IsAtomic, bool IsAtomicReturn) {

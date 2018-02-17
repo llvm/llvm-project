@@ -39,6 +39,66 @@ using namespace llvm::AMDGPU;
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
 
+unsigned AMDGPUTargetStreamer::getMACH(StringRef GPU) const {
+  return llvm::StringSwitch<unsigned>(GPU)
+      // Radeon HD 2000/3000 Series (R600).
+      .Case("r600", ELF::EF_AMDGPU_MACH_R600_R600)
+      .Case("r630", ELF::EF_AMDGPU_MACH_R600_R630)
+      .Case("rs880", ELF::EF_AMDGPU_MACH_R600_RS880)
+      .Case("rv670", ELF::EF_AMDGPU_MACH_R600_RV670)
+      // Radeon HD 4000 Series (R700).
+      .Case("rv710", ELF::EF_AMDGPU_MACH_R600_RV710)
+      .Case("rv730", ELF::EF_AMDGPU_MACH_R600_RV730)
+      .Case("rv770", ELF::EF_AMDGPU_MACH_R600_RV770)
+      // Radeon HD 5000 Series (Evergreen).
+      .Case("cedar", ELF::EF_AMDGPU_MACH_R600_CEDAR)
+      .Case("cypress", ELF::EF_AMDGPU_MACH_R600_CYPRESS)
+      .Case("juniper", ELF::EF_AMDGPU_MACH_R600_JUNIPER)
+      .Case("redwood", ELF::EF_AMDGPU_MACH_R600_REDWOOD)
+      .Case("sumo", ELF::EF_AMDGPU_MACH_R600_SUMO)
+      // Radeon HD 6000 Series (Northern Islands).
+      .Case("barts", ELF::EF_AMDGPU_MACH_R600_BARTS)
+      .Case("caicos", ELF::EF_AMDGPU_MACH_R600_CAICOS)
+      .Case("cayman", ELF::EF_AMDGPU_MACH_R600_CAYMAN)
+      .Case("turks", ELF::EF_AMDGPU_MACH_R600_TURKS)
+      // AMDGCN GFX6.
+      .Case("gfx600", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600)
+      .Case("tahiti", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600)
+      .Case("gfx601", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
+      .Case("hainan", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
+      .Case("oland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
+      .Case("pitcairn", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
+      .Case("verde", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
+      // AMDGCN GFX7.
+      .Case("gfx700", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700)
+      .Case("kaveri", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700)
+      .Case("gfx701", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701)
+      .Case("hawaii", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701)
+      .Case("gfx702", ELF::EF_AMDGPU_MACH_AMDGCN_GFX702)
+      .Case("gfx703", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703)
+      .Case("kabini", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703)
+      .Case("mullins", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703)
+      .Case("gfx704", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704)
+      .Case("bonaire", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704)
+      // AMDGCN GFX8.
+      .Case("gfx801", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801)
+      .Case("carrizo", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801)
+      .Case("gfx802", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802)
+      .Case("iceland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802)
+      .Case("tonga", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802)
+      .Case("gfx803", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
+      .Case("fiji", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
+      .Case("polaris10", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
+      .Case("polaris11", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
+      .Case("gfx810", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810)
+      .Case("stoney", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810)
+      // AMDGCN GFX9.
+      .Case("gfx900", ELF::EF_AMDGPU_MACH_AMDGCN_GFX900)
+      .Case("gfx902", ELF::EF_AMDGPU_MACH_AMDGCN_GFX902)
+      // Not specified processor.
+      .Default(ELF::EF_AMDGPU_MACH_NONE);
+}
+
 bool AMDGPUTargetStreamer::EmitHSAMetadata(StringRef HSAMetadataString) {
   HSAMD::Metadata HSAMetadata;
   if (HSAMD::fromString(HSAMetadataString, HSAMetadata))
@@ -122,8 +182,21 @@ bool AMDGPUTargetAsmStreamer::EmitPALMetadata(
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
 
-AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(MCStreamer &S)
-    : AMDGPUTargetStreamer(S), Streamer(S) {}
+AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(
+    MCStreamer &S, const MCSubtargetInfo &STI)
+    : AMDGPUTargetStreamer(S), Streamer(S) {
+  MCAssembler &MCA = getStreamer().getAssembler();
+  unsigned EFlags = MCA.getELFHeaderEFlags();
+
+  EFlags &= ~ELF::EF_AMDGPU_MACH;
+  EFlags |= getMACH(STI.getCPU());
+
+  EFlags &= ~ELF::EF_AMDGPU_XNACK;
+  if (AMDGPU::hasXNACK(STI))
+    EFlags |= ELF::EF_AMDGPU_XNACK;
+
+  MCA.setELFHeaderEFlags(EFlags);
+}
 
 MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);

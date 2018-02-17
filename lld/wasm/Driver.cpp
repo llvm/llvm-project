@@ -211,9 +211,6 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       break;
     }
   }
-
-  if (Files.empty())
-    error("no input files");
 }
 
 static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
@@ -280,11 +277,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
     readImportFile(Arg->getValue());
 
+  if (!Args.hasArg(OPT_INPUT)) {
+    error("no input files");
+    return;
+  }
+
   if (Config->OutputFile.empty())
     error("no output file specified");
-
-  if (!Args.hasArg(OPT_INPUT))
-    error("no input files");
 
   if (Config->Relocatable) {
     if (!Config->Entry.empty())

@@ -556,12 +556,6 @@ def FeatureISAVersion7_0_4 : SubtargetFeatureISAVersion <7,0,4,
   [FeatureSeaIslands,
    FeatureLDSBankCount32]>;
 
-def FeatureISAVersion8_0_0 : SubtargetFeatureISAVersion <8,0,0,
-  [FeatureVolcanicIslands,
-   FeatureLDSBankCount32,
-   FeatureSGPRInitBug,
-   FeatureUnpackedD16VMem]>;
-
 def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
   [FeatureVolcanicIslands,
    FeatureFastFMAF32,
@@ -595,7 +589,8 @@ def FeatureISAVersion9_0_0 : SubtargetFeatureISAVersion <9,0,0,
 def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
   [FeatureGFX9,
    FeatureMadMixInsts,
-   FeatureLDSBankCount32
+   FeatureLDSBankCount32,
+   FeatureXNACK
    ]>;
 
 //===----------------------------------------------------------------------===//

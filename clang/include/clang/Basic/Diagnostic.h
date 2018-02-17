@@ -1,4 +1,4 @@
-//===--- Diagnostic.h - C Language Family Diagnostic Handling ---*- C++ -*-===//
+//===- Diagnostic.h - C Language Family Diagnostic Handling -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the Diagnostic-related interfaces.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_DIAGNOSTIC_H
@@ -22,12 +22,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include <algorithm>
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h" 
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
@@ -44,13 +45,14 @@ class DiagnosticConsumer;
 class IdentifierInfo;
 class LangOptions;
 class Preprocessor;
+class SourceManager;
 class StoredDiagnostic;
 
 namespace tok {
 
-  enum TokenKind : unsigned short;
+enum TokenKind : unsigned short;
 
-} // end namespace tok
+} // namespace tok
 
 /// \brief Annotates a diagnostic with some code that should be
 /// inserted, removed, or replaced to fix the problem.
@@ -75,11 +77,11 @@ public:
   /// string.
   std::string CodeToInsert;
 
-  bool BeforePreviousInsertions;
+  bool BeforePreviousInsertions = false;
 
   /// \brief Empty code modification hint, indicating that no code
   /// modification is known.
-  FixItHint() : BeforePreviousInsertions(false) { }
+  FixItHint() = default;
 
   bool isNull() const {
     return !RemoveRange.isValid();
@@ -157,43 +159,86 @@ public:
   };
 
   enum ArgumentKind {
-    ak_std_string,      ///< std::string
-    ak_c_string,        ///< const char *
-    ak_sint,            ///< int
-    ak_uint,            ///< unsigned
-    ak_tokenkind,       ///< enum TokenKind : unsigned
-    ak_identifierinfo,  ///< IdentifierInfo
-    ak_qualtype,        ///< QualType
-    ak_declarationname, ///< DeclarationName
-    ak_nameddecl,       ///< NamedDecl *
-    ak_nestednamespec,  ///< NestedNameSpecifier *
-    ak_declcontext,     ///< DeclContext *
-    ak_qualtype_pair,   ///< pair<QualType, QualType>
-    ak_attr             ///< Attr *
+    /// std::string
+    ak_std_string,
+
+    /// const char *
+    ak_c_string,
+
+    /// int
+    ak_sint,
+
+    /// unsigned
+    ak_uint,
+
+    /// enum TokenKind : unsigned
+    ak_tokenkind,
+
+    /// IdentifierInfo
+    ak_identifierinfo,
+
+    /// QualType
+    ak_qualtype,
+
+    /// DeclarationName
+    ak_declarationname,
+
+    /// NamedDecl *
+    ak_nameddecl,
+
+    /// NestedNameSpecifier *
+    ak_nestednamespec,
+
+    /// DeclContext *
+    ak_declcontext,
+
+    /// pair<QualType, QualType>
+    ak_qualtype_pair,
+
+    /// Attr *
+    ak_attr
   };
 
   /// \brief Represents on argument value, which is a union discriminated
   /// by ArgumentKind, with a value.
-  typedef std::pair<ArgumentKind, intptr_t> ArgumentValue;
+  using ArgumentValue = std::pair<ArgumentKind, intptr_t>;
 
 private:
-  unsigned char AllExtensionsSilenced; // Used by __extension__
-  bool SuppressAfterFatalError;  // Suppress diagnostics after a fatal error?
-  bool SuppressAllDiagnostics;   // Suppress all diagnostics.
-  bool ElideType;                // Elide common types of templates.
-  bool PrintTemplateTree;        // Print a tree when comparing templates.
-  bool ShowColors;               // Color printing is enabled.
-  OverloadsShown ShowOverloads;  // Which overload candidates to show.
-  unsigned ErrorLimit;           // Cap of # errors emitted, 0 -> no limit.
-  unsigned TemplateBacktraceLimit; // Cap on depth of template backtrace stack,
-                                   // 0 -> no limit.
-  unsigned ConstexprBacktraceLimit; // Cap on depth of constexpr evaluation
-                                    // backtrace stack, 0 -> no limit.
+  // Used by __extension__
+  unsigned char AllExtensionsSilenced = 0;
+
+  // Suppress diagnostics after a fatal error?
+  bool SuppressAfterFatalError = true;
+
+  // Suppress all diagnostics.
+  bool SuppressAllDiagnostics = false;
+
+  // Elide common types of templates.
+  bool ElideType = true;
+
+  // Print a tree when comparing templates.
+  bool PrintTemplateTree = false;
+
+  // Color printing is enabled.
+  bool ShowColors = false;
+
+  // Which overload candidates to show.
+  OverloadsShown ShowOverloads = Ovl_All;
+
+  // Cap of # errors emitted, 0 -> no limit.
+  unsigned ErrorLimit = 0;
+
+  // Cap on depth of template backtrace stack, 0 -> no limit.
+  unsigned TemplateBacktraceLimit = 0;
+
+  // Cap on depth of constexpr evaluation backtrace stack, 0 -> no limit.
+  unsigned ConstexprBacktraceLimit = 0;
+
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
-  DiagnosticConsumer *Client;
+  DiagnosticConsumer *Client = nullptr;
   std::unique_ptr<DiagnosticConsumer> Owner;
-  SourceManager *SourceMgr;
+  SourceManager *SourceMgr = nullptr;
 
   /// \brief Mapping information for diagnostics.
   ///
@@ -211,25 +256,38 @@ private:
 
   public:
     // "Global" configuration state that can actually vary between modules.
-    unsigned IgnoreAllWarnings : 1;      // Ignore all warnings: -w
-    unsigned EnableAllWarnings : 1;      // Enable all warnings.
-    unsigned WarningsAsErrors : 1;       // Treat warnings like errors.
-    unsigned ErrorsAsFatal : 1;          // Treat errors like fatal errors.
-    unsigned SuppressSystemWarnings : 1; // Suppress warnings in system headers.
-    diag::Severity ExtBehavior;         // Map extensions to warnings or errors?
+
+    // Ignore all warnings: -w
+    unsigned IgnoreAllWarnings : 1;
+
+    // Enable all warnings.
+    unsigned EnableAllWarnings : 1;
+
+    // Treat warnings like errors.
+    unsigned WarningsAsErrors : 1;
+
+    // Treat errors like fatal errors.
+    unsigned ErrorsAsFatal : 1;
+
+    // Suppress warnings in system headers.
+    unsigned SuppressSystemWarnings : 1;
+
+    // Map extensions to warnings or errors?
+    diag::Severity ExtBehavior = diag::Severity::Ignored;
 
     DiagState()
         : IgnoreAllWarnings(false), EnableAllWarnings(false),
           WarningsAsErrors(false), ErrorsAsFatal(false),
-          SuppressSystemWarnings(false), ExtBehavior(diag::Severity::Ignored) {}
+          SuppressSystemWarnings(false) {}
 
-    typedef llvm::DenseMap<unsigned, DiagnosticMapping>::iterator iterator;
-    typedef llvm::DenseMap<unsigned, DiagnosticMapping>::const_iterator
-    const_iterator;
+    using iterator = llvm::DenseMap<unsigned, DiagnosticMapping>::iterator;
+    using const_iterator =
+        llvm::DenseMap<unsigned, DiagnosticMapping>::const_iterator;
 
     void setMapping(diag::kind Diag, DiagnosticMapping Info) {
       DiagMap[Diag] = Info;
     }
+
     DiagnosticMapping lookupMapping(diag::kind Diag) const {
       return DiagMap.lookup(Diag);
     }
@@ -249,12 +307,16 @@ private:
   public:
     /// Add an initial diagnostic state.
     void appendFirst(DiagState *State);
+
     /// Add a new latest state point.
     void append(SourceManager &SrcMgr, SourceLocation Loc, DiagState *State);
+
     /// Look up the diagnostic state at a given source location.
     DiagState *lookup(SourceManager &SrcMgr, SourceLocation Loc) const;
+
     /// Determine whether this map is empty.
     bool empty() const { return Files.empty(); }
+
     /// Clear out this map.
     void clear() {
       Files.clear();
@@ -268,10 +330,14 @@ private:
 
     /// Grab the most-recently-added state point.
     DiagState *getCurDiagState() const { return CurDiagState; }
+
     /// Get the location at which a diagnostic state was last added.
     SourceLocation getCurDiagStateLoc() const { return CurDiagStateLoc; }
 
   private:
+    friend class ASTReader;
+    friend class ASTWriter;
+
     /// \brief Represents a point in source where the diagnostic state was
     /// modified because of a pragma.
     ///
@@ -280,8 +346,9 @@ private:
     struct DiagStatePoint {
       DiagState *State;
       unsigned Offset;
+
       DiagStatePoint(DiagState *State, unsigned Offset)
-        : State(State), Offset(Offset) { } 
+          : State(State), Offset(Offset) {} 
     };
 
     /// Description of the diagnostic states and state transitions for a
@@ -291,11 +358,14 @@ private:
       /// as looking up the DecomposedIncludedLoc for the FileID in the Files
       /// map would give us this, but we cache it here for performance.
       File *Parent = nullptr;
+
       /// The offset of this file within its parent.
       unsigned ParentOffset = 0;
+
       /// Whether this file has any local (not imported from an AST file)
       /// diagnostic state transitions.
       bool HasLocalTransitions = false;
+
       /// The points within the file where the state changes. There will always
       /// be at least one of these (the state on entry to the file).
       llvm::SmallVector<DiagStatePoint, 4> StateTransitions;
@@ -308,16 +378,15 @@ private:
 
     /// The initial diagnostic state.
     DiagState *FirstDiagState;
+
     /// The current diagnostic state.
     DiagState *CurDiagState;
+
     /// The location at which the current diagnostic state was established.
     SourceLocation CurDiagStateLoc;
 
     /// Get the diagnostic state information for a file.
     File *getFile(SourceManager &SrcMgr, FileID ID) const;
-
-    friend class ASTReader;
-    friend class ASTWriter;
   };
 
   DiagStateMap DiagStatesByLoc;
@@ -363,8 +432,11 @@ private:
   /// diagnostic that they follow.
   DiagnosticIDs::Level LastDiagLevel;
 
-  unsigned NumWarnings;         ///< Number of warnings reported
-  unsigned NumErrors;           ///< Number of errors reported
+  /// Number of warnings reported
+  unsigned NumWarnings;
+
+  /// Number of errors reported
+  unsigned NumErrors;
 
   /// \brief A function pointer that converts an opaque diagnostic
   /// argument to a strings.
@@ -376,14 +448,15 @@ private:
   /// avoid redundancy across arguments.
   ///
   /// This is a hack to avoid a layering violation between libbasic and libsema.
-  typedef void (*ArgToStringFnTy)(
+  using ArgToStringFnTy = void (*)(
       ArgumentKind Kind, intptr_t Val,
       StringRef Modifier, StringRef Argument,
       ArrayRef<ArgumentValue> PrevArgs,
       SmallVectorImpl<char> &Output,
       void *Cookie,
       ArrayRef<intptr_t> QualTypeVals);
-  void *ArgToStringCookie;
+
+  void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
 
   /// \brief ID of the "delayed" diagnostic, which is a (typically
@@ -425,7 +498,7 @@ public:
   /// \brief Retrieve the diagnostic options.
   DiagnosticOptions &getDiagnosticOptions() const { return *DiagOpts; }
 
-  typedef llvm::iterator_range<DiagState::const_iterator> diag_mapping_range;
+  using diag_mapping_range = llvm::iterator_range<DiagState::const_iterator>;
 
   /// \brief Get the current set of diagnostic mappings.
   diag_mapping_range getDiagnosticMappings() const {
@@ -444,10 +517,12 @@ public:
   std::unique_ptr<DiagnosticConsumer> takeClient() { return std::move(Owner); }
 
   bool hasSourceManager() const { return SourceMgr != nullptr; }
+
   SourceManager &getSourceManager() const {
     assert(SourceMgr && "SourceManager not set!");
     return *SourceMgr;
   }
+
   void setSourceManager(SourceManager *SrcMgr) {
     assert(DiagStatesByLoc.empty() &&
            "Leftover diag state from a different SourceManager.");
@@ -773,7 +848,9 @@ public:
   void Report(const StoredDiagnostic &storedDiag);
 
   /// \brief Determine whethere there is already a diagnostic in flight.
-  bool isDiagnosticInFlight() const { return CurDiagID != ~0U; }
+  bool isDiagnosticInFlight() const {
+    return CurDiagID != std::numeric_limits<unsigned>::max();
+  }
 
   /// \brief Set the "delayed" diagnostic that will be emitted once
   /// the current diagnostic completes.
@@ -800,33 +877,34 @@ public:
                             StringRef Arg2 = "");
   
   /// \brief Clear out the current diagnostic.
-  void Clear() { CurDiagID = ~0U; }
+  void Clear() { CurDiagID = std::numeric_limits<unsigned>::max(); }
 
   /// \brief Return the value associated with this diagnostic flag.
   StringRef getFlagValue() const { return FlagValue; }
 
 private:
-  /// \brief Report the delayed diagnostic.
-  void ReportDelayed();
-
   // This is private state used by DiagnosticBuilder.  We put it here instead of
   // in DiagnosticBuilder in order to keep DiagnosticBuilder a small lightweight
   // object.  This implementation choice means that we can only have one
   // diagnostic "in flight" at a time, but this seems to be a reasonable
   // tradeoff to keep these objects small.  Assertions verify that only one
   // diagnostic is in flight at a time.
-  friend class DiagnosticIDs;
-  friend class DiagnosticBuilder;
   friend class Diagnostic;
-  friend class PartialDiagnostic;
+  friend class DiagnosticBuilder;
   friend class DiagnosticErrorTrap;
+  friend class DiagnosticIDs;
+  friend class PartialDiagnostic;
   
+  /// \brief Report the delayed diagnostic.
+  void ReportDelayed();
+
   /// \brief The location of the current diagnostic that is in flight.
   SourceLocation CurDiagLoc;
 
   /// \brief The ID of the current diagnostic that is in flight.
   ///
-  /// This is set to ~0U when there is no diagnostic in flight.
+  /// This is set to std::numeric_limits<unsigned>::max() when there is no
+  /// diagnostic in flight.
   unsigned CurDiagID;
 
   enum {
@@ -893,6 +971,9 @@ private:
   /// @name Diagnostic Emission
   /// @{
 protected:
+  friend class ASTReader;
+  friend class ASTWriter;
+
   // Sema requires access to the following functions because the current design
   // of SFINAE requires it to use its own SemaDiagnosticBuilder, which needs to
   // access us directly to ensure we minimize the emitted code for the common
@@ -909,9 +990,6 @@ protected:
   SourceLocation getCurrentDiagLoc() const { return CurDiagLoc; }
 
   /// @}
-
-  friend class ASTReader;
-  friend class ASTWriter;
 };
 
 /// \brief RAII class that determines when any errors have occurred
@@ -924,7 +1002,7 @@ class DiagnosticErrorTrap {
 
 public:
   explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag)
-    : Diag(Diag) { reset(); }
+      : Diag(Diag) { reset(); }
 
   /// \brief Determine whether any errors have occurred since this
   /// object instance was created.
@@ -962,6 +1040,9 @@ public:
 /// the common fields to registers, eliminating increments of the NumArgs field,
 /// for example.
 class DiagnosticBuilder {
+  friend class DiagnosticsEngine;
+  friend class PartialDiagnostic;
+  
   mutable DiagnosticsEngine *DiagObj = nullptr;
   mutable unsigned NumArgs = 0;
 
@@ -976,8 +1057,6 @@ class DiagnosticBuilder {
   /// call to ForceEmit.
   mutable bool IsForceEmit = false;
 
-  friend class DiagnosticsEngine;
-
   DiagnosticBuilder() = default;
 
   explicit DiagnosticBuilder(DiagnosticsEngine *diagObj)
@@ -987,8 +1066,6 @@ class DiagnosticBuilder {
     diagObj->DiagFixItHints.clear();
   }
 
-  friend class PartialDiagnostic;
-  
 protected:
   void FlushCounts() {
     DiagObj->NumDiagArgs = NumArgs;
@@ -1049,7 +1126,7 @@ public:
 
   /// \brief Retrieve an empty diagnostic builder.
   static DiagnosticBuilder getEmpty() {
-    return DiagnosticBuilder();
+    return {};
   }
 
   /// \brief Forces the diagnostic to be emitted.
@@ -1098,8 +1175,9 @@ public:
 };
 
 struct AddFlagValue {
-  explicit AddFlagValue(StringRef V) : Val(V) {}
   StringRef Val;
+
+  explicit AddFlagValue(StringRef V) : Val(V) {}
 };
 
 /// \brief Register a value for the flag in the current diagnostic. This
@@ -1208,14 +1286,15 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
 
 /// A nullability kind paired with a bit indicating whether it used a
 /// context-sensitive keyword.
-typedef std::pair<NullabilityKind, bool> DiagNullabilityKind;
+using DiagNullabilityKind = std::pair<NullabilityKind, bool>;
 
 const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
                                     DiagNullabilityKind nullability);
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
                                                    unsigned DiagID) {
-  assert(CurDiagID == ~0U && "Multiple diagnostics in flight at once!");
+  assert(CurDiagID == std::numeric_limits<unsigned>::max() &&
+         "Multiple diagnostics in flight at once!");
   CurDiagLoc = Loc;
   CurDiagID = DiagID;
   FlagValue.clear();
@@ -1240,7 +1319,7 @@ class Diagnostic {
 public:
   explicit Diagnostic(const DiagnosticsEngine *DO) : DiagObj(DO) {}
   Diagnostic(const DiagnosticsEngine *DO, StringRef storedDiagMessage)
-    : DiagObj(DO), StoredDiagMessage(storedDiagMessage) {}
+      : DiagObj(DO), StoredDiagMessage(storedDiagMessage) {}
 
   const DiagnosticsEngine *getDiags() const { return DiagObj; }
   unsigned getID() const { return DiagObj->CurDiagID; }
@@ -1382,7 +1461,8 @@ public:
 
   void setLocation(FullSourceLoc Loc) { this->Loc = Loc; }
 
-  typedef std::vector<CharSourceRange>::const_iterator range_iterator;
+  using range_iterator = std::vector<CharSourceRange>::const_iterator;
+
   range_iterator range_begin() const { return Ranges.begin(); }
   range_iterator range_end() const { return Ranges.end(); }
   unsigned range_size() const { return Ranges.size(); }
@@ -1391,7 +1471,8 @@ public:
     return llvm::makeArrayRef(Ranges);
   }
 
-  typedef std::vector<FixItHint>::const_iterator fixit_iterator;
+  using fixit_iterator = std::vector<FixItHint>::const_iterator;
+
   fixit_iterator fixit_begin() const { return FixIts.begin(); }
   fixit_iterator fixit_end() const { return FixIts.end(); }
   unsigned fixit_size() const { return FixIts.size(); }
@@ -1410,7 +1491,6 @@ protected:
   
 public:
   DiagnosticConsumer() = default;
-
   virtual ~DiagnosticConsumer();
 
   unsigned getNumErrors() const { return NumErrors; }
@@ -1476,7 +1556,6 @@ class ForwardingDiagnosticConsumer : public DiagnosticConsumer {
 
 public:
   ForwardingDiagnosticConsumer(DiagnosticConsumer &Target) : Target(Target) {}
-
   ~ForwardingDiagnosticConsumer() override;
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
@@ -1494,6 +1573,7 @@ struct TemplateDiffTypes {
   unsigned PrintFromType : 1;
   unsigned ElideType : 1;
   unsigned ShowColors : 1;
+
   // The printer sets this variable to true if the template diff was used.
   unsigned TemplateDiffUsed : 1;
 };
@@ -1502,13 +1582,12 @@ struct TemplateDiffTypes {
 /// attribute.  The character itself will be not be printed.
 const char ToggleHighlight = 127;
 
-
 /// ProcessWarningOptions - Initialize the diagnostic client and process the
 /// warning options specified on the command line.
 void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            bool ReportDiags = true);
 
-} // end namespace clang
+} // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

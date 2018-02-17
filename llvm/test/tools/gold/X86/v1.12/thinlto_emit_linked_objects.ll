@@ -31,6 +31,24 @@
 ; RUN: ls %t2.o.imports
 ; RUN: ls %t3.o.imports
 
+; Regular *thinlto.bc file. "SkipModuleByDistributedBackend" flag (0x2)
+; should not be set.
+; RUN: llvm-bcanalyzer --dump %t1.o.thinlto.bc | FileCheck %s -check-prefixes=CHECK-BC1
+; CHECK-BC1: <GLOBALVAL_SUMMARY_BLOCK
+; CHECK-BC1: <FLAGS op0=1/>
+; CHECK-BC1: </GLOBALVAL_SUMMARY_BLOCK
+
+; Nothing interesting in the corresponding object file, so
+; "SkipModuleByDistributedBackend" flag (0x2) should be set.
+; RUN: llvm-bcanalyzer --dump %t2.o.thinlto.bc | FileCheck %s -check-prefixes=CHECK-BC2
+; CHECK-BC2: <GLOBALVAL_SUMMARY_BLOCK
+; CHECK-BC2: <FLAGS op0=2/>
+; CHECK-BC2: </GLOBALVAL_SUMMARY_BLOCK
+
+; Empty as the corresponding object file is not ThinTLO.
+; RUN: not llvm-bcanalyzer --dump %t3.o.thinlto.bc 2>&1 | FileCheck %s -check-prefixes=CHECK-BC3
+; CHECK-BC3: LLVM ERROR: Unexpected end of file
+
 ; RUN: cat %t.index | FileCheck %s
 ; CHECK: thinlto_emit_linked_objects.ll.tmp1.o
 ; CHECK-NOT: thinlto_emit_linked_objects.ll.tmp2.o

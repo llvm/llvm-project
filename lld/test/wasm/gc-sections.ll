@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: lld -flavor wasm -print-gc-sections -o %t1.wasm %t.o | FileCheck %s -check-prefix=PRINT-GC
+; RUN: wasm-ld -print-gc-sections -o %t1.wasm %t.o | FileCheck %s -check-prefix=PRINT-GC
 ; PRINT-GC: removing unused section 'unused_function' in file '{{.*}}'
 ; PRINT-GC-NOT: removing unused section 'used_function' in file '{{.*}}'
 ; PRINT-GC: removing unused section '.data.unused_data' in file '{{.*}}'
@@ -60,7 +60,7 @@ entry:
 ; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...
 
-; RUN: lld -flavor wasm -print-gc-sections --no-gc-sections -o %t1.no-gc.wasm %t.o
+; RUN: wasm-ld -print-gc-sections --no-gc-sections -o %t1.no-gc.wasm %t.o
 ; RUN: obj2yaml %t1.no-gc.wasm | FileCheck %s -check-prefix=NO-GC
 
 ; NO-GC:        - Type:            TYPE
@@ -100,5 +100,5 @@ entry:
 ; NO-GC-NEXT:         Name:            __wasm_call_ctors
 ; NO-GC-NEXT: ...
 
-; RUN: not lld -flavor wasm --gc-sections --relocatable -o %t1.no-gc.wasm %t.o 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR
-; CHECK-ERROR: lld{{.*}}: error: -r and --gc-sections may not be used together
+; RUN: not wasm-ld --gc-sections --relocatable -o %t1.no-gc.wasm %t.o 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR
+; CHECK-ERROR: wasm-ld: error: -r and --gc-sections may not be used together

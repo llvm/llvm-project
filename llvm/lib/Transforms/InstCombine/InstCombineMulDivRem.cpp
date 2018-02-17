@@ -478,35 +478,6 @@ static void detectLog2OfHalf(Value *&Op, Value *&Y, IntrinsicInst *&Log2) {
     Y = I->getOperand(0);
 }
 
-static bool isFiniteNonZeroFp(Constant *C) {
-  if (C->getType()->isVectorTy()) {
-    for (unsigned I = 0, E = C->getType()->getVectorNumElements(); I != E;
-         ++I) {
-      ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(C->getAggregateElement(I));
-      if (!CFP || !CFP->getValueAPF().isFiniteNonZero())
-        return false;
-    }
-    return true;
-  }
-
-  return isa<ConstantFP>(C) &&
-         cast<ConstantFP>(C)->getValueAPF().isFiniteNonZero();
-}
-
-static bool isNormalFp(Constant *C) {
-  if (C->getType()->isVectorTy()) {
-    for (unsigned I = 0, E = C->getType()->getVectorNumElements(); I != E;
-         ++I) {
-      ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(C->getAggregateElement(I));
-      if (!CFP || !CFP->getValueAPF().isNormal())
-        return false;
-    }
-    return true;
-  }
-
-  return isa<ConstantFP>(C) && cast<ConstantFP>(C)->getValueAPF().isNormal();
-}
-
 /// Helper function of InstCombiner::visitFMul(). Return true iff the given
 /// value is FMul or FDiv with one and only one operand being a finite-non-zero
 /// constant (i.e. not Zero/NaN/Infinity).
@@ -514,7 +485,7 @@ static bool isFMulOrFDivWithConstant(Value *V) {
   Constant *C;
   return (match(V, m_FMul(m_Value(), m_Constant(C))) ||
           match(V, m_FDiv(m_Value(), m_Constant(C))) ||
-          match(V, m_FDiv(m_Constant(C), m_Value()))) && isFiniteNonZeroFp(C);
+          match(V, m_FDiv(m_Constant(C), m_Value()))) && C->isFiniteNonZeroFP();
 }
 
 /// foldFMulConst() is a helper routine of InstCombiner::visitFMul().
@@ -538,7 +509,7 @@ Value *InstCombiner::foldFMulConst(Instruction *FMulOrDiv, Constant *C,
   // (X * C0) * C => X * (C0*C)
   if (FMulOrDiv->getOpcode() == Instruction::FMul) {
     Constant *F = ConstantExpr::getFMul(C1 ? C1 : C0, C);
-    if (isNormalFp(F))
+    if (F->isNormalFP())
       R = BinaryOperator::CreateFMul(C1 ? Opnd0 : Opnd1, F);
   } else {
     if (C0) {
@@ -546,18 +517,18 @@ Value *InstCombiner::foldFMulConst(Instruction *FMulOrDiv, Constant *C,
       if (FMulOrDiv->hasOneUse()) {
         // It would otherwise introduce another div.
         Constant *F = ConstantExpr::getFMul(C0, C);
-        if (isNormalFp(F))
+        if (F->isNormalFP())
           R = BinaryOperator::CreateFDiv(F, Opnd1);
       }
     } else {
       // (X / C1) * C => X * (C/C1) if C/C1 is not a denormal
       Constant *F = ConstantExpr::getFDiv(C, C1);
-      if (isNormalFp(F)) {
+      if (F->isNormalFP()) {
         R = BinaryOperator::CreateFMul(Opnd0, F);
       } else {
         // (X / C1) * C => X / (C1/C)
         Constant *F = ConstantExpr::getFDiv(C1, C);
-        if (isNormalFp(F))
+        if (F->isNormalFP())
           R = BinaryOperator::CreateFDiv(Opnd0, F);
       }
     }
@@ -600,7 +571,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       return RI;
     }
 
-    if (AllowReassociate && isFiniteNonZeroFp(C)) {
+    if (AllowReassociate && C->isFiniteNonZeroFP()) {
       // Let MDC denote an expression in one of these forms:
       // X * C, C/X, X/C, where C is a constant.
       //
@@ -625,11 +596,11 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
           Swap = true;
         }
 
-        if (C1 && isFiniteNonZeroFp(C1) && isFMulOrFDivWithConstant(Opnd0)) {
+        if (C1 && C1->isFiniteNonZeroFP() && isFMulOrFDivWithConstant(Opnd0)) {
           Value *M1 = ConstantExpr::getFMul(C1, C);
-          Value *M0 = isNormalFp(cast<Constant>(M1)) ?
-                      foldFMulConst(cast<Instruction>(Opnd0), C, &I) :
-                      nullptr;
+          Value *M0 = cast<Constant>(M1)->isNormalFP() ?
+                          foldFMulConst(cast<Instruction>(Opnd0), C, &I) :
+                          nullptr;
           if (M0 && M1) {
             if (Swap && FAddSub->getOpcode() == Instruction::FSub)
               std::swap(M0, M1);
@@ -1380,12 +1351,12 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       if (match(Op0, m_FMul(m_Value(X), m_Constant(C1)))) {
         // (X*C1)/C2 => X * (C1/C2)
         Constant *C = ConstantExpr::getFDiv(C1, C2);
-        if (isNormalFp(C))
+        if (C->isNormalFP())
           Res = BinaryOperator::CreateFMul(X, C);
       } else if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
         // (X/C1)/C2 => X /(C2*C1)
         Constant *C = ConstantExpr::getFMul(C1, C2);
-        if (isNormalFp(C))
+        if (C->isNormalFP())
           Res = BinaryOperator::CreateFDiv(X, C);
       }
 
@@ -1415,7 +1386,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       CreateDiv = false;
     }
 
-    if (Fold && isNormalFp(Fold)) {
+    if (Fold && Fold->isNormalFP()) {
       Instruction *R = CreateDiv ? BinaryOperator::CreateFDiv(Fold, X)
                                  : BinaryOperator::CreateFMul(X, Fold);
       R->setFastMathFlags(I.getFastMathFlags());

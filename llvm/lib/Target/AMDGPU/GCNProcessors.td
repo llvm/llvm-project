@@ -93,14 +93,6 @@ def : ProcessorModel<"bonaire", SIQuarterSpeedModel,
 // GCN GFX8 (Volcanic Islands (VI)).
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx800", SIQuarterSpeedModel,
-  [FeatureISAVersion8_0_0]
->;
-
-def : ProcessorModel<"iceland", SIQuarterSpeedModel,
-  [FeatureISAVersion8_0_0]
->;
-
 def : ProcessorModel<"gfx801", SIQuarterSpeedModel,
   [FeatureISAVersion8_0_1]
 >;
@@ -110,6 +102,10 @@ def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
 >;
 
 def : ProcessorModel<"gfx802", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_2]
+>;
+
+def : ProcessorModel<"iceland", SIQuarterSpeedModel,
   [FeatureISAVersion8_0_2]
 >;
 
