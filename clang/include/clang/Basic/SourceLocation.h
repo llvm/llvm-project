@@ -1,4 +1,4 @@
-//===--- SourceLocation.h - Compact identifier for Source Files -*- C++ -*-===//
+//===- SourceLocation.h - Compact identifier for Source Files ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,28 +6,29 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the clang::SourceLocation class and associated facilities.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_SOURCELOCATION_H
 #define LLVM_CLANG_BASIC_SOURCELOCATION_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
-#include <functional>
+#include <cstdint>
 #include <string>
 #include <utility>
 
 namespace llvm {
-  class MemoryBuffer;
-  template <typename T> struct DenseMapInfo;
-  template <typename T> struct isPodLike;
-}
+
+template <typename T> struct DenseMapInfo;
+template <typename T> struct isPodLike;
+
+} // namespace llvm
 
 namespace clang {
 
@@ -56,18 +57,18 @@ public:
   unsigned getHashValue() const { return static_cast<unsigned>(ID); }
 
 private:
-  friend class SourceManager;
   friend class ASTWriter;
   friend class ASTReader;
+  friend class SourceManager;
   
   static FileID get(int V) {
     FileID F;
     F.ID = V;
     return F;
   }
+
   int getOpaqueValue() const { return ID; }
 };
-
 
 /// \brief Encodes a location in the source. The SourceManager can decode this
 /// to get at the full include stack, line and column information.
@@ -85,10 +86,12 @@ private:
 ///
 /// It is important that this type remains small. It is currently 32 bits wide.
 class SourceLocation {
-  unsigned ID = 0;
-  friend class SourceManager;
   friend class ASTReader;
   friend class ASTWriter;
+  friend class SourceManager;
+
+  unsigned ID = 0;
+
   enum : unsigned {
     MacroIDBit = 1U << 31
   };
@@ -124,8 +127,8 @@ private:
     L.ID = MacroIDBit | ID;
     return L;
   }
-public:
 
+public:
   /// \brief Return a source location with the specified offset from this
   /// SourceLocation.
   SourceLocation getLocWithOffset(int Offset) const {
@@ -245,6 +248,7 @@ public:
   static CharSourceRange getTokenRange(SourceLocation B, SourceLocation E) {
     return getTokenRange(SourceRange(B, E));
   }
+
   static CharSourceRange getCharRange(SourceLocation B, SourceLocation E) {
     return getCharRange(SourceRange(B, E));
   }
@@ -274,12 +278,12 @@ public:
 ///
 /// You can get a PresumedLoc from a SourceLocation with SourceManager.
 class PresumedLoc {
-  const char *Filename;
+  const char *Filename = nullptr;
   unsigned Line, Col;
   SourceLocation IncludeLoc;
 
 public:
-  PresumedLoc() : Filename(nullptr) {}
+  PresumedLoc() = default;
   PresumedLoc(const char *FN, unsigned Ln, unsigned Co, SourceLocation IL)
       : Filename(FN), Line(Ln), Col(Co), IncludeLoc(IL) {}
 
@@ -336,7 +340,7 @@ public:
   FullSourceLoc() = default;
 
   explicit FullSourceLoc(SourceLocation Loc, const SourceManager &SM)
-    : SourceLocation(Loc), SrcMgr(&SM) {}
+      : SourceLocation(Loc), SrcMgr(&SM) {}
 
   bool hasManager() const {
       bool hasSrcMgr =  SrcMgr != nullptr;
@@ -415,32 +419,31 @@ public:
   /// This is useful for debugging.
   void dump() const;
 
-  friend inline bool
+  friend bool
   operator==(const FullSourceLoc &LHS, const FullSourceLoc &RHS) {
     return LHS.getRawEncoding() == RHS.getRawEncoding() &&
           LHS.SrcMgr == RHS.SrcMgr;
   }
 
-  friend inline bool
+  friend bool
   operator!=(const FullSourceLoc &LHS, const FullSourceLoc &RHS) {
     return !(LHS == RHS);
   }
-
 };
 
-
-
-}  // end namespace clang
+} // namespace clang
 
 namespace llvm {
+
   /// Define DenseMapInfo so that FileID's can be used as keys in DenseMap and
   /// DenseSets.
   template <>
   struct DenseMapInfo<clang::FileID> {
-    static inline clang::FileID getEmptyKey() {
-      return clang::FileID();
+    static clang::FileID getEmptyKey() {
+      return {};
     }
-    static inline clang::FileID getTombstoneKey() {
+
+    static clang::FileID getTombstoneKey() {
       return clang::FileID::getSentinel();
     }
 
@@ -461,15 +464,17 @@ namespace llvm {
   // Teach SmallPtrSet how to handle SourceLocation.
   template<>
   struct PointerLikeTypeTraits<clang::SourceLocation> {
-    static inline void *getAsVoidPointer(clang::SourceLocation L) {
+    enum { NumLowBitsAvailable = 0 };
+
+    static void *getAsVoidPointer(clang::SourceLocation L) {
       return L.getPtrEncoding();
     }
-    static inline clang::SourceLocation getFromVoidPointer(void *P) {
+
+    static clang::SourceLocation getFromVoidPointer(void *P) {
       return clang::SourceLocation::getFromRawEncoding((unsigned)(uintptr_t)P);
     }
-    enum { NumLowBitsAvailable = 0 };
   };
 
-}  // end namespace llvm
+} // namespace llvm
 
-#endif
+#endif // LLVM_CLANG_BASIC_SOURCELOCATION_H

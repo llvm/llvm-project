@@ -24,6 +24,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include <cstdlib>
 
 using namespace lld;
 using namespace llvm;
@@ -102,6 +103,14 @@ static Flavor parseFlavor(std::vector<const char *> &V) {
   return parseProgname(Arg0);
 }
 
+// If this function returns true, lld calls _exit() so that it quickly
+// exits without invoking destructors of globally allocated objects.
+//
+// We don't want to do that if we are running tests though, because
+// doing that breaks leak sanitizer. So, lit sets this environment variable,
+// and we use it to detect whether we are running tests or not.
+static bool canExitEarly() { return StringRef(getenv("LLD_IN_TEST")) != "1"; }
+
 /// Universal linker main(). This linker emulates the gnu, darwin, or
 /// windows linker based on the argv[0] or -flavor option.
 int main(int Argc, const char **Argv) {
@@ -115,13 +124,13 @@ int main(int Argc, const char **Argv) {
   case Gnu:
     if (isPETarget(Args))
       return !mingw::link(Args);
-    return !elf::link(Args, true);
+    return !elf::link(Args, canExitEarly());
   case WinLink:
-    return !coff::link(Args, true);
+    return !coff::link(Args, canExitEarly());
   case Darwin:
     return !mach_o::link(Args);
   case Wasm:
-    return !wasm::link(Args, true);
+    return !wasm::link(Args, canExitEarly());
   default:
     die("lld is a generic driver.\n"
         "Invoke ld.lld (Unix), ld64.lld (macOS) or lld-link (Windows) instead.");

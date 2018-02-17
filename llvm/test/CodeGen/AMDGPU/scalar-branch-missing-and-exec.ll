@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx800 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
 
 ; This checks for a bug where uniform control flow can result in multiple

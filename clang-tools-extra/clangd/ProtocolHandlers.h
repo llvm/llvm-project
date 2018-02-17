@@ -51,6 +51,7 @@ public:
   virtual void onCommand(ExecuteCommandParams &Params) = 0;
   virtual void onRename(RenameParams &Parames) = 0;
   virtual void onDocumentHighlight(TextDocumentPositionParams &Params) = 0;
+  virtual void onHover(TextDocumentPositionParams &Params) = 0;
 };
 
 void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,

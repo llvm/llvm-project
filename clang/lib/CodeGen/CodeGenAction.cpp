@@ -947,12 +947,21 @@ std::unique_ptr<llvm::Module> CodeGenAction::loadModule(MemoryBufferRef MBRef) {
       return {};
     };
 
-    Expected<llvm::BitcodeModule> BMOrErr = FindThinLTOModule(MBRef);
-    if (!BMOrErr)
-      return DiagErrors(BMOrErr.takeError());
-
+    Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
+    if (!BMsOrErr)
+      return DiagErrors(BMsOrErr.takeError());
+    BitcodeModule *Bm = FindThinLTOModule(*BMsOrErr);
+    // We have nothing to do if the file contains no ThinLTO module. This is
+    // possible if ThinLTO compilation was not able to split module. Content of
+    // the file was already processed by indexing and will be passed to the
+    // linker using merged object file.
+    if (!Bm) {
+      auto M = llvm::make_unique<llvm::Module>("empty", *VMContext);
+      M->setTargetTriple(CI.getTargetOpts().Triple);
+      return M;
+    }
     Expected<std::unique_ptr<llvm::Module>> MOrErr =
-        BMOrErr->parseModule(*VMContext);
+        Bm->parseModule(*VMContext);
     if (!MOrErr)
       return DiagErrors(MOrErr.takeError());
     return std::move(*MOrErr);

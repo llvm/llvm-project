@@ -186,24 +186,24 @@ TEST(HashTableTest, NamedStreamMap) {
 
     uint32_t N;
     EXPECT_TRUE(NSM.get("One", N));
-    EXPECT_EQ(1, N);
+    EXPECT_EQ(1U, N);
 
     EXPECT_TRUE(NSM.get("Two", N));
-    EXPECT_EQ(2, N);
+    EXPECT_EQ(2U, N);
 
     EXPECT_TRUE(NSM.get("Three", N));
-    EXPECT_EQ(3, N);
+    EXPECT_EQ(3U, N);
 
     EXPECT_TRUE(NSM.get("Four", N));
-    EXPECT_EQ(4, N);
+    EXPECT_EQ(4U, N);
 
     EXPECT_TRUE(NSM.get("Five", N));
-    EXPECT_EQ(5, N);
+    EXPECT_EQ(5U, N);
 
     EXPECT_TRUE(NSM.get("Six", N));
-    EXPECT_EQ(6, N);
+    EXPECT_EQ(6U, N);
 
     EXPECT_TRUE(NSM.get("Seven", N));
-    EXPECT_EQ(7, N);
+    EXPECT_EQ(7U, N);
   } while (std::next_permutation(Streams.begin(), Streams.end()));
 }

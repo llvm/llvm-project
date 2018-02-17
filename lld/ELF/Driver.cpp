@@ -77,7 +77,9 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
       "too many errors emitted, stopping now (use "
       "-error-limit=0 to see all errors)";
   errorHandler().ErrorOS = &Error;
+  errorHandler().ExitEarly = CanExitEarly;
   errorHandler().ColorDiagnostics = Error.has_colors();
+
   InputSections.clear();
   OutputSections.clear();
   Tar = nullptr;
@@ -92,12 +94,12 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Symtab = make<SymbolTable>();
   Config->ProgName = Args[0];
 
-  Driver->main(Args, CanExitEarly);
+  Driver->main(Args);
 
   // Exit immediately if we don't need to return to the caller.
   // This saves time because the overhead of calling destructors
   // for all globally-allocated objects is not negligible.
-  if (Config->ExitEarly)
+  if (CanExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
   freeArena();
@@ -309,7 +311,7 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
+void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
@@ -346,9 +348,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
     return;
   if (Args.hasArg(OPT_version))
     return;
-
-  Config->ExitEarly = CanExitEarly && !Args.hasArg(OPT_full_shutdown);
-  errorHandler().ExitEarly = Config->ExitEarly;
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it

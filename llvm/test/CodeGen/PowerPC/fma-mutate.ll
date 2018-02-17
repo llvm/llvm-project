@@ -14,8 +14,7 @@ define double @foo3(double %a) nounwind {
   ret double %r
 
 ; CHECK: @foo3
-; CHECK: fmr [[REG:[0-9]+]], [[REG2:[0-9]+]]
-; CHECK: xsnmsubadp [[REG]], {{[0-9]+}}, [[REG2]]
+; CHECK: xsnmsubadp [[REG:[0-9]+]], {{[0-9]+}}, [[REG]]
 ; CHECK: xsmaddmdp
 ; CHECK: xsmaddadp
 }
