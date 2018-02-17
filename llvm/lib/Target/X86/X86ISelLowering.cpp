@@ -14745,9 +14745,12 @@ static SDValue lowerVSELECTtoVectorShuffle(SDValue Op,
   SmallVector<int, 32> Mask;
   for (int i = 0, Size = VT.getVectorNumElements(); i < Size; ++i) {
     SDValue CondElt = CondBV->getOperand(i);
-    Mask.push_back(
-        isa<ConstantSDNode>(CondElt) ? i + (isNullConstant(CondElt) ? Size : 0)
-                                     : -1);
+    int M = i;
+    // We can't map undef to undef here. They have different meanings. Treat
+    // as the same as zero.
+    if (CondElt.isUndef() || isNullConstant(CondElt))
+      M += Size;
+    Mask.push_back(M);
   }
   return DAG.getVectorShuffle(VT, dl, LHS, RHS, Mask);
 }
@@ -28747,6 +28750,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   unsigned NumRootElts = RootVT.getVectorNumElements();
   unsigned BaseMaskEltSizeInBits = RootSizeInBits / NumBaseMaskElts;
   bool FloatDomain = VT1.isFloatingPoint() || VT2.isFloatingPoint() ||
+                     (RootVT.isFloatingPoint() && Depth >= 2) ||
                      (RootVT.is256BitVector() && !Subtarget.hasAVX2());
 
   // Don't combine if we are a AVX512/EVEX target and the mask element size
@@ -31539,6 +31543,23 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   EVT CondVT = Cond.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // Convert vselects with constant condition into shuffles.
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()) &&
+      DCI.isBeforeLegalizeOps()) {
+    SmallVector<int, 64> Mask(VT.getVectorNumElements(), -1);
+    for (int i = 0, Size = Mask.size(); i != Size; ++i) {
+      SDValue CondElt = Cond->getOperand(i);
+      Mask[i] = i;
+      // Arbitrarily choose from the 2nd operand if the select condition element
+      // is undef.
+      // TODO: Can we do better by matching patterns such as even/odd?
+      if (CondElt.isUndef() || isNullConstant(CondElt))
+        Mask[i] += Size;
+    }
+
+    return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+  }
+
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
   // instructions match the semantics of the common C idiom x<y?x:y but not
   // x<=y?x:y, because of how they handle negative zero (which can be
@@ -31860,8 +31881,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
-    if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
-        TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
+    if (TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
       // If we changed the computation somewhere in the DAG, this change will
       // affect all users of Cond. Make sure it is fine and update all the nodes
       // so that we do not use the generic VSELECT anymore. Otherwise, we may
@@ -32941,10 +32961,16 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+
+  // Only do this on the last DAG combine as it can interfere with other
+  // combines.
+  if (!DCI.isAfterLegalizeVectorOps())
+    return SDValue();
 
   // Try to improve a sequence of srl (and X, C1), C2 by inverting the order.
   // TODO: This is a generic DAG combine that became an x86-only combine to
@@ -32996,7 +33022,7 @@ static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
       return V;
 
   if (N->getOpcode() == ISD::SRL)
-    if (SDValue V = combineShiftRightLogical(N, DAG))
+    if (SDValue V = combineShiftRightLogical(N, DAG, DCI))
       return V;
 
   return SDValue();

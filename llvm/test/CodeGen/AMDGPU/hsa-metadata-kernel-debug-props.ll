@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx802 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX802 --check-prefix=NOTES %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
 target datalayout = "A5"
 
@@ -15,7 +15,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK:        DebuggerABIVersion:                [ 1, 0 ]
 ; CHECK:        ReservedNumVGPRs:                  4
 ; GFX700:       ReservedFirstVGPR:                 8
-; GFX800:       ReservedFirstVGPR:                 8
+; GFX802:       ReservedFirstVGPR:                 8
 ; GFX900:       ReservedFirstVGPR:                 10
 ; CHECK:        PrivateSegmentBufferSGPR:          0
 ; CHECK:        WavefrontPrivateSegmentOffsetSGPR: 11

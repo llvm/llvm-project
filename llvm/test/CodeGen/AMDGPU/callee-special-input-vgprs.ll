@@ -220,8 +220,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_y() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_z:
 ; GCN: enable_vgpr_workitem_id = 2
 
-; GCN: v_mov_b32_e32 v0, 0x22b
-; GCN: v_mov_b32_e32 v1, v2
+; GCN-DAG: v_mov_b32_e32 v0, 0x22b
+; GCN-DAG: v_mov_b32_e32 v1, v2
 ; GCN: s_swappc_b64
 ; GCN-NOT: v0
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {

@@ -94,7 +94,7 @@ void lld::wasm::markLive() {
     auto CheckChunk = [](const InputChunk *C) {
       if (!C->Live)
         message("removing unused section '" + C->getName() + "' in file '" +
-                C->getFileName() + "'");
+                C->File->getName() + "'");
     };
 
     for (const ObjFile *Obj : Symtab->ObjectFiles) {

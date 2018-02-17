@@ -119,11 +119,11 @@ define <2 x float> @not_exact_inverse_vec(<2 x float> %x) {
 
 define float @div_with_div_numerator(float %x, float %y, float %z) {
 ; CHECK-LABEL: @div_with_div_numerator(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul ninf float [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
-  %div1 = fdiv float %x, %y
+  %div1 = fdiv ninf float %x, %y
   %div2 = fdiv fast float %div1, %z
   ret float %div2
 }
@@ -132,11 +132,11 @@ define float @div_with_div_numerator(float %x, float %y, float %z) {
 
 define <2 x float> @div_with_div_denominator(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @div_with_div_denominator(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul nnan <2 x float> [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast <2 x float> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV2]]
 ;
-  %div1 = fdiv <2 x float> %x, %y
+  %div1 = fdiv nnan <2 x float> %x, %y
   %div2 = fdiv fast <2 x float> %z, %div1
   ret <2 x float> %div2
 }

@@ -67,7 +67,6 @@ public:
     ISAVersion7_0_2,
     ISAVersion7_0_3,
     ISAVersion7_0_4,
-    ISAVersion8_0_0,
     ISAVersion8_0_1,
     ISAVersion8_0_2,
     ISAVersion8_0_3,

@@ -71,6 +71,14 @@ public:
   /// Return true if the value is the smallest signed value.
   bool isMinSignedValue() const;
 
+  /// Return true if this is a finite and non-zero floating-point scalar
+  /// constant or a vector constant with all finite and non-zero elements.
+  bool isFiniteNonZeroFP() const;
+
+  /// Return true if this is a normal (as opposed to denormal) floating-point
+  /// scalar constant or a vector constant with all normal elements.
+  bool isNormalFP() const;
+
   /// Return true if evaluation of this constant could trap. This is true for
   /// things like constant expressions that could divide by zero.
   bool canTrap() const;

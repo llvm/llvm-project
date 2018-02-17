@@ -8776,7 +8776,8 @@ static SDValue performBitcastCombine(SDNode *N,
   // If the source type has twice the number of elements as our destination
   // type, we know this is an extract of the high or low half of the vector.
   EVT SVT = Source->getValueType(0);
-  if (SVT.getVectorNumElements() != VT.getVectorNumElements() * 2)
+  if (!SVT.isVector() ||
+      SVT.getVectorNumElements() != VT.getVectorNumElements() * 2)
     return SDValue();
 
   DEBUG(dbgs() << "aarch64-lower: bitcast extract_subvector simplification\n");

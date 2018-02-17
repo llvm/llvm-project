@@ -208,8 +208,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 0
 
 ; GCN: s_mov_b32 s33, s8
-; GCN: s_mov_b32 s4, s33
-; GCN: s_mov_b32 s6, s7
+; GCN-DAG: s_mov_b32 s4, s33
+; GCN-DAG: s_mov_b32 s6, s7
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
@@ -223,8 +223,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
 ; GCN: s_mov_b32 s33, s8
-; GCN: s_mov_b32 s4, s33
-; GCN: s_mov_b32 s6, s7
+; GCN-DAG: s_mov_b32 s4, s33
+; GCN-DAG: s_mov_b32 s6, s7
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
@@ -396,7 +396,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_x() #1 {
 
 ; GCN-DAG: s_mov_b32 s33, s8
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN: s_mov_b32 s4, s33
+; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s6, s7
 ; GCN-DAG: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
@@ -412,7 +412,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_y() #1 {
 
 ; GCN: s_mov_b32 s33, s8
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN: s_mov_b32 s4, s33
+; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s6, s7
 
 ; GCN: s_mov_b32 s32, s33
@@ -547,16 +547,16 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 ; GCN: s_mov_b32 s5, s32
 ; GCN: s_add_u32 s32, s32, 0x300
 
-; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s14
-; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-68-9][0-9]*]], s15
-; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-79][0-9]*]], s16
+; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-9]+]], s14
+; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-9]+]], s15
+; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-9]+]], s16
 ; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[6:7]
 ; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[8:9]
 ; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[10:11]
 
-; GCN-DAG: s_mov_b32 s6, s14
-; GCN-DAG: s_mov_b32 s7, s15
-; GCN-DAG: s_mov_b32 s8, s16
+; GCN-DAG: s_mov_b32 s6, [[SAVE_X]]
+; GCN-DAG: s_mov_b32 s7, [[SAVE_Y]]
+; GCN-DAG: s_mov_b32 s8, [[SAVE_Z]]
 ; GCN: s_swappc_b64
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4

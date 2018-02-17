@@ -1087,15 +1087,15 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     if (!IsLittleEndian)
       return Triple::UnknownArch;
 
-    unsigned EFlags = EF.getHeader()->e_flags;
-    switch (EFlags & ELF::EF_AMDGPU_ARCH) {
-    case ELF::EF_AMDGPU_ARCH_R600:
+    unsigned MACH = EF.getHeader()->e_flags & ELF::EF_AMDGPU_MACH;
+    if (MACH >= ELF::EF_AMDGPU_MACH_R600_FIRST &&
+        MACH <= ELF::EF_AMDGPU_MACH_R600_LAST)
       return Triple::r600;
-    case ELF::EF_AMDGPU_ARCH_GCN:
+    if (MACH >= ELF::EF_AMDGPU_MACH_AMDGCN_FIRST &&
+        MACH <= ELF::EF_AMDGPU_MACH_AMDGCN_LAST)
       return Triple::amdgcn;
-    default:
-      return Triple::UnknownArch;
-    }
+
+    return Triple::UnknownArch;
   }
 
   case ELF::EM_BPF:

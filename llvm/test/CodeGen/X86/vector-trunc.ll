@@ -101,25 +101,17 @@ entry:
 define <8 x i32> @trunc8i64_8i32_lshr(<8 x i64> %a) {
 ; SSE-LABEL: trunc8i64_8i32_lshr:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    psrlq $32, %xmm3
-; SSE-NEXT:    psrlq $32, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE-NEXT:    psrlq $32, %xmm1
-; SSE-NEXT:    psrlq $32, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm3[1,3]
 ; SSE-NEXT:    movaps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc8i64_8i32_lshr:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm1
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

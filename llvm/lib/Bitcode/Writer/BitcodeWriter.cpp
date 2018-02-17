@@ -3604,10 +3604,13 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
   Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 
-  // Write the index flags. Currently we only write a single flag, the value of
-  // withGlobalValueDeadStripping, which only applies to the combined index.
-  Stream.EmitRecord(bitc::FS_FLAGS,
-                    ArrayRef<uint64_t>{Index.withGlobalValueDeadStripping()});
+  // Write the index flags.
+  uint64_t Flags = 0;
+  if (Index.withGlobalValueDeadStripping())
+    Flags |= 0x1;
+  if (Index.skipModuleByDistributedBackend())
+    Flags |= 0x2;
+  Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Flags});
 
   for (const auto &GVI : valueIds()) {
     Stream.EmitRecord(bitc::FS_VALUE_GUID,
