@@ -17,9 +17,11 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
+namespace {
 AST_MATCHER(GotoStmt, isForwardJumping) {
   return Node.getLocStart() < Node.getLabel()->getLocStart();
 }
+} // namespace
 
 void AvoidGotoCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)

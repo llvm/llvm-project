@@ -356,6 +356,31 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
 
+  if (!TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+    const RegClassOrRegBank &RegClassOrBank =
+      MRI.getRegClassOrRegBank(SrcReg);
+
+    const TargetRegisterClass *SrcRC =
+        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+    const RegisterBank *RB = nullptr;
+    if (!SrcRC) {
+      RB = RegClassOrBank.get<const RegisterBank *>();
+      SrcRC = getRegClassForTypeOnBank(MRI.getType(SrcReg), *RB, RBI, true);
+    }
+    // Copies from fpr16 to gpr32 need to use SUBREG_TO_REG.
+    if (RC == &AArch64::GPR32allRegClass && SrcRC == &AArch64::FPR16RegClass) {
+      unsigned PromoteReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(AArch64::SUBREG_TO_REG))
+          .addDef(PromoteReg)
+          .addImm(0)
+          .addUse(SrcReg)
+          .addImm(AArch64::hsub);
+      MachineOperand &RegOp = I.getOperand(1);
+      RegOp.setReg(PromoteReg);
+    }
+  }
+
   // No need to constrain SrcReg. It will get constrained when
   // we hit another of its use or its defs.
   // Copies do not have constraints.
@@ -789,14 +814,23 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   }
   case TargetOpcode::G_EXTRACT: {
     LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
+    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    (void)DstTy;
+    unsigned SrcSize = SrcTy.getSizeInBits();
     // Larger extracts are vectors, same-size extracts should be something else
     // by now (either split up or simplified to a COPY).
     if (SrcTy.getSizeInBits() > 64 || Ty.getSizeInBits() > 32)
       return false;
 
-    I.setDesc(TII.get(AArch64::UBFMXri));
+    I.setDesc(TII.get(SrcSize == 64 ? AArch64::UBFMXri : AArch64::UBFMWri));
     MachineInstrBuilder(MF, I).addImm(I.getOperand(2).getImm() +
                                       Ty.getSizeInBits() - 1);
+
+    if (SrcSize < 64) {
+      assert(SrcSize == 32 && DstTy.getSizeInBits() == 16 &&
+             "unexpected G_EXTRACT types");
+      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    }
 
     unsigned DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
     BuildMI(MBB, std::next(I.getIterator()), I.getDebugLoc(),
@@ -812,16 +846,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
 
   case TargetOpcode::G_INSERT: {
     LLT SrcTy = MRI.getType(I.getOperand(2).getReg());
+    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    unsigned DstSize = DstTy.getSizeInBits();
     // Larger inserts are vectors, same-size ones should be something else by
     // now (split up or turned into COPYs).
     if (Ty.getSizeInBits() > 64 || SrcTy.getSizeInBits() > 32)
       return false;
 
-    I.setDesc(TII.get(AArch64::BFMXri));
+    I.setDesc(TII.get(DstSize == 64 ? AArch64::BFMXri : AArch64::BFMWri));
     unsigned LSB = I.getOperand(3).getImm();
     unsigned Width = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
-    I.getOperand(3).setImm((64 - LSB) % 64);
+    I.getOperand(3).setImm((DstSize - LSB) % DstSize);
     MachineInstrBuilder(MF, I).addImm(Width - 1);
+
+    if (DstSize < 64) {
+      assert(DstSize == 32 && SrcTy.getSizeInBits() == 16 &&
+             "unexpected G_INSERT types");
+      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    }
 
     unsigned SrcReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
     BuildMI(MBB, I.getIterator(), I.getDebugLoc(),
