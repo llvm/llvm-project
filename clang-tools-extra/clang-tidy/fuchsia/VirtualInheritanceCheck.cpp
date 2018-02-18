@@ -17,6 +17,7 @@ namespace clang {
 namespace tidy {
 namespace fuchsia {
 
+namespace {
 AST_MATCHER(CXXRecordDecl, hasDirectVirtualBaseClass) {
   if (!Node.hasDefinition()) return false;
   if (!Node.getNumVBases()) return false;
@@ -24,6 +25,7 @@ AST_MATCHER(CXXRecordDecl, hasDirectVirtualBaseClass) {
     if (Base.isVirtual()) return true;
   return false;
 }
+} // namespace
 
 void VirtualInheritanceCheck::registerMatchers(MatchFinder *Finder) {
   // Defining classes using direct virtual inheritance is disallowed.

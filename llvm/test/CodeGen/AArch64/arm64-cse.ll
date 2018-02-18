@@ -10,7 +10,7 @@ entry:
 ; CHECK: subs
 ; CHECK-NOT: cmp
 ; CHECK-NOT: sub
-; CHECK: b.ge
+; CHECK: b.lt
 ; CHECK: sub
 ; CHECK: sub
 ; CHECK-NOT: sub

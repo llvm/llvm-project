@@ -2190,9 +2190,9 @@ multiclass avx512_icmp_packed_rmb_vl<bits<8> opc, string OpcodeStr,
 }
 
 def X86pcmpeqm : PatFrag<(ops node:$src1, node:$src2),
-                         (X86cmpm node:$src1, node:$src2, (i8 0))>;
+                         (X86cmpm_c node:$src1, node:$src2, (i8 0))>;
 def X86pcmpnem : PatFrag<(ops node:$src1, node:$src2),
-                         (X86cmpm node:$src1, node:$src2, (i8 4))>;
+                         (X86cmpm_c node:$src1, node:$src2, (i8 4))>;
 def X86pcmpgtm : PatFrag<(ops node:$src1, node:$src2),
                          (X86cmpm node:$src1, node:$src2, (i8 6))>;
 

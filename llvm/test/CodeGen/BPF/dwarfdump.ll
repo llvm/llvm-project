@@ -61,4 +61,4 @@ attributes #1 = { nounwind readnone }
 
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 "testprog.c"
 ; CHECK: 0x0000000000000000      2
-; CHECK: 0x0000000000000020      7
+; CHECK: 0x0000000000000028      7
