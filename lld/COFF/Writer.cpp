@@ -1008,9 +1008,9 @@ void Writer::setSectionPermissions() {
 
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
-  // Record the section index that should be used when resolving a section
-  // relocation against an absolute symbol.
-  DefinedAbsolute::OutputSectionIndex = OutputSections.size() + 1;
+  // Record the number of sections to apply section index relocations
+  // against absolute symbols. See applySecIdx in Chunks.cpp..
+  DefinedAbsolute::NumOutputSections = OutputSections.size();
 
   uint8_t *Buf = Buffer->getBufferStart();
   for (OutputSection *Sec : OutputSections) {

@@ -159,14 +159,15 @@ attributes #6 = { "no-frame-pointer-elim"="true" }
 ; CHECK: stur    x8, [x29, #-40]
 ; CHECK: mov     w8, w0
 ; CHECK: add     x8, x8, #15
-; CHECK: mov     x9, sp
-; CHECK: and     x8, x8, #0x1fffffff0
-; CHECK: sub     [[REG:x[0-9]+]], x9, x8
+; CHECK: lsr     x15, x8, #4
 ; CHECK: mov     x19, x1
 ; CHECK: mov     [[REG2:x[0-9]+]], sp
 ; CHECK: stp     x6, x7, [x29, #48]
 ; CHECK: stp     x4, x5, [x29, #32]
 ; CHECK: stp     x2, x3, [x29, #16]
+; CHECK: bl      __chkstk
+; CHECK: mov     x8, sp
+; CHECK: sub     [[REG:x[0-9]+]], x8, x15, lsl #4
 ; CHECK: mov     sp, [[REG]]
 ; CHECK: ldur    [[REG3:x[0-9]+]], [x29, #-40]
 ; CHECK: sxtw    [[REG4:x[0-9]+]], w0

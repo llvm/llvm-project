@@ -345,3 +345,7 @@ def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
                                                 (sequence "X%u", 9, 15))>;
 
+def CSR_AArch64_StackProbe_Windows
+    : CalleeSavedRegs<(add (sequence "X%u", 0, 15),
+                           (sequence "X%u", 18, 28), FP, SP,
+                           (sequence "Q%u", 0, 31))>;

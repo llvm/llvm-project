@@ -31543,6 +31543,23 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   EVT CondVT = Cond.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // Convert vselects with constant condition into shuffles.
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()) &&
+      DCI.isBeforeLegalizeOps()) {
+    SmallVector<int, 64> Mask(VT.getVectorNumElements(), -1);
+    for (int i = 0, Size = Mask.size(); i != Size; ++i) {
+      SDValue CondElt = Cond->getOperand(i);
+      Mask[i] = i;
+      // Arbitrarily choose from the 2nd operand if the select condition element
+      // is undef.
+      // TODO: Can we do better by matching patterns such as even/odd?
+      if (CondElt.isUndef() || isNullConstant(CondElt))
+        Mask[i] += Size;
+    }
+
+    return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+  }
+
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
   // instructions match the semantics of the common C idiom x<y?x:y but not
   // x<=y?x:y, because of how they handle negative zero (which can be

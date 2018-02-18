@@ -39,8 +39,9 @@ define <4 x i32> @test_v4i32_one(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_one_undef(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_one_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem <4 x i32> <i32 1, i32 1, i32 1, i32 undef>, [[A0:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = urem <4 x i32> <i32 1, i32 1, i32 1, i32 undef>, %a0
   ret <4 x i32> %1

@@ -2302,7 +2302,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2-NEXT:    pandn %xmm13, %xmm7
 ; SSE2-NEXT:    por %xmm5, %xmm7
 ; SSE2-NEXT:    movdqa %xmm7, %xmm10
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm10, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    pxor %xmm9, %xmm5
 ; SSE2-NEXT:    movdqa %xmm11, %xmm6
@@ -2317,7 +2317,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2-NEXT:    pandn %xmm13, %xmm6
 ; SSE2-NEXT:    por %xmm4, %xmm6
 ; SSE2-NEXT:    movdqa %xmm6, %xmm7
-; SSE2-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pxor %xmm9, %xmm4
 ; SSE2-NEXT:    movdqa %xmm11, %xmm5
@@ -2332,7 +2332,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2-NEXT:    pandn %xmm13, %xmm5
 ; SSE2-NEXT:    por %xmm3, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, %xmm8
-; SSE2-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    pxor %xmm9, %xmm3
 ; SSE2-NEXT:    movdqa %xmm11, %xmm4
@@ -2527,7 +2527,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3-NEXT:    pandn %xmm13, %xmm7
 ; SSSE3-NEXT:    por %xmm5, %xmm7
 ; SSSE3-NEXT:    movdqa %xmm7, %xmm10
-; SSSE3-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm10, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm4, %xmm5
 ; SSSE3-NEXT:    pxor %xmm9, %xmm5
 ; SSSE3-NEXT:    movdqa %xmm11, %xmm6
@@ -2542,7 +2542,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3-NEXT:    pandn %xmm13, %xmm6
 ; SSSE3-NEXT:    por %xmm4, %xmm6
 ; SSSE3-NEXT:    movdqa %xmm6, %xmm7
-; SSSE3-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSSE3-NEXT:    pxor %xmm9, %xmm4
 ; SSSE3-NEXT:    movdqa %xmm11, %xmm5
@@ -2557,7 +2557,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3-NEXT:    pandn %xmm13, %xmm5
 ; SSSE3-NEXT:    por %xmm3, %xmm5
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm8
-; SSSE3-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSSE3-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm3
 ; SSSE3-NEXT:    pxor %xmm9, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm11, %xmm4

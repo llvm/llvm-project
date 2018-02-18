@@ -182,17 +182,6 @@ struct match_nan {
 /// Match an arbitrary NaN constant. This includes quiet and signalling nans.
 inline match_nan m_NaN() { return match_nan(); }
 
-struct match_one {
-  template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<Constant>(V))
-      return C->isOneValue();
-    return false;
-  }
-};
-
-/// \brief Match an integer 1 or a vector with all elements equal to 1.
-inline match_one m_One() { return match_one(); }
-
 struct match_all_ones {
   template <typename ITy> bool match(ITy *V) {
     if (const auto *C = dyn_cast<Constant>(V))
@@ -283,8 +272,8 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
   return constantint_match<Val>();
 }
 
-/// \brief This helper class is used to match scalar and vector constants that
-/// satisfy a specified predicate.
+/// This helper class is used to match scalar and vector constants that satisfy
+/// a specified predicate. For vector constants, undefined elements are ignored.
 template <typename Predicate> struct cst_pred_ty : public Predicate {
   template <typename ITy> bool match(ITy *V) {
     if (const auto *CI = dyn_cast<ConstantInt>(V))
@@ -338,6 +327,13 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
     return false;
   }
 };
+
+struct is_one {
+  bool isValue(const APInt &C) { return C.isOneValue(); }
+};
+
+/// Match an integer 1 or a vector with all elements equal to 1.
+inline cst_pred_ty<is_one> m_One() { return cst_pred_ty<is_one>(); }
 
 struct is_negative {
   bool isValue(const APInt &C) { return C.isNegative(); }

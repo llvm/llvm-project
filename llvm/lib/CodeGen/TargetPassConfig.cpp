@@ -1080,10 +1080,6 @@ void TargetPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
     // kill markers.
     addPass(&StackSlotColoringID);
 
-    // Copy propagate to forward register uses and try to eliminate COPYs that
-    // were not coalesced.
-    addPass(&MachineCopyPropagationID);
-
     // Run post-ra machine LICM to hoist reloads / remats.
     //
     // FIXME: can this move into MachineLateOptimization?
