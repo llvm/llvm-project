@@ -15591,37 +15591,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
   return SDValue();
 }
 
-static SDValue simplifyShuffleMask(ShuffleVectorSDNode *SVN, SDValue N0,
-                                   SDValue N1, SelectionDAG &DAG) {
-  auto isUndefElt = [](SDValue V, int Idx) {
-    // TODO - handle more cases as required.
-    if (V.getOpcode() == ISD::BUILD_VECTOR)
-      return V.getOperand(Idx).isUndef();
-    if (V.getOpcode() == ISD::SCALAR_TO_VECTOR)
-      return (Idx != 0) || V.getOperand(0).isUndef();
-    return false;
-  };
-
-  EVT VT = SVN->getValueType(0);
-  unsigned NumElts = VT.getVectorNumElements();
-
-  bool Changed = false;
-  SmallVector<int, 8> NewMask;
-  for (unsigned i = 0; i != NumElts; ++i) {
-    int Idx = SVN->getMaskElt(i);
-    if ((0 <= Idx && Idx < (int)NumElts && isUndefElt(N0, Idx)) ||
-        ((int)NumElts < Idx && isUndefElt(N1, Idx - NumElts))) {
-      Changed = true;
-      Idx = -1;
-    }
-    NewMask.push_back(Idx);
-  }
-  if (Changed)
-    return DAG.getVectorShuffle(VT, SDLoc(SVN), N0, N1, NewMask);
-
-  return SDValue();
-}
-
 // Tries to turn a shuffle of two CONCAT_VECTORS into a single concat,
 // or turn a shuffle of a single concat into simpler shuffle then concat.
 static SDValue partitionShuffleOfConcats(SDNode *N, SelectionDAG &DAG) {
@@ -16063,10 +16032,6 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     if (Changed)
       return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
-
-  // Simplify shuffle mask if a referenced element is UNDEF.
-  if (SDValue V = simplifyShuffleMask(SVN, N0, N1, DAG))
-    return V;
 
   if (SDValue InsElt = replaceShuffleOfInsert(SVN, DAG))
     return InsElt;

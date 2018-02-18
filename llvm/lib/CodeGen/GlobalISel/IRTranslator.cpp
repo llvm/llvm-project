@@ -1023,6 +1023,10 @@ bool IRTranslator::translateAlloca(const User &U,
     return true;
   }
 
+  // FIXME: support stack probing for Windows.
+  if (MF->getTarget().getTargetTriple().isOSWindows())
+    return false;
+
   // Now we're in the harder dynamic case.
   Type *Ty = AI.getAllocatedType();
   unsigned Align =

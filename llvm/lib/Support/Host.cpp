@@ -1206,6 +1206,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
+  Features["sahf"]   = HasExtLeaf1 && ((ECX >>  0) & 1);
   Features["lzcnt"]  = HasExtLeaf1 && ((ECX >>  5) & 1);
   Features["sse4a"]  = HasExtLeaf1 && ((ECX >>  6) & 1);
   Features["prfchw"] = HasExtLeaf1 && ((ECX >>  8) & 1);
