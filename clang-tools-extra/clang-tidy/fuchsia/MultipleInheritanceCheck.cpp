@@ -17,12 +17,14 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace fuchsia {
-  
+
+namespace {
 AST_MATCHER(CXXRecordDecl, hasBases) {
   if (Node.hasDefinition())
     return Node.getNumBases() > 0;
   return false;
 }
+} // namespace
 
 // Adds a node (by name) to the interface map, if it was not present in the map
 // previously.

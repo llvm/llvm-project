@@ -36066,7 +36066,7 @@ static SDValue combineToExtendCMOV(SDNode *Extend, SelectionDAG &DAG) {
   SDValue CMovOp1 = CMovN.getOperand(1);
 
   if (!isa<ConstantSDNode>(CMovOp0.getNode()) ||
-      !isa<ConstantSDNode>(CMovOp0.getNode()))
+      !isa<ConstantSDNode>(CMovOp1.getNode()))
     return SDValue();
 
   // Only extend to i32 or i64.

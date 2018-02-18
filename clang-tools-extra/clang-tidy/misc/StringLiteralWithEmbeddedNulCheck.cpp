@@ -17,12 +17,14 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+namespace {
 AST_MATCHER(StringLiteral, containsNul) {
   for (size_t i = 0; i < Node.getLength(); ++i)
     if (Node.getCodeUnit(i) == '\0')
       return true;
   return false;
 }
+} // namespace
 
 void StringLiteralWithEmbeddedNulCheck::registerMatchers(MatchFinder *Finder) {
   // Match a string that contains embedded NUL character. Extra-checks are
