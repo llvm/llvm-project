@@ -7,7 +7,7 @@ define i32 @foo_int(i32 %a, i32 %b) #0 {
   %1 = add nsw i32 %b, %a
   ret i32 %1
 ; CHECK-LABEL: foo_int:
-; CHECK: r2 += r1
+; CHECK: r0 += r1
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -15,9 +15,9 @@ define signext i8 @foo_char(i8 signext %a, i8 signext %b) #0 {
   %1 = add i8 %b, %a
   ret i8 %1
 ; CHECK-LABEL: foo_char:
-; CHECK: r2 += r1
-; CHECK: r2 <<= 56
-; CHECK: r2 s>>= 56
+; CHECK: r0 += r1
+; CHECK: r0 <<= 56
+; CHECK: r0 s>>= 56
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -26,9 +26,9 @@ define i64 @foo_ll(i64 %a, i64 %b, i64 %c) #0 {
   %2 = sub i64 %1, %c
   ret i64 %2
 ; CHECK-LABEL: foo_ll:
-; CHECK: r2 += r1
-; CHECK: r2 -= r3
 ; CHECK: r0 = r2
+; CHECK: r0 += r1
+; CHECK: r0 -= r3
 }
 
 ; Function Attrs: nounwind uwtable
@@ -60,7 +60,7 @@ define signext i8 @foo_cmp(i8 signext %a, i8 signext %b) #0 {
   %a.b = select i1 %1, i8 %a, i8 %b
   ret i8 %a.b
 ; CHECK-LABEL: foo_cmp:
-; CHECK: if r2 s> r1
+; CHECK: if r2 s> r0
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -82,7 +82,7 @@ define i32 @foo_muldiv(i8 signext %a, i16 signext %b, i32 %c, i64 %d) #0 {
   %.0 = phi i32 [ %4, %2 ], [ %7, %5 ]
   ret i32 %.0
 ; CHECK-LABEL: foo_muldiv:
-; CHECK: r2 *= r3
+; CHECK: r0 *= r3
 }
 
 ; Function Attrs: nounwind uwtable

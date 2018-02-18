@@ -27,7 +27,6 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
                                    const MachineInstr &SecondMI) {
-  const AArch64InstrInfo &II = static_cast<const AArch64InstrInfo&>(TII);
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
 
   // Assume wildcards for unspecified instrs.
@@ -66,7 +65,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
       case AArch64::BICSWrs:
       case AArch64::BICSXrs:
         // Shift value can be 0 making these behave like the "rr" variant...
-        return !II.hasShiftedReg(*FirstMI);
+        return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
       case AArch64::INSTRUCTION_LIST_END:
         return true;
       }
@@ -108,7 +107,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
       case AArch64::BICWrs:
       case AArch64::BICXrs:
         // Shift value can be 0 making these behave like the "rr" variant...
-        return !II.hasShiftedReg(*FirstMI);
+        return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
       case AArch64::INSTRUCTION_LIST_END:
         return true;
       }

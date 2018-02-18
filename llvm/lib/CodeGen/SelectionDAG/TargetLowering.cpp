@@ -1411,6 +1411,40 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownZero.insertBits(SubZero, SubIdx);
     break;
   }
+  case ISD::INSERT_VECTOR_ELT: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue Scl = Op.getOperand(1);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+
+    // For a legal, constant insertion index, if we don't need this insertion
+    // then strip it, else remove it from the demanded elts.
+    if (CIdx && CIdx->getAPIntValue().ult(NumElts)) {
+      unsigned Idx = CIdx->getZExtValue();
+      if (!DemandedElts[Idx])
+        return TLO.CombineTo(Op, Vec);
+      DemandedElts.clearBit(Idx);
+
+      if (SimplifyDemandedVectorElts(Vec, DemandedElts, KnownUndef,
+                                     KnownZero, TLO, Depth + 1))
+        return true;
+
+      KnownUndef.clearBit(Idx);
+      if (Scl.isUndef())
+        KnownUndef.setBit(Idx);
+
+      KnownZero.clearBit(Idx);
+      if (isNullConstant(Scl) || isNullFPConstant(Scl))
+        KnownZero.setBit(Idx);
+      break;
+    }
+
+    APInt VecUndef, VecZero;
+    if (SimplifyDemandedVectorElts(Vec, DemandedElts, VecUndef, VecZero, TLO,
+                                   Depth + 1))
+      return true;
+    // Without knowing the insertion index we can't set KnownUndef/KnownZero.
+    break;
+  }
   case ISD::VSELECT: {
     APInt DemandedLHS(DemandedElts);
     APInt DemandedRHS(DemandedElts);
