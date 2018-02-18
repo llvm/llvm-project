@@ -133,6 +133,7 @@ std::unique_ptr<WorkList> WorkList::makeBFSBlockDFSContents() {
   return llvm::make_unique<BFSBlockDFSContents>();
 }
 
+namespace {
 class UnexploredFirstStack : public WorkList {
 
   /// Stack of nodes known to have statements we have not traversed yet.
@@ -186,6 +187,7 @@ public:
     }
   }
 };
+} // end anonymous namespace
 
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
   return llvm::make_unique<UnexploredFirstStack>();
