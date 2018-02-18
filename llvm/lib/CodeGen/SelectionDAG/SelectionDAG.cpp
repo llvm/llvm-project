@@ -3206,7 +3206,32 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return std::min(Tmp, Tmp2);
 
   case ISD::SMIN:
-  case ISD::SMAX:
+  case ISD::SMAX: {
+    // If we have a clamp pattern, we know that the number of sign bits will be
+    // the minimum of the clamp min/max range.
+    bool IsMax = (Opcode == ISD::SMAX);
+    ConstantSDNode *CstLow = nullptr, *CstHigh = nullptr;
+    if ((CstLow = isConstOrDemandedConstSplat(Op.getOperand(1), DemandedElts)))
+      if (Op.getOperand(0).getOpcode() == (IsMax ? ISD::SMIN : ISD::SMAX))
+        CstHigh = isConstOrDemandedConstSplat(Op.getOperand(0).getOperand(1),
+                                              DemandedElts);
+    if (CstLow && CstHigh) {
+      if (!IsMax)
+        std::swap(CstLow, CstHigh);
+      if (CstLow->getAPIntValue().sle(CstHigh->getAPIntValue())) {
+        Tmp = CstLow->getAPIntValue().getNumSignBits();
+        Tmp2 = CstHigh->getAPIntValue().getNumSignBits();
+        return std::min(Tmp, Tmp2);
+      }
+    }
+
+    // Fallback - just get the minimum number of sign bits of the operands.
+    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (Tmp == 1)
+      return 1;  // Early out.
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    return std::min(Tmp, Tmp2);
+  }
   case ISD::UMIN:
   case ISD::UMAX:
     Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);

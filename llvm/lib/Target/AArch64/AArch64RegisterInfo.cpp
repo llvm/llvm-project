@@ -114,6 +114,10 @@ AArch64RegisterInfo::getThisReturnPreservedMask(const MachineFunction &MF,
   return CSR_AArch64_AAPCS_ThisReturn_RegMask;
 }
 
+const uint32_t *AArch64RegisterInfo::getWindowsStackProbePreservedMask() const {
+  return CSR_AArch64_StackProbe_Windows_RegMask;
+}
+
 BitVector
 AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);

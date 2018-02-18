@@ -217,12 +217,6 @@ class TargetRegisterClass;
       VCLT_S,
       VCLT_U,
 
-      // Element-wise vector max/min.
-      VSMAX,
-      VSMIN,
-      VUMAX,
-      VUMIN,
-
       // Vector Shuffle with mask as an operand
       VSHF,  // Generic shuffle
       SHF,   // 4-element set shuffle.
