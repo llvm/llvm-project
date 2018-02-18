@@ -15,5 +15,6 @@ target_link_libraries(global-symbol-builder
   clangDaemon
   clangBasic
   clangFrontend
+  clangLex
   clangTooling
 )
