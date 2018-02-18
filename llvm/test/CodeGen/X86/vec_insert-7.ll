@@ -9,13 +9,9 @@ define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ; X32-LABEL: mmx_movzl:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    subl $20, %esp
-; X32-NEXT:    movq %mm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
 ; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    pinsrd $0, %eax, %xmm0
-; X32-NEXT:    pxor %xmm1, %xmm1
-; X32-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; X32-NEXT:    movq %xmm1, (%esp)
+; X32-NEXT:    movd %eax, %xmm0
+; X32-NEXT:    movq %xmm0, (%esp)
 ; X32-NEXT:    movq (%esp), %mm0
 ; X32-NEXT:    addl $20, %esp
 ; X32-NEXT:    retl

@@ -54,21 +54,30 @@ define i32 @test6(i1 %C) {
 ; CHECK: ret i32 %V
 }
 
-define i1 @test7(i1 %C, i1 %X) {
-; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[R:%.*]] = or i1 %C, %X
+define i1 @trueval_is_true(i1 %C, i1 %X) {
+; CHECK-LABEL: @trueval_is_true(
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[C:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %R = select i1 %C, i1 true, i1 %X
   ret i1 %R
 }
 
-define <2 x i1> @test7vec(<2 x i1> %C, <2 x i1> %X) {
-; CHECK-LABEL: @test7vec(
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> %C, %X
+define <2 x i1> @trueval_is_true_vec(<2 x i1> %C, <2 x i1> %X) {
+; CHECK-LABEL: @trueval_is_true_vec(
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[C:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> <i1 true, i1 true>, <2 x i1> %X
+  ret <2 x i1> %R
+}
+
+define <2 x i1> @trueval_is_true_vec_undef_elt(<2 x i1> %C, <2 x i1> %X) {
+; CHECK-LABEL: @trueval_is_true_vec_undef_elt(
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %R = select <2 x i1> %C, <2 x i1> <i1 undef, i1 true>, <2 x i1> %X
   ret <2 x i1> %R
 }
 

@@ -213,11 +213,10 @@ public:
   uint64_t getRVA() { return VA - Config->ImageBase; }
   void setVA(uint64_t V) { VA = V; }
 
-  // The sentinel absolute symbol section index. Section index relocations
-  // against absolute symbols resolve to this 16 bit number, and it is the
-  // largest valid section index plus one. This is written by the Writer.
-  static uint16_t OutputSectionIndex;
-  uint16_t getSecIdx() { return OutputSectionIndex; }
+  // Section index relocations against absolute symbols resolve to
+  // this 16 bit number, and it is the largest valid section index
+  // plus one. This variable keeps it.
+  static uint16_t NumOutputSections;
 
 private:
   uint64_t VA;

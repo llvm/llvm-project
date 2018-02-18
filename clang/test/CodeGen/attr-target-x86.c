@@ -49,10 +49,10 @@ int __attribute__((target("arch=lakemont,mmx"))) use_before_def(void) {
 // CHECK: lake{{.*}} #7
 // CHECK: use_before_def{{.*}} #7
 // CHECK: #0 = {{.*}}"target-cpu"="i686" "target-features"="+x87"
-// CHECK: #1 = {{.*}}"target-cpu"="ivybridge" "target-features"="+aes,+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
+// CHECK: #1 = {{.*}}"target-cpu"="ivybridge" "target-features"="+aes,+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
 // CHECK: #2 = {{.*}}"target-cpu"="i686" "target-features"="+x87,-aes,-avx,-avx2,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vpopcntdq,-f16c,-fma,-fma4,-gfni,-pclmul,-sha,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-xop,-xsave,-xsaveopt"
 // CHECK: #3 = {{.*}}"target-cpu"="i686" "target-features"="+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87"
 // CHECK: #4 = {{.*}}"target-cpu"="i686" "target-features"="+x87,-avx,-avx2,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vpopcntdq,-f16c,-fma,-fma4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop,-xsave,-xsaveopt"
-// CHECK: #5 = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes,-vaes"
+// CHECK: #5 = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes,-vaes"
 // CHECK: #6 = {{.*}}"target-cpu"="i686" "target-features"="+x87,-3dnow,-3dnowa,-mmx"
 // CHECK: #7 = {{.*}}"target-cpu"="lakemont" "target-features"="+mmx"
