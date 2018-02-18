@@ -51,13 +51,21 @@ static void add64(uint8_t *P, int64_t V) { write64le(P, read64le(P) + V); }
 static void or16(uint8_t *P, uint16_t V) { write16le(P, read16le(P) | V); }
 static void or32(uint8_t *P, uint32_t V) { write32le(P, read32le(P) | V); }
 
+// Verify that given sections are appropriate targets for SECREL
+// relocations. This check is relaxed because unfortunately debug
+// sections have section-relative relocations against absolute symbols.
+static bool checkSecRel(const SectionChunk *Sec, OutputSection *OS) {
+  if (OS)
+    return true;
+  if (Sec->isCodeView())
+    return false;
+  fatal("SECREL relocation cannot be applied to absolute symbols");
+}
+
 static void applySecRel(const SectionChunk *Sec, uint8_t *Off,
                         OutputSection *OS, uint64_t S) {
-  if (!OS) {
-    if (Sec->isCodeView())
-      return;
-    fatal("SECREL relocation cannot be applied to absolute symbols");
-  }
+  if (!checkSecRel(Sec, OS))
+    return;
   uint64_t SecRel = S - OS->getRVA();
   if (SecRel > UINT32_MAX) {
     error("overflow in SECREL relocation in section: " + Sec->getSectionName());
@@ -67,10 +75,13 @@ static void applySecRel(const SectionChunk *Sec, uint8_t *Off,
 }
 
 static void applySecIdx(uint8_t *Off, OutputSection *OS) {
-  // If we have no output section, this must be an absolute symbol. Use the
-  // sentinel absolute symbol section index.
-  uint16_t SecIdx = OS ? OS->SectionIndex : DefinedAbsolute::OutputSectionIndex;
-  add16(Off, SecIdx);
+  // Absolute symbol doesn't have section index, but section index relocation
+  // against absolute symbol should be resolved to one plus the last output
+  // section index. This is required for compatibility with MSVC.
+  if (OS)
+    add16(Off, OS->SectionIndex);
+  else
+    add16(Off, DefinedAbsolute::NumOutputSections + 1);
 }
 
 void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, OutputSection *OS,
@@ -213,16 +224,18 @@ static void applyArm64Ldr(uint8_t *Off, uint64_t Imm) {
   applyArm64Imm(Off, Imm >> Size, Size);
 }
 
-static void applySecRelAdd(const SectionChunk *Sec, uint8_t *Off,
-                           OutputSection *OS, uint64_t S, int Shift) {
-  if (!OS) {
-    if (Sec->isCodeView())
-      return;
-    fatal("SECREL relocation cannot be applied to absolute symbols");
-  }
-  uint64_t SecRel = S - OS->getRVA();
-  SecRel >>= Shift;
-  if (Shift > 0 && SecRel > 0xfff) {
+static void applySecRelLow12A(const SectionChunk *Sec, uint8_t *Off,
+                              OutputSection *OS, uint64_t S) {
+  if (checkSecRel(Sec, OS))
+    applyArm64Imm(Off, (S - OS->getRVA()) & 0xfff, 0);
+}
+
+static void applySecRelHigh12A(const SectionChunk *Sec, uint8_t *Off,
+                               OutputSection *OS, uint64_t S) {
+  if (!checkSecRel(Sec, OS))
+    return;
+  uint64_t SecRel = (S - OS->getRVA()) >> 12;
+  if (0xfff < SecRel) {
     error("overflow in SECREL_HIGH12A relocation in section: " +
           Sec->getSectionName());
     return;
@@ -232,13 +245,8 @@ static void applySecRelAdd(const SectionChunk *Sec, uint8_t *Off,
 
 static void applySecRelLdr(const SectionChunk *Sec, uint8_t *Off,
                            OutputSection *OS, uint64_t S) {
-  if (!OS) {
-    if (Sec->isCodeView())
-      return;
-    fatal("SECREL relocation cannot be applied to absolute symbols");
-  }
-  uint64_t SecRel = S - OS->getRVA();
-  applyArm64Ldr(Off, SecRel & 0xfff);
+  if (checkSecRel(Sec, OS))
+    applyArm64Ldr(Off, (S - OS->getRVA()) & 0xfff);
 }
 
 void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
@@ -252,8 +260,8 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM64_ADDR32NB:       add32(Off, S); break;
   case IMAGE_REL_ARM64_ADDR64:         add64(Off, S + Config->ImageBase); break;
   case IMAGE_REL_ARM64_SECREL:         applySecRel(this, Off, OS, S); break;
-  case IMAGE_REL_ARM64_SECREL_LOW12A:  applySecRelAdd(this, Off, OS, S, 0); break;
-  case IMAGE_REL_ARM64_SECREL_HIGH12A: applySecRelAdd(this, Off, OS, S, 12); break;
+  case IMAGE_REL_ARM64_SECREL_LOW12A:  applySecRelLow12A(this, Off, OS, S); break;
+  case IMAGE_REL_ARM64_SECREL_HIGH12A: applySecRelHigh12A(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, Off, OS, S); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));

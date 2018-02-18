@@ -99,14 +99,14 @@ set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
 
 if(NOT LLDB_CODESIGN_IDENTITY STREQUAL "")
-  set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver>)
+  set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver> CACHE PATH "Path to debugserver.")
 else()
   execute_process(
     COMMAND xcode-select -p
     OUTPUT_VARIABLE XCODE_DEV_DIR)
   string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
   set(DEBUGSERVER_PATH
-    "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver")
+    "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
   set(SKIP_DEBUGSERVER True)
 endif()
 message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")
