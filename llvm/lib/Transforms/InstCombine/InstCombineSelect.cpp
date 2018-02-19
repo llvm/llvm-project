@@ -1643,11 +1643,25 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  auto canMergeSelectThroughBinop = [](BinaryOperator *BO) {
+    // The select might be preventing a division by 0.
+    switch (BO->getOpcode()) {
+    default:
+      return true;
+    case Instruction::SRem:
+    case Instruction::URem:
+    case Instruction::SDiv:
+    case Instruction::UDiv:
+      return false;
+    }
+  };
+
   // Try to simplify a binop sandwiched between 2 selects with the same
   // condition.
   // select(C, binop(select(C, X, Y), W), Z) -> select(C, binop(X, W), Z)
   BinaryOperator *TrueBO;
-  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO)))) {
+  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO))) &&
+      canMergeSelectThroughBinop(TrueBO)) {
     if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(0))) {
       if (TrueBOSI->getCondition() == CondVal) {
         TrueBO->setOperand(0, TrueBOSI->getTrueValue());
@@ -1666,7 +1680,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
   // select(C, Z, binop(select(C, X, Y), W)) -> select(C, Z, binop(Y, W))
   BinaryOperator *FalseBO;
-  if (match(FalseVal, m_OneUse(m_BinOp(FalseBO)))) {
+  if (match(FalseVal, m_OneUse(m_BinOp(FalseBO))) &&
+      canMergeSelectThroughBinop(FalseBO)) {
     if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(0))) {
       if (FalseBOSI->getCondition() == CondVal) {
         FalseBO->setOperand(0, FalseBOSI->getFalseValue());
