@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestFS.h"
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -83,17 +84,28 @@ std::vector<std::string> match(const SymbolIndex &I,
 }
 
 /// Create an ParsedAST for \p Code. Returns None if \p Code is empty.
-llvm::Optional<ParsedAST> build(std::string Path, llvm::StringRef Code) {
+/// \p Code is put into <Path>.h which is included by \p <BasePath>.cpp.
+llvm::Optional<ParsedAST> build(llvm::StringRef BasePath,
+                                llvm::StringRef Code) {
   if (Code.empty())
     return llvm::None;
-  const char *Args[] = {"clang", "-xc++", Path.c_str()};
+
+  assert(llvm::sys::path::extension(BasePath).empty() &&
+         "BasePath must be a base file path without extension.");
+  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
+      new vfs::InMemoryFileSystem);
+  std::string Path = (BasePath + ".cpp").str();
+  std::string Header = (BasePath + ".h").str();
+  VFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer(""));
+  VFS->addFile(Header, 0, llvm::MemoryBuffer::getMemBuffer(Code));
+  const char *Args[] = {"clang", "-xc++", "-include", Header.c_str(),
+                        Path.c_str()};
 
   auto CI = createInvocationFromCommandLine(Args);
 
   auto Buf = llvm::MemoryBuffer::getMemBuffer(Code);
   auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
-                              std::make_shared<PCHContainerOperations>(),
-                              vfs::getRealFileSystem());
+                              std::make_shared<PCHContainerOperations>(), VFS);
   assert(AST.hasValue());
   return std::move(*AST);
 }
@@ -168,6 +180,20 @@ TEST(FileIndexTest, IgnoreClassMembers) {
   Req.Query = "";
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("X"));
 }
+
+#ifndef LLVM_ON_WIN32
+TEST(FileIndexTest, CanonicalizeSystemHeader) {
+  FileIndex M;
+  std::string File = testPath("bits/basic_string");
+  M.update(File, build(File, "class string {};").getPointer());
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+    EXPECT_EQ(Sym.Detail->IncludeHeader, "<string>");
+  });
+}
+#endif
 
 } // namespace
 } // namespace clangd

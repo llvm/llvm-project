@@ -15,14 +15,30 @@ namespace clang {
 namespace clangd {
 namespace {
 
+const CanonicalIncludes *canonicalIncludesForSystemHeaders() {
+  static const auto *Includes = [] {
+    auto *I = new CanonicalIncludes();
+    addSystemHeadersMapping(I);
+    return I;
+  }();
+  return Includes;
+}
+
 /// Retrieves namespace and class level symbols in \p Decls.
 std::unique_ptr<SymbolSlab> indexAST(ASTContext &Ctx,
                                      std::shared_ptr<Preprocessor> PP,
                                      llvm::ArrayRef<const Decl *> Decls) {
   SymbolCollector::Options CollectorOpts;
-  // Code completion gets main-file results from Sema.
-  // But we leave this option on because features like go-to-definition want it.
-  CollectorOpts.IndexMainFiles = true;
+  // Although we do not index symbols in main files (e.g. cpp file), information
+  // in main files like definition locations of class declarations will still be
+  // collected; thus, the index works for go-to-definition.
+  // FIXME(ioeric): handle IWYU pragma for dynamic index. We might want to make
+  // SymbolCollector always provides include canonicalization (e.g. IWYU, STL).
+  // FIXME(ioeric): get rid of `IndexMainFiles` as this is always set to false.
+  CollectorOpts.IndexMainFiles = false;
+  CollectorOpts.CollectIncludePath = true;
+  CollectorOpts.Includes = canonicalIncludesForSystemHeaders();
+
   auto Collector = std::make_shared<SymbolCollector>(std::move(CollectorOpts));
   Collector->setPreprocessor(std::move(PP));
   index::IndexingOptions IndexOpts;
