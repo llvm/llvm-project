@@ -89,18 +89,31 @@ set(lldbDebugserverCommonSources
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE})
 
-if (NOT SKIP_DEBUGSERVER)
-  add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
-  
-  
-  if (APPLE)
-    if(IOS)
-      find_library(COCOA_LIBRARY UIKit)
-      target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY} ${CORE_FOUNDATION_LIBRARY} ${FOUNDATION_LIBRARY})
-    else()
-      find_library(COCOA_LIBRARY Cocoa)
-      target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY})
-    endif()
+add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
+
+set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
+  CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
+
+if(NOT LLDB_CODESIGN_IDENTITY STREQUAL "")
+  set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver>)
+else()
+  execute_process(
+    COMMAND xcode-select -p
+    OUTPUT_VARIABLE XCODE_DEV_DIR)
+  string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
+  set(DEBUGSERVER_PATH
+    "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver")
+  set(SKIP_DEBUGSERVER True)
+endif()
+message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")
+
+if (APPLE AND NOT SKIP_DEBUGSERVER)
+  if(IOS)
+    find_library(COCOA_LIBRARY UIKit)
+    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY} ${CORE_FOUNDATION_LIBRARY} ${FOUNDATION_LIBRARY})
+  else()
+    find_library(COCOA_LIBRARY Cocoa)
+    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY})
   endif()
   
   target_link_libraries(lldbDebugserverCommon
@@ -119,15 +132,13 @@ if (NOT SKIP_DEBUGSERVER)
     )
 endif()
 
-set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
-  CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
 set(LLDB_USE_ENTITLEMENTS_Default On)
 if("${LLDB_CODESIGN_IDENTITY}" STREQUAL "lldb_codesign")
   set(LLDB_USE_ENTITLEMENTS_Default Off)
 endif()
 option(LLDB_USE_ENTITLEMENTS "Use entitlements when codesigning (Defaults Off when using lldb_codesign identity, otherwise On)" ${LLDB_USE_ENTITLEMENTS_Default})
 
-if ("${LLDB_CODESIGN_IDENTITY}" STREQUAL "")
+if (SKIP_DEBUGSERVER)
   if (CMAKE_HOST_APPLE)
     # If we haven't built a signed debugserver, copy the one from the system.
     add_custom_target(debugserver
