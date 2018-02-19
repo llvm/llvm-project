@@ -14,7 +14,8 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace fuchsia {
-  
+
+namespace {
 AST_MATCHER(Expr, isConstantInitializer) {
   return Node.isConstantInitializer(Finder->getASTContext(), false);
 }
@@ -22,7 +23,8 @@ AST_MATCHER(Expr, isConstantInitializer) {
 AST_MATCHER(VarDecl, isGlobalStatic) {
   return Node.getStorageDuration() == SD_Static && !Node.isLocalVarDecl();
 }
-  
+} // namespace
+
 void StaticallyConstructedObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // Constructing global, non-trivial objects with static storage is
   // disallowed, unless the object is statically initialized with a constexpr 

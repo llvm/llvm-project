@@ -1264,9 +1264,10 @@ static Value *SimplifyAShrInst(Value *Op0, Value *Op1, bool isExact,
                                     MaxRecurse))
     return V;
 
-  // all ones >>a X -> all ones
+  // all ones >>a X -> -1
+  // Do not return Op0 because it may contain undef elements if it's a vector.
   if (match(Op0, m_AllOnes()))
-    return Op0;
+    return Constant::getAllOnesValue(Op0->getType());
 
   // (X << A) >> A -> X
   Value *X;
@@ -1783,20 +1784,15 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return C;
 
   // X | undef -> -1
-  if (match(Op1, m_Undef()))
+  // X | -1 = -1
+  // Do not return Op1 because it may contain undef elements if it's a vector.
+  if (match(Op1, m_Undef()) || match(Op1, m_AllOnes()))
     return Constant::getAllOnesValue(Op0->getType());
 
   // X | X = X
-  if (Op0 == Op1)
-    return Op0;
-
   // X | 0 = X
-  if (match(Op1, m_Zero()))
+  if (Op0 == Op1 || match(Op1, m_Zero()))
     return Op0;
-
-  // X | -1 = -1
-  if (match(Op1, m_AllOnes()))
-    return Op1;
 
   // A | ~A  =  ~A | A  =  -1
   if (match(Op0, m_Not(m_Specific(Op1))) ||

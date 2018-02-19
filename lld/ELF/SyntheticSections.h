@@ -316,9 +316,13 @@ public:
         UseSymVA(UseSymVA), Addend(Addend) {}
 
   uint64_t getOffset() const;
-  int64_t getAddend() const;
   uint32_t getSymIndex() const;
   const InputSectionBase *getInputSec() const { return InputSec; }
+
+  // Computes the addend of the dynamic relocation. Note that this is not the
+  // same as the Addend member variable as it also includes the symbol address
+  // if UseSymVA is true.
+  int64_t computeAddend() const;
 
   RelType Type;
 
@@ -326,6 +330,10 @@ private:
   Symbol *Sym;
   const InputSectionBase *InputSec = nullptr;
   uint64_t OffsetInSec;
+  // If this member is true, the dynamic relocation will not be against the
+  // symbol but will instead be a relative relocation that simply adds the
+  // load address. This means we need to write the symbol virtual address
+  // plus the original addend as the final relocation addend.
   bool UseSymVA;
   int64_t Addend;
 };

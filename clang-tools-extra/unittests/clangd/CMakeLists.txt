@@ -38,6 +38,7 @@ target_link_libraries(ClangdTests
   clangFormat
   clangFrontend
   clangIndex
+  clangLex
   clangSema
   clangTooling
   clangToolingCore

@@ -50,10 +50,6 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
-static cl::opt<bool>
-    DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
-                   cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
-
 // The values are (type identifier, summary) pairs.
 typedef DenseMap<
     GlobalValue::GUID,
@@ -1144,9 +1140,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
   StringMap<FunctionImporter::ExportSetTy> ExportLists(
       ThinLTO.ModuleMap.size());
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-
-  if (DumpThinCGSCCs)
-    ThinLTO.CombinedIndex.dumpSCCs(outs());
 
   if (Conf.OptLevel > 0)
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,

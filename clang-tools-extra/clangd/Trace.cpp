@@ -208,17 +208,19 @@ void log(const Twine &Message) {
 }
 
 // Returned context owns Args.
-static Context makeSpanContext(llvm::StringRef Name, json::obj *Args) {
+static Context makeSpanContext(llvm::Twine Name, json::obj *Args) {
   if (!T)
     return Context::current().clone();
   WithContextValue WithArgs{std::unique_ptr<json::obj>(Args)};
-  return T->beginSpan(Name, Args);
+  return T->beginSpan(Name.isSingleStringRef() ? Name.getSingleStringRef()
+                                               : llvm::StringRef(Name.str()),
+                      Args);
 }
 
 // Span keeps a non-owning pointer to the args, which is how users access them.
 // The args are owned by the context though. They stick around until the
 // beginSpan() context is destroyed, when the tracing engine will consume them.
-Span::Span(llvm::StringRef Name)
+Span::Span(llvm::Twine Name)
     : Args(T ? new json::obj() : nullptr),
       RestoreCtx(makeSpanContext(Name, Args)) {}
 

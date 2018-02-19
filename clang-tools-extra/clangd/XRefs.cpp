@@ -360,9 +360,8 @@ static std::string NamedDeclQualifiedName(const NamedDecl *ND,
 static llvm::Optional<std::string> getScopeName(const Decl *D) {
   const DeclContext *DC = D->getDeclContext();
 
-  if (const TranslationUnitDecl *TUD = dyn_cast<TranslationUnitDecl>(DC))
+  if (isa<TranslationUnitDecl>(DC))
     return std::string("global namespace");
-
   if (const TypeDecl *TD = dyn_cast<TypeDecl>(DC))
     return TypeDeclToString(TD);
   else if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))

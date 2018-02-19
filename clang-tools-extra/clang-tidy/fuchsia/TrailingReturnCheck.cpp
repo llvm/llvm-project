@@ -15,18 +15,16 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
-namespace ast_matchers {
-
-const internal::VariadicDynCastAllOfMatcher<Type, DecltypeType> decltypeType;
-
-} // namespace ast_matchers
-
 namespace tidy {
 namespace fuchsia {
+
+namespace {
+const internal::VariadicDynCastAllOfMatcher<Type, DecltypeType> decltypeType;
 
 AST_MATCHER(FunctionDecl, hasTrailingReturn) {
   return Node.getType()->castAs<FunctionProtoType>()->hasTrailingReturn();
 }
+} // namespace
 
 void TrailingReturnCheck::registerMatchers(MatchFinder *Finder) {
 

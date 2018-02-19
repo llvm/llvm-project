@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "Function.h"
+#include "llvm/ADT/Twine.h"
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -81,7 +82,8 @@ public:
 
   void wait() const { (void) wait(llvm::None); }
   LLVM_NODISCARD bool wait(Deadline D) const;
-  void runAsync(UniqueFunction<void()> Action);
+  // The name is used for tracing and debugging (e.g. to name a spawned thread).
+  void runAsync(llvm::Twine Name, UniqueFunction<void()> Action);
 
 private:
   mutable std::mutex Mutex;

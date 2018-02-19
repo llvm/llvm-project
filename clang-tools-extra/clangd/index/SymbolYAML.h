@@ -20,6 +20,7 @@
 
 #include "Index.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -28,9 +29,10 @@ namespace clangd {
 // Read symbols from a YAML-format string.
 SymbolSlab SymbolsFromYAML(llvm::StringRef YAMLContent);
 
-// Read one symbol from a YAML-format string, backed by the arena.
-Symbol SymbolFromYAML(llvm::StringRef YAMLContent,
-                      llvm::BumpPtrAllocator &Arena);
+// Read one symbol from a YAML-stream.
+// The arena must be the Input's context! (i.e. yaml::Input Input(Text, &Arena))
+// The returned symbol is backed by both Input and Arena.
+Symbol SymbolFromYAML(llvm::yaml::Input &Input, llvm::BumpPtrAllocator &Arena);
 
 // Convert a single symbol to YAML-format string.
 // The YAML result is safe to concatenate.
