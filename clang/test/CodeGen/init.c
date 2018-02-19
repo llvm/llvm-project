@@ -8,8 +8,9 @@ unsigned v2[2][3] = {[0 ... 1][0 ... 1] = 2222, 3333};
 // CHECK-DAG: %struct.M = type { [2 x %struct.I] }
 // CHECK-DAG: %struct.I = type { [3 x i32] }
 
-// CHECK: [1 x %struct.M] [%struct.M { [2 x %struct.I] [%struct.I { [3 x i32] [i32 4, i32 4, i32 0] }, %struct.I { [3 x i32] [i32 4, i32 4, i32 5] }] }],
-// CHECK: [2 x [3 x i32]] {{[[][[]}}3 x i32] [i32 2222, i32 2222, i32 0], [3 x i32] [i32 2222, i32 2222, i32 3333]],
+// CHECK-DAG: [1 x %struct.M] [%struct.M { [2 x %struct.I] [%struct.I { [3 x i32] [i32 4, i32 4, i32 0] }, %struct.I { [3 x i32] [i32 4, i32 4, i32 5] }] }],
+// CHECK-DAG: [2 x [3 x i32]] {{[[][[]}}3 x i32] [i32 2222, i32 2222, i32 0], [3 x i32] [i32 2222, i32 2222, i32 3333]],
+// CHECK-DAG: [[INIT14:.*]] = private global [16 x i32] [i32 0, i32 0, i32 0, i32 0, i32 0, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 0, i32 0, i32 0, i32 0], align 4
 
 void f1() {
   // Scalars in braces.
@@ -33,8 +34,8 @@ void f3() {
 }
 
 // Constants
-// CHECK: @g3 = constant i32 10
-// CHECK: @f4.g4 = internal constant i32 12
+// CHECK-DAG: @g3 = constant i32 10
+// CHECK-DAG: @f4.g4 = internal constant i32 12
 const int g3 = 10;
 int f4() {
   static const int g4 = 12;
@@ -61,7 +62,7 @@ void f6() {
 
 
 
-// CHECK: @test7 = global{{.*}}{ i32 0, [4 x i8] c"bar\00" }
+// CHECK-DAG: @test7 = global{{.*}}{ i32 0, [4 x i8] c"bar\00" }
 // PR8217
 struct a7 {
   int  b;
@@ -150,4 +151,16 @@ void PR20473() {
   bar((char[2]) {""});
   // CHECK: memcpy{{.*}}getelementptr inbounds ([3 x i8], [3 x i8]* @
   bar((char[3]) {""});
+}
+
+// Test that we initialize large member arrays by copying from a global and not
+// with a series of stores.
+struct S14 { int a[16]; };
+
+void test14(struct S14 *s14) {
+// CHECK-LABEL: @test14
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 {{.*}}, i8* align 4 {{.*}} [[INIT14]] {{.*}}, i32 64, i1 false)
+// CHECK-NOT: store
+// CHECK: ret void
+  *s14 = (struct S14) { { [5 ... 11] = 17 } };
 }
