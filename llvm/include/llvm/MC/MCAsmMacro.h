@@ -33,6 +33,6 @@ public:
   MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)
       : Name(N), Body(B), Parameters(std::move(P)) {}
 };
-}; // namespace llvm
+} // namespace llvm
 
 #endif
