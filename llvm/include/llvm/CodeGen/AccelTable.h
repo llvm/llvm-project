@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFACCELTABLE_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFACCELTABLE_H
+#ifndef LLVM_CODEGEN_DWARFACCELTABLE_H
+#define LLVM_CODEGEN_DWARFACCELTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -88,36 +88,139 @@
 /// `------------------'
 ///
 /// For the full documentation please refer to the DWARF 5 standard.
+///
+///
+/// This file defines the class template AccelTable, which is represents an
+/// abstract view of an Accelerator table, without any notion of an on-disk
+/// layout. This class is parameterized by an entry type, which should derive
+/// from AccelTableData. This is the type of individual entries in the table,
+/// and it should store the data necessary to emit them. AppleAccelTableData is
+/// the base class for Apple Accelerator Table entries, which have a uniform
+/// structure based on a sequence of Atoms. There are different sub-classes
+/// derived from AppleAccelTable, which differ in the set of Atoms and how they
+/// obtain their values.
+///
+/// An Apple Accelerator Table can be serialized by calling emitAppleAccelTable
+/// function.
+///
+/// TODO: Add DWARF v5 emission code.
 
 namespace llvm {
 
 class AsmPrinter;
 
-/// Representation of the header of an Apple accelerator table. This consists
-/// of the fixed header and the header data. The latter contains the atoms
-/// which define the columns of the table.
-class AppleAccelTableHeader {
-  struct Header {
-    uint32_t Magic = MagicHash;
-    uint16_t Version = 1;
-    uint16_t HashFunction = dwarf::DW_hash_function_djb;
-    uint32_t BucketCount = 0;
-    uint32_t HashCount = 0;
-    uint32_t HeaderDataLength;
+/// Interface which the different types of accelerator table data have to
+/// conform. It serves as a base class for different values of the template
+/// argument of the AccelTable class template.
+class AccelTableData {
+public:
+  virtual ~AccelTableData() = default;
 
-    /// 'HASH' magic value to detect endianness.
-    static const uint32_t MagicHash = 0x48415348;
+  bool operator<(const AccelTableData &Other) const {
+    return order() < Other.order();
+  }
 
-    Header(uint32_t DataLength) : HeaderDataLength(DataLength) {}
+  // Subclasses should implement:
+  // static uint32_t hash(StringRef Name);
+
+#ifndef NDEBUG
+  virtual void print(raw_ostream &OS) const = 0;
+#endif
+protected:
+  virtual uint64_t order() const = 0;
+};
+
+/// A base class holding non-template-dependant functionality of the AccelTable
+/// class. Clients should not use this class directly but rather instantiate
+/// AccelTable with a type derived from AccelTableData.
+class AccelTableBase {
+public:
+  using HashFn = uint32_t(StringRef);
+
+  /// Represents a group of entries with identical name (and hence, hash value).
+  struct HashData {
+    DwarfStringPoolEntryRef Name;
+    uint32_t HashValue;
+    std::vector<AccelTableData *> Values;
+    MCSymbol *Sym;
+
+    HashData(DwarfStringPoolEntryRef Name, HashFn *Hash)
+        : Name(Name), HashValue(Hash(Name.getString())) {}
 
 #ifndef NDEBUG
     void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
 #endif
   };
+  using HashList = std::vector<HashData *>;
+  using BucketList = std::vector<HashList>;
+
+protected:
+  /// Allocator for HashData and Values.
+  BumpPtrAllocator Allocator;
+
+  using StringEntries = StringMap<HashData, BumpPtrAllocator &>;
+  StringEntries Entries;
+
+  HashFn *Hash;
+  uint32_t BucketCount;
+  uint32_t UniqueHashCount;
+
+  HashList Hashes;
+  BucketList Buckets;
+
+  void computeBucketCount();
+
+  AccelTableBase(HashFn *Hash) : Entries(Allocator), Hash(Hash) {}
 
 public:
-  /// An Atom defines the form of the data in the accelerator table.
+  void finalize(AsmPrinter *Asm, StringRef Prefix);
+  ArrayRef<HashList> getBuckets() const { return Buckets; }
+  uint32_t getBucketCount() const { return BucketCount; }
+  uint32_t getUniqueHashCount() const { return UniqueHashCount; }
+  uint32_t getUniqueNameCount() const { return Entries.size(); }
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const;
+  void dump() const { print(dbgs()); }
+#endif
+
+  AccelTableBase(const AccelTableBase &) = delete;
+  void operator=(const AccelTableBase &) = delete;
+};
+
+/// This class holds an abstract representation of an Accelerator Table,
+/// consisting of a sequence of buckets, each bucket containint a sequence of
+/// HashData entries. The class is parameterized by the type of entries it
+/// holds. The type template parameter also defines the hash function to use for
+/// hashing names.
+template <typename DataT> class AccelTable : public AccelTableBase {
+public:
+  AccelTable() : AccelTableBase(DataT::hash) {}
+
+  template <typename... Types>
+  void addName(DwarfStringPoolEntryRef Name, Types &&... Args);
+};
+
+template <typename AccelTableDataT>
+template <typename... Types>
+void AccelTable<AccelTableDataT>::addName(DwarfStringPoolEntryRef Name,
+                                          Types &&... Args) {
+  assert(Buckets.empty() && "Already finalized!");
+  // If the string is in the list already then add this die to the list
+  // otherwise add a new one.
+  auto Iter = Entries.try_emplace(Name.getString(), Name, Hash).first;
+  assert(Iter->second.Name == Name);
+  Iter->second.Values.push_back(
+      new (Allocator) AccelTableDataT(std::forward<Types>(Args)...));
+}
+
+/// A base class for different implementations of Data classes for Apple
+/// Accelerator Tables. The columns in the table are defined by the static Atoms
+/// variable defined on the subclasses.
+class AppleAccelTableData : public AccelTableData {
+public:
+  /// An Atom defines the form of the data in an Apple accelerator table.
   /// Conceptually it is a column in the accelerator consisting of a type and a
   /// specification of the form of its data.
   struct Atom {
@@ -133,197 +236,30 @@ public:
     void dump() const { print(dbgs()); }
 #endif
   };
-
-private:
-  /// The HeaderData describes the structure of the accelerator table through a
-  /// list of Atoms.
-  struct HeaderData {
-    /// In the case of data that is referenced via DW_FORM_ref_* the offset
-    /// base is used to describe the offset for all forms in the list of atoms.
-    uint32_t DieOffsetBase;
-
-    const SmallVector<Atom, 4> Atoms;
-
-#ifndef _MSC_VER
-    // See the `static constexpr` below why we need an alternative
-    // implementation for MSVC.
-    HeaderData(ArrayRef<Atom> AtomList, uint32_t Offset = 0)
-        : DieOffsetBase(Offset), Atoms(AtomList.begin(), AtomList.end()) {}
-#else
-    // FIXME: Erase this path once the minimum MSCV version has been bumped.
-    HeaderData(const SmallVectorImpl<Atom> &Atoms, uint32_t Offset = 0)
-        : DieOffsetBase(Offset), Atoms(Atoms.begin(), Atoms.end()) {}
-#endif
-
-#ifndef NDEBUG
-    void print(raw_ostream &OS) const;
-    void dump() const { print(dbgs()); }
-#endif
-  };
-
-  Header Header;
-  HeaderData HeaderData;
-
-public:
-  /// The length of the header data is always going to be 4 + 4 + 4*NumAtoms.
-#ifndef _MSC_VER
-  // See the `static constexpr` below why we need an alternative implementation
-  // for MSVC.
-  AppleAccelTableHeader(ArrayRef<AppleAccelTableHeader::Atom> Atoms)
-      : Header(8 + (Atoms.size() * 4)), HeaderData(Atoms) {}
-#else
-  // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  AppleAccelTableHeader(const SmallVectorImpl<Atom> &Atoms)
-      : Header(8 + (Atoms.size() * 4)), HeaderData(Atoms) {}
-#endif
-
-  /// Update header with hash and bucket count.
-  void setBucketAndHashCount(uint32_t HashCount);
-
-  uint32_t getHashCount() const { return Header.HashCount; }
-  uint32_t getBucketCount() const { return Header.BucketCount; }
-
-  /// Emits the header via the AsmPrinter.
-  void emit(AsmPrinter *);
-
-#ifndef NDEBUG
-  void print(raw_ostream &OS) const;
-  void dump() const { print(dbgs()); }
-#endif
-};
-
-/// Interface which the different types of accelerator table data have to
-/// conform.
-class AppleAccelTableData {
-public:
-  virtual ~AppleAccelTableData() = default;
+  // Subclasses should define:
+  // static constexpr Atom Atoms[];
 
   virtual void emit(AsmPrinter *Asm) const = 0;
 
-  bool operator<(const AppleAccelTableData &Other) const {
-    return order() < Other.order();
-  }
-
-#ifndef NDEBUG
-  virtual void print(raw_ostream &OS) const = 0;
-#endif
-protected:
-  virtual uint64_t order() const = 0;
+  static uint32_t hash(StringRef Buffer) { return djbHash(Buffer); }
 };
 
-/// Apple-style accelerator table base class.
-class AppleAccelTableBase {
-protected:
-  struct HashData {
-    DwarfStringPoolEntryRef Name;
-    uint32_t HashValue;
-    std::vector<AppleAccelTableData *> Values;
-    MCSymbol *Sym;
+void emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
+                             StringRef Prefix, const MCSymbol *SecBegin,
+                             ArrayRef<AppleAccelTableData::Atom> Atoms);
 
-    HashData(DwarfStringPoolEntryRef Name) : Name(Name) {
-      HashValue = djbHash(Name.getString());
-    }
-
-#ifndef NDEBUG
-    void print(raw_ostream &OS) const;
-    void dump() const { print(dbgs()); }
-#endif
-  };
-
-  /// Allocator for HashData and Values.
-  BumpPtrAllocator Allocator;
-
-  /// Header containing both the header and header data.
-  AppleAccelTableHeader Header;
-
-  using StringEntries = StringMap<HashData, BumpPtrAllocator &>;
-  StringEntries Entries;
-
-  using HashList = std::vector<HashData *>;
-  HashList Hashes;
-
-  using BucketList = std::vector<HashList>;
-  BucketList Buckets;
-
-#ifndef _MSC_VER
-  // See the `static constexpr` below why we need an alternative implementation
-  // for MSVC.
-  AppleAccelTableBase(ArrayRef<AppleAccelTableHeader::Atom> Atoms)
-      : Header(Atoms), Entries(Allocator) {}
-#else
-  // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  AppleAccelTableBase(const SmallVectorImpl<AppleAccelTableHeader::Atom> &Atoms)
-      : Header(Atoms), Entries(Allocator) {}
-#endif
-
-private:
-  /// Emits the header for the table via the AsmPrinter.
-  void emitHeader(AsmPrinter *Asm);
-
-  /// Helper function to compute the number of buckets needed based on the
-  /// number of unique hashes.
-  void computeBucketCount();
-
-  /// Walk through and emit the buckets for the table. Each index is an offset
-  /// into the list of hashes.
-  void emitBuckets(AsmPrinter *);
-
-  /// Walk through the buckets and emit the individual hashes for each bucket.
-  void emitHashes(AsmPrinter *);
-
-  /// Walk through the buckets and emit the individual offsets for each element
-  /// in each bucket. This is done via a symbol subtraction from the beginning
-  /// of the section. The non-section symbol will be output later when we emit
-  /// the actual data.
-  void emitOffsets(AsmPrinter *, const MCSymbol *);
-
-  /// Walk through the buckets and emit the full data for each element in the
-  /// bucket. For the string case emit the dies and the various offsets.
-  /// Terminate each HashData bucket with 0.
-  void emitData(AsmPrinter *);
-
-public:
-  void finalizeTable(AsmPrinter *, StringRef);
-
-  void emit(AsmPrinter *Asm, const MCSymbol *SecBegin) {
-    emitHeader(Asm);
-    emitBuckets(Asm);
-    emitHashes(Asm);
-    emitOffsets(Asm, SecBegin);
-    emitData(Asm);
-  }
-
-#ifndef NDEBUG
-  void print(raw_ostream &OS) const;
-  void dump() const { print(dbgs()); }
-#endif
-};
-
-template <typename AppleAccelTableDataT>
-class AppleAccelTable : public AppleAccelTableBase {
-public:
-  AppleAccelTable() : AppleAccelTableBase(AppleAccelTableDataT::Atoms) {}
-  AppleAccelTable(const AppleAccelTable &) = delete;
-  AppleAccelTable &operator=(const AppleAccelTable &) = delete;
-
-  template <class... Types>
-  void addName(DwarfStringPoolEntryRef Name, Types... Args);
-};
-
-template <typename AppleAccelTableDataT>
-template <class... Types>
-void AppleAccelTable<AppleAccelTableDataT>::addName(
-    DwarfStringPoolEntryRef Name, Types... Args) {
-  assert(Buckets.empty() && "Already finalized!");
-  // If the string is in the list already then add this die to the list
-  // otherwise add a new one.
-  auto Iter = Entries.try_emplace(Name.getString(), Name).first;
-  assert(Iter->second.Name == Name);
-  Iter->second.Values.push_back(new (Allocator) AppleAccelTableDataT(Args...));
+/// Emit an Apple Accelerator Table consisting of entries in the specified
+/// AccelTable. The DataT template parameter should be derived from
+/// AppleAccelTableData.
+template <typename DataT>
+void emitAppleAccelTable(AsmPrinter *Asm, AccelTable<DataT> &Contents,
+                         StringRef Prefix, const MCSymbol *SecBegin) {
+  static_assert(std::is_convertible<DataT *, AppleAccelTableData *>::value, "");
+  emitAppleAccelTableImpl(Asm, Contents, Prefix, SecBegin, DataT::Atoms);
 }
 
-/// Accelerator table data implementation for simple accelerator tables with
-/// just a DIE reference.
+/// Accelerator table data implementation for simple Apple accelerator tables
+/// with just a DIE reference.
 class AppleAccelTableOffsetData : public AppleAccelTableData {
 public:
   AppleAccelTableOffsetData(const DIE *D) : Die(D) {}
@@ -332,12 +268,11 @@ public:
 
 #ifndef _MSC_VER
   // The line below is rejected by older versions (TBD) of MSVC.
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
-                                  dwarf::DW_FORM_data4)};
+  static constexpr Atom Atoms[] = {
+      Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
 #else
   // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+  static const SmallVector<Atom, 4> Atoms;
 #endif
 
 #ifndef NDEBUG
@@ -349,7 +284,7 @@ protected:
   const DIE *Die;
 };
 
-/// Accelerator table data implementation for type accelerator tables.
+/// Accelerator table data implementation for Apple type accelerator tables.
 class AppleAccelTableTypeData : public AppleAccelTableOffsetData {
 public:
   AppleAccelTableTypeData(const DIE *D) : AppleAccelTableOffsetData(D) {}
@@ -358,15 +293,13 @@ public:
 
 #ifndef _MSC_VER
   // The line below is rejected by older versions (TBD) of MSVC.
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
-                                  dwarf::DW_FORM_data4),
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_type_flags,
-                                  dwarf::DW_FORM_data1)};
+  static constexpr Atom Atoms[] = {
+      Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
+      Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
+      Atom(dwarf::DW_ATOM_type_flags, dwarf::DW_FORM_data1)};
 #else
   // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+  static const SmallVector<Atom, 4> Atoms;
 #endif
 
 #ifndef NDEBUG
@@ -374,8 +307,8 @@ public:
 #endif
 };
 
-/// Accelerator table data implementation for simple accelerator tables with
-/// a DIE offset but no actual DIE pointer.
+/// Accelerator table data implementation for simple Apple accelerator tables
+/// with a DIE offset but no actual DIE pointer.
 class AppleAccelTableStaticOffsetData : public AppleAccelTableData {
 public:
   AppleAccelTableStaticOffsetData(uint32_t Offset) : Offset(Offset) {}
@@ -384,12 +317,11 @@ public:
 
 #ifndef _MSC_VER
   // The line below is rejected by older versions (TBD) of MSVC.
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
-                                  dwarf::DW_FORM_data4)};
+  static constexpr Atom Atoms[] = {
+      Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
 #else
   // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+  static const SmallVector<Atom, 4> Atoms;
 #endif
 
 #ifndef NDEBUG
@@ -416,15 +348,13 @@ public:
 
 #ifndef _MSC_VER
   // The line below is rejected by older versions (TBD) of MSVC.
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
-                                  dwarf::DW_FORM_data4),
-      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
-      AppleAccelTableHeader::Atom(5, dwarf::DW_FORM_data1),
-      AppleAccelTableHeader::Atom(6, dwarf::DW_FORM_data4)};
+  static constexpr Atom Atoms[] = {
+      Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
+      Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
+      Atom(5, dwarf::DW_FORM_data1), Atom(6, dwarf::DW_FORM_data4)};
 #else
   // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+  static const SmallVector<Atom, 4> Atoms;
 #endif
 
 #ifndef NDEBUG
@@ -440,4 +370,4 @@ protected:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DWARFACCELTABLE_H
+#endif // LLVM_CODEGEN_DWARFACCELTABLE_H

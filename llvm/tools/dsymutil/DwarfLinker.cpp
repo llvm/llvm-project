@@ -741,17 +741,16 @@ public:
                StringRef Bytes);
 
   /// Emit Apple namespaces accelerator table.
-  void
-  emitAppleNamespaces(AppleAccelTable<AppleAccelTableStaticOffsetData> &Table);
+  void emitAppleNamespaces(AccelTable<AppleAccelTableStaticOffsetData> &Table);
 
   /// Emit Apple names accelerator table.
-  void emitAppleNames(AppleAccelTable<AppleAccelTableStaticOffsetData> &Table);
+  void emitAppleNames(AccelTable<AppleAccelTableStaticOffsetData> &Table);
 
   /// Emit Apple Objective-C accelerator table.
-  void emitAppleObjc(AppleAccelTable<AppleAccelTableStaticOffsetData> &Table);
+  void emitAppleObjc(AccelTable<AppleAccelTableStaticOffsetData> &Table);
 
   /// Emit Apple type accelerator table.
-  void emitAppleTypes(AppleAccelTable<AppleAccelTableStaticTypeData> &Table);
+  void emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table);
 
   uint32_t getFrameSectionSize() const { return FrameSectionSize; }
 };
@@ -898,39 +897,35 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
 }
 
 void DwarfStreamer::emitAppleNamespaces(
-    AppleAccelTable<AppleAccelTableStaticOffsetData> &Table) {
+    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamespaceSection());
-  Table.finalizeTable(Asm.get(), "namespac");
   auto *SectionBegin = Asm->createTempSymbol("namespac_begin");
   Asm->OutStreamer->EmitLabel(SectionBegin);
-  Table.emit(Asm.get(), SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "namespac", SectionBegin);
 }
 
 void DwarfStreamer::emitAppleNames(
-    AppleAccelTable<AppleAccelTableStaticOffsetData> &Table) {
+    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamesSection());
-  Table.finalizeTable(Asm.get(), "names");
   auto *SectionBegin = Asm->createTempSymbol("names_begin");
   Asm->OutStreamer->EmitLabel(SectionBegin);
-  Table.emit(Asm.get(), SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "names", SectionBegin);
 }
 
 void DwarfStreamer::emitAppleObjc(
-    AppleAccelTable<AppleAccelTableStaticOffsetData> &Table) {
+    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelObjCSection());
-  Table.finalizeTable(Asm.get(), "objc");
   auto *SectionBegin = Asm->createTempSymbol("objc_begin");
   Asm->OutStreamer->EmitLabel(SectionBegin);
-  Table.emit(Asm.get(), SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "objc", SectionBegin);
 }
 
 void DwarfStreamer::emitAppleTypes(
-    AppleAccelTable<AppleAccelTableStaticTypeData> &Table) {
+    AccelTable<AppleAccelTableStaticTypeData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelTypesSection());
-  Table.finalizeTable(Asm.get(), "types");
   auto *SectionBegin = Asm->createTempSymbol("types_begin");
   Asm->OutStreamer->EmitLabel(SectionBegin);
-  Table.emit(Asm.get(), SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "types", SectionBegin);
 }
 
 /// Emit the swift_ast section stored in \p Buffers.
@@ -1758,10 +1753,10 @@ private:
   uint32_t LastCIEOffset = 0;
 
   /// Apple accelerator tables.
-  AppleAccelTable<AppleAccelTableStaticOffsetData> AppleNames;
-  AppleAccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
-  AppleAccelTable<AppleAccelTableStaticOffsetData> AppleObjc;
-  AppleAccelTable<AppleAccelTableStaticTypeData> AppleTypes;
+  AccelTable<AppleAccelTableStaticOffsetData> AppleNames;
+  AccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
+  AccelTable<AppleAccelTableStaticOffsetData> AppleObjc;
+  AccelTable<AppleAccelTableStaticTypeData> AppleTypes;
 
   /// Mapping the PCM filename to the DwoId.
   StringMap<uint64_t> ClangModules;
