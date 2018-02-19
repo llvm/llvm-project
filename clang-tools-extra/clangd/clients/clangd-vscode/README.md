@@ -70,7 +70,7 @@ please contact cfe-dev@lists.llvm.org.
 ```bash
   $ cd /path/to/clang-tools-extra/clangd/clients/clangd-vscode/
   # For the first time, you need to login in the account. vsce will ask you for
-    the account password, and remember it for future commands.
+    the Personal Access Token, and remember it for future commands.
   $ vsce login llvm-vs-code-extensions
   $ vsce publish
 ```
