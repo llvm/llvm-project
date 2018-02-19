@@ -83,16 +83,36 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
   SmallVector<StringRef, 4> Opts;
   NameAndArgs.second.split(Opts, '-');
   for (StringRef Opt : Opts) {
-    if (Opt.startswith("instcombine")) {
+    if (Opt == "instcombine") {
       Args.push_back("-passes=instcombine");
-    } else if (Opt.startswith("earlycse")) {
+    } else if (Opt == "earlycse") {
       Args.push_back("-passes=early-cse");
-    } else if (Opt.startswith("simplifycfg")) {
+    } else if (Opt == "simplifycfg") {
       Args.push_back("-passes=simplify-cfg");
-    } else if (Opt.startswith("gvn")) {
+    } else if (Opt == "gvn") {
       Args.push_back("-passes=gvn");
-    } else if (Opt.startswith("sccp")) {
+    } else if (Opt == "sccp") {
       Args.push_back("-passes=sccp");
+    
+    } else if (Opt == "loop_predication") {
+      Args.push_back("-passes=loop-predication");
+    } else if (Opt == "guard_widening") {
+      Args.push_back("-passes=guard-widening");
+    } else if (Opt == "loop_rotate") {
+      Args.push_back("-passes=loop(rotate)");
+    } else if (Opt == "loop_unswitch") {
+      Args.push_back("-passes=loop(unswitch)");
+    } else if (Opt == "loop_unroll") {
+      Args.push_back("-passes=unroll");
+    } else if (Opt == "loop_vectorize") {
+      Args.push_back("-passes=loop-vectorize");
+    } else if (Opt == "licm") {
+      Args.push_back("-passes=licm");
+    } else if (Opt == "indvars") {
+      Args.push_back("-passes=indvars");
+    } else if (Opt == "strength_reduce") {
+      Args.push_back("-passes=strength-reduce");
+      
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {

@@ -2496,7 +2496,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          // (e.g. as "const x of y" in a for loop), or after a destructuring
          // operation (const [x, y] of z, const {a, b} of c).
          (Left.is(Keywords.kw_of) && Left.Previous &&
-          (Left.Previous->Tok.getIdentifierInfo() ||
+          (Left.Previous->Tok.is(tok::identifier) ||
            Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;

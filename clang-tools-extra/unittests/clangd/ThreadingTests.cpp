@@ -29,7 +29,7 @@ TEST_F(ThreadingTest, TaskRunner) {
     AsyncTaskRunner Tasks;
     auto scheduleIncrements = [&]() {
       for (int TaskI = 0; TaskI < TasksCnt; ++TaskI) {
-        Tasks.runAsync([&Counter, &Mutex, IncrementsPerTask]() {
+        Tasks.runAsync("task", [&Counter, &Mutex, IncrementsPerTask]() {
           for (int Increment = 0; Increment < IncrementsPerTask; ++Increment) {
             std::lock_guard<std::mutex> Lock(Mutex);
             ++Counter;

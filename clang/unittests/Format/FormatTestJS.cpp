@@ -294,6 +294,7 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("x.for = 1;");
   verifyFormat("x.of();");
   verifyFormat("of(null);");
+  verifyFormat("return of(null);");
   verifyFormat("import {of} from 'x';");
   verifyFormat("x.in();");
   verifyFormat("x.let();");

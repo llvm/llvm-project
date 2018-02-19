@@ -37,7 +37,7 @@ struct InputsAndPreamble {
 /// TUScheduler is not thread-safe, only one thread should be providing updates
 /// and scheduling tasks.
 /// Callbacks are run on a threadpool and it's appropriate to do slow work in
-/// them.
+/// them. Each task has a name, used for tracing (should be UpperCamelCase).
 class TUScheduler {
 public:
   TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
@@ -65,7 +65,7 @@ public:
   /// \p Action is executed.
   /// If an error occurs during processing, it is forwarded to the \p Action
   /// callback.
-  void runWithAST(PathRef File,
+  void runWithAST(llvm::StringRef Name, PathRef File,
                   UniqueFunction<void(llvm::Expected<InputsAndAST>)> Action);
 
   /// Schedule an async read of the Preamble. Preamble passed to \p Action may
@@ -74,7 +74,7 @@ public:
   /// If an error occurs during processing, it is forwarded to the \p Action
   /// callback.
   void runWithPreamble(
-      PathRef File,
+      llvm::StringRef Name, PathRef File,
       UniqueFunction<void(llvm::Expected<InputsAndPreamble>)> Action);
 
   /// Wait until there are no scheduled or running tasks.

@@ -284,13 +284,13 @@
 // RUN: %clang -target arm -march=armebv8.2-a -mbig-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V82A-THUMB %s
 // CHECK-BE-V82A-THUMB: "-cc1"{{.*}} "-triple" "thumbebv8.2a-{{.*}}" "-target-cpu" "generic"
 
-// RUN: %clang -target armv8a -march=armv8.2-a+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-V82A-FP16 %s
+// RUN: %clang -target armv8a-linux-eabi -march=armv8.2-a+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-V82A-FP16 %s
 // CHECK-V82A-FP16: "-cc1"{{.*}} "-triple" "armv8.2{{.*}}" "-target-cpu" "generic" {{.*}}"-target-feature" "+fullfp16"
 
 // Once we have CPUs with optional v8.2-A FP16, we will need a way to turn it
 // on and off. Cortex-A53 is a placeholder for now.
-// RUN: %clang -target armv8a -mcpu=cortex-a53+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-FP16 %s
-// RUN: %clang -target armv8a -mcpu=cortex-a53+nofp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-NOFP16 %s
+// RUN: %clang -target armv8a-linux-eabi -mcpu=cortex-a53+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-FP16 %s
+// RUN: %clang -target armv8a-linux-eabi -mcpu=cortex-a53+nofp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-NOFP16 %s
 // CHECK-CORTEX-A53-FP16: "-cc1" {{.*}}"-target-cpu" "cortex-a53" {{.*}}"-target-feature" "+fullfp16"
 // CHECK-CORTEX-A53-NOFP16: "-cc1" {{.*}}"-target-cpu" "cortex-a53" {{.*}}"-target-feature" "-fullfp16"
 
