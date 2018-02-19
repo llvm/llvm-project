@@ -392,24 +392,19 @@ class GDBRemoteTestBase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
     server = None
-    temp_files = None
 
     def setUp(self):
         TestBase.setUp(self)
-        self.temp_files = []
         self.server = MockGDBServer()
         self.server.start()
 
     def tearDown(self):
-        for temp_file in self.temp_files:
-            self.RemoveTempFile(temp_file)
         # TestBase.tearDown will kill the process, but we need to kill it early
         # so its client connection closes and we can stop the server before
         # finally calling the base tearDown.
         if self.process() is not None:
             self.process().Kill()
         self.server.stop()
-        self.temp_files = []
         TestBase.tearDown(self)
 
     def createTarget(self, yaml_path):
@@ -421,9 +416,8 @@ class GDBRemoteTestBase(TestBase):
         during tearDown.
         """
         yaml_base, ext = os.path.splitext(yaml_path)
-        obj_path = "%s" % yaml_base
+        obj_path = self.getBuildArtifact(yaml_base)
         self.yaml2obj(yaml_path, obj_path)
-        self.temp_files.append(obj_path)
         return self.dbg.CreateTarget(obj_path)
 
     def connect(self, target):

@@ -271,7 +271,7 @@ public:
   using VisitedContextSet = llvm::SmallPtrSet<DeclContext*, 8>;
 
 private:
-  enum Kind Kind;
+  Kind CCKind;
 
   /// \brief The type that would prefer to see at this point (e.g., the type
   /// of an initializer or function parameter).
@@ -293,23 +293,22 @@ private:
 
 public:
   /// \brief Construct a new code-completion context of the given kind.
-  CodeCompletionContext(enum Kind Kind) : Kind(Kind), SelIdents(None) { }
+  CodeCompletionContext(Kind CCKind) : CCKind(CCKind), SelIdents(None) { }
 
   /// \brief Construct a new code-completion context of the given kind.
-  CodeCompletionContext(enum Kind Kind, QualType T,
+  CodeCompletionContext(Kind CCKind, QualType T,
                         ArrayRef<IdentifierInfo *> SelIdents = None)
-                        : Kind(Kind),
-                          SelIdents(SelIdents) {
-    if (Kind == CCC_DotMemberAccess || Kind == CCC_ArrowMemberAccess ||
-        Kind == CCC_ObjCPropertyAccess || Kind == CCC_ObjCClassMessage ||
-        Kind == CCC_ObjCInstanceMessage)
+      : CCKind(CCKind), SelIdents(SelIdents) {
+    if (CCKind == CCC_DotMemberAccess || CCKind == CCC_ArrowMemberAccess ||
+        CCKind == CCC_ObjCPropertyAccess || CCKind == CCC_ObjCClassMessage ||
+        CCKind == CCC_ObjCInstanceMessage)
       BaseType = T;
     else
       PreferredType = T;
   }
 
   /// \brief Retrieve the kind of code-completion context.
-  enum Kind getKind() const { return Kind; }
+  Kind getKind() const { return CCKind; }
 
   /// \brief Retrieve the type that this expression would prefer to have, e.g.,
   /// if the expression is a variable initializer or a function argument, the
@@ -350,6 +349,9 @@ public:
     return llvm::None;
   }
 };
+
+/// \brief Get string representation of \p Kind, useful for for debugging.
+llvm::StringRef getCompletionKindString(CodeCompletionContext::Kind Kind);
 
 /// \brief A "string" used to describe how code completion can
 /// be performed for an entity.
