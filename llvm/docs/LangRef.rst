@@ -1905,8 +1905,15 @@ as follows:
     must be a multiple of 8-bits. If omitted, the natural stack
     alignment defaults to "unspecified", which does not prevent any
     alignment promotions.
+``P<address space>``
+    Specifies the address space that corresponds to program memory.
+    Harvard architectures can use this to specify what space LLVM
+    should place things such as functions into. If omitted, the
+    program memory space defaults to the default address space of 0,
+    which corresponds to a Von Neumann architecture that has code
+    and data in the same space.
 ``A<address space>``
-    Specifies the address space of  objects created by '``alloca``'.
+    Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
 ``p[n]:<size>:<abi>:<pref>:<idx>``
     This specifies the *size* of a pointer and its ``<abi>`` and
