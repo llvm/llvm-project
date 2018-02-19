@@ -698,7 +698,7 @@ public:
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override {
     Requests.push_back(Req);
-    return false;
+    return true;
   }
 
   const std::vector<FuzzyFindRequest> allRequests() const { return Requests; }

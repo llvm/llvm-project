@@ -919,8 +919,9 @@ private:
                       Req.Query,
                       llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ",")));
     // Run the query against the index.
-    Incomplete |= !Opts.Index->fuzzyFind(
-        Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); });
+    if (Opts.Index->fuzzyFind(
+            Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); }))
+      Incomplete = true;
     return std::move(ResultsBuilder).build();
   }
 
@@ -978,7 +979,8 @@ private:
     NSema += bool(SemaResult);
     NIndex += bool(IndexResult);
     NBoth += SemaResult && IndexResult;
-    Incomplete |= Candidates.push({C, Scores});
+    if (Candidates.push({C, Scores}))
+      Incomplete = true;
   }
 
   CompletionItem toCompletionItem(const CompletionCandidate &Candidate,

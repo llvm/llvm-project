@@ -49,7 +49,7 @@ class MergedIndex : public SymbolIndex {
      for (const Symbol &S : Dyn)
        if (!SeenDynamicSymbols.count(S.ID))
          Callback(S);
-     return !More; // returning true indicates the result is complete.
+     return More;
   }
 
 private:
