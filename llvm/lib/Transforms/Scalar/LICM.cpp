@@ -97,7 +97,7 @@ static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
                   const LoopSafetyInfo *SafetyInfo,
                   OptimizationRemarkEmitter *ORE);
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
-                 const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
+                 const Loop *CurLoop, LoopSafetyInfo *SafetyInfo,
                  OptimizationRemarkEmitter *ORE, bool FreeInLoop);
 static bool isSafeToExecuteUnconditionally(Instruction &Inst,
                                            const DominatorTree *DT,
@@ -855,9 +855,15 @@ static Instruction *sinkThroughTriviallyReplacablePHI(
   return New;
 }
 
-static bool canSplitPredecessors(PHINode *PN) {
+static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
   BasicBlock *BB = PN->getParent();
   if (!BB->canSplitPredecessors())
+    return false;
+  // It's not impossible to split EHPad blocks, but if BlockColors already exist
+  // it require updating BlockColors for all offspring blocks accordingly. By
+  // skipping such corner case, we can make updating BlockColors after splitting
+  // predecessor fairly simple.
+  if (!SafetyInfo->BlockColors.empty() && BB->getFirstNonPHI()->isEHPad())
     return false;
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     BasicBlock *BBPred = *PI;
@@ -868,7 +874,8 @@ static bool canSplitPredecessors(PHINode *PN) {
 }
 
 static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
-                                        LoopInfo *LI, const Loop *CurLoop) {
+                                        LoopInfo *LI, const Loop *CurLoop,
+                                        LoopSafetyInfo *SafetyInfo) {
 #ifndef NDEBUG
   SmallVector<BasicBlock *, 32> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
@@ -910,13 +917,21 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
   // LE:
   //   %p = phi [%p1, %LE.split], [%p2, %LE.split2]
   //
+  auto &BlockColors = SafetyInfo->BlockColors;
   SmallSetVector<BasicBlock *, 8> PredBBs(pred_begin(ExitBB), pred_end(ExitBB));
   while (!PredBBs.empty()) {
     BasicBlock *PredBB = *PredBBs.begin();
     assert(CurLoop->contains(PredBB) &&
            "Expect all predecessors are in the loop");
-    if (PN->getBasicBlockIndex(PredBB) >= 0)
-      SplitBlockPredecessors(ExitBB, PredBB, ".split.loop.exit", DT, LI, true);
+    if (PN->getBasicBlockIndex(PredBB) >= 0) {
+      BasicBlock *NewPred = SplitBlockPredecessors(
+          ExitBB, PredBB, ".split.loop.exit", DT, LI, true);
+      // Since we do not allow splitting EH-block with BlockColors in
+      // canSplitPredecessors(), we can simply assign predecessor's color to
+      // the new block.
+      if (!BlockColors.empty())
+        BlockColors[NewPred] = BlockColors[PredBB];
+    }
     PredBBs.remove(PredBB);
   }
 }
@@ -927,7 +942,7 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
 /// position, and may either delete it or move it to outside of the loop.
 ///
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
-                 const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
+                 const Loop *CurLoop, LoopSafetyInfo *SafetyInfo,
                  OptimizationRemarkEmitter *ORE, bool FreeInLoop) {
   DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
   ORE->emit([&]() {
@@ -975,12 +990,12 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     if (isTriviallyReplacablePHI(*PN, I))
       continue;
 
-    if (!canSplitPredecessors(PN))
+    if (!canSplitPredecessors(PN, SafetyInfo))
       return Changed;
 
     // Split predecessors of the PHI so that we can make users trivially
     // replacable.
-    splitPredecessorsOfLoopExit(PN, DT, LI, CurLoop);
+    splitPredecessorsOfLoopExit(PN, DT, LI, CurLoop, SafetyInfo);
 
     // Should rebuild the iterators, as they may be invalidated by
     // splitPredecessorsOfLoopExit().
