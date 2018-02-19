@@ -43,8 +43,8 @@
         "@types/mocha": "^2.2.32"
     },
     "repository": {
-      "type": "svn",
-      "url": "http://llvm.org/svn/llvm-project/clang-tools-extra/trunk/clangd/clients/clangd-vscode/"
+        "type": "svn",
+        "url": "http://llvm.org/svn/llvm-project/clang-tools-extra/trunk/clangd/clients/clangd-vscode/"
     },
     "contributes": {
         "configuration": {
@@ -68,6 +68,10 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Whether or not to send file events to clangd (File created, changed or deleted). This can be disabled for performance consideration."
+                },
+                "clangd.trace": {
+                    "type": "string",
+                    "description": "Names a file that clangd should log a performance trace to, in chrome trace-viewer JSON format."
                 }
             }
         }
