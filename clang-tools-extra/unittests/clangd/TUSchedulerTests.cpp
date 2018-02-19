@@ -54,31 +54,33 @@ TEST_F(TUSchedulerTests, MissingFiles) {
 
   // Assert each operation for missing file is an error (even if it's available
   // in VFS).
-  S.runWithAST(Missing, [&](llvm::Expected<InputsAndAST> AST) {
+  S.runWithAST("", Missing, [&](llvm::Expected<InputsAndAST> AST) {
     ASSERT_FALSE(bool(AST));
     ignoreError(AST.takeError());
   });
-  S.runWithPreamble(Missing, [&](llvm::Expected<InputsAndPreamble> Preamble) {
-    ASSERT_FALSE(bool(Preamble));
-    ignoreError(Preamble.takeError());
-  });
+  S.runWithPreamble("", Missing,
+                    [&](llvm::Expected<InputsAndPreamble> Preamble) {
+                      ASSERT_FALSE(bool(Preamble));
+                      ignoreError(Preamble.takeError());
+                    });
   // remove() shouldn't crash on missing files.
   S.remove(Missing);
 
   // Assert there aren't any errors for added file.
-  S.runWithAST(
-      Added, [&](llvm::Expected<InputsAndAST> AST) { EXPECT_TRUE(bool(AST)); });
-  S.runWithPreamble(Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
+  S.runWithAST("", Added, [&](llvm::Expected<InputsAndAST> AST) {
+    EXPECT_TRUE(bool(AST));
+  });
+  S.runWithPreamble("", Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
     EXPECT_TRUE(bool(Preamble));
   });
   S.remove(Added);
 
   // Assert that all operations fail after removing the file.
-  S.runWithAST(Added, [&](llvm::Expected<InputsAndAST> AST) {
+  S.runWithAST("", Added, [&](llvm::Expected<InputsAndAST> AST) {
     ASSERT_FALSE(bool(AST));
     ignoreError(AST.takeError());
   });
-  S.runWithPreamble(Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
+  S.runWithPreamble("", Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
     ASSERT_FALSE(bool(Preamble));
     ignoreError(Preamble.takeError());
   });
@@ -143,24 +145,27 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
-          S.runWithAST(File, [Inputs, Nonce, &Mut, &TotalASTReads](
-                                 llvm::Expected<InputsAndAST> AST) {
-            EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
+          S.runWithAST("CheckAST", File,
+                       [Inputs, Nonce, &Mut,
+                        &TotalASTReads](llvm::Expected<InputsAndAST> AST) {
+                         EXPECT_THAT(Context::current().get(NonceKey),
+                                     Pointee(Nonce));
 
-            ASSERT_TRUE((bool)AST);
-            EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
-            EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
+                         ASSERT_TRUE((bool)AST);
+                         EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
+                         EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
 
-            std::lock_guard<std::mutex> Lock(Mut);
-            ++TotalASTReads;
-          });
+                         std::lock_guard<std::mutex> Lock(Mut);
+                         ++TotalASTReads;
+                       });
         }
 
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
           S.runWithPreamble(
-              File, [Inputs, Nonce, &Mut, &TotalPreambleReads](
-                        llvm::Expected<InputsAndPreamble> Preamble) {
+              "CheckPreamble", File,
+              [Inputs, Nonce, &Mut, &TotalPreambleReads](
+                  llvm::Expected<InputsAndPreamble> Preamble) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
                 ASSERT_TRUE((bool)Preamble);

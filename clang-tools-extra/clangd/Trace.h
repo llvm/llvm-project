@@ -82,7 +82,7 @@ void log(const llvm::Twine &Name);
 /// SomeJSONExpr is evaluated and copied only if actually needed.
 class Span {
 public:
-  Span(llvm::StringRef Name);
+  Span(llvm::Twine Name);
   ~Span();
 
   /// Mutable metadata, if this span is interested.
