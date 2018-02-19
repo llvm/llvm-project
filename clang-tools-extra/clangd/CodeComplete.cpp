@@ -855,9 +855,12 @@ public:
     CompletionList Output;
     semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(),
                      SemaCCInput, [&] {
-                       if (Recorder.CCSema)
+                       if (Recorder.CCSema) {
                          Output = runWithSema();
-                       else
+                         SPAN_ATTACH(
+                             Tracer, "sema_completion_kind",
+                             getCompletionKindString(Recorder.CCContext.getKind()));
+                       } else
                          log("Code complete: no Sema callback, 0 results");
                      });
 
