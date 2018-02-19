@@ -12,7 +12,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(clang::clangd::Symbol)
@@ -176,11 +175,11 @@ SymbolSlab SymbolsFromYAML(llvm::StringRef YAMLContent) {
   return std::move(Syms).build();
 }
 
-Symbol SymbolFromYAML(llvm::StringRef YAMLContent,
-                      llvm::BumpPtrAllocator &Arena) {
-  llvm::yaml::Input Yin(YAMLContent, &Arena);
+Symbol SymbolFromYAML(llvm::yaml::Input &Input, llvm::BumpPtrAllocator &Arena) {
+  // We could grab Arena out of Input, but it'd be a huge hazard for callers.
+  assert(Input.getContext() == &Arena);
   Symbol S;
-  Yin >> S;
+  Input >> S;
   return S;
 }
 

@@ -391,12 +391,22 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
   } else if (HDivArg)
     getARMHWDivFeatures(D, HDivArg, Args, HDivArg->getValue(), Features);
 
-  // Setting -msoft-float effectively disables NEON because of the GCC
-  // implementation, although the same isn't true of VFP or VFP3.
+  // Setting -msoft-float/-mfloat-abi=soft effectively disables the FPU (GCC
+  // ignores the -mfpu options in this case).
+  // Note that the ABI can also be set implicitly by the target selected.
   if (ABI == arm::FloatABI::Soft) {
-    Features.push_back("-neon");
-    // Also need to explicitly disable features which imply NEON.
-    Features.push_back("-crypto");
+    llvm::ARM::getFPUFeatures(llvm::ARM::FK_NONE, Features);
+
+    // Disable hardware FP features which have been enabled.
+    // FIXME: Disabling vfp2 and neon should be enough as all the other
+    //        features are dependant on these 2 features in LLVM. However
+    //        there is currently no easy way to test this in clang, so for
+    //        now just be explicit and disable all known dependent features
+    //        as well.
+    for (std::string Feature : {"vfp2", "vfp3", "vfp4", "fp-armv8", "fullfp16",
+                                "neon", "crypto", "dotprod"})
+      if (std::find(std::begin(Features), std::end(Features), "+" + Feature) != std::end(Features))
+        Features.push_back(Args.MakeArgString("-" + Feature));
   }
 
   // En/disable crc code generation.

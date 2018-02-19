@@ -16597,8 +16597,8 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   assert((Opcode == X86ISD::PACKSS || Opcode == X86ISD::PACKUS) &&
          "Unexpected PACK opcode");
 
-  // Requires SSE2 but AVX512 has fast truncate.
-  if (!Subtarget.hasSSE2() || Subtarget.hasAVX512())
+  // Requires SSE2 but AVX512 has fast vector truncate.
+  if (!Subtarget.hasSSE2() || Subtarget.hasAVX512() || !DstVT.isVector())
     return SDValue();
 
   EVT SrcVT = In.getValueType();
@@ -16607,24 +16607,22 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   if (SrcVT == DstVT)
     return In;
 
-  // We only support vector truncation to 128bits or greater from a
-  // 256bits or greater source.
+  // We only support vector truncation to 64bits or greater from a
+  // 128bits or greater source.
   unsigned DstSizeInBits = DstVT.getSizeInBits();
   unsigned SrcSizeInBits = SrcVT.getSizeInBits();
-  if ((DstSizeInBits % 128) != 0 || (SrcSizeInBits % 256) != 0)
+  if ((DstSizeInBits % 64) != 0 || (SrcSizeInBits % 128) != 0)
+    return SDValue();
+
+  unsigned NumElems = SrcVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumElems))
     return SDValue();
 
   LLVMContext &Ctx = *DAG.getContext();
-  unsigned NumElems = SrcVT.getVectorNumElements();
   assert(DstVT.getVectorNumElements() == NumElems && "Illegal truncation");
   assert(SrcSizeInBits > DstSizeInBits && "Illegal truncation");
 
   EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
-
-  // Extract lower/upper subvectors.
-  unsigned NumSubElts = NumElems / 2;
-  SDValue Lo = extractSubVector(In, 0 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
-  SDValue Hi = extractSubVector(In, 1 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
 
   // Pack to the largest type possible:
   // vXi64/vXi32 -> PACK*SDW and vXi16 -> PACK*SWB.
@@ -16635,12 +16633,27 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     OutVT = MVT::i16;
   }
 
+  // 128bit -> 64bit truncate - PACK 128-bit src in the lower subvector.
+  if (SrcVT.is128BitVector()) {
+    InVT = EVT::getVectorVT(Ctx, InVT, 128 / InVT.getSizeInBits());
+    OutVT = EVT::getVectorVT(Ctx, OutVT, 128 / OutVT.getSizeInBits());
+    SDValue Res = DAG.getNode(Opcode, DL, OutVT,
+                              DAG.getBitcast(InVT, In), DAG.getUNDEF(InVT));
+    Res = extractSubVector(Res, 0, DAG, DL, 64);
+    return DAG.getBitcast(DstVT, Res);
+  }
+
+  // Extract lower/upper subvectors.
+  unsigned NumSubElts = NumElems / 2;
+  SDValue Lo = extractSubVector(In, 0 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
+  SDValue Hi = extractSubVector(In, 1 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
+
   unsigned SubSizeInBits = SrcSizeInBits / 2;
   InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
   OutVT = EVT::getVectorVT(Ctx, OutVT, SubSizeInBits / OutVT.getSizeInBits());
 
   // 256bit -> 128bit truncate - PACK lower/upper 128-bit subvectors.
-  if (SrcVT.is256BitVector()) {
+  if (SrcVT.is256BitVector() && DstVT.is128BitVector()) {
     Lo = DAG.getBitcast(InVT, Lo);
     Hi = DAG.getBitcast(InVT, Hi);
     SDValue Res = DAG.getNode(Opcode, DL, OutVT, Lo, Hi);
@@ -16669,7 +16682,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   }
 
   // Recursively pack lower/upper subvectors, concat result and pack again.
-  assert(SrcSizeInBits >= 512 && "Expected 512-bit vector or greater");
+  assert(SrcSizeInBits >= 256 && "Expected 256-bit vector or greater");
   EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumSubElts);
   Lo = truncateVectorWithPACK(Opcode, PackedVT, Lo, DL, DAG, Subtarget);
   Hi = truncateVectorWithPACK(Opcode, PackedVT, Hi, DL, DAG, Subtarget);

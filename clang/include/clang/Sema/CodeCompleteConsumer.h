@@ -351,6 +351,9 @@ public:
   }
 };
 
+/// \brief Get string representation of \p Kind, useful for for debugging.
+llvm::StringRef getCompletionKindString(enum CodeCompletionContext::Kind Kind);
+
 /// \brief A "string" used to describe how code completion can
 /// be performed for an entity.
 ///

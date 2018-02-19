@@ -90,12 +90,15 @@ generateNumSymbols(int Begin, int End,
 }
 
 std::vector<std::string> match(const SymbolIndex &I,
-                               const FuzzyFindRequest &Req) {
+                               const FuzzyFindRequest &Req,
+                               bool *Incomplete = nullptr) {
   std::vector<std::string> Matches;
-  I.fuzzyFind(Req, [&](const Symbol &Sym) {
+  bool IsIncomplete = I.fuzzyFind(Req, [&](const Symbol &Sym) {
     Matches.push_back(
         (Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name).str());
   });
+  if (Incomplete)
+    *Incomplete = IsIncomplete;
   return Matches;
 }
 
@@ -144,8 +147,10 @@ TEST(MemIndexTest, MemIndexLimitedNumMatches) {
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.MaxCandidateCount = 3;
-  auto Matches = match(I, Req);
+  bool Incomplete;
+  auto Matches = match(I, Req, &Incomplete);
   EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
+  EXPECT_TRUE(Incomplete);
 }
 
 TEST(MemIndexTest, FuzzyMatch) {

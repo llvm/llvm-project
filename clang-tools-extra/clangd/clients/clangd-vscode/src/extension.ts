@@ -16,11 +16,16 @@ function getConfig<T>(option: string, defaultValue?: any) : T {
  *  your extension is activated the very first time the command is executed
  */
 export function activate(context: vscode.ExtensionContext) {
-    const clangdPath = getConfig<string>('path');
-    const clangdArgs = getConfig<string[]>('arguments');
     const syncFileEvents = getConfig<boolean>('syncFileEvents', true);
 
-    const serverOptions: vscodelc.ServerOptions = { command: clangdPath, args: clangdArgs };
+    const clangd: vscodelc.Executable = {
+        command: getConfig<string>('path'),
+        args: getConfig<string[]>('arguments')
+    };
+    const traceFile = getConfig<string>('trace');
+    if (traceFile != null)
+        clangd.options = {env: {CLANGD_TRACE: traceFile}};
+    const serverOptions: vscodelc.ServerOptions = clangd;
 
     const filePattern: string = '**/*.{' +
       ['cpp', 'c', 'cc', 'cxx', 'c++', 'm', 'mm', 'h', 'hh', 'hpp', 'hxx', 'inc'].join() + '}';

@@ -20,7 +20,6 @@
 #include "index/SymbolYAML.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/CommonOptionsParser.h"
@@ -31,6 +30,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm;
 using namespace clang::tooling;
@@ -117,7 +117,8 @@ SymbolSlab mergeSymbols(tooling::ToolResults *Results) {
   Symbol::Details Scratch;
   Results->forEachResult([&](llvm::StringRef Key, llvm::StringRef Value) {
     Arena.Reset();
-    auto Sym = clang::clangd::SymbolFromYAML(Value, Arena);
+    llvm::yaml::Input Yin(Value, &Arena);
+    auto Sym = clang::clangd::SymbolFromYAML(Yin, Arena);
     clang::clangd::SymbolID ID;
     Key >> ID;
     if (const auto *Existing = UniqueSymbols.find(ID))

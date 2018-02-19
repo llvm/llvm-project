@@ -155,8 +155,8 @@ private:
                   IntrusiveRefCntPtr<vfs::FileSystem> FS,
                   llvm::MemoryBuffer &ContentsBuffer) const;
 
-  Path FileName;
-  bool StorePreamblesInMemory;
+  const Path FileName;
+  const bool StorePreamblesInMemory;
 
   /// The last parsed AST.
   llvm::Optional<ParsedAST> AST;

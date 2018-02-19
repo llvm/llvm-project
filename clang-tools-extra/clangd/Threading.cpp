@@ -34,7 +34,8 @@ bool AsyncTaskRunner::wait(Deadline D) const {
                       [&] { return InFlightTasks == 0; });
 }
 
-void AsyncTaskRunner::runAsync(UniqueFunction<void()> Action) {
+void AsyncTaskRunner::runAsync(llvm::Twine Name,
+                               UniqueFunction<void()> Action) {
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     ++InFlightTasks;
@@ -51,13 +52,14 @@ void AsyncTaskRunner::runAsync(UniqueFunction<void()> Action) {
   });
 
   std::thread(
-      [](decltype(Action) Action, decltype(CleanupTask)) {
+      [](std::string Name, decltype(Action) Action, decltype(CleanupTask)) {
+        llvm::set_thread_name(Name);
         Action();
         // Make sure function stored by Action is destroyed before CleanupTask
         // is run.
         Action = nullptr;
       },
-      std::move(Action), std::move(CleanupTask))
+      Name.str(), std::move(Action), std::move(CleanupTask))
       .detach();
 }
 
