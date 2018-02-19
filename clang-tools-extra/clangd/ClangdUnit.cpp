@@ -34,6 +34,13 @@ using namespace clang;
 
 namespace {
 
+bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
+                             const tooling::CompileCommand &RHS) {
+  // We don't check for Output, it should not matter to clangd.
+  return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
+         llvm::makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
+}
+
 template <class T> std::size_t getUsedBytes(const std::vector<T> &Vec) {
   return Vec.capacity() * sizeof(T);
 }
@@ -417,7 +424,7 @@ CppFile::rebuild(ParseInputs &&Inputs) {
 
   // Compute updated Preamble.
   std::shared_ptr<const PreambleData> NewPreamble =
-      rebuildPreamble(*CI, Inputs.FS, *ContentsBuffer);
+      rebuildPreamble(*CI, Inputs.CompileCommand, Inputs.FS, *ContentsBuffer);
 
   // Remove current AST to avoid wasting memory.
   AST = llvm::None;
@@ -445,6 +452,7 @@ CppFile::rebuild(ParseInputs &&Inputs) {
   }
 
   // Write the results of rebuild into class fields.
+  Command = std::move(Inputs.CompileCommand);
   Preamble = std::move(NewPreamble);
   AST = std::move(NewAST);
   return Diagnostics;
@@ -471,11 +479,12 @@ std::size_t CppFile::getUsedBytes() const {
 
 std::shared_ptr<const PreambleData>
 CppFile::rebuildPreamble(CompilerInvocation &CI,
+                         const tooling::CompileCommand &Command,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS,
                          llvm::MemoryBuffer &ContentsBuffer) const {
   const auto &OldPreamble = this->Preamble;
   auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), &ContentsBuffer, 0);
-  if (OldPreamble &&
+  if (OldPreamble && compileCommandsAreEqual(this->Command, Command) &&
       OldPreamble->Preamble.CanReuse(CI, &ContentsBuffer, Bounds, FS.get())) {
     log("Reusing preamble for file " + Twine(FileName));
     return OldPreamble;

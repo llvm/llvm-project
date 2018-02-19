@@ -152,12 +152,15 @@ private:
   /// This method is const to ensure we don't incidentally modify any fields.
   std::shared_ptr<const PreambleData>
   rebuildPreamble(CompilerInvocation &CI,
+                  const tooling::CompileCommand &Command,
                   IntrusiveRefCntPtr<vfs::FileSystem> FS,
                   llvm::MemoryBuffer &ContentsBuffer) const;
 
   const Path FileName;
   const bool StorePreamblesInMemory;
 
+  /// The last CompileCommand used to build AST and Preamble.
+  tooling::CompileCommand Command;
   /// The last parsed AST.
   llvm::Optional<ParsedAST> AST;
   /// The last built Preamble.
