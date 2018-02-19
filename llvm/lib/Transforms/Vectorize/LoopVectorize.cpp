@@ -1542,9 +1542,10 @@ public:
       const TargetTransformInfo *TTI,
       std::function<const LoopAccessInfo &(Loop &)> *GetLAA, LoopInfo *LI,
       OptimizationRemarkEmitter *ORE, LoopVectorizationRequirements *R,
-      LoopVectorizeHints *H)
+      LoopVectorizeHints *H, DemandedBits *DB, AssumptionCache *AC)
       : TheLoop(L), PSE(PSE), TLI(TLI), TTI(TTI), DT(DT), GetLAA(GetLAA),
-        ORE(ORE), InterleaveInfo(PSE, L, DT, LI), Requirements(R), Hints(H) {}
+        ORE(ORE), InterleaveInfo(PSE, L, DT, LI), Requirements(R), Hints(H),
+        DB(DB), AC(AC) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -1832,6 +1833,14 @@ private:
 
   /// Used to emit an analysis of any legality issues.
   LoopVectorizeHints *Hints;
+
+  /// The demanded bits analsyis is used to compute the minimum type size in
+  /// which a reduction can be computed.
+  DemandedBits *DB;
+
+  /// The assumption cache analysis is used to compute the minimum type size in
+  /// which a reduction can be computed.
+  AssumptionCache *AC;
 
   /// While vectorizing these instructions we have to generate a
   /// call to the appropriate masked intrinsic
@@ -5300,7 +5309,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         }
 
         RecurrenceDescriptor RedDes;
-        if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes)) {
+        if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC,
+                                                 DT)) {
           if (RedDes.hasUnsafeAlgebra())
             Requirements->addUnsafeAlgebraInst(RedDes.getUnsafeAlgebraInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
@@ -8514,7 +8524,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements(*ORE);
   LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, GetLAA, LI, ORE,
-                                &Requirements, &Hints);
+                                &Requirements, &Hints, DB, AC);
   if (!LVL.canVectorize()) {
     DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     emitMissedWarning(F, L, Hints, ORE);
