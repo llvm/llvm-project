@@ -371,8 +371,8 @@ void SectionWithStrTab::initialize(SectionTableRef SecTable) {
 void SectionWithStrTab::finalize() { this->Link = StrTab->Index; }
 
 void GnuDebugLinkSection::init(StringRef File, StringRef Data) {
-  FileName = sys::path::stem(File);
-  // The format for the .gnu_debuglink starts with the stemmed file name and is
+  FileName = sys::path::filename(File);
+  // The format for the .gnu_debuglink starts with the file name and is
   // followed by a null terminator and then the CRC32 of the file. The CRC32
   // should be 4 byte aligned. So we add the FileName size, a 1 for the null
   // byte, and then finally push the size to alignment and add 4.

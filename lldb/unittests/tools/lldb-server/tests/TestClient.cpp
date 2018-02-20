@@ -150,17 +150,8 @@ const llgs_tests::ProcessInfo &TestClient::GetProcessInfo() {
   return *m_process_info;
 }
 
-Optional<JThreadsInfo> TestClient::GetJThreadsInfo() {
-  std::string response;
-  if (SendMessage("jThreadsInfo", response))
-    return llvm::None;
-  auto creation = JThreadsInfo::Create(response, m_process_info->GetEndian());
-  if (auto create_error = creation.takeError()) {
-    GTEST_LOG_(ERROR) << toString(std::move(create_error));
-    return llvm::None;
-  }
-
-  return std::move(*creation);
+Expected<JThreadsInfo> TestClient::GetJThreadsInfo() {
+  return SendMessage<JThreadsInfo>("jThreadsInfo", m_register_infos);
 }
 
 const StopReply &TestClient::GetLatestStopReply() {
@@ -247,7 +238,8 @@ Error TestClient::Continue(StringRef message) {
   std::string response;
   if (Error E = SendMessage(message, response))
     return E;
-  auto creation = StopReply::create(response, m_process_info->GetEndian());
+  auto creation = StopReply::create(response, m_process_info->GetEndian(),
+                                    m_register_infos);
   if (Error E = creation.takeError())
     return E;
 

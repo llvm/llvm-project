@@ -31,12 +31,6 @@ inline bool operator!=(const llvm::wasm::WasmSignature &LHS,
 namespace lld {
 namespace wasm {
 
-struct OutputRelocation {
-  llvm::wasm::WasmRelocation Reloc;
-  uint32_t NewIndex;
-  uint32_t Value;
-};
-
 void debugWrite(uint64_t Offset, const Twine &Msg);
 
 void writeUleb128(raw_ostream &OS, uint32_t Number, StringRef Msg);
@@ -66,8 +60,6 @@ void writeGlobal(raw_ostream &OS, const llvm::wasm::WasmGlobal &Global);
 void writeImport(raw_ostream &OS, const llvm::wasm::WasmImport &Import);
 
 void writeExport(raw_ostream &OS, const llvm::wasm::WasmExport &Export);
-
-void writeReloc(raw_ostream &OS, const OutputRelocation &Reloc);
 
 } // namespace wasm
 

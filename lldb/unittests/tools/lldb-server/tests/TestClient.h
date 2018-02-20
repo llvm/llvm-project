@@ -59,7 +59,7 @@ public:
   llvm::Error ContinueAll();
   llvm::Error ContinueThread(unsigned long thread_id);
   const ProcessInfo &GetProcessInfo();
-  llvm::Optional<JThreadsInfo> GetJThreadsInfo();
+  llvm::Expected<JThreadsInfo> GetJThreadsInfo();
   const StopReply &GetLatestStopReply();
   template <typename T> llvm::Expected<const T &> GetLatestStopReplyAs() {
     assert(m_stop_reply);
@@ -75,8 +75,9 @@ public:
   llvm::Error SendMessage(llvm::StringRef message, std::string &response_string,
                           PacketResult expected_result);
 
-  template <typename P>
-  llvm::Expected<typename P::result_type> SendMessage(llvm::StringRef Message);
+  template <typename P, typename... CreateArgs>
+  llvm::Expected<typename P::result_type> SendMessage(llvm::StringRef Message,
+                                                      CreateArgs &&... Args);
   unsigned int GetPcRegisterId();
 
 private:
@@ -97,13 +98,13 @@ private:
   unsigned int m_pc_register = LLDB_INVALID_REGNUM;
 };
 
-template <typename P>
+template <typename P, typename... CreateArgs>
 llvm::Expected<typename P::result_type>
-TestClient::SendMessage(llvm::StringRef Message) {
+TestClient::SendMessage(llvm::StringRef Message, CreateArgs &&... Args) {
   std::string ResponseText;
   if (llvm::Error E = SendMessage(Message, ResponseText))
     return std::move(E);
-  return P::create(ResponseText);
+  return P::create(ResponseText, std::forward<CreateArgs>(Args)...);
 }
 
 } // namespace llgs_tests

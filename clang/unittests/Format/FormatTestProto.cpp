@@ -168,6 +168,16 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "    aaaaaaaaaaaaaaaa: true\n"
                "  }\n"
                "];");
+  verifyFormat("extensions 20 [(proto2.type) = 'Aaaa.bbbb'];");
+  verifyFormat("extensions 20\n"
+               "    [(proto3.type) = 'Aaaa.bbbb', (aaa.Aaa) = 'aaa.bbb'];");
+  verifyFormat("extensions 123 [\n"
+               "  (aaa) = aaaa,\n"
+               "  (bbbbbbbbbbbbbbbbbbbbbbbbbb) = {\n"
+               "    aaaaaaaaaaaaaaaaa: true,\n"
+               "    aaaaaaaaaaaaaaaa: true\n"
+               "  }\n"
+               "];");
 }
 
 TEST_F(FormatTestProto, DoesntWrapFileOptions) {

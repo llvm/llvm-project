@@ -16762,6 +16762,10 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
     In = DAG.getNode(ISD::SHL, DL, InVT, In,
                      DAG.getConstant(ShiftInx, DL, InVT));
   }
+  // If we have DQI, emit a pattern that will be iseled as vpmovq2m/vpmovd2m.
+  if (Subtarget.hasDQI())
+    return DAG.getNode(X86ISD::CMPM, DL, VT, DAG.getConstant(0, DL, InVT),
+                       In, DAG.getConstant(6, DL, MVT::i8));
   return DAG.getNode(X86ISD::CMPM, DL, VT, In,
                      getZeroVector(InVT, Subtarget, DAG, DL),
                      DAG.getConstant(4, DL, MVT::i8));
@@ -17830,6 +17834,14 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
          "Cannot set masked compare for this operation");
 
   ISD::CondCode SetCCOpcode = cast<CondCodeSDNode>(CC)->get();
+
+  // If this is a seteq make sure any build vectors of all zeros are on the RHS.
+  // This helps with vptestm matching.
+  // TODO: Should we just canonicalize the setcc during DAG combine?
+  if ((SetCCOpcode == ISD::SETEQ || SetCCOpcode == ISD::SETNE) &&
+      ISD::isBuildVectorAllZeros(Op0.getNode()))
+    std::swap(Op0, Op1);
+
   bool Swap = false;
   unsigned SSECC;
   switch (SetCCOpcode) {
@@ -17840,8 +17852,8 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
   case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETUGT:
   case ISD::SETGT:  SSECC = 6; break;
-  case ISD::SETUGE: SSECC = 5; break;
-  case ISD::SETGE:  Swap = true; LLVM_FALLTHROUGH;
+  case ISD::SETUGE:
+  case ISD::SETGE:  SSECC = 5; break;
   case ISD::SETULE:
   case ISD::SETLE:  SSECC = 2; break;
   }

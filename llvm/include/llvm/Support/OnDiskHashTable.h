@@ -95,7 +95,8 @@ private:
 
   /// \brief Resize the hash table, moving the old entries into the new buckets.
   void resize(size_t NewSize) {
-    Bucket *NewBuckets = (Bucket *)std::calloc(NewSize, sizeof(Bucket));
+    Bucket *NewBuckets = static_cast<Bucket *>(
+        safe_calloc(NewSize, sizeof(Bucket)));
     // Populate NewBuckets with the old entries.
     for (size_t I = 0; I < NumBuckets; ++I)
       for (Item *E = Buckets[I].Head; E;) {
@@ -226,7 +227,7 @@ public:
     NumBuckets = 64;
     // Note that we do not need to run the constructors of the individual
     // Bucket objects since 'calloc' returns bytes that are all 0.
-    Buckets = (Bucket *)std::calloc(NumBuckets, sizeof(Bucket));
+    Buckets = static_cast<Bucket *>(safe_calloc(NumBuckets, sizeof(Bucket)));
   }
 
   ~OnDiskChainedHashTableGenerator() { std::free(Buckets); }

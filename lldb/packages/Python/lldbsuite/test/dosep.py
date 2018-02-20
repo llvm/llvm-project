@@ -477,22 +477,20 @@ def process_file(test_file, dotest_argv, inferior_pid_events):
 
     import __main__ as main
     global dotest_options
-    if dotest_options.p and not re.search(dotest_options.p, base_name):
-        return
+    if not dotest_options.p or re.search(dotest_options.p, base_name):
+        script_file = main.__file__
+        command = ([sys.executable, script_file] +
+                   dotest_argv +
+                   ["-S", dotest_options.session_file_format] +
+                   ["--inferior", "-p", base_name, os.path.dirname(test_file)])
 
-    script_file = main.__file__
-    command = ([sys.executable, script_file] +
-               dotest_argv +
-               ["-S", dotest_options.session_file_format] +
-               ["--inferior", "-p", base_name, os.path.dirname(test_file)])
+        timeout_name = os.path.basename(os.path.splitext(base_name)[0]).upper()
 
-    timeout_name = os.path.basename(os.path.splitext(base_name)[0]).upper()
+        timeout = (os.getenv("LLDB_%s_TIMEOUT" % timeout_name) or
+                   getDefaultTimeout(dotest_options.lldb_platform_name))
 
-    timeout = (os.getenv("LLDB_%s_TIMEOUT" % timeout_name) or
-               getDefaultTimeout(dotest_options.lldb_platform_name))
-
-    results.append(call_with_timeout(
-        command, timeout, base_name, inferior_pid_events, test_file))
+        results.append(call_with_timeout(
+            command, timeout, base_name, inferior_pid_events, test_file))
 
     # result = (name, status, passes, failures, unexpected_successes)
     timed_out = [name for name, status, _, _, _ in results
@@ -1526,31 +1524,15 @@ def rerun_tests(test_subdir, tests_for_rerun, dotest_argv, session_dir,
 
     # Sort rerun files into subdirectories.
     print("\nRerunning the following files:")
-    rerun_files_by_subdir = {}
+    rerun_files = []
     for test_filename in tests_for_rerun.keys():
         # Print the file we'll be rerunning
         test_relative_path = os.path.relpath(
             test_filename, lldbsuite.lldb_test_root)
         print("  {}".format(test_relative_path))
 
-        # Store test filenames by subdir.
-        test_dir = os.path.dirname(test_filename)
-        test_basename = os.path.basename(test_filename)
-        if test_dir in rerun_files_by_subdir:
-            rerun_files_by_subdir[test_dir].append(
-                (test_basename, test_filename))
-        else:
-            rerun_files_by_subdir[test_dir] = [(test_basename, test_filename)]
+        rerun_files.append(test_filename)
 
-    # Break rerun work up by subdirectory.  We do this since
-    # we have an invariant that states only one test file can
-    # be run at a time in any given subdirectory (related to
-    # rules around built inferior test program lifecycle).
-    rerun_work = []
-    for files_by_subdir in rerun_files_by_subdir.values():
-        rerun_work.append((test_subdir, files_by_subdir))
-
-    # Run the work with the serial runner.
     # Do not update legacy counts, I am getting rid of
     # them so no point adding complicated merge logic here.
     rerun_thread_count = 1
@@ -1569,7 +1551,7 @@ def rerun_tests(test_subdir, tests_for_rerun, dotest_argv, session_dir,
             "function named '{}'".format(rerun_runner_name))
 
     walk_and_invoke(
-        rerun_work,
+        rerun_files,
         dotest_argv,
         rerun_thread_count,
         rerun_runner_func)

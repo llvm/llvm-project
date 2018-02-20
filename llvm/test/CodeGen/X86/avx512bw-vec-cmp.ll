@@ -26,7 +26,7 @@ define <64 x i8> @test2(<64 x i8> %x, <64 x i8> %y, <64 x i8> %x1) nounwind {
 define <32 x i16> @test3(<32 x i16> %x, <32 x i16> %y, <32 x i16> %x1) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmplew %zmm0, %zmm1, %k1
+; CHECK-NEXT:    vpcmpnltw %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpblendmw %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp sge <32 x i16> %x, %y
@@ -111,7 +111,7 @@ define <64 x i8> @test10(<64 x i8> %x, <64 x i8> %y, <64 x i8> %x1, <64 x i8> %y
 ; CHECK-LABEL: test10:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleb %zmm1, %zmm0, %k1
-; CHECK-NEXT:    vpcmpleb %zmm2, %zmm3, %k1 {%k1}
+; CHECK-NEXT:    vpcmpnltb %zmm3, %zmm2, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmb %zmm0, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask1 = icmp sge <64 x i8> %x1, %y1
@@ -139,7 +139,7 @@ define <64 x i8> @test11(<64 x i8> %x, <64 x i8>* %y.ptr, <64 x i8> %x1, <64 x i
 define <32 x i16> @test12(<32 x i16> %x, <32 x i16>* %y.ptr, <32 x i16> %x1, <32 x i16> %y1) nounwind {
 ; CHECK-LABEL: test12:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmplew %zmm1, %zmm2, %k1
+; CHECK-NEXT:    vpcmpnltw %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpcmpleuw (%rdi), %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq

@@ -549,13 +549,9 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       }
       DEBUG(dbgs() << "********** MI Scheduling **********\n");
       DEBUG(dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
-                   << MBB->getName() << "\n  From: " << *I << '\n'
-                   << "    To: ";
-            if (RegionEnd != MBB->end()) {
-              dbgs() << *RegionEnd << '\n';
-            } else {
-              dbgs() << "End";
-            }
+                   << MBB->getName() << "\n  From: " << *I << "    To: ";
+            if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
+            else dbgs() << "End";
             dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
@@ -1137,7 +1133,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
         DEBUG(
           dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
                  << printReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
-                 << ' ' << *SU.getInstr() << '\n';
+                 << ' ' << *SU.getInstr();
           dbgs() << "              to ";
           PDiff.dump(*TRI);
         );
@@ -1174,7 +1170,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
             PDiff.addPressureChange(Reg, true, &MRI);
             DEBUG(
               dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
-                     << *SU->getInstr() << '\n';
+                     << *SU->getInstr();
               dbgs() << "              to ";
               PDiff.dump(*TRI);
             );
@@ -3338,8 +3334,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   IsTopNode = true;
   Top.removeReady(SU);
 
-  DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") " << *SU->getInstr()
-               << '\n');
+  DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") " << *SU->getInstr());
   return SU;
 }
 

@@ -763,3 +763,11 @@ def skipUnlessAddressSanitizer(func):
             return "Compiler cannot compile with -fsanitize=address"
         return None
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
+
+def skipIfXmlSupportMissing(func):
+    config = lldb.SBDebugger.GetBuildConfiguration()
+    xml = config.GetValueForKey("xml")
+
+    fail_value = True # More likely to notice if something goes wrong
+    have_xml = xml.GetValueForKey("value").GetBooleanValue(fail_value)
+    return unittest2.skipIf(not have_xml, "requires xml support")(func)

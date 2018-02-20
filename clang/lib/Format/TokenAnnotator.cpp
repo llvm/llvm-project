@@ -375,6 +375,10 @@ private:
         //   (aaa) = aaa
         // ];
         //
+        // extensions 123 [
+        //   (aaa) = aaa
+        // ];
+        //
         // or text proto extensions (in options):
         //
         // option (Aaa.options) = {
@@ -394,6 +398,8 @@ private:
         Left->Type = TT_ArrayInitializerLSquare;
         if (!Left->endsSequence(tok::l_square, tok::numeric_constant,
                                 tok::equal) &&
+            !Left->endsSequence(tok::l_square, tok::numeric_constant,
+                                tok::identifier) &&
             !Left->endsSequence(tok::l_square, tok::colon, TT_SelectorName)) {
           Left->Type = TT_ProtoExtensionLSquare;
           BindingIncrease = 10;

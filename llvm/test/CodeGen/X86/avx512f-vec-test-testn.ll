@@ -17,6 +17,22 @@ entry:
   ret i8 %1
 }
 
+; Similar to the above, but the compare is reversed to have the zeros on the LHS
+define zeroext i8 @TEST_mm512_test_epi64_mask_2(<8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
+; CHECK-LABEL: TEST_mm512_test_epi64_mask_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vptestmq %zmm0, %zmm1, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %and.i.i = and <8 x i64> %__B, %__A
+  %0 = icmp ne <8 x i64> zeroinitializer, %and.i.i
+  %1 = bitcast <8 x i1> %0 to i8
+  ret i8 %1
+}
+
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i16 @TEST_mm512_test_epi32_mask(<8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm512_test_epi32_mask:
@@ -85,6 +101,22 @@ define zeroext i8 @TEST_mm512_testn_epi64_mask(<8 x i64> %__A, <8 x i64> %__B) l
 entry:
   %and.i.i = and <8 x i64> %__B, %__A
   %0 = icmp eq <8 x i64> %and.i.i, zeroinitializer
+  %1 = bitcast <8 x i1> %0 to i8
+  ret i8 %1
+}
+
+; Similar to the above, but the compare is reversed to have the zeros on the LHS
+define zeroext i8 @TEST_mm512_testn_epi64_mask_2(<8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
+; CHECK-LABEL: TEST_mm512_testn_epi64_mask_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm1, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %and.i.i = and <8 x i64> %__B, %__A
+  %0 = icmp eq <8 x i64> zeroinitializer, %and.i.i
   %1 = bitcast <8 x i1> %0 to i8
   ret i8 %1
 }

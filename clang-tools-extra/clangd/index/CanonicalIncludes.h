@@ -23,6 +23,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Regex.h"
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,7 @@ namespace clangd {
 
 /// Maps a definition location onto an #include file, based on a set of filename
 /// rules.
+/// Only const methods (i.e. mapHeader) in this class are thread safe.
 class CanonicalIncludes {
 public:
   CanonicalIncludes() = default;
@@ -53,6 +55,8 @@ private:
   // arbitrary regexes.
   mutable std::vector<std::pair<llvm::Regex, std::string>>
       RegexHeaderMappingTable;
+  // Guards Regex matching as it's not thread-safe.
+  mutable std::mutex RegexMutex;
 };
 
 /// Returns a CommentHandler that parses pragma comment on include files to
