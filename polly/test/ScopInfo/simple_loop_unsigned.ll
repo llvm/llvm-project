@@ -10,7 +10,7 @@
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT: [N] -> {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT: [N] -> {  : 1 = 0 }
+; CHECK-NEXT: [N] -> {  : false }
 ;
 ; CHECK:              Domain :=
 ; CHECK-NEXT:             [N] -> { Stmt_bb[i0] : 0 <= i0 < N; Stmt_bb[0] : N = 0 };

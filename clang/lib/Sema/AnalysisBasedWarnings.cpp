@@ -366,7 +366,6 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
     return;
   if (BodyCFG->getExit().pred_empty())
     return;
-  SourceLocation OpLoc;
   visitReachableThrows(BodyCFG, [&](const CXXThrowExpr *Throw, CFGBlock &Block) {
     if (throwEscapes(S, Throw, Block, BodyCFG))
       EmitDiagForCXXThrowInNonThrowingFunc(S, Throw->getThrowLoc(), FD);

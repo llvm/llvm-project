@@ -24,7 +24,7 @@ __isl_give isl_reordering *isl_parameter_alignment_reordering(
 __isl_give isl_reordering *isl_reordering_copy(__isl_keep isl_reordering *exp);
 void *isl_reordering_free(__isl_take isl_reordering *exp);
 __isl_give isl_reordering *isl_reordering_extend_space(
-	__isl_take isl_reordering *exp, __isl_take isl_space *dim);
+	__isl_take isl_reordering *exp, __isl_take isl_space *space);
 __isl_give isl_reordering *isl_reordering_extend(__isl_take isl_reordering *exp,
 	unsigned extra);
 

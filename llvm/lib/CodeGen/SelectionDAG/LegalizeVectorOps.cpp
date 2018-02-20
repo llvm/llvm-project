@@ -991,7 +991,7 @@ SDValue VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op) {
   SDValue HalfWordMask = DAG.getConstant(HWMask, DL, VT);
 
   // Two to the power of half-word-size.
-  SDValue TWOHW = DAG.getConstantFP(1 << (BW / 2), DL, Op.getValueType());
+  SDValue TWOHW = DAG.getConstantFP(1ULL << (BW / 2), DL, Op.getValueType());
 
   // Clear upper part of LO, lower HI
   SDValue HI = DAG.getNode(ISD::SRL, DL, VT, Op.getOperand(0), HalfWord);

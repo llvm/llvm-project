@@ -1876,15 +1876,9 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx2_pmul_hr_sw : GCCBuiltin<"__builtin_ia32_pmulhrsw256">,
               Intrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
                          llvm_v16i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx512_mask_pmul_hr_sw_128 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
-                     llvm_v8i16_ty, llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmul_hr_sw_256 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty,
-                     llvm_v16i16_ty, llvm_i16_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmul_hr_sw_512 : GCCBuiltin<"__builtin_ia32_pmulhrsw512_mask">,
-              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty,
-                     llvm_v32i16_ty, llvm_i32_ty], [IntrNoMem]>;
+  def int_x86_avx512_pmul_hr_sw_512 : GCCBuiltin<"__builtin_ia32_pmulhrsw512">,
+              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
+                         llvm_v32i16_ty], [IntrNoMem, Commutative]>;
 }
 
 // Vector blend
@@ -4802,24 +4796,12 @@ let TargetPrefix = "x86" in {
               Intrinsic<[llvm_v8i64_ty], [llvm_v16i32_ty, llvm_v16i32_ty], [IntrNoMem]>;
   def int_x86_avx512_pmul_dq_512 : GCCBuiltin<"__builtin_ia32_pmuldq512">,
               Intrinsic<[llvm_v8i64_ty], [llvm_v16i32_ty, llvm_v16i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmulhu_w_512 : GCCBuiltin<"__builtin_ia32_pmulhuw512_mask">,
-              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty,
-                     llvm_v32i16_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmulh_w_512 : GCCBuiltin<"__builtin_ia32_pmulhw512_mask">,
-              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty,
-                     llvm_v32i16_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmulhu_w_128 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
-                     llvm_v8i16_ty, llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmulhu_w_256 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty,
-                     llvm_v16i16_ty, llvm_i16_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmulh_w_128 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
-                     llvm_v8i16_ty, llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_pmulh_w_256 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty,
-                     llvm_v16i16_ty, llvm_i16_ty], [IntrNoMem]>;
+  def int_x86_avx512_pmulhu_w_512 : GCCBuiltin<"__builtin_ia32_pmulhuw512">,
+              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
+                         llvm_v32i16_ty], [IntrNoMem, Commutative]>;
+  def int_x86_avx512_pmulh_w_512 : GCCBuiltin<"__builtin_ia32_pmulhw512">,
+              Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
+                         llvm_v32i16_ty], [IntrNoMem, Commutative]>;
   def int_x86_avx512_mask_pmaddw_d_128 : // FIXME: remove this intrinsic
           Intrinsic<[llvm_v4i32_ty],
           [llvm_v8i16_ty, llvm_v8i16_ty, llvm_v4i32_ty,  llvm_i8_ty],

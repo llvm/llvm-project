@@ -816,10 +816,11 @@ void MCStreamer::EmitWindowsUnwindTables() {
 }
 
 void MCStreamer::Finish() {
-  if (!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End)
+  if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
+      (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
     getContext().reportError(SMLoc(), "Unfinished frame!");
-  if (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)
-    getContext().reportError(SMLoc(), "Unfinished frame!");
+    return;
+  }
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)

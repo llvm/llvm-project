@@ -62,6 +62,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     case X86::reloc_riprel_4byte_movq_load:
     case X86::reloc_riprel_4byte_relax:
     case X86::reloc_riprel_4byte_relax_rex:
+    case X86::reloc_branch_4byte_pcrel:
       return COFF::IMAGE_REL_AMD64_REL32;
     case FK_Data_4:
     case X86::reloc_signed_4byte:

@@ -8,7 +8,7 @@
 ; CHECK-NEXT:    Assumed Context:
 ; CHECK-NEXT:    [n, b] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [n, b] -> {  : 1 = 0 }
+; CHECK-NEXT:    [n, b] -> {  : false }
 
 ;
 ;    void foo(float A[][100], long b, long n) {

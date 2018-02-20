@@ -105,6 +105,11 @@ Improvements to clang-tidy
 
   Diagnoses when a temporary object that appears to be an exception is constructed but not thrown.
 
+- New `modernize-use-uncaught-exceptions
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-uncaught-exceptions.html>`_ check
+
+  Finds and replaces deprecated uses of std::uncaught_exception to std::uncaught_exceptions()
+
 Improvements to include-fixer
 -----------------------------
 

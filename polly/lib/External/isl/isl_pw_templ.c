@@ -100,6 +100,41 @@ error:
 	return NULL;
 }
 
+/* Does the space of "set" correspond to that of the domain of "el".
+ */
+static isl_bool FN(PW,compatible_domain)(__isl_keep EL *el,
+	__isl_keep isl_set *set)
+{
+	isl_bool ok;
+	isl_space *el_space, *set_space;
+
+	if (!set || !el)
+		return isl_bool_error;
+	set_space = isl_set_get_space(set);
+	el_space = FN(EL,get_space)(el);
+	ok = isl_space_is_domain_internal(set_space, el_space);
+	isl_space_free(el_space);
+	isl_space_free(set_space);
+	return ok;
+}
+
+/* Check that the space of "set" corresponds to that of the domain of "el".
+ */
+static isl_stat FN(PW,check_compatible_domain)(__isl_keep EL *el,
+	__isl_keep isl_set *set)
+{
+	isl_bool ok;
+
+	ok = FN(PW,compatible_domain)(el, set);
+	if (ok < 0)
+		return isl_stat_error;
+	if (!ok)
+		isl_die(isl_set_get_ctx(set), isl_error_invalid,
+			"incompatible spaces", return isl_stat_error);
+
+	return isl_stat_ok;
+}
+
 #ifdef HAS_TYPE
 __isl_give PW *FN(PW,alloc)(enum isl_fold type,
 	__isl_take isl_set *set, __isl_take EL *el)
@@ -1464,9 +1499,16 @@ __isl_give isl_val *FN(PW,min)(__isl_take PW *pw)
 }
 #endif
 
+/* Return the space of "pw".
+ */
+__isl_keep isl_space *FN(PW,peek_space)(__isl_keep PW *pw)
+{
+	return pw ? pw->dim : NULL;
+}
+
 __isl_give isl_space *FN(PW,get_space)(__isl_keep PW *pw)
 {
-	return pw ? isl_space_copy(pw->dim) : NULL;
+	return isl_space_copy(FN(PW,peek_space)(pw));
 }
 
 __isl_give isl_space *FN(PW,get_domain_space)(__isl_keep PW *pw)
