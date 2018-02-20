@@ -9,13 +9,19 @@
 
 #include "TestBase.h"
 #include "TestClient.h"
+#include "lldb/Utility/DataExtractor.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace llgs_tests;
+using namespace lldb_private;
 using namespace llvm;
+using namespace lldb;
+using namespace testing;
 
 TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
   // This inferior spawns 4 threads, then forces a break.
@@ -29,7 +35,7 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
   ASSERT_NE(pc_reg, UINT_MAX);
 
   auto jthreads_info = Client->GetJThreadsInfo();
-  ASSERT_TRUE(jthreads_info);
+  ASSERT_THAT_EXPECTED(jthreads_info, Succeeded());
 
   auto stop_reply = Client->GetLatestStopReplyAs<StopReplyStop>();
   ASSERT_THAT_EXPECTED(stop_reply, Succeeded());
@@ -42,9 +48,7 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
     unsigned long tid = stop_reply_pc.first;
     ASSERT_TRUE(thread_infos.find(tid) != thread_infos.end())
         << "Thread ID: " << tid << " not in JThreadsInfo.";
-    auto pc_value = thread_infos[tid].ReadRegisterAsUint64(pc_reg);
-    ASSERT_THAT_EXPECTED(pc_value, Succeeded());
-    ASSERT_EQ(stop_reply_pc.second, *pc_value)
-        << "Mismatched PC for thread: " << tid;
+    EXPECT_THAT(thread_infos[tid].ReadRegister(pc_reg),
+                Pointee(Eq(stop_reply_pc.second)));
   }
 }
