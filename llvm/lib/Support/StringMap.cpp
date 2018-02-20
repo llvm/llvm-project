@@ -57,10 +57,9 @@ void StringMapImpl::init(unsigned InitSize) {
   NumItems = 0;
   NumTombstones = 0;
   
-  TheTable = (StringMapEntryBase **)calloc(NewNumBuckets+1,
-                                           sizeof(StringMapEntryBase **) +
-                                           sizeof(unsigned));
-
+  TheTable = static_cast<StringMapEntryBase **>(
+      std::calloc(NewNumBuckets+1,
+                  sizeof(StringMapEntryBase **) + sizeof(unsigned)));
   if (TheTable == nullptr)
     report_bad_alloc_error("Allocation of StringMap table failed.");
 
@@ -219,10 +218,8 @@ unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
   unsigned NewBucketNo = BucketNo;
   // Allocate one extra bucket which will always be non-empty.  This allows the
   // iterators to stop at end.
-  StringMapEntryBase **NewTableArray =
-    (StringMapEntryBase **)calloc(NewSize+1, sizeof(StringMapEntryBase *) +
-                                             sizeof(unsigned));
-
+  auto NewTableArray = static_cast<StringMapEntryBase **>(
+      std::calloc(NewSize+1, sizeof(StringMapEntryBase *) + sizeof(unsigned)));
   if (NewTableArray == nullptr)
     report_bad_alloc_error("Allocation of StringMap hash table failed.");
 

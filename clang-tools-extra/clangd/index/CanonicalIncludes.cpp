@@ -28,6 +28,7 @@ void CanonicalIncludes::addRegexMapping(llvm::StringRef RE,
 }
 
 llvm::StringRef CanonicalIncludes::mapHeader(llvm::StringRef Header) const {
+  std::lock_guard<std::mutex> Lock(RegexMutex);
   for (auto &Entry : RegexHeaderMappingTable) {
 #ifndef NDEBUG
     std::string Dummy;

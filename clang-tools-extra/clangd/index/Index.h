@@ -255,8 +255,7 @@ public:
   /// each matched symbol before returning.
   /// If returned Symbols are used outside Callback, they must be deep-copied!
   ///
-  /// Returns true if the result list is complete, false if it was truncated due
-  /// to MaxCandidateCount
+  /// Returns true if there may be more results (limited by MaxCandidateCount).
   virtual bool
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const = 0;

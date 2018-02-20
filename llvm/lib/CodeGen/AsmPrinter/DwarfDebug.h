@@ -290,10 +290,10 @@ class DwarfDebug : public DebugHandlerBase {
   AddressPool AddrPool;
 
   /// Apple accelerator tables.
-  AppleAccelTable<AppleAccelTableOffsetData> AccelNames;
-  AppleAccelTable<AppleAccelTableOffsetData> AccelObjC;
-  AppleAccelTable<AppleAccelTableOffsetData> AccelNamespace;
-  AppleAccelTable<AppleAccelTableTypeData> AccelTypes;
+  AccelTable<AppleAccelTableOffsetData> AccelNames;
+  AccelTable<AppleAccelTableOffsetData> AccelObjC;
+  AccelTable<AppleAccelTableOffsetData> AccelNamespace;
+  AccelTable<AppleAccelTableTypeData> AccelTypes;
 
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;

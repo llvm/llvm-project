@@ -974,7 +974,7 @@ void Interpreter::visitAllocaInst(AllocaInst &I) {
   unsigned MemToAlloc = std::max(1U, NumElements * TypeSize);
 
   // Allocate enough memory to hold the type...
-  void *Memory = malloc(MemToAlloc);
+  void *Memory = safe_malloc(MemToAlloc);
 
   DEBUG(dbgs() << "Allocated Type: " << *Ty << " (" << TypeSize << " bytes) x " 
                << NumElements << " (Total: " << MemToAlloc << ") at "

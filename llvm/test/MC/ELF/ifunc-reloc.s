@@ -11,6 +11,6 @@ alias:
 
 // CHECK: Relocations [
 // CHECK-NEXT:   Section {{.*}} .rela.text {
-// CHECK-NEXT:     0x1 R_X86_64_PC32 sym 0xFFFFFFFFFFFFFFFC
+// CHECK-NEXT:     0x1 R_X86_64_PLT32 sym 0xFFFFFFFFFFFFFFFC
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

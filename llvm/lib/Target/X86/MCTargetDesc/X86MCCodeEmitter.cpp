@@ -152,6 +152,8 @@ public:
 
   uint8_t DetermineREXPrefix(const MCInst &MI, uint64_t TSFlags,
                              int MemOperand, const MCInstrDesc &Desc) const;
+
+  bool isPCRel32Branch(const MCInst &MI) const;
 };
 
 } // end anonymous namespace
@@ -276,6 +278,22 @@ static bool HasSecRelSymbolRef(const MCExpr *Expr) {
   return false;
 }
 
+bool X86MCCodeEmitter::isPCRel32Branch(const MCInst &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  const MCInstrDesc &Desc = MCII.get(Opcode);
+  if ((Opcode != X86::CALL64pcrel32 && Opcode != X86::JMP_4) ||
+      getImmFixupKind(Desc.TSFlags) != FK_PCRel_4)
+    return false;
+
+  unsigned CurOp = X86II::getOperandBias(Desc);
+  const MCOperand &Op = MI.getOperand(CurOp);
+  if (!Op.isExpr())
+    return false;
+
+  const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+  return Ref && Ref->getKind() == MCSymbolRefExpr::VK_None;
+}
+
 void X86MCCodeEmitter::
 EmitImmediate(const MCOperand &DispOp, SMLoc Loc, unsigned Size,
               MCFixupKind FixupKind, unsigned &CurByte, raw_ostream &OS,
@@ -331,7 +349,8 @@ EmitImmediate(const MCOperand &DispOp, SMLoc Loc, unsigned Size,
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex))
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
+      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel))
     ImmOffset -= 4;
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
@@ -1287,9 +1306,18 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
     EmitByte(BaseOpcode, CurByte, OS);
     break;
   }
-  case X86II::RawFrm:
+  case X86II::RawFrm: {
     EmitByte(BaseOpcode, CurByte, OS);
+
+    if (!is64BitMode(STI) || !isPCRel32Branch(MI))
+      break;
+
+    const MCOperand &Op = MI.getOperand(CurOp++);
+    EmitImmediate(Op, MI.getLoc(), X86II::getSizeOfImm(TSFlags),
+                  MCFixupKind(X86::reloc_branch_4byte_pcrel), CurByte, OS,
+                  Fixups);
     break;
+  }
   case X86II::RawFrmMemOffs:
     // Emit segment override opcode prefix as needed.
     EmitSegmentOverridePrefix(CurByte, 1, MI, OS);

@@ -137,7 +137,7 @@ define x86_fp80 @test_f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) #0 {
 ; FMA64-NEXT:    fstpt {{[0-9]+}}(%rsp) ## encoding: [0xdb,0x7c,0x24,0x10]
 ; FMA64-NEXT:    fstpt (%rsp) ## encoding: [0xdb,0x3c,0x24]
 ; FMA64-NEXT:    callq _fmal ## encoding: [0xe8,A,A,A,A]
-; FMA64-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: FK_PCRel_4
+; FMA64-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: reloc_branch_4byte_pcrel
 ; FMA64-NEXT:    addq $56, %rsp ## encoding: [0x48,0x83,0xc4,0x38]
 ; FMA64-NEXT:    retq ## encoding: [0xc3]
 ;
@@ -151,7 +151,7 @@ define x86_fp80 @test_f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) #0 {
 ; FMACALL64-NEXT:    fstpt {{[0-9]+}}(%rsp) ## encoding: [0xdb,0x7c,0x24,0x10]
 ; FMACALL64-NEXT:    fstpt (%rsp) ## encoding: [0xdb,0x3c,0x24]
 ; FMACALL64-NEXT:    callq _fmal ## encoding: [0xe8,A,A,A,A]
-; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: FK_PCRel_4
+; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: reloc_branch_4byte_pcrel
 ; FMACALL64-NEXT:    addq $56, %rsp ## encoding: [0x48,0x83,0xc4,0x38]
 ; FMACALL64-NEXT:    retq ## encoding: [0xc3]
 ;
@@ -165,7 +165,7 @@ define x86_fp80 @test_f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) #0 {
 ; AVX512-NEXT:    fstpt {{[0-9]+}}(%rsp) ## encoding: [0xdb,0x7c,0x24,0x10]
 ; AVX512-NEXT:    fstpt (%rsp) ## encoding: [0xdb,0x3c,0x24]
 ; AVX512-NEXT:    callq _fmal ## encoding: [0xe8,A,A,A,A]
-; AVX512-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: FK_PCRel_4
+; AVX512-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: reloc_branch_4byte_pcrel
 ; AVX512-NEXT:    addq $56, %rsp ## encoding: [0x48,0x83,0xc4,0x38]
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
@@ -179,7 +179,7 @@ define x86_fp80 @test_f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) #0 {
 ; AVX512VL-NEXT:    fstpt {{[0-9]+}}(%rsp) ## encoding: [0xdb,0x7c,0x24,0x10]
 ; AVX512VL-NEXT:    fstpt (%rsp) ## encoding: [0xdb,0x3c,0x24]
 ; AVX512VL-NEXT:    callq _fmal ## encoding: [0xe8,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: FK_PCRel_4
+; AVX512VL-NEXT:    ## fixup A - offset: 1, value: _fmal-4, kind: reloc_branch_4byte_pcrel
 ; AVX512VL-NEXT:    addq $56, %rsp ## encoding: [0x48,0x83,0xc4,0x38]
 ; AVX512VL-NEXT:    retq ## encoding: [0xc3]
 entry:

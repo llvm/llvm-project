@@ -191,7 +191,7 @@ define void @test10(i64* %base, <4 x i64> %V, <4 x i1> %mask) {
 ; SKX-LABEL: test10:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
-; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; SKX-NEXT:    vpmovd2m %xmm1, %k1
 ; SKX-NEXT:    vpcompressq %ymm0, (%rdi) {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -213,7 +213,7 @@ define void @test11(i64* %base, <2 x i64> %V, <2 x i1> %mask) {
 ; SKX-LABEL: test11:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; SKX-NEXT:    vptestmq %xmm1, %xmm1, %k1
+; SKX-NEXT:    vpmovq2m %xmm1, %k1
 ; SKX-NEXT:    vpcompressq %xmm0, (%rdi) {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -234,7 +234,7 @@ define void @test12(float* %base, <4 x float> %V, <4 x i1> %mask) {
 ; SKX-LABEL: test12:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
-; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; SKX-NEXT:    vpmovd2m %xmm1, %k1
 ; SKX-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; SKX-NEXT:    retq
 ;

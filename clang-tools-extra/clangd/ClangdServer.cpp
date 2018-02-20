@@ -327,13 +327,11 @@ ClangdServer::insertInclude(PathRef File, StringRef Code,
     if (!Resolved)
       return Resolved.takeError();
 
-    auto FS = FSProvider.getTaggedFileSystem(File).Value;
     tooling::CompileCommand CompileCommand =
         CompileArgs.getCompileCommand(File);
-    FS->setCurrentWorkingDirectory(CompileCommand.Directory);
-
     auto Include =
-        shortenIncludePath(File, Code, *Resolved, CompileCommand, FS);
+        calculateIncludePath(File, Code, *Resolved, CompileCommand,
+                             FSProvider.getTaggedFileSystem(File).Value);
     if (!Include)
       return Include.takeError();
     if (Include->empty())

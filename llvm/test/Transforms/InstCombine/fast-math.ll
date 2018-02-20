@@ -477,39 +477,6 @@ define float @fdiv4(float %x) {
   ret float %div
 }
 
-; C1/(X*C2) => (C1/C2) / X
-define float @fdiv7(float %x) {
-; CHECK-LABEL: @fdiv7(
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 5.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fmul float %x, 3.0e0
-  %t2 = fdiv fast float 15.0e0, %t1
-  ret float %t2
-}
-
-; C1/(X/C2) => (C1*C2) / X
-define float @fdiv8(float %x) {
-; CHECK-LABEL: @fdiv8(
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 4.500000e+01, [[X:%.*]]
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fdiv float %x, 3.0e0
-  %t2 = fdiv fast float 15.0e0, %t1
-  ret float %t2
-}
-
-; C1/(C2/X) => (C1/C2) * X
-define float @fdiv9(float %x) {
-; CHECK-LABEL: @fdiv9(
-; CHECK-NEXT:    [[T2:%.*]] = fmul fast float [[X:%.*]], 5.000000e+00
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fdiv float 3.0e0, %x
-  %t2 = fdiv fast float 15.0e0, %t1
-  ret float %t2
-}
-
 ; =========================================================================
 ;
 ;   Testing-cases about factorization

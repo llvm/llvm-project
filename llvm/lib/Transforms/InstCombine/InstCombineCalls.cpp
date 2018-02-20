@@ -227,7 +227,9 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA tag describing our copy.
   MDNode *CopyMD = nullptr;
-  if (MDNode *M = MI->getMetadata(LLVMContext::MD_tbaa_struct)) {
+  if (MDNode *M = MI->getMetadata(LLVMContext::MD_tbaa)) {
+    CopyMD = M;
+  } else if (MDNode *M = MI->getMetadata(LLVMContext::MD_tbaa_struct)) {
     if (M->getNumOperands() == 3 && M->getOperand(0) &&
         mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
         mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&

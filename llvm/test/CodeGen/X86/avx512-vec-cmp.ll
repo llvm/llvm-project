@@ -345,7 +345,7 @@ define <8 x i64> @test15(<8 x i64>%a, <8 x i64>%b) {
 define <16 x i32> @test16(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1) nounwind {
 ; CHECK-LABEL: test16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k1 ## encoding: [0x62,0xf3,0x75,0x48,0x1f,0xc8,0x02]
+; CHECK-NEXT:    vpcmpnltd %zmm1, %zmm0, %k1 ## encoding: [0x62,0xf3,0x7d,0x48,0x1f,0xc9,0x05]
 ; CHECK-NEXT:    vpblendmd %zmm2, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x64,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp sge <16 x i32> %x, %y
@@ -407,7 +407,7 @@ define <8 x i64> @test21(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y
 ; CHECK-LABEL: test21:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k1 ## encoding: [0x62,0xf3,0xfd,0x48,0x1f,0xc9,0x02]
-; CHECK-NEXT:    vpcmpleq %zmm2, %zmm3, %k1 {%k1} ## encoding: [0x62,0xf3,0xe5,0x49,0x1f,0xca,0x02]
+; CHECK-NEXT:    vpcmpnltq %zmm3, %zmm2, %k1 {%k1} ## encoding: [0x62,0xf3,0xed,0x49,0x1f,0xcb,0x05]
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm2, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xed,0x49,0x64,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask1 = icmp sge <8 x i64> %x1, %y1
@@ -435,7 +435,7 @@ define <8 x i64> @test22(<8 x i64> %x, <8 x i64>* %y.ptr, <8 x i64> %x1, <8 x i6
 define <16 x i32> @test23(<16 x i32> %x, <16 x i32>* %y.ptr, <16 x i32> %x1, <16 x i32> %y1) nounwind {
 ; CHECK-LABEL: test23:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpled %zmm1, %zmm2, %k1 ## encoding: [0x62,0xf3,0x6d,0x48,0x1f,0xc9,0x02]
+; CHECK-NEXT:    vpcmpnltd %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0x75,0x48,0x1f,0xca,0x05]
 ; CHECK-NEXT:    vpcmpleud (%rdi), %zmm0, %k1 {%k1} ## encoding: [0x62,0xf3,0x7d,0x49,0x1e,0x0f,0x02]
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x64,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -478,7 +478,7 @@ define <16 x i32> @test25(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1) nounwind 
 define <16 x i32> @test26(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1, <16 x i32> %y1) nounwind {
 ; CHECK-LABEL: test26:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpled %zmm1, %zmm2, %k1 ## encoding: [0x62,0xf3,0x6d,0x48,0x1f,0xc9,0x02]
+; CHECK-NEXT:    vpcmpnltd %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0x75,0x48,0x1f,0xca,0x05]
 ; CHECK-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k1 {%k1} ## encoding: [0x62,0xf1,0x7d,0x59,0x66,0x0f]
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x49,0x64,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -495,7 +495,7 @@ define <16 x i32> @test26(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1, <16 x i32
 define <8 x i64> @test27(<8 x i64> %x, i64* %yb.ptr, <8 x i64> %x1, <8 x i64> %y1) nounwind {
 ; CHECK-LABEL: test27:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpleq %zmm1, %zmm2, %k1 ## encoding: [0x62,0xf3,0xed,0x48,0x1f,0xc9,0x02]
+; CHECK-NEXT:    vpcmpnltq %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0xf5,0x48,0x1f,0xca,0x05]
 ; CHECK-NEXT:    vpcmpleq (%rdi){1to8}, %zmm0, %k1 {%k1} ## encoding: [0x62,0xf3,0xfd,0x59,0x1f,0x0f,0x02]
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
