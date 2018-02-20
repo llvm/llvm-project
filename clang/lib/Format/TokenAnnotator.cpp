@@ -375,6 +375,10 @@ private:
         //   (aaa) = aaa
         // ];
         //
+        // extensions 123 [
+        //   (aaa) = aaa
+        // ];
+        //
         // or text proto extensions (in options):
         //
         // option (Aaa.options) = {
@@ -394,6 +398,8 @@ private:
         Left->Type = TT_ArrayInitializerLSquare;
         if (!Left->endsSequence(tok::l_square, tok::numeric_constant,
                                 tok::equal) &&
+            !Left->endsSequence(tok::l_square, tok::numeric_constant,
+                                tok::identifier) &&
             !Left->endsSequence(tok::l_square, tok::colon, TT_SelectorName)) {
           Left->Type = TT_ProtoExtensionLSquare;
           BindingIncrease = 10;
@@ -2496,7 +2502,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          // (e.g. as "const x of y" in a for loop), or after a destructuring
          // operation (const [x, y] of z, const {a, b} of c).
          (Left.is(Keywords.kw_of) && Left.Previous &&
-          (Left.Previous->Tok.getIdentifierInfo() ||
+          (Left.Previous->Tok.is(tok::identifier) ||
            Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;
