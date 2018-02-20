@@ -13,7 +13,6 @@
 #include <isl_seq.h>
 #include <isl_val_private.h>
 #include <isl_vec_private.h>
-#include <isl/deprecated/vec_int.h>
 
 isl_ctx *isl_vec_get_ctx(__isl_keep isl_vec *vec)
 {
@@ -123,6 +122,19 @@ __isl_give isl_vec *isl_vec_expand(__isl_take isl_vec *vec, int pos, int n,
 		}
 	}
 
+	return vec;
+}
+
+/* Create a vector of size "size" with zero-valued elements.
+ */
+__isl_give isl_vec *isl_vec_zero(isl_ctx *ctx, unsigned size)
+{
+	isl_vec *vec;
+
+	vec = isl_vec_alloc(ctx, size);
+	if (!vec)
+		return NULL;
+	isl_seq_clr(vec->el, size);
 	return vec;
 }
 
@@ -236,18 +248,6 @@ __isl_null isl_vec *isl_vec_free(__isl_take isl_vec *vec)
 int isl_vec_size(__isl_keep isl_vec *vec)
 {
 	return vec ? vec->size : -1;
-}
-
-int isl_vec_get_element(__isl_keep isl_vec *vec, int pos, isl_int *v)
-{
-	if (!vec)
-		return -1;
-
-	if (pos < 0 || pos >= vec->size)
-		isl_die(vec->ctx, isl_error_invalid, "position out of range",
-			return -1);
-	isl_int_set(*v, vec->el[pos]);
-	return 0;
 }
 
 /* Extract the element at position "pos" of "vec".

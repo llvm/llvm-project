@@ -1,11 +1,15 @@
 /*
  * Copyright 2008-2009 Katholieke Universiteit Leuven
+ * Copyright 2010      INRIA Saclay
  * Copyright 2014      Ecole Normale Superieure
+ * Copyright 2017      Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
  * Written by Sven Verdoolaege, K.U.Leuven, Departement
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
+ * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  */
 
@@ -17,7 +21,6 @@
 #include <isl_vec_private.h>
 #include <isl_space_private.h>
 #include <isl_val_private.h>
-#include <isl/deprecated/mat_int.h>
 
 isl_ctx *isl_mat_get_ctx(__isl_keep isl_mat *mat)
 {
@@ -280,6 +283,34 @@ static isl_stat check_row(__isl_keep isl_mat *mat, int row)
 	if (row < 0 || row >= mat->n_row)
 		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
 			"row out of range", return isl_stat_error);
+	return isl_stat_ok;
+}
+
+/* Check that there are "n" columns starting at position "first" in "mat".
+ */
+static isl_stat check_col_range(__isl_keep isl_mat *mat, unsigned first,
+	unsigned n)
+{
+	if (!mat)
+		return isl_stat_error;
+	if (first + n > mat->n_col || first + n < first)
+		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
+			"column position or range out of bounds",
+			return isl_stat_error);
+	return isl_stat_ok;
+}
+
+/* Check that there are "n" rows starting at position "first" in "mat".
+ */
+static isl_stat check_row_range(__isl_keep isl_mat *mat, unsigned first,
+	unsigned n)
+{
+	if (!mat)
+		return isl_stat_error;
+	if (first + n > mat->n_row || first + n < first)
+		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
+			"row position or range out of bounds",
+			return isl_stat_error);
 	return isl_stat_ok;
 }
 
@@ -786,9 +817,51 @@ __isl_give isl_mat *isl_mat_lexnonneg_rows(__isl_take isl_mat *mat)
 	return mat;
 }
 
-struct isl_mat *isl_mat_right_kernel(struct isl_mat *mat)
+/* Given a matrix "H" is column echelon form, what is the first
+ * zero column?  That is how many initial columns are non-zero?
+ * Start looking at column "first_col" and only consider
+ * the columns to be of size "n_row".
+ * "H" is assumed to be non-NULL.
+ *
+ * Since "H" is in column echelon form, the first non-zero entry
+ * in a column is always in a later position compared to the previous column.
+ */
+static int hermite_first_zero_col(__isl_keep isl_mat *H, int first_col,
+	int n_row)
 {
-	int i, rank;
+	int row, col;
+
+	for (col = first_col, row = 0; col < H->n_col; ++col) {
+		for (; row < n_row; ++row)
+			if (!isl_int_is_zero(H->row[row][col]))
+				break;
+		if (row == n_row)
+			return col;
+	}
+
+	return H->n_col;
+}
+
+/* Return the rank of "mat", or -1 in case of error.
+ */
+int isl_mat_rank(__isl_keep isl_mat *mat)
+{
+	int rank;
+	isl_mat *H;
+
+	H = isl_mat_left_hermite(isl_mat_copy(mat), 0, NULL, NULL);
+	if (!H)
+		return -1;
+
+	rank = hermite_first_zero_col(H, 0, H->n_row);
+	isl_mat_free(H);
+
+	return rank;
+}
+
+__isl_give isl_mat *isl_mat_right_kernel(__isl_take isl_mat *mat)
+{
+	int rank;
 	struct isl_mat *U = NULL;
 	struct isl_mat *K;
 
@@ -796,12 +869,7 @@ struct isl_mat *isl_mat_right_kernel(struct isl_mat *mat)
 	if (!mat || !U)
 		goto error;
 
-	for (i = 0, rank = 0; rank < mat->n_col; ++rank) {
-		while (i < mat->n_row && isl_int_is_zero(mat->row[i][rank]))
-			++i;
-		if (i >= mat->n_row)
-			break;
-	}
+	rank = hermite_first_zero_col(mat, 0, mat->n_row);
 	K = isl_mat_alloc(U->ctx, U->n_row, U->n_col - rank);
 	if (!K)
 		goto error;
@@ -1161,17 +1229,13 @@ __isl_give isl_mat *isl_mat_swap_cols(__isl_take isl_mat *mat,
 	int r;
 
 	mat = isl_mat_cow(mat);
-	if (!mat)
-		return NULL;
-	isl_assert(mat->ctx, i < mat->n_col, goto error);
-	isl_assert(mat->ctx, j < mat->n_col, goto error);
+	if (check_col_range(mat, i, 1) < 0 ||
+	    check_col_range(mat, j, 1) < 0)
+		return isl_mat_free(mat);
 
 	for (r = 0; r < mat->n_row; ++r)
 		isl_int_swap(mat->row[r][i], mat->row[r][j]);
 	return mat;
-error:
-	isl_mat_free(mat);
-	return NULL;
 }
 
 __isl_give isl_mat *isl_mat_swap_rows(__isl_take isl_mat *mat,
@@ -1182,8 +1246,10 @@ __isl_give isl_mat *isl_mat_swap_rows(__isl_take isl_mat *mat,
 	if (!mat)
 		return NULL;
 	mat = isl_mat_cow(mat);
-	if (!mat)
-		return NULL;
+	if (check_row_range(mat, i, 1) < 0 ||
+	    check_row_range(mat, j, 1) < 0)
+		return isl_mat_free(mat);
+
 	t = mat->row[i];
 	mat->row[i] = mat->row[j];
 	mat->row[j] = t;
@@ -1438,8 +1504,8 @@ __isl_give isl_mat *isl_mat_drop_cols(__isl_take isl_mat *mat,
 		return mat;
 
 	mat = isl_mat_cow(mat);
-	if (!mat)
-		return NULL;
+	if (check_col_range(mat, col, n) < 0)
+		return isl_mat_free(mat);
 
 	if (col != mat->n_col-n) {
 		for (r = 0; r < mat->n_row; ++r)
@@ -1456,8 +1522,8 @@ __isl_give isl_mat *isl_mat_drop_rows(__isl_take isl_mat *mat,
 	int r;
 
 	mat = isl_mat_cow(mat);
-	if (!mat)
-		return NULL;
+	if (check_row_range(mat, row, n) < 0)
+		return isl_mat_free(mat);
 
 	for (r = row; r+n < mat->n_row; ++r)
 		mat->row[r] = mat->row[r+n];
@@ -1471,8 +1537,8 @@ __isl_give isl_mat *isl_mat_insert_cols(__isl_take isl_mat *mat,
 {
 	isl_mat *ext;
 
-	if (!mat)
-		return NULL;
+	if (check_col_range(mat, col, 0) < 0)
+		return isl_mat_free(mat);
 	if (n == 0)
 		return mat;
 
@@ -1521,8 +1587,8 @@ __isl_give isl_mat *isl_mat_insert_rows(__isl_take isl_mat *mat,
 {
 	isl_mat *ext;
 
-	if (!mat)
-		return NULL;
+	if (check_row_range(mat, row, 0) < 0)
+		return isl_mat_free(mat);
 	if (n == 0)
 		return mat;
 
@@ -1951,4 +2017,83 @@ int isl_mat_initial_non_zero_cols(__isl_keep isl_mat *mat)
 			break;
 
 	return i;
+}
+
+/* Return a basis for the space spanned by the rows of "mat".
+ * Any basis will do, so simply perform Gaussian elimination and
+ * remove the empty rows.
+ */
+__isl_give isl_mat *isl_mat_row_basis(__isl_take isl_mat *mat)
+{
+	return isl_mat_reverse_gauss(mat);
+}
+
+/* Return rows that extend a basis of "mat1" to one
+ * that covers both "mat1" and "mat2".
+ * The Hermite normal form of the concatenation of the two matrices is
+ *
+ *	                     [ Q1 ]
+ *	[ M1 ] = [ H1 0  0 ] [ Q2 ]
+ *	[ M2 ] = [ H2 H3 0 ] [ Q3 ]
+ *
+ * The number of columns in H1 and H3 determine the number of rows
+ * in Q1 and Q2.  Q1 is a basis for M1, while Q2 extends this basis
+ * to also cover M2.
+ */
+__isl_give isl_mat *isl_mat_row_basis_extension(
+	__isl_take isl_mat *mat1, __isl_take isl_mat *mat2)
+{
+	int n_row;
+	int r1, r, n1;
+	isl_mat *H, *Q;
+
+	n1 = isl_mat_rows(mat1);
+	H = isl_mat_concat(mat1, mat2);
+	H = isl_mat_left_hermite(H, 0, NULL, &Q);
+	if (!H || !Q)
+		goto error;
+
+	r1 = hermite_first_zero_col(H, 0, n1);
+	r = hermite_first_zero_col(H, r1, H->n_row);
+	n_row = isl_mat_rows(Q);
+	Q = isl_mat_drop_rows(Q, r, n_row - r);
+	Q = isl_mat_drop_rows(Q, 0, r1);
+
+	isl_mat_free(H);
+	return Q;
+error:
+	isl_mat_free(H);
+	isl_mat_free(Q);
+	return NULL;
+}
+
+/* Are the rows of "mat1" linearly independent of those of "mat2"?
+ * That is, is there no linear dependence among the combined rows
+ * that is not already present in either "mat1" or "mat2"?
+ * In other words, is the rank of "mat1" and "mat2" combined equal
+ * to the sum of the ranks of "mat1" and "mat2"?
+ */
+isl_bool isl_mat_has_linearly_independent_rows(__isl_keep isl_mat *mat1,
+	__isl_keep isl_mat *mat2)
+{
+	int r1, r2, r;
+	isl_mat *mat;
+
+	r1 = isl_mat_rank(mat1);
+	if (r1 < 0)
+		return isl_bool_error;
+	if (r1 == 0)
+		return isl_bool_true;
+	r2 = isl_mat_rank(mat2);
+	if (r2 < 0)
+		return isl_bool_error;
+	if (r2 == 0)
+		return isl_bool_true;
+
+	mat = isl_mat_concat(isl_mat_copy(mat1), isl_mat_copy(mat2));
+	r = isl_mat_rank(mat);
+	isl_mat_free(mat);
+	if (r < 0)
+		return isl_bool_error;
+	return r == r1 + r2;
 }

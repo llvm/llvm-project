@@ -38,7 +38,7 @@ int isl_multi_##BASE##_find_dim_by_id(					\
 	__isl_keep isl_multi_##BASE *multi, enum isl_dim_type type,	\
 	__isl_keep isl_id *id);						\
 __isl_give isl_id *isl_multi_##BASE##_get_dim_id(			\
-	__isl_take isl_multi_##BASE *multi,				\
+	__isl_keep isl_multi_##BASE *multi,				\
 	enum isl_dim_type type, unsigned pos);				\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_set_dim_name(		\
 	__isl_take isl_multi_##BASE *multi,				\
@@ -134,7 +134,10 @@ __isl_give isl_multi_##BASE *isl_multi_##BASE##_insert_dims(		\
 	unsigned first, unsigned n);					\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_add_dims(		\
 	__isl_take isl_multi_##BASE *multi, enum isl_dim_type type,	\
-	unsigned n);
+	unsigned n);							\
+__isl_give isl_multi_##BASE *						\
+isl_multi_##BASE##_project_domain_on_params(				\
+	__isl_take isl_multi_##BASE *multi);
 
 #define ISL_DECLARE_MULTI_WITH_DOMAIN(BASE)				\
 __isl_export								\

@@ -10,6 +10,7 @@
 
 #include <isl_schedule_constraints.h>
 #include <isl/schedule.h>
+#include <isl/space.h>
 #include <isl/set.h>
 #include <isl/map.h>
 #include <isl/union_set.h>
@@ -479,10 +480,21 @@ static char *key_str[] = {
 };
 
 /* Print a key, value pair for the edge of type "type" in "sc" to "p".
+ *
+ * If the edge relation is empty, then it is not printed since
+ * an empty relation is the default value.
  */
 static __isl_give isl_printer *print_constraint(__isl_take isl_printer *p,
 	__isl_keep isl_schedule_constraints *sc, enum isl_edge_type type)
 {
+	isl_bool empty;
+
+	empty = isl_union_map_plain_is_empty(sc->constraint[type]);
+	if (empty < 0)
+		return isl_printer_free(p);
+	if (empty)
+		return p;
+
 	p = isl_printer_print_str(p, key_str[type]);
 	p = isl_printer_yaml_next(p);
 	p = isl_printer_print_union_map(p, sc->constraint[type]);
@@ -494,10 +506,14 @@ static __isl_give isl_printer *print_constraint(__isl_take isl_printer *p,
 /* Print "sc" to "p"
  *
  * In particular, print the isl_schedule_constraints object as a YAML document.
+ * Fields with values that are (obviously) equal to their default values
+ * are not printed.
  */
 __isl_give isl_printer *isl_printer_print_schedule_constraints(
 	__isl_take isl_printer *p, __isl_keep isl_schedule_constraints *sc)
 {
+	isl_bool universe;
+
 	if (!sc)
 		return isl_printer_free(p);
 
@@ -506,10 +522,15 @@ __isl_give isl_printer *isl_printer_print_schedule_constraints(
 	p = isl_printer_yaml_next(p);
 	p = isl_printer_print_union_set(p, sc->domain);
 	p = isl_printer_yaml_next(p);
-	p = isl_printer_print_str(p, key_str[isl_sc_key_context]);
-	p = isl_printer_yaml_next(p);
-	p = isl_printer_print_set(p, sc->context);
-	p = isl_printer_yaml_next(p);
+	universe = isl_set_plain_is_universe(sc->context);
+	if (universe < 0)
+		return isl_printer_free(p);
+	if (!universe) {
+		p = isl_printer_print_str(p, key_str[isl_sc_key_context]);
+		p = isl_printer_yaml_next(p);
+		p = isl_printer_print_set(p, sc->context);
+		p = isl_printer_yaml_next(p);
+	}
 	p = print_constraint(p, sc, isl_edge_validity);
 	p = print_constraint(p, sc, isl_edge_proximity);
 	p = print_constraint(p, sc, isl_edge_coincidence);
@@ -591,7 +612,11 @@ __isl_give isl_schedule_constraints *isl_stream_read_schedule_constraints(
 			if (!sc)
 				return NULL;
 			break;
-		default:
+		case isl_sc_key_validity:
+		case isl_sc_key_coincidence:
+		case isl_sc_key_condition:
+		case isl_sc_key_conditional_validity:
+		case isl_sc_key_proximity:
 			constraints = read_union_map(s);
 			sc = isl_schedule_constraints_set(sc, key, constraints);
 			if (!sc)

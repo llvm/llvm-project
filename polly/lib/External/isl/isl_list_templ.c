@@ -15,6 +15,7 @@
 
 #include <isl_sort.h>
 #include <isl_tarjan.h>
+#include <isl/printer.h>
 
 #define xCAT(A,B) A ## B
 #define CAT(A,B) xCAT(A,B)

@@ -72,7 +72,7 @@
 ; NONAFFINE-NEXT:    Assumed Context:
 ; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  :  }
 ; NONAFFINE-NEXT:    Invalid Context:
-; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : 1 = 0 }
+; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : false }
 ; NONAFFINE-NEXT:    p0: %tmp9
 ; NONAFFINE-NEXT:    p1: %tmp14
 ; NONAFFINE-NEXT:    Arrays {

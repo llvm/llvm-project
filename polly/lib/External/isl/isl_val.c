@@ -1490,7 +1490,7 @@ __isl_give isl_val *isl_val_insert_dims(__isl_take isl_val *v,
 	return v;
 }
 
-/* Drop the the "n" first dimensions of type "type" at position "first".
+/* Drop the "n" first dimensions of type "type" at position "first".
  *
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
@@ -1641,6 +1641,7 @@ isl_stat isl_val_check_match_domain_space(__isl_keep isl_val *v,
 #define NO_FROM_BASE
 #define NO_MOVE_DIMS
 #include <isl_multi_templ.c>
+#include <isl_multi_dims.c>
 
 /* Apply "fn" to each of the elements of "mv" with as second argument "v".
  */
