@@ -37,6 +37,9 @@ isl_stat isl_schedule_node_foreach_descendant_top_down(
 	__isl_keep isl_schedule_node *node,
 	isl_bool (*fn)(__isl_keep isl_schedule_node *node, void *user),
 	void *user);
+isl_bool isl_schedule_node_every_descendant(__isl_keep isl_schedule_node *node,
+	isl_bool (*test)(__isl_keep isl_schedule_node *node, void *user),
+	void *user);
 isl_stat isl_schedule_node_foreach_ancestor_top_down(
 	__isl_keep isl_schedule_node *node,
 	isl_stat (*fn)(__isl_keep isl_schedule_node *node, void *user),

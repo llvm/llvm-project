@@ -19,11 +19,11 @@ target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp192[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : 3*floor((-i0 + o0)/3) = -i0 + o0 and 0 <= o0 <= 2 };
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : (-i0 + o0) mod 3 = 0 and 0 <= o0 <= 2 }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp194[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : 3*floor((1 - i0 + o0)/3) = 1 - i0 + o0 and 0 <= o0 <= 2 };
+; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_tmp173[o0, 1 + i1, 1 + i2] : (1 - i0 + o0) mod 3 = 0 and 0 <= o0 <= 2 }  
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp180, tmp177, tmp183, tmp162, tmp157, tmp150, tmp146, tmp140, tmp] -> { Stmt_bb203[i0, i1, i2] -> MemRef_arg56[1 + i0, 1 + i1, 1 + i2] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]

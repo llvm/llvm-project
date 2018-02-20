@@ -61,47 +61,43 @@ void lld::wasm::markLive() {
 
   // The ctor functions are all used in the synthetic __wasm_call_ctors
   // function, but since this function is created in-place it doesn't contain
-  // reloctations which mean we have to manually mark the ctors.
+  // relocations which mean we have to manually mark the ctors.
   for (const ObjFile *Obj : Symtab->ObjectFiles) {
     const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions)
       Enqueue(Obj->getFunctionSymbol(F.FunctionIndex));
   }
 
-  auto EnqueueSuccessors = [Enqueue](InputChunk &Chunk) {
-    for (const WasmRelocation Reloc : Chunk.getRelocations()) {
+  // Follow relocations to mark all reachable chunks.
+  while (!Q.empty()) {
+    InputChunk *C = Q.pop_back_val();
+
+    for (const WasmRelocation Reloc : C->getRelocations()) {
       switch (Reloc.Type) {
       case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
       case R_WEBASSEMBLY_TABLE_INDEX_I32:
       case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-        Enqueue(Chunk.File->getFunctionSymbol(Reloc.Index));
+        Enqueue(C->File->getFunctionSymbol(Reloc.Index));
         break;
       case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
       case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
       case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
       case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-        Enqueue(Chunk.File->getGlobalSymbol(Reloc.Index));
+        Enqueue(C->File->getGlobalSymbol(Reloc.Index));
         break;
       }
     }
-  };
-
-  while (!Q.empty())
-    EnqueueSuccessors(*Q.pop_back_val());
+  }
 
   // Report garbage-collected sections.
   if (Config->PrintGcSections) {
-    auto CheckChunk = [](const InputChunk *C) {
-      if (!C->Live)
-        message("removing unused section '" + C->getName() + "' in file '" +
-                C->File->getName() + "'");
-    };
-
     for (const ObjFile *Obj : Symtab->ObjectFiles) {
       for (InputChunk *C : Obj->Functions)
-        CheckChunk(C);
+        if (!C->Live)
+          message("removing unused section " + toString(C));
       for (InputChunk *C : Obj->Segments)
-        CheckChunk(C);
+        if (!C->Live)
+          message("removing unused section " + toString(C));
     }
   }
 }

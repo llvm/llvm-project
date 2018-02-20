@@ -34,9 +34,6 @@
 /* Define if clang/Basic/DiagnosticOptions.h exists */
 #undef HAVE_BASIC_DIAGNOSTICOPTIONS_H
 
-/* define if the compiler supports basic C++11 syntax */
-#undef HAVE_CXX11
-
 /* Define if Driver constructor takes CXXIsProduction argument */
 #undef HAVE_CXXISPRODUCTION
 
