@@ -296,8 +296,7 @@ static int run(int argc, char **argv) {
     return llvm::make_unique<lto::NativeObjectStream>(std::move(S));
   };
 
-  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB,
-                       StringRef Path) {
+  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
     *AddStream(Task)->OS << MB->getBuffer();
   };
 

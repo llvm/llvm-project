@@ -255,6 +255,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Whether to emit all linkage names, or just abstract subprograms.
   bool UseAllLinkageNames;
 
+  /// Use inlined strings.
+  bool UseInlineStrings = false;
+
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -490,6 +493,9 @@ public:
   /// Returns whether to use the DWARF2 format for bitfields instyead of the
   /// DWARF4 format.
   bool useDWARF2Bitfields() const { return UseDWARF2Bitfields; }
+
+  /// Returns whether to use inline strings.
+  bool useInlineStrings() const { return UseInlineStrings; }
 
   // Experimental DWARF5 features.
 

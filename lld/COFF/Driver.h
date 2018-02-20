@@ -36,12 +36,6 @@ using llvm::COFF::MachineTypes;
 using llvm::COFF::WindowsSubsystem;
 using llvm::Optional;
 
-// Implemented in MarkLive.cpp.
-void markLive(ArrayRef<Chunk *> Chunks);
-
-// Implemented in ICF.cpp.
-void doICF(ArrayRef<Chunk *> Chunks);
-
 class COFFOptTable : public llvm::opt::OptTable {
 public:
   COFFOptTable();

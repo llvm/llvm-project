@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MarkLive.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
@@ -27,7 +28,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
-#include "Writer.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"

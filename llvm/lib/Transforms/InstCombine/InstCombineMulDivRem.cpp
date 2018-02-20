@@ -549,9 +549,6 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (isa<Constant>(Op0))
-    std::swap(Op0, Op1);
-
   if (Value *V = SimplifyFMulInst(Op0, Op1, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1289,32 +1286,27 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 }
 
 /// Try to convert X/C into X * (1/C).
-static Instruction *foldFDivConstantDivisor(BinaryOperator &FDiv) {
-  // TODO: Handle non-splat vector constants.
-  const APFloat *C;
-  if (!match(FDiv.getOperand(1), m_APFloat(C)))
+static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
+  Constant *C;
+  if (!match(I.getOperand(1), m_Constant(C)))
     return nullptr;
 
-  // This returns false if the inverse would be a denormal.
-  APFloat Reciprocal(C->getSemantics());
-  bool HasRecip = C->getExactInverse(&Reciprocal);
-  // If the inverse is not exact, we may still be able to convert if we are
-  // not operating with strict math.
-  if (!HasRecip && FDiv.hasAllowReciprocal() && C->isFiniteNonZero()) {
-    Reciprocal = APFloat(C->getSemantics(), 1.0f);
-    Reciprocal.divide(*C, APFloat::rmNearestTiesToEven);
-    // Disallow denormal constants because we don't know what would happen
-    // on all targets.
-    // TODO: Function attributes can tell us that denorms are flushed?
-    HasRecip = !Reciprocal.isDenormal();
-  }
-
-  if (!HasRecip)
+  // If the constant divisor has an exact inverse, this is always safe. If not,
+  // then we can still create a reciprocal if fast-math-flags allow it and the
+  // constant is a regular number (not zero, infinite, or denormal).
+  if (!(C->hasExactInverseFP() || (I.hasAllowReciprocal() && C->isNormalFP())))
     return nullptr;
 
-  auto *RecipCFP = ConstantFP::get(FDiv.getType(), Reciprocal);
-  return BinaryOperator::CreateWithCopiedFlags(Instruction::FMul, RecipCFP,
-                                               FDiv.getOperand(0), &FDiv);
+  // Disallow denormal constants because we don't know what would happen
+  // on all targets.
+  // TODO: Use Intrinsic::canonicalize or let function attributes tell us that
+  // denorms are flushed?
+  auto *RecipC = ConstantExpr::getFDiv(ConstantFP::get(I.getType(), 1.0), C);
+  if (!RecipC->isNormalFP())
+    return nullptr;
+
+  return BinaryOperator::CreateWithCopiedFlags(
+      Instruction::FMul, I.getOperand(0), RecipC, &I);
 }
 
 /// Try to reassociate C / X expressions where X includes another constant.
@@ -1364,39 +1356,12 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
-  bool AllowReassociate = I.isFast();
-  if (Constant *Op1C = dyn_cast<Constant>(Op1)) {
+  if (isa<Constant>(Op1))
     if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
-    if (AllowReassociate) {
-      Constant *C1 = nullptr;
-      Constant *C2 = Op1C;
-      Value *X;
-      Instruction *Res = nullptr;
-
-      if (match(Op0, m_FMul(m_Value(X), m_Constant(C1)))) {
-        // (X*C1)/C2 => X * (C1/C2)
-        Constant *C = ConstantExpr::getFDiv(C1, C2);
-        if (C->isNormalFP())
-          Res = BinaryOperator::CreateFMul(X, C);
-      } else if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
-        // (X/C1)/C2 => X /(C2*C1)
-        Constant *C = ConstantExpr::getFMul(C1, C2);
-        if (C->isNormalFP())
-          Res = BinaryOperator::CreateFDiv(X, C);
-      }
-
-      if (Res) {
-        Res->setFastMathFlags(I.getFastMathFlags());
-        return Res;
-      }
-    }
-    return nullptr;
-  }
-
-  if (AllowReassociate) {
+  if (I.isFast()) {
     Value *X, *Y;
     if (match(Op0, m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))) &&
         (!isa<Constant>(Y) || !isa<Constant>(Op1))) {

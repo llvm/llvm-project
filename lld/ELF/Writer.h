@@ -23,7 +23,6 @@ class InputSectionBase;
 template <class ELFT> class ObjFile;
 class SymbolTable;
 template <class ELFT> void writeResult();
-template <class ELFT> void markLive();
 
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be

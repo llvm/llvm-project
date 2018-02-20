@@ -530,6 +530,7 @@ __DEVICE__ int __syncthreads_or(int __a) { return __nvvm_bar0_or(__a); }
 __DEVICE__ float __tanf(float __a) { return __nv_fast_tanf(__a); }
 __DEVICE__ void __threadfence(void) { __nvvm_membar_gl(); }
 __DEVICE__ void __threadfence_block(void) { __nvvm_membar_cta(); };
+__DEVICE__ void __threadfence_system(void) { __nvvm_membar_sys(); };
 __DEVICE__ void __trap(void) { asm volatile("trap;"); }
 __DEVICE__ unsigned int __uAtomicAdd(unsigned int *__p, unsigned int __v) {
   return __nvvm_atom_add_gen_i((int *)__p, __v);

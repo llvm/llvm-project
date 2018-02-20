@@ -1182,6 +1182,9 @@ INTERCEPTOR(int, fork, void) {
   return pid;
 }
 
+// NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
+// with MSan.
+#if SANITIZER_LINUX
 INTERCEPTOR(int, openpty, int *amaster, int *aslave, char *name,
             const void *termp, const void *winp) {
   ENSURE_MSAN_INITED();
@@ -1193,7 +1196,14 @@ INTERCEPTOR(int, openpty, int *amaster, int *aslave, char *name,
   }
   return res;
 }
+#define MSAN_MAYBE_INTERCEPT_OPENPTY INTERCEPT_FUNCTION(openpty)
+#else
+#define MSAN_MAYBE_INTERCEPT_OPENPTY
+#endif
 
+// NetBSD ships with forkpty(3) in -lutil, that needs to be prebuilt explicitly
+// with MSan.
+#if SANITIZER_LINUX
 INTERCEPTOR(int, forkpty, int *amaster, char *name, const void *termp,
             const void *winp) {
   ENSURE_MSAN_INITED();
@@ -1203,6 +1213,10 @@ INTERCEPTOR(int, forkpty, int *amaster, char *name, const void *termp,
     __msan_unpoison(amaster, sizeof(*amaster));
   return res;
 }
+#define MSAN_MAYBE_INTERCEPT_FORKPTY INTERCEPT_FUNCTION(forkpty)
+#else
+#define MSAN_MAYBE_INTERCEPT_FORKPTY
+#endif
 
 struct MSanInterceptorContext {
   bool in_interceptor_scope;
@@ -1678,8 +1692,8 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(__cxa_atexit);
   INTERCEPT_FUNCTION(shmat);
   INTERCEPT_FUNCTION(fork);
-  INTERCEPT_FUNCTION(openpty);
-  INTERCEPT_FUNCTION(forkpty);
+  MSAN_MAYBE_INTERCEPT_OPENPTY;
+  MSAN_MAYBE_INTERCEPT_FORKPTY;
 
   inited = 1;
 }

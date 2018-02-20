@@ -182,17 +182,6 @@ struct match_nan {
 /// Match an arbitrary NaN constant. This includes quiet and signalling nans.
 inline match_nan m_NaN() { return match_nan(); }
 
-struct match_sign_mask {
-  template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<Constant>(V))
-      return C->isMinSignedValue();
-    return false;
-  }
-};
-
-/// Match an integer or vector with only the sign bit(s) set.
-inline match_sign_mask m_SignMask() { return match_sign_mask(); }
-
 struct apint_match {
   const APInt *&Res;
 
@@ -368,6 +357,14 @@ inline api_pred_ty<is_nonnegative> m_NonNegative(const APInt *&V) {
   return V;
 }
 
+struct is_one {
+  bool isValue(const APInt &C) { return C.isOneValue(); }
+};
+/// Match an integer 1 or a vector with all elements equal to 1.
+inline cst_pred_ty<is_one> m_One() {
+  return cst_pred_ty<is_one>();
+}
+
 struct is_power2 {
   bool isValue(const APInt &C) { return C.isPowerOf2(); }
 };
@@ -390,12 +387,12 @@ inline api_pred_ty<is_power2_or_zero> m_Power2OrZero(const APInt *&V) {
   return V;
 }
 
-struct is_one {
-  bool isValue(const APInt &C) { return C.isOneValue(); }
+struct is_sign_mask {
+  bool isValue(const APInt &C) { return C.isSignMask(); }
 };
-/// Match an integer 1 or a vector with all elements equal to 1.
-inline cst_pred_ty<is_one> m_One() {
-  return cst_pred_ty<is_one>();
+/// Match an integer or vector with only the sign bit(s) set.
+inline cst_pred_ty<is_sign_mask> m_SignMask() {
+  return cst_pred_ty<is_sign_mask>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1104,7 +1101,7 @@ template <typename LHS_t> struct fneg_match {
 
 private:
   bool matchIfFNeg(Value *LHS, Value *RHS) {
-    if (const auto *C = dyn_cast<ConstantFP>(LHS))
+    if (const auto *C = dyn_cast<Constant>(LHS))
       return C->isNegativeZeroValue() && L.match(RHS);
     return false;
   }

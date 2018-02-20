@@ -184,9 +184,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonBitSimplify() : MachineFunctionPass(ID) {
-      initializeHexagonBitSimplifyPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonBitSimplify() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon bit simplification";
@@ -257,10 +255,10 @@ namespace {
 
 char HexagonBitSimplify::ID = 0;
 
-INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexbit",
+INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(HexagonBitSimplify, "hexbit",
+INITIALIZE_PASS_END(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
 
 bool HexagonBitSimplify::visitBlock(MachineBasicBlock &B, Transformation &T,
