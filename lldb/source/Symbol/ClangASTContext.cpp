@@ -1466,7 +1466,7 @@ static TemplateParameterList *CreateTemplateParameterList(
           is_typename, parameter_pack));
     }
   }
-  
+
   if (template_param_infos.packed_args &&
       template_param_infos.packed_args->args.size()) {
     IdentifierInfo *identifier_info = nullptr;
@@ -4074,7 +4074,10 @@ ClangASTContext::GetTypeInfo(lldb::opaque_compiler_type_t type,
   case clang::Type::DependentTemplateSpecialization:
     return eTypeIsTemplate;
   case clang::Type::Decltype:
-    return 0;
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::DecltypeType>(qual_type)->getUnderlyingType())
+        .GetTypeInfo(pointee_or_element_clang_type);
 
   case clang::Type::Enum:
     if (pointee_or_element_clang_type)
@@ -4156,9 +4159,16 @@ ClangASTContext::GetTypeInfo(lldb::opaque_compiler_type_t type,
                             ->getUnderlyingType())
                .GetTypeInfo(pointee_or_element_clang_type);
   case clang::Type::TypeOfExpr:
-    return 0;
+    return CompilerType(getASTContext(),
+                        llvm::cast<clang::TypeOfExprType>(qual_type)
+                            ->getUnderlyingExpr()
+                            ->getType())
+        .GetTypeInfo(pointee_or_element_clang_type);
   case clang::Type::TypeOf:
-    return 0;
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::TypeOfType>(qual_type)->getUnderlyingType())
+        .GetTypeInfo(pointee_or_element_clang_type);
   case clang::Type::UnresolvedUsing:
     return 0;
 
@@ -4365,11 +4375,21 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
 
   case clang::Type::TypeOfExpr:
-    break;
+    return CompilerType(getASTContext(),
+                        llvm::cast<clang::TypeOfExprType>(qual_type)
+                            ->getUnderlyingExpr()
+                            ->getType())
+        .GetTypeClass();
   case clang::Type::TypeOf:
-    break;
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::TypeOfType>(qual_type)->getUnderlyingType())
+        .GetTypeClass();
   case clang::Type::Decltype:
-    break;
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::TypeOfType>(qual_type)->getUnderlyingType())
+        .GetTypeClass();
   case clang::Type::TemplateSpecialization:
     break;
   case clang::Type::DeducedTemplateSpecialization:
@@ -5212,7 +5232,22 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     return CompilerType(getASTContext(),
                         llvm::cast<clang::ParenType>(qual_type)->desugar())
         .GetEncoding(count);
-
+  case clang::Type::TypeOfExpr:
+    return CompilerType(getASTContext(),
+                        llvm::cast<clang::TypeOfExprType>(qual_type)
+                            ->getUnderlyingExpr()
+                            ->getType())
+        .GetEncoding(count);
+  case clang::Type::TypeOf:
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::TypeOfType>(qual_type)->getUnderlyingType())
+        .GetEncoding(count);
+  case clang::Type::Decltype:
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::DecltypeType>(qual_type)->getUnderlyingType())
+        .GetEncoding(count);
   case clang::Type::DependentSizedArray:
   case clang::Type::DependentSizedExtVector:
   case clang::Type::UnresolvedUsing:
@@ -5226,9 +5261,6 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::PackExpansion:
   case clang::Type::ObjCObject:
 
-  case clang::Type::TypeOfExpr:
-  case clang::Type::TypeOf:
-  case clang::Type::Decltype:
   case clang::Type::TemplateSpecialization:
   case clang::Type::DeducedTemplateSpecialization:
   case clang::Type::Atomic:
@@ -5363,6 +5395,22 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
                getASTContext(),
                llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType())
         .GetFormat();
+  case clang::Type::TypeOfExpr:
+    return CompilerType(getASTContext(),
+                        llvm::cast<clang::TypeOfExprType>(qual_type)
+                            ->getUnderlyingExpr()
+                            ->getType())
+        .GetFormat();
+  case clang::Type::TypeOf:
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::TypeOfType>(qual_type)->getUnderlyingType())
+        .GetFormat();
+  case clang::Type::Decltype:
+    return CompilerType(
+               getASTContext(),
+               llvm::cast<clang::DecltypeType>(qual_type)->getUnderlyingType())
+        .GetFormat();
   case clang::Type::DependentSizedArray:
   case clang::Type::DependentSizedExtVector:
   case clang::Type::UnresolvedUsing:
@@ -5376,9 +5424,6 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::PackExpansion:
   case clang::Type::ObjCObject:
 
-  case clang::Type::TypeOfExpr:
-  case clang::Type::TypeOf:
-  case clang::Type::Decltype:
   case clang::Type::TemplateSpecialization:
   case clang::Type::DeducedTemplateSpecialization:
   case clang::Type::Atomic:
@@ -6410,11 +6455,15 @@ uint32_t ClangASTContext::GetNumPointeeChildren(clang::QualType type) {
     return GetNumPointeeChildren(
         llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType());
   case clang::Type::TypeOfExpr:
-    return 0;
+    return GetNumPointeeChildren(llvm::cast<clang::TypeOfExprType>(qual_type)
+                                     ->getUnderlyingExpr()
+                                     ->getType());
   case clang::Type::TypeOf:
-    return 0;
+    return GetNumPointeeChildren(
+        llvm::cast<clang::TypeOfType>(qual_type)->getUnderlyingType());
   case clang::Type::Decltype:
-    return 0;
+    return GetNumPointeeChildren(
+        llvm::cast<clang::DecltypeType>(qual_type)->getUnderlyingType());
   case clang::Type::Record:
     return 0;
   case clang::Type::Enum:
