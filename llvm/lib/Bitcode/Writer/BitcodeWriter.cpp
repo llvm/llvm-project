@@ -1330,19 +1330,19 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::PEO_EXACT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
     if (FPMO->hasAllowReassoc())
-      Flags |= FastMathFlags::AllowReassoc;
+      Flags |= bitc::AllowReassoc;
     if (FPMO->hasNoNaNs())
-      Flags |= FastMathFlags::NoNaNs;
+      Flags |= bitc::NoNaNs;
     if (FPMO->hasNoInfs())
-      Flags |= FastMathFlags::NoInfs;
+      Flags |= bitc::NoInfs;
     if (FPMO->hasNoSignedZeros())
-      Flags |= FastMathFlags::NoSignedZeros;
+      Flags |= bitc::NoSignedZeros;
     if (FPMO->hasAllowReciprocal())
-      Flags |= FastMathFlags::AllowReciprocal;
+      Flags |= bitc::AllowReciprocal;
     if (FPMO->hasAllowContract())
-      Flags |= FastMathFlags::AllowContract;
+      Flags |= bitc::AllowContract;
     if (FPMO->hasApproxFunc())
-      Flags |= FastMathFlags::ApproxFunc;
+      Flags |= bitc::ApproxFunc;
   }
 
   return Flags;
@@ -3183,7 +3183,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LHS
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // RHS
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // opc
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 7)); // flags
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8)); // flags
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_INST_BINOP_FLAGS_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
