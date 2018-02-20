@@ -354,6 +354,31 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
 
+  if (!TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+    const RegClassOrRegBank &RegClassOrBank =
+      MRI.getRegClassOrRegBank(SrcReg);
+
+    const TargetRegisterClass *SrcRC =
+        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+    const RegisterBank *RB = nullptr;
+    if (!SrcRC) {
+      RB = RegClassOrBank.get<const RegisterBank *>();
+      SrcRC = getRegClassForTypeOnBank(MRI.getType(SrcReg), *RB, RBI, true);
+    }
+    // Copies from fpr16 to gpr32 need to use SUBREG_TO_REG.
+    if (RC == &AArch64::GPR32allRegClass && SrcRC == &AArch64::FPR16RegClass) {
+      unsigned PromoteReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(AArch64::SUBREG_TO_REG))
+          .addDef(PromoteReg)
+          .addImm(0)
+          .addUse(SrcReg)
+          .addImm(AArch64::hsub);
+      MachineOperand &RegOp = I.getOperand(1);
+      RegOp.setReg(PromoteReg);
+    }
+  }
+
   // No need to constrain SrcReg. It will get constrained when
   // we hit another of its use or its defs.
   // Copies do not have constraints.
