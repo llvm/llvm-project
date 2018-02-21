@@ -96,7 +96,7 @@ CXString createRef(StringRef String) {
 
 CXString createDup(StringRef String) {
   CXString Result;
-  char *Spelling = static_cast<char *>(malloc(String.size() + 1));
+  char *Spelling = static_cast<char *>(llvm::safe_malloc(String.size() + 1));
   memmove(Spelling, String.data(), String.size());
   Spelling[String.size()] = 0;
   Result.data = Spelling;

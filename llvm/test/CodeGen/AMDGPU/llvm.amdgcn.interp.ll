@@ -160,21 +160,25 @@ bb:
 
 ; SI won't merge ds memory operations, because of the signed offset bug, so
 ; we only have check lines for VI.
-; VI-LABEL: v_interp_readnone:
-; VI: s_mov_b32 m0, 0
-; VI-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
-; VI-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, attr0.x{{$}}
-; VI: s_mov_b32 m0, -1{{$}}
-; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
-define amdgpu_ps void @v_interp_readnone(float addrspace(3)* %lds) #0 {
-bb:
-  store float 0.000000e+00, float addrspace(3)* %lds
-  %tmp1 = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 0)
-  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
-  store float 0.000000e+00, float addrspace(3)* %tmp2
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
-  ret void
-}
+;
+; TODO: VI won't merge them either, because we are conservative about moving
+; instructions past changes to physregs.
+;
+; TODO-VI-LABEL: v_interp_readnone:
+; TODO-VI: s_mov_b32 m0, 0
+; TODO-VI-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; TODO-VI-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, attr0.x{{$}}
+; TODO-VI: s_mov_b32 m0, -1{{$}}
+; TODO-VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
+;define amdgpu_ps void @v_interp_readnone(float addrspace(3)* %lds) #0 {
+;bb:
+;  store float 0.000000e+00, float addrspace(3)* %lds
+;  %tmp1 = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 0)
+;  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
+;  store float 0.000000e+00, float addrspace(3)* %tmp2
+;  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp1, float %tmp1, float %tmp1, float %tmp1, i1 true, i1 true) #0
+;  ret void
+;}
 
 ; Thest that v_interp_p1 uses different source and destination registers
 ; on 16 bank LDS chips.

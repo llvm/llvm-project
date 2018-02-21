@@ -232,6 +232,7 @@ static int parse_remapped_files_with_opt(const char *opt_name,
   *unsaved_files
     = (struct CXUnsavedFile *)malloc(sizeof(struct CXUnsavedFile) *
                                      *num_unsaved_files);
+  assert(*unsaved_files);
   for (i = 0; i != *num_unsaved_files; ++i) {
     struct CXUnsavedFile *unsaved = *unsaved_files + i;
     const char *arg_string = argv[arg_indices[i]] + prefix_len;
@@ -267,6 +268,7 @@ static int parse_remapped_files_with_opt(const char *opt_name,
 
     /* Read the contents of the file we're remapping to. */
     contents = (char *)malloc(unsaved->Length + 1);
+    assert(contents);
     if (fread(contents, 1, unsaved->Length, to_file) != unsaved->Length) {
       fprintf(stderr, "error: unexpected %s reading 'to' file %s\n",
               (feof(to_file) ? "EOF" : "error"), sep + 1);
@@ -286,6 +288,7 @@ static int parse_remapped_files_with_opt(const char *opt_name,
     /* Copy the file name that we're remapping from. */
     filename_len = sep - arg_string;
     filename = (char *)malloc(filename_len + 1);
+    assert(filename);
     memcpy(filename, arg_string, filename_len);
     filename[filename_len] = 0;
     unsaved->Filename = filename;
@@ -340,6 +343,7 @@ static int parse_remapped_files_with_try(int try_idx,
     = (struct CXUnsavedFile *)realloc(unsaved_files_no_try_idx,
                                       sizeof(struct CXUnsavedFile) *
                                         *num_unsaved_files);
+  assert(*unsaved_files);
   memcpy(*unsaved_files + num_unsaved_files_no_try_idx,
          unsaved_files_try_idx, sizeof(struct CXUnsavedFile) *
             num_unsaved_files_try_idx);
@@ -2169,6 +2173,7 @@ int parse_file_line_column(const char *input, char **filename, unsigned *line,
 
   /* Copy the file name. */
   *filename = (char*)malloc(last_colon - input + 1);
+  assert(*filename);
   memcpy(*filename, input, last_colon - input);
   (*filename)[last_colon - input] = 0;
   return 0;
@@ -2578,6 +2583,7 @@ static int inspect_cursor_at(int argc, const char **argv,
   assert(NumLocations > 0 && "Unable to count locations?");
   Locations = (CursorSourceLocation *)malloc(
                                   NumLocations * sizeof(CursorSourceLocation));
+  assert(Locations);
   for (Loc = 0; Loc < NumLocations; ++Loc) {
     const char *input = argv[Loc + 1] + strlen(locations_flag);
     if ((errorCode = parse_file_line_column(input, &Locations[Loc].filename,
@@ -2871,6 +2877,7 @@ static int find_file_refs_at(int argc, const char **argv) {
   assert(NumLocations > 0 && "Unable to count locations?");
   Locations = (CursorSourceLocation *)malloc(
                                   NumLocations * sizeof(CursorSourceLocation));
+  assert(Locations);
   for (Loc = 0; Loc < NumLocations; ++Loc) {
     const char *input = argv[Loc + 1] + strlen("-file-refs-at=");
     if ((errorCode = parse_file_line_column(input, &Locations[Loc].filename,
@@ -2978,6 +2985,7 @@ static int find_file_includes_in(int argc, const char **argv) {
   /* Parse the locations. */
   assert(NumFilenames > 0 && "Unable to count filenames?");
   Filenames = (const char **)malloc(NumFilenames * sizeof(const char *));
+  assert(Filenames);
   for (I = 0; I < NumFilenames; ++I) {
     const char *input = argv[I + 1] + strlen("-file-includes-in=");
     /* Copy the file name. */
@@ -3061,7 +3069,9 @@ typedef struct {
 static ImportedASTFilesData *importedASTs_create() {
   ImportedASTFilesData *p;
   p = malloc(sizeof(ImportedASTFilesData));
+  assert(p);
   p->filenames = malloc(MAX_IMPORTED_ASTFILES * sizeof(const char *));
+  assert(p->filenames);
   p->num_files = 0;
   return p;
 }
@@ -3194,6 +3204,7 @@ static CXIdxClientContainer makeClientContainer(CXClientData *client_data,
   node =
       (IndexDataStringList *)malloc(sizeof(IndexDataStringList) + strlen(name) +
                                     digitCount(line) + digitCount(column) + 2);
+  assert(node);
   newStr = node->data;
   sprintf(newStr, "%s:%d:%d", name, line, column);
 
@@ -3795,6 +3806,7 @@ static int index_compile_db(int argc, const char **argv) {
 
     len = strlen(database);
     tmp = (char *) malloc(len+1);
+    assert(tmp);
     memcpy(tmp, database, len+1);
     buildDir = dirname(tmp);
 
@@ -3976,6 +3988,7 @@ int perform_token_annotation(int argc, const char **argv) {
   }
 
   cursors = (CXCursor *)malloc(num_tokens * sizeof(CXCursor));
+  assert(cursors);
   clang_annotateTokens(TU, tokens, num_tokens, cursors);
 
   if (checkForErrors(TU) != 0) {
@@ -4050,6 +4063,7 @@ perform_test_compilation_db(const char *database, int argc, const char **argv) {
 
   len = strlen(database);
   tmp = (char *) malloc(len+1);
+  assert(tmp);
   memcpy(tmp, database, len+1);
   buildDir = dirname(tmp);
 
