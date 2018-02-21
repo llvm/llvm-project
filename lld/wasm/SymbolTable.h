@@ -49,16 +49,15 @@ public:
 
   Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
                              InputFunction *Function = nullptr);
-  Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F,
-                           InputSegment *Segment = nullptr,
-                           uint32_t Address = 0);
+  Symbol *addDefinedData(StringRef Name, uint32_t Flags, InputFile *F,
+                         InputSegment *Segment = nullptr, uint32_t Address = 0);
   Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
   bool addComdat(StringRef Name, ObjFile *);
 
-  DefinedGlobal *addSyntheticGlobal(StringRef Name, uint32_t Flags = 0);
+  DefinedData *addSyntheticDataSymbol(StringRef Name, uint32_t Flags = 0);
   DefinedFunction *addSyntheticFunction(StringRef Name,
                                         const WasmSignature *Type,
                                         uint32_t Flags = 0);

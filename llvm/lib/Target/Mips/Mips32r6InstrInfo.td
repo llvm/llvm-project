@@ -1036,3 +1036,42 @@ def : MipsPat<(select i32:$cond, immz, i32:$f),
               (SELEQZ i32:$f, i32:$cond)>,
               ISA_MIPS32R6;
 }
+
+// Pseudo instructions
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
+    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT] in {
+  class TailCallRegR6<Instruction JumpInst, Register RT, RegisterOperand RO> :
+    PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>,
+    PseudoInstExpansion<(JumpInst RT:$rt, RO:$rs)>;
+}
+
+class PseudoIndirectBranchBaseR6<Instruction JumpInst, Register RT,
+                                 RegisterOperand RO> :
+    MipsPseudo<(outs), (ins RO:$rs), [(brind RO:$rs)],
+               II_IndirectBranchPseudo>,
+    PseudoInstExpansion<(JumpInst RT:$rt, RO:$rs)> {
+  let isTerminator=1;
+  let isBarrier=1;
+  let hasDelaySlot = 1;
+  let isBranch = 1;
+  let isIndirectBranch = 1;
+  bit isCTI = 1;
+}
+
+
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            NoIndirectJumpGuards] in {
+  def TAILCALLR6REG : TailCallRegR6<JALR, ZERO, GPR32Opnd>, ISA_MIPS32R6;
+  def PseudoIndirectBranchR6 : PseudoIndirectBranchBaseR6<JALR, ZERO,
+                                                          GPR32Opnd>,
+                               ISA_MIPS32R6;
+}
+
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            UseIndirectJumpsHazard] in {
+  def TAILCALLHBR6REG : TailCallReg<JR_HB_R6, GPR32Opnd>, ISA_MIPS32R6;
+  def PseudoIndrectHazardBranchR6 : PseudoIndirectBranchBase<JR_HB_R6,
+                                                             GPR32Opnd>,
+                                    ISA_MIPS32R6;
+}
+

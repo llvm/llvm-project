@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -78,7 +79,7 @@ clang_VirtualFileOverlay_writeToBuffer(CXVirtualFileOverlay VFO, unsigned,
   unwrap(VFO)->write(OS);
 
   StringRef Data = OS.str();
-  *out_buffer_ptr = (char*)malloc(Data.size());
+  *out_buffer_ptr = static_cast<char*>(llvm::safe_malloc(Data.size()));
   *out_buffer_size = Data.size();
   memcpy(*out_buffer_ptr, Data.data(), Data.size());
   return CXError_Success;
@@ -140,7 +141,7 @@ clang_ModuleMapDescriptor_writeToBuffer(CXModuleMapDescriptor MMD, unsigned,
   OS << "}\n";
 
   StringRef Data = OS.str();
-  *out_buffer_ptr = (char*)malloc(Data.size());
+  *out_buffer_ptr = static_cast<char*>(llvm::safe_malloc(Data.size()));
   *out_buffer_size = Data.size();
   memcpy(*out_buffer_ptr, Data.data(), Data.size());
   return CXError_Success;

@@ -38,12 +38,9 @@ define float @fneg_f32(float %x) {
   ret float %cos
 }
 
-; FIXME: m_FNeg() doesn't handle vectors
-
 define <2 x float> @fneg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fneg_v2f32(
-; CHECK-NEXT:    [[X_FNEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X_FNEG]])
+; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[COS]]
 ;
   %x.fneg = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -74,9 +71,7 @@ define float @fabs_fneg_f32(float %x) {
 
 define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fabs_fneg_v2f32(
-; CHECK-NEXT:    [[X_FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[X_FABS_FNEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X_FABS]]
-; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X_FABS_FNEG]])
+; CHECK-NEXT:    [[COS:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[COS]]
 ;
   %x.fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)

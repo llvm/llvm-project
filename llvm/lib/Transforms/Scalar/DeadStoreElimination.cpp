@@ -510,8 +510,8 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
 /// memory region into an identical pointer) then it doesn't actually make its
 /// input dead in the traditional sense.  Consider this case:
 ///
-///   memcpy(A <- B)
-///   memcpy(A <- A)
+///   memmove(A <- B)
+///   memmove(A <- A)
 ///
 /// In this case, the second store to A does not make the first store to A dead.
 /// The usual situation isn't an explicit A<-A store like this (which can be
@@ -527,23 +527,34 @@ static bool isPossibleSelfRead(Instruction *Inst,
   // Self reads can only happen for instructions that read memory.  Get the
   // location read.
   MemoryLocation InstReadLoc = getLocForRead(Inst, TLI);
-  if (!InstReadLoc.Ptr) return false;  // Not a reading instruction.
+  if (!InstReadLoc.Ptr)
+    return false; // Not a reading instruction.
 
   // If the read and written loc obviously don't alias, it isn't a read.
-  if (AA.isNoAlias(InstReadLoc, InstStoreLoc)) return false;
-
-  // Okay, 'Inst' may copy over itself.  However, we can still remove a the
-  // DepWrite instruction if we can prove that it reads from the same location
-  // as Inst.  This handles useful cases like:
-  //   memcpy(A <- B)
-  //   memcpy(A <- B)
-  // Here we don't know if A/B may alias, but we do know that B/B are must
-  // aliases, so removing the first memcpy is safe (assuming it writes <= #
-  // bytes as the second one.
-  MemoryLocation DepReadLoc = getLocForRead(DepWrite, TLI);
-
-  if (DepReadLoc.Ptr && AA.isMustAlias(InstReadLoc.Ptr, DepReadLoc.Ptr))
+  if (AA.isNoAlias(InstReadLoc, InstStoreLoc))
     return false;
+
+  if (isa<MemCpyInst>(Inst)) {
+    // LLVM's memcpy overlap semantics are not fully fleshed out (see PR11763)
+    // but in practice memcpy(A <- B) either means that A and B are disjoint or
+    // are equal (i.e. there are not partial overlaps).  Given that, if we have:
+    //
+    //   memcpy/memmove(A <- B)  // DepWrite
+    //   memcpy(A <- B)  // Inst
+    //
+    // with Inst reading/writing a >= size than DepWrite, we can reason as
+    // follows:
+    //
+    //   - If A == B then both the copies are no-ops, so the DepWrite can be
+    //     removed.
+    //   - If A != B then A and B are disjoint locations in Inst.  Since
+    //     Inst.size >= DepWrite.size A and B are disjoint in DepWrite too.
+    //     Therefore DepWrite can be removed.
+    MemoryLocation DepReadLoc = getLocForRead(DepWrite, TLI);
+
+    if (DepReadLoc.Ptr && AA.isMustAlias(InstReadLoc.Ptr, DepReadLoc.Ptr))
+      return false;
+  }
 
   // If DepWrite doesn't read memory or if we can't prove it is a must alias,
   // then it can't be considered dead.

@@ -204,14 +204,52 @@ define float @fneg_fneg_fast(float %x, float %y) {
 
 define <2 x float> @fneg_fneg_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fneg_fneg_vec(
-; CHECK-NEXT:    [[XNEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[YNEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[XNEG]], [[YNEG]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %xneg = fsub <2 x float> <float -0.0, float -0.0>, %x
   %yneg = fsub <2 x float> <float -0.0, float -0.0>, %y
   %div = fdiv <2 x float> %xneg, %yneg
+  ret <2 x float> %div
+}
+
+define float @fneg_dividend_constant_divisor(float %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nsz float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %neg = fsub float -0.0, %x
+  %div = fdiv nsz float %neg, 3.0
+  ret  float %div
+}
+
+define float @fneg_divisor_constant_dividend(float %x) {
+; CHECK-LABEL: @fneg_divisor_constant_dividend(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float 3.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %neg = fsub float -0.0, %x
+  %div = fdiv nnan float -3.0, %neg
+  ret float %div
+}
+
+define <2 x float> @fneg_dividend_constant_divisor_vec(<2 x float> %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[X:%.*]], <float -3.000000e+00, float 8.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %div = fdiv ninf <2 x float> %neg, <float 3.0, float -8.0>
+  ret <2 x float> %div
+}
+
+define <2 x float> @fneg_divisor_constant_dividend_vec(<2 x float> %x) {
+; CHECK-LABEL: @fneg_divisor_constant_dividend_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv afn <2 x float> <float 3.000000e+00, float -5.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %div = fdiv afn <2 x float> <float -3.0, float 5.0>, %neg
   ret <2 x float> %div
 }
 

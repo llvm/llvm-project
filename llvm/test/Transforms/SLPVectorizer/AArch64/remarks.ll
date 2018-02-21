@@ -9,7 +9,7 @@ define void @f(double* %r, double* %w) {
   %add1 = fadd double %f1, %f1
   %w0 = getelementptr inbounds double, double* %w, i64 0
   %w1 = getelementptr inbounds double, double* %w, i64 1
-; CHECK: remark: /tmp/s.c:5:10: Stores SLP vectorized with cost -3 and with tree size 3
+; CHECK: remark: /tmp/s.c:5:10: Stores SLP vectorized with cost -4 and with tree size 3
   store double %add0, double* %w0, !dbg !9
   store double %add1, double* %w1
   ret void

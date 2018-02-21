@@ -402,3 +402,9 @@
 // RUN: %clang -target -mips-mti-linux-gnu -### -c %s -mno-branch-likely 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO-BRANCH-LIKELY %s
 // NO-BRANCH-LIKELY: argument unused during compilation: '-mno-branch-likely'
+
+// -mindirect-jump=hazard
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:        -mindirect-jump=hazard 2>&1 \
+// RUN:   | FileCheck --check-prefix=INDIRECT-BH %s
+// INDIRECT-BH: "-target-feature" "+use-indirect-jump-hazard"

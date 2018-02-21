@@ -79,10 +79,12 @@ set(LLVM_TOOLCHAIN_TOOLS
 
 set(LLVM_DISTRIBUTION_COMPONENTS
   clang
+  libclang
   lld
   LTO
   clang-format
   clang-headers
+  clang-include-fixer
   clang-refactor
   clang-tidy
   clangd
