@@ -188,7 +188,7 @@ struct AccessInfo {
 
 #if defined(__aarch64__)
 static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
-  // Access type is encoded in HLT immediate as 0x1XY,
+  // Access type is encoded in BRK immediate as 0x9XY,
   // where X&1 is 1 for store, 0 for load,
   // and X&2 is 1 if the error is recoverable.
   // Valid values of Y are 0 to 4, which are interpreted as log2(access_size),
@@ -197,7 +197,7 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   AccessInfo ai;
   uptr pc = (uptr)info->si_addr;
   unsigned code = ((*(u32 *)pc) >> 5) & 0xffff;
-  if ((code & 0xff00) != 0x100)
+  if ((code & 0xff00) != 0x900)
     return AccessInfo{0, 0, false, false}; // Not ours.
   bool is_store = code & 0x10;
   bool recover = code & 0x20;
@@ -221,7 +221,7 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
 }
 #endif
 
-static bool HwasanOnSIGILL(int signo, siginfo_t *info, ucontext_t *uc) {
+static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   SignalContext sig{info, uc};
   AccessInfo ai = GetAccessInfo(info, uc);
   if (!ai.is_store && !ai.is_load)
@@ -251,8 +251,8 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {
   // Probably a tag mismatch.
-  if (signo == SIGILL)
-    if (HwasanOnSIGILL(signo, (siginfo_t *)info, (ucontext_t*)context))
+  if (signo == SIGTRAP)
+    if (HwasanOnSIGTRAP(signo, (siginfo_t *)info, (ucontext_t*)context))
       return;
 
   HandleDeadlySignal(info, context, GetTid(), &OnStackUnwind, nullptr);

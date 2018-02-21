@@ -160,7 +160,7 @@ TEST(CoreAPIsTest, LookupFlagsTest) {
   cantFail(V.define(std::move(InitialDefs)));
 
   SymbolFlagsMap InitialLazyDefs({{Bar, BarFlags}});
-  cantFail(V.defineLazy(InitialLazyDefs, *Source));
+  cantFail(V.defineLazy(InitialLazyDefs, Source));
 
   SymbolNameSet Names({Foo, Bar, Baz});
 
@@ -217,7 +217,7 @@ TEST(CoreAPIsTest, AddAndMaterializeLazySymbol) {
       {{Foo, JITSymbolFlags::Exported},
        {Bar, static_cast<JITSymbolFlags::FlagNames>(JITSymbolFlags::Exported |
                                                     JITSymbolFlags::Weak)}});
-  cantFail(V.defineLazy(InitialSymbols, *Source));
+  cantFail(V.defineLazy(InitialSymbols, Source));
 
   SymbolMap BarOverride;
   BarOverride[Bar] = JITEvaluatedSymbol(FakeBarAddr, JITSymbolFlags::Exported);

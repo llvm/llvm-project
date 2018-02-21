@@ -99,8 +99,8 @@ b2:
 }
 
 ; CHECK-LABEL: test_22:
-; CHECK: v3 = v2
 ; CHECK: vcombine(v3,v2)
+; CHECK: v1 = v0
 ; Result: v1:0 = vcombine(v2,v2)
 define <128 x i8> @test_22(<128 x i8> %a0, <128 x i8> %a1) #0 {
 b2:
@@ -145,8 +145,8 @@ b2:
 }
 
 ; CHECK-LABEL: test_33:
-; CHECK: v2 = v3
 ; CHECK: vcombine(v3,v2)
+; CHECK: v0 = v1
 ; Result: v1:0 = vcombine(v3,v3)
 define <128 x i8> @test_33(<128 x i8> %a0, <128 x i8> %a1) #0 {
 b2:

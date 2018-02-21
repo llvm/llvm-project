@@ -218,6 +218,7 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   MaybeInstallSigaction(SIGABRT, handler);
   MaybeInstallSigaction(SIGFPE, handler);
   MaybeInstallSigaction(SIGILL, handler);
+  MaybeInstallSigaction(SIGTRAP, handler);
 }
 
 bool SignalContext::IsStackOverflow() const {

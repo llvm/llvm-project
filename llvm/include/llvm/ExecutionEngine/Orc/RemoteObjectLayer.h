@@ -306,8 +306,7 @@ public:
   using ObjHandleT = RemoteObjectLayerAPI::ObjHandleT;
   using RemoteSymbol = RemoteObjectLayerAPI::RemoteSymbol;
 
-  using ObjectPtr =
-    std::shared_ptr<object::OwningBinary<object::ObjectFile>>;
+  using ObjectPtr = std::unique_ptr<MemoryBuffer>;
 
   /// Create a RemoteObjectClientLayer that communicates with a
   /// RemoteObjectServerLayer instance via the given RPCEndpoint.
@@ -328,11 +327,10 @@ public:
   /// @return A handle that can be used to refer to the loaded object (for
   ///         symbol searching, finalization, freeing memory, etc.).
   Expected<ObjHandleT>
-  addObject(ObjectPtr Object,
+  addObject(ObjectPtr ObjBuffer,
             std::shared_ptr<LegacyJITSymbolResolver> Resolver) {
-    StringRef ObjBuffer = Object->getBinary()->getData();
     if (auto HandleOrErr =
-          this->Remote.template callB<AddObject>(ObjBuffer)) {
+            this->Remote.template callB<AddObject>(ObjBuffer->getBuffer())) {
       auto &Handle = *HandleOrErr;
       // FIXME: Return an error for this:
       assert(!Resolvers.count(Handle) && "Handle already in use?");
@@ -461,30 +459,21 @@ private:
 
   Expected<ObjHandleT> addObject(std::string ObjBuffer) {
     auto Buffer = llvm::make_unique<StringMemoryBuffer>(std::move(ObjBuffer));
-    if (auto ObjectOrErr =
-          object::ObjectFile::createObjectFile(Buffer->getMemBufferRef())) {
-      auto Object =
-        std::make_shared<object::OwningBinary<object::ObjectFile>>(
-          std::move(*ObjectOrErr), std::move(Buffer));
+    auto Id = HandleIdMgr.getNext();
+    assert(!BaseLayerHandles.count(Id) && "Id already in use?");
 
-      auto Id = HandleIdMgr.getNext();
-      assert(!BaseLayerHandles.count(Id) && "Id already in use?");
+    auto Resolver = createLambdaResolver(
+        [this, Id](const std::string &Name) { return lookup(Id, Name); },
+        [this, Id](const std::string &Name) {
+          return lookupInLogicalDylib(Id, Name);
+        });
 
-      auto Resolver =
-        createLambdaResolver(
-          [this, Id](const std::string &Name) { return lookup(Id, Name); },
-          [this, Id](const std::string &Name) {
-            return lookupInLogicalDylib(Id, Name);
-          });
-
-      if (auto HandleOrErr =
-          BaseLayer.addObject(std::move(Object), std::move(Resolver))) {
-        BaseLayerHandles[Id] = std::move(*HandleOrErr);
-        return Id;
-      } else
-        return teeLog(HandleOrErr.takeError());
+    if (auto HandleOrErr =
+            BaseLayer.addObject(std::move(Buffer), std::move(Resolver))) {
+      BaseLayerHandles[Id] = std::move(*HandleOrErr);
+      return Id;
     } else
-      return teeLog(ObjectOrErr.takeError());
+      return teeLog(HandleOrErr.takeError());
   }
 
   Error removeObject(ObjHandleT H) {
