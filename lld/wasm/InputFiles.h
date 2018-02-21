@@ -108,8 +108,8 @@ public:
     return cast<FunctionSymbol>(FunctionSymbols[Index]);
   }
 
-  GlobalSymbol *getGlobalSymbol(uint32_t Index) const {
-    return cast<GlobalSymbol>(GlobalSymbols[Index]);
+  DataSymbol *getDataSymbol(uint32_t Index) const {
+    return cast<DataSymbol>(DataSymbols[Index]);
   }
 
 private:
@@ -118,8 +118,8 @@ private:
   uint32_t relocateGlobalIndex(uint32_t Original) const;
   uint32_t relocateTableIndex(uint32_t Original) const;
 
-  Symbol *createDefinedGlobal(const WasmSymbol &Sym, InputSegment *Segment,
-                              uint32_t Address);
+  Symbol *createDefinedData(const WasmSymbol &Sym, InputSegment *Segment,
+                            uint32_t Address);
   Symbol *createDefinedFunction(const WasmSymbol &Sym, InputFunction *Function);
   Symbol *createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                           const WasmSignature *Signature = nullptr);
@@ -137,7 +137,7 @@ private:
   std::vector<Symbol *> FunctionSymbols;
 
   // List of all global symbols indexed by the global index space
-  std::vector<Symbol *> GlobalSymbols;
+  std::vector<Symbol *> DataSymbols;
 
   uint32_t NumGlobalImports = 0;
   uint32_t NumFunctionImports = 0;

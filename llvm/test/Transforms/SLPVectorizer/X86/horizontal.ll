@@ -730,26 +730,28 @@ define void @foo(float* nocapture readonly %arg_A, i32 %arg_B, float* nocapture 
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND_CLEANUP15:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP0]], 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[ARRAYIDX8]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP0]], 3
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[TMP0]], 1
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 2
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP0]], 3
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, <4 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[TMP5]], i32 3
 ; CHECK-NEXT:    br i1 [[CMP1495]], label [[FOR_COND_CLEANUP15]], label [[FOR_BODY16_LR_PH:%.*]]
 ; CHECK:       for.body16.lr.ph:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[ARG_A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[ADD_PTR]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[ADD_PTR]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY16:%.*]]
 ; CHECK:       for.cond.cleanup15:
-; CHECK-NEXT:    [[W2_0_LCSSA:%.*]] = phi float [ [[TMP5]], [[FOR_BODY]] ], [ [[SUB28:%.*]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[W3_0_LCSSA:%.*]] = phi float [ [[TMP7]], [[FOR_BODY]] ], [ [[W2_096:%.*]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[W1_0_LCSSA:%.*]] = phi float [ [[TMP3]], [[FOR_BODY]] ], [ [[W0_0100:%.*]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[W0_0_LCSSA:%.*]] = phi float [ [[TMP1]], [[FOR_BODY]] ], [ [[SUB19:%.*]], [[FOR_BODY16]] ]
+; CHECK-NEXT:    [[W2_0_LCSSA:%.*]] = phi float [ [[TMP8]], [[FOR_BODY]] ], [ [[TMP21:%.*]], [[FOR_BODY16]] ]
+; CHECK-NEXT:    [[W3_0_LCSSA:%.*]] = phi float [ [[TMP9]], [[FOR_BODY]] ], [ [[TMP25:%.*]], [[FOR_BODY16]] ]
+; CHECK-NEXT:    [[W1_0_LCSSA:%.*]] = phi float [ [[TMP7]], [[FOR_BODY]] ], [ [[TMP12:%.*]], [[FOR_BODY16]] ]
+; CHECK-NEXT:    [[W0_0_LCSSA:%.*]] = phi float [ [[TMP6]], [[FOR_BODY]] ], [ [[SUB19:%.*]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    store float [[W0_0_LCSSA]], float* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    store float [[W1_0_LCSSA]], float* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    store float [[W2_0_LCSSA]], float* [[ARRAYIDX8]], align 4
@@ -758,26 +760,36 @@ define void @foo(float* nocapture readonly %arg_A, i32 %arg_B, float* nocapture 
 ; CHECK-NEXT:    [[EXITCOND109:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[EXITCOND109]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.body16:
-; CHECK-NEXT:    [[W0_0100]] = phi float [ [[TMP1]], [[FOR_BODY16_LR_PH]] ], [ [[SUB19]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[W1_099:%.*]] = phi float [ [[TMP3]], [[FOR_BODY16_LR_PH]] ], [ [[W0_0100]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    [[J_098:%.*]] = phi i32 [ 0, [[FOR_BODY16_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[W3_097:%.*]] = phi float [ [[TMP7]], [[FOR_BODY16_LR_PH]] ], [ [[W2_096]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[W2_096]] = phi float [ [[TMP5]], [[FOR_BODY16_LR_PH]] ], [ [[SUB28]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[MUL17:%.*]] = fmul fast float [[W0_0100]], 0x3FF19999A0000000
-; CHECK-NEXT:    [[MUL18_NEG:%.*]] = fmul fast float [[W1_099]], 0xBFF3333340000000
-; CHECK-NEXT:    [[SUB92:%.*]] = fadd fast float [[MUL17]], [[MUL18_NEG]]
-; CHECK-NEXT:    [[SUB19]] = fadd fast float [[SUB92]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x float> [ [[TMP5]], [[FOR_BODY16_LR_PH]] ], [ [[TMP26:%.*]], [[FOR_BODY16]] ]
+; CHECK-NEXT:    [[TMP12]] = extractelement <4 x float> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> undef, float [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul fast <2 x float> <float 0x3FF19999A0000000, float 0xBFF3333340000000>, [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP16]], i32 1
+; CHECK-NEXT:    [[SUB92:%.*]] = fadd fast float [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[SUB19]] = fadd fast float [[SUB92]], [[TMP10]]
 ; CHECK-NEXT:    [[MUL20:%.*]] = fmul fast float [[SUB19]], 0x4000CCCCC0000000
-; CHECK-NEXT:    [[MUL21_NEG:%.*]] = fmul fast float [[W0_0100]], 0xC0019999A0000000
-; CHECK-NEXT:    [[MUL23:%.*]] = fmul fast float [[W1_099]], 0x4002666660000000
-; CHECK-NEXT:    [[MUL25:%.*]] = fmul fast float [[W2_096]], 0x4008CCCCC0000000
-; CHECK-NEXT:    [[MUL27_NEG:%.*]] = fmul fast float [[W3_097]], 0xC0099999A0000000
-; CHECK-NEXT:    [[ADD2293:%.*]] = fadd fast float [[MUL27_NEG]], [[MUL25]]
-; CHECK-NEXT:    [[ADD24:%.*]] = fadd fast float [[ADD2293]], [[MUL23]]
-; CHECK-NEXT:    [[SUB2694:%.*]] = fadd fast float [[ADD24]], [[MUL21_NEG]]
-; CHECK-NEXT:    [[SUB28]] = fadd fast float [[SUB2694]], [[MUL20]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> <float 0xC0019999A0000000, float 0x4002666660000000, float 0x4008CCCCC0000000, float 0xC0099999A0000000>, [[TMP11]]
+; CHECK-NEXT:    [[ADD2293:%.*]] = fadd fast float undef, undef
+; CHECK-NEXT:    [[ADD24:%.*]] = fadd fast float [[ADD2293]], undef
+; CHECK-NEXT:    [[SUB2694:%.*]] = fadd fast float [[ADD24]], undef
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP19]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP19]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[TMP21]] = fadd fast float [[TMP20]], [[MUL20]]
+; CHECK-NEXT:    [[SUB28:%.*]] = fadd fast float [[SUB2694]], [[MUL20]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_098]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[ARG_B]]
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x float> undef, float [[SUB19]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x float> [[TMP22]], float [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x float> [[TMP23]], float [[TMP21]], i32 2
+; CHECK-NEXT:    [[TMP25]] = extractelement <4 x float> [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP26]] = insertelement <4 x float> [[TMP24]], float [[TMP25]], i32 3
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP15]], label [[FOR_BODY16]]
 ;
 ; STORE-LABEL: @foo(
@@ -790,26 +802,28 @@ define void @foo(float* nocapture readonly %arg_A, i32 %arg_B, float* nocapture 
 ; STORE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND_CLEANUP15:%.*]] ]
 ; STORE-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVARS_IV]], 2
 ; STORE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[ARRAY:%.*]], i64 [[TMP0]]
-; STORE-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX]], align 4
-; STORE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
-; STORE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP2]]
-; STORE-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX4]], align 4
-; STORE-NEXT:    [[TMP4:%.*]] = or i64 [[TMP0]], 2
-; STORE-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP4]]
-; STORE-NEXT:    [[TMP5:%.*]] = load float, float* [[ARRAYIDX8]], align 4
-; STORE-NEXT:    [[TMP6:%.*]] = or i64 [[TMP0]], 3
-; STORE-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP6]]
-; STORE-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX12]], align 4
+; STORE-NEXT:    [[TMP1:%.*]] = or i64 [[TMP0]], 1
+; STORE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP1]]
+; STORE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 2
+; STORE-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP2]]
+; STORE-NEXT:    [[TMP3:%.*]] = or i64 [[TMP0]], 3
+; STORE-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP3]]
+; STORE-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
+; STORE-NEXT:    [[TMP5:%.*]] = load <4 x float>, <4 x float>* [[TMP4]], align 4
+; STORE-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i32 0
+; STORE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP5]], i32 1
+; STORE-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP5]], i32 2
+; STORE-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[TMP5]], i32 3
 ; STORE-NEXT:    br i1 [[CMP1495]], label [[FOR_COND_CLEANUP15]], label [[FOR_BODY16_LR_PH:%.*]]
 ; STORE:       for.body16.lr.ph:
 ; STORE-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[ARG_A:%.*]], i64 [[INDVARS_IV]]
-; STORE-NEXT:    [[TMP8:%.*]] = load float, float* [[ADD_PTR]], align 4
+; STORE-NEXT:    [[TMP10:%.*]] = load float, float* [[ADD_PTR]], align 4
 ; STORE-NEXT:    br label [[FOR_BODY16:%.*]]
 ; STORE:       for.cond.cleanup15:
-; STORE-NEXT:    [[W2_0_LCSSA:%.*]] = phi float [ [[TMP5]], [[FOR_BODY]] ], [ [[SUB28:%.*]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[W3_0_LCSSA:%.*]] = phi float [ [[TMP7]], [[FOR_BODY]] ], [ [[W2_096:%.*]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[W1_0_LCSSA:%.*]] = phi float [ [[TMP3]], [[FOR_BODY]] ], [ [[W0_0100:%.*]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[W0_0_LCSSA:%.*]] = phi float [ [[TMP1]], [[FOR_BODY]] ], [ [[SUB19:%.*]], [[FOR_BODY16]] ]
+; STORE-NEXT:    [[W2_0_LCSSA:%.*]] = phi float [ [[TMP8]], [[FOR_BODY]] ], [ [[TMP21:%.*]], [[FOR_BODY16]] ]
+; STORE-NEXT:    [[W3_0_LCSSA:%.*]] = phi float [ [[TMP9]], [[FOR_BODY]] ], [ [[TMP25:%.*]], [[FOR_BODY16]] ]
+; STORE-NEXT:    [[W1_0_LCSSA:%.*]] = phi float [ [[TMP7]], [[FOR_BODY]] ], [ [[TMP12:%.*]], [[FOR_BODY16]] ]
+; STORE-NEXT:    [[W0_0_LCSSA:%.*]] = phi float [ [[TMP6]], [[FOR_BODY]] ], [ [[SUB19:%.*]], [[FOR_BODY16]] ]
 ; STORE-NEXT:    store float [[W0_0_LCSSA]], float* [[ARRAYIDX]], align 4
 ; STORE-NEXT:    store float [[W1_0_LCSSA]], float* [[ARRAYIDX4]], align 4
 ; STORE-NEXT:    store float [[W2_0_LCSSA]], float* [[ARRAYIDX8]], align 4
@@ -818,26 +832,36 @@ define void @foo(float* nocapture readonly %arg_A, i32 %arg_B, float* nocapture 
 ; STORE-NEXT:    [[EXITCOND109:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 6
 ; STORE-NEXT:    br i1 [[EXITCOND109]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; STORE:       for.body16:
-; STORE-NEXT:    [[W0_0100]] = phi float [ [[TMP1]], [[FOR_BODY16_LR_PH]] ], [ [[SUB19]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[W1_099:%.*]] = phi float [ [[TMP3]], [[FOR_BODY16_LR_PH]] ], [ [[W0_0100]], [[FOR_BODY16]] ]
 ; STORE-NEXT:    [[J_098:%.*]] = phi i32 [ 0, [[FOR_BODY16_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[W3_097:%.*]] = phi float [ [[TMP7]], [[FOR_BODY16_LR_PH]] ], [ [[W2_096]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[W2_096]] = phi float [ [[TMP5]], [[FOR_BODY16_LR_PH]] ], [ [[SUB28]], [[FOR_BODY16]] ]
-; STORE-NEXT:    [[MUL17:%.*]] = fmul fast float [[W0_0100]], 0x3FF19999A0000000
-; STORE-NEXT:    [[MUL18_NEG:%.*]] = fmul fast float [[W1_099]], 0xBFF3333340000000
-; STORE-NEXT:    [[SUB92:%.*]] = fadd fast float [[MUL17]], [[MUL18_NEG]]
-; STORE-NEXT:    [[SUB19]] = fadd fast float [[SUB92]], [[TMP8]]
+; STORE-NEXT:    [[TMP11:%.*]] = phi <4 x float> [ [[TMP5]], [[FOR_BODY16_LR_PH]] ], [ [[TMP26:%.*]], [[FOR_BODY16]] ]
+; STORE-NEXT:    [[TMP12]] = extractelement <4 x float> [[TMP11]], i32 0
+; STORE-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP11]], i32 1
+; STORE-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> undef, float [[TMP12]], i32 0
+; STORE-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[TMP13]], i32 1
+; STORE-NEXT:    [[TMP16:%.*]] = fmul fast <2 x float> <float 0x3FF19999A0000000, float 0xBFF3333340000000>, [[TMP15]]
+; STORE-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP16]], i32 0
+; STORE-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP16]], i32 1
+; STORE-NEXT:    [[SUB92:%.*]] = fadd fast float [[TMP17]], [[TMP18]]
+; STORE-NEXT:    [[SUB19]] = fadd fast float [[SUB92]], [[TMP10]]
 ; STORE-NEXT:    [[MUL20:%.*]] = fmul fast float [[SUB19]], 0x4000CCCCC0000000
-; STORE-NEXT:    [[MUL21_NEG:%.*]] = fmul fast float [[W0_0100]], 0xC0019999A0000000
-; STORE-NEXT:    [[MUL23:%.*]] = fmul fast float [[W1_099]], 0x4002666660000000
-; STORE-NEXT:    [[MUL25:%.*]] = fmul fast float [[W2_096]], 0x4008CCCCC0000000
-; STORE-NEXT:    [[MUL27_NEG:%.*]] = fmul fast float [[W3_097]], 0xC0099999A0000000
-; STORE-NEXT:    [[ADD2293:%.*]] = fadd fast float [[MUL27_NEG]], [[MUL25]]
-; STORE-NEXT:    [[ADD24:%.*]] = fadd fast float [[ADD2293]], [[MUL23]]
-; STORE-NEXT:    [[SUB2694:%.*]] = fadd fast float [[ADD24]], [[MUL21_NEG]]
-; STORE-NEXT:    [[SUB28]] = fadd fast float [[SUB2694]], [[MUL20]]
+; STORE-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> <float 0xC0019999A0000000, float 0x4002666660000000, float 0x4008CCCCC0000000, float 0xC0099999A0000000>, [[TMP11]]
+; STORE-NEXT:    [[ADD2293:%.*]] = fadd fast float undef, undef
+; STORE-NEXT:    [[ADD24:%.*]] = fadd fast float [[ADD2293]], undef
+; STORE-NEXT:    [[SUB2694:%.*]] = fadd fast float [[ADD24]], undef
+; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP19]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP19]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[TMP20:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; STORE-NEXT:    [[TMP21]] = fadd fast float [[TMP20]], [[MUL20]]
+; STORE-NEXT:    [[SUB28:%.*]] = fadd fast float [[SUB2694]], [[MUL20]]
 ; STORE-NEXT:    [[INC]] = add nuw i32 [[J_098]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[ARG_B]]
+; STORE-NEXT:    [[TMP22:%.*]] = insertelement <4 x float> undef, float [[SUB19]], i32 0
+; STORE-NEXT:    [[TMP23:%.*]] = insertelement <4 x float> [[TMP22]], float [[TMP12]], i32 1
+; STORE-NEXT:    [[TMP24:%.*]] = insertelement <4 x float> [[TMP23]], float [[TMP21]], i32 2
+; STORE-NEXT:    [[TMP25]] = extractelement <4 x float> [[TMP11]], i32 2
+; STORE-NEXT:    [[TMP26]] = insertelement <4 x float> [[TMP24]], float [[TMP25]], i32 3
 ; STORE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP15]], label [[FOR_BODY16]]
 ;
 entry:

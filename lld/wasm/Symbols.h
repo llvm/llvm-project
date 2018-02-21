@@ -32,13 +32,13 @@ class Symbol {
 public:
   enum Kind {
     DefinedFunctionKind,
-    DefinedGlobalKind,
+    DefinedDataKind,
 
     LazyKind,
     UndefinedFunctionKind,
-    UndefinedGlobalKind,
+    UndefinedDataKind,
 
-    LastDefinedKind = DefinedGlobalKind,
+    LastDefinedKind = DefinedDataKind,
     InvalidKind,
   };
 
@@ -47,7 +47,7 @@ public:
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isDefined() const { return SymbolKind <= LastDefinedKind; }
   bool isUndefined() const {
-    return SymbolKind == UndefinedGlobalKind ||
+    return SymbolKind == UndefinedDataKind ||
            SymbolKind == UndefinedFunctionKind;
   }
   bool isLocal() const;
@@ -136,26 +136,26 @@ public:
   }
 };
 
-class GlobalSymbol : public Symbol {
+class DataSymbol : public Symbol {
 public:
   static bool classof(const Symbol *S) {
-    return S->kind() == DefinedGlobalKind || S->kind() == UndefinedGlobalKind;
+    return S->kind() == DefinedDataKind || S->kind() == UndefinedDataKind;
   }
 
 protected:
-  GlobalSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
+  DataSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
       : Symbol(Name, K, Flags, F) {}
 };
 
-class DefinedGlobal : public GlobalSymbol {
+class DefinedData : public DataSymbol {
 public:
-  DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
-                InputSegment *Segment = nullptr, uint32_t Address = 0)
-      : GlobalSymbol(Name, DefinedGlobalKind, Flags, F), Segment(Segment),
+  DefinedData(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
+              InputSegment *Segment = nullptr, uint32_t Address = 0)
+      : DataSymbol(Name, DefinedDataKind, Flags, F), Segment(Segment),
         VirtualAddress(Address) {}
 
   static bool classof(const Symbol *S) {
-    return S->kind() == DefinedGlobalKind;
+    return S->kind() == DefinedDataKind;
   }
 
   uint32_t getVirtualAddress() const;
@@ -167,12 +167,12 @@ protected:
   uint32_t VirtualAddress;
 };
 
-class UndefinedGlobal : public GlobalSymbol {
+class UndefinedData : public DataSymbol {
 public:
-  UndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File = nullptr)
-      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File) {}
+  UndefinedData(StringRef Name, uint32_t Flags, InputFile *File = nullptr)
+      : DataSymbol(Name, UndefinedDataKind, Flags, File) {}
   static bool classof(const Symbol *S) {
-    return S->kind() == UndefinedGlobalKind;
+    return S->kind() == UndefinedDataKind;
   }
 };
 
@@ -194,25 +194,25 @@ struct WasmSym {
   // __stack_pointer
   // Global that holds the address of the top of the explicit value stack in
   // linear memory.
-  static DefinedGlobal *StackPointer;
+  static DefinedData *StackPointer;
 
   // __data_end
   // Symbol marking the end of the data and bss.
-  static DefinedGlobal *DataEnd;
+  static DefinedData *DataEnd;
 
   // __heap_base
   // Symbol marking the end of the data, bss and explicit stack.  Any linear
   // memory following this address is not used by the linked code and can
   // therefore be used as a backing store for brk()/malloc() implementations.
-  static DefinedGlobal *HeapBase;
+  static DefinedData *HeapBase;
 
   // __wasm_call_ctors
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *CallCtors;
 
   // __dso_handle
-  // Global used in calls to __cxa_atexit to determine current DLL
-  static DefinedGlobal *DsoHandle;
+  // Symbol used in calls to __cxa_atexit to determine current DLL
+  static DefinedData *DsoHandle;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived
@@ -220,10 +220,10 @@ struct WasmSym {
 // using the placement new.
 union SymbolUnion {
   alignas(DefinedFunction) char A[sizeof(DefinedFunction)];
-  alignas(DefinedGlobal) char B[sizeof(DefinedGlobal)];
+  alignas(DefinedData) char B[sizeof(DefinedData)];
   alignas(LazySymbol) char C[sizeof(LazySymbol)];
   alignas(UndefinedFunction) char D[sizeof(UndefinedFunction)];
-  alignas(UndefinedGlobal) char E[sizeof(UndefinedFunction)];
+  alignas(UndefinedData) char E[sizeof(UndefinedFunction)];
 };
 
 template <typename T, typename... ArgT>

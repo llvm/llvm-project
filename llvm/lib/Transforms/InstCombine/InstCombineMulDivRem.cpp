@@ -1285,11 +1285,17 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   return nullptr;
 }
 
-/// Try to convert X/C into X * (1/C).
+/// Remove negation and try to convert division into multiplication.
 static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
   Constant *C;
   if (!match(I.getOperand(1), m_Constant(C)))
     return nullptr;
+
+  // -X / C --> X / -C
+  Value *X;
+  if (match(I.getOperand(0), m_FNeg(m_Value(X))))
+    return BinaryOperator::CreateWithCopiedFlags(Instruction::FDiv, X,
+                                                 ConstantExpr::getFNeg(C), &I);
 
   // If the constant divisor has an exact inverse, this is always safe. If not,
   // then we can still create a reciprocal if fast-math-flags allow it and the
@@ -1305,25 +1311,35 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
   if (!RecipC->isNormalFP())
     return nullptr;
 
+  // X / C --> X * (1 / C)
   return BinaryOperator::CreateWithCopiedFlags(
       Instruction::FMul, I.getOperand(0), RecipC, &I);
 }
 
-/// Try to reassociate C / X expressions where X includes another constant.
+/// Remove negation and try to reassociate constant math.
 static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
-  Constant *C1;
-  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal() ||
-      !match(I.getOperand(0), m_Constant(C1)))
+  Constant *C;
+  if (!match(I.getOperand(0), m_Constant(C)))
     return nullptr;
 
+  // C / -X --> -C / X
   Value *X;
+  if (match(I.getOperand(1), m_FNeg(m_Value(X)))) {
+    return BinaryOperator::CreateWithCopiedFlags(
+        Instruction::FDiv, ConstantExpr::getFNeg(C), X, &I);
+  }
+
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
+
+  // Try to reassociate C / X expressions where X includes another constant.
   Constant *C2, *NewC = nullptr;
   if (match(I.getOperand(1), m_FMul(m_Value(X), m_Constant(C2)))) {
-    // C1 / (X * C2) --> (C1 / C2) / X
-    NewC = ConstantExpr::getFDiv(C1, C2);
+    // C / (X * C2) --> (C / C2) / X
+    NewC = ConstantExpr::getFDiv(C, C2);
   } else if (match(I.getOperand(1), m_FDiv(m_Value(X), m_Constant(C2)))) {
-    // C1 / (X / C2) --> (C1 * C2) / X
-    NewC = ConstantExpr::getFMul(C1, C2);
+    // C / (X / C2) --> (C * C2) / X
+    NewC = ConstantExpr::getFMul(C, C2);
   }
   // Disallow denormal constants because we don't know what would happen
   // on all targets.
@@ -1345,11 +1361,11 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *FMul = foldFDivConstantDivisor(I))
-    return FMul;
+  if (Instruction *R = foldFDivConstantDivisor(I))
+    return R;
 
-  if (Instruction *NewFDiv = foldFDivConstantDividend(I))
-    return NewFDiv;
+  if (Instruction *R = foldFDivConstantDividend(I))
+    return R;
 
   if (isa<Constant>(Op0))
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
