@@ -18,7 +18,6 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Endian.h"
-
 #include <vector>
 
 namespace lld {
@@ -156,6 +155,7 @@ struct Configuration {
   bool WriteAddends;
   bool ZCombreloc;
   bool ZExecstack;
+  bool ZHazardplt;
   bool ZNocopyreloc;
   bool ZNodelete;
   bool ZNodlopen;

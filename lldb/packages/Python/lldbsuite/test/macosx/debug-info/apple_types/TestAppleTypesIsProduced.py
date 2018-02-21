@@ -27,7 +27,7 @@ class AppleTypesTestCase(TestBase):
             self.skipTest("clang compiler only test")
 
         self.build()
-        if self.debug_info == "dsym":
+        if self.getDebugInfo() == "dsym":
             exe = self.getBuildArtifact(
                                "a.out.dSYM/Contents/Resources/DWARF/a.out")
         else:
