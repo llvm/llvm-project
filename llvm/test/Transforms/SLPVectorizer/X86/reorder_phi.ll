@@ -9,40 +9,33 @@ define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %R
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 256, 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP25:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP24:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], %struct.complex* [[A:%.*]], i64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[A]], i64 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[TMP3]] to <2 x float>*
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, <2 x float>* [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B:%.*]], i64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B]], i64 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> undef, float [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP6]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> undef, float [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP16]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> undef, float [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x float> [[TMP18]], float [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x float> [[TMP17]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = fsub <2 x float> [[TMP13]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd <2 x float> [[TMP13]], [[TMP20]]
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x float> [[TMP21]], <2 x float> [[TMP22]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP24]] = fadd <2 x float> [[TMP2]], [[TMP23]]
-; CHECK-NEXT:    [[TMP25]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[TMP26]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP20:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP19:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP18:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], %struct.complex* [[A:%.*]], i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[A]], i64 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B:%.*]], i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, float* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B]], i64 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul float [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul float [[TMP7]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub float [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul float [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul float [[TMP5]], [[TMP11]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd float [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18]] = fadd float [[TMP3]], [[TMP14]]
+; CHECK-NEXT:    [[TMP19]] = fadd float [[TMP2]], [[TMP17]]
+; CHECK-NEXT:    [[TMP20]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP20]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x float> [[TMP24]], i32 0
-; CHECK-NEXT:    store float [[TMP28]], float* [[TMP27]], align 4
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT]], i32 0, i32 1
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP24]], i32 1
-; CHECK-NEXT:    store float [[TMP30]], float* [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT:%.*]], i32 0, i32 0
+; CHECK-NEXT:    store float [[TMP18]], float* [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT]], i32 0, i32 1
+; CHECK-NEXT:    store float [[TMP19]], float* [[TMP23]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

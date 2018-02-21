@@ -407,6 +407,20 @@ enum OverflowingBinaryOperatorOptionalFlags {
   OBO_NO_SIGNED_WRAP = 1
 };
 
+/// FastMath Flags
+/// This is a fixed layout derived from the bitcode emitted by LLVM 5.0
+/// intended to decouple the in-memory representation from the serialization.
+enum FastMathMap {
+  UnsafeAlgebra   = (1 << 0), // Legacy
+  NoNaNs          = (1 << 1),
+  NoInfs          = (1 << 2),
+  NoSignedZeros   = (1 << 3),
+  AllowReciprocal = (1 << 4),
+  AllowContract   = (1 << 5),
+  ApproxFunc      = (1 << 6),
+  AllowReassoc    = (1 << 7)
+};
+
 /// PossiblyExactOperatorOptionalFlags - Flags for serializing
 /// PossiblyExactOperator's SubclassOptionalData contents.
 enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };

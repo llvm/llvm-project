@@ -12,7 +12,6 @@
 
 #include "InputFiles.h"
 #include "Symbols.h"
-
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,16 +41,17 @@ public:
 
   std::vector<ObjFile *> ObjectFiles;
 
-  void reportDuplicate(Symbol *Existing, InputFile *NewFile);
   void reportRemainingUndefines();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   Symbol *find(StringRef Name);
   ObjFile *findComdat(StringRef Name) const;
 
-  Symbol *addDefined(bool IsFunction, StringRef Name, uint32_t Flags,
-                     InputFile *F, InputChunk *Chunk = nullptr,
-                     uint32_t Address = 0);
+  Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
+                             InputFunction *Function = nullptr);
+  Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F,
+                           InputSegment *Segment = nullptr,
+                           uint32_t Address = 0);
   Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);

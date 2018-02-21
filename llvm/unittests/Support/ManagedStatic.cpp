@@ -6,6 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Config/config.h"
 #ifdef HAVE_PTHREAD_H
@@ -30,7 +32,7 @@ namespace test1 {
   // Valgrind's leak checker complains glibc's stack allocation.
   // To appease valgrind, we provide our own stack for each thread.
   void *allocate_stack(pthread_attr_t &a, size_t n = 65536) {
-    void *stack = malloc(n);
+    void *stack = safe_malloc(n);
     pthread_attr_init(&a);
 #if defined(__linux__)
     pthread_attr_setstack(&a, stack, n);
@@ -83,7 +85,7 @@ TEST(ManagedStaticTest, NestedStatics) {
 namespace CustomCreatorDeletor {
 struct CustomCreate {
   static void *call() {
-    void *Mem = std::malloc(sizeof(int));
+    void *Mem = safe_malloc(sizeof(int));
     *((int *)Mem) = 42;
     return Mem;
   }

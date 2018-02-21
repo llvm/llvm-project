@@ -73,7 +73,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; KNL-32-NEXT:    movw $-1, %dx
+; KNL-32-NEXT:    movl $65535, %edx # imm = 0xFFFF
 ; KNL-32-NEXT:    .p2align 4, 0x90
 ; KNL-32-NEXT:  .LBB1_1: # %for_loop599
 ; KNL-32-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -81,7 +81,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    movl %eax, %esi
 ; KNL-32-NEXT:    sbbl $0, %esi
 ; KNL-32-NEXT:    movl $0, %esi
-; KNL-32-NEXT:    cmovlw %dx, %si
+; KNL-32-NEXT:    cmovll %edx, %esi
 ; KNL-32-NEXT:    kmovw %esi, %k1
 ; KNL-32-NEXT:    kandw %k0, %k1, %k1
 ; KNL-32-NEXT:    kortestw %k1, %k1

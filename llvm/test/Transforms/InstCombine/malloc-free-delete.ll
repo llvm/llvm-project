@@ -146,7 +146,11 @@ lpad.i:                                           ; preds = %entry
 }
 
 declare i8* @_Znwm(i64) nobuiltin
-declare i8* @_Znwj(i32) nobuiltin
+define i8* @_Znwj(i32 %n) nobuiltin {
+  %z = zext i32 %n to i64
+  %m = call i8* @_Znwm(i64 %z)
+  ret i8* %m
+}
 declare i8* @_Znam(i64) nobuiltin
 declare i8* @_Znaj(i32) nobuiltin
 declare void @_ZdlPv(i8*) nobuiltin
@@ -195,5 +199,21 @@ define void @test9() {
   ; CHECK-NOT: call
   %new_long_long = call noalias i8* @"\01??2@YAPEAX_K@Z"(i64 32) builtin
   call void @"\01??3@YAXPEAX@Z"(i8* %new_long_long) builtin
+  ret void
+}
+
+define void @test10()  {
+; CHECK-LABEL: @test10
+; CHECK: call void @_ZdlPv
+  call void @_ZdlPv(i8* null)
+  ret void
+}
+
+define void @test11() {
+; CHECK-LABEL: @test11
+; CHECK: call i8* @_Znwm
+; CHECK: call void @_ZdlPv
+  %call = call i8* @_Znwm(i64 8) builtin
+  call void @_ZdlPv(i8* %call)
   ret void
 }

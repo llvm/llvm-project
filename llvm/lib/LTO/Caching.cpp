@@ -36,7 +36,7 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
         MemoryBuffer::getFile(EntryPath);
     if (MBOrErr) {
-      AddBuffer(Task, std::move(*MBOrErr), EntryPath);
+      AddBuffer(Task, std::move(*MBOrErr));
       return AddStreamFn();
     }
 
@@ -103,7 +103,7 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
                              TempFile.TmpName + " to " + EntryPath + ": " +
                              toString(std::move(E)) + "\n");
 
-        AddBuffer(Task, std::move(*MBOrErr), EntryPath);
+        AddBuffer(Task, std::move(*MBOrErr));
       }
     };
 

@@ -27,6 +27,7 @@ add_clang_library(clangTidyModernizeModule
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
   UseTransparentFunctorsCheck.cpp
+  UseUncaughtExceptionsCheck.cpp
   UseUsingCheck.cpp
 
   LINK_LIBS

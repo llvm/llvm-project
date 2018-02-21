@@ -828,7 +828,8 @@ private:
   }
 
   MutableArrayRef<BitWord> allocate(size_t NumWords) {
-    BitWord *RawBits = (BitWord *)std::malloc(NumWords * sizeof(BitWord));
+    BitWord *RawBits = static_cast<BitWord *>(
+        safe_malloc(NumWords * sizeof(BitWord)));
     return MutableArrayRef<BitWord>(RawBits, NumWords);
   }
 
@@ -867,8 +868,8 @@ private:
   void grow(unsigned NewSize) {
     size_t NewCapacity = std::max<size_t>(NumBitWords(NewSize), Bits.size() * 2);
     assert(NewCapacity > 0 && "realloc-ing zero space");
-    BitWord *NewBits =
-        (BitWord *)std::realloc(Bits.data(), NewCapacity * sizeof(BitWord));
+    BitWord *NewBits = static_cast<BitWord *>(
+        safe_realloc(Bits.data(), NewCapacity * sizeof(BitWord)));
     Bits = MutableArrayRef<BitWord>(NewBits, NewCapacity);
     clear_unused_bits();
   }

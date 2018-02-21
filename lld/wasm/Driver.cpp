@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
-#include "InputChunks.h"
+#include "Config.h"
 #include "MarkLive.h"
 #include "SymbolTable.h"
 #include "Writer.h"

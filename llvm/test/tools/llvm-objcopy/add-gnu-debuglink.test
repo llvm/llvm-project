@@ -16,12 +16,13 @@ FileHeader:
 # CHECK-NEXT:  ]
 # CHECK-NEXT:  Address: 0x0
 # CHECK-NEXT:  Offset:
-# CHECK-NEXT:  Size: 32
+# CHECK-NEXT:  Size: 36
 # CHECK-NEXT:  Link: 0
 # CHECK-NEXT:  Info: 0
 # CHECK-NEXT:  AddressAlignment: 4
 # CHECK-NEXT:  EntrySize: 0
 # CHECK-NEXT:  SectionData (
 # CHECK-NEXT:      0000: 6164642D 676E752D 64656275 676C696E  |add-gnu-debuglin|
-# CHECK-NEXT:      0010: 6B2E7465 73742E74 6D700000 72C49B0C  |k.test.tmp..r...|
+# CHECK-NEXT:      0010: 6B2E7465 73742E74 6D702E62 6C6F6200  |k.test.tmp.blob.|
+# CHECK-NEXT:      0020: 72C49B0C                             |r...|
 # CHECK-NEXT:  )

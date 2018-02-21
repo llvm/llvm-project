@@ -21,7 +21,6 @@
 #include <isl_vec_private.h>
 #include <isl_lp_private.h>
 #include <isl_ilp_private.h>
-#include <isl/deprecated/ilp_int.h>
 
 /* Given a basic set "bset", construct a basic set U such that for
  * each element x in U, the whole unit box positioned at x is inside
@@ -506,24 +505,6 @@ enum isl_lp_result isl_set_opt(__isl_keep isl_set *set, int max,
 	return res;
 }
 
-enum isl_lp_result isl_basic_set_max(__isl_keep isl_basic_set *bset,
-	__isl_keep isl_aff *obj, isl_int *opt)
-{
-	return isl_basic_set_opt(bset, 1, obj, opt);
-}
-
-enum isl_lp_result isl_set_max(__isl_keep isl_set *set,
-	__isl_keep isl_aff *obj, isl_int *opt)
-{
-	return isl_set_opt(set, 1, obj, opt);
-}
-
-enum isl_lp_result isl_set_min(__isl_keep isl_set *set,
-	__isl_keep isl_aff *obj, isl_int *opt)
-{
-	return isl_set_opt(set, 0, obj, opt);
-}
-
 /* Convert the result of a function that returns an isl_lp_result
  * to an isl_val.  The numerator of "v" is set to the optimal value
  * if lp_res is isl_lp_ok.  "max" is set if a maximum was computed.
@@ -834,4 +815,34 @@ __isl_give isl_multi_val *isl_union_set_min_multi_union_pw_aff(
 	__isl_keep isl_union_set *uset, __isl_keep isl_multi_union_pw_aff *obj)
 {
 	return isl_union_set_opt_multi_union_pw_aff(uset, 0, obj);
+}
+
+/* Return the maximal value attained by the given set dimension,
+ * independently of the parameter values and of any other dimensions.
+ *
+ * Return infinity if the optimal value is unbounded and
+ * NaN if "bset" is empty.
+ */
+__isl_give isl_val *isl_basic_set_dim_max_val(__isl_take isl_basic_set *bset,
+	int pos)
+{
+	isl_local_space *ls;
+	isl_aff *obj;
+	isl_val *v;
+
+	if (!bset)
+		return NULL;
+	if (pos < 0 || pos >= isl_basic_set_dim(bset, isl_dim_set))
+		isl_die(isl_basic_set_get_ctx(bset), isl_error_invalid,
+			"position out of bounds", goto error);
+	ls = isl_local_space_from_space(isl_basic_set_get_space(bset));
+	obj = isl_aff_var_on_domain(ls, isl_dim_set, pos);
+	v = isl_basic_set_max_val(bset, obj);
+	isl_aff_free(obj);
+	isl_basic_set_free(bset);
+
+	return v;
+error:
+	isl_basic_set_free(bset);
+	return NULL;
 }

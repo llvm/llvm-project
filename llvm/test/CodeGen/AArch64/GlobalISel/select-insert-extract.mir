@@ -97,8 +97,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
     ; CHECK: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 15, 30
-    ; CHECK: $h0 = COPY [[UBFMWri]]
-    ; CHECK: $h1 = COPY [[UBFMWri1]]
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY [[UBFMWri]]
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+    ; CHECK: $h0 = COPY [[COPY2]]
+    ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+    ; CHECK: [[COPY4:%[0-9]+]]:fpr16 = COPY [[COPY3]].hsub
+    ; CHECK: $h1 = COPY [[COPY4]]
     %0:gpr(s32) = COPY $w0
 
     %1:gpr(s16) = G_EXTRACT %0, 0

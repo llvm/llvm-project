@@ -314,9 +314,23 @@ TEST(PatternMatchInstr, MatchSpecificType) {
   LLT v2s32 = LLT::vector(2, 32);
   auto MIBCast = B.buildCast(v2s32, Copies[0]);
   ASSERT_TRUE(
+      mi_match(MIBCast->getOperand(0).getReg(), MRI, m_GBitcast(m_Reg())));
+  ASSERT_TRUE(
       mi_match(MIBCast->getOperand(0).getReg(), MRI, m_SpecificType(v2s32)));
   ASSERT_TRUE(
       mi_match(MIBCast->getOperand(1).getReg(), MRI, m_SpecificType(s64)));
+
+  // Build a PTRToInt and INTTOPTR and match and test them.
+  LLT PtrTy = LLT::pointer(0, 64);
+  auto MIBIntToPtr = B.buildCast(PtrTy, Copies[0]);
+  auto MIBPtrToInt = B.buildCast(s64, MIBIntToPtr);
+  unsigned Src0;
+
+  // match the ptrtoint(inttoptr reg)
+  bool match = mi_match(MIBPtrToInt->getOperand(0).getReg(), MRI,
+                        m_GPtrToInt(m_GIntToPtr(m_Reg(Src0))));
+  ASSERT_TRUE(match);
+  ASSERT_EQ(Src0, Copies[0]);
 }
 
 TEST(PatternMatchInstr, MatchCombinators) {

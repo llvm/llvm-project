@@ -95,8 +95,6 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
 	$(top_srcdir)/m4/ax_compiler_vendor.m4 \
 	$(top_srcdir)/m4/ax_create_pkgconfig_info.m4 \
 	$(top_srcdir)/m4/ax_create_stdint_h.m4 \
-	$(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
-	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/ax_detect_clang.m4 \
 	$(top_srcdir)/m4/ax_detect_git_head.m4 \
 	$(top_srcdir)/m4/ax_detect_gmp.m4 \
@@ -155,7 +153,6 @@ CLANG_LIBS = @CLANG_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
-CXX11FLAGS = @CXX11FLAGS@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
@@ -175,7 +172,6 @@ GIT_HEAD = @GIT_HEAD@
 GIT_HEAD_ID = @GIT_HEAD_ID@
 GIT_HEAD_VERSION = @GIT_HEAD_VERSION@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -215,6 +211,11 @@ PDFLATEX = @PDFLATEX@
 PERL = @PERL@
 POD2HTML = @POD2HTML@
 PRTDIAG = @PRTDIAG@
+PYTHON = @PYTHON@
+PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
+PYTHON_PLATFORM = @PYTHON_PLATFORM@
+PYTHON_PREFIX = @PYTHON_PREFIX@
+PYTHON_VERSION = @PYTHON_VERSION@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -267,9 +268,13 @@ oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 pkgconfig_libdir = @pkgconfig_libdir@
 pkgconfig_libfile = @pkgconfig_libfile@
+pkgpyexecdir = @pkgpyexecdir@
+pkgpythondir = @pkgpythondir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+pyexecdir = @pyexecdir@
+pythondir = @pythondir@
 runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@

@@ -13,6 +13,7 @@ main:                                   # @main
 	callq	puts
 	xorl	%eax, %eax
 	addq	$8, %rsp
+    call foo@GOTPCREL
 	ret
 .Ltmp0:
 	.size	main, .Ltmp0-main
@@ -44,14 +45,15 @@ main:                                   # @main
 
 // CHECK:     Name: .rela.text
 
-// CHECK: Relocations [
-// CHECK:   Section {{.*}} .rela.text {
-// CHECK:     0x5  R_X86_64_32   .rodata.str1.1 0x0
-// CHECK:     0xA  R_X86_64_PC32 puts           0xFFFFFFFFFFFFFFFC
-// CHECK:     0xF  R_X86_64_32   .rodata.str1.1 0x6
-// CHECK:     0x14 R_X86_64_PC32 puts           0xFFFFFFFFFFFFFFFC
-// CHECK:   }
-// CHECK: ]
+// CHECK:      Relocations [
+// CHECK:        Section {{.*}} .rela.text {
+// CHECK-NEXT:     0x5  R_X86_64_32   .rodata.str1.1 0x0
+// CHECK-NEXT:     0xA  R_X86_64_PLT32 puts           0xFFFFFFFFFFFFFFFC
+// CHECK-NEXT:     0xF  R_X86_64_32   .rodata.str1.1 0x6
+// CHECK-NEXT:     0x14 R_X86_64_PLT32 puts           0xFFFFFFFFFFFFFFFC
+// CHECK-NEXT:     0x1F R_X86_64_GOTPCREL foo 0xFFFFFFFFFFFFFFFC
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
 
 // CHECK:   Symbol {
 // CHECK:     Binding: Local

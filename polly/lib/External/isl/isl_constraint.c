@@ -18,7 +18,6 @@
 #include <isl_local_space_private.h>
 #include <isl_val_private.h>
 #include <isl_vec_private.h>
-#include <isl/deprecated/constraint_int.h>
 
 #include <bset_to_bmap.c>
 #include <bset_from_bmap.c>

@@ -6,18 +6,21 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-arm-none-eabi"
 
-  %struct.struct2 = type { [2 x half] }
-
-  @global_arg0 = common dso_local global %struct.struct2 zeroinitializer, align 2
-
   ; Function Attrs: noinline nounwind optnone
-  define dso_local void @c_test([2 x half], [2 x half]* %addr) {
-    store [2 x half] %0, [2 x half]* %addr, align 2
+  define void @fp16_to_gpr([2 x half], [2 x half]* %addr) {
+    ret void
+  }
+
+  define void @gpr_to_fp16() {
+    ret void
+  }
+
+  define void @gpr_to_fp16_physreg() {
     ret void
   }
 ...
 ---
-name:            c_test
+name:            fp16_to_gpr
 alignment:       2
 legalized:       true
 regBankSelected: true
@@ -40,7 +43,7 @@ body:             |
   bb.1 (%ir-block.1):
     liveins: $h0, $h1, $x0
 
-    ; CHECK-LABEL: name: c_test
+    ; CHECK-LABEL: name: fp16_to_gpr
     ; CHECK: liveins: $h0, $h1, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
@@ -65,5 +68,60 @@ body:             |
     %6:gpr(p0) = COPY $x0
     G_STORE %0(s32), %6(p0) :: (store 4 into %ir.addr, align 2)
     RET_ReallyLR
+
+...
+
+---
+name:            gpr_to_fp16
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $w0
+
+    ; CHECK-LABEL: name: gpr_to_fp16
+    ; CHECK: liveins: $w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]]
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+    ; CHECK: $h0 = COPY [[COPY2]]
+    ; CHECK: RET_ReallyLR implicit $h0
+    %0:gpr(s32) = COPY $w0
+    %1:gpr(s16) = G_TRUNC %0(s32)
+    %2:fpr(s16) = COPY %1(s16)
+    $h0 = COPY %2(s16)
+    RET_ReallyLR implicit $h0
+
+...
+---
+name:            gpr_to_fp16_physreg
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $w0
+
+    ; CHECK-LABEL: name: gpr_to_fp16_physreg
+    ; CHECK: liveins: $w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]]
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+    ; CHECK: $h0 = COPY [[COPY2]]
+    ; CHECK: RET_ReallyLR implicit $h0
+    %0:gpr(s32) = COPY $w0
+    %1:gpr(s16) = G_TRUNC %0(s32)
+    $h0 = COPY %1(s16)
+    RET_ReallyLR implicit $h0
 
 ...

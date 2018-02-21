@@ -389,6 +389,14 @@ TEST_F(FormatTestTextProto, FormatsExtensions) {
                "    keyyyyyyyyyyyyyy: valuuuuuuuuuuuuuuuuuuuuuuuuue\n"
                "  }\n"
                "}");
+  verifyFormat(
+      "aaaaaaaaaaaaaaa {\n"
+      "  bbbbbb {\n"
+      "    [a.b/cy] {\n"
+      "      eeeeeeeeeeeee: \"The lazy coo cat jumps over the lazy hot dog\"\n"
+      "    }\n"
+      "  }\n"
+      "}");
 }
 
 TEST_F(FormatTestTextProto, NoSpaceAfterPercent) {

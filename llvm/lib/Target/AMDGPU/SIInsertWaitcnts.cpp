@@ -1125,7 +1125,8 @@ void SIInsertWaitcnts::generateSWaitCntInstBefore(
     if (EmitSwaitcnt != 0) {
       MachineInstr *OldWaitcnt = ScoreBrackets->getWaitcnt();
       int Imm = (!OldWaitcnt) ? 0 : OldWaitcnt->getOperand(0).getImm();
-      if (!OldWaitcnt || (AMDGPU::decodeVmcnt(IV, Imm) !=
+      if (!OldWaitcnt ||
+          (AMDGPU::decodeVmcnt(IV, Imm) !=
                           (CntVal[VM_CNT] & AMDGPU::getVmcntBitMask(IV))) ||
           (AMDGPU::decodeExpcnt(IV, Imm) !=
            (CntVal[EXP_CNT] & AMDGPU::getExpcntBitMask(IV))) ||
@@ -1143,7 +1144,7 @@ void SIInsertWaitcnts::generateSWaitCntInstBefore(
             ScoreBracket = BlockWaitcntBracketsMap[TBB].get();
           }
           ScoreBracket->setRevisitLoop(true);
-          DEBUG(dbgs() << "set-revisit: block"
+          DEBUG(dbgs() << "set-revisit: Block"
                        << ContainingLoop->getHeader()->getNumber() << '\n';);
         }
       }
@@ -1151,18 +1152,14 @@ void SIInsertWaitcnts::generateSWaitCntInstBefore(
       // Update an existing waitcount, or make a new one.
       unsigned Enc = AMDGPU::encodeWaitcnt(IV, CntVal[VM_CNT],
                                            CntVal[EXP_CNT], CntVal[LGKM_CNT]);
-      // We don't (yet) track waitcnts that existed prior to the waitcnt
-      // pass (we just skip over them); because the waitcnt pass is ignorant
-      // of them, it may insert a redundant waitcnt. To avoid this, check
-      // the prev instr. If it and the to-be-inserted waitcnt are the
-      // same, keep the prev waitcnt and skip the insertion. We assume that
-      // whomever. e.g., for memory model, inserted the prev waitcnt really
-      // wants it there.
+      // We don't remove waitcnts that existed prior to the waitcnt
+      // pass. Check if the waitcnt to-be-inserted can be avoided
+      // or if the prev waitcnt can be updated.
       bool insertSWaitInst = true;
       for (MachineBasicBlock::iterator I = MI.getIterator(),
                                        B = MI.getParent()->begin();
            insertSWaitInst && I != B; --I) {
-        if (I ==  MI.getIterator())
+        if (I == MI.getIterator())
           continue;
 
         switch (I->getOpcode()) {
@@ -1585,15 +1582,16 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     MachineInstr &Inst = *Iter;
     // Remove any previously existing waitcnts.
     if (Inst.getOpcode() == AMDGPU::S_WAITCNT) {
-      // TODO: Register the old waitcnt and optimize the following waitcnts.
-      // Leaving the previously existing waitcnts is conservatively correct.
+      // Leave pre-existing waitcnts, but note their existence via setWaitcnt.
+      // Remove the waitcnt-pass-generated waitcnts; the pass will add them back
+      // as needed.
       if (!TrackedWaitcntSet.count(&Inst))
         ++Iter;
       else {
-        ScoreBrackets->setWaitcnt(&Inst);
         ++Iter;
         Inst.removeFromParent();
       }
+      ScoreBrackets->setWaitcnt(&Inst);
       continue;
     }
 
@@ -1684,8 +1682,8 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (WaitcntData->getIterCnt() > 2) {
       // To ensure convergence, need to make wait events at loop footer be no
       // more than those from the previous iteration.
-      // As a simplification, Instead of tracking individual scores and
-      // generate the precise wait count, just wait on 0.
+      // As a simplification, instead of tracking individual scores and
+      // generating the precise wait count, just wait on 0.
       bool HasPending = false;
       MachineInstr *SWaitInst = WaitcntData->getWaitcnt();
       for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
@@ -1722,7 +1720,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
         // Add this waitcnt to the block. It is either newly created or
         // created in previous iterations and added back since block traversal
-        // always remove waitcnt.
+        // always removes waitcnts.
         insertWaitcntBeforeCF(Block, SWaitInst);
         WaitcntData->setWaitcnt(SWaitInst);
       }
@@ -1788,7 +1786,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     if (ContainingLoop && ContainingLoop->getHeader() == &MBB && J < I &&
         (!BlockWaitcntProcessedSet.count(&MBB))) {
       BlockWaitcntBracketsMap[&MBB]->setRevisitLoop(true);
-      DEBUG(dbgs() << "set-revisit: block"
+      DEBUG(dbgs() << "set-revisit: Block"
                    << ContainingLoop->getHeader()->getNumber() << '\n';);
     }
 
@@ -1819,7 +1817,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
         }
         LoopWaitcntData *WaitcntData = LoopWaitcntDataMap[ContainingLoop].get();
         WaitcntData->incIterCnt();
-        DEBUG(dbgs() << "revisit: block" << EntryBB->getNumber() << '\n';);
+        DEBUG(dbgs() << "revisit: Block" << EntryBB->getNumber() << '\n';);
         continue;
       } else {
         LoopWaitcntData *WaitcntData = LoopWaitcntDataMap[ContainingLoop].get();

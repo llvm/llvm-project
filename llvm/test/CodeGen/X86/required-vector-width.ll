@@ -614,7 +614,7 @@ define <16 x i16> @test_16f32toub_512(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %zmm1
 ; CHECK-NEXT:    vpslld $31, %zmm1, %zmm1
-; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; CHECK-NEXT:    vpmovd2m %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = load <16 x float>, <16 x float>* %ptr
@@ -645,7 +645,7 @@ define <16 x i16> @test_16f32tosb_512(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK-LABEL: test_16f32tosb_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %zmm1
-; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; CHECK-NEXT:    vpmovd2m %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = load <16 x float>, <16 x float>* %ptr

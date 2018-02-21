@@ -263,6 +263,24 @@ inline UnaryOp_match<SrcTy, TargetOpcode::G_TRUNC> m_GTrunc(const SrcTy &Src) {
 }
 
 template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_BITCAST>
+m_GBitcast(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_BITCAST>(Src);
+}
+
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_PTRTOINT>
+m_GPtrToInt(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_PTRTOINT>(Src);
+}
+
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_INTTOPTR>
+m_GIntToPtr(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_INTTOPTR>(Src);
+}
+
+template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>
 m_GFPTrunc(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>(Src);

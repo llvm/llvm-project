@@ -5857,7 +5857,7 @@ CharUnits ASTContext::getObjCEncodingTypeSize(QualType type) const {
 bool ASTContext::isMSStaticDataMemberInlineDefinition(const VarDecl *VD) const {
   return getTargetInfo().getCXXABI().isMicrosoft() &&
          VD->isStaticDataMember() &&
-         (VD->getType()->isIntegralOrEnumerationType() || VD->isConstexpr()) &&
+         VD->getType()->isIntegralOrEnumerationType() &&
          !VD->getFirstDecl()->isOutOfLine() && VD->getFirstDecl()->hasInit();
 }
 

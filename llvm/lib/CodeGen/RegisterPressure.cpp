@@ -635,7 +635,7 @@ void PressureDiffs::init(unsigned N) {
   }
   Max = Size;
   free(PDiffArray);
-  PDiffArray = reinterpret_cast<PressureDiff*>(calloc(N, sizeof(PressureDiff)));
+  PDiffArray = static_cast<PressureDiff*>(safe_calloc(N, sizeof(PressureDiff)));
 }
 
 void PressureDiffs::addInstruction(unsigned Idx,
