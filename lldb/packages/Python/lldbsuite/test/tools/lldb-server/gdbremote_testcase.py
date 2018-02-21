@@ -549,7 +549,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 inferior_exe_path = self.getBuildArtifact("a.out")
 
             if lldb.remote_platform:
-                remote_path = lldbutil.append_to_process_working_directory(
+                remote_path = lldbutil.append_to_process_working_directory(self,
                     os.path.basename(inferior_exe_path))
                 remote_file_spec = lldb.SBFileSpec(remote_path, False)
                 err = lldb.remote_platform.Install(lldb.SBFileSpec(
@@ -1610,7 +1610,7 @@ class GdbRemoteTestCaseBase(TestBase):
         exe_path = self.getBuildArtifact("a.out")
         if not lldb.remote_platform:
             return [exe_path]
-        remote_path = lldbutil.append_to_process_working_directory(
+        remote_path = lldbutil.append_to_process_working_directory(self,
             os.path.basename(exe_path))
         remote_file_spec = lldb.SBFileSpec(remote_path, False)
         err = lldb.remote_platform.Install(lldb.SBFileSpec(exe_path, True),

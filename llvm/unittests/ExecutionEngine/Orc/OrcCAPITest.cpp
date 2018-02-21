@@ -38,13 +38,11 @@ protected:
     return MB.takeModule();
   }
 
-  std::shared_ptr<object::OwningBinary<object::ObjectFile>>
-  createTestObject() {
+  std::unique_ptr<MemoryBuffer> createTestObject() {
     orc::SimpleCompiler IRCompiler(*TM);
     auto M = createTestModule(TM->getTargetTriple());
     M->setDataLayout(TM->createDataLayout());
-    return std::make_shared<object::OwningBinary<object::ObjectFile>>(
-      IRCompiler(*M));
+    return IRCompiler(*M);
   }
 
   typedef int (*MainFnTy)();
@@ -148,12 +146,7 @@ TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
   if (!TM)
     return;
 
-  std::unique_ptr<MemoryBuffer> ObjBuffer;
-  {
-    auto OwningObj = createTestObject();
-    auto ObjAndBuffer = OwningObj->takeBinary();
-    ObjBuffer = std::move(ObjAndBuffer.second);
-  }
+  auto ObjBuffer = createTestObject();
 
   LLVMOrcJITStackRef JIT =
     LLVMOrcCreateInstance(wrap(TM.get()));

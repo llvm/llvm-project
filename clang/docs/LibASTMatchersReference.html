@@ -2376,6 +2376,8 @@ Given
   template &lt;typename T&gt; class X {}; class A {}; X&lt;A&gt; x;
 or
   template &lt;typename T&gt; class X {}; class A {}; template class X&lt;A&gt;;
+or
+  template &lt;typename T&gt; class X {}; class A {}; extern template class X&lt;A&gt;;
 cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
   matches the template instantiation of X&lt;A&gt;.
 
@@ -2913,6 +2915,8 @@ Given
   template &lt;typename T&gt; class X {}; class A {}; X&lt;A&gt; x;
 or
   template &lt;typename T&gt; class X {}; class A {}; template class X&lt;A&gt;;
+or
+  template &lt;typename T&gt; class X {}; class A {}; extern template class X&lt;A&gt;;
 cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
   matches the template instantiation of X&lt;A&gt;.
 
@@ -3873,6 +3877,8 @@ Given
   template &lt;typename T&gt; class X {}; class A {}; X&lt;A&gt; x;
 or
   template &lt;typename T&gt; class X {}; class A {}; template class X&lt;A&gt;;
+or
+  template &lt;typename T&gt; class X {}; class A {}; extern template class X&lt;A&gt;;
 cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
   matches the template instantiation of X&lt;A&gt;.
 
