@@ -31,6 +31,14 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
+    defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL) || \
+    defined(_LIBCPP_HAS_THREAD_API_WIN32)
+#define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_FUNC_VIS
+#else
+#define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
+#endif
+
 #if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(no_thread_safety_analysis)
 #define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((no_thread_safety_analysis))
 #else
@@ -39,15 +47,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
-    defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL)
-
-#define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_FUNC_VIS
-
-#elif defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
-
-#define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
-
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 // Mutex
 typedef pthread_mutex_t __libcpp_mutex_t;
 #define _LIBCPP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
@@ -75,9 +75,6 @@ typedef pthread_key_t __libcpp_tls_key;
 
 #define _LIBCPP_TLS_DESTRUCTOR_CC
 #else
-
-#define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_FUNC_VIS
-
 // Mutex
 typedef void* __libcpp_mutex_t;
 #define _LIBCPP_MUTEX_INITIALIZER 0
