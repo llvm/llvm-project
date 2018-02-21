@@ -1,50 +1,11 @@
-set(LLVM_NO_RTTI 1)
+if (LLDB_BUILD_FRAMEWORK)
+# Set the correct rpath to locate libswiftCore
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath \
+    -Wl,${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR}/Swift/macosx")
 
-include(AddLLVM)
-include(SwiftAddCustomCommandTarget)
-
-set(output_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
-set(module_cache_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/repl_swift_module_cache")
-
-if(NOT LLDB_BUILT_STANDALONE)
-  set(swift_depends swift swift-stdlib)
-endif()
-
-if(NOT LLDB_SWIFTC)
-  if(NOT LLDB_BUILT_STANDALONE)
-    set(LLDB_SWIFTC $<TARGET_FILE:swift>c)
-  else()
-    set(LLDB_SWIFTC ${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc)
-  endif()
-endif()
-
-set(swift_compile_cmd "${LLDB_SWIFTC}"
-                      -resource-dir "${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift"
-                      -module-cache-path "${module_cache_dir}")
-
-if(CMAKE_CROSSCOMPILING)
-  set(swift_compile_cmd ${swift_compile_cmd} -target "${LLVM_HOST_TRIPLE}" -sdk "${CMAKE_SYSROOT}")
-  if(CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN)
-    set(swift_compile_cmd ${swift_compile_cmd} -tools-directory "${CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN}")
-  endif()
-endif()
-
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-  set(swift_compile_cmd ${swift_compile_cmd} -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux)
-endif()
-
-add_custom_command_target(
-    unused_var
-    COMMAND "${swift_compile_cmd}"
-            -o "${output_dir}/repl_swift"
-            "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
-    OUTPUT "${output_dir}/repl_swift"
-    VERBATIM
-    ALL
-    CUSTOM_TARGET_NAME repl_swift
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
-            create_swift_module_dir
-            ${swift_depends})
+add_lldb_tool(repl_swift
+  main.c
+  )
 
 # Ensure we get a fresh, clean module cache for the swift repl run
 # before we build repl_swift.
@@ -65,6 +26,11 @@ add_custom_target(
   DEPENDS delete_swift_module_dir
   )
 
-install(
-  PROGRAMS "${output_dir}/repl_swift"
-  DESTINATION bin)
+# lldb --repl expects the dummy executable to be located in the framework resource dir,
+# so we copy it.
+  add_custom_command(TARGET repl_swift POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_BINARY_DIR}/bin/repl_swift
+            ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR}/repl_swift
+    )
+endif()

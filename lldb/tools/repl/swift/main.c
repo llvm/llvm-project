@@ -20,10 +20,12 @@
 
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
+__attribute__((optnone))
 int REPL_MAIN() {
   return 0;
 }
 
+__attribute__((optnone))
 int main() {
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
