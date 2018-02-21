@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_WASM_MARKLIVE_H
-#define LLD_WASM_MARKLIVE_H
+#ifndef LLD_ELF_MARKLIVE_H
+#define LLD_ELF_MARKLIVE_H
 
 namespace lld {
-namespace wasm {
+namespace elf {
 
-void markLive();
+template <class ELFT> void markLive();
 
-} // namespace wasm
+} // namespace elf
 } // namespace lld
 
-#endif // LLD_WASM_MARKLIVE_H
+#endif // LLD_ELF_MARKLIVE_H

@@ -7,15 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_WASM_MARKLIVE_H
-#define LLD_WASM_MARKLIVE_H
+#ifndef LLD_COFF_MARKLIVE_H
+#define LLD_COFF_MARKLIVE_H
+
+#include "lld/Common/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace lld {
-namespace wasm {
+namespace coff {
 
-void markLive();
+void markLive(ArrayRef<Chunk *> Chunks);
 
-} // namespace wasm
+} // namespace coff
 } // namespace lld
 
-#endif // LLD_WASM_MARKLIVE_H
+#endif // LLD_COFF_MARKLIVE_H

@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 #include "SourceCode.h"
 
+#include "clang/Basic/SourceManager.h"
+
 namespace clang {
 namespace clangd {
 using namespace llvm;
@@ -39,6 +41,12 @@ Position offsetToPosition(StringRef Code, size_t Offset) {
   return Pos;
 }
 
+Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
+  Position P;
+  P.line = static_cast<int>(SM.getSpellingLineNumber(Loc)) - 1;
+  P.character = static_cast<int>(SM.getSpellingColumnNumber(Loc)) - 1;
+  return P;
+}
+
 } // namespace clangd
 } // namespace clang
-

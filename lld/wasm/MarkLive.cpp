@@ -83,7 +83,7 @@ void lld::wasm::markLive() {
       case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
       case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
       case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-        Enqueue(C->File->getGlobalSymbol(Reloc.Index));
+        Enqueue(C->File->getDataSymbol(Reloc.Index));
         break;
       }
     }

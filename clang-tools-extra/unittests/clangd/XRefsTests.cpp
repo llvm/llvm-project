@@ -36,6 +36,7 @@ void PrintTo(const DocumentHighlight &V, std::ostream *O) {
 namespace {
 using testing::ElementsAre;
 using testing::Field;
+using testing::IsEmpty;
 using testing::Matcher;
 using testing::UnorderedElementsAreArray;
 
@@ -561,6 +562,73 @@ TEST(Hover, All) {
 
     EXPECT_EQ(H.contents.value, Test.ExpectedHover) << Test.Input;
   }
+}
+
+TEST(GoToInclude, All) {
+  MockFSProvider FS;
+  IgnoreDiagnostics DiagConsumer;
+  MockCompilationDatabase CDB;
+
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true);
+
+  auto FooCpp = testPath("foo.cpp");
+  const char *SourceContents = R"cpp(
+  #include ^"$2^foo.h$3^"
+  #include "$4^invalid.h"
+  int b = a;
+  // test
+  int foo;
+  #in$5^clude "$6^foo.h"$7^
+  )cpp";
+  Annotations SourceAnnotations(SourceContents);
+  FS.Files[FooCpp] = SourceAnnotations.code();
+  auto FooH = testPath("foo.h");
+  auto FooHUri = URIForFile{FooH};
+
+  const char *HeaderContents = R"cpp([[]]int a;)cpp";
+  Annotations HeaderAnnotations(HeaderContents);
+  FS.Files[FooH] = HeaderAnnotations.code();
+
+  Server.addDocument(FooH, HeaderAnnotations.code());
+  Server.addDocument(FooCpp, SourceAnnotations.code());
+
+  // Test include in preamble.
+  auto Locations =
+      runFindDefinitions(Server, FooCpp, SourceAnnotations.point());
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value,
+              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+
+  // Test include in preamble, last char.
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("2"));
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value,
+              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("3"));
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value,
+              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+
+  // Test include outside of preamble.
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("6"));
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value,
+              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+
+  // Test a few positions that do not result in Locations.
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("4"));
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value, IsEmpty());
+
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("5"));
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value, IsEmpty());
+
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("7"));
+  ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(Locations->Value, IsEmpty());
 }
 
 } // namespace

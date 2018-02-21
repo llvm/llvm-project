@@ -17,7 +17,6 @@
 
 #include "Config.h"
 #include "InputFiles.h"
-#include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Wasm.h"
 
