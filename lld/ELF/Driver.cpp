@@ -692,6 +692,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
+  Config->ZHazardplt = hasZOption(Args, "hazardplt");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNodlopen = hasZOption(Args, "nodlopen");

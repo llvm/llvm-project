@@ -81,9 +81,9 @@ static void checkSymbolTypes(const Symbol &Existing, const InputFile &F,
   // symbols or both are data symbols).
   if (isa<FunctionSymbol>(Existing) != NewIsFunction) {
     error("symbol type mismatch: " + Existing.getName() + "\n>>> defined as " +
-          (isa<FunctionSymbol>(Existing) ? "Function" : "Global") + " in " +
+          (isa<FunctionSymbol>(Existing) ? "Function" : "Data") + " in " +
           toString(Existing.getFile()) + "\n>>> defined as " +
-          (NewIsFunction ? "Function" : "Global") + " in " + F.getName());
+          (NewIsFunction ? "Function" : "Data") + " in " + F.getName());
     return;
   }
 
@@ -130,13 +130,14 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
   return replaceSymbol<DefinedFunction>(S, Name, Flags, Type);
 }
 
-DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags) {
-  DEBUG(dbgs() << "addSyntheticGlobal: " << Name << "\n");
+DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef Name,
+                                                 uint32_t Flags) {
+  DEBUG(dbgs() << "addSyntheticDataSymbol: " << Name << "\n");
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   assert(WasInserted);
-  return replaceSymbol<DefinedGlobal>(S, Name, Flags);
+  return replaceSymbol<DefinedData>(S, Name, Flags);
 }
 
 static bool shouldReplace(const Symbol &Existing, InputFile *NewFile,
@@ -192,15 +193,15 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
   return S;
 }
 
-Symbol *SymbolTable::addDefinedGlobal(StringRef Name, uint32_t Flags,
+Symbol *SymbolTable::addDefinedData(StringRef Name, uint32_t Flags,
                                       InputFile *F, InputSegment *Segment,
                                       uint32_t Address) {
-  DEBUG(dbgs() << "addDefinedGlobal:" << Name << " addr:" << Address << "\n");
+  DEBUG(dbgs() << "addDefinedData:" << Name << " addr:" << Address << "\n");
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted || shouldReplace(*S, F, Flags, Segment, false))
-    replaceSymbol<DefinedGlobal>(S, Name, Flags, F, Segment, Address);
+    replaceSymbol<DefinedData>(S, Name, Flags, F, Segment, Address);
   return S;
 }
 
@@ -218,7 +219,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, Symbol::Kind Kind,
     if (IsFunction)
       replaceSymbol<UndefinedFunction>(S, Name, Flags, F, Type);
     else
-      replaceSymbol<UndefinedGlobal>(S, Name, Flags, F);
+      replaceSymbol<UndefinedData>(S, Name, Flags, F);
     return S;
   }
 
