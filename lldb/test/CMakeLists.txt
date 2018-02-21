@@ -144,6 +144,9 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   endif ()
 endif ()
 
+# Run the lit-style tests and the unittests as part of the check-lldb target.
+add_dependencies(check-lldb check-lldb-lit)
+
 add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
 # This will add LLDB's test dependencies to the depenednecies for check-all and
 # include them in the test-depends target.
