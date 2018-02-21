@@ -3084,7 +3084,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
     return Sema::TDK_Success;
 
   if (A->isRecordType() && isSimpleTemplateIdType(OriginalParamType) &&
-      S.IsDerivedFrom(SourceLocation(), A, DeducedA))
+      S.IsDerivedFrom(Info.getLocation(), A, DeducedA))
     return Sema::TDK_Success;
 
   return Failed();

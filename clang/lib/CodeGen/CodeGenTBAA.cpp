@@ -215,6 +215,19 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   return MetadataCache[Ty] = TypeNode;
 }
 
+TBAAAccessInfo CodeGenTBAA::getAccessInfo(QualType AccessType) {
+  // Pointee values may have incomplete types, but they shall never be
+  // dereferenced.
+  if (AccessType->isIncompleteType())
+    return TBAAAccessInfo::getIncompleteInfo();
+
+  if (TypeHasMayAlias(AccessType))
+    return TBAAAccessInfo::getMayAliasInfo();
+
+  uint64_t Size = Context.getTypeSizeInChars(AccessType).getQuantity();
+  return TBAAAccessInfo(getTypeInfo(AccessType), Size);
+}
+
 TBAAAccessInfo CodeGenTBAA::getVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
   llvm::DataLayout DL(&Module);
   unsigned Size = DL.getPointerTypeSize(VTablePtrType);

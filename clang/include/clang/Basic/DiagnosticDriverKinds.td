@@ -333,6 +333,10 @@ def warn_drv_unsupported_abicalls : Warning<
   "ignoring '-mabicalls' option as it cannot be used with "
   "non position-independent code and the N64 ABI">,
   InGroup<OptionIgnored>;
+def err_drv_unsupported_indirect_jump_opt : Error<
+  "'-mindirect-jump=%0' is unsupported with the '%1' architecture">;
+def err_drv_unknown_indirect_jump_opt : Error<
+  "unknown '-mindirect-jump=' option '%0'">;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,

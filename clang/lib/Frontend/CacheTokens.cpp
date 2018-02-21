@@ -662,7 +662,8 @@ std::pair<Offset,Offset> PTHWriter::EmitIdentifierTable() {
   //  (2) a map from (IdentifierInfo*, Offset)* -> persistent IDs
 
   // Note that we use 'calloc', so all the bytes are 0.
-  PTHIdKey *IIDMap = (PTHIdKey*)calloc(idcount, sizeof(PTHIdKey));
+  PTHIdKey *IIDMap = static_cast<PTHIdKey*>(
+      llvm::safe_calloc(idcount, sizeof(PTHIdKey)));
 
   // Create the hashtable.
   llvm::OnDiskChainedHashTableGenerator<PTHIdentifierTableTrait> IIOffMap;
