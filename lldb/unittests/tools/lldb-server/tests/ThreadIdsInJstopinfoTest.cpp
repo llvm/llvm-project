@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+#if 0
 #include "TestClient.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -56,3 +56,4 @@ TEST_F(ThreadsInJstopinfoTest, TestStopReplyContainsThreadPcsLlgs) {
 
   ASSERT_TRUE(client.StopDebugger());
 }
+#endif
