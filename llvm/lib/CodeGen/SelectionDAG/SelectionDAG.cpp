@@ -2920,11 +2920,38 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   }
   case ISD::SMIN:
   case ISD::SMAX: {
-    computeKnownBits(Op.getOperand(0), Known, DemandedElts,
-                     Depth + 1);
-    // If we don't know any bits, early out.
-    if (Known.isUnknown())
-      break;
+    // If we have a clamp pattern, we know that the number of sign bits will be
+    // the minimum of the clamp min/max range.
+    bool IsMax = (Opcode == ISD::SMAX);
+    ConstantSDNode *CstLow = nullptr, *CstHigh = nullptr;
+    if ((CstLow = isConstOrDemandedConstSplat(Op.getOperand(1), DemandedElts)))
+      if (Op.getOperand(0).getOpcode() == (IsMax ? ISD::SMIN : ISD::SMAX))
+        CstHigh = isConstOrDemandedConstSplat(Op.getOperand(0).getOperand(1),
+                                              DemandedElts);
+    if (CstLow && CstHigh) {
+      if (!IsMax)
+        std::swap(CstLow, CstHigh);
+
+      const APInt &ValueLow = CstLow->getAPIntValue();
+      const APInt &ValueHigh = CstHigh->getAPIntValue();
+      if (ValueLow.sle(ValueHigh)) {
+        unsigned LowSignBits = ValueLow.getNumSignBits();
+        unsigned HighSignBits = ValueHigh.getNumSignBits();
+        unsigned MinSignBits = std::min(LowSignBits, HighSignBits);
+        if (ValueLow.isNegative() && ValueHigh.isNegative()) {
+          Known.One.setHighBits(MinSignBits);
+          break;
+        }
+        if (ValueLow.isNonNegative() && ValueHigh.isNonNegative()) {
+          Known.Zero.setHighBits(MinSignBits);
+          break;
+        }
+      }
+    }
+
+    // Fallback - just get the shared known bits of the operands.
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+    if (Known.isUnknown()) break; // Early-out
     computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
     Known.Zero &= Known2.Zero;
     Known.One &= Known2.One;

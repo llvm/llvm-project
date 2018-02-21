@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <isl/options.h>
 #include <isl/schedule.h>
+#include <isl/printer.h>
 
 int main(int argc, char **argv)
 {

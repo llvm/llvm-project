@@ -602,13 +602,9 @@ llvm::MDNode *CodeGenModule::getTBAATypeInfo(QualType QTy) {
 }
 
 TBAAAccessInfo CodeGenModule::getTBAAAccessInfo(QualType AccessType) {
-  // Pointee values may have incomplete types, but they shall never be
-  // dereferenced.
-  if (AccessType->isIncompleteType())
-    return TBAAAccessInfo::getIncompleteInfo();
-
-  uint64_t Size = Context.getTypeSizeInChars(AccessType).getQuantity();
-  return TBAAAccessInfo(getTBAATypeInfo(AccessType), Size);
+  if (!TBAA)
+    return TBAAAccessInfo();
+  return TBAA->getAccessInfo(AccessType);
 }
 
 TBAAAccessInfo

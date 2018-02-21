@@ -22,6 +22,7 @@ namespace wasm {
 
 class InputFile;
 class InputChunk;
+class InputSegment;
 class InputFunction;
 
 #define INVALID_INDEX UINT32_MAX
@@ -58,7 +59,7 @@ public:
 
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
-  InputChunk *getChunk() const { return Chunk; }
+  InputChunk *getChunk() const;
 
   void setHidden(bool IsHidden);
 
@@ -72,14 +73,13 @@ public:
   void setOutputIndex(uint32_t Index);
 
 protected:
-  Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F, InputChunk *C)
-      : Name(Name), SymbolKind(K), Flags(Flags), File(F), Chunk(C) {}
+  Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
+      : Name(Name), SymbolKind(K), Flags(Flags), File(F) {}
 
   StringRef Name;
   Kind SymbolKind;
   uint32_t Flags;
   InputFile *File;
-  InputChunk *Chunk;
   uint32_t OutputIndex = INVALID_INDEX;
 };
 
@@ -102,11 +102,8 @@ public:
 
 protected:
   FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-                 InputFunction *Function);
-
-  FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-                 const WasmSignature* Type)
-      : Symbol(Name, K, Flags, F, nullptr), FunctionType(Type) {}
+                 const WasmSignature *Type)
+      : Symbol(Name, K, Flags, F), FunctionType(Type) {}
 
   uint32_t TableIndex = INVALID_INDEX;
 
@@ -116,8 +113,7 @@ protected:
 class DefinedFunction : public FunctionSymbol {
 public:
   DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
-                  InputFunction *Function)
-      : FunctionSymbol(Name, DefinedFunctionKind, Flags, F, Function) {}
+                  InputFunction *Function);
 
   DefinedFunction(StringRef Name, uint32_t Flags, const WasmSignature *Type)
       : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, Type) {}
@@ -125,6 +121,8 @@ public:
   static bool classof(const Symbol *S) {
     return S->kind() == DefinedFunctionKind;
   }
+
+  InputFunction *Function;
 };
 
 class UndefinedFunction : public FunctionSymbol {
@@ -145,16 +143,15 @@ public:
   }
 
 protected:
-  GlobalSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-               InputChunk *C)
-      : Symbol(Name, K, Flags, F, C) {}
+  GlobalSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
+      : Symbol(Name, K, Flags, F) {}
 };
 
 class DefinedGlobal : public GlobalSymbol {
 public:
   DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
-                InputChunk *C = nullptr, uint32_t Address = 0)
-      : GlobalSymbol(Name, DefinedGlobalKind, Flags, F, C),
+                InputSegment *Segment = nullptr, uint32_t Address = 0)
+      : GlobalSymbol(Name, DefinedGlobalKind, Flags, F), Segment(Segment),
         VirtualAddress(Address) {}
 
   static bool classof(const Symbol *S) {
@@ -162,8 +159,9 @@ public:
   }
 
   uint32_t getVirtualAddress() const;
-
   void setVirtualAddress(uint32_t VA);
+
+  InputSegment *Segment;
 
 protected:
   uint32_t VirtualAddress;
@@ -172,7 +170,7 @@ protected:
 class UndefinedGlobal : public GlobalSymbol {
 public:
   UndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File = nullptr)
-      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File, nullptr) {}
+      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File) {}
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedGlobalKind;
   }
@@ -181,7 +179,7 @@ public:
 class LazySymbol : public Symbol {
 public:
   LazySymbol(StringRef Name, InputFile *File, const Archive::Symbol &Sym)
-      : Symbol(Name, LazyKind, 0, File, nullptr), ArchiveSymbol(Sym) {}
+      : Symbol(Name, LazyKind, 0, File), ArchiveSymbol(Sym) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
 

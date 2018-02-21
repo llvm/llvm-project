@@ -35,7 +35,7 @@ return:
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT:   {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT:   {  :  1 = 0 }
+; CHECK-NEXT:   {  :  false }
 
 ; CHECK:  Stmt_store
 ; CHECK:        Domain :=

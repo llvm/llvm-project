@@ -676,7 +676,7 @@ public:
 
   /// Create call to the maxnum intrinsic.
   CallInst *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, Name);
+    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, Name);
   }
 
 private:

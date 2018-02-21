@@ -5467,6 +5467,11 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
   // arguments that will be in registers.
   unsigned NumGPRsUsed = 0, NumFPRsUsed = 0, NumVRsUsed = 0;
 
+  // Avoid allocating parameter area for fastcc functions if all the arguments
+  // can be passed in the registers.
+  if (CallConv == CallingConv::Fast)
+    HasParameterArea = false;
+
   // Add up all the space actually used.
   for (unsigned i = 0; i != NumOps; ++i) {
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
@@ -5477,9 +5482,11 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
       continue;
 
     if (CallConv == CallingConv::Fast) {
-      if (Flags.isByVal())
+      if (Flags.isByVal()) {
         NumGPRsUsed += (Flags.getByValSize()+7)/8;
-      else
+        if (NumGPRsUsed > NumGPRs)
+          HasParameterArea = true;
+      } else {
         switch (ArgVT.getSimpleVT().SimpleTy) {
         default: llvm_unreachable("Unexpected ValueType for argument!");
         case MVT::i1:
@@ -5516,6 +5523,8 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
             continue;
           break;
         }
+        HasParameterArea = true;
+      }
     }
 
     /* Respect alignment of argument on the stack.  */

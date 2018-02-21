@@ -319,10 +319,10 @@ protected:
     if (Parent != Other.Parent) return true;
 
     if (Roots.size() != Other.Roots.size())
-      return false;
+      return true;
 
     if (!std::is_permutation(Roots.begin(), Roots.end(), Other.Roots.begin()))
-      return false;
+      return true;
 
     const DomTreeNodeMapType &OtherDomTreeNodes = Other.DomTreeNodes;
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())

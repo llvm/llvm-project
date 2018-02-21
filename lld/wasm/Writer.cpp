@@ -8,8 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
-
-#include "llvm/ADT/DenseSet.h"
 #include "Config.h"
 #include "InputChunks.h"
 #include "OutputSections.h"
@@ -19,6 +17,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"

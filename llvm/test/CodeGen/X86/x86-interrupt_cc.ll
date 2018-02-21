@@ -161,7 +161,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK64-KNL-NEXT:    .cfi_offset %k7, -82
 ; CHECK64-KNL-NEXT:    cld ## encoding: [0xfc]
 ; CHECK64-KNL-NEXT:    callq _bar ## encoding: [0xe8,A,A,A,A]
-; CHECK64-KNL-NEXT:    ## fixup A - offset: 1, value: _bar-4, kind: FK_PCRel_4
+; CHECK64-KNL-NEXT:    ## fixup A - offset: 1, value: _bar-4, kind: reloc_branch_4byte_pcrel
 ; CHECK64-KNL-NEXT:    vmovups (%rsp), %zmm0 ## 64-byte Reload
 ; CHECK64-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x04,0x24]
 ; CHECK64-KNL-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm1 ## 64-byte Reload
@@ -410,7 +410,7 @@ define x86_intrcc void @foo(i8* %frame) {
 ; CHECK64-SKX-NEXT:    cld ## encoding: [0xfc]
 ; CHECK64-SKX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK64-SKX-NEXT:    callq _bar ## encoding: [0xe8,A,A,A,A]
-; CHECK64-SKX-NEXT:    ## fixup A - offset: 1, value: _bar-4, kind: FK_PCRel_4
+; CHECK64-SKX-NEXT:    ## fixup A - offset: 1, value: _bar-4, kind: reloc_branch_4byte_pcrel
 ; CHECK64-SKX-NEXT:    vmovups (%rsp), %zmm0 ## 64-byte Reload
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x04,0x24]
 ; CHECK64-SKX-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm1 ## 64-byte Reload

@@ -3149,7 +3149,7 @@ define <8 x i16> @test_cmp_d_512(<16 x i32> %a0, <16 x i32> %a1) {
 ; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; CHECK-NEXT:    vpcmpled %zmm1, %zmm0, %k2
 ; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k3
-; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k4
+; CHECK-NEXT:    vpcmpnltd %zmm1, %zmm0, %k4
 ; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k5
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -3194,7 +3194,7 @@ define <8 x i16> @test_mask_cmp_d_512(<16 x i32> %a0, <16 x i32> %a1, i16 %mask)
 ; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k2 {%k1}
 ; CHECK-NEXT:    vpcmpled %zmm1, %zmm0, %k3 {%k1}
 ; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k4 {%k1}
-; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k5 {%k1}
+; CHECK-NEXT:    vpcmpnltd %zmm1, %zmm0, %k5 {%k1}
 ; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -3329,7 +3329,7 @@ define <8 x i8> @test_cmp_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
 ; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k2
 ; CHECK-NEXT:    vpcmpneqq %zmm1, %zmm0, %k3
-; CHECK-NEXT:    vpcmpleq %zmm0, %zmm1, %k4
+; CHECK-NEXT:    vpcmpnltq %zmm1, %zmm0, %k4
 ; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k5
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -3374,7 +3374,7 @@ define <8 x i8> @test_mask_cmp_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
 ; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k2 {%k1}
 ; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k3 {%k1}
 ; CHECK-NEXT:    vpcmpneqq %zmm1, %zmm0, %k4 {%k1}
-; CHECK-NEXT:    vpcmpleq %zmm0, %zmm1, %k5 {%k1}
+; CHECK-NEXT:    vpcmpnltq %zmm1, %zmm0, %k5 {%k1}
 ; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0

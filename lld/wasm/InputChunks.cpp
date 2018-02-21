@@ -10,6 +10,7 @@
 #include "InputChunks.h"
 #include "Config.h"
 #include "OutputSegment.h"
+#include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/Support/LEB128.h"
@@ -21,6 +22,10 @@ using namespace llvm::wasm;
 using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::wasm;
+
+std::string lld::toString(const InputChunk *C) {
+  return (toString(C->File) + ":(" + C->getName() + ")").str();
+}
 
 uint32_t InputSegment::translateVA(uint32_t Address) const {
   assert(Address >= startVA() && Address < endVA());
@@ -40,76 +45,69 @@ void InputChunk::copyRelocations(const WasmSection &Section) {
       Relocations.push_back(R);
 }
 
-static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
-  DEBUG(dbgs() << "write reloc: type=" << Reloc.Reloc.Type
-               << " index=" << Reloc.Reloc.Index << " value=" << Reloc.Value
-               << " offset=" << Reloc.Reloc.Offset << "\n");
-  Buf += Reloc.Reloc.Offset;
-  int64_t ExistingValue;
-  switch (Reloc.Reloc.Type) {
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    ExistingValue = decodeULEB128(Buf);
-    // Additional check to verify that the existing value that the location
-    // matches our expectations.
-    if (ExistingValue != Reloc.Reloc.Index) {
-      DEBUG(dbgs() << "existing value: " << decodeULEB128(Buf) << "\n");
-      assert(decodeULEB128(Buf) == Reloc.Reloc.Index);
+// Copy this input chunk to an mmap'ed output file and apply relocations.
+void InputChunk::writeTo(uint8_t *Buf) const {
+  // Copy contents
+  memcpy(Buf + OutputOffset, data().data(), data().size());
+
+  // Apply relocations
+  if (Relocations.empty())
+    return;
+
+  DEBUG(dbgs() << "applyRelocations: count=" << Relocations.size() << "\n");
+  int32_t Off = OutputOffset - getInputSectionOffset();
+
+  for (const WasmRelocation &Rel : Relocations) {
+    uint8_t *Loc = Buf + Rel.Offset + Off;
+    uint64_t Value = File->calcNewValue(Rel);
+
+    DEBUG(dbgs() << "write reloc: type=" << Rel.Type << " index=" << Rel.Index
+                 << " value=" << Value << " offset=" << Rel.Offset << "\n");
+
+    switch (Rel.Type) {
+    case R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+    case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+      encodeULEB128(Value, Loc, 5);
+      break;
+    case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+      encodeSLEB128(static_cast<int32_t>(Value), Loc, 5);
+      break;
+    case R_WEBASSEMBLY_TABLE_INDEX_I32:
+    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
+      write32le(Loc, Value);
+      break;
+    default:
+      llvm_unreachable("unknown relocation type");
     }
-    LLVM_FALLTHROUGH;
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-    encodeULEB128(Reloc.Value, Buf, 5);
-    break;
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    encodeSLEB128(static_cast<int32_t>(Reloc.Value), Buf, 5);
-    break;
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    write32le(Buf, Reloc.Value);
-    break;
-  default:
-    llvm_unreachable("unknown relocation type");
   }
 }
 
-static void applyRelocations(uint8_t *Buf, ArrayRef<OutputRelocation> Relocs) {
-  if (!Relocs.size())
-    return;
-  DEBUG(dbgs() << "applyRelocations: count=" << Relocs.size() << "\n");
-  for (const OutputRelocation &Reloc : Relocs)
-    applyRelocation(Buf, Reloc);
-}
-
-void InputChunk::writeTo(uint8_t *SectionStart) const {
-  memcpy(SectionStart + getOutputOffset(), data().data(), data().size());
-  applyRelocations(SectionStart, OutRelocations);
-}
-
-// Populate OutRelocations based on the input relocations and offset within the
-// output section.  Calculates the updated index and offset for each relocation
-// as well as the value to write out in the final binary.
-void InputChunk::calcRelocations() {
+// Copy relocation entries to a given output stream.
+// This function is used only when a user passes "-r". For a regular link,
+// we consume relocations instead of copying them to an output file.
+void InputChunk::writeRelocations(raw_ostream &OS) const {
   if (Relocations.empty())
     return;
-  int32_t Off = getOutputOffset() - getInputSectionOffset();
-  DEBUG(dbgs() << "calcRelocations: " << File->getName()
+
+  int32_t Off = OutputOffset - getInputSectionOffset();
+  DEBUG(dbgs() << "writeRelocations: " << File->getName()
                << " offset=" << Twine(Off) << "\n");
-  for (const WasmRelocation &Reloc : Relocations) {
-    OutputRelocation NewReloc;
-    NewReloc.Reloc = Reloc;
-    assert(Reloc.Offset + Off > 0);
-    NewReloc.Reloc.Offset += Off;
-    DEBUG(dbgs() << "reloc: type=" << Reloc.Type << " index=" << Reloc.Index
-                 << " offset=" << Reloc.Offset
-                 << " newOffset=" << NewReloc.Reloc.Offset << "\n");
 
-    if (Config->Relocatable)
-      NewReloc.NewIndex = File->calcNewIndex(Reloc);
+  for (const WasmRelocation &Rel : Relocations) {
+    writeUleb128(OS, Rel.Type, "reloc type");
+    writeUleb128(OS, Rel.Offset + Off, "reloc offset");
+    writeUleb128(OS, File->calcNewIndex(Rel), "reloc index");
 
-    NewReloc.Value = File->calcNewValue(Reloc);
-    OutRelocations.emplace_back(NewReloc);
+    switch (Rel.Type) {
+    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
+      writeUleb128(OS, Rel.Addend, "reloc addend");
+      break;
+    }
   }
 }
 

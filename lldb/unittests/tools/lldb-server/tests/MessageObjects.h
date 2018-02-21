@@ -10,7 +10,9 @@
 #ifndef LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 #define LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 
+#include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -22,8 +24,7 @@
 namespace llgs_tests {
 class ThreadInfo;
 typedef llvm::DenseMap<uint64_t, ThreadInfo> ThreadInfoMap;
-typedef llvm::DenseMap<uint64_t, uint64_t> U64Map;
-typedef llvm::DenseMap<unsigned int, std::string> RegisterMap;
+typedef llvm::DenseMap<unsigned int, lldb_private::RegisterValue> RegisterMap;
 
 template <typename T> struct Parser { using result_type = T; };
 
@@ -51,10 +52,9 @@ class ThreadInfo {
 public:
   ThreadInfo() = default;
   ThreadInfo(llvm::StringRef name, llvm::StringRef reason,
-             const RegisterMap &registers, unsigned int signal);
+             RegisterMap registers, unsigned int signal);
 
-  llvm::StringRef ReadRegister(unsigned int register_id) const;
-  llvm::Expected<uint64_t> ReadRegisterAsUint64(unsigned int register_id) const;
+  const lldb_private::RegisterValue *ReadRegister(unsigned int Id) const;
 
 private:
   std::string m_name;
@@ -63,14 +63,19 @@ private:
   unsigned int m_signal;
 };
 
-class JThreadsInfo {
+class JThreadsInfo : public Parser<JThreadsInfo> {
 public:
-  static llvm::Expected<JThreadsInfo> Create(llvm::StringRef response,
-                                             llvm::support::endianness endian);
+  static llvm::Expected<JThreadsInfo>
+  create(llvm::StringRef Response,
+         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
   const ThreadInfoMap &GetThreadInfos() const;
 
 private:
+  static llvm::Expected<RegisterMap>
+  parseRegisters(const lldb_private::StructuredData::Dictionary &Dict,
+                 llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+
   JThreadsInfo() = default;
   ThreadInfoMap m_thread_infos;
 };
@@ -80,13 +85,18 @@ struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
   create(llvm::StringRef Response);
 };
 
+llvm::Expected<lldb_private::RegisterValue>
+parseRegisterValue(const lldb_private::RegisterInfo &Info,
+                   llvm::StringRef HexValue, llvm::support::endianness Endian);
+
 class StopReply {
 public:
   StopReply() = default;
   virtual ~StopReply() = default;
 
   static llvm::Expected<std::unique_ptr<StopReply>>
-  create(llvm::StringRef response, llvm::support::endianness endian);
+  create(llvm::StringRef Response, llvm::support::endianness Endian,
+         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
   // for llvm::cast<>
   virtual lldb_private::WaitStatus getKind() const = 0;
@@ -98,15 +108,17 @@ public:
 class StopReplyStop : public StopReply {
 public:
   StopReplyStop(uint8_t Signal, lldb::tid_t ThreadId, llvm::StringRef Name,
-                U64Map ThreadPcs, RegisterMap Registers, llvm::StringRef Reason)
+                RegisterMap ThreadPcs, RegisterMap Registers,
+                llvm::StringRef Reason)
       : Signal(Signal), ThreadId(ThreadId), Name(Name),
         ThreadPcs(std::move(ThreadPcs)), Registers(std::move(Registers)),
         Reason(Reason) {}
 
   static llvm::Expected<std::unique_ptr<StopReplyStop>>
-  create(llvm::StringRef response, llvm::support::endianness endian);
+  create(llvm::StringRef Response, llvm::support::endianness Endian,
+         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
-  const U64Map &getThreadPcs() const { return ThreadPcs; }
+  const RegisterMap &getThreadPcs() const { return ThreadPcs; }
   lldb::tid_t getThreadId() const { return ThreadId; }
 
   // for llvm::cast<>
@@ -118,10 +130,15 @@ public:
   }
 
 private:
+  static llvm::Expected<RegisterMap> parseRegisters(
+      const llvm::StringMap<llvm::SmallVector<llvm::StringRef, 2>> &Elements,
+      llvm::support::endianness Endian,
+      llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+
   uint8_t Signal;
   lldb::tid_t ThreadId;
   std::string Name;
-  U64Map ThreadPcs;
+  RegisterMap ThreadPcs;
   RegisterMap Registers;
   std::string Reason;
 };
@@ -162,5 +179,9 @@ llvm::Error make_parsing_error(llvm::StringRef format, Args &&... args) {
 }
 
 } // namespace llgs_tests
+
+namespace lldb_private {
+std::ostream &operator<<(std::ostream &OS, const RegisterValue &RegVal);
+}
 
 #endif // LLDB_SERVER_TESTS_MESSAGEOBJECTS_H

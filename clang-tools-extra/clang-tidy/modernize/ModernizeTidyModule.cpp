@@ -33,6 +33,7 @@
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
 #include "UseTransparentFunctorsCheck.h"
+#include "UseUncaughtExceptionsCheck.h"
 #include "UseUsingCheck.h"
 
 using namespace clang::ast_matchers;
@@ -78,6 +79,8 @@ public:
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
     CheckFactories.registerCheck<UseTransparentFunctorsCheck>(
         "modernize-use-transparent-functors");
+    CheckFactories.registerCheck<UseUncaughtExceptionsCheck>(
+        "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
   }
 

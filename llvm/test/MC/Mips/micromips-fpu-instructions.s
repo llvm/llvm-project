@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=mipsel -show-encoding -mattr=micromips \
+# RUN: llvm-mc %s -triple=mipsel -show-encoding -show-inst -mattr=micromips \
 # RUN: -mcpu=mips32r2 | FileCheck -check-prefix=CHECK-EL %s
-# RUN: llvm-mc %s -triple=mips -show-encoding -mattr=micromips \
+# RUN: llvm-mc %s -triple=mips -show-encoding -show-inst -mattr=micromips \
 # RUN: -mcpu=mips32r2 | FileCheck -check-prefix=CHECK-EB %s
 # Check that the assembler can handle the documented syntax
 # for fpu instructions
@@ -47,6 +47,7 @@
 # CHECK-EL: neg.d      $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x2b]
 # CHECK-EL: cvt.d.s    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x13]
 # CHECK-EL: cvt.d.w    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x33]
+# CHECK-EL:                             # <MCInst #{{.*}} CVT_D32_W_MM
 # CHECK-EL: cvt.s.d    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x1b]
 # CHECK-EL: cvt.s.w    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x3b]
 # CHECK-EL: cfc1    $6, $0              # encoding: [0xc0,0x54,0x3b,0x10]
@@ -112,6 +113,7 @@
 # CHECK-EB: neg.d $f6, $f8              # encoding: [0x54,0xc8,0x2b,0x7b]
 # CHECK-EB: cvt.d.s $f6, $f8            # encoding: [0x54,0xc8,0x13,0x7b]
 # CHECK-EB: cvt.d.w $f6, $f8            # encoding: [0x54,0xc8,0x33,0x7b]
+# CHECK-EB:                             # <MCInst #{{.*}} CVT_D32_W_MM
 # CHECK-EB: cvt.s.d $f6, $f8            # encoding: [0x54,0xc8,0x1b,0x7b]
 # CHECK-EB: cvt.s.w $f6, $f8            # encoding: [0x54,0xc8,0x3b,0x7b]
 # CHECK-EB: cfc1    $6, $0              # encoding: [0x54,0xc0,0x10,0x3b]

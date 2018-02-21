@@ -580,8 +580,11 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
                       /*StorePreamblesInMemory=*/true,
                       /*BuildDynamicSymbolIndex=*/true);
 
-  Server.addDocument(testPath("foo.cpp"), R"cpp(
+  FS.Files[testPath("foo.h")] = R"cpp(
       namespace ns { class XYZ {}; void foo(int x) {} }
+  )cpp";
+  Server.addDocument(testPath("foo.cpp"), R"cpp(
+      #include "foo.h"
   )cpp");
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
 

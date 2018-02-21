@@ -938,8 +938,8 @@ define void @clamp(i32 %src, i16* %dst) {
 ; GENERIC-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; GENERIC-NEXT:    cmovlel %edi, %eax
 ; GENERIC-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
-; GENERIC-NEXT:    movw $-32768, %cx ## imm = 0x8000
-; GENERIC-NEXT:    cmovgew %ax, %cx
+; GENERIC-NEXT:    movl $32768, %ecx ## imm = 0x8000
+; GENERIC-NEXT:    cmovgel %eax, %ecx
 ; GENERIC-NEXT:    movw %cx, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
@@ -948,9 +948,9 @@ define void @clamp(i32 %src, i16* %dst) {
 ; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; ATOM-NEXT:    cmovlel %edi, %eax
-; ATOM-NEXT:    movw $-32768, %cx ## imm = 0x8000
+; ATOM-NEXT:    movl $32768, %ecx ## imm = 0x8000
 ; ATOM-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
-; ATOM-NEXT:    cmovgew %ax, %cx
+; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movw %cx, (%rsi)
 ; ATOM-NEXT:    retq
 ;
@@ -963,7 +963,7 @@ define void @clamp(i32 %src, i16* %dst) {
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB23_2:
 ; MCU-NEXT:    cmpl $-32768, %ecx # imm = 0x8000
-; MCU-NEXT:    movw $-32768, %ax # imm = 0x8000
+; MCU-NEXT:    movl $32768, %eax # imm = 0x8000
 ; MCU-NEXT:    jl .LBB23_4
 ; MCU-NEXT:  # %bb.3:
 ; MCU-NEXT:    movl %ecx, %eax
@@ -1063,8 +1063,8 @@ define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    xorl $43, %eax
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    cmovnew %ax, %di
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmovel %edi, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; MCU-LABEL: select_xor_1:

@@ -1764,8 +1764,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   }
 
   // Ensure that the constant occurs on the RHS and fold constant comparisons.
+  // TODO: Handle non-splat vector constants. All undef causes trouble.
   ISD::CondCode SwappedCC = ISD::getSetCCSwappedOperands(Cond);
-  if (isa<ConstantSDNode>(N0.getNode()) &&
+  if (isConstOrConstSplat(N0) &&
       (DCI.isBeforeLegalizeOps() ||
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())))
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
@@ -2140,9 +2141,15 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               Cond == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ);
       }
     }
+  }
+
+  // These simplifications apply to splat vectors as well.
+  // TODO: Handle more splat vector cases.
+  if (auto *N1C = isConstOrConstSplat(N1)) {
+    const APInt &C1 = N1C->getAPIntValue();
 
     APInt MinVal, MaxVal;
-    unsigned OperandBitSize = N1C->getValueType(0).getSizeInBits();
+    unsigned OperandBitSize = N1C->getValueType(0).getScalarSizeInBits();
     if (ISD::isSignedIntSetCC(Cond)) {
       MinVal = APInt::getSignedMinValue(OperandBitSize);
       MaxVal = APInt::getSignedMaxValue(OperandBitSize);
@@ -2157,16 +2164,18 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       if (C1 == MinVal)
         return DAG.getBoolConstant(true, dl, VT, OpVT);
 
-      // X >= C0 --> X > (C0 - 1)
-      APInt C = C1 - 1;
-      ISD::CondCode NewCC = (Cond == ISD::SETGE) ? ISD::SETGT : ISD::SETUGT;
-      if ((DCI.isBeforeLegalizeOps() ||
-           isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
-          (!N1C->isOpaque() || (N1C->isOpaque() && C.getBitWidth() <= 64 &&
-                                isLegalICmpImmediate(C.getSExtValue())))) {
-        return DAG.getSetCC(dl, VT, N0,
-                            DAG.getConstant(C, dl, N1.getValueType()),
-                            NewCC);
+      if (!VT.isVector()) { // TODO: Support this for vectors.
+        // X >= C0 --> X > (C0 - 1)
+        APInt C = C1 - 1;
+        ISD::CondCode NewCC = (Cond == ISD::SETGE) ? ISD::SETGT : ISD::SETUGT;
+        if ((DCI.isBeforeLegalizeOps() ||
+             isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
+            (!N1C->isOpaque() || (N1C->isOpaque() && C.getBitWidth() <= 64 &&
+                                  isLegalICmpImmediate(C.getSExtValue())))) {
+          return DAG.getSetCC(dl, VT, N0,
+                              DAG.getConstant(C, dl, N1.getValueType()),
+                              NewCC);
+        }
       }
     }
 
@@ -2176,59 +2185,79 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return DAG.getBoolConstant(true, dl, VT, OpVT);
 
       // X <= C0 --> X < (C0 + 1)
-      APInt C = C1 + 1;
-      ISD::CondCode NewCC = (Cond == ISD::SETLE) ? ISD::SETLT : ISD::SETULT;
-      if ((DCI.isBeforeLegalizeOps() ||
-           isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
-          (!N1C->isOpaque() || (N1C->isOpaque() && C.getBitWidth() <= 64 &&
-                                isLegalICmpImmediate(C.getSExtValue())))) {
-        return DAG.getSetCC(dl, VT, N0,
-                            DAG.getConstant(C, dl, N1.getValueType()),
-                            NewCC);
+      if (!VT.isVector()) { // TODO: Support this for vectors.
+        APInt C = C1 + 1;
+        ISD::CondCode NewCC = (Cond == ISD::SETLE) ? ISD::SETLT : ISD::SETULT;
+        if ((DCI.isBeforeLegalizeOps() ||
+             isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
+            (!N1C->isOpaque() || (N1C->isOpaque() && C.getBitWidth() <= 64 &&
+                                  isLegalICmpImmediate(C.getSExtValue())))) {
+          return DAG.getSetCC(dl, VT, N0,
+                              DAG.getConstant(C, dl, N1.getValueType()),
+                              NewCC);
+        }
       }
     }
 
-    if ((Cond == ISD::SETLT || Cond == ISD::SETULT) && C1 == MinVal)
-      return DAG.getBoolConstant(false, dl, VT, OpVT); // X < MIN --> false
-    if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MaxVal)
-      return DAG.getBoolConstant(false, dl, VT, OpVT); // X > MAX --> false
+    if (Cond == ISD::SETLT || Cond == ISD::SETULT) {
+      if (C1 == MinVal)
+        return DAG.getBoolConstant(false, dl, VT, OpVT); // X < MIN --> false
 
-    // Canonicalize setgt X, Min --> setne X, Min
-    if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MinVal)
-      return DAG.getSetCC(dl, VT, N0, N1, ISD::SETNE);
-    // Canonicalize setlt X, Max --> setne X, Max
-    if ((Cond == ISD::SETLT || Cond == ISD::SETULT) && C1 == MaxVal)
-      return DAG.getSetCC(dl, VT, N0, N1, ISD::SETNE);
+      if (!VT.isVector()) { // TODO: Support this for vectors.
+        // Canonicalize setlt X, Max --> setne X, Max
+        if (C1 == MaxVal)
+          return DAG.getSetCC(dl, VT, N0, N1, ISD::SETNE);
 
-    // If we have setult X, 1, turn it into seteq X, 0
-    if ((Cond == ISD::SETLT || Cond == ISD::SETULT) && C1 == MinVal+1)
-      return DAG.getSetCC(dl, VT, N0,
-                          DAG.getConstant(MinVal, dl, N0.getValueType()),
-                          ISD::SETEQ);
-    // If we have setugt X, Max-1, turn it into seteq X, Max
-    if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MaxVal-1)
-      return DAG.getSetCC(dl, VT, N0,
-                          DAG.getConstant(MaxVal, dl, N0.getValueType()),
-                          ISD::SETEQ);
+        // If we have setult X, 1, turn it into seteq X, 0
+        if (C1 == MinVal+1)
+          return DAG.getSetCC(dl, VT, N0,
+                              DAG.getConstant(MinVal, dl, N0.getValueType()),
+                              ISD::SETEQ);
+      }
+    }
+
+    if (Cond == ISD::SETGT || Cond == ISD::SETUGT) {
+      if (C1 == MaxVal)
+        return DAG.getBoolConstant(false, dl, VT, OpVT); // X > MAX --> false
+
+      if (!VT.isVector()) { // TODO: Support this for vectors.
+        // Canonicalize setgt X, Min --> setne X, Min
+        if (C1 == MinVal)
+          return DAG.getSetCC(dl, VT, N0, N1, ISD::SETNE);
+
+        // If we have setugt X, Max-1, turn it into seteq X, Max
+        if ((Cond == ISD::SETGT || Cond == ISD::SETUGT) && C1 == MaxVal-1)
+          return DAG.getSetCC(dl, VT, N0,
+                              DAG.getConstant(MaxVal, dl, N0.getValueType()),
+                              ISD::SETEQ);
+      }
+    }
 
     // If we have "setcc X, C0", check to see if we can shrink the immediate
     // by changing cc.
+    if (!VT.isVector()) { // TODO: Support this for vectors.
+      // SETUGT X, SINTMAX  -> SETLT X, 0
+      if (Cond == ISD::SETUGT &&
+          C1 == APInt::getSignedMaxValue(OperandBitSize))
+        return DAG.getSetCC(dl, VT, N0,
+                            DAG.getConstant(0, dl, N1.getValueType()),
+                            ISD::SETLT);
 
-    // SETUGT X, SINTMAX  -> SETLT X, 0
-    if (Cond == ISD::SETUGT &&
-        C1 == APInt::getSignedMaxValue(OperandBitSize))
-      return DAG.getSetCC(dl, VT, N0,
-                          DAG.getConstant(0, dl, N1.getValueType()),
-                          ISD::SETLT);
-
-    // SETULT X, SINTMIN  -> SETGT X, -1
-    if (Cond == ISD::SETULT &&
-        C1 == APInt::getSignedMinValue(OperandBitSize)) {
-      SDValue ConstMinusOne =
-          DAG.getConstant(APInt::getAllOnesValue(OperandBitSize), dl,
-                          N1.getValueType());
-      return DAG.getSetCC(dl, VT, N0, ConstMinusOne, ISD::SETGT);
+      // SETULT X, SINTMIN  -> SETGT X, -1
+      if (Cond == ISD::SETULT &&
+          C1 == APInt::getSignedMinValue(OperandBitSize)) {
+        SDValue ConstMinusOne =
+            DAG.getConstant(APInt::getAllOnesValue(OperandBitSize), dl,
+                            N1.getValueType());
+        return DAG.getSetCC(dl, VT, N0, ConstMinusOne, ISD::SETGT);
+      }
     }
+  }
+
+  // Back to non-vector simplifications.
+  // TODO: Can we do these for vector splats?
+  if (auto *N1C = dyn_cast<ConstantSDNode>(N1.getNode())) {
+    const APInt &C1 = N1C->getAPIntValue();
 
     // Fold bit comparisons when we can.
     if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
@@ -2237,9 +2266,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         N0.getOpcode() == ISD::AND) {
       auto &DL = DAG.getDataLayout();
       if (auto *AndRHS = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
-        EVT ShiftTy = DCI.isBeforeLegalize()
-                          ? getPointerTy(DL)
-                          : getShiftAmountTy(N0.getValueType(), DL);
+        EVT ShiftTy = getShiftAmountTy(N0.getValueType(), DL,
+                                       !DCI.isBeforeLegalize());
         if (Cond == ISD::SETNE && C1 == 0) {// (X & 8) != 0  -->  (X & 8) >> 3
           // Perform the xform if the AND RHS is a single bit.
           if (AndRHS->getAPIntValue().isPowerOf2()) {
@@ -2271,9 +2299,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           if ((-AndRHSC).isPowerOf2() && (AndRHSC & C1) == C1) {
             unsigned ShiftBits = AndRHSC.countTrailingZeros();
             auto &DL = DAG.getDataLayout();
-            EVT ShiftTy = DCI.isBeforeLegalize()
-                              ? getPointerTy(DL)
-                              : getShiftAmountTy(N0.getValueType(), DL);
+            EVT ShiftTy = getShiftAmountTy(N0.getValueType(), DL,
+                                           !DCI.isBeforeLegalize());
             EVT CmpTy = N0.getValueType();
             SDValue Shift = DAG.getNode(ISD::SRL, dl, CmpTy, N0.getOperand(0),
                                         DAG.getConstant(ShiftBits, dl,
@@ -2303,9 +2330,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         if (ShiftBits && NewC.getMinSignedBits() <= 64 &&
           isLegalICmpImmediate(NewC.getSExtValue())) {
           auto &DL = DAG.getDataLayout();
-          EVT ShiftTy = DCI.isBeforeLegalize()
-                            ? getPointerTy(DL)
-                            : getShiftAmountTy(N0.getValueType(), DL);
+          EVT ShiftTy = getShiftAmountTy(N0.getValueType(), DL,
+                                         !DCI.isBeforeLegalize());
           EVT CmpTy = N0.getValueType();
           SDValue Shift = DAG.getNode(ISD::SRL, dl, CmpTy, N0,
                                       DAG.getConstant(ShiftBits, dl, ShiftTy));
@@ -2499,7 +2525,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             SDValue SH = DAG.getNode(
                 ISD::SHL, dl, N1.getValueType(), N1,
                 DAG.getConstant(1, dl,
-                                getShiftAmountTy(N1.getValueType(), DL)));
+                                getShiftAmountTy(N1.getValueType(), DL,
+                                                 !DCI.isBeforeLegalize())));
             if (!DCI.isCalledByLegalizer())
               DCI.AddToWorklist(SH.getNode());
             return DAG.getSetCC(dl, VT, N0.getOperand(0), SH, Cond);
@@ -2524,7 +2551,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           // X == (Z-X)  --> X<<1 == Z
           SDValue SH = DAG.getNode(
               ISD::SHL, dl, N1.getValueType(), N0,
-              DAG.getConstant(1, dl, getShiftAmountTy(N0.getValueType(), DL)));
+              DAG.getConstant(1, dl, getShiftAmountTy(N0.getValueType(), DL,
+                                                      !DCI.isBeforeLegalize())));
           if (!DCI.isCalledByLegalizer())
             DCI.AddToWorklist(SH.getNode());
           return DAG.getSetCC(dl, VT, SH, N1.getOperand(0), Cond);

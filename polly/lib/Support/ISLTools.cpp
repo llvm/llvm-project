@@ -843,19 +843,19 @@ LLVM_DUMP_METHOD void polly::dumpPw(const isl::union_map &UMap) {
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_set *Set) {
-  dumpPw(isl::manage(isl_set_copy(Set)));
+  dumpPw(isl::manage_copy(Set));
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_map *Map) {
-  dumpPw(isl::manage(isl_map_copy(Map)));
+  dumpPw(isl::manage_copy(Map));
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_union_set *USet) {
-  dumpPw(isl::manage(isl_union_set_copy(USet)));
+  dumpPw(isl::manage_copy(USet));
 }
 
 LLVM_DUMP_METHOD void polly::dumpPw(__isl_keep isl_union_map *UMap) {
-  dumpPw(isl::manage(isl_union_map_copy(UMap)));
+  dumpPw(isl::manage_copy(UMap));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(const isl::set &Set) {
@@ -875,18 +875,18 @@ LLVM_DUMP_METHOD void polly::dumpExpanded(const isl::union_map &UMap) {
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_set *Set) {
-  dumpExpanded(isl::manage(isl_set_copy(Set)));
+  dumpExpanded(isl::manage_copy(Set));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_map *Map) {
-  dumpExpanded(isl::manage(isl_map_copy(Map)));
+  dumpExpanded(isl::manage_copy(Map));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_union_set *USet) {
-  dumpExpanded(isl::manage(isl_union_set_copy(USet)));
+  dumpExpanded(isl::manage_copy(USet));
 }
 
 LLVM_DUMP_METHOD void polly::dumpExpanded(__isl_keep isl_union_map *UMap) {
-  dumpExpanded(isl::manage(isl_union_map_copy(UMap)));
+  dumpExpanded(isl::manage_copy(UMap));
 }
 #endif
