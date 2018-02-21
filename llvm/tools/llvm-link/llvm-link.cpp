@@ -70,6 +70,11 @@ static cl::opt<std::string>
 OutputFilename("o", cl::desc("Override output filename"), cl::init("-"),
                cl::value_desc("filename"));
 
+static cl::opt<std::string>
+    InitialModule("initial-module",
+                  cl::desc("Link to existing destination module"), cl::init(""),
+                  cl::value_desc("filename"));
+
 static cl::opt<bool>
 Internalize("internalize", cl::desc("Internalize linked symbols"));
 
@@ -360,7 +365,9 @@ int main(int argc, char **argv) {
   if (!DisableDITypeMap)
     Context.enableDebugTypeODRUniquing();
 
-  auto Composite = make_unique<Module>("llvm-link", Context);
+  auto Composite = InitialModule.empty()
+                       ? make_unique<Module>("llvm-link", Context)
+                       : loadFile(argv[0], InitialModule, Context);
   Linker L(*Composite);
 
   unsigned Flags = Linker::Flags::None;

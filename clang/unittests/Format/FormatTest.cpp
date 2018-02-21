@@ -11952,6 +11952,34 @@ TEST_F(FormatTest, StructuredBindings) {
   verifyFormat("auto const &[ a, b ] = f();", Spaces);
 }
 
+struct GuessLanguageTestCase {
+  const char *const FileName;
+  const char *const Code;
+  const FormatStyle::LanguageKind ExpectedResult;
+};
+
+class GuessLanguageTest
+    : public FormatTest,
+      public ::testing::WithParamInterface<GuessLanguageTestCase> {};
+
+TEST_P(GuessLanguageTest, FileAndCode) {
+  auto TestCase = GetParam();
+  EXPECT_EQ(TestCase.ExpectedResult,
+            guessLanguage(TestCase.FileName, TestCase.Code));
+}
+
+static const GuessLanguageTestCase TestCases[] = {
+    {"foo.cc", "", FormatStyle::LK_Cpp},
+    {"foo.m", "", FormatStyle::LK_ObjC},
+    {"foo.mm", "", FormatStyle::LK_ObjC},
+    {"foo.h", "", FormatStyle::LK_Cpp},
+    {"foo.h", "@interface Foo\n@end\n", FormatStyle::LK_ObjC},
+    {"foo", "", FormatStyle::LK_Cpp},
+    {"foo", "@interface Foo\n@end\n", FormatStyle::LK_ObjC},
+};
+INSTANTIATE_TEST_CASE_P(ValidLanguages, GuessLanguageTest,
+                        ::testing::ValuesIn(TestCases));
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

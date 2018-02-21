@@ -52,11 +52,17 @@ public:
     // The set of identified but non opaque structures in the composite module.
     DenseSet<StructType *, StructTypeKeyInfo> NonOpaqueStructTypes;
 
+    // Map between structure type name and instance. Used in findNonOpaque
+    // to correctly map imported global variable type during ThinLTO import
+    // phase.
+    DenseMap<StringRef, StructType *> NonOpaqueStructNameMap;
+
   public:
     void addNonOpaque(StructType *Ty);
     void switchToNonOpaque(StructType *Ty);
     void addOpaque(StructType *Ty);
-    StructType *findNonOpaque(ArrayRef<Type *> ETypes, bool IsPacked);
+    StructType *findNonOpaque(ArrayRef<Type *> ETypes, bool IsPacked,
+                              StringRef Name);
     bool hasType(StructType *Ty);
   };
 
