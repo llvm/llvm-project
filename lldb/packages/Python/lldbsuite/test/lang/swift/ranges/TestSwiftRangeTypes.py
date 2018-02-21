@@ -69,9 +69,9 @@ class TestSwiftRangeType(TestBase):
                     '(ClosedRange<Int>) a = 1...100'])
         self.expect("frame variable b", substrs=['(Range<Int>) b = 1..<100'])
         self.expect("frame variable c", substrs=[
-                    '(CountableClosedRange<Int>) c = 1...100'])
+                    '(ClosedRange<Int>) c = 1...100'])
         self.expect("frame variable d", substrs=[
-                    '(CountableRange<Int>) d = 1..<100'])
+                    '(Range<Int>) d = 1..<100'])
 
 if __name__ == '__main__':
     import atexit
