@@ -916,6 +916,9 @@ namespace AMDGPU {
   int getAddr64Inst(uint16_t Opcode);
 
   LLVM_READONLY
+  int getMUBUFNoLdsInst(uint16_t Opcode);
+
+  LLVM_READONLY
   int getAtomicRetOp(uint16_t Opcode);
 
   LLVM_READONLY

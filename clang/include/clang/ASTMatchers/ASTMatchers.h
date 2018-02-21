@@ -4649,6 +4649,10 @@ AST_MATCHER_P(UsingShadowDecl, hasTargetDecl,
 /// \code
 ///   template <typename T> class X {}; class A {}; template class X<A>;
 /// \endcode
+/// or
+/// \code
+///   template <typename T> class X {}; class A {}; extern template class X<A>;
+/// \endcode
 /// cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
 ///   matches the template instantiation of X<A>.
 ///
@@ -4666,7 +4670,9 @@ AST_POLYMORPHIC_MATCHER(isTemplateInstantiation,
                                                         CXXRecordDecl)) {
   return (Node.getTemplateSpecializationKind() == TSK_ImplicitInstantiation ||
           Node.getTemplateSpecializationKind() ==
-          TSK_ExplicitInstantiationDefinition);
+              TSK_ExplicitInstantiationDefinition ||
+          Node.getTemplateSpecializationKind() ==
+              TSK_ExplicitInstantiationDeclaration);
 }
 
 /// \brief Matches declarations that are template instantiations or are inside

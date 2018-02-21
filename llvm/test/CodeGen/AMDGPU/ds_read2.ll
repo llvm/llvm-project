@@ -613,6 +613,24 @@ bb:
   ret void
 }
 
+; GCN-LABEL: ds_read_call_read:
+; GCN: ds_read_b32
+; GCN: s_swappc_b64
+; GCN: ds_read_b32
+define amdgpu_kernel void @ds_read_call_read(i32 addrspace(1)* %out, i32 addrspace(3)* %arg) {
+  %x = call i32 @llvm.amdgcn.workitem.id.x()
+  %arrayidx0 = getelementptr i32, i32 addrspace(3)* %arg, i32 %x
+  %arrayidx1 = getelementptr i32, i32 addrspace(3)* %arrayidx0, i32 1
+  %v0 = load i32, i32 addrspace(3)* %arrayidx0, align 4
+  call void @void_func_void()
+  %v1 = load i32, i32 addrspace(3)* %arrayidx1, align 4
+  %r = add i32 %v0, %v1
+  store i32 %r, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+declare void @void_func_void() #3
+
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.y() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #1
@@ -623,3 +641,4 @@ declare void @llvm.amdgcn.s.barrier() #2
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { convergent nounwind }
+attributes #3 = { nounwind noinline }
