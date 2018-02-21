@@ -488,12 +488,10 @@ public:
 
     std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
-    // Assume that the throughput of any integer or floating-point math
-    // operation is the same and maximal (disregarding free operations).
-    // That is, operations with less throughput should have a relative cost
-    // greater than 1. Targets should override this assumption when they can
-    // provide more accurate information.
-    unsigned OpCost = 1;
+    bool IsFloat = Ty->isFPOrFPVectorTy();
+    // Assume that floating point arithmetic operations cost twice as much as
+    // integer operations.
+    unsigned OpCost = (IsFloat ? 2 : 1);
 
     if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       // The operation is legal. Assume it costs 1.

@@ -53,7 +53,7 @@ define i16 @rnd16(i16 %arg) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandw %cx
-; CHECK-NEXT:    cmovbw %di, %ax
+; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -105,7 +105,7 @@ define i16 @seed16(i16 %arg) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedw %cx
-; CHECK-NEXT:    cmovbw %di, %ax
+; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq

@@ -112,10 +112,9 @@ static const Function *getCalledFunction(const Value *V, bool LookThroughBitCast
 
   IsNoBuiltin = CS.isNoBuiltin();
 
-  const Function *Callee = CS.getCalledFunction();
-  if (!Callee || !Callee->isDeclaration())
-    return nullptr;
-  return Callee;
+  if (const Function *Callee = CS.getCalledFunction())
+    return Callee;
+  return nullptr;
 }
 
 /// Returns the allocation data for the given value if it's either a call to a
@@ -350,11 +349,10 @@ const CallInst *llvm::extractCallocCall(const Value *I,
 
 /// isFreeCall - Returns non-null if the value is a call to the builtin free()
 const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
-  const CallInst *CI = dyn_cast<CallInst>(I);
-  if (!CI || isa<IntrinsicInst>(CI))
-    return nullptr;
-  Function *Callee = CI->getCalledFunction();
-  if (Callee == nullptr)
+  bool IsNoBuiltinCall;
+  const Function *Callee =
+      getCalledFunction(I, /*LookThroughBitCast=*/false, IsNoBuiltinCall);
+  if (Callee == nullptr || IsNoBuiltinCall)
     return nullptr;
 
   StringRef FnName = Callee->getName();
@@ -400,7 +398,7 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
   if (FTy->getParamType(0) != Type::getInt8PtrTy(Callee->getContext()))
     return nullptr;
 
-  return CI;
+  return dyn_cast<CallInst>(I);
 }
 
 //===----------------------------------------------------------------------===//

@@ -575,11 +575,7 @@ namespace {
     /// legalization these can be huge.
     EVT getShiftAmountTy(EVT LHSTy) {
       assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
-      if (LHSTy.isVector())
-        return LHSTy;
-      auto &DL = DAG.getDataLayout();
-      return LegalTypes ? TLI.getScalarShiftAmountTy(DL, LHSTy)
-                        : TLI.getPointerTy(DL);
+      return TLI.getShiftAmountTy(LHSTy, DAG.getDataLayout(), LegalTypes);
     }
 
     /// This method returns true if we are running before type legalization or

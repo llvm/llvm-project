@@ -7054,32 +7054,32 @@ false:
 define <16 x i8> @vcmp_test8(<16 x i32>%a, <16 x i32>%b, i32 %a1, i32 %b1) {
 ; GENERIC-LABEL: vcmp_test8:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
 ; GENERIC-NEXT:    cmpl %esi, %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    jg .LBB386_1 # sched: [1:1.00]
 ; GENERIC-NEXT:  # %bb.2:
-; GENERIC-NEXT:    vpcmpltud %zmm2, %zmm1, %k0 # sched: [3:1.00]
+; GENERIC-NEXT:    kxorw %k0, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:  .LBB386_1:
-; GENERIC-NEXT:    vpcmpgtd %zmm2, %zmm0, %k0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vcmp_test8:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
 ; SKX-NEXT:    cmpl %esi, %edi # sched: [1:0.25]
 ; SKX-NEXT:    jg .LBB386_1 # sched: [1:0.50]
 ; SKX-NEXT:  # %bb.2:
-; SKX-NEXT:    vpcmpltud %zmm2, %zmm1, %k0 # sched: [3:1.00]
+; SKX-NEXT:    kxorw %k0, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ; SKX-NEXT:  .LBB386_1:
-; SKX-NEXT:    vpcmpgtd %zmm2, %zmm0, %k0 # sched: [3:1.00]
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; SKX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -7201,10 +7201,10 @@ define <16 x i1> @vmov_test15(i32 %x, i32 %y)  {
 ; GENERIC-LABEL: vmov_test15:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    cmpl %esi, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    movw $21845, %ax # imm = 0x5555
+; GENERIC-NEXT:    movl $21845, %eax # imm = 0x5555
 ; GENERIC-NEXT:    # sched: [1:0.33]
-; GENERIC-NEXT:    movw $1, %cx # sched: [1:0.33]
-; GENERIC-NEXT:    cmovgw %ax, %cx # sched: [2:0.67]
+; GENERIC-NEXT:    movl $1, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    cmovgl %eax, %ecx # sched: [2:0.67]
 ; GENERIC-NEXT:    kmovd %ecx, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -7212,10 +7212,10 @@ define <16 x i1> @vmov_test15(i32 %x, i32 %y)  {
 ; SKX-LABEL: vmov_test15:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    cmpl %esi, %edi # sched: [1:0.25]
-; SKX-NEXT:    movw $21845, %ax # imm = 0x5555
+; SKX-NEXT:    movl $21845, %eax # imm = 0x5555
 ; SKX-NEXT:    # sched: [1:0.25]
-; SKX-NEXT:    movw $1, %cx # sched: [1:0.25]
-; SKX-NEXT:    cmovgw %ax, %cx # sched: [1:0.50]
+; SKX-NEXT:    movl $1, %ecx # sched: [1:0.25]
+; SKX-NEXT:    cmovgl %eax, %ecx # sched: [1:0.50]
 ; SKX-NEXT:    kmovd %ecx, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]

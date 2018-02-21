@@ -425,10 +425,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
                   ABSS_FM<0x20, 17>, FGR_32;
   def CVT_D32_S : MMRel, ABSS_FT<"cvt.d.s", AFGR64Opnd, FGR32Opnd, II_CVT>,
                   ABSS_FM<0x21, 16>, FGR_32;
+  def CVT_D32_W : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
+                  ABSS_FM<0x21, 20>, FGR_32;
 }
-def CVT_D32_W : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
-                ABSS_FM<0x21, 20>, FGR_32;
-
 let DecoderNamespace = "MipsFP64" in {
   let AdditionalPredicates = [NotInMicroMips] in {
     def CVT_S_L   : ABSS_FT<"cvt.s.l", FGR32Opnd, FGR64Opnd, II_CVT>,

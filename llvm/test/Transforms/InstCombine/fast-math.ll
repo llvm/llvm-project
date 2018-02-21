@@ -229,6 +229,9 @@ define float @fmul_distribute1(float %f1) {
 }
 
 ; (X/C1 + C2) * C3 => X/(C1/C3) + C2*C3
+; TODO: We don't convert the fast fdiv to fmul because that would be multiplication
+; by a denormal, but we could do better when we know that denormals are not a problem.
+
 define double @fmul_distribute2(double %f1, double %f2) {
 ; CHECK-LABEL: @fmul_distribute2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast double [[F1:%.*]], 0x7FE8000000000000
@@ -345,7 +348,9 @@ define float @fmul4(float %f1, float %f2) {
 
 ; X / C1 * C2 => X / (C2/C1) if  C1/C2 is either a special value of a denormal,
 ;  and C2/C1 is a normal value.
-;
+; TODO: We don't convert the fast fdiv to fmul because that would be multiplication
+; by a denormal, but we could do better when we know that denormals are not a problem.
+
 define float @fmul5(float %f1, float %f2) {
 ; CHECK-LABEL: @fmul5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float [[F1:%.*]], 0x47E8000000000000

@@ -2159,7 +2159,7 @@ struct DisassembleInfo {
   std::vector<SectionRef> *Sections;
   const char *class_name = nullptr;
   const char *selector_name = nullptr;
-  char *method = nullptr;
+  std::unique_ptr<char[]> method = nullptr;
   char *demangled_name = nullptr;
   uint64_t adrp_addr = 0;
   uint32_t adrp_inst = 0;
@@ -2759,32 +2759,33 @@ static void method_reference(struct DisassembleInfo *info,
   if (*ReferenceName != nullptr) {
     if (strcmp(*ReferenceName, "_objc_msgSend") == 0) {
       if (info->selector_name != nullptr) {
-        if (info->method != nullptr)
-          delete[] info->method;
         if (info->class_name != nullptr) {
-          info->method = new char[5 + strlen(info->class_name) +
-                                  strlen(info->selector_name)];
-          if (info->method != nullptr) {
-            strcpy(info->method, "+[");
-            strcat(info->method, info->class_name);
-            strcat(info->method, " ");
-            strcat(info->method, info->selector_name);
-            strcat(info->method, "]");
-            *ReferenceName = info->method;
+          info->method = llvm::make_unique<char[]>(
+              5 + strlen(info->class_name) + strlen(info->selector_name));
+          char *method = info->method.get();
+          if (method != nullptr) {
+            strcpy(method, "+[");
+            strcat(method, info->class_name);
+            strcat(method, " ");
+            strcat(method, info->selector_name);
+            strcat(method, "]");
+            *ReferenceName = method;
             *ReferenceType = LLVMDisassembler_ReferenceType_Out_Objc_Message;
           }
         } else {
-          info->method = new char[9 + strlen(info->selector_name)];
-          if (info->method != nullptr) {
+          info->method =
+              llvm::make_unique<char[]>(9 + strlen(info->selector_name));
+          char *method = info->method.get();
+          if (method != nullptr) {
             if (Arch == Triple::x86_64)
-              strcpy(info->method, "-[%rdi ");
+              strcpy(method, "-[%rdi ");
             else if (Arch == Triple::aarch64)
-              strcpy(info->method, "-[x0 ");
+              strcpy(method, "-[x0 ");
             else
-              strcpy(info->method, "-[r? ");
-            strcat(info->method, info->selector_name);
-            strcat(info->method, "]");
-            *ReferenceName = info->method;
+              strcpy(method, "-[r? ");
+            strcat(method, info->selector_name);
+            strcat(method, "]");
+            *ReferenceName = method;
             *ReferenceType = LLVMDisassembler_ReferenceType_Out_Objc_Message;
           }
         }
@@ -2792,19 +2793,19 @@ static void method_reference(struct DisassembleInfo *info,
       }
     } else if (strcmp(*ReferenceName, "_objc_msgSendSuper2") == 0) {
       if (info->selector_name != nullptr) {
-        if (info->method != nullptr)
-          delete[] info->method;
-        info->method = new char[17 + strlen(info->selector_name)];
-        if (info->method != nullptr) {
+        info->method =
+            llvm::make_unique<char[]>(17 + strlen(info->selector_name));
+        char *method = info->method.get();
+        if (method != nullptr) {
           if (Arch == Triple::x86_64)
-            strcpy(info->method, "-[[%rdi super] ");
+            strcpy(method, "-[[%rdi super] ");
           else if (Arch == Triple::aarch64)
-            strcpy(info->method, "-[[x0 super] ");
+            strcpy(method, "-[[x0 super] ");
           else
-            strcpy(info->method, "-[[r? super] ");
-          strcat(info->method, info->selector_name);
-          strcat(info->method, "]");
-          *ReferenceName = info->method;
+            strcpy(method, "-[[r? super] ");
+          strcat(method, info->selector_name);
+          strcat(method, "]");
+          *ReferenceName = method;
           *ReferenceType = LLVMDisassembler_ReferenceType_Out_Objc_Message;
         }
         info->class_name = nullptr;
@@ -7249,12 +7250,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     TripleName = "";
     ThumbTripleName = "";
 
-    if (SymbolizerInfo.method != nullptr)
-      delete[] SymbolizerInfo.method;
     if (SymbolizerInfo.demangled_name != nullptr)
       free(SymbolizerInfo.demangled_name);
-    if (ThumbSymbolizerInfo.method != nullptr)
-      delete[] ThumbSymbolizerInfo.method;
     if (ThumbSymbolizerInfo.demangled_name != nullptr)
       free(ThumbSymbolizerInfo.demangled_name);
   }

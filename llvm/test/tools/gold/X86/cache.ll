@@ -54,10 +54,16 @@
 ; This should remove it.
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
+; RUN:     --plugin-opt=save-temps \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     --plugin-opt=cache-policy=cache_size_bytes=32k:prune_interval=0s \
-; RUN:     -o %t3.o %t2.o %t.o
+; RUN:     -o %t4.o %t2.o %t.o
 ; RUN: ls %t.cache | count 4
+; With save-temps we can confirm that the cached files were copied into temp
+; files to avoid a race condition with the cached files being pruned, since the
+; gold plugin-api only accepts native objects passed back as files.
+; RUN: ls %t4.o.o1
+; RUN: ls %t4.o.o2
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

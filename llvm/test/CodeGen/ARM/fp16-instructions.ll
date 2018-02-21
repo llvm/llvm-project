@@ -136,7 +136,7 @@ entry:
   %0 = bitcast float %F.coerce to i32
   %tmp.0.extract.trunc = trunc i32 %0 to i16
   %1 = bitcast i16 %tmp.0.extract.trunc to half
-  %cmp = fcmp une half %1, 0.000000e+00 
+  %cmp = fcmp une half %1, 0.000000e+00
   ret i1 %cmp
 
 ; CHECK-LABEL:             VCMP2:
@@ -183,6 +183,36 @@ entry:
 ; CHECK-SOFTFP-FP16:       vcmpe.f32 s{{.}}, s{{.}}
 ; CHECK-SOFTFP-FULLFP16:   vcmpe.f16 s{{.}}, s{{.}}
 ; CHECK-HARDFP-FULLFP16:   vcmpe.f16 s{{.}}, s{{.}}
+}
+
+; Test lowering of BR_CC
+define hidden i32 @VCMPBRCC() {
+entry:
+  %f = alloca half, align 2
+  br label %for.cond
+
+for.cond:
+  %0 = load half, half* %f, align 2
+  %cmp = fcmp nnan ninf nsz ole half %0, 0xH6800
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:
+  ret i32 1
+
+for.end:
+  ret i32 0
+
+; CHECK-LABEL:            VCMPBRCC:
+
+; CHECK-SOFT:             bl  __aeabi_fcmple
+; CHECK-SOFT:             cmp r0, #0
+
+; CHECK-SOFTFP-FP16:      vcvtb.f32.f16 [[S2:s[0-9]]], [[S2]]
+; CHECK-SOFTFP-FP16:      vcmpe.f32 [[S2]], s0
+; CHECK-SOFTFP-FP16:      vmrs  APSR_nzcv, fpscr
+
+; CHECK-SOFTFP-FULLFP16:  vcmpe.f16 s{{.}}, s{{.}}
+; CHECK-SOFTFP-FULLFP16:  vmrs  APSR_nzcv, fpscr
 }
 
 ; 5. VCVT (between floating-point and fixed-point)

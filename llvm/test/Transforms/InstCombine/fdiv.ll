@@ -86,11 +86,9 @@ define <2 x float> @not_exact_but_allow_recip_splat(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-; FIXME: Vector neglect.
-
 define <2 x float> @exact_inverse_vec(<2 x float> %x) {
 ; CHECK-LABEL: @exact_inverse_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.000000e+00, float 8.000000e+00>
+; CHECK-NEXT:    [[DIV:%.*]] = fmul <2 x float> [[X:%.*]], <float 2.500000e-01, float 1.250000e-01>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 4.0, float 8.0>
@@ -112,6 +110,15 @@ define <2 x float> @not_exact_inverse_vec(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 4.0, float 3.0>
+  ret <2 x float> %div
+}
+
+define <2 x float> @not_exact_inverse_vec_arcp(<2 x float> %x) {
+; CHECK-LABEL: @not_exact_inverse_vec_arcp(
+; CHECK-NEXT:    [[DIV:%.*]] = fmul arcp <2 x float> [[X:%.*]], <float 2.500000e-01, float 0x3FD5555560000000>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %div = fdiv arcp <2 x float> %x, <float 4.0, float 3.0>
   ret <2 x float> %div
 }
 
@@ -171,8 +178,8 @@ define float @div_with_div_denominator_extra_use(float %x, float %y, float %z) {
   ret float %div2
 }
 
-define float @fdiv_fneg_fneg(float %x, float %y) {
-; CHECK-LABEL: @fdiv_fneg_fneg(
+define float @fneg_fneg(float %x, float %y) {
+; CHECK-LABEL: @fneg_fneg(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
@@ -184,8 +191,8 @@ define float @fdiv_fneg_fneg(float %x, float %y) {
 
 ; The test above shows that no FMF are needed, but show that we are not dropping FMF.
 
-define float @fdiv_fneg_fneg_fast(float %x, float %y) {
-; CHECK-LABEL: @fdiv_fneg_fneg_fast(
+define float @fneg_fneg_fast(float %x, float %y) {
+; CHECK-LABEL: @fneg_fneg_fast(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
@@ -193,6 +200,57 @@ define float @fdiv_fneg_fneg_fast(float %x, float %y) {
   %y.fneg = fsub float -0.0, %y
   %div = fdiv fast float %x.fneg, %y.fneg
   ret float %div
+}
+
+define <2 x float> @fneg_fneg_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_fneg_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %xneg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %yneg = fsub <2 x float> <float -0.0, float -0.0>, %y
+  %div = fdiv <2 x float> %xneg, %yneg
+  ret <2 x float> %div
+}
+
+define float @fneg_dividend_constant_divisor(float %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nsz float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %neg = fsub float -0.0, %x
+  %div = fdiv nsz float %neg, 3.0
+  ret  float %div
+}
+
+define float @fneg_divisor_constant_dividend(float %x) {
+; CHECK-LABEL: @fneg_divisor_constant_dividend(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float 3.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %neg = fsub float -0.0, %x
+  %div = fdiv nnan float -3.0, %neg
+  ret float %div
+}
+
+define <2 x float> @fneg_dividend_constant_divisor_vec(<2 x float> %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[X:%.*]], <float -3.000000e+00, float 8.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %div = fdiv ninf <2 x float> %neg, <float 3.0, float -8.0>
+  ret <2 x float> %div
+}
+
+define <2 x float> @fneg_divisor_constant_dividend_vec(<2 x float> %x) {
+; CHECK-LABEL: @fneg_divisor_constant_dividend_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv afn <2 x float> <float 3.000000e+00, float -5.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %div = fdiv afn <2 x float> <float -3.0, float 5.0>, %neg
+  ret <2 x float> %div
 }
 
 ; X / (X * Y) --> 1.0 / Y
