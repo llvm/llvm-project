@@ -133,16 +133,21 @@ AArch64InstructionSelector::AArch64InstructionSelector(
 // for each class in the bank.
 static const TargetRegisterClass *
 getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
-                         const RegisterBankInfo &RBI) {
+                         const RegisterBankInfo &RBI,
+                         bool GetAllRegSet = false) {
   if (RB.getID() == AArch64::GPRRegBankID) {
     if (Ty.getSizeInBits() <= 32)
-      return &AArch64::GPR32RegClass;
+      return GetAllRegSet ? &AArch64::GPR32allRegClass
+                          : &AArch64::GPR32RegClass;
     if (Ty.getSizeInBits() == 64)
-      return &AArch64::GPR64RegClass;
+      return GetAllRegSet ? &AArch64::GPR64allRegClass
+                          : &AArch64::GPR64RegClass;
     return nullptr;
   }
 
   if (RB.getID() == AArch64::FPRRegBankID) {
+    if (Ty.getSizeInBits() <= 16)
+      return &AArch64::FPR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return &AArch64::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -310,19 +315,46 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   return GenericOpc;
 }
 
+static bool selectFP16CopyFromGPR32(MachineInstr &I, const TargetInstrInfo &TII,
+                                    MachineRegisterInfo &MRI, unsigned SrcReg) {
+  // Copies from gpr32 to fpr16 need to use a sub-register copy.
+  unsigned CopyReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::COPY))
+      .addDef(CopyReg)
+      .addUse(SrcReg);
+  unsigned SubRegCopy = MRI.createVirtualRegister(&AArch64::FPR16RegClass);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY))
+      .addDef(SubRegCopy)
+      .addUse(CopyReg, 0, AArch64::hsub);
+
+  MachineOperand &RegOp = I.getOperand(1);
+  RegOp.setReg(SubRegCopy);
+  return true;
+}
+
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
 
   unsigned DstReg = I.getOperand(0).getReg();
+  unsigned SrcReg = I.getOperand(1).getReg();
+
   if (TargetRegisterInfo::isPhysicalRegister(DstReg)) {
+    if (TRI.getRegClass(AArch64::FPR16RegClassID)->contains(DstReg) &&
+        !TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+      const RegisterBank &RegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
+      const TargetRegisterClass *SrcRC = getRegClassForTypeOnBank(
+          MRI.getType(SrcReg), RegBank, RBI, /* GetAllRegSet */ true);
+      if (SrcRC == &AArch64::GPR32allRegClass)
+        return selectFP16CopyFromGPR32(I, TII, MRI, SrcReg);
+    }
     assert(I.isCopy() && "Generic operators do not allow physical registers");
     return true;
   }
 
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  unsigned SrcReg = I.getOperand(1).getReg();
+  (void)DstSize;
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
   (void)SrcSize;
   assert((!TargetRegisterInfo::isPhysicalRegister(SrcReg) || I.isCopy()) &&
@@ -340,26 +372,38 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       "Copy with different width?!");
   assert((DstSize <= 64 || RegBank.getID() == AArch64::FPRRegBankID) &&
          "GPRs cannot get more than 64-bit width values");
-  const TargetRegisterClass *RC = nullptr;
 
-  if (RegBank.getID() == AArch64::FPRRegBankID) {
-    if (DstSize <= 16)
-      RC = &AArch64::FPR16RegClass;
-    else if (DstSize <= 32)
-      RC = &AArch64::FPR32RegClass;
-    else if (DstSize <= 64)
-      RC = &AArch64::FPR64RegClass;
-    else if (DstSize <= 128)
-      RC = &AArch64::FPR128RegClass;
-    else {
-      DEBUG(dbgs() << "Unexpected bitcast size " << DstSize << '\n');
-      return false;
+  const TargetRegisterClass *RC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), RegBank, RBI, /* GetAllRegSet */ true);
+  if (!RC) {
+    DEBUG(dbgs() << "Unexpected bitcast size " << DstSize << '\n');
+    return false;
+  }
+
+  if (!TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(SrcReg);
+    const TargetRegisterClass *SrcRC =
+        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+    const RegisterBank *RB = nullptr;
+    if (!SrcRC) {
+      RB = RegClassOrBank.get<const RegisterBank *>();
+      SrcRC = getRegClassForTypeOnBank(MRI.getType(SrcReg), *RB, RBI, true);
     }
-  } else {
-    assert(RegBank.getID() == AArch64::GPRRegBankID &&
-           "Bitcast for the flags?");
-    RC =
-        DstSize <= 32 ? &AArch64::GPR32allRegClass : &AArch64::GPR64allRegClass;
+    // Copies from fpr16 to gpr32 need to use SUBREG_TO_REG.
+    if (RC == &AArch64::GPR32allRegClass && SrcRC == &AArch64::FPR16RegClass) {
+      unsigned PromoteReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(AArch64::SUBREG_TO_REG))
+          .addDef(PromoteReg)
+          .addImm(0)
+          .addUse(SrcReg)
+          .addImm(AArch64::hsub);
+      MachineOperand &RegOp = I.getOperand(1);
+      RegOp.setReg(PromoteReg);
+    } else if (RC == &AArch64::FPR16RegClass &&
+               SrcRC == &AArch64::GPR32allRegClass) {
+      selectFP16CopyFromGPR32(I, TII, MRI, SrcReg);
+    }
   }
 
   // No need to constrain SrcReg. It will get constrained when
