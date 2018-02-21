@@ -24,6 +24,10 @@ void std_example() {
     { 2, f(2), f(2.0) };  // OK: the double-to-int conversion is not at the top level
 }
 
+enum UnscopedEnum {
+  EnumVal = 300
+};
+
 // Test each rule individually.
 
 template<typename T>
@@ -115,15 +119,21 @@ void shrink_float() {
 void int_to_float() {
   // Not a constant expression.
   char c = 1;
+  UnscopedEnum e = EnumVal;
 
   // Variables.  Yes, even though all char's will fit into any floating type.
   Agg<float> f1 = {c};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
   Agg<double> f2 = {c};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
   Agg<long double> f3 = {c};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
 
+  Agg<float> f4 = {e};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
+  Agg<double> f5 = {e};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
+  Agg<long double> f6 = {e};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
+
   // Constants.
-  Agg<float> f4 = {12345678};  // OK (exactly fits in a float)
-  Agg<float> f5 = {123456789};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
+  Agg<float> f7 = {12345678};  // OK (exactly fits in a float)
+  Agg<float> f8 = {EnumVal};  // OK
+  Agg<float> f9 = {123456789};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
 
   Agg<float> ce1 = { Convert<int>(123456789) }; // expected-error {{constant expression evaluates to 123456789 which cannot be narrowed to type 'float'}} expected-note {{silence}}
   Agg<double> ce2 = { ConvertVar<long long>() }; // expected-error {{non-constant-expression cannot be narrowed from type 'long long' to 'double'}} expected-note {{silence}}

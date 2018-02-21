@@ -1,5 +1,6 @@
 ; RUN: opt -S -bdce -instsimplify < %s | FileCheck %s
 ; RUN: opt -S -instsimplify < %s | FileCheck %s -check-prefix=CHECK-IO
+; RUN: opt -S -debugify -bdce < %s | FileCheck %s -check-prefix=DEBUGIFY
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -379,6 +380,16 @@ entry:
 ; CHECK: tail call signext i32 @foo(i32 signext 0)
 ; CHECK: tail call signext i32 @foo(i32 signext 4)
 ; CHECK: ret i16
+}
+
+; DEBUGIFY-LABEL: @tar9
+define signext i16 @tar9(i32 signext %x) #0 {
+entry:
+  %call = tail call signext i32 @foo(i32 signext 5) #0
+  %and = and i32 %call, 33554432
+; DEBUGIFY: call void @llvm.dbg.value(metadata i32 %call, metadata {{.*}}, metadata !DIExpression(DW_OP_constu, 33554432, DW_OP_and, DW_OP_stack_value))
+  %cast = trunc i32 %call to i16
+  ret i16 %cast
 }
 
 attributes #0 = { nounwind readnone }

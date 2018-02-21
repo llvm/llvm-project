@@ -228,6 +228,16 @@ canMoveInstsAcrossMemOp(MachineInstr &MemOp,
   return true;
 }
 
+static bool
+hasPhysRegDef(MachineInstr &MI) {
+  for (const MachineOperand &Def : MI.defs()) {
+    if (Def.isReg() &&
+        TargetRegisterInfo::isPhysicalRegister(Def.getReg()))
+      return true;
+  }
+  return false;
+}
+
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI) {
   // XXX - Would the same offset be OK? Is there any reason this would happen or
   // be useful?
@@ -350,6 +360,13 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
         return false;
       }
 
+      if (hasPhysRegDef(*MBBI)) {
+        // We could re-order this instruction in theory, but it would require
+        // tracking physreg defs and uses. This should only affect M0 in
+        // practice.
+        return false;
+      }
+
       if (MBBI->mayLoadOrStore() &&
         (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
          !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))) {
@@ -437,7 +454,8 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     // down past this instruction.
     // check if we can move I across MBBI and if we can move all I's users
     if (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
-      !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))
+        !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA) ||
+        hasPhysRegDef(*MBBI))
       break;
   }
   return false;

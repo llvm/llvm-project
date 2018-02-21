@@ -26,6 +26,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "bdce"
@@ -114,6 +115,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     if (!DB.isInstructionDead(&I))
       continue;
 
+    salvageDebugInfo(I);
     Worklist.push_back(&I);
     I.dropAllReferences();
     Changed = true;

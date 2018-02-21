@@ -19,19 +19,20 @@ define i32 @test(double* nocapture %G) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> <double 4.000000e+00, double 3.000000e+00>, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> <double 1.000000e+00, double 6.000000e+00>, [[TMP2]]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[G]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[G]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd double [[TMP5]], 7.000000e+00
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, double* [[G]], i64 2
-; CHECK-NEXT:    store double [[ADD8]], double* [[ARRAYIDX9]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[TMP6]], 4.000000e+00
-; CHECK-NEXT:    [[ADD12:%.*]] = fadd double [[MUL11]], 8.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[TMP3]], 4.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> undef, double [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP5]], double [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> [[TMP7]], double [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[MUL11]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> <double 1.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[TMP9]]
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds double, double* [[G]], i64 3
-; CHECK-NEXT:    store double [[ADD12]], double* [[ARRAYIDX13]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[G]] to <4 x double>*
+; CHECK-NEXT:    store <4 x double> [[TMP10]], <4 x double>* [[TMP11]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

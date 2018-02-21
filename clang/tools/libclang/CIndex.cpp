@@ -6666,7 +6666,8 @@ void clang_tokenize(CXTranslationUnit TU, CXSourceRange Range,
   if (CXTokens.empty())
     return;
 
-  *Tokens = (CXToken *)malloc(sizeof(CXToken) * CXTokens.size());
+  *Tokens = static_cast<CXToken *>(
+      llvm::safe_malloc(sizeof(CXToken) * CXTokens.size()));
   memmove(*Tokens, CXTokens.data(), sizeof(CXToken) * CXTokens.size());
   *NumTokens = CXTokens.size();
 }
