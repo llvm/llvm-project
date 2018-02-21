@@ -24,7 +24,11 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* Item 1.
+* MIPS port now generates all output dynamic relocations
+  using Elf_Rel format only.
+
+* Added handling of the R_MIPS_26 relocation in case of N32 / N64 ABIs
+  and generating proper PLT entries.
 
 COFF Improvements
 -----------------
