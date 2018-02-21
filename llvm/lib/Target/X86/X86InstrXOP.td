@@ -211,51 +211,64 @@ let Predicates = [HasXOP] in {
             (VPMADCSWDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
 }
 
+// Transforms to swizzle an immediate to help matching memory operand in first
+// operand.
+def CommuteVPCOMCC : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue() & 0x7;
+  Imm = X86::getSwappedVPCOMImm(Imm);
+  return getI8Imm(Imm, SDLoc(N));
+}]>;
+
 // Instruction where second source can be memory, third must be imm8
 multiclass xopvpcom<bits<8> opc, string Suffix, SDNode OpNode, ValueType vt128> {
-  let isCommutable = 1 in
-  def ri : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
-           (ins VR128:$src1, VR128:$src2, XOPCC:$cc),
-           !strconcat("vpcom${cc}", Suffix,
-           "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-           [(set VR128:$dst,
-              (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
-                             imm:$cc)))]>,
-           XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
-  def mi : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
-           (ins VR128:$src1, i128mem:$src2, XOPCC:$cc),
-           !strconcat("vpcom${cc}", Suffix,
-           "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-           [(set VR128:$dst,
-              (vt128 (OpNode (vt128 VR128:$src1),
-                             (vt128 (bitconvert (loadv2i64 addr:$src2))),
-                              imm:$cc)))]>,
-           XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
-  let isAsmParserOnly = 1, hasSideEffects = 0 in {
-    def ri_alt : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
-                 (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-                 !strconcat("vpcom", Suffix,
-                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                 []>, XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
-    let mayLoad = 1 in
-    def mi_alt : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
-                 (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-                 !strconcat("vpcom", Suffix,
-                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                 []>, XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
+  let ExeDomain = SSEPackedInt in { // SSE integer instructions
+    let isCommutable = 1 in
+    def ri : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+             (ins VR128:$src1, VR128:$src2, XOPCC:$cc),
+             !strconcat("vpcom${cc}", Suffix,
+             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             [(set VR128:$dst,
+                (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
+                               imm:$cc)))]>,
+             XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
+    def mi : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+             (ins VR128:$src1, i128mem:$src2, XOPCC:$cc),
+             !strconcat("vpcom${cc}", Suffix,
+             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             [(set VR128:$dst,
+                (vt128 (OpNode (vt128 VR128:$src1),
+                               (vt128 (bitconvert (loadv2i64 addr:$src2))),
+                                imm:$cc)))]>,
+             XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
+    let isAsmParserOnly = 1, hasSideEffects = 0 in {
+      def ri_alt : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+                   (ins VR128:$src1, VR128:$src2, u8imm:$src3),
+                   !strconcat("vpcom", Suffix,
+                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
+                   []>, XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
+      let mayLoad = 1 in
+      def mi_alt : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+                   (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
+                   !strconcat("vpcom", Suffix,
+                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
+                   []>, XOP_4V, Sched<[WriteVecALULd, ReadAfterLd]>;
+    }
   }
+
+  def : Pat<(OpNode (bitconvert (loadv2i64 addr:$src2)),
+                    (vt128 VR128:$src1), imm:$cc),
+            (!cast<Instruction>(NAME#"mi") VR128:$src1, addr:$src2,
+                                           (CommuteVPCOMCC imm:$cc))>;
 }
 
-let ExeDomain = SSEPackedInt in { // SSE integer instructions
-  defm VPCOMB  : xopvpcom<0xCC, "b", X86vpcom, v16i8>;
-  defm VPCOMW  : xopvpcom<0xCD, "w", X86vpcom, v8i16>;
-  defm VPCOMD  : xopvpcom<0xCE, "d", X86vpcom, v4i32>;
-  defm VPCOMQ  : xopvpcom<0xCF, "q", X86vpcom, v2i64>;
-  defm VPCOMUB : xopvpcom<0xEC, "ub", X86vpcomu, v16i8>;
-  defm VPCOMUW : xopvpcom<0xED, "uw", X86vpcomu, v8i16>;
-  defm VPCOMUD : xopvpcom<0xEE, "ud", X86vpcomu, v4i32>;
-  defm VPCOMUQ : xopvpcom<0xEF, "uq", X86vpcomu, v2i64>;
-}
+defm VPCOMB  : xopvpcom<0xCC, "b", X86vpcom, v16i8>;
+defm VPCOMW  : xopvpcom<0xCD, "w", X86vpcom, v8i16>;
+defm VPCOMD  : xopvpcom<0xCE, "d", X86vpcom, v4i32>;
+defm VPCOMQ  : xopvpcom<0xCF, "q", X86vpcom, v2i64>;
+defm VPCOMUB : xopvpcom<0xEC, "ub", X86vpcomu, v16i8>;
+defm VPCOMUW : xopvpcom<0xED, "uw", X86vpcomu, v8i16>;
+defm VPCOMUD : xopvpcom<0xEE, "ud", X86vpcomu, v4i32>;
+defm VPCOMUQ : xopvpcom<0xEF, "uq", X86vpcomu, v2i64>;
 
 multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   ValueType vt128> {

@@ -229,6 +229,9 @@ define float @fmul_distribute1(float %f1) {
 }
 
 ; (X/C1 + C2) * C3 => X/(C1/C3) + C2*C3
+; TODO: We don't convert the fast fdiv to fmul because that would be multiplication
+; by a denormal, but we could do better when we know that denormals are not a problem.
+
 define double @fmul_distribute2(double %f1, double %f2) {
 ; CHECK-LABEL: @fmul_distribute2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast double [[F1:%.*]], 0x7FE8000000000000
@@ -345,7 +348,9 @@ define float @fmul4(float %f1, float %f2) {
 
 ; X / C1 * C2 => X / (C2/C1) if  C1/C2 is either a special value of a denormal,
 ;  and C2/C1 is a normal value.
-;
+; TODO: We don't convert the fast fdiv to fmul because that would be multiplication
+; by a denormal, but we could do better when we know that denormals are not a problem.
+
 define float @fmul5(float %f1, float %f2) {
 ; CHECK-LABEL: @fmul5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float [[F1:%.*]], 0x47E8000000000000
@@ -475,39 +480,6 @@ define float @fdiv4(float %x) {
   %mul = fmul float %x, 0x47EFFFFFE0000000
   %div = fdiv float %mul, 0x3FC99999A0000000
   ret float %div
-}
-
-; C1/(X*C2) => (C1/C2) / X
-define float @fdiv7(float %x) {
-; CHECK-LABEL: @fdiv7(
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 5.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fmul float %x, 3.0e0
-  %t2 = fdiv fast float 15.0e0, %t1
-  ret float %t2
-}
-
-; C1/(X/C2) => (C1*C2) / X
-define float @fdiv8(float %x) {
-; CHECK-LABEL: @fdiv8(
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 4.500000e+01, [[X:%.*]]
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fdiv float %x, 3.0e0
-  %t2 = fdiv fast float 15.0e0, %t1
-  ret float %t2
-}
-
-; C1/(C2/X) => (C1/C2) * X
-define float @fdiv9(float %x) {
-; CHECK-LABEL: @fdiv9(
-; CHECK-NEXT:    [[T2:%.*]] = fmul fast float [[X:%.*]], 5.000000e+00
-; CHECK-NEXT:    ret float [[T2]]
-;
-  %t1 = fdiv float 3.0e0, %x
-  %t2 = fdiv fast float 15.0e0, %t1
-  ret float %t2
 }
 
 ; =========================================================================

@@ -86,11 +86,9 @@ define <2 x float> @not_exact_but_allow_recip_splat(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-; FIXME: Vector neglect.
-
 define <2 x float> @exact_inverse_vec(<2 x float> %x) {
 ; CHECK-LABEL: @exact_inverse_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.000000e+00, float 8.000000e+00>
+; CHECK-NEXT:    [[DIV:%.*]] = fmul <2 x float> [[X:%.*]], <float 2.500000e-01, float 1.250000e-01>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 4.0, float 8.0>
@@ -112,6 +110,15 @@ define <2 x float> @not_exact_inverse_vec(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %div = fdiv <2 x float> %x, <float 4.0, float 3.0>
+  ret <2 x float> %div
+}
+
+define <2 x float> @not_exact_inverse_vec_arcp(<2 x float> %x) {
+; CHECK-LABEL: @not_exact_inverse_vec_arcp(
+; CHECK-NEXT:    [[DIV:%.*]] = fmul arcp <2 x float> [[X:%.*]], <float 2.500000e-01, float 0x3FD5555560000000>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %div = fdiv arcp <2 x float> %x, <float 4.0, float 3.0>
   ret <2 x float> %div
 }
 
@@ -231,5 +238,65 @@ define <2 x float> @div_factor_commute(<2 x float> %x, <2 x float> %y) {
   %m = fmul <2 x float> %y, %x
   %d = fdiv nnan ninf nsz reassoc <2 x float> %x, %m
   ret <2 x float> %d
+}
+
+; C1/(X*C2) => (C1/C2) / X
+
+define <2 x float> @div_constant_dividend1(<2 x float> %x) {
+; CHECK-LABEL: @div_constant_dividend1(
+; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 5.000000e+00, float 1.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[T2]]
+;
+  %t1 = fmul <2 x float> %x, <float 3.0e0, float 7.0e0>
+  %t2 = fdiv arcp reassoc <2 x float> <float 15.0e0, float 7.0e0>, %t1
+  ret <2 x float> %t2
+}
+
+define <2 x float> @div_constant_dividend1_arcp_only(<2 x float> %x) {
+; CHECK-LABEL: @div_constant_dividend1_arcp_only(
+; CHECK-NEXT:    [[T1:%.*]] = fmul <2 x float> [[X:%.*]], <float 3.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[T2:%.*]] = fdiv arcp <2 x float> <float 1.500000e+01, float 7.000000e+00>, [[T1]]
+; CHECK-NEXT:    ret <2 x float> [[T2]]
+;
+  %t1 = fmul <2 x float> %x, <float 3.0e0, float 7.0e0>
+  %t2 = fdiv arcp <2 x float> <float 15.0e0, float 7.0e0>, %t1
+  ret <2 x float> %t2
+}
+
+; C1/(X/C2) => (C1*C2) / X
+
+define <2 x float> @div_constant_dividend2(<2 x float> %x) {
+; CHECK-LABEL: @div_constant_dividend2(
+; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 4.500000e+01, float 4.900000e+01>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[T2]]
+;
+  %t1 = fdiv <2 x float> %x, <float 3.0e0, float -7.0e0>
+  %t2 = fdiv arcp reassoc <2 x float> <float 15.0e0, float -7.0e0>, %t1
+  ret <2 x float> %t2
+}
+
+define <2 x float> @div_constant_dividend2_reassoc_only(<2 x float> %x) {
+; CHECK-LABEL: @div_constant_dividend2_reassoc_only(
+; CHECK-NEXT:    [[T1:%.*]] = fdiv <2 x float> [[X:%.*]], <float 3.000000e+00, float -7.000000e+00>
+; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc <2 x float> <float 1.500000e+01, float -7.000000e+00>, [[T1]]
+; CHECK-NEXT:    ret <2 x float> [[T2]]
+;
+  %t1 = fdiv <2 x float> %x, <float 3.0e0, float -7.0e0>
+  %t2 = fdiv reassoc <2 x float> <float 15.0e0, float -7.0e0>, %t1
+  ret <2 x float> %t2
+}
+
+; C1/(C2/X) => (C1/C2) * X
+; This tests the combination of 2 folds: (C1 * X) / C2 --> (C1 / C2) * X
+
+define <2 x float> @div_constant_dividend3(<2 x float> %x) {
+; CHECK-LABEL: @div_constant_dividend3(
+; CHECK-NEXT:    [[T1:%.*]] = fdiv <2 x float> <float 3.000000e+00, float 7.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 1.500000e+01, float -7.000000e+00>, [[T1]]
+; CHECK-NEXT:    ret <2 x float> [[T2]]
+;
+  %t1 = fdiv <2 x float> <float 3.0e0, float 7.0e0>, %x
+  %t2 = fdiv arcp reassoc <2 x float> <float 15.0e0, float -7.0e0>, %t1
+  ret <2 x float> %t2
 }
 

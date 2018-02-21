@@ -9,6 +9,6 @@ bar:
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{[0-9]+}}) .rela.text {
-// CHECK-NEXT:     0x1 R_X86_64_PC32 foo 0xFFFFFFFFFFFFFFFC
+// CHECK-NEXT:     0x1 R_X86_64_PLT32 foo 0xFFFFFFFFFFFFFFFC
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

@@ -186,7 +186,6 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_ast.c
     isl/isl_ast_codegen.c
     isl/isl_ast_graft.c
-    isl/isl_band.c
     isl/isl_bernstein.c
     isl/isl_blk.c
     isl/isl_bound.c
@@ -242,6 +241,7 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_set_list.c
     isl/isl_sort.c
     isl/isl_space.c
+    isl/isl_stride.c
     isl/isl_stream.c
     isl/isl_tab.c
     isl/isl_tab_pip.c

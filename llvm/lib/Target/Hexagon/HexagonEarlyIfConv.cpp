@@ -765,9 +765,11 @@ unsigned HexagonEarlyIfConversion::buildMux(MachineBasicBlock *B,
   unsigned Opc = 0;
   switch (DRC->getID()) {
     case Hexagon::IntRegsRegClassID:
+    case Hexagon::IntRegsLow8RegClassID:
       Opc = Hexagon::C2_mux;
       break;
     case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::GeneralDoubleLow8RegsRegClassID:
       Opc = Hexagon::PS_pselect;
       break;
     case Hexagon::HvxVRRegClassID:

@@ -46,7 +46,7 @@ define <4 x i64> @test256_2(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1) nounwind 
 define <8 x i32> @test256_3(<8 x i32> %x, <8 x i32> %y, <8 x i32> %x1) nounwind {
 ; VLX-LABEL: test256_3:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpled %ymm0, %ymm1, %k1
+; VLX-NEXT:    vpcmpnltd %ymm1, %ymm0, %k1
 ; VLX-NEXT:    vpblendmd %ymm2, %ymm1, %ymm0 {%k1}
 ; VLX-NEXT:    retq
 ;
@@ -55,7 +55,7 @@ define <8 x i32> @test256_3(<8 x i32> %x, <8 x i32> %y, <8 x i32> %x1) nounwind 
 ; NoVLX-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; NoVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k1
+; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm2, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -207,7 +207,7 @@ define <8 x i32> @test256_7b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nou
 ; NoVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
-; NoVLX-NEXT:    vpcmpled %zmm2, %zmm0, %k1
+; NoVLX-NEXT:    vpcmpnltd %zmm0, %zmm2, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -291,7 +291,7 @@ define <4 x i64> @test256_10(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64
 ; VLX-LABEL: test256_10:
 ; VLX:       # %bb.0:
 ; VLX-NEXT:    vpcmpleq %ymm1, %ymm0, %k1
-; VLX-NEXT:    vpcmpleq %ymm2, %ymm3, %k1 {%k1}
+; VLX-NEXT:    vpcmpnltq %ymm3, %ymm2, %k1 {%k1}
 ; VLX-NEXT:    vpblendmq %ymm0, %ymm2, %ymm0 {%k1}
 ; VLX-NEXT:    retq
 ;
@@ -302,7 +302,7 @@ define <4 x i64> @test256_10(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64
 ; NoVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    vpcmpleq %zmm1, %zmm0, %k1
-; NoVLX-NEXT:    vpcmpleq %zmm2, %zmm3, %k1 {%k1}
+; NoVLX-NEXT:    vpcmpnltq %zmm3, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmq %zmm0, %zmm2, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -343,7 +343,7 @@ define <4 x i64> @test256_11(<4 x i64> %x, <4 x i64>* %y.ptr, <4 x i64> %x1, <4 
 define <8 x i32> @test256_12(<8 x i32> %x, <8 x i32>* %y.ptr, <8 x i32> %x1, <8 x i32> %y1) nounwind {
 ; VLX-LABEL: test256_12:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpled %ymm1, %ymm2, %k1
+; VLX-NEXT:    vpcmpnltd %ymm2, %ymm1, %k1
 ; VLX-NEXT:    vpcmpleud (%rdi), %ymm0, %k1 {%k1}
 ; VLX-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; VLX-NEXT:    retq
@@ -355,7 +355,7 @@ define <8 x i32> @test256_12(<8 x i32> %x, <8 x i32>* %y.ptr, <8 x i32> %x1, <8 
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm3
 ; NoVLX-NEXT:    vpcmpleud %zmm3, %zmm0, %k1
-; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1 {%k1}
+; NoVLX-NEXT:    vpcmpnltd %zmm2, %zmm1, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -418,7 +418,7 @@ define <8 x i32> @test256_14(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1) nounwind
 define <8 x i32> @test256_15(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1, <8 x i32> %y1) nounwind {
 ; VLX-LABEL: test256_15:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpled %ymm1, %ymm2, %k1
+; VLX-NEXT:    vpcmpnltd %ymm2, %ymm1, %k1
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to8}, %ymm0, %k1 {%k1}
 ; VLX-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; VLX-NEXT:    retq
@@ -428,7 +428,7 @@ define <8 x i32> @test256_15(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1, <8 x i32
 ; NoVLX-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; NoVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1
+; NoVLX-NEXT:    vpcmpnltd %zmm2, %zmm1, %k1
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpgtd %zmm2, %zmm0, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
@@ -447,7 +447,7 @@ define <8 x i32> @test256_15(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1, <8 x i32
 define <4 x i64> @test256_16(<4 x i64> %x, i64* %yb.ptr, <4 x i64> %x1, <4 x i64> %y1) nounwind {
 ; VLX-LABEL: test256_16:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpleq %ymm1, %ymm2, %k1
+; VLX-NEXT:    vpcmpnltq %ymm2, %ymm1, %k1
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to4}, %ymm0, %k1 {%k1}
 ; VLX-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; VLX-NEXT:    retq
@@ -457,7 +457,7 @@ define <4 x i64> @test256_16(<4 x i64> %x, i64* %yb.ptr, <4 x i64> %x1, <4 x i64
 ; NoVLX-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; NoVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NoVLX-NEXT:    vpcmpleq %zmm1, %zmm2, %k1
+; NoVLX-NEXT:    vpcmpnltq %zmm2, %zmm1, %k1
 ; NoVLX-NEXT:    vpbroadcastq (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpgtq %zmm2, %zmm0, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
@@ -605,7 +605,7 @@ define <2 x i64> @test128_2(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1) nounwind 
 define <4 x i32> @test128_3(<4 x i32> %x, <4 x i32> %y, <4 x i32> %x1) nounwind {
 ; VLX-LABEL: test128_3:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpled %xmm0, %xmm1, %k1
+; VLX-NEXT:    vpcmpnltd %xmm1, %xmm0, %k1
 ; VLX-NEXT:    vpblendmd %xmm2, %xmm1, %xmm0 {%k1}
 ; VLX-NEXT:    retq
 ;
@@ -614,7 +614,7 @@ define <4 x i32> @test128_3(<4 x i32> %x, <4 x i32> %y, <4 x i32> %x1) nounwind 
 ; NoVLX-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k1
+; NoVLX-NEXT:    vpcmpnltd %zmm1, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm2, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -766,7 +766,7 @@ define <4 x i32> @test128_7b(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nou
 ; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %xmm2
-; NoVLX-NEXT:    vpcmpled %zmm2, %zmm0, %k1
+; NoVLX-NEXT:    vpcmpnltd %zmm0, %zmm2, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -850,7 +850,7 @@ define <2 x i64> @test128_10(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64
 ; VLX-LABEL: test128_10:
 ; VLX:       # %bb.0:
 ; VLX-NEXT:    vpcmpleq %xmm1, %xmm0, %k1
-; VLX-NEXT:    vpcmpleq %xmm2, %xmm3, %k1 {%k1}
+; VLX-NEXT:    vpcmpnltq %xmm3, %xmm2, %k1 {%k1}
 ; VLX-NEXT:    vpblendmq %xmm0, %xmm2, %xmm0 {%k1}
 ; VLX-NEXT:    retq
 ;
@@ -861,7 +861,7 @@ define <2 x i64> @test128_10(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64
 ; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    vpcmpleq %zmm1, %zmm0, %k1
-; NoVLX-NEXT:    vpcmpleq %zmm2, %zmm3, %k1 {%k1}
+; NoVLX-NEXT:    vpcmpnltq %zmm3, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmq %zmm0, %zmm2, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -902,7 +902,7 @@ define <2 x i64> @test128_11(<2 x i64> %x, <2 x i64>* %y.ptr, <2 x i64> %x1, <2 
 define <4 x i32> @test128_12(<4 x i32> %x, <4 x i32>* %y.ptr, <4 x i32> %x1, <4 x i32> %y1) nounwind {
 ; VLX-LABEL: test128_12:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpled %xmm1, %xmm2, %k1
+; VLX-NEXT:    vpcmpnltd %xmm2, %xmm1, %k1
 ; VLX-NEXT:    vpcmpleud (%rdi), %xmm0, %k1 {%k1}
 ; VLX-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
 ; VLX-NEXT:    retq
@@ -914,7 +914,7 @@ define <4 x i32> @test128_12(<4 x i32> %x, <4 x i32>* %y.ptr, <4 x i32> %x1, <4 
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %xmm3
 ; NoVLX-NEXT:    vpcmpleud %zmm3, %zmm0, %k1
-; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1 {%k1}
+; NoVLX-NEXT:    vpcmpnltd %zmm2, %zmm1, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NoVLX-NEXT:    retq
@@ -977,7 +977,7 @@ define <4 x i32> @test128_14(<4 x i32> %x, i32* %yb.ptr, <4 x i32> %x1) nounwind
 define <4 x i32> @test128_15(<4 x i32> %x, i32* %yb.ptr, <4 x i32> %x1, <4 x i32> %y1) nounwind {
 ; VLX-LABEL: test128_15:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpled %xmm1, %xmm2, %k1
+; VLX-NEXT:    vpcmpnltd %xmm2, %xmm1, %k1
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to4}, %xmm0, %k1 {%k1}
 ; VLX-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
 ; VLX-NEXT:    retq
@@ -987,7 +987,7 @@ define <4 x i32> @test128_15(<4 x i32> %x, i32* %yb.ptr, <4 x i32> %x1, <4 x i32
 ; NoVLX-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1
+; NoVLX-NEXT:    vpcmpnltd %zmm2, %zmm1, %k1
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %xmm2
 ; NoVLX-NEXT:    vpcmpgtd %zmm2, %zmm0, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
@@ -1006,7 +1006,7 @@ define <4 x i32> @test128_15(<4 x i32> %x, i32* %yb.ptr, <4 x i32> %x1, <4 x i32
 define <2 x i64> @test128_16(<2 x i64> %x, i64* %yb.ptr, <2 x i64> %x1, <2 x i64> %y1) nounwind {
 ; VLX-LABEL: test128_16:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vpcmpleq %xmm1, %xmm2, %k1
+; VLX-NEXT:    vpcmpnltq %xmm2, %xmm1, %k1
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to2}, %xmm0, %k1 {%k1}
 ; VLX-NEXT:    vpblendmq %xmm0, %xmm1, %xmm0 {%k1}
 ; VLX-NEXT:    retq
@@ -1016,7 +1016,7 @@ define <2 x i64> @test128_16(<2 x i64> %x, i64* %yb.ptr, <2 x i64> %x1, <2 x i64
 ; NoVLX-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NoVLX-NEXT:    vpcmpleq %zmm1, %zmm2, %k1
+; NoVLX-NEXT:    vpcmpnltq %zmm2, %zmm1, %k1
 ; NoVLX-NEXT:    vpbroadcastq (%rdi), %xmm2
 ; NoVLX-NEXT:    vpcmpgtq %zmm2, %zmm0, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}

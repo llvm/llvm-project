@@ -14,7 +14,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"

@@ -30,7 +30,7 @@ define <2 x i1> @shuf2i1_1_0(<2 x i1> %a) {
 ; VL_BW_DQ-LABEL: shuf2i1_1_0:
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    vpsllq $63, %xmm0, %xmm0
-; VL_BW_DQ-NEXT:    vptestmq %xmm0, %xmm0, %k0
+; VL_BW_DQ-NEXT:    vpmovq2m %xmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %xmm0
 ; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; VL_BW_DQ-NEXT:    vpmovq2m %xmm0, %k0
@@ -71,7 +71,7 @@ define <2 x i1> @shuf2i1_1_2(<2 x i1> %a) {
 ; VL_BW_DQ-LABEL: shuf2i1_1_2:
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    vpsllq $63, %xmm0, %xmm0
-; VL_BW_DQ-NEXT:    vptestmq %xmm0, %xmm0, %k0
+; VL_BW_DQ-NEXT:    vpmovq2m %xmm0, %k0
 ; VL_BW_DQ-NEXT:    movq $-1, %rax
 ; VL_BW_DQ-NEXT:    vmovq %rax, %xmm0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %xmm1
@@ -111,7 +111,7 @@ define <4 x i1> @shuf4i1_3_2_10(<4 x i1> %a) {
 ; VL_BW_DQ-LABEL: shuf4i1_3_2_10:
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    vpslld $31, %xmm0, %xmm0
-; VL_BW_DQ-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; VL_BW_DQ-NEXT:    vpmovd2m %xmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %xmm0
 ; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; VL_BW_DQ-NEXT:    vpmovd2m %xmm0, %k0

@@ -79,6 +79,10 @@ public:
   /// scalar constant or a vector constant with all normal elements.
   bool isNormalFP() const;
 
+  /// Return true if this scalar has an exact multiplicative inverse or this
+  /// vector has an exact multiplicative inverse for each element in the vector.
+  bool hasExactInverseFP() const;
+
   /// Return true if evaluation of this constant could trap. This is true for
   /// things like constant expressions that could divide by zero.
   bool canTrap() const;

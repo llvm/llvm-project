@@ -30,6 +30,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "MarkLive.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"

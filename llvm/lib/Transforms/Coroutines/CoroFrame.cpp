@@ -739,6 +739,8 @@ static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
     for (User *U : CurrentValue->users()) {
       Instruction *I = cast<Instruction>(U);
       if (!DT.dominates(CoroBegin, I)) {
+        DEBUG(dbgs() << "will move: " << *I << "\n");
+
         // TODO: Make this more robust. Currently if we run into a situation
         // where simple instruction move won't work we panic and
         // report_fatal_error.
@@ -748,7 +750,6 @@ static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
                                " dominated by CoroBegin");
         }
 
-        DEBUG(dbgs() << "will move: " << *I << "\n");
         NeedsMoving.push_back(I);
       }
     }

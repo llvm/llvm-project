@@ -11,17 +11,13 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import side_effect
 
 
 class BreakpointCommandTestCase(TestBase):
 
+    NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
-
-    @classmethod
-    def classCleanup(cls):
-        """Cleanup the test byproduct of breakpoint_command_sequence(self)."""
-        cls.RemoveTempFile("output.txt")
-        cls.RemoveTempFile("output2.txt")
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_breakpoint_command_sequence(self):
@@ -71,7 +67,7 @@ class BreakpointCommandTestCase(TestBase):
         self.runCmd(
             "breakpoint command add -s command -o 'frame variable --show-types --scope' 1 4")
         self.runCmd(
-            "breakpoint command add -s python -o 'here = open(\"output.txt\", \"w\"); here.write(\"lldb\\n\"); here.close()' 2")
+            "breakpoint command add -s python -o 'import side_effect; side_effect.one_liner = \"one liner was here\"' 2")
         self.runCmd(
             "breakpoint command add --python-function bktptcmd.function 3")
 
@@ -104,9 +100,8 @@ class BreakpointCommandTestCase(TestBase):
                              "frame variable --show-types --scope"])
         self.expect("breakpoint command list 2", "Breakpoint 2 command ok",
                     substrs=["Breakpoint commands (Python):",
-                             "here = open",
-                             "here.write",
-                             "here.close()"])
+                             "import side_effect",
+                             "side_effect.one_liner"])
         self.expect("breakpoint command list 3", "Breakpoint 3 command ok",
                     substrs=["Breakpoint commands (Python):",
                              "bktptcmd.function(frame, bp_loc, internal_dict)"])
@@ -151,40 +146,14 @@ class BreakpointCommandTestCase(TestBase):
             extra_options="-f a.c",
             num_expected_locations=1)
 
-        # Run the program.  Remove 'output.txt' if it exists.
-        self.RemoveTempFile("output.txt")
-        self.RemoveTempFile("output2.txt")
+        # Reset our canary variables and run the program.
+        side_effect.one_liner = None
+        side_effect.bktptcmd = None
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # Check that the file 'output.txt' exists and contains the string
-        # "lldb".
-
-        # The 'output.txt' file should now exist.
-        self.assertTrue(
-            os.path.isfile("output.txt"),
-            "'output.txt' exists due to breakpoint command for breakpoint 2.")
-        self.assertTrue(
-            os.path.isfile("output2.txt"),
-            "'output2.txt' exists due to breakpoint command for breakpoint 3.")
-
-        # Read the output file produced by running the program.
-        with open('output.txt', 'r') as f:
-            output = f.read()
-
-        self.expect(
-            output,
-            "File 'output.txt' and the content matches",
-            exe=False,
-            startstr="lldb")
-
-        with open('output2.txt', 'r') as f:
-            output = f.read()
-
-        self.expect(
-            output,
-            "File 'output2.txt' and the content matches",
-            exe=False,
-            startstr="lldb")
+        # Check the value of canary variables.
+        self.assertEquals("one liner was here", side_effect.one_liner)
+        self.assertEquals("function was here", side_effect.bktptcmd)
 
         # Finish the program.
         self.runCmd("process continue")
@@ -245,38 +214,16 @@ class BreakpointCommandTestCase(TestBase):
             self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
 
         # Now add callbacks for the breakpoints just created.
-        self.runCmd("breakpoint command add -s python -o 'here = open(\"output-2.txt\", \"w\"); here.write(str(frame) + \"\\n\"); here.write(str(bp_loc) + \"\\n\"); here.close()' 1")
+        self.runCmd("breakpoint command add -s python -o 'import side_effect; side_effect.frame = str(frame); side_effect.bp_loc = str(bp_loc)' 1")
 
-        # Remove 'output-2.txt' if it already exists.
-
-        if (os.path.exists('output-2.txt')):
-            os.remove('output-2.txt')
-
-        # Run program, hit breakpoint, and hopefully write out new version of
-        # 'output-2.txt'
+        # Reset canary variables and run.
+        side_effect.frame = None
+        side_effect.bp_loc = None
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # Check that the file 'output.txt' exists and contains the string
-        # "lldb".
-
-        # The 'output-2.txt' file should now exist.
-        self.assertTrue(
-            os.path.isfile("output-2.txt"),
-            "'output-2.txt' exists due to breakpoint command for breakpoint 1.")
-
-        # Read the output file produced by running the program.
-        with open('output-2.txt', 'r') as f:
-            output = f.read()
-
-        self.expect(
-            output,
-            "File 'output-2.txt' and the content matches",
-            exe=False,
-            startstr="frame #0:",
-            patterns=["1.* where = .*main .* resolved, hit count = 1"])
-
-        # Now remove 'output-2.txt'
-        os.remove('output-2.txt')
+        self.expect(side_effect.frame, exe=False, startstr="frame #0:")
+        self.expect(side_effect.bp_loc, exe=False,
+                patterns=["1.* where = .*main .* resolved, hit count = 1"])
 
     def breakpoint_commands_on_creation(self):
         """Test that setting breakpoint commands when creating the breakpoint works"""

@@ -3484,7 +3484,7 @@ void Scop::foldSizeConstantsToRight() {
     for (auto &Access : AccessFunctions)
       if (Access->getScopArrayInfo() == Array)
         Access->setAccessRelation(Access->getAccessRelation().apply_range(
-            isl::manage(isl_map_copy(Transform))));
+            isl::manage_copy(Transform)));
 
     isl_map_free(Transform);
 

@@ -6,9 +6,7 @@
 define <4 x i32> @slt_min(<4 x i32> %x) {
 ; CHECK-LABEL: slt_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -18,10 +16,7 @@ define <4 x i32> @slt_min(<4 x i32> %x) {
 define <4 x i32> @sge_min(<4 x i32> %x) {
 ; CHECK-LABEL: sge_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sge <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -53,7 +48,7 @@ define <4 x i32> @sle_min(<4 x i32> %x) {
 define <4 x i32> @sgt_max(<4 x i32> %x) {
 ; CHECK-LABEL: sgt_max:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -63,9 +58,7 @@ define <4 x i32> @sgt_max(<4 x i32> %x) {
 define <4 x i32> @sle_max(<4 x i32> %x) {
 ; CHECK-LABEL: sle_max:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sle <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -99,10 +92,7 @@ define <4 x i32> @sge_max(<4 x i32> %x) {
 define <4 x i32> @ult_min(<4 x i32> %x) {
 ; CHECK-LABEL: ult_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp ult <4 x i32> %x, zeroinitializer
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -112,11 +102,7 @@ define <4 x i32> @ult_min(<4 x i32> %x) {
 define <4 x i32> @uge_min(<4 x i32> %x) {
 ; CHECK-LABEL: uge_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp uge <4 x i32> %x, zeroinitializer
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -152,8 +138,7 @@ define <4 x i32> @ule_min(<4 x i32> %x) {
 define <4 x i32> @ugt_max(<4 x i32> %x) {
 ; CHECK-LABEL: ugt_max:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp ugt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -163,10 +148,7 @@ define <4 x i32> @ugt_max(<4 x i32> %x) {
 define <4 x i32> @ule_max(<4 x i32> %x) {
 ; CHECK-LABEL: ule_max:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp ule <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %r = sext <4 x i1> %cmp to <4 x i32>

@@ -373,6 +373,46 @@ struct bar { T x; };
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 }
 
+TEST_F(ClangdVFSTest, ForceReparseCompileCommandDefines) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true);
+
+  // No need to sync reparses, because reparses are performed on the calling
+  // thread.
+  auto FooCpp = testPath("foo.cpp");
+  const auto SourceContents = R"cpp(
+#ifdef WITH_ERROR
+this
+#endif
+
+int main() { return 0; }
+)cpp";
+  FS.Files[FooCpp] = "";
+  FS.ExpectedFile = FooCpp;
+
+  // Parse with define, we expect to see the errors.
+  CDB.ExtraClangFlags = {"-DWITH_ERROR"};
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+
+  // Parse without the define, no errors should be produced.
+  CDB.ExtraClangFlags = {};
+  // Currently, addDocument never checks if CompileCommand has changed, so we
+  // expect to see the errors.
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+  // But forceReparse should reparse the file with proper flags.
+  Server.forceReparse(FooCpp);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+  // Subsequent addDocument call should finish without errors too.
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+}
+
 TEST_F(ClangdVFSTest, MemoryUsage) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;

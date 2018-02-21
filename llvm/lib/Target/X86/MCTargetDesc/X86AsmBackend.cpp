@@ -46,6 +46,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
+  case X86::reloc_branch_4byte_pcrel:
   case FK_SecRel_4:
   case FK_Data_4:
     return 2;
@@ -86,6 +87,7 @@ public:
         {"reloc_signed_4byte_relax", 0, 32, 0},
         {"reloc_global_offset_table", 0, 32, 0},
         {"reloc_global_offset_table8", 0, 64, 0},
+        {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -93,6 +95,7 @@ public:
 
     assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
            "Invalid kind!");
+    assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
     return Infos[Kind - FirstTargetFixupKind];
   }
 

@@ -5399,18 +5399,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPCMPWZrrik:    case X86::VPCMPUWZrrik: {
     // Flip comparison mode immediate (if necessary).
     unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm() & 0x7;
-    switch (Imm) {
-    default: llvm_unreachable("Unreachable!");
-    case 0x01: Imm = 0x06; break; // LT  -> NLE
-    case 0x02: Imm = 0x05; break; // LE  -> NLT
-    case 0x05: Imm = 0x02; break; // NLT -> LE
-    case 0x06: Imm = 0x01; break; // NLE -> LT
-    case 0x00: // EQ
-    case 0x03: // FALSE
-    case 0x04: // NE
-    case 0x07: // TRUE
-      break;
-    }
+    Imm = X86::getSwappedVPCMPImm(Imm);
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(Imm);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
@@ -5422,18 +5411,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPCOMWri: case X86::VPCOMUWri: {
     // Flip comparison mode immediate (if necessary).
     unsigned Imm = MI.getOperand(3).getImm() & 0x7;
-    switch (Imm) {
-    default: llvm_unreachable("Unreachable!");
-    case 0x00: Imm = 0x02; break; // LT -> GT
-    case 0x01: Imm = 0x03; break; // LE -> GE
-    case 0x02: Imm = 0x00; break; // GT -> LT
-    case 0x03: Imm = 0x01; break; // GE -> LE
-    case 0x04: // EQ
-    case 0x05: // NE
-    case 0x06: // FALSE
-    case 0x07: // TRUE
-      break;
-    }
+    Imm = X86::getSwappedVPCOMImm(Imm);
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.getOperand(3).setImm(Imm);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
@@ -6131,6 +6109,42 @@ unsigned X86::getCMovFromCond(CondCode CC, unsigned RegBytes,
   case 4: return Opc[Idx][1];
   case 8: return Opc[Idx][2];
   }
+}
+
+/// \brief Get the VPCMP immediate if the opcodes are swapped.
+unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
+  switch (Imm) {
+  default: llvm_unreachable("Unreachable!");
+  case 0x01: Imm = 0x06; break; // LT  -> NLE
+  case 0x02: Imm = 0x05; break; // LE  -> NLT
+  case 0x05: Imm = 0x02; break; // NLT -> LE
+  case 0x06: Imm = 0x01; break; // NLE -> LT
+  case 0x00: // EQ
+  case 0x03: // FALSE
+  case 0x04: // NE
+  case 0x07: // TRUE
+    break;
+  }
+
+  return Imm;
+}
+
+/// \brief Get the VPCOM immediate if the opcodes are swapped.
+unsigned X86::getSwappedVPCOMImm(unsigned Imm) {
+  switch (Imm) {
+  default: llvm_unreachable("Unreachable!");
+  case 0x00: Imm = 0x02; break; // LT -> GT
+  case 0x01: Imm = 0x03; break; // LE -> GE
+  case 0x02: Imm = 0x00; break; // GT -> LT
+  case 0x03: Imm = 0x01; break; // GE -> LE
+  case 0x04: // EQ
+  case 0x05: // NE
+  case 0x06: // FALSE
+  case 0x07: // TRUE
+    break;
+  }
+
+  return Imm;
 }
 
 bool X86InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {

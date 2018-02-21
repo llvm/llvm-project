@@ -503,8 +503,6 @@ define <2 x i64> @shrunkblend_2uses(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, 
 ; SSE41-LABEL: shrunkblend_2uses:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psllq $63, %xmm0
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm4
 ; SSE41-NEXT:    paddq %xmm2, %xmm4
@@ -514,8 +512,6 @@ define <2 x i64> @shrunkblend_2uses(<2 x i1> %cond, <2 x i64> %a, <2 x i64> %b, 
 ; AVX-LABEL: shrunkblend_2uses:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; AVX-NEXT:    vpcmpgtq %xmm0, %xmm5, %xmm0
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm3, %xmm4, %xmm0
 ; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0

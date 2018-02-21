@@ -85,13 +85,27 @@ void *isl_realloc_or_die(isl_ctx *ctx, void *ptr, size_t size)
 	return ctx ? check_non_null(ctx, realloc(ptr, size), size) : NULL;
 }
 
+/* Keep track of all information about the current error ("error", "msg",
+ * "file", "line") in "ctx".
+ */
+void isl_ctx_set_full_error(isl_ctx *ctx, enum isl_error error, const char *msg,
+	const char *file, int line)
+{
+	if (!ctx)
+		return;
+	ctx->error = error;
+	ctx->error_msg = msg;
+	ctx->error_file = file;
+	ctx->error_line = line;
+}
+
 void isl_handle_error(isl_ctx *ctx, enum isl_error error, const char *msg,
 	const char *file, int line)
 {
 	if (!ctx)
 		return;
 
-	isl_ctx_set_error(ctx, error);
+	isl_ctx_set_full_error(ctx, error, msg, file, line);
 
 	switch (ctx->opt->on_error) {
 	case ISL_ON_ERROR_WARN:
@@ -202,7 +216,7 @@ isl_ctx *isl_ctx_alloc_with_options(struct isl_args *args, void *user_opt)
 	ctx->n_cached = 0;
 	ctx->n_miss = 0;
 
-	ctx->error = isl_error_none;
+	isl_ctx_reset_error(ctx);
 
 	ctx->operations = 0;
 	isl_ctx_set_max_operations(ctx, ctx->opt->max_operations);
@@ -278,18 +292,43 @@ struct isl_options *isl_ctx_options(isl_ctx *ctx)
 
 enum isl_error isl_ctx_last_error(isl_ctx *ctx)
 {
-	return ctx->error;
+	return ctx ? ctx->error : isl_error_invalid;
+}
+
+/* Return the error message of the last error in "ctx".
+ */
+const char *isl_ctx_last_error_msg(isl_ctx *ctx)
+{
+	return ctx ? ctx->error_msg : NULL;
+}
+
+/* Return the file name where the last error in "ctx" occurred.
+ */
+const char *isl_ctx_last_error_file(isl_ctx *ctx)
+{
+	return ctx ? ctx->error_file : NULL;
+}
+
+/* Return the line number where the last error in "ctx" occurred.
+ */
+int isl_ctx_last_error_line(isl_ctx *ctx)
+{
+	return ctx ? ctx->error_line : -1;
 }
 
 void isl_ctx_reset_error(isl_ctx *ctx)
 {
+	if (!ctx)
+		return;
 	ctx->error = isl_error_none;
+	ctx->error_msg = NULL;
+	ctx->error_file = NULL;
+	ctx->error_line = -1;
 }
 
 void isl_ctx_set_error(isl_ctx *ctx, enum isl_error error)
 {
-	if (ctx)
-		ctx->error = error;
+	isl_ctx_set_full_error(ctx, error, NULL, NULL, -1);
 }
 
 void isl_ctx_abort(isl_ctx *ctx)

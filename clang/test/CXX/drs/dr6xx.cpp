@@ -4,7 +4,10 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
-namespace std { struct type_info {}; }
+namespace std {
+  struct type_info {};
+  __extension__ typedef __SIZE_TYPE__ size_t;
+} // namespace std
 
 namespace dr601 { // dr601: yes
 #if __cplusplus >= 201103L
@@ -871,11 +874,11 @@ namespace dr675 { // dr675: dup 739
 
 namespace dr677 { // dr677: no
   struct A {
-    void *operator new(__SIZE_TYPE__);
+    void *operator new(std::size_t);
     void operator delete(void*) = delete; // expected-error 0-1{{C++11}} expected-note {{deleted}}
   };
   struct B {
-    void *operator new(__SIZE_TYPE__);
+    void *operator new(std::size_t);
     void operator delete(void*) = delete; // expected-error 0-1{{C++11}} expected-note 2{{deleted}}
     virtual ~B();
   };

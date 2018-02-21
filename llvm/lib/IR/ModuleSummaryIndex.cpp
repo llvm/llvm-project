@@ -13,10 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+FunctionSummary FunctionSummary::ExternalNode =
+    FunctionSummary::makeDummyFunctionSummary({});
 bool ValueInfo::isDSOLocal() const {
   // Need to check all summaries are local in case of hash collisions.
   return getSummaryList().size() &&
@@ -78,6 +82,26 @@ bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
     if (isGlobalValueLive(I.get()))
       return true;
   return false;
+}
+
+// TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)
+// then delete this function and update its tests
+LLVM_DUMP_METHOD
+void ModuleSummaryIndex::dumpSCCs(raw_ostream &O) {
+  for (scc_iterator<ModuleSummaryIndex *> I =
+           scc_begin<ModuleSummaryIndex *>(this);
+       !I.isAtEnd(); ++I) {
+    O << "SCC (" << utostr(I->size()) << " node" << (I->size() == 1 ? "" : "s")
+      << ") {\n";
+    for (const ValueInfo V : *I) {
+      FunctionSummary *F = nullptr;
+      if (V.getSummaryList().size())
+        F = cast<FunctionSummary>(V.getSummaryList().front().get());
+      O << " " << (F == nullptr ? "External" : "") << " " << utostr(V.getGUID())
+        << (I.hasLoop() ? " (has loop)" : "") << "\n";
+    }
+    O << "}\n";
+  }
 }
 
 namespace {

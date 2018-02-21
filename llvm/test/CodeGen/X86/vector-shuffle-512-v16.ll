@@ -567,7 +567,7 @@ define <16 x float> @test_vshuff32x4_512_mask(<16 x float> %x, <16 x float> %x1,
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm3
 ; AVX512F-NEXT:    vpslld $31, %zmm3, %zmm3
-; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k1
+; AVX512F-NEXT:    vpmovd2m %zmm3, %k1
 ; AVX512F-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} = zmm0[0,1,2,3,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
 ; AVX512F-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
@@ -589,7 +589,7 @@ define <16 x i32> @test_vshufi32x4_512_mask(<16 x i32> %x, <16 x i32> %x1, <16 x
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm3
 ; AVX512F-NEXT:    vpslld $31, %zmm3, %zmm3
-; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k1
+; AVX512F-NEXT:    vpmovd2m %zmm3, %k1
 ; AVX512F-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} = zmm0[0,1,2,3,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512F-NEXT:    retq

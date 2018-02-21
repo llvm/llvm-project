@@ -228,6 +228,19 @@ bool Constant::isNormalFP() const {
   return true;
 }
 
+bool Constant::hasExactInverseFP() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->getValueAPF().getExactInverse(nullptr);
+  if (!getType()->isVectorTy())
+    return false;
+  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
+    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
+    if (!CFP || !CFP->getValueAPF().getExactInverse(nullptr))
+      return false;
+  }
+  return true;
+}
+
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {

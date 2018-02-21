@@ -13,6 +13,8 @@
  * CS 42112, 75589 Paris Cedex 12, France
  */
 
+#include <isl/val.h>
+#include <isl/space.h>
 #include <isl/map.h>
 #include <isl_schedule_band.h>
 #include <isl_schedule_private.h>
@@ -2265,7 +2267,7 @@ static __isl_give isl_set *isolate_final(__isl_keep isl_set *isolate,
  * The tree is itself positioned at schedule depth "depth".
  *
  * The loop AST generation type options and the isolate option
- * are split over the the two band nodes.
+ * are split over the two band nodes.
  */
 __isl_give isl_schedule_tree *isl_schedule_tree_band_split(
 	__isl_take isl_schedule_tree *tree, int pos, int depth)

@@ -135,6 +135,7 @@ static llvm::cl::opt<Path> YamlSymbolFile(
     llvm::cl::init(""), llvm::cl::Hidden);
 
 int main(int argc, char *argv[]) {
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::cl::ParseCommandLineOptions(argc, argv, "clangd");
   if (Test) {
     RunSynchronously = true;

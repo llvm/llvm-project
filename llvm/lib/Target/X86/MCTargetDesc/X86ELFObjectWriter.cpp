@@ -75,6 +75,9 @@ static X86_64RelType getType64(unsigned Kind,
   case X86::reloc_riprel_4byte_relax_rex:
   case X86::reloc_riprel_4byte_movq_load:
     return RT64_32;
+  case X86::reloc_branch_4byte_pcrel:
+    Modifier = MCSymbolRefExpr::VK_PLT;
+    return RT64_32;
   case FK_PCRel_2:
   case FK_Data_2:
     return RT64_16;

@@ -32,7 +32,8 @@
   ; debug value as KILL'ed, resulting in a DEBUG_VALUE node changing codegen!  (or
   ; hopefully, triggering an assert).
 
-  ; CHECK: BUNDLE implicit-def dead $itstate{{.*}} {
+  ; CHECK: BUNDLE implicit-def dead $itstate{{.*}}
+  ; CHECK-NEXT: {
   ; CHECK: DBG_VALUE debug-use $r1, debug-use $noreg, !"u"
   ; CHECK-NOT: DBG_VALUE killed $r1, $noreg, !"u"
 

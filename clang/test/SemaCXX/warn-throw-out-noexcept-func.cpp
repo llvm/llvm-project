@@ -248,9 +248,11 @@ void o_ShouldNotDiag() noexcept {
   }
 }
 
-void p_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
+void p_ShouldNotDiag() noexcept {
+  // Don't warn here: it's possible that the user arranges to only call this
+  // when the active exception is of type 'int'.
   try {
-    throw; //expected-warning {{has a non-throwing exception specification but}}
+    throw;
   } catch (int){
   }
 }
@@ -404,5 +406,59 @@ namespace HandlerSpecialCases {
   }
   void bad12() throw() { // expected-note {{here}}
     try { throw nullptr; } catch (int) {} // expected-warning {{still throw}}
+  }
+}
+
+namespace NestedTry {
+  void f() noexcept {
+    try {
+      try {
+        throw 0;
+      } catch (float) {}
+    } catch (int) {}
+  }
+
+  struct A { [[noreturn]] ~A(); };
+
+  void g() noexcept { // expected-note {{here}}
+    try {
+      try {
+        throw 0; // expected-warning {{still throw}}
+      } catch (float) {}
+    } catch (const char*) {}
+  }
+
+  void h() noexcept { // expected-note {{here}}
+    try {
+      try {
+        throw 0;
+      } catch (float) {}
+    } catch (int) {
+      throw; // expected-warning {{still throw}}
+    }
+  }
+
+  // FIXME: Ideally, this should still warn; we can track which types are
+  // potentially thrown by the rethrow.
+  void i() noexcept {
+    try {
+      try {
+        throw 0;
+      } catch (int) {
+        throw;
+      }
+    } catch (float) {}
+  }
+
+  // FIXME: Ideally, this should not warn: the second catch block is
+  // unreachable.
+  void j() noexcept { // expected-note {{here}}
+    try {
+      try {
+        throw 0;
+      } catch (int) {}
+    } catch (float) {
+      throw; // expected-warning {{still throw}}
+    }
   }
 }

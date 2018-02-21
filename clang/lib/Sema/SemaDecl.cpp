@@ -9365,6 +9365,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
       }
       if (!S.getASTContext().getTargetInfo().supportsMultiVersioning()) {
         S.Diag(NewFD->getLocation(), diag::err_multiversion_not_supported);
+        NewFD->setInvalidDecl();
         return true;
       }
 
@@ -9407,6 +9408,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     if (!S.getASTContext().getTargetInfo().supportsMultiVersioning()) {
       S.Diag(NewFD->getLocation(), diag::err_multiversion_not_supported);
       S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
+      NewFD->setInvalidDecl();
       return true;
     }
 

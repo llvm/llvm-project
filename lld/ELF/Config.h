@@ -18,7 +18,6 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Endian.h"
-
 #include <vector>
 
 namespace lld {
