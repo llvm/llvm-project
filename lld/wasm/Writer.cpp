@@ -122,7 +122,7 @@ private:
   std::vector<const DataSymbol *> ImportedGlobals;
   std::vector<WasmExportEntry> ExportedSymbols;
   std::vector<const DefinedData *> DefinedDataSymbols;
-  std::vector<InputFunction *> DefinedFunctions;
+  std::vector<InputFunction *> InputFunctions;
   std::vector<const FunctionSymbol *> IndirectFunctions;
   std::vector<WasmInitFunc> InitFunctions;
 
@@ -131,7 +131,6 @@ private:
   std::vector<OutputSection *> OutputSections;
 
   std::unique_ptr<FileOutputBuffer> Buffer;
-  std::unique_ptr<SyntheticFunction> CtorFunction;
   std::string CtorFunctionBody;
 
   std::vector<OutputSegment *> Segments;
@@ -202,14 +201,14 @@ void Writer::createTypeSection() {
 }
 
 void Writer::createFunctionSection() {
-  if (DefinedFunctions.empty())
+  if (InputFunctions.empty())
     return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_FUNCTION);
   raw_ostream &OS = Section->getStream();
 
-  writeUleb128(OS, DefinedFunctions.size(), "function count");
-  for (const InputFunction *Func : DefinedFunctions)
+  writeUleb128(OS, InputFunctions.size(), "function count");
+  for (const InputFunction *Func : InputFunctions)
     writeUleb128(OS, lookupType(Func->Signature), "sig index");
 }
 
@@ -323,12 +322,12 @@ void Writer::createElemSection() {
 }
 
 void Writer::createCodeSection() {
-  if (DefinedFunctions.empty())
+  if (InputFunctions.empty())
     return;
 
   log("createCodeSection");
 
-  auto Section = make<CodeSection>(DefinedFunctions);
+  auto Section = make<CodeSection>(InputFunctions);
   OutputSections.push_back(Section);
 }
 
@@ -438,7 +437,7 @@ void Writer::createLinkingSection() {
   struct ComdatEntry { unsigned Kind; uint32_t Index; };
   std::map<StringRef,std::vector<ComdatEntry>> Comdats;
 
-  for (const InputFunction *F : DefinedFunctions) {
+  for (const InputFunction *F : InputFunctions) {
     StringRef Comdat = F->getComdat();
     if (!Comdat.empty())
       Comdats[Comdat].emplace_back(
@@ -477,7 +476,7 @@ void Writer::createLinkingSection() {
 // Create the custom "name" section containing debug symbol names.
 void Writer::createNameSection() {
   unsigned NumNames = ImportedFunctions.size();
-  for (const InputFunction *F : DefinedFunctions)
+  for (const InputFunction *F : InputFunctions)
     if (!F->getName().empty())
       ++NumNames;
 
@@ -491,13 +490,13 @@ void Writer::createNameSection() {
   writeUleb128(OS, NumNames, "name count");
 
   // Names must appear in function index order.  As it happens ImportedFunctions
-  // and DefinedFunctions are numbers in order with imported functions coming
+  // and InputFunctions are numbers in order with imported functions coming
   // first.
   for (const Symbol *S : ImportedFunctions) {
     writeUleb128(OS, S->getOutputIndex(), "import index");
     writeStr(OS, S->getName(), "symbol name");
   }
-  for (const InputFunction *F : DefinedFunctions) {
+  for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
       writeUleb128(OS, F->getOutputIndex(), "func index");
       writeStr(OS, F->getName(), "symbol name");
@@ -714,13 +713,13 @@ void Writer::calculateTypes() {
   for (const FunctionSymbol *Sym : ImportedFunctions)
     registerType(*Sym->getFunctionType());
 
-  for (const InputFunction *F : DefinedFunctions)
+  for (const InputFunction *F : InputFunctions)
     registerType(F->Signature);
 }
 
 void Writer::assignIndexes() {
   uint32_t GlobalIndex = ImportedGlobals.size() + DefinedDataSymbols.size();
-  uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
+  uint32_t FunctionIndex = ImportedFunctions.size() + InputFunctions.size();
 
   auto AddDefinedData = [&](DefinedData *Sym) {
     if (Sym) {
@@ -755,7 +754,7 @@ void Writer::assignIndexes() {
     for (InputFunction *Func : File->Functions) {
       if (!Func->Live)
         continue;
-      DefinedFunctions.emplace_back(Func);
+      InputFunctions.emplace_back(Func);
       Func->setOutputIndex(FunctionIndex++);
     }
   }
@@ -828,7 +827,7 @@ static const int OPCODE_END = 0xb;
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
 void Writer::createCtorFunction() {
-  uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
+  uint32_t FunctionIndex = ImportedFunctions.size() + InputFunctions.size();
   WasmSym::CallCtors->setOutputIndex(FunctionIndex);
 
   // First write the body bytes to a string.
@@ -852,10 +851,10 @@ void Writer::createCtorFunction() {
   ArrayRef<uint8_t> BodyArray(
       reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
       CtorFunctionBody.size());
-  CtorFunction = llvm::make_unique<SyntheticFunction>(
-      Signature, BodyArray, WasmSym::CallCtors->getName());
-  CtorFunction->setOutputIndex(FunctionIndex);
-  DefinedFunctions.emplace_back(CtorFunction.get());
+  SyntheticFunction *F = make<SyntheticFunction>(Signature, BodyArray,
+                                                 WasmSym::CallCtors->getName());
+  F->setOutputIndex(FunctionIndex);
+  InputFunctions.emplace_back(F);
 }
 
 // Populate InitFunctions vector with init functions from all input objects.
@@ -892,7 +891,7 @@ void Writer::run() {
   calculateTypes();
 
   if (errorHandler().Verbose) {
-    log("Defined Functions: " + Twine(DefinedFunctions.size()));
+    log("Defined Functions: " + Twine(InputFunctions.size()));
     log("Defined Data Syms: " + Twine(DefinedDataSymbols.size()));
     log("Function Imports : " + Twine(ImportedFunctions.size()));
     log("Global Imports   : " + Twine(ImportedGlobals.size()));

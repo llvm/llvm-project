@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,deadcode.DeadStores,debug.Stats -verify -Wno-unreachable-code -analyzer-opt-analyze-nested-blocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,deadcode.DeadStores,debug.Stats -verify -Wno-unreachable-code -analyzer-opt-analyze-nested-blocks -analyzer-max-loop 4 %s
 
 int foo();
 
@@ -11,4 +11,20 @@ int test() { // expected-warning-re{{test -> Total CFGBlocks: {{[0-9]+}} | Unrea
 
   a /= 4;
   return a;
+}
+
+
+int sink() // expected-warning-re{{sink -> Total CFGBlocks: {{[0-9]+}} | Unreachable CFGBlocks: 1 | Exhausted Block: yes | Empty WorkList: yes}}
+{
+  for (int i = 0; i < 10; ++i) // expected-warning {{(sink): The analyzer generated a sink at this point}}
+    ++i;
+
+  return 0;
+}
+
+int emptyConditionLoop() // expected-warning-re{{emptyConditionLoop -> Total CFGBlocks: {{[0-9]+}} | Unreachable CFGBlocks: 0 | Exhausted Block: yes | Empty WorkList: yes}}
+{
+  int num = 1;
+  for (;;)
+    num++;
 }

@@ -134,6 +134,7 @@ public:
   bool isInterestingAlloca(const AllocaInst &AI);
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
+  Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(SmallVectorImpl<AllocaInst *> &Allocas,
                        SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
@@ -291,9 +292,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
                                                    Instruction *InsertBefore) {
   IRBuilder<> IRB(InsertBefore);
   Value *PtrTag = IRB.CreateTrunc(IRB.CreateLShr(PtrLong, kPointerTagShift), IRB.getInt8Ty());
-  Value *AddrLong =
-      IRB.CreateAnd(PtrLong, ConstantInt::get(PtrLong->getType(),
-                                              ~(0xFFULL << kPointerTagShift)));
+  Value *AddrLong = untagPointer(IRB, PtrLong);
   Value *ShadowLong = IRB.CreateLShr(AddrLong, kShadowScale);
   if (ClMappingOffset)
     ShadowLong = IRB.CreateAdd(
@@ -311,8 +310,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
   // The signal handler will find the data address in x0.
   InlineAsm *Asm = InlineAsm::get(
       FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-      "hlt #" +
-          itostr(0x100 + Recover * 0x20 + IsWrite * 0x10 + AccessSizeIndex),
+      "brk #" +
+          itostr(0x900 + Recover * 0x20 + IsWrite * 0x10 + AccessSizeIndex),
       "{x0}",
       /*hasSideEffects=*/true);
   IRB.CreateCall(Asm, PtrLong);
@@ -459,6 +458,21 @@ Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong
     TaggedPtrLong = IRB.CreateOr(PtrLong, ShiftedTag);
   }
   return IRB.CreateIntToPtr(TaggedPtrLong, Ty);
+}
+
+// Remove tag from an address.
+Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
+  Value *UntaggedPtrLong;
+  if (ClEnableKhwasan) {
+    // Kernel addresses have 0xFF in the most significant byte.
+    UntaggedPtrLong = IRB.CreateOr(PtrLong,
+        ConstantInt::get(PtrLong->getType(), 0xFFULL << kPointerTagShift));
+  } else {
+    // Userspace addresses have 0x00.
+    UntaggedPtrLong = IRB.CreateAnd(PtrLong,
+        ConstantInt::get(PtrLong->getType(), ~(0xFFULL << kPointerTagShift)));
+  }
+  return UntaggedPtrLong;
 }
 
 bool HWAddressSanitizer::instrumentStack(

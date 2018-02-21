@@ -84,7 +84,7 @@ static void InitializeFlags() {
     cf.check_printf = false;
     cf.intercept_tls_get_addr = true;
     cf.exitcode = 99;
-    cf.handle_sigill = kHandleSignalExclusive;
+    cf.handle_sigtrap = kHandleSignalExclusive;
     OverrideCommonFlags(cf);
   }
 
@@ -240,9 +240,9 @@ void __sanitizer_unaligned_store64(uu64 *p, u64 x) {
 
 template<unsigned X>
 __attribute__((always_inline))
-static void SigIll() {
+static void SigTrap() {
 #if defined(__aarch64__)
-  asm("hlt %0\n\t" ::"n"(X));
+  asm("brk %0\n\t" ::"n"(X));
 #elif defined(__x86_64__) || defined(__i386__)
   asm("ud2\n\t");
 #else
@@ -261,7 +261,7 @@ __attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t mem_tag = *(tag_t *)MEM_TO_SHADOW(ptr_raw);
   if (UNLIKELY(ptr_tag != mem_tag)) {
-    SigIll<0x100 + 0x20 * (EA == ErrorAction::Recover) +
+    SigTrap<0x900 + 0x20 * (EA == ErrorAction::Recover) +
            0x10 * (AT == AccessType::Store) + LogSize>();
     if (EA == ErrorAction::Abort) __builtin_unreachable();
   }
@@ -277,7 +277,7 @@ __attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
   tag_t *shadow_last = (tag_t *)MEM_TO_SHADOW(ptr_raw + sz - 1);
   for (tag_t *t = shadow_first; t <= shadow_last; ++t)
     if (UNLIKELY(ptr_tag != *t)) {
-      SigIll<0x100 + 0x20 * (EA == ErrorAction::Recover) +
+      SigTrap<0x900 + 0x20 * (EA == ErrorAction::Recover) +
              0x10 * (AT == AccessType::Store) + 0xf>();
       if (EA == ErrorAction::Abort) __builtin_unreachable();
     }

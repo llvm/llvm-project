@@ -75,9 +75,9 @@ b3:
 }
 
 ; CHECK-LABEL: mul_nac_2
-; CHECK: r0 = memw(r0+#0)
-; CHECK: r5:4 -= mpy(r2,r0)
 ; CHECK: r1:0 = combine(r5,r4)
+; CHECK: r6 = memw(r0+#0)
+; CHECK: r1:0 -= mpy(r2,r6)
 ; CHECK: jumpr r31
 define i64 @mul_nac_2(i32* %a0, i64 %a1, i64 %a2) #0 {
 b3:
