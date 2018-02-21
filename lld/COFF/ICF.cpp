@@ -18,6 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ICF.h"
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"

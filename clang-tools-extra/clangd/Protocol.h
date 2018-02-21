@@ -100,6 +100,10 @@ struct Position {
     return std::tie(LHS.line, LHS.character) <
            std::tie(RHS.line, RHS.character);
   }
+  friend bool operator<=(const Position &LHS, const Position &RHS) {
+    return std::tie(LHS.line, LHS.character) <=
+           std::tie(RHS.line, RHS.character);
+  }
 };
 bool fromJSON(const json::Expr &, Position &);
 json::Expr toJSON(const Position &);
@@ -118,6 +122,8 @@ struct Range {
   friend bool operator<(const Range &LHS, const Range &RHS) {
     return std::tie(LHS.start, LHS.end) < std::tie(RHS.start, RHS.end);
   }
+
+  bool contains(Position Pos) const { return start <= Pos && Pos < end; }
 };
 bool fromJSON(const json::Expr &, Range &);
 json::Expr toJSON(const Range &);

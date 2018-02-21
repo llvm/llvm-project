@@ -8,6 +8,7 @@
 //===---------------------------------------------------------------------===//
 #include "XRefs.h"
 #include "Logger.h"
+#include "SourceCode.h"
 #include "URI.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -21,7 +22,7 @@ namespace {
 // Get the definition from a given declaration `D`.
 // Return nullptr if no definition is found, or the declaration type of `D` is
 // not supported.
-const Decl* GetDefinition(const Decl* D) {
+const Decl *GetDefinition(const Decl *D) {
   assert(D);
   if (const auto *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
@@ -85,7 +86,7 @@ public:
       // We don't use parameter `D`, as Parameter `D` is the canonical
       // declaration, which is the first declaration of a redeclarable
       // declaration, and it could be a forward declaration.
-      if (const auto* Def = GetDefinition(D)) {
+      if (const auto *Def = GetDefinition(D)) {
         Decls.push_back(Def);
       } else {
         // Couldn't find a definition, fall back to use `D`.
@@ -143,12 +144,8 @@ getDeclarationLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
     return llvm::None;
   SourceLocation LocEnd = Lexer::getLocForEndOfToken(ValSourceRange.getEnd(), 0,
                                                      SourceMgr, LangOpts);
-  Position Begin;
-  Begin.line = SourceMgr.getSpellingLineNumber(LocStart) - 1;
-  Begin.character = SourceMgr.getSpellingColumnNumber(LocStart) - 1;
-  Position End;
-  End.line = SourceMgr.getSpellingLineNumber(LocEnd) - 1;
-  End.character = SourceMgr.getSpellingColumnNumber(LocEnd) - 1;
+  Position Begin = sourceLocToPosition(SourceMgr, LocStart);
+  Position End = sourceLocToPosition(SourceMgr, LocEnd);
   Range R = {Begin, End};
   Location L;
 
@@ -204,6 +201,15 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
     auto L = getDeclarationLocation(AST, SR);
     if (L)
       Result.push_back(*L);
+  }
+
+  /// Process targets for paths inside #include directive.
+  for (auto &IncludeLoc : AST.getInclusionLocations()) {
+    Range R = IncludeLoc.first;
+    Position Pos = sourceLocToPosition(SourceMgr, SourceLocationBeg);
+
+    if (R.contains(Pos))
+      Result.push_back(Location{URIForFile{IncludeLoc.second}, {}});
   }
 
   return Result;
@@ -263,13 +269,8 @@ private:
   DocumentHighlight getDocumentHighlight(SourceRange SR,
                                          DocumentHighlightKind Kind) {
     const SourceManager &SourceMgr = AST.getSourceManager();
-    SourceLocation LocStart = SR.getBegin();
-    Position Begin;
-    Begin.line = SourceMgr.getSpellingLineNumber(LocStart) - 1;
-    Begin.character = SourceMgr.getSpellingColumnNumber(LocStart) - 1;
-    Position End;
-    End.line = SourceMgr.getSpellingLineNumber(SR.getEnd()) - 1;
-    End.character = SourceMgr.getSpellingColumnNumber(SR.getEnd()) - 1;
+    Position Begin = sourceLocToPosition(SourceMgr, SR.getBegin());
+    Position End = sourceLocToPosition(SourceMgr, SR.getEnd());
     Range R = {Begin, End};
     DocumentHighlight DH;
     DH.range = R;

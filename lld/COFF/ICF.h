@@ -1,4 +1,4 @@
-//===- MarkLive.h -----------------------------------------------*- C++ -*-===//
+//===- ICF.h --------------------------------------------------------------===//
 //
 //                             The LLVM Linker
 //
@@ -7,15 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_WASM_MARKLIVE_H
-#define LLD_WASM_MARKLIVE_H
+#ifndef LLD_COFF_ICF_H
+#define LLD_COFF_ICF_H
+
+#include "lld/Common/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace lld {
-namespace wasm {
+namespace coff {
 
-void markLive();
+class Chunk;
 
-} // namespace wasm
+void doICF(ArrayRef<Chunk *> Chunks);
+
+} // namespace coff
 } // namespace lld
 
-#endif // LLD_WASM_MARKLIVE_H
+#endif

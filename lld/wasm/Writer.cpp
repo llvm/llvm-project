@@ -8,8 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
-
-#include "llvm/ADT/DenseSet.h"
 #include "Config.h"
 #include "InputChunks.h"
 #include "OutputSections.h"
@@ -19,6 +17,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -120,9 +119,9 @@ private:
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
   std::vector<const FunctionSymbol *> ImportedFunctions;
-  std::vector<const GlobalSymbol *> ImportedGlobals;
+  std::vector<const DataSymbol *> ImportedGlobals;
   std::vector<WasmExportEntry> ExportedSymbols;
-  std::vector<const DefinedGlobal *> DefinedGlobals;
+  std::vector<const DefinedData *> DefinedDataSymbols;
   std::vector<InputFunction *> DefinedFunctions;
   std::vector<const FunctionSymbol *> IndirectFunctions;
   std::vector<WasmInitFunc> InitFunctions;
@@ -227,14 +226,14 @@ void Writer::createMemorySection() {
 }
 
 void Writer::createGlobalSection() {
-  if (DefinedGlobals.empty())
+  if (DefinedDataSymbols.empty())
     return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_GLOBAL);
   raw_ostream &OS = Section->getStream();
 
-  writeUleb128(OS, DefinedGlobals.size(), "global count");
-  for (const DefinedGlobal *Sym : DefinedGlobals) {
+  writeUleb128(OS, DefinedDataSymbols.size(), "global count");
+  for (const DefinedData *Sym : DefinedDataSymbols) {
     WasmGlobal Global;
     Global.Type.Type = WASM_TYPE_I32;
     Global.Type.Mutable = Sym == WasmSym::StackPointer;
@@ -622,7 +621,7 @@ void Writer::calculateImports() {
     if (auto *F = dyn_cast<FunctionSymbol>(Sym)) {
       F->setOutputIndex(ImportedFunctions.size());
       ImportedFunctions.push_back(F);
-    } else if (auto *G = dyn_cast<GlobalSymbol>(Sym)) {
+    } else if (auto *G = dyn_cast<DataSymbol>(Sym)) {
       G->setOutputIndex(ImportedGlobals.size());
       ImportedGlobals.push_back(G);
     }
@@ -660,7 +659,7 @@ void Writer::calculateExports() {
     for (Symbol *Sym : File->getSymbols()) {
       if (!Sym->isDefined() || File != Sym->getFile())
         continue;
-      if (isa<GlobalSymbol>(Sym))
+      if (!isa<FunctionSymbol>(Sym))
         continue;
       if (!Sym->getChunk()->Live)
         continue;
@@ -671,7 +670,7 @@ void Writer::calculateExports() {
     }
   }
 
-  for (const Symbol *Sym : DefinedGlobals) {
+  for (const Symbol *Sym : DefinedDataSymbols) {
     // Can't export the SP right now because its mutable, and mutuable globals
     // are yet supported in the official binary format.
     // TODO(sbc): Remove this if/when the "mutable global" proposal is accepted.
@@ -720,21 +719,21 @@ void Writer::calculateTypes() {
 }
 
 void Writer::assignIndexes() {
-  uint32_t GlobalIndex = ImportedGlobals.size() + DefinedGlobals.size();
+  uint32_t GlobalIndex = ImportedGlobals.size() + DefinedDataSymbols.size();
   uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
 
-  auto AddDefinedGlobal = [&](DefinedGlobal *Sym) {
+  auto AddDefinedData = [&](DefinedData *Sym) {
     if (Sym) {
-      DefinedGlobals.emplace_back(Sym);
+      DefinedDataSymbols.emplace_back(Sym);
       Sym->setOutputIndex(GlobalIndex++);
     }
   };
-  AddDefinedGlobal(WasmSym::StackPointer);
-  AddDefinedGlobal(WasmSym::HeapBase);
-  AddDefinedGlobal(WasmSym::DataEnd);
+  AddDefinedData(WasmSym::StackPointer);
+  AddDefinedData(WasmSym::HeapBase);
+  AddDefinedData(WasmSym::DataEnd);
 
   if (Config->Relocatable)
-    DefinedGlobals.reserve(Symtab->getSymbols().size());
+    DefinedDataSymbols.reserve(Symtab->getSymbols().size());
 
   uint32_t TableIndex = kInitialTableOffset;
 
@@ -745,8 +744,8 @@ void Writer::assignIndexes() {
         // Create wasm globals for data symbols defined in this file
         if (File != Sym->getFile())
           continue;
-        if (auto *G = dyn_cast<DefinedGlobal>(Sym))
-          AddDefinedGlobal(G);
+        if (auto *G = dyn_cast<DefinedData>(Sym))
+          AddDefinedData(G);
       }
     }
   }
@@ -872,10 +871,10 @@ void Writer::calculateInitFunctions() {
   }
   // Sort in order of priority (lowest first) so that they are called
   // in the correct order.
-  std::sort(InitFunctions.begin(), InitFunctions.end(),
-            [](const WasmInitFunc &L, const WasmInitFunc &R) {
-              return L.Priority < R.Priority;
-            });
+  std::stable_sort(InitFunctions.begin(), InitFunctions.end(),
+                   [](const WasmInitFunc &L, const WasmInitFunc &R) {
+                     return L.Priority < R.Priority;
+                   });
 }
 
 void Writer::run() {
@@ -894,7 +893,7 @@ void Writer::run() {
 
   if (errorHandler().Verbose) {
     log("Defined Functions: " + Twine(DefinedFunctions.size()));
-    log("Defined Globals  : " + Twine(DefinedGlobals.size()));
+    log("Defined Data Syms: " + Twine(DefinedDataSymbols.size()));
     log("Function Imports : " + Twine(ImportedFunctions.size()));
     log("Global Imports   : " + Twine(ImportedGlobals.size()));
     log("Total Imports    : " +
