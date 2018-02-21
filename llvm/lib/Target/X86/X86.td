@@ -740,7 +740,13 @@ class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
 def : SkylakeServerProc<"skylake-avx512">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
 
-def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
+def CNLFeatures : ProcessorFeatures<SKLFeatures.Value, [
+  FeatureAVX512,
+  FeatureCDI,
+  FeatureDQI,
+  FeatureBWI,
+  FeatureVLX,
+  FeaturePKU,
   FeatureVBMI,
   FeatureIFMA,
   FeatureSHA
