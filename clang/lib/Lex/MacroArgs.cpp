@@ -49,7 +49,8 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
   if (!ResultEnt) {
     // Allocate memory for a MacroArgs object with the lexer tokens at the end,
     // and construct the MacroArgs object.
-    Result = new (std::malloc(totalSizeToAlloc<Token>(UnexpArgTokens.size())))
+    Result = new (
+        llvm::safe_malloc(totalSizeToAlloc<Token>(UnexpArgTokens.size())))
         MacroArgs(UnexpArgTokens.size(), VarargsElided, MI->getNumParams());
   } else {
     Result = *ResultEnt;

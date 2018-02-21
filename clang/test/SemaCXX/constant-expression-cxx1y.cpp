@@ -1021,3 +1021,26 @@ constexpr bool evalNested() {
 }
 static_assert(evalNested(), "");
 } // namespace PR19741
+
+namespace Mutable {
+  struct A { mutable int n; }; // expected-note 2{{here}}
+  constexpr int k = A{123}.n; // ok
+  static_assert(k == 123, "");
+
+  struct Q { A &&a; int b = a.n; };
+  constexpr Q q = { A{456} }; // ok
+  static_assert(q.b == 456, "");
+
+  constexpr A a = {123};
+  constexpr int m = a.n; // expected-error {{constant expression}} expected-note {{mutable}}
+
+  constexpr Q r = { static_cast<A&&>(const_cast<A&>(a)) }; // expected-error {{constant expression}} expected-note@-7 {{mutable}}
+
+  struct B {
+    mutable int n; // expected-note {{here}}
+    int m;
+    constexpr B() : n(1), m(n) {} // ok
+  };
+  constexpr B b;
+  constexpr int p = b.n; // expected-error {{constant expression}} expected-note {{mutable}}
+}

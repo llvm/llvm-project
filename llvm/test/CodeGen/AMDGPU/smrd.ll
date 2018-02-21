@@ -232,6 +232,48 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}smrd_imm_nomerge_m0:
+;
+; In principle we could merge the loads here as well, but it would require
+; careful tracking of physical registers since both v_interp* and v_movrel*
+; instructions (or gpr idx mode) use M0.
+;
+; GCN: s_buffer_load_dword
+; GCN: s_buffer_load_dword
+define amdgpu_ps float @smrd_imm_nomerge_m0(<4 x i32> inreg %desc, i32 inreg %prim, float %u, float %v) #0 {
+main_body:
+  %idx1.f = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 0)
+  %idx1 = bitcast float %idx1.f to i32
+
+  %v0.x1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 0, i32 0, i32 %prim)
+  %v0.x = call nsz float @llvm.amdgcn.interp.p2(float %v0.x1, float %v, i32 0, i32 0, i32 %prim)
+  %v0.y1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 0, i32 1, i32 %prim)
+  %v0.y = call nsz float @llvm.amdgcn.interp.p2(float %v0.y1, float %v, i32 0, i32 1, i32 %prim)
+  %v0.z1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 0, i32 2, i32 %prim)
+  %v0.z = call nsz float @llvm.amdgcn.interp.p2(float %v0.z1, float %v, i32 0, i32 2, i32 %prim)
+  %v0.tmp0 = insertelement <3 x float> undef, float %v0.x, i32 0
+  %v0.tmp1 = insertelement <3 x float> %v0.tmp0, float %v0.y, i32 1
+  %v0 = insertelement <3 x float> %v0.tmp1, float %v0.z, i32 2
+  %a = extractelement <3 x float> %v0, i32 %idx1
+
+  %v1.x1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 1, i32 0, i32 %prim)
+  %v1.x = call nsz float @llvm.amdgcn.interp.p2(float %v1.x1, float %v, i32 1, i32 0, i32 %prim)
+  %v1.y1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 1, i32 1, i32 %prim)
+  %v1.y = call nsz float @llvm.amdgcn.interp.p2(float %v1.y1, float %v, i32 1, i32 1, i32 %prim)
+  %v1.z1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 1, i32 2, i32 %prim)
+  %v1.z = call nsz float @llvm.amdgcn.interp.p2(float %v1.z1, float %v, i32 1, i32 2, i32 %prim)
+  %v1.tmp0 = insertelement <3 x float> undef, float %v0.x, i32 0
+  %v1.tmp1 = insertelement <3 x float> %v0.tmp0, float %v0.y, i32 1
+  %v1 = insertelement <3 x float> %v0.tmp1, float %v0.z, i32 2
+
+  %b = extractelement <3 x float> %v1, i32 %idx1
+  %c = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 4)
+
+  %res.tmp = fadd float %a, %b
+  %res = fadd float %res.tmp, %c
+  ret float %res
+}
+
 ; GCN-LABEL: {{^}}smrd_vgpr_merged:
 ; GCN-NEXT: %bb.
 ; GCN-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
@@ -289,8 +331,11 @@ ret_block:                                       ; preds = %.outer, %.label22, %
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readnone speculatable }
 
 !0 = !{}
