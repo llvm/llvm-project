@@ -27,6 +27,7 @@
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/Demangler.h"
 #include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
 
@@ -594,47 +595,7 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString (const ConstString &sym
 
 bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
 {
-  // _TtC in the old mangling
-  if (!name)
-    return false;
-
-  swift::Demangle::Context demangle_ctx;
-  swift::Demangle::NodePointer node_ptr =
-    demangle_ctx.demangleSymbolAsNode(name);
-  if (!node_ptr)
-    return false;
-
-  size_t num_children = node_ptr->getNumChildren();
-  
-  if (num_children != 1)
-    return false;
-    
-  if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
-    return false;
-  
-  num_children = node_ptr->getNumChildren();
-  if (num_children != 1)
-  return true;
-  
-  swift::Demangle::NodePointer type_mangling_ptr = node_ptr->getFirstChild();
-  if (type_mangling_ptr->getKind() != swift::Demangle::Node::Kind::TypeMangling)
-    return false;
-  
-  if (type_mangling_ptr->getNumChildren() != 1)
-    return false;
-
-  swift::Demangle::NodePointer type_ptr = type_mangling_ptr->getFirstChild();
-  if (type_ptr->getKind() != swift::Demangle::Node::Kind::Type)
-    return false;
-  
-  if (type_ptr->getNumChildren() != 1)
-    return false;
-
-  swift::Demangle::NodePointer class_ptr = type_ptr->getFirstChild();
-  if (class_ptr->getKind() != swift::Demangle::Node::Kind::Class)
-    return false;
-  
-  return true;
+  return swift::Demangle::isClass(name);
 }
 
 bool SwiftLanguageRuntime::IsMetadataSymbol(const char *symbol) {
