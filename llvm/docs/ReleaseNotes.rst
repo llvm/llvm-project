@@ -56,6 +56,9 @@ Non-comprehensive list of changes in this release
 
 * Significantly improved quality of CodeView debug info for Windows.
 
+* Preliminary support for Sanitizers and sibling features on X86(_64) NetBSD
+  (ASan, UBsan, TSan, MSan, SafeStack, libFuzzer).
+
 * Note..
 
 .. NOTE
