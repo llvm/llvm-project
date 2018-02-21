@@ -31,7 +31,9 @@ macro(opencl_bc_lib name)
     get_filename_component(fext ${file} EXT)
     #mark files as OCL source
     if (fext STREQUAL ".cl")
-      set_source_files_properties(${file} PROPERTIES LANGUAGE "OCL")
+      set_source_files_properties(${file} PROPERTIES
+        OBJECT_DEPENDS ${CMAKE_OCL_COMPILER}
+        LANGUAGE "OCL")
     endif()
     #mark files as OCL object to add them to link
     if (fext STREQUAL ".ll")
@@ -50,6 +52,7 @@ macro(opencl_bc_lib name)
     ARCHIVE_OUTPUT_NAME "${name}"
     PREFIX "" SUFFIX ${LIB_SUFFIX}
     COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm"
+    LINK_DEPENDS ${LLVM_LINK}
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
   set(output_name "${name}.amdgcn${BC_EXT}")
 
