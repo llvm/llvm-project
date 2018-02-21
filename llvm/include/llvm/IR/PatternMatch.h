@@ -1101,7 +1101,7 @@ template <typename LHS_t> struct fneg_match {
 
 private:
   bool matchIfFNeg(Value *LHS, Value *RHS) {
-    if (const auto *C = dyn_cast<ConstantFP>(LHS))
+    if (const auto *C = dyn_cast<Constant>(LHS))
       return C->isNegativeZeroValue() && L.match(RHS);
     return false;
   }

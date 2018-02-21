@@ -148,7 +148,7 @@ lpad.i:                                           ; preds = %entry
 declare i8* @_Znwm(i64) nobuiltin
 define i8* @_Znwj(i32 %n) nobuiltin {
   %z = zext i32 %n to i64
-  call i8* @_Znwm(i64 %z)
+  %m = call i8* @_Znwm(i64 %z)
   ret i8* %m
 }
 declare i8* @_Znam(i64) nobuiltin

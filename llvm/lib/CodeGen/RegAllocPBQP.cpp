@@ -561,16 +561,7 @@ void RegAllocPBQP::findVRegIntervalsToAlloc(const MachineFunction &MF,
     unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(Reg))
       continue;
-    LiveInterval &LI = LIS.getInterval(Reg);
-
-    // If this live interval is non-empty we will use pbqp to allocate it.
-    // Empty intervals we allocate in a simple post-processing stage in
-    // finalizeAlloc.
-    if (!LI.empty()) {
-      VRegsToAlloc.insert(LI.reg);
-    } else {
-      EmptyIntervalVRegs.insert(LI.reg);
-    }
+    VRegsToAlloc.insert(Reg);
   }
 }
 
@@ -594,12 +585,23 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
 
   std::vector<unsigned> Worklist(VRegsToAlloc.begin(), VRegsToAlloc.end());
 
+  std::map<unsigned, std::vector<unsigned>> VRegAllowedMap;
+
   while (!Worklist.empty()) {
     unsigned VReg = Worklist.back();
     Worklist.pop_back();
 
-    const TargetRegisterClass *TRC = MRI.getRegClass(VReg);
     LiveInterval &VRegLI = LIS.getInterval(VReg);
+
+    // If this is an empty interval move it to the EmptyIntervalVRegs set then
+    // continue.
+    if (VRegLI.empty()) {
+      EmptyIntervalVRegs.insert(VRegLI.reg);
+      VRegsToAlloc.erase(VRegLI.reg);
+      continue;
+    }
+
+    const TargetRegisterClass *TRC = MRI.getRegClass(VReg);
 
     // Record any overlaps with regmask operands.
     BitVector RegMaskOverlaps;
@@ -639,7 +641,21 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
       spillVReg(VReg, NewVRegs, MF, LIS, VRM, VRegSpiller);
       Worklist.insert(Worklist.end(), NewVRegs.begin(), NewVRegs.end());
       continue;
+    } else
+      VRegAllowedMap[VReg] = std::move(VRegAllowed);
+  }
+
+  for (auto &KV : VRegAllowedMap) {
+    auto VReg = KV.first;
+
+    // Move empty intervals to the EmptyIntervalVReg set.
+    if (LIS.getInterval(VReg).empty()) {
+      EmptyIntervalVRegs.insert(VReg);
+      VRegsToAlloc.erase(VReg);
+      continue;
     }
+
+    auto &VRegAllowed = KV.second;
 
     PBQPRAGraph::RawVector NodeCosts(VRegAllowed.size() + 1, 0);
 

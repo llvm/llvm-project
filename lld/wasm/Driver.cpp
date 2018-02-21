@@ -301,10 +301,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Add synthetic symbols before any others
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", &NullSignature, WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::StackPointer = Symtab->addSyntheticGlobal("__stack_pointer");
-    WasmSym::HeapBase = Symtab->addSyntheticGlobal("__heap_base");
-    WasmSym::DsoHandle = Symtab->addSyntheticGlobal("__dso_handle");
-    WasmSym::DataEnd = Symtab->addSyntheticGlobal("__data_end");
+    WasmSym::StackPointer = Symtab->addSyntheticDataSymbol("__stack_pointer");
+    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base");
+    WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol("__dso_handle");
+    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end");
 
     if (!Config->Entry.empty())
       EntrySym = addUndefinedFunction(Config->Entry, &NullSignature);

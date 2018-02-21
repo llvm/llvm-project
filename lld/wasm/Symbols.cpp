@@ -22,10 +22,10 @@ using namespace lld;
 using namespace lld::wasm;
 
 DefinedFunction *WasmSym::CallCtors;
-DefinedGlobal *WasmSym::DsoHandle;
-DefinedGlobal *WasmSym::DataEnd;
-DefinedGlobal *WasmSym::HeapBase;
-DefinedGlobal *WasmSym::StackPointer;
+DefinedData *WasmSym::DsoHandle;
+DefinedData *WasmSym::DataEnd;
+DefinedData *WasmSym::HeapBase;
+DefinedData *WasmSym::StackPointer;
 
 bool Symbol::hasOutputIndex() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
@@ -45,7 +45,7 @@ uint32_t Symbol::getOutputIndex() const {
 InputChunk *Symbol::getChunk() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
     return F->Function;
-  if (auto *G = dyn_cast<DefinedGlobal>(this))
+  if (auto *G = dyn_cast<DefinedData>(this))
     return G->Segment;
   return nullptr;
 }
@@ -109,12 +109,12 @@ DefinedFunction::DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
                      Function ? &Function->Signature : nullptr),
       Function(Function) {}
 
-uint32_t DefinedGlobal::getVirtualAddress() const {
+uint32_t DefinedData::getVirtualAddress() const {
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   return Segment ? Segment->translateVA(VirtualAddress) : VirtualAddress;
 }
 
-void DefinedGlobal::setVirtualAddress(uint32_t Value) {
+void DefinedData::setVirtualAddress(uint32_t Value) {
   DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
   VirtualAddress = Value;
 }
@@ -130,12 +130,12 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
   switch (Kind) {
   case wasm::Symbol::DefinedFunctionKind:
     return "DefinedFunction";
-  case wasm::Symbol::DefinedGlobalKind:
-    return "DefinedGlobal";
+  case wasm::Symbol::DefinedDataKind:
+    return "DefinedData";
   case wasm::Symbol::UndefinedFunctionKind:
     return "UndefinedFunction";
-  case wasm::Symbol::UndefinedGlobalKind:
-    return "UndefinedGlobal";
+  case wasm::Symbol::UndefinedDataKind:
+    return "UndefinedData";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
   }

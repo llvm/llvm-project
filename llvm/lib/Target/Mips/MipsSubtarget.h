@@ -158,6 +158,10 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // HasMT -- support MT ASE.
   bool HasMT;
 
+  // Use hazard variants of the jump register instructions for indirect
+  // function calls and jump tables.
+  bool UseIndirectJumpsHazard;
+
   // Disable use of the `jal` instruction.
   bool UseLongCalls = false;
 
@@ -278,6 +282,9 @@ public:
   bool disableMadd4() const { return DisableMadd4; }
   bool hasEVA() const { return HasEVA; }
   bool hasMT() const { return HasMT; }
+  bool useIndirectJumpsHazard() const {
+    return UseIndirectJumpsHazard && hasMips32r2();
+  }
   bool useSmallSection() const { return UseSmallSection; }
 
   bool hasStandardEncoding() const { return !inMips16Mode(); }

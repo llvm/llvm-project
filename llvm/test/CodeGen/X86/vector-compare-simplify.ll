@@ -82,9 +82,10 @@ define <4 x i32> @sge_max(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp = icmp slt <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %cmp = icmp sge <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %r = sext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %r
 }
