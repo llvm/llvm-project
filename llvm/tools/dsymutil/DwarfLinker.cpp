@@ -327,6 +327,7 @@ public:
 
   uint64_t getLowPc() const { return LowPc; }
   uint64_t getHighPc() const { return HighPc; }
+  bool hasLabelAt(uint64_t Addr) const { return Labels.count(Addr); }
 
   Optional<PatchLocation> getUnitRangesAttribute() const {
     return UnitRangeAttribute;
@@ -365,6 +366,10 @@ public:
 
   /// Apply all fixups recored by noteForwardReference().
   void fixupForwardReferences();
+
+  /// Add the low_pc of a label that is relocatad by applying
+  /// offset \p PCOffset.
+  void addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset);
 
   /// Add a function range [\p LowPC, \p HighPC) that is relocatad by applying
   /// offset \p PCOffset.
@@ -470,6 +475,9 @@ private:
   /// functions in this unit, associated with the PC offset to apply
   /// to the addresses to get the linked address.
   FunctionIntervals Ranges;
+
+  /// The DW_AT_low_pc of each DW_TAG_label.
+  SmallDenseMap<uint64_t, uint64_t, 1> Labels;
 
   /// DW_AT_ranges attributes to patch after we have gathered
   /// all the unit's function addresses.
@@ -583,6 +591,10 @@ void CompileUnit::fixupForwardReferences() {
     else
       Attr.set(RefDie->getOffset() + RefUnit->getStartOffset());
   }
+}
+
+void CompileUnit::addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset) {
+  Labels.insert({LabelLowPc, PcOffset});
 }
 
 void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
@@ -2453,7 +2465,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
     return Flags;
 
   uint32_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
-  const DWARFUnit &OrigUnit = Unit.getOrigUnit();
+  DWARFUnit &OrigUnit = Unit.getOrigUnit();
   uint32_t LowPcOffset, LowPcEndOffset;
   std::tie(LowPcOffset, LowPcEndOffset) =
       getAttributeOffsets(Abbrev, *LowPcIdx, Offset, OrigUnit);
@@ -2469,6 +2481,20 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
     DumpOpts.RecurseDepth = 0;
     DumpOpts.Verbose = Options.Verbose;
     DIE.dump(outs(), 8 /* Indent */, DumpOpts);
+  }
+
+  if (DIE.getTag() == dwarf::DW_TAG_label) {
+    if (Unit.hasLabelAt(*LowPc))
+      return Flags;
+    // FIXME: dsymutil-classic compat. dsymutil-classic doesn't consider labels
+    // that don't fall into the CU's aranges. This is wrong IMO. Debug info
+    // generation bugs aside, this is really wrong in the case of labels, where
+    // a label marking the end of a function will have a PC == CU's high_pc.
+    if (dwarf::toAddress(OrigUnit.getUnitDIE().find(dwarf::DW_AT_high_pc))
+          .getValueOr(UINT64_MAX) <= LowPc)
+      return Flags;
+    Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
+    return Flags | TF_Keep;
   }
 
   Flags |= TF_Keep;
@@ -2498,6 +2524,7 @@ unsigned DwarfLinker::shouldKeepDIE(RelocationManager &RelocMgr,
   case dwarf::DW_TAG_variable:
     return shouldKeepVariableDIE(RelocMgr, DIE, Unit, MyInfo, Flags);
   case dwarf::DW_TAG_subprogram:
+  case dwarf::DW_TAG_label:
     return shouldKeepSubprogramDIE(RelocMgr, DIE, Unit, MyInfo, Flags);
   case dwarf::DW_TAG_imported_module:
   case dwarf::DW_TAG_imported_declaration:
