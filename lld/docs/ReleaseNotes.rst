@@ -41,6 +41,16 @@ COFF Improvements
 
 * Initial support for the ARM64 architecture has been added.
 
+* New ``--version`` flag.
+
+* Significantly improved support for writing PDB Files.
+
+* New ``--rsp-quoting`` flag, like ``clang-cl``.
+
+* ``/manifestuac:no`` no longer incorrectly disables ``/manifestdependency:``.
+
+* Only write ``.manifest`` files if ``/manifest`` is passed.
+
 MachO Improvements
 ------------------
 
