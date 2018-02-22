@@ -77,6 +77,10 @@ public:
 
   unsigned getFirstCallerSavedNonParamReg() const;
 
+  const TargetRegisterClass *
+  getPointerRegClass(const MachineFunction &MF,
+                     unsigned Kind = 0) const override;
+
   bool isEHReturnCalleeSaveReg(unsigned Reg) const;
 };
 

@@ -1294,8 +1294,7 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
   // -X / C --> X / -C
   Value *X;
   if (match(I.getOperand(0), m_FNeg(m_Value(X))))
-    return BinaryOperator::CreateWithCopiedFlags(Instruction::FDiv, X,
-                                                 ConstantExpr::getFNeg(C), &I);
+    return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
 
   // If the constant divisor has an exact inverse, this is always safe. If not,
   // then we can still create a reciprocal if fast-math-flags allow it and the
@@ -1312,8 +1311,7 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
     return nullptr;
 
   // X / C --> X * (1 / C)
-  return BinaryOperator::CreateWithCopiedFlags(
-      Instruction::FMul, I.getOperand(0), RecipC, &I);
+  return BinaryOperator::CreateFMulFMF(I.getOperand(0), RecipC, &I);
 }
 
 /// Remove negation and try to reassociate constant math.
@@ -1324,10 +1322,8 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 
   // C / -X --> -C / X
   Value *X;
-  if (match(I.getOperand(1), m_FNeg(m_Value(X)))) {
-    return BinaryOperator::CreateWithCopiedFlags(
-        Instruction::FDiv, ConstantExpr::getFNeg(C), X, &I);
-  }
+  if (match(I.getOperand(1), m_FNeg(m_Value(X))))
+    return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
 
   if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
     return nullptr;
@@ -1348,7 +1344,7 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
   if (!NewC || !NewC->isNormalFP())
     return nullptr;
 
-  return BinaryOperator::CreateWithCopiedFlags(Instruction::FDiv, NewC, X, &I);
+  return BinaryOperator::CreateFDivFMF(NewC, X, &I);
 }
 
 Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
@@ -1388,9 +1384,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         FMFIntersect &= cast<Instruction>(Op0)->getFastMathFlags();
         YZInst->setFastMathFlags(FMFIntersect);
       }
-      Instruction *NewDiv = BinaryOperator::CreateFDiv(X, YZ);
-      NewDiv->setFastMathFlags(I.getFastMathFlags());
-      return NewDiv;
+      return BinaryOperator::CreateFDivFMF(X, YZ, &I);
     }
     if (match(Op1, m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))) &&
         (!isa<Constant>(Y) || !isa<Constant>(Op0))) {
@@ -1401,9 +1395,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         FMFIntersect &= cast<Instruction>(Op1)->getFastMathFlags();
         YZInst->setFastMathFlags(FMFIntersect);
       }
-      Instruction *NewDiv = BinaryOperator::CreateFDiv(YZ, X);
-      NewDiv->setFastMathFlags(I.getFastMathFlags());
-      return NewDiv;
+      return BinaryOperator::CreateFDivFMF(YZ, X, &I);
     }
   }
 
