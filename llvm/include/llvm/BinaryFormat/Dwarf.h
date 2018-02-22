@@ -361,12 +361,15 @@ inline bool isUnitType(dwarf::Tag T) {
 // Constants for the DWARF v5 Accelerator Table Proposal
 enum AcceleratorTable {
   // Data layout descriptors.
-  DW_ATOM_null = 0u,       // Marker as the end of a list of atoms.
+  DW_ATOM_null = 0u,       ///  Marker as the end of a list of atoms.
   DW_ATOM_die_offset = 1u, // DIE offset in the debug_info section.
   DW_ATOM_cu_offset = 2u, // Offset of the compile unit header that contains the
                           // item in question.
   DW_ATOM_die_tag = 3u,   // A tag entry.
   DW_ATOM_type_flags = 4u, // Set of flags for a type.
+
+  DW_ATOM_type_type_flags = 5u, // Dsymutil type extension.
+  DW_ATOM_qual_name_hash = 6u,  // Dsymutil qualified hash extension.
 
   // DW_ATOM_type_flags values.
 
