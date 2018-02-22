@@ -817,6 +817,12 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
                  unsigned MaxElements,
                  Optional<function_ref<void(CallSite OldCS, CallSite NewCS)>>
                      ReplaceCallSite) {
+  // Don't perform argument promotion for naked functions; otherwise we can end
+  // up removing parameters that are seemingly 'not used' as they are referred
+  // to in the assembly.
+  if(F->hasFnAttribute(Attribute::Naked))
+    return nullptr;
+
   // Make sure that it is local to this module.
   if (!F->hasLocalLinkage())
     return nullptr;

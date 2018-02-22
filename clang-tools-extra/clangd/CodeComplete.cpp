@@ -286,13 +286,9 @@ struct CompletionCandidate {
           I.documentation = D->Documentation;
         if (I.detail.empty())
           I.detail = D->CompletionDetail;
-        // We only insert #include for items with details, since we can't tell
-        // whether the file URI of the canonical declaration would be the
-        // canonical #include without checking IncludeHeader in the detail.
         // FIXME: delay creating include insertion command to
         // "completionItem/resolve", when it is supported
-        if (!D->IncludeHeader.empty() ||
-            !IndexResult->CanonicalDeclaration.FileURI.empty()) {
+        if (!D->IncludeHeader.empty()) {
           // LSP favors additionalTextEdits over command. But we are still using
           // command here because it would be expensive to calculate #include
           // insertion edits for all candidates, and the include insertion edit
@@ -301,9 +297,7 @@ struct CompletionCandidate {
           // Command title is not added since this is not a user-facing command.
           Cmd.command = ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE;
           IncludeInsertion Insertion;
-          Insertion.header = D->IncludeHeader.empty()
-                                 ? IndexResult->CanonicalDeclaration.FileURI
-                                 : D->IncludeHeader;
+          Insertion.header = D->IncludeHeader;
           Insertion.textDocument.uri = URIForFile(FileName);
           Cmd.includeInsertion = std::move(Insertion);
           I.command = std::move(Cmd);
@@ -702,11 +696,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     Input.Preamble->CanReuse(*CI, ContentsBuffer.get(), Bounds,
                              Input.VFS.get());
   }
+  // The diagnostic options must be set before creating a CompilerInstance.
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto Clang = prepareCompilerInstance(
       std::move(CI), Input.Preamble, std::move(ContentsBuffer),
       std::move(Input.PCHs), std::move(Input.VFS), DummyDiagsConsumer);
-  auto &DiagOpts = Clang->getDiagnosticOpts();
-  DiagOpts.IgnoreWarnings = true;
 
   // Disable typo correction in Sema.
   Clang->getLangOpts().SpellChecking = false;

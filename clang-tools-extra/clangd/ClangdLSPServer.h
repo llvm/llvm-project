@@ -76,6 +76,7 @@ private:
   void onCommand(ExecuteCommandParams &Params) override;
   void onRename(RenameParams &Parames) override;
   void onHover(TextDocumentPositionParams &Params) override;
+  void onChangeConfiguration(DidChangeConfigurationParams &Params) override;
 
   std::vector<TextEdit> getFixIts(StringRef File, const clangd::Diagnostic &D);
 

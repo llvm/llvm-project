@@ -319,31 +319,32 @@ void CallInst::init(Value *Func, const Twine &NameStr) {
   setName(NameStr);
 }
 
-CallInst::CallInst(Value *Func, const Twine &Name,
-                   Instruction *InsertBefore)
-  : Instruction(cast<FunctionType>(cast<PointerType>(Func->getType())
-                                   ->getElementType())->getReturnType(),
-                Instruction::Call,
-                OperandTraits<CallInst>::op_end(this) - 1,
-                1, InsertBefore) {
+CallInst::CallInst(Value *Func, const Twine &Name, Instruction *InsertBefore)
+    : CallBase<CallInst>(
+          cast<FunctionType>(
+              cast<PointerType>(Func->getType())->getElementType())
+              ->getReturnType(),
+          Instruction::Call,
+          OperandTraits<CallBase<CallInst>>::op_end(this) - 1, 1,
+          InsertBefore) {
   init(Func, Name);
 }
 
-CallInst::CallInst(Value *Func, const Twine &Name,
-                   BasicBlock *InsertAtEnd)
-  : Instruction(cast<FunctionType>(cast<PointerType>(Func->getType())
-                                   ->getElementType())->getReturnType(),
-                Instruction::Call,
-                OperandTraits<CallInst>::op_end(this) - 1,
-                1, InsertAtEnd) {
+CallInst::CallInst(Value *Func, const Twine &Name, BasicBlock *InsertAtEnd)
+    : CallBase<CallInst>(
+          cast<FunctionType>(
+              cast<PointerType>(Func->getType())->getElementType())
+              ->getReturnType(),
+          Instruction::Call,
+          OperandTraits<CallBase<CallInst>>::op_end(this) - 1, 1, InsertAtEnd) {
   init(Func, Name);
 }
 
 CallInst::CallInst(const CallInst &CI)
-    : Instruction(CI.getType(), Instruction::Call,
-                  OperandTraits<CallInst>::op_end(this) - CI.getNumOperands(),
-                  CI.getNumOperands()),
-      Attrs(CI.Attrs), FTy(CI.FTy) {
+    : CallBase<CallInst>(CI.Attrs, CI.FTy, CI.getType(), Instruction::Call,
+                         OperandTraits<CallBase<CallInst>>::op_end(this) -
+                             CI.getNumOperands(),
+                         CI.getNumOperands()) {
   setTailCallKind(CI.getTailCallKind());
   setCallingConv(CI.getCallingConv());
 
@@ -367,125 +368,14 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
-Value *CallInst::getReturnedArgOperand() const {
-  unsigned Index;
 
-  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
-    return getArgOperand(Index - AttributeList::FirstArgIndex);
-  if (const Function *F = getCalledFunction())
-    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
-        Index)
-      return getArgOperand(Index - AttributeList::FirstArgIndex);
 
-  return nullptr;
-}
 
-void CallInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
 
-void CallInst::addAttribute(unsigned i, Attribute Attr) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Attr);
-  setAttributes(PAL);
-}
 
-void CallInst::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
 
-void CallInst::addParamAttr(unsigned ArgNo, Attribute Attr) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Attr);
-  setAttributes(PAL);
-}
 
-void CallInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
 
-void CallInst::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void CallInst::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void CallInst::removeParamAttr(unsigned ArgNo, StringRef Kind) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void CallInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
-void CallInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
-bool CallInst::hasRetAttr(Attribute::AttrKind Kind) const {
-  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
-    return true;
-
-  // Look at the callee, if available.
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
-  return false;
-}
-
-bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-  assert(i < getNumArgOperands() && "Param index out of bounds!");
-
-  if (Attrs.hasParamAttribute(i, Kind))
-    return true;
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttribute(i, Kind);
-  return false;
-}
-
-bool CallInst::dataOperandHasImpliedAttr(unsigned i,
-                                         Attribute::AttrKind Kind) const {
-  // There are getNumOperands() - 1 data operands.  The last operand is the
-  // callee.
-  assert(i < getNumOperands() && "Data operand index out of bounds!");
-
-  // The attribute A can either be directly specified, if the operand in
-  // question is a call argument; or be indirectly implied by the kind of its
-  // containing operand bundle, if the operand is a bundle operand.
-
-  if (i == AttributeList::ReturnIndex)
-    return hasRetAttr(Kind);
-
-  // FIXME: Avoid these i - 1 calculations and update the API to use zero-based
-  // indices.
-  if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i - 1, Kind);
-
-  assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
-         "Must be either a call argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, Kind);
-}
 
 /// IsConstantOne - Return true only if val is constant int 1
 static bool IsConstantOne(Value *val) {
@@ -721,11 +611,10 @@ void InvokeInst::init(FunctionType *FTy, Value *Fn, BasicBlock *IfNormal,
 }
 
 InvokeInst::InvokeInst(const InvokeInst &II)
-    : TerminatorInst(II.getType(), Instruction::Invoke,
-                     OperandTraits<InvokeInst>::op_end(this) -
-                         II.getNumOperands(),
-                     II.getNumOperands()),
-      Attrs(II.Attrs), FTy(II.FTy) {
+    : CallBase<InvokeInst>(II.Attrs, II.FTy, II.getType(), Instruction::Invoke,
+                           OperandTraits<CallBase<InvokeInst>>::op_end(this) -
+                               II.getNumOperands(),
+                           II.getNumOperands()) {
   setCallingConv(II.getCallingConv());
   std::copy(II.op_begin(), II.op_end(), op_begin());
   std::copy(II.bundle_op_info_begin(), II.bundle_op_info_end(),
@@ -747,109 +636,6 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   return NewII;
 }
 
-Value *InvokeInst::getReturnedArgOperand() const {
-  unsigned Index;
-
-  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
-    return getArgOperand(Index - AttributeList::FirstArgIndex);
-  if (const Function *F = getCalledFunction())
-    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
-        Index)
-      return getArgOperand(Index - AttributeList::FirstArgIndex);
-
-  return nullptr;
-}
-
-bool InvokeInst::hasRetAttr(Attribute::AttrKind Kind) const {
-  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
-    return true;
-
-  // Look at the callee, if available.
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
-  return false;
-}
-
-bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-  assert(i < getNumArgOperands() && "Param index out of bounds!");
-
-  if (Attrs.hasParamAttribute(i, Kind))
-    return true;
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttribute(i, Kind);
-  return false;
-}
-
-bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
-                                           Attribute::AttrKind Kind) const {
-  // There are getNumOperands() - 3 data operands.  The last three operands are
-  // the callee and the two successor basic blocks.
-  assert(i < (getNumOperands() - 2) && "Data operand index out of bounds!");
-
-  // The attribute A can either be directly specified, if the operand in
-  // question is an invoke argument; or be indirectly implied by the kind of its
-  // containing operand bundle, if the operand is a bundle operand.
-
-  if (i == AttributeList::ReturnIndex)
-    return hasRetAttr(Kind);
-
-  // FIXME: Avoid these i - 1 calculations and update the API to use zero-based
-  // indices.
-  if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i - 1, Kind);
-
-  assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
-         "Must be either an invoke argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, Kind);
-}
-
-void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addAttribute(unsigned i, Attribute Attr) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Attr);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());

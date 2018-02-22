@@ -466,7 +466,8 @@ def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
 def Xopenmp_target : Separate<["-"], "Xopenmp-target">,
   HelpText<"Pass <arg> to the target offloading toolchain.">, MetaVarName<"<arg>">;
 def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">,
-  HelpText<"Pass <arg> to the specified target offloading toolchain. The triple that identifies the toolchain must be provided after the equals sign.">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to the target offloading toolchain identified by <triple>.">,
+  MetaVarName<"<triple> <arg>">;
 def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
@@ -518,6 +519,8 @@ def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">, Group<opencl_Group
   HelpText<"OpenCL only. Allow denormals to be flushed to zero.">;
 def cl_fp32_correctly_rounded_divide_sqrt : Flag<["-"], "cl-fp32-correctly-rounded-divide-sqrt">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded.">;
+def cl_uniform_work_group_size : Flag<["-"], "cl-uniform-work-group-size">, Group<opencl_Group>, Flags<[CC1Option]>,
+  HelpText<"OpenCL only. Defines that the global work-size be a multiple of the work-group size specified to clEnqueueNDRangeKernel">;
 def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[DriverOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
@@ -1395,24 +1398,26 @@ def fno_objc_nonfragile_abi : Flag<["-"], "fno-objc-nonfragile-abi">, Group<f_Gr
 
 def fobjc_sender_dependent_dispatch : Flag<["-"], "fobjc-sender-dependent-dispatch">, Group<f_Group>;
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>;
-def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
+def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
+  HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>, Flags<[NoArgumentUnused]>;
 def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
 def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
-def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>, Flags<[NoArgumentUnused]>;
-def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
+def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>;
+def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">, Flags<[DriverOption, CC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
-def fopenmp_dump_offload_linker_script : Flag<["-"], "fopenmp-dump-offload-linker-script">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>;
-def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"OpenMP target code is compiled as relocatable using the -c flag. For OpenMP targets the code is relocatable by default.">;
-def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"Do not compile OpenMP target code as relocatable.">;
+def fopenmp_dump_offload_linker_script : Flag<["-"], "fopenmp-dump-offload-linker-script">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
+def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
+  Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
+def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
+  Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
-def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"Disable OpenMP code for SIMD-based constructs.">;
+def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
 def force__cpusubtype__ALL : Flag<["-"], "force_cpusubtype_ALL">;

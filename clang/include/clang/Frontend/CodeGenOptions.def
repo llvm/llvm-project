@@ -128,6 +128,7 @@ CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
 CODEGENOPT(FlushDenorm       , 1, 0) ///< Allow FP denorm numbers to be flushed to zero
 CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(UniformWGSize     , 1, 0) ///< -cl-uniform-work-group-size
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 /// \brief Method of Objective-C dispatch to use.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)

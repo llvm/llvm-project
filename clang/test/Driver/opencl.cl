@@ -13,6 +13,7 @@
 // RUN: %clang -S -### -cl-no-signed-zeros %s 2>&1 | FileCheck --check-prefix=CHECK-NO-SIGNED-ZEROS %s
 // RUN: %clang -S -### -cl-denorms-are-zero %s 2>&1 | FileCheck --check-prefix=CHECK-DENORMS-ARE-ZERO %s
 // RUN: %clang -S -### -cl-fp32-correctly-rounded-divide-sqrt %s 2>&1 | FileCheck --check-prefix=CHECK-ROUND-DIV %s
+// RUN: %clang -S -### -cl-uniform-work-group-size %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
 // RUN: not %clang -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 
@@ -31,6 +32,7 @@
 // CHECK-NO-SIGNED-ZEROS: "-cc1" {{.*}} "-cl-no-signed-zeros"
 // CHECK-DENORMS-ARE-ZERO: "-cc1" {{.*}} "-cl-denorms-are-zero"
 // CHECK-ROUND-DIV: "-cc1" {{.*}} "-cl-fp32-correctly-rounded-divide-sqrt"
+// CHECK-UNIFORM-WG: "-cc1" {{.*}} "-cl-uniform-work-group-size"
 // CHECK-C99: error: invalid value 'c99' in '-cl-std=c99'
 // CHECK-INVALID: error: invalid value 'invalid' in '-cl-std=invalid'
 
