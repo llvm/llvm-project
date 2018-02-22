@@ -41,6 +41,17 @@ int main()
 {
     {
     const char* s = "12345678901234";
+    std::basic_string s1(s, s+10);  // Can't use {} here
+    using S = decltype(s1); // what type did we get?
+    static_assert(std::is_same_v<S::value_type,                      char>,  "");
+    static_assert(std::is_same_v<S::traits_type,    std::char_traits<char>>, "");
+    static_assert(std::is_same_v<S::allocator_type,   std::allocator<char>>, "");
+    assert(s1.size() == 10);
+    assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
+    }
+
+    {
+    const char* s = "12345678901234";
     std::basic_string s1{s, s+10, std::allocator<char>{}};
     using S = decltype(s1); // what type did we get?
     static_assert(std::is_same_v<S::value_type,                      char>,  "");
