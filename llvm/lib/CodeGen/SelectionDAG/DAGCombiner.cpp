@@ -16417,10 +16417,11 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   if (N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) {
     SDValue CN0 = N0.getOperand(0);
     SDValue CN1 = N1.getOperand(0);
-    if (CN0.getValueType().getVectorElementType() ==
-            CN1.getValueType().getVectorElementType() &&
-        CN0.getValueType().getVectorNumElements() ==
-            VT.getVectorNumElements()) {
+    EVT CN0VT = CN0.getValueType();
+    EVT CN1VT = CN1.getValueType();
+    if (CN0VT.isVector() && CN1VT.isVector() &&
+        CN0VT.getVectorElementType() == CN1VT.getVectorElementType() &&
+        CN0VT.getVectorNumElements() == VT.getVectorNumElements()) {
       SDValue NewINSERT = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
                                       CN0.getValueType(), CN0, CN1, N2);
       return DAG.getBitcast(VT, NewINSERT);

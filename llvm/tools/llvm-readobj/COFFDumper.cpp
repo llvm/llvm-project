@@ -244,7 +244,7 @@ std::error_code createCOFFDumper(const object::ObjectFile *Obj,
 
 } // namespace llvm
 
-// Given a a section and an offset into this section the function returns the
+// Given a section and an offset into this section the function returns the
 // symbol used for the relocation at the offset.
 std::error_code COFFDumper::resolveSymbol(const coff_section *Section,
                                           uint64_t Offset, SymbolRef &Sym) {

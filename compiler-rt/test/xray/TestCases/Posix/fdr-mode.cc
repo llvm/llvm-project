@@ -8,7 +8,7 @@
 // RUN: rm fdr-logging-test-*
 // RUN: rm fdr-unwrite-test-*
 // FIXME: Make llvm-xray work on non-x86_64 as well.
-// REQUIRES: x86_64-linux
+// REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"

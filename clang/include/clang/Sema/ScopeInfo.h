@@ -799,7 +799,7 @@ public:
   ///  Potentially capturable variables of a nested lambda that might need 
   ///   to be captured by the lambda are housed here.  
   ///  This is specifically useful for generic lambdas or
-  ///  lambdas within a a potentially evaluated-if-used context.
+  ///  lambdas within a potentially evaluated-if-used context.
   ///  If an enclosing variable is named in an expression of a lambda nested
   ///  within a generic lambda, we don't always know know whether the variable 
   ///  will truly be odr-used (i.e. need to be captured) by that nested lambda,
