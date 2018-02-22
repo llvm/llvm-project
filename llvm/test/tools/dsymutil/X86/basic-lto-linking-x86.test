@@ -78,7 +78,7 @@ CHECK:        DW_AT_name ("arg")
 CHECK:        DW_AT_type (0x0000000000000063
 CHECK:        DW_AT_location (0x00000000
 CHECK:          [0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4)
-CHECK:      DW_TAG_inlined_subroutine
+CHECK:[[INC1:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
 CHECK:        DW_AT_abstract_origin (cu + 0x00a7 "inc")
 CHECK:        DW_AT_low_pc (0x0000000100000f63)
 CHECK:        DW_AT_high_pc (0x0000000100000f72)
@@ -120,7 +120,7 @@ CHECK:          [0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_
 CHECK:      DW_TAG_lexical_block
 CHECK:        DW_AT_low_pc (0x0000000100000f94)
 CHECK:        DW_AT_high_pc (0x0000000100000fa7)
-CHECK:        DW_TAG_inlined_subroutine
+CHECK:[[INC2:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
 CHECK:          DW_AT_abstract_origin (cu + 0x009a "inc")
 CHECK:          DW_AT_ranges (0x00000000
 CHECK:             [0x0000000100000f94, 0x0000000100000f9a)
@@ -197,3 +197,194 @@ CHECK-NEXT: length = 0x0000001f version = 0x0002 unit_offset = 0x00000000 unit_s
 CHECK-NEXT: Offset     Name
 CHECK-NEXT: 0x00000063 "int"
 CHECK-NEXT: 0x00000079 "char"
+
+CHECK: .apple_names contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 7
+CHECK-NEXT:   Hashes count: 7
+CHECK-NEXT:   HeaderData length: 12
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   Hash 0xb8860c2 [
+CHECK-NEXT:     Name@0x74 {
+CHECK-NEXT:       String: 0x0000007e "baz"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x000000c0
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT:   Hash 0xb88801f [
+CHECK-NEXT:     Name@0x84 {
+CHECK-NEXT:       String: 0x0000008a "inc"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000110
+CHECK-NEXT:       ]
+CHECK-NEXT:       Data 1 [
+CHECK-NEXT:         Atom[0]: 0x000001c7
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 1 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 2 [
+CHECK-NEXT:   Hash 0xfed12c6a [
+CHECK-NEXT:     Name@0x98 {
+CHECK-NEXT:       String: 0x00000072 "private_int"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x000000a7
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 3 [
+CHECK-NEXT:   Hash 0xb88b5c8 [
+CHECK-NEXT:     Name@0xa8 {
+CHECK-NEXT:       String: 0x00000097 "val"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000160
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT:   Hash 0x7c9a7f6a [
+CHECK-NEXT:     Name@0xb8 {
+CHECK-NEXT:       String: 0x00000051 "main"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000026
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 4 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 5 [
+CHECK-NEXT:   Hash 0xb887389 [
+CHECK-NEXT:     Name@0xc8 {
+CHECK-NEXT:       String: 0x00000082 "foo"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x000000d9
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 6 [
+CHECK-NEXT:   Hash 0xb8860ba [
+CHECK-NEXT:     Name@0xd8 {
+CHECK-NEXT:       String: 0x0000009b "bar"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x0000017f
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+
+CHECK: apple_types contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 2
+CHECK-NEXT:   Hashes count: 2
+CHECK-NEXT:   HeaderData length: 24
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 4
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT:   Atom 1 {
+CHECK-NEXT:     Type: DW_ATOM_die_tag
+CHECK-NEXT:     Form: DW_FORM_data2
+CHECK-NEXT:   }
+CHECK-NEXT:   Atom 2 {
+CHECK-NEXT:     Type: DW_ATOM_type_flags
+CHECK-NEXT:     Form: DW_FORM_data1
+CHECK-NEXT:   }
+CHECK-NEXT:   Atom 3 {
+CHECK-NEXT:     Type: DW_ATOM_qual_name_hash
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   Hash 0xb888030 [
+CHECK-NEXT:     Name@0x44 {
+CHECK-NEXT:       String: 0x00000060 "int"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000063
+CHECK-NEXT:         Atom[1]: 0x0024
+CHECK-NEXT:         Atom[2]: 0x00
+CHECK-NEXT:         Atom[3]: 0x0c3a28a4
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 1 [
+CHECK-NEXT:   Hash 0x7c952063 [
+CHECK-NEXT:     Name@0x5b {
+CHECK-NEXT:       String: 0x00000064 "char"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000079
+CHECK-NEXT:         Atom[1]: 0x0024
+CHECK-NEXT:         Atom[2]: 0x00
+CHECK-NEXT:         Atom[3]: 0x937bd757
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+
+CHECK: .apple_namespaces contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 1
+CHECK-NEXT:   Hashes count: 0
+CHECK-NEXT:   HeaderData length: 12
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]
+
+CHECK: .apple_objc contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 1
+CHECK-NEXT:   Hashes count: 0
+CHECK-NEXT:   HeaderData length: 12
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]

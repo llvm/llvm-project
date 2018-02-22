@@ -380,6 +380,68 @@ public:
 #endif
 };
 
+/// Accelerator table data implementation for simple accelerator tables with
+/// a DIE offset but no actual DIE pointer.
+class AppleAccelTableStaticOffsetData : public AppleAccelTableData {
+public:
+  AppleAccelTableStaticOffsetData(uint32_t Offset) : Offset(Offset) {}
+
+  void emit(AsmPrinter *Asm) const override;
+
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
+                                  dwarf::DW_FORM_data4)};
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const override {
+    OS << "  Static Offset: " << Offset << "\n";
+  }
+
+#endif
+protected:
+  uint64_t order() const override { return Offset; }
+
+  uint32_t Offset;
+};
+
+/// Accelerator table data implementation for type accelerator tables with
+/// a DIE offset but no actual DIE pointer.
+class AppleAccelTableStaticTypeData : public AppleAccelTableStaticOffsetData {
+public:
+  AppleAccelTableStaticTypeData(uint32_t Offset, uint16_t Tag,
+                                bool ObjCClassIsImplementation,
+                                uint32_t QualifiedNameHash)
+      : AppleAccelTableStaticOffsetData(Offset),
+        QualifiedNameHash(QualifiedNameHash), Tag(Tag),
+        ObjCClassIsImplementation(ObjCClassIsImplementation) {}
+
+  void emit(AsmPrinter *Asm) const override;
+
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
+                                  dwarf::DW_FORM_data4),
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
+      AppleAccelTableHeader::Atom(5, dwarf::DW_FORM_data1),
+      AppleAccelTableHeader::Atom(6, dwarf::DW_FORM_data4)};
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const override {
+    OS << "  Static Offset: " << Offset << "\n";
+    OS << "  QualifiedNameHash: " << format("%x\n", QualifiedNameHash) << "\n";
+    OS << "  Tag: " << dwarf::TagString(Tag) << "\n";
+    OS << "  ObjCClassIsImplementation: "
+       << (ObjCClassIsImplementation ? "true" : "false");
+    OS << "\n";
+  }
+#endif
+protected:
+  uint64_t order() const override { return Offset; }
+
+  uint32_t QualifiedNameHash;
+  uint16_t Tag;
+  bool ObjCClassIsImplementation;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_ASMPRINTER_DWARFACCELTABLE_H
