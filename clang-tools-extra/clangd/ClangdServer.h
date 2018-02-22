@@ -150,7 +150,8 @@ public:
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
-  void addDocument(PathRef File, StringRef Contents);
+  void addDocument(PathRef File, StringRef Contents,
+                   WantDiagnostics WD = WantDiagnostics::Auto);
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
@@ -278,6 +279,7 @@ private:
 
   void
   scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
+                          WantDiagnostics WD,
                           Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
 
   CompileArgsCache CompileArgs;

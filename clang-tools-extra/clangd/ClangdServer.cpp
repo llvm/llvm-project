@@ -110,11 +110,12 @@ void ClangdServer::setRootPath(PathRef RootPath) {
     this->RootPath = NewRootPath;
 }
 
-void ClangdServer::addDocument(PathRef File, StringRef Contents) {
+void ClangdServer::addDocument(PathRef File, StringRef Contents,
+                               WantDiagnostics WantDiags) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
-                          std::move(TaggedFS));
+                          WantDiags, std::move(TaggedFS));
 }
 
 void ClangdServer::removeDocument(PathRef File) {
@@ -133,7 +134,8 @@ void ClangdServer::forceReparse(PathRef File) {
   CompileArgs.invalidate(File);
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  scheduleReparseAndDiags(File, std::move(FileContents), std::move(TaggedFS));
+  scheduleReparseAndDiags(File, std::move(FileContents), WantDiagnostics::Yes,
+                          std::move(TaggedFS));
 }
 
 void ClangdServer::codeComplete(
@@ -519,20 +521,16 @@ void ClangdServer::findHover(
 }
 
 void ClangdServer::scheduleReparseAndDiags(
-    PathRef File, VersionedDraft Contents,
+    PathRef File, VersionedDraft Contents, WantDiagnostics WantDiags,
     Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
   tooling::CompileCommand Command = CompileArgs.getCompileCommand(File);
-
-  using OptDiags = llvm::Optional<std::vector<DiagWithFixIts>>;
 
   DocVersion Version = Contents.Version;
   Path FileStr = File.str();
   VFSTag Tag = std::move(TaggedFS.Tag);
 
-  auto Callback = [this, Version, FileStr, Tag](OptDiags Diags) {
-    if (!Diags)
-      return; // A new reparse was requested before this one completed.
-
+  auto Callback = [this, Version, FileStr,
+                   Tag](std::vector<DiagWithFixIts> Diags) {
     // We need to serialize access to resulting diagnostics to avoid calling
     // `onDiagnosticsReady` in the wrong order.
     std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
@@ -546,14 +544,14 @@ void ClangdServer::scheduleReparseAndDiags(
     LastReportedDiagsVersion = Version;
 
     DiagConsumer.onDiagnosticsReady(
-        FileStr, make_tagged(std::move(*Diags), std::move(Tag)));
+        FileStr, make_tagged(std::move(Diags), std::move(Tag)));
   };
 
   WorkScheduler.update(File,
                        ParseInputs{std::move(Command),
                                    std::move(TaggedFS.Value),
                                    std::move(*Contents.Draft)},
-                       std::move(Callback));
+                       WantDiags, std::move(Callback));
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

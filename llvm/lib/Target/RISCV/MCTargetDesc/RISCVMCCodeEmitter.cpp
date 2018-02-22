@@ -161,16 +161,24 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     case RISCVMCExpr::VK_RISCV_Invalid:
       llvm_unreachable("Unhandled fixup kind!");
     case RISCVMCExpr::VK_RISCV_LO:
-      FixupKind = MIFrm == RISCVII::InstFormatI ? RISCV::fixup_riscv_lo12_i
-                                                : RISCV::fixup_riscv_lo12_s;
+      if (MIFrm == RISCVII::InstFormatI)
+        FixupKind = RISCV::fixup_riscv_lo12_i;
+      else if (MIFrm == RISCVII::InstFormatS)
+        FixupKind = RISCV::fixup_riscv_lo12_s;
+      else
+        llvm_unreachable("VK_RISCV_LO used with unexpected instruction format");
       break;
     case RISCVMCExpr::VK_RISCV_HI:
       FixupKind = RISCV::fixup_riscv_hi20;
       break;
     case RISCVMCExpr::VK_RISCV_PCREL_LO:
-      FixupKind = MIFrm == RISCVII::InstFormatI
-                      ? RISCV::fixup_riscv_pcrel_lo12_i
-                      : RISCV::fixup_riscv_pcrel_lo12_s;
+      if (MIFrm == RISCVII::InstFormatI)
+        FixupKind = RISCV::fixup_riscv_pcrel_lo12_i;
+      else if (MIFrm == RISCVII::InstFormatS)
+        FixupKind = RISCV::fixup_riscv_pcrel_lo12_s;
+      else
+        llvm_unreachable(
+            "VK_RISCV_PCREL_LO used with unexpected instruction format");
       break;
     case RISCVMCExpr::VK_RISCV_PCREL_HI:
       FixupKind = RISCV::fixup_riscv_pcrel_hi20;

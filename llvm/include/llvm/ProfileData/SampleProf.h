@@ -383,6 +383,21 @@ public:
   /// Return the function name.
   const StringRef &getName() const { return Name; }
 
+  /// Returns the line offset to the start line of the subprogram.
+  /// We assume that a single function will not exceed 65535 LOC.
+  static unsigned getOffset(const DILocation *DIL);
+
+  /// \brief Get the FunctionSamples of the inline instance where DIL originates
+  /// from.
+  ///
+  /// The FunctionSamples of the instruction (Machine or IR) associated to
+  /// \p DIL is the inlined instance in which that instruction is coming from.
+  /// We traverse the inline stack of that instruction, and match it with the
+  /// tree nodes in the profile.
+  ///
+  /// \returns the FunctionSamples pointer to the inlined instance.
+  const FunctionSamples *findFunctionSamples(const DILocation *DIL) const;
+
 private:
   /// Mangled name of the function.
   StringRef Name;

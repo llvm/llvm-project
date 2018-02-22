@@ -218,7 +218,7 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - RegNum - The register to add
   GIR_AddRegister,
-  /// Add a a temporary register to the specified instruction
+  /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - TempRegID - The temporary register ID to add
   GIR_AddTempRegister,

@@ -162,8 +162,8 @@ struct Symbol {
     /// directly. When this is a URI, the exact #include path needs to be
     /// calculated according to the URI scheme.
     ///
-    /// If empty, FileURI in CanonicalDeclaration should be used to calculate
-    /// the #include path.
+    /// This is a canonical include for the symbol and can be different from
+    /// FileURI in the CanonicalDeclaration.
     llvm::StringRef IncludeHeader;
   };
 

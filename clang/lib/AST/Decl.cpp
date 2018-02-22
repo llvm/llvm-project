@@ -3625,6 +3625,12 @@ unsigned FunctionDecl::getODRHash() {
     }
   }
 
+  if (auto *FT = getInstantiatedFromMemberFunction()) {
+    HasODRHash = true;
+    ODRHash = FT->getODRHash();
+    return ODRHash;
+  }
+
   class ODRHash Hash;
   Hash.AddFunctionDecl(this);
   HasODRHash = true;

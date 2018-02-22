@@ -150,8 +150,9 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
   }
 }
 
-/// Gets a canonical include (<header>  or "header") for header of \p Loc.
-/// Returns None if the header has no canonical include.
+/// Gets a canonical include (URI of the header or <header>  or "header") for
+/// header of \p Loc.
+/// Returns None if fails to get include header for \p Loc.
 /// FIXME: we should handle .inc files whose symbols are expected be exported by
 /// their containing headers.
 llvm::Optional<std::string>
@@ -167,10 +168,8 @@ getIncludeHeader(const SourceManager &SM, SourceLocation Loc,
                  ? Mapped.str()
                  : ("\"" + Mapped + "\"").str();
   }
-  // If the header path is the same as the file path of the declaration, we skip
-  // storing the #include path; users can use the URI in declaration location to
-  // calculate the #include path.
-  return llvm::None;
+
+  return toURI(SM, SM.getFilename(Loc), Opts);
 }
 
 // Return the symbol location of the given declaration `D`.
