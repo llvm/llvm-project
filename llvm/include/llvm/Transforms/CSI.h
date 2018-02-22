@@ -257,7 +257,7 @@ public:
     return ConstantInt::get(getType(C), PropValue.Bits);
   }
 
-  /// Set the value of the MightDetach property.
+  /// Set the value of the MaySpawn property.
   void setMaySpawn(bool v) {
     PropValue.Fields.MaySpawn = v;
   }
@@ -295,6 +295,7 @@ public:
     // Must match the definition of property type in csi.h
     return CsiProperty::getCoercedType(
         C, StructType::get(IntegerType::get(C, PropBits.MaySpawn),
+                           IntegerType::get(C, PropBits.EHReturn),
                            IntegerType::get(C, PropBits.Padding)));
   }
   /// Return a constant value holding this property.
@@ -309,9 +310,13 @@ public:
     return ConstantInt::get(getType(C), PropValue.Bits);
   }
 
-  /// Set the value of the MightDetach property.
+  /// Set the value of the MaySpawn property.
   void setMaySpawn(bool v) {
     PropValue.Fields.MaySpawn = v;
+  }
+  /// Set the value of the EHReturn property.
+  void setEHReturn(bool v) {
+    PropValue.Fields.EHReturn = v;
   }
 
 private:
@@ -319,7 +324,8 @@ private:
     // Must match the definition of property type in csi.h
     struct {
       unsigned MaySpawn : 1;
-      uint64_t Padding : 63;
+      unsigned EHReturn : 1;
+      uint64_t Padding : 62;
     } Fields;
     uint64_t Bits;
   } Property;
@@ -329,11 +335,12 @@ private:
 
   typedef struct {
     int MaySpawn;
+    int EHReturn;
     int Padding;
   } PropertyBits;
 
   /// The number of bits representing each property.
-  static constexpr PropertyBits PropBits = { 1, (64-1) };
+  static constexpr PropertyBits PropBits = { 1, 1, (64-1-1) };
 };
 
 class CsiBBProperty : public CsiProperty {
