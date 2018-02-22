@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -192,7 +193,7 @@ private:
 
     HashData(StringRef S, DwarfAccelTable::DataArray &Data)
         : Str(S), Data(Data) {
-      HashValue = dwarf::djbHash(S);
+      HashValue = djbHash(S);
     }
 
 #ifndef NDEBUG
