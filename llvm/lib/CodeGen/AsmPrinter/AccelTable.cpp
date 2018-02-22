@@ -70,10 +70,10 @@ void AppleAccelTableHeader::setBucketAndHashCount(uint32_t HashCount) {
   Header.HashCount = HashCount;
 }
 
-constexpr AppleAccelTableHeader::Atom AppleAccelTableTypeData::Atoms[];
-constexpr AppleAccelTableHeader::Atom AppleAccelTableOffsetData::Atoms[];
-constexpr AppleAccelTableHeader::Atom AppleAccelTableStaticOffsetData::Atoms[];
-constexpr AppleAccelTableHeader::Atom AppleAccelTableStaticTypeData::Atoms[];
+constexpr const AppleAccelTableHeader::Atom AppleAccelTableTypeData::Atoms[];
+constexpr const AppleAccelTableHeader::Atom AppleAccelTableOffsetData::Atoms[];
+constexpr const AppleAccelTableHeader::Atom AppleAccelTableStaticOffsetData::Atoms[];
+constexpr const AppleAccelTableHeader::Atom AppleAccelTableStaticTypeData::Atoms[];
 
 void AppleAccelTableBase::emitHeader(AsmPrinter *Asm) { Header.emit(Asm); }
 
