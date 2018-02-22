@@ -1,8 +1,23 @@
-# Multiple inputs in flat mode
-RUN: not llvm-dsymutil -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET
-RUN: not llvm-dsymutil -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET --check-prefix=VERBOSE
+# Positive tests in regular and verbose mode.
+# RUN: llvm-dsymutil -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
+# RUN: llvm-dsymutil -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-SUCCESS --check-prefix=VERBOSE
 
-VERBOSE: Verifying DWARF for architecture: x86_64
-VERBOSE: error: DIE has invalid DW_AT_location encoding:
-VERBOSE: error: DIE has invalid DW_AT_location encoding:
-QUIET: error: verification failed
+# VERBOSE: Verifying DWARF for architecture: x86_64
+# QUIET-SUCCESS-NOT: error: verification failed
+
+# Negative tests in regular and verbose mode.
+# (Invalid object generated from ../Inputs/invalid.s by modified the low PC.)
+# RUN: not llvm-dsymutil -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-FAIL
+# RUN: not llvm-dsymutil -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-FAIL --check-prefix=VERBOSE
+
+# QUIET-FAIL: error: verification failed
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        invalid.o
+    timestamp:       1518197670
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000010, binAddr: 0x0000000100000FB0, size: 0x00000008 }
+      - { sym: _g, objAddr: 0x0000000000000000, binAddr: 0x0000000100000FA0, size: 0x00000010 }
+...
