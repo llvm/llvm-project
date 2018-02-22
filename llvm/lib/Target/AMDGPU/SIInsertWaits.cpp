@@ -218,7 +218,7 @@ Counters SIInsertWaits::getHwCounts(MachineInstr &MI) {
         unsigned Size = TRI->getRegSizeInBits(*RC);
         Result.Named.LGKM = Size > 32 ? 2 : 1;
       } else {
-        // s_dcache_inv etc. do not have a a destination register. Assume we
+        // s_dcache_inv etc. do not have a destination register. Assume we
         // want a wait on these.
         // XXX - What is the right value?
         Result.Named.LGKM = 1;

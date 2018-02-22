@@ -79,12 +79,12 @@ calculateIncludePath(llvm::StringRef File, llvm::StringRef Code,
   // added more than once.
   CI->getPreprocessorOpts().SingleFileParseMode = true;
 
+  // The diagnostic options must be set before creating a CompilerInstance.
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto Clang = prepareCompilerInstance(
       std::move(CI), /*Preamble=*/nullptr,
       llvm::MemoryBuffer::getMemBuffer(Code, File),
       std::make_shared<PCHContainerOperations>(), FS, IgnoreDiags);
-  auto &DiagOpts = Clang->getDiagnosticOpts();
-  DiagOpts.IgnoreWarnings = true;
 
   if (Clang->getFrontendOpts().Inputs.empty())
     return llvm::make_error<llvm::StringError>(

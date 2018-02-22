@@ -37,8 +37,9 @@ class TemplateParameterList;
 // Typically, only one Add* call is needed.  clear can be called to reuse the
 // object.
 class ODRHash {
-  // Use DenseMaps to convert between Decl and Type pointers and an index value.
-  llvm::DenseMap<const Decl*, unsigned> DeclMap;
+  // Use DenseMaps to convert from DeclarationName and Type pointers
+  // to an index value.
+  llvm::DenseMap<DeclarationName, unsigned> DeclNameMap;
   llvm::DenseMap<const Type*, unsigned> TypeMap;
 
   // Save space by processing bools at the end.

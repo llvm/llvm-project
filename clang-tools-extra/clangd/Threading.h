@@ -13,7 +13,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "llvm/ADT/Twine.h"
-#include <atomic>
 #include <cassert>
 #include <condition_variable>
 #include <memory>
@@ -23,24 +22,18 @@
 namespace clang {
 namespace clangd {
 
-/// A shared boolean flag indicating if the computation was cancelled.
-/// Once cancelled, cannot be returned to the previous state.
-class CancellationFlag {
+/// A threadsafe flag that is initially clear.
+class Notification {
 public:
-  CancellationFlag();
-
-  void cancel() {
-    assert(WasCancelled && "the object was moved");
-    WasCancelled->store(true);
-  }
-
-  bool isCancelled() const {
-    assert(WasCancelled && "the object was moved");
-    return WasCancelled->load();
-  }
+  // Sets the flag. No-op if already set.
+  void notify();
+  // Blocks until flag is set.
+  void wait() const;
 
 private:
-  std::shared_ptr<std::atomic<bool>> WasCancelled;
+  bool Notified = false;
+  mutable std::condition_variable CV;
+  mutable std::mutex Mu;
 };
 
 /// Limits the number of threads that can acquire the lock at the same time.

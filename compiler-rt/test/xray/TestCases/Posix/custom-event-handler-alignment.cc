@@ -4,7 +4,7 @@
 // RUN: %clangxx_xray -std=c++11 %s -o %t
 // RUN: XRAY_OPTIONS="patch_premain=false verbosity=1 xray_naive_log=false" \
 // RUN:     %run %t 2>&1
-// REQUIRES: x86_64-linux
+// REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 #include <xmmintrin.h>
 #include <stdio.h>

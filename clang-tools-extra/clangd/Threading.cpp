@@ -7,8 +7,18 @@
 namespace clang {
 namespace clangd {
 
-CancellationFlag::CancellationFlag()
-    : WasCancelled(std::make_shared<std::atomic<bool>>(false)) {}
+void Notification::notify() {
+  {
+    std::lock_guard<std::mutex> Lock(Mu);
+    Notified = true;
+  }
+  CV.notify_all();
+}
+
+void Notification::wait() const {
+  std::unique_lock<std::mutex> Lock(Mu);
+  CV.wait(Lock, [this] { return Notified; });
+}
 
 Semaphore::Semaphore(std::size_t MaxLocks) : FreeSlots(MaxLocks) {}
 

@@ -141,7 +141,8 @@ void ClangdLSPServer::onDocumentDidOpen(DidOpenTextDocumentParams &Params) {
   if (Params.metadata && !Params.metadata->extraFlags.empty())
     CDB.setExtraFlagsForFile(Params.textDocument.uri.file(),
                              std::move(Params.metadata->extraFlags));
-  Server.addDocument(Params.textDocument.uri.file(), Params.textDocument.text);
+  Server.addDocument(Params.textDocument.uri.file(), Params.textDocument.text,
+                     WantDiagnostics::Yes);
 }
 
 void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
@@ -150,7 +151,7 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
                       "can only apply one change at a time");
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file(),
-                     Params.contentChanges[0].text);
+                     Params.contentChanges[0].text, WantDiagnostics::Auto);
 }
 
 void ClangdLSPServer::onFileEvent(DidChangeWatchedFilesParams &Params) {

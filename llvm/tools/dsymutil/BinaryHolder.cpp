@@ -202,5 +202,5 @@ BinaryHolder::GetObjectFiles(StringRef Filename,
 
   return std::move(Objects);
 }
-}
-}
+} // namespace dsymutil
+} // namespace llvm
