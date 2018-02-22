@@ -331,7 +331,7 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
 llvm::Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
                                              uint32_t *Offset) {
   // Check that we can read the fixed-size part.
-  if (!AS.isValidOffset(*Offset + sizeof(Header) - 1))
+  if (!AS.isValidOffset(*Offset + sizeof(HeaderPOD) - 1))
     return make_error<StringError>("Section too small: cannot read header.",
                                    inconvertibleErrorCode());
 
