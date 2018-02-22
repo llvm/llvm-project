@@ -143,6 +143,9 @@ New Compiler Flags
   feature is enabled by default for AArch64 at the ``-O0`` optimization level.
   Support for other targets or optimization levels is currently incomplete.
 
+- New ``-nostdlib++`` flag to disable linking the C++ standard library. Similar
+  to using ``clang`` instead of ``clang++`` but doesn't disable ``-lm``.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -190,6 +193,8 @@ Windows Support
 
 - Clang now has initial, preliminary support for targeting Windows on
   ARM64.
+
+- clang-cl now exposes the ``--version`` flag.
 
 C Language Changes in Clang
 ---------------------------
