@@ -95,6 +95,12 @@ Improvements to Clang's diagnostics
 - ``-Wzero-as-null-pointer-constant`` was adjusted not to warn on null pointer
   constants that originate from system macros, except ``NULL`` macro.
 
+- ``-Wdelete-non-virtual-dtor`` can now fire in system headers, so that
+  ``std::unique_ptr<>`` deleting through a non-virtual dtor is now diagnosed.
+
+- ``-Wunreachable-code`` can now reason about ``__try``, ``__except`` and
+  ``__leave``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
