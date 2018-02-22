@@ -75,6 +75,15 @@ static opt<bool> FlatOut("flat",
                          init(false), cat(DsymCategory));
 static alias FlatOutA("f", desc("Alias for --flat"), aliasopt(FlatOut));
 
+static opt<bool> Minimize(
+    "minimize",
+    desc("When used when creating a dSYM file, this option will suppress\n"
+         "the emission of the .debug_inlines, .debug_pubnames, and\n"
+         ".debug_pubtypes sections since dsymutil currently has better\n"
+         "equivalents: .apple_names and .apple_types."),
+    init(false), cat(DsymCategory));
+static alias MinimizeA("z", desc("Alias for --minimize"), aliasopt(Minimize));
+
 static opt<unsigned> NumThreads(
     "num-threads",
     desc("Specifies the maximum number (n) of simultaneous threads to use\n"
@@ -302,6 +311,7 @@ int main(int argc, char **argv) {
   Options.Verbose = Verbose;
   Options.NoOutput = NoOutput;
   Options.NoODR = NoODR;
+  Options.Minimize = Minimize;
   Options.NoTimestamp = NoTimestamp;
   Options.PrependPath = OsoPrependPath;
 

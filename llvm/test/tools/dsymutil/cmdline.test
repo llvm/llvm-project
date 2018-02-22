@@ -6,6 +6,7 @@ HELP: Specific Options:
 HELP: -arch=<arch>
 HELP: -dump-debug-map
 HELP: -flat
+HELP: -minimize
 HELP: -no-odr
 HELP: -no-output
 HELP: -no-swiftmodule-timestamp
