@@ -54,8 +54,10 @@ typedef struct {
 typedef struct {
   // The function might have spawned.
   unsigned may_spawn : 1;
+  // This function exit returns an exception.
+  unsigned eh_return : 1;
   // Pad struct to 64 total bits.
-  uint64_t _padding : 63;
+  uint64_t _padding : 62;
 } func_exit_prop_t;
 
 typedef struct {
