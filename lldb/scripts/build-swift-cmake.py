@@ -205,7 +205,7 @@ else:
     elif args.use_system_debugserver:
         build_script_impl_arguments += ['--lldb-use-system-debugserver']
 
-args = ["python" + os.path.join("swift", "utils", "build-script")] + \
+args = ["python", os.path.join("swift", "utils", "build-script")] + \
     build_script_arguments + ["--"] + build_script_impl_arguments
 
 print(" ".join(args))
