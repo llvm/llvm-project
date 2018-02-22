@@ -181,19 +181,19 @@ TEST(FileIndexTest, IgnoreClassMembers) {
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("X"));
 }
 
-#ifndef LLVM_ON_WIN32
-TEST(FileIndexTest, CanonicalizeSystemHeader) {
+TEST(FileIndexTest, NoIncludeCollected) {
   FileIndex M;
-  std::string File = testPath("bits/basic_string");
-  M.update(File, build(File, "class string {};").getPointer());
+  M.update("f", build("f", "class string {};").getPointer());
 
   FuzzyFindRequest Req;
   Req.Query = "";
+  bool SeenSymbol = false;
   M.fuzzyFind(Req, [&](const Symbol &Sym) {
-    EXPECT_EQ(Sym.Detail->IncludeHeader, "<string>");
+    EXPECT_TRUE(Sym.Detail->IncludeHeader.empty());
+    SeenSymbol = true;
   });
+  EXPECT_TRUE(SeenSymbol);
 }
-#endif
 
 } // namespace
 } // namespace clangd

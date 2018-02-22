@@ -585,7 +585,7 @@ TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI),
-                                         IncludeHeader(""))));
+                                         IncludeHeader(TestHeaderURI))));
 }
 
 #ifndef LLVM_ON_WIN32
