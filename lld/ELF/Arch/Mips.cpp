@@ -296,7 +296,8 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
     write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   }
 
-  write32<E>(Buf + 24, 0x0320f809); // jalr  $25
+  uint32_t JalrInst = Config->ZHazardplt ? 0x0320fc09 : 0x0320f809;
+  write32<E>(Buf + 24, JalrInst); // jalr.hb $25 or jalr $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
   uint64_t GotPlt = InX::GotPlt->getVA();
@@ -330,9 +331,12 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
     return;
   }
 
+  uint32_t JrInst = isMipsR6() ? (Config->ZHazardplt ? 0x03200409 : 0x03200009)
+                               : (Config->ZHazardplt ? 0x03200408 : 0x03200008);
+
   write32<E>(Buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)
   write32<E>(Buf + 4, 0x8df90000); // l[wd] $25, %lo(.got.plt entry)($15)
-  write32<E>(Buf + 8, isMipsR6() ? 0x03200009 : 0x03200008);  // jr  $25
+  write32<E>(Buf + 8, JrInst);     // jr  $25 / jr.hb $25
   write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
   writeValue<E>(Buf, GotPltEntryAddr + 0x8000, 16, 16);
   writeValue<E>(Buf + 4, GotPltEntryAddr, 16, 0);

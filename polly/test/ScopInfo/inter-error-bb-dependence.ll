@@ -47,5 +47,5 @@ bb36:                                             ; preds = %bb33, %bb5
 
 
 ; CHECK:      SCoP begins here.
-; CHECK-NEXT: Low complexity assumption:       {  : 1 = 0 }
+; CHECK-NEXT: Low complexity assumption:       {  : false }
 ; CHECK-NEXT: SCoP ends here but was dismissed.

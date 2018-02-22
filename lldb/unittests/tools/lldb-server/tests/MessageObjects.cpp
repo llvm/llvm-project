@@ -9,14 +9,13 @@
 
 #include "MessageObjects.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/StringExtras.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
 using namespace lldb;
 using namespace llvm;
-using namespace llvm::support;
 namespace llgs_tests {
 
 Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
@@ -55,36 +54,50 @@ Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
 
 lldb::pid_t ProcessInfo::GetPid() const { return m_pid; }
 
-endianness ProcessInfo::GetEndian() const { return m_endian; }
+support::endianness ProcessInfo::GetEndian() const { return m_endian; }
 
 //====== ThreadInfo ============================================================
-ThreadInfo::ThreadInfo(StringRef name, StringRef reason,
-                       const RegisterMap &registers, unsigned int signal)
-    : m_name(name.str()), m_reason(reason.str()), m_registers(registers),
-      m_signal(signal) {}
+ThreadInfo::ThreadInfo(StringRef name, StringRef reason, RegisterMap registers,
+                       unsigned int signal)
+    : m_name(name.str()), m_reason(reason.str()),
+      m_registers(std::move(registers)), m_signal(signal) {}
 
-StringRef ThreadInfo::ReadRegister(unsigned int register_id) const {
-  return m_registers.lookup(register_id);
-}
-
-Expected<uint64_t>
-ThreadInfo::ReadRegisterAsUint64(unsigned int register_id) const {
-  uint64_t value;
-  std::string value_str(m_registers.lookup(register_id));
-  if (!llvm::to_integer(value_str, value, 16))
-    return make_parsing_error("ThreadInfo value for register {0}: {1}",
-                              register_id, value_str);
-
-  sys::swapByteOrder(value);
-  return value;
+const RegisterValue *ThreadInfo::ReadRegister(unsigned int Id) const {
+  auto Iter = m_registers.find(Id);
+  return Iter == m_registers.end() ? nullptr : &Iter->getSecond();
 }
 
 //====== JThreadsInfo ==========================================================
-Expected<JThreadsInfo> JThreadsInfo::Create(StringRef response,
-                                            endianness endian) {
+
+Expected<RegisterMap>
+JThreadsInfo::parseRegisters(const StructuredData::Dictionary &Dict,
+                             ArrayRef<RegisterInfo> RegInfos) {
+  RegisterMap Result;
+
+  auto KeysObj = Dict.GetKeys();
+  auto Keys = KeysObj->GetAsArray();
+  for (size_t i = 0; i < Keys->GetSize(); i++) {
+    StringRef KeyStr, ValueStr;
+    Keys->GetItemAtIndexAsString(i, KeyStr);
+    Dict.GetValueForKeyAsString(KeyStr, ValueStr);
+    unsigned int Register;
+    if (!llvm::to_integer(KeyStr, Register, 10))
+      return make_parsing_error("JThreadsInfo: register key[{0}]", i);
+
+    auto RegValOr =
+        parseRegisterValue(RegInfos[Register], ValueStr, support::big);
+    if (!RegValOr)
+      return RegValOr.takeError();
+    Result[Register] = std::move(*RegValOr);
+  }
+  return std::move(Result);
+}
+
+Expected<JThreadsInfo> JThreadsInfo::create(StringRef Response,
+                                            ArrayRef<RegisterInfo> RegInfos) {
   JThreadsInfo jthreads_info;
 
-  StructuredData::ObjectSP json = StructuredData::ParseJSON(response);
+  StructuredData::ObjectSP json = StructuredData::ParseJSON(Response);
   StructuredData::Array *array = json->GetAsArray();
   if (!array)
     return make_parsing_error("JThreadsInfo: JSON array");
@@ -108,23 +121,11 @@ Expected<JThreadsInfo> JThreadsInfo::Create(StringRef response,
     if (!register_dict)
       return make_parsing_error("JThreadsInfo: registers JSON obj");
 
-    RegisterMap registers;
-
-    auto keys_obj = register_dict->GetKeys();
-    auto keys = keys_obj->GetAsArray();
-    for (size_t i = 0; i < keys->GetSize(); i++) {
-      StringRef key_str, value_str;
-      keys->GetItemAtIndexAsString(i, key_str);
-      register_dict->GetValueForKeyAsString(key_str, value_str);
-      unsigned int register_id;
-      if (key_str.getAsInteger(10, register_id))
-        return make_parsing_error("JThreadsInfo: register key[{0}]", i);
-
-      registers[register_id] = value_str.str();
-    }
-
+    auto RegsOr = parseRegisters(*register_dict, RegInfos);
+    if (!RegsOr)
+      return RegsOr.takeError();
     jthreads_info.m_thread_infos[tid] =
-        ThreadInfo(name, reason, registers, signal);
+        ThreadInfo(name, reason, std::move(*RegsOr), signal);
   }
 
   return jthreads_info;
@@ -200,20 +201,72 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
   return std::move(Info);
 }
 
+Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
+                                           StringRef HexValue,
+                                           llvm::support::endianness Endian,
+                                           bool ZeroPad) {
+  SmallString<128> Storage;
+  if (ZeroPad && HexValue.size() < Info.byte_size * 2) {
+    Storage.insert(Storage.begin(), Info.byte_size * 2 - HexValue.size(), '0');
+    Storage += HexValue;
+    HexValue = Storage;
+  }
+
+  SmallVector<uint8_t, 64> Bytes(HexValue.size() / 2);
+  StringExtractor(HexValue).GetHexBytes(Bytes, '\xcc');
+  RegisterValue Value;
+  Status ST;
+  Value.SetFromMemoryData(
+      &Info, Bytes.data(), Bytes.size(),
+      Endian == support::little ? eByteOrderLittle : eByteOrderBig, ST);
+  if (ST.Fail())
+    return ST.ToError();
+  return Value;
+}
+
 //====== StopReply =============================================================
 Expected<std::unique_ptr<StopReply>>
-StopReply::create(StringRef Response, llvm::support::endianness Endian) {
+StopReply::create(StringRef Response, llvm::support::endianness Endian,
+                  ArrayRef<RegisterInfo> RegInfos) {
   if (Response.size() < 3)
     return make_parsing_error("StopReply: Invalid packet");
   if (Response.consume_front("T"))
-    return StopReplyStop::create(Response, Endian);
+    return StopReplyStop::create(Response, Endian, RegInfos);
   if (Response.consume_front("W"))
     return StopReplyExit::create(Response);
   return make_parsing_error("StopReply: Invalid packet");
 }
 
+Expected<RegisterMap> StopReplyStop::parseRegisters(
+    const StringMap<SmallVector<StringRef, 2>> &Elements,
+    support::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
+
+  RegisterMap Result;
+  for (const auto &E : Elements) {
+    StringRef Key = E.getKey();
+    const auto &Val = E.getValue();
+    if (Key.size() != 2)
+      continue;
+
+    unsigned int Reg;
+    if (!to_integer(Key, Reg, 16))
+      continue;
+
+    if (Val.size() != 1)
+      return make_parsing_error(
+          "StopReplyStop: multiple entries for register field [{0:x}]", Reg);
+
+    auto RegValOr = parseRegisterValue(RegInfos[Reg], Val[0], Endian);
+    if (!RegValOr)
+      return RegValOr.takeError();
+    Result[Reg] = std::move(*RegValOr);
+  }
+  return std::move(Result);
+}
+
 Expected<std::unique_ptr<StopReplyStop>>
-StopReplyStop::create(StringRef Response, llvm::support::endianness Endian) {
+StopReplyStop::create(StringRef Response, support::endianness Endian,
+                      ArrayRef<RegisterInfo> RegInfos) {
   unsigned int Signal;
   StringRef SignalStr = Response.take_front(2);
   Response = Response.drop_front(2);
@@ -244,40 +297,32 @@ StopReplyStop::create(StringRef Response, llvm::support::endianness Endian) {
   if (Threads.size() != Pcs.size())
     return make_parsing_error("StopReply: thread/PC count mismatch");
 
-  U64Map ThreadPcs;
+  RegisterMap ThreadPcs;
+  const RegisterInfo *PcInfo = find_if(RegInfos, [](const RegisterInfo &Info) {
+    return Info.kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC;
+  });
+  assert(PcInfo);
+
   for (auto ThreadPc : zip(Threads, Pcs)) {
     lldb::tid_t Id;
-    uint64_t Pc;
     if (!to_integer(std::get<0>(ThreadPc), Id, 16))
       return make_parsing_error("StopReply: Thread id '{0}'",
                                 std::get<0>(ThreadPc));
-    if (!to_integer(std::get<1>(ThreadPc), Pc, 16))
-      return make_parsing_error("StopReply Thread Pc '{0}'",
-                                std::get<1>(ThreadPc));
 
-    ThreadPcs[Id] = Pc;
+    auto PcOr = parseRegisterValue(*PcInfo, std::get<1>(ThreadPc), Endian,
+                                   /*ZeroPad*/ true);
+    if (!PcOr)
+      return PcOr.takeError();
+    ThreadPcs[Id] = std::move(*PcOr);
   }
 
-  RegisterMap Registers;
-  for (const auto &E : Elements) {
-    StringRef Key = E.getKey();
-    const auto &Val = E.getValue();
-    if (Key.size() != 2)
-      continue;
+  auto RegistersOr = parseRegisters(Elements, Endian, RegInfos);
+  if (!RegistersOr)
+    return RegistersOr.takeError();
 
-    unsigned int Reg;
-    if (!to_integer(Key, Reg, 16))
-      continue;
-
-    if (Val.size() != 1)
-      return make_parsing_error(
-          "StopReply: multiple entries for register field [{0:x}]", Reg);
-
-    Registers[Reg] = Val[0].str();
-  }
-
-  return llvm::make_unique<StopReplyStop>(Signal, Thread, Name, ThreadPcs,
-                                          Registers, Reason);
+  return llvm::make_unique<StopReplyStop>(Signal, Thread, Name,
+                                          std::move(ThreadPcs),
+                                          std::move(*RegistersOr), Reason);
 }
 
 Expected<std::unique_ptr<StopReplyExit>>
@@ -319,3 +364,12 @@ StringMap<SmallVector<StringRef, 2>> SplitPairList(StringRef str) {
   return pairs;
 }
 } // namespace llgs_tests
+
+std::ostream &lldb_private::operator<<(std::ostream &OS,
+                                       const RegisterValue &RegVal) {
+  ArrayRef<uint8_t> Bytes(static_cast<const uint8_t *>(RegVal.GetBytes()),
+                          RegVal.GetByteSize());
+  return OS << formatv("RegisterValue[{0}]: {1:@[x-2]}", RegVal.GetByteSize(),
+                       make_range(Bytes.begin(), Bytes.end()))
+                   .str();
+}

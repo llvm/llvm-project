@@ -73,7 +73,6 @@ __isl_give isl_aff *isl_aff_reset_domain_space(__isl_take isl_aff *aff,
 __isl_give isl_aff *isl_aff_realign_domain(__isl_take isl_aff *aff,
 	__isl_take isl_reordering *r);
 
-int isl_aff_get_constant(__isl_keep isl_aff *aff, isl_int *v);
 __isl_give isl_aff *isl_aff_set_constant(__isl_take isl_aff *aff, isl_int v);
 __isl_give isl_aff *isl_aff_set_coefficient(__isl_take isl_aff *aff,
 	enum isl_dim_type type, int pos, isl_int v);
@@ -102,6 +101,7 @@ __isl_give isl_pw_aff *isl_pw_aff_set_rational(__isl_take isl_pw_aff *pwaff);
 __isl_give isl_pw_aff_list *isl_pw_aff_list_set_rational(
 	__isl_take isl_pw_aff_list *list);
 
+__isl_give isl_aff *isl_aff_scale_down(__isl_take isl_aff *aff, isl_int f);
 __isl_give isl_pw_aff *isl_pw_aff_scale(__isl_take isl_pw_aff *pwaff,
 	isl_int f);
 __isl_give isl_pw_aff *isl_pw_aff_scale_down(__isl_take isl_pw_aff *pwaff,

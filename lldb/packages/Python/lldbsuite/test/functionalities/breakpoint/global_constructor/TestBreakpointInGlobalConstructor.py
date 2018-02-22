@@ -29,8 +29,9 @@ class TestBreakpointInGlobalConstructors(TestBase):
 
         bp_main = lldbutil.run_break_set_by_file_and_line(
             self, 'main.cpp', self.line_main)
+
         bp_foo = lldbutil.run_break_set_by_file_and_line(
-            self, 'foo.cpp', self.line_foo)
+            self, 'foo.cpp', self.line_foo, num_expected_locations=-2)
 
         process = target.LaunchSimple(
             None, env, self.get_process_working_directory())

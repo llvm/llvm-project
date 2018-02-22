@@ -870,38 +870,6 @@ static __isl_give UNION *FN(UNION,negate_type)(__isl_take UNION *u)
 }
 #endif
 
-static __isl_give PART *FN(UNION,mul_isl_int_entry)(__isl_take PART *part,
-	void *user)
-{
-	isl_int *v = user;
-
-	return FN(PW,mul_isl_int)(part, *v);
-}
-
-__isl_give UNION *FN(UNION,mul_isl_int)(__isl_take UNION *u, isl_int v)
-{
-	if (isl_int_is_one(v))
-		return u;
-
-	if (DEFAULT_IS_ZERO && u && isl_int_is_zero(v)) {
-		UNION *zero;
-		isl_space *dim = FN(UNION,get_space)(u);
-#ifdef HAS_TYPE
-		zero = FN(UNION,ZERO)(dim, u->type);
-#else
-		zero = FN(UNION,ZERO)(dim);
-#endif
-		FN(UNION,free)(u);
-		return zero;
-	}
-
-	u = FN(UNION,transform_inplace)(u, &FN(UNION,mul_isl_int_entry), &v);
-	if (isl_int_is_neg(v))
-		u = FN(UNION,negate_type)(u);
-
-	return u;
-}
-
 /* Multiply "part" by the isl_val "user" and return the result.
  */
 static __isl_give PART *FN(UNION,scale_val_entry)(__isl_take PART *part,
