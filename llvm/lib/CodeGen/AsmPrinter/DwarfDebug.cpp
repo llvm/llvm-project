@@ -258,23 +258,12 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
          "conflicting locations for variable");
 }
 
-static const DwarfAccelTable::Atom TypeAtoms[] = {
-    DwarfAccelTable::Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
-    DwarfAccelTable::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
-    DwarfAccelTable::Atom(dwarf::DW_ATOM_type_flags, dwarf::DW_FORM_data1)};
-
 DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
       InfoHolder(A, "info_string", DIEValueAllocator),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
-      IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
-      AccelNames(DwarfAccelTable::Atom(dwarf::DW_ATOM_die_offset,
-                                       dwarf::DW_FORM_data4)),
-      AccelObjC(DwarfAccelTable::Atom(dwarf::DW_ATOM_die_offset,
-                                      dwarf::DW_FORM_data4)),
-      AccelNamespace(DwarfAccelTable::Atom(dwarf::DW_ATOM_die_offset,
-                                           dwarf::DW_FORM_data4)),
-      AccelTypes(TypeAtoms) {
+      IsDarwin(A->TM.getTargetTriple().isOSDarwin()), AccelNames(), AccelObjC(),
+      AccelNamespace(), AccelTypes() {
   const Triple &TT = Asm->TM.getTargetTriple();
 
   // Make sure we know our "debugger tuning."  The target option takes
@@ -1426,13 +1415,14 @@ void DwarfDebug::emitStringOffsetsTableHeader() {
       Asm->getObjFileLowering().getDwarfStrOffSection());
 }
 
-void DwarfDebug::emitAccel(DwarfAccelTable &Accel, MCSection *Section,
+template <typename AccelTableT>
+void DwarfDebug::emitAccel(AccelTableT &Accel, MCSection *Section,
                            StringRef TableName) {
-  Accel.FinalizeTable(Asm, TableName);
+  Accel.finalizeTable(Asm, TableName);
   Asm->OutStreamer->SwitchSection(Section);
 
   // Emit the full data.
-  Accel.emit(Asm, Section->getBeginSymbol(), this);
+  Accel.emit(Asm, Section->getBeginSymbol());
 }
 
 // Emit visible names into a hashed accelerator table section.
@@ -2211,25 +2201,25 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 void DwarfDebug::addAccelName(StringRef Name, const DIE &Die) {
   if (!useDwarfAccelTables())
     return;
-  AccelNames.AddName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  AccelNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
 }
 
 void DwarfDebug::addAccelObjC(StringRef Name, const DIE &Die) {
   if (!useDwarfAccelTables())
     return;
-  AccelObjC.AddName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  AccelObjC.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
 }
 
 void DwarfDebug::addAccelNamespace(StringRef Name, const DIE &Die) {
   if (!useDwarfAccelTables())
     return;
-  AccelNamespace.AddName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  AccelNamespace.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
 }
 
 void DwarfDebug::addAccelType(StringRef Name, const DIE &Die, char Flags) {
   if (!useDwarfAccelTables())
     return;
-  AccelTypes.AddName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  AccelTypes.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
 }
 
 uint16_t DwarfDebug::getDwarfVersion() const {
