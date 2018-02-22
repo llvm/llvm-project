@@ -342,6 +342,7 @@ bool ASTWorker::shouldSkipHeadLocked() const {
         return true; // Prefer later diagnostics.
     return false;
   }
+  llvm_unreachable("Unknown WantDiagnostics");
 }
 
 bool ASTWorker::blockUntilIdle(Deadline Timeout) const {
