@@ -244,7 +244,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def nsdata_data_formatter_commands(self):
         self.expect(
-            'frame variable immutableData mutableData data_ref mutable_data_ref mutable_string_ref',
+            'frame variable immutableData mutableData data_ref mutable_data_ref mutable_string_ref concreteData concreteMutableData',
             substrs=[
                 '(NSData *) immutableData = ',
                 ' 4 bytes',
@@ -255,7 +255,12 @@ class ObjCDataFormatterTestCase(TestBase):
                 '(CFMutableDataRef) mutable_data_ref = ',
                 '@"5 bytes"',
                 '(CFMutableStringRef) mutable_string_ref = ',
-                ' @"Wish ya knew"'])
+                ' @"Wish ya knew"',
+                '(NSData *) concreteData = ',
+                ' 100000 bytes',
+                '(NSMutableData *) concreteMutableData = ',
+                ' 100000 bytes'])
+
 
     def nsurl_data_formatter_commands(self):
         self.expect(
