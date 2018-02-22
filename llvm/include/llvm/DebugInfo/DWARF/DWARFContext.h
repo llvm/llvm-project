@@ -69,10 +69,10 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugFrame> DebugFrame;
   std::unique_ptr<DWARFDebugFrame> EHFrame;
   std::unique_ptr<DWARFDebugMacro> Macro;
-  std::unique_ptr<DWARFAcceleratorTable> AppleNames;
-  std::unique_ptr<DWARFAcceleratorTable> AppleTypes;
-  std::unique_ptr<DWARFAcceleratorTable> AppleNamespaces;
-  std::unique_ptr<DWARFAcceleratorTable> AppleObjC;
+  std::unique_ptr<AppleAcceleratorTable> AppleNames;
+  std::unique_ptr<AppleAcceleratorTable> AppleTypes;
+  std::unique_ptr<AppleAcceleratorTable> AppleNamespaces;
+  std::unique_ptr<AppleAcceleratorTable> AppleObjC;
 
   DWARFUnitSection<DWARFCompileUnit> DWOCUs;
   std::deque<DWARFUnitSection<DWARFTypeUnit>> DWOTUs;
@@ -243,16 +243,16 @@ public:
   const DWARFDebugMacro *getDebugMacro();
 
   /// Get a reference to the parsed accelerator table object.
-  const DWARFAcceleratorTable &getAppleNames();
+  const AppleAcceleratorTable &getAppleNames();
 
   /// Get a reference to the parsed accelerator table object.
-  const DWARFAcceleratorTable &getAppleTypes();
+  const AppleAcceleratorTable &getAppleTypes();
 
   /// Get a reference to the parsed accelerator table object.
-  const DWARFAcceleratorTable &getAppleNamespaces();
+  const AppleAcceleratorTable &getAppleNamespaces();
 
   /// Get a reference to the parsed accelerator table object.
-  const DWARFAcceleratorTable &getAppleObjC();
+  const AppleAcceleratorTable &getAppleObjC();
 
   /// Get a pointer to a parsed line table corresponding to a compile unit.
   const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *cu);
