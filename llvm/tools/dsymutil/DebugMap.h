@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -107,7 +108,7 @@ public:
   DebugMapObject &
   addDebugMapObject(StringRef ObjectFilePath,
                     sys::TimePoint<std::chrono::seconds> Timestamp,
-                    uint8_t Type);
+                    uint8_t Type = llvm::MachO::N_OSO);
 
   const Triple &getTriple() const { return BinaryTriple; }
 
