@@ -32,6 +32,14 @@ struct InputsAndPreamble {
   const PreambleData *Preamble;
 };
 
+/// Determines whether diagnostics should be generated for a file snapshot.
+enum class WantDiagnostics {
+  Yes,  /// Diagnostics must be generated for this snapshot.
+  No,   /// Diagnostics must not be generated for this snapshot.
+  Auto, /// Diagnostics must be generated for this snapshot or a subsequent one,
+        /// within a bounded amount of time.
+};
+
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
 /// preambles and ASTs) for opened files.
 /// TUScheduler is not thread-safe, only one thread should be providing updates
@@ -51,9 +59,8 @@ public:
   /// Schedule an update for \p File. Adds \p File to a list of tracked files if
   /// \p File was not part of it before.
   /// FIXME(ibiryukov): remove the callback from this function.
-  void update(PathRef File, ParseInputs Inputs,
-              UniqueFunction<void(llvm::Optional<std::vector<DiagWithFixIts>>)>
-                  OnUpdated);
+  void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD,
+              UniqueFunction<void(std::vector<DiagWithFixIts>)> OnUpdated);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
   /// resources.

@@ -696,11 +696,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     Input.Preamble->CanReuse(*CI, ContentsBuffer.get(), Bounds,
                              Input.VFS.get());
   }
+  // The diagnostic options must be set before creating a CompilerInstance.
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto Clang = prepareCompilerInstance(
       std::move(CI), Input.Preamble, std::move(ContentsBuffer),
       std::move(Input.PCHs), std::move(Input.VFS), DummyDiagsConsumer);
-  auto &DiagOpts = Clang->getDiagnosticOpts();
-  DiagOpts.IgnoreWarnings = true;
 
   // Disable typo correction in Sema.
   Clang->getLangOpts().SpellChecking = false;
