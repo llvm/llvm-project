@@ -56,6 +56,9 @@ Non-comprehensive list of changes in this release
 
 * Significantly improved quality of CodeView debug info for Windows.
 
+* Preliminary support for Sanitizers and sibling features on X86(_64) NetBSD
+  (ASan, UBsan, TSan, MSan, SafeStack, libFuzzer).
+
 * Note..
 
 .. NOTE
@@ -132,10 +135,22 @@ During this release the SystemZ target has:
 Changes to the X86 Target
 -------------------------
 
-During this release ...
+During this release the X86 target has:
 
-* Got support for enabling SjLj exception handling on platforms where it
+* Added support for enabling SjLj exception handling on platforms where it
   isn't the default.
+
+* Added intrinsics for Intel Extensions: VAES, GFNI, VPCLMULQDQ, AVX512VBMI2, AVX512BITALG, AVX512VNNI.
+
+* Added support for Intel Icelake CPU.
+
+* Added instruction scheduling information for Intel Sandy Bridge, Ivy Bridge, Haswell, Broadwell, and Skylake CPUs.
+
+* Improved codegen of data being transferred between GPRs and K-registers.
+
+* Improved llvm-mc's disassembler for some EVEX encoded instructions.
+
+* Improved codegen for vector truncations.
 
 Changes to the AMDGPU Target
 -----------------------------
