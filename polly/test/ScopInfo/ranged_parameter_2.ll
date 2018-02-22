@@ -4,7 +4,7 @@
 ; REQUIRES: asserts
 
 ; CHECK: Region: %bb1---%bb16
-; CHECK:   [n] -> {  : 1 = 0 }
+; CHECK:   [n] -> {  : false }
 
 ; This test case at some point caused an assertion when modeling a scop, due
 ; to use constructing an invalid lower and upper bound for the range of

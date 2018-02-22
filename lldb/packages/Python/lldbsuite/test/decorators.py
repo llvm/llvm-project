@@ -437,12 +437,6 @@ def expectedFlakey(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
-def expectedFlakeyDwarf(bugnumber=None):
-    def fn(self):
-        return self.getDebugInfo() == "dwarf"
-    return expectedFlakey(fn, bugnumber)
-
-
 def expectedFlakeyDsym(bugnumber=None):
     def fn(self):
         return self.getDebugInfo() == "dwarf"
@@ -475,27 +469,6 @@ def expectedFlakeyLinux(bugnumber=None, compilers=None):
 
 def expectedFlakeyNetBSD(bugnumber=None, compilers=None):
     return expectedFlakeyOS(['netbsd'], bugnumber, compilers)
-
-
-def expectedFlakeyCompiler(compiler, compiler_version=None, bugnumber=None):
-    if compiler_version is None:
-        compiler_version = ['=', None]
-
-    def fn(self):
-        return compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version)
-    return expectedFlakey(fn, bugnumber)
-
-# @expectedFlakeyClang('bugnumber', ['<=', '3.4'])
-
-
-def expectedFlakeyClang(bugnumber=None, compiler_version=None):
-    return expectedFlakeyCompiler('clang', compiler_version, bugnumber)
-
-# @expectedFlakeyGcc('bugnumber', ['<=', '3.4'])
-
-
-def expectedFlakeyGcc(bugnumber=None, compiler_version=None):
-    return expectedFlakeyCompiler('gcc', compiler_version, bugnumber)
 
 
 def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
@@ -790,7 +763,6 @@ def skipUnlessAddressSanitizer(func):
         return None
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
 
-
 def skipUnlessSwiftAddressSanitizer(func):
     """Decorate the item to skip test unless Swift -sanitize=address is supported."""
 
@@ -821,3 +793,11 @@ def skipUnlessSwiftThreadSanitizer(func):
             return "Compiler cannot compile with -sanitize=thread"
         return None
     return skipTestIfFn(is_swift_compiler_with_thread_sanitizer)(func)
+
+def skipIfXmlSupportMissing(func):
+    config = lldb.SBDebugger.GetBuildConfiguration()
+    xml = config.GetValueForKey("xml")
+
+    fail_value = True # More likely to notice if something goes wrong
+    have_xml = xml.GetValueForKey("value").GetBooleanValue(fail_value)
+    return unittest2.skipIf(not have_xml, "requires xml support")(func)

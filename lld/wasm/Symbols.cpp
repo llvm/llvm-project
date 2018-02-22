@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Symbols.h"
-
 #include "Config.h"
 #include "InputChunks.h"
 #include "InputFiles.h"
@@ -23,27 +22,36 @@ using namespace lld;
 using namespace lld::wasm;
 
 DefinedFunction *WasmSym::CallCtors;
-DefinedGlobal *WasmSym::DsoHandle;
-DefinedGlobal *WasmSym::DataEnd;
-DefinedGlobal *WasmSym::HeapBase;
-DefinedGlobal *WasmSym::StackPointer;
+DefinedData *WasmSym::DsoHandle;
+DefinedData *WasmSym::DataEnd;
+DefinedData *WasmSym::HeapBase;
+DefinedData *WasmSym::StackPointer;
 
 bool Symbol::hasOutputIndex() const {
-  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
-    return F->hasOutputIndex();
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    if (F->Function)
+      return F->Function->hasOutputIndex();
   return OutputIndex != INVALID_INDEX;
 }
 
 uint32_t Symbol::getOutputIndex() const {
-  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
-    return F->getOutputIndex();
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    if (F->Function)
+      return F->Function->getOutputIndex();
   assert(OutputIndex != INVALID_INDEX);
   return OutputIndex;
 }
 
+InputChunk *Symbol::getChunk() const {
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    return F->Function;
+  if (auto *G = dyn_cast<DefinedData>(this))
+    return G->Segment;
+  return nullptr;
+}
+
 void Symbol::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
-  assert(!dyn_cast_or_null<InputFunction>(Chunk));
   assert(OutputIndex == INVALID_INDEX);
   OutputIndex = Index;
 }
@@ -69,20 +77,16 @@ void Symbol::setHidden(bool IsHidden) {
     Flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
 }
 
-FunctionSymbol::FunctionSymbol(StringRef Name, Kind K, uint32_t Flags,
-                               InputFile *F, InputFunction *Function)
-    : Symbol(Name, K, Flags, F, Function), FunctionType(&Function->Signature) {}
-
 uint32_t FunctionSymbol::getTableIndex() const {
-  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
-    return F->getTableIndex();
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    return F->Function->getTableIndex();
   assert(TableIndex != INVALID_INDEX);
   return TableIndex;
 }
 
 bool FunctionSymbol::hasTableIndex() const {
-  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
-    return F->hasTableIndex();
+  if (auto *F = dyn_cast<DefinedFunction>(this))
+    return F->Function->hasTableIndex();
   return TableIndex != INVALID_INDEX;
 }
 
@@ -90,8 +94,8 @@ void FunctionSymbol::setTableIndex(uint32_t Index) {
   // For imports, we set the table index here on the Symbol; for defined
   // functions we set the index on the InputFunction so that we don't export
   // the same thing twice (keeps the table size down).
-  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk)) {
-    F->setTableIndex(Index);
+  if (auto *F = dyn_cast<DefinedFunction>(this)) {
+    F->Function->setTableIndex(Index);
     return;
   }
   DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
@@ -99,13 +103,18 @@ void FunctionSymbol::setTableIndex(uint32_t Index) {
   TableIndex = Index;
 }
 
-uint32_t DefinedGlobal::getVirtualAddress() const {
+DefinedFunction::DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
+                                 InputFunction *Function)
+    : FunctionSymbol(Name, DefinedFunctionKind, Flags, F,
+                     Function ? &Function->Signature : nullptr),
+      Function(Function) {}
+
+uint32_t DefinedData::getVirtualAddress() const {
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  return Chunk ? dyn_cast<InputSegment>(Chunk)->translateVA(VirtualAddress)
-               : VirtualAddress;
+  return Segment ? Segment->translateVA(VirtualAddress) : VirtualAddress;
 }
 
-void DefinedGlobal::setVirtualAddress(uint32_t Value) {
+void DefinedData::setVirtualAddress(uint32_t Value) {
   DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
   VirtualAddress = Value;
 }
@@ -121,12 +130,12 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
   switch (Kind) {
   case wasm::Symbol::DefinedFunctionKind:
     return "DefinedFunction";
-  case wasm::Symbol::DefinedGlobalKind:
-    return "DefinedGlobal";
+  case wasm::Symbol::DefinedDataKind:
+    return "DefinedData";
   case wasm::Symbol::UndefinedFunctionKind:
     return "UndefinedFunction";
-  case wasm::Symbol::UndefinedGlobalKind:
-    return "UndefinedGlobal";
+  case wasm::Symbol::UndefinedDataKind:
+    return "UndefinedData";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
   }

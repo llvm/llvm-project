@@ -14,7 +14,8 @@ namespace lld {
 namespace wasm {
 
 void markLive();
-}
+
+} // namespace wasm
 } // namespace lld
 
 #endif // LLD_WASM_MARKLIVE_H

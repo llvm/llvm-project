@@ -371,6 +371,57 @@ __isl_give isl_space *isl_local_space_get_space(__isl_keep isl_local_space *ls)
 	return isl_space_copy(ls->dim);
 }
 
+/* Return the space of "ls".
+ * This may be either a copy or the space itself
+ * if there is only one reference to "ls".
+ * This allows the space to be modified inplace
+ * if both the local space and its space have only a single reference.
+ * The caller is not allowed to modify "ls" between this call and
+ * a subsequent call to isl_local_space_restore_space.
+ * The only exception is that isl_local_space_free can be called instead.
+ */
+__isl_give isl_space *isl_local_space_take_space(__isl_keep isl_local_space *ls)
+{
+	isl_space *space;
+
+	if (!ls)
+		return NULL;
+	if (ls->ref != 1)
+		return isl_local_space_get_space(ls);
+	space = ls->dim;
+	ls->dim = NULL;
+	return space;
+}
+
+/* Set the space of "ls" to "space", where the space of "ls" may be missing
+ * due to a preceding call to isl_local_space_take_space.
+ * However, in this case, "ls" only has a single reference and
+ * then the call to isl_local_space_cow has no effect.
+ */
+__isl_give isl_local_space *isl_local_space_restore_space(
+	__isl_take isl_local_space *ls, __isl_take isl_space *space)
+{
+	if (!ls || !space)
+		goto error;
+
+	if (ls->dim == space) {
+		isl_space_free(space);
+		return ls;
+	}
+
+	ls = isl_local_space_cow(ls);
+	if (!ls)
+		goto error;
+	isl_space_free(ls->dim);
+	ls->dim = space;
+
+	return ls;
+error:
+	isl_local_space_free(ls);
+	isl_space_free(space);
+	return NULL;
+}
+
 /* Replace the identifier of the tuple of type "type" by "id".
  */
 __isl_give isl_local_space *isl_local_space_set_tuple_id(
@@ -418,6 +469,20 @@ __isl_give isl_local_space *isl_local_space_set_dim_id(
 error:
 	isl_id_free(id);
 	return NULL;
+}
+
+/* Construct a zero-dimensional local space with the given parameter domain.
+ */
+__isl_give isl_local_space *isl_local_space_set_from_params(
+	__isl_take isl_local_space *ls)
+{
+	isl_space *space;
+
+	space = isl_local_space_take_space(ls);
+	space = isl_space_set_from_params(space);
+	ls = isl_local_space_restore_space(ls, space);
+
+	return ls;
 }
 
 __isl_give isl_local_space *isl_local_space_reset_space(

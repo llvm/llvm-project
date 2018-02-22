@@ -9,7 +9,9 @@
 
 #include "Driver.h"
 #include "Config.h"
+#include "ICF.h"
 #include "InputFiles.h"
+#include "MarkLive.h"
 #include "MinGW.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -37,9 +39,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include <algorithm>
-#include <memory>
-
 #include <future>
+#include <memory>
 
 using namespace llvm;
 using namespace llvm::object;

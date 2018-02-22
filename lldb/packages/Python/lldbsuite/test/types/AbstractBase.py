@@ -95,7 +95,7 @@ class GenericTester(TestBase):
         if lldb.remote_platform:
             # process launch -o requires a path that is valid on the target
             self.assertIsNotNone(lldb.remote_platform.GetWorkingDirectory())
-            remote_path = lldbutil.append_to_process_working_directory(
+            remote_path = lldbutil.append_to_process_working_directory(self,
                 "lldb-stdout-redirect.txt")
             self.runCmd(
                 'process launch -- {remote}'.format(remote=remote_path))

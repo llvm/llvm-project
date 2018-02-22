@@ -12,7 +12,6 @@
 
 #include "Config.h"
 #include "lld/Common/ErrorHandler.h"
-
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -23,7 +22,6 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/Threading.h"
-
 #include <map>
 
 namespace llvm {

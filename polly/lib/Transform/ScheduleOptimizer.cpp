@@ -1101,7 +1101,7 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
   // matrix B, the second operand of the matrix multiplication.
   Node = Node.parent().parent().parent().parent().parent().parent();
   Node = isl::manage(isl_schedule_node_band_split(Node.release(), 2)).child(0);
-  auto AccRel = getMatMulAccRel(isl::manage(MapOldIndVar.copy()), 3, 7);
+  auto AccRel = getMatMulAccRel(MapOldIndVar, 3, 7);
   unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
   unsigned SecondDimSize = MacroParams.Kc;
   unsigned ThirdDimSize = MicroParams.Nr;
@@ -1122,15 +1122,15 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
   auto DomainId = Domain.get_tuple_id();
   auto *NewStmt = Stmt->getParent()->addScopStmt(
       OldAcc, MMI.B->getLatestAccessRelation(), Domain);
-  ExtMap = ExtMap.set_tuple_id(isl::dim::out, isl::manage(DomainId.copy()));
-  ExtMap = ExtMap.intersect_range(isl::manage(Domain.copy()));
+  ExtMap = ExtMap.set_tuple_id(isl::dim::out, DomainId);
+  ExtMap = ExtMap.intersect_range(Domain);
   ExtMap = ExtMap.set_tuple_id(isl::dim::out, NewStmt->getDomainId());
   Node = createExtensionNode(Node, ExtMap);
 
   // Create a copy statement that corresponds to the memory access
   // to the matrix A, the first operand of the matrix multiplication.
   Node = Node.child(0);
-  AccRel = getMatMulAccRel(isl::manage(MapOldIndVar.copy()), 4, 6);
+  AccRel = getMatMulAccRel(MapOldIndVar, 4, 6);
   FirstDimSize = MacroParams.Mc / MicroParams.Mr;
   ThirdDimSize = MicroParams.Mr;
   SAI = Stmt->getParent()->createScopArrayInfo(
@@ -1260,7 +1260,7 @@ getBandNodeWithOriginDimOrder(isl::schedule_node Node) {
   auto Domain = Node.get_universe_domain();
   assert(isl_union_set_n_set(Domain.keep()) == 1);
   if (Node.get_schedule_depth() != 0 ||
-      (isl::set(isl::manage(Domain.copy())).dim(isl::dim::set) !=
+      (isl::set(Domain).dim(isl::dim::set) !=
        isl_schedule_node_band_n_member(Node.keep())))
     return Node;
   Node = isl::manage(isl_schedule_node_delete(Node.take()));
@@ -1329,7 +1329,7 @@ bool ScheduleTreeOptimizer::isMatrMultPattern(isl::schedule_node Node,
 __isl_give isl_schedule_node *
 ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *Node,
                                     void *User) {
-  if (!isTileableBandNode(isl::manage(isl_schedule_node_copy(Node))))
+  if (!isTileableBandNode(isl::manage_copy(Node)))
     return Node;
 
   const OptimizerAdditionalInfoTy *OAI =
@@ -1337,8 +1337,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *Node,
 
   MatMulInfoTy MMI;
   if (PMBasedOpts && User &&
-      isMatrMultPattern(isl::manage(isl_schedule_node_copy(Node)), OAI->D,
-                        MMI)) {
+      isMatrMultPattern(isl::manage_copy(Node), OAI->D, MMI)) {
     DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
     MatMulOpts++;
     return optimizeMatMulPattern(isl::manage(Node), OAI->TTI, MMI).release();
@@ -1434,7 +1433,7 @@ static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
   isl_schedule_node_foreach_descendant_top_down(
       Root.get(),
       [](__isl_keep isl_schedule_node *nodeptr, void *user) -> isl_bool {
-        isl::schedule_node Node = isl::manage(isl_schedule_node_copy(nodeptr));
+        isl::schedule_node Node = isl::manage_copy(nodeptr);
         int Version = *static_cast<int *>(user);
 
         switch (isl_schedule_node_get_type(Node.get())) {

@@ -6,8 +6,8 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
-config.lldb_libs_dir = "@LLVM_LIBRARY_OUTPUT_INTDIR@"
-config.lldb_tools_dir = "@LLVM_RUNTIME_OUTPUT_INTDIR@"
+config.lldb_libs_dir = "@LLDB_LIBS_DIR@"
+config.lldb_tools_dir = "@LLDB_TOOLS_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.cc = "@LLDB_TEST_C_COMPILER@"
@@ -19,6 +19,10 @@ config.have_zlib = @LLVM_ENABLE_ZLIB@
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
+    config.lldb_libs_dir = config.lldb_libs_dir % lit_config.params
+    config.lldb_tools_dir = config.lldb_tools_dir % lit_config.params
+    config.cc = config.cc % lit_config.params
+    config.cxx = config.cxx % lit_config.params
 except KeyError as e:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))

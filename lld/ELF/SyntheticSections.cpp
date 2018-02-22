@@ -1184,7 +1184,7 @@ uint64_t DynamicReloc::getOffset() const {
   return InputSec->getOutputSection()->Addr + InputSec->getOffset(OffsetInSec);
 }
 
-int64_t DynamicReloc::getAddend() const {
+int64_t DynamicReloc::computeAddend() const {
   if (UseSymVA)
     return Sym->getVA(Addend);
   return Addend;
@@ -1239,7 +1239,7 @@ template <class ELFT>
 static void encodeDynamicReloc(typename ELFT::Rela *P,
                                const DynamicReloc &Rel) {
   if (Config->IsRela)
-    P->r_addend = Rel.getAddend();
+    P->r_addend = Rel.computeAddend();
   P->r_offset = Rel.getOffset();
   if (Config->EMachine == EM_MIPS && Rel.getInputSec() == InX::MipsGot)
     // The MIPS GOT section contains dynamic relocations that correspond to TLS

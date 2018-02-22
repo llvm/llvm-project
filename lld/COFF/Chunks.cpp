@@ -123,11 +123,10 @@ static void applyMOV(uint8_t *Off, uint16_t V) {
 }
 
 static uint16_t readMOV(uint8_t *Off) {
-  uint16_t Opcode1 = read16le(Off);
-  uint16_t Opcode2 = read16le(Off + 2);
-  uint16_t Imm = (Opcode2 & 0x00ff) | ((Opcode2 >> 4) & 0x0700);
-  Imm |= ((Opcode1 << 1) & 0x0800) | ((Opcode1 & 0x000f) << 12);
-  return Imm;
+  uint16_t Op1 = read16le(Off);
+  uint16_t Op2 = read16le(Off + 2);
+  return (Op2 & 0x00ff) | ((Op2 >> 4) & 0x0700) | ((Op1 << 1) & 0x0800) |
+         ((Op1 & 0x000f) << 12);
 }
 
 void applyMOV32T(uint8_t *Off, uint32_t V) {

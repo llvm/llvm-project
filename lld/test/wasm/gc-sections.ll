@@ -1,9 +1,9 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -print-gc-sections -o %t1.wasm %t.o | FileCheck %s -check-prefix=PRINT-GC
-; PRINT-GC: removing unused section 'unused_function' in file '{{.*}}'
-; PRINT-GC-NOT: removing unused section 'used_function' in file '{{.*}}'
-; PRINT-GC: removing unused section '.data.unused_data' in file '{{.*}}'
-; PRINT-GC-NOT: removing unused section '.data.used_data' in file '{{.*}}'
+; PRINT-GC: removing unused section {{.*}}:(unused_function)
+; PRINT-GC-NOT: removing unused section {{.*}}:(used_function)
+; PRINT-GC: removing unused section {{.*}}:(.data.unused_data)
+; PRINT-GC-NOT: removing unused section {{.*}}:(.data.used_data)
 
 target triple = "wasm32-unknown-unknown-wasm"
 
