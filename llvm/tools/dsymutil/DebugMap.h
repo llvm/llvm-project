@@ -208,7 +208,6 @@ public:
 };
 
 } // end namespace dsymutil
-
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::dsymutil::DebugMapObject::YAMLSymbolMapping)
