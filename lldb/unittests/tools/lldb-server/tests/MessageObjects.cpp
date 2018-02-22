@@ -203,7 +203,15 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
 
 Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
                                            StringRef HexValue,
-                                           llvm::support::endianness Endian) {
+                                           llvm::support::endianness Endian,
+                                           bool ZeroPad) {
+  SmallString<128> Storage;
+  if (ZeroPad && HexValue.size() < Info.byte_size * 2) {
+    Storage.insert(Storage.begin(), Info.byte_size * 2 - HexValue.size(), '0');
+    Storage += HexValue;
+    HexValue = Storage;
+  }
+
   SmallVector<uint8_t, 64> Bytes(HexValue.size() / 2);
   StringExtractor(HexValue).GetHexBytes(Bytes, '\xcc');
   RegisterValue Value;
@@ -301,7 +309,8 @@ StopReplyStop::create(StringRef Response, support::endianness Endian,
       return make_parsing_error("StopReply: Thread id '{0}'",
                                 std::get<0>(ThreadPc));
 
-    auto PcOr = parseRegisterValue(*PcInfo, std::get<1>(ThreadPc), Endian);
+    auto PcOr = parseRegisterValue(*PcInfo, std::get<1>(ThreadPc), Endian,
+                                   /*ZeroPad*/ true);
     if (!PcOr)
       return PcOr.takeError();
     ThreadPcs[Id] = std::move(*PcOr);

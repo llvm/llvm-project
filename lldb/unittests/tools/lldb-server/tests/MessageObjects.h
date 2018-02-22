@@ -87,7 +87,8 @@ struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
 
 llvm::Expected<lldb_private::RegisterValue>
 parseRegisterValue(const lldb_private::RegisterInfo &Info,
-                   llvm::StringRef HexValue, llvm::support::endianness Endian);
+                   llvm::StringRef HexValue, llvm::support::endianness Endian,
+                   bool ZeroPad = false);
 
 class StopReply {
 public:

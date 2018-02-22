@@ -369,8 +369,8 @@ class _RemoteProcess(_BaseProcess):
     def launch(self, executable, args):
         if self._install_remote:
             src_path = executable
-            dst_path = lldbutil.append_to_process_working_directory(
-                os.path.basename(executable))
+            dst_path = lldbutil.join_remote_paths(
+                    lldb.remote_platform.GetWorkingDirectory(), os.path.basename(executable))
 
             dst_file_spec = lldb.SBFileSpec(dst_path, False)
             err = lldb.remote_platform.Install(
@@ -1987,7 +1987,7 @@ class TestBase(Base):
             if lldb.remote_platform:
                 # We must set the remote install location if we want the shared library
                 # to get uploaded to the remote target
-                remote_shlib_path = lldbutil.append_to_process_working_directory(
+                remote_shlib_path = lldbutil.append_to_process_working_directory(self,
                     os.path.basename(local_shlib_path))
                 shlib_module.SetRemoteInstallFileSpec(
                     lldb.SBFileSpec(remote_shlib_path, False))

@@ -40,6 +40,7 @@ set(LLDB_TEST_DEPS
   LLDBUnitTests
   lldb
   lldb-test
+  llvm-config
   )
 
 if(NOT LLDB_BUILT_STANDALONE)

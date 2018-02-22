@@ -1348,9 +1348,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
     // Remove the Sections we marked as duplicate earlier.
     for (BaseCommand *Base : Sec->SectionCommands)
       if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
-        ISD->Sections.erase(
-            std::remove(ISD->Sections.begin(), ISD->Sections.end(), nullptr),
-            ISD->Sections.end());
+        llvm::erase_if(ISD->Sections, [](InputSection *IS) { return !IS; });
   }
 }
 

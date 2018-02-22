@@ -435,6 +435,8 @@ static HandleSignalMode GetHandleSignalModeImpl(int signum) {
       return common_flags()->handle_abort;
     case SIGILL:
       return common_flags()->handle_sigill;
+    case SIGTRAP:
+      return common_flags()->handle_sigtrap;
     case SIGFPE:
       return common_flags()->handle_sigfpe;
     case SIGSEGV:

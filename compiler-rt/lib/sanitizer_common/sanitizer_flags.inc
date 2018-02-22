@@ -93,6 +93,8 @@ COMMON_FLAG(HandleSignalMode, handle_abort, kHandleSignalNo,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGABRT))
 COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGILL))
+COMMON_FLAG(HandleSignalMode, handle_sigtrap, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGTRAP))
 COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
 #undef COMMON_FLAG_HANDLE_SIGNAL_HELP

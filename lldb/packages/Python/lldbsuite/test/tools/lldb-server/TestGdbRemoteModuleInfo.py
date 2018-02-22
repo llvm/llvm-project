@@ -20,7 +20,7 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         self.test_sequence.add_log_lines([
             'read packet: $jModulesInfo:[{"file":"%s","triple":"%s"}]]#00' % (
-                lldbutil.append_to_process_working_directory("a.out"),
+                lldbutil.append_to_process_working_directory(self, "a.out"),
                 info["triple"].decode('hex')),
             {"direction": "send",
              "regex": r'^\$\[{(.*)}\]\]#[0-9A-Fa-f]{2}',

@@ -13,7 +13,7 @@
 // RUN:     FileCheck %s --check-prefix TRACE
 // RUN: rm basic-filtering-* || true
 //
-// REQUIRES: x86_64-linux
+// REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
 #include <cstdio>

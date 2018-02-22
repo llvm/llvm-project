@@ -343,7 +343,8 @@ def run_break_set_by_file_and_line(
 
     If extra_options is not None, then we append it to the breakpoint set command.
 
-    If num_expected_locations is -1 we check that we got AT LEAST one location, otherwise we check that num_expected_locations equals the number of locations.
+    If num_expected_locations is -1, we check that we got AT LEAST one location. If num_expected_locations is -2, we don't
+    check the actual number at all. Otherwise, we check that num_expected_locations equals the number of locations.
 
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number."""
 
@@ -563,7 +564,7 @@ def check_breakpoint_result(
     if num_locations == -1:
         test.assertTrue(out_num_locations > 0,
                         "Expecting one or more locations, got none.")
-    else:
+    elif num_locations != -2:
         test.assertTrue(
             num_locations == out_num_locations,
             "Expecting %d locations, got %d." %
@@ -1249,11 +1250,11 @@ def join_remote_paths(*paths):
     return os.path.join(*paths).replace(os.path.sep, '/')
 
 
-def append_to_process_working_directory(*paths):
+def append_to_process_working_directory(test, *paths):
     remote = lldb.remote_platform
     if remote:
         return join_remote_paths(remote.GetWorkingDirectory(), *paths)
-    return os.path.join(os.getcwd(), *paths)
+    return os.path.join(test.getBuildDir(), *paths)
 
 # ==================================================
 # Utility functions to get the correct signal number
