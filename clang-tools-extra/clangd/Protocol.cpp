@@ -221,7 +221,8 @@ bool fromJSON(const json::Expr &Params, DidCloseTextDocumentParams &R) {
 bool fromJSON(const json::Expr &Params, DidChangeTextDocumentParams &R) {
   json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&
-         O.map("contentChanges", R.contentChanges);
+         O.map("contentChanges", R.contentChanges) &&
+         O.map("wantDiagnostics", R.wantDiagnostics);
 }
 
 bool fromJSON(const json::Expr &E, FileChangeType &Out) {
@@ -495,6 +496,16 @@ json::Expr toJSON(const DocumentHighlight &DH) {
       {"range", toJSON(DH.range)},
       {"kind", static_cast<int>(DH.kind)},
   };
+}
+
+bool fromJSON(const json::Expr &Params, DidChangeConfigurationParams &CCP) {
+  json::ObjectMapper O(Params);
+  return O && O.map("settings", CCP.settings);
+}
+
+bool fromJSON(const json::Expr &Params, ClangdConfigurationParamsChange &CCPC) {
+  json::ObjectMapper O(Params);
+  return O && O.map("compilationDatabasePath", CCPC.compilationDatabasePath);
 }
 
 } // namespace clangd

@@ -3254,7 +3254,6 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
 bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
   // FIXME: I'm not sure what this is.
   int64_t FileNumber = -1;
-  SMLoc FileNumberLoc = getLexer().getLoc();
   if (getLexer().is(AsmToken::Integer)) {
     FileNumber = getTok().getIntVal();
     Lex();
@@ -3321,9 +3320,13 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     // we turn off -g option, directly use the existing debug info instead.
     if (getContext().getGenDwarfForAssembly())
       getContext().setGenDwarfForAssembly(false);
-    else if (getStreamer().EmitDwarfFileDirective(FileNumber, Directory,
-                                                  Filename, CKMem) == 0)
-      return Error(FileNumberLoc, "file number already allocated");
+    else {
+      Expected<unsigned> FileNumOrErr = getStreamer().tryEmitDwarfFileDirective(
+          FileNumber, Directory, Filename, CKMem);
+      if (!FileNumOrErr)
+        return Error(DirectiveLoc, toString(FileNumOrErr.takeError()));
+      FileNumber = FileNumOrErr.get();
+    }
   }
 
   return false;

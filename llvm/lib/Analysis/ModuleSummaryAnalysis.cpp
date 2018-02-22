@@ -279,17 +279,9 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // Add the relative block frequency to CalleeInfo if there is no profile
         // information.
         if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
-          auto BBFreq = BFI->getBlockFreq(&BB).getFrequency();
-          // FIXME: This might need some scaling to prevent BBFreq values from
-          // being rounded down to 0.
-          auto EntryFreq = BFI->getEntryFreq();
-          // Block frequencies can be directly set for a block and so we need to
-          // handle the case of entry frequency being 0.
-          if (EntryFreq)
-            BBFreq /= EntryFreq;
-          else
-            BBFreq = 0;
-          ValueInfo.updateRelBlockFreq(BBFreq);
+          uint64_t BBFreq = BFI->getBlockFreq(&BB).getFrequency();
+          uint64_t EntryFreq = BFI->getEntryFreq();
+          ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
         }
       } else {
         // Skip inline assembly calls.

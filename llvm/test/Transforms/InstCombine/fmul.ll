@@ -2,8 +2,8 @@
 ; RUN: opt -S -instcombine < %s | FileCheck %s
 
 ; (-0.0 - X) * C => X * -C
-define float @test1(float %x) {
-; CHECK-LABEL: @test1(
+define float @neg_constant(float %x) {
+; CHECK-LABEL: @neg_constant(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[X:%.*]], -2.000000e+01
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -13,8 +13,8 @@ define float @test1(float %x) {
 }
 
 ; (0.0 - X) * C => X * -C
-define float @test2(float %x) {
-; CHECK-LABEL: @test2(
+define float @neg_nsz_constant(float %x) {
+; CHECK-LABEL: @neg_nsz_constant(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X:%.*]], -2.000000e+01
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -24,8 +24,8 @@ define float @test2(float %x) {
 }
 
 ; (-0.0 - X) * (-0.0 - Y) => X * Y
-define float @test3(float %x, float %y) {
-; CHECK-LABEL: @test3(
+define float @neg_neg(float %x, float %y) {
+; CHECK-LABEL: @neg_neg(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul arcp float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -36,8 +36,8 @@ define float @test3(float %x, float %y) {
 }
 
 ; (0.0 - X) * (0.0 - Y) => X * Y
-define float @test4(float %x, float %y) {
-; CHECK-LABEL: @test4(
+define float @neg_neg_nsz(float %x, float %y) {
+; CHECK-LABEL: @neg_neg_nsz(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul afn float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -47,9 +47,28 @@ define float @test4(float %x, float %y) {
   ret float %mul
 }
 
+declare void @use_f32(float)
+
+define float @neg_neg_multi_use(float %x, float %y) {
+; CHECK-LABEL: @neg_neg_multi_use(
+; CHECK-NEXT:    [[NX:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NY:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul afn float [[X]], [[Y]]
+; CHECK-NEXT:    call void @use_f32(float [[NX]])
+; CHECK-NEXT:    call void @use_f32(float [[NY]])
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %nx = fsub float -0.000000e+00, %x
+  %ny = fsub float -0.000000e+00, %y
+  %mul = fmul afn float %nx, %ny
+  call void @use_f32(float %nx)
+  call void @use_f32(float %ny)
+  ret float %mul
+}
+
 ; (-0.0 - X) * Y => -0.0 - (X * Y)
-define float @test5(float %x, float %y) {
-; CHECK-LABEL: @test5(
+define float @neg_sink(float %x, float %y) {
+; CHECK-LABEL: @neg_sink(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -60,8 +79,8 @@ define float @test5(float %x, float %y) {
 }
 
 ; (0.0 - X) * Y => 0.0 - (X * Y)
-define float @test6(float %x, float %y) {
-; CHECK-LABEL: @test6(
+define float @neg_sink_nsz(float %x, float %y) {
+; CHECK-LABEL: @neg_sink_nsz(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -73,8 +92,8 @@ define float @test6(float %x, float %y) {
 
 ; "(-0.0 - X) * Y => -0.0 - (X * Y)" is disabled if expression "-0.0 - X"
 ; has multiple uses.
-define float @test7(float %x, float %y) {
-; CHECK-LABEL: @test7(
+define float @neg_sink_multi_use(float %x, float %y) {
+; CHECK-LABEL: @neg_sink_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[MUL]], [[SUB1]]

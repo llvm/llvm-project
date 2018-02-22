@@ -2020,8 +2020,11 @@ void DwarfDebug::emitDebugMacinfo() {
     auto *SkCU = TheCU.getSkeleton();
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
     auto *CUNode = cast<DICompileUnit>(P.first);
-    Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
-    handleMacroNodes(CUNode->getMacros(), U);
+    DIMacroNodeArray Macros = CUNode->getMacros();
+    if (!Macros.empty()) {
+      Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
+      handleMacroNodes(Macros, U);
+    }
   }
   Asm->OutStreamer->AddComment("End Of Macro List Mark");
   Asm->EmitInt8(0);

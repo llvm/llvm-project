@@ -17,7 +17,6 @@
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[D:0x[0-9a-z]*]]
 ; CHECK: DW_AT_ranges [DW_FORM_sec_offset]   (0x00000000
-; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[W:0x[0-9a-z]*]]
 ; CHECK-NOT: .debug_loc contents:
 ; CHECK-NOT: Beginning address offset
 ; CHECK: .debug_loc.dwo contents:
@@ -26,27 +25,24 @@
 ; if they've changed due to a bugfix, change in register allocation, etc.
 
 ; CHECK:      [[A]]:
-; CHECK-NEXT:   Addr idx 2 (w/ length 188): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:   Addr idx 2 (w/ length 169): DW_OP_consts +0, DW_OP_stack_value
 ; CHECK-NEXT:   Addr idx 3 (w/ length 25): DW_OP_reg0 RAX
-; CHECK:      [[W]]:
-; CHECK-NEXT:   Addr idx 4 (w/ length 20): DW_OP_reg1 RDX
-; CHECK-NEXT:   Addr idx 5 (w/ length 102): DW_OP_breg7 RSP-56
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   Addr idx 6 (w/ length 24): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 4 (w/ length 19): DW_OP_reg0 RAX
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   Addr idx 7 (w/ length 17): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 5 (w/ length 17): DW_OP_reg0 RAX
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   Addr idx 8 (w/ length 21): DW_OP_reg0 RAX
+; CHECK-NEXT:   Addr idx 6 (w/ length 17): DW_OP_reg0 RAX
 
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Make sure we have enough stuff in the debug_addr to cover the address indexes
-; (8 is the last index in debug_loc.dwo, making 9 entries of 8 bytes each, 9 * 8
-; == 72 base 10 == 48 base 16)
+; (6 is the last index in debug_loc.dwo, making 7 entries of 8 bytes each, 7 * 8
+; == 56 base 10 == 38 base 16)
 
-; HDR: .debug_addr 00000048
+; HDR: .debug_addr 00000038
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; From the code:

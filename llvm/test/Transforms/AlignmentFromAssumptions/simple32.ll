@@ -205,7 +205,7 @@ entry:
   ret i32 undef
 
 ; CHECK-LABEL: @moo2
-; CHECK: @llvm.memcpy.p0i8.p0i8.i64(i8* align 32 %0, i8* align 32 %1, i64 64, i1 false)
+; CHECK: @llvm.memcpy.p0i8.p0i8.i64(i8* align 32 %0, i8* align 128 %1, i64 64, i1 false)
 ; CHECK: ret i32 undef
 }
 

@@ -23,6 +23,7 @@
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetParser.h"
@@ -752,10 +753,20 @@ public:
 
   /// \brief Associate a filename with a specified logical file number.  This
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
-  virtual unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
-                                          StringRef Filename,
-                                          MD5::MD5Result *Checksum = nullptr,
-                                          unsigned CUID = 0);
+  unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
+                                  StringRef Filename,
+                                  MD5::MD5Result *Checksum = nullptr,
+                                  unsigned CUID = 0) {
+    return cantFail(
+        tryEmitDwarfFileDirective(FileNo, Directory, Filename, Checksum, CUID));
+  }
+
+  /// Associate a filename with a specified logical file number.  Returns a
+  /// StringError for any problem, or the file number.  This implements the
+  /// DWARF2 '.file 4 "foo.c"' assembler directive.
+  virtual Expected<unsigned> tryEmitDwarfFileDirective(
+      unsigned FileNo, StringRef Directory, StringRef Filename,
+      MD5::MD5Result *Checksum = nullptr, unsigned CUID = 0);
 
   /// \brief This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.

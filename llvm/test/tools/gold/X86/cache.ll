@@ -8,7 +8,8 @@
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     -o %t3.o %t2.o %t.o
 
-; RUN: ls %t.cache | count 0
+; We should just get the timestamp file
+; RUN: ls %t.cache | count 1
 
 
 ; Verify that enabling caching is working with module with hash.
@@ -22,7 +23,8 @@
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     -o %t3.o %t2.o %t.o
 
-; RUN: ls %t.cache | count 2
+; Two cached objects, plus a timestamp file
+; RUN: ls %t.cache | count 3
 
 
 ; Create two files that would be removed by cache pruning due to age.

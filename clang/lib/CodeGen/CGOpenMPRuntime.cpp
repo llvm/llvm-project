@@ -8057,9 +8057,10 @@ void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
   CGF.EmitRuntimeCall(RTLFn, Args);
 }
 
-void CGOpenMPRuntime::emitCall(CodeGenFunction &CGF, llvm::Value *Callee,
-                               ArrayRef<llvm::Value *> Args,
-                               SourceLocation Loc) const {
+void CGOpenMPRuntime::emitCall(CodeGenFunction &CGF, SourceLocation Loc,
+                               llvm::Value *Callee,
+                               ArrayRef<llvm::Value *> Args) const {
+  assert(Loc.isValid() && "Outlined function call location must be valid.");
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
 
   if (auto *Fn = dyn_cast<llvm::Function>(Callee)) {
@@ -8074,8 +8075,7 @@ void CGOpenMPRuntime::emitCall(CodeGenFunction &CGF, llvm::Value *Callee,
 void CGOpenMPRuntime::emitOutlinedFunctionCall(
     CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
     ArrayRef<llvm::Value *> Args) const {
-  assert(Loc.isValid() && "Outlined function call location must be valid.");
-  emitCall(CGF, OutlinedFn, Args, Loc);
+  emitCall(CGF, Loc, OutlinedFn, Args);
 }
 
 Address CGOpenMPRuntime::getParameterAddress(CodeGenFunction &CGF,

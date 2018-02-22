@@ -52,9 +52,11 @@ c.addi t0, 0 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the ra
 c.addi t0, -33 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 c.addi t0, 32 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 
-## uimm6nonzero
-c.lui t0, 64 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [1, 63]
-c.lui t0, 0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [1, 63]
+## c_lui_imm
+c.lui t0, 0 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
+c.lui t0, 32 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
+c.lui t0, 0xffffdf # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
+c.lui t0, 0x1000000 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
 
 ## uimm8_lsb00
 c.lwsp  ra, 256(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 252]
