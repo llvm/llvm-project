@@ -1623,6 +1623,14 @@ TEST(IsTemplateInstantiation, MatchesExplicitClassTemplateInstantiation) {
       "template class X<A>;",
     cxxRecordDecl(isTemplateInstantiation(), hasDescendant(
       fieldDecl(hasType(recordDecl(hasName("A"))))))));
+
+  // Make sure that we match the instantiation instead of the template
+  // definition by checking whether the member function is present.
+  EXPECT_TRUE(
+      matches("template <typename T> class X { void f() { T t; } };"
+              "extern template class X<int>;",
+              cxxRecordDecl(isTemplateInstantiation(),
+                            unless(hasDescendant(varDecl(hasName("t")))))));
 }
 
 TEST(IsTemplateInstantiation,

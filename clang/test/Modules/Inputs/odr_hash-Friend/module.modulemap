@@ -13,3 +13,11 @@ module Module2 {
 module Module3 {
   header "M3.h"
 }
+
+module Good {
+  header "Good.h"
+}
+
+module Bad {
+  header "Bad.h"
+}

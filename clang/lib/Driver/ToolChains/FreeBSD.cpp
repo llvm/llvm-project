@@ -136,9 +136,9 @@ static bool addXRayRuntime(const ToolChain &TC, const ArgList &Args,
 static void linkXRayRuntimeDeps(const ToolChain &TC, const ArgList &Args,
                                 ArgStringList &CmdArgs) {
   CmdArgs.push_back("--no-as-needed");
-  CmdArgs.push_back("-pthread");
   CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
+  CmdArgs.push_back("-lpthread");
 } 
 
 void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,

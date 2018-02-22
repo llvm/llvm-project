@@ -1981,6 +1981,10 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef Code = "",
                                      vfs::FileSystem *FS = nullptr);
 
+// \brief Guesses the language from the ``FileName`` and ``Code`` to be formatted.
+// Defaults to FormatStyle::LK_Cpp.
+FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code);
+
 // \brief Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
   switch (Language) {
