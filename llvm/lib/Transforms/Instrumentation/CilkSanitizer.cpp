@@ -1,4 +1,4 @@
-//===- CilkSanitizer.cpp - determinacy race detector for Cilk/Tapir -------===//
+//===- CilkSanitizer.cpp - Nondeterminism detector for Cilk/Tapir ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -682,6 +682,8 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
   bool HasCalls = false;
   bool MaySpawn = false;
 
+  changeCallsToInvokes(F);
+
   // TODO: Consider modifying this to choose instrumentation to insert based on
   // fibrils, not basic blocks.
   for (BasicBlock &BB : F) {
@@ -750,13 +752,14 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
         {IRB.getInt32(0)});
     IRB.CreateCall(CsanFuncEntry, {FuncId, FrameAddr, FuncEntryProp.getValue(IRB)});
 
-    EscapeEnumerator EE(F, "csan_cleanup", true);
+    EscapeEnumerator EE(F, "csan_cleanup", false);
     while (IRBuilder<> *AtExit = EE.Next()) {
       // uint64_t ExitLocalId = FunctionExitFED.add(F);
       uint64_t ExitLocalId = FunctionExitFED.add(*AtExit->GetInsertPoint());
       Value *ExitCsiId = FunctionExitFED.localToGlobalId(ExitLocalId, *AtExit);
       CsiFuncExitProperty FuncExitProp;
       FuncExitProp.setMaySpawn(MaySpawn);
+      FuncExitProp.setEHReturn(isa<ResumeInst>(AtExit->GetInsertPoint()));
       AtExit->CreateCall(CsanFuncExit,
                          {ExitCsiId, FuncId, FuncExitProp.getValue(*AtExit)});
     }
@@ -958,12 +961,8 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
 }
 
 bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
-  // Exclude calls to the syncregion.start intrinsic.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
-        Intrinsic::lifetime_start == II->getIntrinsicID() ||
-        Intrinsic::lifetime_end == II->getIntrinsicID())
-      return false;
+  if (callsPlaceholderFunction(*I))
+    return false;
 
   bool IsInvoke = isa<InvokeInst>(I);
 
@@ -1002,15 +1001,13 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
 
   BasicBlock::iterator Iter(I);
   if (IsInvoke) {
-    // There are two "after" positions for invokes: the normal block
-    // and the exception block. This also means we have to recompute
-    // the callsite and function IDs in each basic block so that we
-    // can use it for the after hook.
+    // There are two "after" positions for invokes: the normal block and the
+    // exception block. This also means we have to recompute the callsite and
+    // function IDs in each basic block so that we can use it for the after
+    // hook.
 
-    // TODO: Do we want the "after" hook for this callsite to come
-    // before or after the BB entry hook? Currently it is inserted
-    // before BB entry because instrumentCallsite is called after
-    // instrumentBasicBlock.
+    // The "after" hook for this callsite is inserted before the BB entry hook
+    // by running instrumentCallsite after instrumentBasicBlock.
 
     // TODO: If a destination of an invoke has multiple predecessors, then we
     // must split that destination.
@@ -1028,6 +1025,12 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
                               {CallsiteId, FuncId, PropVal});
 
     BasicBlock *UnwindBB = II->getUnwindDest();
+    // If this unwind destination is shared among multiple invokes, split the
+    // destination to provide a unique destination for this invoke.
+    if (!UnwindBB->getSinglePredecessor())
+      UnwindBB =
+        SplitBlockPredecessors(UnwindBB, { II->getParent() }, ".csi-split", DT);
+
     IRB.SetInsertPoint(&*UnwindBB->getFirstInsertionPt());
     CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
     if (FuncIdGV != NULL) FuncId = IRB.CreateLoad(FuncIdGV);

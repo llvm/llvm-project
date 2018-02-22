@@ -580,6 +580,14 @@ public:
   static bool addrPointsToConstantData(Value *Addr);
   static bool isAtomic(Instruction *I);
 
+  /// Helper functions to deal with calls to functions that can throw.
+  static Constant *getDefaultPersonalityFn(Module *M);
+  static void changeCallsToInvokes(Function &F);
+
+  /// Helper function that identifies calls or invokes of placeholder functions,
+  /// such as debug-info intrinsics or lifetime intrinsics.
+  static bool callsPlaceholderFunction(const Instruction &I);
+
 protected:
   /// Initialize the CSI pass.
   void initializeCsi();
@@ -640,7 +648,7 @@ protected:
                              const DataLayout &DL);
   void instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
-  void instrumentCallsite(Instruction *I);
+  void instrumentCallsite(Instruction *I, DominatorTree *DT);
   void instrumentBasicBlock(BasicBlock &BB);
   void instrumentDetach(DetachInst *DI, DominatorTree *DT);
   void instrumentSync(SyncInst *SI);

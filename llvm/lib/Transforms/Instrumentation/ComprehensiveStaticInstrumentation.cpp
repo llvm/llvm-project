@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -26,6 +27,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 
@@ -158,6 +161,22 @@ static void setInstrumentationDebugLoc(Function &Instrumented,
   }
 }
 
+bool CSIImpl::callsPlaceholderFunction(const Instruction &I) {
+  if (isa<DbgInfoIntrinsic>(I))
+    return true;
+
+  if (isDetachedRethrow(&I))
+    return true;
+
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+    if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
+        Intrinsic::lifetime_start == II->getIntrinsicID() ||
+        Intrinsic::lifetime_end == II->getIntrinsicID())
+      return true;
+
+  return false;
+}
+
 bool CSIImpl::run() {
   initializeCsi();
 
@@ -205,13 +224,7 @@ uint64_t SizeTable::add(const BasicBlock &BB) {
   int32_t NonEmptyIRSize = 0;
   for (const Instruction &I : BB) {
     if (isa<PHINode>(I)) continue;
-    if (isa<DbgInfoIntrinsic>(I)) continue;
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
-      if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
-          Intrinsic::detached_rethrow == II->getIntrinsicID() ||
-          Intrinsic::lifetime_start == II->getIntrinsicID() ||
-          Intrinsic::lifetime_end == II->getIntrinsicID())
-        continue;
+    if (CSIImpl::callsPlaceholderFunction(I)) continue;
     NonEmptyIRSize++;
   }
   add(ID, BB.size(), NonEmptyIRSize);
@@ -599,22 +612,12 @@ void CSIImpl::instrumentBasicBlock(BasicBlock &BB) {
                             {CsiId, PropVal});
 }
 
-void CSIImpl::instrumentCallsite(Instruction *I) {
-  // Ignore calls to debug intrinsics
-  if (isa<DbgInfoIntrinsic>(I))
+void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
+  if (callsPlaceholderFunction(*I))
     return;
 
-  // Ignore intrinsics that act as placeholders, i.e., the intrinsics don't
-  // ultimately result in a function call.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
-        Intrinsic::detached_rethrow == II->getIntrinsicID() ||
-        Intrinsic::lifetime_start == II->getIntrinsicID() ||
-        Intrinsic::lifetime_end == II->getIntrinsicID())
-      return;
-
   bool IsInvoke = false;
-  Function *Called = NULL;
+  Function *Called = nullptr;
   if (CallInst *CI = dyn_cast<CallInst>(I)) {
     Called = CI->getCalledFunction();
   } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
@@ -625,8 +628,8 @@ void CSIImpl::instrumentCallsite(Instruction *I) {
   IRBuilder<> IRB(I);
   uint64_t LocalId = CallsiteFED.add(*I);
   Value *CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
-  Value *FuncId = NULL;
-  GlobalVariable *FuncIdGV = NULL;
+  Value *FuncId = nullptr;
+  GlobalVariable *FuncIdGV = nullptr;
   if (Called) {
     Module *M = I->getParent()->getParent()->getParent();
     std::string GVName =
@@ -651,15 +654,13 @@ void CSIImpl::instrumentCallsite(Instruction *I) {
 
   BasicBlock::iterator Iter(I);
   if (IsInvoke) {
-    // There are two "after" positions for invokes: the normal block
-    // and the exception block. This also means we have to recompute
-    // the callsite and function IDs in each basic block so that we
-    // can use it for the after hook.
+    // There are two "after" positions for invokes: the normal block and the
+    // exception block. This also means we have to recompute the callsite and
+    // function IDs in each basic block so that we can use it for the after
+    // hook.
 
-    // TODO: Do we want the "after" hook for this callsite to come
-    // before or after the BB entry hook? Currently it is inserted
-    // before BB entry because instrumentCallsite is called after
-    // instrumentBasicBlock.
+    // The "after" hook for this callsite is inserted before the BB entry hook
+    // by running instrumentCallsite after instrumentBasicBlock.
     InvokeInst *II = dyn_cast<InvokeInst>(I);
     BasicBlock *NormalBB = II->getNormalDest();
     IRB.SetInsertPoint(&*NormalBB->getFirstInsertionPt());
@@ -670,6 +671,12 @@ void CSIImpl::instrumentCallsite(Instruction *I) {
                               {CallsiteId, FuncId, PropVal});
 
     BasicBlock *UnwindBB = II->getUnwindDest();
+    // If this unwind destination is shared among multiple invokes, split the
+    // destination to provide a unique destination for this invoke.
+    if (!UnwindBB->getSinglePredecessor())
+      UnwindBB =
+        SplitBlockPredecessors(UnwindBB, { II->getParent() }, ".csi-split", DT);
+
     IRB.SetInsertPoint(&*UnwindBB->getFirstInsertionPt());
     CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
     if (FuncIdGV != NULL) FuncId = IRB.CreateLoad(FuncIdGV);
@@ -1120,6 +1127,61 @@ void CSIImpl::computeLoadAndStoreProperties(
   BBLoadsAndStores.clear();
 }
 
+Constant *CSIImpl::getDefaultPersonalityFn(Module *M) {
+  LLVMContext &C = M->getContext();
+  Triple T(M->getTargetTriple());
+  EHPersonality Pers = getDefaultEHPersonality(T);
+  return M->getOrInsertFunction(getEHPersonalityName(Pers),
+                                FunctionType::get(Type::getInt32Ty(C), true));
+}
+
+// Convert all call instructions that might throw into invokes.
+void CSIImpl::changeCallsToInvokes(Function &F) {
+  // Find all 'call' instructions that may throw.
+  SmallVector<Instruction *, 16> Calls;
+  for (BasicBlock &BB : F)
+    for (Instruction &II : BB)
+      if (CallInst *CI = dyn_cast<CallInst>(&II))
+        if (!CI->doesNotThrow())
+          Calls.push_back(CI);
+
+  if (Calls.empty())
+    return;
+
+  // Create a cleanup block.
+  LLVMContext &C = F.getContext();
+  BasicBlock *CleanupBB = BasicBlock::Create(C, "csi.cleanup", &F);
+  Type *ExnTy = StructType::get(Type::getInt8PtrTy(C), Type::getInt32Ty(C));
+  if (!F.hasPersonalityFn()) {
+    Constant *PersFn = getDefaultPersonalityFn(F.getParent());
+    F.setPersonalityFn(PersFn);
+  }
+
+  if (isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {
+    report_fatal_error("Funclet EH not supported");
+  }
+
+  LandingPadInst *LPad =
+      LandingPadInst::Create(ExnTy, 1, "csi.cleanup.lpad", CleanupBB);
+  LPad->setCleanup(true);
+  ResumeInst *RI = ResumeInst::Create(LPad, CleanupBB);
+
+  // Transform the 'call' instructions into 'invoke's branching to the
+  // cleanup block. Go in reverse order to make prettier BB names.
+  for (unsigned I = Calls.size(); I != 0;) {
+    CallInst *CI = cast<CallInst>(Calls[--I]);
+    changeToInvokeAndSplitBasicBlock(CI, CleanupBB);
+  }
+}
+
+// Update the attributes on the instrumented function that might be invalidated
+// by the inserted instrumentation.
+static void updateInstrumentedFnAttrs(Function &F) {
+  F.removeFnAttr(Attribute::ReadNone);
+  F.removeFnAttr(Attribute::ReadOnly);
+  F.removeFnAttr(Attribute::ArgMemOnly);
+}
+
 void CSIImpl::instrumentFunction(Function &F) {
   // This is required to prevent instrumenting the call to
   // __csi_module_init from within the module constructor.
@@ -1130,7 +1192,6 @@ void CSIImpl::instrumentFunction(Function &F) {
 
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
     LoadAndStoreProperties;
-  SmallVector<Instruction *, 8> ReturnInstructions;
   SmallVector<Instruction *, 8> MemIntrinsics;
   SmallVector<Instruction *, 8> Callsites;
   SmallVector<BasicBlock *, 8> BasicBlocks;
@@ -1138,6 +1199,8 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<DetachInst*, 8> Detaches;
   SmallVector<SyncInst*, 8> Syncs;
   bool MaySpawn = false;
+
+  changeCallsToInvokes(F);
 
   // Compile lists of all instrumentation points before anything is modified.
   for (BasicBlock &BB : F) {
@@ -1147,8 +1210,6 @@ void CSIImpl::instrumentFunction(Function &F) {
         AtomicAccesses.push_back(&I);
       else if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
         BBLoadsAndStores.push_back(&I);
-      } else if (isa<ReturnInst>(I)) {
-        ReturnInstructions.push_back(&I);
       } else if (DetachInst *DI = dyn_cast<DetachInst>(&I)) {
         MaySpawn = true;
         Detaches.push_back(DI);
@@ -1204,29 +1265,33 @@ void CSIImpl::instrumentFunction(Function &F) {
 
   if (Options.InstrumentCalls)
     for (Instruction *I : Callsites)
-      instrumentCallsite(I);
+      instrumentCallsite(I, DT);
 
   // Instrument function entry/exit points.
   if (Options.InstrumentFuncEntryExit) {
     IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
     CsiFuncProperty FuncEntryProp;
     FuncEntryProp.setMaySpawn(MaySpawn);
-    CsiFuncExitProperty FuncExitProp;
     Value *FuncId = FunctionFED.localToGlobalId(LocalId, IRB);
     Value *PropVal = FuncEntryProp.getValue(IRB);
     insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiFuncEntry,
                               {FuncId, PropVal});
 
-    for (Instruction *I : ReturnInstructions) {
-      IRBuilder<> IRBRet(I);
+    EscapeEnumerator EE(F, "csi.cleanup", false);
+    while (IRBuilder<> *AtExit = EE.Next()) {
       // uint64_t ExitLocalId = FunctionExitFED.add(F);
-      uint64_t ExitLocalId = FunctionExitFED.add(*I);
-      Value *ExitCsiId = FunctionExitFED.localToGlobalId(ExitLocalId, IRBRet);
-      PropVal = FuncExitProp.getValue(IRBRet);
-      insertConditionalHookCall(I, CsiFuncExit,
-                                {ExitCsiId, FuncId, PropVal});
+      uint64_t ExitLocalId = FunctionExitFED.add(*AtExit->GetInsertPoint());
+      Value *ExitCsiId = FunctionExitFED.localToGlobalId(ExitLocalId, *AtExit);
+      CsiFuncExitProperty FuncExitProp;
+      FuncExitProp.setMaySpawn(MaySpawn);
+      FuncExitProp.setEHReturn(isa<ResumeInst>(AtExit->GetInsertPoint()));
+      Value *PropVal = FuncExitProp.getValue(*AtExit);
+      insertConditionalHookCall(&*AtExit->GetInsertPoint(), CsiFuncExit,
+                                { ExitCsiId, FuncId, PropVal });
     }
   }
+
+  updateInstrumentedFnAttrs(F);
 }
 
 void ComprehensiveStaticInstrumentation::getAnalysisUsage(
