@@ -297,6 +297,12 @@ struct DidChangeTextDocumentParams {
 
   /// The actual content changes.
   std::vector<TextDocumentContentChangeEvent> contentChanges;
+
+  /// Forces diagnostics to be generated, or to not be generated, for this
+  /// version of the file. If not set, diagnostics are eventually consistent:
+  /// either they will be provided for this version or some subsequent one.
+  /// This is a clangd extension.
+  llvm::Optional<bool> wantDiagnostics;
 };
 bool fromJSON(const json::Expr &, DidChangeTextDocumentParams &);
 
