@@ -212,7 +212,7 @@ public:
   virtual void print(raw_ostream &OS) const = 0;
 #endif
 protected:
-  virtual uint64_t order() const;
+  virtual uint64_t order() const = 0;
 };
 
 /// Apple-style accelerator table base class.
