@@ -138,11 +138,11 @@ void AppleAccelTableBase::emitData(AsmPrinter *Asm) {
         Asm->EmitInt32(0);
       // Remember to emit the label for our offset.
       Asm->OutStreamer->EmitLabel(Hash->Sym);
-      Asm->OutStreamer->AddComment(Hash->Str);
-      Asm->emitDwarfStringOffset(Hash->Data.Name);
+      Asm->OutStreamer->AddComment(Hash->Name.getString());
+      Asm->emitDwarfStringOffset(Hash->Name);
       Asm->OutStreamer->AddComment("Num DIEs");
-      Asm->EmitInt32(Hash->Data.Values.size());
-      for (const auto *V : Hash->Data.Values) {
+      Asm->EmitInt32(Hash->Values.size());
+      for (const auto *V : Hash->Values) {
         V->emit(Asm);
       }
       PrevHash = Hash->HashValue;
@@ -155,9 +155,10 @@ void AppleAccelTableBase::emitData(AsmPrinter *Asm) {
 
 void AppleAccelTableBase::computeBucketCount() {
   // First get the number of unique hashes.
-  std::vector<uint32_t> uniques(Data.size());
-  for (size_t i = 0, e = Data.size(); i < e; ++i)
-    uniques[i] = Data[i]->HashValue;
+  std::vector<uint32_t> uniques;
+  uniques.reserve(Entries.size());
+  for (const auto &E : Entries)
+    uniques.push_back(E.second.HashValue);
   array_pod_sort(uniques.begin(), uniques.end());
   std::vector<uint32_t>::iterator p =
       std::unique(uniques.begin(), uniques.end());
@@ -169,7 +170,6 @@ void AppleAccelTableBase::computeBucketCount() {
 
 void AppleAccelTableBase::finalizeTable(AsmPrinter *Asm, StringRef Prefix) {
   // Create the individual hash data outputs.
-  Data.reserve(Entries.size());
   for (auto &E : Entries) {
     // Unique the entries.
     std::stable_sort(E.second.Values.begin(), E.second.Values.end(),
@@ -178,9 +178,6 @@ void AppleAccelTableBase::finalizeTable(AsmPrinter *Asm, StringRef Prefix) {
     E.second.Values.erase(
         std::unique(E.second.Values.begin(), E.second.Values.end()),
         E.second.Values.end());
-
-    HashData *Entry = new (Allocator) HashData(E.first(), E.second);
-    Data.push_back(Entry);
   }
 
   // Figure out how many buckets we need, then compute the bucket contents and
@@ -192,10 +189,10 @@ void AppleAccelTableBase::finalizeTable(AsmPrinter *Asm, StringRef Prefix) {
 
   // Compute bucket contents and final ordering.
   Buckets.resize(Header.getBucketCount());
-  for (auto &D : Data) {
-    uint32_t bucket = D->HashValue % Header.getBucketCount();
-    Buckets[bucket].push_back(D);
-    D->Sym = Asm->createTempSymbol(Prefix);
+  for (auto &E : Entries) {
+    uint32_t bucket = E.second.HashValue % Header.getBucketCount();
+    Buckets[bucket].push_back(&E.second);
+    E.second.Sym = Asm->createTempSymbol(Prefix);
   }
 
   // Sort the contents of the buckets by hash value so that hash collisions end
@@ -286,8 +283,8 @@ void AppleAccelTableHeader::print(raw_ostream &OS) const {
   HeaderData.print(OS);
 }
 
-void AppleAccelTableBase::HashData::print(raw_ostream &OS) {
-  OS << "Name: " << Str << "\n";
+void AppleAccelTableBase::HashData::print(raw_ostream &OS) const {
+  OS << "Name: " << Name.getString() << "\n";
   OS << "  Hash Value: " << format("0x%x", HashValue) << "\n";
   OS << "  Symbol: ";
   if (Sym)
@@ -295,7 +292,7 @@ void AppleAccelTableBase::HashData::print(raw_ostream &OS) {
   else
     OS << "<none>";
   OS << "\n";
-  for (auto *Value : Data.Values)
+  for (auto *Value : Values)
     Value->print(OS);
 }
 
@@ -317,8 +314,8 @@ void AppleAccelTableBase::print(raw_ostream &OS) const {
       Hash->print(OS);
 
   OS << "Data: \n";
-  for (auto &D : Data)
-    D->print(OS);
+  for (auto &E : Entries)
+    E.second.print(OS);
 }
 
 void AppleAccelTableOffsetData::print(raw_ostream &OS) const {
