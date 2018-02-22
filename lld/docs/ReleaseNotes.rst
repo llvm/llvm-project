@@ -25,6 +25,28 @@ ELF Improvements
 * Added handling of the R_MIPS_26 relocation in case of N32 / N64 ABIs
   and generating proper PLT entries.
 
+* lld can patch Aarch64 errata 843419.
+
+* lld can generate thunks for out of range thunks.
+
+* ARM PLT entries automatically use short or long variants.
+
+* Lots of bug fixes. Should be able to handle almost all linker and version scripts.
+
+* Faster gdb index creation.
+
+* Tar files created by --reproduce now work even in the presence of absolute paths.
+
+* lld defaults to --hash-style=both.
+
+* ICF now deduplicates .eh_frame entries.
+
+* LLD supports the Android relocation packing format.
+
+* Debug info is used in more cases when reporting errors.
+
+* LLD can produce x86/x86_64 PLTs that use retpolines.
+
 COFF Improvements
 -----------------
 
