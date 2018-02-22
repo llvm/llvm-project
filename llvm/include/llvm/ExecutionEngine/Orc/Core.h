@@ -201,7 +201,7 @@ public:
 
   using SetDefinitionsResult =
       std::map<SymbolStringPtr, RelativeLinkageStrength>;
-  using SourceWorkMap = std::map<SymbolSource *, SymbolNameSet>;
+  using SourceWorkMap = std::map<std::shared_ptr<SymbolSource>, SymbolNameSet>;
 
   struct LookupResult {
     SourceWorkMap MaterializationWork;
@@ -231,7 +231,8 @@ public:
   Error define(SymbolMap NewSymbols);
 
   /// @brief Adds the given symbols to the mapping as lazy symbols.
-  Error defineLazy(const SymbolFlagsMap &NewSymbols, SymbolSource &Source);
+  Error defineLazy(const SymbolFlagsMap &NewSymbols,
+                   std::shared_ptr<SymbolSource> Source);
 
   /// @brief Add the given symbol/address mappings to the dylib, but do not
   ///        mark the symbols as finalized yet.
@@ -265,32 +266,37 @@ private:
   class MaterializationInfo {
   public:
     MaterializationInfo(JITSymbolFlags Flags,
-                        std::shared_ptr<AsynchronousSymbolQuery> Query);
+                        std::shared_ptr<SymbolSource> Query);
     JITSymbolFlags getFlags() const;
     JITTargetAddress getAddress() const;
-    void query(SymbolStringPtr Name,
-               std::shared_ptr<AsynchronousSymbolQuery> Query);
-    void resolve(SymbolStringPtr Name, JITEvaluatedSymbol Sym);
+    void replaceWithSource(VSO &V, SymbolStringPtr Name,
+                           JITSymbolFlags NewFlags,
+                           std::shared_ptr<SymbolSource> NewSource);
+    std::shared_ptr<SymbolSource>
+    query(SymbolStringPtr Name, std::shared_ptr<AsynchronousSymbolQuery> Query);
+    void resolve(VSO &V, SymbolStringPtr Name, JITEvaluatedSymbol Sym);
     void finalize();
 
   private:
     JITSymbolFlags Flags;
     JITTargetAddress Address = 0;
+    std::shared_ptr<SymbolSource> Source;
     std::vector<std::shared_ptr<AsynchronousSymbolQuery>> PendingResolution;
     std::vector<std::shared_ptr<AsynchronousSymbolQuery>> PendingFinalization;
   };
 
   class SymbolTableEntry {
   public:
-    SymbolTableEntry(JITSymbolFlags Flags, SymbolSource &Source);
+    SymbolTableEntry(JITSymbolFlags Flags,
+                     std::shared_ptr<SymbolSource> Source);
     SymbolTableEntry(JITEvaluatedSymbol Sym);
     SymbolTableEntry(SymbolTableEntry &&Other);
     ~SymbolTableEntry();
     JITSymbolFlags getFlags() const;
     void replaceWithSource(VSO &V, SymbolStringPtr Name, JITSymbolFlags Flags,
-                           SymbolSource &NewSource);
-    SymbolSource *query(SymbolStringPtr Name,
-                        std::shared_ptr<AsynchronousSymbolQuery> Query);
+                           std::shared_ptr<SymbolSource> NewSource);
+    std::shared_ptr<SymbolSource>
+    query(SymbolStringPtr Name, std::shared_ptr<AsynchronousSymbolQuery> Query);
     void resolve(VSO &V, SymbolStringPtr Name, JITEvaluatedSymbol Sym);
     void finalize();
 
@@ -298,7 +304,6 @@ private:
     JITSymbolFlags Flags;
     union {
       JITTargetAddress Address;
-      SymbolSource *Source;
       std::unique_ptr<MaterializationInfo> MatInfo;
     };
   };

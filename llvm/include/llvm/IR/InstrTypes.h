@@ -391,6 +391,27 @@ public:
     return BO;
   }
 
+  static BinaryOperator *CreateFAddFMF(Value *V1, Value *V2,
+                                       BinaryOperator *FMFSource,
+                                       const Twine &Name = "") {
+    return CreateWithCopiedFlags(Instruction::FAdd, V1, V2, FMFSource, Name);
+  }
+  static BinaryOperator *CreateFSubFMF(Value *V1, Value *V2,
+                                       BinaryOperator *FMFSource,
+                                       const Twine &Name = "") {
+    return CreateWithCopiedFlags(Instruction::FSub, V1, V2, FMFSource, Name);
+  }
+  static BinaryOperator *CreateFMulFMF(Value *V1, Value *V2,
+                                       BinaryOperator *FMFSource,
+                                       const Twine &Name = "") {
+    return CreateWithCopiedFlags(Instruction::FMul, V1, V2, FMFSource, Name);
+  }
+  static BinaryOperator *CreateFDivFMF(Value *V1, Value *V2,
+                                       BinaryOperator *FMFSource,
+                                       const Twine &Name = "") {
+    return CreateWithCopiedFlags(Instruction::FDiv, V1, V2, FMFSource, Name);
+  }
+
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
                                    const Twine &Name = "") {
     BinaryOperator *BO = Create(Opc, V1, V2, Name);
