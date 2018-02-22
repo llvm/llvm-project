@@ -70,11 +70,6 @@ void AppleAccelTableHeader::setBucketAndHashCount(uint32_t HashCount) {
   Header.HashCount = HashCount;
 }
 
-constexpr const AppleAccelTableHeader::Atom AppleAccelTableTypeData::Atoms[];
-constexpr const AppleAccelTableHeader::Atom AppleAccelTableOffsetData::Atoms[];
-constexpr const AppleAccelTableHeader::Atom AppleAccelTableStaticOffsetData::Atoms[];
-constexpr const AppleAccelTableHeader::Atom AppleAccelTableStaticTypeData::Atoms[];
-
 void AppleAccelTableBase::emitHeader(AsmPrinter *Asm) { Header.emit(Asm); }
 
 void AppleAccelTableBase::emitBuckets(AsmPrinter *Asm) {
@@ -233,3 +228,35 @@ void AppleAccelTableStaticTypeData::emit(AsmPrinter *Asm) const {
                                           : 0);
   Asm->EmitInt32(QualifiedNameHash);
 }
+
+#ifndef _MSC_VER
+// The lines below are rejected by older versions (TBD) of MSVC.
+constexpr AppleAccelTableHeader::Atom AppleAccelTableTypeData::Atoms[];
+constexpr AppleAccelTableHeader::Atom AppleAccelTableOffsetData::Atoms[];
+constexpr AppleAccelTableHeader::Atom AppleAccelTableStaticOffsetData::Atoms[];
+constexpr AppleAccelTableHeader::Atom AppleAccelTableStaticTypeData::Atoms[];
+#else
+// FIXME: Erase this path once the minimum MSCV version has been bumped.
+const SmallVector<AppleAccelTableHeader::Atom, 4>
+    AppleAccelTableOffsetData::Atoms = {AppleAccelTableHeader::Atom(
+        dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
+const SmallVector<AppleAccelTableHeader::Atom, 4>
+    AppleAccelTableTypeData::Atoms = {
+        AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
+                                    dwarf::DW_FORM_data4),
+        AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag,
+                                    dwarf::DW_FORM_data2),
+        AppleAccelTableHeader::Atom(dwarf::DW_ATOM_type_flags,
+                                    dwarf::DW_FORM_data1)};
+const SmallVector<AppleAccelTableHeader::Atom, 4>
+    AppleAccelTableStaticOffsetData::Atoms = {AppleAccelTableHeader::Atom(
+        dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
+const SmallVector<AppleAccelTableHeader::Atom, 4>
+    AppleAccelTableStaticTypeData::Atoms = {
+        AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
+                                    dwarf::DW_FORM_data4),
+        AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag,
+                                    dwarf::DW_FORM_data2),
+        AppleAccelTableHeader::Atom(5, dwarf::DW_FORM_data1),
+        AppleAccelTableHeader::Atom(6, dwarf::DW_FORM_data4)};
+#endif
