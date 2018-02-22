@@ -260,3 +260,86 @@ const SmallVector<AppleAccelTableHeader::Atom, 4>
         AppleAccelTableHeader::Atom(5, dwarf::DW_FORM_data1),
         AppleAccelTableHeader::Atom(6, dwarf::DW_FORM_data4)};
 #endif
+
+#ifndef NDEBUG
+void AppleAccelTableHeader::Header::print(raw_ostream &OS) const {
+  OS << "Magic: " << format("0x%x", Magic) << "\n"
+     << "Version: " << Version << "\n"
+     << "Hash Function: " << HashFunction << "\n"
+     << "Bucket Count: " << BucketCount << "\n"
+     << "Header Data Length: " << HeaderDataLength << "\n";
+}
+
+void AppleAccelTableHeader::Atom::print(raw_ostream &OS) const {
+  OS << "Type: " << dwarf::AtomTypeString(Type) << "\n"
+     << "Form: " << dwarf::FormEncodingString(Form) << "\n";
+}
+
+void AppleAccelTableHeader::HeaderData::print(raw_ostream &OS) const {
+  OS << "DIE Offset Base: " << DieOffsetBase << "\n";
+  for (auto Atom : Atoms)
+    Atom.print(OS);
+}
+
+void AppleAccelTableHeader::print(raw_ostream &OS) const {
+  Header.print(OS);
+  HeaderData.print(OS);
+}
+
+void AppleAccelTableBase::HashData::print(raw_ostream &OS) {
+  OS << "Name: " << Str << "\n";
+  OS << "  Hash Value: " << format("0x%x", HashValue) << "\n";
+  OS << "  Symbol: ";
+  if (Sym)
+    OS << *Sym;
+  else
+    OS << "<none>";
+  OS << "\n";
+  for (auto *Value : Data.Values)
+    Value->print(OS);
+}
+
+void AppleAccelTableBase::print(raw_ostream &OS) const {
+  // Print Header.
+  Header.print(OS);
+
+  // Print Content.
+  OS << "Entries: \n";
+  for (const auto &Entry : Entries) {
+    OS << "Name: " << Entry.first() << "\n";
+    for (auto *V : Entry.second.Values)
+      V->print(OS);
+  }
+
+  OS << "Buckets and Hashes: \n";
+  for (auto &Bucket : Buckets)
+    for (auto &Hash : Bucket)
+      Hash->print(OS);
+
+  OS << "Data: \n";
+  for (auto &D : Data)
+    D->print(OS);
+}
+
+void AppleAccelTableOffsetData::print(raw_ostream &OS) const {
+  OS << "  Offset: " << Die->getOffset() << "\n";
+}
+
+void AppleAccelTableTypeData::print(raw_ostream &OS) const {
+  OS << "  Offset: " << Die->getOffset() << "\n";
+  OS << "  Tag: " << dwarf::TagString(Die->getTag()) << "\n";
+}
+
+void AppleAccelTableStaticOffsetData::print(raw_ostream &OS) const {
+  OS << "  Static Offset: " << Offset << "\n";
+}
+
+void AppleAccelTableStaticTypeData::print(raw_ostream &OS) const {
+  OS << "  Static Offset: " << Offset << "\n";
+  OS << "  QualifiedNameHash: " << format("%x\n", QualifiedNameHash) << "\n";
+  OS << "  Tag: " << dwarf::TagString(Tag) << "\n";
+  OS << "  ObjCClassIsImplementation: "
+     << (ObjCClassIsImplementation ? "true" : "false");
+  OS << "\n";
+}
+#endif
