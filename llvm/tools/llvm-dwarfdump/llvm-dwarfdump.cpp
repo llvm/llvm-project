@@ -377,6 +377,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
         if (auto Offset = find(DICtx.getAppleNamespaces()))
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        // TODO: Add .debug_names support
       }
       return None;
     }();
