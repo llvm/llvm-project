@@ -163,6 +163,11 @@ public:
   /// and AST and rebuild them from scratch.
   void forceReparse(PathRef File);
 
+  /// Calls forceReparse() on all currently opened files.
+  /// As a result, this method may be very expensive.
+  /// This method is normally called when the compilation database is changed.
+  void reparseOpenedFiles();
+
   /// Run code completion for \p File at \p Pos.
   /// Request is processed asynchronously.
   ///

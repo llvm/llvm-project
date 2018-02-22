@@ -324,6 +324,20 @@ struct DidChangeWatchedFilesParams {
 };
 bool fromJSON(const json::Expr &, DidChangeWatchedFilesParams &);
 
+/// Clangd extension to manage a workspace/didChangeConfiguration notification
+/// since the data received is described as 'any' type in LSP.
+struct ClangdConfigurationParamsChange {
+  llvm::Optional<std::string> compilationDatabasePath;
+};
+bool fromJSON(const json::Expr &, ClangdConfigurationParamsChange &);
+
+struct DidChangeConfigurationParams {
+  // We use this predefined struct because it is easier to use
+  // than the protocol specified type of 'any'.
+  ClangdConfigurationParamsChange settings;
+};
+bool fromJSON(const json::Expr &, DidChangeConfigurationParams &);
+
 struct FormattingOptions {
   /// Size of a tab in spaces.
   int tabSize = 0;

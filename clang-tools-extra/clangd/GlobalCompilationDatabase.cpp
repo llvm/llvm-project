@@ -51,6 +51,12 @@ DirectoryBasedGlobalCompilationDatabase::getFallbackCommand(
   return C;
 }
 
+void DirectoryBasedGlobalCompilationDatabase::setCompileCommandsDir(Path P) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  CompileCommandsDir = P;
+  CompilationDatabases.clear();
+}
+
 void DirectoryBasedGlobalCompilationDatabase::setExtraFlagsForFile(
     PathRef File, std::vector<std::string> ExtraFlags) {
   std::lock_guard<std::mutex> Lock(Mutex);

@@ -370,6 +370,18 @@ void ClangdLSPServer::onHover(TextDocumentPositionParams &Params) {
                    });
 }
 
+// FIXME: This function needs to be properly tested.
+void ClangdLSPServer::onChangeConfiguration(
+    DidChangeConfigurationParams &Params) {
+  ClangdConfigurationParamsChange &Settings = Params.settings;
+
+  // Compilation database change.
+  if (Settings.compilationDatabasePath.hasValue()) {
+    CDB.setCompileCommandsDir(Settings.compilationDatabasePath.getValue());
+    Server.reparseOpenedFiles();
+  }
+}
+
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  bool StorePreamblesInMemory,
                                  const clangd::CodeCompleteOptions &CCOpts,

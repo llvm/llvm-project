@@ -497,5 +497,15 @@ json::Expr toJSON(const DocumentHighlight &DH) {
   };
 }
 
+bool fromJSON(const json::Expr &Params, DidChangeConfigurationParams &CCP) {
+  json::ObjectMapper O(Params);
+  return O && O.map("settings", CCP.settings);
+}
+
+bool fromJSON(const json::Expr &Params, ClangdConfigurationParamsChange &CCPC) {
+  json::ObjectMapper O(Params);
+  return O && O.map("compilationDatabasePath", CCPC.compilationDatabasePath);
+}
+
 } // namespace clangd
 } // namespace clang
