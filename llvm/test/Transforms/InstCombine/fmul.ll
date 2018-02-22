@@ -4,46 +4,46 @@
 ; (-0.0 - X) * C => X * -C
 define float @test1(float %x) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], -2.000000e+01
+; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[X:%.*]], -2.000000e+01
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = fsub float -0.000000e+00, %x
-  %mul = fmul float %sub, 2.0e+1
+  %mul = fmul ninf float %sub, 2.0e+1
   ret float %mul
 }
 
 ; (0.0 - X) * C => X * -C
 define float @test2(float %x) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], -2.000000e+01
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X:%.*]], -2.000000e+01
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = fsub nsz float 0.000000e+00, %x
-  %mul = fmul float %sub, 2.0e+1
+  %mul = fmul nnan float %sub, 2.0e+1
   ret float %mul
 }
 
 ; (-0.0 - X) * (-0.0 - Y) => X * Y
 define float @test3(float %x, float %y) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul arcp float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub1 = fsub float -0.000000e+00, %x
   %sub2 = fsub float -0.000000e+00, %y
-  %mul = fmul fast float %sub1, %sub2
+  %mul = fmul arcp float %sub1, %sub2
   ret float %mul
 }
 
 ; (0.0 - X) * (0.0 - Y) => X * Y
 define float @test4(float %x, float %y) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul afn float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub1 = fsub nsz float 0.000000e+00, %x
   %sub2 = fsub nsz float 0.000000e+00, %y
-  %mul = fmul float %sub1, %sub2
+  %mul = fmul afn float %sub1, %sub2
   ret float %mul
 }
 

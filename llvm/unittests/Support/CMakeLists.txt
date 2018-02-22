@@ -19,6 +19,7 @@ add_llvm_unittest(SupportTests
   ConvertUTFTest.cpp
   DataExtractorTest.cpp
   DebugTest.cpp
+  DJBTest.cpp
   EndianStreamTest.cpp
   EndianTest.cpp
   ErrnoTest.cpp
