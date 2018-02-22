@@ -100,6 +100,37 @@ namespace dsymutil {
 
 namespace {
 
+/// Small helper that resolves and caches file paths. This helps reduce the
+/// number of calls to realpath which is expensive. We assume the input are
+/// files, and cache the realpath of their parent. This way we can quickly
+/// resolve different files under the same path.
+class CachedPathResolver {
+public:
+  /// Resolve a path by calling realpath and cache its result. The returned
+  /// StringRef is interned in the given \p StringPool.
+  StringRef resolve(std::string Path, NonRelocatableStringpool &StringPool) {
+    StringRef FileName = sys::path::filename(Path);
+    SmallString<PATH_MAX> ParentPath = sys::path::parent_path(Path);
+
+    // If the ParentPath has not yet been resolved, resolve and cache it for
+    // future look-ups.
+    if (!ResolvedPaths.count(ParentPath)) {
+      SmallString<PATH_MAX> RealPath;
+      sys::fs::real_path(ParentPath, RealPath);
+      ResolvedPaths.insert({ParentPath, StringRef(RealPath).str()});
+    }
+
+    // Join the file name again with the resolved path.
+    SmallString<PATH_MAX> ResolvedPath(ResolvedPaths[ParentPath]);
+    sys::path::append(ResolvedPath, FileName);
+    return StringPool.internString(ResolvedPath);
+  }
+
+private:
+  StringMap<std::string> ResolvedPaths;
+};
+
+
 /// Retrieve the section named \a SecName in \a Obj.
 ///
 /// To accommodate for platform discrepancies, the name passed should be
@@ -234,6 +265,8 @@ class DeclContextTree {
   DeclContext Root;
   DeclContext::Map Contexts;
 
+  /// Cache resolved paths from the line table.
+  CachedPathResolver PathResolver;
 public:
   /// Get the child of \a Context described by \a DIE in \a Unit. The
   /// required strings will be interned in \a StringPool.
@@ -1945,30 +1978,24 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
           if (!Name && Tag == dwarf::DW_TAG_namespace)
             FileNum = 1;
 
-          // FIXME: Passing U.getOrigUnit().getCompilationDir()
-          // instead of "" would allow more uniquing, but for now, do
-          // it this way to match dsymutil-classic.
           if (LT->hasFileAtIndex(FileNum)) {
             Line = dwarf::toUnsigned(DIE.find(dwarf::DW_AT_decl_line), 0);
-            // Cache the resolved paths, because calling realpath is expansive.
+            // Cache the resolved paths based on the index in the line table,
+            // because calling realpath is expansive.
             StringRef ResolvedPath = U.getResolvedPath(FileNum);
             if (!ResolvedPath.empty()) {
               FileRef = ResolvedPath;
             } else {
               std::string File;
-              bool gotFileName =
-                LT->getFileNameByIndex(FileNum, "",
-                        DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                        File);
-              (void)gotFileName;
-              assert(gotFileName && "Must get file name from line table");
-#ifdef HAVE_REALPATH
-              char RealPath[PATH_MAX + 1];
-              RealPath[PATH_MAX] = 0;
-              if (::realpath(File.c_str(), RealPath))
-                File = RealPath;
-#endif
-              FileRef = StringPool.internString(File);
+              bool FoundFileName = LT->getFileNameByIndex(
+                  FileNum, U.getOrigUnit().getCompilationDir(),
+                  DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                  File);
+              (void)FoundFileName;
+              assert(FoundFileName && "Must get file name from line table");
+              // Second level of caching, this time based on the file's parent
+              // path.
+              FileRef = PathResolver.resolve(File, StringPool);
               U.setResolvedPath(FileNum, FileRef);
             }
           }
