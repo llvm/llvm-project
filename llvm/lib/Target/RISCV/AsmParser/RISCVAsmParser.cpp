@@ -273,12 +273,13 @@ public:
            (VK == RISCVMCExpr::VK_RISCV_None || VK == RISCVMCExpr::VK_RISCV_LO);
   }
 
-  bool isUImm6NonZero() const {
+  bool isCLUIImm() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
-    return IsConstantImm && isUInt<6>(Imm) && (Imm != 0) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && (Imm != 0) &&
+           (isUInt<5>(Imm) || (Imm >= 0xfffe0 && Imm <= 0xfffff)) &&
+            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isUImm7Lsb00() const {
@@ -631,8 +632,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 5),
                                       (1 << 5) - 1,
         "immediate must be non-zero in the range");
-  case Match_InvalidUImm6NonZero:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6) - 1);
+  case Match_InvalidCLUIImm:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 1, (1 << 5) - 1,
+        "immediate must be in [0xfffe0, 0xfffff] or");
   case Match_InvalidUImm7Lsb00:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 7) - 4,

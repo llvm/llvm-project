@@ -1235,7 +1235,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
           .addImm(0U)
           .addMetadata(DI->getVariable())
           .addMetadata(DI->getExpression());
-    } else if (unsigned Reg = getRegForValue(V)) {
+    } else if (unsigned Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
       bool IsIndirect = false;
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, IsIndirect, Reg,

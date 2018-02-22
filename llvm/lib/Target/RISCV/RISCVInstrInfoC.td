@@ -42,10 +42,25 @@ def simm6nonzero : Operand<XLenVT>,
   let DecoderMethod = "decodeSImmOperand<6>";
 }
 
-def uimm6nonzero : Operand<XLenVT>,
-                   ImmLeaf<XLenVT, [{return isUInt<6>(Imm) && (Imm != 0);}]> {
-  let ParserMatchClass = UImmAsmOperand<6, "NonZero">;
-  let DecoderMethod = "decodeUImmOperand<6>";
+def CLUIImmAsmOperand : AsmOperandClass {
+  let Name = "CLUIImm";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = !strconcat("Invalid", Name);
+}
+
+
+// c_lui_imm checks the immediate range is in [1, 31] or [0xfffe0, 0xfffff].
+// The RISC-V ISA describes the constraint as [1, 63], with that value being
+// loaded in to bits 17-12 of the destination register and sign extended from
+// bit 17. Therefore, this 6-bit immediate can represent values in the ranges
+// [1, 31] and [0xfffe0, 0xfffff].
+def c_lui_imm : Operand<XLenVT>,
+                ImmLeaf<XLenVT, [{return (Imm != 0) &&
+                                 (isUInt<5>(Imm) ||
+                                  (Imm >= 0xfffe0 && Imm <= 0xfffff));}]> {
+  let ParserMatchClass = CLUIImmAsmOperand;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeCLUIImmOperand";
 }
 
 // A 7-bit unsigned immediate where the least significant two bits are zero.
@@ -303,7 +318,7 @@ def C_ADDI16SP : RVInst16CI<0b011, 0b01, (outs SP:$rd_wb),
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX0X2:$rd),
-                       (ins uimm6nonzero:$imm),
+                       (ins c_lui_imm:$imm),
                        "c.lui", "$rd, $imm"> {
   let Inst{6-2} = imm{4-0};
 }

@@ -1136,7 +1136,8 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   bool HasUnknownCall = false;
   for (LazyCallGraph::Node &N : C) {
     Function &F = N.getFunction();
-    if (F.hasFnAttribute(Attribute::OptimizeNone)) {
+    if (F.hasFnAttribute(Attribute::OptimizeNone) ||
+        F.hasFnAttribute(Attribute::Naked)) {
       // Treat any function we're trying not to optimize as if it were an
       // indirect call and omit it from the node set used below.
       HasUnknownCall = true;
@@ -1221,7 +1222,8 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
   bool ExternalNode = false;
   for (CallGraphNode *I : SCC) {
     Function *F = I->getFunction();
-    if (!F || F->hasFnAttribute(Attribute::OptimizeNone)) {
+    if (!F || F->hasFnAttribute(Attribute::OptimizeNone) ||
+        F->hasFnAttribute(Attribute::Naked)) {
       // External node or function we're trying not to optimize - we both avoid
       // transform them and avoid leveraging information they provide.
       ExternalNode = true;

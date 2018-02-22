@@ -17896,6 +17896,51 @@ static SDValue ChangeVSETULTtoVSETULE(const SDLoc &dl, SDValue Op1,
   return DAG.getBuildVector(VT, dl, ULTOp1);
 }
 
+/// As another special case, use PSUBUS[BW] when it's profitable. E.g. for
+/// Op0 u<= Op1:
+///   t = psubus Op0, Op1
+///   pcmpeq t, <0..0>
+static SDValue LowerVSETCCWithSUBUS(SDValue Op0, SDValue Op1, MVT VT,
+                                    ISD::CondCode Cond, const SDLoc &dl,
+                                    const X86Subtarget &Subtarget,
+                                    SelectionDAG &DAG) {
+  if (!Subtarget.hasSSE2())
+    return SDValue();
+
+  MVT VET = VT.getVectorElementType();
+  if (VET != MVT::i8 && VET != MVT::i16)
+    return SDValue();
+
+  switch (Cond) {
+  default:
+    return SDValue();
+  case ISD::SETULT: {
+    // If the comparison is against a constant we can turn this into a
+    // setule.  With psubus, setule does not require a swap.  This is
+    // beneficial because the constant in the register is no longer
+    // destructed as the destination so it can be hoisted out of a loop.
+    // Only do this pre-AVX since vpcmp* is no longer destructive.
+    if (Subtarget.hasAVX())
+      return SDValue();
+    SDValue ULEOp1 = ChangeVSETULTtoVSETULE(dl, Op1, DAG);
+    if (!ULEOp1)
+      return SDValue();
+    Op1 = ULEOp1;
+    break;
+  }
+  // Psubus is better than flip-sign because it requires no inversion.
+  case ISD::SETUGE:
+    std::swap(Op0, Op1);
+    break;
+  case ISD::SETULE:
+    break;
+  }
+
+  SDValue Result = DAG.getNode(X86ISD::SUBUS, dl, VT, Op0, Op1);
+  return DAG.getNode(X86ISD::PCMPEQ, dl, VT, Result,
+                     getZeroVector(VT, Subtarget, DAG, dl));
+}
+
 static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   SDValue Op0 = Op.getOperand(0);
@@ -18088,6 +18133,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     return Result;
   }
 
+  // Try to use SUBUS and PCMPEQ.
+  if (SDValue V = LowerVSETCCWithSUBUS(Op0, Op1, VT, Cond, dl, Subtarget, DAG))
+    return V;
+
   // We are handling one of the integer comparisons here. Since SSE only has
   // GT and EQ comparisons for integer, swapping operands and multiple
   // operations may be required for some comparisons.
@@ -18097,41 +18146,6 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
               Cond == ISD::SETGE || Cond == ISD::SETUGE;
   bool Invert = Cond == ISD::SETNE ||
                 (Cond != ISD::SETEQ && ISD::isTrueWhenEqual(Cond));
-
-  MVT VET = VT.getVectorElementType();
-  bool HasSubus = Subtarget.hasSSE2() && (VET == MVT::i8 || VET == MVT::i16);
-  bool Subus = false;
-  if (HasSubus) {
-    // As another special case, use PSUBUS[BW] when it's profitable. E.g. for
-    // Op0 u<= Op1:
-    //   t = psubus Op0, Op1
-    //   pcmpeq t, <0..0>
-    switch (Cond) {
-    default: break;
-    case ISD::SETULT: {
-      // If the comparison is against a constant we can turn this into a
-      // setule.  With psubus, setule does not require a swap.  This is
-      // beneficial because the constant in the register is no longer
-      // destructed as the destination so it can be hoisted out of a loop.
-      // Only do this pre-AVX since vpcmp* is no longer destructive.
-      if (Subtarget.hasAVX())
-        break;
-      if (SDValue ULEOp1 = ChangeVSETULTtoVSETULE(dl, Op1, DAG)) {
-        Op1 = ULEOp1;
-        Subus = true; Invert = false; Swap = false;
-      }
-      break;
-    }
-    // Psubus is better than flip-sign because it requires no inversion.
-    case ISD::SETUGE: Subus = true; Invert = false; Swap = true;  break;
-    case ISD::SETULE: Subus = true; Invert = false; Swap = false; break;
-    }
-
-    if (Subus) {
-      Opc = X86ISD::SUBUS;
-      FlipSigns = false;
-    }
-  }
 
   if (Swap)
     std::swap(Op0, Op1);
@@ -18219,10 +18233,6 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   // If the logical-not of the result is required, perform that now.
   if (Invert)
     Result = DAG.getNOT(dl, Result, VT);
-
-  if (Subus)
-    Result = DAG.getNode(X86ISD::PCMPEQ, dl, VT, Result,
-                         getZeroVector(VT, Subtarget, DAG, dl));
 
   return Result;
 }

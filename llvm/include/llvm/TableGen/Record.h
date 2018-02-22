@@ -141,6 +141,8 @@ public:
   static CodeRecTy *get() { return &Shared; }
 
   std::string getAsString() const override { return "code"; }
+
+  bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size
@@ -176,6 +178,8 @@ public:
   static StringRecTy *get() { return &Shared; }
 
   std::string getAsString() const override;
+
+  bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
 /// 'list<Ty>' - Represent a list of values, all of which must be of
@@ -678,6 +682,9 @@ public:
   Init *getElement(unsigned i) const {
     assert(i < NumValues && "List element index out of range!");
     return getTrailingObjects<Init *>()[i];
+  }
+  RecTy *getElementType() const {
+    return cast<ListRecTy>(getType())->getElementType();
   }
 
   Record *getElementAsRecord(unsigned i) const;
@@ -1234,6 +1241,8 @@ public:
   bool setValue(Init *V) {
     if (V) {
       Value = V->convertInitializerTo(getType());
+      assert(!Value || !isa<TypedInit>(Value) ||
+             cast<TypedInit>(Value)->getType()->typeIsConvertibleTo(getType()));
       return Value == nullptr;
     }
     Value = nullptr;

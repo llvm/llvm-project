@@ -149,9 +149,13 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
   if (Params.contentChanges.size() != 1)
     return replyError(ErrorCode::InvalidParams,
                       "can only apply one change at a time");
+  auto WantDiags = WantDiagnostics::Auto;
+  if (Params.wantDiagnostics.hasValue())
+    WantDiags = Params.wantDiagnostics.getValue() ? WantDiagnostics::Yes
+                                                  : WantDiagnostics::No;
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file(),
-                     Params.contentChanges[0].text, WantDiagnostics::Auto);
+                     Params.contentChanges[0].text, WantDiags);
 }
 
 void ClangdLSPServer::onFileEvent(DidChangeWatchedFilesParams &Params) {
@@ -368,6 +372,18 @@ void ClangdLSPServer::onHover(TextDocumentPositionParams &Params) {
 
                      reply(H->Value);
                    });
+}
+
+// FIXME: This function needs to be properly tested.
+void ClangdLSPServer::onChangeConfiguration(
+    DidChangeConfigurationParams &Params) {
+  ClangdConfigurationParamsChange &Settings = Params.settings;
+
+  // Compilation database change.
+  if (Settings.compilationDatabasePath.hasValue()) {
+    CDB.setCompileCommandsDir(Settings.compilationDatabasePath.getValue());
+    Server.reparseOpenedFiles();
+  }
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

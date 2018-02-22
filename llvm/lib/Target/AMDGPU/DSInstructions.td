@@ -600,8 +600,6 @@ class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
   (inst $ptr, (as_i16imm $offset), (i1 0))
 >;
 
-// FIXME: Passing name of PatFrag in workaround. Why doesn't
-// !cast<PatFrag>(frag.NAME#"_m0") work!?
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
 
   let OtherPredicates = [LDSRequiresM0Init] in {
@@ -609,7 +607,7 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSReadPat<!cast<DS_Pseudo>(inst.NAME#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
@@ -678,7 +676,7 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSWritePat<!cast<DS_Pseudo>(inst.NAME#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
@@ -732,7 +730,8 @@ multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(inst.NAME#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                         !cast<PatFrag>(frag)>;
   }
 }
 
@@ -749,7 +748,8 @@ multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicCmpXChg<!cast<DS_Pseudo>(inst.NAME#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                          !cast<PatFrag>(frag)>;
   }
 }
 

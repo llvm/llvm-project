@@ -40,6 +40,12 @@ public:
   /// \return version and contents of the stored document.
   /// For untracked files, a (0, None) pair is returned.
   VersionedDraft getDraft(PathRef File) const;
+
+  /// \return List of names of active drafts in this store.  Drafts that were
+  /// removed (which still have an entry in the Drafts map) are not returned by
+  /// this function.
+  std::vector<Path> getActiveFiles() const;
+
   /// \return version of the tracked document.
   /// For untracked files, 0 is returned.
   DocVersion getVersion(PathRef File) const;

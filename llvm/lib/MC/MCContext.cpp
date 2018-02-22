@@ -536,11 +536,13 @@ MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
 /// directory tables.  If the file number has already been allocated it is an
 /// error and zero is returned and the client reports the error, else the
 /// allocated file number is returned.  The file numbers may be in any order.
-unsigned MCContext::getDwarfFile(StringRef Directory, StringRef FileName,
-                                 unsigned FileNumber, MD5::MD5Result *Checksum,
-                                 unsigned CUID) {
+Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
+                                           StringRef FileName,
+                                           unsigned FileNumber,
+                                           MD5::MD5Result *Checksum,
+                                           unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];
-  return Table.getFile(Directory, FileName, Checksum, FileNumber);
+  return Table.tryGetFile(Directory, FileName, Checksum, FileNumber);
 }
 
 /// isValidDwarfFileNumber - takes a dwarf file number and returns true if it

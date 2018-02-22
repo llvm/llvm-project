@@ -21,6 +21,17 @@ VersionedDraft DraftStore::getDraft(PathRef File) const {
   return It->second;
 }
 
+std::vector<Path> DraftStore::getActiveFiles() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  std::vector<Path> ResultVector;
+
+  for (auto DraftIt = Drafts.begin(); DraftIt != Drafts.end(); DraftIt++)
+    if (DraftIt->second.Draft)
+      ResultVector.push_back(DraftIt->getKey());
+
+  return ResultVector;
+}
+
 DocVersion DraftStore::getVersion(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
 
