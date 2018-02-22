@@ -110,18 +110,18 @@ public:
   /// StringRef is interned in the given \p StringPool.
   StringRef resolve(std::string Path, NonRelocatableStringpool &StringPool) {
     StringRef FileName = sys::path::filename(Path);
-    SmallString<PATH_MAX> ParentPath = sys::path::parent_path(Path);
+    SmallString<256> ParentPath = sys::path::parent_path(Path);
 
     // If the ParentPath has not yet been resolved, resolve and cache it for
     // future look-ups.
     if (!ResolvedPaths.count(ParentPath)) {
-      SmallString<PATH_MAX> RealPath;
+      SmallString<256> RealPath;
       sys::fs::real_path(ParentPath, RealPath);
       ResolvedPaths.insert({ParentPath, StringRef(RealPath).str()});
     }
 
     // Join the file name again with the resolved path.
-    SmallString<PATH_MAX> ResolvedPath(ResolvedPaths[ParentPath]);
+    SmallString<256> ResolvedPath(ResolvedPaths[ParentPath]);
     sys::path::append(ResolvedPath, FileName);
     return StringPool.internString(ResolvedPath);
   }
