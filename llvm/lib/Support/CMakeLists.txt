@@ -113,6 +113,7 @@ add_llvm_library(LLVMSupport
   Triple.cpp
   Twine.cpp
   Unicode.cpp
+  UnicodeCaseFold.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp
