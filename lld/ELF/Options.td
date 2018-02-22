@@ -351,7 +351,6 @@ def alias_filter: Separate<["-"], "F">, Alias<filter>;
 def alias_format_b: S<"b">, Alias<format>;
 def alias_library: JoinedOrSeparate<["-"], "l">, Alias<library>;
 def alias_library_path: JoinedOrSeparate<["-"], "L">, Alias<library_path>;
-def alias_nopie: F<"nopie">, Alias<no_pie>;
 def alias_omagic: Flag<["-"], "N">, Alias<omagic>;
 def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
