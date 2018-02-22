@@ -137,17 +137,11 @@ void elf::writeMapFile() {
     OS << OSec->Name << '\n';
 
     // Dump symbols for each input section.
-    for (BaseCommand *Base : OSec->SectionCommands) {
-      auto *ISD = dyn_cast<InputSectionDescription>(Base);
-      if (!ISD)
-        continue;
-      for (InputSection *IS : ISD->Sections) {
-        writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(),
-                    IS->Alignment);
-        OS << indent(1) << toString(IS) << '\n';
-        for (Symbol *Sym : SectionSyms[IS])
-          OS << SymStr[Sym] << '\n';
-      }
+    for (InputSection *IS : getInputSections(OSec)) {
+      writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(), IS->Alignment);
+      OS << indent(1) << toString(IS) << '\n';
+      for (Symbol *Sym : SectionSyms[IS])
+        OS << SymStr[Sym] << '\n';
     }
   }
 }

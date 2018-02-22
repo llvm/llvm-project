@@ -34,7 +34,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   const llvm::Triple &Triple = TC.getTriple();
   if (Args.hasFlag(options::OPT_fxray_instrument,
                    options::OPT_fnoxray_instrument, false)) {
-    if (Triple.getOS() == llvm::Triple::Linux)
+    if (Triple.getOS() == llvm::Triple::Linux) {
       switch (Triple.getArch()) {
       case llvm::Triple::x86_64:
       case llvm::Triple::arm:
@@ -49,9 +49,15 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         D.Diag(diag::err_drv_clang_unsupported)
             << (std::string(XRayInstrumentOption) + " on " + Triple.str());
       }
-    else
+    } else if (Triple.getOS() == llvm::Triple::FreeBSD) {
+        if (Triple.getArch() != llvm::Triple::x86_64) {
+          D.Diag(diag::err_drv_clang_unsupported)
+              << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+        }
+    } else {
       D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on non-Linux target OS");
+          << (std::string(XRayInstrumentOption) + " on non-supported target OS");
+    }
     XRayInstrument = true;
     if (const Arg *A =
             Args.getLastArg(options::OPT_fxray_instruction_threshold_,

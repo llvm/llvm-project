@@ -10,7 +10,7 @@
 //
 // FIXME: Understand how to make this work on other platforms
 // REQUIRES: built-in-llvm-tree
-// REQUIRES: x86_64-linux
+// REQUIRES: x86_64-target-arch
 #include <iostream>
 
 using namespace std;

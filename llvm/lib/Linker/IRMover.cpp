@@ -318,8 +318,8 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
       return *Entry = Ty;
     }
 
-    if (StructType *OldT = DstStructTypesSet.findNonOpaque(
-            ElementTypes, IsPacked, STy->getName())) {
+    if (StructType *OldT =
+            DstStructTypesSet.findNonOpaque(ElementTypes, IsPacked)) {
       STy->setName("");
       return *Entry = OldT;
     }
@@ -906,6 +906,7 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
 Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
                                                     bool ForAlias) {
   GlobalValue *DGV = getLinkedToGlobal(SGV);
+
   bool ShouldLink = shouldLink(DGV, *SGV);
 
   // just missing from map
@@ -1409,14 +1410,12 @@ bool IRMover::StructTypeKeyInfo::isEqual(const StructType *LHS,
 
 void IRMover::IdentifiedStructTypeSet::addNonOpaque(StructType *Ty) {
   assert(!Ty->isOpaque());
-  if (Ty->hasName())
-    NonOpaqueStructNameMap.insert({getTypeNamePrefix(Ty->getName()), Ty});
-
   NonOpaqueStructTypes.insert(Ty);
 }
 
 void IRMover::IdentifiedStructTypeSet::switchToNonOpaque(StructType *Ty) {
-  addNonOpaque(Ty);
+  assert(!Ty->isOpaque());
+  NonOpaqueStructTypes.insert(Ty);
   bool Removed = OpaqueStructTypes.erase(Ty);
   (void)Removed;
   assert(Removed);
@@ -1429,16 +1428,10 @@ void IRMover::IdentifiedStructTypeSet::addOpaque(StructType *Ty) {
 
 StructType *
 IRMover::IdentifiedStructTypeSet::findNonOpaque(ArrayRef<Type *> ETypes,
-                                                bool IsPacked, StringRef Name) {
+                                                bool IsPacked) {
   IRMover::StructTypeKeyInfo::KeyTy Key(ETypes, IsPacked);
   auto I = NonOpaqueStructTypes.find_as(Key);
-  if (I == NonOpaqueStructTypes.end())
-    return nullptr;
-  auto NI = NonOpaqueStructNameMap.find(getTypeNamePrefix(Name));
-  if (NI != NonOpaqueStructNameMap.end() &&
-      IRMover::StructTypeKeyInfo::KeyTy((*NI).second) == Key)
-    return (*NI).second;
-  return *I;
+  return I == NonOpaqueStructTypes.end() ? nullptr : *I;
 }
 
 bool IRMover::IdentifiedStructTypeSet::hasType(StructType *Ty) {

@@ -231,12 +231,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   }
 
   // Write leading padding.
-  std::vector<InputSection *> Sections;
-  for (BaseCommand *Cmd : SectionCommands)
-    if (auto *ISD = dyn_cast<InputSectionDescription>(Cmd))
-      for (InputSection *IS : ISD->Sections)
-        if (IS->Live)
-          Sections.push_back(IS);
+  std::vector<InputSection *> Sections = getInputSections(this);
   uint32_t Filler = getFiller();
   if (Filler)
     fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
@@ -281,17 +276,13 @@ static void finalizeShtGroup(OutputSection *OS,
 }
 
 template <class ELFT> void OutputSection::finalize() {
-  InputSection *First = nullptr;
-  for (BaseCommand *Base : SectionCommands) {
-    if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
-      if (ISD->Sections.empty())
-        continue;
-      if (First == nullptr)
-        First = ISD->Sections.front();
-    }
-    if (isa<ByteCommand>(Base) && Type == SHT_NOBITS)
-      Type = SHT_PROGBITS;
-  }
+  if (Type == SHT_NOBITS)
+    for (BaseCommand *Base : SectionCommands)
+      if (isa<ByteCommand>(Base))
+        Type = SHT_PROGBITS;
+
+  std::vector<InputSection *> V = getInputSections(this);
+  InputSection *First = V.empty() ? nullptr : V[0];
 
   if (Flags & SHF_LINK_ORDER) {
     // We must preserve the link order dependency of sections with the
@@ -392,6 +383,14 @@ int elf::getPriority(StringRef S) {
   if (!to_integer(S.substr(Pos + 1), V, 10))
     return 65536;
   return V;
+}
+
+std::vector<InputSection *> elf::getInputSections(OutputSection *OS) {
+  std::vector<InputSection *> Ret;
+  for (BaseCommand *Base : OS->SectionCommands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+      Ret.insert(Ret.end(), ISD->Sections.begin(), ISD->Sections.end());
+  return Ret;
 }
 
 // Sorts input sections by section name suffixes, so that .foo.N comes

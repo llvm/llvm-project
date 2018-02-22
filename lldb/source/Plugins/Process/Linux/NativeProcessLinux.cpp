@@ -1518,7 +1518,6 @@ Status NativeProcessLinux::GetSoftwareBreakpointPCOffset(
   // set per architecture.  Need ARM, MIPS support here.
   static const uint8_t g_i386_opcode[] = {0xCC};
   static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
 
   switch (m_arch.GetMachine()) {
   case llvm::Triple::x86:
@@ -1530,16 +1529,13 @@ Status NativeProcessLinux::GetSoftwareBreakpointPCOffset(
     actual_opcode_size = static_cast<uint32_t>(sizeof(g_s390x_opcode));
     return Status();
 
-  case llvm::Triple::ppc64le:
-    actual_opcode_size = static_cast<uint32_t>(sizeof(g_ppc64le_opcode));
-    return Status();
-
   case llvm::Triple::arm:
   case llvm::Triple::aarch64:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
+  case llvm::Triple::ppc64le:
     // On these architectures the PC don't get updated for breakpoint hits
     actual_opcode_size = 0;
     return Status();

@@ -9324,7 +9324,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   if (NewFD->isMain()) {
     if (NewTA && NewTA->isDefaultVersion()) {
       S.Diag(NewFD->getLocation(), diag::err_multiversion_not_allowed_on_main);
-      NewFD->isInvalidDecl();
+      NewFD->setInvalidDecl();
       return true;
     }
     return false;

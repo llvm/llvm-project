@@ -11723,6 +11723,12 @@ TEST_F(FormatTest, NoSpaceAfterSuper) {
     verifyFormat("__super::FooBar();");
 }
 
+TEST(FormatStyle, GetStyleWithEmptyFileName) {
+  auto Style1 = getStyle("file", "", "Google");
+  ASSERT_TRUE((bool)Style1);
+  ASSERT_EQ(*Style1, getGoogleStyle());
+}
+
 TEST(FormatStyle, GetStyleOfFile) {
   vfs::InMemoryFileSystem FS;
   // Test 1: format file in the same directory.

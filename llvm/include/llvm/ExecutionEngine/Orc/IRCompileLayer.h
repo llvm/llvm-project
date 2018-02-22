@@ -47,9 +47,7 @@ public:
   /// @brief Compile the module, and add the resulting object to the base layer
   ///        along with the given memory manager and symbol resolver.
   Error addModule(VModuleKey K, std::shared_ptr<Module> M) {
-    using CompileResult = decltype(Compile(*M));
-    auto Obj = std::make_shared<CompileResult>(Compile(*M));
-    return BaseLayer.addObject(std::move(K), std::move(Obj));
+    return BaseLayer.addObject(std::move(K), Compile(*M));
   }
 
   /// @brief Remove the module associated with the VModuleKey K.

@@ -353,24 +353,21 @@ public:
                              std::unique_ptr<MemoryBuffer> ObjBuffer,
                              LLVMOrcSymbolResolverFn ExternalResolver,
                              void *ExternalResolverCtx) {
-    if (auto ObjOrErr =
-        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef())) {
-      auto &Obj = *ObjOrErr;
-      auto OwningObj =
-        std::make_shared<OwningObject>(std::move(Obj), std::move(ObjBuffer));
+    if (auto Obj = object::ObjectFile::createObjectFile(
+            ObjBuffer->getMemBufferRef())) {
 
       RetKey = ES.allocateVModule();
       Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
           *this, ExternalResolver, ExternalResolverCtx);
 
-      if (auto Err = ObjectLayer.addObject(RetKey, std::move(OwningObj)))
+      if (auto Err = ObjectLayer.addObject(RetKey, std::move(ObjBuffer)))
         return mapError(std::move(Err));
 
       KeyLayers[RetKey] = detail::createGenericLayer(ObjectLayer);
 
       return LLVMOrcErrSuccess;
     } else
-      return mapError(ObjOrErr.takeError());
+      return mapError(Obj.takeError());
   }
 
   JITSymbol findSymbol(const std::string &Name,

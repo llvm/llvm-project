@@ -95,14 +95,13 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   if (!TM)
     return;
 
-  auto Obj =
-    std::make_shared<object::OwningBinary<object::ObjectFile>>(
-      SimpleCompiler(*TM)(*M));
+  auto Obj = SimpleCompiler(*TM)(*M);
 
   {
     // Test with ProcessAllSections = false (the default).
     auto K = ES.allocateVModule();
-    cantFail(ObjLayer.addObject(K, Obj));
+    cantFail(ObjLayer.addObject(
+        K, MemoryBuffer::getMemBufferCopy(Obj->getBuffer())));
     cantFail(ObjLayer.emitAndFinalize(K));
     EXPECT_EQ(DebugSectionSeen, false)
       << "Unexpected debug info section";
@@ -113,7 +112,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
     // Test with ProcessAllSections = true.
     ObjLayer.setProcessAllSections(true);
     auto K = ES.allocateVModule();
-    cantFail(ObjLayer.addObject(K, Obj));
+    cantFail(ObjLayer.addObject(K, std::move(Obj)));
     cantFail(ObjLayer.emitAndFinalize(K));
     EXPECT_EQ(DebugSectionSeen, true)
       << "Expected debug info section not seen";
@@ -164,9 +163,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     Builder.CreateRet(FourtyTwo);
   }
 
-  auto Obj1 =
-    std::make_shared<object::OwningBinary<object::ObjectFile>>(
-      Compile(*MB1.getModule()));
+  auto Obj1 = Compile(*MB1.getModule());
 
   ModuleBuilder MB2(Context, "", "dummy");
   {
@@ -177,9 +174,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     IRBuilder<> Builder(FooEntry);
     Builder.CreateRet(Builder.CreateCall(BarDecl));
   }
-  auto Obj2 =
-    std::make_shared<object::OwningBinary<object::ObjectFile>>(
-      Compile(*MB2.getModule()));
+  auto Obj2 = Compile(*MB2.getModule());
 
   auto K1 = ES.allocateVModule();
   Resolvers[K1] = std::make_shared<NullResolver>();
@@ -249,9 +244,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     Builder.CreateRet(FourtyTwo);
   }
 
-  auto Obj1 =
-    std::make_shared<object::OwningBinary<object::ObjectFile>>(
-      Compile(*MB1.getModule()));
+  auto Obj1 = Compile(*MB1.getModule());
 
   ModuleBuilder MB2(Context, "", "dummy");
   {
@@ -263,9 +256,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     Value *Seven = ConstantInt::getSigned(Int32Ty, 7);
     Builder.CreateRet(Seven);
   }
-  auto Obj2 =
-    std::make_shared<object::OwningBinary<object::ObjectFile>>(
-      Compile(*MB2.getModule()));
+  auto Obj2 = Compile(*MB2.getModule());
 
   auto K = ES.allocateVModule();
   cantFail(ObjLayer.addObject(K, std::move(Obj1)));
@@ -288,7 +279,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
         return RTDyldObjectLinkingLayer::Resources{
             nullptr, std::make_shared<NullResolver>()};
       },
-      [](VModuleKey, const RTDyldObjectLinkingLayer::ObjectPtr &obj,
+      [](VModuleKey, const object::ObjectFile &obj,
          const RuntimeDyld::LoadedObjectInfo &info) {});
 }
 

@@ -1914,7 +1914,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (OptimizeSpillSlots && !isOptNone(MF))
     optimizeSpillSlots(MF, NewRegs);
 
-  // We need to reserve a a spill slot if scavenging could potentially require
+  // We need to reserve a spill slot if scavenging could potentially require
   // spilling a scavenged register.
   if (!NewRegs.empty() || mayOverflowFrameOffset(MF)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
