@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -148,6 +149,32 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                           const FunctionSamples &FS) {
   FS.print(OS);
   return OS;
+}
+
+unsigned FunctionSamples::getOffset(const DILocation *DIL) {
+  return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+      0xffff;
+}
+
+const FunctionSamples *
+FunctionSamples::findFunctionSamples(const DILocation *DIL) const {
+  assert(DIL);
+  SmallVector<std::pair<LineLocation, StringRef>, 10> S;
+
+  const DILocation *PrevDIL = DIL;
+  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
+    S.push_back(std::make_pair(
+        LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()),
+        PrevDIL->getScope()->getSubprogram()->getLinkageName()));
+    PrevDIL = DIL;
+  }
+  if (S.size() == 0)
+    return this;
+  const FunctionSamples *FS = this;
+  for (int i = S.size() - 1; i >= 0 && FS != nullptr; i--) {
+    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second);
+  }
+  return FS;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -39,6 +39,8 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
+  bool enableMultipleCopyHints() const override { return true; }
+
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
         unsigned FIOperandNum, RegScavenger *RS = nullptr) const override;
 
@@ -74,6 +76,10 @@ public:
         const TargetRegisterClass *RC) const;
 
   unsigned getFirstCallerSavedNonParamReg() const;
+
+  const TargetRegisterClass *
+  getPointerRegClass(const MachineFunction &MF,
+                     unsigned Kind = 0) const override;
 
   bool isEHReturnCalleeSaveReg(unsigned Reg) const;
 };

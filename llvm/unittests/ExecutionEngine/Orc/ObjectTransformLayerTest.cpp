@@ -288,16 +288,13 @@ TEST(ObjectTransformLayerTest, Main) {
         std::make_shared<NullResolver>()};
   });
 
-  auto IdentityTransform =
-    [](std::shared_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
-       Obj) {
-      return Obj;
-    };
+  auto IdentityTransform = [](std::unique_ptr<llvm::MemoryBuffer> Obj) {
+    return Obj;
+  };
   ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
       TransformLayer(BaseLayer, IdentityTransform);
   auto NullCompiler = [](llvm::Module &) {
-    return llvm::object::OwningBinary<llvm::object::ObjectFile>(nullptr,
-                                                                nullptr);
+    return std::unique_ptr<llvm::MemoryBuffer>(nullptr);
   };
   IRCompileLayer<decltype(TransformLayer), decltype(NullCompiler)>
     CompileLayer(TransformLayer, NullCompiler);

@@ -438,7 +438,7 @@ struct FunCloner {
         LLVMBasicBlockRef ElseBB = DeclareBB(LLVMValueAsBasicBlock(Else));
         LLVMValueRef Then = LLVMGetOperand(Src, 2);
         LLVMBasicBlockRef ThenBB = DeclareBB(LLVMValueAsBasicBlock(Then));
-        Dst = LLVMBuildCondBr(Builder, Cond, ThenBB, ElseBB);
+        Dst = LLVMBuildCondBr(Builder, CloneValue(Cond), ThenBB, ElseBB);
         break;
       }
       case LLVMSwitch:
@@ -949,6 +949,7 @@ int llvm_echo(void) {
   fputs(Str, stdout);
 
   LLVMDisposeMessage(Str);
+  LLVMDisposeModule(Src);
   LLVMDisposeModule(M);
   LLVMContextDispose(Ctx);
 

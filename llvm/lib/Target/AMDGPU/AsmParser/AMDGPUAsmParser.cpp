@@ -12,6 +12,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
+#include "SIInstrInfo.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
@@ -128,6 +129,7 @@ public:
   enum ImmTy {
     ImmTyNone,
     ImmTyGDS,
+    ImmTyLDS,
     ImmTyOffen,
     ImmTyIdxen,
     ImmTyAddr64,
@@ -303,6 +305,7 @@ public:
   bool isOffsetU12() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isUInt<12>(getImm()); }
   bool isOffsetS13() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isInt<13>(getImm()); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
+  bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
@@ -649,6 +652,7 @@ public:
     switch (Type) {
     case ImmTyNone: OS << "None"; break;
     case ImmTyGDS: OS << "GDS"; break;
+    case ImmTyLDS: OS << "LDS"; break;
     case ImmTyOffen: OS << "Offen"; break;
     case ImmTyIdxen: OS << "Idxen"; break;
     case ImmTyAddr64: OS << "Addr64"; break;
@@ -4078,6 +4082,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultTFE() const {
 void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                const OperandVector &Operands,
                                bool IsAtomic, bool IsAtomicReturn) {
+  bool HasLdsModifier = false;
   OptionalImmIndexMap OptionalIdx;
   assert(IsAtomicReturn ? IsAtomic : true);
 
@@ -4096,6 +4101,8 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
       continue;
     }
 
+    HasLdsModifier = Op.isLDS();
+
     // Handle tokens like 'offen' which are sometimes hard-coded into the
     // asm string.  There are no MCInst operands for these.
     if (Op.isToken()) {
@@ -4105,6 +4112,20 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
 
     // Handle optional arguments
     OptionalIdx[Op.getImmTy()] = i;
+  }
+
+  // This is a workaround for an llvm quirk which may result in an
+  // incorrect instruction selection. Lds and non-lds versions of
+  // MUBUF instructions are identical except that lds versions
+  // have mandatory 'lds' modifier. However this modifier follows
+  // optional modifiers and llvm asm matcher regards this 'lds'
+  // modifier as an optional one. As a result, an lds version
+  // of opcode may be selected even if it has no 'lds' modifier.
+  if (!HasLdsModifier) {
+    int NoLdsOpcode = AMDGPU::getMUBUFNoLdsInst(Inst.getOpcode());
+    if (NoLdsOpcode != -1) { // Got lds version - correct it.
+      Inst.setOpcode(NoLdsOpcode);
+    }
   }
 
   // Copy $vdata_in operand and insert as $vdata for MUBUF_Atomic RTN insns.
@@ -4118,7 +4139,10 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
   }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
+
+  if (!HasLdsModifier) { // tfe is not legal with lds opcodes
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
+  }
 }
 
 void AMDGPUAsmParser::cvtMtbuf(MCInst &Inst, const OperandVector &Operands) {
@@ -4312,6 +4336,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"offset0", AMDGPUOperand::ImmTyOffset0, false, nullptr},
   {"offset1", AMDGPUOperand::ImmTyOffset1, false, nullptr},
   {"gds",     AMDGPUOperand::ImmTyGDS, true, nullptr},
+  {"lds",     AMDGPUOperand::ImmTyLDS, true, nullptr},
   {"offset",  AMDGPUOperand::ImmTyOffset, false, nullptr},
   {"inst_offset", AMDGPUOperand::ImmTyInstOffset, false, nullptr},
   {"dfmt",    AMDGPUOperand::ImmTyDFMT, false, nullptr},
@@ -5022,6 +5047,8 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isAddr64() ? Match_Success : Match_InvalidOperand;
   case MCK_gds:
     return Operand.isGDS() ? Match_Success : Match_InvalidOperand;
+  case MCK_lds:
+    return Operand.isLDS() ? Match_Success : Match_InvalidOperand;
   case MCK_glc:
     return Operand.isGLC() ? Match_Success : Match_InvalidOperand;
   case MCK_d16:

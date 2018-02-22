@@ -23703,7 +23703,8 @@ static SDValue LowerCMP_SWAP(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
                             SelectionDAG &DAG) {
-  MVT SrcVT = Op.getOperand(0).getSimpleValueType();
+  SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
 
   // Legalize (v64i1 (bitcast i64 (X))) by splitting the i64, bitcasting each
@@ -23711,12 +23712,11 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
   if (SrcVT == MVT::i64 && DstVT == MVT::v64i1) {
     assert(!Subtarget.is64Bit() && "Expected 32-bit mode");
     assert(Subtarget.hasBWI() && "Expected BWI target");
-    SDValue Op0 = Op->getOperand(0);
     SDLoc dl(Op);
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op0,
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
                              DAG.getIntPtrConstant(0, dl));
     Lo = DAG.getBitcast(MVT::v32i1, Lo);
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op0,
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
                              DAG.getIntPtrConstant(1, dl));
     Hi = DAG.getBitcast(MVT::v32i1, Hi);
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lo, Hi);
@@ -23729,7 +23729,6 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
       // This conversion needs to be expanded.
       return SDValue();
 
-    SDValue Op0 = Op->getOperand(0);
     SmallVector<SDValue, 16> Elts;
     SDLoc dl(Op);
     unsigned NumElts;
@@ -23741,14 +23740,14 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
       // Widen the vector in input in the case of MVT::v2i32.
       // Example: from MVT::v2i32 to MVT::v4i32.
       for (unsigned i = 0, e = NumElts; i != e; ++i)
-        Elts.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SVT, Op0,
+        Elts.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SVT, Src,
                                    DAG.getIntPtrConstant(i, dl)));
     } else {
       assert(SrcVT == MVT::i64 && !Subtarget.is64Bit() &&
              "Unexpected source type in LowerBITCAST");
-      Elts.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op0,
+      Elts.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
                                  DAG.getIntPtrConstant(0, dl)));
-      Elts.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op0,
+      Elts.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
                                  DAG.getIntPtrConstant(1, dl)));
       NumElts = 2;
       SVT = MVT::i32;
@@ -30765,13 +30764,23 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
                          DAG.getConstant(EltBits[0], DL, MVT::i32));
     }
 
-    // Detect bitcasts between i32 to x86mmx low word.
-    if (N0.getOpcode() == ISD::BUILD_VECTOR && SrcVT == MVT::v2i32) {
-      SDValue N00 = N0.getOperand(0);
-      SDValue N01 = N0.getOperand(1);
-      if (N00.getValueType() == MVT::i32 &&
-          (N01.getOpcode() == ISD::UNDEF || isNullConstant(N01)))
-        return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);
+    // Detect bitcasts to x86mmx low word.
+    if (N0.getOpcode() == ISD::BUILD_VECTOR &&
+        (SrcVT == MVT::v2i32 || SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8) &&
+        N0.getOperand(0).getValueType() == SrcVT.getScalarType()) {
+      bool LowUndef = true, AllUndefOrZero = true;
+      for (unsigned i = 1, e = SrcVT.getVectorNumElements(); i != e; ++i) {
+        SDValue Op = N0.getOperand(i);
+        LowUndef &= Op.isUndef() || (i >= e/2);
+        AllUndefOrZero &= (Op.isUndef() || isNullConstant(Op));
+      }
+      if (AllUndefOrZero) {
+        SDValue N00 = N0.getOperand(0);
+        SDLoc dl(N00);
+        N00 = LowUndef ? DAG.getAnyExtOrTrunc(N00, dl, MVT::i32)
+                       : DAG.getZExtOrTrunc(N00, dl, MVT::i32);
+        return DAG.getNode(X86ISD::MMX_MOVW2D, dl, VT, N00);
+      }
     }
 
     // Detect bitcasts between element or subvector extraction to x86mmx.

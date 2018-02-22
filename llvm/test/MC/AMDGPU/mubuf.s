@@ -2,9 +2,9 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck -check-prefix=NOCI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSI -check-prefix=NOSICIVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck -check-prefix=NOCI -check-prefix=NOSICIVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOVI -check-prefix=NOSICIVI %s
 
 //===----------------------------------------------------------------------===//
 // Test for different operand combinations
@@ -710,3 +710,69 @@ buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc slc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc slc ; encoding: [0x04,0x70,0xf0,0xe0,0x02,0x01,0x42,0xb8]
 // VI:   buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 glc slc ; encoding: [0x04,0x70,0x2e,0xe1,0x02,0x01,0x02,0xb8]
+
+//===----------------------------------------------------------------------===//
+// Lds support
+//===----------------------------------------------------------------------===//
+
+buffer_load_sbyte v5, off, s[8:11], s3 lds
+// SICI: buffer_load_sbyte v5, off, s[8:11], s3 lds ; encoding: [0x00,0x00,0x25,0xe0,0x00,0x05,0x02,0x03]
+// VI:   buffer_load_sbyte v5, off, s[8:11], s3 lds ; encoding: [0x00,0x00,0x45,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, off, s[8:11], s3 glc slc lds
+// SICI: buffer_load_sbyte v5, off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x25,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_sbyte v5, off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x47,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, off, s[8:11], s3 offset:4095 glc slc lds
+// SICI: buffer_load_sbyte v5, off, s[8:11], s3 offset:4095 glc slc lds ; encoding: [0xff,0x4f,0x25,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_sbyte v5, off, s[8:11], s3 offset:4095 glc slc lds ; encoding: [0xff,0x4f,0x47,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 slc lds
+// SICI: buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 slc lds ; encoding: [0xff,0x1f,0x25,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 slc lds ; encoding: [0xff,0x1f,0x47,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, v0, s[8:11], s3 offen lds
+// SICI: buffer_load_sbyte v5, v0, s[8:11], s3 offen lds ; encoding: [0x00,0x10,0x25,0xe0,0x00,0x05,0x02,0x03]
+// VI:   buffer_load_sbyte v5, v0, s[8:11], s3 offen lds ; encoding: [0x00,0x10,0x45,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, v0, s[8:11], s3 idxen glc slc lds
+// SICI: buffer_load_sbyte v5, v0, s[8:11], s3 idxen glc slc lds ; encoding: [0x00,0x60,0x25,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_sbyte v5, v0, s[8:11], s3 idxen glc slc lds ; encoding: [0x00,0x60,0x47,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 lds
+// SICI: buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 lds ; encoding: [0xff,0x3f,0x25,0xe0,0x00,0x05,0x02,0x03]
+// VI:   buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 lds ; encoding: [0xff,0x3f,0x45,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds
+// SICI: buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x25,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x47,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_ubyte v5, off, s[8:11], s3 offset:4095 lds
+// SICI: buffer_load_ubyte v5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x21,0xe0,0x00,0x05,0x02,0x03]
+// VI:   buffer_load_ubyte v5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x41,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095 glc slc lds
+// SICI: buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095 glc slc lds ; encoding: [0xff,0x5f,0x2d,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095 glc slc lds ; encoding: [0xff,0x5f,0x4f,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_ushort v5, v0, s[8:11], s3 idxen offset:4095 glc slc lds
+// SICI: buffer_load_ushort v5, v0, s[8:11], s3 idxen offset:4095 glc slc lds ; encoding: [0xff,0x6f,0x29,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_ushort v5, v0, s[8:11], s3 idxen offset:4095 glc slc lds ; encoding: [0xff,0x6f,0x4b,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_load_dword v5, v0, s[8:11], s101 offen lds
+// SICI: buffer_load_dword v5, v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x31,0xe0,0x00,0x05,0x02,0x65]
+// VI:   buffer_load_dword v5, v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x51,0xe0,0x00,0x05,0x02,0x65]
+
+buffer_load_format_x v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds
+// SICI: buffer_load_format_x v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x01,0xe0,0x00,0x05,0x42,0x03]
+// VI:   buffer_load_format_x v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x03,0xe0,0x00,0x05,0x02,0x03]
+
+//===----------------------------------------------------------------------===//
+// Errors handling
+//===----------------------------------------------------------------------===//
+
+buffer_load_sbyte v5, off, s[8:11], s3 lds tfe
+// NOSICIVI: error: invalid operand for instruction
+
+buffer_load_dword v5, off, s[8:11], s3 tfe lds
+// NOSICIVI: error: invalid operand for instruction

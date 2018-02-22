@@ -205,6 +205,11 @@ static cl::opt<unsigned>
                   cl::desc("Max coefficients in AddRec during evolving"),
                   cl::init(16));
 
+static cl::opt<bool> VersionUnknown(
+    "scev-version-unknown", cl::Hidden,
+    cl::desc("Use predicated scalar evolution to version SCEVUnknowns"),
+    cl::init(false));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -1727,9 +1732,7 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
           const SCEV *N = getConstant(APInt::getMinValue(BitWidth) -
                                       getUnsignedRangeMax(Step));
           if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT, AR, N) ||
-              (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_ULT, Start, N) &&
-               isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT,
-                                           AR->getPostIncExpr(*this), N))) {
+              isKnownOnEveryIteration(ICmpInst::ICMP_ULT, AR, N)) {
             // Cache knowledge of AR NUW, which is propagated to this
             // AddRec.
             const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(SCEV::FlagNUW);
@@ -1744,9 +1747,7 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
           const SCEV *N = getConstant(APInt::getMaxValue(BitWidth) -
                                       getSignedRangeMin(Step));
           if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
-              (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_UGT, Start, N) &&
-               isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT,
-                                           AR->getPostIncExpr(*this), N))) {
+              isKnownOnEveryIteration(ICmpInst::ICMP_UGT, AR, N)) {
             // Cache knowledge of AR NW, which is propagated to this
             // AddRec.  Negative step causes unsigned wrap, but it
             // still can't self-wrap.
@@ -1989,9 +1990,7 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
             getSignedOverflowLimitForStep(Step, &Pred, this);
         if (OverflowLimit &&
             (isLoopBackedgeGuardedByCond(L, Pred, AR, OverflowLimit) ||
-             (isLoopEntryGuardedByCond(L, Pred, Start, OverflowLimit) &&
-              isLoopBackedgeGuardedByCond(L, Pred, AR->getPostIncExpr(*this),
-                                          OverflowLimit)))) {
+             isKnownOnEveryIteration(Pred, AR, OverflowLimit))) {
           // Cache knowledge of AR NSW, then propagate NSW to the wide AddRec.
           const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(SCEV::FlagNSW);
           return getAddRecExpr(
@@ -8672,17 +8671,16 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
   if (LAR) {
     const Loop *L = LAR->getLoop();
     if (isAvailableAtLoopEntry(RHS, L) &&
-        isLoopEntryGuardedByCond(L, Pred, LAR->getStart(), RHS) &&
-        isLoopBackedgeGuardedByCond(L, Pred, LAR->getPostIncExpr(*this), RHS)) {
+        isKnownOnEveryIteration(Pred, LAR, RHS)) {
       if (!RAR) return true;
       LeftGuarded = true;
     }
   }
   if (RAR) {
     const Loop *L = RAR->getLoop();
+    auto SwappedPred = ICmpInst::getSwappedPredicate(Pred);
     if (isAvailableAtLoopEntry(LHS, L) &&
-        isLoopEntryGuardedByCond(L, Pred, LHS, RAR->getStart()) &&
-        isLoopBackedgeGuardedByCond(L, Pred, LHS, RAR->getPostIncExpr(*this))) {
+        isKnownOnEveryIteration(SwappedPred, RAR, LHS)) {
       if (!LAR) return true;
       RightGuarded = true;
     }
@@ -8695,6 +8693,14 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
 
   // Otherwise see what can be done with some simple reasoning.
   return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+}
+
+bool ScalarEvolution::isKnownOnEveryIteration(ICmpInst::Predicate Pred,
+                                              const SCEVAddRecExpr *LHS,
+                                              const SCEV *RHS) {
+  const Loop *L = LHS->getLoop();
+  return isLoopEntryGuardedByCond(L, Pred, LHS->getStart(), RHS) &&
+         isLoopBackedgeGuardedByCond(L, Pred, LHS->getPostIncExpr(*this), RHS);
 }
 
 bool ScalarEvolution::isMonotonicPredicate(const SCEVAddRecExpr *LHS,
@@ -11573,6 +11579,8 @@ private:
   // couldn't create an AddRec for it, or couldn't add the predicate), we just
   // return \p Expr.
   const SCEV *convertToAddRecWithPreds(const SCEVUnknown *Expr) {
+    if (!VersionUnknown)
+      return Expr;
     if (!isa<PHINode>(Expr->getValue()))
       return Expr;
     Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>

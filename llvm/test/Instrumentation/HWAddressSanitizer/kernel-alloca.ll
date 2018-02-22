@@ -1,4 +1,4 @@
-; Test basic address sanitizer instrumentation.
+; Test kernel hwasan instrumentation for alloca.
 ;
 ; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s
 

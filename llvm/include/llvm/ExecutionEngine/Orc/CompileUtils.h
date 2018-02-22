@@ -38,9 +38,23 @@ namespace orc {
 /// @brief Simple compile functor: Takes a single IR module and returns an
 ///        ObjectFile.
 class SimpleCompiler {
-public:
+private:
+  class SmallVectorMemoryBuffer : public MemoryBuffer {
+  public:
+    SmallVectorMemoryBuffer(SmallVector<char, 0> Buffer)
+        : Buffer(std::move(Buffer)) {
+      init(this->Buffer.data(), this->Buffer.data() + this->Buffer.size(),
+           false);
+    }
 
-  using CompileResult = object::OwningBinary<object::ObjectFile>;
+    BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
+
+  private:
+    SmallVector<char, 0> Buffer;
+  };
+
+public:
+  using CompileResult = std::unique_ptr<MemoryBuffer>;
 
   /// @brief Construct a simple compile functor with the given target.
   SimpleCompiler(TargetMachine &TM, ObjectCache *ObjCache = nullptr)
@@ -52,28 +66,34 @@ public:
   /// @brief Compile a Module to an ObjectFile.
   CompileResult operator()(Module &M) {
     CompileResult CachedObject = tryToLoadFromObjectCache(M);
-    if (CachedObject.getBinary())
+    if (CachedObject)
       return CachedObject;
 
     SmallVector<char, 0> ObjBufferSV;
-    raw_svector_ostream ObjStream(ObjBufferSV);
 
-    legacy::PassManager PM;
-    MCContext *Ctx;
-    if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
-      llvm_unreachable("Target does not support MC emission.");
-    PM.run(M);
-    std::unique_ptr<MemoryBuffer> ObjBuffer(
-        new ObjectMemoryBuffer(std::move(ObjBufferSV)));
-    Expected<std::unique_ptr<object::ObjectFile>> Obj =
+    {
+      raw_svector_ostream ObjStream(ObjBufferSV);
+
+      legacy::PassManager PM;
+      MCContext *Ctx;
+      if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
+        llvm_unreachable("Target does not support MC emission.");
+      PM.run(M);
+    }
+
+    auto ObjBuffer =
+        llvm::make_unique<SmallVectorMemoryBuffer>(std::move(ObjBufferSV));
+    auto Obj =
         object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
+
     if (Obj) {
       notifyObjectCompiled(M, *ObjBuffer);
-      return CompileResult(std::move(*Obj), std::move(ObjBuffer));
+      return std::move(ObjBuffer);
     }
+
     // TODO: Actually report errors helpfully.
     consumeError(Obj.takeError());
-    return CompileResult(nullptr, nullptr);
+    return nullptr;
   }
 
 private:
@@ -82,19 +102,7 @@ private:
     if (!ObjCache)
       return CompileResult();
 
-    std::unique_ptr<MemoryBuffer> ObjBuffer = ObjCache->getObject(&M);
-    if (!ObjBuffer)
-      return CompileResult();
-
-    Expected<std::unique_ptr<object::ObjectFile>> Obj =
-        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-    if (!Obj) {
-      // TODO: Actually report errors helpfully.
-      consumeError(Obj.takeError());
-      return CompileResult();
-    }
-
-    return CompileResult(std::move(*Obj), std::move(ObjBuffer));
+    return ObjCache->getObject(&M);
   }
 
   void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer) {
