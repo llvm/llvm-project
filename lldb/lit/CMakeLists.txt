@@ -16,6 +16,10 @@ option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" Off)
 set(LLDB_TEST_C_COMPILER "" CACHE STRING "C compiler to use when testing LLDB")
 set(LLDB_TEST_CXX_COMPILER "" CACHE STRING "C++ compiler to use when testing LLDB")
 
+# This should be inherited from the `check-lldb` target. We currently don't run
+# it for swift, but we might consider removing this code once we're done.
+set(LIT_ARGS "-sv")
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
@@ -55,6 +59,7 @@ set(LLDB_TEST_PARAMS
 
 add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
+  ${LIT_ARGS}
   PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
        lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLDB_TEST_DEPS}
@@ -63,6 +68,7 @@ add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
 set_target_properties(check-lldb-lit PROPERTIES FOLDER "LLDB tests")
 
 add_lit_testsuites(LLDB ${CMAKE_CURRENT_SOURCE_DIR}
+  ${LIT_ARGS}
   PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
          lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLDB_TEST_DEPS}
