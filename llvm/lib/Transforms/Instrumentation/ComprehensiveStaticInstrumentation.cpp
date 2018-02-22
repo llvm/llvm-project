@@ -589,6 +589,8 @@ void CSIImpl::instrumentBasicBlock(BasicBlock &BB) {
          "BB recieved different ID's in FED and sizeinfo tables.");
   Value *CsiId = BasicBlockFED.localToGlobalId(LocalId, IRB);
   CsiBBProperty Prop;
+  Prop.setIsLandingPad(BB.isLandingPad());
+  Prop.setIsEHPad(BB.isEHPad());
   TerminatorInst *TI = BB.getTerminator();
   Value *PropVal = Prop.getValue(IRB);
   insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiBBEntry,
