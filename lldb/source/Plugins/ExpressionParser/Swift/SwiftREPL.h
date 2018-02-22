@@ -42,6 +42,13 @@ protected:
                                      Debugger *debugger, Target *target,
                                      const char *repl_options);
 
+  static lldb::REPLSP CreateInstanceFromTarget(Status &error, Target &target,
+                                               const char *repl_options);
+
+  static lldb::REPLSP CreateInstanceFromDebugger(Status &error,
+                                                 Debugger &debugger,
+                                                 const char *repl_options);
+
   static void
   EnumerateSupportedLanguages(std::set<lldb::LanguageType> &languages);
 
@@ -67,9 +74,6 @@ protected:
                    StringList &matches) override;
 
 public:
-  //------------------------------------------------------------------
-  // llvm casting support
-  //------------------------------------------------------------------
   static bool classof(const REPL *repl) {
     return repl->getKind() == LLVMCastKind::eKindSwift;
   }
