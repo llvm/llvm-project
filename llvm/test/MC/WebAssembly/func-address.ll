@@ -30,7 +30,7 @@ entry:
 ; CHECK:   }
 
 ; CHECK: Relocations [
-; CHECK:   Section (6) CODE {
+; CHECK:   Section (5) CODE {
 ; CHECK:     Relocation {
 ; CHECK:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 ; CHECK:       Offset: 0x4
@@ -44,6 +44,6 @@ entry:
 ; CHECK:     Relocation {
 ; CHECK:       Type: R_WEBASSEMBLY_TABLE_INDEX_SLEB (1)
 ; CHECK:       Offset: 0x1E
-; CHECK:       Index: 0x2
+; CHECK:       Index: 0x3
 ; CHECK:     }
 ; CHECK:   }

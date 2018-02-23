@@ -148,8 +148,8 @@ uint64_t DIASession::getLoadAddress() const {
   return (success) ? LoadAddress : 0;
 }
 
-void DIASession::setLoadAddress(uint64_t Address) {
-  Session->put_loadAddress(Address);
+bool DIASession::setLoadAddress(uint64_t Address) {
+  return (S_OK == Session->put_loadAddress(Address));
 }
 
 std::unique_ptr<PDBSymbolExe> DIASession::getGlobalScope() {

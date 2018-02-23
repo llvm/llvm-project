@@ -29,12 +29,6 @@ entry:
 ; CHECK:    Type: FUNCTION (0x3)
 ; CHECK:  }
 ; CHECK:  Section {
-; CHECK:    Type: GLOBAL (0x6)
-; CHECK:  }
-; CHECK:  Section {
-; CHECK:    Type: EXPORT (0x7)
-; CHECK:  }
-; CHECK:  Section {
 ; CHECK:    Type: CODE (0xA)
 ; CHECK:  }
 ; CHECK:  Section {

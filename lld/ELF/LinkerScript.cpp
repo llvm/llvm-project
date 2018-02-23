@@ -508,7 +508,7 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
   // ignored. We should not have two output .text sections just because one was
   // in a group and another was not for example.
   //
-  // It also seems that that wording was a late addition and didn't get the
+  // It also seems that wording was a late addition and didn't get the
   // necessary scrutiny.
   //
   // Merging sections with different flags is expected by some users. One

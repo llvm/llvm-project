@@ -2717,7 +2717,7 @@ OptimizeGlobalAliases(Module &M,
       continue;
     }
 
-    // If the aliasee may change at link time, nothing can be done - bail out.
+    // If the alias can change at link time, nothing can be done - bail out.
     if (J->isInterposable())
       continue;
 

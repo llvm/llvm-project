@@ -712,7 +712,7 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
 }
 
 static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
-                                 llvm::GlobalValue *GV, const NamedDecl *D) {
+                                 llvm::GlobalValue *GV) {
   const llvm::Triple &TT = CGM.getTriple();
   // Only handle ELF for now.
   if (!TT.isOSBinFormatELF())
@@ -742,31 +742,30 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
     return false;
 
   // If we can use copy relocations we can assume it is local.
-  if (auto *VD = dyn_cast<VarDecl>(D))
-    if (VD->getTLSKind() == VarDecl::TLS_None &&
+  if (auto *Var = dyn_cast<llvm::GlobalVariable>(GV))
+    if (!Var->isThreadLocal() &&
         (RM == llvm::Reloc::Static || CGOpts.PIECopyRelocations))
       return true;
 
   // If we can use a plt entry as the symbol address we can assume it
   // is local.
   // FIXME: This should work for PIE, but the gold linker doesn't support it.
-  if (isa<FunctionDecl>(D) && !CGOpts.NoPLT && RM == llvm::Reloc::Static)
+  if (isa<llvm::Function>(GV) && !CGOpts.NoPLT && RM == llvm::Reloc::Static)
     return true;
 
   // Otherwise don't assue it is local.
   return false;
 }
 
-void CodeGenModule::setDSOLocal(llvm::GlobalValue *GV,
-                                const NamedDecl *D) const {
-  if (shouldAssumeDSOLocal(*this, GV, D))
+void CodeGenModule::setDSOLocal(llvm::GlobalValue *GV) const {
+  if (shouldAssumeDSOLocal(*this, GV))
     GV->setDSOLocal(true);
 }
 
 void CodeGenModule::setGVProperties(llvm::GlobalValue *GV,
                                     const NamedDecl *D) const {
   setGlobalVisibility(GV, D);
-  setDSOLocal(GV, D);
+  setDSOLocal(GV);
 }
 
 static llvm::GlobalVariable::ThreadLocalMode GetLLVMTLSModel(StringRef S) {
@@ -2749,13 +2748,14 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     GV->setAlignment(getContext().getDeclAlign(D).getQuantity());
 
     setLinkageForGV(GV, D);
-    setGVProperties(GV, D);
 
     if (D->getTLSKind()) {
       if (D->getTLSKind() == VarDecl::TLS_Dynamic)
         CXXThreadLocals.push_back(D);
       setTLSMode(GV, *D);
     }
+
+    setGVProperties(GV, D);
 
     // If required by the ABI, treat declarations of static data members with
     // inline initializers as definitions.

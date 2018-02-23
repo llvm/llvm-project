@@ -99,10 +99,10 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
 
-  // True is this is an undefined weak symbol. This only works once
+  // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
   bool isUndefWeak() const {
-    // See comment on Lazy the details.
+    // See comment on Lazy for details.
     return isWeak() && (isUndefined() || isLazy());
   }
 
@@ -154,6 +154,7 @@ public:
   // True if this symbol is in the Igot sub-section of the .got.plt or .got.
   unsigned IsInIgot : 1;
 
+  // True if this symbol is preemptible at link or load time.
   unsigned IsPreemptible : 1;
 
   // True if an undefined or shared symbol is used from a live section.

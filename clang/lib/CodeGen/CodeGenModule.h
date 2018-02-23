@@ -721,7 +721,7 @@ public:
   /// Set the visibility for the given LLVM GlobalValue.
   void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
-  void setDSOLocal(llvm::GlobalValue *GV, const NamedDecl *D) const;
+  void setDSOLocal(llvm::GlobalValue *GV) const;
 
   void setGVProperties(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
