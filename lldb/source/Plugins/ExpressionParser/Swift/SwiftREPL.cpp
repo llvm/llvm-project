@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/CleanUp.h"
 
 #include "swift/Basic/Version.h"
 #include "swift/Frontend/Frontend.h"
@@ -92,28 +93,6 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
   repl_sp->SetCompilerOptions(repl_options);
   return repl_sp;
 }
-
-/// Run a cleanup function on scope exit unless it's explicitly disabled.
-/// TODO: Upstream this and move it to a generic location.
-class CleanupRAII {
-  bool PerformCleanup;
-  llvm::function_ref<void()> Cleanup;
-
-public:
-  CleanupRAII(llvm::function_ref<void()> Cleanup)
-      : PerformCleanup(true), Cleanup(Cleanup) {}
-
-  // Prevent cleanups from being run more than once.
-  CleanupRAII(const CleanupRAII &) = delete;
-  CleanupRAII &operator=(const CleanupRAII &) = delete;
-
-  void disable() { PerformCleanup = false; }
-
-  ~CleanupRAII() {
-    if (PerformCleanup)
-      Cleanup();
-  }
-};
 
 lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
                                                    Debugger &debugger,
@@ -217,11 +196,10 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   debugger.StartEventHandlerThread();
 
   // Destroy the process and the event handler thread after a fatal error.
-  auto cleanupHelper = [&] {
+  CleanUp cleanup{[&] {
     process_sp->Destroy(/*force_kill=*/false);
     debugger.StopEventHandlerThread();
-  };
-  CleanupRAII cleanup{cleanupHelper};
+  }};
 
   StateType state = process_sp->GetState();
 

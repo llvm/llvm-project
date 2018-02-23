@@ -379,10 +379,8 @@ static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
       log->Printf("[GetObjectDescription_ObjectCopy] copy_location invalid");
     return false;
   }
-  lldb_utility::CleanUp<lldb::addr_t> cleanup(
-      copy_location, [process](lldb::addr_t value) {
-        (void)process->DeallocateMemory(value);
-      });
+  CleanUp cleanup(
+      [process, copy_location] { process->DeallocateMemory(copy_location); });
 
   DataExtractor data_extractor;
   if (0 == static_sp->GetData(data_extractor, error)) {
