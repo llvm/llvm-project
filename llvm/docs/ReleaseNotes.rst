@@ -178,13 +178,33 @@ During this release the X86 target has:
 
 * Added support for Intel Icelake CPU.
 
+* Fixed some X87 codegen bugs.
+
 * Added instruction scheduling information for Intel Sandy Bridge, Ivy Bridge, Haswell, Broadwell, and Skylake CPUs.
 
-* Improved codegen of data being transferred between GPRs and K-registers.
+* Improved scheduler model for AMD Jaguar CPUs.
 
 * Improved llvm-mc's disassembler for some EVEX encoded instructions.
 
+* Add support for i8 and i16 vector signed/unsigned min/max horizontal reductions.
+
+* Improved codegen for memory comparisons
+
+* Improved codegen for i32 vector multiplies
+
+* Improved codegen for scalar integer absolute values
+
+* Improved codegen for vector integer rotations (XOP and AVX512)
+
+* Improved codegen of data being transferred between GPRs and K-registers.
+
 * Improved codegen for vector truncations.
+
+* Improved folding of address computations into gather/scatter instructions.
+
+* Gained initial support recognizing variable shuffles from vector element extracts and inserts.
+
+* Improved documentation for SSE/AVX intrinsics in *intrin.h header files.
 
 Changes to the AMDGPU Target
 -----------------------------
