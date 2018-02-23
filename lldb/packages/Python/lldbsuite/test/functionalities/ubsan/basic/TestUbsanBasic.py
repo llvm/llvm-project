@@ -84,7 +84,7 @@ class UbsanBasicTestCase(TestBase):
 
         self.assertEqual(data["instrumentation_class"], "UndefinedBehaviorSanitizer")
         self.assertEqual(data["description"], "misaligned-pointer-use")
-        self.assertEqual(data["filename"], "main.c")
+        self.assertEqual(os.path.basename(data["filename"]), "main.c")
         self.assertEqual(data["line"], self.line_align)
 
         self.runCmd("continue")
