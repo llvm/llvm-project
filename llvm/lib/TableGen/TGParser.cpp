@@ -198,6 +198,8 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
+  CurRec->addSuperClass(SC, SubClass.RefRange);
+
   ArrayRef<std::pair<Record *, SMRange>> SCs = SC->getSuperClasses();
   for (const auto &SCPair : SCs) {
     if (CurRec->isSubClassOf(SCPair.first))
@@ -205,11 +207,6 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
                    "Already subclass of '" + SCPair.first->getName() + "'!\n");
     CurRec->addSuperClass(SCPair.first, SCPair.second);
   }
-
-  if (CurRec->isSubClassOf(SC))
-    return Error(SubClass.RefRange.Start,
-                 "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -320,7 +317,7 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
 
     // Process each value.
     for (unsigned i = 0; i < List->size(); ++i) {
-      Init *ItemVal = List->resolveListElementReference(*CurRec, nullptr, i);
+      Init *ItemVal = List->getElement(i)->resolveReferences(*CurRec, nullptr);
       IterVals.push_back(IterRecord(CurLoop.IterVar, ItemVal));
       if (ProcessForeachDefs(CurRec, Loc, IterVals))
         return true;
@@ -781,6 +778,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return nullptr;
   case tgtok::XHead:
   case tgtok::XTail:
+  case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast: {  // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
@@ -807,6 +805,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XTail:
       Lex.Lex();  // eat the operation
       Code = UnOpInit::TAIL;
+      break;
+    case tgtok::XSize:
+      Lex.Lex();
+      Code = UnOpInit::SIZE;
+      Type = IntRecTy::get();
       break;
     case tgtok::XEmpty:
       Lex.Lex();  // eat the operation
@@ -842,12 +845,15 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         }
       }
 
-      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
+      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL ||
+          Code == UnOpInit::SIZE) {
         if (!LHSl && !LHSt) {
           TokError("expected list type argument in unary operator");
           return nullptr;
         }
+      }
 
+      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
         if (LHSl && LHSl->empty()) {
           TokError("empty list argument in unary operator");
           return nullptr;
@@ -1058,12 +1064,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
 
-      if (MHSTy->typeIsConvertibleTo(RHSTy)) {
-        Type = RHSTy;
-      } else if (RHSTy->typeIsConvertibleTo(MHSTy)) {
-        Type = MHSTy;
-      } else {
-        TokError("inconsistent types for !if");
+      Type = resolveTypes(MHSTy, RHSTy);
+      if (!Type) {
+        TokError(Twine("inconsistent types '") + MHSTy->getAsString() +
+                 "' and '" + RHSTy->getAsString() + "' for !if");
         return nullptr;
       }
       break;
@@ -1453,6 +1457,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
   case tgtok::XHead:
   case tgtok::XTail:
+  case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast:  // Value ::= !unop '(' Value ')'
   case tgtok::XConcat:

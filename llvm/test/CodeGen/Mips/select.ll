@@ -202,15 +202,15 @@ define float @i32_icmp_ne_f32_val(i32 signext %s, float %f0, float %f1) nounwind
 ;
 ; 64-LABEL: i32_icmp_ne_f32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    movn.s $f14, $f13, $4
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.s $f0, $f14
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movn.s $f0, $f13, $4
 ;
 ; 64R2-LABEL: i32_icmp_ne_f32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    movn.s $f14, $f13, $4
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.s $f0, $f14
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movn.s $f0, $f13, $4
 ;
 ; 64R6-LABEL: i32_icmp_ne_f32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -255,15 +255,15 @@ define double @i32_icmp_ne_f64_val(i32 signext %s, double %f0, double %f1) nounw
 ;
 ; 64-LABEL: i32_icmp_ne_f64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    movn.d $f14, $f13, $4
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.d $f0, $f14
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movn.d $f0, $f13, $4
 ;
 ; 64R2-LABEL: i32_icmp_ne_f64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    movn.d $f14, $f13, $4
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.d $f0, $f14
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movn.d $f0, $f13, $4
 ;
 ; 64R6-LABEL: i32_icmp_ne_f64_val:
 ; 64R6:       # %bb.0: # %entry
@@ -281,21 +281,21 @@ entry:
 define float @f32_fcmp_oeq_f32_val(float %f0, float %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_oeq_f32_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    mtc1 $7, $f0
-; 32-NEXT:    mtc1 $6, $f1
-; 32-NEXT:    c.eq.s $f1, $f0
-; 32-NEXT:    movt.s $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.s $f0, $f14
+; 32-NEXT:    mtc1 $7, $f1
+; 32-NEXT:    mtc1 $6, $f2
+; 32-NEXT:    c.eq.s $f2, $f1
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_oeq_f32_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    mtc1 $7, $f0
-; 32R2-NEXT:    mtc1 $6, $f1
-; 32R2-NEXT:    c.eq.s $f1, $f0
-; 32R2-NEXT:    movt.s $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.s $f0, $f14
+; 32R2-NEXT:    mtc1 $7, $f1
+; 32R2-NEXT:    mtc1 $6, $f2
+; 32R2-NEXT:    c.eq.s $f2, $f1
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_oeq_f32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -307,17 +307,17 @@ define float @f32_fcmp_oeq_f32_val(float %f0, float %f1, float %f2, float %f3) n
 ;
 ; 64-LABEL: f32_fcmp_oeq_f32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.eq.s $f14, $f15
-; 64-NEXT:    movt.s $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.s $f0, $f13
+; 64-NEXT:    c.eq.s $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_oeq_f32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.eq.s $f14, $f15
-; 64R2-NEXT:    movt.s $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.s $f0, $f13
+; 64R2-NEXT:    c.eq.s $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_oeq_f32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -333,21 +333,21 @@ entry:
 define float @f32_fcmp_olt_f32_val(float %f0, float %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_olt_f32_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    mtc1 $7, $f0
-; 32-NEXT:    mtc1 $6, $f1
-; 32-NEXT:    c.olt.s $f1, $f0
-; 32-NEXT:    movt.s $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.s $f0, $f14
+; 32-NEXT:    mtc1 $7, $f1
+; 32-NEXT:    mtc1 $6, $f2
+; 32-NEXT:    c.olt.s $f2, $f1
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_olt_f32_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    mtc1 $7, $f0
-; 32R2-NEXT:    mtc1 $6, $f1
-; 32R2-NEXT:    c.olt.s $f1, $f0
-; 32R2-NEXT:    movt.s $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.s $f0, $f14
+; 32R2-NEXT:    mtc1 $7, $f1
+; 32R2-NEXT:    mtc1 $6, $f2
+; 32R2-NEXT:    c.olt.s $f2, $f1
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_olt_f32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -359,17 +359,17 @@ define float @f32_fcmp_olt_f32_val(float %f0, float %f1, float %f2, float %f3) n
 ;
 ; 64-LABEL: f32_fcmp_olt_f32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.olt.s $f14, $f15
-; 64-NEXT:    movt.s $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.s $f0, $f13
+; 64-NEXT:    c.olt.s $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_olt_f32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.olt.s $f14, $f15
-; 64R2-NEXT:    movt.s $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.s $f0, $f13
+; 64R2-NEXT:    c.olt.s $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_olt_f32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -385,21 +385,21 @@ entry:
 define float @f32_fcmp_ogt_f32_val(float %f0, float %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_ogt_f32_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    mtc1 $7, $f0
-; 32-NEXT:    mtc1 $6, $f1
-; 32-NEXT:    c.ule.s $f1, $f0
-; 32-NEXT:    movf.s $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.s $f0, $f14
+; 32-NEXT:    mtc1 $7, $f1
+; 32-NEXT:    mtc1 $6, $f2
+; 32-NEXT:    c.ule.s $f2, $f1
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_ogt_f32_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    mtc1 $7, $f0
-; 32R2-NEXT:    mtc1 $6, $f1
-; 32R2-NEXT:    c.ule.s $f1, $f0
-; 32R2-NEXT:    movf.s $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.s $f0, $f14
+; 32R2-NEXT:    mtc1 $7, $f1
+; 32R2-NEXT:    mtc1 $6, $f2
+; 32R2-NEXT:    c.ule.s $f2, $f1
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_ogt_f32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -411,17 +411,17 @@ define float @f32_fcmp_ogt_f32_val(float %f0, float %f1, float %f2, float %f3) n
 ;
 ; 64-LABEL: f32_fcmp_ogt_f32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.ule.s $f14, $f15
-; 64-NEXT:    movf.s $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.s $f0, $f13
+; 64-NEXT:    c.ule.s $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_ogt_f32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.ule.s $f14, $f15
-; 64R2-NEXT:    movf.s $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.s $f0, $f13
+; 64R2-NEXT:    c.ule.s $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_ogt_f32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -437,21 +437,21 @@ entry:
 define double @f32_fcmp_ogt_f64_val(double %f0, double %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_ogt_f64_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    lwc1 $f0, 20($sp)
-; 32-NEXT:    lwc1 $f1, 16($sp)
-; 32-NEXT:    c.ule.s $f1, $f0
-; 32-NEXT:    movf.d $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.d $f0, $f14
+; 32-NEXT:    lwc1 $f2, 20($sp)
+; 32-NEXT:    lwc1 $f3, 16($sp)
+; 32-NEXT:    c.ule.s $f3, $f2
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_ogt_f64_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    lwc1 $f0, 20($sp)
-; 32R2-NEXT:    lwc1 $f1, 16($sp)
-; 32R2-NEXT:    c.ule.s $f1, $f0
-; 32R2-NEXT:    movf.d $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.d $f0, $f14
+; 32R2-NEXT:    lwc1 $f2, 20($sp)
+; 32R2-NEXT:    lwc1 $f3, 16($sp)
+; 32R2-NEXT:    c.ule.s $f3, $f2
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_ogt_f64_val:
 ; 32R6:       # %bb.0: # %entry
@@ -465,17 +465,17 @@ define double @f32_fcmp_ogt_f64_val(double %f0, double %f1, float %f2, float %f3
 ;
 ; 64-LABEL: f32_fcmp_ogt_f64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.ule.s $f14, $f15
-; 64-NEXT:    movf.d $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.d $f0, $f13
+; 64-NEXT:    c.ule.s $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_ogt_f64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.ule.s $f14, $f15
-; 64R2-NEXT:    movf.d $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.d $f0, $f13
+; 64R2-NEXT:    c.ule.s $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_ogt_f64_val:
 ; 64R6:       # %bb.0: # %entry
@@ -493,21 +493,21 @@ entry:
 define double @f64_fcmp_oeq_f64_val(double %f0, double %f1, double %f2, double %f3) nounwind readnone {
 ; 32-LABEL: f64_fcmp_oeq_f64_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    ldc1 $f0, 24($sp)
-; 32-NEXT:    ldc1 $f2, 16($sp)
-; 32-NEXT:    c.eq.d $f2, $f0
-; 32-NEXT:    movt.d $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.d $f0, $f14
+; 32-NEXT:    ldc1 $f2, 24($sp)
+; 32-NEXT:    ldc1 $f4, 16($sp)
+; 32-NEXT:    c.eq.d $f4, $f2
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_oeq_f64_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    ldc1 $f0, 24($sp)
-; 32R2-NEXT:    ldc1 $f2, 16($sp)
-; 32R2-NEXT:    c.eq.d $f2, $f0
-; 32R2-NEXT:    movt.d $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.d $f0, $f14
+; 32R2-NEXT:    ldc1 $f2, 24($sp)
+; 32R2-NEXT:    ldc1 $f4, 16($sp)
+; 32R2-NEXT:    c.eq.d $f4, $f2
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_oeq_f64_val:
 ; 32R6:       # %bb.0: # %entry
@@ -521,17 +521,17 @@ define double @f64_fcmp_oeq_f64_val(double %f0, double %f1, double %f2, double %
 ;
 ; 64-LABEL: f64_fcmp_oeq_f64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.eq.d $f14, $f15
-; 64-NEXT:    movt.d $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.d $f0, $f13
+; 64-NEXT:    c.eq.d $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_oeq_f64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.eq.d $f14, $f15
-; 64R2-NEXT:    movt.d $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.d $f0, $f13
+; 64R2-NEXT:    c.eq.d $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_oeq_f64_val:
 ; 64R6:       # %bb.0: # %entry
@@ -549,21 +549,21 @@ entry:
 define double @f64_fcmp_olt_f64_val(double %f0, double %f1, double %f2, double %f3) nounwind readnone {
 ; 32-LABEL: f64_fcmp_olt_f64_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    ldc1 $f0, 24($sp)
-; 32-NEXT:    ldc1 $f2, 16($sp)
-; 32-NEXT:    c.olt.d $f2, $f0
-; 32-NEXT:    movt.d $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.d $f0, $f14
+; 32-NEXT:    ldc1 $f2, 24($sp)
+; 32-NEXT:    ldc1 $f4, 16($sp)
+; 32-NEXT:    c.olt.d $f4, $f2
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_olt_f64_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    ldc1 $f0, 24($sp)
-; 32R2-NEXT:    ldc1 $f2, 16($sp)
-; 32R2-NEXT:    c.olt.d $f2, $f0
-; 32R2-NEXT:    movt.d $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.d $f0, $f14
+; 32R2-NEXT:    ldc1 $f2, 24($sp)
+; 32R2-NEXT:    ldc1 $f4, 16($sp)
+; 32R2-NEXT:    c.olt.d $f4, $f2
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_olt_f64_val:
 ; 32R6:       # %bb.0: # %entry
@@ -577,17 +577,17 @@ define double @f64_fcmp_olt_f64_val(double %f0, double %f1, double %f2, double %
 ;
 ; 64-LABEL: f64_fcmp_olt_f64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.olt.d $f14, $f15
-; 64-NEXT:    movt.d $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.d $f0, $f13
+; 64-NEXT:    c.olt.d $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_olt_f64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.olt.d $f14, $f15
-; 64R2-NEXT:    movt.d $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.d $f0, $f13
+; 64R2-NEXT:    c.olt.d $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_olt_f64_val:
 ; 64R6:       # %bb.0: # %entry
@@ -605,21 +605,21 @@ entry:
 define double @f64_fcmp_ogt_f64_val(double %f0, double %f1, double %f2, double %f3) nounwind readnone {
 ; 32-LABEL: f64_fcmp_ogt_f64_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    ldc1 $f0, 24($sp)
-; 32-NEXT:    ldc1 $f2, 16($sp)
-; 32-NEXT:    c.ule.d $f2, $f0
-; 32-NEXT:    movf.d $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.d $f0, $f14
+; 32-NEXT:    ldc1 $f2, 24($sp)
+; 32-NEXT:    ldc1 $f4, 16($sp)
+; 32-NEXT:    c.ule.d $f4, $f2
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_ogt_f64_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    ldc1 $f0, 24($sp)
-; 32R2-NEXT:    ldc1 $f2, 16($sp)
-; 32R2-NEXT:    c.ule.d $f2, $f0
-; 32R2-NEXT:    movf.d $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.d $f0, $f14
+; 32R2-NEXT:    ldc1 $f2, 24($sp)
+; 32R2-NEXT:    ldc1 $f4, 16($sp)
+; 32R2-NEXT:    c.ule.d $f4, $f2
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_ogt_f64_val:
 ; 32R6:       # %bb.0: # %entry
@@ -633,17 +633,17 @@ define double @f64_fcmp_ogt_f64_val(double %f0, double %f1, double %f2, double %
 ;
 ; 64-LABEL: f64_fcmp_ogt_f64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.ule.d $f14, $f15
-; 64-NEXT:    movf.d $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.d $f0, $f13
+; 64-NEXT:    c.ule.d $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_ogt_f64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.ule.d $f14, $f15
-; 64R2-NEXT:    movf.d $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.d $f0, $f13
+; 64R2-NEXT:    c.ule.d $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_ogt_f64_val:
 ; 64R6:       # %bb.0: # %entry
@@ -661,23 +661,23 @@ entry:
 define float @f64_fcmp_ogt_f32_val(float %f0, float %f1, double %f2, double %f3) nounwind readnone {
 ; 32-LABEL: f64_fcmp_ogt_f32_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    mtc1 $6, $f0
-; 32-NEXT:    mtc1 $7, $f1
-; 32-NEXT:    ldc1 $f2, 16($sp)
-; 32-NEXT:    c.ule.d $f0, $f2
-; 32-NEXT:    movf.s $f14, $f12, $fcc0
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    mov.s $f0, $f14
+; 32-NEXT:    mtc1 $6, $f2
+; 32-NEXT:    mtc1 $7, $f3
+; 32-NEXT:    ldc1 $f4, 16($sp)
+; 32-NEXT:    c.ule.d $f2, $f4
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_ogt_f32_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    mtc1 $6, $f0
-; 32R2-NEXT:    mthc1 $7, $f0
-; 32R2-NEXT:    ldc1 $f2, 16($sp)
-; 32R2-NEXT:    c.ule.d $f0, $f2
-; 32R2-NEXT:    movf.s $f14, $f12, $fcc0
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    mov.s $f0, $f14
+; 32R2-NEXT:    mtc1 $6, $f2
+; 32R2-NEXT:    mthc1 $7, $f2
+; 32R2-NEXT:    ldc1 $f4, 16($sp)
+; 32R2-NEXT:    c.ule.d $f2, $f4
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_ogt_f32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -690,17 +690,17 @@ define float @f64_fcmp_ogt_f32_val(float %f0, float %f1, double %f2, double %f3)
 ;
 ; 64-LABEL: f64_fcmp_ogt_f32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.ule.d $f14, $f15
-; 64-NEXT:    movf.s $f13, $f12, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    mov.s $f0, $f13
+; 64-NEXT:    c.ule.d $f14, $f15
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_ogt_f32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.ule.d $f14, $f15
-; 64R2-NEXT:    movf.s $f13, $f12, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    mov.s $f0, $f13
+; 64R2-NEXT:    c.ule.d $f14, $f15
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movf.s $f0, $f12, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_ogt_f32_val:
 ; 64R6:       # %bb.0: # %entry

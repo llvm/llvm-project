@@ -15,7 +15,7 @@
 
 # CHECK:      Segment Sections...
 # CHECK-NEXT:   00     .text .dynsym .hash .dynstr .dynamic
-# CHECK-NEXT:   01     .foo
+# CHECK-NEXT:   01     .bar .foo
 
 .quad 0
 .section .foo,"ax"

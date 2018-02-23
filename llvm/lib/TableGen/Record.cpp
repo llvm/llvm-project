@@ -141,10 +141,6 @@ bool RecordRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
   if (RTy->getRecord() == Rec || Rec->isSubClassOf(RTy->getRecord()))
     return true;
 
-  for (const auto &SCPair : RTy->getRecord()->getSuperClasses())
-    if (Rec->isSubClassOf(SCPair.first))
-      return true;
-
   return false;
 }
 
@@ -173,6 +169,16 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
         return NewType2;
     }
   }
+
+  if (ListRecTy *ListTy1 = dyn_cast<ListRecTy>(T1)) {
+    if (ListRecTy *ListTy2 = dyn_cast<ListRecTy>(T2)) {
+      RecTy* NewType = resolveTypes(ListTy1->getElementType(),
+                                    ListTy2->getElementType());
+      if (NewType)
+        return NewType->getListTy();
+    }
+  }
+
   return nullptr;
 }
 
@@ -722,6 +728,11 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
     }
     break;
 
+  case SIZE:
+    if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
+      return IntInit::get(LHSl->size());
+    break;
+
   case EMPTY:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->empty());
@@ -746,6 +757,7 @@ std::string UnOpInit::getAsString() const {
   case CAST: Result = "!cast<" + getType()->getAsString() + ">"; break;
   case HEAD: Result = "!head"; break;
   case TAIL: Result = "!tail"; break;
+  case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";

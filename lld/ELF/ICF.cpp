@@ -437,17 +437,14 @@ template <class ELFT> void ICF<ELFT>::run() {
     for (size_t I = Begin + 1; I < End; ++I) {
       print("  removing identical section " + toString(Sections[I]));
       Sections[Begin]->replace(Sections[I]);
+
+      // At this point we know sections merged are fully identical and hence
+      // we want to remove duplicate implicit dependencies such as link order
+      // and relocation sections.
+      for (InputSection *IS : Sections[I]->DependentSections)
+        IS->Live = false;
     }
   });
-
-  // Mark ARM Exception Index table sections that refer to folded code
-  // sections as not live. These sections have an implict dependency
-  // via the link order dependency.
-  if (Config->EMachine == EM_ARM)
-    for (InputSectionBase *Sec : InputSections)
-      if (auto *S = dyn_cast<InputSection>(Sec))
-        if (S->Flags & SHF_LINK_ORDER)
-          S->Live = S->getLinkOrderDep()->Live;
 }
 
 // ICF entry point function.
