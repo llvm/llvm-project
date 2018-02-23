@@ -10,139 +10,144 @@
 define double @foo(double %a, double %b) nounwind readnone {
 ; MIPS32-LABEL: foo:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    mtc1 $zero, $f0
-; MIPS32-NEXT:    mtc1 $zero, $f1
-; MIPS32-NEXT:    c.ule.d $f12, $f0
+; MIPS32-NEXT:    mov.d $f0, $f12
+; MIPS32-NEXT:    mtc1 $zero, $f2
+; MIPS32-NEXT:    mtc1 $zero, $f3
+; MIPS32-NEXT:    c.ule.d $f0, $f2
 ; MIPS32-NEXT:    bc1f $BB0_2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1: # %if.else
-; MIPS32-NEXT:    mtc1 $zero, $f12
-; MIPS32-NEXT:    mtc1 $zero, $f13
-; MIPS32-NEXT:    c.ule.d $f14, $f12
+; MIPS32-NEXT:    mtc1 $zero, $f0
+; MIPS32-NEXT:    mtc1 $zero, $f1
+; MIPS32-NEXT:    c.ule.d $f14, $f0
 ; MIPS32-NEXT:    bc1t $BB0_3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB0_2: # %if.end6
-; MIPS32-NEXT:    sub.d $f0, $f14, $f12
-; MIPS32-NEXT:    add.d $f12, $f0, $f0
+; MIPS32-NEXT:    sub.d $f0, $f14, $f0
+; MIPS32-NEXT:    add.d $f0, $f0, $f0
 ; MIPS32-NEXT:  $BB0_3: # %return
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    mov.d $f0, $f12
+; MIPS32-NEXT:    nop
 ;
 ; MIPS32R2-LABEL: foo:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    mtc1 $zero, $f0
-; MIPS32R2-NEXT:    mthc1 $zero, $f0
-; MIPS32R2-NEXT:    c.ule.d $f12, $f0
+; MIPS32R2-NEXT:    mov.d $f0, $f12
+; MIPS32R2-NEXT:    mtc1 $zero, $f2
+; MIPS32R2-NEXT:    mthc1 $zero, $f2
+; MIPS32R2-NEXT:    c.ule.d $f0, $f2
 ; MIPS32R2-NEXT:    bc1f $BB0_2
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  # %bb.1: # %if.else
-; MIPS32R2-NEXT:    mtc1 $zero, $f12
-; MIPS32R2-NEXT:    mthc1 $zero, $f12
-; MIPS32R2-NEXT:    c.ule.d $f14, $f12
+; MIPS32R2-NEXT:    mtc1 $zero, $f0
+; MIPS32R2-NEXT:    mthc1 $zero, $f0
+; MIPS32R2-NEXT:    c.ule.d $f14, $f0
 ; MIPS32R2-NEXT:    bc1t $BB0_3
 ; MIPS32R2-NEXT:    nop
 ; MIPS32R2-NEXT:  $BB0_2: # %if.end6
-; MIPS32R2-NEXT:    sub.d $f0, $f14, $f12
-; MIPS32R2-NEXT:    add.d $f12, $f0, $f0
+; MIPS32R2-NEXT:    sub.d $f0, $f14, $f0
+; MIPS32R2-NEXT:    add.d $f0, $f0, $f0
 ; MIPS32R2-NEXT:  $BB0_3: # %return
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    mov.d $f0, $f12
+; MIPS32R2-NEXT:    nop
 ;
 ; MIPS32r6-LABEL: foo:
 ; MIPS32r6:       # %bb.0: # %entry
-; MIPS32r6-NEXT:    mtc1 $zero, $f0
-; MIPS32r6-NEXT:    mthc1 $zero, $f0
-; MIPS32r6-NEXT:    cmp.lt.d $f0, $f0, $f12
-; MIPS32r6-NEXT:    mfc1 $1, $f0
+; MIPS32r6-NEXT:    mov.d $f0, $f12
+; MIPS32r6-NEXT:    mtc1 $zero, $f1
+; MIPS32r6-NEXT:    mthc1 $zero, $f1
+; MIPS32r6-NEXT:    cmp.lt.d $f1, $f1, $f0
+; MIPS32r6-NEXT:    mfc1 $1, $f1
 ; MIPS32r6-NEXT:    andi $1, $1, 1
 ; MIPS32r6-NEXT:    bnezc $1, $BB0_2
 ; MIPS32r6-NEXT:  # %bb.1: # %if.else
-; MIPS32r6-NEXT:    mtc1 $zero, $f12
-; MIPS32r6-NEXT:    mthc1 $zero, $f12
-; MIPS32r6-NEXT:    cmp.ule.d $f0, $f14, $f12
-; MIPS32r6-NEXT:    mfc1 $1, $f0
+; MIPS32r6-NEXT:    mtc1 $zero, $f0
+; MIPS32r6-NEXT:    mthc1 $zero, $f0
+; MIPS32r6-NEXT:    cmp.ule.d $f1, $f14, $f0
+; MIPS32r6-NEXT:    mfc1 $1, $f1
 ; MIPS32r6-NEXT:    andi $1, $1, 1
 ; MIPS32r6-NEXT:    bnezc $1, $BB0_3
 ; MIPS32r6-NEXT:  $BB0_2: # %if.end6
-; MIPS32r6-NEXT:    sub.d $f0, $f14, $f12
-; MIPS32r6-NEXT:    add.d $f12, $f0, $f0
+; MIPS32r6-NEXT:    sub.d $f0, $f14, $f0
+; MIPS32r6-NEXT:    add.d $f0, $f0, $f0
 ; MIPS32r6-NEXT:  $BB0_3: # %return
-; MIPS32r6-NEXT:    jr $ra
-; MIPS32r6-NEXT:    mov.d $f0, $f12
+; MIPS32r6-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: foo:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:    dmtc1 $zero, $f0
-; MIPS4-NEXT:    c.ule.d $f12, $f0
+; MIPS4-NEXT:    mov.d $f0, $f12
+; MIPS4-NEXT:    dmtc1 $zero, $f1
+; MIPS4-NEXT:    c.ule.d $f0, $f1
 ; MIPS4-NEXT:    bc1f .LBB0_2
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  # %bb.1: # %if.else
-; MIPS4-NEXT:    dmtc1 $zero, $f12
-; MIPS4-NEXT:    c.ule.d $f13, $f12
+; MIPS4-NEXT:    dmtc1 $zero, $f0
+; MIPS4-NEXT:    c.ule.d $f13, $f0
 ; MIPS4-NEXT:    bc1t .LBB0_3
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  .LBB0_2: # %if.end6
-; MIPS4-NEXT:    sub.d $f0, $f13, $f12
-; MIPS4-NEXT:    add.d $f12, $f0, $f0
+; MIPS4-NEXT:    sub.d $f0, $f13, $f0
+; MIPS4-NEXT:    add.d $f0, $f0, $f0
 ; MIPS4-NEXT:  .LBB0_3: # %return
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    mov.d $f0, $f12
+; MIPS4-NEXT:    nop
 ;
 ; MIPS64-LABEL: foo:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    dmtc1 $zero, $f0
-; MIPS64-NEXT:    c.ule.d $f12, $f0
+; MIPS64-NEXT:    mov.d $f0, $f12
+; MIPS64-NEXT:    dmtc1 $zero, $f1
+; MIPS64-NEXT:    c.ule.d $f0, $f1
 ; MIPS64-NEXT:    bc1f .LBB0_2
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.1: # %if.else
-; MIPS64-NEXT:    dmtc1 $zero, $f12
-; MIPS64-NEXT:    c.ule.d $f13, $f12
+; MIPS64-NEXT:    dmtc1 $zero, $f0
+; MIPS64-NEXT:    c.ule.d $f13, $f0
 ; MIPS64-NEXT:    bc1t .LBB0_3
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  .LBB0_2: # %if.end6
-; MIPS64-NEXT:    sub.d $f0, $f13, $f12
-; MIPS64-NEXT:    add.d $f12, $f0, $f0
+; MIPS64-NEXT:    sub.d $f0, $f13, $f0
+; MIPS64-NEXT:    add.d $f0, $f0, $f0
 ; MIPS64-NEXT:  .LBB0_3: # %return
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    mov.d $f0, $f12
+; MIPS64-NEXT:    nop
 ;
 ; MIPS64R2-LABEL: foo:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    dmtc1 $zero, $f0
-; MIPS64R2-NEXT:    c.ule.d $f12, $f0
+; MIPS64R2-NEXT:    mov.d $f0, $f12
+; MIPS64R2-NEXT:    dmtc1 $zero, $f1
+; MIPS64R2-NEXT:    c.ule.d $f0, $f1
 ; MIPS64R2-NEXT:    bc1f .LBB0_2
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  # %bb.1: # %if.else
-; MIPS64R2-NEXT:    dmtc1 $zero, $f12
-; MIPS64R2-NEXT:    c.ule.d $f13, $f12
+; MIPS64R2-NEXT:    dmtc1 $zero, $f0
+; MIPS64R2-NEXT:    c.ule.d $f13, $f0
 ; MIPS64R2-NEXT:    bc1t .LBB0_3
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  .LBB0_2: # %if.end6
-; MIPS64R2-NEXT:    sub.d $f0, $f13, $f12
-; MIPS64R2-NEXT:    add.d $f12, $f0, $f0
+; MIPS64R2-NEXT:    sub.d $f0, $f13, $f0
+; MIPS64R2-NEXT:    add.d $f0, $f0, $f0
 ; MIPS64R2-NEXT:  .LBB0_3: # %return
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    mov.d $f0, $f12
+; MIPS64R2-NEXT:    nop
 ;
 ; MIPS64R6-LABEL: foo:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    dmtc1 $zero, $f0
-; MIPS64R6-NEXT:    cmp.lt.d $f0, $f0, $f12
-; MIPS64R6-NEXT:    mfc1 $1, $f0
+; MIPS64R6-NEXT:    mov.d $f0, $f12
+; MIPS64R6-NEXT:    dmtc1 $zero, $f1
+; MIPS64R6-NEXT:    cmp.lt.d $f1, $f1, $f0
+; MIPS64R6-NEXT:    mfc1 $1, $f1
 ; MIPS64R6-NEXT:    andi $1, $1, 1
 ; MIPS64R6-NEXT:    bnezc $1, .LBB0_2
 ; MIPS64R6-NEXT:  # %bb.1: # %if.else
-; MIPS64R6-NEXT:    dmtc1 $zero, $f12
-; MIPS64R6-NEXT:    cmp.ule.d $f0, $f13, $f12
-; MIPS64R6-NEXT:    mfc1 $1, $f0
+; MIPS64R6-NEXT:    dmtc1 $zero, $f0
+; MIPS64R6-NEXT:    cmp.ule.d $f1, $f13, $f0
+; MIPS64R6-NEXT:    mfc1 $1, $f1
 ; MIPS64R6-NEXT:    andi $1, $1, 1
 ; MIPS64R6-NEXT:    bnezc $1, .LBB0_3
 ; MIPS64R6-NEXT:  .LBB0_2: # %if.end6
-; MIPS64R6-NEXT:    sub.d $f0, $f13, $f12
-; MIPS64R6-NEXT:    add.d $f12, $f0, $f0
+; MIPS64R6-NEXT:    sub.d $f0, $f13, $f0
+; MIPS64R6-NEXT:    add.d $f0, $f0, $f0
 ; MIPS64R6-NEXT:  .LBB0_3: # %return
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    mov.d $f0, $f12
+; MIPS64R6-NEXT:    jrc $ra
 entry:
   %cmp = fcmp ogt double %a, 0.000000e+00
   br i1 %cmp, label %if.end6, label %if.else

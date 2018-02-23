@@ -369,7 +369,8 @@ static bool windowsRequiresStackProbe(MachineFunction &MF,
     F.getFnAttribute("stack-probe-size")
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
-  return StackSizeInBytes >= StackProbeSize;
+  return (StackSizeInBytes >= StackProbeSize) &&
+         !F.hasFnAttribute("no-stack-arg-probe");
 }
 
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(

@@ -205,6 +205,9 @@ supported include:
 ``!empty(a)``
     An integer {0,1} indicating whether list 'a' is empty.
 
+``!size(a)``
+    An integer indicating the number of elements in list 'a'.
+
 ``!if(a,b,c)``
   'b' if the result of 'int' or 'bit' operator 'a' is nonzero, 'c' otherwise.
 

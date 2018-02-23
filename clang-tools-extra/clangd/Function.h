@@ -117,7 +117,7 @@ public:
                                  std::forward<RestArgs>(Rest)...)) {
 
 #ifndef NDEBUG
-    assert(!WasCalled && "Can only call result of BindWithForward once.");
+    assert(!WasCalled && "Can only call result of Bind once.");
     WasCalled = true;
 #endif
     return CallImpl(llvm::index_sequence_for<Args...>(),
@@ -132,7 +132,7 @@ public:
 /// The returned object must be called no more than once, as \p As are
 /// std::forwarded'ed (therefore can be moved) into \p F during the call.
 template <class Func, class... Args>
-ForwardBinder<Func, Args...> BindWithForward(Func F, Args &&... As) {
+ForwardBinder<Func, Args...> Bind(Func F, Args &&... As) {
   return ForwardBinder<Func, Args...>(
       std::make_tuple(std::forward<Func>(F), std::forward<Args>(As)...));
 }

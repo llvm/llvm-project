@@ -320,7 +320,7 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
 
     // Process each value.
     for (unsigned i = 0; i < List->size(); ++i) {
-      Init *ItemVal = List->resolveListElementReference(*CurRec, nullptr, i);
+      Init *ItemVal = List->getElement(i)->resolveReferences(*CurRec, nullptr);
       IterVals.push_back(IterRecord(CurLoop.IterVar, ItemVal));
       if (ProcessForeachDefs(CurRec, Loc, IterVals))
         return true;
@@ -781,6 +781,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return nullptr;
   case tgtok::XHead:
   case tgtok::XTail:
+  case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast: {  // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
@@ -807,6 +808,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XTail:
       Lex.Lex();  // eat the operation
       Code = UnOpInit::TAIL;
+      break;
+    case tgtok::XSize:
+      Lex.Lex();
+      Code = UnOpInit::SIZE;
+      Type = IntRecTy::get();
       break;
     case tgtok::XEmpty:
       Lex.Lex();  // eat the operation
@@ -842,12 +848,15 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         }
       }
 
-      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
+      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL ||
+          Code == UnOpInit::SIZE) {
         if (!LHSl && !LHSt) {
           TokError("expected list type argument in unary operator");
           return nullptr;
         }
+      }
 
+      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
         if (LHSl && LHSl->empty()) {
           TokError("empty list argument in unary operator");
           return nullptr;
@@ -1453,6 +1462,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
   case tgtok::XHead:
   case tgtok::XTail:
+  case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast:  // Value ::= !unop '(' Value ')'
   case tgtok::XConcat:

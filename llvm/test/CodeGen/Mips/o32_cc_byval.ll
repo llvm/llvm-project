@@ -190,14 +190,15 @@ define void @f4(float %f, %struct.S3* nocapture byval %s3, %struct.S1* nocapture
 ; CHECK-NEXT:    addiu $sp, $sp, -48
 ; CHECK-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    addu $gp, $2, $25
+; CHECK-NEXT:    move $4, $7
 ; CHECK-NEXT:    sw $5, 52($sp)
 ; CHECK-NEXT:    sw $6, 56($sp)
-; CHECK-NEXT:    sw $7, 60($sp)
+; CHECK-NEXT:    sw $4, 60($sp)
 ; CHECK-NEXT:    lw $1, 80($sp)
 ; CHECK-NEXT:    lb $2, 52($sp)
 ; CHECK-NEXT:    addiu $3, $zero, 4
-; CHECK-NEXT:    lui $4, 16576
-; CHECK-NEXT:    sw $4, 36($sp)
+; CHECK-NEXT:    lui $5, 16576
+; CHECK-NEXT:    sw $5, 36($sp)
 ; CHECK-NEXT:    sw $2, 32($sp)
 ; CHECK-NEXT:    sw $3, 28($sp)
 ; CHECK-NEXT:    sw $1, 24($sp)
@@ -207,11 +208,9 @@ define void @f4(float %f, %struct.S3* nocapture byval %s3, %struct.S1* nocapture
 ; CHECK-NEXT:    lw $1, %got($CPI3_0)($gp)
 ; CHECK-NEXT:    ldc1 $f0, %lo($CPI3_0)($1)
 ; CHECK-NEXT:    mfc1 $6, $f0
-; CHECK-NEXT:    mfc1 $1, $f1
 ; CHECK-NEXT:    lw $25, %call16(callee4)($gp)
-; CHECK-NEXT:    move $4, $7
 ; CHECK-NEXT:    jalr $25
-; CHECK-NEXT:    move $7, $1
+; CHECK-NEXT:    mfc1 $7, $f1
 ; CHECK-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 48

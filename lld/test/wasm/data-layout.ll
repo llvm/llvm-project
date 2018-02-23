@@ -46,25 +46,10 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; RUN: wasm-ld --check-signatures --relocatable -o %t_reloc.wasm %t.o %t.hello.o
 ; RUN: obj2yaml %t_reloc.wasm | FileCheck %s -check-prefix=RELOC
 
-; RELOC:        - Type:            GLOBAL
-; RELOC-NEXT:     Globals:
-; RELOC-NEXT:       - Index:           0
-; RELOC-NEXT:         Type:            I32
-; RELOC-NEXT:         Mutable:         false
-; RELOC-NEXT:         InitExpr:
-; RELOC-NEXT:           Opcode:          I32_CONST
-; RELOC-NEXT:           Value:           0
-; RELOC-NEXT:       - Index:           1
-; RELOC-NEXT:         Type:            I32
-; RELOC-NEXT:         Mutable:         false
-; RELOC-NEXT:         InitExpr:
-; RELOC-NEXT:           Opcode:          I32_CONST
-; RELOC-NEXT:           Value:           16
-
 ; RELOC:       - Type:            DATA
 ; RELOC-NEXT:     Relocations:
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; RELOC-NEXT:         Index:           3
+; RELOC-NEXT:         Index:           5
 ; RELOC-NEXT:         Offset:          0x00000018
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - SectionOffset:   6
@@ -92,6 +77,31 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; RELOC-NEXT:           Value:           28
 ; RELOC-NEXT:         Content:         68656C6C6F0A00
 
-; RELOC:       - Type:            CUSTOM
+; RELOC:        - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            linking
 ; RELOC-NEXT:     DataSize:        35
+; RELOC-NEXT:     SymbolTable:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         Kind:            DATA
+; RELOC-NEXT:         Name:            foo
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Segment:         0
+; RELOC-NEXT:         Size:            4
+; RELOC-NEXT:       - Index:           1
+; RELOC-NEXT:         Kind:            DATA
+; RELOC-NEXT:         Name:            aligned_bar
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Segment:         1
+; RELOC-NEXT:         Size:            4
+; RELOC-NEXT:       - Index:           2
+; RELOC-NEXT:         Kind:            DATA
+; RELOC-NEXT:         Name:            external_ref
+; RELOC-NEXT:         Flags:           [  ]
+; RELOC-NEXT:         Segment:         2
+; RELOC-NEXT:         Size:            4
+; RELOC:            - Index:           5
+; RELOC-NEXT:         Kind:            DATA
+; RELOC-NEXT:         Name:            hello_str
+; RELOC-NEXT:         Flags:           [  ]
+; RELOC-NEXT:         Segment:         3
+; RELOC-NEXT:         Size:            7

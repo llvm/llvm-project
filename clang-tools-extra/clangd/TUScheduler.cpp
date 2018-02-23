@@ -218,7 +218,7 @@ void ASTWorker::update(
       OnUpdated(std::move(*Diags));
   };
 
-  startTask("Update", BindWithForward(Task, std::move(OnUpdated)), WantDiags);
+  startTask("Update", Bind(Task, std::move(OnUpdated)), WantDiags);
 }
 
 void ASTWorker::runWithAST(
@@ -239,7 +239,7 @@ void ASTWorker::runWithAST(
     LastASTSize = ActualAST->getUsedBytes();
   };
 
-  startTask(Name, BindWithForward(Task, std::move(Action)),
+  startTask(Name, Bind(Task, std::move(Action)),
             /*UpdateType=*/llvm::None);
 }
 
@@ -472,10 +472,9 @@ void TUScheduler::runWithPreamble(
     Action(InputsAndPreamble{InputsCopy, Preamble.get()});
   };
 
-  PreambleTasks->runAsync(
-      "task:" + llvm::sys::path::filename(File),
-      BindWithForward(Task, std::string(Name), std::string(File),
-                      Context::current().clone(), std::move(Action)));
+  PreambleTasks->runAsync("task:" + llvm::sys::path::filename(File),
+                          Bind(Task, std::string(Name), std::string(File),
+                               Context::current().clone(), std::move(Action)));
 }
 
 std::vector<std::pair<Path, std::size_t>>

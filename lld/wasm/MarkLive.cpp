@@ -65,7 +65,7 @@ void lld::wasm::markLive() {
   for (const ObjFile *Obj : Symtab->ObjectFiles) {
     const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions)
-      Enqueue(Obj->getFunctionSymbol(F.FunctionIndex));
+      Enqueue(Obj->getFunctionSymbol(F.Symbol));
   }
 
   // Follow relocations to mark all reachable chunks.
@@ -73,19 +73,8 @@ void lld::wasm::markLive() {
     InputChunk *C = Q.pop_back_val();
 
     for (const WasmRelocation Reloc : C->getRelocations()) {
-      switch (Reloc.Type) {
-      case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-      case R_WEBASSEMBLY_TABLE_INDEX_I32:
-      case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-        Enqueue(C->File->getFunctionSymbol(Reloc.Index));
-        break;
-      case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-      case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-      case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-      case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-        Enqueue(C->File->getDataSymbol(Reloc.Index));
-        break;
-      }
+      if (Reloc.Type != R_WEBASSEMBLY_TYPE_INDEX_LEB)
+        Enqueue(C->File->getSymbol(Reloc.Index));
     }
   }
 
