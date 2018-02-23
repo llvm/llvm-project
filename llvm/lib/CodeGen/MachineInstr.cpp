@@ -930,8 +930,7 @@ void MachineInstr::clearKillInfo() {
 
 void MachineInstr::substituteRegister(unsigned FromReg, unsigned ToReg,
                                       unsigned SubIdx,
-                                      const TargetRegisterInfo &RegInfo,
-                                      bool ClearIsRenamable) {
+                                      const TargetRegisterInfo &RegInfo) {
   if (TargetRegisterInfo::isPhysicalRegister(ToReg)) {
     if (SubIdx)
       ToReg = RegInfo.getSubReg(ToReg, SubIdx);
@@ -939,11 +938,8 @@ void MachineInstr::substituteRegister(unsigned FromReg, unsigned ToReg,
       if (!MO.isReg() || MO.getReg() != FromReg)
         continue;
       MO.substPhysReg(ToReg, RegInfo);
-      if (ClearIsRenamable)
-        MO.setIsRenamable(false);
     }
   } else {
-    assert(!ClearIsRenamable && "IsRenamable invalid for virtual registers");
     for (MachineOperand &MO : operands()) {
       if (!MO.isReg() || MO.getReg() != FromReg)
         continue;

@@ -77,6 +77,6 @@ struct __declspec(dllexport) CtorClosureOutOfLine {
 CtorClosureOutOfLine::CtorClosureOutOfLine(const HasImplicitDtor2 &v) {}
 
 // CHECK-LABEL: define weak_odr dllexport x86_thiscallcc void @"\01??_FCtorClosureInline@@QAEXXZ"
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"\01??1HasImplicitDtor1@@QAE@XZ"
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"\01??1HasImplicitDtor1@@QAE@XZ"
 // CHECK-LABEL: define weak_odr dllexport x86_thiscallcc void @"\01??_FCtorClosureOutOfLine@@QAEXXZ"
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"\01??1HasImplicitDtor2@@QAE@XZ"
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"\01??1HasImplicitDtor2@@QAE@XZ"

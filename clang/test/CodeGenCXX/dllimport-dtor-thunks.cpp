@@ -39,11 +39,11 @@ extern "C" void testit() {
 
 // The destructors are called in reverse order of construction. Only the third
 // needs the complete destructor (_D).
-// CHECK-LABEL: define void @testit()
+// CHECK-LABEL: define dso_local void @testit()
 // CHECK:  call void @"\01??_DImportVBaseOverrideVDtor@@QEAAXXZ"(%struct.ImportVBaseOverrideVDtor* %{{.*}})
 // CHECK:  call void @"\01??1ImportOverrideVDtor@@UEAA@XZ"(%struct.ImportOverrideVDtor* %{{.*}})
 // CHECK:  call void @"\01??1ImportIntroVDtor@@UEAA@XZ"(%struct.ImportIntroVDtor* %{{.*}})
 
-// CHECK-LABEL: define linkonce_odr void @"\01??_DImportVBaseOverrideVDtor@@QEAAXXZ"
+// CHECK-LABEL: define linkonce_odr dso_local void @"\01??_DImportVBaseOverrideVDtor@@QEAAXXZ"
 // CHECK-LABEL: declare dllimport void @"\01??1ImportOverrideVDtor@@UEAA@XZ"
 // CHECK-LABEL: declare dllimport void @"\01??1ImportIntroVDtor@@UEAA@XZ"

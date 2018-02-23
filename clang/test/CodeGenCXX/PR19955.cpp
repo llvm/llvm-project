@@ -6,13 +6,13 @@ extern void __declspec(dllimport) fun();
 
 extern int *varp;
 int *varp = &var;
-// CHECK-DAG: @"\01?varp@@3PAHA" = global i32* null
-// X64-DAG: @"\01?varp@@3PEAHEA" = global i32* null
+// CHECK-DAG: @"\01?varp@@3PAHA" = dso_local global i32* null
+// X64-DAG: @"\01?varp@@3PEAHEA" = dso_local global i32* null
 
 extern void (*funp)();
 void (*funp)() = &fun;
-// CHECK-DAG: @"\01?funp@@3P6AXXZA" = global void ()* null
-// X64-DAG: @"\01?funp@@3P6AXXZEA" = global void ()* null
+// CHECK-DAG: @"\01?funp@@3P6AXXZA" = dso_local global void ()* null
+// X64-DAG: @"\01?funp@@3P6AXXZEA" = dso_local global void ()* null
 
 // CHECK-LABEL: @"\01??__Evarp@@YAXXZ"
 // CHECK-DAG: store i32* @"\01?var@@3HA", i32** @"\01?varp@@3PAHA"

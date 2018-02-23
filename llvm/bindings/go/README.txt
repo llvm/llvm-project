@@ -51,3 +51,11 @@ CGO_CPPFLAGS, CGO_CXXFLAGS and CGO_LDFLAGS environment variables:
     $ export CGO_CXXFLAGS=-std=c++11
     $ export CGO_LDFLAGS="`/path/to/llvm-build/bin/llvm-config --ldflags --libs --system-libs all`"
     $ go build -tags byollvm
+
+If you see a compilation error while compiling your code with Go 1.9.4 or later as follows,
+
+    go build llvm.org/llvm/bindings/go/llvm: invalid flag in #cgo LDFLAGS: -Wl,-headerpad_max_install_names
+
+you need to setup $CGO_LDFLAGS_ALLOW to allow a compiler to specify some linker options:
+
+    $ export CGO_LDFLAGS_ALLOW='-Wl,(-search_paths_first|-headerpad_max_install_names)'

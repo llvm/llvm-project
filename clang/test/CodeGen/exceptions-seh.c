@@ -10,7 +10,7 @@
 void try_body(int numerator, int denominator, int *myres) {
   *myres = numerator / denominator;
 }
-// CHECK-LABEL: define void @try_body(i32 %numerator, i32 %denominator, i32* %myres)
+// CHECK-LABEL: define dso_local void @try_body(i32 %numerator, i32 %denominator, i32* %myres)
 // CHECK: sdiv i32
 // CHECK: store i32 %{{.*}}, i32*
 // CHECK: ret void
@@ -27,7 +27,7 @@ int safe_div(int numerator, int denominator, int *res) {
   return success;
 }
 
-// CHECK-LABEL: define i32 @safe_div(i32 %numerator, i32 %denominator, i32* %res)
+// CHECK-LABEL: define dso_local i32 @safe_div(i32 %numerator, i32 %denominator, i32* %res)
 // X64-SAME:      personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // X86-SAME:      personality i8* bitcast (i32 (...)* @_except_handler3 to i8*)
 // CHECK: invoke void @try_body(i32 %{{.*}}, i32 %{{.*}}, i32* %{{.*}}) #[[NOINLINE:[0-9]+]]
@@ -57,9 +57,9 @@ int safe_div(int numerator, int denominator, int *res) {
 // X86: ret i32 1
 
 // Mingw uses msvcrt, so it can also use _except_handler3.
-// X86-GNU-LABEL: define i32 @safe_div(i32 %numerator, i32 %denominator, i32* %res)
+// X86-GNU-LABEL: define dso_local i32 @safe_div(i32 %numerator, i32 %denominator, i32* %res)
 // X86-GNU-SAME:      personality i8* bitcast (i32 (...)* @_except_handler3 to i8*)
-// X64-GNU-LABEL: define i32 @safe_div(i32 %numerator, i32 %denominator, i32* %res)
+// X64-GNU-LABEL: define dso_local i32 @safe_div(i32 %numerator, i32 %denominator, i32* %res)
 // X64-GNU-SAME:      personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 
 void j(void);
@@ -74,7 +74,7 @@ int filter_expr_capture(void) {
   return r;
 }
 
-// CHECK-LABEL: define i32 @filter_expr_capture()
+// CHECK-LABEL: define dso_local i32 @filter_expr_capture()
 // X64-SAME: personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // X86-SAME: personality i8* bitcast (i32 (...)* @_except_handler3 to i8*)
 // X64: call void (...) @llvm.localescape(i32* %[[r:[^ ,]*]])
@@ -114,7 +114,7 @@ int nested_try(void) {
   }
   return r;
 }
-// CHECK-LABEL: define i32 @nested_try()
+// CHECK-LABEL: define dso_local i32 @nested_try()
 // X64-SAME: personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // X86-SAME: personality i8* bitcast (i32 (...)* @_except_handler3 to i8*)
 // CHECK: store i32 42, i32* %[[r:[^ ,]*]]
@@ -174,7 +174,7 @@ int basic_finally(int g) {
   }
   return g;
 }
-// CHECK-LABEL: define i32 @basic_finally(i32 %g)
+// CHECK-LABEL: define dso_local i32 @basic_finally(i32 %g)
 // X64-SAME: personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // X86-SAME: personality i8* bitcast (i32 (...)* @_except_handler3 to i8*)
 // CHECK: %[[g_addr:[^ ]*]] = alloca i32, align 4
@@ -211,7 +211,7 @@ int except_return(void) {
     return 42;
   }
 }
-// CHECK-LABEL: define i32 @except_return()
+// CHECK-LABEL: define dso_local i32 @except_return()
 // CHECK: %[[tmp:[^ ]*]] = invoke i32 @returns_int()
 // CHECK:       to label %[[cont:[^ ]*]] unwind label %[[catchpad:[^ ]*]]
 //
@@ -240,7 +240,7 @@ void finally_capture_twice(int x) {
   }
 }
 //
-// CHECK-LABEL: define void @finally_capture_twice(
+// CHECK-LABEL: define dso_local void @finally_capture_twice(
 // CHECK:         [[X:%.*]] = alloca i32, align 4
 // CHECK:         call void (...) @llvm.localescape(i32* [[X]])
 // CHECK-NEXT:    store i32 {{.*}}, i32* [[X]], align 4
@@ -267,7 +267,7 @@ int exception_code_in_except(void) {
   }
 }
 
-// CHECK-LABEL: define i32 @exception_code_in_except()
+// CHECK-LABEL: define dso_local i32 @exception_code_in_except()
 // CHECK: %[[ret_slot:[^ ]*]] = alloca i32
 // CHECK: %[[code_slot:[^ ]*]] = alloca i32
 // CHECK: invoke void @try_body(i32 0, i32 0, i32* null)

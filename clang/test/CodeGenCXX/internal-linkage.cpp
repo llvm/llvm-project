@@ -51,7 +51,7 @@ extern char const * extern_nonconst_xyzzy;
 
 char const * *test4()
 {
-    // CHECK: @extern_nonconst_xyzzy = global
+    // CHECK: @extern_nonconst_xyzzy = {{(dso_local )?}}global
     return &extern_nonconst_xyzzy;
 }
 

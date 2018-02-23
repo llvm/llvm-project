@@ -510,6 +510,15 @@ void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {
   OwnedMemoryBuffer = std::move(MB);
 }
 
+bool Module::getRtLibUseGOT() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("RtLibUseGOT"));
+  return Val && (cast<ConstantInt>(Val->getValue())->getZExtValue() > 0);
+}
+
+void Module::setRtLibUseGOT() {
+  addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
+}
+
 GlobalVariable *llvm::collectUsedGlobalVariables(
     const Module &M, SmallPtrSetImpl<GlobalValue *> &Set, bool CompilerUsed) {
   const char *Name = CompilerUsed ? "llvm.compiler.used" : "llvm.used";

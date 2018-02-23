@@ -39,14 +39,14 @@ USEVAR(GlobalRedecl2)
 
 // NB: MSVC issues a warning and makes GlobalRedecl3 dllexport. We follow GCC
 // and drop the dllimport with a warning.
-// CHECK: @GlobalRedecl3 = external global i32
+// CHECK: @GlobalRedecl3 = external dso_local global i32
 __declspec(dllimport) extern int GlobalRedecl3;
                       extern int GlobalRedecl3; // dllimport ignored
 USEVAR(GlobalRedecl3)
 
 // Make sure this works even if the decl has been used before it's defined (PR20792).
-// MS: @GlobalRedecl4 = common dllexport global i32
-// GNU: @GlobalRedecl4 = common global i32
+// MS: @GlobalRedecl4 = common dso_local dllexport global i32
+// GNU: @GlobalRedecl4 = common dso_local global i32
 __declspec(dllimport) extern int GlobalRedecl4;
 USEVAR(GlobalRedecl4)
                       int GlobalRedecl4; // dllimport ignored
@@ -76,22 +76,22 @@ int functionScope() {
 __declspec(dllimport) void decl(void);
 
 // Initialize use_decl with the address of the thunk.
-// CHECK-DAG: @use_decl = global void ()* @decl
+// CHECK-DAG: @use_decl = dso_local global void ()* @decl
 void (*use_decl)(void) = &decl;
 
 // Import inline function.
 // MS-DAG: declare dllimport void @inlineFunc()
 // MO1-DAG: define available_externally dllimport void @inlineFunc()
-// GNU-DAG: declare void @inlineFunc()
-// GO1-DAG: define available_externally void @inlineFunc()
+// GNU-DAG: declare dso_local void @inlineFunc()
+// GO1-DAG: define available_externally dso_local void @inlineFunc()
 __declspec(dllimport) inline void inlineFunc(void) {}
 USE(inlineFunc)
 
 // inline attributes
 // MS-DAG: declare dllimport void @noinline()
 // MO1-DAG: define available_externally dllimport void @noinline()
-// GNU-DAG: declare void @noinline()
-// GO1-DAG: define available_externally void @noinline()
+// GNU-DAG: declare dso_local void @noinline()
+// GO1-DAG: define available_externally dso_local void @noinline()
 // CHECK-NOT: @alwaysInline()
 // O1-NOT: @alwaysInline()
 __declspec(dllimport) __attribute__((noinline)) inline void noinline(void) {}
@@ -107,20 +107,20 @@ USE(redecl1)
 
 // NB: MSVC issues a warning and makes redecl2/redecl3 dllexport. We follow GCC
 // and drop the dllimport with a warning.
-// CHECK-DAG: declare void @redecl2()
+// CHECK-DAG: declare dso_local void @redecl2()
 __declspec(dllimport) void redecl2(void);
                       void redecl2(void);
 USE(redecl2)
 
-// MS: define dllexport void @redecl3()
-// GNU: define void @redecl3()
+// MS: define dso_local dllexport void @redecl3()
+// GNU: define dso_local void @redecl3()
 __declspec(dllimport) void redecl3(void);
                       void redecl3(void) {} // dllimport ignored
 USE(redecl3)
 
 // Make sure this works even if the decl is used before it's defined (PR20792).
-// MS: define dllexport void @redecl4()
-// GNU: define void @redecl4()
+// MS: define dso_local dllexport void @redecl4()
+// GNU: define dso_local void @redecl4()
 __declspec(dllimport) void redecl4(void);
 USE(redecl4)
                       void redecl4(void) {} // dllimport ignored

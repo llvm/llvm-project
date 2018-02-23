@@ -4,7 +4,7 @@
 // Should be 3 hello strings, two global (of different sizes), the rest are
 // shared.
 
-// CHECK: @align = global i8 [[ALIGN:[0-9]+]]
+// CHECK: @align = {{(dso_local )?}}global i8 [[ALIGN:[0-9]+]]
 // ITANIUM: @.str = private unnamed_addr constant [6 x i8] c"hello\00"
 // MSABI: @"\01??_C@_05CJBACGMB@hello?$AA@" = linkonce_odr unnamed_addr constant [6 x i8] c"hello\00", comdat, align 1
 // ITANIUM: @f1.x = internal global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0)
@@ -13,7 +13,7 @@
 // CHECK: @f3.x = internal global [8 x i8] c"hello\00\00\00", align [[ALIGN]]
 // ITANIUM: @f4.x = internal global %struct.s { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0) }
 // MSABI: @f4.x = internal global %struct.s { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"\01??_C@_05CJBACGMB@hello?$AA@", i32 0, i32 0) }
-// CHECK: @x = global [3 x i8] c"ola", align [[ALIGN]]
+// CHECK: @x = {{(dso_local )?}}global [3 x i8] c"ola", align [[ALIGN]]
 
 // XFAIL: hexagon
 // Hexagon aligns arrays of size 8+ bytes to a 64-bit boundary, which

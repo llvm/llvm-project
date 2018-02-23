@@ -7,7 +7,7 @@ struct A {
 };
 
 A a(42);
-// CHECK: @"\01?a@@3UA@@A" = global { { [1 x i8*] }*, i32 } { { [1 x i8*] }* @"\01??_7A@@6B@", i32 42 }, align 4
+// CHECK: @"\01?a@@3UA@@A" = dso_local global { { [1 x i8*] }*, i32 } { { [1 x i8*] }* @"\01??_7A@@6B@", i32 42 }, align 4
 
 struct B {
   constexpr B(int y) : y(y) {}
@@ -20,4 +20,4 @@ struct C : A, B {
 };
 
 C c;
-// CHECK: @"\01?c@@3UC@@A" = global { { [1 x i8*] }*, i32, { [1 x i8*] }*, i32 } { { [1 x i8*] }* @"\01??_7C@@6BA@@@", i32 777, { [1 x i8*] }* @"\01??_7C@@6BB@@@", i32 13 }
+// CHECK: @"\01?c@@3UC@@A" = dso_local global { { [1 x i8*] }*, i32, { [1 x i8*] }*, i32 } { { [1 x i8*] }* @"\01??_7C@@6BA@@@", i32 777, { [1 x i8*] }* @"\01??_7C@@6BB@@@", i32 13 }

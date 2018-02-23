@@ -686,6 +686,7 @@ def AMDGPU : Target {
                                 SDWA9AsmParserVariant,
                                 DPPAsmParserVariant];
   let AssemblyWriters = [AMDGPUAsmWriter];
+  let AllowRegisterRenaming = 1;
 }
 
 // Dummy Instruction itineraries for pseudo instructions

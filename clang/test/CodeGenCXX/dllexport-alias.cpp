@@ -14,5 +14,5 @@ A::A() {}
 
 A::~A() {}
 
-// CHECK: @_ZN1AC1Ev = dllexport alias void (%class.A*), void (%class.A*)* @_ZN1AC2Ev
-// CHECK: @_ZN1AD1Ev = dllexport alias void (%class.A*), void (%class.A*)* @_ZN1AD2Ev
+// CHECK: @_ZN1AC1Ev = dso_local dllexport alias void (%class.A*), void (%class.A*)* @_ZN1AC2Ev
+// CHECK: @_ZN1AD1Ev = dso_local dllexport alias void (%class.A*), void (%class.A*)* @_ZN1AD2Ev

@@ -3,13 +3,13 @@
 @class I;
 
 id kid;
-// CHECK: @"\01?kid@@3PAUobjc_object@@A" = global
+// CHECK: @"\01?kid@@3PAUobjc_object@@A" =  dso_local global
 
 Class klass;
-// CHECK: @"\01?klass@@3PAUobjc_class@@A" = global
+// CHECK: @"\01?klass@@3PAUobjc_class@@A" = dso_local global
 
 I *kI;
-// CHECK: @"\01?kI@@3PAUI@@A" = global
+// CHECK: @"\01?kI@@3PAUI@@A" = dso_local global
 
 void f(I *) {}
 // CHECK-LABEL: "\01?f@@YAXPAUI@@@Z"

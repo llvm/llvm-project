@@ -105,11 +105,7 @@ private:
   /// This is only valid on register operands.
   unsigned IsDeadOrKill : 1;
 
-  /// IsRenamable - True if this register may be renamed, i.e. it does not
-  /// generate a value that is somehow read in a way that is not represented by
-  /// the Machine IR (e.g. to meet an ABI or ISA requirement).  This is only
-  /// valid on physical register operands.  Virtual registers are assumed to
-  /// always be renamable regardless of the value of this field.
+  /// See isRenamable().
   unsigned IsRenamable : 1;
 
   /// IsUndef - True if this register operand reads an "undef" value, i.e. the
@@ -384,6 +380,35 @@ public:
     return IsUndef;
   }
 
+  /// isRenamable - Returns true if this register may be renamed, i.e. it does
+  /// not generate a value that is somehow read in a way that is not represented
+  /// by the Machine IR (e.g. to meet an ABI or ISA requirement).  This is only
+  /// valid on physical register operands.  Virtual registers are assumed to
+  /// always be renamable regardless of the value of this field.
+  ///
+  /// Operands that are renamable can freely be changed to any other register
+  /// that is a member of the register class returned by
+  /// MI->getRegClassConstraint().
+  ///
+  /// isRenamable can return false for several different reasons:
+  ///
+  /// - ABI constraints (since liveness is not always precisely modeled).  We
+  ///   conservatively handle these cases by setting all physical register
+  ///   operands that didn’t start out as virtual regs to not be renamable.
+  ///   Also any physical register operands created after register allocation or
+  ///   whose register is changed after register allocation will not be
+  ///   renamable.  This state is tracked in the MachineOperand::IsRenamable
+  ///   bit.
+  ///
+  /// - Opcode/target constraints: for opcodes that have complex register class
+  ///   requirements (e.g. that depend on other operands/instructions), we set
+  ///   hasExtraSrcRegAllocReq/hasExtraDstRegAllocReq in the machine opcode
+  ///   description.  Operands belonging to instructions with opcodes that are
+  ///   marked hasExtraSrcRegAllocReq/hasExtraDstRegAllocReq return false from
+  ///   isRenamable().  Additionally, the AllowRegisterRenaming target property
+  ///   prevents any operands from being marked renamable for targets that don't
+  ///   have detailed opcode hasExtraSrcRegAllocReq/hasExtraDstRegAllocReq
+  ///   values.
   bool isRenamable() const;
 
   bool isInternalRead() const {
@@ -472,10 +497,6 @@ public:
   }
 
   void setIsRenamable(bool Val = true);
-
-  /// Set IsRenamable to true if there are no extra register allocation
-  /// requirements placed on this operand by the parent instruction's opcode.
-  void setIsRenamableIfNoExtraRegAllocReq();
 
   void setIsInternalRead(bool Val = true) {
     assert(isReg() && "Wrong MachineOperand mutator");

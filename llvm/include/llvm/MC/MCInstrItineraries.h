@@ -94,11 +94,11 @@ struct InstrStage {
 /// cycle in which operands are read and written.
 ///
 struct InstrItinerary {
-  int      NumMicroOps;        ///< # of micro-ops, -1 means it's variable
-  unsigned FirstStage;         ///< Index of first stage in itinerary
-  unsigned LastStage;          ///< Index of last + 1 stage in itinerary
-  unsigned FirstOperandCycle;  ///< Index of first operand rd/wr
-  unsigned LastOperandCycle;   ///< Index of last + 1 operand rd/wr
+  int16_t  NumMicroOps;        ///< # of micro-ops, -1 means it's variable
+  uint16_t FirstStage;         ///< Index of first stage in itinerary
+  uint16_t LastStage;          ///< Index of last + 1 stage in itinerary
+  uint16_t FirstOperandCycle;  ///< Index of first operand rd/wr
+  uint16_t LastOperandCycle;   ///< Index of last + 1 operand rd/wr
 };
 
 //===----------------------------------------------------------------------===//
@@ -125,8 +125,8 @@ public:
 
   /// \brief Returns true if the index is for the end marker itinerary.
   bool isEndMarker(unsigned ItinClassIndx) const {
-    return ((Itineraries[ItinClassIndx].FirstStage == ~0U) &&
-            (Itineraries[ItinClassIndx].LastStage == ~0U));
+    return ((Itineraries[ItinClassIndx].FirstStage == UINT16_MAX) &&
+            (Itineraries[ItinClassIndx].LastStage == UINT16_MAX));
   }
 
   /// \brief Return the first stage of the itinerary.

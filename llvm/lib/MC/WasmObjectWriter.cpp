@@ -1181,15 +1181,12 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       DEBUG(dbgs() << "  -> segment index: " << Ref.Segment);
     } else {
       // A "true" Wasm global (currently just __stack_pointer)
-      unsigned WasmIndex;
-      if (WS.isDefined()) {
+      if (WS.isDefined())
         report_fatal_error("don't yet support defined globals");
-      } else {
-        // An import; the index was assigned above
-        WasmIndex = WasmIndices.find(&WS)->second;
-      }
 
-      DEBUG(dbgs() << "  -> global index: " << WasmIndex << "\n");
+      // An import; the index was assigned above
+      DEBUG(dbgs() << "  -> global index: " << WasmIndices.find(&WS)->second
+                   << "\n");
     }
 
     if (WS.isDefined())

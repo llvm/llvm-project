@@ -401,3 +401,91 @@ for.inc:
 end:
   ret void
 }
+
+; Check that the for.body -> if.then edge is considered unlikely due to making
+; the if-condition false for the next iteration of the loop.
+define i32 @test10(i32 %n, i32* %p) {
+entry:
+  br label %for.cond
+; CHECK: edge entry -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+for.cond:
+  %count.0 = phi i32 [ 0, %entry ], [ %count.1, %for.inc ]
+  %sum.0 = phi i32 [ 0, %entry ], [ %sum.1, %for.inc ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc3, %for.inc ]
+  %cmp = icmp slt i32 %i.0, %n
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+; CHECK: edge for.cond -> for.body probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
+; CHECK: edge for.cond -> for.cond.cleanup probability is 0x04000000 / 0x80000000 = 3.12%
+
+for.cond.cleanup:
+  ret i32 %sum.0
+
+for.body:
+  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %i.0
+  %0 = load i32, i32* %arrayidx, align 4
+  %add = add nsw i32 %sum.0, %0
+  %inc = add nsw i32 %count.0, 1
+  %cmp1 = icmp sgt i32 %count.0, 6
+  br i1 %cmp1, label %if.then, label %for.inc
+; CHECK: edge for.body -> if.then probability is 0x2aaaaaab / 0x80000000 = 33.33%
+; CHECK: edge for.body -> for.inc probability is 0x55555555 / 0x80000000 = 66.67%
+
+if.then:
+  store i32 %add, i32* %arrayidx, align 4
+  br label %for.inc
+; CHECK: edge if.then -> for.inc probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+for.inc:
+  %count.1 = phi i32 [ 0, %if.then ], [ %inc, %for.body ]
+  %sum.1 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
+  %inc3 = add nsw i32 %i.0, 1
+  br label %for.cond
+; CHECK: edge for.inc -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+}
+
+; Each successor to for.body makes itself not be taken in the next iteration, so
+; both should be equally likely
+define i32 @test11(i32 %n, i32* %p) {
+entry:
+  br label %for.cond
+; CHECK: edge entry -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+for.cond:
+  %flip.0 = phi i32 [ 0, %entry ], [ %flip.1, %for.inc ]
+  %sum.0 = phi i32 [ 0, %entry ], [ %sum.1, %for.inc ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %cmp = icmp slt i32 %i.0, %n
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+; CHECK: edge for.cond -> for.body probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
+; CHECK: edge for.cond -> for.cond.cleanup probability is 0x04000000 / 0x80000000 = 3.12%
+
+for.cond.cleanup:
+  ret i32 %sum.0
+
+for.body:
+  %tobool = icmp eq i32 %flip.0, 0
+  %arrayidx1 = getelementptr inbounds i32, i32* %p, i32 %i.0
+  %0 = load i32, i32* %arrayidx1, align 4
+  br i1 %tobool, label %if.else, label %if.then
+; CHECK: edge for.body -> if.else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge for.body -> if.then probability is 0x40000000 / 0x80000000 = 50.00%
+
+if.then:
+  %add = add nsw i32 %0, %sum.0
+  store i32 %add, i32* %arrayidx1, align 4
+  br label %for.inc
+; CHECK: edge if.then -> for.inc probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+if.else:
+  %add2 = add nsw i32 %sum.0, %0
+  br label %for.inc
+; CHECK: edge if.else -> for.inc probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+for.inc:
+  %flip.1 = phi i32 [ 0, %if.then ], [ 1, %if.else ]
+  %sum.1 = phi i32 [ %sum.0, %if.then ], [ %add2, %if.else ]
+  %inc = add nsw i32 %i.0, 1
+  br label %for.cond
+; CHECK: edge for.inc -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+}

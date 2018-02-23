@@ -1362,6 +1362,12 @@ class Target {
 
   // AssemblyWriters - The AsmWriter instances available for this target.
   list<AsmWriter> AssemblyWriters = [DefaultAsmWriter];
+
+  // AllowRegisterRenaming - Controls whether this target allows
+  // post-register-allocation renaming of registers.  This is done by
+  // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
+  // for all opcodes if this flag is set to 0.
+  int AllowRegisterRenaming = 0;
 }
 
 //===----------------------------------------------------------------------===//

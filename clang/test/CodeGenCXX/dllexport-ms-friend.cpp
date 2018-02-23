@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple %ms_abi_triple -fms-extensions -emit-llvm -O0 -o - %s | FileCheck %s
 
 // Friend functions defined in classes are emitted.
-// CHECK: define weak_odr dllexport void @"\01?friend1@@YAXXZ"()
+// CHECK: define weak_odr dso_local dllexport void @"\01?friend1@@YAXXZ"()
 struct FuncFriend1 {
   friend __declspec(dllexport) void friend1() {}
 };
