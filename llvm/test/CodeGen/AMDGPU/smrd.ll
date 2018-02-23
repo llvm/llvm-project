@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti  -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=SI   -check-prefix=GCN -check-prefix=SICI -check-prefix=SIVIGFX9 %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=CI   -check-prefix=GCN -check-prefix=SICI %s
-; RUN: llc -march=amdgcn -mcpu=tonga   -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=VI   -check-prefix=GCN -check-prefix=VIGFX9 -check-prefix=SIVIGFX9 %s
+; RUN: llc -march=amdgcn -mcpu=tahiti  -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=SI   -check-prefix=GCN -check-prefix=SICIVI -check-prefix=SICI -check-prefix=SIVIGFX9 %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=CI   -check-prefix=GCN -check-prefix=SICIVI -check-prefix=SICI %s
+; RUN: llc -march=amdgcn -mcpu=tonga   -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=VI   -check-prefix=GCN -check-prefix=SICIVI -check-prefix=VIGFX9 -check-prefix=SIVIGFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN -check-prefix=VIGFX9 -check-prefix=SIVIGFX9  %s
 
 ; SMRD load with an immediate offset.
@@ -232,15 +232,24 @@ main_body:
   ret void
 }
 
-; GCN-LABEL: {{^}}smrd_imm_nomerge_m0:
+; GCN-LABEL: {{^}}smrd_imm_merge_m0:
 ;
-; In principle we could merge the loads here as well, but it would require
-; careful tracking of physical registers since both v_interp* and v_movrel*
-; instructions (or gpr idx mode) use M0.
+; SICIVI: s_buffer_load_dwordx2
+; SICIVI: s_mov_b32 m0
+; SICIVI_DAG: v_interp_p1_f32
+; SICIVI_DAG: v_interp_p1_f32
+; SICIVI_DAG: v_interp_p1_f32
+; SICIVI_DAG: v_interp_p2_f32
+; SICIVI_DAG: v_interp_p2_f32
+; SICIVI_DAG: v_interp_p2_f32
+; SICIVI: s_mov_b32 m0
+; SICIVI: v_movrels_b32_e32
 ;
-; GCN: s_buffer_load_dword
-; GCN: s_buffer_load_dword
-define amdgpu_ps float @smrd_imm_nomerge_m0(<4 x i32> inreg %desc, i32 inreg %prim, float %u, float %v) #0 {
+; Merging is still thwarted on GFX9 due to s_set_gpr_idx
+;
+; GFX9: s_buffer_load_dword
+; GFX9: s_buffer_load_dword
+define amdgpu_ps float @smrd_imm_merge_m0(<4 x i32> inreg %desc, i32 inreg %prim, float %u, float %v) #0 {
 main_body:
   %idx1.f = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 0)
   %idx1 = bitcast float %idx1.f to i32

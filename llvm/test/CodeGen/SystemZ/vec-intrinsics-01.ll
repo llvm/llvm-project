@@ -334,9 +334,9 @@ define <2 x i64> @test_vpdi1(<2 x i64> %a, <2 x i64> %b) {
 ; VPDI taking element 1 from each half.
 define <2 x i64> @test_vpdi2(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vpdi2:
-; CHECK: vpdi %v24, %v24, %v26, 10
+; CHECK: vpdi %v24, %v24, %v26, 5
 ; CHECK: br %r14
-  %res = call <2 x i64> @llvm.s390.vpdi(<2 x i64> %a, <2 x i64> %b, i32 10)
+  %res = call <2 x i64> @llvm.s390.vpdi(<2 x i64> %a, <2 x i64> %b, i32 5)
   ret <2 x i64> %res
 }
 

@@ -14,8 +14,8 @@ define i32 @and_sink1(i32 %a, i1 %c) {
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl $0, A
 ; CHECK-NEXT:    testb $4, %al
+; CHECK-NEXT:    movl $0, A
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
@@ -61,8 +61,8 @@ define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-NEXT:    je .LBB1_5
 ; CHECK-NEXT:  # %bb.3: # %bb1
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    movl $0, C
 ; CHECK-NEXT:    testb $4, %cl
+; CHECK-NEXT:    movl $0, C
 ; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:  # %bb.4: # %bb2
 ; CHECK-NEXT:    movl $1, %eax

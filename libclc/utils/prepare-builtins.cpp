@@ -105,7 +105,11 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+#if HAVE_LLVM >= 0x0700
+  WriteBitcodeToFile(*M, Out->os());
+#else
   WriteBitcodeToFile(M, Out->os());
+#endif
 
   // Declare success.
   Out->keep();

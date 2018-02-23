@@ -11,6 +11,8 @@
 #include "Config.h"
 #include "InputChunks.h"
 #include "InputFiles.h"
+#include "InputGlobal.h"
+#include "OutputSegment.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 
@@ -25,19 +27,42 @@ DefinedFunction *WasmSym::CallCtors;
 DefinedData *WasmSym::DsoHandle;
 DefinedData *WasmSym::DataEnd;
 DefinedData *WasmSym::HeapBase;
-DefinedData *WasmSym::StackPointer;
+DefinedGlobal *WasmSym::StackPointer;
+
+WasmSymbolType Symbol::getWasmType() const {
+  switch (SymbolKind) {
+  case Symbol::DefinedFunctionKind:
+  case Symbol::UndefinedFunctionKind:
+    return llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION;
+  case Symbol::DefinedDataKind:
+  case Symbol::UndefinedDataKind:
+    return llvm::wasm::WASM_SYMBOL_TYPE_DATA;
+  case Symbol::DefinedGlobalKind:
+  case Symbol::UndefinedGlobalKind:
+    return llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL;
+  default:
+    llvm_unreachable("invalid symbol kind");
+  }
+}
 
 bool Symbol::hasOutputIndex() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
     if (F->Function)
       return F->Function->hasOutputIndex();
+  if (auto *G = dyn_cast<DefinedGlobal>(this))
+    if (G->Global)
+      return G->Global->hasOutputIndex();
   return OutputIndex != INVALID_INDEX;
 }
 
 uint32_t Symbol::getOutputIndex() const {
+  assert(!isa<DataSymbol>(this));
   if (auto *F = dyn_cast<DefinedFunction>(this))
     if (F->Function)
       return F->Function->getOutputIndex();
+  if (auto *G = dyn_cast<DefinedGlobal>(this))
+    if (G->Global)
+      return G->Global->getOutputIndex();
   assert(OutputIndex != INVALID_INDEX);
   return OutputIndex;
 }
@@ -45,13 +70,34 @@ uint32_t Symbol::getOutputIndex() const {
 InputChunk *Symbol::getChunk() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
     return F->Function;
-  if (auto *G = dyn_cast<DefinedData>(this))
-    return G->Segment;
+  if (auto *D = dyn_cast<DefinedData>(this))
+    return D->Segment;
   return nullptr;
+}
+
+bool Symbol::isLive() const {
+  if (auto *G = dyn_cast<DefinedGlobal>(this))
+    return G->Global->Live;
+  if (InputChunk *C = getChunk())
+    return C->Live;
+  // Assume any other kind of symbol is live.
+  return true;
+}
+
+uint32_t Symbol::getOutputSymbolIndex() const {
+  assert(OutputSymbolIndex != INVALID_INDEX);
+  return OutputSymbolIndex;
+}
+
+void Symbol::setOutputSymbolIndex(uint32_t Index) {
+  DEBUG(dbgs() << "setOutputSymbolIndex " << Name << " -> " << Index << "\n");
+  assert(OutputSymbolIndex == INVALID_INDEX);
+  OutputSymbolIndex = Index;
 }
 
 void Symbol::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
+  assert(!isa<DataSymbol>(this));
   assert(OutputIndex == INVALID_INDEX);
   OutputIndex = Index;
 }
@@ -111,13 +157,30 @@ DefinedFunction::DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
 
 uint32_t DefinedData::getVirtualAddress() const {
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  return Segment ? Segment->translateVA(VirtualAddress) : VirtualAddress;
+  return Segment ? Segment->translateVA(Offset) : Offset;
 }
 
 void DefinedData::setVirtualAddress(uint32_t Value) {
   DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
-  VirtualAddress = Value;
+  assert(!Segment);
+  Offset = Value;
 }
+
+uint32_t DefinedData::getOutputSegmentOffset() const {
+  DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
+  return Segment->OutputSegmentOffset + Offset;
+}
+
+uint32_t DefinedData::getOutputSegmentIndex() const {
+  DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
+  return Segment->getOutputSegment()->Index;
+}
+
+DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
+                             InputGlobal *Global)
+    : GlobalSymbol(Name, DefinedGlobalKind, Flags, File,
+                   Global ? &Global->getType() : nullptr),
+      Global(Global) {}
 
 std::string lld::toString(const wasm::Symbol &Sym) {
   if (Config->Demangle)
@@ -132,12 +195,28 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
     return "DefinedFunction";
   case wasm::Symbol::DefinedDataKind:
     return "DefinedData";
+  case wasm::Symbol::DefinedGlobalKind:
+    return "DefinedGlobal";
   case wasm::Symbol::UndefinedFunctionKind:
     return "UndefinedFunction";
   case wasm::Symbol::UndefinedDataKind:
     return "UndefinedData";
+  case wasm::Symbol::UndefinedGlobalKind:
+    return "UndefinedGlobal";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
   }
-  llvm_unreachable("Invalid symbol kind!");
+  llvm_unreachable("invalid symbol kind");
+}
+
+std::string lld::toString(WasmSymbolType Type) {
+  switch (Type) {
+  case llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION:
+    return "Function";
+  case llvm::wasm::WASM_SYMBOL_TYPE_DATA:
+    return "Data";
+  case llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL:
+    return "Global";
+  }
+  llvm_unreachable("invalid symbol type");
 }

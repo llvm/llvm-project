@@ -39186,7 +39186,8 @@ StringRef X86TargetLowering::getStackProbeSymbolName(MachineFunction &MF) const 
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
-  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO())
+  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO() ||
+      MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 
   // We need a stack probe to conform to the Windows ABI. Choose the right

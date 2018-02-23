@@ -89,12 +89,12 @@ entry:
 define float @sel_float2(float %k, float %l, i32 %j) {
 ; CHECK-LABEL: sel_float2:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mov.s $f0, $f14
 ; CHECK-NEXT:    xor $1, $6, $zero
 ; CHECK-NEXT:    sltu $1, $zero, $1
 ; CHECK-NEXT:    andi $1, $1, 1
-; CHECK-NEXT:    movn.s $f14, $f12, $1
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    mov.s $f0, $f14
+; CHECK-NEXT:    movn.s $f0, $f12, $1
 entry:
   %cond = icmp ne i32 %j, 0
   %res = select i1 %cond, float %k, float %l
@@ -121,13 +121,13 @@ entry:
 define double @sel_double2(double %k, double %l, i32 %j) {
 ; CHECK-LABEL: sel_double2:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mov.d $f0, $f14
 ; CHECK-NEXT:    lw $1, 16($sp)
 ; CHECK-NEXT:    xor $1, $1, $zero
 ; CHECK-NEXT:    sltu $1, $zero, $1
 ; CHECK-NEXT:    andi $1, $1, 1
-; CHECK-NEXT:    movn.d $f14, $f12, $1
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    mov.d $f0, $f14
+; CHECK-NEXT:    movn.d $f0, $f12, $1
 entry:
   %cond = icmp ne i32 %j, 0
   %res = select i1 %cond, double %k, double %l

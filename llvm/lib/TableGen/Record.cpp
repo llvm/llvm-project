@@ -722,6 +722,11 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
     }
     break;
 
+  case SIZE:
+    if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
+      return IntInit::get(LHSl->size());
+    break;
+
   case EMPTY:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->empty());
@@ -746,6 +751,7 @@ std::string UnOpInit::getAsString() const {
   case CAST: Result = "!cast<" + getType()->getAsString() + ">"; break;
   case HEAD: Result = "!head"; break;
   case TAIL: Result = "!tail"; break;
+  case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";
