@@ -864,7 +864,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     // use that as the function value.
     //
     // For the static linking part, we just return a plt expr and everything
-    // else will use the the PLT entry as the address.
+    // else will use the PLT entry as the address.
     //
     // The remaining problem is making sure pointer equality still works. We
     // need the help of the dynamic linker for that. We let it know that we have

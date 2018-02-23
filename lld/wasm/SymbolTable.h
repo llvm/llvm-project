@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using llvm::wasm::WasmSignature;
+using llvm::wasm::WasmGlobalType;
 
 namespace lld {
 namespace wasm {
@@ -50,17 +51,26 @@ public:
   Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
                              InputFunction *Function = nullptr);
   Symbol *addDefinedData(StringRef Name, uint32_t Flags, InputFile *F,
-                         InputSegment *Segment = nullptr, uint32_t Address = 0);
+                         InputSegment *Segment = nullptr, uint32_t Address = 0,
+                         uint32_t Size = 0);
+  Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F,
+                           InputGlobal *G);
   Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
+  Symbol *addUndefined(StringRef Name, WasmSymbolType Type, uint32_t Flags,
+                       InputFile *F, const WasmSignature *Signature = nullptr,
+                       const WasmGlobalType *GlobalType = nullptr);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
   bool addComdat(StringRef Name, ObjFile *);
 
   DefinedData *addSyntheticDataSymbol(StringRef Name, uint32_t Flags = 0);
+  DefinedGlobal *addSyntheticGlobal(StringRef Name, uint32_t Flags,
+                                    InputGlobal *Global);
   DefinedFunction *addSyntheticFunction(StringRef Name,
                                         const WasmSignature *Type,
                                         uint32_t Flags = 0);
+
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 
