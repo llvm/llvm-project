@@ -1,18 +1,12 @@
-=======================================
-Clang 6.0.0 (In-Progress) Release Notes
-=======================================
+=========================
+Clang 6.0.0 Release Notes
+=========================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 6 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -29,11 +23,6 @@ site <http://llvm.org/releases/>`_.
 For more information about Clang or LLVM, including information about the
 latest release, please see the `Clang Web Site <http://clang.llvm.org>`_ or the
 `LLVM Web Site <http://llvm.org>`_.
-
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
 
 What's New in Clang 6.0.0?
 ==========================
@@ -95,6 +84,12 @@ Improvements to Clang's diagnostics
 - ``-Wzero-as-null-pointer-constant`` was adjusted not to warn on null pointer
   constants that originate from system macros, except ``NULL`` macro.
 
+- ``-Wdelete-non-virtual-dtor`` can now fire in system headers, so that
+  ``std::unique_ptr<>`` deleting through a non-virtual dtor is now diagnosed.
+
+- ``-Wunreachable-code`` can now reason about ``__try``, ``__except`` and
+  ``__leave``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -136,6 +131,9 @@ New Compiler Flags
   enable/disable the new GlobalISel instruction selection framework. This
   feature is enabled by default for AArch64 at the ``-O0`` optimization level.
   Support for other targets or optimization levels is currently incomplete.
+
+- New ``-nostdlib++`` flag to disable linking the C++ standard library. Similar
+  to using ``clang`` instead of ``clang++`` but doesn't disable ``-lm``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -184,6 +182,8 @@ Windows Support
 
 - Clang now has initial, preliminary support for targeting Windows on
   ARM64.
+
+- clang-cl now exposes the ``--version`` flag.
 
 C Language Changes in Clang
 ---------------------------

@@ -5,11 +5,6 @@ LLD 6.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 6.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -24,7 +19,11 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* Item 1.
+* MIPS port now generates all output dynamic relocations
+  using Elf_Rel format only.
+
+* Added handling of the R_MIPS_26 relocation in case of N32 / N64 ABIs
+  and generating proper PLT entries.
 
 COFF Improvements
 -----------------
@@ -36,6 +35,16 @@ COFF Improvements
   lld-link style parameters and the COFF linker is invoked instead.
 
 * Initial support for the ARM64 architecture has been added.
+
+* New ``--version`` flag.
+
+* Significantly improved support for writing PDB Files.
+
+* New ``--rsp-quoting`` flag, like ``clang-cl``.
+
+* ``/manifestuac:no`` no longer incorrectly disables ``/manifestdependency:``.
+
+* Only write ``.manifest`` files if ``/manifest`` is passed.
 
 MachO Improvements
 ------------------
