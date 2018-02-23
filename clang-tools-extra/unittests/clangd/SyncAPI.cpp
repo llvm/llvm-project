@@ -32,7 +32,7 @@ template <typename T> struct CaptureProxy {
   operator UniqueFunction<void(T)>() && {
     assert(!Future.valid() && "conversion to callback called multiple times");
     Future = Promise.get_future();
-    return BindWithForward(
+    return Bind(
         [](std::promise<std::shared_ptr<T>> Promise, T Value) {
           Promise.set_value(std::make_shared<T>(std::move(Value)));
         },

@@ -23,6 +23,7 @@ using llvm::object::Archive;
 using llvm::object::WasmObjectFile;
 using llvm::object::WasmSection;
 using llvm::object::WasmSymbol;
+using llvm::wasm::WasmGlobal;
 using llvm::wasm::WasmImport;
 using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmRelocation;
@@ -33,6 +34,7 @@ namespace wasm {
 class InputChunk;
 class InputFunction;
 class InputSegment;
+class InputGlobal;
 
 class InputFile {
 public:
@@ -90,7 +92,6 @@ public:
 
   void dumpInfo() const;
 
-  uint32_t relocateFunctionIndex(uint32_t Original) const;
   uint32_t calcNewIndex(const WasmRelocation &Reloc) const;
   uint32_t calcNewValue(const WasmRelocation &Reloc) const;
 
@@ -101,43 +102,36 @@ public:
   std::vector<bool> TypeIsUsed;
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
+  std::vector<InputGlobal *> Globals;
 
   ArrayRef<Symbol *> getSymbols() const { return Symbols; }
-
-  FunctionSymbol *getFunctionSymbol(uint32_t Index) const {
-    return cast<FunctionSymbol>(FunctionSymbols[Index]);
-  }
-
-  DataSymbol *getDataSymbol(uint32_t Index) const {
-    return cast<DataSymbol>(DataSymbols[Index]);
-  }
+  Symbol *getSymbol(uint32_t Index) const { return Symbols[Index]; }
+  FunctionSymbol *getFunctionSymbol(uint32_t Index) const;
+  DataSymbol *getDataSymbol(uint32_t Index) const;
+  GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
 
 private:
   uint32_t relocateVirtualAddress(uint32_t Index) const;
+  uint32_t relocateFunctionIndex(uint32_t Original) const;
   uint32_t relocateTypeIndex(uint32_t Original) const;
   uint32_t relocateGlobalIndex(uint32_t Original) const;
   uint32_t relocateTableIndex(uint32_t Original) const;
+  uint32_t relocateSymbolIndex(uint32_t Original) const;
 
   Symbol *createDefinedData(const WasmSymbol &Sym, InputSegment *Segment,
-                            uint32_t Address);
+                            uint32_t Offset, uint32_t DataSize);
   Symbol *createDefinedFunction(const WasmSymbol &Sym, InputFunction *Function);
-  Symbol *createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
-                          const WasmSignature *Signature = nullptr);
+  Symbol *createDefinedGlobal(const WasmSymbol &Sym, InputGlobal *Global);
+  Symbol *createUndefined(const WasmSymbol &Sym);
+
   void initializeSymbols();
   InputSegment *getSegment(const WasmSymbol &WasmSym) const;
-  const WasmSignature *getFunctionSig(const WasmSymbol &Sym) const;
-  uint32_t getGlobalValue(const WasmSymbol &Sym) const;
   InputFunction *getFunction(const WasmSymbol &Sym) const;
+  InputGlobal *getGlobal(const WasmSymbol &Sym) const;
   bool isExcludedByComdat(InputChunk *Chunk) const;
 
   // List of all symbols referenced or defined by this file.
   std::vector<Symbol *> Symbols;
-
-  // List of all function symbols indexed by the function index space
-  std::vector<Symbol *> FunctionSymbols;
-
-  // List of all global symbols indexed by the global index space
-  std::vector<Symbol *> DataSymbols;
 
   uint32_t NumGlobalImports = 0;
   uint32_t NumFunctionImports = 0;

@@ -1170,7 +1170,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   // The way we define an order then is:
   // *  Sort only the orphan sections. They are in the end right now.
   // *  Move each orphan section to its preferred position. We try
-  //    to put each section in the last position where it it can share
+  //    to put each section in the last position where it can share
   //    a PT_LOAD.
   //
   // There is some ambiguity as to where exactly a new entry should be
@@ -1557,7 +1557,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Some architectures need to generate content that depends on the address
   // of InputSections. For example some architectures use small displacements
-  // for jump instructions that is is the linker's responsibility for creating
+  // for jump instructions that is the linker's responsibility for creating
   // range extension thunks for. As the generation of the content may also
   // alter InputSection addresses we must converge to a fixed point.
   if (Target->NeedsThunks || Config->AndroidPackDynRelocs) {
@@ -2017,7 +2017,7 @@ template <class ELFT> void Writer<ELFT>::checkNoOverlappingSections() {
     return;
 
   // Checking for overlapping virtual and load addresses only needs to take
-  // into account SHF_ALLOC sections since since others will not be loaded.
+  // into account SHF_ALLOC sections since others will not be loaded.
   // Furthermore, we also need to skip SHF_TLS sections since these will be
   // mapped to other addresses at runtime and can therefore have overlapping
   // ranges in the file.

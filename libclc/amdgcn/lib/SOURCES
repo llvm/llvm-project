@@ -1,7 +1,6 @@
 cl_khr_int64_extended_atomics/minmax_helpers.ll
 math/ldexp.cl
 mem_fence/fence.cl
-mem_fence/waitcnt.ll
 synchronization/barrier.cl
 workitem/get_global_offset.cl
 workitem/get_group_id.cl

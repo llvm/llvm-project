@@ -17,10 +17,10 @@ entry:
 
 declare i32 @ret32(i32, i64, i32) local_unnamed_addr #1
 
-; CHECK: error: function signature mismatch: ret32
+; CHECK: error: Function type mismatch: ret32
 ; CHECK-NEXT: >>> defined as (I32, I64, I32) -> I32 in {{.*}}.main.o
 ; CHECK-NEXT: >>> defined as (F32) -> I32 in {{.*}}.ret32.o
 
-; REVERSE: error: function signature mismatch: ret32
+; REVERSE: error: Function type mismatch: ret32
 ; REVERSE-NEXT: >>> defined as (F32) -> I32 in {{.*}}.ret32.o
 ; REVERSE-NEXT: >>> defined as (I32, I64, I32) -> I32 in {{.*}}.main.o

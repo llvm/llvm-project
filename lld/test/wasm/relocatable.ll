@@ -59,11 +59,6 @@ entry:
 ; CHECK-NEXT:         Field:           bar_import
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           data_import
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         GlobalType:      I32
-; CHECK-NEXT:         GlobalMutable:   false
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 2, 1, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
@@ -76,73 +71,6 @@ entry:
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x00000001
-; CHECK-NEXT:   - Type:            GLOBAL
-; CHECK-NEXT:     Globals:
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           0
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           28
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           8
-; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           12
-; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           16
-; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           24
-; CHECK-NEXT:   - Type:            EXPORT
-; CHECK-NEXT:     Exports:
-; CHECK-NEXT:       - Name:            hello
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:       - Name:            my_func
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:       - Name:            func_comdat
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:       - Name:            hello_str
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            data_comdat
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           2
-; CHECK-NEXT:       - Name:            func_addr1
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:       - Name:            func_addr2
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:       - Name:            func_addr3
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:       - Name:            data_addr1
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           6
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
@@ -152,19 +80,19 @@ entry:
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:         Offset:          0x00000004
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x0000000A
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000013
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x0000001A
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           8
 ; CHECK-NEXT:         Offset:          0x00000026
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:         3
@@ -179,16 +107,16 @@ entry:
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           6
 ; CHECK-NEXT:         Offset:          0x00000012
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x0000001B
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x00000024
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x0000002D
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
@@ -230,25 +158,77 @@ entry:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        31
-; CHECK-NEXT:     SymbolInfo:
-; CHECK-NEXT:       - Name:            bar_import
+; CHECK-NEXT:     SymbolTable:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            puts
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        0
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            hello
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:         Function:        3
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            hello_str
+; CHECK-NEXT:         Flags:           [  ]
+; CHECK-NEXT:         Segment:         0
+; CHECK-NEXT:         Size:            7
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            foo_import
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        1
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            bar_import
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, UNDEFINED ]
+; CHECK-NEXT:         Function:        2
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            data_import
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            my_func
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:         Function:        4
+; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            func_comdat
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:       - Name:            hello
-; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; CHECK-NEXT:       - Name:            my_func
-; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; CHECK-NEXT:       - Name:            func_comdat
+; CHECK-NEXT:         Function:        5
+; CHECK-NEXT:       - Index:           8
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            data_comdat
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:       - Name:            data_comdat
-; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:       - Name:            func_addr1
+; CHECK-NEXT:         Segment:         5
+; CHECK-NEXT:         Size:            3
+; CHECK-NEXT:       - Index:           9
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            func_addr1
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; CHECK-NEXT:       - Name:            func_addr2
+; CHECK-NEXT:         Segment:         1
+; CHECK-NEXT:         Size:            4
+; CHECK-NEXT:       - Index:           10
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            func_addr2
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; CHECK-NEXT:       - Name:            func_addr3
+; CHECK-NEXT:         Segment:         2
+; CHECK-NEXT:         Size:            4
+; CHECK-NEXT:       - Index:           11
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            func_addr3
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; CHECK-NEXT:       - Name:            data_addr1
+; CHECK-NEXT:         Segment:         3
+; CHECK-NEXT:         Size:            4
+; CHECK-NEXT:       - Index:           12
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            data_addr1
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:         Segment:         4
+; CHECK-NEXT:         Size:            4
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .rodata.hello_str
