@@ -113,8 +113,44 @@ Changes to the Hexagon Target
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+Fixed numerous bugs:
 
+* fpowi on MIPS64 giving incorrect results when used with a negative integer.
+* Usage of the asm 'c' constraint with the wrong datatype causing an
+  assert/crash.
+* Fixed a conversion bug when using the DSP ASE.
+* Fixed an inconsistency where objects were not marked as using the microMIPS as
+  when the micromips function attribute or the ".set micromips" directive was
+  used.
+* Reordered the MIPSR6 specific hazard scheduler pass to after the delay slot
+  filler, fixing a class of rare edge case bugs where the delay slot filler
+  would violate ISA restrictions.
+* Fixed a crash when using a type of unknown size with gp relative addressing.
+* Corrected the j macro for microMIPS.
+* Corrected the encoding of movep for microMIPS32r6.
+* Fixed an issue with the usage of insert instructions having an invalid set of
+  operands.
+* Fixed an issue where TLS symbols where not marked as such.
+* Enabled the usage of register scavanging with MSA, due to its' shorter offsets
+  for loads and stores.
+* Corrected the ELF headers when using the DSP ASE.
+
+New features:
+
+* The long branch pass now generates some R6 specific instructions when
+  targeting MIPSR6.
+* The delay slot filler now performs more branch conversions if delay slots
+  cannot be filled.
+* The MIPS MT ASE is now fully supported.
+* Added support for the ``lapc`` pseudo instruction.
+* Improved the selection of multiple instructions (``dext``, ``nmadd``,
+  ``nmsub``).
+* Further improved microMIPS codesize reduction.
+
+Deprecation notices:
+
+* microMIPS64R6 support was been deprecated since 5.0, and has now been
+  completely removed.
 
 Changes to the PowerPC Target
 -----------------------------
