@@ -98,7 +98,7 @@ wide variety of meanings:
                :!eq     !if      !head    !tail      !con
                :!add    !shl     !sra     !srl       !and
                :!or     !empty   !subst   !foreach   !strconcat
-               :!cast   !listconcat
+               :!cast   !listconcat       !size
 
 
 Syntax

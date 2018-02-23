@@ -48,10 +48,9 @@ namespace dsymutil {
 
 class DebugMapObject;
 
-/// \brief The DebugMap object stores the list of object files to
-/// query for debug information along with the mapping between the
-/// symbols' addresses in the object file to their linked address in
-/// the linked binary.
+/// The DebugMap object stores the list of object files to query for debug
+/// information along with the mapping between the symbols' addresses in the
+/// object file to their linked address in the linked binary.
 ///
 /// A DebugMap producer could look like this:
 /// DebugMap *DM = new DebugMap();
@@ -125,10 +124,9 @@ public:
   parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath, bool Verbose);
 };
 
-/// \brief The DebugMapObject represents one object file described by
-/// the DebugMap. It contains a list of mappings between addresses in
-/// the object file and in the linked binary for all the linked atoms
-/// in this object file.
+/// The DebugMapObject represents one object file described by the DebugMap. It
+/// contains a list of mappings between addresses in the object file and in the
+/// linked binary for all the linked atoms in this object file.
 class DebugMapObject {
 public:
   struct SymbolMapping {
@@ -150,17 +148,17 @@ public:
   using YAMLSymbolMapping = std::pair<std::string, SymbolMapping>;
   using DebugMapEntry = StringMapEntry<SymbolMapping>;
 
-  /// \brief Adds a symbol mapping to this DebugMapObject.
+  /// Adds a symbol mapping to this DebugMapObject.
   /// \returns false if the symbol was already registered. The request
   /// is discarded in this case.
   bool addSymbol(StringRef SymName, Optional<uint64_t> ObjectAddress,
                  uint64_t LinkedAddress, uint32_t Size);
 
-  /// \brief Lookup a symbol mapping.
+  /// Lookup a symbol mapping.
   /// \returns null if the symbol isn't found.
   const DebugMapEntry *lookupSymbol(StringRef SymbolName) const;
 
-  /// \brief Lookup an objectfile address.
+  /// Lookup an object file address.
   /// \returns null if the address isn't found.
   const DebugMapEntry *lookupObjectAddress(uint64_t Address) const;
 
@@ -208,7 +206,6 @@ public:
 };
 
 } // end namespace dsymutil
-
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::dsymutil::DebugMapObject::YAMLSymbolMapping)

@@ -244,7 +244,9 @@ enum class PDB_BuiltinType {
   Complex = 28,
   Bitfield = 29,
   BSTR = 30,
-  HResult = 31
+  HResult = 31,
+  Char16 = 32,
+  Char32 = 33
 };
 
 /// These values correspond to the flags that can be combined to control the

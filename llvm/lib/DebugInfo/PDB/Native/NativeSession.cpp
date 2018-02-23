@@ -165,7 +165,7 @@ SymIndexId NativeSession::findSymbolByTypeIndex(codeview::TypeIndex Index) {
 
 uint64_t NativeSession::getLoadAddress() const { return 0; }
 
-void NativeSession::setLoadAddress(uint64_t Address) {}
+bool NativeSession::setLoadAddress(uint64_t Address) { return false; }
 
 std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
   const auto Id = static_cast<SymIndexId>(SymbolCache.size());

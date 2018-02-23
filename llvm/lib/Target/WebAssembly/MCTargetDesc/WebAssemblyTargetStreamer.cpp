@@ -215,7 +215,7 @@ void WebAssemblyTargetWasmStreamer::emitIndirectFunctionType(
 
   WasmSym->setParams(std::move(ValParams));
   WasmSym->setReturns(std::move(ValResults));
-  WasmSym->setIsFunction(true);
+  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 }
 
 void WebAssemblyTargetWasmStreamer::emitGlobalImport(StringRef name) {

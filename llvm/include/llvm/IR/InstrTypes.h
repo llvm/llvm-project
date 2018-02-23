@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -410,6 +411,16 @@ public:
                                        BinaryOperator *FMFSource,
                                        const Twine &Name = "") {
     return CreateWithCopiedFlags(Instruction::FDiv, V1, V2, FMFSource, Name);
+  }
+  static BinaryOperator *CreateFRemFMF(Value *V1, Value *V2,
+                                       BinaryOperator *FMFSource,
+                                       const Twine &Name = "") {
+    return CreateWithCopiedFlags(Instruction::FRem, V1, V2, FMFSource, Name);
+  }
+  static BinaryOperator *CreateFNegFMF(Value *Op, BinaryOperator *FMFSource,
+                                       const Twine &Name = "") {
+    Value *Zero = ConstantFP::getNegativeZero(Op->getType());
+    return CreateWithCopiedFlags(Instruction::FSub, Zero, Op, FMFSource);
   }
 
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,

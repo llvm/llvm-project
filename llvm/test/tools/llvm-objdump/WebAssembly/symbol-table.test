@@ -4,5 +4,5 @@ CHECK:      SYMBOL TABLE:
 CHECK-NEXT: 00000000 g     F *UND*	puts
 CHECK-NEXT: 00000000 g     F *UND*	SomeOtherFunction
 CHECK-NEXT: 00000002 g     F CODE	main
+CHECK-NEXT: 00000000 l       DATA	.L.str
 CHECK-NEXT: 00000010 g       DATA	var
-

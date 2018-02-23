@@ -4063,7 +4063,12 @@ void MipsTargetLowering::copyByValRegs(
 
   // Create frame object.
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
-  int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, true);
+  // Make the fixed object stored to mutable so that the load instructions
+  // referencing it have their memory dependencies added.
+  // Set the frame object as isAliased which clears the underlying objects
+  // vector in ScheduleDAGInstrs::buildSchedGraph() resulting in addition of all
+  // stores as dependencies for loads referencing this fixed object.
+  int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, false, true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
   InVals.push_back(FIN);
 

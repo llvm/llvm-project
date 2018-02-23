@@ -35,10 +35,31 @@ public:
     findChildren(PDB_SymType Type, StringRef Name,
       PDB_NameSearchFlags Flags) const override;
   std::unique_ptr<IPDBEnumSymbols>
+    findChildrenByAddr(PDB_SymType Type, StringRef Name,
+                       PDB_NameSearchFlags Flags,
+                       uint32_t Section, uint32_t Offset) const override;
+  std::unique_ptr<IPDBEnumSymbols>
+    findChildrenByVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
+                     uint64_t VA) const override;
+  std::unique_ptr<IPDBEnumSymbols>
     findChildrenByRVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
       uint32_t RVA) const override;
+
+  std::unique_ptr<IPDBEnumSymbols>
+    findInlineFramesByAddr(uint32_t Section, uint32_t Offset) const override;
   std::unique_ptr<IPDBEnumSymbols>
     findInlineFramesByRVA(uint32_t RVA) const override;
+  std::unique_ptr<IPDBEnumSymbols>
+    findInlineFramesByVA(uint64_t VA) const override;
+
+  std::unique_ptr<IPDBEnumLineNumbers> findInlineeLines() const override;
+  std::unique_ptr<IPDBEnumLineNumbers>
+    findInlineeLinesByAddr(uint32_t Section, uint32_t Offset,
+                           uint32_t Length) const override;
+  std::unique_ptr<IPDBEnumLineNumbers>
+    findInlineeLinesByRVA(uint32_t RVA, uint32_t Length) const override;
+  std::unique_ptr<IPDBEnumLineNumbers>
+    findInlineeLinesByVA(uint64_t VA, uint32_t Length) const override;
 
   void getDataBytes(SmallVector<uint8_t, 32> &Bytes) const override;
   void getFrontEndVersion(VersionInfo &Version) const override;

@@ -26,17 +26,15 @@
 namespace llvm {
 namespace dsymutil {
 
-/// \brief The BinaryHolder class is responsible for creating and
-/// owning ObjectFile objects and their underlying MemoryBuffer. This
-/// is different from a simple OwningBinary in that it handles
-/// accessing to archive members.
+/// The BinaryHolder class is responsible for creating and owning ObjectFile
+/// objects and their underlying MemoryBuffer. This is different from a simple
+/// OwningBinary in that it handles accessing to archive members.
 ///
-/// As an optimization, this class will reuse an already mapped and
-/// parsed Archive object if 2 successive requests target the same
-/// archive file (Which is always the case in debug maps).
-/// Currently it only owns one memory buffer at any given time,
-/// meaning that a mapping request will invalidate the previous memory
-/// mapping.
+/// As an optimization, this class will reuse an already mapped and parsed
+/// Archive object if 2 successive requests target the same archive file (Which
+/// is always the case in debug maps).
+/// Currently it only owns one memory buffer at any given time, meaning that a
+/// mapping request will invalidate the previous memory mapping.
 class BinaryHolder {
   std::vector<std::unique_ptr<object::Archive>> CurrentArchives;
   std::unique_ptr<MemoryBuffer> CurrentMemoryBuffer;
@@ -119,7 +117,7 @@ public:
   }
 
   /// Access the currently owned ObjectFile with architecture \p T. As
-  /// successfull call to GetObjectFiles() or GetFilesAs() must have
+  /// successful call to GetObjectFiles() or GetFilesAs() must have
   /// been performed before calling this.
   ErrorOr<const object::ObjectFile &> Get(const Triple &T) {
     return getObjfileForArch(T);
@@ -135,6 +133,6 @@ public:
     return cast<ObjectFileType>(*ErrOrObj);
   }
 };
-}
-}
+} // namespace dsymutil
+} // namespace llvm
 #endif

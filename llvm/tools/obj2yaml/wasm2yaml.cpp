@@ -91,16 +91,27 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
       }
       SegmentIndex++;
     }
-    for (const object::SymbolRef& Sym: Obj.symbols()) {
-      const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
-      if (Symbol.Flags != 0) {
-        WasmYAML::SymbolInfo Info{Symbol.Name, Symbol.Flags};
-        LinkingSec->SymbolInfos.emplace_back(Info);
+    uint32_t SymbolIndex = 0;
+    for (const wasm::WasmSymbolInfo &Symbol : Obj.linkingData().SymbolTable) {
+      WasmYAML::SymbolInfo Info;
+      Info.Index = SymbolIndex++;
+      Info.Kind = static_cast<uint32_t>(Symbol.Kind);
+      Info.Name = Symbol.Name;
+      Info.Flags = Symbol.Flags;
+      switch (Symbol.Kind) {
+      case wasm::WASM_SYMBOL_TYPE_DATA:
+        Info.DataRef = Symbol.DataRef;
+        break;
+      case wasm::WASM_SYMBOL_TYPE_FUNCTION:
+      case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+        Info.ElementIndex = Symbol.ElementIndex;
+        break;
       }
+      LinkingSec->SymbolTable.emplace_back(Info);
     }
     LinkingSec->DataSize = Obj.linkingData().DataSize;
     for (const wasm::WasmInitFunc &Func : Obj.linkingData().InitFunctions) {
-      WasmYAML::InitFunction F{Func.Priority, Func.FunctionIndex};
+      WasmYAML::InitFunction F{Func.Priority, Func.Symbol};
       LinkingSec->InitFunctions.emplace_back(F);
     }
     CustomSec = std::move(LinkingSec);

@@ -501,50 +501,26 @@ WASM-NEXT:     Offset: 8
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: IMPORT (0x2)
-WASM-NEXT:     Size: 36
+WASM-NEXT:     Size: 93
 WASM-NEXT:     Offset: 28
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: FUNCTION (0x3)
 WASM-NEXT:     Size: 2
-WASM-NEXT:     Offset: 70
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: TABLE (0x4)
-WASM-NEXT:     Size: 4
-WASM-NEXT:     Offset: 78
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: MEMORY (0x5)
-WASM-NEXT:     Size: 3
-WASM-NEXT:     Offset: 88
-WASM-NEXT:     Memories [
-WASM-NEXT:       Memory {
-WASM-NEXT:         InitialPages: 1
-WASM-NEXT:       }
-WASM-NEXT:     ]
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: GLOBAL (0x6)
-WASM-NEXT:     Size: 6
-WASM-NEXT:     Offset: 97
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: EXPORT (0x7)
-WASM-NEXT:     Size: 8
-WASM-NEXT:     Offset: 109
+WASM-NEXT:     Offset: 127
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CODE (0xA)
 WASM-NEXT:     Size: 25
-WASM-NEXT:     Offset: 123
+WASM-NEXT:     Offset: 135
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: DATA (0xB)
 WASM-NEXT:     Size: 19
-WASM-NEXT:     Offset: 154
+WASM-NEXT:     Offset: 166
 WASM-NEXT:     Segments [
 WASM-NEXT:       Segment {
+WASM-NEXT:         Name: .rodata..L.str
 WASM-NEXT:         Size: 13
 WASM-NEXT:         Offset: 0
 WASM-NEXT:       }
@@ -552,20 +528,14 @@ WASM-NEXT:     ]
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 43
-WASM-NEXT:     Offset: 179
-WASM-NEXT:     Name: name
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: CUSTOM (0x0)
 WASM-NEXT:     Size: 23
-WASM-NEXT:     Offset: 228
+WASM-NEXT:     Offset: 191
 WASM-NEXT:     Name: reloc.CODE
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 22
-WASM-NEXT:     Offset: 257
+WASM-NEXT:     Size: 72
+WASM-NEXT:     Offset: 220
 WASM-NEXT:     Name: linking
 WASM-NEXT:     DataSize: 13
 WASM-NEXT:   }

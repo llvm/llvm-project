@@ -497,16 +497,17 @@ void MCDwarfLineTable::EmitCU(MCObjectStreamer *MCOS,
   MCOS->EmitLabel(LineEndSym);
 }
 
-unsigned MCDwarfLineTable::getFile(StringRef &Directory, StringRef &FileName,
-                                   MD5::MD5Result *Checksum,
-                                   unsigned FileNumber) {
-  return Header.getFile(Directory, FileName, Checksum, FileNumber);
+Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
+                                                StringRef &FileName,
+                                                MD5::MD5Result *Checksum,
+                                                unsigned FileNumber) {
+  return Header.tryGetFile(Directory, FileName, Checksum, FileNumber);
 }
 
-unsigned MCDwarfLineTableHeader::getFile(StringRef &Directory,
-                                         StringRef &FileName,
-                                         MD5::MD5Result *Checksum,
-                                         unsigned FileNumber) {
+Expected<unsigned> MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
+                                                      StringRef &FileName,
+                                                      MD5::MD5Result *Checksum,
+                                                      unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
   if (FileName.empty()) {
@@ -514,6 +515,9 @@ unsigned MCDwarfLineTableHeader::getFile(StringRef &Directory,
     Directory = "";
   }
   assert(!FileName.empty());
+  // If any files have an MD5 checksum, they all must.
+  if (MCDwarfFiles.empty())
+    HasMD5 = (Checksum != nullptr);
   if (FileNumber == 0) {
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
@@ -532,13 +536,15 @@ unsigned MCDwarfLineTableHeader::getFile(StringRef &Directory,
   // Get the new MCDwarfFile slot for this FileNumber.
   MCDwarfFile &File = MCDwarfFiles[FileNumber];
 
-  // It is an error to use see the same number more than once.
+  // It is an error to see the same number more than once.
   if (!File.Name.empty())
-    return 0;
+    return make_error<StringError>("file number already allocated",
+                                   inconvertibleErrorCode());
 
   // If any files have an MD5 checksum, they all must.
-  if (FileNumber > 1)
-    assert(HasMD5 == (Checksum != nullptr));
+  if (HasMD5 != (Checksum != nullptr))
+    return make_error<StringError>("inconsistent use of MD5 checksums",
+                                   inconvertibleErrorCode());
 
   if (Directory.empty()) {
     // Separate the directory part from the basename of the FileName.
