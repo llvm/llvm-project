@@ -15,7 +15,11 @@
 #include "llvm/Object/Wasm.h"
 
 using llvm::object::Archive;
+using llvm::object::WasmSymbol;
 using llvm::wasm::WasmSignature;
+using llvm::wasm::WasmGlobal;
+using llvm::wasm::WasmGlobalType;
+using llvm::wasm::WasmSymbolType;
 
 namespace lld {
 namespace wasm {
@@ -24,6 +28,7 @@ class InputFile;
 class InputChunk;
 class InputSegment;
 class InputFunction;
+class InputGlobal;
 
 #define INVALID_INDEX UINT32_MAX
 
@@ -33,12 +38,14 @@ public:
   enum Kind {
     DefinedFunctionKind,
     DefinedDataKind,
+    DefinedGlobalKind,
 
     LazyKind,
     UndefinedFunctionKind,
     UndefinedDataKind,
+    UndefinedGlobalKind,
 
-    LastDefinedKind = DefinedDataKind,
+    LastDefinedKind = DefinedGlobalKind,
     InvalidKind,
   };
 
@@ -47,8 +54,8 @@ public:
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isDefined() const { return SymbolKind <= LastDefinedKind; }
   bool isUndefined() const {
-    return SymbolKind == UndefinedDataKind ||
-           SymbolKind == UndefinedFunctionKind;
+    return SymbolKind == UndefinedFunctionKind ||
+           SymbolKind == UndefinedDataKind || SymbolKind == UndefinedGlobalKind;
   }
   bool isLocal() const;
   bool isWeak() const;
@@ -59,7 +66,11 @@ public:
 
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
+
   InputChunk *getChunk() const;
+
+  // Indicates that this symbol will be included in the final image.
+  bool isLive() const;
 
   void setHidden(bool IsHidden);
 
@@ -68,9 +79,17 @@ public:
   // Returns true if an output index has been set for this symbol
   bool hasOutputIndex() const;
 
-  // Set the output index of the symbol (in the function or global index
-  // space of the output object.
+  // Set the output index of the symbol, in the Wasm index space of the output
+  // object - that is, for defined symbols only, its position in the list of
+  // Wasm imports+code for functions, imports+globals for globals.
   void setOutputIndex(uint32_t Index);
+
+  // Get/set the output symbol index, in the Symbol index space.  This is
+  // only used for relocatable output.
+  uint32_t getOutputSymbolIndex() const;
+  void setOutputSymbolIndex(uint32_t Index);
+
+  WasmSymbolType getWasmType() const;
 
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
@@ -81,6 +100,7 @@ protected:
   uint32_t Flags;
   InputFile *File;
   uint32_t OutputIndex = INVALID_INDEX;
+  uint32_t OutputSymbolIndex = INVALID_INDEX;
 };
 
 class FunctionSymbol : public Symbol {
@@ -112,9 +132,11 @@ protected:
 
 class DefinedFunction : public FunctionSymbol {
 public:
+  // Primary constructor for file-defined functions.
   DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
                   InputFunction *Function);
 
+  // Second constructor used when creating synthetic functions.
   DefinedFunction(StringRef Name, uint32_t Flags, const WasmSignature *Type)
       : FunctionSymbol(Name, DefinedFunctionKind, Flags, nullptr, Type) {}
 
@@ -149,22 +171,32 @@ protected:
 
 class DefinedData : public DataSymbol {
 public:
-  DefinedData(StringRef Name, uint32_t Flags, InputFile *F = nullptr,
-              InputSegment *Segment = nullptr, uint32_t Address = 0)
+  // Constructor for for regular data symbols originating from input files.
+  DefinedData(StringRef Name, uint32_t Flags, InputFile *F,
+              InputSegment *Segment, uint32_t Offset, uint32_t Size)
       : DataSymbol(Name, DefinedDataKind, Flags, F), Segment(Segment),
-        VirtualAddress(Address) {}
+        Offset(Offset), Size(Size) {}
 
-  static bool classof(const Symbol *S) {
-    return S->kind() == DefinedDataKind;
-  }
+  // Constructor for linker synthetic data symbols.
+  DefinedData(StringRef Name, uint32_t Flags)
+      : DataSymbol(Name, DefinedDataKind, Flags, nullptr) {}
 
+  static bool classof(const Symbol *S) { return S->kind() == DefinedDataKind; }
+
+  // Returns the output virtual address of a defined data symbol.
   uint32_t getVirtualAddress() const;
   void setVirtualAddress(uint32_t VA);
 
-  InputSegment *Segment;
+  // Returns the offset of a defined data symbol within its OutputSegment.
+  uint32_t getOutputSegmentOffset() const;
+  uint32_t getOutputSegmentIndex() const;
+  uint32_t getSize() const { return Size; }
+
+  InputSegment *Segment = nullptr;
 
 protected:
-  uint32_t VirtualAddress;
+  uint32_t Offset = 0;
+  uint32_t Size = 0;
 };
 
 class UndefinedData : public DataSymbol {
@@ -173,6 +205,47 @@ public:
       : DataSymbol(Name, UndefinedDataKind, Flags, File) {}
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedDataKind;
+  }
+};
+
+class GlobalSymbol : public Symbol {
+public:
+  static bool classof(const Symbol *S) {
+    return S->kind() == DefinedGlobalKind || S->kind() == UndefinedGlobalKind;
+  }
+
+  const WasmGlobalType *getGlobalType() const { return GlobalType; }
+
+protected:
+  GlobalSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
+               const WasmGlobalType *GlobalType)
+      : Symbol(Name, K, Flags, F), GlobalType(GlobalType) {}
+
+  // Explicit function type, needed for undefined or synthetic functions only.
+  // For regular defined globals this information comes from the InputChunk.
+  const WasmGlobalType *GlobalType;
+};
+
+class DefinedGlobal : public GlobalSymbol {
+public:
+  DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
+                InputGlobal *Global);
+
+  static bool classof(const Symbol *S) {
+    return S->kind() == DefinedGlobalKind;
+  }
+
+  InputGlobal *Global;
+};
+
+class UndefinedGlobal : public GlobalSymbol {
+public:
+  UndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File = nullptr,
+                  const WasmGlobalType *Type = nullptr)
+      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File, Type) {}
+
+  static bool classof(const Symbol *S) {
+    return S->kind() == UndefinedGlobalKind;
   }
 };
 
@@ -194,7 +267,7 @@ struct WasmSym {
   // __stack_pointer
   // Global that holds the address of the top of the explicit value stack in
   // linear memory.
-  static DefinedData *StackPointer;
+  static DefinedGlobal *StackPointer;
 
   // __data_end
   // Symbol marking the end of the data and bss.
@@ -221,9 +294,11 @@ struct WasmSym {
 union SymbolUnion {
   alignas(DefinedFunction) char A[sizeof(DefinedFunction)];
   alignas(DefinedData) char B[sizeof(DefinedData)];
-  alignas(LazySymbol) char C[sizeof(LazySymbol)];
-  alignas(UndefinedFunction) char D[sizeof(UndefinedFunction)];
-  alignas(UndefinedData) char E[sizeof(UndefinedFunction)];
+  alignas(DefinedGlobal) char C[sizeof(DefinedGlobal)];
+  alignas(LazySymbol) char D[sizeof(LazySymbol)];
+  alignas(UndefinedFunction) char E[sizeof(UndefinedFunction)];
+  alignas(UndefinedData) char F[sizeof(UndefinedData)];
+  alignas(UndefinedGlobal) char G[sizeof(UndefinedGlobal)];
 };
 
 template <typename T, typename... ArgT>
@@ -243,6 +318,7 @@ T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
 // Returns a symbol name for an error message.
 std::string toString(const wasm::Symbol &Sym);
 std::string toString(wasm::Symbol::Kind Kind);
+std::string toString(WasmSymbolType Type);
 
 } // namespace lld
 

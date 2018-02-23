@@ -211,6 +211,72 @@ class DFSanABIList {
   }
 };
 
+/// TransformedFunction is used to express the result of transforming one
+/// function type into another.  This struct is immutable.  It holds metadata
+/// useful for updating calls of the old function to the new type.
+struct TransformedFunction {
+  TransformedFunction(FunctionType* OriginalType,
+                      FunctionType* TransformedType,
+                      std::vector<unsigned> ArgumentIndexMapping)
+      : OriginalType(OriginalType),
+        TransformedType(TransformedType),
+        ArgumentIndexMapping(ArgumentIndexMapping) {}
+
+  // Disallow copies.
+  TransformedFunction(const TransformedFunction&) = delete;
+  TransformedFunction& operator=(const TransformedFunction&) = delete;
+
+  // Allow moves.
+  TransformedFunction(TransformedFunction&&) = default;
+  TransformedFunction& operator=(TransformedFunction&&) = default;
+
+  /// Type of the function before the transformation.
+  FunctionType* const OriginalType;
+
+  /// Type of the function after the transformation.
+  FunctionType* const TransformedType;
+
+  /// Transforming a function may change the position of arguments.  This
+  /// member records the mapping from each argument's old position to its new
+  /// position.  Argument positions are zero-indexed.  If the transformation
+  /// from F to F' made the first argument of F into the third argument of F',
+  /// then ArgumentIndexMapping[0] will equal 2.
+  const std::vector<unsigned> ArgumentIndexMapping;
+};
+
+/// Given function attributes from a call site for the original function,
+/// return function attributes appropriate for a call to the transformed
+/// function.
+AttributeList TransformFunctionAttributes(
+    const TransformedFunction& TransformedFunction,
+    LLVMContext& Ctx, AttributeList CallSiteAttrs) {
+
+  // Construct a vector of AttributeSet for each function argument.
+  std::vector<llvm::AttributeSet> ArgumentAttributes(
+      TransformedFunction.TransformedType->getNumParams());
+
+  // Copy attributes from the parameter of the original function to the
+  // transformed version.  'ArgumentIndexMapping' holds the mapping from
+  // old argument position to new.
+  for (unsigned i=0, ie = TransformedFunction.ArgumentIndexMapping.size();
+       i < ie; ++i) {
+    unsigned TransformedIndex = TransformedFunction.ArgumentIndexMapping[i];
+    ArgumentAttributes[TransformedIndex] = CallSiteAttrs.getParamAttributes(i);
+  }
+
+  // Copy annotations on varargs arguments.
+  for (unsigned i = TransformedFunction.OriginalType->getNumParams(),
+       ie = CallSiteAttrs.getNumAttrSets(); i<ie; ++i) {
+    ArgumentAttributes.push_back(CallSiteAttrs.getParamAttributes(i));
+  }
+
+  return AttributeList::get(
+      Ctx,
+      CallSiteAttrs.getFnAttributes(),
+      CallSiteAttrs.getRetAttributes(),
+      llvm::makeArrayRef(ArgumentAttributes));
+}
+
 class DataFlowSanitizer : public ModulePass {
   friend struct DFSanFunction;
   friend class DFSanVisitor;
@@ -294,7 +360,7 @@ class DataFlowSanitizer : public ModulePass {
   bool isInstrumented(const GlobalAlias *GA);
   FunctionType *getArgsFunctionType(FunctionType *T);
   FunctionType *getTrampolineFunctionType(FunctionType *T);
-  FunctionType *getCustomFunctionType(FunctionType *T);
+  TransformedFunction getCustomFunctionType(FunctionType *T);
   InstrumentedABI getInstrumentedABI();
   WrapperKind getWrapperKind(Function *F);
   void addGlobalNamePrefix(GlobalValue *GV);
@@ -437,17 +503,25 @@ FunctionType *DataFlowSanitizer::getTrampolineFunctionType(FunctionType *T) {
   return FunctionType::get(T->getReturnType(), ArgTypes, false);
 }
 
-FunctionType *DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
+TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
   SmallVector<Type *, 4> ArgTypes;
-  for (FunctionType::param_iterator i = T->param_begin(), e = T->param_end();
-       i != e; ++i) {
+
+  // Some parameters of the custom function being constructed are
+  // parameters of T.  Record the mapping from parameters of T to
+  // parameters of the custom function, so that parameter attributes
+  // at call sites can be updated.
+  std::vector<unsigned> ArgumentIndexMapping;
+  for (unsigned i = 0, ie = T->getNumParams(); i != ie; ++i) {
+    Type* param_type = T->getParamType(i);
     FunctionType *FT;
-    if (isa<PointerType>(*i) && (FT = dyn_cast<FunctionType>(cast<PointerType>(
-                                     *i)->getElementType()))) {
+    if (isa<PointerType>(param_type) && (FT = dyn_cast<FunctionType>(
+            cast<PointerType>(param_type)->getElementType()))) {
+      ArgumentIndexMapping.push_back(ArgTypes.size());
       ArgTypes.push_back(getTrampolineFunctionType(FT)->getPointerTo());
       ArgTypes.push_back(Type::getInt8PtrTy(*Ctx));
     } else {
-      ArgTypes.push_back(*i);
+      ArgumentIndexMapping.push_back(ArgTypes.size());
+      ArgTypes.push_back(param_type);
     }
   }
   for (unsigned i = 0, e = T->getNumParams(); i != e; ++i)
@@ -457,7 +531,9 @@ FunctionType *DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
   Type *RetType = T->getReturnType();
   if (!RetType->isVoidTy())
     ArgTypes.push_back(ShadowPtrTy);
-  return FunctionType::get(T->getReturnType(), ArgTypes, T->isVarArg());
+  return TransformedFunction(
+      T, FunctionType::get(T->getReturnType(), ArgTypes, T->isVarArg()),
+      ArgumentIndexMapping);
 }
 
 bool DataFlowSanitizer::doInitialization(Module &M) {
@@ -1459,11 +1535,11 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
       // wrapper.
       if (CallInst *CI = dyn_cast<CallInst>(CS.getInstruction())) {
         FunctionType *FT = F->getFunctionType();
-        FunctionType *CustomFT = DFSF.DFS.getCustomFunctionType(FT);
+        TransformedFunction CustomFn = DFSF.DFS.getCustomFunctionType(FT);
         std::string CustomFName = "__dfsw_";
         CustomFName += F->getName();
-        Constant *CustomF =
-            DFSF.DFS.Mod->getOrInsertFunction(CustomFName, CustomFT);
+        Constant *CustomF = DFSF.DFS.Mod->getOrInsertFunction(
+            CustomFName, CustomFn.TransformedType);
         if (Function *CustomFn = dyn_cast<Function>(CustomF)) {
           CustomFn->copyAttributesFrom(F);
 
@@ -1531,7 +1607,8 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
 
         CallInst *CustomCI = IRB.CreateCall(CustomF, Args);
         CustomCI->setCallingConv(CI->getCallingConv());
-        CustomCI->setAttributes(CI->getAttributes());
+        CustomCI->setAttributes(TransformFunctionAttributes(CustomFn,
+            CI->getContext(), CI->getAttributes()));
 
         // Update the parameter attributes of the custom call instruction to
         // zero extend the shadow parameters. This is required for targets

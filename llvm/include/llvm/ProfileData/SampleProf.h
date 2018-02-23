@@ -395,8 +395,6 @@ public:
   /// We traverse the inline stack of that instruction, and match it with the
   /// tree nodes in the profile.
   ///
-  /// \param Inst Instruction to query.
-  ///
   /// \returns the FunctionSamples pointer to the inlined instance.
   const FunctionSamples *findFunctionSamples(const DILocation *DIL) const;
 

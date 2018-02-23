@@ -339,53 +339,24 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
       unsigned NewDestAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
         MI->getDest(), SE);
 
-      // For memory transfers, we need a common alignment for both the
-      // source and destination. If we have a new alignment for this
-      // instruction, but only for one operand, save it. If we reach the
-      // other operand through another assumption later, then we may
-      // change the alignment at that point.
+      DEBUG(dbgs() << "\tmem inst: " << NewDestAlignment << "\n";);
+      if (NewDestAlignment > MI->getDestAlignment()) {
+        MI->setDestAlignment(NewDestAlignment);
+        ++NumMemIntAlignChanged;
+      }
+
+      // For memory transfers, there is also a source alignment that
+      // can be set.
       if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
         unsigned NewSrcAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
           MTI->getSource(), SE);
 
-        DenseMap<MemTransferInst *, unsigned>::iterator DI =
-          NewDestAlignments.find(MTI);
-        unsigned AltDestAlignment = (DI == NewDestAlignments.end()) ?
-                                    0 : DI->second;
+        DEBUG(dbgs() << "\tmem trans: " << NewSrcAlignment << "\n";);
 
-        DenseMap<MemTransferInst *, unsigned>::iterator SI =
-          NewSrcAlignments.find(MTI);
-        unsigned AltSrcAlignment = (SI == NewSrcAlignments.end()) ?
-                                   0 : SI->second;
-
-        DEBUG(dbgs() << "\tmem trans: " << NewDestAlignment << " " <<
-                        AltDestAlignment << " " << NewSrcAlignment <<
-                        " " << AltSrcAlignment << "\n");
-
-        // Of these four alignments, pick the largest possible...
-        unsigned NewAlignment = 0;
-        if (NewDestAlignment <= std::max(NewSrcAlignment, AltSrcAlignment))
-          NewAlignment = std::max(NewAlignment, NewDestAlignment);
-        if (AltDestAlignment <= std::max(NewSrcAlignment, AltSrcAlignment))
-          NewAlignment = std::max(NewAlignment, AltDestAlignment);
-        if (NewSrcAlignment <= std::max(NewDestAlignment, AltDestAlignment))
-          NewAlignment = std::max(NewAlignment, NewSrcAlignment);
-        if (AltSrcAlignment <= std::max(NewDestAlignment, AltDestAlignment))
-          NewAlignment = std::max(NewAlignment, AltSrcAlignment);
-
-        if (NewAlignment > MI->getAlignment()) {
-          MI->setAlignment(NewAlignment);
+        if (NewSrcAlignment > MTI->getSourceAlignment()) {
+          MTI->setSourceAlignment(NewSrcAlignment);
           ++NumMemIntAlignChanged;
         }
-
-        NewDestAlignments.insert(std::make_pair(MTI, NewDestAlignment));
-        NewSrcAlignments.insert(std::make_pair(MTI, NewSrcAlignment));
-      } else if (NewDestAlignment > MI->getAlignment()) {
-        assert((!isa<MemIntrinsic>(MI) || isa<MemSetInst>(MI)) &&
-               "Unknown memory intrinsic");
-
-        MI->setAlignment(NewDestAlignment);
-        ++NumMemIntAlignChanged;
       }
     }
 
@@ -418,9 +389,6 @@ bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
                                            DominatorTree *DT_) {
   SE = SE_;
   DT = DT_;
-
-  NewDestAlignments.clear();
-  NewSrcAlignments.clear();
 
   bool Changed = false;
   for (auto &AssumeVH : AC.assumptions())

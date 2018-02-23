@@ -173,10 +173,17 @@ static void moveInstsAfter(MachineBasicBlock::iterator I,
   }
 }
 
-static void addDefsToList(const MachineInstr &MI, DenseSet<unsigned> &Defs) {
-  for (const MachineOperand &Def : MI.operands()) {
-    if (Def.isReg() && Def.isDef())
-      Defs.insert(Def.getReg());
+static void addDefsUsesToList(const MachineInstr &MI,
+                              DenseSet<unsigned> &RegDefs,
+                              DenseSet<unsigned> &PhysRegUses) {
+  for (const MachineOperand &Op : MI.operands()) {
+    if (Op.isReg()) {
+      if (Op.isDef())
+        RegDefs.insert(Op.getReg());
+      else if (Op.readsReg() &&
+               TargetRegisterInfo::isPhysicalRegister(Op.getReg()))
+        PhysRegUses.insert(Op.getReg());
+    }
   }
 }
 
@@ -195,16 +202,24 @@ static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
 // already in the list. Returns true in that case.
 static bool
 addToListsIfDependent(MachineInstr &MI,
-                      DenseSet<unsigned> &Defs,
+                      DenseSet<unsigned> &RegDefs,
+                      DenseSet<unsigned> &PhysRegUses,
                       SmallVectorImpl<MachineInstr*> &Insts) {
   for (MachineOperand &Use : MI.operands()) {
     // If one of the defs is read, then there is a use of Def between I and the
     // instruction that I will potentially be merged with. We will need to move
     // this instruction after the merged instructions.
-
-    if (Use.isReg() && Use.readsReg() && Defs.count(Use.getReg())) {
+    //
+    // Similarly, if there is a def which is read by an instruction that is to
+    // be moved for merging, then we need to move the def-instruction as well.
+    // This can only happen for physical registers such as M0; virtual
+    // registers are in SSA form.
+    if (Use.isReg() &&
+        ((Use.readsReg() && RegDefs.count(Use.getReg())) ||
+         (Use.isDef() && TargetRegisterInfo::isPhysicalRegister(Use.getReg()) &&
+          PhysRegUses.count(Use.getReg())))) {
       Insts.push_back(&MI);
-      addDefsToList(MI, Defs);
+      addDefsUsesToList(MI, RegDefs, PhysRegUses);
       return true;
     }
   }
@@ -226,16 +241,6 @@ canMoveInstsAcrossMemOp(MachineInstr &MemOp,
         return false;
   }
   return true;
-}
-
-static bool
-hasPhysRegDef(MachineInstr &MI) {
-  for (const MachineOperand &Def : MI.defs()) {
-    if (Def.isReg() &&
-        TargetRegisterInfo::isPhysicalRegister(Def.getReg()))
-      return true;
-  }
-  return false;
 }
 
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI) {
@@ -343,8 +348,9 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
 
   ++MBBI;
 
-  DenseSet<unsigned> DefsToMove;
-  addDefsToList(*CI.I, DefsToMove);
+  DenseSet<unsigned> RegDefsToMove;
+  DenseSet<unsigned> PhysRegUsesToMove;
+  addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
   for ( ; MBBI != E; ++MBBI) {
     if (MBBI->getOpcode() != CI.I->getOpcode()) {
@@ -360,13 +366,6 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
         return false;
       }
 
-      if (hasPhysRegDef(*MBBI)) {
-        // We could re-order this instruction in theory, but it would require
-        // tracking physreg defs and uses. This should only affect M0 in
-        // practice.
-        return false;
-      }
-
       if (MBBI->mayLoadOrStore() &&
         (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
          !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))) {
@@ -374,14 +373,15 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
         // #2.  Add this instruction to the move list and then we will check
         // if condition #2 holds once we have selected the matching instruction.
         CI.InstsToMove.push_back(&*MBBI);
-        addDefsToList(*MBBI, DefsToMove);
+        addDefsUsesToList(*MBBI, RegDefsToMove, PhysRegUsesToMove);
         continue;
       }
 
       // When we match I with another DS instruction we will be moving I down
       // to the location of the matched instruction any uses of I will need to
       // be moved down as well.
-      addToListsIfDependent(*MBBI, DefsToMove, CI.InstsToMove);
+      addToListsIfDependent(*MBBI, RegDefsToMove, PhysRegUsesToMove,
+                            CI.InstsToMove);
       continue;
     }
 
@@ -395,7 +395,8 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     //   DS_WRITE_B32 addr, f(w), idx1
     // where the DS_READ_B32 ends up in InstsToMove and therefore prevents
     // merging of the two writes.
-    if (addToListsIfDependent(*MBBI, DefsToMove, CI.InstsToMove))
+    if (addToListsIfDependent(*MBBI, RegDefsToMove, PhysRegUsesToMove,
+                              CI.InstsToMove))
       continue;
 
     bool Match = true;
@@ -454,8 +455,7 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     // down past this instruction.
     // check if we can move I across MBBI and if we can move all I's users
     if (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
-        !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA) ||
-        hasPhysRegDef(*MBBI))
+        !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))
       break;
   }
   return false;

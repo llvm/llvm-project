@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 //
+
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
@@ -140,14 +141,36 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
   encodeULEB128(Section.DataSize, SubSection.GetStream());
   SubSection.Done();
 
-  // SYMBOL_INFO subsection
-  if (Section.SymbolInfos.size()) {
-    encodeULEB128(wasm::WASM_SYMBOL_INFO, OS);
+  // SYMBOL_TABLE subsection
+  if (Section.SymbolTable.size()) {
+    encodeULEB128(wasm::WASM_SYMBOL_TABLE, OS);
 
-    encodeULEB128(Section.SymbolInfos.size(), SubSection.GetStream());
-    for (const WasmYAML::SymbolInfo &Info : Section.SymbolInfos) {
-      writeStringRef(Info.Name, SubSection.GetStream());
+    encodeULEB128(Section.SymbolTable.size(), SubSection.GetStream());
+#ifndef NDEBUG
+    uint32_t SymbolIndex = 0;
+#endif
+    for (const WasmYAML::SymbolInfo &Info : Section.SymbolTable) {
+      assert(Info.Index == SymbolIndex++);
+      encodeULEB128(Info.Kind, SubSection.GetStream());
       encodeULEB128(Info.Flags, SubSection.GetStream());
+      switch (Info.Kind) {
+      case wasm::WASM_SYMBOL_TYPE_FUNCTION:
+      case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+        encodeULEB128(Info.ElementIndex, SubSection.GetStream());
+        if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0)
+          writeStringRef(Info.Name, SubSection.GetStream());
+        break;
+      case wasm::WASM_SYMBOL_TYPE_DATA:
+        writeStringRef(Info.Name, SubSection.GetStream());
+        if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
+          encodeULEB128(Info.DataRef.Segment, SubSection.GetStream());
+          encodeULEB128(Info.DataRef.Offset, SubSection.GetStream());
+          encodeULEB128(Info.DataRef.Size, SubSection.GetStream());
+        }
+        break;
+      default:
+        llvm_unreachable("unexpected kind");
+      }
     }
 
     SubSection.Done();
@@ -171,7 +194,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
     encodeULEB128(Section.InitFunctions.size(), SubSection.GetStream());
     for (const WasmYAML::InitFunction &Func : Section.InitFunctions) {
       encodeULEB128(Func.Priority, SubSection.GetStream());
-      encodeULEB128(Func.FunctionIndex, SubSection.GetStream());
+      encodeULEB128(Func.Symbol, SubSection.GetStream());
     }
     SubSection.Done();
   }

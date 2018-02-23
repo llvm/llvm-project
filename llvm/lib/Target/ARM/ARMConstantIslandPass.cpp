@@ -1425,10 +1425,6 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
         assert(!isThumb || getITInstrPredicate(*MI, PredReg) == ARMCC::AL));
 
   NewMBB = splitBlockBeforeInstr(&*MI);
-
-  // 4 byte align the next block after the constant pool when the CPE is a
-  // 16-bit value in ARM mode, and 2 byte for Thumb.
-  NewMBB->setAlignment(isThumb ? 1 : 2);
 }
 
 /// handleConstantPoolUser - Analyze the specified user, checking to see if it
@@ -1489,6 +1485,8 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
     // We are adding new water.  Update NewWaterList.
     NewWaterList.insert(NewIsland);
   }
+  // Always align the new block because CP entries can be smaller than 4 bytes.
+  NewMBB->setAlignment(isThumb ? 1 : 2);
 
   // Remove the original WaterList entry; we want subsequent insertions in
   // this vicinity to go after the one we're about to insert.  This

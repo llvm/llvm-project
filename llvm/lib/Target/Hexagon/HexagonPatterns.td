@@ -2800,6 +2800,8 @@ def: Pat<(brcond (not I1:$Pu), bb:$dst),
          (J2_jumpf I1:$Pu, bb:$dst)>;
 def: Pat<(brcond (i1 (setne I1:$Pu, -1)), bb:$dst),
          (J2_jumpf I1:$Pu, bb:$dst)>;
+def: Pat<(brcond (i1 (seteq I1:$Pu, 0)), bb:$dst),
+         (J2_jumpf I1:$Pu, bb:$dst)>;
 def: Pat<(brcond (i1 (setne I1:$Pu, 0)), bb:$dst),
          (J2_jumpt I1:$Pu, bb:$dst)>;
 

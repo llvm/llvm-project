@@ -30,7 +30,7 @@ public:
                              std::unique_ptr<IPDBSession> &Session);
 
   uint64_t getLoadAddress() const override;
-  void setLoadAddress(uint64_t Address) override;
+  bool setLoadAddress(uint64_t Address) override;
   std::unique_ptr<PDBSymbolExe> getGlobalScope() override;
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override;
 

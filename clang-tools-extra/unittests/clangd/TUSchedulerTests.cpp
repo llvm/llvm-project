@@ -50,7 +50,7 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   auto Missing = testPath("missing.cpp");
   Files[Missing] = "";
 
-  S.update(Added, getInputs(Added, ""), ignoreUpdate);
+  S.update(Added, getInputs(Added, ""), WantDiagnostics::No, ignoreUpdate);
 
   // Assert each operation for missing file is an error (even if it's available
   // in VFS).
@@ -86,6 +86,36 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   });
   // remove() shouldn't crash on missing files.
   S.remove(Added);
+}
+
+TEST_F(TUSchedulerTests, WantDiagnostics) {
+  std::atomic<int> CallbackCount(0);
+  {
+    // To avoid a racy test, don't allow tasks to actualy run on the worker
+    // thread until we've scheduled them all.
+    Notification Ready;
+    TUScheduler S(getDefaultAsyncThreadsCount(),
+                  /*StorePreamblesInMemory=*/true,
+                  /*ASTParsedCallback=*/nullptr);
+    auto Path = testPath("foo.cpp");
+    S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes,
+             [&](std::vector<DiagWithFixIts>) { Ready.wait(); });
+
+    S.update(Path, getInputs(Path, "request diags"), WantDiagnostics::Yes,
+             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+    S.update(Path, getInputs(Path, "auto (clobbered)"), WantDiagnostics::Auto,
+             [&](std::vector<DiagWithFixIts> Diags) {
+               ADD_FAILURE() << "auto should have been cancelled by auto";
+             });
+    S.update(Path, getInputs(Path, "request no diags"), WantDiagnostics::No,
+             [&](std::vector<DiagWithFixIts> Diags) {
+               ADD_FAILURE() << "no diags should not be called back";
+             });
+    S.update(Path, getInputs(Path, "auto (produces)"), WantDiagnostics::Auto,
+             [&](std::vector<DiagWithFixIts> Diags) { ++CallbackCount; });
+    Ready.notify();
+  }
+  EXPECT_EQ(2, CallbackCount);
 }
 
 TEST_F(TUSchedulerTests, ManyUpdates) {
@@ -132,7 +162,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
-          S.update(File, Inputs,
+          S.update(File, Inputs, WantDiagnostics::Auto,
                    [Nonce, &Mut, &TotalUpdates](
                        llvm::Optional<std::vector<DiagWithFixIts>> Diags) {
                      EXPECT_THAT(Context::current().get(NonceKey),

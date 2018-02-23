@@ -14,6 +14,6 @@ entry:
   ret void
 }
 
-; CHECK: error: function signature mismatch: weakFn
+; CHECK: error: Function type mismatch: weakFn
 ; CHECK-NEXT: >>> defined as () -> I32 in {{.*}}signature-mismatch-weak.ll.tmp.o
 ; CHECK-NEXT: >>> defined as () -> I64 in {{.*}}signature-mismatch-weak.ll.tmp.strong.o

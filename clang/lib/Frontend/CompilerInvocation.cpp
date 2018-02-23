@@ -659,6 +659,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.FlushDenorm = Args.hasArg(OPT_cl_denorms_are_zero);
   Opts.CorrectlyRoundedDivSqrt =
       Args.hasArg(OPT_cl_fp32_correctly_rounded_divide_sqrt);
+  Opts.UniformWGSize =
+      Args.hasArg(OPT_cl_uniform_work_group_size);
   Opts.Reciprocals = Args.getAllArgValues(OPT_mrecip_EQ);
   Opts.ReciprocalMath = Args.hasArg(OPT_freciprocal_math);
   Opts.NoTrappingMath = Args.hasArg(OPT_fno_trapping_math);
@@ -920,6 +922,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Val.getAsInteger(0, StackProbeSize);
     Opts.StackProbeSize = StackProbeSize;
   }
+
+  Opts.NoStackArgProbe = Args.hasArg(OPT_mno_stack_arg_probe);
 
   if (Arg *A = Args.getLastArg(OPT_fobjc_dispatch_method_EQ)) {
     StringRef Name = A->getValue();

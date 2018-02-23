@@ -369,14 +369,16 @@ possible event codes are:
 Each output line also reports the following statistics (when non-zero):
 
 ``cov:``
-  Total number of code blocks or edges covered by the executing the current
-  corpus.
+  Total number of code blocks or edges covered by executing the current corpus.
 ``ft:``
   libFuzzer uses different signals to evaluate the code coverage:
   edge coverage, edge counters, value profiles, indirect caller/callee pairs, etc.
   These signals combined are called *features* (`ft:`).
 ``corp:``
   Number of entries in the current in-memory test corpus and its size in bytes.
+``lim:``
+  Current limit on the length of new entries in the corpus.  Increases over time
+  until the max length (``-max_len``) is reached.
 ``exec/s:``
   Number of fuzzer iterations per second.
 ``rss:``

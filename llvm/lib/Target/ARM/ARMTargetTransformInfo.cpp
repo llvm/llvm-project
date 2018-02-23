@@ -127,11 +127,8 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   }
 
   // xor a, -1 can always be folded to MVN
-  if (Opcode == Instruction::Xor) {
-    int64_t NegImm = Imm.getSExtValue();
-    if (NegImm == -1)
-      return 0;
-  }
+  if (Opcode == Instruction::Xor && Imm.isAllOnesValue())
+    return 0;
 
   return getIntImmCost(Imm, Ty);
 }

@@ -141,6 +141,8 @@ public:
   static CodeRecTy *get() { return &Shared; }
 
   std::string getAsString() const override { return "code"; }
+
+  bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size
@@ -176,6 +178,8 @@ public:
   static StringRecTy *get() { return &Shared; }
 
   std::string getAsString() const override;
+
+  bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
 /// 'list<Ty>' - Represent a list of values, all of which must be of
@@ -263,8 +267,9 @@ protected:
   /// and IK_LastXXXInit be their own values, but that would degrade
   /// readability for really no benefit.
   enum InitKind : uint8_t {
-    IK_BitInit,
+    IK_First, // unused; silence a spurious warning
     IK_FirstTypedInit,
+    IK_BitInit,
     IK_BitsInit,
     IK_CodeInit,
     IK_DagInit,
@@ -280,9 +285,9 @@ protected:
     IK_StringInit,
     IK_VarInit,
     IK_VarListElementInit,
+    IK_VarBitInit,
     IK_LastTypedInit,
-    IK_UnsetInit,
-    IK_VarBitInit
+    IK_UnsetInit
   };
 
 private:
@@ -447,10 +452,10 @@ public:
 };
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
-class BitInit : public Init {
+class BitInit final : public TypedInit {
   bool Value;
 
-  explicit BitInit(bool V) : Init(IK_BitInit), Value(V) {}
+  explicit BitInit(bool V) : TypedInit(IK_BitInit, BitRecTy::get()), Value(V) {}
 
 public:
   BitInit(const BitInit &) = delete;
@@ -465,6 +470,11 @@ public:
   bool getValue() const { return Value; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
+
+  Init *resolveListElementReference(Record &R, const RecordVal *RV,
+                                    unsigned Elt) const override {
+    llvm_unreachable("Illegal element reference off bit");
+  }
 
   Init *getBit(unsigned Bit) const override {
     assert(Bit < 1 && "Bit index out of range!");
@@ -679,6 +689,9 @@ public:
     assert(i < NumValues && "List element index out of range!");
     return getTrailingObjects<Init *>()[i];
   }
+  RecTy *getElementType() const {
+    return cast<ListRecTy>(getType())->getElementType();
+  }
 
   Record *getElementAsRecord(unsigned i) const;
 
@@ -752,7 +765,7 @@ public:
 ///
 class UnOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum UnaryOp : uint8_t { CAST, HEAD, TAIL, EMPTY };
+  enum UnaryOp : uint8_t { CAST, HEAD, TAIL, SIZE, EMPTY };
 
 private:
   Init *LHS;
@@ -959,11 +972,12 @@ public:
 };
 
 /// Opcode{0} - Represent access to one bit of a variable or field.
-class VarBitInit : public Init {
+class VarBitInit final : public TypedInit {
   TypedInit *TI;
   unsigned Bit;
 
-  VarBitInit(TypedInit *T, unsigned B) : Init(IK_VarBitInit), TI(T), Bit(B) {
+  VarBitInit(TypedInit *T, unsigned B)
+      : TypedInit(IK_VarBitInit, BitRecTy::get()), TI(T), Bit(B) {
     assert(T->getType() &&
            (isa<IntRecTy>(T->getType()) ||
             (isa<BitsRecTy>(T->getType()) &&
@@ -988,6 +1002,11 @@ public:
 
   std::string getAsString() const override;
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
+
+  Init *resolveListElementReference(Record &R, const RecordVal *RV,
+                                    unsigned Elt) const override {
+    llvm_unreachable("Illegal element reference off bit");
+  }
 
   Init *getBit(unsigned B) const override {
     assert(B < 1 && "Bit index out of range!");
@@ -1234,6 +1253,8 @@ public:
   bool setValue(Init *V) {
     if (V) {
       Value = V->convertInitializerTo(getType());
+      assert(!Value || !isa<TypedInit>(Value) ||
+             cast<TypedInit>(Value)->getType()->typeIsConvertibleTo(getType()));
       return Value == nullptr;
     }
     Value = nullptr;

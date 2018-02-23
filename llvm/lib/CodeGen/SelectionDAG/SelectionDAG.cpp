@@ -263,6 +263,52 @@ bool ISD::allOperandsUndef(const SDNode *N) {
   return true;
 }
 
+bool ISD::matchUnaryPredicate(SDValue Op,
+                              std::function<bool(ConstantSDNode *)> Match) {
+  if (auto *Cst = dyn_cast<ConstantSDNode>(Op))
+    return Match(Cst);
+
+  if (ISD::BUILD_VECTOR != Op.getOpcode())
+    return false;
+
+  EVT SVT = Op.getValueType().getScalarType();
+  for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+    auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(i));
+    if (!Cst || Cst->getValueType(0) != SVT || !Match(Cst))
+      return false;
+  }
+  return true;
+}
+
+bool ISD::matchBinaryPredicate(
+    SDValue LHS, SDValue RHS,
+    std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match) {
+  if (LHS.getValueType() != RHS.getValueType())
+    return false;
+
+  if (auto *LHSCst = dyn_cast<ConstantSDNode>(LHS))
+    if (auto *RHSCst = dyn_cast<ConstantSDNode>(RHS))
+      return Match(LHSCst, RHSCst);
+
+  if (ISD::BUILD_VECTOR != LHS.getOpcode() ||
+      ISD::BUILD_VECTOR != RHS.getOpcode())
+    return false;
+
+  EVT SVT = LHS.getValueType().getScalarType();
+  for (unsigned i = 0, e = LHS.getNumOperands(); i != e; ++i) {
+    auto *LHSCst = dyn_cast<ConstantSDNode>(LHS.getOperand(i));
+    auto *RHSCst = dyn_cast<ConstantSDNode>(RHS.getOperand(i));
+    if (!LHSCst || !RHSCst)
+      return false;
+    if (LHSCst->getValueType(0) != SVT ||
+        LHSCst->getValueType(0) != RHSCst->getValueType(0))
+      return false;
+    if (!Match(LHSCst, RHSCst))
+      return false;
+  }
+  return true;
+}
+
 ISD::NodeType ISD::getExtForLoadExtType(bool IsFP, ISD::LoadExtType ExtType) {
   switch (ExtType) {
   case ISD::EXTLOAD:

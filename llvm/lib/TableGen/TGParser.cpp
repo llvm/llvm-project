@@ -104,7 +104,7 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
   if (BitList.empty())
     if (VarInit *VI = dyn_cast<VarInit>(V))
       if (VI->getNameInit() == ValName && !AllowSelfAssignment)
-        return true;
+        return Error(Loc, "Recursion / self-assignment forbidden");
 
   // If we are assigning to a subset of the bits in the value... then we must be
   // assigning to a field of BitsRecTy, which must have a BitsInit
@@ -147,10 +147,12 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
     if (BitsInit *BI = dyn_cast<BitsInit>(V))
       InitType = (Twine("' of type bit initializer with length ") +
                   Twine(BI->getNumBits())).str();
+    else if (TypedInit *TI = dyn_cast<TypedInit>(V))
+      InitType = (Twine("' of type '") + TI->getType()->getAsString()).str();
     return Error(Loc, "Value '" + ValName->getAsUnquotedString() +
-                 "' of type '" + RV->getType()->getAsString() +
-                 "' is incompatible with initializer '" + V->getAsString() +
-                 InitType + "'");
+                          "' of type '" + RV->getType()->getAsString() +
+                          "' is incompatible with initializer '" +
+                          V->getAsString() + InitType + "'");
   }
   return false;
 }
@@ -318,7 +320,7 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
 
     // Process each value.
     for (unsigned i = 0; i < List->size(); ++i) {
-      Init *ItemVal = List->resolveListElementReference(*CurRec, nullptr, i);
+      Init *ItemVal = List->getElement(i)->resolveReferences(*CurRec, nullptr);
       IterVals.push_back(IterRecord(CurLoop.IterVar, ItemVal));
       if (ProcessForeachDefs(CurRec, Loc, IterVals))
         return true;
@@ -779,6 +781,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return nullptr;
   case tgtok::XHead:
   case tgtok::XTail:
+  case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast: {  // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
@@ -805,6 +808,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XTail:
       Lex.Lex();  // eat the operation
       Code = UnOpInit::TAIL;
+      break;
+    case tgtok::XSize:
+      Lex.Lex();
+      Code = UnOpInit::SIZE;
+      Type = IntRecTy::get();
       break;
     case tgtok::XEmpty:
       Lex.Lex();  // eat the operation
@@ -840,12 +848,15 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         }
       }
 
-      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
+      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL ||
+          Code == UnOpInit::SIZE) {
         if (!LHSl && !LHSt) {
           TokError("expected list type argument in unary operator");
           return nullptr;
         }
+      }
 
+      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
         if (LHSl && LHSl->empty()) {
           TokError("empty list argument in unary operator");
           return nullptr;
@@ -942,9 +953,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
 
     // If we are doing !listconcat, we should know the type by now
     if (OpTok == tgtok::XListConcat) {
-      if (VarInit *Arg0 = dyn_cast<VarInit>(InitList[0]))
-        Type = Arg0->getType();
-      else if (ListInit *Arg0 = dyn_cast<ListInit>(InitList[0]))
+      if (TypedInit *Arg0 = dyn_cast<TypedInit>(InitList[0]))
         Type = Arg0->getType();
       else {
         InitList[0]->print(errs());
@@ -1075,6 +1084,14 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
       Type = MHSt->getType();
+      if (isa<ListRecTy>(Type)) {
+        TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+        if (!RHSt) {
+          TokError("could not get type of !foreach list elements");
+          return nullptr;
+        }
+        Type = RHSt->getType()->getListTy();
+      }
       break;
     }
     case tgtok::XSubst: {
@@ -1396,7 +1413,9 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       // Make sure the deduced type is compatible with the given type
       if (GivenListTy) {
         if (!EltTy->typeIsConvertibleTo(GivenListTy->getElementType())) {
-          TokError("Element type mismatch for list");
+          TokError(Twine("Element type mismatch for list: element type '") +
+                   EltTy->getAsString() + "' not convertible to '" +
+                   GivenListTy->getElementType()->getAsString());
           return nullptr;
         }
       }
@@ -1443,6 +1462,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
   case tgtok::XHead:
   case tgtok::XTail:
+  case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast:  // Value ::= !unop '(' Value ')'
   case tgtok::XConcat:

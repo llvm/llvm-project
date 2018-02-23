@@ -110,11 +110,12 @@ void ClangdServer::setRootPath(PathRef RootPath) {
     this->RootPath = NewRootPath;
 }
 
-void ClangdServer::addDocument(PathRef File, StringRef Contents) {
+void ClangdServer::addDocument(PathRef File, StringRef Contents,
+                               WantDiagnostics WantDiags) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
-                          std::move(TaggedFS));
+                          WantDiags, std::move(TaggedFS));
 }
 
 void ClangdServer::removeDocument(PathRef File) {
@@ -133,7 +134,8 @@ void ClangdServer::forceReparse(PathRef File) {
   CompileArgs.invalidate(File);
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  scheduleReparseAndDiags(File, std::move(FileContents), std::move(TaggedFS));
+  scheduleReparseAndDiags(File, std::move(FileContents), WantDiagnostics::Yes,
+                          std::move(TaggedFS));
 }
 
 void ClangdServer::codeComplete(
@@ -179,10 +181,9 @@ void ClangdServer::codeComplete(
     Callback(make_tagged(std::move(Result), std::move(TaggedFS.Tag)));
   };
 
-  WorkScheduler.runWithPreamble("CodeComplete", File,
-                                BindWithForward(Task, std::move(Contents),
-                                                File.str(),
-                                                std::move(Callback)));
+  WorkScheduler.runWithPreamble(
+      "CodeComplete", File,
+      Bind(Task, std::move(Contents), File.str(), std::move(Callback)));
 }
 
 void ClangdServer::signatureHelp(
@@ -222,9 +223,8 @@ void ClangdServer::signatureHelp(
         TaggedFS.Tag));
   };
 
-  WorkScheduler.runWithPreamble(
-      "SignatureHelp", File,
-      BindWithForward(Action, File.str(), std::move(Callback)));
+  WorkScheduler.runWithPreamble("SignatureHelp", File,
+                                Bind(Action, File.str(), std::move(Callback)));
 }
 
 llvm::Expected<tooling::Replacements>
@@ -310,7 +310,7 @@ void ClangdServer::rename(
 
   WorkScheduler.runWithAST(
       "Rename", File,
-      BindWithForward(Action, File.str(), NewName.str(), std::move(Callback)));
+      Bind(Action, File.str(), NewName.str(), std::move(Callback)));
 }
 
 Expected<tooling::Replacements>
@@ -376,8 +376,7 @@ void ClangdServer::dumpAST(PathRef File,
     Callback(Result);
   };
 
-  WorkScheduler.runWithAST("DumpAST", File,
-                           BindWithForward(Action, std::move(Callback)));
+  WorkScheduler.runWithAST("DumpAST", File, Bind(Action, std::move(Callback)));
 }
 
 void ClangdServer::findDefinitions(
@@ -394,7 +393,7 @@ void ClangdServer::findDefinitions(
   };
 
   WorkScheduler.runWithAST("Definitions", File,
-                           BindWithForward(Action, std::move(Callback)));
+                           Bind(Action, std::move(Callback)));
 }
 
 llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
@@ -491,7 +490,7 @@ void ClangdServer::findDocumentHighlights(
   };
 
   WorkScheduler.runWithAST("Highlights", File,
-                           BindWithForward(Action, std::move(Callback)));
+                           Bind(Action, std::move(Callback)));
 }
 
 void ClangdServer::findHover(
@@ -514,25 +513,20 @@ void ClangdServer::findHover(
     Callback(make_tagged(std::move(Result), TaggedFS.Tag));
   };
 
-  WorkScheduler.runWithAST("Hover", File,
-                           BindWithForward(Action, std::move(Callback)));
+  WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(Callback)));
 }
 
 void ClangdServer::scheduleReparseAndDiags(
-    PathRef File, VersionedDraft Contents,
+    PathRef File, VersionedDraft Contents, WantDiagnostics WantDiags,
     Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
   tooling::CompileCommand Command = CompileArgs.getCompileCommand(File);
-
-  using OptDiags = llvm::Optional<std::vector<DiagWithFixIts>>;
 
   DocVersion Version = Contents.Version;
   Path FileStr = File.str();
   VFSTag Tag = std::move(TaggedFS.Tag);
 
-  auto Callback = [this, Version, FileStr, Tag](OptDiags Diags) {
-    if (!Diags)
-      return; // A new reparse was requested before this one completed.
-
+  auto Callback = [this, Version, FileStr,
+                   Tag](std::vector<DiagWithFixIts> Diags) {
     // We need to serialize access to resulting diagnostics to avoid calling
     // `onDiagnosticsReady` in the wrong order.
     std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
@@ -546,14 +540,19 @@ void ClangdServer::scheduleReparseAndDiags(
     LastReportedDiagsVersion = Version;
 
     DiagConsumer.onDiagnosticsReady(
-        FileStr, make_tagged(std::move(*Diags), std::move(Tag)));
+        FileStr, make_tagged(std::move(Diags), std::move(Tag)));
   };
 
   WorkScheduler.update(File,
                        ParseInputs{std::move(Command),
                                    std::move(TaggedFS.Value),
                                    std::move(*Contents.Draft)},
-                       std::move(Callback));
+                       WantDiags, std::move(Callback));
+}
+
+void ClangdServer::reparseOpenedFiles() {
+  for (const Path &FilePath : DraftMgr.getActiveFiles())
+    forceReparse(FilePath);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

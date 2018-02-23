@@ -190,3 +190,10 @@ std::string lld::toString(const WasmSignature &Sig) {
     S += toString(static_cast<ValType>(Sig.ReturnType));
   return S.str();
 }
+
+std::string lld::toString(const WasmGlobalType &Sig) {
+  std::string S = toString(static_cast<ValType>(Sig.Type));
+  if (Sig.Mutable)
+    return "mutable " + S;
+  return S;
+}

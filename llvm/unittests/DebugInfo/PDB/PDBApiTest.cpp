@@ -63,7 +63,7 @@ namespace {
 
 class MockSession : public IPDBSession {
   uint64_t getLoadAddress() const override { return 0; }
-  void setLoadAddress(uint64_t Address) override {}
+  bool setLoadAddress(uint64_t Address) override { return false; }
   std::unique_ptr<PDBSymbolExe> getGlobalScope() override { return nullptr; }
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override {
     return nullptr;
@@ -142,12 +142,46 @@ public:
     return nullptr;
   }
   std::unique_ptr<IPDBEnumSymbols>
+  findChildrenByAddr(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
+                     uint32_t Section, uint32_t Offset) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumSymbols>
+  findChildrenByVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
+                   uint64_t VA) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumSymbols>
   findChildrenByRVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
                     uint32_t RVA) const override {
     return nullptr;
   }
   std::unique_ptr<IPDBEnumSymbols>
+  findInlineFramesByAddr(uint32_t Section, uint32_t Offset) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumSymbols>
   findInlineFramesByRVA(uint32_t RVA) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumSymbols>
+  findInlineFramesByVA(uint64_t VA) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumLineNumbers> findInlineeLines() const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findInlineeLinesByAddr(uint32_t Section, uint32_t Offset,
+                         uint32_t Length) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findInlineeLinesByRVA(uint32_t RVA, uint32_t Length) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findInlineeLinesByVA(uint64_t VA, uint32_t Length) const override {
     return nullptr;
   }
 

@@ -131,7 +131,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     return false;
 
   // Every other GV is local on COFF.
-  // Make an exception for windows OS in the triple: Some firmwares builds use
+  // Make an exception for windows OS in the triple: Some firmware builds use
   // *-win32-macho triples. This (accidentally?) produced windows relocations
   // without GOT tables in older clang versions; Keep this behaviour.
   if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))

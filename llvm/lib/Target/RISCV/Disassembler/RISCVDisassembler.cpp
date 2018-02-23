@@ -232,6 +232,17 @@ static DecodeStatus decodeSImmOperandAndLsl1(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address,
+                                         const void *Decoder) {
+  assert(isUInt<6>(Imm) && "Invalid immediate");
+  if (Imm > 31) {
+    Imm = (SignExtend64<6>(Imm) & 0xfffff);
+  }
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 #include "RISCVGenDisassemblerTables.inc"
 
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,

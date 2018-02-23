@@ -23,21 +23,25 @@ add_llvm_target(MipsCodeGen
   Mips16RegisterInfo.cpp
   MipsAnalyzeImmediate.cpp
   MipsAsmPrinter.cpp
+  MipsCallLowering.cpp
   MipsCCState.cpp
   MipsConstantIslandPass.cpp
   MipsDelaySlotFiller.cpp
   MipsFastISel.cpp
   MipsHazardSchedule.cpp
   MipsInstrInfo.cpp
+  MipsInstructionSelector.cpp
   MipsISelDAGToDAG.cpp
   MipsISelLowering.cpp
   MipsFrameLowering.cpp
+  MipsLegalizerInfo.cpp
   MipsLongBranch.cpp
   MipsMCInstLower.cpp
   MipsMachineFunction.cpp
   MipsModuleISelDAGToDAG.cpp
   MipsOptimizePICCall.cpp
   MipsOs16.cpp
+  MipsRegisterBankInfo.cpp
   MipsRegisterInfo.cpp
   MipsSEFrameLowering.cpp
   MipsSEInstrInfo.cpp

@@ -97,8 +97,18 @@ bool IntRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
   return kind==BitRecTyKind || kind==BitsRecTyKind || kind==IntRecTyKind;
 }
 
+bool CodeRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
+  RecTyKind Kind = RHS->getRecTyKind();
+  return Kind == CodeRecTyKind || Kind == StringRecTyKind;
+}
+
 std::string StringRecTy::getAsString() const {
   return "string";
+}
+
+bool StringRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
+  RecTyKind Kind = RHS->getRecTyKind();
+  return Kind == StringRecTyKind || Kind == CodeRecTyKind;
 }
 
 std::string ListRecTy::getAsString() const {
@@ -433,6 +443,8 @@ StringInit *StringInit::get(StringRef V) {
 Init *StringInit::convertInitializerTo(RecTy *Ty) const {
   if (isa<StringRecTy>(Ty))
     return const_cast<StringInit *>(this);
+  if (isa<CodeRecTy>(Ty))
+    return CodeInit::get(getValue());
 
   return nullptr;
 }
@@ -440,6 +452,8 @@ Init *StringInit::convertInitializerTo(RecTy *Ty) const {
 Init *CodeInit::convertInitializerTo(RecTy *Ty) const {
   if (isa<CodeRecTy>(Ty))
     return const_cast<CodeInit *>(this);
+  if (isa<StringRecTy>(Ty))
+    return StringInit::get(getValue());
 
   return nullptr;
 }
@@ -463,6 +477,9 @@ ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
   void *IP = nullptr;
   if (ListInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
+
+  assert(Range.empty() || !isa<TypedInit>(Range[0]) ||
+         cast<TypedInit>(Range[0])->getType()->typeIsConvertibleTo(EltTy));
 
   void *Mem = Allocator.Allocate(totalSizeToAlloc<Init *>(Range.size()),
                                  alignof(ListInit));
@@ -501,7 +518,7 @@ Init *ListInit::convertInitializerTo(RecTy *Ty) const {
 
     if (!Changed)
       return const_cast<ListInit*>(this);
-    return ListInit::get(Elements, Ty);
+    return ListInit::get(Elements, ElementType);
   }
 
   return nullptr;
@@ -515,7 +532,7 @@ Init *ListInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
       return nullptr;
     Vals.push_back(getElement(Element));
   }
-  return ListInit::get(Vals, getType());
+  return ListInit::get(Vals, getElementType());
 }
 
 Record *ListInit::getElementAsRecord(unsigned i) const {
@@ -543,7 +560,7 @@ Init *ListInit::resolveReferences(Record &R, const RecordVal *RV) const {
   }
 
   if (Changed)
-    return ListInit::get(Resolved, getType());
+    return ListInit::get(Resolved, getElementType());
   return const_cast<ListInit *>(this);
 }
 
@@ -701,8 +718,13 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       assert(!LHSl->empty() && "Empty list in tail");
       // Note the +1.  We can't just pass the result of getValues()
       // directly.
-      return ListInit::get(LHSl->getValues().slice(1), LHSl->getType());
+      return ListInit::get(LHSl->getValues().slice(1), LHSl->getElementType());
     }
+    break;
+
+  case SIZE:
+    if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
+      return IntInit::get(LHSl->size());
     break;
 
   case EMPTY:
@@ -729,6 +751,7 @@ std::string UnOpInit::getAsString() const {
   case CAST: Result = "!cast<" + getType()->getAsString() + ">"; break;
   case HEAD: Result = "!head"; break;
   case TAIL: Result = "!tail"; break;
+  case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";
@@ -801,8 +824,7 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       SmallVector<Init *, 8> Args;
       Args.insert(Args.end(), LHSs->begin(), LHSs->end());
       Args.insert(Args.end(), RHSs->begin(), RHSs->end());
-      return ListInit::get(
-          Args, cast<ListRecTy>(LHSs->getType())->getElementType());
+      return ListInit::get(Args, LHSs->getElementType());
     }
     break;
   }
@@ -919,9 +941,6 @@ void TernOpInit::Profile(FoldingSetNodeID &ID) const {
   ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
-static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, Record *CurRec,
-                           MultiClass *CurMultiClass);
-
 // Evaluates operation RHSo after replacing all operands matching LHS with Arg.
 static Init *EvaluateOperation(OpInit *RHSo, Init *LHS, Init *Arg,
                                Record *CurRec, MultiClass *CurMultiClass) {
@@ -949,8 +968,8 @@ static Init *EvaluateOperation(OpInit *RHSo, Init *LHS, Init *Arg,
 }
 
 // Applies RHS to all elements of MHS, using LHS as a temp variable.
-static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, Record *CurRec,
-                           MultiClass *CurMultiClass) {
+static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
+                           Record *CurRec, MultiClass *CurMultiClass) {
   OpInit *RHSo = dyn_cast<OpInit>(RHS);
 
   if (!RHSo)
@@ -973,7 +992,8 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, Record *CurRec,
       StringInit *ArgName = MHSd->getArgName(i);
       // If this is a dag, recurse
       if (isa<DagInit>(Arg)) {
-        if (Init *Result = ForeachHelper(LHS, Arg, RHSo, CurRec, CurMultiClass))
+        if (Init *Result =
+                ForeachHelper(LHS, Arg, RHSo, Type, CurRec, CurMultiClass))
           Arg = Result;
       } else if (Init *Result =
                      EvaluateOperation(RHSo, LHS, Arg, CurRec, CurMultiClass)) {
@@ -988,14 +1008,15 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, Record *CurRec,
   }
 
   ListInit *MHSl = dyn_cast<ListInit>(MHS);
-  if (MHSl) {
+  ListRecTy *ListType = dyn_cast<ListRecTy>(Type);
+  if (MHSl && ListType) {
     SmallVector<Init *, 8> NewList(MHSl->begin(), MHSl->end());
     for (Init *&Arg : NewList) {
       if (Init *Result =
               EvaluateOperation(RHSo, LHS, Arg, CurRec, CurMultiClass))
         Arg = Result;
     }
-    return ListInit::get(NewList, MHSl->getType());
+    return ListInit::get(NewList, ListType->getElementType());
   }
   return nullptr;
 }
@@ -1046,7 +1067,8 @@ Init *TernOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
   }
 
   case FOREACH: {
-    if (Init *Result = ForeachHelper(LHS, MHS, RHS, CurRec, CurMultiClass))
+    if (Init *Result =
+            ForeachHelper(LHS, MHS, RHS, getType(), CurRec, CurMultiClass))
       return Result;
     break;
   }
@@ -1225,7 +1247,7 @@ Init *TypedInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
   for (unsigned Element : Elements)
     ListInits.push_back(VarListElementInit::get(const_cast<TypedInit *>(this),
                                                 Element));
-  return ListInit::get(ListInits, T);
+  return ListInit::get(ListInits, T->getElementType());
 }
 
 

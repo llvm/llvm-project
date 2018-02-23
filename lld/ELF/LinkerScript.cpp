@@ -508,7 +508,7 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
   // ignored. We should not have two output .text sections just because one was
   // in a group and another was not for example.
   //
-  // It also seems that that wording was a late addition and didn't get the
+  // It also seems that wording was a late addition and didn't get the
   // necessary scrutiny.
   //
   // Merging sections with different flags is expected by some users. One
@@ -752,21 +752,19 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   }
 }
 
-void LinkerScript::removeEmptyCommands() {
-  // It is common practice to use very generic linker scripts. So for any
-  // given run some of the output sections in the script will be empty.
-  // We could create corresponding empty output sections, but that would
-  // clutter the output.
-  // We instead remove trivially empty sections. The bfd linker seems even
-  // more aggressive at removing them.
-  llvm::erase_if(SectionCommands, [&](BaseCommand *Base) {
-    if (auto *Sec = dyn_cast<OutputSection>(Base))
-      return !Sec->Live;
-    return false;
-  });
-}
-
 static bool isAllSectionDescription(const OutputSection &Cmd) {
+  // We do not remove empty sections that are explicitly
+  // assigned to any segment.
+  if (!Cmd.Phdrs.empty())
+    return false;
+
+  // We do not want to remove sections that have custom address or align
+  // expressions set even if them are empty. We keep them because we
+  // want to be sure that any expressions can be evaluated and report
+  // an error otherwise.
+  if (Cmd.AddrExpr || Cmd.AlignExpr || Cmd.LMAExpr)
+    return false;
+
   for (BaseCommand *Base : Cmd.SectionCommands)
     if (!isa<InputSectionDescription>(*Base))
       return false;
@@ -796,7 +794,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t Flags = SHF_ALLOC;
 
-  for (BaseCommand *Cmd : SectionCommands) {
+  for (BaseCommand *&Cmd : SectionCommands) {
     auto *Sec = dyn_cast<OutputSection>(Cmd);
     if (!Sec)
       continue;
@@ -805,20 +803,25 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       continue;
     }
 
-    if (isAllSectionDescription(*Sec))
-      continue;
-
-    Sec->Live = true;
-    Sec->Flags = Flags;
+    if (!isAllSectionDescription(*Sec))
+      Sec->Flags = Flags;
+    else
+      Cmd = nullptr;
   }
+
+  // It is common practice to use very generic linker scripts. So for any
+  // given run some of the output sections in the script will be empty.
+  // We could create corresponding empty output sections, but that would
+  // clutter the output.
+  // We instead remove trivially empty sections. The bfd linker seems even
+  // more aggressive at removing them.
+  llvm::erase_if(SectionCommands, [&](BaseCommand *Base) { return !Base; });
 }
 
 void LinkerScript::adjustSectionsAfterSorting() {
   // Try and find an appropriate memory region to assign offsets in.
   for (BaseCommand *Base : SectionCommands) {
     if (auto *Sec = dyn_cast<OutputSection>(Base)) {
-      if (!Sec->Live)
-        continue;
       if (!Sec->LMARegionName.empty()) {
         if (MemoryRegion *M = MemoryRegions.lookup(Sec->LMARegionName))
           Sec->LMARegion = M;

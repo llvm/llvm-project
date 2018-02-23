@@ -7,12 +7,18 @@
 // CHECK: "NAME"
 
 // CHECK: Defs
+
+// CHECK: def DX {
+// CHECK:   list<string> x = ["0", "1", "2"];
+// CHECK: }
+
 // CHECK: Jr
 // CHECK: Sr
 
 // Variables for foreach
 class decls {
   string name;
+  int num;
 }
 
 def Decls : decls;
@@ -37,3 +43,9 @@ def Seniors : B<People.values>;
 def Juniors : C<People.values>;
 def Smiths : D<["NAME", "Jane Smith"]>;
 def Unprocessed : D<People.values>;
+
+class X<list<int> a> {
+    list<string> x = !foreach(Decls.num, a, !cast<string>(Decls.num));
+}
+
+def DX : X<[0, 1, 2]>;

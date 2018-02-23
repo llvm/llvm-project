@@ -245,19 +245,27 @@ void emitOptionWithArgs(StringRef Prefix, const Record *Option,
 void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
   // Find the arguments to list after the option.
   unsigned NumArgs = getNumArgsForKind(Option->getValueAsDef("Kind"), Option);
+  bool HasMetaVarName = !Option->isValueUnset("MetaVarName");
 
   std::vector<std::string> Args;
-  if (!Option->isValueUnset("MetaVarName"))
+  if (HasMetaVarName)
     Args.push_back(Option->getValueAsString("MetaVarName"));
   else if (NumArgs == 1)
     Args.push_back("<arg>");
 
-  while (Args.size() < NumArgs) {
-    Args.push_back(("<arg" + Twine(Args.size() + 1) + ">").str());
-    // Use '--args <arg1> <arg2>...' if any number of args are allowed.
-    if (Args.size() == 2 && NumArgs == UnlimitedArgs) {
-      Args.back() += "...";
-      break;
+  // Fill up arguments if this option didn't provide a meta var name or it
+  // supports an unlimited number of arguments. We can't see how many arguments
+  // already are in a meta var name, so assume it has right number. This is
+  // needed for JoinedAndSeparate options so that there arent't too many
+  // arguments.
+  if (!HasMetaVarName || NumArgs == UnlimitedArgs) {
+    while (Args.size() < NumArgs) {
+      Args.push_back(("<arg" + Twine(Args.size() + 1) + ">").str());
+      // Use '--args <arg1> <arg2>...' if any number of args are allowed.
+      if (Args.size() == 2 && NumArgs == UnlimitedArgs) {
+        Args.back() += "...";
+        break;
+      }
     }
   }
 

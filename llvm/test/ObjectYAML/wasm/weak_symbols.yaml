@@ -37,11 +37,17 @@ Sections:
   - Type:            CUSTOM
     Name:            linking
     DataSize:        10
-    SymbolInfo:
-      - Name:            function_export
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            function_export
         Flags:           [ BINDING_WEAK ]
-      - Name:            global_export
+        Function:        0
+      - Index:           1
+        Kind:            GLOBAL
+        Name:            global_export
         Flags:           [ BINDING_WEAK ]
+        Global:          0
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -58,8 +64,14 @@ Sections:
 # CHECK:   - Type:            CUSTOM
 # CHECK:     Name:            linking
 # CHECK:     DataSize:        10
-# CHECK:     SymbolInfo:
-# CHECK:       - Name:            function_export
-# CHECK:         Flags:           [ BINDING_WEAK ]
-# CHECK:       - Name:            global_export
-# CHECK:         Flags:           [ BINDING_WEAK ]
+# CHECK:     SymbolTable:
+# CHECK:      - Index:           0
+# CHECK:        Kind:            FUNCTION
+# CHECK:        Name:            function_export
+# CHECK:        Flags:           [ BINDING_WEAK ]
+# CHECK:        Function:        0
+# CHECK:      - Index:           1
+# CHECK:        Kind:            GLOBAL
+# CHECK:        Name:            global_export
+# CHECK:        Flags:           [ BINDING_WEAK ]
+# CHECK:        Global:          0

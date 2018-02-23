@@ -1561,6 +1561,8 @@ example:
     inlined into a function that has no ``"stack-probe-size"`` attribute
     at all, the resulting function has the ``"stack-probe-size"`` attribute
     of the callee.
+``"no-stack-arg-probe"``
+    This attribute disables ABI-required stack probes, if any.
 ``writeonly``
     On a function, this attribute indicates that the function may write to but
     does not read from memory.

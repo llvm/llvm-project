@@ -188,11 +188,10 @@ void MCStreamer::EmitZeros(uint64_t NumBytes) {
   emitFill(NumBytes, 0);
 }
 
-unsigned MCStreamer::EmitDwarfFileDirective(unsigned FileNo,
-                                            StringRef Directory,
-                                            StringRef Filename,
-                                            MD5::MD5Result *Checksum,
-                                            unsigned CUID) {
+Expected<unsigned>
+MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
+                                      StringRef Filename,
+                                      MD5::MD5Result *Checksum, unsigned CUID) {
   return getContext().getDwarfFile(Directory, Filename, FileNo, Checksum, CUID);
 }
 
