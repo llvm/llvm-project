@@ -18,6 +18,7 @@
 # CHECK: Section Headers
 # CHECK: .text
 # CHECK-NEXT: .orphan
+# CHECK-NEXT: .empty
 # CHECK-NEXT: .rw
 
 # CHECK: Segment Sections

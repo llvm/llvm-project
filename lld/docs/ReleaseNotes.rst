@@ -13,9 +13,9 @@ LLD 7.0.0 Release Notes
 Introduction
 ============
 
-This document contains the release notes for the LLD linker, release 7.0.0.
-Here we describe the status of LLD, including major improvements
-from the previous release. All LLD releases may be downloaded
+This document contains the release notes for the lld linker, release 7.0.0.
+Here we describe the status of lld, including major improvements
+from the previous release. All lld releases may be downloaded
 from the `LLVM releases web site <http://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release

@@ -1604,7 +1604,8 @@ size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
   method_die_offsets.clear();
   if (m_using_apple_tables) {
     if (m_apple_objc_ap.get())
-      m_apple_objc_ap->FindByName(class_name.GetCString(), method_die_offsets);
+      m_apple_objc_ap->FindByName(class_name.GetStringRef(),
+                                  method_die_offsets);
   } else {
     if (!m_indexed)
       Index();
@@ -2314,7 +2315,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
                                                           basename))
         basename = name_cstr;
 
-      m_apple_names_ap->FindByName(basename.data(), die_offsets);
+      m_apple_names_ap->FindByName(basename, die_offsets);
     }
   } else {
     // Index the DWARF if we haven't already
@@ -2620,8 +2621,6 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
   // Remember how many sc_list are in the list before we search in case
   // we are appending the results to a variable list.
 
-  const char *name_cstr = name.GetCString();
-
   const uint32_t original_size = sc_list.GetSize();
 
   DWARFDebugInfo *info = DebugInfo();
@@ -2642,7 +2641,8 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
         // want to canonicalize this (strip double spaces, etc.  For now, we
         // just add all the
         // dies that we find by exact match.
-        num_matches = m_apple_names_ap->FindByName(name_cstr, die_offsets);
+        num_matches =
+            m_apple_names_ap->FindByName(name.GetStringRef(), die_offsets);
         for (uint32_t i = 0; i < num_matches; i++) {
           const DIERef &die_ref = die_offsets[i];
           DWARFDIE die = info->GetDIE(die_ref);
@@ -2658,7 +2658,7 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
             GetObjectFile()->GetModule()->ReportErrorIfModifyDetected(
                 "the DWARF debug information has been modified (.apple_names "
                 "accelerator table had bad die 0x%8.8x for '%s')",
-                die_ref.die_offset, name_cstr);
+                die_ref.die_offset, name.GetCString());
           }
         }
       }
@@ -2667,7 +2667,8 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
         if (parent_decl_ctx && parent_decl_ctx->IsValid())
           return 0; // no selectors in namespaces
 
-        num_matches = m_apple_names_ap->FindByName(name_cstr, die_offsets);
+        num_matches =
+            m_apple_names_ap->FindByName(name.GetStringRef(), die_offsets);
         // Now make sure these are actually ObjC methods.  In this case we can
         // simply look up the name,
         // and if it is an ObjC method name, we're good.
@@ -2687,7 +2688,7 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
             GetObjectFile()->GetModule()->ReportError(
                 "the DWARF debug information has been modified (.apple_names "
                 "accelerator table had bad die 0x%8.8x for '%s')",
-                die_ref.die_offset, name_cstr);
+                die_ref.die_offset, name.GetCString());
           }
         }
         die_offsets.clear();
@@ -2703,7 +2704,8 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
 
         // FIXME: Arrange the logic above so that we don't calculate the base
         // name twice:
-        num_matches = m_apple_names_ap->FindByName(name_cstr, die_offsets);
+        num_matches =
+            m_apple_names_ap->FindByName(name.GetStringRef(), die_offsets);
 
         for (uint32_t i = 0; i < num_matches; i++) {
           const DIERef &die_ref = die_offsets[i];
@@ -2757,7 +2759,7 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
             GetObjectFile()->GetModule()->ReportErrorIfModifyDetected(
                 "the DWARF debug information has been modified (.apple_names "
                 "accelerator table had bad die 0x%8.8x for '%s')",
-                die_ref.die_offset, name_cstr);
+                die_ref.die_offset, name.GetCString());
           }
         }
         die_offsets.clear();
@@ -2981,8 +2983,7 @@ uint32_t SymbolFileDWARF::FindTypes(
 
   if (m_using_apple_tables) {
     if (m_apple_types_ap.get()) {
-      const char *name_cstr = name.GetCString();
-      m_apple_types_ap->FindByName(name_cstr, die_offsets);
+      m_apple_types_ap->FindByName(name.GetStringRef(), die_offsets);
     }
   } else {
     if (!m_indexed)
@@ -3075,8 +3076,7 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
 
   if (m_using_apple_tables) {
     if (m_apple_types_ap.get()) {
-      const char *name_cstr = name.GetCString();
-      m_apple_types_ap->FindByName(name_cstr, die_offsets);
+      m_apple_types_ap->FindByName(name.GetStringRef(), die_offsets);
     }
   } else {
     if (!m_indexed)
@@ -3144,8 +3144,7 @@ SymbolFileDWARF::FindNamespace(const SymbolContext &sc, const ConstString &name,
     // get indexed and make their global DIE index list
     if (m_using_apple_tables) {
       if (m_apple_namespaces_ap.get()) {
-        const char *name_cstr = name.GetCString();
-        m_apple_namespaces_ap->FindByName(name_cstr, die_offsets);
+        m_apple_namespaces_ap->FindByName(name.GetStringRef(), die_offsets);
       }
     } else {
       if (!m_indexed)
@@ -3338,9 +3337,8 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
   if (m_using_apple_tables) {
     if (m_apple_types_ap.get()) {
-      const char *name_cstr = type_name.GetCString();
-      m_apple_types_ap->FindCompleteObjCClassByName(name_cstr, die_offsets,
-                                                    must_be_implementation);
+      m_apple_types_ap->FindCompleteObjCClassByName(
+          type_name.GetStringRef(), die_offsets, must_be_implementation);
     }
   } else {
     if (!m_indexed)
@@ -3529,21 +3527,21 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
                   DWARFMappedHash::eAtomTypeQualNameHash);
           if (has_tag && has_qualified_name_hash) {
             const char *qualified_name = dwarf_decl_ctx.GetQualifiedName();
-            const uint32_t qualified_name_hash =
-                MappedHash::HashStringUsingDJB(qualified_name);
+            const uint32_t qualified_name_hash = llvm::djbHash(qualified_name);
             if (log)
               GetObjectFile()->GetModule()->LogMessage(
                   log, "FindByNameAndTagAndQualifiedNameHash()");
             m_apple_types_ap->FindByNameAndTagAndQualifiedNameHash(
-                type_name.GetCString(), tag, qualified_name_hash, die_offsets);
+                type_name.GetStringRef(), tag, qualified_name_hash,
+                die_offsets);
           } else if (has_tag) {
             if (log)
               GetObjectFile()->GetModule()->LogMessage(log,
                                                        "FindByNameAndTag()");
-            m_apple_types_ap->FindByNameAndTag(type_name.GetCString(), tag,
+            m_apple_types_ap->FindByNameAndTag(type_name.GetStringRef(), tag,
                                                die_offsets);
           } else {
-            m_apple_types_ap->FindByName(type_name.GetCString(), die_offsets);
+            m_apple_types_ap->FindByName(type_name.GetStringRef(), die_offsets);
           }
         }
       } else {
