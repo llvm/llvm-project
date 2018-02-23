@@ -65,6 +65,14 @@ class AsmPrinter;
 class DwarfDebug;
 
 class DwarfAccelTable {
+
+  static uint32_t HashDJB(StringRef Str) {
+    uint32_t h = 5381;
+    for (unsigned i = 0, e = Str.size(); i != e; ++i)
+      h = ((h << 5) + h) + Str[i];
+    return h;
+  }
+
   // Helper function to compute the number of buckets needed based on
   // the number of unique hashes.
   void ComputeBucketCount(void);
@@ -183,7 +191,7 @@ private:
     DwarfAccelTable::DataArray &Data; // offsets
     HashData(StringRef S, DwarfAccelTable::DataArray &Data)
         : Str(S), Data(Data) {
-      HashValue = dwarf::djbHash(S);
+      HashValue = DwarfAccelTable::HashDJB(S);
     }
 #ifndef NDEBUG
     void print(raw_ostream &O) {

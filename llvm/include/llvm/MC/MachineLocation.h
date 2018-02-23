@@ -16,14 +16,14 @@
 #define LLVM_MC_MACHINELOCATION_H
 
 #include <cstdint>
-#include <cassert>
 
 namespace llvm {
 
 class MachineLocation {
 private:
-  bool IsRegister = false;              ///< True if location is a register.
-  unsigned Register = 0;                ///< gcc/gdb register number.
+  bool IsRegister = false;              // True if location is a register.
+  unsigned Register = 0;                // gcc/gdb register number.
+  int Offset = 0;                       // Displacement if not register.
 
 public:
   enum : uint32_t {
@@ -34,11 +34,13 @@ public:
 
   MachineLocation() = default;
   /// Create a direct register location.
-  explicit MachineLocation(unsigned R, bool Indirect = false)
-      : IsRegister(!Indirect), Register(R) {}
+  explicit MachineLocation(unsigned R) : IsRegister(true), Register(R) {}
+  /// Create a register-indirect location with an offset.
+  MachineLocation(unsigned R, int O) : Register(R), Offset(O) {}
 
   bool operator==(const MachineLocation &Other) const {
-    return IsRegister == Other.IsRegister && Register == Other.Register;
+      return IsRegister == Other.IsRegister && Register == Other.Register &&
+        Offset == Other.Offset;
   }
 
   // Accessors.
@@ -46,8 +48,24 @@ public:
   bool isIndirect()      const { return !IsRegister; }
   bool isReg()           const { return IsRegister; }
   unsigned getReg()      const { return Register; }
+  int getOffset()        const { return Offset; }
   void setIsRegister(bool Is)  { IsRegister = Is; }
   void setRegister(unsigned R) { Register = R; }
+  void setOffset(int O)        { Offset = O; }
+
+  /// Make this location a direct register location.
+  void set(unsigned R) {
+    IsRegister = true;
+    Register = R;
+    Offset = 0;
+  }
+
+  /// Make this location a register-indirect+offset location.
+  void set(unsigned R, int O) {
+    IsRegister = false;
+    Register = R;
+    Offset = O;
+  }
 };
 
 inline bool operator!=(const MachineLocation &LHS, const MachineLocation &RHS) {

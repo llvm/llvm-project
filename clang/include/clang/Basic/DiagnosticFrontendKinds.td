@@ -196,11 +196,6 @@ def err_missing_module : Error<
 def err_no_submodule : Error<"no submodule named %0 in module '%1'">;
 def err_no_submodule_suggest : Error<
   "no submodule named %0 in module '%1'; did you mean '%2'?">;
-def warn_no_priv_submodule_use_toplevel : Warning<
-  "no submodule named %0 in module '%1'; using top level '%2'">,
-  InGroup<PrivateModule>, DefaultIgnore;
-def note_private_top_level_defined : Note<
-  "module defined here">;
 def warn_missing_submodule : Warning<"missing submodule '%0'">,
   InGroup<IncompleteUmbrella>;
 def note_module_import_here : Note<"module imported here">;
@@ -233,6 +228,10 @@ def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
+
+def err_no_apinotes_cache_path : Error<
+  "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
+  DefaultFatal;
 
 def warn_option_invalid_ocl_version : Warning<
   "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;

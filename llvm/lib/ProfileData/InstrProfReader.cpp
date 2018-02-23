@@ -733,6 +733,8 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
 }
 
 Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
+  static unsigned RecordIndex = 0;
+
   ArrayRef<NamedInstrProfRecord> Data;
 
   Error E = Index->getRecords(Data);

@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump - | FileCheck %s
 ; CHECK: debug_info contents
 ; CHECK: DW_AT_name{{.*}}= [[F1:.*]])
 ; CHECK: [[NS1:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
@@ -23,11 +23,6 @@
 ; CHECK-NOT: NULL
 ; CHECK: [[BAR:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_name{{.*}}= "bar"
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_MIPS_linkage_name
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "f1"
 ; CHECK: [[FUNC1:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
@@ -50,6 +45,11 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}}= "func_fwd"
 ; CHECK-NOT: DW_AT_declaration
+; CHECK: DW_TAG_subprogram
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_MIPS_linkage_name
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name{{.*}}= "f1"
 ; CHECK: NULL
 
 ; CHECK-NOT: NULL
@@ -66,8 +66,6 @@
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
 ; CHECK-NOT: NULL
 
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
@@ -361,5 +359,5 @@ attributes #1 = { nounwind readnone }
 !73 = !DILocation(line: 47, column: 21, scope: !26)
 !74 = !DILocation(line: 0, scope: !75)
 !75 = !DILexicalBlockFile(discriminator: 0, file: !5, scope: !27)
-!131 = !DIGlobalVariableExpression(var: !31, expr: !DIExpression())
-!132 = !DIGlobalVariableExpression(var: !32, expr: !DIExpression())
+!131 = !DIGlobalVariableExpression(var: !31)
+!132 = !DIGlobalVariableExpression(var: !32)

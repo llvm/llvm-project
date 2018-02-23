@@ -150,8 +150,9 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   uint64_t Filesize = Layout.SB->BlockSize * Layout.SB->NumBlocks;
   auto OutFileOrError = FileOutputBuffer::create(Filename, Filesize);
-  if (auto E = OutFileOrError.takeError())
-    return E;
+  if (OutFileOrError.getError())
+    return llvm::make_error<pdb::GenericError>(generic_error_code::invalid_path,
+                                               Filename);
   FileBufferByteStream Buffer(std::move(*OutFileOrError),
                               llvm::support::little);
   BinaryStreamWriter Writer(Buffer);

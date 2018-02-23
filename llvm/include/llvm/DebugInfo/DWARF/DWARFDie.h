@@ -108,13 +108,19 @@ public:
   ///
   /// \returns a valid DWARFDie instance if this object has children or an
   /// invalid DWARFDie instance if it doesn't.
-  DWARFDie getFirstChild() const;
+  DWARFDie getFirstChild() const {
+    if (isValid() && Die->hasChildren())
+      return DWARFDie(U, Die + 1);
+    return DWARFDie();
+  }
 
   /// Dump the DIE and all of its attributes to the supplied stream.
   ///
   /// \param OS the stream to use for output.
+  /// \param recurseDepth the depth to recurse to when dumping this DIE and its
+  /// children.
   /// \param indent the number of characters to indent each line that is output.
-  void dump(raw_ostream &OS, unsigned indent = 0,
+  void dump(raw_ostream &OS, unsigned recurseDepth, unsigned indent = 0,
             DIDumpOptions DumpOpts = DIDumpOptions()) const;
 
   /// Extract the specified attribute from this DIE.
@@ -296,10 +302,6 @@ inline bool operator==(const DWARFDie &LHS, const DWARFDie &RHS) {
 
 inline bool operator!=(const DWARFDie &LHS, const DWARFDie &RHS) {
   return !(LHS == RHS);
-}
-
-inline bool operator<(const DWARFDie &LHS, const DWARFDie &RHS) {
-  return LHS.getOffset() < RHS.getOffset();
 }
 
 class DWARFDie::iterator : public iterator_facade_base<iterator,

@@ -1,3 +1,0 @@
-CHECK: BINGO
-RUN: %cpp_compiler %S/SingleStrcmpTest.cpp -o %t-SingleStrcmpTest
-RUN: not %t-SingleStrcmpTest -seed=1  -use_cmp=0 -use_value_profile=1 -runs=10000000 2>&1 | FileCheck %s

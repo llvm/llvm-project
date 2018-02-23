@@ -70,7 +70,7 @@ public:
 
 private:
   const Driver &D;
-  llvm::Triple Triple;
+  const llvm::Triple Triple;
   const llvm::opt::ArgList &Args;
   // We need to initialize CachedRTTIArg before CachedRTTIMode
   const llvm::opt::Arg *const CachedRTTIArg;
@@ -112,8 +112,6 @@ protected:
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
-
-  void setTripleEnvironment(llvm::Triple::EnvironmentType Env);
 
   virtual Tool *buildAssembler() const;
   virtual Tool *buildLinker() const;
@@ -317,7 +315,7 @@ public:
 
   /// IsUnwindTablesDefault - Does this tool chain use -funwind-tables
   /// by default.
-  virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
+  virtual bool IsUnwindTablesDefault() const;
 
   /// \brief Test whether this toolchain defaults to PIC.
   virtual bool isPICDefault() const = 0;
@@ -433,10 +431,6 @@ public:
   virtual void
   AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args) const;
-
-  /// Returns if the C++ standard library should be linked in.
-  /// Note that e.g. -lm should still be linked even if this returns false.
-  bool ShouldLinkCXXStdlib(const llvm::opt::ArgList &Args) const;
 
   /// AddCXXStdlibLibArgs - Add the system specific linker arguments to use
   /// for the given C++ standard library type.

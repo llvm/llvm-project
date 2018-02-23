@@ -699,14 +699,15 @@ bool PeepholeOptimizer::findNextSource(unsigned Reg, unsigned SubReg,
     CurSrcPair = Pair;
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI,
                             !DisableAdvCopyOpt, TII);
+    ValueTrackerResult Res;
+    bool ShouldRewrite = false;
 
-    // Follow the chain of copies until we find a more suitable source, a phi
-    // or have to abort.
-    while (true) {
-      ValueTrackerResult Res = ValTracker.getNextSource();
-      // Abort at the end of a chain (without finding a suitable source).
+    do {
+      // Follow the chain of copies until we reach the top of the use-def chain
+      // or find a more suitable source.
+      Res = ValTracker.getNextSource();
       if (!Res.isValid())
-        return false;
+        break;
 
       // Insert the Def -> Use entry for the recently found source.
       ValueTrackerResult CurSrcRes = RewriteMap.lookup(CurSrcPair);
@@ -742,19 +743,24 @@ bool PeepholeOptimizer::findNextSource(unsigned Reg, unsigned SubReg,
       if (TargetRegisterInfo::isPhysicalRegister(CurSrcPair.Reg))
         return false;
 
-      // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
-      if (!TRI->shouldRewriteCopySrc(DefRC, SubReg, SrcRC, CurSrcPair.SubReg))
-        continue;
+      ShouldRewrite = TRI->shouldRewriteCopySrc(DefRC, SubReg, SrcRC,
+                                                CurSrcPair.SubReg);
+    } while (!ShouldRewrite);
 
-      // We currently cannot deal with subreg operands on PHI instructions
-      // (see insertPHI()).
-      if (PHICount > 0 && CurSrcPair.SubReg != 0)
-        continue;
+    // Continue looking for new sources...
+    if (Res.isValid())
+      continue;
 
-      // We found a suitable source, and are done with this chain.
-      break;
-    }
+    // Do not continue searching for a new source if the there's at least
+    // one use-def which cannot be rewritten.
+    if (!ShouldRewrite)
+      return false;
+  }
+
+  if (PHICount >= RewritePHILimit) {
+    DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
+    return false;
   }
 
   // If we did not find a more suitable source, there is nothing to optimize.
@@ -773,9 +779,6 @@ insertPHI(MachineRegisterInfo *MRI, const TargetInstrInfo *TII,
   assert(!SrcRegs.empty() && "No sources to create a PHI instruction?");
 
   const TargetRegisterClass *NewRC = MRI->getRegClass(SrcRegs[0].Reg);
-  // NewRC is only correct if no subregisters are involved. findNextSource()
-  // should have rejected those cases already.
-  assert(SrcRegs[0].SubReg == 0 && "should not have subreg operand");
   unsigned NewVR = MRI->createVirtualRegister(NewRC);
   MachineBasicBlock *MBB = OrigPHI->getParent();
   MachineInstrBuilder MIB = BuildMI(*MBB, OrigPHI, OrigPHI->getDebugLoc(),

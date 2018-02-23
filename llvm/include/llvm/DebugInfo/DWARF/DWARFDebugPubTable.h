@@ -69,7 +69,7 @@ private:
 public:
   DWARFDebugPubTable(StringRef Data, bool LittleEndian, bool GnuStyle);
 
-  void dump(raw_ostream &OS) const;
+  void dump(StringRef Name, raw_ostream &OS) const;
 
   ArrayRef<Set> getData() { return Sets; }
 };

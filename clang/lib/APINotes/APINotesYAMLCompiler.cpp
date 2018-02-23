@@ -187,8 +187,7 @@ namespace {
   struct Param {
     unsigned Position;
     Optional<bool> NoEscape = false;
-    Optional<NullabilityKind> Nullability;
-    Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
+    llvm::Optional<NullabilityKind> Nullability;
     StringRef Type;
   };
   typedef std::vector<Param> ParamsSeq;
@@ -198,8 +197,7 @@ namespace {
     MethodKind Kind;
     ParamsSeq Params;
     NullabilitySeq Nullability;
-    Optional<NullabilityKind> NullabilityOfRet;
-    Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
+    llvm::Optional<NullabilityKind> NullabilityOfRet;
     AvailabilityItem Availability;
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
@@ -241,8 +239,7 @@ namespace {
     StringRef Name;
     ParamsSeq Params;
     NullabilitySeq Nullability;
-    Optional<NullabilityKind> NullabilityOfRet;
-    Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
+    llvm::Optional<NullabilityKind> NullabilityOfRet;
     AvailabilityItem Availability;
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
@@ -412,23 +409,6 @@ namespace llvm {
       }
     };
 
-    template<>
-    struct ScalarEnumerationTraits<api_notes::RetainCountConventionKind> {
-      static void enumeration(IO &io,
-                              api_notes::RetainCountConventionKind &value) {
-        using api_notes::RetainCountConventionKind;
-        io.enumCase(value, "none", RetainCountConventionKind::None);
-        io.enumCase(value, "CFReturnsRetained",
-                    RetainCountConventionKind::CFReturnsRetained);
-        io.enumCase(value, "CFReturnsNotRetained",
-                    RetainCountConventionKind::CFReturnsNotRetained);
-        io.enumCase(value, "NSReturnsRetained",
-                    RetainCountConventionKind::NSReturnsRetained);
-        io.enumCase(value, "NSReturnsNotRetained",
-                    RetainCountConventionKind::NSReturnsNotRetained);
-      }
-    };
-
     template <>
     struct ScalarTraits<VersionTuple> {
       static void output(const VersionTuple &value, void*,
@@ -444,18 +424,17 @@ namespace llvm {
         return StringRef();
       }
 
-      static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+      static bool mustQuote(StringRef) { return false; }
     };
 
     template <>
     struct MappingTraits<Param> {
       static void mapping(IO &io, Param& p) {
-        io.mapRequired("Position",              p.Position);
-        io.mapOptional("Nullability",           p.Nullability, 
-                                                AbsentNullability);
-        io.mapOptional("RetainCountConvention", p.RetainCountConvention);
-        io.mapOptional("NoEscape",              p.NoEscape);
-        io.mapOptional("Type",                  p.Type, StringRef(""));
+        io.mapRequired("Position",        p.Position);
+        io.mapOptional("Nullability",     p.Nullability, 
+                                          AbsentNullability);
+        io.mapOptional("NoEscape",        p.NoEscape);
+        io.mapOptional("Type",            p.Type, StringRef(""));
       }
     };
 
@@ -478,22 +457,21 @@ namespace llvm {
     template <>
     struct MappingTraits<Method> {
       static void mapping(IO &io, Method& m) {
-        io.mapRequired("Selector",              m.Selector);
-        io.mapRequired("MethodKind",            m.Kind);
-        io.mapOptional("Parameters",            m.Params);
-        io.mapOptional("Nullability",           m.Nullability);
-        io.mapOptional("NullabilityOfRet",      m.NullabilityOfRet,
-                                                AbsentNullability);
-        io.mapOptional("RetainCountConvention", m.RetainCountConvention);
-        io.mapOptional("Availability",          m.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       m.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          m.SwiftPrivate);
-        io.mapOptional("SwiftName",             m.SwiftName);
-        io.mapOptional("FactoryAsInit",         m.FactoryAsInit,
-                                                FactoryAsInitKind::Infer);
-        io.mapOptional("DesignatedInit",        m.DesignatedInit, false);
-        io.mapOptional("Required",              m.Required, false);
-        io.mapOptional("ResultType",            m.ResultType, StringRef(""));
+        io.mapRequired("Selector",        m.Selector);
+        io.mapRequired("MethodKind",      m.Kind);
+        io.mapOptional("Parameters",      m.Params);
+        io.mapOptional("Nullability",     m.Nullability);
+        io.mapOptional("NullabilityOfRet",  m.NullabilityOfRet,
+                                            AbsentNullability);
+        io.mapOptional("Availability",    m.Availability.Mode);
+        io.mapOptional("AvailabilityMsg", m.Availability.Msg);
+        io.mapOptional("SwiftPrivate",    m.SwiftPrivate);
+        io.mapOptional("SwiftName",       m.SwiftName);
+        io.mapOptional("FactoryAsInit",   m.FactoryAsInit,
+                                          FactoryAsInitKind::Infer);
+        io.mapOptional("DesignatedInit",  m.DesignatedInit, false);
+        io.mapOptional("Required",        m.Required, false);
+        io.mapOptional("ResultType",      m.ResultType, StringRef(""));
       }
     };
 
@@ -518,17 +496,16 @@ namespace llvm {
     template <>
     struct MappingTraits<Function> {
       static void mapping(IO &io, Function& f) {
-        io.mapRequired("Name",                  f.Name);
-        io.mapOptional("Parameters",            f.Params);
-        io.mapOptional("Nullability",           f.Nullability);
-        io.mapOptional("NullabilityOfRet",      f.NullabilityOfRet,
-                                                AbsentNullability);
-        io.mapOptional("RetainCountConvention", f.RetainCountConvention);
-        io.mapOptional("Availability",          f.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       f.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          f.SwiftPrivate);
-        io.mapOptional("SwiftName",             f.SwiftName);
-        io.mapOptional("ResultType",            f.ResultType, StringRef(""));
+        io.mapRequired("Name",             f.Name);
+        io.mapOptional("Parameters",       f.Params);
+        io.mapOptional("Nullability",      f.Nullability);
+        io.mapOptional("NullabilityOfRet", f.NullabilityOfRet,
+                                           AbsentNullability);
+        io.mapOptional("Availability",     f.Availability.Mode);
+        io.mapOptional("AvailabilityMsg",  f.Availability.Msg);
+        io.mapOptional("SwiftPrivate",     f.SwiftPrivate);
+        io.mapOptional("SwiftName",        f.SwiftName);
+        io.mapOptional("ResultType",       f.ResultType, StringRef(""));
       }
     };
 
@@ -704,7 +681,6 @@ namespace {
           pi.setNullabilityAudited(*p.Nullability);
         pi.setNoEscape(p.NoEscape);
         pi.setType(p.Type);
-        pi.setRetainCountConvention(p.RetainCountConvention);
         while (outInfo.Params.size() <= p.Position) {
           outInfo.Params.push_back(ParamInfo());
         }
@@ -805,8 +781,6 @@ namespace {
       // Translate nullability info.
       convertNullability(meth.Nullability, meth.NullabilityOfRet,
                          mInfo, meth.Selector);
-
-      mInfo.setRetainCountConvention(meth.RetainCountConvention);
 
       // Write it.
       Writer->addObjCMethod(classID, selectorRef,
@@ -962,7 +936,6 @@ namespace {
                            function.NullabilityOfRet,
                            info, function.Name);
         info.ResultType = function.ResultType;
-        info.setRetainCountConvention(function.RetainCountConvention);
         Writer->addGlobalFunction(function.Name, info, swiftVersion);
       }
 
@@ -1245,7 +1218,6 @@ namespace {
         p.Nullability = pi.getNullability();
         p.NoEscape = pi.isNoEscape();
         p.Type = copyString(pi.getType());
-        p.RetainCountConvention = pi.getRetainCountConvention();
         params.push_back(p);
       }
     }
@@ -1315,7 +1287,6 @@ namespace {
       method.DesignatedInit = info.DesignatedInit;
       method.Required = info.Required;
       method.ResultType = copyString(info.ResultType);
-      method.RetainCountConvention = info.getRetainCountConvention();
       auto &items = getTopLevelItems(swiftVersion);
       knownContexts[contextID.Value].getContext(swiftVersion, items)
         .Methods.push_back(method);
@@ -1355,7 +1326,6 @@ namespace {
         handleNullability(function.Nullability, function.NullabilityOfRet,
                           info, info.NumAdjustedNullable-1);
       function.ResultType = copyString(info.ResultType);
-      function.RetainCountConvention = info.getRetainCountConvention();
       auto &items = getTopLevelItems(swiftVersion);
       items.Functions.push_back(function);
     }

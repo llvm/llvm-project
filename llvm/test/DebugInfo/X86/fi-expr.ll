@@ -1,11 +1,10 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
-; RUN:   | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; A hand-crafted FrameIndex location with a DW_OP_deref.
 ; CHECK: DW_TAG_formal_parameter
 ;                                          fbreg -8, deref
-; CHECK-NEXT: DW_AT_location {{.*}} (DW_OP_fbreg -8, DW_OP_deref)
+; CHECK-NEXT: DW_AT_location {{.*}} (<0x3> 91 78 06 )
 ; CHECK-NEXT: DW_AT_name {{.*}} "foo"
-
 define void @f(i8* %bar) !dbg !6 {
 entry:
   %foo.addr = alloca i8*

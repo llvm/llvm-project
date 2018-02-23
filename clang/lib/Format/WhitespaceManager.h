@@ -154,11 +154,12 @@ public:
     const Change *StartOfBlockComment;
     int IndentationOffset;
 
-    // A combination of indent level and nesting level, which are used in
+    // A combination of nesting level and indent level, which are used in
     // tandem to compute lexical scope, for the purposes of deciding
     // when to stop consecutive alignment runs.
-    std::pair<unsigned, unsigned> indentAndNestingLevel() const {
-      return std::make_pair(Tok->IndentLevel, Tok->NestingLevel);
+    std::pair<unsigned, unsigned>
+    nestingAndIndentLevel() const {
+      return std::make_pair(Tok->NestingLevel, Tok->IndentLevel);
     }
   };
 

@@ -1087,8 +1087,7 @@ void PGOUseFunc::setBranchWeights() {
     TerminatorInst *TI = BB.getTerminator();
     if (TI->getNumSuccessors() < 2)
       continue;
-    if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI)))
+    if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))
       continue;
     if (getBBInfo(&BB).CountValue == 0)
       continue;

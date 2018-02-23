@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeViewDebug.h"
-#include "DwarfExpression.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -983,29 +982,17 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       const MachineInstr *DVInst = Range.first;
       assert(DVInst->isDebugValue() && "Invalid History entry");
       const DIExpression *DIExpr = DVInst->getDebugExpression();
-      bool InMemory = DVInst->getOperand(1).isImm();
       bool IsSubfield = false;
       unsigned StructOffset = 0;
-      // Recognize a +Offset expression.
-      int Offset = 0;
-      DIExpressionCursor Ops(DIExpr);
-      auto Op = Ops.peek();
-      if (Op && Op->getOp() == dwarf::DW_OP_plus_uconst) {
-        Offset = Op->getArg(0);
-        Ops.take();
-      }
 
       // Handle fragments.
-      auto Fragment = Ops.getFragmentInfo();
+      auto Fragment = DIExpr->getFragmentInfo();
       if (Fragment) {
         IsSubfield = true;
         StructOffset = Fragment->OffsetInBits / 8;
+      } else if (DIExpr->getNumElements() > 0) {
+        continue; // Ignore unrecognized exprs.
       }
-      // Ignore unrecognized exprs.
-      if (Ops.peek() && Ops.peek()->getOp() != dwarf::DW_OP_LLVM_fragment)
-        continue;
-      if (!InMemory && Offset)
-        continue;
 
       // Bail if operand 0 is not a valid register. This means the variable is a
       // simple constant, or is described by a complex expression.
@@ -1018,6 +1005,8 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 
       // Handle the two cases we can handle: indirect in memory and in register.
       unsigned CVReg = TRI->getCodeViewRegNum(Reg);
+      bool InMemory = DVInst->getOperand(1).isImm();
+      int Offset = InMemory ? DVInst->getOperand(1).getImm() : 0;
       {
         LocalVarDefRange DR;
         DR.CVRegister = CVReg;
@@ -1204,12 +1193,11 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
            "codeview doesn't support subranges with lower bounds");
     int64_t Count = Subrange->getCount();
 
-    // Variable length arrays and forward declarations of arrays without a size
-    // use a count of -1. Emit a count (and overall size) or zero in these cases
-    // to match what MSVC does for array declarations with no count.
+    // Variable Length Array (VLA) has Count equal to '-1'.
+    // Replace with Count '1', assume it is the minimum VLA length.
     // FIXME: Make front-end support VLA subrange and emit LF_DIMVARLU.
     if (Count == -1)
-      Count = 0;
+      Count = 1;
 
     // Update the element size and element type index for subsequent subranges.
     ElementSize *= Count;
@@ -1655,7 +1643,7 @@ struct llvm::ClassInfo {
 
   TypeIndex VShapeTI;
 
-  std::vector<const DIType *> NestedTypes;
+  std::vector<const DICompositeType *> NestedClasses;
 };
 
 void CodeViewDebug::clear() {
@@ -1706,14 +1694,12 @@ ClassInfo CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
       } else if (DDTy->getTag() == dwarf::DW_TAG_pointer_type &&
                  DDTy->getName() == "__vtbl_ptr_type") {
         Info.VShapeTI = getTypeIndex(DDTy);
-      } else if (DDTy->getTag() == dwarf::DW_TAG_typedef) {
-        Info.NestedTypes.push_back(DDTy);
       } else if (DDTy->getTag() == dwarf::DW_TAG_friend) {
         // Ignore friend members. It appears that MSVC emitted info about
         // friends in the past, but modern versions do not.
       }
     } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
-      Info.NestedTypes.push_back(Composite);
+      Info.NestedClasses.push_back(Composite);
     }
     // Skip other unrecognized kinds of elements.
   }
@@ -1922,7 +1908,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   }
 
   // Create nested classes.
-  for (const DIType *Nested : Info.NestedTypes) {
+  for (const DICompositeType *Nested : Info.NestedClasses) {
     NestedTypeRecord R(getTypeIndex(DITypeRef(Nested)), Nested->getName());
     FLBR.writeMemberType(R);
     MemberCount++;
@@ -1930,7 +1916,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
 
   TypeIndex FieldTI = FLBR.end(true);
   return std::make_tuple(FieldTI, Info.VShapeTI, MemberCount,
-                         !Info.NestedTypes.empty());
+                         !Info.NestedClasses.empty());
 }
 
 TypeIndex CodeViewDebug::getVBPTypeIndex() {
@@ -2170,8 +2156,6 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
   if (!DL && MI->getParent() != PrevInstBB) {
     for (const auto &NextMI : *MI->getParent()) {
-      if (NextMI.isDebugValue())
-        continue;
       DL = NextMI.getDebugLoc();
       if (DL)
         break;

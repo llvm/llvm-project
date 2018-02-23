@@ -4,14 +4,12 @@ from __future__ import print_function
 
 import argparse
 import cgi
-import codecs
 import errno
 import functools
 from multiprocessing import cpu_count
 import os.path
 import re
 import shutil
-import sys
 
 from pygments import highlight
 from pygments.lexers.c_cpp import CppLexer
@@ -35,13 +33,6 @@ class Context:
 
 context = Context()
 
-def suppress(remark):
-    if remark.Name == 'sil.Specialized':
-        return remark.getArgDict()['Function'][0].startswith('\"Swift.')
-    elif remark.Name == 'sil.Inlined':
-        return remark.getArgDict()['Callee'][0].startswith(('\"Swift.', '\"specialized Swift.'))
-    return False
-
 class SourceFileRenderer:
     def __init__(self, source_dir, output_dir, filename):
         existing_filename = None
@@ -52,7 +43,7 @@ class SourceFileRenderer:
             if os.path.exists(fn):
                 existing_filename = fn
 
-        self.stream = codecs.open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w', encoding='utf-8')
+        self.stream = open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w')
         if existing_filename:
             self.source_stream = open(existing_filename)
         else:
@@ -68,29 +59,15 @@ class SourceFileRenderer:
 
     def render_source_lines(self, stream, line_remarks):
         file_text = stream.read()
+        html_highlighted = highlight(file_text, self.cpp_lexer, self.html_formatter)
 
-        if args.no_highlight:
-            html_highlighted = file_text.decode('utf-8')
-        else:
-            html_highlighted = highlight(
-            file_text,
-                self.cpp_lexer,
-                self.html_formatter)
-
-            # Note that the API is different between Python 2 and 3.  On
-            # Python 3, pygments.highlight() returns a bytes object, so we
-            # have to decode.  On Python 2, the output is str but since we
-            # support unicode characters and the output streams is unicode we
-            # decode too.
-            html_highlighted = html_highlighted.decode('utf-8')
-
-            # Take off the header and footer, these must be
-            #   reapplied line-wise, within the page structure
-            html_highlighted = html_highlighted.replace('<div class="highlight"><pre>', '')
-            html_highlighted = html_highlighted.replace('</pre></div>', '')
+        # Take off the header and footer, these must be
+        #   reapplied line-wise, within the page structure
+        html_highlighted = html_highlighted.replace('<div class="highlight"><pre>', '')
+        html_highlighted = html_highlighted.replace('</pre></div>', '')
 
         for (linenum, html_line) in enumerate(html_highlighted.split('\n'), start=1):
-            print(u'''
+            print('''
 <tr>
 <td><a name=\"L{linenum}\">{linenum}</a></td>
 <td></td>
@@ -99,15 +76,13 @@ class SourceFileRenderer:
 </tr>'''.format(**locals()), file=self.stream)
 
             for remark in line_remarks.get(linenum, []):
-                if not suppress(remark):
-                    self.render_inline_remarks(remark, html_line)
+                self.render_inline_remarks(remark, html_line)
 
     def render_inline_remarks(self, r, line):
         inlining_context = r.DemangledFunctionName
         dl = context.caller_loc.get(r.Function)
         if dl:
-            dl_dict = dict(list(dl))
-            link = optrecord.make_link(dl_dict['File'], dl_dict['Line'] - 2)
+            link = optrecord.make_link(dl['File'], dl['Line'] - 2)
             inlining_context = "<a href={link}>{r.DemangledFunctionName}</a>".format(**locals())
 
         # Column is the number of characters *including* tabs, keep those and
@@ -115,7 +90,7 @@ class SourceFileRenderer:
         indent = line[:max(r.Column, 1) - 1]
         indent = re.sub('\S', ' ', indent)
 
-        print(u'''
+        print('''
 <tr>
 <td></td>
 <td>{r.RelativeHotness}</td>
@@ -130,40 +105,34 @@ class SourceFileRenderer:
 
         print('''
 <html>
-<meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
 </head>
 <body>
 <div class="centered">
-<table class="source">
-<thead>
+<table>
 <tr>
-<th style="width: 2%">Line</td>
-<th style="width: 3%">Hotness</td>
-<th style="width: 10%">Optimization</td>
-<th style="width: 70%">Source</td>
-<th style="width: 15%">Inline Context</td>
-</tr>
-</thead>
-<tbody>''', file=self.stream)
+<td>Line</td>
+<td>Hotness</td>
+<td>Optimization</td>
+<td>Source</td>
+<td>Inline Context</td>
+</tr>''', file=self.stream)
         self.render_source_lines(self.source_stream, line_remarks)
 
         print('''
-</tbody>
 </table>
 </body>
 </html>''', file=self.stream)
 
 
 class IndexRenderer:
-    def __init__(self, output_dir, should_display_hotness):
-        self.stream = codecs.open(os.path.join(output_dir, 'index.html'), 'w', encoding='utf-8')
-        self.should_display_hotness = should_display_hotness
+    def __init__(self, output_dir):
+        self.stream = open(os.path.join(output_dir, 'index.html'), 'w')
 
     def render_entry(self, r, odd):
         escaped_name = cgi.escape(r.DemangledFunctionName)
-        print(u'''
+        print('''
 <tr>
 <td class=\"column-entry-{odd}\"><a href={r.Link}>{r.DebugLocString}</a></td>
 <td class=\"column-entry-{odd}\">{r.RelativeHotness}</td>
@@ -174,7 +143,6 @@ class IndexRenderer:
     def render(self, all_remarks):
         print('''
 <html>
-<meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
 </head>
@@ -187,14 +155,8 @@ class IndexRenderer:
 <td>Function</td>
 <td>Pass</td>
 </tr>''', file=self.stream)
-
-        max_entries = None
-        if should_display_hotness:
-            max_entries = args.max_hottest_remarks_on_index
-
-        for i, remark in enumerate(all_remarks[:max_entries]):
-            if not suppress(remark):
-                self.render_entry(remark, i % 2)
+        for i, remark in enumerate(all_remarks):
+            self.render_entry(remark, i % 2)
         print('''
 </table>
 </body>
@@ -214,11 +176,10 @@ def map_remarks(all_remarks):
     for remark in optrecord.itervalues(all_remarks):
         if isinstance(remark, optrecord.Passed) and remark.Pass == "inline" and remark.Name == "Inlined":
             for arg in remark.Args:
-                arg_dict = dict(list(arg))
-                caller = arg_dict.get('Caller')
+                caller = arg.get('Caller')
                 if caller:
                     try:
-                        context.caller_loc[caller] = arg_dict['DebugLoc']
+                        context.caller_loc[caller] = arg['DebugLoc']
                     except KeyError:
                         pass
 
@@ -250,7 +211,7 @@ def generate_report(all_remarks,
         sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function), reverse=True)
     else:
         sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function))
-    IndexRenderer(args.output_dir, should_display_hotness).render(sorted_remarks)
+    IndexRenderer(args.output_dir).render(sorted_remarks)
 
     shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)),
             "style.css"), output_dir)
@@ -277,7 +238,7 @@ if __name__ == '__main__':
         type=int,
         help='Max job count (defaults to %(default)s, the current CPU count)')
     parser.add_argument(
-        '--source-dir',
+        '-source-dir',
         '-s',
         default='',
         help='set source directory')
@@ -288,26 +249,11 @@ if __name__ == '__main__':
         default=False,
         help='Do not display any indicator of how many YAML files were read '
              'or rendered into HTML.')
-    parser.add_argument(
-        '--max-hottest-remarks-on-index',
-        default=1000,
-        type=int,
-        help='Maximum number of the hottest remarks to appear on the index page')
-    parser.add_argument(
-        '--no-highlight',
-        action='store_true',
-        default=False,
-        help='Do not use a syntax highlighter when rendering the source code')
-    parser.add_argument(
-        '--demangler',
-        help='Set the demangler to be used (defaults to %s)' % optrecord.Remark.default_demangler)
     args = parser.parse_args()
 
     print_progress = not args.no_progress_indicator
-    if args.demangler:
-        optrecord.Remark.set_demangler(args.demangler)
 
-    files = optrecord.find_opt_files(*args.yaml_dirs_or_files)
+    files = optrecord.find_opt_files(args.yaml_dirs_or_files)
     if not files:
         parser.error("No *.opt.yaml files found")
         sys.exit(1)

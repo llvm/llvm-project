@@ -59,7 +59,6 @@ public:
     Initializer,
     NewAllocator,
     LifetimeEnds,
-    LoopExit,
     // dtor kind
     AutomaticObjectDtor,
     DeleteDtor,
@@ -167,29 +166,6 @@ private:
   static bool isKind(const CFGElement &elem) {
     return elem.getKind() == NewAllocator;
   }
-};
-
-/// Represents the point where a loop ends.
-/// This element is is only produced when building the CFG for the static
-/// analyzer and hidden behind the 'cfg-loopexit' analyzer config flag.
-///
-/// Note: a loop exit element can be reached even when the loop body was never
-/// entered.
-class CFGLoopExit : public CFGElement {
-public:
-    explicit CFGLoopExit(const Stmt *stmt)
-            : CFGElement(LoopExit, stmt) {}
-
-    const Stmt *getLoopStmt() const {
-      return static_cast<Stmt *>(Data1.getPointer());
-    }
-
-private:
-    friend class CFGElement;
-    CFGLoopExit() {}
-    static bool isKind(const CFGElement &elem) {
-      return elem.getKind() == LoopExit;
-    }
 };
 
 /// Represents the point where the lifetime of an automatic object ends
@@ -752,10 +728,6 @@ public:
     Elements.push_back(CFGLifetimeEnds(VD, S), C);
   }
 
-  void appendLoopExit(const Stmt *LoopStmt, BumpVectorContext &C) {
-    Elements.push_back(CFGLoopExit(LoopStmt), C);
-  }
-
   void appendDeleteDtor(CXXRecordDecl *RD, CXXDeleteExpr *DE, BumpVectorContext &C) {
     Elements.push_back(CFGDeleteDtor(RD, DE), C);
   }
@@ -822,7 +794,6 @@ public:
     bool AddInitializers;
     bool AddImplicitDtors;
     bool AddLifetime;
-    bool AddLoopExit;
     bool AddTemporaryDtors;
     bool AddStaticInitBranches;
     bool AddCXXNewAllocator;
@@ -847,7 +818,7 @@ public:
         PruneTriviallyFalseEdges(true),
         AddEHEdges(false),
         AddInitializers(false), AddImplicitDtors(false),
-        AddLifetime(false), AddLoopExit(false),
+        AddLifetime(false),
         AddTemporaryDtors(false), AddStaticInitBranches(false),
         AddCXXNewAllocator(false), AddCXXDefaultInitExprInCtors(false) {}
   };

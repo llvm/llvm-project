@@ -145,8 +145,6 @@ public:
   const char *NameUID;
   DeclPredicateNode(const char *NameUID) : NameUID(NameUID) {}
 
-  virtual ~DeclPredicateNode() { }
-
   static std::unique_ptr<DeclPredicateNode>
   create(const DeclPredicate &Predicate);
   static std::unique_ptr<DeclPredicateNode>

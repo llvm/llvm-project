@@ -1,0 +1,6 @@
+REQUIRES: linux
+
+RUN: not LLVMFuzzer-TableLookupTest -print_final_stats=1 2>&1 | FileCheck %s
+CHECK: BINGO
+// Expecting >= 4096 new_units_added
+CHECK: stat::new_units_added:{{.*[4][0-9][0-9][0-9]}}

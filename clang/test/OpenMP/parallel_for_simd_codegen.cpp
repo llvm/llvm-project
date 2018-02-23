@@ -114,7 +114,6 @@ void simple(float *a, float *b, float *c, float *d) {
   int lin = 12;
   #pragma omp parallel for simd linear(lin : get_val()), linear(g_ptr)
 
-// CHECK: alloca i32,
 // Init linear private var.
 // CHECK: [[LIN_VAR:%.+]] = load i32*, i32** %
 // CHECK: [[LIN_LOAD:%.+]] = load i32, i32* [[LIN_VAR]]

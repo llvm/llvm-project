@@ -8,9 +8,9 @@
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[INT]]
+; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[INT]])
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[BASE]]
+; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[BASE]])
 
 ; Make sure llvm-link only generates a single copy of the struct.
 ; LINK: DW_TAG_structure_type

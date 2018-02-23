@@ -240,8 +240,7 @@ private:
                            FileID FID, unsigned Offset,
                            ASTNodeInfo ASTNode) override {
     // Ignore the predefines buffer.
-    const FileEntry *FE = PP->getSourceManager().getFileEntryForID(FID);
-    if (!FE)
+    if (FID == PP->getPredefinesFileID())
       return true;
 
     FileIndexRecord &Rec = getFileIndexRecord(FID);

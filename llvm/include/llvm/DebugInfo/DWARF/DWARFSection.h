@@ -17,11 +17,7 @@ namespace llvm {
 
 struct DWARFSection {
   StringRef Data;
-};
-
-struct SectionName {
-  StringRef Name;
-  bool IsNameUnique;
+  RelocAddrMap Relocs;
 };
 
 } // end namespace llvm

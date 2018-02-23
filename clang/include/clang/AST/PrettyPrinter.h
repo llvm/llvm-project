@@ -51,7 +51,6 @@ struct PrintingPolicy {
       TerseOutput(false), PolishForDeclaration(false),
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
       IncludeNewlines(true), MSVCFormatting(false),
-      ConstantsAsWritten(false), SuppressImplicitBase(false),
       UseStdFunctionForLambda(false) { }
 
   /// \brief Adjust this printing policy for cases where it's known that
@@ -206,27 +205,6 @@ struct PrintingPolicy {
   /// prints anonymous namespaces as `anonymous namespace' and does not insert
   /// spaces after template arguments.
   bool MSVCFormatting : 1;
-
-  /// \brief Whether we should print the constant expressions as written in the
-  /// sources.
-  ///
-  /// This flag determines whether constants expressions like
-  ///
-  /// \code
-  /// 0x10
-  /// 2.5e3
-  /// \endcode
-  ///
-  /// will be printed as written or as follows:
-  ///
-  /// \code
-  /// 0x10
-  /// 2.5e3
-  /// \endcode
-  bool ConstantsAsWritten : 1;
-
-  /// \brief When true, don't print the implicit 'self' or 'this' expressions.
-  bool SuppressImplicitBase : 1;
 
   /// \brief Whether we should use std::function<...> for lambda record types.
   bool UseStdFunctionForLambda : 1;

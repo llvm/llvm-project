@@ -24,7 +24,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -1661,13 +1660,9 @@ static void diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
 
   bool IsAligned = false;
   if (FD.isReplaceableGlobalAllocationFunction(&IsAligned) && IsAligned) {
-    const llvm::Triple &T = S.getASTContext().getTargetInfo().getTriple();
-    StringRef OSName = AvailabilityAttr::getPlatformNameSourceSpelling(
-        S.getASTContext().getTargetInfo().getPlatformName());
-
     S.Diag(Loc, diag::warn_aligned_allocation_unavailable)
-         << IsDelete << FD.getType().getAsString() << OSName
-         << alignedAllocMinVersion(T.getOS()).getAsString();
+         << IsDelete << FD.getType().getAsString()
+         << S.getASTContext().getTargetInfo().getTriple().str();
     S.Diag(Loc, diag::note_silence_unligned_allocation_unavailable);
   }
 }

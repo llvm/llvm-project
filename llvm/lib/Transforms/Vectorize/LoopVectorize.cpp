@@ -574,11 +574,6 @@ protected:
   /// Returns (and creates if needed) the trip count of the widened loop.
   Value *getOrCreateVectorTripCount(Loop *NewLoop);
 
-  /// Returns a bitcasted value to the requested vector type.
-  /// Also handles bitcasts of vector<float> <-> vector<pointer> types.
-  Value *createBitOrPointerCast(Value *V, VectorType *DstVTy,
-                                const DataLayout &DL);
-
   /// Emit a bypass check to see if the vector trip count is zero, including if
   /// it overflows.
   void emitMinimumIterationCountCheck(Loop *L, BasicBlock *Bypass);
@@ -1014,19 +1009,6 @@ public:
 
   Instruction *getInsertPos() const { return InsertPos; }
   void setInsertPos(Instruction *Inst) { InsertPos = Inst; }
-
-  /// Add metadata (e.g. alias info) from the instructions in this group to \p
-  /// NewInst.
-  ///
-  /// FIXME: this function currently does not add noalias metadata a'la
-  /// addNewMedata.  To do that we need to compute the intersection of the
-  /// noalias info from all members.
-  void addMetadata(Instruction *NewInst) const {
-    SmallVector<Value *, 4> VL;
-    std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                   [](std::pair<int, Instruction *> p) { return p.second; });
-    propagateMetadata(NewInst, VL);
-  }
 
 private:
   unsigned Factor; // Interleave Factor.
@@ -2861,7 +2843,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   if (Instr != Group->getInsertPos())
     return;
 
-  const DataLayout &DL = Instr->getModule()->getDataLayout();
   Value *Ptr = getPointerOperand(Instr);
 
   // Prepare for the vector type of the interleaved load/store.
@@ -2915,7 +2896,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
     for (unsigned Part = 0; Part < UF; Part++) {
       auto *NewLoad = Builder.CreateAlignedLoad(
           NewPtrs[Part], Group->getAlignment(), "wide.vec");
-      Group->addMetadata(NewLoad);
+      addMetadata(NewLoad, Instr);
       NewLoads.push_back(NewLoad);
     }
 
@@ -2936,7 +2917,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
           VectorType *OtherVTy = VectorType::get(Member->getType(), VF);
-          StridedVec = createBitOrPointerCast(StridedVec, OtherVTy, DL);
+          StridedVec = Builder.CreateBitOrPointerCast(StridedVec, OtherVTy);
         }
 
         if (Group->isReverse())
@@ -2965,10 +2946,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
       if (Group->isReverse())
         StoredVec = reverseVector(StoredVec);
 
-      // If this member has different type, cast it to a unified type.
-
+      // If this member has different type, cast it to an unified type.
       if (StoredVec->getType() != SubVT)
-        StoredVec = createBitOrPointerCast(StoredVec, SubVT, DL);
+        StoredVec = Builder.CreateBitOrPointerCast(StoredVec, SubVT);
 
       StoredVecs.push_back(StoredVec);
     }
@@ -2983,8 +2963,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
 
     Instruction *NewStoreInstr =
         Builder.CreateAlignedStore(IVec, NewPtrs[Part], Group->getAlignment());
-
-    Group->addMetadata(NewStoreInstr);
+    addMetadata(NewStoreInstr, Instr);
   }
 }
 
@@ -3300,36 +3279,6 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   VectorTripCount = Builder.CreateSub(TC, R, "n.vec");
 
   return VectorTripCount;
-}
-
-Value *InnerLoopVectorizer::createBitOrPointerCast(Value *V, VectorType *DstVTy,
-                                                   const DataLayout &DL) {
-  // Verify that V is a vector type with same number of elements as DstVTy.
-  unsigned VF = DstVTy->getNumElements();
-  VectorType *SrcVecTy = cast<VectorType>(V->getType());
-  assert((VF == SrcVecTy->getNumElements()) && "Vector dimensions do not match");
-  Type *SrcElemTy = SrcVecTy->getElementType();
-  Type *DstElemTy = DstVTy->getElementType();
-  assert((DL.getTypeSizeInBits(SrcElemTy) == DL.getTypeSizeInBits(DstElemTy)) &&
-         "Vector elements must have same size");
-
-  // Do a direct cast if element types are castable.
-  if (CastInst::isBitOrNoopPointerCastable(SrcElemTy, DstElemTy, DL)) {
-    return Builder.CreateBitOrPointerCast(V, DstVTy);
-  }
-  // V cannot be directly casted to desired vector type.
-  // May happen when V is a floating point vector but DstVTy is a vector of
-  // pointers or vice-versa. Handle this using a two-step bitcast using an
-  // intermediate Integer type for the bitcast i.e. Ptr <-> Int <-> Float.
-  assert((DstElemTy->isPointerTy() != SrcElemTy->isPointerTy()) &&
-         "Only one type should be a pointer type");
-  assert((DstElemTy->isFloatingPointTy() != SrcElemTy->isFloatingPointTy()) &&
-         "Only one type should be a floating point type");
-  Type *IntTy =
-      IntegerType::getIntNTy(V->getContext(), DL.getTypeSizeInBits(SrcElemTy));
-  VectorType *VecIntTy = VectorType::get(IntTy, VF);
-  Value *CastVal = Builder.CreateBitOrPointerCast(V, VecIntTy);
-  return Builder.CreateBitOrPointerCast(CastVal, DstVTy);
 }
 
 void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
@@ -5145,15 +5094,12 @@ bool LoopVectorizationLegality::canVectorize() {
   // Store the result and return it at the end instead of exiting early, in case
   // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
   bool Result = true;
-
-  bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
-  if (DoExtraAnalysis)
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!TheLoop->getLoopPreheader()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-  if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5166,7 +5112,7 @@ bool LoopVectorizationLegality::canVectorize() {
   if (!TheLoop->empty()) {
     ORE->emit(createMissedAnalysis("NotInnermostLoop")
               << "loop is not the innermost loop");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5176,7 +5122,7 @@ bool LoopVectorizationLegality::canVectorize() {
   if (TheLoop->getNumBackEdges() != 1) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5186,7 +5132,7 @@ bool LoopVectorizationLegality::canVectorize() {
   if (!TheLoop->getExitingBlock()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5198,7 +5144,7 @@ bool LoopVectorizationLegality::canVectorize() {
   if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5212,7 +5158,7 @@ bool LoopVectorizationLegality::canVectorize() {
   unsigned NumBlocks = TheLoop->getNumBlocks();
   if (NumBlocks != 1 && !canVectorizeWithIfConvert()) {
     DEBUG(dbgs() << "LV: Can't if-convert the loop.\n");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5221,7 +5167,7 @@ bool LoopVectorizationLegality::canVectorize() {
   // Check if we can vectorize the instructions and CFG in this loop.
   if (!canVectorizeInstrs()) {
     DEBUG(dbgs() << "LV: Can't vectorize the instructions or CFG\n");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5230,7 +5176,7 @@ bool LoopVectorizationLegality::canVectorize() {
   // Go over each instruction and look at memory deps.
   if (!canVectorizeMemory()) {
     DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;
@@ -5261,7 +5207,7 @@ bool LoopVectorizationLegality::canVectorize() {
               << "Too many SCEV assumptions need to be made and checked "
               << "at runtime");
     DEBUG(dbgs() << "LV: Too many SCEV checks needed.\n");
-    if (DoExtraAnalysis)
+    if (ORE->allowExtraAnalysis())
       Result = false;
     else
       return false;

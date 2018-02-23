@@ -38,20 +38,24 @@ namespace PR18246 {
 
   template<typename T>
   template<int N>
-  void Baz<T>::bar() {
+  void Baz<T>::bar() { // expected-note {{couldn't infer template argument 'N'}}
   }
 
+  // FIXME: We shouldn't try to match this against a prior declaration if
+  // template parameter matching failed.
   template<typename T>
-  void Baz<T>::bar<0>() { // expected-error {{cannot specialize a member of an unspecialized template}}
+  void Baz<T>::bar<0>() { // expected-error {{cannot specialize a member of an unspecialized template}} \
+                          // expected-error {{no function template matches}}
   }
 }
 
 namespace PR19340 {
 template<typename T> struct Helper {
-  template<int N> static void func(const T *m) {}
+  template<int N> static void func(const T *m) {} // expected-note {{failed template argument deduction}}
 };
 
-template<typename T> void Helper<T>::func<2>() {} // expected-error {{cannot specialize a member}}
+template<typename T> void Helper<T>::func<2>() {} // expected-error {{cannot specialize a member}} \
+                                                  // expected-error {{no function template matches}}
 }
 
 namespace SpecLoc {

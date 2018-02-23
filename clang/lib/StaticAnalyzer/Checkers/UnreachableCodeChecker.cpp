@@ -112,7 +112,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
       continue;
 
     // Check for false positives
-    if (isInvalidPath(CB, *PM))
+    if (CB->size() > 0 && isInvalidPath(CB, *PM))
       continue;
 
     // It is good practice to always have a "default" label in a "switch", even

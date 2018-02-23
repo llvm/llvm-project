@@ -235,14 +235,6 @@ public:
   virtual void PragmaWarningPop(SourceLocation Loc) {
   }
 
-  /// \brief Callback invoked when a \#pragma clang assume_nonnull begin directive
-  /// is read.
-  virtual void PragmaAssumeNonNullBegin(SourceLocation Loc) {}
-
-  /// \brief Callback invoked when a \#pragma clang assume_nonnull end directive
-  /// is read.
-  virtual void PragmaAssumeNonNullEnd(SourceLocation Loc) {}
-
   /// \brief Called by Preprocessor::HandleMacroExpandedIdentifier when a
   /// macro invocation is found.
   virtual void MacroExpands(const Token &MacroNameTok,
@@ -274,10 +266,7 @@ public:
   /// \brief Hook called when a source range is skipped.
   /// \param Range The SourceRange that was skipped. The range begins at the
   /// \#if/\#else directive and ends after the \#endif/\#else directive.
-  /// \param EndifLoc The end location of the 'endif' token, which may precede
-  /// the range skipped by the directive (e.g excluding comments after an
-  /// 'endif').
-  virtual void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) {
+  virtual void SourceRangeSkipped(SourceRange Range) {
   }
 
   enum ConditionValueKind {
@@ -448,16 +437,6 @@ public:
     Second->PragmaWarningPop(Loc);
   }
 
-  void PragmaAssumeNonNullBegin(SourceLocation Loc) override {
-    First->PragmaAssumeNonNullBegin(Loc);
-    Second->PragmaAssumeNonNullBegin(Loc);
-  }
-
-  void PragmaAssumeNonNullEnd(SourceLocation Loc) override {
-    First->PragmaAssumeNonNullEnd(Loc);
-    Second->PragmaAssumeNonNullEnd(Loc);
-  }
-
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
     First->MacroExpands(MacroNameTok, MD, Range, Args);
@@ -483,9 +462,9 @@ public:
     Second->Defined(MacroNameTok, MD, Range);
   }
 
-  void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override {
-    First->SourceRangeSkipped(Range, EndifLoc);
-    Second->SourceRangeSkipped(Range, EndifLoc);
+  void SourceRangeSkipped(SourceRange Range) override {
+    First->SourceRangeSkipped(Range);
+    Second->SourceRangeSkipped(Range);
   }
 
   /// \brief Hook called whenever an \#if is seen.

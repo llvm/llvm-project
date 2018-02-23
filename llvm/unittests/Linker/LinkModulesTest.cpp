@@ -98,7 +98,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
-  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
   Linker::linkModules(*LinkedModule, std::move(M));
 
   // Check that the global "@switch.bas" is well-formed.
@@ -172,14 +172,14 @@ static Module *getInternal(LLVMContext &Ctx) {
 TEST_F(LinkModuleTest, EmptyModule) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
   Linker::linkModules(*EmptyM, std::move(InternalM));
 }
 
 TEST_F(LinkModuleTest, EmptyModule2) {
   std::unique_ptr<Module> InternalM(getInternal(Ctx));
   std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
-  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
   Linker::linkModules(*InternalM, std::move(EmptyM));
 }
 
@@ -195,7 +195,7 @@ TEST_F(LinkModuleTest, TypeMerge) {
                       "@t2 = weak global %t zeroinitializer\n";
   std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, C);
 
-  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
   Linker::linkModules(*M1, std::move(M2));
 
   EXPECT_EQ(M1->getNamedGlobal("t1")->getType(),
@@ -280,7 +280,7 @@ TEST_F(LinkModuleTest, MoveDistinctMDs) {
   // Link into destination module.
   auto Dst = llvm::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
-  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
   Linker::linkModules(*Dst, std::move(Src));
 
   // Check that distinct metadata was moved, not cloned.  Even !4, the uniqued
@@ -349,7 +349,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // Link two modules together.
   auto Dst = llvm::make_unique<Module>("Linked", C);
   ASSERT_TRUE(Dst.get());
-  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Ctx.setDiagnosticHandler(expectNoDiags);
   bool Failed = Linker::linkModules(*Foo, std::move(Bar));
   ASSERT_FALSE(Failed);
 

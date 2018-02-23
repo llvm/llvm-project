@@ -1,8 +1,9 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN: | not llvm-dwarfdump -v -verify - \
+# RUN: | not llvm-dwarfdump -verify - \
 # RUN: | FileCheck %s
 
-# CHECK: error: DIE has invalid DW_AT_stmt_list encoding:{{[[:space:]]}}
+# CHECK: Verifying .debug_info Unit Header Chain...
+# CHECK-NEXT: error: DIE has invalid DW_AT_stmt_list encoding:{{[[:space:]]}}
 # CHECK-NEXT: 0x0000000c: DW_TAG_compile_unit [1] *
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000000] = "clang version 5.0.0 (trunk 308185) (llvm/trunk 308186)")
 # CHECK-NEXT: DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)
@@ -11,11 +12,9 @@
 # CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000003f] = "/Users/sgravani/Development/tests")
 # CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
 # CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000016){{[[:space:]]}}
-# CHECK-NEXT: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
-# CHECK-NEXT: error: Compilation unit type (DW_UT_compile) and root DIE (DW_TAG_null) do not match.
-# CHECK-NEXT: error: Units[2] - start offset: 0x00000068
-# CHECK-NEXT: note: The length for this unit is too large for the .debug_info provided.
-# CHECK-NEXT: note: The unit type encoding is not valid.
+# CHECK-NEXT: Units[2] - start offset: 0x00000068 
+# CHECK-NEXT:	Error: The length for this unit is too large for the .debug_info provided.
+# CHECK-NEXT:	Error: The unit type encoding is not valid.
 
 
 	.section	__TEXT,__text,regular,pure_instructions
@@ -177,7 +176,7 @@ Lcu_begin1:
 	.byte	1                       ## DWARF Unit Type
 	.byte	4                       ## Address Size (in bytes)
 	.long	0						## Abbrev offset
-	.byte 	0
+	.byte 	0	
 Ltu_begin0:
 	.long	26                      ## Length of Unit -- Error: The length for this unit is too large for the .debug_info provided.
 	.short	5                       ## DWARF version number
@@ -186,7 +185,7 @@ Ltu_begin0:
 	.long	0
 	.quad	0
 	.long   0
-	.byte 	0
+	.byte 	0			
 
 .subsections_via_symbols
 	.section	__DWARF,__debug_line,regular,debug

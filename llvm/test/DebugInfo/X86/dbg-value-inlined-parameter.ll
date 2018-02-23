@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -filetype=obj \
-; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 ; RUN: llc -mtriple=x86_64-linux-gnu < %s -filetype=obj \
-; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -filetype=obj -regalloc=basic \
-; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_abstract_origin {{.*}} "foo"
@@ -48,8 +48,8 @@ source_filename = "test/DebugInfo/X86/dbg-value-inlined-parameter.ll"
 ; Function Attrs: nounwind optsize ssp
 define i32 @foo(%struct.S1* nocapture %sp, i32 %nums) #0 !dbg !15 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.S1* %sp, metadata !19, metadata !22), !dbg !23
-  tail call void @llvm.dbg.value(metadata i32 %nums, metadata !21, metadata !22), !dbg !24
+  tail call void @llvm.dbg.value(metadata %struct.S1* %sp, i64 0, metadata !19, metadata !22), !dbg !23
+  tail call void @llvm.dbg.value(metadata i32 %nums, i64 0, metadata !21, metadata !22), !dbg !24
   %tmp2 = getelementptr inbounds %struct.S1, %struct.S1* %sp, i64 0, i32 1, !dbg !25
   store i32 %nums, i32* %tmp2, align 4, !dbg !25
   %call = tail call float* @bar(i32 %nums) #3, !dbg !27
@@ -66,8 +66,8 @@ declare float* @bar(i32) #1
 ; Function Attrs: nounwind optsize ssp
 define void @foobar() #0 !dbg !29 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.S1* @p, metadata !19, metadata !22) #4, !dbg !32
-  tail call void @llvm.dbg.value(metadata i32 1, metadata !21, metadata !22) #4, !dbg !35
+  tail call void @llvm.dbg.value(metadata %struct.S1* @p, i64 0, metadata !19, metadata !22) #4, !dbg !32
+  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !21, metadata !22) #4, !dbg !35
   store i32 1, i32* getelementptr inbounds (%struct.S1, %struct.S1* @p, i64 0, i32 1), align 8, !dbg !36
   %call.i = tail call float* @bar(i32 1) #3, !dbg !37
   store float* %call.i, float** getelementptr inbounds (%struct.S1, %struct.S1* @p, i64 0, i32 0), align 8, !dbg !37
@@ -76,7 +76,7 @@ entry:
 
 ; Function Attrs: nounwind readnone
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 attributes #0 = { nounwind optsize ssp }
 attributes #1 = { optsize }
@@ -87,7 +87,7 @@ attributes #4 = { nounwind }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!14}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "p", scope: !2, file: !3, line: 14, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 2.9 (trunk 125693)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "nm2.c", directory: "/private/tmp")

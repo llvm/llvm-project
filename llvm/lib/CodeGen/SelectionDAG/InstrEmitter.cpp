@@ -673,6 +673,7 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
 MachineInstr *
 InstrEmitter::EmitDbgValue(SDDbgValue *SD,
                            DenseMap<SDValue, unsigned> &VRBaseMap) {
+  uint64_t Offset = SD->getOffset();
   MDNode *Var = SD->getVariable();
   MDNode *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
@@ -684,7 +685,7 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
     return BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
         .addFrameIndex(SD->getFrameIx())
-        .addImm(0)
+        .addImm(Offset)
         .addMetadata(Var)
         .addMetadata(Expr);
   }
@@ -726,9 +727,11 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
 
   // Indirect addressing is indicated by an Imm as the second parameter.
   if (SD->isIndirect())
-    MIB.addImm(0U);
-  else
+    MIB.addImm(Offset);
+  else {
+    assert(Offset == 0 && "direct value cannot have an offset");
     MIB.addReg(0U, RegState::Debug);
+  }
 
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);

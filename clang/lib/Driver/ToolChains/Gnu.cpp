@@ -560,15 +560,13 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.CCCIsCXX() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    if (ToolChain.ShouldLinkCXXStdlib(Args)) {
-      bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
-                                 !Args.hasArg(options::OPT_static);
-      if (OnlyLibstdcxxStatic)
-        CmdArgs.push_back("-Bstatic");
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-      if (OnlyLibstdcxxStatic)
-        CmdArgs.push_back("-Bdynamic");
-    }
+    bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
+                               !Args.hasArg(options::OPT_static);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bstatic");
+    ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bdynamic");
     CmdArgs.push_back("-lm");
   }
   // Silence warnings when linking C code with a C++ '-stdlib' argument.
@@ -2293,7 +2291,7 @@ void Generic_GCC::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation.print(OS);
 }
 
-bool Generic_GCC::IsUnwindTablesDefault(const ArgList &Args) const {
+bool Generic_GCC::IsUnwindTablesDefault() const {
   return getArch() == llvm::Triple::x86_64;
 }
 

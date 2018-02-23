@@ -8554,11 +8554,6 @@ public:
   /// is performed.
   bool isOpenMPPrivateDecl(ValueDecl *D, unsigned Level);
 
-  /// Sets OpenMP capture kind (OMPC_private, OMPC_firstprivate, OMPC_map etc.)
-  /// for \p FD based on DSA for the provided corresponding captured declaration
-  /// \p D.
-  void setOpenMPCaptureKind(FieldDecl *FD, ValueDecl *D, unsigned Level);
-
   /// \brief Check if the specified variable is captured  by 'target' directive.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.
@@ -10178,7 +10173,8 @@ public:
   void CodeCompleteObjCPropertyDefinition(Scope *S);
   void CodeCompleteObjCPropertySynthesizeIvar(Scope *S,
                                               IdentifierInfo *PropertyName);
-  void CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
+  void CodeCompleteObjCMethodDecl(Scope *S,
+                                  bool IsInstanceMethod,
                                   ParsedType ReturnType);
   void CodeCompleteObjCMethodDeclSelector(Scope *S,
                                           bool IsInstanceMethod,
@@ -10498,36 +10494,6 @@ public:
   SmallVector<CXXRecordDecl*, 4> DelayedDllExportClasses;
 
 private:
-  class SavePendingParsedClassStateRAII {
-  public:
-    SavePendingParsedClassStateRAII(Sema &S) : S(S) { swapSavedState(); }
-
-    ~SavePendingParsedClassStateRAII() {
-      assert(S.DelayedExceptionSpecChecks.empty() &&
-             "there shouldn't be any pending delayed exception spec checks");
-      assert(S.DelayedDefaultedMemberExceptionSpecs.empty() &&
-             "there shouldn't be any pending delayed defaulted member "
-             "exception specs");
-      assert(S.DelayedDllExportClasses.empty() &&
-             "there shouldn't be any pending delayed DLL export classes");
-      swapSavedState();
-    }
-
-  private:
-    Sema &S;
-    decltype(DelayedExceptionSpecChecks) SavedExceptionSpecChecks;
-    decltype(DelayedDefaultedMemberExceptionSpecs)
-        SavedDefaultedMemberExceptionSpecs;
-    decltype(DelayedDllExportClasses) SavedDllExportClasses;
-
-    void swapSavedState() {
-      SavedExceptionSpecChecks.swap(S.DelayedExceptionSpecChecks);
-      SavedDefaultedMemberExceptionSpecs.swap(
-          S.DelayedDefaultedMemberExceptionSpecs);
-      SavedDllExportClasses.swap(S.DelayedDllExportClasses);
-    }
-  };
-
   /// \brief Helper class that collects misaligned member designations and
   /// their location info for delayed diagnostics.
   struct MisalignedMember {

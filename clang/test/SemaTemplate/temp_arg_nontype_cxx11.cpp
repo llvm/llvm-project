@@ -25,7 +25,7 @@ namespace CanonicalNullptr {
 }
 
 namespace Auto {
-  template<auto> struct A { };  // expected-error {{until C++17}}
+  template<auto> struct A { };  // expected-error {{until C++1z}}
 }
 
 namespace check_conversion_early {

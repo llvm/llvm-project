@@ -1203,7 +1203,6 @@ namespace clang {
       ExcludeKeyword,
       ExplicitKeyword,
       ExportKeyword,
-      ExportAsKeyword,
       ExternKeyword,
       FrameworkKeyword,
       LinkKeyword,
@@ -1315,7 +1314,6 @@ namespace clang {
                          SourceLocation LeadingLoc);
     void parseUmbrellaDirDecl(SourceLocation UmbrellaLoc);
     void parseExportDecl();
-    void parseExportAsDecl();
     void parseUseDecl();
     void parseLinkDecl();
     void parseConfigMacros();
@@ -1367,7 +1365,6 @@ retry:
                  .Case("exclude", MMToken::ExcludeKeyword)
                  .Case("explicit", MMToken::ExplicitKeyword)
                  .Case("export", MMToken::ExportKeyword)
-                 .Case("export_as", MMToken::ExportAsKeyword)
                  .Case("extern", MMToken::ExternKeyword)
                  .Case("framework", MMToken::FrameworkKeyword)
                  .Case("header", MMToken::HeaderKeyword)
@@ -1585,54 +1582,6 @@ namespace {
   };
 }
 
-/// Private modules are canonicalized as Foo_Private. Clang provides extra
-/// module map search logic to find the appropriate private module when PCH
-/// is used with implicit module maps. Warn when private modules are written
-/// in other ways (FooPrivate and Foo.Private), providing notes and fixits.
-static void diagnosePrivateModules(const ModuleMap &Map,
-                                   DiagnosticsEngine &Diags,
-                                   const Module *ActiveModule) {
-
-  auto GenNoteAndFixIt = [&](StringRef BadName, StringRef Canonical,
-                             const Module *M) {
-    auto D = Diags.Report(ActiveModule->DefinitionLoc,
-                          diag::note_mmap_rename_top_level_private_module);
-    D << BadName << M->Name;
-    D << FixItHint::CreateReplacement(ActiveModule->DefinitionLoc, Canonical);
-  };
-
-  for (auto E = Map.module_begin(); E != Map.module_end(); ++E) {
-    auto const *M = E->getValue();
-    if (M->Directory != ActiveModule->Directory)
-      continue;
-
-    SmallString<128> FullName(ActiveModule->getFullModuleName());
-    if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
-      continue;
-    SmallString<128> Canonical(M->Name);
-    Canonical.append("_Private");
-
-    // Foo.Private -> Foo_Private
-    if (ActiveModule->Parent && ActiveModule->Name == "Private" && !M->Parent &&
-        M->Name == ActiveModule->Parent->Name) {
-      Diags.Report(ActiveModule->DefinitionLoc,
-                   diag::warn_mmap_mismatched_private_submodule)
-          << FullName;
-      GenNoteAndFixIt(FullName, Canonical, M);
-      continue;
-    }
-
-    // FooPrivate and whatnots -> Foo_Private
-    if (!ActiveModule->Parent && !M->Parent && M->Name != ActiveModule->Name &&
-        ActiveModule->Name != Canonical) {
-      Diags.Report(ActiveModule->DefinitionLoc,
-                   diag::warn_mmap_mismatched_private_module_name)
-          << ActiveModule->Name;
-      GenNoteAndFixIt(ActiveModule->Name, Canonical, M);
-    }
-  }
-}
-
 /// \brief Parse a module declaration.
 ///
 ///   module-declaration:
@@ -1645,7 +1594,6 @@ static void diagnosePrivateModules(const ModuleMap &Map,
 ///     header-declaration
 ///     submodule-declaration
 ///     export-declaration
-///     export-as-declaration
 ///     link-declaration
 ///
 ///   submodule-declaration:
@@ -1830,21 +1778,41 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule->NoUndeclaredIncludes = true;
   ActiveModule->Directory = Directory;
 
-
-  // Private modules named as FooPrivate, Foo.Private or similar are likely a
-  // user error; provide warnings, notes and fixits to direct users to use
-  // Foo_Private instead.
-  SourceLocation StartLoc =
-      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
-  StringRef MapFileName(ModuleMapFile->getName());
-  if (Map.HeaderInfo.getHeaderSearchOpts().ImplicitModuleMaps &&
-      !Diags.isIgnored(diag::warn_mmap_mismatched_private_submodule,
-                       StartLoc) &&
-      !Diags.isIgnored(diag::warn_mmap_mismatched_private_module_name,
-                       StartLoc) &&
-      (MapFileName.endswith("module.private.modulemap") ||
-       MapFileName.endswith("module_private.map")))
-    diagnosePrivateModules(Map, Diags, ActiveModule);
+  if (!ActiveModule->Parent) {
+    StringRef MapFileName(ModuleMapFile->getName());
+    if (MapFileName.endswith("module.private.modulemap") ||
+        MapFileName.endswith("module_private.map")) {
+      // Adding a top-level module from a private modulemap is likely a
+      // user error; we check to see if there's another top-level module
+      // defined in the non-private map in the same dir, and if so emit a
+      // warning.
+      for (auto E = Map.module_begin(); E != Map.module_end(); ++E) {
+        auto const *M = E->getValue();
+        if (!M->Parent &&
+            M->Directory == ActiveModule->Directory &&
+            M->Name != ActiveModule->Name) {
+          Diags.Report(ActiveModule->DefinitionLoc,
+                       diag::warn_mmap_mismatched_top_level_private)
+            << ActiveModule->Name << M->Name;
+          // The pattern we're defending against here is typically due to
+          // a module named FooPrivate which is supposed to be a submodule
+          // called Foo.Private. Emit a fixit in that case.
+          auto D =
+            Diags.Report(ActiveModule->DefinitionLoc,
+                         diag::note_mmap_rename_top_level_private_as_submodule);
+          D << ActiveModule->Name << M->Name;
+          StringRef Bad(ActiveModule->Name);
+          if (Bad.consume_back("Private")) {
+            SmallString<128> Fixed = Bad;
+            Fixed.append(".Private");
+            D << FixItHint::CreateReplacement(ActiveModule->DefinitionLoc,
+                                              Fixed);
+          }
+          break;
+        }
+      }
+    }
+  }
 
   bool Done = false;
   do {
@@ -1871,10 +1839,6 @@ void ModuleMapParser::parseModuleDecl() {
 
     case MMToken::ExportKeyword:
       parseExportDecl();
-      break;
-
-    case MMToken::ExportAsKeyword:
-      parseExportAsDecl();
       break;
 
     case MMToken::UseKeyword:
@@ -2337,41 +2301,6 @@ void ModuleMapParser::parseExportDecl() {
   ActiveModule->UnresolvedExports.push_back(Unresolved);
 }
 
-/// \brief Parse a module export_as declaration.
-///
-///   export-as-declaration:
-///     'export_as' identifier
-void ModuleMapParser::parseExportAsDecl() {
-  assert(Tok.is(MMToken::ExportAsKeyword));
-  consumeToken();
-
-  if (!Tok.is(MMToken::Identifier)) {
-    Diags.Report(Tok.getLocation(), diag::err_mmap_module_id);
-    HadError = true;
-    return;
-  }
-
-  if (ActiveModule->Parent) {
-    Diags.Report(Tok.getLocation(), diag::err_mmap_submodule_export_as);
-    consumeToken();
-    return;
-  }
-  
-  if (!ActiveModule->ExportAsModule.empty()) {
-    if (ActiveModule->ExportAsModule == Tok.getString()) {
-      Diags.Report(Tok.getLocation(), diag::warn_mmap_redundant_export_as)
-        << ActiveModule->Name << Tok.getString();
-    } else {
-      Diags.Report(Tok.getLocation(), diag::err_mmap_conflicting_export_as)
-        << ActiveModule->Name << ActiveModule->ExportAsModule
-        << Tok.getString();
-    }
-  }
-  
-  ActiveModule->ExportAsModule = Tok.getString();
-  consumeToken();
-}
-
 /// \brief Parse a module use declaration.
 ///
 ///   use-declaration:
@@ -2782,7 +2711,6 @@ bool ModuleMapParser::parseModuleMapFile() {
     case MMToken::Exclaim:
     case MMToken::ExcludeKeyword:
     case MMToken::ExportKeyword:
-    case MMToken::ExportAsKeyword:
     case MMToken::HeaderKeyword:
     case MMToken::Identifier:
     case MMToken::LBrace:

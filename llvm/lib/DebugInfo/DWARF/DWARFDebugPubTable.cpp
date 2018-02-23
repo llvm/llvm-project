@@ -44,7 +44,8 @@ DWARFDebugPubTable::DWARFDebugPubTable(StringRef Data, bool LittleEndian,
   }
 }
 
-void DWARFDebugPubTable::dump(raw_ostream &OS) const {
+void DWARFDebugPubTable::dump(StringRef Name, raw_ostream &OS) const {
+  OS << "\n." << Name << " contents:\n";
   for (const Set &S : Sets) {
     OS << "length = " << format("0x%08x", S.Length);
     OS << " version = " << format("0x%04x", S.Version);

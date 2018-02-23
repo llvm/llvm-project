@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj -generate-arange-section < %s | llvm-dwarfdump -debug-aranges - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj -generate-arange-section < %s | llvm-dwarfdump -debug-dump=aranges - | FileCheck %s
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj -generate-arange-section < %s | llvm-readobj --relocations - | FileCheck --check-prefix=OBJ %s
 
 ; extern int i;
@@ -31,7 +31,7 @@ source_filename = "test/DebugInfo/X86/arange.ll"
 !llvm.module.flags = !{!12, !13}
 !llvm.ident = !{!14}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "f", scope: null, file: !2, line: 6, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "simple.cpp", directory: "/tmp/dbginfo")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo<&i>", file: !2, line: 3, size: 8, align: 8, elements: !4, templateParams: !5, identifier: "_ZTS3fooIXadL_Z1iEEE")

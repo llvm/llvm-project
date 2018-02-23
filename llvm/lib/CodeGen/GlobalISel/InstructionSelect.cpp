@@ -20,27 +20,16 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Config/config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 #define DEBUG_TYPE "instruction-select"
 
 using namespace llvm;
-
-#ifdef LLVM_GISEL_COV_PREFIX
-static cl::opt<std::string>
-    CoveragePrefix("gisel-coverage-prefix", cl::init(LLVM_GISEL_COV_PREFIX),
-                   cl::desc("Record GlobalISel rule coverage files of this "
-                            "prefix if instrumentation was generated"));
-#else
-static const std::string CoveragePrefix = "";
-#endif
 
 char InstructionSelect::ID = 0;
 INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
@@ -77,7 +66,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
-  CodeGenCoverage CoverageInfo;
   assert(ISel && "Cannot work without InstructionSelector");
 
   // An optimization remark emitter. Used to report failures.
@@ -139,7 +127,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (!ISel->select(MI, CoverageInfo)) {
+      if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's
         // not obvious how, esp. considering select() can insert after MI.
         reportGISelFailure(MF, TPC, MORE, "gisel-select", "cannot select", MI);
@@ -198,13 +186,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
-
-  CoverageInfo.emit(CoveragePrefix,
-                    MF.getSubtarget()
-                        .getTargetLowering()
-                        ->getTargetMachine()
-                        .getTarget()
-                        .getBackendName());
 
   // FIXME: Should we accurately track changes?
   return true;

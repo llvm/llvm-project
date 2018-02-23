@@ -2,7 +2,8 @@
 %class.A = type { i32, i32, i32, i32 }
 
 define void @_Z3fooi(%class.A* sret %agg.result) #0 !dbg !3 {
-  ; CHECK: call void @llvm.dbg.declare({{.*}}, metadata !DIExpression()), !dbg
+  ; CHECK: call void @llvm.dbg.declare({{.*}}, metadata ![[EXPR:[0-9]+]]), !dbg
+  ; CHECK: ![[EXPR]] = !DIExpression()
   call void @llvm.dbg.declare(metadata %class.A* %agg.result, metadata !13, metadata !16), !dbg !17
   ret void, !dbg !17
 }

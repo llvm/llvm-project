@@ -1,5 +1,5 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump -all %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=all %t | FileCheck %s
 ; RUN: llvm-readobj --relocations %t | FileCheck --check-prefix=CHECK-RELOCS %s
 
 ; From:
@@ -63,7 +63,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 8, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "baz.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 1, size: 32, align: 32, elements: !4, identifier: "_ZTS1A")

@@ -17,57 +17,42 @@
 
 using namespace llvm;
 
-bool NameCoverageFilter::matches(
-    const coverage::CoverageMapping &,
-    const coverage::FunctionRecord &Function) const {
+bool NameCoverageFilter::matches(const coverage::FunctionRecord &Function) {
   StringRef FuncName = Function.Name;
   return FuncName.find(Name) != StringRef::npos;
 }
 
-bool NameRegexCoverageFilter::matches(
-    const coverage::CoverageMapping &,
-    const coverage::FunctionRecord &Function) const {
+bool
+NameRegexCoverageFilter::matches(const coverage::FunctionRecord &Function) {
   return llvm::Regex(Regex).match(Function.Name);
 }
 
-bool NameWhitelistCoverageFilter::matches(
-    const coverage::CoverageMapping &,
-    const coverage::FunctionRecord &Function) const {
-  return Whitelist.inSection("llvmcov", "whitelist_fun", Function.Name);
-}
-
-bool RegionCoverageFilter::matches(
-    const coverage::CoverageMapping &CM,
-    const coverage::FunctionRecord &Function) const {
-  return PassesThreshold(FunctionCoverageSummary::get(CM, Function)
+bool RegionCoverageFilter::matches(const coverage::FunctionRecord &Function) {
+  return PassesThreshold(FunctionCoverageSummary::get(Function)
                              .RegionCoverage.getPercentCovered());
 }
 
-bool LineCoverageFilter::matches(
-    const coverage::CoverageMapping &CM,
-    const coverage::FunctionRecord &Function) const {
-  return PassesThreshold(FunctionCoverageSummary::get(CM, Function)
-                             .LineCoverage.getPercentCovered());
+bool LineCoverageFilter::matches(const coverage::FunctionRecord &Function) {
+  return PassesThreshold(
+      FunctionCoverageSummary::get(Function).LineCoverage.getPercentCovered());
 }
 
 void CoverageFilters::push_back(std::unique_ptr<CoverageFilter> Filter) {
   Filters.push_back(std::move(Filter));
 }
 
-bool CoverageFilters::matches(const coverage::CoverageMapping &CM,
-                              const coverage::FunctionRecord &Function) const {
+bool CoverageFilters::matches(const coverage::FunctionRecord &Function) {
   for (const auto &Filter : Filters) {
-    if (Filter->matches(CM, Function))
+    if (Filter->matches(Function))
       return true;
   }
   return false;
 }
 
-bool CoverageFiltersMatchAll::matches(
-    const coverage::CoverageMapping &CM,
-    const coverage::FunctionRecord &Function) const {
+bool
+CoverageFiltersMatchAll::matches(const coverage::FunctionRecord &Function) {
   for (const auto &Filter : Filters) {
-    if (!Filter->matches(CM, Function))
+    if (!Filter->matches(Function))
       return false;
   }
   return true;

@@ -1,5 +1,5 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp
-// RUN: llvm-dwarfdump -a %t | FileCheck -check-prefix DWARF %s
+// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC %s
 
   .section foo, "ax"
@@ -18,18 +18,18 @@ b:
 // DWARF:         DW_AT_language  DW_FORM_data2
 
 // DWARF: .debug_info contents:
-// DWARF: DW_TAG_compile_unit
+// DWARF: 0x{{[0-9a-f]+}}: DW_TAG_compile_unit [1]
 // DWARF-NOT:         DW_TAG_
-// DWARF:               DW_AT_low_pc (0x0000000000000000)
-// DWARF:               DW_AT_high_pc (0x0000000000000004)
+// DWARF:               DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000)
+// DWARF:               DW_AT_high_pc [DW_FORM_addr]      (0x0000000000000004)
 
-// DWARF: DW_TAG_label
-// DWARF-NEXT: DW_AT_name ("b")
+// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2] *
+// DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("b")
 
 
 // DWARF: .debug_aranges contents:
 // DWARF-NEXT: Address Range Header: length = 0x0000001c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
-// DWARF-NEXT: [0x00000000, 0x00000004)
+// DWARF-NEXT: [0x00000000 - 0x00000004)
 
 
 // DWARF: .debug_line contents:
@@ -37,8 +37,9 @@ b:
 // DWARF-NEXT: 0x0000000000000004      7      0      1   0   0  is_stmt end_sequence
 
 
-// DWARF-NOT: .debug_ranges contents:
-// DWARF-NOT: .debug_pubnames contents:
+// DWARF: .debug_ranges contents:
+// DWARF-NOT: {{0-9a-f}}
+// DWARF: .debug_pubnames contents:
 
 
 

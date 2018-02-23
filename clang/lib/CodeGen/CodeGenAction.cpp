@@ -46,32 +46,6 @@ using namespace clang;
 using namespace llvm;
 
 namespace clang {
-  class BackendConsumer;
-  class ClangDiagnosticHandler final : public DiagnosticHandler {
-  public:
-    ClangDiagnosticHandler(const CodeGenOptions &CGOpts, BackendConsumer *BCon)
-        : CodeGenOpts(CGOpts), BackendCon(BCon) {}
-
-    bool handleDiagnostics(const DiagnosticInfo &DI) override;
-
-    bool isAnalysisRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-              CodeGenOpts.OptimizationRemarkAnalysisPattern->match(PassName));
-    }
-    bool isMissedOptRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkMissedPattern &&
-              CodeGenOpts.OptimizationRemarkMissedPattern->match(PassName));
-    }
-    bool isPassedOptRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkPattern &&
-              CodeGenOpts.OptimizationRemarkPattern->match(PassName));
-    }
-
-  private:
-    const CodeGenOptions &CodeGenOpts;
-    BackendConsumer *BackendCon;
-  };
-
   class BackendConsumer : public ASTConsumer {
     using LinkModule = CodeGenAction::LinkModule;
 
@@ -250,10 +224,10 @@ namespace clang {
       void *OldContext = Ctx.getInlineAsmDiagnosticContext();
       Ctx.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, this);
 
-      std::unique_ptr<DiagnosticHandler> OldDiagnosticHandler =
+      LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
           Ctx.getDiagnosticHandler();
-      Ctx.setDiagnosticHandler(llvm::make_unique<ClangDiagnosticHandler>(
-        CodeGenOpts, this));
+      void *OldDiagnosticContext = Ctx.getDiagnosticContext();
+      Ctx.setDiagnosticHandler(DiagnosticHandler, this);
       Ctx.setDiagnosticsHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
       if (CodeGenOpts.DiagnosticsHotnessThreshold != 0)
         Ctx.setDiagnosticsHotnessThreshold(
@@ -290,7 +264,7 @@ namespace clang {
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
-      Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
+      Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext);
 
       if (OptRecordFile)
         OptRecordFile->keep();
@@ -323,6 +297,11 @@ namespace clang {
                                      unsigned LocCookie) {
       SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);
       ((BackendConsumer*)Context)->InlineAsmDiagHandler2(SM, Loc);
+    }
+
+    static void DiagnosticHandler(const llvm::DiagnosticInfo &DI,
+                                  void *Context) {
+      ((BackendConsumer *)Context)->DiagnosticHandlerImpl(DI);
     }
 
     /// Get the best possible source location to represent a diagnostic that
@@ -362,11 +341,6 @@ namespace clang {
   };
 
   void BackendConsumer::anchor() {}
-}
-
-bool ClangDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
-  BackendCon->DiagnosticHandlerImpl(DI);
-  return true;
 }
 
 /// ConvertBackendLocation - Convert a location in a temporary llvm::SourceMgr
@@ -428,8 +402,6 @@ void BackendConsumer::InlineAsmDiagHandler2(const llvm::SMDiagnostic &D,
   case llvm::SourceMgr::DK_Note:
     DiagID = diag::note_fe_inline_asm;
     break;
-  case llvm::SourceMgr::DK_Remark:
-    llvm_unreachable("remarks unexpected");
   }
   // If this problem has clang-level source location information, report the
   // issue in the source with a note showing the instantiated
@@ -912,8 +884,6 @@ static void BitcodeInlineAsmDiagHandler(const llvm::SMDiagnostic &SM,
   case llvm::SourceMgr::DK_Note:
     DiagID = diag::note_fe_inline_asm;
     break;
-  case llvm::SourceMgr::DK_Remark:
-    llvm_unreachable("remarks unexpected");
   }
 
   Diags->Report(DiagID).AddString("cannot compile inline asm");

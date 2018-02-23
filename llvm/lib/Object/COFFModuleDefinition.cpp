@@ -232,13 +232,7 @@ private:
     for (;;) {
       read();
       if (Tok.K == Identifier && Tok.Value[0] == '@') {
-        if (Tok.Value.drop_front().getAsInteger(10, E.Ordinal)) {
-          // Not an ordinal modifier at all, but the next export (fastcall
-          // decorated) - complete the current one.
-          unget();
-          Info.Exports.push_back(E);
-          return Error::success();
-        }
+        Tok.Value.drop_front().getAsInteger(10, E.Ordinal);
         read();
         if (Tok.K == KwNoname) {
           E.Noname = true;

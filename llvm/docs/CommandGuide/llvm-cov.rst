@@ -195,52 +195,43 @@ OPTIONS
 
 .. option:: -show-line-counts
 
- Show the execution counts for each line. Defaults to true, unless another
- ``-show`` option is used.
+ Show the execution counts for each line. This is enabled by default, unless
+ another ``-show`` option is used.
 
 .. option:: -show-expansions
 
  Expand inclusions, such as preprocessor macros or textual inclusions, inline
- in the display of the source file. Defaults to false.
+ in the display of the source file.
 
 .. option:: -show-instantiations
 
  For source regions that are instantiated multiple times, such as templates in
  ``C++``, show each instantiation separately as well as the combined summary.
- Defaults to true.
 
 .. option:: -show-regions
 
  Show the execution counts for each region by displaying a caret that points to
- the character where the region starts. Defaults to false.
+ the character where the region starts.
 
 .. option:: -show-line-counts-or-regions
 
  Show the execution counts for each line if there is only one region on the
  line, but show the individual regions if there are multiple on the line.
- Defaults to false.
 
-.. option:: -use-color
+.. option:: -use-color[=VALUE]
 
  Enable or disable color output. By default this is autodetected.
 
-.. option:: -arch=[*NAMES*]
+.. option:: -arch=<name>
 
- Specify a list of architectures such that the Nth entry in the list
- corresponds to the Nth specified binary. If the covered object is a universal
- binary, this specifies the architecture to use. It is an error to specify an
- architecture that is not included in the universal binary or to use an
- architecture that does not match a non-universal binary.
+ If the covered binary is a universal binary, select the architecture to use.
+ It is an error to specify an architecture that is not included in the
+ universal binary or to use an architecture that does not match a
+ non-universal binary.
 
 .. option:: -name=<NAME>
 
  Show code coverage only for functions with the given name.
-
-.. option:: -name-whitelist=<FILE>
-
- Show code coverage only for functions listed in the given file. Each line in
- the file should start with `whitelist_fun:`, immediately followed by the name
- of the function to accept. This name can be a wildcard expression.
 
 .. option:: -name-regex=<PATTERN>
 
@@ -297,12 +288,6 @@ OPTIONS
  Show code coverage only for functions with region coverage less than the given
  threshold.
 
-.. option:: -path-equivalence=<from>,<to>
-
- Map the paths in the coverage data to local source file paths. This allows you
- to generate the coverage data on one machine, and then use llvm-cov on a
- different machine where you have the same files on a different path.
-
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -345,11 +330,7 @@ OPTIONS
 
 .. option:: -show-functions
 
- Show coverage summaries for each function. Defaults to false.
-
-.. option:: -show-instantiation-summary
-
- Show statistics for all function instantiations. Defaults to false.
+ Show coverage summaries for each function.
 
 .. program:: llvm-cov export
 
@@ -382,10 +363,3 @@ OPTIONS
  It is an error to specify an architecture that is not included in the
  universal binary or to use an architecture that does not match a
  non-universal binary.
-
-.. option:: -summary-only
-
- Export only summary information for each file in the coverage data. This mode
- will not export coverage information for smaller units such as individual
- functions or regions. The result will be the same as produced by :program:
- `llvm-cov report` command, but presented in JSON format rather than text.

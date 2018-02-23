@@ -294,16 +294,17 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+#endif
   bool addILPOpts() override;
   bool addPreISel() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
-  void addPreEmitPass2() override;
   void addPreSched2() override;
 };
 
@@ -333,11 +334,6 @@ void X86PassConfig::addIRPasses() {
 
   if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createInterleavedAccessPass());
-
-  // Add passes that handle indirect branch removal and insertion of a retpoline
-  // thunk. These will be a no-op unless a function subtarget has the retpoline
-  // feature enabled.
-  addPass(createIndirectBrExpandPass());
 }
 
 bool X86PassConfig::addInstSelector() {
@@ -353,6 +349,7 @@ bool X86PassConfig::addInstSelector() {
   return false;
 }
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool X86PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -372,6 +369,7 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
+#endif
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);
@@ -419,8 +417,4 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupLEAs());
     addPass(createX86EvexToVexInsts());
   }
-}
-
-void X86PassConfig::addPreEmitPass2() {
-  addPass(createX86RetpolineThunksPass());
 }

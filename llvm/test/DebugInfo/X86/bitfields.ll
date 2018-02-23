@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_le.o %s
-; RUN: llvm-dwarfdump -v -debug-info %t_le.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t_le.o | FileCheck %s
 
 ; Produced at -O0 from:
 ; struct bitfield {
@@ -19,12 +19,12 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x02)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x1e)
-; CHECK-NEXT: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
+; CHECK-NEXT: DW_AT_data_member_location {{.*}} 00
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"b"
 ; CHECK-NOT: DW_TAG_member
-; CHECK:      DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
+; CHECK:      DW_AT_data_member_location {{.*}} 04
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"c"
@@ -32,7 +32,7 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x1f)
-; CHECK:      DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
+; CHECK-NEXT: DW_AT_data_member_location {{.*}} 08
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"d"
@@ -40,7 +40,7 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x1c)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x03)
-; CHECK-NEXT: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
+; CHECK-NEXT: DW_AT_data_member_location {{.*}} 08
 
 ; ModuleID = 'bitfields.c'
 source_filename = "test/DebugInfo/X86/bitfields.ll"
@@ -55,7 +55,7 @@ target triple = "x86_64-apple-macosx"
 !llvm.module.flags = !{!13, !14, !15}
 !llvm.ident = !{!16}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.7.0 (trunk 240548) (llvm/trunk 240554)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "bitfields.c", directory: "/")

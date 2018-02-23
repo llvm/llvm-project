@@ -35,8 +35,7 @@ public:
   AMDGPUInstructionSelector(const SISubtarget &STI,
                             const AMDGPURegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
-
+  bool select(MachineInstr &I) const override;
 private:
   struct GEPInfo {
     const MachineInstr &GEP;

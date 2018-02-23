@@ -261,17 +261,17 @@ using char_16 = char[16];
 template <> struct ScalarTraits<char_16> {
   static void output(const char_16 &Val, void *, raw_ostream &Out);
   static StringRef input(StringRef Scalar, void *, char_16 &Val);
-  static QuotingType mustQuote(StringRef S);
+  static bool mustQuote(StringRef S);
 };
 
 // This trait is used for UUIDs. It reads and writes them matching otool's
 // formatting style.
-using uuid_t = raw_ostream::uuid_t;
+using uuid_t = uint8_t[16];
 
 template <> struct ScalarTraits<uuid_t> {
   static void output(const uuid_t &Val, void *, raw_ostream &Out);
   static StringRef input(StringRef Scalar, void *, uuid_t &Val);
-  static QuotingType mustQuote(StringRef S);
+  static bool mustQuote(StringRef S);
 };
 
 // Load Command struct mapping traits

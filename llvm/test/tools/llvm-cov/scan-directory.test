@@ -8,8 +8,7 @@ RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths %t/a
 REAL-DAG: {{.*}}c.tmp
 REAL-DAG: {{.*}}d.tmp
 
-// NEEDS FIX.
-RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths -path-equivalence=%t,%S %t a b c d e f | FileCheck %s --check-prefix=EQUIV
+RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths -filename-equivalence %t a b c d e f | FileCheck %s --check-prefix=EQUIV
 EQUIV-DAG: {{.*}}c.tmp
 EQUIV-DAG: {{.*}}d.tmp
 EQUIV-DAG: a

@@ -1,9 +1,0 @@
-module PrivateFoo {
-  export_as Foo
-  export_as Bar
-  export_as Bar
-
-  module Sub {
-    export_as Wibble
-  }
-}

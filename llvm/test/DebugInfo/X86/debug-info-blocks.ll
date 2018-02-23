@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t.o | FileCheck %s
 
 ; Generated from llvm/tools/clang/test/CodeGenObjC/debug-info-blocks.m
 ; rdar://problem/9279956
@@ -27,7 +27,10 @@
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_location{{.*}}(DW_OP_fbreg -24, DW_OP_deref, DW_OP_plus_uconst 0x20)
+; 0x06 = DW_OP_deref
+; 0x23 = DW_OP_uconst
+; 0x91 = DW_OP_fbreg
+; CHECK: DW_AT_location{{.*}}91 {{[0-9]+}} 06 23 {{[0-9]+}} )
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}}"self"
 ; CHECK-NOT: DW_TAG
@@ -164,7 +167,7 @@ define internal void @"__9-[A init]_block_invoke"(i8* %.block_descriptor) #0 !db
   %d = alloca %1*, align 8
   store i8* %.block_descriptor, i8** %1, align 8
   %3 = load i8*, i8** %1
-  call void @llvm.dbg.value(metadata i8* %3, metadata !76, metadata !DIExpression()), !dbg !88
+  call void @llvm.dbg.value(metadata i8* %3, i64 0, metadata !76, metadata !DIExpression()), !dbg !88
   call void @llvm.dbg.declare(metadata i8* %.block_descriptor, metadata !76, metadata !DIExpression()), !dbg !88
   %4 = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>*, !dbg !88
   store <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %4, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>** %2, align 8, !dbg !88
@@ -197,7 +200,7 @@ define internal void @"__9-[A init]_block_invoke"(i8* %.block_descriptor) #0 !db
   ret void, !dbg !90
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 declare i8* @objc_msgSend_fixup(i8*, %struct._message_ref_t*, ...)
 

@@ -139,16 +139,6 @@ raw_ostream &raw_ostream::write_hex(unsigned long long N) {
   return *this;
 }
 
-raw_ostream &raw_ostream::write_uuid(const uuid_t UUID) {
-  for (int Idx = 0; Idx < 16; ++Idx) {
-    *this << format("%02" PRIX32, UUID[Idx]);
-    if (Idx == 3 || Idx == 5 || Idx == 7 || Idx == 9)
-      *this << "-";
-  }
-  return *this;
-}
-
-
 raw_ostream &raw_ostream::write_escaped(StringRef Str,
                                         bool UseHexEscapes) {
   for (unsigned char c : Str) {
@@ -517,7 +507,8 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 /// FD is the file descriptor that this writes to.  If ShouldClose is true, this
 /// closes the file when the stream is destroyed.
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
-    : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose) {
+    : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose),
+      Error(false) {
   if (FD < 0 ) {
     ShouldClose = false;
     return;
@@ -549,10 +540,8 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
 raw_fd_ostream::~raw_fd_ostream() {
   if (FD >= 0) {
     flush();
-    if (ShouldClose) {
-      if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-        error_detected(EC);
-    }
+    if (ShouldClose && sys::Process::SafelyCloseFileDescriptor(FD))
+      error_detected();
   }
 
 #ifdef __MINGW32__
@@ -568,8 +557,7 @@ raw_fd_ostream::~raw_fd_ostream() {
   // has_error() and clear the error flag with clear_error() before
   // destructing raw_ostream objects which may have errors.
   if (has_error())
-    report_fatal_error("IO failure on output stream: " + error().message(),
-                       /*GenCrashDiag=*/false);
+    report_fatal_error("IO failure on output stream.", /*GenCrashDiag=*/false);
 }
 
 void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
@@ -613,7 +601,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
         continue;
 
       // Otherwise it's a non-recoverable error. Note it and quit.
-      error_detected(std::error_code(errno, std::generic_category()));
+      error_detected();
       break;
     }
 
@@ -629,8 +617,8 @@ void raw_fd_ostream::close() {
   assert(ShouldClose);
   ShouldClose = false;
   flush();
-  if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-    error_detected(EC);
+  if (sys::Process::SafelyCloseFileDescriptor(FD))
+    error_detected();
   FD = -1;
 }
 
@@ -645,7 +633,7 @@ uint64_t raw_fd_ostream::seek(uint64_t off) {
   pos = ::lseek(FD, off, SEEK_SET);
 #endif
   if (pos == (uint64_t)-1)
-    error_detected(std::error_code(errno, std::generic_category()));
+    error_detected();
   return pos;
 }
 

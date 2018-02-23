@@ -334,16 +334,6 @@ CINDEX_LINKAGE void clang_CXIndex_setGlobalOptions(CXIndex, unsigned options);
 CINDEX_LINKAGE unsigned clang_CXIndex_getGlobalOptions(CXIndex);
 
 /**
- * \brief Sets the invocation emission path option in a CXIndex.
- *
- * The invocation emission path specifies a path which will contain log
- * files for certain libclang invocations. A null value (default) implies that
- * libclang invocations are not logged..
- */
-CINDEX_LINKAGE void
-clang_CXIndex_setInvocationEmissionPathOption(CXIndex, const char *Path);
-
-/**
  * \defgroup CINDEX_FILES File manipulation routines
  *
  * @{
@@ -3216,8 +3206,6 @@ enum CXCallingConv {
   CXCallingConv_X86RegCall = 8,
   CXCallingConv_IntelOclBicc = 9,
   CXCallingConv_Win64 = 10,
-  /* Alias for compatibility with older versions of API. */
-  CXCallingConv_X86_64Win64 = CXCallingConv_Win64,
   CXCallingConv_X86_64SysV = 11,
   CXCallingConv_X86VectorCall = 12,
   CXCallingConv_Swift = 13,

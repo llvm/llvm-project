@@ -486,10 +486,6 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
         break;
       }
       Sec = *SecOrErr;
-      if (Sec == MachO->section_end()) {
-        outs() << "(?,?) ";
-        break;
-      }
     } else {
       Sec = I->Section;
     }
@@ -997,8 +993,6 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
       return 's';
     }
     section_iterator Sec = *SecOrErr;
-    if (Sec == Obj.section_end())
-      return 's';
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);

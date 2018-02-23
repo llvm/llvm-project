@@ -1,7 +1,7 @@
 ; RUN: llc -O2 -march=bpfel %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=line %t | FileCheck %s
 ; RUN: llc -O2 -march=bpfeb %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=line %t | FileCheck %s
 
 source_filename = "testprog.c"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
@@ -30,7 +30,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "myvar_c", scope: !2, file: !3, line: 3, type: !6, isLocal: true, isDefinition: true)
 !2 = distinct !DISubprogram(name: "testprog", scope: !3, file: !3, line: 1, type: !4, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !7, variables: !10)
 !3 = !DIFile(filename: "testprog.c", directory: "/w/llvm/bld")

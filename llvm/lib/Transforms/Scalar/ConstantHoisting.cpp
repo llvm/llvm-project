@@ -45,11 +45,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <iterator>
 #include <tuple>
 
 using namespace llvm;
@@ -701,9 +696,6 @@ bool ConstantHoistingPass::emitBaseConstants() {
       IntegerType *Ty = ConstInfo.BaseConstant->getType();
       Instruction *Base =
           new BitCastInst(ConstInfo.BaseConstant, Ty, "const", IP);
-
-      Base->setDebugLoc(IP->getDebugLoc());
-
       DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseConstant
                    << ") to BB " << IP->getParent()->getName() << '\n'
                    << *Base << '\n');
@@ -722,8 +714,6 @@ bool ConstantHoistingPass::emitBaseConstants() {
             emitBaseConstants(Base, RCI.Offset, U);
             ReBasesNum++;
           }
-
-          Base->setDebugLoc(DILocation::getMergedLocation(Base->getDebugLoc(), U.Inst->getDebugLoc()));
         }
       }
       UsesNum = Uses;
@@ -732,6 +722,7 @@ bool ConstantHoistingPass::emitBaseConstants() {
       assert(!Base->use_empty() && "The use list is empty!?");
       assert(isa<Instruction>(Base->user_back()) &&
              "All uses should be instructions.");
+      Base->setDebugLoc(cast<Instruction>(Base->user_back())->getDebugLoc());
     }
     (void)UsesNum;
     (void)ReBasesNum;

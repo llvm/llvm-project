@@ -302,21 +302,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
-  SDValue Cond = N->getOperand(0);
-  EVT OpVT = Cond.getValueType();
-  SDLoc DL(N);
-  // The vselect result and true/value operands needs scalarizing, but it's
-  // not a given that the Cond does. For instance, in AVX512 v1i1 is legal.
-  // See the similar logic in ScalarizeVecRes_VSETCC
-  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
-    Cond = GetScalarizedVector(Cond);
-  } else {
-    EVT VT = OpVT.getVectorElementType();
-    Cond = DAG.getNode(
-        ISD::EXTRACT_VECTOR_ELT, DL, VT, Cond,
-        DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
-  }
-
+  SDValue Cond = GetScalarizedVector(N->getOperand(0));
   SDValue LHS = GetScalarizedVector(N->getOperand(1));
   TargetLowering::BooleanContent ScalarBool =
       TLI.getBooleanContents(false, false);
@@ -484,9 +470,6 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::VSELECT:
       Res = ScalarizeVecOp_VSELECT(N);
       break;
-    case ISD::SETCC:
-      Res = ScalarizeVecOp_VSETCC(N);
-      break;
     case ISD::STORE:
       Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
       break;
@@ -561,36 +544,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSELECT(SDNode *N) {
 
   return DAG.getNode(ISD::SELECT, SDLoc(N), VT, ScalarCond, N->getOperand(1),
                      N->getOperand(2));
-}
-
-/// If the operand is a vector that needs to be scalarized then the
-/// result must be v1i1, so just convert to a scalar SETCC and wrap
-/// with a scalar_to_vector since the res type is legal if we got here
-SDValue DAGTypeLegalizer::ScalarizeVecOp_VSETCC(SDNode *N) {
-  assert(N->getValueType(0).isVector() &&
-         N->getOperand(0).getValueType().isVector() &&
-         "Operand types must be vectors");
-  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
-
-  EVT VT = N->getValueType(0);
-  SDValue LHS = GetScalarizedVector(N->getOperand(0));
-  SDValue RHS = GetScalarizedVector(N->getOperand(1));
-
-  EVT OpVT = N->getOperand(0).getValueType();
-  EVT NVT = VT.getVectorElementType();
-  SDLoc DL(N);
-  // Turn it into a scalar SETCC.
-  SDValue Res = DAG.getNode(ISD::SETCC, DL, MVT::i1, LHS, RHS,
-      N->getOperand(2));
-
-  // Vectors may have a different boolean contents to scalars.  Promote the
-  // value appropriately.
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
-
-  Res = DAG.getNode(ExtendCode, DL, NVT, Res);
-
-  return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Res);
 }
 
 /// If the value to store is a vector that needs to be scalarized, it must be
@@ -3012,12 +2965,7 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
   else if (N.getOpcode() == ISD::SIGN_EXTEND)
     N = N.getOperand(0);
 
-  if (isLogicalMaskOp(N.getOpcode()))
-    return isSETCCorConvertedSETCC(N.getOperand(0)) &&
-           isSETCCorConvertedSETCC(N.getOperand(1));
-
-  return (N.getOpcode() == ISD::SETCC ||
-          ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
+  return (N.getOpcode() == ISD::SETCC);
 }
 #endif
 
@@ -3025,20 +2973,28 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
 // to ToMaskVT if needed with vector extension or truncation.
 SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
                                       EVT ToMaskVT) {
+  LLVMContext &Ctx = *DAG.getContext();
+
   // Currently a SETCC or a AND/OR/XOR with two SETCCs are handled.
+  unsigned InMaskOpc = InMask->getOpcode();
+
   // FIXME: This code seems to be too restrictive, we might consider
   // generalizing it or dropping it.
-  assert(isSETCCorConvertedSETCC(InMask) && "Unexpected mask argument.");
+  assert((InMaskOpc == ISD::SETCC ||
+          ISD::isBuildVectorOfConstantSDNodes(InMask.getNode()) ||
+          (isLogicalMaskOp(InMaskOpc) &&
+           isSETCCorConvertedSETCC(InMask->getOperand(0)) &&
+           isSETCCorConvertedSETCC(InMask->getOperand(1)))) &&
+         "Unexpected mask argument.");
 
   // Make a new Mask node, with a legal result VT.
   SmallVector<SDValue, 4> Ops;
   for (unsigned i = 0; i < InMask->getNumOperands(); ++i)
     Ops.push_back(InMask->getOperand(i));
-  SDValue Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops);
+  SDValue Mask = DAG.getNode(InMaskOpc, SDLoc(InMask), MaskVT, Ops);
 
   // If MaskVT has smaller or bigger elements than ToMaskVT, a vector sign
   // extend or truncate is needed.
-  LLVMContext &Ctx = *DAG.getContext();
   unsigned MaskScalarBits = MaskVT.getScalarSizeInBits();
   unsigned ToMaskScalBits = ToMaskVT.getScalarSizeInBits();
   if (MaskScalarBits < ToMaskScalBits) {

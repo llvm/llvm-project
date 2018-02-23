@@ -295,8 +295,7 @@ enum class instrprof_error {
   value_site_count_mismatch,
   compress_failed,
   uncompress_failed,
-  empty_raw_profile,
-  zlib_unavailable
+  empty_raw_profile
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -859,9 +858,7 @@ enum ProfVersion {
   // In this version, profile summary data \c IndexedInstrProf::Summary is
   // stored after the profile header.
   Version4 = 4,
-  // In this version, the frontend PGO stable hash algorithm defaults to V2.
-  Version5 = 5,
-  // The current version is 5.
+  // The current version is 4.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;

@@ -1,9 +1,0 @@
-# RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN: | llvm-dwarfdump -debug-abbrev -debug-info - \
-# RUN: | FileCheck %s
-
-# CHECK-NOT: contents:
-# CHECK: .debug_abbrev contents:
-# CHECK-NOT: contents:
-# CHECK: .debug_info contents:
-# CHECK-NOT: contents:

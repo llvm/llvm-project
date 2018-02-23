@@ -2806,8 +2806,6 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
   {
     QualType type = VD->getType();
-    if (type.isNull())
-      return ExprError();
     if (auto *FPT = type->getAs<FunctionProtoType>()) {
       // C++ [except.spec]p17:
       //   An exception-specification is considered to be needed when:
@@ -7398,14 +7396,6 @@ Sema::CheckAssignmentConstraints(SourceLocation Loc,
   return CheckAssignmentConstraints(LHSType, RHSPtr, K, /*ConvertRHS=*/false);
 }
 
-/// This helper function returns true if QT is a vector type that has element
-/// type ElementType.
-static bool isVector(QualType QT, QualType ElementType) {
-  if (const VectorType *VT = QT->getAs<VectorType>())
-    return VT->getElementType() == ElementType;
-  return false;
-}
-
 /// CheckAssignmentConstraints (C99 6.5.16) - This routine currently
 /// has code to accommodate several GCC extensions when type checking
 /// pointers. Here are some objectionable examples that GCC considers warnings:
@@ -8028,25 +8018,6 @@ static bool tryVectorConvertAndSplat(Sema &S, ExprResult *scalar,
   return false;
 }
 
-/// Convert vector E to a vector with the same number of elements but different
-/// element type.
-static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
-  const auto *VecTy = E->getType()->getAs<VectorType>();
-  assert(VecTy && "Expression E must be a vector");
-  QualType NewVecTy = S.Context.getVectorType(ElementType,
-                                              VecTy->getNumElements(),
-                                              VecTy->getVectorKind());
-
-  // Look through the implicit cast. Return the subexpression if its type is
-  // NewVecTy.
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-    if (ICE->getSubExpr()->getType() == NewVecTy)
-      return ICE->getSubExpr();
-
-  auto Cast = ElementType->isIntegerType() ? CK_IntegralCast : CK_FloatingCast;
-  return S.ImpCastExprToType(E, NewVecTy, Cast);
-}
-
 /// Test if a (constant) integer Int can be casted to another integer type
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
@@ -8317,7 +8288,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
     // type. Note that this is already done by non-compound assignments in
     // CheckAssignmentConstraints. If it's a scalar type, only bitcast for
     // <1 x T> -> T. The result is also a vector type.
-    } else if (OtherType->isExtVectorType() || OtherType->isVectorType() ||
+    } else if (OtherType->isExtVectorType() ||
                (OtherType->isScalarType() && VT->getNumElements() == 1)) {
       ExprResult *RHSExpr = &RHS;
       *RHSExpr = ImpCastExprToType(RHSExpr->get(), LHSType, CK_BitCast);
@@ -11262,69 +11233,6 @@ static NamedDecl *getDeclFromExpr(Expr *E) {
   return nullptr;
 }
 
-// This helper function promotes a binary operator's operands (which are of a
-// half vector type) to a vector of floats and then truncates the result to
-// a vector of either half or short.
-static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
-                                      BinaryOperatorKind Opc, QualType ResultTy,
-                                      ExprValueKind VK, ExprObjectKind OK,
-                                      bool IsCompAssign, SourceLocation OpLoc,
-                                      FPOptions FPFeatures) {
-  auto &Context = S.getASTContext();
-  assert((isVector(ResultTy, Context.HalfTy) ||
-          isVector(ResultTy, Context.ShortTy)) &&
-         "Result must be a vector of half or short");
-  assert(isVector(LHS.get()->getType(), Context.HalfTy) &&
-         isVector(RHS.get()->getType(), Context.HalfTy) &&
-         "both operands expected to be a half vector");
-
-  RHS = convertVector(RHS.get(), Context.FloatTy, S);
-  QualType BinOpResTy = RHS.get()->getType();
-
-  // If Opc is a comparison, ResultType is a vector of shorts. In that case,
-  // change BinOpResTy to a vector of ints.
-  if (isVector(ResultTy, Context.ShortTy))
-    BinOpResTy = S.GetSignedVectorType(BinOpResTy);
-
-  if (IsCompAssign)
-    return new (Context) CompoundAssignOperator(
-        LHS.get(), RHS.get(), Opc, ResultTy, VK, OK, BinOpResTy, BinOpResTy,
-        OpLoc, FPFeatures);
-
-  LHS = convertVector(LHS.get(), Context.FloatTy, S);
-  auto *BO = new (Context) BinaryOperator(LHS.get(), RHS.get(), Opc, BinOpResTy,
-                                          VK, OK, OpLoc, FPFeatures);
-  return convertVector(BO, ResultTy->getAs<VectorType>()->getElementType(), S);
-}
-
-static std::pair<ExprResult, ExprResult>
-CorrectDelayedTyposInBinOp(Sema &S, BinaryOperatorKind Opc, Expr *LHSExpr,
-                           Expr *RHSExpr) {
-  ExprResult LHS = LHSExpr, RHS = RHSExpr;
-  if (!S.getLangOpts().CPlusPlus) {
-    // C cannot handle TypoExpr nodes on either side of a binop because it
-    // doesn't handle dependent types properly, so make sure any TypoExprs have
-    // been dealt with before checking the operands.
-    LHS = S.CorrectDelayedTyposInExpr(LHS);
-    RHS = S.CorrectDelayedTyposInExpr(RHS, [Opc, LHS](Expr *E) {
-      if (Opc != BO_Assign)
-        return ExprResult(E);
-      // Avoid correcting the RHS to the same Expr as the LHS.
-      Decl *D = getDeclFromExpr(E);
-      return (D && D == getDeclFromExpr(LHS.get())) ? ExprError() : E;
-    });
-  }
-  return std::make_pair(LHS, RHS);
-}
-
-/// Returns true if conversion between vectors of halfs and vectors of floats
-/// is needed.
-static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
-                                     QualType SrcType) {
-  return OpRequiresConversion && !Ctx.getLangOpts().NativeHalfType &&
-         Ctx.getLangOpts().HalfArgsAndReturns && isVector(SrcType, Ctx.HalfTy);
-}
-
 /// CreateBuiltinBinOp - Creates a new built-in binary operation with
 /// operator @p Opc at location @c TokLoc. This routine only supports
 /// built-in operations; ActOnBinOp handles overloaded operators.
@@ -11356,11 +11264,22 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   QualType CompResultTy; // Type of computation result
   ExprValueKind VK = VK_RValue;
   ExprObjectKind OK = OK_Ordinary;
-  bool ConvertHalfVec = false;
 
-  std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
-  if (!LHS.isUsable() || !RHS.isUsable())
-    return ExprError();
+  if (!getLangOpts().CPlusPlus) {
+    // C cannot handle TypoExpr nodes on either side of a binop because it
+    // doesn't handle dependent types properly, so make sure any TypoExprs have
+    // been dealt with before checking the operands.
+    LHS = CorrectDelayedTyposInExpr(LHSExpr);
+    RHS = CorrectDelayedTyposInExpr(RHSExpr, [Opc, LHS](Expr *E) {
+      if (Opc != BO_Assign)
+        return ExprResult(E);
+      // Avoid correcting the RHS to the same Expr as the LHS.
+      Decl *D = getDeclFromExpr(E);
+      return (D && D == getDeclFromExpr(LHS.get())) ? ExprError() : E;
+    });
+    if (!LHS.isUsable() || !RHS.isUsable())
+      return ExprError();
+  }
 
   if (getLangOpts().OpenCL) {
     QualType LHSTy = LHSExpr->getType();
@@ -11408,7 +11327,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_Mul:
   case BO_Div:
-    ConvertHalfVec = true;
     ResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, false,
                                            Opc == BO_Div);
     break;
@@ -11416,11 +11334,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     ResultTy = CheckRemainderOperands(LHS, RHS, OpLoc);
     break;
   case BO_Add:
-    ConvertHalfVec = true;
     ResultTy = CheckAdditionOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_Sub:
-    ConvertHalfVec = true;
     ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc);
     break;
   case BO_Shl:
@@ -11431,12 +11347,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_LT:
   case BO_GE:
   case BO_GT:
-    ConvertHalfVec = true;
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, true);
     break;
   case BO_EQ:
   case BO_NE:
-    ConvertHalfVec = true;
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, false);
     break;
   case BO_And:
@@ -11448,12 +11362,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_LAnd:
   case BO_LOr:
-    ConvertHalfVec = true;
     ResultTy = CheckLogicalOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_MulAssign:
   case BO_DivAssign:
-    ConvertHalfVec = true;
     CompResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, true,
                                                Opc == BO_DivAssign);
     CompLHSTy = CompResultTy;
@@ -11467,13 +11379,11 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
     break;
   case BO_AddAssign:
-    ConvertHalfVec = true;
     CompResultTy = CheckAdditionOperands(LHS, RHS, OpLoc, Opc, &CompLHSTy);
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
     break;
   case BO_SubAssign:
-    ConvertHalfVec = true;
     CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, &CompLHSTy);
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
@@ -11506,16 +11416,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   if (ResultTy.isNull() || LHS.isInvalid() || RHS.isInvalid())
     return ExprError();
 
-  // Some of the binary operations require promoting operands of half vector to
-  // float vectors and truncating the result back to half vector. For now, we do
-  // this only when HalfArgsAndReturn is set (that is, when the target is arm or
-  // arm64).
-  assert(isVector(RHS.get()->getType(), Context.HalfTy) ==
-         isVector(LHS.get()->getType(), Context.HalfTy) &&
-         "both sides are half vectors or neither sides are");
-  ConvertHalfVec = needsConversionOfHalfVec(ConvertHalfVec, Context,
-                                            LHS.get()->getType());
-
   // Check for array bounds violations for both sides of the BinaryOperator
   CheckArrayAccess(LHS.get());
   CheckArrayAccess(RHS.get());
@@ -11538,26 +11438,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
            dyn_cast<ObjCIvarRefExpr>(LHS.get()->IgnoreParenCasts()))
     DiagnoseDirectIsaAccess(*this, OIRE, OpLoc, RHS.get());
   
-  // Opc is not a compound assignment if CompResultTy is null.
-  if (CompResultTy.isNull()) {
-    if (ConvertHalfVec)
-      return convertHalfVecBinOp(*this, LHS, RHS, Opc, ResultTy, VK, OK, false,
-                                 OpLoc, FPFeatures);
+  if (CompResultTy.isNull())
     return new (Context) BinaryOperator(LHS.get(), RHS.get(), Opc, ResultTy, VK,
                                         OK, OpLoc, FPFeatures);
-  }
-
-  // Handle compound assignments.
   if (getLangOpts().CPlusPlus && LHS.get()->getObjectKind() !=
       OK_ObjCProperty) {
     VK = VK_LValue;
     OK = LHS.get()->getObjectKind();
   }
-
-  if (ConvertHalfVec)
-    return convertHalfVecBinOp(*this, LHS, RHS, Opc, ResultTy, VK, OK, true,
-                               OpLoc, FPFeatures);
-
   return new (Context) CompoundAssignOperator(
       LHS.get(), RHS.get(), Opc, ResultTy, VK, OK, CompLHSTy, CompResultTy,
       OpLoc, FPFeatures);
@@ -11805,13 +11693,6 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
                             BinaryOperatorKind Opc,
                             Expr *LHSExpr, Expr *RHSExpr) {
-  ExprResult LHS, RHS;
-  std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
-  if (!LHS.isUsable() || !RHS.isUsable())
-    return ExprError();
-  LHSExpr = LHS.get();
-  RHSExpr = RHS.get();
-
   // We want to end up calling one of checkPseudoObjectAssignment
   // (if the LHS is a pseudo-object), BuildOverloadedBinOp (if
   // both expressions are overloadable or either is type-dependent),
@@ -11915,7 +11796,6 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   ExprValueKind VK = VK_RValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType resultType;
-  bool ConvertHalfVec = false;
   if (getLangOpts().OpenCL) {
     QualType Ty = InputExpr->getType();
     // The only legal unary operation for atomics is '&'.
@@ -11955,16 +11835,6 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   case UO_Minus:
     Input = UsualUnaryConversions(Input.get());
     if (Input.isInvalid()) return ExprError();
-    // Unary plus and minus require promoting an operand of half vector to a
-    // float vector and truncating the result back to a half vector. For now, we
-    // do this only when HalfArgsAndReturns is set (that is, when the target is
-    // arm or arm64).
-    ConvertHalfVec =
-        needsConversionOfHalfVec(true, Context, Input.get()->getType());
-
-    // If the operand is a half vector, promote it to a float vector.
-    if (ConvertHalfVec)
-      Input = convertVector(Input.get(), Context.FloatTy, *this);
     resultType = Input.get()->getType();
     if (resultType->isDependentType())
       break;
@@ -12102,12 +11972,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   if (Opc != UO_AddrOf && Opc != UO_Deref)
     CheckArrayAccess(Input.get());
 
-  auto *UO = new (Context)
+  return new (Context)
       UnaryOperator(Input.get(), Opc, resultType, VK, OK, OpLoc);
-  // Convert the result back to a half vector.
-  if (ConvertHalfVec)
-    return convertVector(UO, Context.HalfTy, *this);
-  return UO;
 }
 
 /// \brief Determine whether the given expression is a qualified member
@@ -12616,8 +12482,8 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
   // Look for an explicit signature in that function type.
   FunctionProtoTypeLoc ExplicitSignature;
 
-  if ((ExplicitSignature =
-           Sig->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>())) {
+  TypeLoc tmp = Sig->getTypeLoc().IgnoreParens();
+  if ((ExplicitSignature = tmp.getAs<FunctionProtoTypeLoc>())) {
 
     // Check whether that explicit signature was synthesized by
     // GetTypeForDeclarator.  If so, don't save that as part of the
@@ -14131,8 +13997,6 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
     Field->setImplicit(true);
     Field->setAccess(AS_private);
     RD->addDecl(Field);
-    if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-      S.setOpenMPCaptureKind(Field, Var, RSI->OpenMPLevel);
  
     CopyExpr = new (S.Context) DeclRefExpr(Var, RefersToCapturedVariable,
                                             DeclRefType, VK_LValue, Loc);

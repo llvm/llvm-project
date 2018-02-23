@@ -201,11 +201,12 @@ LockFileManager::LockFileManager(StringRef FileName)
     Out.close();
 
     if (Out.has_error()) {
-      // We failed to write out PID, so report the error, remove the
+      // We failed to write out PID, so make up an excuse, remove the
       // unique lock file, and fail.
+      auto EC = make_error_code(errc::no_space_on_device);
       std::string S("failed to write to ");
       S.append(UniqueLockFileName.str());
-      setError(Out.error(), S);
+      setError(EC, S);
       sys::fs::remove(UniqueLockFileName);
       return;
     }
@@ -261,20 +262,21 @@ LockFileManager::LockFileState LockFileManager::getState() const {
   if (Owner)
     return LFS_Shared;
 
-  if (ErrorCode)
+  if (Error)
     return LFS_Error;
 
   return LFS_Owned;
 }
 
 std::string LockFileManager::getErrorMessage() const {
-  if (ErrorCode) {
+  if (Error) {
     std::string Str(ErrorDiagMsg);
-    std::string ErrCodeMsg = ErrorCode.message();
+    std::string ErrCodeMsg = Error->message();
     raw_string_ostream OSS(Str);
     if (!ErrCodeMsg.empty())
-      OSS << ": " << ErrCodeMsg;
-    return OSS.str();
+      OSS << ": " << Error->message();
+    OSS.flush();
+    return Str;
   }
   return "";
 }

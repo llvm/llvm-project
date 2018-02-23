@@ -445,7 +445,6 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       }
 
       CurPPLexer = nullptr;
-      recomputeCurLexerKind();
       return true;
     }
 
@@ -459,15 +458,9 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       SourceMgr.setNumCreatedFIDsForFileID(CurPPLexer->getFileID(), NumFIDs);
     }
 
-    bool ExitedFromPredefinesFile = false;
     FileID ExitedFID;
-    if (!isEndOfMacro && CurPPLexer) {
+    if (Callbacks && !isEndOfMacro && CurPPLexer)
       ExitedFID = CurPPLexer->getFileID();
-
-      assert(PredefinesFileID.isValid() &&
-             "HandleEndOfFile is called before PredefinesFileId is set");
-      ExitedFromPredefinesFile = (PredefinesFileID == ExitedFID);
-    }
 
     if (LeavingSubmodule) {
       // We're done with this submodule.
@@ -495,11 +488,6 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       Callbacks->FileChanged(CurPPLexer->getSourceLocation(),
                              PPCallbacks::ExitFile, FileType, ExitedFID);
     }
-
-    // Restore conditional stack from the preamble right after exiting from the
-    // predefines file.
-    if (ExitedFromPredefinesFile)
-      replayPreambleConditionalStack();
 
     // Client should lex another token unless we generated an EOM.
     return LeavingSubmodule;

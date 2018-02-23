@@ -579,9 +579,11 @@ bool SwiftAggLowering::shouldPassIndirectly(bool asReturnValue) const {
   // Empty types don't need to be passed indirectly.
   if (Entries.empty()) return false;
 
+  CharUnits totalSize = Entries.back().End;
+
   // Avoid copying the array of types when there's just a single element.
   if (Entries.size() == 1) {
-    return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(
+    return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(totalSize,
                                                            Entries.back().Type,
                                                              asReturnValue);    
   }
@@ -591,14 +593,8 @@ bool SwiftAggLowering::shouldPassIndirectly(bool asReturnValue) const {
   for (auto &entry : Entries) {
     componentTys.push_back(entry.Type);
   }
-  return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(componentTys,
-                                                           asReturnValue);
-}
-
-bool swiftcall::shouldPassIndirectly(CodeGenModule &CGM,
-                                     ArrayRef<llvm::Type*> componentTys,
-                                     bool asReturnValue) {
-  return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(componentTys,
+  return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(totalSize,
+                                                           componentTys,
                                                            asReturnValue);
 }
 

@@ -1,8 +1,6 @@
-; RUN: llc -split-dwarf-file=foo.dwo -O0 < %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -split-dwarf-file=foo.dwo -O0 < %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
-; CHECK: .debug_info contents:
 ; CHECK-NOT: DW_TAG_subprogram
-; CHECK: contents:
 
 ; IR generated from the following source:
 ; void f1();

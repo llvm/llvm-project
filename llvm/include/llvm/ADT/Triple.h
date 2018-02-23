@@ -202,8 +202,7 @@ public:
     AMDOpenCL,
     CoreCLR,
     OpenCL,
-    Simulator,  // Simulator variants of other systems, e.g., Apple's iOS
-    LastEnvironmentType = Simulator
+    LastEnvironmentType = OpenCL
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -468,10 +467,6 @@ public:
     return isMacOSX() || isiOS() || isWatchOS();
   }
 
-  bool isSimulatorEnvironment() const {
-    return getEnvironment() == Triple::Simulator;
-  }
-
   bool isOSNetBSD() const {
     return getOS() == Triple::NetBSD;
   }
@@ -511,11 +506,6 @@ public:
 
   bool isOSContiki() const {
     return getOS() == Triple::Contiki;
-  }
-
-  /// Tests whether the OS is Haiku.
-  bool isOSHaiku() const {
-    return getOS() == Triple::Haiku;
   }
 
   /// Checks if the environment could be MSVC.

@@ -16,7 +16,6 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -30,7 +29,6 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <sstream>
 
 using namespace clang;
@@ -643,291 +641,6 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 };
 }
 
-Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
-                                                 BuiltinCheckKind Kind) {
-  assert(Kind == BCK_CLZPassedZero ||
-         Kind == BCK_CTZPassedZero && "Unsupported builtin check kind");
-
-  Value *ArgValue = EmitScalarExpr(E);
-  if (!SanOpts.has(SanitizerKind::Builtin) || !getTarget().isCLZForZeroUndef())
-    return ArgValue;
-
-  SanitizerScope SanScope(this);
-  Value *Cond = Builder.CreateICmpNE(
-      ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
-  EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
-            SanitizerHandler::InvalidBuiltin,
-            {EmitCheckSourceLocation(E->getExprLoc()),
-             llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
-            None);
-  return ArgValue;
-}
-
-/// Get the argument type for arguments to os_log_helper.
-static CanQualType getOSLogArgType(ASTContext &C, int Size) {
-  QualType UnsignedTy = C.getIntTypeForBitwidth(Size * 8, /*Signed=*/false);
-  return C.getCanonicalType(UnsignedTy);
-}
-
-llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
-    const analyze_os_log::OSLogBufferLayout &Layout,
-    CharUnits BufferAlignment) {
-  ASTContext &Ctx = getContext();
-
-  llvm::SmallString<64> Name;
-  {
-    raw_svector_ostream OS(Name);
-    OS << "__os_log_helper";
-    OS << "_" << BufferAlignment.getQuantity();
-    OS << "_" << int(Layout.getSummaryByte());
-    OS << "_" << int(Layout.getNumArgsByte());
-    for (const auto &Item : Layout.Items)
-      OS << "_" << int(Item.getSizeByte()) << "_"
-         << int(Item.getDescriptorByte());
-  }
-
-  if (llvm::Function *F = CGM.getModule().getFunction(Name))
-    return F;
-
-  llvm::SmallVector<ImplicitParamDecl, 4> Params;
-  Params.emplace_back(Ctx, nullptr, SourceLocation(), &Ctx.Idents.get("buffer"),
-                      Ctx.VoidPtrTy, ImplicitParamDecl::Other);
-
-  for (unsigned int I = 0, E = Layout.Items.size(); I < E; ++I) {
-    char Size = Layout.Items[I].getSizeByte();
-    if (!Size)
-      continue;
-
-    Params.emplace_back(
-        Ctx, nullptr, SourceLocation(),
-        &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)),
-        getOSLogArgType(Ctx, Size), ImplicitParamDecl::Other);
-  }
-
-  FunctionArgList Args;
-  for (auto &P : Params)
-    Args.push_back(&P);
-
-  // The helper function has linkonce_odr linkage to enable the linker to merge
-  // identical functions. To ensure the merging always happens, 'noinline' is
-  // attached to the function when compiling with -Oz.
-  const CGFunctionInfo &FI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
-  llvm::FunctionType *FuncTy = CGM.getTypes().GetFunctionType(FI);
-  llvm::Function *Fn = llvm::Function::Create(
-      FuncTy, llvm::GlobalValue::LinkOnceODRLinkage, Name, &CGM.getModule());
-  Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  CGM.SetLLVMFunctionAttributes(nullptr, FI, Fn);
-  CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
-
-  // Attach 'noinline' at -Oz.
-  if (CGM.getCodeGenOpts().OptimizeSize == 2)
-    Fn->addFnAttr(llvm::Attribute::NoInline);
-
-  auto NL = ApplyDebugLocation::CreateEmpty(*this);
-  IdentifierInfo *II = &Ctx.Idents.get(Name);
-  FunctionDecl *FD = FunctionDecl::Create(
-      Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      Ctx.VoidTy, nullptr, SC_PrivateExtern, false, false);
-
-  StartFunction(FD, Ctx.VoidTy, Fn, FI, Args);
-
-  // Create a scope with an artificial location for the body of this function.
-  auto AL = ApplyDebugLocation::CreateArtificial(*this);
-
-  CharUnits Offset;
-  Address BufAddr(Builder.CreateLoad(GetAddrOfLocalVar(&Params[0]), "buf"),
-                  BufferAlignment);
-  Builder.CreateStore(Builder.getInt8(Layout.getSummaryByte()),
-                      Builder.CreateConstByteGEP(BufAddr, Offset++, "summary"));
-  Builder.CreateStore(Builder.getInt8(Layout.getNumArgsByte()),
-                      Builder.CreateConstByteGEP(BufAddr, Offset++, "numArgs"));
-
-  unsigned I = 1;
-  for (const auto &Item : Layout.Items) {
-    Builder.CreateStore(
-        Builder.getInt8(Item.getDescriptorByte()),
-        Builder.CreateConstByteGEP(BufAddr, Offset++, "argDescriptor"));
-    Builder.CreateStore(
-        Builder.getInt8(Item.getSizeByte()),
-        Builder.CreateConstByteGEP(BufAddr, Offset++, "argSize"));
-
-    CharUnits Size = Item.size();
-    if (!Size.getQuantity())
-      continue;
-
-    Address Arg = GetAddrOfLocalVar(&Params[I]);
-    Address Addr = Builder.CreateConstByteGEP(BufAddr, Offset, "argData");
-    Addr = Builder.CreateBitCast(Addr, Arg.getPointer()->getType(),
-                                 "argDataCast");
-    Builder.CreateStore(Builder.CreateLoad(Arg), Addr);
-    Offset += Size;
-    ++I;
-  }
-
-  FinishFunction();
-
-  return Fn;
-}
-
-RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
-  assert(E.getNumArgs() >= 2 &&
-         "__builtin_os_log_format takes at least 2 arguments");
-  ASTContext &Ctx = getContext();
-  analyze_os_log::OSLogBufferLayout Layout;
-  analyze_os_log::computeOSLogBufferLayout(Ctx, &E, Layout);
-  Address BufAddr = EmitPointerWithAlignment(E.getArg(0));
-  llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
-
-  // Ignore argument 1, the format string. It is not currently used.
-  CallArgList Args;
-  Args.add(RValue::get(BufAddr.getPointer()), Ctx.VoidPtrTy);
-
-  for (const auto &Item : Layout.Items) {
-    int Size = Item.getSizeByte();
-    if (!Size)
-      continue;
-
-    llvm::Value *ArgVal;
-
-    if (const Expr *TheExpr = Item.getExpr()) {
-      ArgVal = EmitScalarExpr(TheExpr, /*Ignore*/ false);
-
-      // Check if this is a retainable type.
-      if (TheExpr->getType()->isObjCRetainableType()) {
-        assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
-               "Only scalar can be a ObjC retainable type");
-        // Check if the object is constant, if not, save it in
-        // RetainableOperands.
-        if (!isa<Constant>(ArgVal))
-          RetainableOperands.push_back(ArgVal);
-      }
-    } else {
-      ArgVal = Builder.getInt32(Item.getConstValue().getQuantity());
-    }
-
-    unsigned ArgValSize =
-        CGM.getDataLayout().getTypeSizeInBits(ArgVal->getType());
-    llvm::IntegerType *IntTy = llvm::Type::getIntNTy(getLLVMContext(),
-                                                     ArgValSize);
-    ArgVal = Builder.CreateBitOrPointerCast(ArgVal, IntTy);
-    CanQualType ArgTy = getOSLogArgType(Ctx, Size);
-    // If ArgVal has type x86_fp80, zero-extend ArgVal.
-    ArgVal = Builder.CreateZExtOrBitCast(ArgVal, ConvertType(ArgTy));
-    Args.add(RValue::get(ArgVal), ArgTy);
-  }
-
-  const CGFunctionInfo &FI =
-      CGM.getTypes().arrangeBuiltinFunctionCall(Ctx.VoidTy, Args);
-  llvm::Function *F = CodeGenFunction(CGM).generateBuiltinOSLogHelperFunction(
-      Layout, BufAddr.getAlignment());
-  EmitCall(FI, CGCallee::forDirect(F), ReturnValueSlot(), Args);
-
-  // Push a clang.arc.use cleanup for each object in RetainableOperands. The
-  // cleanup will cause the use to appear after the final log call, keeping
-  // the object valid while it’s held in the log buffer.  Note that if there’s
-  // a release cleanup on the object, it will already be active; since
-  // cleanups are emitted in reverse order, the use will occur before the
-  // object is released.
-  if (!RetainableOperands.empty() && getLangOpts().ObjCAutoRefCount &&
-      CGM.getCodeGenOpts().OptimizationLevel != 0)
-    for (llvm::Value *Object : RetainableOperands)
-      pushFullExprCleanup<CallObjCArcUse>(getARCCleanupKind(), Object);
-
-  return RValue::get(BufAddr.getPointer());
-}
-
-/// Determine if a binop is a checked mixed-sign multiply we can specialize.
-static bool isSpecialMixedSignMultiply(unsigned BuiltinID,
-                                       WidthAndSignedness Op1Info,
-                                       WidthAndSignedness Op2Info,
-                                       WidthAndSignedness ResultInfo) {
-  return BuiltinID == Builtin::BI__builtin_mul_overflow &&
-         Op1Info.Width == Op2Info.Width && Op1Info.Width >= ResultInfo.Width &&
-         Op1Info.Signed != Op2Info.Signed;
-}
-
-/// Emit a checked mixed-sign multiply. This is a cheaper specialization of
-/// the generic checked-binop irgen.
-static RValue
-EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
-                             WidthAndSignedness Op1Info, const clang::Expr *Op2,
-                             WidthAndSignedness Op2Info,
-                             const clang::Expr *ResultArg, QualType ResultQTy,
-                             WidthAndSignedness ResultInfo) {
-  assert(isSpecialMixedSignMultiply(Builtin::BI__builtin_mul_overflow, Op1Info,
-                                    Op2Info, ResultInfo) &&
-         "Not a mixed-sign multipliction we can specialize");
-
-  // Emit the signed and unsigned operands.
-  const clang::Expr *SignedOp = Op1Info.Signed ? Op1 : Op2;
-  const clang::Expr *UnsignedOp = Op1Info.Signed ? Op2 : Op1;
-  llvm::Value *Signed = CGF.EmitScalarExpr(SignedOp);
-  llvm::Value *Unsigned = CGF.EmitScalarExpr(UnsignedOp);
-
-  llvm::Type *OpTy = Signed->getType();
-  llvm::Value *Zero = llvm::Constant::getNullValue(OpTy);
-  Address ResultPtr = CGF.EmitPointerWithAlignment(ResultArg);
-  llvm::Type *ResTy = ResultPtr.getElementType();
-
-  // Take the absolute value of the signed operand.
-  llvm::Value *IsNegative = CGF.Builder.CreateICmpSLT(Signed, Zero);
-  llvm::Value *AbsOfNegative = CGF.Builder.CreateSub(Zero, Signed);
-  llvm::Value *AbsSigned =
-      CGF.Builder.CreateSelect(IsNegative, AbsOfNegative, Signed);
-
-  // Perform a checked unsigned multiplication.
-  llvm::Value *UnsignedOverflow;
-  llvm::Value *UnsignedResult =
-      EmitOverflowIntrinsic(CGF, llvm::Intrinsic::umul_with_overflow, AbsSigned,
-                            Unsigned, UnsignedOverflow);
-
-  llvm::Value *Overflow, *Result;
-  if (ResultInfo.Signed) {
-    // Signed overflow occurs if the result is greater than INT_MAX or lesser
-    // than INT_MIN, i.e when |Result| > (INT_MAX + IsNegative).
-    auto IntMax = llvm::APInt::getSignedMaxValue(ResultInfo.Width)
-                      .zextOrSelf(Op1Info.Width);
-    llvm::Value *MaxResult =
-        CGF.Builder.CreateAdd(llvm::ConstantInt::get(OpTy, IntMax),
-                              CGF.Builder.CreateZExt(IsNegative, OpTy));
-    llvm::Value *SignedOverflow =
-        CGF.Builder.CreateICmpUGT(UnsignedResult, MaxResult);
-    Overflow = CGF.Builder.CreateOr(UnsignedOverflow, SignedOverflow);
-
-    // Prepare the signed result (possibly by negating it).
-    llvm::Value *NegativeResult = CGF.Builder.CreateNeg(UnsignedResult);
-    llvm::Value *SignedResult =
-        CGF.Builder.CreateSelect(IsNegative, NegativeResult, UnsignedResult);
-    Result = CGF.Builder.CreateTrunc(SignedResult, ResTy);
-  } else {
-    // Unsigned overflow occurs if the result is < 0 or greater than UINT_MAX.
-    llvm::Value *Underflow = CGF.Builder.CreateAnd(
-        IsNegative, CGF.Builder.CreateIsNotNull(UnsignedResult));
-    Overflow = CGF.Builder.CreateOr(UnsignedOverflow, Underflow);
-    if (ResultInfo.Width < Op1Info.Width) {
-      auto IntMax =
-          llvm::APInt::getMaxValue(ResultInfo.Width).zext(Op1Info.Width);
-      llvm::Value *TruncOverflow = CGF.Builder.CreateICmpUGT(
-          UnsignedResult, llvm::ConstantInt::get(OpTy, IntMax));
-      Overflow = CGF.Builder.CreateOr(Overflow, TruncOverflow);
-    }
-
-    // Negate the product if it would be negative in infinite precision.
-    Result = CGF.Builder.CreateSelect(
-        IsNegative, CGF.Builder.CreateNeg(UnsignedResult), UnsignedResult);
-
-    Result = CGF.Builder.CreateTrunc(Result, ResTy);
-  }
-  assert(Overflow && Result && "Missing overflow or result");
-
-  bool isVolatile =
-      ResultArg->getType()->getPointeeType().isVolatileQualified();
-  CGF.Builder.CreateStore(CGF.EmitToMemory(Result, ResultQTy), ResultPtr,
-                          isVolatile);
-  return RValue::get(Overflow);
-}
-
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -947,7 +660,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   default: break;  // Handle intrinsics and libm functions below.
   case Builtin::BI__builtin___CFStringMakeConstantString:
   case Builtin::BI__builtin___NSStringMakeConstantString:
-    return RValue::get(ConstantEmitter(*this).emitAbstract(E, E->getType()));
+    return RValue::get(CGM.EmitConstantExpr(E, E->getType(), nullptr));
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start:
@@ -1079,7 +792,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll: {
-    Value *ArgValue = EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
     Value *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
@@ -1096,7 +809,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll: {
-    Value *ArgValue = EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
     Value *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
@@ -1633,8 +1346,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                       llvm::ConstantInt::get(Int32Ty, Offset)));
   }
   case Builtin::BI__builtin_return_address: {
-    Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
-                                                   getContext().UnsignedIntTy);
+    Value *Depth =
+        CGM.EmitConstantExpr(E->getArg(0), getContext().UnsignedIntTy, this);
     Value *F = CGM.getIntrinsic(Intrinsic::returnaddress);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
@@ -1643,8 +1356,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(Builder.CreateCall(F, Builder.getInt32(0)));
   }
   case Builtin::BI__builtin_frame_address: {
-    Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
-                                                   getContext().UnsignedIntTy);
+    Value *Depth =
+        CGM.EmitConstantExpr(E->getArg(0), getContext().UnsignedIntTy, this);
     Value *F = CGM.getIntrinsic(Intrinsic::frameaddress);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
@@ -2313,14 +2026,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
         getIntegerWidthAndSignedness(CGM.getContext(), RightArg->getType());
     WidthAndSignedness ResultInfo =
         getIntegerWidthAndSignedness(CGM.getContext(), ResultQTy);
-
-    // Handle mixed-sign multiplication as a special case, because adding
-    // runtime or backend support for our generic irgen would be too expensive.
-    if (isSpecialMixedSignMultiply(BuiltinID, LeftInfo, RightInfo, ResultInfo))
-      return EmitCheckedMixedSignMultiply(*this, LeftArg, LeftInfo, RightArg,
-                                          RightInfo, ResultArg, ResultQTy,
-                                          ResultInfo);
-
     WidthAndSignedness EncompassingInfo =
         EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});
 
@@ -2994,8 +2699,69 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     // Fall through - it's already mapped to the intrinsic by GCCBuiltin.
     break;
   }
-  case Builtin::BI__builtin_os_log_format:
-    return emitBuiltinOSLogFormat(*E);
+  case Builtin::BI__builtin_os_log_format: {
+    assert(E->getNumArgs() >= 2 &&
+           "__builtin_os_log_format takes at least 2 arguments");
+    analyze_os_log::OSLogBufferLayout Layout;
+    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
+    Address BufAddr = EmitPointerWithAlignment(E->getArg(0));
+    // Ignore argument 1, the format string. It is not currently used.
+    CharUnits Offset;
+    Builder.CreateStore(
+        Builder.getInt8(Layout.getSummaryByte()),
+        Builder.CreateConstByteGEP(BufAddr, Offset++, "summary"));
+    Builder.CreateStore(
+        Builder.getInt8(Layout.getNumArgsByte()),
+        Builder.CreateConstByteGEP(BufAddr, Offset++, "numArgs"));
+
+    llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
+    for (const auto &Item : Layout.Items) {
+      Builder.CreateStore(
+          Builder.getInt8(Item.getDescriptorByte()),
+          Builder.CreateConstByteGEP(BufAddr, Offset++, "argDescriptor"));
+      Builder.CreateStore(
+          Builder.getInt8(Item.getSizeByte()),
+          Builder.CreateConstByteGEP(BufAddr, Offset++, "argSize"));
+      Address Addr = Builder.CreateConstByteGEP(BufAddr, Offset);
+      if (const Expr *TheExpr = Item.getExpr()) {
+        Addr = Builder.CreateElementBitCast(
+            Addr, ConvertTypeForMem(TheExpr->getType()));
+        // Check if this is a retainable type.
+        if (TheExpr->getType()->isObjCRetainableType()) {
+          assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
+                 "Only scalar can be a ObjC retainable type");
+          llvm::Value *SV = EmitScalarExpr(TheExpr, /*Ignore*/ false);
+          RValue RV = RValue::get(SV);
+          LValue LV = MakeAddrLValue(Addr, TheExpr->getType());
+          EmitStoreThroughLValue(RV, LV);
+          // Check if the object is constant, if not, save it in
+          // RetainableOperands.
+          if (!isa<Constant>(SV))
+            RetainableOperands.push_back(SV);
+        } else {
+          EmitAnyExprToMem(TheExpr, Addr, Qualifiers(), /*isInit*/ true);
+        }
+      } else {
+        Addr = Builder.CreateElementBitCast(Addr, Int32Ty);
+        Builder.CreateStore(
+            Builder.getInt32(Item.getConstValue().getQuantity()), Addr);
+      }
+      Offset += Item.size();
+    }
+
+    // Push a clang.arc.use cleanup for each object in RetainableOperands. The
+    // cleanup will cause the use to appear after the final log call, keeping
+    // the object valid while it's held in the log buffer.  Note that if there's
+    // a release cleanup on the object, it will already be active; since
+    // cleanups are emitted in reverse order, the use will occur before the
+    // object is released.
+    if (!RetainableOperands.empty() && getLangOpts().ObjCAutoRefCount &&
+        CGM.getCodeGenOpts().OptimizationLevel != 0)
+      for (llvm::Value *object : RetainableOperands)
+        pushFullExprCleanup<CallObjCArcUse>(getARCCleanupKind(), object);
+
+    return RValue::get(BufAddr.getPointer());
+  }
 
   case Builtin::BI__builtin_os_log_format_buffer_size: {
     analyze_os_log::OSLogBufferLayout Layout;

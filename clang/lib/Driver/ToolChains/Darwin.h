@@ -152,11 +152,10 @@ public:
                               llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Add the linker arguments to link the compiler runtime library.
-  ///
-  /// FIXME: This API is intended for use with embedded libraries only, and is
-  /// misleadingly named.
   virtual void AddLinkRuntimeLibArgs(const llvm::opt::ArgList &Args,
                                      llvm::opt::ArgStringList &CmdArgs) const;
+  virtual void AddFuzzerLinkArgs(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const;
 
   virtual void addStartObjectFileArgs(const llvm::opt::ArgList &Args,
                                       llvm::opt::ArgStringList &CmdArgs) const {
@@ -172,26 +171,10 @@ public:
   /// Is the target either iOS or an iOS simulator?
   bool isTargetIOSBased() const { return false; }
 
-  /// Options to control how a runtime library is linked.
-  enum RuntimeLinkOptions : unsigned {
-    // Link the library in even if it can't be found in the VFS.
-    RLO_AlwaysLink = 1 << 0,
-
-    // Use the embedded runtime from the macho_embedded directory.
-    RLO_IsEmbedded = 1 << 1,
-
-    // Emit rpaths for @executable_path as well as the resource directory.
-    RLO_AddRPath = 1 << 2,
-
-    //< Link the library in before any others.
-    RLO_FirstLink = 1 << 3,
-  };
-
-  /// Add a runtime library to the list of items to link.
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs,
-                         StringRef DarwinLibName,
-                         RuntimeLinkOptions Opts = RuntimeLinkOptions()) const;
+                         StringRef DarwinLibName, bool AlwaysLink = false,
+                         bool IsEmbedded = false, bool AddRPath = false) const;
 
   /// Add any profiling runtime libraries that are needed. This is essentially a
   /// MachO specific version of addProfileRT in Tools.cpp.
@@ -233,7 +216,7 @@ public:
 
   bool UseObjCMixedDispatch() const override { return true; }
 
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  bool IsUnwindTablesDefault() const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
@@ -269,17 +252,14 @@ public:
   enum DarwinPlatformKind {
     MacOS,
     IPhoneOS,
+    IPhoneOSSimulator,
     TvOS,
+    TvOSSimulator,
     WatchOS,
-    LastDarwinPlatform = WatchOS
-  };
-  enum DarwinEnvironmentKind {
-    NativeEnvironment,
-    Simulator,
+    WatchOSSimulator
   };
 
   mutable DarwinPlatformKind TargetPlatform;
-  mutable DarwinEnvironmentKind TargetEnvironment;
 
   /// The OS version we are targeting.
   mutable VersionTuple TargetVersion;
@@ -321,34 +301,29 @@ protected:
 
   // FIXME: Eliminate these ...Target functions and derive separate tool chains
   // for these targets and put version in constructor.
-  void setTarget(DarwinPlatformKind Platform, DarwinEnvironmentKind Environment,
-                 unsigned Major, unsigned Minor, unsigned Micro) const {
+  void setTarget(DarwinPlatformKind Platform, unsigned Major, unsigned Minor,
+                 unsigned Micro) const {
     // FIXME: For now, allow reinitialization as long as values don't
     // change. This will go away when we move away from argument translation.
     if (TargetInitialized && TargetPlatform == Platform &&
-        TargetEnvironment == Environment &&
         TargetVersion == VersionTuple(Major, Minor, Micro))
       return;
 
     assert(!TargetInitialized && "Target already initialized!");
     TargetInitialized = true;
     TargetPlatform = Platform;
-    TargetEnvironment = Environment;
     TargetVersion = VersionTuple(Major, Minor, Micro);
-    if (Environment == Simulator)
-      const_cast<Darwin *>(this)->setTripleEnvironment(llvm::Triple::Simulator);
   }
 
   bool isTargetIPhoneOS() const {
     assert(TargetInitialized && "Target not initialized!");
-    return (TargetPlatform == IPhoneOS || TargetPlatform == TvOS) &&
-           TargetEnvironment == NativeEnvironment;
+    return TargetPlatform == IPhoneOS || TargetPlatform == TvOS;
   }
 
   bool isTargetIOSSimulator() const {
     assert(TargetInitialized && "Target not initialized!");
-    return (TargetPlatform == IPhoneOS || TargetPlatform == TvOS) &&
-           TargetEnvironment == Simulator;
+    return TargetPlatform == IPhoneOSSimulator ||
+           TargetPlatform == TvOSSimulator;
   }
 
   bool isTargetIOSBased() const {
@@ -358,32 +333,32 @@ protected:
 
   bool isTargetTvOS() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == TvOS && TargetEnvironment == NativeEnvironment;
+    return TargetPlatform == TvOS;
   }
 
   bool isTargetTvOSSimulator() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == TvOS && TargetEnvironment == Simulator;
+    return TargetPlatform == TvOSSimulator;
   }
 
   bool isTargetTvOSBased() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == TvOS;
+    return TargetPlatform == TvOS || TargetPlatform == TvOSSimulator;
   }
 
   bool isTargetWatchOS() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == WatchOS && TargetEnvironment == NativeEnvironment;
+    return TargetPlatform == WatchOS;
   }
 
   bool isTargetWatchOSSimulator() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == WatchOS && TargetEnvironment == Simulator;
+    return TargetPlatform == WatchOSSimulator;
   }
 
   bool isTargetWatchOSBased() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == WatchOS;
+    return TargetPlatform == WatchOS || TargetPlatform == WatchOSSimulator;
   }
 
   bool isTargetMacOS() const {
@@ -419,11 +394,10 @@ protected:
                              Action::OffloadKind DeviceOffloadKind) const override;
 
   StringRef getPlatformFamily() const;
+  static StringRef getSDKName(StringRef isysroot);
   StringRef getOSLibraryNameSuffix() const;
 
 public:
-  static StringRef getSDKName(StringRef isysroot);
-
   /// }
   /// @name ToolChain Implementation
   /// {
@@ -515,8 +489,7 @@ public:
 private:
   void AddLinkSanitizerLibArgs(const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs,
-                               StringRef Sanitizer,
-                               bool shared = true) const;
+                               StringRef Sanitizer) const;
 };
 
 } // end namespace toolchains

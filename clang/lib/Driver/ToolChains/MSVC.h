@@ -73,7 +73,7 @@ public:
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsIntegratedAssemblerDefault() const override;
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  bool IsUnwindTablesDefault() const override;
   bool isPICDefault() const override;
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;
@@ -92,12 +92,7 @@ public:
     return getSubDirectoryPath(Type, getArch());
   }
 
-  enum class ToolsetLayout {
-    OlderVS,
-    VS2017OrNewer,
-    DevDivInternal,
-  };
-  bool getIsVS2017OrNewer() const { return VSLayout == ToolsetLayout::VS2017OrNewer; }
+  bool getIsVS2017OrNewer() const { return IsVS2017OrNewer; }
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -135,7 +130,7 @@ protected:
   Tool *buildAssembler() const override;
 private:
   std::string VCToolChainPath;
-  ToolsetLayout VSLayout = ToolsetLayout::OlderVS;
+  bool IsVS2017OrNewer = false;
   CudaInstallationDetector CudaInstallation;
 };
 

@@ -643,11 +643,8 @@ void InlineSpiller::reMaterializeAll() {
       Edit->eraseVirtReg(Reg);
       continue;
     }
-
-    assert(LIS.hasInterval(Reg) &&
-           (!LIS.getInterval(Reg).empty() || !MRI.reg_nodbg_empty(Reg)) &&
-           "Empty and not used live-range?!");
-
+    assert((LIS.hasInterval(Reg) && !LIS.getInterval(Reg).empty()) &&
+           "Reg with empty interval has reference");
     RegsToSpill[ResultPos++] = Reg;
   }
   RegsToSpill.erase(RegsToSpill.begin() + ResultPos, RegsToSpill.end());

@@ -1837,10 +1837,9 @@ bool CXXMethodDecl::hasInlineBody() const {
   const FunctionDecl *CheckFn = getTemplateInstantiationPattern();
   if (!CheckFn)
     CheckFn = this;
-
+  
   const FunctionDecl *fn;
-  return CheckFn->isDefined(fn) && !fn->isOutOfLine() &&
-         (fn->doesThisDeclarationHaveABody() || fn->willHaveBody());
+  return CheckFn->hasBody(fn) && !fn->isOutOfLine();
 }
 
 bool CXXMethodDecl::isLambdaStaticInvoker() const {

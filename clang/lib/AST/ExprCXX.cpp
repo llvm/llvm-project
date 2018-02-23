@@ -1052,9 +1052,7 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(TypeSourceInfo *Type,
           :Type->getType()->isRValueReferenceType()? VK_XValue
           :VK_RValue),
          OK_Ordinary,
-         Type->getType()->isDependentType() ||
-             Type->getType()->getContainedDeducedType(),
-         true, true,
+         Type->getType()->isDependentType(), true, true,
          Type->getType()->containsUnexpandedParameterPack()),
     Type(Type),
     LParenLoc(LParenLoc),

@@ -1125,7 +1125,6 @@ static bool SinkCast(CastInst *CI) {
 
   // If we removed all uses, nuke the cast.
   if (CI->use_empty()) {
-    salvageDebugInfo(*CI);
     CI->eraseFromParent();
     MadeChange = true;
   }
@@ -2620,7 +2619,6 @@ static inline raw_ostream &operator<<(raw_ostream &OS, const ExtAddrMode &AM) {
 }
 #endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ExtAddrMode::print(raw_ostream &OS) const {
   bool NeedPlus = false;
   OS << "[";
@@ -2652,6 +2650,7 @@ void ExtAddrMode::print(raw_ostream &OS) const {
   OS << ']';
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ExtAddrMode::dump() const {
   print(dbgs());
   dbgs() << '\n';
@@ -4017,18 +4016,14 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
   return true;
 }
 
-// Max number of memory uses to look at before aborting the search to conserve
-// compile time.
-static constexpr int MaxMemoryUsesToScan = 20;
-
 /// Recursively walk all the uses of I until we find a memory use.
 /// If we find an obviously non-foldable instruction, return true.
 /// Add the ultimately found memory instructions to MemoryUses.
 static bool FindAllMemoryUses(
     Instruction *I,
     SmallVectorImpl<std::pair<Instruction *, unsigned>> &MemoryUses,
-    SmallPtrSetImpl<Instruction *> &ConsideredInsts, const TargetLowering &TLI,
-    const TargetRegisterInfo &TRI, int SeenInsts = 0) {
+    SmallPtrSetImpl<Instruction *> &ConsideredInsts,
+    const TargetLowering &TLI, const TargetRegisterInfo &TRI) {
   // If we already considered this instruction, we're done.
   if (!ConsideredInsts.insert(I).second)
     return false;
@@ -4041,12 +4036,8 @@ static bool FindAllMemoryUses(
 
   // Loop over all the uses, recursively processing them.
   for (Use &U : I->uses()) {
-    // Conservatively return true if we're seeing a large number or a deep chain
-    // of users. This avoids excessive compilation times in pathological cases.
-    if (SeenInsts++ >= MaxMemoryUsesToScan)
-      return true;
-
     Instruction *UserI = cast<Instruction>(U.getUser());
+
     if (LoadInst *LI = dyn_cast<LoadInst>(UserI)) {
       MemoryUses.push_back(std::make_pair(LI, U.getOperandNo()));
       continue;
@@ -4091,8 +4082,7 @@ static bool FindAllMemoryUses(
       continue;
     }
 
-    if (FindAllMemoryUses(UserI, MemoryUses, ConsideredInsts, TLI, TRI,
-                          SeenInsts))
+    if (FindAllMemoryUses(UserI, MemoryUses, ConsideredInsts, TLI, TRI))
       return true;
   }
 

@@ -940,12 +940,6 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
 bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
                                       unsigned &SrcReg2, int &CmpMask,
                                       int &CmpValue) const {
-  // The first operand can be a frame index where we'd normally expect a
-  // register.
-  assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
-  if (!MI.getOperand(1).isReg())
-    return false;
-
   switch (MI.getOpcode()) {
   default:
     break;
@@ -2087,6 +2081,18 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
   // The caller should already have ordered First/SecondLdSt by offset.
   assert(Offset1 <= Offset2 && "Caller should have ordered offsets.");
   return Offset1 + 1 == Offset2;
+}
+
+MachineInstr *AArch64InstrInfo::emitFrameIndexDebugValue(
+    MachineFunction &MF, int FrameIx, uint64_t Offset, const MDNode *Var,
+    const MDNode *Expr, const DebugLoc &DL) const {
+  MachineInstrBuilder MIB = BuildMI(MF, DL, get(AArch64::DBG_VALUE))
+                                .addFrameIndex(FrameIx)
+                                .addImm(0)
+                                .addImm(Offset)
+                                .addMetadata(Var)
+                                .addMetadata(Expr);
+  return &*MIB;
 }
 
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,

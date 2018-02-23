@@ -71,9 +71,8 @@ public:
 
   Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef MsfBuffer);
 
-  void addSectionContrib(const SectionContrib &SC) {
-    SectionContribs.emplace_back(SC);
-  }
+  void addSectionContrib(DbiModuleDescriptorBuilder *ModuleDbi,
+                         const llvm::object::coff_section *SecHdr);
 
   // A helper function to create a Section Map from a COFF section header.
   static std::vector<SecMapEntry>

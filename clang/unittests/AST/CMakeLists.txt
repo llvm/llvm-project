@@ -9,7 +9,6 @@ add_clang_unittest(ASTTests
   ASTVectorTest.cpp
   CommentLexer.cpp
   CommentParser.cpp
-  DataCollectionTest.cpp
   DeclPrinterTest.cpp
   DeclTest.cpp
   EvaluateAsRValueTest.cpp

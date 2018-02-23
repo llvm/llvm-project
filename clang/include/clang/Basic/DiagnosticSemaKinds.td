@@ -211,9 +211,9 @@ def warn_auto_storage_class : Warning<
 
 def warn_deprecated_register : Warning<
   "'register' storage class specifier is deprecated "
-  "and incompatible with C++17">, InGroup<DeprecatedRegister>;
+  "and incompatible with C++1z">, InGroup<DeprecatedRegister>;
 def ext_register_storage_class : ExtWarn<
-  "ISO C++17 does not allow 'register' storage class specifier">,
+  "ISO C++1z does not allow 'register' storage class specifier">,
   DefaultError, InGroup<Register>;
 
 def err_invalid_decl_spec_combination : Error<
@@ -391,9 +391,9 @@ def err_decomp_decl_context : Error<
   "decomposition declaration not permitted in this context">;
 def warn_cxx14_compat_decomp_decl : Warning<
   "decomposition declarations are incompatible with "
-  "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre1zCompat>;
+  "C++ standards before C++1z">, DefaultIgnore, InGroup<CXXPre1zCompat>;
 def ext_decomp_decl : ExtWarn<
-  "decomposition declarations are a C++17 extension">, InGroup<CXX17>;
+  "decomposition declarations are a C++1z extension">, InGroup<CXX1z>;
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;
@@ -494,7 +494,7 @@ def err_access_decl : Error<
   "ISO C++11 does not allow access declarations; "
   "use using declarations instead">;
 def ext_dynamic_exception_spec : ExtWarn<
-  "ISO C++17 does not allow dynamic exception specifications">,
+  "ISO C++1z does not allow dynamic exception specifications">,
   InGroup<DynamicExceptionSpec>, DefaultError;
 def warn_exception_spec_deprecated : Warning<
   "dynamic exception specifications are deprecated">,
@@ -507,7 +507,7 @@ def warn_deprecated_copy_operation : Warning<
   InGroup<Deprecated>, DefaultIgnore;
 def warn_cxx1z_compat_exception_spec_in_signature : Warning<
   "mangled name of %0 will change in C++17 due to non-throwing exception "
-  "specification in function signature">, InGroup<CXX17CompatMangling>;
+  "specification in function signature">, InGroup<CXX1zCompatMangling>;
 
 def warn_global_constructor : Warning<
   "declaration requires a global constructor">,
@@ -1206,15 +1206,15 @@ def err_static_assert_expression_is_not_constant : Error<
   "static_assert expression is not an integral constant expression">;
 def err_static_assert_failed : Error<"static_assert failed%select{ %1|}0">;
 def ext_static_assert_no_message : ExtWarn<
-  "static_assert with no message is a C++17 extension">, InGroup<CXX17>;
+  "static_assert with no message is a C++1z extension">, InGroup<CXX1z>;
 def warn_cxx14_compat_static_assert_no_message : Warning<
-  "static_assert with no message is incompatible with C++ standards before C++17">,
+  "static_assert with no message is incompatible with C++ standards before C++1z">,
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 
 def ext_inline_variable : ExtWarn<
-  "inline variables are a C++17 extension">, InGroup<CXX17>;
+  "inline variables are a C++1z extension">, InGroup<CXX1z>;
 def warn_cxx14_compat_inline_variable : Warning<
-  "inline variables are incompatible with C++ standards before C++17">,
+  "inline variables are incompatible with C++ standards before C++1z">,
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 
 def warn_inline_namespace_reopened_noninline : Warning<
@@ -1319,8 +1319,6 @@ def err_type_defined_in_alias_template : Error<
   "%0 cannot be defined in a type alias template">;
 def err_type_defined_in_condition : Error<
   "%0 cannot be defined in a condition">;
-def err_type_defined_in_enum : Error<
-  "%0 cannot be defined in an enumeration">;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -1930,7 +1928,7 @@ def err_auto_not_allowed : Error<
   "|in non-static struct member|in struct member"
   "|in non-static union member|in union member"
   "|in non-static class member|in interface member"
-  "|in exception declaration|in template parameter until C++17|in block literal"
+  "|in exception declaration|in template parameter until C++1z|in block literal"
   "|in template argument|in typedef|in type alias|in function return type"
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
@@ -2155,11 +2153,11 @@ def err_for_range_iter_deduction_failure : Error<
 def err_for_range_member_begin_end_mismatch : Error<
   "range type %0 has '%select{begin|end}1' member but no '%select{end|begin}1' member">;
 def ext_for_range_begin_end_types_differ : ExtWarn<
-  "'begin' and 'end' returning different types (%0 and %1) is a C++17 extension">,
-  InGroup<CXX17>;
+  "'begin' and 'end' returning different types (%0 and %1) is a C++1z extension">,
+  InGroup<CXX1z>;
 def warn_for_range_begin_end_types_differ : Warning<
   "'begin' and 'end' returning different types (%0 and %1) is incompatible "
-  "with C++ standards before C++17">, InGroup<CXXPre1zCompat>, DefaultIgnore;
+  "with C++ standards before C++1z">, InGroup<CXXPre1zCompat>, DefaultIgnore;
 def note_in_for_range: Note<
   "when looking up '%select{begin|end}0' function for range expression "
   "of type %1">;
@@ -2737,7 +2735,7 @@ def err_attribute_weakref_not_global_context : Error<
 def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
-  "aliases are not supported on darwin">;
+  "only weak aliases are supported on darwin">;
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined %select{variable or |}1function">;
 def warn_alias_to_weak_alias : Warning<
@@ -2890,11 +2888,25 @@ def warn_unguarded_availability :
 def warn_unguarded_availability_new :
   Warning<warn_unguarded_availability.Text>,
   InGroup<UnguardedAvailabilityNew>;
-def note_decl_unguarded_availability_silence : Note<
-  "annotate %select{%1|anonymous %1}0 with an availability attribute to silence this warning">;
+def warn_partial_availability : Warning<"%0 is only available conditionally">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_availability_new : Warning<warn_partial_availability.Text>,
+  InGroup<UnguardedAvailabilityNew>;
+def note_partial_availability_silence : Note<
+  "annotate %select{%1|anonymous %1}0 with an availability attribute to silence">;
 def note_unguarded_available_silence : Note<
   "enclose %0 in %select{an @available|a __builtin_available}1 check to silence"
   " this warning">;
+def warn_partial_message : Warning<"%0 is partial: %1">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_message_new : Warning<warn_partial_message.Text>,
+  InGroup<UnguardedAvailabilityNew>;
+def warn_partial_fwdclass_message : Warning<
+    "%0 may be partial because the receiver type is unknown">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_fwdclass_message_new :
+  Warning<warn_partial_fwdclass_message.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
@@ -3967,7 +3979,7 @@ def err_template_nontype_parm_bad_type : Error<
   "a non-type template parameter cannot have type %0">;
 def warn_cxx14_compat_template_nontype_parm_auto_type : Warning<
   "non-type template parameters declared with %0 are incompatible with C++ "
-  "standards before C++17">,
+  "standards before C++1z">,
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 def err_template_param_default_arg_redefinition : Error<
   "template parameter redefines default argument">;
@@ -6399,9 +6411,9 @@ def note_member_first_declared_here : Note<
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
   "incrementing expression of type bool is deprecated and "
-  "incompatible with C++17">, InGroup<DeprecatedIncrementBool>;
+  "incompatible with C++1z">, InGroup<DeprecatedIncrementBool>;
 def ext_increment_bool : ExtWarn<
-  "ISO C++17 does not allow incrementing expression of type bool">,
+  "ISO C++1z does not allow incrementing expression of type bool">,
   DefaultError, InGroup<IncrementBool>;
 def err_increment_decrement_enum : Error<
   "cannot %select{decrement|increment}0 expression of enum type %1">;
@@ -6482,8 +6494,8 @@ def warn_overaligned_type : Warning<
   "guarantees %2 bytes">,
   InGroup<OveralignedType>, DefaultIgnore;
 def warn_aligned_allocation_unavailable :Warning<
-  "aligned %select{allocation|deallocation}0 function of type '%1' is only "
-  "available on %2 %3 or newer">, InGroup<AlignedAllocationUnavailable>, DefaultError;
+  "aligned %select{allocation|deallocation}0 function of type '%1' possibly "
+  "unavailable on %2">, InGroup<AlignedAllocationUnavailable>, DefaultError;
 def note_silence_unligned_allocation_unavailable : Note<
   "if you supply your own aligned allocation functions, use "
   "-Wno-aligned-allocation-unavailable to silence this diagnostic">;
@@ -6590,10 +6602,10 @@ let CategoryName = "Lambda Issue" in {
 
   // C++1z '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
-    "by value capture of '*this' is incompatible with C++ standards before C++17">,
+    "by value capture of '*this' is incompatible with C++ standards before C++1z">,
      InGroup<CXXPre1zCompat>, DefaultIgnore;
   def ext_star_this_lambda_capture_cxx1z : ExtWarn<
-    "capture of '*this' by copy is a C++17 extension">, InGroup<CXX17>;
+    "capture of '*this' by copy is a C++1z extension">, InGroup<CXX1z>;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -7262,7 +7274,7 @@ def warn_unused_volatile : Warning<
 def ext_cxx14_attr : Extension<
   "use of the %0 attribute is a C++14 extension">, InGroup<CXX14>;
 def ext_cxx1z_attr : Extension<
-  "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
+  "use of the %0 attribute is a C++1z extension">, InGroup<CXX1z>;
 
 def warn_unused_comparison : Warning<
   "%select{%select{|in}1equality|relational}0 comparison result unused">,
@@ -8908,7 +8920,7 @@ def err_omp_firstprivate_distribute_in_teams_reduction : Error<
 def err_omp_depend_clause_thread_simd : Error<
   "'depend' clauses cannot be mixed with '%0' clause">;
 def err_omp_depend_sink_expected_loop_iteration : Error<
-  "expected%select{| %1}0 loop iteration variable">;
+  "expected %0 loop iteration variable">;
 def err_omp_depend_sink_unexpected_expr : Error<
   "unexpected expression: number of expressions is larger than the number of associated loops">;
 def err_omp_depend_sink_expected_plus_minus : Error<

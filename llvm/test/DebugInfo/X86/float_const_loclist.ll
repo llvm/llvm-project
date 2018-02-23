@@ -1,5 +1,5 @@
 ; RUN: llc %s -stop-after=livedebugvalues -o - | FileCheck --check-prefix=SANITY %s
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
 ; Test debug_loc support for floating point constants.
 ;
 ; Created from clang -O1:
@@ -20,14 +20,21 @@
 ;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:  DW_AT_location {{.*}} (
-; CHECK-NEXT:    [0x[[START:.*]], 0x[[END:.*]]): DW_OP_constu 0xc8f5c28f5c28f800, DW_OP_piece 0x8, DW_OP_constu 0x4000, DW_OP_bit_piece 0x10 0x40)
+; CHECK-NEXT:  DW_AT_location {{.*}} (0x[[LD:.*]])
 ; CHECK-NEXT:  DW_AT_name {{.*}}"ld"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:  DW_AT_location {{.*}} (
-; CHECK-NEXT:    [0x[[START]], 0x[[END]]): DW_OP_constu 0x4048f5c3)
+; CHECK-NEXT:  DW_AT_location {{.*}} (0x[[F:.*]])
 ; CHECK-NEXT:  DW_AT_name {{.*}}"f"
-
+;
+; CHECK: .debug_loc contents:
+; CHECK: [[LD]]: Beginning address offset: [[START:.*]]
+; CHECK:            Ending address offset: [[END:.*]]
+; CHECK: Location description: 10 80 f0 a3 e1 f5 d1 f0 fa c8 01 93 08 10 80 80 01 9d 10 40
+;                   constu 0xc8f5c28f5c28f800, piece 8, constu 0x00004000, bit-piece 16 64
+; CHECK: [[F]]: Beginning address offset: [[START]]
+; CHECK:           Ending address offset: [[END]]
+; CHECK:            Location description: 10 c3 eb a3 82 04
+;                                         constu ...
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
@@ -36,8 +43,8 @@ target triple = "x86_64-apple-macosx10.11.0"
 define void @foo() #0 !dbg !4 {
 entry:
   tail call void (...) @barrier() #3, !dbg !16
-  tail call void @llvm.dbg.value(metadata float 0x40091EB860000000, metadata !8, metadata !17), !dbg !18
-  tail call void @llvm.dbg.value(metadata x86_fp80 0xK4000C8F5C28F5C28F800, metadata !10, metadata !17), !dbg !19
+  tail call void @llvm.dbg.value(metadata float 0x40091EB860000000, i64 0, metadata !8, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata x86_fp80 0xK4000C8F5C28F5C28F800, i64 0, metadata !10, metadata !17), !dbg !19
   tail call void (...) @barrier() #3, !dbg !20
   ret void, !dbg !21
 }
@@ -45,7 +52,7 @@ entry:
 declare void @barrier(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #2 = { nounwind readnone }

@@ -10,10 +10,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
-#include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
-#include "llvm/DebugInfo/DWARF/DWARFDie.h"
-
 #include <cstdint>
 #include <map>
 #include <set>
@@ -26,91 +22,17 @@ class DWARFDie;
 class DWARFUnit;
 class DWARFAcceleratorTable;
 class DWARFDataExtractor;
-class DWARFDebugAbbrev;
-class DataExtractor;
-struct DWARFSection;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
-public:
-  /// A class that keeps the address range information for a single DIE.
-  struct DieRangeInfo {
-    DWARFDie Die;
-
-    /// Sorted DWARFAddressRanges.
-    std::vector<DWARFAddressRange> Ranges;
-
-    /// Sorted DWARFAddressRangeInfo.
-    std::set<DieRangeInfo> Children;
-
-    DieRangeInfo() = default;
-    DieRangeInfo(DWARFDie Die) : Die(Die) {}
-
-    /// Used for unit testing.
-    DieRangeInfo(std::vector<DWARFAddressRange> Ranges)
-        : Ranges(std::move(Ranges)) {}
-
-    typedef std::vector<DWARFAddressRange>::const_iterator
-        address_range_iterator;
-    typedef std::set<DieRangeInfo>::const_iterator die_range_info_iterator;
-
-    /// Inserts the address range. If the range overlaps with an existing
-    /// range, the range is *not* added and an iterator to the overlapping
-    /// range is returned.
-    ///
-    /// This is used for finding overlapping ranges within the same DIE.
-    address_range_iterator insert(const DWARFAddressRange &R);
-
-    /// Finds an address range in the sorted vector of ranges.
-    address_range_iterator findRange(const DWARFAddressRange &R) const {
-      auto Begin = Ranges.begin();
-      auto End = Ranges.end();
-      auto Iter = std::upper_bound(Begin, End, R);
-      if (Iter != Begin)
-        --Iter;
-      return Iter;
-    }
-
-    /// Inserts the address range info. If any of its ranges overlaps with a
-    /// range in an existing range info, the range info is *not* added and an
-    /// iterator to the overlapping range info.
-    ///
-    /// This is used for finding overlapping children of the same DIE.
-    die_range_info_iterator insert(const DieRangeInfo &RI);
-
-    /// Return true if ranges in this object contains all ranges within RHS.
-    bool contains(const DieRangeInfo &RHS) const;
-
-    /// Return true if any range in this object intersects with any range in
-    /// RHS.
-    bool intersects(const DieRangeInfo &RHS) const;
-  };
-
-private:
   raw_ostream &OS;
   DWARFContext &DCtx;
-  DIDumpOptions DumpOpts;
   /// A map that tracks all references (converted absolute references) so we
   /// can verify each reference points to a valid DIE and not an offset that
   /// lies between to valid DIEs.
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
-
-  raw_ostream &error() const;
-  raw_ostream &warn() const;
-  raw_ostream &note() const;
-
-  /// Verifies the abbreviations section.
-  ///
-  /// This function currently checks that:
-  /// --No abbreviation declaration has more than one attributes with the same
-  /// name.
-  ///
-  /// \param Abbrev Pointer to the abbreviations section we are verifying
-  /// Abbrev can be a pointer to either .debug_abbrev or debug_abbrev.dwo.
-  ///
-  /// \returns The number of errors that occured during verification.
-  unsigned verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev);
+  uint32_t NumAppleNamesErrors = 0;
 
   /// Verifies the header of a unit in the .debug_info section.
   ///
@@ -136,31 +58,8 @@ private:
                         uint32_t *Offset, unsigned UnitIndex, uint8_t &UnitType,
                         bool &isUnitDWARF64);
 
-  /// Verifies the header of a unit in the .debug_info section.
-  ///
-  /// This function currently verifies:
-  ///  - The debug info attributes.
-  ///  - The debug info form=s.
-  ///  - The presence of a root DIE.
-  ///  - That the root DIE is a unit DIE.
-  ///  - If a unit type is provided, that the unit DIE matches the unit type.
-  ///  - The DIE ranges.
-  ///
-  /// \param Unit      The DWARF Unit to verifiy.
-  /// \param UnitType  An optional unit type which will be used to verify the
-  ///                  type of the unit DIE.
-  ///
-  /// \returns true if the content is verified successfully, false otherwise.
-  bool verifyUnitContents(DWARFUnit Unit, uint8_t UnitType = 0);
 
-  /// Verify that all Die ranges are valid.
-  ///
-  /// This function currently checks for:
-  /// - cases in which lowPC >= highPC
-  ///
-  /// \returns Number of errors that occured during verification.
-  unsigned verifyDieRanges(const DWARFDie &Die, DieRangeInfo &ParentRI);
-
+  bool verifyUnitContents(DWARFUnit Unit);
   /// Verifies the attribute's DWARF attribute and its value.
   ///
   /// This function currently checks for:
@@ -212,40 +111,9 @@ private:
   /// - invalid file indexes
   void verifyDebugLineRows();
 
-  /// Verify that an Apple-style accelerator table is valid.
-  ///
-  /// This function currently checks that:
-  /// - The fixed part of the header fits in the section
-  /// - The size of the section is as large as what the header describes
-  /// - There is at least one atom
-  /// - The form for each atom is valid
-  /// - The tag for each DIE in the table is valid
-  /// - The buckets have a valid index, or they are empty
-  /// - Each hashdata offset is valid
-  /// - Each DIE is valid
-  ///
-  /// \param AccelSection pointer to the section containing the acceleration table
-  /// \param StrData pointer to the string section
-  /// \param SectionName the name of the table we're verifying
-  ///
-  /// \returns The number of errors occured during verification
-  unsigned verifyAccelTable(const DWARFSection *AccelSection,
-                            DataExtractor *StrData, const char *SectionName);
-
 public:
-  DWARFVerifier(raw_ostream &S, DWARFContext &D,
-                DIDumpOptions DumpOpts = DIDumpOptions::getForSingleDIE())
-      : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)) {}
-  /// Verify the information in any of the following sections, if available:
-  /// .debug_abbrev, debug_abbrev.dwo
-  ///
-  /// Any errors are reported to the stream that was this object was
-  /// constructed with.
-  ///
-  /// \returns true if .debug_abbrev and .debug_abbrev.dwo verify successfully,
-  /// false otherwise.
-  bool handleDebugAbbrev();
-
+  DWARFVerifier(raw_ostream &S, DWARFContext &D)
+      : OS(S), DCtx(D) {}
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was
@@ -262,20 +130,14 @@ public:
   /// \returns true if the .debug_line verifies successfully, false otherwise.
   bool handleDebugLine();
 
-  /// Verify the information in accelerator tables, if they exist.
+  /// Verify the information in the .apple_names accelerator table.
   ///
   /// Any errors are reported to the stream that was this object was
   /// constructed with.
   ///
-  /// \returns true if the existing Apple-style accelerator tables verify
-  /// successfully, false otherwise.
-  bool handleAccelTables();
+  /// \returns true if the .apple_names verifies successfully, false otherwise.
+  bool handleAppleNames();
 };
-
-static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,
-                             const DWARFVerifier::DieRangeInfo &RHS) {
-  return std::tie(LHS.Ranges, LHS.Die) < std::tie(RHS.Ranges, RHS.Die);
-}
 
 } // end namespace llvm
 

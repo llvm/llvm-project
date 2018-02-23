@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; From source:
 ; typedef void x;
@@ -20,7 +20,7 @@ source_filename = "test/DebugInfo/Generic/typedef.ll"
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "y", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "typedef.cpp", directory: "/tmp/dbginfo")
 !3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)

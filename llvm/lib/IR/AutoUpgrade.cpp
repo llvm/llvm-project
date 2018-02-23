@@ -27,7 +27,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include <cstring>
@@ -417,14 +416,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
                                         F->arg_begin()->getType());
-      return true;
-    }
-    break;
-  }
-  case 'd': {
-    if (Name == "dbg.value" && F->arg_size() == 4) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
       return true;
     }
     break;
@@ -2064,20 +2055,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0)});
     break;
 
-  case Intrinsic::dbg_value:
-    // Upgrade from the old version that had an extra offset argument.
-    assert(CI->getNumArgOperands() == 4);
-    // Drop nonzero offsets instead of attempting to upgrade them.
-    if (auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1)))
-      if (Offset->isZeroValue()) {
-        NewCall = Builder.CreateCall(
-            NewFn,
-            {CI->getArgOperand(0), CI->getArgOperand(2), CI->getArgOperand(3)});
-        break;
-      }
-    CI->eraseFromParent();
-    return;
-
   case Intrinsic::x86_xop_vfrcz_ss:
   case Intrinsic::x86_xop_vfrcz_sd:
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(1)});
@@ -2250,37 +2227,26 @@ Value *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
   unsigned Version = getDebugMetadataVersionFromModule(M);
-  if (Version == DEBUG_METADATA_VERSION) {
-    bool BrokenDebugInfo = false;
-    if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))
-      report_fatal_error("Broken module found, compilation aborted!");
-    if (!BrokenDebugInfo)
-      // Everything is ok.
-      return false;
-    else {
-      // Diagnose malformed debug info.
-      DiagnosticInfoIgnoringInvalidDebugMetadata Diag(M);
-      M.getContext().diagnose(Diag);
-    }
-  }
-  bool Modified = StripDebugInfo(M);
-  if (Modified && Version != DEBUG_METADATA_VERSION) {
-    // Diagnose a version mismatch.
+  if (Version == DEBUG_METADATA_VERSION)
+    return false;
+
+  bool RetCode = StripDebugInfo(M);
+  if (RetCode) {
     DiagnosticInfoDebugMetadataVersion DiagVersion(M, Version);
     M.getContext().diagnose(DiagVersion);
   }
-  return Modified;
+  return RetCode;
 }
 
 bool llvm::UpgradeModuleFlags(Module &M) {
-  NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
+  const NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
     return false;
 
-  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasObjCFlag = false, HasClassProperties = false;
   for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
     MDNode *Op = ModFlags->getOperand(I);
-    if (Op->getNumOperands() != 3)
+    if (Op->getNumOperands() < 2)
       continue;
     MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
     if (!ID)
@@ -2289,42 +2255,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
-    // Upgrade PIC/PIE Module Flags. The module flag behavior for these two
-    // field was Error and now they are Max.
-    if (ID->getString() == "PIC Level" || ID->getString() == "PIE Level") {
-      if (auto *Behavior =
-              mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
-        if (Behavior->getLimitedValue() == Module::Error) {
-          Type *Int32Ty = Type::getInt32Ty(M.getContext());
-          Metadata *Ops[3] = {
-              ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Max)),
-              MDString::get(M.getContext(), ID->getString()),
-              Op->getOperand(2)};
-          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
-          Changed = true;
-        }
-      }
-    }
-    // Upgrade Objective-C Image Info Section. Removed the whitespce in the
-    // section name so that llvm-lto will not complain about mismatching
-    // module flags that is functionally the same.
-    if (ID->getString() == "Objective-C Image Info Section") {
-      if (auto *Value = dyn_cast_or_null<MDString>(Op->getOperand(2))) {
-        SmallVector<StringRef, 4> ValueComp;
-        Value->getString().split(ValueComp, " ");
-        if (ValueComp.size() != 1) {
-          std::string NewValue;
-          for (auto &S : ValueComp)
-            NewValue += S.str();
-          Metadata *Ops[3] = {Op->getOperand(0), Op->getOperand(1),
-                              MDString::get(M.getContext(), NewValue)};
-          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
-          Changed = true;
-        }
-      }
-    }
   }
-
   // "Objective-C Class Properties" is recently added for Objective-C. We
   // upgrade ObjC bitcodes to contain a "Objective-C Class Properties" module
   // flag of value 0, so we can correclty downgrade this flag when trying to
@@ -2333,39 +2264,9 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   if (HasObjCFlag && !HasClassProperties) {
     M.addModuleFlag(llvm::Module::Override, "Objective-C Class Properties",
                     (uint32_t)0);
-    Changed = true;
+    return true;
   }
-
-  return Changed;
-}
-
-void llvm::UpgradeSectionAttributes(Module &M) {
-  auto TrimSpaces = [](StringRef Section) -> std::string {
-    SmallVector<StringRef, 5> Components;
-    Section.split(Components, ',');
-
-    SmallString<32> Buffer;
-    raw_svector_ostream OS(Buffer);
-
-    for (auto Component : Components)
-      OS << ',' << Component.trim();
-
-    return OS.str().substr(1);
-  };
-
-  for (auto &GV : M.globals()) {
-    if (!GV.hasSection())
-      continue;
-
-    StringRef Section = GV.getSection();
-
-    if (!Section.startswith("__DATA, __objc_catlist"))
-      continue;
-
-    // __DATA, __objc_catlist, regular, no_dead_strip
-    // __DATA,__objc_catlist,regular,no_dead_strip
-    GV.setSection(TrimSpaces(Section));
-  }
+  return false;
 }
 
 static bool isOldLoopArgument(Metadata *MD) {

@@ -85,10 +85,7 @@ namespace ISD {
 
   /// If N is a BUILD_VECTOR node whose elements are all the same constant or
   /// undefined, return true and return the constant value in \p SplatValue.
-  /// This sets \p SplatValue to the smallest possible splat unless AllowShrink
-  /// is set to false.
-  bool isConstantSplatVector(const SDNode *N, APInt &SplatValue,
-                             bool AllowShrink = true);
+  bool isConstantSplatVector(const SDNode *N, APInt &SplatValue);
 
   /// Return true if the specified node is a BUILD_VECTOR where all of the
   /// elements are ~0 or undef.
@@ -801,8 +798,7 @@ public:
   /// if DAG changes.
   static bool hasPredecessorHelper(const SDNode *N,
                                    SmallPtrSetImpl<const SDNode *> &Visited,
-                                   SmallVectorImpl<const SDNode *> &Worklist,
-                                   unsigned int MaxSteps = 0) {
+                                   SmallVectorImpl<const SDNode *> &Worklist) {
     if (Visited.count(N))
       return true;
     while (!Worklist.empty()) {
@@ -817,8 +813,6 @@ public:
       }
       if (Found)
         return true;
-      if (MaxSteps != 0 && Visited.size() >= MaxSteps)
-        return false;
     }
     return false;
   }
@@ -1489,7 +1483,11 @@ public:
   /// convenient to write "2.0" and the like.  Without this function we'd
   /// have to duplicate its logic everywhere it's called.
   bool isExactlyValue(double V) const {
-    return Value->getValueAPF().isExactlyValue(V);
+    bool ignored;
+    APFloat Tmp(V);
+    Tmp.convert(Value->getValueAPF().getSemantics(),
+                APFloat::rmNearestTiesToEven, &ignored);
+    return isExactlyValue(Tmp);
   }
   bool isExactlyValue(const APFloat& V) const;
 

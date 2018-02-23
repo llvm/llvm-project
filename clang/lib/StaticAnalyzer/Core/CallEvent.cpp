@@ -21,9 +21,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Debug.h"
-
-#define DEBUG_TYPE "static-analyzer-call-event"
 
 using namespace clang;
 using namespace ento;
@@ -100,6 +97,9 @@ bool CallEvent::hasNonNullArgumentsWithType(bool (*Condition)(QualType)) const {
   for (CallEvent::param_type_iterator I = param_type_begin(),
                                       E = param_type_end();
        I != E && Idx < NumOfArgs; ++I, ++Idx) {
+    if (NumOfArgs <= Idx)
+      break;
+
     // If the parameter is 0, it's harmless.
     if (getArgSVal(Idx).isZeroConstant())
       continue;
@@ -211,9 +211,7 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 }
 
 bool CallEvent::isCalled(const CallDescription &CD) const {
-  // FIXME: Add ObjC Message support.
-  if (getKind() == CE_ObjCMessage)
-    return false;
+  assert(getKind() != CE_ObjCMessage && "Obj-C methods are not supported");
   if (!CD.IsLookupDone) {
     CD.IsLookupDone = true;
     CD.II = &getState()->getStateManager().getContext().Idents.get(CD.FuncName);
@@ -346,30 +344,6 @@ ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   if (!D)
     return None;
   return D->parameters();
-}
-
-RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
-  const FunctionDecl *FD = getDecl();
-  // Note that the AnalysisDeclContext will have the FunctionDecl with
-  // the definition (if one exists).
-  if (FD) {
-    AnalysisDeclContext *AD =
-      getLocationContext()->getAnalysisDeclContext()->
-      getManager()->getContext(FD);
-    bool IsAutosynthesized;
-    Stmt* Body = AD->getBody(IsAutosynthesized);
-    DEBUG({
-        if (IsAutosynthesized)
-          llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
-                       << "\n";
-    });
-    if (Body) {
-      const Decl* Decl = AD->getDecl();
-      return RuntimeDefinition(Decl);
-    }
-  }
-
-  return RuntimeDefinition();
 }
 
 void AnyFunctionCall::getInitialStackFrameContents(

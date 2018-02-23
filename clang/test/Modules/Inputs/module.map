@@ -451,12 +451,3 @@ module DebugNestedB {
 module objcAtKeywordMissingEnd {
   header "objcAtKeywordMissingEnd.h"
 }
-
-module innerstructredef {
-  module one {
-    header "empty.h"
-  }
-  module two {
-   header "innerstructredef.h"
-  }
-}

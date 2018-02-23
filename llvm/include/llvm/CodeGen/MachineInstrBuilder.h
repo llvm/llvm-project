@@ -396,31 +396,27 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB, const DebugLoc &DL,
 }
 
 /// This version of the builder builds a DBG_VALUE intrinsic
-/// for either a value in a register or a register-indirect
+/// for either a value in a register or a register-indirect+offset
 /// address.  The convention is that a DBG_VALUE is indirect iff the
 /// second operand is an immediate.
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            unsigned Reg, const MDNode *Variable,
-                            const MDNode *Expr);
+                            unsigned Reg, unsigned Offset,
+                            const MDNode *Variable, const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
-/// for either a value in a register or a register-indirect
+/// for either a value in a register or a register-indirect+offset
 /// address and inserts it at position I.
 MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             MachineBasicBlock::iterator I, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            unsigned Reg, const MDNode *Variable,
-                            const MDNode *Expr);
+                            unsigned Reg, unsigned Offset,
+                            const MDNode *Variable, const MDNode *Expr);
 
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
                                     MachineBasicBlock::iterator I,
                                     const MachineInstr &Orig, int FrameIndex);
-
-/// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
-/// modifying an instruction in place while iterating over a basic block.
-void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex);
 
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;

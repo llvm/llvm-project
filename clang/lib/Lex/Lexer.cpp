@@ -1932,21 +1932,18 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
   const char *AfterLessPos = CurPtr;
   char C = getAndAdvanceChar(CurPtr, Result);
   while (C != '>') {
-    // Skip escaped characters.  Escaped newlines will already be processed by
-    // getAndAdvanceChar.
-    if (C == '\\')
-      C = getAndAdvanceChar(CurPtr, Result);
-
-    if (C == '\n' || C == '\r' ||             // Newline.
-        (C == 0 && (CurPtr-1 == BufferEnd ||  // End of file.
-                    isCodeCompletionPoint(CurPtr-1)))) {
+    // Skip escaped characters.
+    if (C == '\\' && CurPtr < BufferEnd) {
+      // Skip the escaped character.
+      getAndAdvanceChar(CurPtr, Result);
+    } else if (C == '\n' || C == '\r' ||             // Newline.
+               (C == 0 && (CurPtr-1 == BufferEnd ||  // End of file.
+                           isCodeCompletionPoint(CurPtr-1)))) {
       // If the filename is unterminated, then it must just be a lone <
       // character.  Return this as such.
       FormTokenWithChars(Result, AfterLessPos, tok::less);
       return true;
-    }
-
-    if (C == 0) {
+    } else if (C == 0) {
       NulCharacter = CurPtr-1;
     }
     C = getAndAdvanceChar(CurPtr, Result);
@@ -2163,8 +2160,7 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
     // If we read multiple characters, and one of those characters was a \r or
     // \n, then we had an escaped newline within the comment.  Emit diagnostic
     // unless the next line is also a // comment.
-    if (CurPtr != OldPtr + 1 && C != '/' &&
-        (CurPtr == BufferEnd + 1 || CurPtr[0] != '/')) {
+    if (CurPtr != OldPtr+1 && C != '/' && CurPtr[0] != '/') {
       for (; OldPtr != CurPtr; ++OldPtr)
         if (OldPtr[0] == '\n' || OldPtr[0] == '\r') {
           // Okay, we found a // comment that ends in a newline, if the next
@@ -3559,8 +3555,7 @@ LexNextToken:
     } else if (LangOpts.Digraphs && Char == '%') {     // '<%' -> '{'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_brace;
-    } else if (Char == '#' && /*Not a trigraph*/ SizeTmp == 1 &&
-               lexEditorPlaceholder(Result, CurPtr)) {
+    } else if (Char == '#' && lexEditorPlaceholder(Result, CurPtr)) {
       return true;
     } else {
       Kind = tok::less;

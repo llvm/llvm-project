@@ -17,17 +17,6 @@ void load_non_null_pointers() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z31use_us16_aligned_array_elementsv
-void use_us16_aligned_array_elements() {
-  static const unsigned short Arr[] = {0, 1, 2};
-  auto use_array = [](const unsigned short(&X)[3]) -> void {};
-  use_array(Arr);
-
-  // CHECK-NOT: br i1 true
-  // ALIGN-NOT: call void @__ubsan_handle_type_mismatch
-  // CHECK: ret void
-}
-
 struct A {
   int foo;
 
@@ -240,5 +229,4 @@ void force_irgen() {
   d->load_member_3();
 
   load_non_null_pointers();
-  use_us16_aligned_array_elements();
 }

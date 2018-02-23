@@ -538,35 +538,26 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
   // Collect shared runtimes.
-  if (SanArgs.needsSharedRt()) {
-    if (SanArgs.needsAsanRt()) {
-      SharedRuntimes.push_back("asan");
-      if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
-        HelperStaticRuntimes.push_back("asan-preinit");
-    }
-
-    if (SanArgs.needsUbsanRt()) {
-      if (SanArgs.requiresMinimalRuntime()) {
-        SharedRuntimes.push_back("ubsan_minimal");
-      } else {
-        SharedRuntimes.push_back("ubsan_standalone");
-      }
-    }
+  if (SanArgs.needsAsanRt() && SanArgs.needsSharedAsanRt()) {
+    SharedRuntimes.push_back("asan");
   }
-
   // The stats_client library is also statically linked into DSOs.
   if (SanArgs.needsStatsRt())
     StaticRuntimes.push_back("stats_client");
 
   // Collect static runtimes.
-  if (Args.hasArg(options::OPT_shared) || SanArgs.needsSharedRt()) {
-    // Don't link static runtimes into DSOs or if -shared-libasan.
+  if (Args.hasArg(options::OPT_shared) || TC.getTriple().isAndroid()) {
+    // Don't link static runtimes into DSOs or if compiling for Android.
     return;
   }
   if (SanArgs.needsAsanRt()) {
-    StaticRuntimes.push_back("asan");
-    if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("asan_cxx");
+    if (SanArgs.needsSharedAsanRt()) {
+      HelperStaticRuntimes.push_back("asan-preinit");
+    } else {
+      StaticRuntimes.push_back("asan");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("asan_cxx");
+    }
   }
   if (SanArgs.needsDfsanRt())
     StaticRuntimes.push_back("dfsan");
@@ -583,13 +574,9 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("tsan_cxx");
   }
   if (SanArgs.needsUbsanRt()) {
-    if (SanArgs.requiresMinimalRuntime()) {
-      StaticRuntimes.push_back("ubsan_minimal");
-    } else {
-      StaticRuntimes.push_back("ubsan_standalone");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("ubsan_standalone_cxx");
-    }
+    StaticRuntimes.push_back("ubsan_standalone");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
@@ -610,6 +597,17 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("esan");
 }
 
+static void addLibFuzzerRuntime(const ToolChain &TC,
+                                const ArgList &Args,
+                                ArgStringList &CmdArgs) {
+    StringRef ParentDir = llvm::sys::path::parent_path(TC.getDriver().InstalledDir);
+    SmallString<128> P(ParentDir);
+    llvm::sys::path::append(P, "lib", "libLLVMFuzzer.a");
+    CmdArgs.push_back(Args.MakeArgString(P));
+    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+}
+
+
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
@@ -619,14 +617,10 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
                            NonWholeStaticRuntimes, HelperStaticRuntimes,
                            RequiredSymbols);
-
   // Inject libfuzzer dependencies.
   if (TC.getSanitizerArgs().needsFuzzer()
       && !Args.hasArg(options::OPT_shared)) {
-
-    addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer", false, true);
-    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
-      TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+    addLibFuzzerRuntime(TC, Args, CmdArgs);
   }
 
   for (auto RT : SharedRuntimes)

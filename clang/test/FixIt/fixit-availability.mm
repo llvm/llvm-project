@@ -108,43 +108,4 @@ void wrapDeclStmtUses() {
 // CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:24-[[@LINE-2]]:24}:"\n    } else {\n        // Fallback on earlier versions\n    }"
   anotherFunction(y);
   anotherFunction(x);
-
-  if (@available(macOS 10.1, *)) {
-    int z = function();
-    (void)z;
-// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (@available(macOS 10.12, *)) {\n        "
-// CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:13-[[@LINE-2]]:13}:"\n    } else {\n        // Fallback on earlier versions\n    }"
-    anotherFunction(x);
-  }
 }
-
-#define API_AVAILABLE(X) __attribute__((availability(macos, introduced=10.12))) // dummy macro
-
-API_AVAILABLE(macos(10.12))
-@interface NewClass
-@end
-
-@interface OldButOfferFixit
-@property(copy) NewClass *prop;
-// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:1-[[@LINE-2]]:1}:"API_AVAILABLE(macos(10.12))\n"
-
-- (NewClass *)fixitMe;
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:22-[[@LINE-1]]:22}:" API_AVAILABLE(macos(10.12))"
-@end
-
-void oldButOfferFixitFn(NewClass *) {
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"API_AVAILABLE(macos(10.12))\n"
-}
-
-template<typename T>
-struct OldButOfferFixitTag {
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:7-[[@LINE-1]]:7}:" API_AVAILABLE(macos(10.12))"
-  NewClass *x;
-};
-
-// Avoid a fixit for declarations that already have an attribute:
-__attribute__((availability(macos, introduced=10.11)))
-@interface WithoutFixit
-@property(copy) NewClass *prop;
-// CHECK-NOT: API_AVAILABLE
-@end

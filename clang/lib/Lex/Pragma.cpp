@@ -1725,7 +1725,6 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
 
     // The start location we want after processing this.
     SourceLocation NewLoc;
-    PPCallbacks *Callbacks = PP.getPPCallbacks();
 
     if (IsBegin) {
       // Complain about attempts to re-enter an audit.
@@ -1734,8 +1733,6 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
         PP.Diag(BeginLoc, diag::note_pragma_entered_here);
       }
       NewLoc = Loc;
-      if (Callbacks)
-        Callbacks->PragmaAssumeNonNullBegin(NewLoc);
     } else {
       // Complain about attempts to leave an audit that doesn't exist.
       if (!BeginLoc.isValid()) {
@@ -1743,8 +1740,6 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
         return;
       }
       NewLoc = SourceLocation();
-      if (Callbacks)
-        Callbacks->PragmaAssumeNonNullEnd(NewLoc);
     }
 
     PP.setPragmaAssumeNonNullLoc(NewLoc);

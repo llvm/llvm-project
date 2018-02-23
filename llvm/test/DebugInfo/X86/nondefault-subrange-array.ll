@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -O0 -filetype=obj -o %t < %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
 source_filename = "test/DebugInfo/X86/nondefault-subrange-array.ll"
 
@@ -12,13 +12,13 @@ source_filename = "test/DebugInfo/X86/nondefault-subrange-array.ll"
 ; CHECK: DW_TAG_class_type
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT:                   DW_AT_name [DW_FORM_strp]       ( .debug_str[0x{{[0-9a-f]*}}] = "x")
-; CHECK-NEXT:                   DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[ARRAY:0x[0-9a-f]*]]}
+; CHECK-NEXT:                   DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[ARRAY:0x[0-9a-f]*]]})
 
 ; CHECK: [[ARRAY]]: DW_TAG_array_type [{{.*}}] *
-; CHECK-NEXT:                 DW_AT_type [DW_FORM_ref4]    (cu + 0x{{[0-9a-f]*}} => {[[BASE:0x[0-9a-f]*]]}
+; CHECK-NEXT:                 DW_AT_type [DW_FORM_ref4]    (cu + 0x{{[0-9a-f]*}} => {[[BASE:0x[0-9a-f]*]]})
 
 ; CHECK: DW_TAG_subrange_type
-; CHECK-NEXT:                   DW_AT_type [DW_FORM_ref4]  (cu + 0x{{[0-9a-f]*}} => {[[BASE2:0x[0-9a-f]*]]}
+; CHECK-NEXT:                   DW_AT_type [DW_FORM_ref4]  (cu + 0x{{[0-9a-f]*}} => {[[BASE2:0x[0-9a-f]*]]})
 ; CHECK-NEXT:                   DW_AT_lower_bound [DW_FORM_data8]       (0xfffffffffffffffd)
 ; CHECK-NEXT:                   DW_AT_count [DW_FORM_data1]       (0x2a)
 
@@ -31,7 +31,7 @@ source_filename = "test/DebugInfo/X86/nondefault-subrange-array.ll"
 !llvm.dbg.cu = !{!14}
 !llvm.module.flags = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "t.cpp", directory: "/Volumes/Sandbox/llvm")
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 1, align: 32, elements: !4)

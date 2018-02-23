@@ -160,7 +160,8 @@ void tools::CrossWindows::Linker::ConstructJob(
   TC.AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  if (TC.ShouldLinkCXXStdlib(Args)) {
+  if (D.CCCIsCXX() && !Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
     bool StaticCXX = Args.hasArg(options::OPT_static_libstdcxx) &&
                      !Args.hasArg(options::OPT_static);
     if (StaticCXX)
@@ -213,7 +214,7 @@ CrossWindowsToolChain::CrossWindowsToolChain(const Driver &D,
   }
 }
 
-bool CrossWindowsToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
+bool CrossWindowsToolChain::IsUnwindTablesDefault() const {
   // FIXME: all non-x86 targets need unwind tables, however, LLVM currently does
   // not know how to emit them.
   return getArch() == llvm::Triple::x86_64;

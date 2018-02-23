@@ -1,6 +1,6 @@
 ; REQUIRES: default_triple, object-emission
 ;
-; RUN: llvm-link %s %p/type-unique-type-array-b.ll -S -o - | %llc_dwarf -filetype=obj -O0 | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llvm-link %s %p/type-unique-type-array-b.ll -S -o - | %llc_dwarf -filetype=obj -O0 | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ;
 ; rdar://problem/17628609
 ;
@@ -26,7 +26,7 @@
 ; CHECK: DW_AT_name {{.*}} "testA"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[STRUCT:.*]]}
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[STRUCT:.*]]})
 ; CHECK: 0x[[STRUCT]]: DW_TAG_structure_type
 ; CHECK-NEXT:   DW_AT_name {{.*}} "SA"
 

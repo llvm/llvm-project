@@ -16,7 +16,6 @@
 #define LLVM_IR_LLVMCONTEXT_H
 
 #include "llvm-c/Types.h"
-#include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Options.h"
 #include <cstdint>
@@ -168,6 +167,11 @@ public:
   using InlineAsmDiagHandlerTy = void (*)(const SMDiagnostic&, void *Context,
                                           unsigned LocCookie);
 
+  /// Defines the type of a diagnostic handler.
+  /// \see LLVMContext::setDiagnosticHandler.
+  /// \see LLVMContext::diagnose.
+  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo &DI, void *Context);
+
   /// Defines the type of a yield callback.
   /// \see LLVMContext::setYieldCallback.
   using YieldCallbackTy = void (*)(LLVMContext *Context, void *OpaqueHandle);
@@ -190,42 +194,25 @@ public:
   /// setInlineAsmDiagnosticHandler.
   void *getInlineAsmDiagnosticContext() const;
 
-  /// setDiagnosticHandlerCallBack - This method sets a handler call back
-  /// that is invoked when the backend needs to report anything to the user.
-  /// The first argument is a function pointer and the second is a context pointer
-  /// that gets passed into the DiagHandler.  The third argument should be set to
+  /// setDiagnosticHandler - This method sets a handler that is invoked
+  /// when the backend needs to report anything to the user.  The first
+  /// argument is a function pointer and the second is a context pointer that
+  /// gets passed into the DiagHandler.  The third argument should be set to
   /// true if the handler only expects enabled diagnostics.
   ///
   /// LLVMContext doesn't take ownership or interpret either of these
   /// pointers.
-  void setDiagnosticHandlerCallBack(
-      DiagnosticHandler::DiagnosticHandlerTy DiagHandler,
-      void *DiagContext = nullptr, bool RespectFilters = false);
-
-  /// setDiagnosticHandler - This method sets unique_ptr to object of DiagnosticHandler
-  /// to provide custom diagnostic handling. The first argument is unique_ptr of object
-  /// of type DiagnosticHandler or a derived of that.   The third argument should be
-  /// set to true if the handler only expects enabled diagnostics.
-  ///
-  /// Ownership of this pointer is moved to LLVMContextImpl.
-  void setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
+  void setDiagnosticHandler(DiagnosticHandlerTy DiagHandler,
+                            void *DiagContext = nullptr,
                             bool RespectFilters = false);
 
-  /// getDiagnosticHandlerCallBack - Return the diagnostic handler call back set by
-  /// setDiagnosticHandlerCallBack.
-  DiagnosticHandler::DiagnosticHandlerTy getDiagnosticHandlerCallBack() const;
+  /// getDiagnosticHandler - Return the diagnostic handler set by
+  /// setDiagnosticHandler.
+  DiagnosticHandlerTy getDiagnosticHandler() const;
 
   /// getDiagnosticContext - Return the diagnostic context set by
   /// setDiagnosticContext.
   void *getDiagnosticContext() const;
-
-  /// getDiagHandlerPtr - Returns const raw pointer of DiagnosticHandler set by
-  /// setDiagnosticHandler.
-  const DiagnosticHandler *getDiagHandlerPtr() const;
-
-  /// getDiagnosticHandler - transfers owenership of DiagnosticHandler unique_ptr
-  /// to caller.
-  std::unique_ptr<DiagnosticHandler> getDiagnosticHandler();
 
   /// \brief Return if a code hotness metric should be included in optimization
   /// diagnostics.

@@ -16,7 +16,6 @@
 #define LLVM_TRANSFORMS_UTILS_LOCAL_H
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -33,7 +32,6 @@ class BranchInst;
 class Instruction;
 class CallInst;
 class DbgDeclareInst;
-class DbgInfoIntrinsic;
 class DbgValueInst;
 class StoreInst;
 class LoadInst;
@@ -264,50 +262,46 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 ///
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
-/// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+/// that has an associated llvm.dbg.decl intrinsic.
+void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      StoreInst *SI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
-/// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+/// that has an associated llvm.dbg.decl intrinsic.
+void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      LoadInst *LI, DIBuilder &Builder);
 
-/// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
-/// llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+/// Inserts a llvm.dbg.value intrinsic after a phi of an alloca'd value
+/// that has an associated llvm.dbg.decl intrinsic.
+void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      PHINode *LI, DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
 /// llvm.dbg.value intrinsics.
 bool LowerDbgDeclare(Function &F);
 
-/// Finds all intrinsics declaring local variables as living in the memory that
-/// 'V' points to. This may include a mix of dbg.declare and
-/// dbg.addr intrinsics.
-TinyPtrVector<DbgInfoIntrinsic *> FindDbgAddrUses(Value *V);
+/// Finds the llvm.dbg.declare intrinsic corresponding to an alloca, if any.
+DbgDeclareInst *FindAllocaDbgDeclare(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
 
-/// Replaces llvm.dbg.declare instruction when the address it
-/// describes is replaced with a new value. If Deref is true, an
-/// additional DW_OP_deref is prepended to the expression. If Offset
-/// is non-zero, a constant displacement is added to the expression
-/// (between the optional Deref operations). Offset can be negative.
+/// Replaces llvm.dbg.declare instruction when the address it describes
+/// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
+/// prepended to the expression. If Offset is non-zero, a constant displacement
+/// is added to the expression (after the optional Deref). Offset can be
+/// negative.
 bool replaceDbgDeclare(Value *Address, Value *NewAddress,
                        Instruction *InsertBefore, DIBuilder &Builder,
-                       bool DerefBefore, int Offset, bool DerefAfter);
+                       bool Deref, int Offset);
 
 /// Replaces llvm.dbg.declare instruction when the alloca it describes
-/// is replaced with a new value. If Deref is true, an additional
-/// DW_OP_deref is prepended to the expression. If Offset is non-zero,
-/// a constant displacement is added to the expression (between the
-/// optional Deref operations). Offset can be negative. The new
-/// llvm.dbg.declare is inserted immediately before AI.
+/// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
+/// prepended to the expression. If Offset is non-zero, a constant displacement
+/// is added to the expression (after the optional Deref). Offset can be
+/// negative. New llvm.dbg.declare is inserted immediately before AI.
 bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                DIBuilder &Builder, bool DerefBefore,
-                                int Offset, bool DerefAfter);
+                                DIBuilder &Builder, bool Deref, int Offset = 0);
 
 /// Replaces multiple llvm.dbg.value instructions when the alloca it describes
 /// is replaced with a new value. If Offset is non-zero, a constant displacement

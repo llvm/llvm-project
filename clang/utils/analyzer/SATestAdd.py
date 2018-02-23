@@ -27,17 +27,15 @@ the Repository Directory.
       - CachedSource/ - An optional directory containing the source of the
                                      project being analyzed. If present,
                                      download_project.sh will not be called.
-      - changes_for_analyzer.patch - An optional patch file for any local
-                                     changes
+      - changes_for_analyzer.patch - An optional patch file for any local changes
                                      (e.g., to adapt to newer version of clang)
                                      that should be applied to CachedSource
                                      before analysis. To construct this patch,
                                      run the the download script to download
                                      the project to CachedSource, copy the
                                      CachedSource to another directory (for
-                                     example, PatchedSource) and make any
-                                     needed modifications to the the copied
-                                     source.
+                                     example, PatchedSource) and make any needed
+                                     modifications to the the copied source.
                                      Then run:
                                           diff -ur CachedSource PatchedSource \
                                               > changes_for_analyzer.patch
@@ -48,21 +46,18 @@ import os
 import csv
 import sys
 
-
-def isExistingProject(PMapFile, projectID):
+def isExistingProject(PMapFile, projectID) :
     PMapReader = csv.reader(PMapFile)
     for I in PMapReader:
         if projectID == I[0]:
             return True
     return False
 
-
-def addNewProject(ID, BuildMode):
-    """
-    Add a new project for testing: build it and add to the Project Map file.
-    :param ID: is a short string used to identify a project.
-    """
-
+# Add a new project for testing: build it and add to the Project Map file.
+# Params:
+#   Dir is the directory where the sources are.
+#   ID is a short string used to identify a project.
+def addNewProject(ID, BuildMode) :
     CurDir = os.path.abspath(os.curdir)
     Dir = SATestBuild.getProjectDir(ID)
     if not os.path.exists(Dir):
@@ -70,37 +65,36 @@ def addNewProject(ID, BuildMode):
         sys.exit(-1)
 
     # Build the project.
-    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True)
+    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True, Dir=Dir)
 
     # Add the project ID to the project map.
     ProjectMapPath = os.path.join(CurDir, SATestBuild.ProjectMapFile)
-
     if os.path.exists(ProjectMapPath):
-        FileMode = "r+b"
+        PMapFile = open(ProjectMapPath, "r+b")
     else:
         print "Warning: Creating the Project Map file!!"
-        FileMode = "w+b"
-
-    with open(ProjectMapPath, FileMode) as PMapFile:
-        if (isExistingProject(PMapFile, ID)):
+        PMapFile = open(ProjectMapPath, "w+b")
+    try:
+        if (isExistingProject(PMapFile, ID)) :
             print >> sys.stdout, 'Warning: Project with ID \'', ID, \
                                  '\' already exists.'
             print >> sys.stdout, "Reference output has been regenerated."
         else:
             PMapWriter = csv.writer(PMapFile)
-            PMapWriter.writerow((ID, int(BuildMode)))
+            PMapWriter.writerow( (ID, int(BuildMode)) );
             print "The project map is updated: ", ProjectMapPath
+    finally:
+        PMapFile.close()
 
 
 # TODO: Add an option not to build.
 # TODO: Set the path to the Repository directory.
 if __name__ == '__main__':
-    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
-        print >> sys.stderr, 'Add a new project for testing to the analyzer'\
-                             '\nUsage: ', sys.argv[0],\
-                             'project_ID <mode>\n' \
-                             'mode: 0 for single file project, ' \
-                             '1 for scan_build, ' \
+    if len(sys.argv) < 2:
+        print >> sys.stderr, 'Usage: ', sys.argv[0],\
+                             'project_ID <mode>' \
+                             'mode - 0 for single file project; ' \
+                             '1 for scan_build; ' \
                              '2 for single file c++11 project'
         sys.exit(-1)
 

@@ -26,7 +26,7 @@
 #include "clang/Analysis/Analyses/ThreadSafetyLogical.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -1735,23 +1735,8 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
         CapExprSet AssertLocks;
         Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
         for (const auto &AssertLock : AssertLocks)
-          Analyzer->addLock(FSet,
-                            llvm::make_unique<LockableFactEntry>(
-                                AssertLock, LK_Shared, Loc, false, true),
-                            ClassifyDiagnostic(A));
-        break;
-      }
-
-      case attr::AssertCapability: {
-        AssertCapabilityAttr *A = cast<AssertCapabilityAttr>(At);
-        CapExprSet AssertLocks;
-        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
-        for (const auto &AssertLock : AssertLocks)
-          Analyzer->addLock(FSet,
-                            llvm::make_unique<LockableFactEntry>(
-                                AssertLock,
-                                A->isShared() ? LK_Shared : LK_Exclusive, Loc,
-                                false, true),
+          Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
+                                      AssertLock, LK_Shared, Loc, false, true),
                             ClassifyDiagnostic(A));
         break;
       }

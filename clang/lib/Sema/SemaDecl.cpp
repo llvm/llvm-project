@@ -1603,24 +1603,7 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
   if (D->isInvalidDecl())
     return false;
 
-  bool Referenced = false;
-  if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
-    // For a decomposition declaration, warn if none of the bindings are
-    // referenced, instead of if the variable itself is referenced (which
-    // it is, by the bindings' expressions).
-    for (auto *BD : DD->bindings()) {
-      if (BD->isReferenced()) {
-        Referenced = true;
-        break;
-      }
-    }
-  } else if (!D->getDeclName()) {
-    return false;
-  } else if (D->isReferenced() || D->isUsed()) {
-    Referenced = true;
-  }
-
-  if (Referenced || D->hasAttr<UnusedAttr>() ||
+  if (D->isReferenced() || D->isUsed() || D->hasAttr<UnusedAttr>() ||
       D->hasAttr<ObjCPreciseLifetimeAttr>())
     return false;
 
@@ -1743,7 +1726,7 @@ void Sema::DiagnoseUnusedDecl(const NamedDecl *D) {
   else
     DiagID = diag::warn_unused_variable;
 
-  Diag(D->getLocation(), DiagID) << D << Hint;
+  Diag(D->getLocation(), DiagID) << D->getDeclName() << Hint;
 }
 
 static void CheckPoppedLabel(LabelDecl *L, Sema &S) {
@@ -1773,14 +1756,14 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
     assert(isa<NamedDecl>(TmpD) && "Decl isn't NamedDecl?");
     NamedDecl *D = cast<NamedDecl>(TmpD);
 
+    if (!D->getDeclName()) continue;
+
     // Diagnose unused variables in this scope.
     if (!S->hasUnrecoverableErrorOccurred()) {
       DiagnoseUnusedDecl(D);
       if (const auto *RD = dyn_cast<RecordDecl>(D))
         DiagnoseUnusedNestedTypedefs(RD);
     }
-
-    if (!D->getDeclName()) continue;
 
     // If this was a forward reference to a label, verify it was defined.
     if (LabelDecl *LD = dyn_cast<LabelDecl>(D))
@@ -6178,6 +6161,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   IdentifierInfo *II = Name.getAsIdentifierInfo();
 
   if (D.isDecompositionDeclarator()) {
+    AddToScope = false;
     // Take the name of the first declarator as our name for diagnostic
     // purposes.
     auto &Decomp = D.getDecompositionDeclarator();
@@ -7019,21 +7003,6 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
               ->ShadowingDecls.push_back(
                   {cast<VarDecl>(D), cast<VarDecl>(ShadowedDecl)});
           return;
-        }
-      }
-
-      if (cast<VarDecl>(ShadowedDecl)->hasLocalStorage()) {
-        // A variable can't shadow a local variable in an enclosing scope, if
-        // they are separated by a non-capturing declaration context.
-        for (DeclContext *ParentDC = NewDC;
-             ParentDC && !ParentDC->Equals(OldDC);
-             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
-          // Only block literals, captured statements, and lambda expressions
-          // can capture; other scopes don't.
-          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
-              !isLambdaCallOperator(ParentDC)) {
-            return;
-          }
         }
       }
     }
@@ -8896,10 +8865,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           diag::ext_function_specialization_in_class :
           diag::err_function_specialization_in_class)
           << NewFD->getDeclName();
-      } else if (!NewFD->isInvalidDecl() &&
-                 CheckFunctionTemplateSpecialization(
-                     NewFD, (HasExplicitTemplateArgs ? &TemplateArgs : nullptr),
-                     Previous))
+      } else if (CheckFunctionTemplateSpecialization(NewFD,
+                                  (HasExplicitTemplateArgs ? &TemplateArgs
+                                                           : nullptr),
+                                                     Previous))
         NewFD->setInvalidDecl();
 
       // C++ [dcl.stc]p1:
@@ -10006,9 +9975,14 @@ namespace {
 
     void VisitCallExpr(CallExpr *E) {
       // Treat std::move as a use.
-      if (E->isCallToStdMove()) {
-        HandleValue(E->getArg(0));
-        return;
+      if (E->getNumArgs() == 1) {
+        if (FunctionDecl *FD = E->getDirectCallee()) {
+          if (FD->isInStdNamespace() && FD->getIdentifier() &&
+              FD->getIdentifier()->isStr("move")) {
+            HandleValue(E->getArg(0));
+            return;
+          }
+        }
       }
 
       Inherited::VisitCallExpr(E);
@@ -12115,9 +12089,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
   }
 
-  // See if this is a redefinition. If 'will have body' is already set, then
-  // these checks were already performed when it was set.
-  if (!FD->willHaveBody() && !FD->isLateTemplateParsed()) {
+  // See if this is a redefinition.
+  if (!FD->isLateTemplateParsed()) {
     CheckForFunctionRedefinition(FD, nullptr, SkipBody);
 
     // If we're skipping the body, we're done. Don't enter the scope.
@@ -13321,7 +13294,6 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         AddMsStructLayoutForRecord(RD);
       }
     }
-    New->setLexicalDeclContext(CurContext);
     return New;
   };
 
@@ -13948,13 +13920,6 @@ CreateNewDecl:
   if (getLangOpts().CPlusPlus && (IsTypeSpecifier || IsTemplateParamOrArg) &&
       TUK == TUK_Definition) {
     Diag(New->getLocation(), diag::err_type_defined_in_type_specifier)
-      << Context.getTagDeclType(New);
-    Invalid = true;
-  }
-
-  if (!Invalid && getLangOpts().CPlusPlus && TUK == TUK_Definition &&
-      DC->getDeclKind() == Decl::Enum) {
-    Diag(New->getLocation(), diag::err_type_defined_in_enum)
       << Context.getTagDeclType(New);
     Invalid = true;
   }

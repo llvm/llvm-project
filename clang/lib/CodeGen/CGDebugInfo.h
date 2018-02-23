@@ -398,8 +398,8 @@ public:
   /// Emit call to \c llvm.dbg.declare for the block-literal argument
   /// to a block invocation function.
   void EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
-                                            StringRef Name, unsigned ArgNo,
-                                            llvm::AllocaInst *LocalAddr,
+                                            llvm::Value *Arg, unsigned ArgNo,
+                                            llvm::Value *LocalAddr,
                                             CGBuilderTy &Builder);
 
   /// Emit information about a global variable.

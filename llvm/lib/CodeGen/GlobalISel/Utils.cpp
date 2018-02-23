@@ -99,10 +99,7 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               const MachineInstr &MI) {
   MachineOptimizationRemarkMissed R(PassName, "GISelFailure: ",
                                     MI.getDebugLoc(), MI.getParent());
-  R << Msg;
-  // Printing MI is expensive;  only do it if expensive remarks are enabled.
-  if (MORE.allowExtraAnalysis(PassName))
-    R << ": " << ore::MNV("Inst", MI);
+  R << Msg << ": " << ore::MNV("Inst", MI);
   reportGISelFailure(MF, TPC, MORE, R);
 }
 
@@ -128,20 +125,4 @@ const llvm::ConstantFP* llvm::getConstantFPVRegVal(unsigned VReg,
   if (TargetOpcode::G_FCONSTANT != MI->getOpcode())
     return nullptr;
   return MI->getOperand(1).getFPImm();
-}
-
-llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, unsigned Reg,
-                                       const MachineRegisterInfo &MRI) {
-  auto *DefMI = MRI.getVRegDef(Reg);
-  auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
-  if (!DstTy.isValid())
-    return nullptr;
-  while (DefMI->getOpcode() == TargetOpcode::COPY) {
-    unsigned SrcReg = DefMI->getOperand(1).getReg();
-    auto SrcTy = MRI.getType(SrcReg);
-    if (!SrcTy.isValid() || SrcTy != DstTy)
-      break;
-    DefMI = MRI.getVRegDef(SrcReg);
-  }
-  return DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }

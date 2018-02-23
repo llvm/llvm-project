@@ -716,9 +716,6 @@ namespace clang {
       /// \brief Specifies some declarations with initializers that must be
       /// emitted to initialize the module.
       SUBMODULE_INITIALIZERS = 16,
-      /// \brief Specifies the name of the module that will eventually
-      /// re-export the entities in this module.
-      SUBMODULE_EXPORT_AS = 17,
     };
 
     /// \brief Record types used within a comments block.
@@ -1548,14 +1545,9 @@ namespace clang {
 
       // ARC
       EXPR_OBJC_BRIDGED_CAST,     // ObjCBridgedCastExpr
-
+      
       STMT_MS_DEPENDENT_EXISTS,   // MSDependentExistsStmt
-      EXPR_LAMBDA,                // LambdaExpr
-      STMT_COROUTINE_BODY,
-      STMT_CORETURN,
-      EXPR_COAWAIT,
-      EXPR_COYIELD,
-      EXPR_DEPENDENT_COAWAIT,
+      EXPR_LAMBDA                 // LambdaExpr
     };
 
     /// \brief The kinds of designators that can occur in a

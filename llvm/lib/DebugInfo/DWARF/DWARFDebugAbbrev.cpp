@@ -68,7 +68,9 @@ DWARFAbbreviationDeclarationSet::getAbbreviationDeclaration(
   return &Decls[AbbrCode - FirstAbbrCode];
 }
 
-DWARFDebugAbbrev::DWARFDebugAbbrev() { clear(); }
+DWARFDebugAbbrev::DWARFDebugAbbrev() {
+  clear();
+}
 
 void DWARFDebugAbbrev::clear() {
   AbbrDeclSets.clear();
@@ -77,29 +79,18 @@ void DWARFDebugAbbrev::clear() {
 
 void DWARFDebugAbbrev::extract(DataExtractor Data) {
   clear();
-  this->Data = Data;
-}
 
-void DWARFDebugAbbrev::parse() const {
-  if (!Data)
-    return;
   uint32_t Offset = 0;
   DWARFAbbreviationDeclarationSet AbbrDecls;
-  auto I = AbbrDeclSets.begin();
-  while (Data->isValidOffset(Offset)) {
-    while (I != AbbrDeclSets.end() && I->first < Offset)
-      ++I;
+  while (Data.isValidOffset(Offset)) {
     uint32_t CUAbbrOffset = Offset;
-    if (!AbbrDecls.extract(*Data, &Offset))
+    if (!AbbrDecls.extract(Data, &Offset))
       break;
-    AbbrDeclSets.insert(I, std::make_pair(CUAbbrOffset, std::move(AbbrDecls)));
+    AbbrDeclSets[CUAbbrOffset] = std::move(AbbrDecls);
   }
-  Data = None;
 }
 
 void DWARFDebugAbbrev::dump(raw_ostream &OS) const {
-  parse();
-
   if (AbbrDeclSets.empty()) {
     OS << "< EMPTY >\n";
     return;
@@ -122,17 +113,6 @@ DWARFDebugAbbrev::getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const {
   if (Pos != End) {
     PrevAbbrOffsetPos = Pos;
     return &(Pos->second);
-  }
-
-  if (Data && CUAbbrOffset < Data->getData().size()) {
-    uint32_t Offset = CUAbbrOffset;
-    DWARFAbbreviationDeclarationSet AbbrDecls;
-    if (!AbbrDecls.extract(*Data, &Offset))
-      return nullptr;
-    PrevAbbrOffsetPos =
-        AbbrDeclSets.insert(std::make_pair(CUAbbrOffset, std::move(AbbrDecls)))
-            .first;
-    return &PrevAbbrOffsetPos->second;
   }
 
   return nullptr;

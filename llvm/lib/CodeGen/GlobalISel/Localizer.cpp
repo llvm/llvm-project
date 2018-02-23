@@ -101,8 +101,7 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
           // Don't try to be smart for the insertion point.
           // There is no guarantee that the first seen use is the first
           // use in the block.
-          InsertMBB->insert(InsertMBB->SkipPHIsAndLabels(InsertMBB->begin()),
-                            LocalizedMI);
+          InsertMBB->insert(InsertMBB->getFirstNonPHI(), LocalizedMI);
 
           // Set a new register for the definition.
           unsigned NewReg =

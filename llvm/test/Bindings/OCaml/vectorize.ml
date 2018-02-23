@@ -1,8 +1,8 @@
-(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/vectorize_opts.ml
- * RUN: %ocamlc -g -w +A -package llvm.vectorize -linkpkg %t/vectorize_opts.ml -o %t/executable
- * RUN: %t/executable %t/bitcode.bc
- * RUN: %ocamlopt -g -w +A -package llvm.vectorize -linkpkg %t/vectorize_opts.ml -o %t/executable
- * RUN: %t/executable %t/bitcode.bc
+(* RUN: cp %s %T/vectorize_opts.ml
+ * RUN: %ocamlc -g -w +A -package llvm.vectorize -linkpkg %T/vectorize_opts.ml -o %t
+ * RUN: %t %t.bc
+ * RUN: %ocamlopt -g -w +A -package llvm.vectorize -linkpkg %T/vectorize_opts.ml -o %t
+ * RUN: %t %t.bc
  * XFAIL: vg_leak
  *)
 

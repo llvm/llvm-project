@@ -251,7 +251,8 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsIntMax:
           return ArgType::PtrTo(ArgType(Ctx.getIntMaxType(), "intmax_t"));
         case LengthModifier::AsSizeT:
-          return ArgType::PtrTo(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
+          // FIXME: ssize_t.
+          return ArgType();
         case LengthModifier::AsPtrDiff:
           return ArgType::PtrTo(ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
         case LengthModifier::AsLongDouble:
@@ -385,7 +386,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsIntMax:
           return ArgType::PtrTo(ArgType(Ctx.getIntMaxType(), "intmax_t"));
         case LengthModifier::AsSizeT:
-          return ArgType::PtrTo(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
+          return ArgType(); // FIXME: ssize_t
         case LengthModifier::AsPtrDiff:
           return ArgType::PtrTo(ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
         case LengthModifier::AsLongDouble:

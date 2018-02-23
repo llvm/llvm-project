@@ -40,8 +40,7 @@ entry:
 }
 
 ; CHECK-LABEL: withDebug
-; CHECK:       callq printf
-; CHECK:       callq printf
+; CHECK:       #DEBUG_VALUE: test:j <- %RBX
 ; CHECK-NEXT:  addq  $24, %rsp
 ; CHECK:       popq  %rbx
 ; CHECK-NEXT:  popq  %r14

@@ -420,9 +420,6 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
-  // This pass expands indirectbr instructions.
-  FunctionPass *createIndirectBrExpandPass();
-
 } // End llvm namespace
 
 #endif

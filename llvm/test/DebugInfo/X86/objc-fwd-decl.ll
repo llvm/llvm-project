@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-macosx %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK:                 DW_AT_declaration
@@ -14,7 +14,7 @@ source_filename = "test/DebugInfo/X86/objc-fwd-decl.ll"
 !llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!8, !9, !10, !11, !12, !13}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 3, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.m", directory: "/Users/echristo")
 !3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)

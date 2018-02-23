@@ -56,15 +56,8 @@ function(add_compiler_rt_object_libraries name)
 
   foreach(libname ${libnames})
     add_library(${libname} OBJECT ${LIB_SOURCES})
-
-    # Strip out -msse3 if this isn't macOS.
-    set(target_flags ${LIB_CFLAGS})
-    if(APPLE AND NOT "${libname}" MATCHES ".*\.osx.*")
-      list(REMOVE_ITEM target_flags "-msse3")
-    endif()
-
     set_target_compile_flags(${libname}
-      ${CMAKE_CXX_FLAGS} ${extra_cflags_${libname}} ${target_flags})
+      ${CMAKE_CXX_FLAGS} ${extra_cflags_${libname}} ${LIB_CFLAGS})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
@@ -124,14 +117,8 @@ function(add_compiler_rt_runtime name type)
   else()
     set(NO_LTO_FLAGS "")
   endif()
-
   if(APPLE)
     foreach(os ${LIB_OS})
-      # Strip out -msse3 if this isn't macOS.
-      list(LENGTH LIB_CFLAGS HAS_EXTRA_CFLAGS)
-      if(HAS_EXTRA_CFLAGS AND NOT "${os}" MATCHES "^(osx)$")
-        list(REMOVE_ITEM LIB_CFLAGS "-msse3")
-      endif()
       if(type STREQUAL "STATIC")
         set(libname "${name}_${os}")
       else()
@@ -215,10 +202,10 @@ function(add_compiler_rt_runtime name type)
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
-    if(LIB_LINK_LIBS)
-      target_link_libraries(${libname} ${LIB_LINK_LIBS})
-    endif()
     if(${type} STREQUAL "SHARED")
+      if(LIB_LINK_LIBS)
+        target_link_libraries(${libname} ${LIB_LINK_LIBS})
+      endif()
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
@@ -300,65 +287,24 @@ if(MSVC)
   list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
 endif()
 
-# Compile and register compiler-rt tests.
-# generate_compiler_rt_tests(<output object files> <test_suite> <test_name>
-#                           <test architecture>
-#                           KIND <custom prefix>
-#                           SUBDIR <subdirectory for testing binary>
-#                           SOURCES <sources to compile>
-#                           RUNTIME <tests runtime to link in>
-#                           CFLAGS <compile-time flags>
-#                           COMPILE_DEPS <compile-time dependencies>
-#                           DEPS <dependencies>
-#                           LINK_FLAGS <flags to use during linking>
-# )
-function(generate_compiler_rt_tests test_objects test_suite testname arch)
-  cmake_parse_arguments(TEST "" "KIND;RUNTIME;SUBDIR"
-    "SOURCES;COMPILE_DEPS;DEPS;CFLAGS;LINK_FLAGS" ${ARGN})
-
-  foreach(source ${TEST_SOURCES})
-    sanitizer_test_compile(
-      "${test_objects}" "${source}" "${arch}"
-      KIND ${TEST_KIND}
-      COMPILE_DEPS ${TEST_COMPILE_DEPS}
-      DEPS ${TEST_DEPS}
-      CFLAGS ${TEST_CFLAGS}
-      )
-  endforeach()
-
-  set(TEST_DEPS ${${test_objects}})
-
-  if(NOT "${TEST_RUNTIME}" STREQUAL "")
-    list(APPEND TEST_DEPS ${TEST_RUNTIME})
-    list(APPEND "${test_objects}" $<TARGET_FILE:${TEST_RUNTIME}>)
-  endif()
-
-  add_compiler_rt_test(${test_suite} "${testname}" "${arch}"
-    SUBDIR ${TEST_SUBDIR}
-    OBJECTS ${${test_objects}}
-    DEPS ${TEST_DEPS}
-    LINK_FLAGS ${TEST_LINK_FLAGS}
-    )
-  set("${test_objects}" "${${test_objects}}" PARENT_SCOPE)
-endfunction()
-
 # Link objects into a single executable with COMPILER_RT_TEST_COMPILER,
 # using specified link flags. Make executable a part of provided
 # test_suite.
-# add_compiler_rt_test(<test_suite> <test_name> <arch>
+# add_compiler_rt_test(<test_suite> <test_name>
 #                      SUBDIR <subdirectory for binary>
 #                      OBJECTS <object files>
 #                      DEPS <deps (e.g. runtime libs)>
 #                      LINK_FLAGS <link flags>)
-function(add_compiler_rt_test test_suite test_name arch)
+macro(add_compiler_rt_test test_suite test_name)
   cmake_parse_arguments(TEST "" "SUBDIR" "OBJECTS;DEPS;LINK_FLAGS" "" ${ARGN})
-  set(output_dir ${CMAKE_CURRENT_BINARY_DIR})
+  set(output_bin ${CMAKE_CURRENT_BINARY_DIR})
   if(TEST_SUBDIR)
-    set(output_dir "${output_dir}/${TEST_SUBDIR}")
+    set(output_bin "${output_bin}/${TEST_SUBDIR}")
   endif()
-  set(output_dir "${output_dir}/${CMAKE_CFG_INTDIR}")
-  file(MAKE_DIRECTORY "${output_dir}")
-  set(output_bin "${output_dir}/${test_name}")
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_bin "${output_bin}/${CMAKE_CFG_INTDIR}")
+  endif()
+  set(output_bin "${output_bin}/${test_name}")
   if(MSVC)
     set(output_bin "${output_bin}.exe")
   endif()
@@ -367,10 +313,6 @@ function(add_compiler_rt_test test_suite test_name arch)
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND TEST_DEPS clang)
   endif()
-
-  get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
-  list(APPEND TEST_LINK_FLAGS ${TARGET_LINK_FLAGS})
-
   # If we're not on MSVC, include the linker flags from CMAKE but override them
   # with the provided link flags. This ensures that flags which are required to
   # link programs at all are included, but the changes needed for the test
@@ -381,18 +323,16 @@ function(add_compiler_rt_test test_suite test_name arch)
     set(TEST_LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${TEST_LINK_FLAGS}")
     separate_arguments(TEST_LINK_FLAGS)
   endif()
-  add_custom_command(
-    OUTPUT "${output_bin}"
-    COMMAND ${COMPILER_RT_TEST_COMPILER} ${TEST_OBJECTS} -o "${output_bin}"
+  add_custom_target(${test_name}
+    COMMAND ${COMPILER_RT_TEST_COMPILER} ${TEST_OBJECTS}
+            -o "${output_bin}"
             ${TEST_LINK_FLAGS}
-    DEPENDS ${TEST_DEPS}
-    )
-  add_custom_target(T${test_name} DEPENDS "${output_bin}")
-  set_target_properties(T${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
+    DEPENDS ${TEST_DEPS})
+  set_target_properties(${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
 
   # Make the test suite depend on the binary.
-  add_dependencies(${test_suite} T${test_name})
-endfunction()
+  add_dependencies(${test_suite} ${test_name})
+endmacro()
 
 macro(add_compiler_rt_resource_file target_name file_name component)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")

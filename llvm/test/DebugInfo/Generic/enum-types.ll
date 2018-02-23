@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 ;
-; RUN: %llc_dwarf -filetype=obj -O0 -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; Make sure we can handle enums with the same identifier but in enum types of
 ; different compile units.
@@ -12,7 +12,7 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_AT_MIPS_linkage_name {{.*}} "_Z4topA2EA"
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[ENUM]]}
+; CHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[ENUM]]})
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_subprogram

@@ -1469,10 +1469,8 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   }
 
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
-
-  MachineFunction::iterator I;
-  for (I = F->begin(); I != F->end() && &(*I) != BB; ++I);
-  if (I != F->end()) ++I;
+  MachineFunction::iterator I = BB->getParent()->begin();
+  ++I;
 
   // Create loop block.
   MachineBasicBlock *LoopBB = F->CreateMachineBasicBlock(LLVM_BB);

@@ -74,15 +74,14 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
       EffectiveTriple() {
+  if (Arg *A = Args.getLastArg(options::OPT_mthread_model))
+    if (!isThreadModelSupported(A->getValue()))
+      D.Diag(diag::err_drv_invalid_thread_model_for_target)
+          << A->getValue() << A->getAsString(Args);
+
   std::string CandidateLibPath = getArchSpecificLibPath();
   if (getVFS().exists(CandidateLibPath))
     getFilePaths().push_back(CandidateLibPath);
-}
-
-void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
-  Triple.setEnvironment(Env);
-  if (EffectiveTriple != llvm::Triple())
-    EffectiveTriple.setEnvironment(Env);
 }
 
 ToolChain::~ToolChain() {
@@ -218,7 +217,7 @@ StringRef ToolChain::getDefaultUniversalArchName() const {
   }
 }
 
-bool ToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
+bool ToolChain::IsUnwindTablesDefault() const {
   return false;
 }
 
@@ -649,16 +648,8 @@ void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   DriverArgs.AddAllArgs(CC1Args, options::OPT_stdlib_EQ);
 }
 
-bool ToolChain::ShouldLinkCXXStdlib(const llvm::opt::ArgList &Args) const {
-  return getDriver().CCCIsCXX() &&
-         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
-                      options::OPT_nostdlibxx);
-}
-
 void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  assert(!Args.hasArg(options::OPT_nostdlibxx) &&
-         "should not have called this");
   CXXStdlibType Type = GetCXXStdlibType(Args);
 
   switch (Type) {

@@ -27,7 +27,6 @@ def GNUAnonymousStruct : DiagGroup<"gnu-anonymous-struct">;
 def GNUAutoType : DiagGroup<"gnu-auto-type">;
 def ArrayBounds : DiagGroup<"array-bounds">;
 def ArrayBoundsPointerArithmetic : DiagGroup<"array-bounds-pointer-arithmetic">;
-def AutoDisableVptrSanitizer : DiagGroup<"auto-disable-vptr-sanitizer">;
 def Availability : DiagGroup<"availability">;
 def Section : DiagGroup<"section">;
 def AutoImport : DiagGroup<"auto-import">;
@@ -152,13 +151,9 @@ def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
-
-def InvalidIOSDeploymentTarget : DiagGroup<"invalid-ios-deployment-target">;
-
-def CXX17CompatMangling : DiagGroup<"c++17-compat-mangling">;
-def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
+def CXX1zCompatMangling : DiagGroup<"c++1z-compat-mangling">;
 // Name of this warning in GCC.
-def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
+def NoexceptType : DiagGroup<"noexcept-type", [CXX1zCompatMangling]>;
 
 // Warnings for C++1y code which is not compatible with prior C++ standards.
 def CXXPre14Compat : DiagGroup<"c++98-c++11-compat">;
@@ -220,10 +215,9 @@ def CXX14Compat : DiagGroup<"c++14-compat", [CXXPre1zCompat]>;
 def CXX14CompatPedantic : DiagGroup<"c++14-compat-pedantic",
                                     [CXXPre1zCompatPedantic]>;
 
-def CXX17Compat : DiagGroup<"c++17-compat", [DeprecatedRegister,
+def CXX1zCompat : DiagGroup<"c++1z-compat", [DeprecatedRegister,
                                              DeprecatedIncrementBool,
-                                             CXX17CompatMangling]>;
-def : DiagGroup<"c++1z-compat", [CXX17Compat]>;
+                                             CXX1zCompatMangling]>;
 
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
@@ -779,11 +773,10 @@ def CXX14 : DiagGroup<"c++14-extensions", [CXX14BinaryLiteral]>;
 
 // A warning group for warnings about using C++1z features as extensions in
 // earlier C++ versions.
-def CXX17 : DiagGroup<"c++17-extensions">;
+def CXX1z : DiagGroup<"c++1z-extensions">;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
-def : DiagGroup<"c++1z-extensions", [CXX17]>;
 
 def DelegatingCtorCycles :
   DiagGroup<"delegating-ctor-cycles">;

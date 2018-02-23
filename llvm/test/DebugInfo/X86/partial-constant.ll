@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s
 ; Generated at -O2 from:
 ; bool c();
 ; void f();
@@ -16,10 +16,9 @@
 ;
 ; The constant should NOT be available for the entire function.
 ; CHECK-NOT: DW_AT_const_value
-; CHECK: .debug_loc contents:
-; CHECK-NEXT: 0x00000000:
-; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x1, DW_OP_stack_value
-
+; CHECK: .debug_loc
+; CHECK: Location description: 10 01 9f
+;                              constu 0x00000001, stack-value
 source_filename = "test.ii"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
@@ -33,7 +32,7 @@ entry:
 
 if.end:                                           ; preds = %entry
   tail call void @_Z1fv() #3, !dbg !17
-  tail call void @llvm.dbg.value(metadata i8 1, metadata !12, metadata !18), !dbg !19
+  tail call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !12, metadata !18), !dbg !19
   br label %exit, !dbg !20
 
 exit:                                             ; preds = %entry, %if.end
@@ -48,7 +47,7 @@ declare zeroext i1 @_Z1cv() local_unnamed_addr #1
 declare void @_Z1fv() local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 attributes #0 = { noimplicitfloat noredzone nounwind optsize }
 attributes #1 = { noimplicitfloat noredzone optsize }

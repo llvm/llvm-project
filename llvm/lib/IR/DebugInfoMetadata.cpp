@@ -391,7 +391,7 @@ DICompileUnit *DICompileUnit::getImpl(
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
     Metadata *GlobalVariables, Metadata *ImportedEntities, Metadata *Macros,
     uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-    bool GnuPubnames, StorageType Storage, bool ShouldCreate) {
+    StorageType Storage, bool ShouldCreate) {
   assert(Storage != Uniqued && "Cannot unique DICompileUnit");
   assert(isCanonical(Producer) && "Expected canonical MDString");
   assert(isCanonical(Flags) && "Expected canonical MDString");
@@ -401,10 +401,11 @@ DICompileUnit *DICompileUnit::getImpl(
       File,      Producer,      Flags,           SplitDebugFilename,
       EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities,
       Macros};
-  return storeImpl(new (array_lengthof(Ops)) DICompileUnit(
-                       Context, Storage, SourceLanguage, IsOptimized,
-                       RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
-                       DebugInfoForProfiling, GnuPubnames, Ops),
+  return storeImpl(new (array_lengthof(Ops))
+                       DICompileUnit(Context, Storage, SourceLanguage,
+                                     IsOptimized, RuntimeVersion, EmissionKind,
+                                     DWOId, SplitDebugInlining,
+                                     DebugInfoForProfiling, Ops),
                    Storage);
 }
 
@@ -585,29 +586,6 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
 }
 
-Optional<uint64_t> DIVariable::getSizeInBits() const {
-  // This is used by the Verifier so be mindful of broken types.
-  const Metadata *RawType = getRawType();
-  while (RawType) {
-    // Try to get the size directly.
-    if (auto *T = dyn_cast<DIType>(RawType))
-      if (uint64_t Size = T->getSizeInBits())
-        return Size;
-
-    if (auto *DT = dyn_cast<DIDerivedType>(RawType)) {
-      // Look at the base type.
-      RawType = DT->getRawBaseType();
-      continue;
-    }
-
-    // Missing type or size.
-    break;
-  }
-
-  // Fail gracefully.
-  return None;
-}
-
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     ArrayRef<uint64_t> Elements,
                                     StorageType Storage, bool ShouldCreate) {
@@ -720,17 +698,12 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
-DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
-                                    int64_t Offset, bool DerefAfter,
-                                    bool StackValue) {
+DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
+                                    int64_t Offset, bool StackValue) {
   SmallVector<uint64_t, 8> Ops;
-  if (DerefBefore)
-    Ops.push_back(dwarf::DW_OP_deref);
-  
   appendOffset(Ops, Offset);
-  if (DerefAfter)
+  if (Deref)
     Ops.push_back(dwarf::DW_OP_deref);
-
   if (Expr)
     for (auto Op : Expr->expr_ops()) {
       // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
@@ -748,44 +721,6 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
     }
   if (StackValue)
     Ops.push_back(dwarf::DW_OP_stack_value);
-  return DIExpression::get(Expr->getContext(), Ops);
-}
-
-Optional<DIExpression *> DIExpression::createFragmentExpression(
-    const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
-  SmallVector<uint64_t, 8> Ops;
-  // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
-  if (Expr) {
-    for (auto Op : Expr->expr_ops()) {
-      switch (Op.getOp()) {
-      default: break;
-      case dwarf::DW_OP_plus:
-      case dwarf::DW_OP_minus:
-        // We can't safely split arithmetic into multiple fragments because we
-        // can't express carry-over between fragments.
-        //
-        // FIXME: We *could* preserve the lowest fragment of a constant offset
-        // operation if the offset fits into SizeInBits.
-        return None;
-      case dwarf::DW_OP_LLVM_fragment: {
-        // Make the new offset point into the existing fragment.
-        uint64_t FragmentOffsetInBits = Op.getArg(0);
-        // Op.getArg(0) is FragmentOffsetInBits.
-        // Op.getArg(1) is FragmentSizeInBits.
-        assert((OffsetInBits + SizeInBits <= Op.getArg(0) + Op.getArg(1)) &&
-               "new fragment outside of original fragment");
-        OffsetInBits += FragmentOffsetInBits;
-        continue;
-      }
-      }
-      Ops.push_back(Op.getOp());
-      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
-        Ops.push_back(Op.getArg(I));
-    }
-  }
-  Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-  Ops.push_back(OffsetInBits);
-  Ops.push_back(SizeInBits);
   return DIExpression::get(Expr->getContext(), Ops);
 }
 

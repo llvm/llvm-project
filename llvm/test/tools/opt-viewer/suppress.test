@@ -1,3 +1,0 @@
-RUN: %opt-viewer -s %p/Inputs/suppress -o %t %p/Inputs/suppress/s.opt.yaml --no-highlight --demangler=llvm-cxxfilt
-RUN: diff %p/Outputs/suppress/index.html %t/index.html
-RUN: diff %p/Outputs/suppress/s.swift.html %t/s.swift.html

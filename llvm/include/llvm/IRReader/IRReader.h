@@ -37,22 +37,14 @@ getLazyIRFileModule(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 /// If the given MemoryBuffer holds a bitcode image, return a Module
 /// for it.  Otherwise, attempt to parse it as LLVM Assembly and return
 /// a Module for it.
-/// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
-///                         This option should only be set to false by llvm-as
-///                         for use inside the LLVM testuite!
 std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
-                                LLVMContext &Context,
-                                bool UpgradeDebugInfo = true);
+                                LLVMContext &Context);
 
 /// If the given file holds a bitcode image, return a Module for it.
 /// Otherwise, attempt to parse it as LLVM Assembly and return a Module
 /// for it.
-/// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
-///                         This option should only be set to false by llvm-as
-///                         for use inside the LLVM testuite!
 std::unique_ptr<Module> parseIRFile(StringRef Filename, SMDiagnostic &Err,
-                                    LLVMContext &Context,
-                                    bool UpgradeDebugInfo = true);
+                                    LLVMContext &Context);
 }
 
 #endif

@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf %s -o - -filetype=obj | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf %s -o - -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; Generated from:
 ; namespace normal { inline namespace inlined { int i; } }
 ; Check that an inline namespace is emitted with DW_AT_export_symbols
@@ -26,7 +26,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 !llvm.module.flags = !{!9, !10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "i", linkageName: "_ZN6normal7inlined1iE", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
 !2 = !DINamespace(name: "inlined", scope: !4, exportSymbols: true)
 !3 = !DIFile(filename: "namespace.cpp", directory: "/")

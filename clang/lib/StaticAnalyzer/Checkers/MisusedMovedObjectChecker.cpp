@@ -56,11 +56,8 @@ public:
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
-  void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) const override;
 
 private:
-  enum MisuseKind {MK_FunCall, MK_Copy, MK_Move};
   class MovedBugVisitor : public BugReporterVisitorImpl<MovedBugVisitor> {
   public:
     MovedBugVisitor(const MemRegion *R) : Region(R), Found(false) {}
@@ -84,7 +81,7 @@ private:
 
   mutable std::unique_ptr<BugType> BT;
   ExplodedNode *reportBug(const MemRegion *Region, const CallEvent &Call,
-                          CheckerContext &C, MisuseKind MK) const;
+                          CheckerContext &C, bool isCopy) const;
   bool isInMoveSafeContext(const LocationContext *LC) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
@@ -180,7 +177,7 @@ const ExplodedNode *MisusedMovedObjectChecker::getMoveLocation(
 ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
                                                    const CallEvent &Call,
                                                    CheckerContext &C,
-                                                   MisuseKind MK) const {
+                                                   bool isCopy = false) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!BT)
       BT.reset(new BugType(this, "Usage of a 'moved-from' object",
@@ -196,17 +193,10 @@ ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
 
     // Creating the error message.
     std::string ErrorMessage;
-    switch(MK) {
-      case MK_FunCall:
-        ErrorMessage = "Method call on a 'moved-from' object";
-        break;
-      case MK_Copy:
-        ErrorMessage = "Copying a 'moved-from' object";
-        break;
-      case MK_Move:
-        ErrorMessage = "Moving a 'moved-from' object";
-        break;
-    }
+    if (isCopy)
+      ErrorMessage = "Copying a 'moved-from' object";
+    else
+      ErrorMessage = "Method call on a 'moved-from' object";
     if (const auto DecReg = Region->getAs<DeclRegion>()) {
       const auto *RegionDecl = dyn_cast<NamedDecl>(DecReg->getDecl());
       ErrorMessage += " '" + RegionDecl->getNameAsString() + "'";
@@ -360,7 +350,7 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
   const LocationContext *LC = C.getLocationContext();
   ExplodedNode *N = nullptr;
 
-  // Remove the MemRegions from the map on which a ctor/dtor call or assignment
+  // Remove the MemRegions from the map on which a ctor/dtor call or assignement
   // happened.
 
   // Checking constructor calls.
@@ -373,10 +363,7 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
       const RegionState *ArgState = State->get<TrackedRegionMap>(ArgRegion);
       if (ArgState && ArgState->isMoved()) {
         if (!isInMoveSafeContext(LC)) {
-          if(CtorDec->isMoveConstructor())
-            N = reportBug(ArgRegion, Call, C, MK_Move);
-          else
-            N = reportBug(ArgRegion, Call, C, MK_Copy);
+          N = reportBug(ArgRegion, Call, C, /*isCopy=*/true);
           State = State->set<TrackedRegionMap>(ArgRegion,
                                                RegionState::getReported());
         }
@@ -391,11 +378,8 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
     return;
   // In case of destructor call we do not track the object anymore.
   const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
-  if (!ThisRegion)
-    return;
-
   if (dyn_cast_or_null<CXXDestructorDecl>(Call.getDecl())) {
-    State = removeFromState(State, ThisRegion);
+    State = removeFromState(State, IC->getCXXThisVal().getAsRegion());
     C.addTransition(State);
     return;
   }
@@ -416,10 +400,7 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
           State->get<TrackedRegionMap>(IC->getArgSVal(0).getAsRegion());
       if (ArgState && ArgState->isMoved() && !isInMoveSafeContext(LC)) {
         const MemRegion *ArgRegion = IC->getArgSVal(0).getAsRegion();
-        if(MethodDecl->isMoveAssignmentOperator())
-          N = reportBug(ArgRegion, Call, C, MK_Move);
-        else
-          N = reportBug(ArgRegion, Call, C, MK_Copy);
+        N = reportBug(ArgRegion, Call, C, /*isCopy=*/true);
         State =
             State->set<TrackedRegionMap>(ArgRegion, RegionState::getReported());
       }
@@ -429,35 +410,28 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
   }
 
   // The remaining part is check only for method call on a moved-from object.
-
-  // We want to investigate the whole object, not only sub-object of a parent
-  // class in which the encountered method defined.
-  while (const CXXBaseObjectRegion *BR =
-             dyn_cast<CXXBaseObjectRegion>(ThisRegion))
-    ThisRegion = BR->getSuperRegion();
-
   if (isMoveSafeMethod(MethodDecl))
     return;
 
   if (isStateResetMethod(MethodDecl)) {
-    State = removeFromState(State, ThisRegion);
+    State = State->remove<TrackedRegionMap>(ThisRegion);
     C.addTransition(State);
     return;
   }
 
-  // If it is already reported then we don't report the bug again.
+  // If it is already reported then we dont report the bug again.
   const RegionState *ThisState = State->get<TrackedRegionMap>(ThisRegion);
   if (!(ThisState && ThisState->isMoved()))
     return;
 
-  // Don't report it in case if any base region is already reported
+  // Dont report it in case if any base region is already reported
   if (isAnyBaseRegionReported(State, ThisRegion))
     return;
 
   if (isInMoveSafeContext(LC))
     return;
 
-  N = reportBug(ThisRegion, Call, C, MK_FunCall);
+  N = reportBug(ThisRegion, Call, C);
   State = State->set<TrackedRegionMap>(ThisRegion, RegionState::getReported());
   C.addTransition(State, N);
 }
@@ -502,25 +476,6 @@ ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
   return State;
 }
 
-void MisusedMovedObjectChecker::printState(raw_ostream &Out,
-                                           ProgramStateRef State,
-                                           const char *NL,
-                                           const char *Sep) const {
-
-  TrackedRegionMapTy RS = State->get<TrackedRegionMap>();
-
-  if (!RS.isEmpty()) {
-    Out << Sep << "Moved-from objects :" << NL;
-    for (auto I: RS) {
-      I.first->dumpToStream(Out);
-      if (I.second.isMoved())
-        Out << ": moved";
-      else
-        Out << ": moved and reported";
-      Out << NL;
-    }
-  }
-}
 void ento::registerMisusedMovedObjectChecker(CheckerManager &mgr) {
   mgr.registerChecker<MisusedMovedObjectChecker>();
 }

@@ -166,10 +166,9 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   const char *delim = "";
   for (const Statistic *Stat : Stats.Stats) {
     OS << delim;
-    assert(yaml::needsQuotes(Stat->getDebugType()) == yaml::QuotingType::None &&
+    assert(!yaml::needsQuotes(Stat->getDebugType()) &&
            "Statistic group/type name is simple.");
-    assert(yaml::needsQuotes(Stat->getName()) == yaml::QuotingType::None &&
-           "Statistic name is simple");
+    assert(!yaml::needsQuotes(Stat->getName()) && "Statistic name is simple");
     OS << "\t\"" << Stat->getDebugType() << '.' << Stat->getName() << "\": "
        << Stat->getValue();
     delim = ",\n";

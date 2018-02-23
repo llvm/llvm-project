@@ -1,6 +1,5 @@
-# RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=arm64-apple-ios7.0.0 -filetype=obj -o %t/foo.o %s
-# RUN: llvm-rtdyld -triple=arm64-apple-ios7.0.0 -map-section foo.o,__text=0x10bc0 -verify -check=%s %t/foo.o
+# RUN: llvm-mc -triple=arm64-apple-ios7.0.0 -code-model=small -filetype=obj -o %T/foo.o %s
+# RUN: llvm-rtdyld -triple=arm64-apple-ios7.0.0 -map-section foo.o,__text=0x10bc0 -verify -check=%s %/T/foo.o
 
     .section  __TEXT,__text,regular,pure_instructions
     .ios_version_min 7, 0

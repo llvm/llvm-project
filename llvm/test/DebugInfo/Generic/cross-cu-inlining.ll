@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck -implicit-check-not=DW_TAG %s
-; RUN: %llc_dwarf -dwarf-accel-tables=Enable -dwarf-linkage-names=All -O0 -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck --check-prefix=CHECK-ACCEL --check-prefix=CHECK %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-dump=info - | FileCheck -implicit-check-not=DW_TAG %s
+; RUN: %llc_dwarf -dwarf-accel-tables=Enable -dwarf-linkage-names=All -O0 -filetype=obj < %s | llvm-dwarfdump - | FileCheck --check-prefix=CHECK-ACCEL --check-prefix=CHECK %s
 
 ; Build from source:
 ; $ clang++ a.cpp b.cpp -g -c -emit-llvm
@@ -24,7 +24,7 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_name {{.*}} "a.cpp"
 ; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[INT:[a-f0-9]+]]
+; CHECK:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[INT:.*]])
 ; CHECK:     0x[[INLINED:[0-9a-f]*]]:{{.*}}DW_TAG_inlined_subroutine
 ; CHECK:       DW_AT_abstract_origin {{.*}}[[ABS_FUNC:........]] "_Z4funci"
 ; CHECK:       DW_TAG_formal_parameter

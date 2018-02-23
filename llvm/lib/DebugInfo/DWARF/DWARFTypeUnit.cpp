@@ -31,11 +31,11 @@ bool DWARFTypeUnit::extractImpl(DataExtractor debug_info,
   return TypeOffset < getLength() + SizeOfLength;
 }
 
-void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
+void DWARFTypeUnit::dump(raw_ostream &OS, bool SummarizeTypes) {
   DWARFDie TD = getDIEForOffset(TypeOffset + getOffset());
   const char *Name = TD.getName(DINameKind::ShortName);
 
-  if (DumpOpts.SummarizeTypes) {
+  if (SummarizeTypes) {
     OS << "name = '" << Name << "'"
        << " type_signature = " << format("0x%016" PRIx64, TypeHash)
        << " length = " << format("0x%08x", getLength()) << '\n';
@@ -55,7 +55,7 @@ void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
      << " (next unit at " << format("0x%08x", getNextUnitOffset()) << ")\n";
 
   if (DWARFDie TU = getUnitDIE(false))
-    TU.dump(OS, 0, DumpOpts);
+    TU.dump(OS, -1U);
   else
     OS << "<type unit can't be parsed!>\n\n";
 }

@@ -14,7 +14,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include <cstdint>
 
@@ -102,14 +101,18 @@ public:
 
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
+  void dump(raw_ostream &OS) const;
 
-  /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
-  /// in \p FormParams is needed to interpret some forms. The optional
-  /// \p Unit allows extracting information if the form refers to other
-  /// sections (e.g., .debug_str).
+  /// Extracts a value in \p Data at offset \p *OffsetPtr.
+  ///
+  /// The passed DWARFUnit is allowed to be nullptr, in which case some
+  /// kind of forms that depend on Unit information are disallowed.
+  /// \param Data The DWARFDataExtractor to use.
+  /// \param OffsetPtr The offset within \p Data where the data starts.
+  /// \param U The optional DWARFUnit supplying information for some forms.
+  /// \returns whether the extraction succeeded.
   bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
-                    DWARFFormParams FormParams, const DWARFUnit *U = nullptr);
+                    const DWARFUnit *U);
 
   bool isInlinedCStr() const {
     return Value.data != nullptr && Value.data == (const uint8_t *)Value.cstr;

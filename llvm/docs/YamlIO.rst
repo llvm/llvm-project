@@ -466,7 +466,7 @@ looks like:
         return StringRef();
       }
       // Determine if this scalar needs quotes.
-      static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
+      static bool mustQuote(StringRef) { return true; }
     };
 
 Block Scalars

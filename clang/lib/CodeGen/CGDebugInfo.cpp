@@ -18,7 +18,6 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "ConstantEmitter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
@@ -528,15 +527,16 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   // FIXME - Eliminate TheCU.
-  auto &CGOpts = CGM.getCodeGenOpts();
   TheCU = DBuilder.createCompileUnit(
       LangTag,
       DBuilder.createFile(remapDIPath(MainFileName),
                           remapDIPath(getCurrentDirname()), CSKind, Checksum),
-      Producer, LO.Optimize || CGOpts.PrepareForLTO || CGOpts.EmitSummaryIndex,
-      CGOpts.DwarfDebugFlags, RuntimeVers,
-      CGOpts.EnableSplitDwarf ? "" : CGOpts.SplitDwarfFile, EmissionKind,
-      0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling);
+      Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
+      CGM.getCodeGenOpts().EnableSplitDwarf
+          ? ""
+          : CGM.getCodeGenOpts().SplitDwarfFile,
+      EmissionKind, 0 /* DWOid */, CGM.getCodeGenOpts().SplitDwarfInlining,
+      CGM.getCodeGenOpts().DebugInfoForProfiling);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
@@ -1590,7 +1590,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       QualType T = E->getType();
       if (E->isGLValue())
         T = CGM.getContext().getLValueReferenceType(T);
-      llvm::Constant *V = ConstantEmitter(CGM).emitAbstract(E, T);
+      llvm::Constant *V = CGM.EmitConstantExpr(E, T);
       assert(V && "Expression in template argument isn't constant");
       llvm::DIType *TTy = getOrCreateType(T, Unit);
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
@@ -1766,29 +1766,6 @@ static bool isClassOrMethodDLLImport(const CXXRecordDecl *RD) {
   return false;
 }
 
-/// Does a type definition exist in an imported clang module?
-static bool isDefinedInClangModule(const RecordDecl *RD) {
-  // Only definitions that where imported from an AST file come from a module.
-  if (!RD || !RD->isFromASTFile())
-    return false;
-  // Anonymous entities cannot be addressed. Treat them as not from module.
-  if (!RD->isExternallyVisible() && RD->getName().empty())
-    return false;
-  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-    if (!CXXDecl->isCompleteDefinition())
-      return false;
-    auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
-    if (TemplateKind != TSK_Undeclared) {
-      // This is a template, check the origin of the first member.
-      if (CXXDecl->field_begin() == CXXDecl->field_end())
-        return TemplateKind == TSK_ExplicitInstantiationDeclaration;
-      if (!CXXDecl->field_begin()->isFromASTFile())
-        return false;
-    }
-  }
-  return true;
-}
-
 void CGDebugInfo::completeClassData(const RecordDecl *RD) {
   if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     if (CXXRD->isDynamicClass() &&
@@ -1796,10 +1773,6 @@ void CGDebugInfo::completeClassData(const RecordDecl *RD) {
             llvm::GlobalValue::AvailableExternallyLinkage &&
         !isClassOrMethodDLLImport(CXXRD))
       return;
-
-  if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
-    return;
-
   completeClass(RD);
 }
 
@@ -1824,6 +1797,29 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
           !MD->getMemberSpecializationInfo()->isExplicitSpecialization())
         return true;
   return false;
+}
+
+/// Does a type definition exist in an imported clang module?
+static bool isDefinedInClangModule(const RecordDecl *RD) {
+  // Only definitions that where imported from an AST file come from a module.
+  if (!RD || !RD->isFromASTFile())
+    return false;
+  // Anonymous entities cannot be addressed. Treat them as not from module.
+  if (!RD->isExternallyVisible() && RD->getName().empty())
+    return false;
+  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
+    if (!CXXDecl->isCompleteDefinition())
+      return false;
+    auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
+    if (TemplateKind != TSK_Undeclared) {
+      // This is a template, check the origin of the first member.
+      if (CXXDecl->field_begin() == CXXDecl->field_end())
+        return TemplateKind == TSK_ExplicitInstantiationDeclaration;
+      if (!CXXDecl->field_begin()->isFromASTFile())
+        return false;
+    }
+  }
+  return true;
 }
 
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
@@ -3264,7 +3260,7 @@ void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
   llvm::DISubprogram *SP = nullptr;
   if (FI != SPCache.end())
     SP = dyn_cast_or_null<llvm::DISubprogram>(FI->second);
-  if (!SP || !SP->isDefinition())
+  if (!SP)
     SP = getFunctionStub(GD);
   FnBeginRegionCount.push_back(LexicalBlockStack.size());
   LexicalBlockStack.emplace_back(SP);
@@ -3659,9 +3655,9 @@ bool operator<(const BlockLayoutChunk &l, const BlockLayoutChunk &r) {
 }
 
 void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
-                                                       StringRef Name,
+                                                       llvm::Value *Arg,
                                                        unsigned ArgNo,
-                                                       llvm::AllocaInst *Alloca,
+                                                       llvm::Value *LocalAddr,
                                                        CGBuilderTy &Builder) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   ASTContext &C = CGM.getContext();
@@ -3793,11 +3789,19 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
   // Create the descriptor for the parameter.
   auto *debugVar = DBuilder.createParameterVariable(
-      scope, Name, ArgNo, tunit, line, type,
+      scope, Arg->getName(), ArgNo, tunit, line, type,
       CGM.getLangOpts().Optimize, flags);
 
+  if (LocalAddr) {
+    // Insert an llvm.dbg.value into the current block.
+    DBuilder.insertDbgValueIntrinsic(
+        LocalAddr, 0, debugVar, DBuilder.createExpression(),
+        llvm::DebugLoc::get(line, column, scope, CurInlinedAt),
+        Builder.GetInsertBlock());
+  }
+
   // Insert an llvm.dbg.declare into the current block.
-  DBuilder.insertDeclare(Alloca, debugVar, DBuilder.createExpression(),
+  DBuilder.insertDeclare(Arg, debugVar, DBuilder.createExpression(),
                          llvm::DebugLoc::get(line, column, scope, CurInlinedAt),
                          Builder.GetInsertBlock());
 }

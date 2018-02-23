@@ -299,18 +299,15 @@ void test_neg() {
   bar(s);
 }
 
-__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_cow(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap);
+__attribute__((cf_returns_retained)) isl_basic_map *isl_basic_map_cow(__attribute__((cf_consumed)) isl_basic_map *bmap);
 void free(void *);
-
-void callee_side_parameter_checking_leak(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) { // expected-warning {{Potential leak of an object}}
-}
 
 // As 'isl_basic_map_free' is annotated with 'rc_ownership_trusted_implementation', RetainCountChecker trusts its
 // implementation and doesn't analyze its body. If the annotation 'rc_ownership_trusted_implementation' is removed,
 // a leak warning is raised by RetainCountChecker as the analyzer is unable to detect a decrement in the reference
 // count of 'bmap' along the path in 'isl_basic_map_free' assuming the predicate of the second 'if' branch to be
 // true or assuming both the predicates in the function to be false.
-__attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *isl_basic_map_free(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
+__attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *isl_basic_map_free(__attribute__((cf_consumed)) isl_basic_map *bmap) {
   if (!bmap)
     return NULL;
 
@@ -325,7 +322,7 @@ __attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *
 // implementation and doesn't analyze its body. If that annotation is removed, a 'use-after-release' warning might
 // be raised by RetainCountChecker as the pointer which is passed as an argument to this function and the pointer
 // which is returned from the function point to the same memory location.
-__attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_copy(isl_basic_map *bmap) {
+__attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((cf_returns_retained)) isl_basic_map *isl_basic_map_copy(isl_basic_map *bmap) {
   if (!bmap)
     return NULL;
 
@@ -333,7 +330,7 @@ __attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((
   return bmap;
 }
 
-void test_use_after_release_with_trusted_implementation_annotate_attribute(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
+void test_use_after_release_with_trusted_implementation_annotate_attribute(__attribute__((cf_consumed)) isl_basic_map *bmap) {
   // After this call, 'bmap' has a +1 reference count.
   bmap = isl_basic_map_cow(bmap);
   // After the call to 'isl_basic_map_copy', 'bmap' has a +1 reference count.
@@ -344,42 +341,11 @@ void test_use_after_release_with_trusted_implementation_annotate_attribute(__att
   isl_basic_map_free(temp);
 }
 
-void test_leak_with_trusted_implementation_annotate_attribute(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
+void test_leak_with_trusted_implementation_annotate_attribute(__attribute__((cf_consumed)) isl_basic_map *bmap) {
   // After this call, 'bmap' has a +1 reference count.
   bmap = isl_basic_map_cow(bmap); // no-warning
   // After this call, 'bmap' has a +0 reference count.
   isl_basic_map_free(bmap);
-}
-
-void callee_side_parameter_checking_incorrect_rc_decrement(isl_basic_map *bmap) {
-  isl_basic_map_free(bmap); // expected-warning {{Incorrect decrement of the reference count}}
-}
-
-__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *callee_side_parameter_checking_return_notowned_object(isl_basic_map *bmap) {
-  return bmap; // expected-warning {{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
-}
-
-__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *callee_side_parameter_checking_assign_consumed_parameter_leak_return(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap1, __attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap2) { // expected-warning {{Potential leak of an object}}
-  bmap1 = bmap2;
-  isl_basic_map_free(bmap2);
-  return bmap1;
-}
-
-__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *callee_side_parameter_checking_assign_consumed_parameter_leak(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap1, __attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap2) { // expected-warning {{Potential leak of an object}}
-  bmap1 = bmap2;
-  isl_basic_map_free(bmap1);
-  return bmap2;
-}
-
-__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *error_path_leak(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap1, __attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap2) { // expected-warning {{Potential leak of an object}}
-  bmap1 = isl_basic_map_cow(bmap1);
-  if (!bmap1 || !bmap2)
-    goto error;
-
-  isl_basic_map_free(bmap2);
-  return bmap1;
-error:
-  return isl_basic_map_free(bmap1);
 }
 
 //===----------------------------------------------------------------------===//

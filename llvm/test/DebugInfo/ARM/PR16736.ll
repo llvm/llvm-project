@@ -1,23 +1,5 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
-; RUN: llc -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
-;
-; CHECK: @DEBUG_VALUE: h:x <- [DW_OP_plus_uconst {{.*}}] [%R{{.*}}+0]
-; DWARF: DW_TAG_formal_parameter
-; DWARF:       DW_AT_location
-; DWARF-NEXT:    DW_OP_reg0 R0
-; DWARF: DW_TAG_formal_parameter
-; DWARF:       DW_AT_location
-; DWARF-NEXT:    DW_OP_reg1 R1
-; DWARF: DW_TAG_formal_parameter
-; DWARF:       DW_AT_location
-; DWARF-NEXT:    DW_OP_reg2 R2
-; DWARF: DW_TAG_formal_parameter
-; DWARF:       DW_AT_location
-; DWARF-NEXT:    DW_OP_reg3 R3
-; DWARF: DW_TAG_formal_parameter
-; DWARF: DW_AT_location
-; DWARF-NEXT: DW_OP_breg7 R7+8
+; CHECK: @DEBUG_VALUE: h:x <- [%R{{.*}}+{{.*}}]
 ; generated from:
 ; clang -cc1 -triple  thumbv7 -S -O1 arm.cpp  -g
 ;
@@ -33,14 +15,14 @@ target triple = "thumbv7-apple-ios"
 ; Function Attrs: nounwind
 define arm_aapcscc void @_Z1hiiiif(i32, i32, i32, i32, float %x) #0 "no-frame-pointer-elim"="true" !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %0, metadata !12, metadata !DIExpression()), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %1, metadata !13, metadata !DIExpression()), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %2, metadata !14, metadata !DIExpression()), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %3, metadata !15, metadata !DIExpression()), !dbg !18
-  tail call void @llvm.dbg.value(metadata float %x, metadata !16, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !12, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !13, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %2, i64 0, metadata !14, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %3, i64 0, metadata !15, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata float %x, i64 0, metadata !16, metadata !DIExpression()), !dbg !18
   %call = tail call arm_aapcscc i32 @_Z1fv() #3, !dbg !19
   %conv = sitofp i32 %call to float, !dbg !19
-  tail call void @llvm.dbg.value(metadata float %conv, metadata !16, metadata !DIExpression()), !dbg !19
+  tail call void @llvm.dbg.value(metadata float %conv, i64 0, metadata !16, metadata !DIExpression()), !dbg !19
   tail call arm_aapcscc void @_Z1gf(float %conv) #3, !dbg !19
   ret void, !dbg !20
 }
@@ -50,7 +32,7 @@ declare arm_aapcscc void @_Z1gf(float)
 declare arm_aapcscc i32 @_Z1fv()
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 attributes #0 = { nounwind  }
 attributes #2 = { nounwind readnone }

@@ -17,17 +17,6 @@
 
 using namespace llvm;
 
-void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize) const {
-
-  OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2, LowPC)
-     << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, HighPC);
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, const DWARFAddressRange &R) {
-  R.dump(OS, /* AddressSize */ 8);
-  return OS;
-}
-
 void DWARFDebugRangeList::clear() {
   Offset = -1U;
   AddressSize = 0;
@@ -44,22 +33,20 @@ bool DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
     return false;
   Offset = *offset_ptr;
   while (true) {
-    RangeListEntry Entry;
-    Entry.SectionIndex = -1ULL;
-
+    RangeListEntry entry;
     uint32_t prev_offset = *offset_ptr;
-    Entry.StartAddress = data.getRelocatedAddress(offset_ptr);
-    Entry.EndAddress =
-        data.getRelocatedAddress(offset_ptr, &Entry.SectionIndex);
+    entry.StartAddress =
+        data.getRelocatedAddress(offset_ptr, &entry.SectionIndex);
+    entry.EndAddress = data.getRelocatedAddress(offset_ptr);
 
     // Check that both values were extracted correctly.
     if (*offset_ptr != prev_offset + 2 * AddressSize) {
       clear();
       return false;
     }
-    if (Entry.isEndOfListEntry())
+    if (entry.isEndOfListEntry())
       break;
-    Entries.push_back(Entry);
+    Entries.push_back(entry);
   }
   return true;
 }
@@ -74,29 +61,16 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
   OS << format("%08x <End of list>\n", Offset);
 }
 
-DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
-    llvm::Optional<BaseAddress> BaseAddr) const {
+DWARFAddressRangesVector
+DWARFDebugRangeList::getAbsoluteRanges(uint64_t BaseAddress) const {
   DWARFAddressRangesVector Res;
   for (const RangeListEntry &RLE : Entries) {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {
-      BaseAddr = {RLE.EndAddress, RLE.SectionIndex};
-      continue;
+      BaseAddress = RLE.EndAddress;
+    } else {
+      Res.push_back({BaseAddress + RLE.StartAddress,
+                     BaseAddress + RLE.EndAddress, RLE.SectionIndex});
     }
-
-    DWARFAddressRange E;
-    E.LowPC = RLE.StartAddress;
-    E.HighPC = RLE.EndAddress;
-    E.SectionIndex = RLE.SectionIndex;
-    // Base address of a range list entry is determined by the closest preceding
-    // base address selection entry in the same range list. It defaults to the
-    // base address of the compilation unit if there is no such entry.
-    if (BaseAddr) {
-      E.LowPC += BaseAddr->Address;
-      E.HighPC += BaseAddr->Address;
-      if (E.SectionIndex == -1ULL)
-        E.SectionIndex = BaseAddr->SectionIndex;
-    }
-    Res.push_back(E);
   }
   return Res;
 }

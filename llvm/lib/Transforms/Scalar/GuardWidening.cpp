@@ -664,7 +664,6 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   return PA;
 }
 
-#ifndef NDEBUG
 StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
   switch (WS) {
   case WS_IllegalOrNegative:
@@ -679,7 +678,6 @@ StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
 
   llvm_unreachable("Fully covered switch above!");
 }
-#endif
 
 char GuardWideningLegacyPass::ID = 0;
 

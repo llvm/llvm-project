@@ -1139,39 +1139,6 @@ bool Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level) {
       D, [](OpenMPClauseKind K) -> bool { return K == OMPC_private; }, Level);
 }
 
-void Sema::setOpenMPCaptureKind(FieldDecl *FD, ValueDecl *D, unsigned Level) {
-  assert(LangOpts.OpenMP && "OpenMP is not allowed");
-  D = getCanonicalDecl(D);
-  OpenMPClauseKind OMPC = OMPC_unknown;
-  for (unsigned I = DSAStack->getNestingLevel() + 1; I > Level; --I) {
-    const unsigned NewLevel = I - 1;
-    if (DSAStack->hasExplicitDSA(D,
-                                 [&OMPC](const OpenMPClauseKind K) {
-                                   if (isOpenMPPrivate(K)) {
-                                     OMPC = K;
-                                     return true;
-                                   }
-                                   return false;
-                                 },
-                                 NewLevel))
-      break;
-    if (DSAStack->checkMappableExprComponentListsForDeclAtLevel(
-            D, NewLevel,
-            [](OMPClauseMappableExprCommon::MappableExprComponentListRef,
-               OpenMPClauseKind) { return true; })) {
-      OMPC = OMPC_map;
-      break;
-    }
-    if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective,
-                                       NewLevel)) {
-      OMPC = OMPC_firstprivate;
-      break;
-    }
-  }
-  if (OMPC != OMPC_unknown)
-    FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, OMPC));
-}
-
 bool Sema::isOpenMPTargetCapturedDecl(ValueDecl *D, unsigned Level) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   // Return true if the current level is no longer enclosed in a target region.
@@ -3144,8 +3111,8 @@ bool OpenMPIterationSpaceChecker::SetStep(Expr *NewStep, bool Subtract) {
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getLocStart();
-    ExprResult Val = SemaRef.PerformOpenMPImplicitIntegerConversion(
-        StepLoc, getExprAsWritten(NewStep));
+    ExprResult Val =
+        SemaRef.PerformOpenMPImplicitIntegerConversion(StepLoc, NewStep);
     if (Val.isInvalid())
       return true;
     NewStep = Val.get();
@@ -8891,8 +8858,7 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
       PrevD = D;
     }
   }
-  if (SemaRef.CurContext->isDependentContext() || Ty->isDependentType() ||
-      Ty->isInstantiationDependentType() ||
+  if (Ty->isDependentType() || Ty->isInstantiationDependentType() ||
       Ty->containsUnexpandedParameterPack() ||
       filterLookupForUDR<bool>(Lookups, [](ValueDecl *D) -> bool {
         return !D->isInvalidDecl() &&
@@ -10260,14 +10226,9 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
         if (!CurContext->isDependentContext() &&
             DSAStack->getParentOrderedRegionParam() &&
             DepCounter != DSAStack->isParentLoopControlVariable(D).first) {
-          ValueDecl* VD = DSAStack->getParentLoopControlVariable(
-              DepCounter.getZExtValue());
-          if (VD) {
-            Diag(ELoc, diag::err_omp_depend_sink_expected_loop_iteration)
-                << 1 << VD;
-          } else {
-             Diag(ELoc, diag::err_omp_depend_sink_expected_loop_iteration) << 0;
-          }
+          Diag(ELoc, diag::err_omp_depend_sink_expected_loop_iteration)
+              << DSAStack->getParentLoopControlVariable(
+                     DepCounter.getZExtValue());
           continue;
         }
         OpsOffs.push_back({RHS, OOK});
@@ -10297,9 +10258,8 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
 
     if (!CurContext->isDependentContext() && DepKind == OMPC_DEPEND_sink &&
         TotalDepCount > VarList.size() &&
-        DSAStack->getParentOrderedRegionParam() &&
-        DSAStack->getParentLoopControlVariable(VarList.size() + 1)) {
-      Diag(EndLoc, diag::err_omp_depend_sink_expected_loop_iteration) << 1
+        DSAStack->getParentOrderedRegionParam()) {
+      Diag(EndLoc, diag::err_omp_depend_sink_expected_loop_iteration)
           << DSAStack->getParentLoopControlVariable(VarList.size() + 1);
     }
     if (DepKind != OMPC_DEPEND_source && DepKind != OMPC_DEPEND_sink &&

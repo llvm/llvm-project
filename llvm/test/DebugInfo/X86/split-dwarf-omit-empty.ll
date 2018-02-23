@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; Created from:
 ; a.cpp:
@@ -15,10 +15,8 @@
 ; will be emitted. This emulates something more like the available_externally
 ; import performed by ThinLTO.
 
-; CHECK: .debug_info contents:
 ; CHECK: Compile Unit
 ; CHECK-NOT: Compile Unit
-; CHECK: .debug_info.dwo contents:
 
 target triple = "x86_64-pc-linux"
 

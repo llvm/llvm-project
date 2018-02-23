@@ -4,7 +4,7 @@
 ; for the stack location directly instead of generating a register+offset indirection.
 
 ; RUN: llc -O2 -filetype=obj -disable-post-ra -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN: | llvm-dwarfdump -v - | FileCheck %s
+; RUN: | llvm-dwarfdump - | FileCheck %s
 ;
 ; int data = 17;
 ; int sum  = 0;
@@ -26,10 +26,18 @@
 ; CHECK:      DW_TAG_subprogram
 ; CHECK-NOT:  NULL
 ; CHECK:      DW_TAG_variable
-; CHECK:      DW_AT_location [DW_FORM_sec_offset] ({{.*}}
-; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_reg0 RAX
-; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_breg7 RSP+4, DW_OP_deref)
-; CHECK-NEXT: DW_AT_name {{.*}}"val"
+; CHECK:      DW_AT_location [DW_FORM_sec_offset] ([[DEBUGLOCOFFSET:0x[0-9a-f]+]]){{[[:space:]].*}}"val"
+
+; See that 'val' has at least one location entry with a DW_op_breg? operand.
+; The DWARF DW_op_breg* ops are encoded from 0x70 to 0x8f, but checking for an
+; op in the range from 0x70 to 0x7f should suffice because that range covers
+; all integer GPRs.
+;
+; CHECK: .debug_loc contents:
+; CHECK-NOT: .debug{{.*}} contents
+; CHECK: [[DEBUGLOCOFFSET]]: Beginning
+; CHECK-NOT: {{0x[0-9a-f]+}}: Beginning
+; CHECK: Location description: 7{{[0-9a-f] .*}}
 
 ; ModuleID = 'frame.c'
 source_filename = "frame.c"
@@ -45,9 +53,9 @@ entry:
   %0 = bitcast i32* %val to i8*, !dbg !22
   call void @llvm.lifetime.start(i64 4, i8* %0), !dbg !22
   %1 = load i32, i32* @data, align 4, !dbg !23, !tbaa !24
-  tail call void @llvm.dbg.value(metadata i32 %1, metadata !21, metadata !28), !dbg !29
+  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !21, metadata !28), !dbg !29
   store i32 %1, i32* %val, align 4, !dbg !30, !tbaa !24
-  tail call void @llvm.dbg.value(metadata i32* %val, metadata !21, metadata !31), !dbg !29
+  tail call void @llvm.dbg.value(metadata i32* %val, i64 0, metadata !21, metadata !31), !dbg !29
   call void @foo(i32 1, i32* nonnull %val), !dbg !32
   call void @foo(i32 2, i32* nonnull @data), !dbg !33
   %2 = load i32, i32* @zero, align 4, !dbg !34, !tbaa !24
@@ -64,7 +72,7 @@ declare void @foo(i32, i32*) local_unnamed_addr
 declare void @llvm.lifetime.end(i64, i8* nocapture) #0
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone }
@@ -73,18 +81,18 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "data", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 273961)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "frame.c", directory: "/home/user/test")
 !4 = !{}
 !5 = !{!0, !6, !9, !11}
-!6 = distinct !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
+!6 = distinct !DIGlobalVariableExpression(var: !7)
 !7 = !DIGlobalVariable(name: "sum", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = distinct !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
+!9 = distinct !DIGlobalVariableExpression(var: !10)
 !10 = !DIGlobalVariable(name: "zero", scope: !2, file: !3, line: 3, type: !8, isLocal: false, isDefinition: true)
-!11 = distinct !DIGlobalVariableExpression(var: !12, expr: !DIExpression())
+!11 = distinct !DIGlobalVariableExpression(var: !12)
 !12 = !DIGlobalVariable(name: "ptr", scope: !2, file: !3, line: 4, type: !13, isLocal: false, isDefinition: true)
 !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64, align: 64)
 !14 = !{i32 2, !"Dwarf Version", i32 4}

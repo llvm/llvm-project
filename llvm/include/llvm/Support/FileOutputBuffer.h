@@ -17,7 +17,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 
 namespace llvm {
@@ -30,6 +30,7 @@ namespace llvm {
 /// not committed, the file will be deleted in the FileOutputBuffer destructor.
 class FileOutputBuffer {
 public:
+
   enum  {
     F_executable = 1  /// set the 'x' bit on the resulting file
   };
@@ -37,37 +38,52 @@ public:
   /// Factory method to create an OutputBuffer object which manages a read/write
   /// buffer of the specified size. When committed, the buffer will be written
   /// to the file at the specified path.
-  static Expected<std::unique_ptr<FileOutputBuffer>>
+  static ErrorOr<std::unique_ptr<FileOutputBuffer>>
   create(StringRef FilePath, size_t Size, unsigned Flags = 0);
 
   /// Returns a pointer to the start of the buffer.
-  virtual uint8_t *getBufferStart() const = 0;
+  uint8_t *getBufferStart() {
+    return (uint8_t*)Region->data();
+  }
 
   /// Returns a pointer to the end of the buffer.
-  virtual uint8_t *getBufferEnd() const = 0;
+  uint8_t *getBufferEnd() {
+    return (uint8_t*)Region->data() + Region->size();
+  }
 
   /// Returns size of the buffer.
-  virtual size_t getBufferSize() const = 0;
+  size_t getBufferSize() const {
+    return Region->size();
+  }
 
   /// Returns path where file will show up if buffer is committed.
-  StringRef getPath() const { return FinalPath; }
+  StringRef getPath() const {
+    return FinalPath;
+  }
 
   /// Flushes the content of the buffer to its file and deallocates the
   /// buffer.  If commit() is not called before this object's destructor
   /// is called, the file is deleted in the destructor. The optional parameter
   /// is used if it turns out you want the file size to be smaller than
   /// initially requested.
-  virtual Error commit() = 0;
+  std::error_code commit();
 
   /// If this object was previously committed, the destructor just deletes
   /// this object.  If this object was not committed, the destructor
   /// deallocates the buffer and the target file is never written.
-  virtual ~FileOutputBuffer() {}
+  ~FileOutputBuffer();
 
-protected:
-  FileOutputBuffer(StringRef Path) : FinalPath(Path) {}
+private:
+  FileOutputBuffer(const FileOutputBuffer &) = delete;
+  FileOutputBuffer &operator=(const FileOutputBuffer &) = delete;
 
-  std::string FinalPath;
+  FileOutputBuffer(std::unique_ptr<llvm::sys::fs::mapped_file_region> R,
+                   StringRef Path, StringRef TempPath, bool IsRegular);
+
+  std::unique_ptr<llvm::sys::fs::mapped_file_region> Region;
+  SmallString<128>    FinalPath;
+  SmallString<128>    TempPath;
+  bool IsRegular;
 };
 } // end namespace llvm
 

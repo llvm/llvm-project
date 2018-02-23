@@ -29,11 +29,10 @@ enum : SanitizerMask {
   NeedsUbsanRt = Undefined | Integer | Nullability | CFI,
   NeedsUbsanCxxRt = Vptr | CFI,
   NotAllowedWithTrap = Vptr,
-  NotAllowedWithMinimalRuntime = Vptr,
   RequiresPIE = DataFlow,
   NeedsUnwindTables = Address | Thread | Memory | DataFlow,
   SupportsCoverage = Address | KernelAddress | Memory | Leak | Undefined |
-                     Integer | Nullability | DataFlow | Fuzzer | FuzzerNoLink,
+                     Integer | Nullability | DataFlow | Fuzzer,
   RecoverableByDefault = Undefined | Integer | Nullability,
   Unrecoverable = Unreachable | Return,
   LegacyFsanitizeRecoverMask = Undefined | Integer,
@@ -42,7 +41,6 @@ enum : SanitizerMask {
                       Nullability | LocalBounds | CFI,
   TrappingDefault = CFI,
   CFIClasses = CFIVCall | CFINVCall | CFIDerivedCast | CFIUnrelatedCast,
-  CompatibleWithMinimalRuntime = TrappingSupported,
 };
 
 enum CoverageFeature {
@@ -102,8 +100,6 @@ static bool getDefaultBlacklist(const Driver &D, SanitizerMask Kinds,
     BlacklistFile = "dfsan_abilist.txt";
   else if (Kinds & CFI)
     BlacklistFile = "cfi_blacklist.txt";
-  else if (Kinds & (Undefined | Integer | Nullability))
-    BlacklistFile = "ubsan_blacklist.txt";
 
   if (BlacklistFile) {
     clang::SmallString<64> Path(D.ResourceDir);
@@ -172,7 +168,7 @@ bool SanitizerArgs::needsUbsanRt() const {
   return ((Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
           CoverageFeatures) &&
          !Sanitizers.has(Address) && !Sanitizers.has(Memory) &&
-         !Sanitizers.has(Thread) && !Sanitizers.has(DataFlow) &&
+         !Sanitizers.has(Thread) && !Sanitizers.has(DataFlow) && 
          !Sanitizers.has(Leak) && !CfiCrossDso;
 }
 
@@ -212,10 +208,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask TrappingKinds = parseSanitizeTrapArgs(D, Args);
   SanitizerMask InvalidTrappingKinds = TrappingKinds & NotAllowedWithTrap;
 
-  MinimalRuntime =
-      Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
-                   options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
-
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
   bool RemoveObjectSizeAtO0 =
@@ -253,18 +245,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         DiagnosedKinds |= KindsToDiagnose;
       }
       Add &= ~InvalidTrappingKinds;
-
-      if (MinimalRuntime) {
-        if (SanitizerMask KindsToDiagnose =
-                Add & NotAllowedWithMinimalRuntime & ~DiagnosedKinds) {
-          std::string Desc = describeSanitizeArg(*I, KindsToDiagnose);
-          D.Diag(diag::err_drv_argument_not_allowed_with)
-              << Desc << "-fsanitize-minimal-runtime";
-          DiagnosedKinds |= KindsToDiagnose;
-        }
-        Add &= ~NotAllowedWithMinimalRuntime;
-      }
-
       if (SanitizerMask KindsToDiagnose = Add & ~Supported & ~DiagnosedKinds) {
         std::string Desc = describeSanitizeArg(*I, KindsToDiagnose);
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -301,18 +281,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       // Silently discard any unsupported sanitizers implicitly enabled through
       // group expansion.
       Add &= ~InvalidTrappingKinds;
-      if (MinimalRuntime) {
-        Add &= ~NotAllowedWithMinimalRuntime;
-      }
       Add &= Supported;
 
-      if (Add & Fuzzer)
-        Add |= FuzzerNoLink;
-
       // Enable coverage if the fuzzing flag is set.
-      if (Add & FuzzerNoLink)
-        CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall |
-                            CoverageTraceCmp;
+      if (Add & Fuzzer)
+        CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall | CoverageTraceCmp;
 
       Kinds |= Add;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_EQ)) {
@@ -511,21 +484,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   Stats = Args.hasFlag(options::OPT_fsanitize_stats,
                        options::OPT_fno_sanitize_stats, false);
 
-  if (MinimalRuntime) {
-    SanitizerMask IncompatibleMask =
-        Kinds & ~setGroupBits(CompatibleWithMinimalRuntime);
-    if (IncompatibleMask)
-      D.Diag(clang::diag::err_drv_argument_not_allowed_with)
-          << "-fsanitize-minimal-runtime"
-          << lastArgumentForMask(D, Args, IncompatibleMask);
-
-    SanitizerMask NonTrappingCfi = Kinds & CFI & ~TrappingKinds;
-    if (NonTrappingCfi)
-      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-          << "fsanitize-minimal-runtime"
-          << "fsanitize-trap=cfi";
-  }
-
   // Parse -f(no-)?sanitize-coverage flags if coverage is supported by the
   // enabled sanitizers.
   for (const auto *Arg : Args) {
@@ -594,13 +552,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       !(CoverageFeatures & InsertionPointTypes))
     CoverageFeatures |= CoverageEdge;
 
-  SharedRuntime =
-      Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
-                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
-                       TC.getTriple().isOSDarwin());
-
   if (AllAddedKinds & Address) {
-    NeedPIE |= TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();
+    AsanSharedRuntime =
+        Args.hasArg(options::OPT_shared_libasan) || TC.getTriple().isAndroid();
+    NeedPIE |= TC.getTriple().isAndroid();
     if (Arg *A =
             Args.getLastArg(options::OPT_fsanitize_address_field_padding)) {
         StringRef S = A->getValue();
@@ -634,7 +589,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping =
-        !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
+        !TC.getTriple().isOSBinFormatELF() ||
         Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
   } else {
     AsanUseAfterScope = false;
@@ -780,9 +735,6 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (Stats)
     CmdArgs.push_back("-fsanitize-stats");
-
-  if (MinimalRuntime)
-    CmdArgs.push_back("-fsanitize-minimal-runtime");
 
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +

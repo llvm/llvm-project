@@ -1,19 +1,22 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump -v -all %t | FileCheck %s --check-prefix=CHECK-DWO
+; RUN: llvm-dwarfdump -debug-dump=all %t | FileCheck %s --check-prefix=CHECK-DWO
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
 ; CHECK-DWO: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x51ac5644b1937aa1)
 ; CHECK-DWO: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x51ac5644b1937aa1)
 
-; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
-; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 ; CHECK: _ZN1B9AInstanceEv
-; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-24, DW_OP_deref)
+; CHECK: DW_TAG_variable  
+; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"a"
+; CHECK: .debug_loc contents:
+; CHECK: 0x00000000: Beginning address offset:
+; CHECK-NEXT:                Ending address offset:
+; CHECK-NEXT:                 Location description: 75 00
+;                                                   rdi+0
 
 %class.A = type { i32 (...)**, i32 }
 %class.B = type { i8 }

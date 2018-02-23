@@ -21,11 +21,9 @@ define fastcc void @func_stack0() {
   call fastcc void @func_stack8([8 x i32] undef, i32 42)
 ; CHECK:  bl func_stack8
 ; CHECK-NOT: sub sp, sp,
-; CHECK-NOT: [sp, #{{[-0-9]+}}]!
-; CHECK-NOT: [sp], #{{[-0-9]+}}
 
 ; CHECK-TAIL: bl func_stack8
-; CHECK-TAIL: stp xzr, xzr, [sp, #-16]!
+; CHECK-TAIL: sub sp, sp, #16
 
 
   call fastcc void @func_stack32([8 x i32] undef, i128 0, i128 9)
@@ -74,12 +72,10 @@ define fastcc void @func_stack8([8 x i32], i32 %stacked) {
   call fastcc void @func_stack8([8 x i32] undef, i32 42)
 ; CHECK:  bl func_stack8
 ; CHECK-NOT: sub sp, sp,
-; CHECK-NOT: [sp, #{{[-0-9]+}}]!
-; CHECK-NOT: [sp], #{{[-0-9]+}}
 
 
 ; CHECK-TAIL: bl func_stack8
-; CHECK-TAIL: stp xzr, xzr, [sp, #-16]!
+; CHECK-TAIL: sub sp, sp, #16
 
 
   call fastcc void @func_stack32([8 x i32] undef, i128 0, i128 9)
@@ -120,11 +116,9 @@ define fastcc void @func_stack32([8 x i32], i128 %stacked0, i128 %stacked1) {
   call fastcc void @func_stack8([8 x i32] undef, i32 42)
 ; CHECK:  bl func_stack8
 ; CHECK-NOT: sub sp, sp,
-; CHECK-NOT: [sp, #{{[-0-9]+}}]!
-; CHECK-NOT: [sp], #{{[-0-9]+}}
 
 ; CHECK-TAIL: bl func_stack8
-; CHECK-TAIL: stp xzr, xzr, [sp, #-16]!
+; CHECK-TAIL: sub sp, sp, #16
 
 
   call fastcc void @func_stack32([8 x i32] undef, i128 0, i128 9)

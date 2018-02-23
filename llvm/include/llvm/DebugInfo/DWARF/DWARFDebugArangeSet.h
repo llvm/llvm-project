@@ -43,7 +43,6 @@ public:
     uint64_t Length;
 
     uint64_t getEndAddress() const { return Address + Length; }
-    void dump(raw_ostream &OS, uint32_t AddressSize) const;
   };
 
 private:

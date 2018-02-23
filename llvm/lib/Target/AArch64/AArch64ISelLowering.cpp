@@ -2889,12 +2889,9 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   unsigned GPRSaveSize = 8 * (NumGPRArgRegs - FirstVariadicGPR);
   int GPRIdx = 0;
   if (GPRSaveSize != 0) {
-    if (IsWin64) {
+    if (IsWin64)
       GPRIdx = MFI.CreateFixedObject(GPRSaveSize, -(int)GPRSaveSize, false);
-      if (GPRSaveSize & 15)
-        // The extra size here, if triggered, will always be 8.
-        MFI.CreateFixedObject(16 - (GPRSaveSize & 15), -(int)alignTo(GPRSaveSize, 16), false);
-    } else
+    else
       GPRIdx = MFI.CreateStackObject(GPRSaveSize, 8, false);
 
     SDValue FIN = DAG.getFrameIndex(GPRIdx, PtrVT);
@@ -9347,20 +9344,11 @@ static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
       return SDValue();
   }
 
-  // Use a CopyFromReg WZR/XZR here to prevent
-  // DAGCombiner::MergeConsecutiveStores from undoing this transformation.
-  SDLoc DL(&St);
-  unsigned ZeroReg;
-  EVT ZeroVT;
-  if (VT.getVectorElementType().getSizeInBits() == 32) {
-    ZeroReg = AArch64::WZR;
-    ZeroVT = MVT::i32;
-  } else {
-    ZeroReg = AArch64::XZR;
-    ZeroVT = MVT::i64;
-  }
-  SDValue SplatVal =
-      DAG.getCopyFromReg(DAG.getEntryNode(), DL, ZeroReg, ZeroVT);
+  // Use WZR/XZR here to prevent DAGCombiner::MergeConsecutiveStores from
+  // undoing this transformation.
+  SDValue SplatVal = VT.getVectorElementType().getSizeInBits() == 32
+                         ? DAG.getRegister(AArch64::WZR, MVT::i32)
+                         : DAG.getRegister(AArch64::XZR, MVT::i64);
   return splitStoreSplat(DAG, St, SplatVal, NumVecElts);
 }
 
@@ -9595,8 +9583,8 @@ static bool performTBISimplification(SDValue Addr,
                                      SelectionDAG &DAG) {
   APInt DemandedMask = APInt::getLowBitsSet(64, 56);
   KnownBits Known;
-  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                        !DCI.isBeforeLegalizeOps());
+  TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
+                                        DCI.isBeforeLegalizeOps());
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedBits(Addr, DemandedMask, Known, TLO)) {
     DCI.CommitTargetLoweringOpt(TLO);
@@ -10841,9 +10829,4 @@ AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
     return getPointerTy(DL).getSizeInBits();
 
   return 3 * getPointerTy(DL).getSizeInBits() + 2 * 32;
-}
-
-void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
-  MF.getFrameInfo().computeMaxCallFrameSize(MF);
-  TargetLoweringBase::finalizeLowering(MF);
 }

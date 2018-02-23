@@ -334,7 +334,7 @@ public:
 // Path "pieces" for path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
 
-class PathDiagnosticPiece: public llvm::FoldingSetNode {
+class PathDiagnosticPiece {
 public:
   enum Kind { ControlFlow, Event, Macro, Call, Note };
   enum DisplayHint { Above, Below };

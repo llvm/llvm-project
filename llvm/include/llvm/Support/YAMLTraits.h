@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -118,11 +117,6 @@ struct ScalarBitSetTraits {
   // static void bitset(IO &io, T &value);
 };
 
-/// Describe which type of quotes should be used when quoting is necessary.
-/// Some non-printable characters need to be double-quoted, while some others
-/// are fine with simple-quoting, and some don't need any quoting.
-enum class QuotingType { None, Single, Double };
-
 /// This class should be specialized by type that requires custom conversion
 /// to/from a yaml scalar.  For example:
 ///
@@ -137,7 +131,7 @@ enum class QuotingType { None, Single, Double };
 ///        // return empty string on success, or error string
 ///        return StringRef();
 ///      }
-///      static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
+///      static bool mustQuote(StringRef) { return true; }
 ///    };
 template<typename T>
 struct ScalarTraits {
@@ -151,7 +145,7 @@ struct ScalarTraits {
   //static StringRef input(StringRef scalar, void *ctxt, T &value);
   //
   // Function to determine if the value should be quoted.
-  //static QuotingType mustQuote(StringRef);
+  //static bool mustQuote(StringRef);
 };
 
 /// This class should be specialized by type that requires custom conversion
@@ -276,7 +270,7 @@ struct has_ScalarTraits
 {
   using Signature_input = StringRef (*)(StringRef, void*, T&);
   using Signature_output = void (*)(const T&, void*, raw_ostream&);
-  using Signature_mustQuote = QuotingType (*)(StringRef);
+  using Signature_mustQuote = bool (*)(StringRef);
 
   template <typename U>
   static char test(SameType<Signature_input, &U::input> *,
@@ -501,66 +495,28 @@ inline bool isBool(StringRef S) {
          S.equals("false") || S.equals("False") || S.equals("FALSE");
 }
 
-// 5.1. Character Set
-// The allowed character range explicitly excludes the C0 control block #x0-#x1F
-// (except for TAB #x9, LF #xA, and CR #xD which are allowed), DEL #x7F, the C1
-// control block #x80-#x9F (except for NEL #x85 which is allowed), the surrogate
-// block #xD800-#xDFFF, #xFFFE, and #xFFFF.
-inline QuotingType needsQuotes(StringRef S) {
+inline bool needsQuotes(StringRef S) {
   if (S.empty())
-    return QuotingType::Single;
+    return true;
   if (isspace(S.front()) || isspace(S.back()))
-    return QuotingType::Single;
+    return true;
   if (S.front() == ',')
-    return QuotingType::Single;
+    return true;
+
+  static const char ScalarSafeChars[] =
+      "abcdefghijklmnopqrstuvwxyz"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-/^., \t";
+  if (S.find_first_not_of(ScalarSafeChars) != StringRef::npos)
+    return true;
+
   if (isNull(S))
-    return QuotingType::Single;
+    return true;
   if (isBool(S))
-    return QuotingType::Single;
+    return true;
   if (isNumeric(S))
-    return QuotingType::Single;
+    return true;
 
-  QuotingType MaxQuotingNeeded = QuotingType::None;
-  for (unsigned char C : S) {
-    // Alphanum is safe.
-    if (isAlnum(C))
-      continue;
-
-    switch (C) {
-    // Safe scalar characters.
-    case '_':
-    case '-':
-    case '/':
-    case '^':
-    case '.':
-    case ',':
-    case ' ':
-    // TAB (0x9), LF (0xA), CR (0xD) and NEL (0x85) are allowed.
-    case 0x9:
-    case 0xA:
-    case 0xD:
-    case 0x85:
-      continue;
-    // DEL (0x7F) are excluded from the allowed character range.
-    case 0x7F:
-      return QuotingType::Double;
-    default: {
-      // C0 control block (0x0 - 0x1F) is excluded from the allowed character
-      // range.
-      if (C <= 0x1F)
-        return QuotingType::Double;
-
-      // Always double quote UTF-8.
-      if ((C & 0x80) != 0)
-        return QuotingType::Double;
-
-      // The character is not safe, at least simple quoting needed.
-      MaxQuotingNeeded = QuotingType::Single;
-    }
-    }
-  }
-
-  return MaxQuotingNeeded;
+  return false;
 }
 
 template <typename T, typename Context>
@@ -625,7 +581,7 @@ public:
   virtual bool bitSetMatch(const char*, bool) = 0;
   virtual void endBitSetScalar() = 0;
 
-  virtual void scalarString(StringRef &, QuotingType) = 0;
+  virtual void scalarString(StringRef &, bool) = 0;
   virtual void blockScalarString(StringRef &) = 0;
 
   virtual void setError(const Twine &) = 0;
@@ -955,91 +911,91 @@ template<>
 struct ScalarTraits<bool> {
   static void output(const bool &, void* , raw_ostream &);
   static StringRef input(StringRef, void *, bool &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<StringRef> {
   static void output(const StringRef &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, StringRef &);
-  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
+  static bool mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 template<>
 struct ScalarTraits<std::string> {
   static void output(const std::string &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, std::string &);
-  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
+  static bool mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 template<>
 struct ScalarTraits<uint8_t> {
   static void output(const uint8_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint8_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<uint16_t> {
   static void output(const uint16_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint16_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<uint32_t> {
   static void output(const uint32_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint32_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<uint64_t> {
   static void output(const uint64_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, uint64_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<int8_t> {
   static void output(const int8_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int8_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<int16_t> {
   static void output(const int16_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int16_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<int32_t> {
   static void output(const int32_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int32_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<int64_t> {
   static void output(const int64_t &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, int64_t &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<float> {
   static void output(const float &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, float &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<double> {
   static void output(const double &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, double &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 // For endian types, we just use the existing ScalarTraits for the underlying
@@ -1063,7 +1019,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
     return R;
   }
 
-  static QuotingType mustQuote(StringRef Str) {
+  static bool mustQuote(StringRef Str) {
     return ScalarTraits<value_type>::mustQuote(Str);
   }
 };
@@ -1192,7 +1148,7 @@ private:
   bool beginBitSetScalar(bool &) override;
   bool bitSetMatch(const char *, bool ) override;
   void endBitSetScalar() override;
-  void scalarString(StringRef &, QuotingType) override;
+  void scalarString(StringRef &, bool) override;
   void blockScalarString(StringRef &) override;
   void setError(const Twine &message) override;
   bool canElideEmptySequence() override;
@@ -1337,7 +1293,7 @@ public:
   bool beginBitSetScalar(bool &) override;
   bool bitSetMatch(const char *, bool ) override;
   void endBitSetScalar() override;
-  void scalarString(StringRef &, QuotingType) override;
+  void scalarString(StringRef &, bool) override;
   void blockScalarString(StringRef &) override;
   void setError(const Twine &message) override;
   bool canElideEmptySequence() override;
@@ -1415,28 +1371,28 @@ template<>
 struct ScalarTraits<Hex8> {
   static void output(const Hex8 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex8 &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<Hex16> {
   static void output(const Hex16 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex16 &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<Hex32> {
   static void output(const Hex32 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex32 &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 template<>
 struct ScalarTraits<Hex64> {
   static void output(const Hex64 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex64 &);
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static bool mustQuote(StringRef) { return false; }
 };
 
 // Define non-member operator>> so that Input can stream in a document list.
@@ -1725,7 +1681,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   template <> struct ScalarTraits<Type> {                                      \
     static void output(const Type &Value, void *ctx, raw_ostream &Out);        \
     static StringRef input(StringRef Scalar, void *ctxt, Type &Value);         \
-    static QuotingType mustQuote(StringRef) { return MustQuote; }              \
+    static bool mustQuote(StringRef) { return MustQuote; }                     \
   };                                                                           \
   }                                                                            \
   }

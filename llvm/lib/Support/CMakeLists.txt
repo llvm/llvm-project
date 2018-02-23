@@ -48,7 +48,6 @@ add_llvm_library(LLVMSupport
   circular_raw_ostream.cpp
   Chrono.cpp
   COM.cpp
-  CodeGenCoverage.cpp
   CommandLine.cpp
   Compression.cpp
   ConvertUTF.cpp

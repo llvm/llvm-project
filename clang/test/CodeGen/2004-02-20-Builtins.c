@@ -1,8 +1,5 @@
-// RUN: %clang_cc1  %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1  %s -emit-llvm -o - | not grep builtin
 double sqrt(double x);
-
-// CHECK-LABEL: @zsqrtxxx
-// CHECK-NOT: builtin
 void zsqrtxxx(float num) {
    num = sqrt(num);
 }

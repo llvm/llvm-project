@@ -243,8 +243,7 @@ static unsigned getDeclShowContexts(const NamedDecl *ND,
   
   uint64_t Contexts = 0;
   if (isa<TypeDecl>(ND) || isa<ObjCInterfaceDecl>(ND) || 
-      isa<ClassTemplateDecl>(ND) || isa<TemplateTemplateParmDecl>(ND) ||
-      isa<TypeAliasTemplateDecl>(ND)) {
+      isa<ClassTemplateDecl>(ND) || isa<TemplateTemplateParmDecl>(ND)) {
     // Types can appear in these contexts.
     if (LangOpts.CPlusPlus || !isa<TagDecl>(ND))
       Contexts |= (1LL << CodeCompletionContext::CCC_TopLevel)
@@ -264,12 +263,8 @@ static unsigned getDeclShowContexts(const NamedDecl *ND,
       Contexts |= (1LL << CodeCompletionContext::CCC_ObjCMessageReceiver);
     
     // In Objective-C, you can only be a subclass of another Objective-C class
-    if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
-      // Objective-C interfaces can be used in a class property expression.
-      if (ID->getDefinition())
-        Contexts |= (1LL << CodeCompletionContext::CCC_Expression);
+    if (isa<ObjCInterfaceDecl>(ND))
       Contexts |= (1LL << CodeCompletionContext::CCC_ObjCInterfaceName);
-    }
 
     // Deal with tag names.
     if (isa<EnumDecl>(ND)) {
@@ -546,9 +541,6 @@ private:
 
     // Initialize the ASTContext
     Context->InitBuiltinTypes(*Target);
-
-    // Adjust printing policy based on language options.
-    Context->setPrintingPolicy(PrintingPolicy(LangOpt));
 
     // We didn't have access to the comment options when the ASTContext was
     // constructed, so register them now.
@@ -1433,7 +1425,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     if (!AST)
       return nullptr;
   }
-
+  
   if (!ResourceFilesPath.empty()) {
     // Override the resources path.
     CI->getHeaderSearchOpts().ResourceDir = ResourceFilesPath;
@@ -1676,9 +1668,6 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
 
   if (ModuleFormat)
     CI->getHeaderSearchOpts().ModuleFormat = ModuleFormat.getValue();
-
-  if (ForSerialization)
-    CI->getLangOpts()->NeededByPCHOrCompilationUsesPCH = true;
 
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;

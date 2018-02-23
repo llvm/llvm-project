@@ -1,22 +1,24 @@
-; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
 
 ; A hand-written testcase to check 64-bit constant handling in location lists.
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_constu 0x4000000000000000)
+; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(0x[[D:.*]])
 ; CHECK-NEXT: DW_AT_name {{.*}}"d"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_consts +0
-; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_consts +4611686018427387904)
+; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(0x[[I:.*]])
 ; CHECK-NEXT: DW_AT_name {{.*}}"i"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_constu 0x0
-; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_constu 0x4000000000000000)
+; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(0x[[U:.*]])
 ; CHECK-NEXT: DW_AT_name {{.*}}"u"
+; CHECK: .debug_loc contents:
+; CHECK: [[D]]:
+; CHECK: Location description: 10 80 80 80 80 80 80 80 80 40
+; CHECK: [[I]]:
+; CHECK: Location description: 11 80 80 80 80 80 80 80 80 c0 00
+; CHECK: [[U]]:
+; CHECK: Location description: 10 80 80 80 80 80 80 80 80 40 
 
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -28,19 +30,19 @@ define void @main() #0 !dbg !7 {
   %2 = alloca i64, align 8
   %3 = alloca i64, align 8
   store double 2.000000e+00, double* %1, align 8, !dbg !21
-  call void @llvm.dbg.value(metadata i64 0, metadata !22, metadata !15), !dbg !24
-  call void @llvm.dbg.value(metadata i64 0, metadata !25, metadata !15), !dbg !27
-  call void @llvm.dbg.value(metadata double 2.000000e+00, metadata !19, metadata !15), !dbg !21
+  call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !22, metadata !15), !dbg !24
+  call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !25, metadata !15), !dbg !27
+  call void @llvm.dbg.value(metadata double 2.000000e+00, i64 0, metadata !19, metadata !15), !dbg !21
   store i64 4611686018427387904, i64* %2, align 8, !dbg !24
-  call void @llvm.dbg.value(metadata i64 4611686018427387904, metadata !22, metadata !15), !dbg !24
-  call void @llvm.dbg.value(metadata i64 4611686018427387904, metadata !25, metadata !15), !dbg !27
+  call void @llvm.dbg.value(metadata i64 4611686018427387904, i64 0, metadata !22, metadata !15), !dbg !24
+  call void @llvm.dbg.value(metadata i64 4611686018427387904, i64 0, metadata !25, metadata !15), !dbg !27
   store i64 4611686018427387904, i64* %3, align 8, !dbg !27
   ret void, !dbg !28
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 
 attributes #0 = { nounwind ssp uwtable }

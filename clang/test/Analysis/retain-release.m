@@ -325,9 +325,6 @@ typedef const struct __CFUUID * CFUUIDRef;
 
 extern
 void *CFPlugInInstanceCreate(CFAllocatorRef allocator, CFUUIDRef factoryUUID, CFUUIDRef typeUUID);
-typedef struct {
-  int ref;
-} isl_basic_map;
 
 //===----------------------------------------------------------------------===//
 // Test cases.
@@ -448,51 +445,6 @@ void f10(io_service_t media, DADiskRef d, CFStringRef s) {
   
   DASessionRef session = DASessionCreate(kCFAllocatorDefault);  // expected-warning{{leak}}
   if (session) NSLog(@"ok");
-}
-
-
-// Handle CoreMedia API
-
-struct CMFoo;
-typedef struct CMFoo *CMFooRef;
-
-CMFooRef CMCreateFooRef();
-CMFooRef CMGetFooRef();
-
-typedef signed long SInt32;
-typedef SInt32  OSStatus;
-OSStatus CMCreateFooAndReturnViaOutParameter(CMFooRef * CF_RETURNS_RETAINED fooOut);
-
-void testLeakCoreMediaReferenceType() {
-  CMFooRef f = CMCreateFooRef(); // expected-warning{{leak}}
-}
-
-void testOverReleaseMediaReferenceType() {
-  CMFooRef f = CMGetFooRef();
-  CFRelease(f); // expected-warning{{Incorrect decrement of the reference count}}
-}
-
-void testOkToReleaseReturnsRetainedOutParameter() {
-  CMFooRef foo = 0;
-  OSStatus status = CMCreateFooAndReturnViaOutParameter(&foo);
-
-  if (status != 0)
-    return;
-
-  CFRelease(foo); // no-warning
-}
-
-void testLeakWithReturnsRetainedOutParameter() {
-  CMFooRef foo = 0;
-  OSStatus status = CMCreateFooAndReturnViaOutParameter(&foo);
-
-  if (status != 0)
-    return;
-
-  // FIXME: Ideally we would report a leak here since it is the caller's
-  // responsibility to release 'foo'. However, we don't currently have
-  // a mechanism in this checker to only require a release when a successful
-  // status is returned.
 }
 
 // Test retain/release checker with CFString and CFMutableArray.
@@ -620,14 +572,6 @@ void f17(int x, CFTypeRef p) {
   default:
     break;
   }
-}
-
-__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_cow(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap);
-
-// Test custom diagnostics for generalized objects.
-void f18(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
-  // After this call, 'bmap' has a +1 reference count.
-  bmap = isl_basic_map_cow(bmap); // expected-warning {{Potential leak of an object}}
 }
 
 // Test basic tracking of ivars associated with 'self'.  For the retain/release

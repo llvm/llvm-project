@@ -189,10 +189,3 @@ void atoiTest() {
 
 }
 
-char *pointer1;
-void *pointer2;
-void noCrashTest() {
-  if (!*pointer1) {
-    __builtin___memcpy_chk(pointer2, pointer1, 0, 0); // no-crash
-  }
-}

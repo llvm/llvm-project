@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 ; Test that DW_OP_piece is emitted for constants.
 ;
 ; // Generated from:
@@ -7,7 +7,7 @@
 ;   I r = {i, 0};
 ;   return r;
 ; }
-;
+;  
 ; typedef struct { float a, b; } F;
 ; F f(float f) {
 ;   F r = {f, 0};
@@ -18,22 +18,25 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_name {{.*}} "i"
 ; CHECK:   DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location {{.*}} ([[I:.*]]
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT:   DW_AT_location {{.*}} ([[I:.*]])
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_name {{.*}} "f"
 ; CHECK:   DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location {{.*}} ([[F:.*]]
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT:   DW_AT_location {{.*}} ([[F:.*]])
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 ;
 ; CHECK: .debug_loc contents:
-; CHECK:      [[I]]:
-; CHECK-NEXT:   [{{.*}}, {{.*}}): DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
-; CHECK:      [[F]]:
-; CHECK-NEXT:   [{{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
+; CHECK: [[I]]: Beginning address offset:
+; CHECK-NEXT:           Ending address offset:
+; CHECK-NEXT:            Location description: 55 93 04 10 00 9f 93 04 
+; rdi, piece 0x00000004, constu 0x00000000, stack-value, piece 0x00000004
+;
+; CHECK: [[F]]: Beginning address offset:
+; CHECK-NEXT:           Ending address offset:
+; CHECK-NEXT:            Location description: 61 93 04 10 00 9f 93 04
+; reg17, piece 0x00000004, constu 0x00000000, stack-value, piece 0x00000004
 
 source_filename = "stack-value-piece.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -45,8 +48,8 @@ target triple = "x86_64-apple-macosx10.12.0"
 ; Function Attrs: nounwind readnone ssp uwtable
 define i64 @i(i32 %i) local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %i, metadata !18, metadata !22), !dbg !21
-  tail call void @llvm.dbg.value(metadata i32 0, metadata !18, metadata !23), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !18, metadata !22), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !23), !dbg !21
   %retval.sroa.0.0.insert.ext = zext i32 %i to i64, !dbg !24
   ret i64 %retval.sroa.0.0.insert.ext, !dbg !24
 }
@@ -57,15 +60,15 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: nounwind readnone ssp uwtable
 define <2 x float> @f(float %f) local_unnamed_addr #0 !dbg !25 {
 entry:
-  tail call void @llvm.dbg.value(metadata float %f, metadata !36, metadata !22), !dbg !38
-  tail call void @llvm.dbg.value(metadata float 0.000000e+00, metadata !36, metadata !23), !dbg !38
+  tail call void @llvm.dbg.value(metadata float %f, i64 0, metadata !36, metadata !22), !dbg !38
+  tail call void @llvm.dbg.value(metadata float 0.000000e+00, i64 0, metadata !36, metadata !23), !dbg !38
   %retval.sroa.0.0.vec.insert = insertelement <2 x float> undef, float %f, i32 0, !dbg !39
   %retval.sroa.0.4.vec.insert = insertelement <2 x float> %retval.sroa.0.0.vec.insert, float 0.000000e+00, i32 1, !dbg !39
   ret <2 x float> %retval.sroa.0.4.vec.insert, !dbg !40
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone ssp uwtable }
 attributes #1 = { nounwind readnone }

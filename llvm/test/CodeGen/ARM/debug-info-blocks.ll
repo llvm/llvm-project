@@ -1,14 +1,20 @@
-; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
 
 ; debug_info content
 ; CHECK: DW_AT_name {{.*}} "foobar_func_block_invoke_0"
 ; CHECK-NOT: DW_TAG_subprogram
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
-; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
-; CHECK-NEXT:    [0x{{.*}}, 0x{{.*}}): {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
-; CHECK-NEXT:    [0x{{.*}}, 0x{{.*}}): {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
+; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	([[MYDATA_LOC:0x[0-9a-f]*]])
 ; CHECK-NEXT: DW_AT_name {{.*}} "mydata"
+
+; debug_loc content
+; CHECK: .debug_loc contents:
+; CHECK: [[MYDATA_LOC]]: Beginning address offset: {{.*}}
+; CHECK-NOT: {{0x[0-9a-f]*}}: Beginning address offset
+; CHECK: Location description: {{.*}} 23 04 06 23 18
+; CHECK-NOT: {{0x[0-9a-f]*}}: Beginning address offset
+; CHECK: Location description: {{.*}} 23 04 06 23 18
 
 ; Radar 9331779
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
@@ -33,7 +39,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 declare i8* @objc_msgSend(i8*, i8*, ...)
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
@@ -41,7 +47,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
   %1 = alloca %0*, align 4
   %bounds = alloca %struct.CR, align 4
   %data = alloca %struct.CR, align 4
-  call void @llvm.dbg.value(metadata i8* %.block_descriptor, metadata !27, metadata !DIExpression()), !dbg !129
+  call void @llvm.dbg.value(metadata i8* %.block_descriptor, i64 0, metadata !27, metadata !DIExpression()), !dbg !129
   store %0* %loadedMydata, %0** %1, align 4
   call void @llvm.dbg.declare(metadata %0** %1, metadata !130, metadata !DIExpression()), !dbg !131
   %2 = bitcast %struct.CR* %bounds to %1*

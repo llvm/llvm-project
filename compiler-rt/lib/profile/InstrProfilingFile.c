@@ -574,10 +574,8 @@ void __llvm_profile_initialize_file(void) {
 
   EnvFilenamePat = getFilenamePatFromEnv();
   if (EnvFilenamePat) {
-    /* Pass CopyFilenamePat = 1, to ensure that the filename would be valid 
-       at the  moment when __llvm_profile_write_file() gets executed. */
-    parseAndSetFilename(EnvFilenamePat, PNS_environment, 1);
-    return;
+    SelectedPat = EnvFilenamePat;
+    PNS = PNS_environment;
   } else if (hasCommandLineOverrider) {
     SelectedPat = INSTR_PROF_PROFILE_NAME_VAR;
     PNS = PNS_command_line;

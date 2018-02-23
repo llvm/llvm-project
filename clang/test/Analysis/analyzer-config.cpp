@@ -25,7 +25,6 @@ public:
 // CHECK-NEXT: cfg-conditional-static-initializers = true
 // CHECK-NEXT: cfg-implicit-dtors = true
 // CHECK-NEXT: cfg-lifetime = false
-// CHECK-NEXT: cfg-loopexit = false
 // CHECK-NEXT: cfg-temporary-dtors = false
 // CHECK-NEXT: faux-bodies = true
 // CHECK-NEXT: graph-trim-interval = 1000
@@ -39,7 +38,6 @@ public:
 // CHECK-NEXT: min-cfg-size-treat-functions-as-large = 14
 // CHECK-NEXT: mode = deep
 // CHECK-NEXT: region-store-small-struct-limit = 2
-// CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 24
+// CHECK-NEXT: num-entries = 22

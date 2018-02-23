@@ -285,29 +285,13 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
 }
 
 /// Emit column labels for the table in the index.
-static void emitColumnLabelsForIndex(raw_ostream &OS,
-                                     const CoverageViewOptions &Opts) {
+static void emitColumnLabelsForIndex(raw_ostream &OS) {
   SmallVector<std::string, 4> Columns;
   Columns.emplace_back(tag("td", "Filename", "column-entry-left"));
-  Columns.emplace_back(tag("td", "Function Coverage", "column-entry"));
-  if (Opts.ShowInstantiationSummary)
-    Columns.emplace_back(tag("td", "Instantiation Coverage", "column-entry"));
-  Columns.emplace_back(tag("td", "Line Coverage", "column-entry"));
-  if (Opts.ShowRegionSummary)
-    Columns.emplace_back(tag("td", "Region Coverage", "column-entry"));
+  for (const char *Label : {"Function Coverage", "Instantiation Coverage",
+                            "Line Coverage", "Region Coverage"})
+    Columns.emplace_back(tag("td", Label, "column-entry"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
-}
-
-std::string
-CoveragePrinterHTML::buildLinkToFile(StringRef SF,
-                                     const FileCoverageSummary &FCS) const {
-  SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
-  sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
-  sys::path::native(LinkTextStr);
-  std::string LinkText = escape(LinkTextStr, Opts);
-  std::string LinkTarget =
-      escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
-  return a(LinkTarget, LinkText);
 }
 
 /// Render a file coverage summary (\p FCS) in a table row. If \p IsTotals is
@@ -342,31 +326,34 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   if (IsTotals) {
     Filename = "TOTALS";
   } else {
-    Filename = buildLinkToFile(SF, FCS);
+    SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
+    sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
+    sys::path::native(LinkTextStr);
+    std::string LinkText = escape(LinkTextStr, Opts);
+    std::string LinkTarget =
+        escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
+    Filename = a(LinkTarget, LinkText);
   }
 
   Columns.emplace_back(tag("td", tag("pre", Filename)));
-  AddCoverageTripleToColumn(FCS.FunctionCoverage.getExecuted(),
-                            FCS.FunctionCoverage.getNumFunctions(),
+  AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
+                            FCS.FunctionCoverage.NumFunctions,
                             FCS.FunctionCoverage.getPercentCovered());
-  if (Opts.ShowInstantiationSummary)
-    AddCoverageTripleToColumn(FCS.InstantiationCoverage.getExecuted(),
-                              FCS.InstantiationCoverage.getNumFunctions(),
-                              FCS.InstantiationCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(FCS.LineCoverage.getCovered(),
-                            FCS.LineCoverage.getNumLines(),
+  AddCoverageTripleToColumn(FCS.InstantiationCoverage.Executed,
+                            FCS.InstantiationCoverage.NumFunctions,
+                            FCS.InstantiationCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.LineCoverage.Covered, FCS.LineCoverage.NumLines,
                             FCS.LineCoverage.getPercentCovered());
-  if (Opts.ShowRegionSummary)
-    AddCoverageTripleToColumn(FCS.RegionCoverage.getCovered(),
-                              FCS.RegionCoverage.getNumRegions(),
-                              FCS.RegionCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.RegionCoverage.Covered,
+                            FCS.RegionCoverage.NumRegions,
+                            FCS.RegionCoverage.getPercentCovered());
 
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
 }
 
 Error CoveragePrinterHTML::createIndexFile(
-    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
-    const CoverageFiltersMatchAll &Filters) {
+    ArrayRef<std::string> SourceFiles,
+    const coverage::CoverageMapping &Coverage) {
   // Emit the default stylesheet.
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
   if (Error E = CSSOrErr.takeError())
@@ -400,39 +387,16 @@ Error CoveragePrinterHTML::createIndexFile(
                         " for information about interpreting this report.");
 
   // Emit a table containing links to reports for each file in the covmapping.
-  // Exclude files which don't contain any regions.
   OSRef << BeginCenteredDiv << BeginTable;
-  emitColumnLabelsForIndex(OSRef, Opts);
+  emitColumnLabelsForIndex(OSRef);
   FileCoverageSummary Totals("TOTALS");
-  auto FileReports = CoverageReport::prepareFileReports(
-      Coverage, Totals, SourceFiles, Opts, Filters);
-  bool EmptyFiles = false;
-  for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
-    if (FileReports[I].FunctionCoverage.getNumFunctions())
-      emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
-    else
-      EmptyFiles = true;
-  }
+  auto FileReports =
+      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
+  for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
+    emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
   emitFileSummary(OSRef, "Totals", Totals, /*IsTotals=*/true);
-  OSRef << EndTable << EndCenteredDiv;
-
-  // Emit links to files which don't contain any functions. These are normally
-  // not very useful, but could be relevant for code which abuses the
-  // preprocessor.
-  if (EmptyFiles && Filters.empty()) {
-    OSRef << tag("p", "Files which contain no functions. (These "
-                      "files contain code pulled into other files "
-                      "by the preprocessor.)\n");
-    OSRef << BeginCenteredDiv << BeginTable;
-    for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
-      if (!FileReports[I].FunctionCoverage.getNumFunctions()) {
-        std::string Link = buildLinkToFile(SourceFiles[I], FileReports[I]);
-        OSRef << tag("tr", tag("td", tag("pre", Link)), "light-row") << '\n';
-      }
-    OSRef << EndTable << EndCenteredDiv;
-  }
-
-  OSRef << tag("h5", escape(Opts.getLLVMVersionString(), Opts));
+  OSRef << EndTable << EndCenteredDiv
+        << tag("h5", escape(Opts.getLLVMVersionString(), Opts));
   emitEpilog(OSRef);
 
   return Error::success();
@@ -467,9 +431,9 @@ void SourceCoverageViewHTML::renderViewDivider(raw_ostream &, unsigned) {
   // The table-based output makes view dividers unnecessary.
 }
 
-void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
-                                        const LineCoverageStats &LCS,
-                                        unsigned ExpansionCol, unsigned) {
+void SourceCoverageViewHTML::renderLine(
+    raw_ostream &OS, LineRef L, const coverage::CoverageSegment *WrappedSegment,
+    CoverageSegmentArray Segments, unsigned ExpansionCol, unsigned) {
   StringRef Line = L.Line;
   unsigned LineNo = L.LineNo;
 
@@ -481,7 +445,6 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   //    at the end of the line. Both are required but may be empty.
 
   SmallVector<std::string, 8> Snippets;
-  CoverageSegmentArray Segments = LCS.getLineSegments();
 
   unsigned LCol = 1;
   auto Snip = [&](unsigned Start, unsigned Len) {
@@ -506,7 +469,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   //    1 to set the highlight for snippet 2, segment 2 to set the highlight for
   //    snippet 3, and so on.
 
-  Optional<StringRef> Color;
+  Optional<std::string> Color;
   SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
     if (getOptions().Debug)
@@ -514,12 +477,11 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     return tag("span", Snippet, Color.getValue());
   };
 
-  auto CheckIfUncovered = [&](const CoverageSegment *S) {
-    return S && (!S->IsGapRegion || (Color && *Color == "red")) &&
-           S->HasCount && S->Count == 0;
+  auto CheckIfUncovered = [](const coverage::CoverageSegment *S) {
+    return S && S->HasCount && S->Count == 0;
   };
 
-  if (CheckIfUncovered(LCS.getWrappedSegment())) {
+  if (CheckIfUncovered(WrappedSegment)) {
     Color = "red";
     if (!Snippets[0].empty())
       Snippets[0] = Highlight(Snippets[0], 1, 1 + Snippets[0].size());
@@ -527,10 +489,10 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
 
   for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
     const auto *CurSeg = Segments[I];
-    if (CheckIfUncovered(CurSeg))
-      Color = "red";
-    else if (CurSeg->Col == ExpansionCol)
+    if (CurSeg->Col == ExpansionCol)
       Color = "cyan";
+    else if (CheckIfUncovered(CurSeg))
+      Color = "red";
     else
       Color = None;
 
@@ -556,23 +518,25 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   // 4. Snippets[1:N+1] correspond to \p Segments[0:N]: use these to generate
   //    sub-line region count tooltips if needed.
 
-  if (shouldRenderRegionMarkers(LCS)) {
-    // Just consider the segments which start *and* end on this line.
-    for (unsigned I = 0, E = Segments.size() - 1; I < E; ++I) {
+  bool HasMultipleRegions = [&] {
+    unsigned RegionCount = 0;
+    for (const auto *S : Segments)
+      if (S->HasCount && S->IsRegionEntry)
+        if (++RegionCount > 1)
+          return true;
+    return false;
+  }();
+
+  if (shouldRenderRegionMarkers(HasMultipleRegions)) {
+    for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
       const auto *CurSeg = Segments[I];
-      if (!CurSeg->IsRegionEntry)
-        continue;
-      if (CurSeg->Count == LCS.getExecutionCount())
+      if (!CurSeg->IsRegionEntry || !CurSeg->HasCount)
         continue;
 
       Snippets[I + 1] =
           tag("div", Snippets[I + 1] + tag("span", formatCount(CurSeg->Count),
                                            "tooltip-content"),
               "tooltip");
-
-      if (getOptions().Debug)
-        errs() << "Marker at " << CurSeg->Line << ":" << CurSeg->Col << " = "
-               << formatCount(CurSeg->Count) << "\n";
     }
   }
 
@@ -592,9 +556,9 @@ void SourceCoverageViewHTML::renderLineCoverageColumn(
     raw_ostream &OS, const LineCoverageStats &Line) {
   std::string Count = "";
   if (Line.isMapped())
-    Count = tag("pre", formatCount(Line.getExecutionCount()));
+    Count = tag("pre", formatCount(Line.ExecutionCount));
   std::string CoverageClass =
-      (Line.getExecutionCount() > 0) ? "covered-line" : "uncovered-line";
+      (Line.ExecutionCount > 0) ? "covered-line" : "uncovered-line";
   OS << tag("td", Count, CoverageClass);
 }
 
@@ -607,17 +571,16 @@ void SourceCoverageViewHTML::renderLineNumberColumn(raw_ostream &OS,
 }
 
 void SourceCoverageViewHTML::renderRegionMarkers(raw_ostream &,
-                                                 const LineCoverageStats &Line,
+                                                 CoverageSegmentArray,
                                                  unsigned) {
   // Region markers are rendered in-line using tooltips.
 }
 
-void SourceCoverageViewHTML::renderExpansionSite(raw_ostream &OS, LineRef L,
-                                                 const LineCoverageStats &LCS,
-                                                 unsigned ExpansionCol,
-                                                 unsigned ViewDepth) {
+void SourceCoverageViewHTML::renderExpansionSite(
+    raw_ostream &OS, LineRef L, const coverage::CoverageSegment *WrappedSegment,
+    CoverageSegmentArray Segments, unsigned ExpansionCol, unsigned ViewDepth) {
   // Render the line containing the expansion site. No extra formatting needed.
-  renderLine(OS, L, LCS, ExpansionCol, ViewDepth);
+  renderLine(OS, L, WrappedSegment, Segments, ExpansionCol, ViewDepth);
 }
 
 void SourceCoverageViewHTML::renderExpansionView(raw_ostream &OS,
@@ -625,7 +588,7 @@ void SourceCoverageViewHTML::renderExpansionView(raw_ostream &OS,
                                                  unsigned ViewDepth) {
   OS << BeginExpansionDiv;
   ESV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/false,
-                  /*ShowTitle=*/false, ViewDepth + 1);
+                  ViewDepth + 1);
   OS << EndExpansionDiv;
 }
 
@@ -641,7 +604,7 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
        << EndSourceNameDiv;
   else
     ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
-                    /*ShowTitle=*/false, ViewDepth);
+                    ViewDepth);
   OS << EndExpansionDiv;
 }
 

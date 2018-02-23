@@ -185,7 +185,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // TODO: Add profile stuff here
 
-  if (TC.ShouldLinkCXXStdlib(Args)) {
+  if (D.CCCIsCXX() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                !Args.hasArg(options::OPT_static);
     if (OnlyLibstdcxxStatic)
@@ -346,7 +347,7 @@ Tool *toolchains::MinGW::buildLinker() const {
   return new tools::MinGW::Linker(*this);
 }
 
-bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
+bool toolchains::MinGW::IsUnwindTablesDefault() const {
   return getArch() == llvm::Triple::x86_64;
 }
 

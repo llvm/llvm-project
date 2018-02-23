@@ -1,20 +1,23 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj \
-; RUN:     | llvm-dwarfdump -v -debug-info - \
+; RUN:     | llvm-dwarfdump -debug-dump=info - \
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF4
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj -dwarf-version=3 \
-; RUN:     | llvm-dwarfdump -v -debug-info - \
+; RUN:     | llvm-dwarfdump -debug-dump=info - \
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF3
 
-; DWARF4: DW_AT_location [DW_FORM_sec_offset]                      (0x00000000
-; DWARF4-NEXT:  {{.*}}: DW_OP_breg2 RCX+0, DW_OP_deref
+; FIXME: The location here needs to be fixed, but llvm-dwarfdump doesn't handle
+; DW_AT_location lists yet.
+; DWARF4: DW_AT_location [DW_FORM_sec_offset]                      (0x00000000)
 
-; DWARF3: DW_AT_location [DW_FORM_data4]                      (0x00000000
-; DWARF3-NEXT:  {{.*}}: DW_OP_breg2 RCX+0, DW_OP_deref
+; FIXME: The location here needs to be fixed, but llvm-dwarfdump doesn't handle
+; DW_AT_location lists yet.
+; DWARF3: DW_AT_location [DW_FORM_data4]                      (0x00000000)
 
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name [DW_FORM_strp]  ( .debug_str[0x00000067] = "vla")
 
-; Check the DEBUG_VALUE comments for good measure.
+; Unfortunately llvm-dwarfdump can't unparse a list of DW_AT_locations
+; right now, so we check the asm output:
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o - -filetype=asm | FileCheck %s -check-prefix=ASM-CHECK
 ; vla should have a register-indirect address at one point.
 ; ASM-CHECK: DEBUG_VALUE: vla <- [DW_OP_deref] [%RCX+0]

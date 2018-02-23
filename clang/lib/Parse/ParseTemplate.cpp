@@ -197,11 +197,10 @@ Parser::ParseSingleDeclarationAfterTemplate(
   MaybeParseCXX11Attributes(prefixAttrs);
 
   if (Tok.is(tok::kw_using)) {
-    auto usingDeclPtr = ParseUsingDirectiveOrDeclaration(Context, TemplateInfo, DeclEnd,
-                                                         prefixAttrs);
-    if (!usingDeclPtr || !usingDeclPtr.get().isSingleDecl())
-      return nullptr;
-    return usingDeclPtr.get().getSingleDecl();
+    // FIXME: We should return the DeclGroup to the caller.
+    ParseUsingDirectiveOrDeclaration(Context, TemplateInfo, DeclEnd,
+                                     prefixAttrs);
+    return nullptr;
   }
 
   // Parse the declaration specifiers, stealing any diagnostics from

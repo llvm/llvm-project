@@ -29,8 +29,8 @@ void CoveragePrinterText::closeViewFile(OwnedStream OS) {
 }
 
 Error CoveragePrinterText::createIndexFile(
-    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
-    const CoverageFiltersMatchAll &Filters) {
+    ArrayRef<std::string> SourceFiles,
+    const coverage::CoverageMapping &Coverage) {
   auto OSOrErr = createOutputStream("index", "txt", /*InToplevel=*/true);
   if (Error E = OSOrErr.takeError())
     return E;
@@ -38,7 +38,7 @@ Error CoveragePrinterText::createIndexFile(
   raw_ostream &OSRef = *OS.get();
 
   CoverageReport Report(Opts, Coverage);
-  Report.renderFileReports(OSRef, SourceFiles, Filters);
+  Report.renderFileReports(OSRef, SourceFiles);
 
   Opts.colored_ostream(OSRef, raw_ostream::CYAN) << "\n"
                                                  << Opts.getLLVMVersionString();
@@ -93,21 +93,18 @@ void SourceCoverageViewText::renderViewDivider(raw_ostream &OS,
   OS << '\n';
 }
 
-void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
-                                        const LineCoverageStats &LCS,
-                                        unsigned ExpansionCol,
-                                        unsigned ViewDepth) {
+void SourceCoverageViewText::renderLine(
+    raw_ostream &OS, LineRef L,
+    const coverage::CoverageSegment *WrappedSegment,
+    CoverageSegmentArray Segments, unsigned ExpansionCol, unsigned ViewDepth) {
   StringRef Line = L.Line;
   unsigned LineNumber = L.LineNo;
-  auto *WrappedSegment = LCS.getWrappedSegment();
-  CoverageSegmentArray Segments = LCS.getLineSegments();
 
   Optional<raw_ostream::Colors> Highlight;
   SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
 
   // The first segment overlaps from a previous line, so we treat it specially.
-  if (WrappedSegment && !WrappedSegment->IsGapRegion &&
-      WrappedSegment->HasCount && WrappedSegment->Count == 0)
+  if (WrappedSegment && WrappedSegment->HasCount && WrappedSegment->Count == 0)
     Highlight = raw_ostream::RED;
 
   // Output each segment of the line, possibly highlighted.
@@ -121,11 +118,10 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
-    if ((!S->IsGapRegion || (Highlight && *Highlight == raw_ostream::RED)) &&
-        S->HasCount && S->Count == 0)
-      Highlight = raw_ostream::RED;
-    else if (Col == ExpansionCol)
+    if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;
+    else if (S->HasCount && S->Count == 0)
+      Highlight = raw_ostream::RED;
     else
       Highlight = None;
   }
@@ -151,7 +147,7 @@ void SourceCoverageViewText::renderLineCoverageColumn(
     OS.indent(LineCoverageColumnWidth) << '|';
     return;
   }
-  std::string C = formatCount(Line.getExecutionCount());
+  std::string C = formatCount(Line.ExecutionCount);
   OS.indent(LineCoverageColumnWidth - C.size());
   colored_ostream(OS, raw_ostream::MAGENTA,
                   Line.hasMultipleRegions() && getOptions().Colors)
@@ -170,23 +166,14 @@ void SourceCoverageViewText::renderLineNumberColumn(raw_ostream &OS,
   OS.indent(LineNumberColumnWidth - Str.size()) << Str << '|';
 }
 
-void SourceCoverageViewText::renderRegionMarkers(raw_ostream &OS,
-                                                 const LineCoverageStats &Line,
-                                                 unsigned ViewDepth) {
+void SourceCoverageViewText::renderRegionMarkers(
+    raw_ostream &OS, CoverageSegmentArray Segments, unsigned ViewDepth) {
   renderLinePrefix(OS, ViewDepth);
   OS.indent(getCombinedColumnWidth(getOptions()));
-
-  CoverageSegmentArray Segments = Line.getLineSegments();
-
-  // Just consider the segments which start *and* end on this line.
-  if (Segments.size() > 1)
-    Segments = Segments.drop_back();
 
   unsigned PrevColumn = 1;
   for (const auto *S : Segments) {
     if (!S->IsRegionEntry)
-      continue;
-    if (S->Count == Line.getExecutionCount())
       continue;
     // Skip to the new region.
     if (S->Col > PrevColumn)
@@ -195,21 +182,21 @@ void SourceCoverageViewText::renderRegionMarkers(raw_ostream &OS,
     std::string C = formatCount(S->Count);
     PrevColumn += C.size();
     OS << '^' << C;
-
-    if (getOptions().Debug)
-      errs() << "Marker at " << S->Line << ":" << S->Col << " = "
-            << formatCount(S->Count) << "\n";
   }
   OS << '\n';
+
+  if (getOptions().Debug)
+    for (const auto *S : Segments)
+      errs() << "Marker at " << S->Line << ":" << S->Col << " = "
+             << formatCount(S->Count) << (S->IsRegionEntry ? "\n" : " (pop)\n");
 }
 
-void SourceCoverageViewText::renderExpansionSite(raw_ostream &OS, LineRef L,
-                                                 const LineCoverageStats &LCS,
-                                                 unsigned ExpansionCol,
-                                                 unsigned ViewDepth) {
+void SourceCoverageViewText::renderExpansionSite(
+    raw_ostream &OS, LineRef L, const coverage::CoverageSegment *WrappedSegment,
+    CoverageSegmentArray Segments, unsigned ExpansionCol, unsigned ViewDepth) {
   renderLinePrefix(OS, ViewDepth);
   OS.indent(getCombinedColumnWidth(getOptions()) + (ViewDepth == 0 ? 0 : 1));
-  renderLine(OS, L, LCS, ExpansionCol, ViewDepth);
+  renderLine(OS, L, WrappedSegment, Segments, ExpansionCol, ViewDepth);
 }
 
 void SourceCoverageViewText::renderExpansionView(raw_ostream &OS,
@@ -220,7 +207,7 @@ void SourceCoverageViewText::renderExpansionView(raw_ostream &OS,
     errs() << "Expansion at line " << ESV.getLine() << ", " << ESV.getStartCol()
            << " -> " << ESV.getEndCol() << '\n';
   ESV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/false,
-                  /*ShowTitle=*/false, ViewDepth + 1);
+                  ViewDepth + 1);
 }
 
 void SourceCoverageViewText::renderInstantiationView(raw_ostream &OS,
@@ -233,7 +220,7 @@ void SourceCoverageViewText::renderInstantiationView(raw_ostream &OS,
         << "Unexecuted instantiation: " << ISV.FunctionName << "\n";
   else
     ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
-                    /*ShowTitle=*/false, ViewDepth);
+                    ViewDepth);
 }
 
 void SourceCoverageViewText::renderTitle(raw_ostream &OS, StringRef Title) {

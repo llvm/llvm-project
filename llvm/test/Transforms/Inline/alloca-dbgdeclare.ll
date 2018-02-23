@@ -46,7 +46,7 @@ entry:
   %agg.tmp.sroa.3 = alloca [20 x i8], align 4
   tail call void @llvm.dbg.declare(metadata [20 x i8]* %agg.tmp.sroa.3, metadata !25, metadata !30), !dbg !31
   %agg.tmp.sroa.0.0.copyload = load i32, i32* getelementptr inbounds (%struct.A, %struct.A* @b, i64 0, i32 0), align 8, !dbg !33
-  tail call void @llvm.dbg.value(metadata i32 %agg.tmp.sroa.0.0.copyload, metadata !25, metadata !34), !dbg !31
+  tail call void @llvm.dbg.value(metadata i32 %agg.tmp.sroa.0.0.copyload, i64 0, metadata !25, metadata !34), !dbg !31
   %agg.tmp.sroa.3.0..sroa_idx = getelementptr inbounds [20 x i8], [20 x i8]* %agg.tmp.sroa.3, i64 0, i64 0, !dbg !33
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.3.0..sroa_idx, i8* getelementptr (i8, i8* bitcast (%struct.A* @b to i8*), i64 4), i64 20, i32 4, i1 false), !dbg !33
   tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !25, metadata !35) #0, !dbg !31
@@ -74,7 +74,7 @@ while.body:                                       ; preds = %while.body, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
@@ -85,7 +85,7 @@ attributes #3 = { noreturn nounwind }
 !llvm.module.flags = !{!19, !20}
 !llvm.ident = !{!21}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "test.cpp", directory: "")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !2, line: 1, size: 192, align: 64, elements: !4, identifier: "_ZTS1A")
@@ -97,7 +97,7 @@ attributes #3 = { noreturn nounwind }
 !9 = !DIBasicType(name: "double", size: 64, align: 64, encoding: DW_ATE_float)
 !10 = !{!11}
 !11 = !DISubrange(count: 2)
-!12 = !DIGlobalVariableExpression(var: !13, expr: !DIExpression())
+!12 = !DIGlobalVariableExpression(var: !13)
 !13 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !14 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !15, producer: "clang version 3.7.0 (trunk 227480) (llvm/trunk 227517)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !16, retainedTypes: !17, globals: !18, imports: !16)
 !15 = !DIFile(filename: "<stdin>", directory: "")

@@ -1022,16 +1022,9 @@ bool ResultBuilder::IsOrdinaryName(const NamedDecl *ND) const {
 /// ordinary name lookup but is not a type name.
 bool ResultBuilder::IsOrdinaryNonTypeName(const NamedDecl *ND) const {
   ND = cast<NamedDecl>(ND->getUnderlyingDecl());
-  if (isa<TypeDecl>(ND))
+  if (isa<TypeDecl>(ND) || isa<ObjCInterfaceDecl>(ND))
     return false;
-  // Objective-C interfaces names are not filtered by this method because they
-  // can be used in a class property expression. We can still filter out
-  // @class declarations though.
-  if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
-    if (!ID->getDefinition())
-      return false;
-  }
-
+  
   unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_LocalExtern;
   if (SemaRef.getLangOpts().CPlusPlus)
     IDNS |= Decl::IDNS_Tag | Decl::IDNS_Namespace | Decl::IDNS_Member;
@@ -2357,34 +2350,6 @@ formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
   return Result;
 }
 
-static std::string GetDefaultValueString(const ParmVarDecl *Param,
-                                         const SourceManager &SM,
-                                         const LangOptions &LangOpts) {
-  const SourceRange SrcRange = Param->getDefaultArgRange();
-  CharSourceRange CharSrcRange = CharSourceRange::getTokenRange(SrcRange);
-  bool Invalid = CharSrcRange.isInvalid();
-  if (Invalid)
-    return "";
-  StringRef srcText = Lexer::getSourceText(CharSrcRange, SM, LangOpts, &Invalid);
-  if (Invalid)
-    return "";
-
-  if (srcText.empty() || srcText == "=") {
-    // Lexer can't determine the value.
-    // This happens if the code is incorrect (for example class is forward declared).
-    return "";
-  }
-  std::string DefValue(srcText.str());
-  // FIXME: remove this check if the Lexer::getSourceText value is fixed and
-  // this value always has (or always does not have) '=' in front of it
-  if (DefValue.at(0) != '=') {
-    // If we don't have '=' in front of value.
-    // Lexer returns built-in types values without '=' and user-defined types values with it.
-    return " = " + DefValue;
-  }
-  return " " + DefValue;
-}
-
 /// \brief Add function parameter chunks to the given code completion string.
 static void AddFunctionParameterChunks(Preprocessor &PP,
                                        const PrintingPolicy &Policy,
@@ -2418,8 +2383,6 @@ static void AddFunctionParameterChunks(Preprocessor &PP,
     
     // Format the placeholder string.
     std::string PlaceholderStr = FormatFunctionParameter(Policy, Param);
-    if (Param->hasDefaultArg())
-      PlaceholderStr += GetDefaultValueString(Param, PP.getSourceManager(), PP.getLangOpts());
 
     if (Function->isVariadic() && P == N - 1)
       PlaceholderStr += ", ...";
@@ -3001,14 +2964,10 @@ static void AddOverloadParameterChunks(ASTContext &Context,
 
     // Format the placeholder string.
     std::string Placeholder;
-    if (Function) {
-      const ParmVarDecl *Param = Function->getParamDecl(P);
-      Placeholder = FormatFunctionParameter(Policy, Param);
-      if (Param->hasDefaultArg())
-        Placeholder += GetDefaultValueString(Param, Context.getSourceManager(), Context.getLangOpts());
-    } else {
+    if (Function)
+      Placeholder = FormatFunctionParameter(Policy, Function->getParamDecl(P));
+    else
       Placeholder = Prototype->getParamType(P).getAsString(Policy);
-    }
 
     if (P == CurrentArg)
       Result.AddCurrentParameterChunk(
@@ -6589,7 +6548,7 @@ typedef llvm::DenseMap<
 /// indexed by selector so they can be easily found.
 static void FindImplementableMethods(ASTContext &Context,
                                      ObjCContainerDecl *Container,
-                                     Optional<bool> WantInstanceMethods,
+                                     bool WantInstanceMethods,
                                      QualType ReturnType,
                                      KnownMethodsMap &KnownMethods,
                                      bool InOriginalClass = true) {
@@ -6660,7 +6619,7 @@ static void FindImplementableMethods(ASTContext &Context,
   // we want the methods from this container to override any methods
   // we've previously seen with the same selector.
   for (auto *M : Container->methods()) {
-    if (!WantInstanceMethods || M->isInstanceMethod() == *WantInstanceMethods) {
+    if (M->isInstanceMethod() == WantInstanceMethods) {
       if (!ReturnType.isNull() &&
           !Context.hasSameUnqualifiedType(ReturnType, M->getReturnType()))
         continue;
@@ -7332,7 +7291,8 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
   }
 }
 
-void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
+void Sema::CodeCompleteObjCMethodDecl(Scope *S, 
+                                      bool IsInstanceMethod,
                                       ParsedType ReturnTy) {
   // Determine the return type of the method we're declaring, if
   // provided.
@@ -7387,13 +7347,7 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
     ObjCMethodDecl *Method = M->second.getPointer();
     CodeCompletionBuilder Builder(Results.getAllocator(),
                                   Results.getCodeCompletionTUInfo());
-
-    // Add the '-'/'+' prefix if it wasn't provided yet.
-    if (!IsInstanceMethod) {
-      Builder.AddTextChunk(Method->isInstanceMethod() ? "-" : "+");
-      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-    }
-
+    
     // If the result type was not already provided, add it to the
     // pattern as (type).
     if (ReturnType.isNull()) {
@@ -7495,13 +7449,11 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
     if (IFace)
       for (auto *Cat : IFace->visible_categories())
         Containers.push_back(Cat);
-
-    if (IsInstanceMethod) {
-      for (unsigned I = 0, N = Containers.size(); I != N; ++I)
-        for (auto *P : Containers[I]->instance_properties())
-          AddObjCKeyValueCompletions(P, *IsInstanceMethod, ReturnType, Context,
-                                     KnownSelectors, Results);
-    }
+    
+    for (unsigned I = 0, N = Containers.size(); I != N; ++I)
+      for (auto *P : Containers[I]->instance_properties())
+        AddObjCKeyValueCompletions(P, IsInstanceMethod, ReturnType, Context, 
+                                   KnownSelectors, Results);
   }
   
   Results.ExitScope();

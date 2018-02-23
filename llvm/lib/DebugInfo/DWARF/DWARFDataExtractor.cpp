@@ -8,20 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 
 using namespace llvm;
 
 uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint32_t *Off,
                                                uint64_t *SecNdx) const {
-  if (SecNdx)
-    *SecNdx = -1ULL;
-  if (!Section)
+  if (!RelocMap)
     return getUnsigned(Off, Size);
-  Optional<RelocAddrEntry> Rel = Obj->find(*Section, *Off);
-  if (!Rel)
+  RelocAddrMap::const_iterator AI = RelocMap->find(*Off);
+  if (AI == RelocMap->end())
     return getUnsigned(Off, Size);
   if (SecNdx)
-    *SecNdx = Rel->SectionIndex;
-  return getUnsigned(Off, Size) + Rel->Value;
+    *SecNdx = AI->second.SectionIndex;
+  return getUnsigned(Off, Size) + AI->second.Value;
 }

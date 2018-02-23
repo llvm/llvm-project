@@ -328,10 +328,12 @@ public:
   void addIRPasses() override;
   bool addPreISel() override;
   bool addInstSelector() override;
+#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+#endif
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -406,6 +408,7 @@ bool ARMPassConfig::addInstSelector() {
   return false;
 }
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool ARMPassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -425,6 +428,7 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
+#endif
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOpt::None) {

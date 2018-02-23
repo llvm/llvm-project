@@ -214,9 +214,6 @@ void MIRParserImpl::reportDiagnostic(const SMDiagnostic &Diag) {
   case SourceMgr::DK_Note:
     Kind = DS_Note;
     break;
-  case SourceMgr::DK_Remark:
-    llvm_unreachable("remark unexpected");
-    break;
   }
   Context.diagnose(DiagnosticInfoMIRParser(Kind, Diag));
 }
@@ -441,7 +438,6 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
 
     if (StringRef(VReg.Class.Value).equals("_")) {
       Info.Kind = VRegInfo::GENERIC;
-      Info.D.RegBank = nullptr;
     } else {
       const auto *RC = getRegClass(MF, VReg.Class.Value);
       if (RC) {
@@ -720,10 +716,6 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
   const auto &M = *MF.getFunction()->getParent();
   SMDiagnostic Error;
   for (const auto &YamlConstant : YamlMF.Constants) {
-    if (YamlConstant.IsTargetSpecific)
-      // FIXME: Support target-specific constant pools
-      return error(YamlConstant.Value.SourceRange.Start,
-                   "Can't parse target-specific constant pool entries yet");
     const Constant *Value = dyn_cast_or_null<Constant>(
         parseConstantValue(YamlConstant.Value.Value, Error, M));
     if (!Value)

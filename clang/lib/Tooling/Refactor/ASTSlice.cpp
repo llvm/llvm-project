@@ -246,7 +246,8 @@ canonicalizeSelectedExpr(const Stmt *S, unsigned Index,
   const Stmt *Parent = NodeTree[Index + 1].getStmtOrNull();
   if (!Parent)
     return Same;
-  auto Next = std::make_pair(Parent, Index + 1);
+
+  const auto Next = std::make_pair(Parent, Index + 1);
   // The entire pseudo expression is selected when just its syntactic
   // form is selected.
   if (isa<Expr>(S)) {
@@ -255,18 +256,6 @@ canonicalizeSelectedExpr(const Stmt *S, unsigned Index,
         return Next;
     }
   }
-
-  // Look through the implicit casts in the parents.
-  unsigned ParentIndex = Index + 1;
-  for (; ParentIndex <= NodeTree.size() && isa<ImplicitCastExpr>(Parent);
-       ++ParentIndex) {
-    const Stmt *NewParent = NodeTree[ParentIndex + 1].getStmtOrNull();
-    if (!NewParent)
-      break;
-    Parent = NewParent;
-  }
-  Next = std::make_pair(Parent, ParentIndex);
-
   // The entire ObjC string literal is selected when just its string
   // literal is selected.
   if (isa<StringLiteral>(S) && isa<ObjCStringLiteral>(Parent))
@@ -282,7 +271,7 @@ canonicalizeSelectedExpr(const Stmt *S, unsigned Index,
       if (Call->getCalleeDecl() == DRE->getDecl())
         return Next;
     }
-    }
+  }
   return Same;
 }
 

@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
-; RUN:   | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; A single FI location. This used to trigger an assertion in debug libstdc++.
 ; CHECK: DW_TAG_formal_parameter
 ;                                          fbreg -8
-; CHECK-NEXT: DW_AT_location {{.*}} (DW_OP_fbreg -8)
+; CHECK-NEXT: DW_AT_location {{.*}} (<0x2> 91 78 )
 ; CHECK-NEXT: DW_AT_name {{.*}} "dipsy"
 define void @tinkywinky(i8* %dipsy) !dbg !6 {
 entry:

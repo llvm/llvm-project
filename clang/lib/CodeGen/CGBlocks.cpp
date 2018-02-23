@@ -16,7 +16,6 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "ConstantEmitter.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/SmallSet.h"
@@ -291,7 +290,7 @@ static llvm::Constant *tryCaptureAsConstant(CodeGenModule &CGM,
   const Expr *init = var->getInit();
   if (!init) return nullptr;
 
-  return ConstantEmitter(CGM, CGF).tryEmitAbstractForInitializer(*var);
+  return CGM.EmitConstantInit(*var, CGF);
 }
 
 /// Get the low bit of a nonzero character count.  This is the
@@ -722,15 +721,15 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
 llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
   // Using the computed layout, generate the actual block function.
   bool isLambdaConv = blockInfo.getBlockDecl()->isConversionFromLambda();
-  CodeGenFunction BlockCGF{CGM, true};
-  BlockCGF.SanOpts = SanOpts;
-  llvm::Constant *blockFn = BlockCGF.GenerateBlockFunction(
-      CurGD, blockInfo, LocalDeclMap, isLambdaConv, blockInfo.CanBeGlobal);
+  llvm::Constant *blockFn
+    = CodeGenFunction(CGM, true).GenerateBlockFunction(CurGD, blockInfo,
+                                                       LocalDeclMap,
+                                                       isLambdaConv);
   blockFn = llvm::ConstantExpr::getBitCast(blockFn, VoidPtrTy);
 
   // If there is nothing to capture, we can emit this as a global block.
   if (blockInfo.CanBeGlobal)
-    return CGM.getAddrOfGlobalBlockIfEmitted(blockInfo.BlockExpression);
+    return buildGlobalBlock(CGM, blockInfo, blockFn);
 
   // Otherwise, we have to emit this as a local block.
 
@@ -1114,14 +1113,17 @@ CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE,
   computeBlockInfo(*this, nullptr, blockInfo);
 
   // Using that metadata, generate the actual block function.
+  llvm::Constant *blockFn;
   {
     CodeGenFunction::DeclMapTy LocalDeclMap;
-    CodeGenFunction(*this).GenerateBlockFunction(
-        GlobalDecl(), blockInfo, LocalDeclMap,
-        /*IsLambdaConversionToBlock*/ false, /*BuildGlobalBlock*/ true);
+    blockFn = CodeGenFunction(*this).GenerateBlockFunction(GlobalDecl(),
+                                                           blockInfo,
+                                                           LocalDeclMap,
+                                                           false);
   }
+  blockFn = llvm::ConstantExpr::getBitCast(blockFn, VoidPtrTy);
 
-  return getAddrOfGlobalBlockIfEmitted(BE);
+  return buildGlobalBlock(*this, blockInfo, blockFn);
 }
 
 static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
@@ -1182,17 +1184,20 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
                                                llvm::Value *arg) {
   assert(BlockInfo && "not emitting prologue of block invocation function?!");
 
-  // Allocate a stack slot like for any local variable to guarantee optimal
-  // debug info at -O0. The mem2reg pass will eliminate it when optimizing.
-  Address alloc = CreateMemTemp(D->getType(), D->getName() + ".addr");
-  Builder.CreateStore(arg, alloc);
+  llvm::Value *localAddr = nullptr;
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
+    // Allocate a stack slot to let the debug info survive the RA.
+    Address alloc = CreateMemTemp(D->getType(), D->getName() + ".addr");
+    Builder.CreateStore(arg, alloc);
+    localAddr = Builder.CreateLoad(alloc);
+  }
+
   if (CGDebugInfo *DI = getDebugInfo()) {
     if (CGM.getCodeGenOpts().getDebugInfo() >=
         codegenoptions::LimitedDebugInfo) {
       DI->setLocation(D->getLocation());
-      DI->EmitDeclareOfBlockLiteralArgVariable(
-          *BlockInfo, D->getName(), argNum,
-          cast<llvm::AllocaInst>(alloc.getPointer()), Builder);
+      DI->EmitDeclareOfBlockLiteralArgVariable(*BlockInfo, arg, argNum,
+                                               localAddr, Builder);
     }
   }
 
@@ -1220,8 +1225,7 @@ llvm::Function *
 CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
                                        const CGBlockInfo &blockInfo,
                                        const DeclMapTy &ldm,
-                                       bool IsLambdaConversionToBlock,
-                                       bool BuildGlobalBlock) {
+                                       bool IsLambdaConversionToBlock) {
   const BlockDecl *blockDecl = blockInfo.getBlockDecl();
 
   CurGD = GD;
@@ -1279,10 +1283,6 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
   llvm::Function *fn = llvm::Function::Create(
       fnLLVMType, llvm::GlobalValue::InternalLinkage, name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(blockDecl, fn, fnInfo);
-
-  if (BuildGlobalBlock)
-    buildGlobalBlock(CGM, blockInfo,
-                     llvm::ConstantExpr::getBitCast(fn, VoidPtrTy));
 
   // Begin generating the function.
   StartFunction(blockDecl, fnType->getReturnType(), fn, fnInfo, args,
@@ -1529,8 +1529,10 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
   CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
 
+  auto NL = ApplyDebugLocation::CreateEmpty(*this);
   StartFunction(FD, C.VoidTy, Fn, FI, args);
-  ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getLocStart()};
+  // Create a scope with an artificial location for the body of this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(*this);
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
@@ -1699,8 +1701,10 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
 
+  // Create a scope with an artificial location for the body of this function.
+  auto NL = ApplyDebugLocation::CreateEmpty(*this);
   StartFunction(FD, C.VoidTy, Fn, FI, args);
-  ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getLocStart()};
+  auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 

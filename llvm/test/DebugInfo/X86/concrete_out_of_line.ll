@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux < %s -filetype=obj | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux < %s -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; test that we add DW_AT_inline even when we only have concrete out of line
 ; instances.
@@ -85,7 +85,7 @@ attributes #0 = { nounwind }
 !1 = !DIFile(filename: "nsAutoRefCnt.ii", directory: "/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/netwerk/base/src")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+!4 = !DIGlobalVariableExpression(var: !5)
 !5 = !DIGlobalVariable(name: "mRefCnt", scope: null, file: !1, line: 9, type: !6, isLocal: false, isDefinition: true)
 !6 = !DICompositeType(tag: DW_TAG_class_type, name: "nsAutoRefCnt", file: !1, line: 2, size: 32, align: 32, elements: !7)
 !7 = !{!8, !10, !15}

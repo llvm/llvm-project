@@ -181,10 +181,10 @@ def err_hex_constant_requires : Error<
 def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
 def ext_hex_literal_invalid : Extension<
-  "hexadecimal floating literals are a C++17 feature">, InGroup<CXX17>;
+  "hexadecimal floating literals are a C++1z feature">, InGroup<CXX1z>;
 def warn_cxx1z_hex_literal : Warning<
   "hexadecimal floating literals are incompatible with "
-  "C++ standards before C++17">,
+  "C++ standards before C++1z">,
   InGroup<CXXPre1zCompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
   "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
@@ -208,7 +208,7 @@ def warn_cxx98_compat_unicode_literal : Warning<
   "unicode literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx14_compat_u8_character_literal : Warning<
-  "unicode literals are incompatible with C++ standards before C++17">,
+  "unicode literals are incompatible with C++ standards before C++1z">,
   InGroup<CXXPre1zCompat>, DefaultIgnore;
 def warn_cxx11_compat_user_defined_literal : Warning<
   "identifier after literal will be treated as a user-defined literal suffix "
@@ -663,28 +663,17 @@ def err_mmap_expected_feature : Error<"expected a feature name">;
 def err_mmap_expected_attribute : Error<"expected an attribute name">;
 def warn_mmap_unknown_attribute : Warning<"unknown attribute '%0'">,
   InGroup<IgnoredAttributes>;
-def warn_mmap_mismatched_private_submodule : Warning<
-  "private submodule '%0' in private module map, expected top-level module">,
-  InGroup<PrivateModule>, DefaultIgnore;
-def warn_mmap_mismatched_private_module_name : Warning<
-  "expected canonical name for private module '%0'">,
-  InGroup<PrivateModule>, DefaultIgnore;
-def note_mmap_rename_top_level_private_module : Note<
-  "rename '%0' to ensure it can be found by name">;
-
+def warn_mmap_mismatched_top_level_private : Warning<
+  "top-level module '%0' in private module map, expected a submodule of '%1'">,
+  InGroup<PrivateModule>;
+def note_mmap_rename_top_level_private_as_submodule : Note<
+  "make '%0' a submodule of '%1' to ensure it can be found by name">;
 def err_mmap_duplicate_header_attribute : Error<
   "header attribute '%0' specified multiple times">;
 def err_mmap_invalid_header_attribute_value : Error<
   "expected integer literal as value for header attribute '%0'">;
 def err_mmap_expected_header_attribute : Error<
   "expected a header attribute name ('size' or 'mtime')">;
-def err_mmap_conflicting_export_as : Error<
-  "conflicting re-export of module '%0' as '%1' or '%2'">;
-def warn_mmap_redundant_export_as : Warning<
-  "module '%0' already re-exported as '%1'">,
-  InGroup<PrivateModule>;
-def err_mmap_submodule_export_as : Error<
-  "only top-level modules can be re-exported as public">;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "

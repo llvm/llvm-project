@@ -647,19 +647,11 @@ public:
       BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     }
     bool HasBaseReg = (BaseGV == nullptr);
-
-    auto PtrSizeBits = DL.getPointerTypeSizeInBits(Ptr->getType());
-    APInt BaseOffset(PtrSizeBits, 0);
+    int64_t BaseOffset = 0;
     int64_t Scale = 0;
 
     auto GTI = gep_type_begin(PointeeType, Operands);
     Type *TargetType;
-
-    // Handle the case where the GEP instruction has a single operand,
-    // the basis, therefore TargetType is a nullptr.
-    if (Operands.empty())
-      return !BaseGV ? TTI::TCC_Free : TTI::TCC_Basic;
-
     for (auto I = Operands.begin(); I != Operands.end(); ++I, ++GTI) {
       TargetType = GTI.getIndexedType();
       // We assume that the cost of Scalar GEP with constant index and the
@@ -675,10 +667,9 @@ public:
         BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
       } else {
         int64_t ElementSize = DL.getTypeAllocSize(GTI.getIndexedType());
-        if (ConstIdx) {
-          BaseOffset +=
-              ConstIdx->getValue().sextOrTrunc(PtrSizeBits) * ElementSize;
-        } else {
+        if (ConstIdx)
+          BaseOffset += ConstIdx->getSExtValue() * ElementSize;
+        else {
           // Needs scale register.
           if (Scale != 0)
             // No addressing mode takes two scale registers.
@@ -691,10 +682,9 @@ public:
     // Assumes the address space is 0 when Ptr is nullptr.
     unsigned AS =
         (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
-
     if (static_cast<T *>(this)->isLegalAddressingMode(
-            TargetType, const_cast<GlobalValue *>(BaseGV),
-            BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale, AS))
+            TargetType, const_cast<GlobalValue *>(BaseGV), BaseOffset,
+            HasBaseReg, Scale, AS))
       return TTI::TCC_Free;
     return TTI::TCC_Basic;
   }

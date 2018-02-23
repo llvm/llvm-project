@@ -92,10 +92,10 @@ protected:
     return DIFile::getDistinct(Context, "file.c", "/path/to/dir");
   }
   DICompileUnit *getUnit() {
-    return DICompileUnit::getDistinct(
-        Context, 1, getFile(), "clang", false, "-g", 2, "",
-        DICompileUnit::FullDebug, getTuple(), getTuple(), getTuple(),
-        getTuple(), getTuple(), 0, true, false, false);
+    return DICompileUnit::getDistinct(Context, 1, getFile(), "clang", false,
+                                      "-g", 2, "", DICompileUnit::FullDebug,
+                                      getTuple(), getTuple(), getTuple(),
+                                      getTuple(), getTuple(), 0, true, false);
   }
   DIType *getBasicType(StringRef Name) {
     return DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, Name);
@@ -1417,7 +1417,7 @@ TEST_F(DICompileUnitTest, get) {
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
       RetainedTypes, GlobalVariables, ImportedEntities, Macros, DWOId, true,
-      false, false);
+      false);
 
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, N->getTag());
   EXPECT_EQ(SourceLanguage, N->getSourceLanguage());
@@ -1474,8 +1474,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false,
-      false);
+      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false);
 
   auto *GlobalVariables = MDTuple::getDistinct(Context, None);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
@@ -2025,18 +2024,6 @@ TEST_F(DIExpressionTest, get) {
 
   TempDIExpression Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
-
-  // Test DIExpression::prepend().
-  uint64_t Elts0[] = {dwarf::DW_OP_LLVM_fragment, 0, 32};
-  auto *N0 = DIExpression::get(Context, Elts0);
-  N0 = DIExpression::prepend(N0, true, 64, true, true);
-  uint64_t Elts1[] = {dwarf::DW_OP_deref,
-                      dwarf::DW_OP_plus_uconst, 64,
-                      dwarf::DW_OP_deref,
-                      dwarf::DW_OP_stack_value,
-                      dwarf::DW_OP_LLVM_fragment, 0, 32};
-  auto *N1 = DIExpression::get(Context, Elts1);
-  EXPECT_EQ(N0, N1);
 }
 
 TEST_F(DIExpressionTest, isValid) {

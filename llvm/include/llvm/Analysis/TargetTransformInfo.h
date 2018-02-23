@@ -23,28 +23,21 @@
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
 #include <functional>
 
 namespace llvm {
 
-namespace Intrinsic {
-enum ID : unsigned;
-}
-
 class Function;
 class GlobalValue;
-class IntrinsicInst;
-class LoadInst;
 class Loop;
-class SCEV;
 class ScalarEvolution;
-class StoreInst;
-class SwitchInst;
+class SCEV;
 class Type;
 class User;
 class Value;

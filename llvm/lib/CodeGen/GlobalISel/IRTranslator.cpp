@@ -682,16 +682,23 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     if (!V) {
       // Currently the optimizer can produce this; insert an undef to
       // help debugging.  Probably the optimizer should not do this.
-      MIRBuilder.buildIndirectDbgValue(0, DI.getVariable(), DI.getExpression());
+      MIRBuilder.buildIndirectDbgValue(0, DI.getOffset(), DI.getVariable(),
+                                       DI.getExpression());
     } else if (const auto *CI = dyn_cast<Constant>(V)) {
-      MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
+      MIRBuilder.buildConstDbgValue(*CI, DI.getOffset(), DI.getVariable(),
+                                    DI.getExpression());
     } else {
       unsigned Reg = getOrCreateVReg(*V);
       // FIXME: This does not handle register-indirect values at offset 0. The
       // direct/indirect thing shouldn't really be handled by something as
       // implicit as reg+noreg vs reg+imm in the first palce, but it seems
       // pretty baked in right now.
-      MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
+      if (DI.getOffset() != 0)
+        MIRBuilder.buildIndirectDbgValue(Reg, DI.getOffset(), DI.getVariable(),
+                                         DI.getExpression());
+      else
+        MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(),
+                                       DI.getExpression());
     }
     return true;
   }
@@ -848,7 +855,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
         Info.vol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
     Flags |=
         Info.readMem ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore;
-    uint64_t Size = Info.memVT.getStoreSize();
+    uint64_t Size = Info.memVT.getSizeInBits() >> 3;
     MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
                                                Flags, Size, Info.align));
   }
@@ -1098,7 +1105,7 @@ bool IRTranslator::translateShuffleVector(const User &U,
 
 bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   const PHINode &PI = cast<PHINode>(U);
-  auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI);
+  auto MIB = MIRBuilder.buildInstr(TargetOpcode::PHI);
   MIB.addDef(getOrCreateVReg(PI));
 
   PendingPHIs.emplace_back(&PI, MIB.getInstr());
@@ -1291,18 +1298,14 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       if (translate(Inst))
         continue;
 
+      std::string InstStrStorage;
+      raw_string_ostream InstStr(InstStrStorage);
+      InstStr << Inst;
+
       OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                  Inst.getDebugLoc(), &BB);
-      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst);
-
-      if (ORE->allowExtraAnalysis("gisel-irtranslator")) {
-        std::string InstStrStorage;
-        raw_string_ostream InstStr(InstStrStorage);
-        InstStr << Inst;
-
-        R << ": '" << InstStr.str() << "'";
-      }
-
+      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
+        << ": '" << InstStr.str() << "'";
       reportTranslationError(*MF, *TPC, *ORE, R);
       return false;
     }

@@ -73,9 +73,6 @@ def FeatureReserveX18 : SubtargetFeature<"reserve-x18", "ReserveX18", "true",
 def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
                                     "Use alias analysis during codegen">;
 
-def FeatureLimit16FPRegs : SubtargetFeature<"limit-16-fpregs", "Limit16FPRegs",
-    "true", "only use the first 16 FP registers">;
-
 def FeatureBalanceFPOps : SubtargetFeature<"balance-fp-ops", "BalanceFPOps",
     "true",
     "balance mix of odd and even D-registers for fp multiply(-accumulate) ops">;
@@ -238,18 +235,14 @@ def ProcA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
                                    FeaturePerfMon
                                    ]>;
 
-
-// Note that cyclone does not fuse AES instructions, but newer apple chips do
-// perform the fusion and cyclone is used by default when targetting apple OSes.
 def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    "Cyclone", [
                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                   FeatureArithmeticBccFusion,
-                                   FeatureArithmeticCbzFusion,
                                    FeatureCrypto,
                                    FeatureDisableLatencySchedHeuristic,
                                    FeatureFPARMv8,
-                                   FeatureFuseAES,
+                                   FeatureArithmeticBccFusion,
+                                   FeatureArithmeticCbzFusion,
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeatureSlowMisaligned128Store,

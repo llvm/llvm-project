@@ -79,10 +79,7 @@ public:
     MatchingDocComment,
 
     /// \brief This is an occurrence of a symbol in an inclusion directive.
-    MatchingFilename,
-
-    /// \brief This is a textual occurrence of a symbol in a string literal.
-    MatchingStringLiteral
+    MatchingFilename
   };
 
   OccurrenceKind Kind;

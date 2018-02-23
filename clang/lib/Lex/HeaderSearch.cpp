@@ -202,14 +202,11 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch) {
 
   // The facility for "private modules" -- adjacent, optional module maps named
   // module.private.modulemap that are supposed to define private submodules --
-  // may have different flavors of names: FooPrivate, Foo_Private and Foo.Private.
-  //
-  // Foo.Private is now depracated in favor of Foo_Private. Users of FooPrivate
-  // should also rename to Foo_Private. Representing private as submodules
-  // could force building unwanted dependencies into the parent module and cause
-  // dependency cycles.
-  if (!Module && SearchName.consume_back("_Private"))
-    Module = lookupModule(ModuleName, SearchName);
+  // is sometimes misused by frameworks that name their associated private
+  // module FooPrivate, rather than as a submodule named Foo.Private as
+  // intended. Here we compensate for such cases by looking in directories named
+  // Foo.framework, when we previously looked and failed to find a
+  // FooPrivate.framework.
   if (!Module && SearchName.consume_back("Private"))
     Module = lookupModule(ModuleName, SearchName);
   return Module;
@@ -1111,7 +1108,6 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
 
   // Get information about this file.
   HeaderFileInfo &FileInfo = getFileInfo(File);
-  bool isCompilingModule = ModMap.getLangOpts().isCompilingModule();
 
   // FIXME: this is a workaround for the lack of proper modules-aware support
   // for #import / #pragma once
@@ -1147,7 +1143,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     // headers find in the wild might rely only on #import and do not contain
     // controlling macros, be conservative and only try to enter textual headers
     // if such macro is present.
-    if ((isCompilingModule || !isImport) && !FileInfo.isModuleHeader &&
+    if (!FileInfo.isModuleHeader &&
         FileInfo.getControllingMacro(ExternalLookup))
       TryEnterHdr = true;
     return TryEnterHdr;

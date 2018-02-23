@@ -21,6 +21,5 @@ Target &getTheLanaiTarget() {
 } // namespace llvm
 
 extern "C" void LLVMInitializeLanaiTargetInfo() {
-  RegisterTarget<Triple::lanai> X(getTheLanaiTarget(), "lanai", "Lanai",
-                                  "Lanai");
+  RegisterTarget<Triple::lanai> X(getTheLanaiTarget(), "lanai", "Lanai");
 }

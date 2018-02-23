@@ -1,6 +1,7 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v --debug-info - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump --debug-dump=info - | FileCheck %s
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +0)
+;                                                      DW_OP_fbreg
+; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 00 )
 ; CHECK-NEXT: DW_AT_name {{.*}}"i"
 
 target datalayout = "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128"

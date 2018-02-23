@@ -11,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -45,25 +46,18 @@ public:
   FrameKind getKind() const { return Kind; }
   virtual uint64_t getOffset() const { return Offset; }
 
-  /// Parse and store a sequence of CFI instructions from Data,
+  /// \brief Parse and store a sequence of CFI instructions from Data,
   /// starting at *Offset and ending at EndOffset. If everything
   /// goes well, *Offset should be equal to EndOffset when this method
   /// returns. Otherwise, an error occurred.
   virtual void parseInstructions(DataExtractor Data, uint32_t *Offset,
                                  uint32_t EndOffset);
 
-  /// Dump the entry header to the given output stream.
+  /// \brief Dump the entry header to the given output stream.
   virtual void dumpHeader(raw_ostream &OS) const = 0;
 
-  /// Dump the entry's instructions to the given output stream.
+  /// \brief Dump the entry's instructions to the given output stream.
   virtual void dumpInstructions(raw_ostream &OS) const;
-
-  /// Dump the entire entry to the given output stream.
-  void dump(raw_ostream &OS) const {
-    dumpHeader(OS);
-    dumpInstructions(OS);
-    OS << "\n";
-  }
 
 protected:
   const FrameKind Kind;
@@ -194,16 +188,10 @@ void FrameEntry::parseInstructions(DataExtractor Data, uint32_t *Offset,
           break;
         }
         case DW_CFA_def_cfa_expression:
-          // FIXME: Parse the actual instruction.
-          *Offset += Data.getULEB128(Offset);
-          break;
         case DW_CFA_expression:
-        case DW_CFA_val_expression: {
-          // FIXME: Parse the actual instruction.
-          Data.getULEB128(Offset);
-          *Offset += Data.getULEB128(Offset);
-          break;
-        }
+        case DW_CFA_val_expression:
+          // TODO: implement this
+          report_fatal_error("Values with expressions not implemented yet!");
       }
     }
   }
@@ -698,24 +686,11 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
   }
 }
 
-FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
-  auto It =
-      std::lower_bound(Entries.begin(), Entries.end(), Offset,
-                       [](const std::unique_ptr<FrameEntry> &E,
-                          uint64_t Offset) { return E->getOffset() < Offset; });
-  if (It != Entries.end() && (*It)->getOffset() == Offset)
-    return It->get();
-  return nullptr;
-}
-
-void DWARFDebugFrame::dump(raw_ostream &OS, Optional<uint64_t> Offset) const {
-  if (Offset) {
-    if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS);
-    return;
-  }
-
+void DWARFDebugFrame::dump(raw_ostream &OS) const {
   OS << "\n";
-  for (const auto &Entry : Entries)
-    Entry->dump(OS);
+  for (const auto &Entry : Entries) {
+    Entry->dumpHeader(OS);
+    Entry->dumpInstructions(OS);
+    OS << "\n";
+  }
 }

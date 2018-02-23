@@ -3,7 +3,7 @@
 ; RUN: llvm-link %s %p/type-unique-simple-b.ll -S -o %t
 ; RUN: cat %t | FileCheck %s -check-prefix=LINK
 ; RUN: %llc_dwarf -filetype=obj -O0 < %t > %t2
-; RUN: llvm-dwarfdump -v -debug-info %t2 | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t2 | FileCheck %s
 
 ; Make sure the backend generates a single DIE and uses ref_addr.
 ; CHECK: 0x[[BASE:.*]]: DW_TAG_structure_type
@@ -15,9 +15,9 @@
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[INT]]
+; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[INT]])
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[BASE]]
+; CHECK: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[BASE]])
 
 ; Make sure llvm-link only generates a single copy of the struct.
 ; LINK: DW_TAG_structure_type

@@ -47,41 +47,37 @@
 # llc -stop-after=funclet-layout < spill1.ll > spill1.mir                
 #
 # Make sure that we generated DBG_VALUE instructions for the spills
-# GENERATE: ![[INT0:[0-9]+]] = !DILocalVariable(name: "int0",{{.*}})
-# GENERATE: ![[INTB:[0-9]+]] = !DILocalVariable(name: "intb",{{.*}})
-# GENERATE: ![[INTD:[0-9]+]] = !DILocalVariable(name: "intd",{{.*}})
-#
 # GENERATE:      bb.1.if.end:
 # GENERATE:      MOV32mr %rbp, 1, _, -48, _, killed %edx :: (store 4 into %stack.5)
-# GENERATE-NEXT: DBG_VALUE debug-use %rbp, 0, ![[INT0]], !DIExpression(DW_OP_constu, 48, DW_OP_minus)
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -48, !26, !38
 # GENERATE:      MOV32mr %rbp, 1, _, -52, _, killed %r8d :: (store 4 into %stack.4)
-# GENERATE-NEXT: DBG_VALUE debug-use %rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -52, !32, !38
 # GENERATE:      MOV32mr %rbp, 1, _, -56, _, killed %esi :: (store 4 into %stack.3)
-# GENERATE-NEXT: DBG_VALUE debug-use %rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -56, !34, !38
 #
 # Check that the spill locations that are valid at the end of bb.1.if.end are
 # propagated to subsequent BBs.
 #
 # GENERATE:      bb.2.if.then4:
 # GENERATE-NOT:  bb.3:
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
 #
 # GENERATE:      bb.3:
 # GENERATE-NOT:  bb.4.if.end13:
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
 #
 # GENERATE:      bb.4.if.end13:
 # GENERATE-NOT:  bb.5.cleanup:
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
 # 
 # Check that the spill location rbp-48 (the variable int0) is not propagated 
 # because int0 is redefined within the same basic block.
 #
 # TERMINATE:     bb.2.if.then4:
-# TERMINATE-NOT: DBG_VALUE debug-use %rbp, -48,
+# TERMINATE-NOT: DBG_VALUE debug-use %rbp, -48, !26, !38
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "spill1.c"
@@ -206,22 +202,22 @@
   !llvm.module.flags = !{!17, !18}
   !llvm.ident = !{!19}
   
-  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !0 = !DIGlobalVariableExpression(var: !1)
   !1 = distinct !DIGlobalVariable(name: "glob0", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
   !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 5.0.0 (trunk 292962)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
   !3 = !DIFile(filename: "spill1.c", directory: "/home/test")
   !4 = !{}
   !5 = !{!0, !6, !9, !11, !13, !15}
-  !6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
+  !6 = !DIGlobalVariableExpression(var: !7)
   !7 = distinct !DIGlobalVariable(name: "glob1", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
   !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-  !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
+  !9 = !DIGlobalVariableExpression(var: !10)
   !10 = distinct !DIGlobalVariable(name: "glob2", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
-  !11 = !DIGlobalVariableExpression(var: !12, expr: !DIExpression())
+  !11 = !DIGlobalVariableExpression(var: !12)
   !12 = distinct !DIGlobalVariable(name: "glob3", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
-  !13 = !DIGlobalVariableExpression(var: !14, expr: !DIExpression())
+  !13 = !DIGlobalVariableExpression(var: !14)
   !14 = distinct !DIGlobalVariable(name: "glob4", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
-  !15 = !DIGlobalVariableExpression(var: !16, expr: !DIExpression())
+  !15 = !DIGlobalVariableExpression(var: !16)
   !16 = distinct !DIGlobalVariable(name: "glob5", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
   !17 = !{i32 2, !"Dwarf Version", i32 4}
   !18 = !{i32 2, !"Debug Info Version", i32 3}

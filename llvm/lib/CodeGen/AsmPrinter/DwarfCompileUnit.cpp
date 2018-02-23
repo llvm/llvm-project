@@ -19,7 +19,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetFrameLowering.h"
@@ -29,16 +28,6 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 namespace llvm {
-
-enum DefaultOnOff { Default, Enable, Disable };
-
-static cl::opt<DefaultOnOff>
-DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
-                 cl::desc("Generate DWARF pubnames and pubtypes sections"),
-                 cl::values(clEnumVal(Default, "Default for platform"),
-                            clEnumVal(Enable, "Enabled"),
-                            clEnumVal(Disable, "Disabled")),
-                 cl::init(Default));
 
 DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
                                    AsmPrinter *A, DwarfDebug *DW,
@@ -347,15 +336,23 @@ void DwarfCompileUnit::constructScopeDIE(
     if (DD->isLexicalScopeDIENull(Scope))
       return;
 
-    bool HasNonScopeChildren = false;
+    unsigned ChildScopeCount;
 
     // We create children here when we know the scope DIE is not going to be
     // null and the children will be added to the scope DIE.
-    createScopeChildrenDIE(Scope, Children, &HasNonScopeChildren);
+    createScopeChildrenDIE(Scope, Children, &ChildScopeCount);
+
+    // Skip imported directives in gmlt-like data.
+    if (!includeMinimalInlineScopes()) {
+      // There is no need to emit empty lexical block DIE.
+      for (const auto *IE : ImportedEntities[DS])
+        Children.push_back(
+            constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
+    }
 
     // If there are only other scopes as children, put them directly in the
     // parent instead, as this scope would serve no purpose.
-    if (!HasNonScopeChildren) {
+    if (Children.size() == ChildScopeCount) {
       FinalChildren.insert(FinalChildren.end(),
                            std::make_move_iterator(Children.begin()),
                            std::make_move_iterator(Children.end()));
@@ -491,12 +488,14 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   if (const MachineInstr *DVInsn = DV.getMInsn()) {
     assert(DVInsn->getNumOperands() == 4);
     if (DVInsn->getOperand(0).isReg()) {
-      auto RegOp = DVInsn->getOperand(0);
-      auto Op1 = DVInsn->getOperand(1);
+      const MachineOperand RegOp = DVInsn->getOperand(0);
       // If the second operand is an immediate, this is an indirect value.
-      assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
-      MachineLocation Location(RegOp.getReg(), Op1.isImm());
-      addVariableAddress(DV, *VariableDie, Location);
+      if (DVInsn->getOperand(1).isImm()) {
+        MachineLocation Location(RegOp.getReg(),
+                                 DVInsn->getOperand(1).getImm());
+        addVariableAddress(DV, *VariableDie, Location);
+      } else if (RegOp.getReg())
+        addVariableAddress(DV, *VariableDie, MachineLocation(RegOp.getReg()));
     } else if (DVInsn->getOperand(0).isImm()) {
       // This variable is described by a single constant.
       // Check whether it has a DIExpression.
@@ -558,26 +557,19 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV,
 
 DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
                                               SmallVectorImpl<DIE *> &Children,
-                                              bool *HasNonScopeChildren) {
-  assert(Children.empty());
+                                              unsigned *ChildScopeCount) {
   DIE *ObjectPointer = nullptr;
 
   for (DbgVariable *DV : DU->getScopeVariables().lookup(Scope))
     Children.push_back(constructVariableDIE(*DV, *Scope, ObjectPointer));
 
-  // Skip imported directives in gmlt-like data.
-  if (!includeMinimalInlineScopes()) {
-    // There is no need to emit empty lexical block DIE.
-    for (const auto *IE : ImportedEntities[Scope->getScopeNode()])
-      Children.push_back(
-          constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
-  }
-
-  if (HasNonScopeChildren)
-    *HasNonScopeChildren = !Children.empty();
+  unsigned ChildCountWithoutScopes = Children.size();
 
   for (LexicalScope *LS : Scope->getChildren())
     constructScopeDIE(LS, Children);
+
+  if (ChildScopeCount)
+    *ChildScopeCount = Children.size() - ChildCountWithoutScopes;
 
   return ObjectPointer;
 }
@@ -629,7 +621,6 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
   auto *SP = cast<DISubprogram>(Scope->getScopeNode());
 
   DIE *ContextDIE;
-  DwarfCompileUnit *ContextCU = this;
 
   if (includeMinimalInlineScopes())
     ContextDIE = &getUnitDie();
@@ -640,23 +631,18 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
   else if (auto *SPDecl = SP->getDeclaration()) {
     ContextDIE = &getUnitDie();
     getOrCreateSubprogramDIE(SPDecl);
-  } else {
+  } else
     ContextDIE = getOrCreateContextDIE(resolve(SP->getScope()));
-    // The scope may be shared with a subprogram that has already been
-    // constructed in another CU, in which case we need to construct this
-    // subprogram in the same CU.
-    ContextCU = DD->lookupCU(ContextDIE->getUnitDie());
-  }
 
   // Passing null as the associated node because the abstract definition
   // shouldn't be found by lookup.
-  AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
-  ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
+  AbsDef = &createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
+  applySubprogramAttributesToDefinition(SP, *AbsDef);
 
-  if (!ContextCU->includeMinimalInlineScopes())
-    ContextCU->addUInt(*AbsDef, dwarf::DW_AT_inline, None, dwarf::DW_INL_inlined);
-  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
-    ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
+  if (!includeMinimalInlineScopes())
+    addUInt(*AbsDef, dwarf::DW_AT_inline, None, dwarf::DW_INL_inlined);
+  if (DIE *ObjectPointer = createAndAddScopeChildren(Scope, *AbsDef))
+    addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
 }
 
 DIE *DwarfCompileUnit::constructImportedEntityDIE(
@@ -752,22 +738,10 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   DwarfUnit::emitCommonHeader(UseOffsets, UT);
 }
 
-bool DwarfCompileUnit::hasDwarfPubSections() const {
-  // Opting in to GNU Pubnames/types overrides the default to ensure these are
-  // generated for things like Gold's gdb_index generation.
-  if (CUNode->getGnuPubnames())
-    return true;
-
-  if (DwarfPubSections == Default)
-    return DD->tuneForGDB() && !includeMinimalInlineScopes();
-
-  return DwarfPubSections == Enable;
-}
-
 /// addGlobalName - Add a new global name to the compile unit.
 void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
                                      const DIScope *Context) {
-  if (!hasDwarfPubSections())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   GlobalNames[FullName] = &Die;
@@ -775,7 +749,7 @@ void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
 
 void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
                                                 const DIScope *Context) {
-  if (!hasDwarfPubSections())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   // Insert, allowing the entry to remain as-is if it's already present
@@ -788,7 +762,7 @@ void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
 /// Add a new global type to the unit.
 void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
                                      const DIScope *Context) {
-  if (!hasDwarfPubSections())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   GlobalTypes[FullName] = &Die;
@@ -796,7 +770,7 @@ void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
 
 void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
                                              const DIScope *Context) {
-  if (!hasDwarfPubSections())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   // Insert, allowing the entry to remain as-is if it's already present
@@ -826,7 +800,12 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (Location.isIndirect())
     DwarfExpr.setMemoryLocationKind();
 
-  DIExpressionCursor Cursor({});
+  SmallVector<uint64_t, 8> Ops;
+  if (Location.isIndirect() && Location.getOffset()) {
+    Ops.push_back(dwarf::DW_OP_plus_uconst);
+    Ops.push_back(Location.getOffset());
+  }
+  DIExpressionCursor Cursor(Ops);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
@@ -850,7 +829,13 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
   if (Location.isIndirect())
     DwarfExpr.setMemoryLocationKind();
 
-  DIExpressionCursor Cursor(DIExpr);
+  SmallVector<uint64_t, 8> Ops;
+  if (Location.isIndirect() && Location.getOffset()) {
+    Ops.push_back(dwarf::DW_OP_plus_uconst);
+    Ops.push_back(Location.getOffset());
+  }
+  Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+  DIExpressionCursor Cursor(Ops);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;

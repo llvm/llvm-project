@@ -1,11 +1,12 @@
-; RUN: llc -disable-fp-elim -O0 -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -disable-fp-elim -O0 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s
 ; Test that a variable with multiple entries in the MMI table makes it into the
 ; debug info.
 ;
 ; CHECK: DW_TAG_inlined_subroutine
 ; CHECK:    "_Z3f111A"
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location [DW_FORM_block1]    (DW_OP_piece 0x1, DW_OP_fbreg -47, DW_OP_piece 0xf, DW_OP_piece 0x1, DW_OP_fbreg -54, DW_OP_piece 0x7)
+; CHECK: DW_AT_location [DW_FORM_block1]    (<0x0c> 93 01 91 51 93 0f 93 01 91 4a 93 07 )
+;  -- piece 0x00000001, fbreg -47, piece 0x0000000f, piece 0x00000001, fbreg -54, piece 0x00000007 ------^
 ; CHECK: DW_AT_abstract_origin {{.*}} "p1"
 ;
 ; long a;
@@ -93,12 +94,12 @@ entry:
   tail call void @llvm.dbg.declare(metadata [7 x i8]* %agg.tmp.sroa.4, metadata !56, metadata !77), !dbg !75
   tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !72, metadata !37), !dbg !78
   %0 = load i64, i64* @a, align 8, !dbg !79, !tbaa !40
-  tail call void @llvm.dbg.value(metadata %struct.B* %d, metadata !73, metadata !37), !dbg !80
+  tail call void @llvm.dbg.value(metadata %struct.B* %d, i64 0, metadata !73, metadata !37), !dbg !80
   %call = call %struct.B* @_ZN1BC1El(%struct.B* %d, i64 %0), !dbg !80
-  call void @llvm.dbg.value(metadata i8 1, metadata !72, metadata !81), !dbg !78
-  call void @llvm.dbg.value(metadata i8 1, metadata !72, metadata !82), !dbg !78
-  call void @llvm.dbg.value(metadata i8 1, metadata !56, metadata !81), !dbg !75
-  call void @llvm.dbg.value(metadata i8 1, metadata !56, metadata !82), !dbg !75
+  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !72, metadata !81), !dbg !78
+  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !72, metadata !82), !dbg !78
+  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !56, metadata !81), !dbg !75
+  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !56, metadata !82), !dbg !75
   call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !56, metadata !37), !dbg !75
   %1 = getelementptr inbounds %struct.A, %struct.A* %agg.tmp.i.i, i64 0, i32 0, !dbg !83
   call void @llvm.lifetime.start(i64 24, i8* %1), !dbg !83
@@ -122,14 +123,14 @@ call.i.i.noexc:                                   ; preds = %entry
 
 invoke.cont:                                      ; preds = %call.i.i.noexc
   call void @llvm.lifetime.end(i64 24, i8* %1), !dbg !91
-  call void @llvm.dbg.value(metadata %struct.B* %d, metadata !73, metadata !37), !dbg !80
+  call void @llvm.dbg.value(metadata %struct.B* %d, i64 0, metadata !73, metadata !37), !dbg !80
   %call1 = call %struct.B* @_ZN1BD1Ev(%struct.B* %d) #3, !dbg !92
   ret void, !dbg !92
 
 lpad:                                             ; preds = %call.i.i.noexc, %entry
   %3 = landingpad { i8*, i32 }
           cleanup, !dbg !92
-  call void @llvm.dbg.value(metadata %struct.B* %d, metadata !73, metadata !37), !dbg !80
+  call void @llvm.dbg.value(metadata %struct.B* %d, i64 0, metadata !73, metadata !37), !dbg !80
   %call2 = call %struct.B* @_ZN1BD1Ev(%struct.B* %d) #3, !dbg !92
   resume { i8*, i32 } %3, !dbg !92
 }
@@ -142,7 +143,7 @@ declare i32 @__gxx_personality_v0(...)
 declare %struct.B* @_ZN1BD1Ev(%struct.B*) #3
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start(i64, i8* nocapture) #2
@@ -160,11 +161,11 @@ attributes #4 = { builtin }
 !llvm.module.flags = !{!29, !30}
 !llvm.ident = !{!31}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "test.cpp", directory: "")
 !3 = !DIBasicType(name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)
-!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+!4 = !DIGlobalVariableExpression(var: !5)
 !5 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 7, type: !6, isLocal: false, isDefinition: true)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64)
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

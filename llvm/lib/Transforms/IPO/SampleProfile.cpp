@@ -423,7 +423,6 @@ unsigned SampleProfileLoader::getOffset(const DILocation *DIL) const {
          0xffff;
 }
 
-#ifndef NDEBUG
 /// \brief Print the weight of edge \p E on stream \p OS.
 ///
 /// \param OS  Stream to emit the output to.
@@ -454,7 +453,6 @@ void SampleProfileLoader::printBlockWeight(raw_ostream &OS,
   uint64_t W = (I == BlockWeights.end() ? 0 : I->second);
   OS << "weight[" << BB->getName() << "]: " << W << "\n";
 }
-#endif
 
 /// \brief Get the weight for an instruction.
 ///

@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-line - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-dump=line - | FileCheck %s
 ; RUN: %llc_dwarf < %s -filetype=asm | FileCheck --check-prefix=ASM %s
 
 ; If multiple line tables are emitted, one per CU, those line tables can
@@ -8,14 +8,12 @@
 ; to refer to it.
 
 ; CHECK: .debug_line contents:
-; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NOT: include_directories
 ; CHECK: file_names[   1]   0 {{.*}} a.cpp
 ; CHECK-NOT: file_names
 
-; CHECK: debug_line[{{.*}}]
-; CHECK-NEXT: Line table prologue:
+; CHECK: Line table prologue:
 ; CHECK-NOT: include_directories
 ; CHECK: file_names[   1]   0 {{.*}} b.cpp
 ; CHECK-NOT: file_names

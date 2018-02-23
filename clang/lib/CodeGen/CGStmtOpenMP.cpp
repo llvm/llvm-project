@@ -246,12 +246,12 @@ namespace {
     const CapturedStmt *S = nullptr;
     /// true if cast to/from  UIntPtr is required for variables captured by
     /// value.
-    const bool UIntPtrCastRequired = true;
-    /// true if only casted arguments must be registered as local args or VLA
+    bool UIntPtrCastRequired = true;
+    /// true if only casted argumefnts must be registered as local args or VLA
     /// sizes.
-    const bool RegisterCastedArgsOnly = false;
+    bool RegisterCastedArgsOnly = false;
     /// Name of the generated function.
-    const StringRef FunctionName;
+    StringRef FunctionName;
     explicit FunctionOptions(const CapturedStmt *S, bool UIntPtrCastRequired,
                              bool RegisterCastedArgsOnly,
                              StringRef FunctionName)
@@ -261,9 +261,9 @@ namespace {
   };
 }
 
-static llvm::Function *emitOutlinedFunctionPrologue(
+static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
     CodeGenFunction &CGF, FunctionArgList &Args,
-    llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>>
+    llvm::DenseMap<const Decl *, std::pair<const VarDecl *, Address>>
         &LocalAddrs,
     llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>>
         &VLASizes,
@@ -276,12 +276,9 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   // Build the argument list.
   CodeGenModule &CGM = CGF.CGM;
   ASTContext &Ctx = CGM.getContext();
-  FunctionArgList TargetArgs;
+  bool HasUIntPtrArgs = false;
   Args.append(CD->param_begin(),
               std::next(CD->param_begin(), CD->getContextParamPosition()));
-  TargetArgs.append(
-      CD->param_begin(),
-      std::next(CD->param_begin(), CD->getContextParamPosition()));
   auto I = FO.S->captures().begin();
   for (auto *FD : RD->fields()) {
     QualType ArgType = FD->getType();
@@ -295,6 +292,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     // outlined function.
     if ((I->capturesVariableByCopy() && !ArgType->isAnyPointerType()) ||
         I->capturesVariableArrayType()) {
+      HasUIntPtrArgs = true;
       if (FO.UIntPtrCastRequired)
         ArgType = Ctx.getUIntPtrType();
     }
@@ -310,28 +308,19 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     }
     if (ArgType->isVariablyModifiedType())
       ArgType = getCanonicalParamType(Ctx, ArgType.getNonReferenceType());
-    auto *Arg =
-        ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(), II,
-                                  ArgType, ImplicitParamDecl::Other);
-    Args.emplace_back(Arg);
-    // Do not cast arguments if we emit function with non-original types.
-    TargetArgs.emplace_back(
-        FO.UIntPtrCastRequired
-            ? Arg
-            : CGM.getOpenMPRuntime().translateParameter(FD, Arg));
+    Args.push_back(ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr,
+                                             FD->getLocation(), II, ArgType,
+                                             ImplicitParamDecl::Other));
     ++I;
   }
   Args.append(
-      std::next(CD->param_begin(), CD->getContextParamPosition() + 1),
-      CD->param_end());
-  TargetArgs.append(
       std::next(CD->param_begin(), CD->getContextParamPosition() + 1),
       CD->param_end());
 
   // Create the function declaration.
   FunctionType::ExtInfo ExtInfo;
   const CGFunctionInfo &FuncInfo =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, TargetArgs);
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);
 
   llvm::Function *F =
@@ -339,26 +328,19 @@ static llvm::Function *emitOutlinedFunctionPrologue(
                              FO.FunctionName, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
-    F->setDoesNotThrow();
+    F->addFnAttr(llvm::Attribute::NoUnwind);
 
   // Generate the function.
-  CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, TargetArgs, CD->getLocation(),
+  CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, CD->getLocation(),
                     CD->getBody()->getLocStart());
   unsigned Cnt = CD->getContextParamPosition();
   I = FO.S->captures().begin();
   for (auto *FD : RD->fields()) {
-    // Do not map arguments if we emit function with non-original types.
-    Address LocalAddr(Address::invalid());
-    if (!FO.UIntPtrCastRequired && Args[Cnt] != TargetArgs[Cnt]) {
-      LocalAddr = CGM.getOpenMPRuntime().getParameterAddress(CGF, Args[Cnt],
-                                                             TargetArgs[Cnt]);
-    } else {
-      LocalAddr = CGF.GetAddrOfLocalVar(Args[Cnt]);
-    }
     // If we are capturing a pointer by copy we don't need to do anything, just
     // use the value that we get from the arguments.
     if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
       const VarDecl *CurVD = I->getCapturedVar();
+      Address LocalAddr = CGF.GetAddrOfLocalVar(Args[Cnt]);
       // If the variable is a reference we need to materialize it here.
       if (CurVD->getType()->isReferenceType()) {
         Address RefAddr = CGF.CreateMemTemp(
@@ -375,8 +357,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     }
 
     LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-    LValue ArgLVal =
-        CGF.MakeAddrLValue(LocalAddr, Args[Cnt]->getType(), BaseInfo);
+    LValue ArgLVal = CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(Args[Cnt]),
+                                        Args[Cnt]->getType(), BaseInfo);
     if (FD->hasCapturedVLAType()) {
       if (FO.UIntPtrCastRequired) {
         ArgLVal = CGF.MakeAddrLValue(castValueFromUintptr(CGF, FD->getType(),
@@ -430,7 +412,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     ++I;
   }
 
-  return F;
+  return {F, HasUIntPtrArgs};
 }
 
 llvm::Function *
@@ -444,17 +426,14 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
       getDebugInfo() &&
       CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo;
   FunctionArgList Args;
-  llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
+  llvm::DenseMap<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << CapturedStmtInfo->getHelperName();
-  if (NeedWrapperFunction)
-    Out << "_debug__";
   FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,
-                     Out.str());
-  llvm::Function *F = emitOutlinedFunctionPrologue(*this, Args, LocalAddrs,
-                                                   VLASizes, CXXThisValue, FO);
+                     CapturedStmtInfo->getHelperName());
+  llvm::Function *F;
+  bool HasUIntPtrArgs;
+  std::tie(F, HasUIntPtrArgs) = emitOutlinedFunctionPrologue(
+      *this, Args, LocalAddrs, VLASizes, CXXThisValue, FO);
   for (const auto &LocalAddrPair : LocalAddrs) {
     if (LocalAddrPair.second.first) {
       setAddrOfLocalVar(LocalAddrPair.second.first,
@@ -466,19 +445,20 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   FinishFunction(CD->getBodyRBrace());
-  if (!NeedWrapperFunction)
+  if (!NeedWrapperFunction || !HasUIntPtrArgs)
     return F;
 
   FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
                             /*RegisterCastedArgsOnly=*/true,
-                            CapturedStmtInfo->getHelperName());
+                            ".nondebug_wrapper.");
   CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
+  WrapperCGF.disableDebugInfo();
   Args.clear();
   LocalAddrs.clear();
   VLASizes.clear();
   llvm::Function *WrapperF =
       emitOutlinedFunctionPrologue(WrapperCGF, Args, LocalAddrs, VLASizes,
-                                   WrapperCGF.CXXThisValue, WrapperFO);
+                                   WrapperCGF.CXXThisValue, WrapperFO).first;
   LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
   llvm::SmallVector<llvm::Value *, 4> CallArgs;
   for (const auto *Arg : Args) {
@@ -500,8 +480,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     }
     CallArgs.emplace_back(CallArg);
   }
-  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, S.getLocStart(),
-                                                  F, CallArgs);
+  WrapperCGF.Builder.CreateCall(F, CallArgs);
   WrapperCGF.FinishFunction();
   return WrapperF;
 }
@@ -1231,14 +1210,12 @@ void CodeGenFunction::EmitOMPInnerLoop(
   EmitBlock(LoopExit.getBlock());
 }
 
-bool CodeGenFunction::EmitOMPLinearClauseInit(const OMPLoopDirective &D) {
+void CodeGenFunction::EmitOMPLinearClauseInit(const OMPLoopDirective &D) {
   if (!HaveInsertPoint())
-    return false;
+    return;
   // Emit inits for the linear variables.
-  bool HasLinears = false;
   for (const auto *C : D.getClausesOfKind<OMPLinearClause>()) {
     for (auto *Init : C->inits()) {
-      HasLinears = true;
       auto *VD = cast<VarDecl>(cast<DeclRefExpr>(Init)->getDecl());
       if (auto *Ref = dyn_cast<DeclRefExpr>(VD->getInit()->IgnoreImpCasts())) {
         AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
@@ -1263,7 +1240,6 @@ bool CodeGenFunction::EmitOMPLinearClauseInit(const OMPLoopDirective &D) {
         EmitIgnoredExpr(CS);
       }
   }
-  return HasLinears;
 }
 
 void CodeGenFunction::EmitOMPLinearClauseFinal(
@@ -1553,7 +1529,7 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
     CGF.EmitOMPSimdInit(S);
 
     emitAlignedClause(CGF, S);
-    (void)CGF.EmitOMPLinearClauseInit(S);
+    CGF.EmitOMPLinearClauseInit(S);
     {
       OMPPrivateScope LoopScope(CGF);
       CGF.EmitOMPPrivateLoopCounters(S, LoopScope);
@@ -2171,7 +2147,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
 
     llvm::DenseSet<const Expr *> EmittedFinals;
     emitAlignedClause(*this, S);
-    bool HasLinears = EmitOMPLinearClauseInit(S);
+    EmitOMPLinearClauseInit(S);
     // Emit helper vars inits.
 
     std::pair<LValue, LValue> Bounds = CodeGenLoopBounds(*this, S);
@@ -2185,7 +2161,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     // Emit 'then' code.
     {
       OMPPrivateScope LoopScope(*this);
-      if (EmitOMPFirstprivateClause(S, LoopScope) || HasLinears) {
+      if (EmitOMPFirstprivateClause(S, LoopScope)) {
         // Emit implicit barrier to synchronize threads and avoid data races on
         // initialization of firstprivate variables and post-update of
         // lastprivate variables.
@@ -2752,7 +2728,6 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
     OMPPrivateScope Scope(CGF);
     if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
         !Data.LastprivateVars.empty()) {
-      enum { PrivatesParam = 2, CopyFnParam = 3 };
       auto *CopyFn = CGF.Builder.CreateLoad(
           CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(3)));
       auto *PrivatesPtr = CGF.Builder.CreateLoad(
@@ -2784,8 +2759,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
         PrivatePtrs.push_back(std::make_pair(VD, PrivatePtr));
         CallArgs.push_back(PrivatePtr.getPointer());
       }
-      CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, S.getLocStart(),
-                                                          CopyFn, CallArgs);
+      CGF.EmitRuntimeCall(CopyFn, CallArgs);
       for (auto &&Pair : LastprivateDstsOrigs) {
         auto *OrigVD = cast<VarDecl>(Pair.second->getDecl());
         DeclRefExpr DRE(
@@ -3096,8 +3070,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
       llvm::SmallVector<llvm::Value *, 16> CapturedVars;
       CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
       auto *OutlinedFn = emitOutlinedOrderedFunction(CGM, CS);
-      CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, S.getLocStart(),
-                                                      OutlinedFn, CapturedVars);
+      CGF.EmitNounwindRuntimeCall(OutlinedFn, CapturedVars);
     } else {
       Action.Enter(CGF);
       CGF.EmitStmt(

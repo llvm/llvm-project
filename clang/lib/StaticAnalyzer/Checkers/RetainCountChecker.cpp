@@ -462,7 +462,6 @@ private:
   ArgEffect getDefaultArgEffect() const { return DefaultArgEffect; }
 
   friend class RetainSummaryManager;
-  friend class RetainCountChecker;
 };
 } // end anonymous namespace
 
@@ -1062,7 +1061,6 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
 
     // Inspect the result type.
     QualType RetTy = FT->getReturnType();
-    std::string RetTyName = RetTy.getAsString();
 
     // FIXME: This should all be refactored into a chain of "summary lookup"
     //  filters.
@@ -1082,14 +1080,12 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       AllowAnnotations = false;
     } else if (FName == "CFPlugInInstanceCreate") {
       S = getPersistentSummary(RetEffect::MakeNoRet());
-    } else if (FName == "IORegistryEntrySearchCFProperty"
-        || (RetTyName == "CFMutableDictionaryRef" && (
-               FName == "IOBSDNameMatching" ||
+    } else if (FName == "IOBSDNameMatching" ||
                FName == "IOServiceMatching" ||
                FName == "IOServiceNameMatching" ||
+               FName == "IORegistryEntrySearchCFProperty" ||
                FName == "IORegistryEntryIDMatching" ||
-               FName == "IOOpenFirmwarePathMatching"
-            ))) {
+               FName == "IOOpenFirmwarePathMatching") {
       // Part of <rdar://problem/6961230>. (IOKit)
       // This should be addressed using a API table.
       S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
@@ -1170,11 +1166,6 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       if (cocoa::isRefType(RetTy, "CF", FName)) {
         if (isRetain(FD, FName)) {
           S = getUnarySummary(FT, cfretain);
-          // CFRetain isn't supposed to be annotated. However, this may as well
-          // be a user-made "safe" CFRetain function that is incorrectly
-          // annotated as cf_returns_retained due to lack of better options.
-          // We want to ignore such annotation.
-          AllowAnnotations = false;
         } else if (isAutorelease(FD, FName)) {
           S = getUnarySummary(FT, cfautorelease);
           // The headers use cf_consumed, but we can fully model CFAutorelease
@@ -1201,10 +1192,10 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
         break;
       }
 
-      // For all other CF-style types, use the Create/Get
-      // rule for summaries but don't support Retain functions
-      // with framework-specific prefixes.
-      if (coreFoundation::isCFObjectRef(RetTy)) {
+      // For the Disk Arbitration API (DiskArbitration/DADisk.h)
+      if (cocoa::isRefType(RetTy, "DADisk") ||
+          cocoa::isRefType(RetTy, "DADissenter") ||
+          cocoa::isRefType(RetTy, "DASessionRef")) {
         S = getCFCreateGetRuleSummary(FD);
         break;
       }
@@ -1219,8 +1210,7 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
 
     // Check for release functions, the only kind of functions that we care
     // about that don't return a pointer type.
-    if (FName.size() >= 2 &&
-        FName[0] == 'C' && (FName[1] == 'F' || FName[1] == 'G')) {
+    if (FName[0] == 'C' && (FName[1] == 'F' || FName[1] == 'G')) {
       // Test for 'CGCF'.
       FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
 
@@ -1329,13 +1319,6 @@ static bool isTrustedReferenceCountImplementation(const FunctionDecl *FD) {
   return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
 }
 
-static bool isGeneralizedObjectRef(QualType Ty) {
-  if (Ty.getAsString().substr(0, 4) == "isl_")
-    return true;
-  else
-    return false;
-}
-
 //===----------------------------------------------------------------------===//
 // Summary creation for Selectors.
 //===----------------------------------------------------------------------===//
@@ -1357,8 +1340,6 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 
   if (D->hasAttr<CFReturnsRetainedAttr>())
     return RetEffect::MakeOwned(RetEffect::CF);
-  else if (hasRCAnnotation(D, "rc_ownership_returns_retained"))
-    return RetEffect::MakeOwned(RetEffect::Generalized);
 
   if (D->hasAttr<CFReturnsNotRetainedAttr>())
     return RetEffect::MakeNotOwned(RetEffect::CF);
@@ -1382,11 +1363,9 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     const ParmVarDecl *pd = *pi;
     if (pd->hasAttr<NSConsumedAttr>())
       Template->addArg(AF, parm_idx, DecRefMsg);
-    else if (pd->hasAttr<CFConsumedAttr>() ||
-             hasRCAnnotation(pd, "rc_ownership_consumed"))
+    else if (pd->hasAttr<CFConsumedAttr>())
       Template->addArg(AF, parm_idx, DecRef);
-    else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
-             hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
+    else if (pd->hasAttr<CFReturnsRetainedAttr>()) {
       QualType PointeeTy = pd->getType()->getPointeeType();
       if (!PointeeTy.isNull())
         if (coreFoundation::isCFObjectRef(PointeeTy))
@@ -1865,15 +1844,6 @@ namespace {
 
   class CFRefLeakReport : public CFRefReport {
     const MemRegion* AllocBinding;
-    const Stmt *AllocStmt;
-
-    // Finds the function declaration where a leak warning for the parameter 'sym' should be raised.
-    void deriveParamLocation(CheckerContext &Ctx, SymbolRef sym);
-    // Finds the location where a leak warning for 'sym' should be raised.
-    void deriveAllocLocation(CheckerContext &Ctx, SymbolRef sym);
-    // Produces description of a leak warning which is printed on the console.
-    void createDescription(CheckerContext &Ctx, bool GCEnabled, bool IncludeAllocationLine);
-
   public:
     CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts, bool GCEnabled,
                     const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
@@ -2029,15 +1999,17 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
       }
 
       if (CurrV.getObjKind() == RetEffect::CF) {
-        os << " returns a Core Foundation object of type "
-           << Sym->getType().getAsString() << " with a ";
-      } else if (CurrV.getObjKind() == RetEffect::Generalized) {
-        os << " returns an object of type " << Sym->getType().getAsString()
-           << " with a ";
-      } else {
+        if (Sym->getType().isNull()) {
+          os << " returns a Core Foundation object with a ";
+        } else {
+          os << " returns a Core Foundation object of type "
+             << Sym->getType().getAsString() << " with a ";
+        }
+      }
+      else {
         assert (CurrV.getObjKind() == RetEffect::ObjC);
         QualType T = Sym->getType();
-        if (!isa<ObjCObjectPointerType>(T)) {
+        if (T.isNull() || !isa<ObjCObjectPointerType>(T)) {
           os << " returns an Objective-C object with a ";
         } else {
           const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
@@ -2453,25 +2425,13 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   return llvm::make_unique<PathDiagnosticEventPiece>(L, os.str());
 }
 
-void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
-  const SourceManager& SMgr = Ctx.getSourceManager();
+CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
+                                 bool GCEnabled, const SummaryLogTy &Log,
+                                 ExplodedNode *n, SymbolRef sym,
+                                 CheckerContext &Ctx,
+                                 bool IncludeAllocationLine)
+  : CFRefReport(D, LOpts, GCEnabled, Log, n, sym, false) {
 
-  if (!sym->getOriginRegion())
-    return;
-
-  auto *Region = dyn_cast<DeclRegion>(sym->getOriginRegion());
-  if (Region) {
-    const Decl *PDecl = Region->getDecl();
-    if (PDecl && isa<ParmVarDecl>(PDecl)) {
-      PathDiagnosticLocation ParamLocation = PathDiagnosticLocation::create(PDecl, SMgr);
-      Location = ParamLocation;
-      UniqueingLocation = ParamLocation;
-      UniqueingDecl = Ctx.getLocationContext()->getDecl();
-    }
-  }
-}
-
-void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   // Most bug reports are cached at the location where they occurred.
   // With leaks, we want to unique them by the location where they were
   // allocated, and only report a single path.  To do this, we need to find
@@ -2495,12 +2455,8 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   // FIXME: This will crash the analyzer if an allocation comes from an
   // implicit call (ex: a destructor call).
   // (Currently there are no such allocations in Cocoa, though.)
-  AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
-
-  if (!AllocStmt) {
-    AllocBinding = nullptr;
-    return;
-  }
+  const Stmt *AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  assert(AllocStmt && "Cannot find allocation statement");
 
   PathDiagnosticLocation AllocLocation =
     PathDiagnosticLocation::createBegin(AllocStmt, SMgr,
@@ -2511,10 +2467,8 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   // leaks should be uniqued on the allocation site.
   UniqueingLocation = AllocLocation;
   UniqueingDecl = AllocNode->getLocationContext()->getDecl();
-}
 
-void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled, bool IncludeAllocationLine) {
-  assert(Location.isValid() && UniqueingDecl && UniqueingLocation.isValid());
+  // Fill in the description of the bug.
   Description.clear();
   llvm::raw_string_ostream os(Description);
   os << "Potential leak ";
@@ -2529,20 +2483,6 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled, boo
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";
     }
   }
-}
-
-CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
-                                 bool GCEnabled, const SummaryLogTy &Log,
-                                 ExplodedNode *n, SymbolRef sym,
-                                 CheckerContext &Ctx,
-                                 bool IncludeAllocationLine)
-  : CFRefReport(D, LOpts, GCEnabled, Log, n, sym, false) {
-
-  deriveAllocLocation(Ctx, sym);
-  if (!AllocBinding)
-    deriveParamLocation(Ctx, sym);
-
-  createDescription(Ctx, GCEnabled, IncludeAllocationLine);
 
   addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym, GCEnabled, Log));
 }
@@ -2556,7 +2496,6 @@ class RetainCountChecker
   : public Checker< check::Bind,
                     check::DeadSymbols,
                     check::EndAnalysis,
-                    check::BeginFunction,
                     check::EndFunction,
                     check::PostStmt<BlockExpr>,
                     check::PostStmt<CastExpr>,
@@ -2741,7 +2680,6 @@ public:
                                 SymbolRef Sym, ProgramStateRef state) const;
 
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
-  void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(CheckerContext &C) const;
 
   ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym,
@@ -3961,36 +3899,6 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
   }
 
   return N;
-}
-
-void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
-  if (!Ctx.inTopFrame())
-    return;
-
-  const LocationContext *LCtx = Ctx.getLocationContext();
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(LCtx->getDecl());
-
-  if (!FD || isTrustedReferenceCountImplementation(FD))
-    return;
-
-  ProgramStateRef state = Ctx.getState();
-
-  const RetainSummary *FunctionSummary = getSummaryManager(Ctx).getFunctionSummary(FD);
-  ArgEffects CalleeSideArgEffects = FunctionSummary->getArgEffects();
-
-  for (unsigned idx = 0, e = FD->getNumParams(); idx != e; ++idx) {
-    const ParmVarDecl *Param = FD->getParamDecl(idx);
-    SymbolRef Sym = state->getSVal(state->getRegion(Param, LCtx)).getAsSymbol();
-
-    QualType Ty = Param->getType();
-    const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
-    if (AE && *AE == DecRef && isGeneralizedObjectRef(Ty))
-      state = setRefBinding(state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
-    else if (isGeneralizedObjectRef(Ty))
-      state = setRefBinding(state, Sym, RefVal::makeNotOwned(RetEffect::ObjKind::Generalized, Ty));
-  }
-
-  Ctx.addTransition(state);
 }
 
 void RetainCountChecker::checkEndFunction(CheckerContext &Ctx) const {

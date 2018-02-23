@@ -1,18 +1,18 @@
 ; RUN: llc -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-4
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SINGLE-4
 
 ; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPLIT-4
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SPLIT-4
 
 ; RUN: llc -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SINGLE-5
 
 ; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPLIT-5
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SPLIT-5
 
 ; Looking for DWARF headers to be generated correctly.
 ; There are 7 variants: v4 CU, v4 TU, v5 (normal/skeleton/split) CU,
@@ -94,7 +94,7 @@ target triple = "x86_64-unknown-linux-gnu"
 !llvm.module.flags = !{!10, !11}
 !llvm.ident = !{!12}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = distinct !DIGlobalVariable(name: "s", scope: !2, file: !3, line: 5, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 5.0.0 (trunk 295942)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "t.cpp", directory: "/home/probinson/projects/scratch")

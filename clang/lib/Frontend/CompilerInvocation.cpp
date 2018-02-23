@@ -798,7 +798,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
   Opts.SanitizeMemoryUseAfterDtor =
       Args.hasArg(OPT_fsanitize_memory_use_after_dtor);
-  Opts.SanitizeMinimalRuntime = Args.hasArg(OPT_fsanitize_minimal_runtime);
   Opts.SanitizeCfiCrossDso = Args.hasArg(OPT_fsanitize_cfi_cross_dso);
   Opts.SanitizeStats = Args.hasArg(OPT_fsanitize_stats);
   if (Arg *A = Args.getLastArg(OPT_fsanitize_address_use_after_scope,
@@ -1145,6 +1144,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
 static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
   Opts.WorkingDir = Args.getLastArgValue(OPT_working_directory);
+  Opts.APINotesCachePath = Args.getLastArgValue(OPT_fapinotes_cache_path);
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -2669,6 +2669,13 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                   Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
+
+    // -fapinotes and -fapinotes-modules requires -fapinotes-cache-path=<directory>.
+    if ((LangOpts.APINotes || LangOpts.APINotesModules) &&
+        Res.getFileSystemOpts().APINotesCachePath.empty()) {
+      Diags.Report(diag::err_no_apinotes_cache_path);
+      Success = false;
+    }
   }
 
   if (LangOpts.CUDA) {
@@ -2698,10 +2705,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                         Res.getFrontendOpts().ProgramAction);
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
-
-  if (!Res.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
-      Res.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
-    LangOpts.NeededByPCHOrCompilationUsesPCH = true;
 
   // Turn on -Wspir-compat for SPIR target.
   llvm::Triple T(Res.getTargetOpts().Triple);

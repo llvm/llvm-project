@@ -124,14 +124,8 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->hasFP(MF) || TT.isOSDarwin())
     markSuperRegs(Reserved, AArch64::W29);
 
-  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-  if (STI.isX18Reserved())
+  if (MF.getSubtarget<AArch64Subtarget>().isX18Reserved())
     markSuperRegs(Reserved, AArch64::W18); // Platform register
-  if (STI.limit16FPRegs()) {
-    assert((AArch64::B31 == AArch64::B16+15) && "consecutive reg numbers");
-    for (unsigned Reg = AArch64::B16; Reg <= AArch64::B31; ++Reg)
-      markSuperRegs(Reserved, Reg);
-  }
 
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, AArch64::W19);
@@ -230,9 +224,6 @@ bool AArch64RegisterInfo::requiresVirtualBaseRegisters(
 bool
 AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  // See also AArch64FrameLowering::hasFP().
-  if (MFI.getMaxCallFrameSize() > 255)
-    return true;
   // AArch64FrameLowering::resolveFrameIndexReference() can always fall back
   // to the stack pointer, so only put the emergency spill slot next to the
   // FP when there's no better way to access it (SP or base pointer).

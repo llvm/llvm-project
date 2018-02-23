@@ -299,6 +299,13 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   return MadeChange;
 }
 
+static unsigned getStoreSizeInBytes(StoreInst *SI, const DataLayout *DL) {
+  uint64_t SizeInBits = DL->getTypeSizeInBits(SI->getValueOperand()->getType());
+  assert(((SizeInBits & 7) || (SizeInBits >> 32) == 0) &&
+         "Don't overflow unsigned.");
+  return (unsigned)SizeInBits >> 3;
+}
+
 static APInt getStoreStride(const SCEVAddRecExpr *StoreEv) {
   const SCEVConstant *ConstStride = cast<SCEVConstant>(StoreEv->getOperand(1));
   return ConstStride->getAPInt();
@@ -417,7 +424,7 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     // Check to see if the stride matches the size of the store.  If so, then we
     // know that every byte is touched in the loop.
     APInt Stride = getStoreStride(StoreEv);
-    unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
+    unsigned StoreSize = getStoreSizeInBytes(SI, DL);
     if (StoreSize != Stride && StoreSize != -Stride)
       return LegalStoreKind::None;
 
@@ -556,7 +563,7 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     const SCEVAddRecExpr *FirstStoreEv =
         cast<SCEVAddRecExpr>(SE->getSCEV(FirstStorePtr));
     APInt FirstStride = getStoreStride(FirstStoreEv);
-    unsigned FirstStoreSize = DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
+    unsigned FirstStoreSize = getStoreSizeInBytes(SL[i], DL);
 
     // See if we can optimize just this store in isolation.
     if (FirstStride == FirstStoreSize || -FirstStride == FirstStoreSize) {
@@ -649,7 +656,7 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
         break;
       AdjacentStores.insert(I);
 
-      StoreSize += DL->getTypeStoreSize(I->getValueOperand()->getType());
+      StoreSize += getStoreSizeInBytes(I, DL);
       // Move to the next value in the chain.
       I = ConsecutiveChain[I];
     }
@@ -896,7 +903,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   Value *StorePtr = SI->getPointerOperand();
   const SCEVAddRecExpr *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
   APInt Stride = getStoreStride(StoreEv);
-  unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
+  unsigned StoreSize = getStoreSizeInBytes(SI, DL);
   bool NegStride = StoreSize == -Stride;
 
   // The store must be feeding a non-volatile load.

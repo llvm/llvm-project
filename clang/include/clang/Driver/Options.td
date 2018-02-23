@@ -595,9 +595,7 @@ def fapple_kext : Flag<["-"], "fapple-kext">, Group<f_Group>, Flags<[CC1Option]>
   HelpText<"Use Apple's kernel extensions ABI">;
 def fapple_pragma_pack : Flag<["-"], "fapple-pragma-pack">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable Apple gcc-compatible #pragma pack handling">;
-def shared_libsan : Flag<["-"], "shared-libsan">;
-def static_libsan : Flag<["-"], "static-libsan">;
-def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
+def shared_libasan : Flag<["-"], "shared-libasan">;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 def fasm_blocks : Flag<["-"], "fasm-blocks">, Group<f_Group>, Flags<[CC1Option]>;
@@ -703,8 +701,8 @@ def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
 def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Group>,
   Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
-  Group<i_Group>, Flags<[DriverOption]>, MetaVarName<"<directory>">,
-  HelpText<"Does nothing; API notes are no longer cached separately from modules">;
+  Group<i_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
+  HelpText<"Specify the API notes cache path">;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
@@ -889,10 +887,6 @@ def fsanitize_undefined_trap_on_error : Flag<["-"], "fsanitize-undefined-trap-on
                                         Group<f_clang_Group>;
 def fno_sanitize_undefined_trap_on_error : Flag<["-"], "fno-sanitize-undefined-trap-on-error">,
                                            Group<f_clang_Group>;
-def fsanitize_minimal_runtime : Flag<["-"], "fsanitize-minimal-runtime">,
-                                        Group<f_clang_Group>;
-def fno_sanitize_minimal_runtime : Flag<["-"], "fno-sanitize-minimal-runtime">,
-                                        Group<f_clang_Group>;
 def fsanitize_link_cxx_runtime : Flag<["-"], "fsanitize-link-c++-runtime">,
                                  Group<f_clang_Group>;
 def fsanitize_cfi_cross_dso : Flag<["-"], "fsanitize-cfi-cross-dso">,
@@ -1865,9 +1859,6 @@ def mno_fix_cortex_a53_835769 : Flag<["-"], "mno-fix-cortex-a53-835769">,
   HelpText<"Don't workaround Cortex-A53 erratum 835769 (AArch64 only)">;
 def ffixed_x18 : Flag<["-"], "ffixed-x18">, Group<m_aarch64_Features_Group>,
   HelpText<"Reserve the x18 register (AArch64 only)">;
-def mlimit_16_fpregs : Flag<["-"], "mlimit-16-fpregs">,
-  Group<m_aarch64_Features_Group>,
-  HelpText<"Only use first 16 floatingpoint registers">;
 
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
@@ -2161,7 +2152,6 @@ def nostdlibinc : Flag<["-"], "nostdlibinc">;
 def nostdincxx : Flag<["-"], "nostdinc++">, Flags<[CC1Option]>,
   HelpText<"Disable standard #include directories for the C++ standard library">;
 def nostdlib : Flag<["-"], "nostdlib">;
-def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
 def o : JoinedOrSeparate<["-"], "o">, Flags<[DriverOption, RenderAsInput, CC1Option, CC1AsOption]>,
   HelpText<"Write output to <file>">, MetaVarName<"<file>">;
@@ -2452,11 +2442,6 @@ def mhexagon_hvx_double : Flag<["-"], "mhvx-double">, Group<m_hexagon_Features_G
     Flags<[CC1Option]>, HelpText<"Enable Hexagon Double Vector eXtensions">;
 def mno_hexagon_hvx_double : Flag<["-"], "mno-hvx-double">, Group<m_hexagon_Features_Group>,
     Flags<[CC1Option]>, HelpText<"Disable Hexagon Double Vector eXtensions">;
-
-def mretpoline : Flag<["-"], "mretpoline">, Group<m_x86_Features_Group>;
-def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_x86_Features_Group>;
-def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<m_x86_Features_Group>;
-def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag

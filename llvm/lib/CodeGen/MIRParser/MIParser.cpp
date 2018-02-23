@@ -39,7 +39,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -210,11 +209,9 @@ public:
   bool parseJumpTableIndexOperand(MachineOperand &Dest);
   bool parseExternalSymbolOperand(MachineOperand &Dest);
   bool parseMDNode(MDNode *&Node);
-  bool parseDIExpression(MDNode *&Node);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
   bool parseCFIRegister(unsigned &Reg);
-  bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
   bool parseBlockAddressOperand(MachineOperand &Dest);
@@ -857,14 +854,10 @@ bool MIParser::parseStandaloneStackObject(int &FI) {
 
 bool MIParser::parseStandaloneMDNode(MDNode *&Node) {
   lex();
-  if (Token.is(MIToken::exclaim)) {
-    if (parseMDNode(Node))
-      return true;
-  } else if (Token.is(MIToken::md_diexpr)) {
-    if (parseDIExpression(Node))
-      return true;
-  } else
+  if (Token.isNot(MIToken::exclaim))
     return error("expected a metadata node");
+  if (parseMDNode(Node))
+    return true;
   if (Token.isNot(MIToken::Eof))
     return error("expected end of string after the metadata node");
   return false;
@@ -1499,7 +1492,6 @@ bool MIParser::parseSubRegisterIndexOperand(MachineOperand &Dest) {
 
 bool MIParser::parseMDNode(MDNode *&Node) {
   assert(Token.is(MIToken::exclaim));
-
   auto Loc = Token.location();
   lex();
   if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
@@ -1515,56 +1507,10 @@ bool MIParser::parseMDNode(MDNode *&Node) {
   return false;
 }
 
-bool MIParser::parseDIExpression(MDNode *&Expr) {
-  assert(Token.is(MIToken::md_diexpr));
-  lex();
-
-  // FIXME: Share this parsing with the IL parser.
-  SmallVector<uint64_t, 8> Elements;
-
-  if (expectAndConsume(MIToken::lparen))
-    return true;
-
-  if (Token.isNot(MIToken::rparen)) {
-    do {
-      if (Token.is(MIToken::Identifier)) {
-        if (unsigned Op = dwarf::getOperationEncoding(Token.stringValue())) {
-          lex();
-          Elements.push_back(Op);
-          continue;
-        }
-        return error(Twine("invalid DWARF op '") + Token.stringValue() + "'");
-      }
-
-      if (Token.isNot(MIToken::IntegerLiteral) ||
-          Token.integerValue().isSigned())
-        return error("expected unsigned integer");
-
-      auto &U = Token.integerValue();
-      if (U.ugt(UINT64_MAX))
-        return error("element too large, limit is " + Twine(UINT64_MAX));
-      Elements.push_back(U.getZExtValue());
-      lex();
-
-    } while (consumeIfPresent(MIToken::comma));
-  }
-
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-
-  Expr = DIExpression::get(MF.getFunction()->getContext(), Elements);
-  return false;
-}
-
 bool MIParser::parseMetadataOperand(MachineOperand &Dest) {
   MDNode *Node = nullptr;
-  if (Token.is(MIToken::exclaim)) {
-    if (parseMDNode(Node))
-      return true;
-  } else if (Token.is(MIToken::md_diexpr)) {
-    if (parseDIExpression(Node))
-      return true;
-  }
+  if (parseMDNode(Node))
+    return true;
   Dest = MachineOperand::CreateMetadata(Node);
   return false;
 }
@@ -1595,21 +1541,6 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
   return false;
 }
 
-bool MIParser::parseCFIEscapeValues(std::string &Values) {
-  do {
-    if (Token.isNot(MIToken::HexLiteral))
-      return error("expected a hexadecimal literal");
-    unsigned Value;
-    if (getUnsigned(Value))
-      return true;
-    if (Value > UINT8_MAX)
-      return error("expected a 8-bit integer (too large)");
-    Values.push_back(static_cast<uint8_t>(Value));
-    lex();
-  } while (consumeIfPresent(MIToken::comma));
-  return false;
-}
-
 bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
@@ -1629,13 +1560,6 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, Reg, Offset));
     break;
-  case MIToken::kw_cfi_rel_offset:
-    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
-        parseCFIOffset(Offset))
-      return true;
-    CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createRelOffset(nullptr, Reg, Offset));
-    break;
   case MIToken::kw_cfi_def_cfa_register:
     if (parseCFIRegister(Reg))
       return true;
@@ -1649,12 +1573,6 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
     break;
-  case MIToken::kw_cfi_adjust_cfa_offset:
-    if (parseCFIOffset(Offset))
-      return true;
-    CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createAdjustCfaOffset(nullptr, Offset));
-    break;
   case MIToken::kw_cfi_def_cfa:
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIOffset(Offset))
@@ -1663,42 +1581,6 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createDefCfa(nullptr, Reg, -Offset));
     break;
-  case MIToken::kw_cfi_remember_state:
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
-    break;
-  case MIToken::kw_cfi_restore:
-    if (parseCFIRegister(Reg))
-      return true;
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, Reg));
-    break;
-  case MIToken::kw_cfi_restore_state:
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
-    break;
-  case MIToken::kw_cfi_undefined:
-    if (parseCFIRegister(Reg))
-      return true;
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, Reg));
-    break;
-  case MIToken::kw_cfi_register: {
-    unsigned Reg2;
-    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
-        parseCFIRegister(Reg2))
-      return true;
-
-    CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createRegister(nullptr, Reg, Reg2));
-    break;
-  }
-  case MIToken::kw_cfi_window_save:
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
-    break;
-  case MIToken::kw_cfi_escape: {
-    std::string Values;
-    if (parseCFIEscapeValues(Values))
-      return true;
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, Values));
-    break;
-  }
   default:
     // TODO: Parse the other CFI operands.
     llvm_unreachable("The current token should be a cfi operand");
@@ -1969,23 +1851,13 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseExternalSymbolOperand(Dest);
   case MIToken::SubRegisterIndex:
     return parseSubRegisterIndexOperand(Dest);
-  case MIToken::md_diexpr:
   case MIToken::exclaim:
     return parseMetadataOperand(Dest);
   case MIToken::kw_cfi_same_value:
   case MIToken::kw_cfi_offset:
-  case MIToken::kw_cfi_rel_offset:
   case MIToken::kw_cfi_def_cfa_register:
   case MIToken::kw_cfi_def_cfa_offset:
-  case MIToken::kw_cfi_adjust_cfa_offset:
-  case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
-  case MIToken::kw_cfi_register:
-  case MIToken::kw_cfi_remember_state:
-  case MIToken::kw_cfi_restore:
-  case MIToken::kw_cfi_restore_state:
-  case MIToken::kw_cfi_undefined:
-  case MIToken::kw_cfi_window_save:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);
@@ -2344,12 +2216,6 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     Flags |= MachineMemOperand::MOStore;
   lex();
 
-  // Optional 'store' for operands that both load and store.
-  if (Token.is(MIToken::Identifier) && Token.stringValue() == "store") {
-    Flags |= MachineMemOperand::MOStore;
-    lex();
-  }
-
   // Optional synchronization scope.
   SyncScope::ID SSID;
   if (parseOptionalScope(MF.getFunction()->getContext(), SSID))
@@ -2372,11 +2238,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
 
   MachinePointerInfo Ptr = MachinePointerInfo();
   if (Token.is(MIToken::Identifier)) {
-    const char *Word =
-        ((Flags & MachineMemOperand::MOLoad) &&
-         (Flags & MachineMemOperand::MOStore))
-            ? "on"
-            : Flags & MachineMemOperand::MOLoad ? "from" : "into";
+    const char *Word = Flags & MachineMemOperand::MOLoad ? "from" : "into";
     if (Token.stringValue() != Word)
       return error(Twine("expected '") + Word + "'");
     lex();

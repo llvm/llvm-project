@@ -1,9 +1,9 @@
 ; RUN: llc %s -o %t -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=4
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s -check-prefix=PRESENT 
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s -check-prefix=ABSENT
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=PRESENT 
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=ABSENT
 ; RUN: llc %s -o %t -filetype=obj -O0 -mtriple=x86_64-apple-darwin -dwarf-version=4
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s -check-prefix=DARWINP
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s -check-prefix=DARWINA
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=DARWINP
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=DARWINA
 ; Verify that attributes we do want are PRESENT;
 ; verify that attributes we don't want are ABSENT.
 ; It's a lot easier to do this in two passes than in one.
@@ -66,7 +66,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!22}
 !llvm.module.flags = !{!25}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", linkageName: "_ZN1C1aE", scope: null, file: !2, line: 14, type: !3, isLocal: false, isDefinition: true, declaration: !4)
 !2 = !DIFile(filename: "/usr/local/google/home/blaikie/Development/llvm/src/tools/clang/test/CodeGenCXX/debug-info-static-member.cpp", directory: "/home/blaikie/local/Development/llvm/build/clang/x86-64/Debug/llvm")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -84,9 +84,9 @@ attributes #1 = { nounwind readnone }
 !15 = !DIDerivedType(tag: DW_TAG_member, name: "const_c", scope: !5, file: !2, line: 10, baseType: !16, flags: DIFlagPublic | DIFlagStaticMember, extraData: i32 18)
 !16 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !3)
 !17 = !DIDerivedType(tag: DW_TAG_member, name: "d", scope: !5, file: !2, line: 11, baseType: !3, size: 32, align: 32, flags: DIFlagPublic)
-!18 = !DIGlobalVariableExpression(var: !19, expr: !DIExpression())
+!18 = !DIGlobalVariableExpression(var: !19)
 !19 = !DIGlobalVariable(name: "b", linkageName: "_ZN1C1bE", scope: null, file: !2, line: 15, type: !3, isLocal: false, isDefinition: true, declaration: !10)
-!20 = !DIGlobalVariableExpression(var: !21, expr: !DIExpression())
+!20 = !DIGlobalVariableExpression(var: !21)
 !21 = !DIGlobalVariable(name: "c", linkageName: "_ZN1C1cE", scope: null, file: !2, line: 16, type: !3, isLocal: false, isDefinition: true, declaration: !14)
 !22 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.3 (trunk 171914)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !23, retainedTypes: !23, globals: !24, imports: !23)
 !23 = !{}

@@ -59,18 +59,13 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(ubsan cfi)
     compiler_rt_test_runtime(sanitizer_common)
 
-    if(COMPILER_RT_BUILD_LIBFUZZER)
-      compiler_rt_test_runtime(fuzzer)
-    endif()
-
     foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
       # cfi testing is gated on ubsan
       if(NOT ${sanitizer} STREQUAL cfi)
         compiler_rt_test_runtime(${sanitizer})
       endif()
     endforeach()
-  endif()
-  if (COMPILER_RT_HAS_PROFILE)
+
     compiler_rt_test_runtime(profile)
   endif()
   if(COMPILER_RT_BUILD_XRAY)

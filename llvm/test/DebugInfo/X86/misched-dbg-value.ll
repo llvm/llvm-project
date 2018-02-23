@@ -1,5 +1,5 @@
 ; RUN: llc %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t -enable-misched
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
+; RUN: llvm-dwarfdump %t | FileCheck %s
 
 ; rdar://13183203
 ; Make sure when misched is enabled, we still have location information for
@@ -51,12 +51,12 @@ source_filename = "test/DebugInfo/X86/misched-dbg-value.ll"
 ; Function Attrs: nounwind optsize
 define void @Proc8(i32* nocapture %Array1Par, [51 x i32]* nocapture %Array2Par, i32 %IntParI1, i32 %IntParI2) #0 !dbg !61 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %Array1Par, metadata !67, metadata !73), !dbg !74
-  tail call void @llvm.dbg.value(metadata [51 x i32]* %Array2Par, metadata !68, metadata !73), !dbg !75
-  tail call void @llvm.dbg.value(metadata i32 %IntParI1, metadata !69, metadata !73), !dbg !76
-  tail call void @llvm.dbg.value(metadata i32 %IntParI2, metadata !70, metadata !73), !dbg !77
+  tail call void @llvm.dbg.value(metadata i32* %Array1Par, i64 0, metadata !67, metadata !73), !dbg !74
+  tail call void @llvm.dbg.value(metadata [51 x i32]* %Array2Par, i64 0, metadata !68, metadata !73), !dbg !75
+  tail call void @llvm.dbg.value(metadata i32 %IntParI1, i64 0, metadata !69, metadata !73), !dbg !76
+  tail call void @llvm.dbg.value(metadata i32 %IntParI2, i64 0, metadata !70, metadata !73), !dbg !77
   %add = add i32 %IntParI1, 5, !dbg !78
-  tail call void @llvm.dbg.value(metadata i32 %add, metadata !71, metadata !73), !dbg !78
+  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !71, metadata !73), !dbg !78
   %idxprom = sext i32 %add to i64, !dbg !79
   %arrayidx = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom, !dbg !79
   store i32 %IntParI2, i32* %arrayidx, align 4, !dbg !79
@@ -68,7 +68,7 @@ entry:
   %idxprom7 = sext i32 %add6 to i64, !dbg !81
   %arrayidx8 = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom7, !dbg !81
   store i32 %add, i32* %arrayidx8, align 4, !dbg !81
-  tail call void @llvm.dbg.value(metadata i32 %add, metadata !72, metadata !73), !dbg !82
+  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !72, metadata !73), !dbg !82
   br label %for.body, !dbg !82
 
 for.body:                                         ; preds = %for.body, %entry
@@ -77,7 +77,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx13 = getelementptr inbounds [51 x i32], [51 x i32]* %Array2Par, i64 %idxprom, i64 %indvars.iv, !dbg !84
   store i32 %add, i32* %arrayidx13, align 4, !dbg !84
   %inc = add nsw i32 %IntIndex.046, 1, !dbg !82
-  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !72, metadata !73), !dbg !82
+  tail call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !72, metadata !73), !dbg !82
   %cmp = icmp sgt i32 %inc, %add3, !dbg !82
   %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !82
   br i1 %cmp, label %for.end, label %for.body, !dbg !82
@@ -99,7 +99,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind optsize }
 attributes #1 = { nounwind readnone }
@@ -107,35 +107,35 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!56}
 !llvm.module.flags = !{!60}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "Version", scope: null, file: !2, line: 111, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "dry.c", directory: "/Users/manmanren/test-Nov/rdar_13183203/test2")
 !3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 32, align: 8, elements: !5)
 !4 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !5 = !{!6}
 !6 = !DISubrange(count: 4) ; [ DW_TAG_enumerator ] [Ident1 :: 0]
-!7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression()) ; [ DW_TAG_enumerator ] [Ident2 :: 10000]
+!7 = !DIGlobalVariableExpression(var: !8) ; [ DW_TAG_enumerator ] [Ident2 :: 10000]
 !8 = !DIGlobalVariable(name: "IntGlob", scope: null, file: !2, line: 171, type: !9, isLocal: false, isDefinition: true) ; [ DW_TAG_enumerator ] [Ident3 :: 10001]
 !9 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed) ; [ DW_TAG_enumerator ] [Ident4 :: 10002]
-!10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression()) ; [ DW_TAG_enumerator ] [Ident5 :: 10003]
+!10 = !DIGlobalVariableExpression(var: !11) ; [ DW_TAG_enumerator ] [Ident5 :: 10003]
 !11 = !DIGlobalVariable(name: "BoolGlob", scope: null, file: !2, line: 172, type: !12, isLocal: false, isDefinition: true)
 !12 = !DIDerivedType(tag: DW_TAG_typedef, name: "boolean", file: !2, line: 149, baseType: !9)
-!13 = !DIGlobalVariableExpression(var: !14, expr: !DIExpression())
+!13 = !DIGlobalVariableExpression(var: !14)
 !14 = !DIGlobalVariable(name: "Char1Glob", scope: null, file: !2, line: 173, type: !4, isLocal: false, isDefinition: true)
-!15 = !DIGlobalVariableExpression(var: !16, expr: !DIExpression())
+!15 = !DIGlobalVariableExpression(var: !16)
 !16 = !DIGlobalVariable(name: "Char2Glob", scope: null, file: !2, line: 174, type: !4, isLocal: false, isDefinition: true)
-!17 = !DIGlobalVariableExpression(var: !18, expr: !DIExpression())
+!17 = !DIGlobalVariableExpression(var: !18)
 !18 = !DIGlobalVariable(name: "Array1Glob", scope: null, file: !2, line: 175, type: !19, isLocal: false, isDefinition: true)
 !19 = !DIDerivedType(tag: DW_TAG_typedef, name: "Array1Dim", file: !2, line: 135, baseType: !20)
 !20 = !DICompositeType(tag: DW_TAG_array_type, baseType: !9, size: 1632, align: 32, elements: !21)
 !21 = !{!22}
 !22 = !DISubrange(count: 51)
-!23 = !DIGlobalVariableExpression(var: !24, expr: !DIExpression())
+!23 = !DIGlobalVariableExpression(var: !24)
 !24 = !DIGlobalVariable(name: "Array2Glob", scope: null, file: !2, line: 176, type: !25, isLocal: false, isDefinition: true)
 !25 = !DIDerivedType(tag: DW_TAG_typedef, name: "Array2Dim", file: !2, line: 136, baseType: !26)
 !26 = !DICompositeType(tag: DW_TAG_array_type, baseType: !9, size: 83232, align: 32, elements: !27)
 !27 = !{!22, !22}
-!28 = !DIGlobalVariableExpression(var: !29, expr: !DIExpression())
+!28 = !DIGlobalVariableExpression(var: !29)
 !29 = !DIGlobalVariable(name: "PtrGlb", scope: null, file: !2, line: 177, type: !30, isLocal: false, isDefinition: true)
 !30 = !DIDerivedType(tag: DW_TAG_typedef, name: "RecordPtr", file: !2, line: 148, baseType: !31)
 !31 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !32, size: 64, align: 64)
@@ -161,7 +161,7 @@ attributes #1 = { nounwind readnone }
 !51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 248, align: 8, elements: !52)
 !52 = !{!53}
 !53 = !DISubrange(count: 31)
-!54 = !DIGlobalVariableExpression(var: !55, expr: !DIExpression())
+!54 = !DIGlobalVariableExpression(var: !55)
 !55 = !DIGlobalVariable(name: "PtrGlbNext", scope: null, file: !2, line: 178, type: !30, isLocal: false, isDefinition: true)
 !56 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.3 (trunk 175015)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !57, retainedTypes: !58, globals: !59, imports: !58)
 !57 = !{!39}

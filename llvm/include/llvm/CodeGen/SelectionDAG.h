@@ -1166,24 +1166,18 @@ public:
                           const SDNodeFlags Flags = SDNodeFlags());
 
   /// Creates a SDDbgValue node.
-  SDDbgValue *getDbgValue(DIVariable *Var, DIExpression *Expr, SDNode *N,
-                          unsigned R, bool IsIndirect, const DebugLoc &DL,
+  SDDbgValue *getDbgValue(MDNode *Var, MDNode *Expr, SDNode *N, unsigned R,
+                          bool IsIndirect, uint64_t Off, const DebugLoc &DL,
                           unsigned O);
 
-  /// Creates a constant SDDbgValue node.
-  SDDbgValue *getConstantDbgValue(DIVariable *Var, DIExpression *Expr,
-                                  const Value *C, const DebugLoc &DL,
-                                  unsigned O);
+  /// Constant
+  SDDbgValue *getConstantDbgValue(MDNode *Var, MDNode *Expr, const Value *C,
+                                  uint64_t Off, const DebugLoc &DL, unsigned O);
 
-  /// Creates a FrameIndex SDDbgValue node.
-  SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
-                                    unsigned FI, const DebugLoc &DL,
+  /// FrameIndex
+  SDDbgValue *getFrameIndexDbgValue(MDNode *Var, MDNode *Expr, unsigned FI,
+                                    uint64_t Off, const DebugLoc &DL,
                                     unsigned O);
-
-  /// Transfer debug values from one node to another, while optionally
-  /// generating fragment expressions for split-up values.
-  void transferDbgValues(SDValue From, SDValue To, unsigned OffsetInBits = 0,
-                         unsigned SizeInBits = 0);
 
   /// Remove the specified node from the system. If any of its
   /// operands then becomes dead, remove them as well. Inform UpdateListener
@@ -1226,9 +1220,8 @@ public:
   /// If an existing load has uses of its chain, create a token factor node with
   /// that chain and the new memory node's chain and update users of the old
   /// chain to the token factor. This ensures that the new memory node will have
-  /// the same relative memory dependency position as the old load. Returns the
-  /// new merged load chain.
-  SDValue makeEquivalentMemoryOrdering(LoadSDNode *Old, SDValue New);
+  /// the same relative memory dependency position as the old load.
+  void makeEquivalentMemoryOrdering(LoadSDNode *Old, SDValue New);
 
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their
@@ -1284,10 +1277,6 @@ public:
   SDDbgInfo::DbgIterator ByvalParmDbgEnd()   {
     return DbgInfo->ByvalParmDbgEnd();
   }
-
-  /// To be invoked on an SDNode that is slated to be erased. This
-  /// function mirrors \c llvm::salvageDebugInfo.
-  void salvageDebugInfo(SDNode &N);
 
   void dump() const;
 

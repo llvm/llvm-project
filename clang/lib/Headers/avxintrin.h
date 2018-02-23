@@ -3590,8 +3590,7 @@ _mm_maskstore_ps(float *__p, __m128i __m, __m128 __a)
 static __inline void __DEFAULT_FN_ATTRS
 _mm256_stream_si256(__m256i *__a, __m256i __b)
 {
-  typedef __v4di __v4di_aligned __attribute__((aligned(32)));
-  __builtin_nontemporal_store((__v4di_aligned)__b, (__v4di_aligned*)__a);
+  __builtin_nontemporal_store((__v4di)__b, (__v4di*)__a);
 }
 
 /// \brief Moves double-precision values from a 256-bit vector of [4 x double]
@@ -3610,8 +3609,7 @@ _mm256_stream_si256(__m256i *__a, __m256i __b)
 static __inline void __DEFAULT_FN_ATTRS
 _mm256_stream_pd(double *__a, __m256d __b)
 {
-  typedef __v4df __v4df_aligned __attribute__((aligned(32)));
-  __builtin_nontemporal_store((__v4df_aligned)__b, (__v4df_aligned*)__a);
+  __builtin_nontemporal_store((__v4df)__b, (__v4df*)__a);
 }
 
 /// \brief Moves single-precision floating point values from a 256-bit vector
@@ -3631,8 +3629,7 @@ _mm256_stream_pd(double *__a, __m256d __b)
 static __inline void __DEFAULT_FN_ATTRS
 _mm256_stream_ps(float *__p, __m256 __a)
 {
-  typedef __v8sf __v8sf_aligned __attribute__((aligned(32)));
-  __builtin_nontemporal_store((__v8sf_aligned)__a, (__v8sf_aligned*)__p);
+  __builtin_nontemporal_store((__v8sf)__a, (__v8sf*)__p);
 }
 
 /* Create vectors */

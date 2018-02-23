@@ -142,10 +142,6 @@ class Preprocessor {
   IdentifierInfo *Ident__MODULE__;                 // __MODULE__
   IdentifierInfo *Ident__has_cpp_attribute;        // __has_cpp_attribute
   IdentifierInfo *Ident__has_declspec;             // __has_declspec_attribute
-  IdentifierInfo *Ident__is_target_arch;           // __is_target_arch
-  IdentifierInfo *Ident__is_target_vendor;         // __is_target_vendor
-  IdentifierInfo *Ident__is_target_os;             // __is_target_os
-  IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
 
   SourceLocation DATELoc, TIMELoc;
   unsigned CounterValue;  // Next __COUNTER__ value.
@@ -1052,6 +1048,10 @@ public:
   /// which implicitly adds the builtin defines etc.
   void EnterMainSourceFile();
 
+  /// \brief After parser warm-up, initialize the conditional stack from
+  /// the preamble.
+  void replayPreambleConditionalStack();
+
   /// \brief Inform the preprocessor callbacks that processing is complete.
   void EndSourceFile();
 
@@ -1840,8 +1840,7 @@ private:
   /// \p FoundElse is false, then \#else directives are ok, if not, then we have
   /// already seen one so a \#else directive is a duplicate.  When this returns,
   /// the caller can lex the first valid token.
-  void SkipExcludedConditionalBlock(const Token &HashToken,
-                                    SourceLocation IfTokenLoc,
+  void SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
                                     bool FoundNonSkipPortion, bool FoundElse,
                                     SourceLocation ElseLoc = SourceLocation());
 
@@ -2026,22 +2025,17 @@ public:
   }
 
 private:
-  /// \brief After processing predefined file, initialize the conditional stack from
-  /// the preamble.
-  void replayPreambleConditionalStack();
-
   // Macro handling.
   void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterTopLevelIfndef);
   void HandleUndefDirective();
 
   // Conditional Inclusion.
-  void HandleIfdefDirective(Token &Tok, const Token &HashToken,
-                            bool isIfndef, bool ReadAnyTokensBeforeDirective);
-  void HandleIfDirective(Token &Tok, const Token &HashToken,
-                         bool ReadAnyTokensBeforeDirective);
+  void HandleIfdefDirective(Token &Tok, bool isIfndef,
+                            bool ReadAnyTokensBeforeDirective);
+  void HandleIfDirective(Token &Tok, bool ReadAnyTokensBeforeDirective);
   void HandleEndifDirective(Token &Tok);
-  void HandleElseDirective(Token &Tok, const Token &HashToken);
-  void HandleElifDirective(Token &Tok, const Token &HashToken);
+  void HandleElseDirective(Token &Tok);
+  void HandleElifDirective(Token &Tok);
 
   // Pragmas.
   void HandlePragmaDirective(SourceLocation IntroducerLoc,

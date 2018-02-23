@@ -1,4 +1,4 @@
-//===- LiveInterval.cpp - Live Interval Representation --------------------===//
+//===-- LiveInterval.cpp - Live Interval Representation -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,34 +19,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LiveInterval.h"
+
 #include "LiveRangeUtils.h"
 #include "RegisterCoalescer.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/MC/LaneBitmask.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <iterator>
-#include <utility>
-
 using namespace llvm;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // Implementation of various methods necessary for calculation of live ranges.
 // The implementation of the methods abstracts from the concrete type of the
@@ -70,8 +56,8 @@ protected:
   CalcLiveRangeUtilBase(LiveRange *LR) : LR(LR) {}
 
 public:
-  using Segment = LiveRange::Segment;
-  using iterator = IteratorT;
+  typedef LiveRange::Segment Segment;
+  typedef IteratorT iterator;
 
   /// A counterpart of LiveRange::createDeadDef: Make sure the range has a
   /// value defined at @p Def.
@@ -279,9 +265,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 class CalcLiveRangeUtilVector;
-using CalcLiveRangeUtilVectorBase =
-    CalcLiveRangeUtilBase<CalcLiveRangeUtilVector, LiveRange::iterator,
-                          LiveRange::Segments>;
+typedef CalcLiveRangeUtilBase<CalcLiveRangeUtilVector, LiveRange::iterator,
+                              LiveRange::Segments> CalcLiveRangeUtilVectorBase;
 
 class CalcLiveRangeUtilVector : public CalcLiveRangeUtilVectorBase {
 public:
@@ -307,9 +292,9 @@ private:
 //===----------------------------------------------------------------------===//
 
 class CalcLiveRangeUtilSet;
-using CalcLiveRangeUtilSetBase =
-    CalcLiveRangeUtilBase<CalcLiveRangeUtilSet, LiveRange::SegmentSet::iterator,
-                          LiveRange::SegmentSet>;
+typedef CalcLiveRangeUtilBase<CalcLiveRangeUtilSet,
+                              LiveRange::SegmentSet::iterator,
+                              LiveRange::SegmentSet> CalcLiveRangeUtilSetBase;
 
 class CalcLiveRangeUtilSet : public CalcLiveRangeUtilSetBase {
 public:
@@ -342,8 +327,7 @@ private:
     return I;
   }
 };
-
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 //   LiveRange methods
@@ -460,7 +444,7 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
   if (J == JE)
     return false;
 
-  while (true) {
+  for (;;) {
     // J has just been advanced to satisfy:
     assert(J->end >= I->start);
     // Check for an overlap.
@@ -881,6 +865,7 @@ void LiveInterval::clearSubRanges() {
 
 void LiveInterval::refineSubRanges(BumpPtrAllocator &Allocator,
     LaneBitmask LaneMask, std::function<void(LiveInterval::SubRange&)> Apply) {
+
   LaneBitmask ToApply = LaneMask;
   for (SubRange &SR : subranges()) {
     LaneBitmask SRMask = SR.LaneMask;
@@ -940,8 +925,8 @@ void LiveInterval::computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
   }
 }
 
-raw_ostream& llvm::operator<<(raw_ostream& OS, const LiveRange::Segment &S) {
-  return OS << '[' << S.start << ',' << S.end << ':' << S.valno->id << ')';
+raw_ostream& llvm::operator<<(raw_ostream& os, const LiveRange::Segment &S) {
+  return os << '[' << S.start << ',' << S.end << ':' << S.valno->id << ')';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1047,6 +1032,7 @@ void LiveInterval::verify(const MachineRegisterInfo *MRI) const {
   }
 }
 #endif
+
 
 //===----------------------------------------------------------------------===//
 //                           LiveRangeUpdater class

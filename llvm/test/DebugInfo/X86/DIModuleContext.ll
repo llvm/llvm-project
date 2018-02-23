@@ -1,7 +1,7 @@
 source_filename = "test/DebugInfo/X86/DIModuleContext.ll"
 target triple = "x86_64-apple-macosx"
 ; RUN: %llc_dwarf %s -o - -filetype=obj \
-; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; CHECK: DW_TAG_module
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_structure_type
@@ -17,7 +17,7 @@ target triple = "x86_64-apple-macosx"
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!11, !12}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "s", scope: !2, file: !3, line: 2, type: !9, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, imports: !6)
 !3 = !DIFile(filename: "test.c", directory: "/")

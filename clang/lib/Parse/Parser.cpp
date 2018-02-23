@@ -524,6 +524,8 @@ void Parser::Initialize() {
 
   // Prime the lexer look-ahead.
   ConsumeToken();
+
+  PP.replayPreambleConditionalStack();
 }
 
 void Parser::LateTemplateParserCleanupCallback(void *P) {
@@ -761,15 +763,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     SingleDecl = ParseObjCMethodDefinition();
     break;
   case tok::code_completion:
-    if (CurParsedObjCImpl) {
-      // Code-complete Objective-C methods even without leading '-'/'+' prefix.
-      Actions.CodeCompleteObjCMethodDecl(getCurScope(),
-                                         /*IsInstanceMethod=*/None,
-                                         /*ReturnType=*/nullptr);
-    }
-    Actions.CodeCompleteOrdinaryName(
-        getCurScope(),
-        CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
+      Actions.CodeCompleteOrdinaryName(getCurScope(), 
+                             CurParsedObjCImpl? Sema::PCC_ObjCImplementation
+                                              : Sema::PCC_Namespace);
     cutOffParsing();
     return nullptr;
   case tok::kw_export:

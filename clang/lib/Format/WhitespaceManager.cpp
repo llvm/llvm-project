@@ -246,12 +246,12 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
 
   for (unsigned i = Start; i != End; ++i) {
     if (ScopeStack.size() != 0 &&
-        Changes[i].indentAndNestingLevel() <
-            Changes[ScopeStack.back()].indentAndNestingLevel())
+        Changes[i].nestingAndIndentLevel() <
+            Changes[ScopeStack.back()].nestingAndIndentLevel())
       ScopeStack.pop_back();
 
-    if (i != Start && Changes[i].indentAndNestingLevel() >
-                          Changes[i - 1].indentAndNestingLevel())
+    if (i != Start && Changes[i].nestingAndIndentLevel() >
+                          Changes[i - 1].nestingAndIndentLevel())
       ScopeStack.push_back(i);
 
     bool InsideNestedScope = ScopeStack.size() != 0;
@@ -327,8 +327,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   // Measure the scope level (i.e. depth of (), [], {}) of the first token, and
   // abort when we hit any token in a higher scope than the starting one.
-  auto IndentAndNestingLevel = StartAt < Changes.size()
-                                   ? Changes[StartAt].indentAndNestingLevel()
+  auto NestingAndIndentLevel = StartAt < Changes.size()
+                                   ? Changes[StartAt].nestingAndIndentLevel()
                                    : std::pair<unsigned, unsigned>(0, 0);
 
   // Keep track of the number of commas before the matching tokens, we will only
@@ -359,7 +359,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   unsigned i = StartAt;
   for (unsigned e = Changes.size(); i != e; ++i) {
-    if (Changes[i].indentAndNestingLevel() < IndentAndNestingLevel)
+    if (Changes[i].nestingAndIndentLevel() < NestingAndIndentLevel)
       break;
 
     if (Changes[i].NewlinesBefore != 0) {
@@ -375,7 +375,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
     if (Changes[i].Tok->is(tok::comma)) {
       ++CommasBeforeMatch;
-    } else if (Changes[i].indentAndNestingLevel() > IndentAndNestingLevel) {
+    } else if (Changes[i].nestingAndIndentLevel() > NestingAndIndentLevel) {
       // Call AlignTokens recursively, skipping over this scope block.
       unsigned StoppedAt = AlignTokens(Style, Matches, Changes, i);
       i = StoppedAt - 1;
@@ -472,14 +472,9 @@ void WhitespaceManager::alignTrailingComments() {
       continue;
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-    unsigned ChangeMaxColumn;
-
-    if (Style.ColumnLimit == 0)
-      ChangeMaxColumn = UINT_MAX;
-    else if (Style.ColumnLimit >= Changes[i].TokenLength)
-      ChangeMaxColumn = Style.ColumnLimit - Changes[i].TokenLength;
-    else
-      ChangeMaxColumn = ChangeMinColumn;
+    unsigned ChangeMaxColumn = Style.ColumnLimit >= Changes[i].TokenLength
+                                   ? Style.ColumnLimit - Changes[i].TokenLength
+                                   : ChangeMinColumn;
 
     // If we don't create a replacement for this change, we have to consider
     // it to be immovable.

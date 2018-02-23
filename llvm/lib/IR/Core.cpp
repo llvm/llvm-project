@@ -85,15 +85,15 @@ LLVMContextRef LLVMGetGlobalContext() { return wrap(&*GlobalContext); }
 void LLVMContextSetDiagnosticHandler(LLVMContextRef C,
                                      LLVMDiagnosticHandler Handler,
                                      void *DiagnosticContext) {
-  unwrap(C)->setDiagnosticHandlerCallBack(
-      LLVM_EXTENSION reinterpret_cast<DiagnosticHandler::DiagnosticHandlerTy>(
+  unwrap(C)->setDiagnosticHandler(
+      LLVM_EXTENSION reinterpret_cast<LLVMContext::DiagnosticHandlerTy>(
           Handler),
       DiagnosticContext);
 }
 
 LLVMDiagnosticHandler LLVMContextGetDiagnosticHandler(LLVMContextRef C) {
   return LLVM_EXTENSION reinterpret_cast<LLVMDiagnosticHandler>(
-      unwrap(C)->getDiagnosticHandlerCallBack());
+      unwrap(C)->getDiagnosticHandler());
 }
 
 void *LLVMContextGetDiagnosticContext(LLVMContextRef C) {
@@ -276,8 +276,7 @@ LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
   dest.close();
 
   if (dest.has_error()) {
-    std::string E = "Error printing to file: " + dest.error().message();
-    *ErrorMessage = strdup(E.c_str());
+    *ErrorMessage = strdup("Error printing to file");
     return true;
   }
 

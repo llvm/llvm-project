@@ -337,16 +337,6 @@ void captureByReference() {
   lambda2();
 }
 
-void testCapturedConstExprFloat() {
-  constexpr float localConstant = 4.0;
-  auto lambda = []{
-    // Don't treat localConstant as containing a garbage value
-    float copy = localConstant; // no-warning
-    (void)copy;
-  };
-
-  lambda();
-}
 
 // CHECK: [B2 (ENTRY)]
 // CHECK:   Succs (1): B1

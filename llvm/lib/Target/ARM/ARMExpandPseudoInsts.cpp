@@ -769,7 +769,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   const MachineOperand &Dest = MI.getOperand(0);
-  unsigned TempReg = MI.getOperand(1).getReg();
+  unsigned StatusReg = MI.getOperand(1).getReg();
+  bool StatusDead = MI.getOperand(1).isDead();
   // Duplicating undef operands into 2 instructions does not guarantee the same
   // value on both; However undef should be replaced by xzr anyway.
   assert(!MI.getOperand(2).isUndef() && "cannot handle undef");
@@ -796,9 +797,23 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   }
 
   // .Lloadcmp:
+  //     mov wStatus, #0
   //     ldrex rDest, [rAddr]
   //     cmp rDest, rDesired
   //     bne .Ldone
+  if (!StatusDead) {
+    if (IsThumb) {
+      BuildMI(LoadCmpBB, DL, TII->get(ARM::tMOVi8), StatusReg)
+        .addDef(ARM::CPSR, RegState::Dead)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
+    } else {
+      BuildMI(LoadCmpBB, DL, TII->get(ARM::MOVi), StatusReg)
+        .addImm(0)
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
+    }
+  }
 
   MachineInstrBuilder MIB;
   MIB = BuildMI(LoadCmpBB, DL, TII->get(LdrexOp), Dest.getReg());
@@ -821,10 +836,10 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   LoadCmpBB->addSuccessor(StoreBB);
 
   // .Lstore:
-  //     strex rTempReg, rNew, [rAddr]
-  //     cmp rTempReg, #0
+  //     strex rStatus, rNew, [rAddr]
+  //     cmp rStatus, #0
   //     bne .Lloadcmp
-  MIB = BuildMI(StoreBB, DL, TII->get(StrexOp), TempReg)
+  MIB = BuildMI(StoreBB, DL, TII->get(StrexOp), StatusReg)
     .addReg(NewReg)
     .addReg(AddrReg);
   if (StrexOp == ARM::t2STREX)
@@ -833,7 +848,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
 
   unsigned CMPri = IsThumb ? ARM::t2CMPri : ARM::CMPri;
   BuildMI(StoreBB, DL, TII->get(CMPri))
-      .addReg(TempReg, RegState::Kill)
+      .addReg(StatusReg, getKillRegState(StatusDead))
       .addImm(0)
       .add(predOps(ARMCC::AL));
   BuildMI(StoreBB, DL, TII->get(Bcc))
@@ -889,7 +904,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   MachineOperand &Dest = MI.getOperand(0);
-  unsigned TempReg = MI.getOperand(1).getReg();
+  unsigned StatusReg = MI.getOperand(1).getReg();
+  bool StatusDead = MI.getOperand(1).isDead();
   // Duplicating undef operands into 2 instructions does not guarantee the same
   // value on both; However undef should be replaced by xzr anyway.
   assert(!MI.getOperand(2).isUndef() && "cannot handle undef");
@@ -915,7 +931,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   // .Lloadcmp:
   //     ldrexd rDestLo, rDestHi, [rAddr]
   //     cmp rDestLo, rDesiredLo
-  //     sbcs rTempReg<dead>, rDestHi, rDesiredHi
+  //     sbcs rStatus<dead>, rDestHi, rDesiredHi
   //     bne .Ldone
   unsigned LDREXD = IsThumb ? ARM::t2LDREXD : ARM::LDREXD;
   MachineInstrBuilder MIB;
@@ -943,17 +959,17 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   LoadCmpBB->addSuccessor(StoreBB);
 
   // .Lstore:
-  //     strexd rTempReg, rNewLo, rNewHi, [rAddr]
-  //     cmp rTempReg, #0
+  //     strexd rStatus, rNewLo, rNewHi, [rAddr]
+  //     cmp rStatus, #0
   //     bne .Lloadcmp
   unsigned STREXD = IsThumb ? ARM::t2STREXD : ARM::STREXD;
-  MIB = BuildMI(StoreBB, DL, TII->get(STREXD), TempReg);
+  MIB = BuildMI(StoreBB, DL, TII->get(STREXD), StatusReg);
   addExclusiveRegPair(MIB, New, 0, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
   unsigned CMPri = IsThumb ? ARM::t2CMPri : ARM::CMPri;
   BuildMI(StoreBB, DL, TII->get(CMPri))
-      .addReg(TempReg, RegState::Kill)
+      .addReg(StatusReg, getKillRegState(StatusDead))
       .addImm(0)
       .add(predOps(ARMCC::AL));
   BuildMI(StoreBB, DL, TII->get(Bcc))
@@ -1030,11 +1046,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         if (STI->isThumb())
           MIB.add(predOps(ARMCC::AL));
       } else if (RetOpcode == ARM::TCRETURNri) {
-        unsigned Opcode =
-          STI->isThumb() ? ARM::tTAILJMPr
-                         : (STI->hasV4TOps() ? ARM::TAILJMPr : ARM::TAILJMPr4);
         BuildMI(MBB, MBBI, dl,
-                TII.get(Opcode))
+                TII.get(STI->isThumb() ? ARM::tTAILJMPr : ARM::TAILJMPr))
             .addReg(JumpTarget.getReg(), RegState::Kill);
       }
 
@@ -1315,11 +1328,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       if (IsPIC) {
         unsigned PCAdj = IsARM ? 8 : 4;
-        auto Modifier = STI->getCPModifier(GV);
         ARMPCLabelIndex = AFI->createPICLabelUId();
-        CPV = ARMConstantPoolConstant::Create(
-            GV, ARMPCLabelIndex, ARMCP::CPValue, PCAdj, Modifier,
-            /*AddCurrentAddr*/ Modifier == ARMCP::GOT_PREL);
+        CPV = ARMConstantPoolConstant::Create(GV, ARMPCLabelIndex,
+                                              ARMCP::CPValue, PCAdj);
       } else
         CPV = ARMConstantPoolConstant::Create(GV, ARMCP::no_modifier);
 

@@ -75,23 +75,20 @@ static bool parsedOptions = false;
 
 static LLVMContext *LTOContext = nullptr;
 
-struct LTOToolDiagnosticHandler : public DiagnosticHandler {
-  bool handleDiagnostics(const DiagnosticInfo &DI) override {
-    if (DI.getSeverity() != DS_Error) {
-      DiagnosticPrinterRawOStream DP(errs());
-      DI.print(DP);
-      errs() << '\n';
-      return true;
-    }
-    sLastErrorString = "";
-    {
-      raw_string_ostream Stream(sLastErrorString);
-      DiagnosticPrinterRawOStream DP(Stream);
-      DI.print(DP);
-    }
-    return true;
+static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
+  if (DI.getSeverity() != DS_Error) {
+    DiagnosticPrinterRawOStream DP(errs());
+    DI.print(DP);
+    errs() << '\n';
+    return;
   }
-};
+  sLastErrorString = "";
+  {
+    raw_string_ostream Stream(sLastErrorString);
+    DiagnosticPrinterRawOStream DP(Stream);
+    DI.print(DP);
+  }
+}
 
 // Initialize the configured targets if they have not been initialized.
 static void lto_initialize() {
@@ -111,8 +108,7 @@ static void lto_initialize() {
 
     static LLVMContext Context;
     LTOContext = &Context;
-    LTOContext->setDiagnosticHandler(
-        llvm::make_unique<LTOToolDiagnosticHandler>(), true);
+    LTOContext->setDiagnosticHandler(diagnosticHandler, nullptr, true);
     initialized = true;
   }
 }
@@ -278,8 +274,7 @@ lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
 
   // Create a local context. Ownership will be transferred to LTOModule.
   std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
-  Context->setDiagnosticHandler(llvm::make_unique<LTOToolDiagnosticHandler>(),
-                                true);
+  Context->setDiagnosticHandler(diagnosticHandler, nullptr, true);
 
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createInLocalContext(
       std::move(Context), mem, length, Options, StringRef(path));

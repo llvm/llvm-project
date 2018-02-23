@@ -12,7 +12,6 @@ target_link_libraries(clang-rename
   clangTooling
   clangToolingCore
   clangToolingRefactor
-  clangToolingRefactoring
   )
 
 install(TARGETS clang-rename RUNTIME DESTINATION bin)

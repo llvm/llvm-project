@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx10.7 %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
 ; CHECK: ptr
 ; CHECK-NOT: AT_bit_size
@@ -13,7 +13,7 @@ source_filename = "test/DebugInfo/X86/pointer-type-size.ll"
 !llvm.dbg.cu = !{!9}
 !llvm.module.flags = !{!12}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "crass", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.c", directory: "/Users/echristo/tmp")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "crass", file: !2, line: 1, size: 64, align: 64, elements: !4)

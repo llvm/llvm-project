@@ -419,11 +419,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SELECT, VT, Custom);
     setOperationAction(ISD::SETCC,  VT, Custom);
   }
-
-  // Custom action for SELECT MMX and expand action for SELECT_CC MMX
-  setOperationAction(ISD::SELECT, MVT::x86mmx, Custom);
-  setOperationAction(ISD::SELECT_CC, MVT::x86mmx, Expand);
-
   setOperationAction(ISD::EH_RETURN       , MVT::Other, Custom);
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -1388,7 +1383,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // (result) is 256-bit but the source is 512-bit wide.
     // 128-bit was made Custom under AVX1.
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64,
-                     MVT::v8f32, MVT::v4f64, MVT::v1i1 })
+                     MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
     for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1,
                      MVT::v16i1, MVT::v32i1, MVT::v64i1 })
@@ -1677,8 +1672,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // TODO: These control memcmp expansion in CGP and could be raised higher, but
   // that needs to benchmarked and balanced with the potential use of vector
-  // load/store types (PR33329, PR33914).
-  MaxLoadsPerMemcmp = 2;
+  // load/store types (PR33329).
+  MaxLoadsPerMemcmp = 4;
   MaxLoadsPerMemcmpOptSize = 2;
 
   // Set loop alignment to 2^ExperimentalPrefLoopAlignment bytes (default: 2^4).
@@ -3987,13 +3982,6 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
     return false;
 
   if (Offset != MFI.getObjectOffset(FI))
-    return false;
-
-  // If this is not byval, check that the argument stack object is immutable.
-  // inalloca and argument copy elision can create mutable argument stack
-  // objects. Byval objects can be mutated, but a byval call intends to pass the
-  // mutated memory.
-  if (!Flags.isByVal() && !MFI.isImmutableObjectIndex(FI))
     return false;
 
   if (VA.getLocVT().getSizeInBits() > Arg.getValueSizeInBits()) {
@@ -7026,18 +7014,6 @@ X86TargetLowering::LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getTargetConstant(1, dl, VT);
 
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
-    if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
-      // Split the pieces.
-      SDValue Lower =
-          DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(0, 32));
-      SDValue Upper =
-          DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(32, 32));
-      // We have to manually lower both halves so getNode doesn't try to
-      // reassemble the build_vector.
-      Lower = LowerBUILD_VECTORvXi1(Lower, DAG);
-      Upper = LowerBUILD_VECTORvXi1(Upper, DAG);
-      return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lower, Upper);
-    }
     SDValue Imm = ConvertI1VectorToInteger(Op, DAG);
     if (Imm.getValueSizeInBits() == VT.getSizeInBits())
       return DAG.getBitcast(VT, Imm);
@@ -14587,21 +14563,6 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   MVT ResVT = Op.getSimpleValueType();
 
-  // When v1i1 is legal a scalarization of a vselect with a vXi1 Cond
-  // would result with: v1i1 = extract_subvector(vXi1, idx).
-  // Lower these into extract_vector_elt which is already selectable.
-  if (ResVT == MVT::v1i1) {
-    assert(Subtarget.hasAVX512() &&
-           "Boolean EXTRACT_SUBVECTOR requires AVX512");
-
-    MVT EltVT = ResVT.getVectorElementType();
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    MVT LegalVT =
-        (TLI.getTypeToTransformTo(*DAG.getContext(), EltVT)).getSimpleVT();
-    SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LegalVT, In, Idx);
-    return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, ResVT, Res);
-  }
-
   assert((In.getSimpleValueType().is256BitVector() ||
           In.getSimpleValueType().is512BitVector()) &&
          "Can only extract from 256-bit or 512-bit vectors");
@@ -20683,8 +20644,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   }
   // ADC/ADCX/SBB
   case ADX: {
-    SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
-    SDVTList VTs = DAG.getVTList(Op.getOperand(3)->getValueType(0), MVT::i32);
+    SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::Other);
+    SDVTList VTs = DAG.getVTList(Op.getOperand(3)->getValueType(0), MVT::Other);
     SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(2),
                                 DAG.getConstant(-1, dl, MVT::i8));
     SDValue Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(3),
@@ -24994,15 +24955,6 @@ X86TargetLowering::isVectorClearMaskLegal(const SmallVectorImpl<int> &Mask,
   return isShuffleMaskLegal(Mask, VT);
 }
 
-bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
-  // If the subtarget is using retpolines, we need to not generate jump tables.
-  if (Subtarget.useRetpoline())
-    return false;
-
-  // Otherwise, fallback on the generic logic.
-  return TargetLowering::areJTsAllowed(Fn);
-}
-
 //===----------------------------------------------------------------------===//
 //                           X86 Scheduler Hooks
 //===----------------------------------------------------------------------===//
@@ -26234,130 +26186,6 @@ X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
   return BB;
 }
 
-static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
-  switch (RPOpc) {
-  case X86::RETPOLINE_CALL32:
-    return X86::CALLpcrel32;
-  case X86::RETPOLINE_CALL64:
-    return X86::CALL64pcrel32;
-  case X86::RETPOLINE_TCRETURN32:
-    return X86::TCRETURNdi;
-  case X86::RETPOLINE_TCRETURN64:
-    return X86::TCRETURNdi64;
-  }
-  llvm_unreachable("not retpoline opcode");
-}
-
-static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
-                                      unsigned Reg) {
-  if (Subtarget.useRetpolineExternalThunk()) {
-    // When using an external thunk for retpolines, we pick names that match the
-    // names GCC happens to use as well. This helps simplify the implementation
-    // of the thunks for kernels where they have no easy ability to create
-    // aliases and are doing non-trivial configuration of the thunk's body. For
-    // example, the Linux kernel will do boot-time hot patching of the thunk
-    // bodies and cannot easily export aliases of these to loaded modules.
-    //
-    // Note that at any point in the future, we may need to change the semantics
-    // of how we implement retpolines and at that time will likely change the
-    // name of the called thunk. Essentially, there is no hard guarantee that
-    // LLVM will generate calls to specific thunks, we merely make a best-effort
-    // attempt to help out kernels and other systems where duplicating the
-    // thunks is costly.
-    switch (Reg) {
-    case X86::EAX:
-      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-      return "__x86_indirect_thunk_eax";
-    case X86::ECX:
-      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-      return "__x86_indirect_thunk_ecx";
-    case X86::EDX:
-      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-      return "__x86_indirect_thunk_edx";
-    case X86::EDI:
-      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-      return "__x86_indirect_thunk_edi";
-    case X86::R11:
-      assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
-      return "__x86_indirect_thunk_r11";
-    }
-    llvm_unreachable("unexpected reg for retpoline");
-  }
-
-  // When targeting an internal COMDAT thunk use an LLVM-specific name.
-  switch (Reg) {
-  case X86::EAX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_eax";
-  case X86::ECX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_ecx";
-  case X86::EDX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_edx";
-  case X86::EDI:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_edi";
-  case X86::R11:
-    assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
-    return "__llvm_retpoline_r11";
-  }
-  llvm_unreachable("unexpected reg for retpoline");
-}
-
-MachineBasicBlock *
-X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const {
-  // Copy the virtual register into the R11 physical register and
-  // call the retpoline thunk.
-  DebugLoc DL = MI.getDebugLoc();
-  const X86InstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned CalleeVReg = MI.getOperand(0).getReg();
-  unsigned Opc = getOpcodeForRetpoline(MI.getOpcode());
-
-  // Find an available scratch register to hold the callee. On 64-bit, we can
-  // just use R11, but we scan for uses anyway to ensure we don't generate
-  // incorrect code. On 32-bit, we use one of EAX, ECX, or EDX that isn't
-  // already a register use operand to the call to hold the callee. If none
-  // are available, use EDI instead. EDI is chosen because EBX is the PIC base
-  // register and ESI is the base pointer to realigned stack frames with VLAs.
-  SmallVector<unsigned, 3> AvailableRegs;
-  if (Subtarget.is64Bit())
-    AvailableRegs.push_back(X86::R11);
-  else
-    AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX, X86::EDI});
-
-  // Zero out any registers that are already used.
-  for (const auto &MO : MI.operands()) {
-    if (MO.isReg() && MO.isUse())
-      for (unsigned &Reg : AvailableRegs)
-        if (Reg == MO.getReg())
-          Reg = 0;
-  }
-
-  // Choose the first remaining non-zero available register.
-  unsigned AvailableReg = 0;
-  for (unsigned MaybeReg : AvailableRegs) {
-    if (MaybeReg) {
-      AvailableReg = MaybeReg;
-      break;
-    }
-  }
-  if (!AvailableReg)
-    report_fatal_error("calling convention incompatible with retpoline, no "
-                       "available registers");
-
-  const char *Symbol = getRetpolineSymbol(Subtarget, AvailableReg);
-
-  BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
-      .addReg(CalleeVReg);
-  MI.getOperand(0).ChangeToES(Symbol);
-  MI.setDesc(TII->get(Opc));
-  MachineInstrBuilder(*BB->getParent(), &MI)
-      .addReg(AvailableReg, RegState::Implicit | RegState::Kill);
-  return BB;
-}
-
 MachineBasicBlock *
 X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const {
@@ -26822,11 +26650,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
     return EmitLoweredTLSAddr(MI, BB);
-  case X86::RETPOLINE_CALL32:
-  case X86::RETPOLINE_CALL64:
-  case X86::RETPOLINE_TCRETURN32:
-  case X86::RETPOLINE_TCRETURN64:
-    return EmitLoweredRetpoline(MI, BB);
   case X86::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
   case X86::CATCHPAD:
@@ -29690,9 +29513,8 @@ static bool detectZextAbsDiff(const SDValue &Select, SDValue &Op0,
   // In SetLT case, The second operand of the comparison can be either 1 or 0.
   APInt SplatVal;
   if ((CC == ISD::SETLT) &&
-      !((ISD::isConstantSplatVector(SetCC.getOperand(1).getNode(), SplatVal,
-                                    /*AllowShrink*/false) &&
-         SplatVal.isOneValue()) ||
+      !((ISD::isConstantSplatVector(SetCC.getOperand(1).getNode(), SplatVal) &&
+         SplatVal == 1) ||
         (ISD::isBuildVectorAllZeros(SetCC.getOperand(1).getNode()))))
     return false;
 
@@ -30779,15 +30601,12 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // Byte blends are only available in AVX2
     if (VT == MVT::v32i8 && !Subtarget.hasAVX2())
       return SDValue();
-    // There are no 512-bit blend instructions that use sign bits.
-    if (VT.is512BitVector())
-      return SDValue();
 
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask(APInt::getSignMask(BitWidth));
     KnownBits Known;
-    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                          !DCI.isBeforeLegalizeOps());
+    TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
+                                          DCI.isBeforeLegalizeOps());
     if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
         TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
       // If we changed the computation somewhere in the DAG, this change will
@@ -30835,14 +30654,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
     if (combineBitcastForMaskedOp(RHS, DAG, DCI))
       return SDValue(N, 0);
-  }
-
-  // Custom action for SELECT MMX
-  if (VT == MVT::x86mmx) {
-    LHS = DAG.getBitcast(MVT::i64, LHS);
-    RHS = DAG.getBitcast(MVT::i64, RHS);
-    SDValue newSelect = DAG.getNode(ISD::SELECT, DL, MVT::i64, Cond, LHS, RHS);
-    return DAG.getBitcast(VT, newSelect);
   }
 
   return SDValue();
@@ -31092,40 +30903,11 @@ static bool checkBoolTestAndOrSetCCCombine(SDValue Cond, X86::CondCode &CC0,
   return true;
 }
 
-// When legalizing carry, we create carries via add X, -1
-// If that comes from an actual carry, via setcc, we use the
-// carry directly.
-static SDValue combineCarryThroughADD(SDValue EFLAGS) {
-  if (EFLAGS.getOpcode() == X86ISD::ADD) {
-    if (isAllOnesConstant(EFLAGS.getOperand(1))) {
-      SDValue Carry = EFLAGS.getOperand(0);
-      while (Carry.getOpcode() == ISD::TRUNCATE ||
-             Carry.getOpcode() == ISD::ZERO_EXTEND ||
-             Carry.getOpcode() == ISD::SIGN_EXTEND ||
-             Carry.getOpcode() == ISD::ANY_EXTEND ||
-             (Carry.getOpcode() == ISD::AND &&
-              isOneConstant(Carry.getOperand(1))))
-        Carry = Carry.getOperand(0);
-      if (Carry.getOpcode() == X86ISD::SETCC ||
-          Carry.getOpcode() == X86ISD::SETCC_CARRY) {
-        if (Carry.getConstantOperandVal(0) == X86::COND_B)
-          return Carry.getOperand(1);
-      }
-    }
-  }
-
-  return SDValue();
-}
-
 /// Optimize an EFLAGS definition used according to the condition code \p CC
 /// into a simpler EFLAGS value, potentially returning a new \p CC and replacing
 /// uses of chain values.
 static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
                                   SelectionDAG &DAG) {
-  if (CC == X86::COND_B)
-    if (SDValue Flags = combineCarryThroughADD(EFLAGS))
-      return Flags;
-
   if (SDValue R = checkBoolTestSetCCCombine(EFLAGS, CC))
     return R;
   return combineSetCCAtomicArith(EFLAGS, CC, DAG);
@@ -32241,8 +32023,7 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal,
-                                  /*AllowShrink*/false) ||
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) ||
       !SplatVal.isMask())
     return SDValue();
 
@@ -32826,8 +32607,7 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
     "Unexpected types for truncate operation");
 
   APInt C;
-  if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C,
-                                 /*AllowShrink*/false)) {
+  if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C)) {
     // C should be equal to UINT32_MAX / UINT16_MAX / UINT8_MAX according
     // the element size of the destination type.
     return C.isMask(VT.getScalarSizeInBits()) ? In.getOperand(0) :
@@ -33571,8 +33351,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       SDValue NewLd = DAG.getLoad(LdVT, LdDL, Ld->getChain(), Ld->getBasePtr(),
                                   Ld->getPointerInfo(), Ld->getAlignment(),
                                   Ld->getMemOperand()->getFlags());
-      // Make sure new load is placed in same chain order.
-      SDValue NewChain = DAG.makeEquivalentMemoryOrdering(Ld, NewLd);
+      SDValue NewChain = NewLd.getValue(1);
       if (TokenFactorIndex >= 0) {
         Ops.push_back(NewChain);
         NewChain = DAG.getNode(ISD::TokenFactor, LdDL, MVT::Other, Ops);
@@ -33593,12 +33372,11 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                                Ld->getPointerInfo().getWithOffset(4),
                                MinAlign(Ld->getAlignment(), 4),
                                Ld->getMemOperand()->getFlags());
-    // Make sure new loads are placed in same chain order.
-    SDValue NewChain = DAG.makeEquivalentMemoryOrdering(Ld, LoLd);
-    NewChain = DAG.makeEquivalentMemoryOrdering(Ld, HiLd);
 
+    SDValue NewChain = LoLd.getValue(1);
     if (TokenFactorIndex >= 0) {
-      Ops.push_back(NewChain);
+      Ops.push_back(LoLd);
+      Ops.push_back(HiLd);
       NewChain = DAG.getNode(ISD::TokenFactor, LdDL, MVT::Other, Ops);
     }
 
@@ -34883,11 +34661,6 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   if (!OpVT.isScalarInteger() || OpSize < 128 || isNullConstant(Y))
     return SDValue();
 
-  // Bail out if we know that this is not really just an oversized integer.
-  if (peekThroughBitcasts(X).getValueType() == MVT::f128 ||
-      peekThroughBitcasts(Y).getValueType() == MVT::f128)
-    return SDValue();
-
   // TODO: Use PXOR + PTEST for SSE4.1 or later?
   // TODO: Add support for AVX-512.
   EVT VT = SetCC->getValueType(0);
@@ -35173,13 +34946,27 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
-    MVT VT = N->getSimpleValueType(0);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
-    return DAG.getNode(X86ISD::SBB, SDLoc(N), VTs,
-                       N->getOperand(0), N->getOperand(1),
-                       Flags);
+// Optimize RES, EFLAGS = X86ISD::ADD LHS, RHS
+static SDValue combineX86ADD(SDNode *N, SelectionDAG &DAG,
+                             X86TargetLowering::DAGCombinerInfo &DCI) {
+  // When legalizing carry, we create carries via add X, -1
+  // If that comes from an actual carry, via setcc, we use the
+  // carry directly.
+  if (isAllOnesConstant(N->getOperand(1)) && N->hasAnyUseOfValue(1)) {
+    SDValue Carry = N->getOperand(0);
+    while (Carry.getOpcode() == ISD::TRUNCATE ||
+           Carry.getOpcode() == ISD::ZERO_EXTEND ||
+           Carry.getOpcode() == ISD::SIGN_EXTEND ||
+           Carry.getOpcode() == ISD::ANY_EXTEND ||
+           (Carry.getOpcode() == ISD::AND &&
+            isOneConstant(Carry.getOperand(1))))
+      Carry = Carry.getOperand(0);
+
+    if (Carry.getOpcode() == X86ISD::SETCC ||
+        Carry.getOpcode() == X86ISD::SETCC_CARRY) {
+      if (Carry.getConstantOperandVal(0) == X86::COND_B)
+        return DCI.CombineTo(N, SDValue(N, 0), Carry.getOperand(1));
+    }
   }
 
   return SDValue();
@@ -35206,14 +34993,6 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
                                            N->getOperand(2)),
                                DAG.getConstant(1, DL, VT));
     return DCI.CombineTo(N, Res1, CarryOut);
-  }
-
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
-    MVT VT = N->getSimpleValueType(0);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
-    return DAG.getNode(X86ISD::ADC, SDLoc(N), VTs,
-                       N->getOperand(0), N->getOperand(1),
-                       Flags);
   }
 
   return SDValue();
@@ -35530,8 +35309,7 @@ static SDValue combineIncDecVector(SDNode *N, SelectionDAG &DAG) {
 
   SDNode *N1 = N->getOperand(1).getNode();
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(N1, SplatVal, /*AllowShrink*/false) ||
-      !SplatVal.isOneValue())
+  if (!ISD::isConstantSplatVector(N1, SplatVal) || !SplatVal.isOneValue())
     return SDValue();
 
   SDValue AllOnesVec = getOnesVector(VT, DAG, SDLoc(N));
@@ -35855,7 +35633,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
   case ISD::ADD:            return combineAdd(N, DAG, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, Subtarget);
-  case X86ISD::SBB:         return combineSBB(N, DAG);
+  case X86ISD::ADD:         return combineX86ADD(N, DAG, DCI);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
   case ISD::SHL:

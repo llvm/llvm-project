@@ -909,10 +909,15 @@ class Project : public SExpr {
 public:
   static bool classof(const SExpr *E) { return E->opcode() == COP_Project; }
 
+  Project(SExpr *R, StringRef SName)
+      : SExpr(COP_Project), Rec(R), SlotName(SName), Cvdecl(nullptr)
+  { }
   Project(SExpr *R, const clang::ValueDecl *Cvd)
-      : SExpr(COP_Project), Rec(R), Cvdecl(Cvd) {
-    assert(Cvd && "ValueDecl must not be null");
-  }
+      : SExpr(COP_Project), Rec(R), SlotName(Cvd->getName()), Cvdecl(Cvd)
+  { }
+  Project(const Project &P, SExpr *R)
+      : SExpr(P), Rec(R), SlotName(P.SlotName), Cvdecl(P.Cvdecl)
+  { }
 
   SExpr *record() { return Rec; }
   const SExpr *record() const { return Rec; }
@@ -926,14 +931,10 @@ public:
   }
 
   StringRef slotName() const {
-    if (Cvdecl->getDeclName().isIdentifier())
+    if (Cvdecl)
       return Cvdecl->getName();
-    if (!SlotName) {
-      SlotName = "";
-      llvm::raw_string_ostream OS(*SlotName);
-      Cvdecl->printName(OS);
-    }
-    return *SlotName;
+    else
+      return SlotName;
   }
 
   template <class V>
@@ -952,7 +953,7 @@ public:
 
 private:
   SExpr* Rec;
-  mutable llvm::Optional<std::string> SlotName;
+  StringRef SlotName;
   const clang::ValueDecl *Cvdecl;
 };
 

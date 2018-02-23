@@ -3400,20 +3400,13 @@ bool Sema::isCFError(RecordDecl *recordDecl) {
   }
 
   // Check whether this is CFError, which we identify based on being
-  // bridged to NSError. CFErrorRef used to be declared with "objc_bridge" but
-  // is now declared with "objc_bridge_mutable", so look for either one of the
-  // two attributes.
+  // bridged to NSError.
   if (recordDecl->getTagKind() == TTK_Struct) {
-    IdentifierInfo *bridgedType = nullptr;
-    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>())
-      bridgedType = bridgeAttr->getBridgedType();
-    else if (auto bridgeAttr =
-                 recordDecl->getAttr<ObjCBridgeMutableAttr>())
-      bridgedType = bridgeAttr->getBridgedType();
-
-    if (bridgedType == getNSErrorIdent()) {
-      CFError = recordDecl;
-      return true;
+    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>()) {
+      if (bridgeAttr->getBridgedType() == getNSErrorIdent()) {
+        CFError = recordDecl;
+        return true;
+      }
     }
   }
 
@@ -4610,7 +4603,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
       case DeclaratorChunk::Function: {
         const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-        if (FTI.NumParams == 0 && !FTI.isVariadic)
+        if (FTI.NumParams == 0)
           S.Diag(DeclType.Loc, diag::warn_strict_prototypes)
               << IsBlock
               << FixItHint::CreateInsertion(FTI.getRParenLoc(), "void");

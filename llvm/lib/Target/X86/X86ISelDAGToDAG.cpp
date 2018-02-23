@@ -550,11 +550,11 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
     if (OptLevel != CodeGenOpt::None &&
-        // Only do this when the target can fold the load into the call or
-        // jmp.
-        !Subtarget->useRetpoline() &&
+        // Only does this when target favors doesn't favor register indirect
+        // call.
         ((N->getOpcode() == X86ISD::CALL && !Subtarget->callRegIndirect()) ||
          (N->getOpcode() == X86ISD::TC_RETURN &&
+          // Only does this if load can be folded into TC_RETURN.
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
       /// Also try moving call address load from outside callseq_start to just
@@ -1055,10 +1055,7 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
 
   // Scale the leading zero count down based on the actual size of the value.
   // Also scale it down based on the size of the shift.
-  unsigned ScaleDown = (64 - X.getSimpleValueType().getSizeInBits()) + ShiftAmt;
-  if (MaskLZ < ScaleDown)
-    return true;
-  MaskLZ -= ScaleDown;
+  MaskLZ -= (64 - X.getSimpleValueType().getSizeInBits()) + ShiftAmt;
 
   // The final check is to ensure that any masked out high bits of X are
   // already known to be zero. Otherwise, the mask has a semantic impact

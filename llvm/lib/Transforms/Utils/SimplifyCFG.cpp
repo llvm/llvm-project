@@ -1629,11 +1629,14 @@ namespace {
 
 } // end anonymous namespace
 
-/// Check whether BB's predecessors end with unconditional branches. If it is
-/// true, sink any common code from the predecessors to BB.
-/// We also allow one predecessor to end with conditional branch (but no more
-/// than one).
-static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
+/// Given an unconditional branch that goes to BBEnd,
+/// check whether BBEnd has only two predecessors and the other predecessor
+/// ends with an unconditional branch. If it is true, sink any common code
+/// in the two predecessors to BBEnd.
+static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
+  assert(BI1->isUnconditional());
+  BasicBlock *BBEnd = BI1->getSuccessor(0);
+
   // We support two situations:
   //   (1) all incoming arcs are unconditional
   //   (2) one incoming arc is conditional
@@ -1677,7 +1680,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
   //
   SmallVector<BasicBlock*,4> UnconditionalPreds;
   Instruction *Cond = nullptr;
-  for (auto *B : predecessors(BB)) {
+  for (auto *B : predecessors(BBEnd)) {
     auto *T = B->getTerminator();
     if (isa<BranchInst>(T) && cast<BranchInst>(T)->isUnconditional())
       UnconditionalPreds.push_back(B);
@@ -1745,7 +1748,8 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
     DEBUG(dbgs() << "SINK: Splitting edge\n");
     // We have a conditional edge and we're going to sink some instructions.
     // Insert a new block postdominating all blocks we're going to sink from.
-    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split"))
+    if (!SplitBlockPredecessors(BI1->getSuccessor(0), UnconditionalPreds,
+                                ".sink.split"))
       // Edges couldn't be split.
       return false;
     Changed = true;
@@ -5654,6 +5658,9 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
   BasicBlock *BB = BI->getParent();
   BasicBlock *Succ = BI->getSuccessor(0);
 
+  if (SinkCommon && SinkThenElseCodeToEnd(BI))
+    return true;
+
   // If the Terminator is the only non-phi instruction, simplify the block.
   // if LoopHeader is provided, check if the block or its successor is a loop
   // header (This is for early invocations before loop simplify and
@@ -5932,9 +5939,6 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
   //
   if (MergeBlockIntoPredecessor(BB))
     return true;
-
-  if (SinkCommon)
-    Changed |= SinkCommonCodeFromPredecessors(BB);
 
   IRBuilder<> Builder(BB);
 

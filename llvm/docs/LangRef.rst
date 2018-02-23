@@ -4013,12 +4013,12 @@ example:
 
     !foo = !{!4, !3}
 
-Metadata can be used as function arguments. Here the ``llvm.dbg.value``
-intrinsic is using three metadata arguments:
+Metadata can be used as function arguments. Here ``llvm.dbg.value``
+function is using two metadata arguments:
 
 .. code-block:: llvm
 
-    call void @llvm.dbg.value(metadata !24, metadata !25, metadata !26)
+    call void @llvm.dbg.value(metadata !24, i64 0, metadata !25)
 
 Metadata can be attached to an instruction. Here metadata ``!21`` is attached
 to the ``add`` instruction using the ``!dbg`` identifier:
@@ -5368,10 +5368,6 @@ The following behaviors are supported:
            Appends the two values, which are required to be metadata
            nodes. However, duplicate entries in the second list are dropped
            during the append operation.
-
-   * - 7
-     - **Max**
-           Takes the max of the two values, which are required to be integers.
 
 It is an error for a particular unique flag ID to have multiple behaviors,
 except in the case of **Require** (which adds restrictions on another metadata

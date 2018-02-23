@@ -758,335 +758,22 @@ static void DumpDepVars(MultipleUseVarSet &DepVars) {
 
 /// TreePredicateFn constructor.  Here 'N' is a subclass of PatFrag.
 TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
-  assert(
-      (!hasPredCode() || !hasImmCode()) &&
-      ".td file corrupt: can't have a node predicate *and* an imm predicate");
-}
-
-bool TreePredicateFn::hasPredCode() const {
-  return isLoad() || isStore() || isAtomic() ||
-         !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
+  assert((getPredCode().empty() || getImmCode().empty()) &&
+        ".td file corrupt: can't have a node predicate *and* an imm predicate");
 }
 
 std::string TreePredicateFn::getPredCode() const {
-  std::string Code = "";
-
-  if (!isLoad() && !isStore() && !isAtomic()) {
-    Record *MemoryVT = getMemoryVT();
-
-    if (MemoryVT)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "MemoryVT requires IsLoad or IsStore");
-  }
-
-  if (!isLoad() && !isStore()) {
-    if (isUnindexed())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsUnindexed requires IsLoad or IsStore");
-
-    Record *ScalarMemoryVT = getScalarMemoryVT();
-
-    if (ScalarMemoryVT)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "ScalarMemoryVT requires IsLoad or IsStore");
-  }
-
-  if (isLoad() + isStore() + isAtomic() > 1)
-    PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                    "IsLoad, IsStore, and IsAtomic are mutually exclusive");
-
-  if (isLoad()) {
-    if (!isUnindexed() && !isNonExtLoad() && !isAnyExtLoad() &&
-        !isSignExtLoad() && !isZeroExtLoad() && getMemoryVT() == nullptr &&
-        getScalarMemoryVT() == nullptr)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsLoad cannot be used by itself");
-  } else {
-    if (isNonExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonExtLoad requires IsLoad");
-    if (isAnyExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAnyExtLoad requires IsLoad");
-    if (isSignExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsSignExtLoad requires IsLoad");
-    if (isZeroExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsZeroExtLoad requires IsLoad");
-  }
-
-  if (isStore()) {
-    if (!isUnindexed() && !isTruncStore() && !isNonTruncStore() &&
-        getMemoryVT() == nullptr && getScalarMemoryVT() == nullptr)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsStore cannot be used by itself");
-  } else {
-    if (isNonTruncStore())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonTruncStore requires IsStore");
-    if (isTruncStore())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsTruncStore requires IsStore");
-  }
-
-  if (isAtomic()) {
-    if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
-        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
-        !isAtomicOrderingAcquireRelease() &&
-        !isAtomicOrderingSequentiallyConsistent() &&
-        !isAtomicOrderingAcquireOrStronger() &&
-        !isAtomicOrderingReleaseOrStronger() &&
-        !isAtomicOrderingWeakerThanAcquire() &&
-        !isAtomicOrderingWeakerThanRelease())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomic cannot be used by itself");
-  } else {
-    if (isAtomicOrderingMonotonic())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingMonotonic requires IsAtomic");
-    if (isAtomicOrderingAcquire())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingAcquire requires IsAtomic");
-    if (isAtomicOrderingRelease())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingRelease requires IsAtomic");
-    if (isAtomicOrderingAcquireRelease())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingAcquireRelease requires IsAtomic");
-    if (isAtomicOrderingSequentiallyConsistent())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingSequentiallyConsistent requires IsAtomic");
-    if (isAtomicOrderingAcquireOrStronger())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingAcquireOrStronger requires IsAtomic");
-    if (isAtomicOrderingReleaseOrStronger())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingReleaseOrStronger requires IsAtomic");
-    if (isAtomicOrderingWeakerThanAcquire())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAtomicOrderingWeakerThanAcquire requires IsAtomic");
-  }
-
-  if (isLoad() || isStore() || isAtomic()) {
-    StringRef SDNodeName =
-        isLoad() ? "LoadSDNode" : isStore() ? "StoreSDNode" : "AtomicSDNode";
-
-    Record *MemoryVT = getMemoryVT();
-
-    if (MemoryVT)
-      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
-               MemoryVT->getName() + ") return false;\n")
-                  .str();
-  }
-
-  if (isAtomic() && isAtomicOrderingMonotonic())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
-            "AtomicOrdering::Monotonic) return false;\n";
-  if (isAtomic() && isAtomicOrderingAcquire())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
-            "AtomicOrdering::Acquire) return false;\n";
-  if (isAtomic() && isAtomicOrderingRelease())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
-            "AtomicOrdering::Release) return false;\n";
-  if (isAtomic() && isAtomicOrderingAcquireRelease())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
-            "AtomicOrdering::AcquireRelease) return false;\n";
-  if (isAtomic() && isAtomicOrderingSequentiallyConsistent())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
-            "AtomicOrdering::SequentiallyConsistent) return false;\n";
-
-  if (isAtomic() && isAtomicOrderingAcquireOrStronger())
-    Code += "if (!isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
-            "return false;\n";
-  if (isAtomic() && isAtomicOrderingWeakerThanAcquire())
-    Code += "if (isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
-            "return false;\n";
-
-  if (isAtomic() && isAtomicOrderingReleaseOrStronger())
-    Code += "if (!isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
-            "return false;\n";
-  if (isAtomic() && isAtomicOrderingWeakerThanRelease())
-    Code += "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
-            "return false;\n";
-
-  if (isLoad() || isStore()) {
-    StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
-
-    if (isUnindexed())
-      Code += ("if (cast<" + SDNodeName +
-               ">(N)->getAddressingMode() != ISD::UNINDEXED) "
-               "return false;\n")
-                  .str();
-
-    if (isLoad()) {
-      if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() +
-           isZeroExtLoad()) > 1)
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and "
-                        "IsZeroExtLoad are mutually exclusive");
-      if (isNonExtLoad())
-        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != "
-                "ISD::NON_EXTLOAD) return false;\n";
-      if (isAnyExtLoad())
-        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != ISD::EXTLOAD) "
-                "return false;\n";
-      if (isSignExtLoad())
-        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != ISD::SEXTLOAD) "
-                "return false;\n";
-      if (isZeroExtLoad())
-        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
-                "return false;\n";
-    } else {
-      if ((isNonTruncStore() + isTruncStore()) > 1)
-        PrintFatalError(
-            getOrigPatFragRecord()->getRecord()->getLoc(),
-            "IsNonTruncStore, and IsTruncStore are mutually exclusive");
-      if (isNonTruncStore())
-        Code +=
-            " if (cast<StoreSDNode>(N)->isTruncatingStore()) return false;\n";
-      if (isTruncStore())
-        Code +=
-            " if (!cast<StoreSDNode>(N)->isTruncatingStore()) return false;\n";
-    }
-
-    Record *ScalarMemoryVT = getScalarMemoryVT();
-
-    if (ScalarMemoryVT)
-      Code += ("if (cast<" + SDNodeName +
-               ">(N)->getMemoryVT().getScalarType() != MVT::" +
-               ScalarMemoryVT->getName() + ") return false;\n")
-                  .str();
-  }
-
-  std::string PredicateCode = PatFragRec->getRecord()->getValueAsString("PredicateCode");
-
-  Code += PredicateCode;
-
-  if (PredicateCode.empty() && !Code.empty())
-    Code += "return true;\n";
-
-  return Code;
-}
-
-bool TreePredicateFn::hasImmCode() const {
-  return !PatFragRec->getRecord()->getValueAsString("ImmediateCode").empty();
+  return PatFragRec->getRecord()->getValueAsString("PredicateCode");
 }
 
 std::string TreePredicateFn::getImmCode() const {
   return PatFragRec->getRecord()->getValueAsString("ImmediateCode");
 }
 
-bool TreePredicateFn::immCodeUsesAPInt() const {
-  return getOrigPatFragRecord()->getRecord()->getValueAsBit("IsAPInt");
-}
-
-bool TreePredicateFn::immCodeUsesAPFloat() const {
-  bool Unset;
-  // The return value will be false when IsAPFloat is unset.
-  return getOrigPatFragRecord()->getRecord()->getValueAsBitOrUnset("IsAPFloat",
-                                                                   Unset);
-}
-
-bool TreePredicateFn::isPredefinedPredicateEqualTo(StringRef Field,
-                                                   bool Value) const {
-  bool Unset;
-  bool Result =
-      getOrigPatFragRecord()->getRecord()->getValueAsBitOrUnset(Field, Unset);
-  if (Unset)
-    return false;
-  return Result == Value;
-}
-bool TreePredicateFn::isLoad() const {
-  return isPredefinedPredicateEqualTo("IsLoad", true);
-}
-bool TreePredicateFn::isStore() const {
-  return isPredefinedPredicateEqualTo("IsStore", true);
-}
-bool TreePredicateFn::isAtomic() const {
-  return isPredefinedPredicateEqualTo("IsAtomic", true);
-}
-bool TreePredicateFn::isUnindexed() const {
-  return isPredefinedPredicateEqualTo("IsUnindexed", true);
-}
-bool TreePredicateFn::isNonExtLoad() const {
-  return isPredefinedPredicateEqualTo("IsNonExtLoad", true);
-}
-bool TreePredicateFn::isAnyExtLoad() const {
-  return isPredefinedPredicateEqualTo("IsAnyExtLoad", true);
-}
-bool TreePredicateFn::isSignExtLoad() const {
-  return isPredefinedPredicateEqualTo("IsSignExtLoad", true);
-}
-bool TreePredicateFn::isZeroExtLoad() const {
-  return isPredefinedPredicateEqualTo("IsZeroExtLoad", true);
-}
-bool TreePredicateFn::isNonTruncStore() const {
-  return isPredefinedPredicateEqualTo("IsTruncStore", false);
-}
-bool TreePredicateFn::isTruncStore() const {
-  return isPredefinedPredicateEqualTo("IsTruncStore", true);
-}
-bool TreePredicateFn::isAtomicOrderingMonotonic() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingMonotonic", true);
-}
-bool TreePredicateFn::isAtomicOrderingAcquire() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquire", true);
-}
-bool TreePredicateFn::isAtomicOrderingRelease() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingRelease", true);
-}
-bool TreePredicateFn::isAtomicOrderingAcquireRelease() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireRelease", true);
-}
-bool TreePredicateFn::isAtomicOrderingSequentiallyConsistent() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingSequentiallyConsistent",
-                                      true);
-}
-bool TreePredicateFn::isAtomicOrderingAcquireOrStronger() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireOrStronger", true);
-}
-bool TreePredicateFn::isAtomicOrderingWeakerThanAcquire() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireOrStronger", false);
-}
-bool TreePredicateFn::isAtomicOrderingReleaseOrStronger() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingReleaseOrStronger", true);
-}
-bool TreePredicateFn::isAtomicOrderingWeakerThanRelease() const {
-  return isPredefinedPredicateEqualTo("IsAtomicOrderingReleaseOrStronger", false);
-}
-Record *TreePredicateFn::getMemoryVT() const {
-  Record *R = getOrigPatFragRecord()->getRecord();
-  if (R->isValueUnset("MemoryVT"))
-    return nullptr;
-  return R->getValueAsDef("MemoryVT");
-}
-Record *TreePredicateFn::getScalarMemoryVT() const {
-  Record *R = getOrigPatFragRecord()->getRecord();
-  if (R->isValueUnset("ScalarMemoryVT"))
-    return nullptr;
-  return R->getValueAsDef("ScalarMemoryVT");
-}
-
-StringRef TreePredicateFn::getImmType() const {
-  if (immCodeUsesAPInt())
-    return "const APInt &";
-  if (immCodeUsesAPFloat())
-    return "const APFloat &";
-  return "int64_t";
-}
-
-StringRef TreePredicateFn::getImmTypeIdentifier() const {
-  if (immCodeUsesAPInt())
-    return "APInt";
-  else if (immCodeUsesAPFloat())
-    return "APFloat";
-  return "I64";
-}
 
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
-  return !hasPredCode() && !hasImmCode();
+  return getPredCode().empty() && getImmCode().empty();
 }
 
 /// Return the name to use in the generated code to reference this, this is
@@ -1103,61 +790,14 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   // Handle immediate predicates first.
   std::string ImmCode = getImmCode();
   if (!ImmCode.empty()) {
-    if (isLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsLoad cannot be used with ImmLeaf or its subclasses");
-    if (isStore())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsStore cannot be used with ImmLeaf or its subclasses");
-    if (isUnindexed())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsUnindexed cannot be used with ImmLeaf or its subclasses");
-    if (isNonExtLoad())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsNonExtLoad cannot be used with ImmLeaf or its subclasses");
-    if (isAnyExtLoad())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsAnyExtLoad cannot be used with ImmLeaf or its subclasses");
-    if (isSignExtLoad())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsSignExtLoad cannot be used with ImmLeaf or its subclasses");
-    if (isZeroExtLoad())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsZeroExtLoad cannot be used with ImmLeaf or its subclasses");
-    if (isNonTruncStore())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsNonTruncStore cannot be used with ImmLeaf or its subclasses");
-    if (isTruncStore())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "IsTruncStore cannot be used with ImmLeaf or its subclasses");
-    if (getMemoryVT())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "MemoryVT cannot be used with ImmLeaf or its subclasses");
-    if (getScalarMemoryVT())
-      PrintFatalError(
-          getOrigPatFragRecord()->getRecord()->getLoc(),
-          "ScalarMemoryVT cannot be used with ImmLeaf or its subclasses");
-
-    std::string Result = ("    " + getImmType() + " Imm = ").str();
-    if (immCodeUsesAPFloat())
-      Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
-    else if (immCodeUsesAPInt())
-      Result += "cast<ConstantSDNode>(Node)->getAPIntValue();\n";
-    else
-      Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
+    std::string Result =
+      "    int64_t Imm = cast<ConstantSDNode>(Node)->getSExtValue();\n";
     return Result + ImmCode;
   }
   
   // Handle arbitrary node predicates.
-  assert(hasPredCode() && "Don't have any predicate code!");
-  StringRef ClassName;
+  assert(!getPredCode().empty() && "Don't have any predicate code!");
+  std::string ClassName;
   if (PatFragRec->getOnlyTree()->isLeaf())
     ClassName = "SDNode";
   else {
@@ -1168,8 +808,8 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   if (ClassName == "SDNode")
     Result = "    SDNode *N = Node;\n";
   else
-    Result = "    auto *N = cast<" + ClassName.str() + ">(Node);\n";
-
+    Result = "    auto *N = cast<" + ClassName + ">(Node);\n";
+  
   return Result + getPredCode();
 }
 
@@ -2756,9 +2396,8 @@ void TreePattern::dump() const { print(errs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R,
-                                       PatternRewriterFn PatternRewriter)
-    : Records(R), Target(R), PatternRewriter(PatternRewriter) {
+CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R) :
+  Records(R), Target(R) {
 
   Intrinsics = CodeGenIntrinsicTable(Records, false);
   TgtIntrinsics = CodeGenIntrinsicTable(Records, true);
@@ -3535,8 +3174,6 @@ void CodeGenDAGPatterns::ParseInstructions() {
     TreePattern *I = TheInst.getPattern();
     if (!I) continue;  // No pattern.
 
-    if (PatternRewriter)
-      PatternRewriter(I);
     // FIXME: Assume only the first tree is the pattern. The others are clobber
     // nodes.
     TreePatternNode *Pattern = I->getTree(0);
@@ -3914,8 +3551,6 @@ void CodeGenDAGPatterns::ParsePatterns() {
     TreePattern Temp(Result.getRecord(), DstPattern, false, *this);
     Temp.InferAllTypes();
 
-    if (PatternRewriter)
-      PatternRewriter(Pattern);
     AddPatternToMatch(
         Pattern,
         PatternToMatch(

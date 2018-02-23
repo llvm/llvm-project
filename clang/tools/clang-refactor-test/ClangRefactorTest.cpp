@@ -255,8 +255,6 @@ static const char *renameOccurrenceKindString(CXSymbolOccurrenceKind Kind,
     return "documentation";
   case CXSymbolOccurrence_MatchingFilename:
     return "filename";
-  case CXSymbolOccurrence_MatchingStringLiteral:
-    return "string-literal";
   case CXSymbolOccurrence_ExtractedDeclaration:
     return "extracted-decl";
   case CXSymbolOccurrence_ExtractedDeclaration_Reference:
@@ -399,7 +397,6 @@ renameIndexedOccurrenceKindStringToKind(StringRef Str, CXCursorKind Default) {
       .Case("objc-cm", CXCursor_ObjCClassMethodDecl)
       .Case("objc-message", CXCursor_ObjCMessageExpr)
       .Case("include", CXCursor_InclusionDirective)
-      .Case("objc-class", CXCursor_ObjCInterfaceDecl)
       .Default(Default);
 }
 
@@ -1121,10 +1118,8 @@ bool performOperation(CXRefactoringAction Action, ArrayRef<const char *> Args,
       CXString Spelling = clang_getDiagnosticSpelling(Diag);
       errs() << clang_getCString(Spelling) << "\n";
       clang_disposeString(Spelling);
-      clang_disposeDiagnostic(Diag);
     }
     clang_RefactoringContinuation_dispose(Continuation);
-    clang_disposeDiagnosticSet(Diags);
     return true;
   }
   clang_RefactoringContinuation_finalizeEvaluationInInitationTU(Continuation);
@@ -1353,51 +1348,39 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
   return 0;
 }
 
-struct MainTU {
-  CXIndex CIdx;
-  CXTranslationUnit TU = nullptr;
-
-  MainTU() {
-    CIdx = clang_createIndex(0, 0);
-  }
-  ~MainTU() {
-    if (TU)
-      clang_disposeTranslationUnit(TU);
-    clang_disposeIndex(CIdx);
-  }
-};
-
 int main(int argc, const char **argv) {
   cl::HideUnrelatedOptions(opts::ClangRefactorTestOptions);
 
   cl::ParseCommandLineOptions(argc, argv, "Clang refactoring test tool\n");
   cl::PrintOptionValues();
 
-  MainTU MainTranslationUnit;
+  CXIndex CIdx = clang_createIndex(0, 0);
 
   std::vector<const char *> Args;
   for (const auto &Arg : opts::CompilerArguments) {
     Args.push_back(Arg.c_str());
   }
+  CXTranslationUnit TU;
   CXErrorCode Err = clang_parseTranslationUnit2(
-      MainTranslationUnit.CIdx,
+      CIdx,
       opts::IgnoreFilenameForInitiationTU ? nullptr : opts::FileName.c_str(),
-      Args.data(), Args.size(), 0, 0, CXTranslationUnit_KeepGoing,
-      &MainTranslationUnit.TU);
+      Args.data(), Args.size(), 0, 0, CXTranslationUnit_KeepGoing, &TU);
   if (Err != CXError_Success) {
     errs() << "error: failed to load '" << opts::FileName << "'\n";
     return 1;
   }
 
   if (opts::RenameInitiateSubcommand || opts::RenameInitiateUSRSubcommand)
-    return rename(MainTranslationUnit.TU, MainTranslationUnit.CIdx, Args);
+    return rename(TU, CIdx, Args);
   else if (opts::RenameIndexedFileSubcommand)
-    return renameIndexedFile(MainTranslationUnit.CIdx, Args);
+    return renameIndexedFile(CIdx, Args);
   else if (opts::ListRefactoringActionsSubcommand)
-    return listRefactoringActions(MainTranslationUnit.TU);
+    return listRefactoringActions(TU);
   else if (opts::InitiateActionSubcommand || opts::PerformActionSubcommand)
-    return initiateAndPerformAction(MainTranslationUnit.TU, Args,
-                                    MainTranslationUnit.CIdx);
+    return initiateAndPerformAction(TU, Args, CIdx);
+
+  clang_disposeTranslationUnit(TU);
+  clang_disposeIndex(CIdx);
 
   return 0;
 }

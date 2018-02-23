@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-macosx %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
 ; CHECK: DW_TAG_subprogram [9] *
 ; CHECK-NOT: DW_AT_{{(MIPS_)?}}linkage_name
@@ -35,7 +35,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!10}
 !llvm.module.flags = !{!13}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 9, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo")
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 1, size: 8, align: 8, elements: !4)

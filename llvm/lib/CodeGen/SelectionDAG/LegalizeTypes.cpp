@@ -14,13 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
-#include "SDNodeDbgValue.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -835,17 +831,6 @@ void DAGTypeLegalizer::SetExpandedInteger(SDValue Op, SDValue Lo,
   // Lo/Hi may have been newly allocated, if so, add nodeid's as relevant.
   AnalyzeNewValue(Lo);
   AnalyzeNewValue(Hi);
-
-  // Transfer debug values.
-  if (DAG.getDataLayout().isBigEndian()) {
-    DAG.transferDbgValues(Op, Hi, 0, Hi.getValueSizeInBits());
-    DAG.transferDbgValues(Op, Lo, Hi.getValueSizeInBits(),
-                          Lo.getValueSizeInBits());
-  } else {
-    DAG.transferDbgValues(Op, Lo, 0, Lo.getValueSizeInBits());
-    DAG.transferDbgValues(Op, Hi, Lo.getValueSizeInBits(),
-                          Hi.getValueSizeInBits());
-  }
 
   // Remember that this is the result of the node.
   std::pair<SDValue, SDValue> &Entry = ExpandedIntegers[Op];

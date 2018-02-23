@@ -23,7 +23,7 @@ declare void @invokee()
 declare i8* @returner()
 declare void @bar(i32 ()*)
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 declare i8* @objc_msgSend(i8*, i8*, ...)
 
@@ -1337,26 +1337,6 @@ entry:
 ; CHECK-NOT: @objc_release
 ; CHECK: }
 define void @test22(double* %p, i1 %a) {
-  br i1 %a, label %A, label %B
-A:
-  br label %C
-B:
-  br label %C
-C:
-  %h = phi double* [ null, %A ], [ %p, %B ]
-  %c = bitcast double* %h to i8*
-  call void @objc_release(i8* %c), !clang.imprecise_release !0
-  ret void
-}
-
-; Do not move an objc_release that doesn't have the clang.imprecise_release tag.
-
-; CHECK-LABEL: define void @test22_precise(
-; CHECK: %[[P0:.*]] = phi double*
-; CHECK: %[[V0:.*]] = bitcast double* %[[P0]] to i8*
-; CHECK: call void @objc_release(i8* %[[V0]])
-; CHECK: ret void
-define void @test22_precise(double* %p, i1 %a) {
   br i1 %a, label %A, label %B
 A:
   br label %C
@@ -2726,8 +2706,8 @@ define {<2 x float>, <2 x float>} @"\01-[A z]"({}* %self, i8* nocapture %_cmd) n
 invoke.cont:
   %0 = bitcast {}* %self to i8*
   %1 = tail call i8* @objc_retain(i8* %0) nounwind
-  tail call void @llvm.dbg.value(metadata {}* %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
-  tail call void @llvm.dbg.value(metadata {}* %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
+  tail call void @llvm.dbg.value(metadata {}* %self, i64 0, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
+  tail call void @llvm.dbg.value(metadata {}* %self, i64 0, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
   %ivar = load i64, i64* @"OBJC_IVAR_$_A.myZ", align 8
   %add.ptr = getelementptr i8, i8* %0, i64 %ivar
   %tmp1 = bitcast i8* %add.ptr to float*

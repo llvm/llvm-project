@@ -150,18 +150,20 @@ enum NamedBarrier : unsigned {
 
 /// Get the GPU warp size.
 static llvm::Value *getNVPTXWarpSize(CodeGenFunction &CGF) {
-  return CGF.EmitRuntimeCall(
+  CGBuilderTy &Bld = CGF.Builder;
+  return Bld.CreateCall(
       llvm::Intrinsic::getDeclaration(
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_warpsize),
-      "nvptx_warp_size");
+      llvm::None, "nvptx_warp_size");
 }
 
 /// Get the id of the current thread on the GPU.
 static llvm::Value *getNVPTXThreadID(CodeGenFunction &CGF) {
-  return CGF.EmitRuntimeCall(
+  CGBuilderTy &Bld = CGF.Builder;
+  return Bld.CreateCall(
       llvm::Intrinsic::getDeclaration(
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x),
-      "nvptx_tid");
+      llvm::None, "nvptx_tid");
 }
 
 /// Get the id of the warp in the block.
@@ -183,15 +185,17 @@ static llvm::Value *getNVPTXLaneID(CodeGenFunction &CGF) {
 
 /// Get the maximum number of threads in a block of the GPU.
 static llvm::Value *getNVPTXNumThreads(CodeGenFunction &CGF) {
-  return CGF.EmitRuntimeCall(
+  CGBuilderTy &Bld = CGF.Builder;
+  return Bld.CreateCall(
       llvm::Intrinsic::getDeclaration(
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x),
-      "nvptx_num_threads");
+      llvm::None, "nvptx_num_threads");
 }
 
 /// Get barrier to synchronize all threads in a block.
 static void getNVPTXCTABarrier(CodeGenFunction &CGF) {
-  CGF.EmitRuntimeCall(llvm::Intrinsic::getDeclaration(
+  CGBuilderTy &Bld = CGF.Builder;
+  Bld.CreateCall(llvm::Intrinsic::getDeclaration(
       &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier0));
 }
 
@@ -201,9 +205,9 @@ static void getNVPTXBarrier(CodeGenFunction &CGF, int ID,
                             llvm::Value *NumThreads) {
   CGBuilderTy &Bld = CGF.Builder;
   llvm::Value *Args[] = {Bld.getInt32(ID), NumThreads};
-  CGF.EmitRuntimeCall(llvm::Intrinsic::getDeclaration(
-                          &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier),
-                      Args);
+  Bld.CreateCall(llvm::Intrinsic::getDeclaration(&CGF.CGM.getModule(),
+                                                 llvm::Intrinsic::nvvm_barrier),
+                 Args);
 }
 
 /// Synchronize all GPU threads in a block.
@@ -341,7 +345,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericEntryHeader(CodeGenFunction &CGF,
   Bld.CreateCondBr(IsWorker, WorkerBB, MasterCheckBB);
 
   CGF.EmitBlock(WorkerBB);
-  emitCall(CGF, WST.WorkerFn);
+  CGF.EmitCallOrInvoke(WST.WorkerFn, llvm::None);
   CGF.EmitBranch(EST.ExitBB);
 
   CGF.EmitBlock(MasterCheckBB);
@@ -551,7 +555,7 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
         CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty, /*Name=*/".zero.addr");
     CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C=*/0));
     llvm::Value *FnArgs[] = {ZeroAddr.getPointer(), ZeroAddr.getPointer()};
-    emitCall(CGF, Fn, FnArgs);
+    CGF.EmitCallOrInvoke(Fn, FnArgs);
 
     // Go to end of parallel region.
     CGF.EmitBranch(TerminateBB);
@@ -879,7 +883,7 @@ void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
+  CGF.EmitCallOrInvoke(OutlinedFn, OutlinedFnArgs);
 }
 
 void CGOpenMPRuntimeNVPTX::emitParallelCall(
@@ -928,10 +932,10 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
   auto *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *Args[] = {RTLoc, ThreadID};
 
-  auto &&SeqGen = [this, Fn, &CapturedVars, &Args, Loc](CodeGenFunction &CGF,
-                                                        PrePostActionTy &) {
-    auto &&CodeGen = [this, Fn, &CapturedVars, Loc](CodeGenFunction &CGF,
-                                                    PrePostActionTy &Action) {
+  auto &&SeqGen = [this, Fn, &CapturedVars, &Args](CodeGenFunction &CGF,
+                                                   PrePostActionTy &) {
+    auto &&CodeGen = [this, Fn, &CapturedVars](CodeGenFunction &CGF,
+                                               PrePostActionTy &Action) {
       Action.Enter(CGF);
 
       llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
@@ -940,7 +944,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
       OutlinedFnArgs.push_back(
           llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
       OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-      emitOutlinedFunctionCall(CGF, Loc, Fn, OutlinedFnArgs);
+      CGF.EmitCallOrInvoke(Fn, OutlinedFnArgs);
     };
 
     RegionCodeGenTy RCG(CodeGen);
@@ -976,7 +980,7 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
   OutlinedFnArgs.push_back(
       llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
+  CGF.EmitCallOrInvoke(OutlinedFn, OutlinedFnArgs);
 }
 
 /// This function creates calls to one of two shuffle functions to copy
@@ -2233,82 +2237,4 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
   RCG(CGF);
   CGF.EmitBranch(DefaultBB);
   CGF.EmitBlock(DefaultBB, /*IsFinished=*/true);
-}
-
-const VarDecl *
-CGOpenMPRuntimeNVPTX::translateParameter(const FieldDecl *FD,
-                                         const VarDecl *NativeParam) const {
-  if (!NativeParam->getType()->isReferenceType())
-    return NativeParam;
-  QualType ArgType = NativeParam->getType();
-  QualifierCollector QC;
-  const Type *NonQualTy = QC.strip(ArgType);
-  QualType PointeeTy = cast<ReferenceType>(NonQualTy)->getPointeeType();
-  if (const auto *Attr = FD->getAttr<OMPCaptureKindAttr>()) {
-    if (Attr->getCaptureKind() == OMPC_map) {
-      PointeeTy = CGM.getContext().getAddrSpaceQualType(PointeeTy,
-                                                        LangAS::opencl_global);
-    }
-  }
-  ArgType = CGM.getContext().getPointerType(PointeeTy);
-  QC.addRestrict();
-  enum { NVPTX_local_addr = 5 };
-  QC.addAddressSpace(NVPTX_local_addr);
-  ArgType = QC.apply(CGM.getContext(), ArgType);
-  return ImplicitParamDecl::Create(
-      CGM.getContext(), /*DC=*/nullptr, NativeParam->getLocation(),
-      NativeParam->getIdentifier(), ArgType, ImplicitParamDecl::Other);
-}
-
-Address
-CGOpenMPRuntimeNVPTX::getParameterAddress(CodeGenFunction &CGF,
-                                          const VarDecl *NativeParam,
-                                          const VarDecl *TargetParam) const {
-  assert(NativeParam != TargetParam &&
-         NativeParam->getType()->isReferenceType() &&
-         "Native arg must not be the same as target arg.");
-  Address LocalAddr = CGF.GetAddrOfLocalVar(TargetParam);
-  QualType NativeParamType = NativeParam->getType();
-  QualifierCollector QC;
-  const Type *NonQualTy = QC.strip(NativeParamType);
-  QualType NativePointeeTy = cast<ReferenceType>(NonQualTy)->getPointeeType();
-  unsigned NativePointeeAddrSpace =
-      NativePointeeTy.getQualifiers().getAddressSpace();
-  QualType TargetPointeeTy = TargetParam->getType()->getPointeeType();
-  llvm::Value *TargetAddr = CGF.EmitLoadOfScalar(
-      LocalAddr, /*Volatile=*/false, TargetPointeeTy, SourceLocation());
-  // First cast to generic.
-  TargetAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      TargetAddr, TargetAddr->getType()->getPointerElementType()->getPointerTo(
-                      /*AddrSpace=*/0));
-  // Cast from generic to native address space.
-  TargetAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      TargetAddr, TargetAddr->getType()->getPointerElementType()->getPointerTo(
-                      NativePointeeAddrSpace));
-  Address NativeParamAddr = CGF.CreateMemTemp(NativeParamType);
-  CGF.EmitStoreOfScalar(TargetAddr, NativeParamAddr, /*Volatile=*/false,
-                        NativeParam->getType());
-  return NativeParamAddr;
-}
-
-void CGOpenMPRuntimeNVPTX::emitOutlinedFunctionCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
-    ArrayRef<llvm::Value *> Args) const {
-  SmallVector<llvm::Value *, 4> TargetArgs;
-  auto *FnType =
-      cast<llvm::FunctionType>(OutlinedFn->getType()->getPointerElementType());
-  for (unsigned I = 0, E = Args.size(); I < E; ++I) {
-    llvm::Type *TargetType = FnType->getParamType(I);
-    llvm::Value *NativeArg = Args[I];
-    if (!TargetType->isPointerTy()) {
-      TargetArgs.emplace_back(NativeArg);
-      continue;
-    }
-    llvm::Value *TargetArg = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        NativeArg, NativeArg->getType()->getPointerElementType()->getPointerTo(
-                       /*AddrSpace=*/0));
-    TargetArgs.emplace_back(
-        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TargetArg, TargetType));
-  }
-  CGOpenMPRuntime::emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, TargetArgs);
 }

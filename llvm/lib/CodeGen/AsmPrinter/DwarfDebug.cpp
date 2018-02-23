@@ -61,9 +61,10 @@ static cl::opt<bool>
 DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
                          cl::desc("Disable debug info printing"));
 
-static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
-    "use-dwarf-ranges-base-address-specifier", cl::Hidden,
-    cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
+static cl::opt<bool>
+GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
+                       cl::desc("Generate GNU-style pubnames and pubtypes"),
+                       cl::init(false));
 
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
@@ -88,6 +89,14 @@ static cl::opt<DefaultOnOff> UnknownLocations(
 static cl::opt<DefaultOnOff>
 DwarfAccelTables("dwarf-accel-tables", cl::Hidden,
                  cl::desc("Output prototype dwarf accelerator tables."),
+                 cl::values(clEnumVal(Default, "Default for platform"),
+                            clEnumVal(Enable, "Enabled"),
+                            clEnumVal(Disable, "Disabled")),
+                 cl::init(Default));
+
+static cl::opt<DefaultOnOff>
+DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
+                 cl::desc("Generate DWARF pubnames and pubtypes sections"),
                  cl::values(clEnumVal(Default, "Default for platform"),
                             clEnumVal(Enable, "Enabled"),
                             clEnumVal(Disable, "Disabled")),
@@ -197,42 +206,7 @@ ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
               return A.Expr->getFragmentInfo()->OffsetInBits <
                      B.Expr->getFragmentInfo()->OffsetInBits;
             });
-
   return FrameIndexExprs;
-}
-
-void DbgVariable::addMMIEntry(const DbgVariable &V) {
-  assert(DebugLocListIndex == ~0U && !MInsn && "not an MMI entry");
-  assert(V.DebugLocListIndex == ~0U && !V.MInsn && "not an MMI entry");
-  assert(V.Var == Var && "conflicting variable");
-  assert(V.IA == IA && "conflicting inlined-at location");
-
-  assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
-  assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
-
-  // FIXME: This logic should not be necessary anymore, as we now have proper
-  // deduplication. However, without it, we currently run into the assertion
-  // below, which means that we are likely dealing with broken input, i.e. two
-  // non-fragment entries for the same variable at different frame indices.
-  if (FrameIndexExprs.size()) {
-    auto *Expr = FrameIndexExprs.back().Expr;
-    if (!Expr || !Expr->isFragment())
-      return;
-  }
-
-  for (const auto &FIE : V.FrameIndexExprs)
-    // Ignore duplicate entries.
-    if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
-          return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
-        }))
-      FrameIndexExprs.push_back(FIE);
-
-  assert((FrameIndexExprs.size() == 1 ||
-          llvm::all_of(FrameIndexExprs,
-                       [](FrameIndexExpr &FIE) {
-                         return FIE.Expr && FIE.Expr->isFragment();
-                       })) &&
-         "conflicting locations for variable");
 }
 
 static const DwarfAccelTable::Atom TypeAtoms[] = {
@@ -415,8 +389,20 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
+bool DwarfDebug::hasDwarfPubSections(bool includeMinimalInlineScopes) const {
+  // Opting in to GNU Pubnames/types overrides the default to ensure these are
+  // generated for things like Gold's gdb_index generation.
+  if (GenerateGnuPubSections)
+    return true;
+
+  if (DwarfPubSections == Default)
+    return tuneForGDB() && !includeMinimalInlineScopes;
+
+  return DwarfPubSections == Enable;
+}
+
 void DwarfDebug::addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const {
-  if (!U.hasDwarfPubSections())
+  if (!hasDwarfPubSections(U.includeMinimalInlineScopes()))
     return;
 
   U.addFlag(D, dwarf::DW_AT_GNU_pubnames);
@@ -441,9 +427,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
     NewCU.addString(Die, dwarf::DW_AT_GNU_dwo_name,
                   Asm->TM.Options.MCOptions.SplitDwarfFile);
   }
-
-  for (auto *IE : DIUnit->getImportedEntities())
-    NewCU.addImportedEntity(IE);
 
   // LTO with assembly output shares a single line table amongst multiple CUs.
   // To avoid the compilation directory being ambiguous, let the line table
@@ -511,8 +494,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
 void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
                                                   const DIImportedEntity *N) {
-  if (isa<DILocalScope>(N->getScope()))
-    return;
   if (DIE *D = TheCU.getOrCreateContextDIE(N->getScope()))
     D->addChild(TheCU.constructImportedEntityDIE(N));
 }
@@ -522,18 +503,13 @@ static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
 sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
   std::sort(GVEs.begin(), GVEs.end(),
             [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
-              // Sort order: first null exprs, then exprs without fragment
-              // info, then sort by fragment offset in bits.
-              // FIXME: Come up with a more comprehensive comparator so
-              // the sorting isn't non-deterministic, and so the following
-              // std::unique call works correctly.
-              if (!A.Expr || !B.Expr)
-                return !!B.Expr;
-              auto FragmentA = A.Expr->getFragmentInfo();
-              auto FragmentB = B.Expr->getFragmentInfo();
-              if (!FragmentA || !FragmentB)
-                return !!FragmentB;
-              return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
+              if (A.Expr != B.Expr && A.Expr && B.Expr) {
+		auto FragmentA = A.Expr->getFragmentInfo();
+		auto FragmentB = B.Expr->getFragmentInfo();
+		if (FragmentA && FragmentB)
+		  return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
+	      }
+              return false;
             });
   GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
                          [](DwarfCompileUnit::GlobalExpr A,
@@ -570,31 +546,18 @@ void DwarfDebug::beginModule() {
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    // FIXME: Move local imported entities into a list attached to the
-    // subprogram, then this search won't be needed and a
-    // getImportedEntities().empty() test should go below with the rest.
-    bool HasNonLocalImportedEntities = llvm::any_of(
-        CUNode->getImportedEntities(), [](const DIImportedEntity *IE) {
-          return !isa<DILocalScope>(IE->getScope());
-        });
-
-    if (!HasNonLocalImportedEntities && CUNode->getEnumTypes().empty() &&
-        CUNode->getRetainedTypes().empty() &&
-        CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
+    if (CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
+        CUNode->getGlobalVariables().empty() &&
+        CUNode->getImportedEntities().empty() && CUNode->getMacros().empty())
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
+    for (auto *IE : CUNode->getImportedEntities())
+      CU.addImportedEntity(IE);
 
     // Global Variables.
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
-      // already know about the variable and it isn't adding a constant
-      // expression.
-      auto &GVMapEntry = GVMap[GVE->getVariable()];
-      auto *Expr = GVE->getExpression();
-      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
-        GVMapEntry.push_back({nullptr, Expr});
-    }
+    for (auto *GVE : CUNode->getGlobalVariables())
+      GVMap[GVE->getVariable()].push_back({nullptr, GVE->getExpression()});
     DenseSet<DIGlobalVariable *> Processed;
     for (auto *GVE : CUNode->getGlobalVariables()) {
       DIGlobalVariable *GV = GVE->getVariable();
@@ -719,11 +682,6 @@ void DwarfDebug::finalizeModuleInfo() {
                         TLOF.getDwarfMacinfoSection()->getBeginSymbol());
   }
 
-  // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
-  for (auto *CUNode : MMI->getModule()->debug_compile_units())
-    if (CUNode->getDWOId())
-      getOrCreateDwarfCompileUnit(CUNode);
-
   // Compute DIE offsets and sizes.
   InfoHolder.computeSizeAndOffsets();
   if (useSplitDwarf())
@@ -786,7 +744,12 @@ void DwarfDebug::endModule() {
   }
 
   // Emit the pubnames and pubtypes sections if requested.
-  emitDebugPubSections();
+  // The condition is optimistically correct - any CU not using GMLT (&
+  // implicit/default pubnames state) might still have pubnames.
+  if (hasDwarfPubSections(/* gmlt */ false)) {
+    emitDebugPubNames(GenerateGnuPubSections);
+    emitDebugPubTypes(GenerateGnuPubSections);
+  }
 
   // clean up.
   // FIXME: AbstractVariables.clear();
@@ -815,7 +778,6 @@ void DwarfDebug::ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU,
 // Collect variable information from side table maintained by MF.
 void DwarfDebug::collectVariableInfoFromMFTable(
     DwarfCompileUnit &TheCU, DenseSet<InlinedVariable> &Processed) {
-  SmallDenseMap<InlinedVariable, DbgVariable *> MFVars;
   for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
     if (!VI.Var)
       continue;
@@ -833,26 +795,24 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     ensureAbstractVariableIsCreatedIfScoped(TheCU, Var, Scope->getScopeNode());
     auto RegVar = make_unique<DbgVariable>(Var.first, Var.second);
     RegVar->initializeMMI(VI.Expr, VI.Slot);
-    if (DbgVariable *DbgVar = MFVars.lookup(Var))
-      DbgVar->addMMIEntry(*RegVar);
-    else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
-      MFVars.insert({Var, RegVar.get()});
+    if (InfoHolder.addScopeVariable(Scope, RegVar.get()))
       ConcreteVariables.push_back(std::move(RegVar));
-    }
   }
 }
 
 // Get .debug_loc entry for the instruction range starting at MI.
 static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
+
   assert(MI->getNumOperands() == 4);
   if (MI->getOperand(0).isReg()) {
-    auto RegOp = MI->getOperand(0);
-    auto Op1 = MI->getOperand(1);
+    MachineLocation MLoc;
     // If the second operand is an immediate, this is a
     // register-indirect address.
-    assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
-    MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
+    if (!MI->getOperand(1).isImm())
+      MLoc.set(MI->getOperand(0).getReg());
+    else
+      MLoc.set(MI->getOperand(0).getReg(), MI->getOperand(1).getImm());
     return DebugLocEntry::Value(Expr, MLoc);
   }
   if (MI->getOperand(0).isImm())
@@ -1349,8 +1309,8 @@ void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
   if (auto *Scope = cast_or_null<DIScope>(S)) {
     Fn = Scope->getFilename();
     Dir = Scope->getDirectory();
-    if (Line != 0 && getDwarfVersion() >= 4)
-      if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
+    if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
+      if (getDwarfVersion() >= 4)
         Discriminator = LBF->getDiscriminator();
 
     unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
@@ -1480,74 +1440,84 @@ static dwarf::PubIndexEntryDescriptor computeIndexValue(DwarfUnit *CU,
   }
 }
 
-/// emitDebugPubSections - Emit visible names and types into debug pubnames and
-/// pubtypes sections.
-void DwarfDebug::emitDebugPubSections() {
+/// emitDebugPubNames - Emit visible names into a debug pubnames section.
+///
+void DwarfDebug::emitDebugPubNames(bool GnuStyle) {
+  MCSection *PSec = GnuStyle
+                        ? Asm->getObjFileLowering().getDwarfGnuPubNamesSection()
+                        : Asm->getObjFileLowering().getDwarfPubNamesSection();
+
+  emitDebugPubSection(GnuStyle, PSec, "Names",
+                      &DwarfCompileUnit::getGlobalNames);
+}
+
+void DwarfDebug::emitDebugPubSection(
+    bool GnuStyle, MCSection *PSec, StringRef Name,
+    const StringMap<const DIE *> &(DwarfCompileUnit::*Accessor)() const) {
   for (const auto &NU : CUMap) {
     DwarfCompileUnit *TheU = NU.second;
-    if (!TheU->hasDwarfPubSections())
+
+    const auto &Globals = (TheU->*Accessor)();
+
+    if (!hasDwarfPubSections(TheU->includeMinimalInlineScopes()))
       continue;
 
-    bool GnuStyle = TheU->getCUNode()->getGnuPubnames();
+    if (auto *Skeleton = TheU->getSkeleton())
+      TheU = Skeleton;
 
-    Asm->OutStreamer->SwitchSection(
-        GnuStyle ? Asm->getObjFileLowering().getDwarfGnuPubNamesSection()
-                 : Asm->getObjFileLowering().getDwarfPubNamesSection());
-    emitDebugPubSection(GnuStyle, "Names", TheU, TheU->getGlobalNames());
+    // Start the dwarf pubnames section.
+    Asm->OutStreamer->SwitchSection(PSec);
 
-    Asm->OutStreamer->SwitchSection(
-        GnuStyle ? Asm->getObjFileLowering().getDwarfGnuPubTypesSection()
-                 : Asm->getObjFileLowering().getDwarfPubTypesSection());
-    emitDebugPubSection(GnuStyle, "Types", TheU, TheU->getGlobalTypes());
+    // Emit the header.
+    Asm->OutStreamer->AddComment("Length of Public " + Name + " Info");
+    MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
+    MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
+    Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+
+    Asm->OutStreamer->EmitLabel(BeginLabel);
+
+    Asm->OutStreamer->AddComment("DWARF Version");
+    Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION);
+
+    Asm->OutStreamer->AddComment("Offset of Compilation Unit Info");
+    Asm->emitDwarfSymbolReference(TheU->getLabelBegin());
+
+    Asm->OutStreamer->AddComment("Compilation Unit Length");
+    Asm->EmitInt32(TheU->getLength());
+
+    // Emit the pubnames for this compilation unit.
+    for (const auto &GI : Globals) {
+      const char *Name = GI.getKeyData();
+      const DIE *Entity = GI.second;
+
+      Asm->OutStreamer->AddComment("DIE offset");
+      Asm->EmitInt32(Entity->getOffset());
+
+      if (GnuStyle) {
+        dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
+        Asm->OutStreamer->AddComment(
+            Twine("Kind: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) + ", " +
+            dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
+        Asm->EmitInt8(Desc.toBits());
+      }
+
+      Asm->OutStreamer->AddComment("External Name");
+      Asm->OutStreamer->EmitBytes(StringRef(Name, GI.getKeyLength() + 1));
+    }
+
+    Asm->OutStreamer->AddComment("End Mark");
+    Asm->EmitInt32(0);
+    Asm->OutStreamer->EmitLabel(EndLabel);
   }
 }
 
-void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
-                                     DwarfCompileUnit *TheU,
-                                     const StringMap<const DIE *> &Globals) {
-  if (auto *Skeleton = TheU->getSkeleton())
-    TheU = Skeleton;
+void DwarfDebug::emitDebugPubTypes(bool GnuStyle) {
+  MCSection *PSec = GnuStyle
+                        ? Asm->getObjFileLowering().getDwarfGnuPubTypesSection()
+                        : Asm->getObjFileLowering().getDwarfPubTypesSection();
 
-  // Emit the header.
-  Asm->OutStreamer->AddComment("Length of Public " + Name + " Info");
-  MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
-  MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
-  Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
-
-  Asm->OutStreamer->EmitLabel(BeginLabel);
-
-  Asm->OutStreamer->AddComment("DWARF Version");
-  Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION);
-
-  Asm->OutStreamer->AddComment("Offset of Compilation Unit Info");
-  Asm->emitDwarfSymbolReference(TheU->getLabelBegin());
-
-  Asm->OutStreamer->AddComment("Compilation Unit Length");
-  Asm->EmitInt32(TheU->getLength());
-
-  // Emit the pubnames for this compilation unit.
-  for (const auto &GI : Globals) {
-    const char *Name = GI.getKeyData();
-    const DIE *Entity = GI.second;
-
-    Asm->OutStreamer->AddComment("DIE offset");
-    Asm->EmitInt32(Entity->getOffset());
-
-    if (GnuStyle) {
-      dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
-      Asm->OutStreamer->AddComment(
-          Twine("Kind: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) + ", " +
-          dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
-      Asm->EmitInt8(Desc.toBits());
-    }
-
-    Asm->OutStreamer->AddComment("External Name");
-    Asm->OutStreamer->EmitBytes(StringRef(Name, GI.getKeyLength() + 1));
-  }
-
-  Asm->OutStreamer->AddComment("End Mark");
-  Asm->EmitInt32(0);
-  Asm->OutStreamer->EmitLabel(EndLabel);
+  emitDebugPubSection(GnuStyle, PSec, "Types",
+                      &DwarfCompileUnit::getGlobalTypes);
 }
 
 /// Emit null-terminated strings into a debug str section.
@@ -1583,7 +1553,13 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     MachineLocation Location = Value.getLoc();
     if (Location.isIndirect())
       DwarfExpr.setMemoryLocationKind();
-    DIExpressionCursor Cursor(DIExpr);
+    SmallVector<uint64_t, 8> Ops;
+    if (Location.isIndirect() && Location.getOffset()) {
+      Ops.push_back(dwarf::DW_OP_plus_uconst);
+      Ops.push_back(Location.getOffset());
+    }
+    Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+    DIExpressionCursor Cursor(Ops);
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
       return;
@@ -1868,49 +1844,17 @@ void DwarfDebug::emitDebugRanges() {
       // Emit our symbol so we can find the beginning of the range.
       Asm->OutStreamer->EmitLabel(List.getSym());
 
-      // Gather all the ranges that apply to the same section so they can share
-      // a base address entry.
-      MapVector<const MCSection *, std::vector<const RangeSpan *>> MV;
       for (const RangeSpan &Range : List.getRanges()) {
-        MV[&Range.getStart()->getSection()].push_back(&Range);
-      }
-
-      auto *CUBase = TheCU->getBaseAddress();
-      bool BaseIsSet = false;
-      for (const auto &P : MV) {
-        // Don't bother with a base address entry if there's only one range in
-        // this section in this range list - for example ranges for a CU will
-        // usually consist of single regions from each of many sections
-        // (-ffunction-sections, or just C++ inline functions) except under LTO
-        // or optnone where there may be holes in a single CU's section
-        // contrubutions.
-        auto *Base = CUBase;
-        if (!Base && P.second.size() > 1 &&
-            UseDwarfRangesBaseAddressSpecifier) {
-          BaseIsSet = true;
-          // FIXME/use care: This may not be a useful base address if it's not
-          // the lowest address/range in this object.
-          Base = P.second.front()->getStart();
-          Asm->OutStreamer->EmitIntValue(-1, Size);
-          Asm->OutStreamer->EmitSymbolValue(Base, Size);
-        } else if (BaseIsSet) {
-          BaseIsSet = false;
-          Asm->OutStreamer->EmitIntValue(-1, Size);
-          Asm->OutStreamer->EmitIntValue(0, Size);
-        }
-
-        for (const auto *RS : P.second) {
-          const MCSymbol *Begin = RS->getStart();
-          const MCSymbol *End = RS->getEnd();
-          assert(Begin && "Range without a begin symbol?");
-          assert(End && "Range without an end symbol?");
-          if (Base) {
-            Asm->EmitLabelDifference(Begin, Base, Size);
-            Asm->EmitLabelDifference(End, Base, Size);
-          } else {
-            Asm->OutStreamer->EmitSymbolValue(Begin, Size);
-            Asm->OutStreamer->EmitSymbolValue(End, Size);
-          }
+        const MCSymbol *Begin = Range.getStart();
+        const MCSymbol *End = Range.getEnd();
+        assert(Begin && "Range without a begin symbol?");
+        assert(End && "Range without an end symbol?");
+        if (auto *Base = TheCU->getBaseAddress()) {
+          Asm->EmitLabelDifference(Begin, Base, Size);
+          Asm->EmitLabelDifference(End, Base, Size);
+        } else {
+          Asm->OutStreamer->EmitSymbolValue(Begin, Size);
+          Asm->OutStreamer->EmitSymbolValue(End, Size);
         }
       }
 

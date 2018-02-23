@@ -231,7 +231,6 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case AMDOpenCL: return "amdopencl";
   case CoreCLR: return "coreclr";
   case OpenCL: return "opencl";
-  case Simulator: return "simulator";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -512,7 +511,6 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
     .StartsWith("amdopencl", Triple::AMDOpenCL)
     .StartsWith("coreclr", Triple::CoreCLR)
     .StartsWith("opencl", Triple::OpenCL)
-    .StartsWith("simulator", Triple::Simulator)
     .Default(Triple::UnknownEnvironment);
 }
 

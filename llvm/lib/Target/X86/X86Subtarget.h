@@ -20,10 +20,7 @@
 #include "X86SelectionDAGInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Target/TargetMachine.h"
@@ -300,14 +297,6 @@ protected:
   /// Processor supports Cache Line Write Back instruction
   bool HasCLWB;
 
-  /// Use a retpoline thunk rather than indirect calls to block speculative
-  /// execution.
-  bool UseRetpoline;
-
-  /// When using a retpoline thunk, call an externally provided thunk rather
-  /// than emitting one inside the compiler.
-  bool UseRetpolineExternalThunk;
-
   /// Use software floating point for code generation.
   bool UseSoftFloat;
 
@@ -325,11 +314,10 @@ protected:
   /// Instruction itineraries for scheduling
   InstrItineraryData InstrItins;
 
-  /// GlobalISel related APIs.
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
+  /// Gather the accessor points to GlobalISel-related APIs.
+  /// This is used to avoid ifndefs spreading around while GISel is
+  /// an optional library.
+  std::unique_ptr<GISelAccessor> GISel;
 
 private:
   /// Override the stack alignment.
@@ -357,6 +345,9 @@ public:
   ///
   X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                const X86TargetMachine &TM, unsigned StackAlignOverride);
+
+  /// This object will take onwership of \p GISelAccessor.
+  void setGISelAccessor(GISelAccessor &GISel) { this->GISel.reset(&GISel); }
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -515,8 +506,6 @@ public:
   bool hasPKU() const { return HasPKU; }
   bool hasMPX() const { return HasMPX; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
-  bool useRetpoline() const { return UseRetpoline; }
-  bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 
   bool isXRaySupported() const override { return is64Bit(); }
 
@@ -601,7 +590,6 @@ public:
     // On Win64, all these conventions just use the default convention.
     case CallingConv::C:
     case CallingConv::Fast:
-    case CallingConv::Swift:
     case CallingConv::X86_FastCall:
     case CallingConv::X86_StdCall:
     case CallingConv::X86_ThisCall:
@@ -650,10 +638,6 @@ public:
   /// This function returns true if the target has sincos() routine in its
   /// compiler runtime or math libraries.
   bool hasSinCos() const;
-
-  /// If we are using retpolines, we need to expand indirectbr to avoid it
-  /// lowering to an actual indirect jump.
-  bool enableIndirectBrExpand() const override { return useRetpoline(); }
 
   /// Enable the MachineScheduler pass for all X86 subtargets.
   bool enableMachineScheduler() const override { return true; }

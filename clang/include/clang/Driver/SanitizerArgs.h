@@ -33,7 +33,7 @@ class SanitizerArgs {
   bool MsanUseAfterDtor = false;
   bool CfiCrossDso = false;
   int AsanFieldPadding = 0;
-  bool SharedRuntime = false;
+  bool AsanSharedRuntime = false;
   bool AsanUseAfterScope = true;
   bool AsanGlobalsDeadStripping = false;
   bool LinkCXXRuntimes = false;
@@ -42,15 +42,13 @@ class SanitizerArgs {
   bool TsanMemoryAccess = true;
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
-  bool MinimalRuntime = false;
 
  public:
   /// Parses the sanitizer arguments from an argument list.
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
-  bool needsSharedRt() const { return SharedRuntime; }
-
   bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
+  bool needsSharedAsanRt() const { return AsanSharedRuntime; }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }
   bool needsFuzzer() const { return Sanitizers.has(SanitizerKind::Fuzzer); }
@@ -59,7 +57,6 @@ class SanitizerArgs {
            !Sanitizers.has(SanitizerKind::Address);
   }
   bool needsUbsanRt() const;
-  bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const {
     return Sanitizers.has(SanitizerKind::SafeStack);

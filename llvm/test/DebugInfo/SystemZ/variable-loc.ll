@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -disable-fp-elim < %s | FileCheck %s
 ; RUN: llc -mtriple=s390x-linux-gnu -disable-fp-elim -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=DEBUG %s
+; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=DEBUG %s
 ;
 ; This is a regression test making sure the location of variables is correct in
 ; debugging information, even if they're addressed via the frame pointer.
@@ -14,8 +14,9 @@
 ; CHECK: brasl   %r14, populate_array@PLT
 
 ; DEBUG: DW_TAG_variable
+; Rather hard-coded, but 0x91 => DW_OP_fbreg and 0xa401 is SLEB128 encoded 164.
 ; DEBUG-NOT: DW_TAG
-; DEBUG: DW_AT_location {{.*}}(DW_OP_fbreg +164)
+; DEBUG: DW_AT_location {{.*}}(<0x3> 91 a4 01 )
 ; DEBUG-NOT: DW_TAG
 ; DEBUG: DW_AT_name {{.*}} "main_arr"
 

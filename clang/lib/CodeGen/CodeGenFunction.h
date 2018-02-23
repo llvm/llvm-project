@@ -76,10 +76,6 @@ class ObjCAtThrowStmt;
 class ObjCAtSynchronizedStmt;
 class ObjCAutoreleasePoolStmt;
 
-namespace analyze_os_log {
-class OSLogBufferLayout;
-}
-
 namespace CodeGen {
 class CodeGenTypes;
 class CGCallee;
@@ -115,7 +111,6 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(DynamicTypeCacheMiss, dynamic_type_cache_miss, 0)            \
   SANITIZER_CHECK(FloatCastOverflow, float_cast_overflow, 0)                   \
   SANITIZER_CHECK(FunctionTypeMismatch, function_type_mismatch, 0)             \
-  SANITIZER_CHECK(InvalidBuiltin, invalid_builtin, 0)                          \
   SANITIZER_CHECK(LoadInvalidValue, load_invalid_value, 0)                     \
   SANITIZER_CHECK(MissingReturn, missing_return, 0)                            \
   SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
@@ -1121,7 +1116,7 @@ private:
         auto IP = CGF.Builder.saveAndClearIP();
         CGF.EmitBlock(Stack.back().ExitBlock.getBlock());
         CodeGen(CGF);
-        CGF.EmitBranch(Stack.back().ContBlock.getBlock());
+        CGF.EmitBranchThroughCleanup(Stack.back().ContBlock);
         CGF.Builder.restoreIP(IP);
         Stack.back().HasBeenEmitted = true;
       }
@@ -1588,8 +1583,7 @@ public:
   llvm::Function *GenerateBlockFunction(GlobalDecl GD,
                                         const CGBlockInfo &Info,
                                         const DeclMapTy &ldm,
-                                        bool IsLambdaConversionToBlock,
-                                        bool BuildGlobalBlock);
+                                        bool IsLambdaConversionToBlock);
 
   llvm::Constant *GenerateCopyHelperFunction(const CGBlockInfo &blockInfo);
   llvm::Constant *GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo);
@@ -1780,15 +1774,6 @@ public:
   /// EmitMCountInstrumentation - Emit call to .mcount.
   void EmitMCountInstrumentation();
 
-  /// Encode an address into a form suitable for use in a function prologue.
-  llvm::Constant *EncodeAddrForUseInPrologue(llvm::Function *F,
-                                             llvm::Constant *Addr);
-
-  /// Decode an address used in a function prologue, encoded by \c
-  /// EncodeAddrForUseInPrologue.
-  llvm::Value *DecodeAddrUsedInPrologue(llvm::Value *F,
-                                        llvm::Value *EncodedAddr);
-
   /// EmitFunctionProlog - Emit the target specific LLVM code to load the
   /// arguments for the given function. This is also responsible for naming the
   /// LLVM function arguments.
@@ -1831,7 +1816,8 @@ public:
   /// TypeOfSelfObject - Return type of object that this self represents.
   QualType TypeOfSelfObject();
 
-  /// getEvaluationKind - Return the TypeEvaluationKind of QualType \c T.
+  /// hasAggregateLLVMType - Return true if the specified AST type will map into
+  /// an aggregate LLVM type or is void.
   static TypeEvaluationKind getEvaluationKind(QualType T);
 
   static bool hasScalarEvaluationKind(QualType T) {
@@ -2359,12 +2345,6 @@ public:
     TCK_NonnullAssign
   };
 
-  /// Determine whether the pointer type check \p TCK permits null pointers.
-  static bool isNullPointerAllowed(TypeCheckKind TCK);
-
-  /// Determine whether the pointer type check \p TCK requires a vptr check.
-  static bool isVptrCheckRequired(TypeCheckKind TCK, QualType Ty);
-
   /// \brief Whether any type-checking sanitizers are enabled. If \c false,
   /// calls to EmitTypeCheck can be skipped.
   bool sanitizePerformTypeCheck() const;
@@ -2781,9 +2761,7 @@ public:
   /// and initializes them with the values according to OpenMP standard.
   ///
   /// \param D Directive (possibly) with the 'linear' clause.
-  /// \return true if at least one linear variable is found that should be
-  /// initialized with the value of the original variable, false otherwise.
-  bool EmitOMPLinearClauseInit(const OMPLoopDirective &D);
+  void EmitOMPLinearClauseInit(const OMPLoopDirective &D);
 
   typedef const llvm::function_ref<void(CodeGenFunction & /*CGF*/,
                                         llvm::Value * /*OutlinedFn*/,
@@ -3179,7 +3157,6 @@ public:
   };
 
   ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
-  ConstantEmission tryEmitAsConstant(const MemberExpr *ME);
 
   RValue EmitPseudoObjectRValue(const PseudoObjectExpr *e,
                                 AggValueSlot slot = AggValueSlot::ignored());
@@ -3306,13 +3283,6 @@ public:
   RValue EmitBuiltinExpr(const FunctionDecl *FD,
                          unsigned BuiltinID, const CallExpr *E,
                          ReturnValueSlot ReturnValue);
-
-  /// Emit IR for __builtin_os_log_format.
-  RValue emitBuiltinOSLogFormat(const CallExpr &E);
-
-  llvm::Function *generateBuiltinOSLogHelperFunction(
-      const analyze_os_log::OSLogBufferLayout &Layout,
-      CharUnits BufferAlignment);
 
   RValue EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue);
 
@@ -3635,17 +3605,6 @@ public:
                                       SourceLocation Loc,
                                       const Twine &Name = "");
 
-  /// Specifies which type of sanitizer check to apply when handling a
-  /// particular builtin.
-  enum BuiltinCheckKind {
-    BCK_CTZPassedZero,
-    BCK_CLZPassedZero,
-  };
-
-  /// Emits an argument for a call to a builtin. If the builtin sanitizer is
-  /// enabled, a runtime check specified by \p Kind is also emitted.
-  llvm::Value *EmitCheckedArgForBuiltin(const Expr *E, BuiltinCheckKind Kind);
-
   /// \brief Emit a description of a type in a format suitable for passing to
   /// a runtime sanitizer handler.
   llvm::Constant *EmitCheckTypeDescriptor(QualType T);
@@ -3860,11 +3819,6 @@ public:
   /// explicit source.
   Address EmitPointerWithAlignment(const Expr *Addr,
                                    LValueBaseInfo *BaseInfo = nullptr);
-
-  /// If \p E references a parameter with pass_object_size info or a constant
-  /// array size modifier, emit the object size divided by the size of \p EltTy.
-  /// Otherwise return null.
-  llvm::Value *LoadPassedObjectSize(const Expr *E, QualType EltTy);
 
   void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 

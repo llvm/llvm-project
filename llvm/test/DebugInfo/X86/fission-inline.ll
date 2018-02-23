@@ -1,5 +1,5 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 < %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj > %t
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 ; RUN: llvm-objdump -r %t | FileCheck --check-prefix=RELOCS %s
 
 ; Test the emission of gmlt-like inlining information into the skeleton unit.
@@ -71,7 +71,6 @@
 ; CHECK:     DW_AT_call_file
 ; CHECK-NEXT:     DW_AT_call_line {{.*}} (18)
 ; CHECK-NOT: DW_
-; CHECK: .debug_info.dwo contents:
 
 ; RELOCS-NOT: RELOCATION RECORDS FOR [.rela.debug_ranges]
 

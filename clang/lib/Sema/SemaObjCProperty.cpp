@@ -872,7 +872,7 @@ SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
   }
 
   QualType RHSType = S.Context.getCanonicalType(Property->getType());
-  unsigned OriginalAttributes = Property->getPropertyAttributesAsWritten();
+  unsigned OriginalAttributes = Property->getPropertyAttributes();
   enum MismatchKind {
     IncompatibleType = 0,
     HasNoExpectedAttribute,
@@ -890,7 +890,7 @@ SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
   SmallVector<MismatchingProperty, 4> Mismatches;
   for (ObjCPropertyDecl *Prop : Properties) {
     // Verify the property attributes.
-    unsigned Attr = Prop->getPropertyAttributesAsWritten();
+    unsigned Attr = Prop->getPropertyAttributes();
     if (Attr != OriginalAttributes) {
       auto Diag = [&](bool OriginalHasAttribute, StringRef AttributeName) {
         MismatchKind Kind = OriginalHasAttribute ? HasNoExpectedAttribute
@@ -1599,11 +1599,7 @@ Sema::DiagnosePropertyMismatch(ObjCPropertyDecl *Property,
   // meaningless for readonly properties, so don't diagnose if the
   // atomic property is 'readonly'.
   checkAtomicPropertyMismatch(*this, SuperProperty, Property, false);
-  // Readonly properties from protocols can be implemented as "readwrite"
-  // with a custom setter name.
-  if (Property->getSetterName() != SuperProperty->getSetterName() &&
-      !(SuperProperty->isReadOnly() &&
-        isa<ObjCProtocolDecl>(SuperProperty->getDeclContext()))) {
+  if (Property->getSetterName() != SuperProperty->getSetterName()) {
     Diag(Property->getLocation(), diag::warn_property_attribute)
       << Property->getDeclName() << "setter" << inheritedName;
     Diag(SuperProperty->getLocation(), diag::note_property_declare);
@@ -1899,7 +1895,7 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
                             /* property = */ Prop->getIdentifier(),
                             /* ivar = */ Prop->getDefaultSynthIvarName(Context),
                             Prop->getLocation(), Prop->getQueryKind()));
-    if (PIDecl && !Prop->isUnavailable()) {
+    if (PIDecl) {
       Diag(Prop->getLocation(), diag::warn_missing_explicit_synthesis);
       Diag(IMPDecl->getLocation(), diag::note_while_in_implementation);
     }

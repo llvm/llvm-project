@@ -207,7 +207,7 @@ class _CXString(Structure):
         conf.lib.clang_disposeString(self)
 
     @staticmethod
-    def from_result(res, fn=None, args=None):
+    def from_result(res, fn, args):
         assert isinstance(res, _CXString)
         return conf.lib.clang_getCString(res)
 
@@ -459,7 +459,8 @@ class Diagnostic(object):
         """The command-line option that disables this diagnostic."""
         disable = _CXString()
         conf.lib.clang_getDiagnosticOption(self, byref(disable))
-        return _CXString.from_result(disable)
+
+        return conf.lib.clang_getCString(disable)
 
     def format(self, options=None):
         """
@@ -472,7 +473,8 @@ class Diagnostic(object):
             options = conf.lib.clang_defaultDiagnosticDisplayOptions()
         if options & ~Diagnostic._FormatOptionsMask:
             raise ValueError('Invalid format options')
-        return conf.lib.clang_formatDiagnostic(self, options)
+        formatted = conf.lib.clang_formatDiagnostic(self, options)
+        return conf.lib.clang_getCString(formatted)
 
     def __repr__(self):
         return "<Diagnostic severity %r, location %r, spelling %r>" % (

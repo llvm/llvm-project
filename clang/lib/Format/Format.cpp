@@ -506,7 +506,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
-    Expanded.BraceWrapping.SplitEmptyFunction = true;
+    Expanded.BraceWrapping.SplitEmptyFunction = false;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
     break;
   case FormatStyle::BS_Stroustrup:

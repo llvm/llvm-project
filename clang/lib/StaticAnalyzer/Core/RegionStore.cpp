@@ -18,7 +18,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -409,19 +409,6 @@ public: // Part of public interface to class.
 
   // BindDefault is only used to initialize a region with a default value.
   StoreRef BindDefault(Store store, const MemRegion *R, SVal V) override {
-    // FIXME: The offsets of empty bases can be tricky because of
-    // of the so called "empty base class optimization".
-    // If a base class has been optimized out
-    // we should not try to create a binding, otherwise we should.
-    // Unfortunately, at the moment ASTRecordLayout doesn't expose
-    // the actual sizes of the empty bases
-    // and trying to infer them from offsets/alignments
-    // seems to be error-prone and non-trivial because of the trailing padding.
-    // As a temporary mitigation we don't create bindings for empty bases.
-    if (R->getKind() == MemRegion::CXXBaseObjectRegionKind &&
-        cast<CXXBaseObjectRegion>(R)->getDecl()->isEmpty())
-      return StoreRef(store, *this);
-
     RegionBindingsRef B = getRegionBindings(store);
     assert(!B.lookup(R, BindingKey::Direct));
 
@@ -1393,17 +1380,17 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     return UnknownVal();
   }
 
-  if (!isa<TypedValueRegion>(MR)) {
+  if (isa<AllocaRegion>(MR) ||
+      isa<SymbolicRegion>(MR) ||
+      isa<CodeTextRegion>(MR)) {
     if (T.isNull()) {
       if (const TypedRegion *TR = dyn_cast<TypedRegion>(MR))
-        T = TR->getLocationType()->getPointeeType();
-      else if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR))
-        T = SR->getSymbol()->getType()->getPointeeType();
-      else if (isa<AllocaRegion>(MR))
-        T = Ctx.VoidTy;
+        T = TR->getLocationType();
+      else {
+        const SymbolicRegion *SR = cast<SymbolicRegion>(MR);
+        T = SR->getSymbol()->getType();
+      }
     }
-    assert(!T.isNull() && "Unable to auto-detect binding type!");
-    assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
     MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
   }
 
@@ -1859,17 +1846,10 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
     return svalBuilder.getRegionValueSymbolVal(R);
 
   // Is 'VD' declared constant?  If so, retrieve the constant value.
-  if (VD->getType().isConstQualified()) {
-    if (const Expr *Init = VD->getInit()) {
+  if (VD->getType().isConstQualified())
+    if (const Expr *Init = VD->getInit())
       if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
-
-      // If the variable is const qualified and has an initializer but
-      // we couldn't evaluate initializer to a value, treat the value as
-      // unknown.
-      return UnknownVal();
-    }
-  }
 
   // This must come after the check for constants because closure-captured
   // constant variables may appear in UnknownSpaceRegion.
@@ -2092,12 +2072,15 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
   if (const ConstantArrayType* CAT = dyn_cast<ConstantArrayType>(AT))
     Size = CAT->getSize().getZExtValue();
 
-  // Check if the init expr is a literal. If so, bind the rvalue instead.
-  // FIXME: It's not responsibility of the Store to transform this lvalue
-  // to rvalue. ExprEngine or maybe even CFG should do this before binding.
+  // Check if the init expr is a string literal.
   if (Optional<loc::MemRegionVal> MRV = Init.getAs<loc::MemRegionVal>()) {
-    SVal V = getBinding(B.asStore(), *MRV, R->getValueType());
-    return bindAggregate(B, R, V);
+    const StringRegion *S = cast<StringRegion>(MRV->getRegion());
+
+    // Treat the string as a lazy compound value.
+    StoreRef store(B.asStore(), *this);
+    nonloc::LazyCompoundVal LCV = svalBuilder.makeLazyCompoundVal(store, S)
+        .castAs<nonloc::LazyCompoundVal>();
+    return bindAggregate(B, R, LCV);
   }
 
   // Handle lazy compound values.
@@ -2130,10 +2113,9 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
       NewB = bind(NewB, loc::MemRegionVal(ER), *VI);
   }
 
-  // If the init list is shorter than the array length (or the array has
-  // variable length), set the array default value. Values that are already set
-  // are not overwritten.
-  if (!Size.hasValue() || i < Size.getValue())
+  // If the init list is shorter than the array length, set the
+  // array default value.
+  if (Size.hasValue() && i < Size.getValue())
     NewB = setImplicitDefaultValue(NewB, R, ElementTy);
 
   return NewB;

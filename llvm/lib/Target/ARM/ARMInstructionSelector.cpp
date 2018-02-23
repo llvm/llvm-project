@@ -15,14 +15,18 @@
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
-#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arm-isel"
 
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+
 using namespace llvm;
+
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+#error "You shouldn't build this"
+#endif
 
 namespace {
 
@@ -35,11 +39,10 @@ public:
   ARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                          const ARMRegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
-  static const char *getName() { return DEBUG_TYPE; }
+  bool select(MachineInstr &I) const override;
 
 private:
-  bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+  bool selectImpl(MachineInstr &I) const;
 
   struct CmpConstants;
   struct InsertInfo;
@@ -57,9 +60,7 @@ private:
   // Set \p DestReg to \p Constant.
   void putConstant(InsertInfo I, unsigned DestReg, unsigned Constant) const;
 
-  bool selectGlobal(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
   bool selectSelect(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
-  bool selectShift(unsigned ShiftOpc, MachineInstrBuilder &MIB) const;
 
   // Check if the types match and both operands have the expected size and
   // register bank.
@@ -97,7 +98,7 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM,
 }
 }
 
-const unsigned zero_reg = 0;
+unsigned zero_reg = 0;
 
 #define GET_GLOBALISEL_IMPL
 #include "ARMGenGlobalISel.inc"
@@ -487,75 +488,6 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
   return true;
 }
 
-bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
-                                          MachineRegisterInfo &MRI) const {
-  if (TII.getSubtarget().isROPI() || TII.getSubtarget().isRWPI()) {
-    DEBUG(dbgs() << "ROPI and RWPI not supported yet\n");
-    return false;
-  }
-
-  auto GV = MIB->getOperand(1).getGlobal();
-  if (GV->isThreadLocal()) {
-    DEBUG(dbgs() << "TLS variables not supported yet\n");
-    return false;
-  }
-
-  auto &MBB = *MIB->getParent();
-  auto &MF = *MBB.getParent();
-
-  bool UseMovt = STI.useMovt(MF);
-
-  unsigned Alignment = 4;
-  if (TM.isPositionIndependent()) {
-    bool Indirect = STI.isGVIndirectSymbol(GV);
-    // FIXME: Taking advantage of MOVT for ELF is pretty involved, so we don't
-    // support it yet. See PR28229.
-    unsigned Opc =
-        UseMovt && !STI.isTargetELF()
-            ? (Indirect ? ARM::MOV_ga_pcrel_ldr : ARM::MOV_ga_pcrel)
-            : (Indirect ? ARM::LDRLIT_ga_pcrel_ldr : ARM::LDRLIT_ga_pcrel);
-    MIB->setDesc(TII.get(Opc));
-
-    if (STI.isTargetDarwin())
-      MIB->getOperand(1).setTargetFlags(ARMII::MO_NONLAZY);
-
-    if (Indirect)
-      MIB.addMemOperand(MF.getMachineMemOperand(
-          MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad,
-          TM.getPointerSize(), Alignment));
-
-    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-  }
-
-  if (STI.isTargetELF()) {
-    if (UseMovt) {
-      MIB->setDesc(TII.get(ARM::MOVi32imm));
-    } else {
-      // Load the global's address from the constant pool.
-      MIB->setDesc(TII.get(ARM::LDRi12));
-      MIB->RemoveOperand(1);
-      MIB.addConstantPoolIndex(
-             MF.getConstantPool()->getConstantPoolIndex(GV, Alignment),
-             /* Offset */ 0, /* TargetFlags */ 0)
-          .addMemOperand(MF.getMachineMemOperand(
-              MachinePointerInfo::getConstantPool(MF),
-              MachineMemOperand::MOLoad, TM.getPointerSize(), Alignment))
-          .addImm(0)
-          .add(predOps(ARMCC::AL));
-    }
-  } else if (STI.isTargetMachO()) {
-    if (UseMovt)
-      MIB->setDesc(TII.get(ARM::MOVi32imm));
-    else
-      MIB->setDesc(TII.get(ARM::LDRLIT_ga_abs));
-  } else {
-    DEBUG(dbgs() << "Object format not supported yet\n");
-    return false;
-  }
-
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
 bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
                                           MachineRegisterInfo &MRI) const {
   auto &MBB = *MIB->getParent();
@@ -593,16 +525,7 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
   return true;
 }
 
-bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
-                                         MachineInstrBuilder &MIB) const {
-  MIB->setDesc(TII.get(ARM::MOVsr));
-  MIB.addImm(ShiftOpc);
-  MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
-bool ARMInstructionSelector::select(MachineInstr &I,
-                                    CodeGenCoverage &CoverageInfo) const {
+bool ARMInstructionSelector::select(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -617,7 +540,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     return true;
   }
 
-  if (selectImpl(I, CoverageInfo))
+  if (selectImpl(I))
     return true;
 
   MachineInstrBuilder MIB{MF, I};
@@ -710,12 +633,12 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     return selectCmp(Helper, MIB, MRI);
   }
   case G_FCMP: {
-    assert(STI.hasVFP2() && "Can't select fcmp without VFP");
+    assert(TII.getSubtarget().hasVFP2() && "Can't select fcmp without VFP");
 
     unsigned OpReg = I.getOperand(2).getReg();
     unsigned Size = MRI.getType(OpReg).getSizeInBits();
 
-    if (Size == 64 && STI.isFPOnlySP()) {
+    if (Size == 64 && TII.getSubtarget().isFPOnlySP()) {
       DEBUG(dbgs() << "Subtarget only supports single precision");
       return false;
     }
@@ -728,13 +651,6 @@ bool ARMInstructionSelector::select(MachineInstr &I,
                         ARM::FPRRegBankID, Size);
     return selectCmp(Helper, MIB, MRI);
   }
-  case G_LSHR:
-    return selectShift(ARM_AM::ShiftOpc::lsr, MIB);
-  case G_ASHR:
-    return selectShift(ARM_AM::ShiftOpc::asr, MIB);
-  case G_SHL: {
-    return selectShift(ARM_AM::ShiftOpc::lsl, MIB);
-  }
   case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
@@ -745,8 +661,28 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     I.setDesc(TII.get(ARM::ADDri));
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
-  case G_GLOBAL_VALUE:
-    return selectGlobal(MIB, MRI);
+  case G_CONSTANT: {
+    unsigned Reg = I.getOperand(0).getReg();
+
+    if (!validReg(MRI, Reg, 32, ARM::GPRRegBankID))
+      return false;
+
+    I.setDesc(TII.get(ARM::MOVi));
+    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+
+    auto &Val = I.getOperand(1);
+    if (Val.isCImm()) {
+      if (Val.getCImm()->getBitWidth() > 32)
+        return false;
+      Val.ChangeToImmediate(Val.getCImm()->getZExtValue());
+    }
+
+    if (!Val.isImm()) {
+      return false;
+    }
+
+    break;
+  }
   case G_STORE:
   case G_LOAD: {
     const auto &MemOp = **I.memoperands_begin();
@@ -761,7 +697,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     LLT ValTy = MRI.getType(Reg);
     const auto ValSize = ValTy.getSizeInBits();
 
-    assert((ValSize != 64 || STI.hasVFP2()) &&
+    assert((ValSize != 64 || TII.getSubtarget().hasVFP2()) &&
            "Don't know how to load/store 64-bit value without VFP");
 
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);

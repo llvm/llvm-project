@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
+; RUN: llvm-dwarfdump %t | FileCheck %s
 
 ; IR generated from the following code compiled with clang -g:
 ; enum e1 { I, J = 0xffffffffU, K = 0xf000000000000000ULL } a;
@@ -55,7 +55,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!8}
 !llvm.module.flags = !{!15, !16}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "enum.cpp", directory: "/tmp")
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e1", file: !2, line: 1, size: 64, align: 64, elements: !4)

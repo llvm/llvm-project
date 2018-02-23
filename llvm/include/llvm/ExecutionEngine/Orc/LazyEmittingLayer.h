@@ -94,9 +94,9 @@ private:
       llvm_unreachable("Invalid emit-state.");
     }
 
-    Error removeModuleFromBaseLayer(BaseLayerT& BaseLayer) {
-      return EmitState != NotEmitted ? BaseLayer.removeModule(Handle)
-                                     : Error::success();
+    void removeModuleFromBaseLayer(BaseLayerT &BaseLayer) {
+      if (EmitState != NotEmitted)
+        BaseLayer.removeModule(Handle);
     }
 
     void emitAndFinalize(BaseLayerT &BaseLayer) {
@@ -226,9 +226,9 @@ public:
   ///   This method will free the memory associated with the given module, both
   /// in this layer, and the base layer.
   Error removeModule(ModuleHandleT H) {
-    Error Err = (*H)->removeModuleFromBaseLayer(BaseLayer);
+    (*H)->removeModuleFromBaseLayer(BaseLayer);
     ModuleList.erase(H);
-    return Err;
+    return Error::success();
   }
 
   /// @brief Search for the given named symbol.

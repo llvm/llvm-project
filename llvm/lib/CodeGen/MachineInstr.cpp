@@ -211,19 +211,6 @@ void MachineOperand::ChangeToFrameIndex(int Idx) {
   setIndex(Idx);
 }
 
-void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
-                                         unsigned char TargetFlags) {
-  assert((!isReg() || !isTied()) &&
-         "Cannot change a tied operand into a FrameIndex");
-
-  removeRegFromUses();
-
-  OpKind = MO_TargetIndex;
-  setIndex(Idx);
-  setOffset(Offset);
-  setTargetFlags(TargetFlags);
-}
-
 /// ChangeToRegister - Replace this operand with a new register operand of
 /// the specified value.  If an operand is known to be an register already,
 /// the setReg method should be used.
@@ -376,10 +363,6 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getPredicate());
   }
   llvm_unreachable("Invalid machine operand type");
-}
-
-void MachineOperand::printSymbol(raw_ostream &OS, MCSymbol &Sym) {
-  OS << "<MCSym= " << Sym << ">";
 }
 
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
@@ -541,7 +524,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << '>';
     break;
   case MachineOperand::MO_MCSymbol:
-    printSymbol(OS, *getMCSymbol());
+    OS << "<MCSym=" << *getMCSymbol() << '>';
     break;
   case MachineOperand::MO_CFIIndex:
     OS << "<call frame instruction>";
@@ -595,8 +578,10 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
   if (BasePtr == nullptr)
     return false;
 
-  return isDereferenceableAndAlignedPointer(
-      BasePtr, 1, APInt(DL.getPointerSizeInBits(), Offset + Size), DL);
+  return isDereferenceableAndAlignedPointer(BasePtr, 1,
+                                            APInt(DL.getPointerSize(),
+                                                  Offset + Size),
+                                            DL);
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the
@@ -1148,10 +1133,6 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
         getDebugLoc() != Other.getDebugLoc())
       return false;
   return true;
-}
-
-const MachineFunction *MachineInstr::getMF() const {
-  return getParent()->getParent();
 }
 
 MachineInstr *MachineInstr::removeFromParent() {
@@ -2349,8 +2330,8 @@ void MachineInstr::emitError(StringRef Msg) const {
 
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
-                                  unsigned Reg, const MDNode *Variable,
-                                  const MDNode *Expr) {
+                                  unsigned Reg, unsigned Offset,
+                                  const MDNode *Variable, const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
@@ -2358,60 +2339,53 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   if (IsIndirect)
     return BuildMI(MF, DL, MCID)
         .addReg(Reg, RegState::Debug)
-        .addImm(0U)
+        .addImm(Offset)
         .addMetadata(Variable)
         .addMetadata(Expr);
-  else
+  else {
+    assert(Offset == 0 && "A direct address cannot have an offset.");
     return BuildMI(MF, DL, MCID)
         .addReg(Reg, RegState::Debug)
         .addReg(0U, RegState::Debug)
         .addMetadata(Variable)
         .addMetadata(Expr);
+  }
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, const MCInstrDesc &MCID,
                                   bool IsIndirect, unsigned Reg,
-                                  const MDNode *Variable, const MDNode *Expr) {
+                                  unsigned Offset, const MDNode *Variable,
+                                  const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   MachineFunction &MF = *BB.getParent();
-  MachineInstr *MI = BuildMI(MF, DL, MCID, IsIndirect, Reg, Variable, Expr);
+  MachineInstr *MI =
+      BuildMI(MF, DL, MCID, IsIndirect, Reg, Offset, Variable, Expr);
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI);
-}
-
-/// Compute the new DIExpression to use with a DBG_VALUE for a spill slot.
-/// This prepends DW_OP_deref when spilling an indirect DBG_VALUE.
-static const DIExpression *computeExprForSpill(const MachineInstr &MI) {
-  assert(MI.getOperand(0).isReg() && "can't spill non-register");
-  assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
-         "Expected inlined-at fields to agree");
-
-  const DIExpression *Expr = MI.getDebugExpression();
-  if (MI.isIndirectDebugValue()) {
-    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
-    Expr = DIExpression::prepend(Expr, DIExpression::WithDeref);
-  }
-  return Expr;
 }
 
 MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
                                           MachineBasicBlock::iterator I,
                                           const MachineInstr &Orig,
                                           int FrameIndex) {
-  const DIExpression *Expr = computeExprForSpill(Orig);
-  return BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc())
+  const MDNode *Var = Orig.getDebugVariable();
+  const auto *Expr = cast_or_null<DIExpression>(Orig.getDebugExpression());
+  bool IsIndirect = Orig.isIndirectDebugValue();
+  uint64_t Offset = IsIndirect ? Orig.getOperand(1).getImm() : 0;
+  DebugLoc DL = Orig.getDebugLoc();
+  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  // If the DBG_VALUE already was a memory location, add an extra
+  // DW_OP_deref. Otherwise just turning this from a register into a
+  // memory/indirect location is sufficient.
+  if (IsIndirect)
+    Expr = DIExpression::prepend(Expr, DIExpression::WithDeref);
+  return BuildMI(BB, I, DL, Orig.getDesc())
       .addFrameIndex(FrameIndex)
-      .addImm(0U)
-      .addMetadata(Orig.getDebugVariable())
+      .addImm(Offset)
+      .addMetadata(Var)
       .addMetadata(Expr);
-}
-
-void llvm::updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex) {
-  const DIExpression *Expr = computeExprForSpill(Orig);
-  Orig.getOperand(0).ChangeToFrameIndex(FrameIndex);
-  Orig.getOperand(1).ChangeToImmediate(0U);
-  Orig.getOperand(3).setMetadata(Expr);
 }

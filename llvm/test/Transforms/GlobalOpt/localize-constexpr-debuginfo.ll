@@ -14,26 +14,26 @@ define i32 @main(i32 %argc, i8** %argv) norecurse !dbg !18 {
 ; CHECK: call void @llvm.dbg.value(metadata !2,
 ; CHECK: !2 = !{}
 entry:
-  call void @llvm.dbg.value(metadata i32 %argc, metadata !22, metadata !23), !dbg !24
-  call void @llvm.dbg.value(metadata i8** %argv, metadata !25, metadata !23), !dbg !26
+  call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !22, metadata !23), !dbg !24
+  call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !25, metadata !23), !dbg !26
   %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 0, !dbg !27
   %0 = load i8*, i8** %arrayidx, align 8, !dbg !27
   %1 = bitcast i8* %0 to [200 x i8]*, !dbg !28
   store [200 x i8]* %1, [200 x i8]** @_ZL1x, align 8, !dbg !29
-  call void @llvm.dbg.value(metadata i8** bitcast ([200 x i8]** @_ZL1x to i8**), metadata !30, metadata !23), !dbg !31
+  call void @llvm.dbg.value(metadata i8** bitcast ([200 x i8]** @_ZL1x to i8**), i64 0, metadata !30, metadata !23), !dbg !31
   %2 = load i8*, i8** bitcast ([200 x i8]** @_ZL1x to i8**), align 8, !dbg !32
   %3 = load i8, i8* %2, align 1, !dbg !33
   %conv = sext i8 %3 to i32, !dbg !33
   ret i32 %conv, !dbg !34
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = distinct !DIGlobalVariable(name: "x", linkageName: "_ZL1x", scope: !2, file: !14, line: 1, type: !6, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !13)
 !3 = !DIFile(filename: "-", directory: "/")

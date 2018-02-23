@@ -1,0 +1,26 @@
+RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-loc-list-32bit.elf.o | FileCheck %s
+Note: the input file was generated from Inputs/dwarfdump-test-loc-list-32bit.elf.cpp
+
+CHECK: .debug_info
+CHECK: DW_AT_name{{.*}}"f"
+CHECK: DW_AT_location{{.*}}([[F_LOC:0x[0-9a-f]*]])
+CHECK: DW_AT_name{{.*}}"g"
+CHECK: DW_AT_location{{.*}}([[G_LOC:0x[0-9a-f]*]])
+CHECK: .debug_loc contents:
+CHECK-NEXT: [[F_LOC]]: Beginning address offset: 0x0000000000000000
+CHECK-NEXT:               Ending address offset: 0x0000000000000023
+this is actually the wrong location due to PR14763, but that doesn't matter for
+the purposes of testing dwarfdump
+CHECK-NEXT:                Location description: 51
+CHECK-NEXT: {{^$}}
+CHECK-NEXT:            Beginning address offset: 0x0000000000000023
+CHECK-NEXT:               Ending address offset: 0x000000000000005d
+CHECK-NEXT:                Location description: 75 70
+CHECK-NEXT: {{^$}}
+CHECK-NEXT: [[G_LOC]]: Beginning address offset: 0x0000000000000000
+CHECK-NEXT:               Ending address offset: 0x0000000000000020
+CHECK-NEXT:               Location description: 50
+CHECK-NEXT: {{^$}}
+CHECK-NEXT:            Beginning address offset: 0x0000000000000020
+CHECK-NEXT:               Ending address offset: 0x000000000000005d
+CHECK-NEXT:                Location description: 75 74

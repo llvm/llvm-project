@@ -1,5 +1,5 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o %t
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_AT_GNU_dwo_id {{.*}}abcd
 ; CHECK: DW_AT_GNU_dwo_name {{.*}}"my.dwo"
@@ -14,3 +14,4 @@
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!6}
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+

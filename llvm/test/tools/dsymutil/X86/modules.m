@@ -11,16 +11,14 @@
 EOF
    clang -D BAR_H -E -o Bar.h modules.m
    clang -D FOO_H -E -o Foo.h modules.m
-   clang -D ODR_VIOLATION_C -E -o odr_violation.c modules.m
-   clang -c -fmodules -fmodule-map-file=modules.modulemap \
-     -g -gmodules -fmodules-cache-path=. \
-     -Xclang -fdisable-module-hash modules.m -o 1.o
-   clang -c -g odr_violation.c -o 2.o
+   clang -cc1 -emit-obj -fmodules -fmodule-map-file=modules.modulemap \
+     -fmodule-format=obj -g -dwarf-ext-refs -fmodules-cache-path=. \
+     -fdisable-module-hash modules.m -o 1.o
 */
 
 // RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
+// RUN:     | llvm-dwarfdump --debug-dump=info - | FileCheck %s
 
 // RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
@@ -59,9 +57,9 @@ struct PruneMeNot;
 // CHECK: 0x0[[FOO:.*]]:  DW_TAG_module
 // CHECK-NEXT:              DW_AT_name{{.*}}"Foo"
 // CHECK-NOT:               DW_TAG
-// CHECK: 0x0[[BARTD:.*]]: DW_TAG_typedef
+// CHECK:                   DW_TAG_typedef
 // CHECK-NOT:                 DW_TAG
-// CHECK:                     DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BAR]]
+// CHECK:                     DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BAR]])
 // CHECK:                   DW_TAG_structure_type
 // CHECK-NEXT:                DW_AT_name{{.*}}"S"
 // CHECK-NOT:                 DW_TAG
@@ -77,25 +75,19 @@ struct S {};
 }
 @end
 
-#else
-// ---------------------------------------------------------------------
-#ifdef ODR_VIOLATION_C
-// ---------------------------------------------------------------------
-
-struct Bar {
-  int i;
-};
-typedef struct Bar Bar;
-Bar odr_violation = { 42 };
-
 // ---------------------------------------------------------------------
 #else
 // ---------------------------------------------------------------------
 
 // CHECK:  DW_TAG_compile_unit
 // CHECK:    DW_AT_low_pc
-// CHECK-NOT:  DW_TAG_module
-// CHECK-NOT:  DW_TAG_typedef
+// CHECK-NOT:DW_TAG
+// CHECK:     DW_TAG_module
+// CHECK-NEXT:  DW_AT_name{{.*}}"Foo"
+// CHECK-NOT:   DW_TAG
+// CHECK:       DW_TAG_typedef
+// CHECK-NOT:     DW_TAG
+// CHECK:       NULL
 //
 // CHECK:   DW_TAG_imported_declaration
 // CHECK-NOT: DW_TAG
@@ -105,10 +97,6 @@ Bar odr_violation = { 42 };
 // CHECK:     DW_AT_name {{.*}}"main"
 //
 // CHECK:     DW_TAG_variable
-// CHECK-NOT:   DW_TAG
-// CHECK:       DW_AT_name{{.*}}"bar"
-// CHECK-NOT:   DW_TAG
-// CHECK:       DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BARTD]]
 // CHECK:     DW_TAG_variable
 // CHECK-NOT:   DW_TAG
 // CHECK:       DW_AT_name{{.*}}"foo"
@@ -116,27 +104,14 @@ Bar odr_violation = { 42 };
 // CHECK:       DW_AT_type {{.*}}{0x{{0*}}[[PTR:.*]]}
 //
 // CHECK: 0x{{0*}}[[PTR]]: DW_TAG_pointer_type
-// CHECK-NEXT   DW_AT_type [DW_FORM_ref_addr] {0x{{0*}}[[INTERFACE]]
-extern int odr_violation;
+// CHECK-NEXT   DW_AT_type [DW_FORM_ref_addr] {0x{{0*}}[[INTERFACE]])
 
 @import Foo;
 int main(int argc, char **argv) {
   Bar bar;
   Foo *foo = 0;
-  bar.value = odr_violation;
+  bar.value = 42;
   return bar.value;
 }
 #endif
 #endif
-#endif
-
-// CHECK: DW_TAG_compile_unit
-// CHECK:   DW_AT_name {{.*}}"odr_violation.c"
-// CHECK: DW_TAG_variable
-// CHECK:   DW_AT_name {{.*}}"odr_violation"
-// CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR2:.*]]}
-// CHECK: 0x{{0*}}[[BAR2]]: DW_TAG_typedef
-// CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR3:.*]]}
-// CHECK:   DW_AT_name {{.*}}"Bar"
-// CHECK: 0x{{0*}}[[BAR3]]: DW_TAG_structure_type
-// CHECK-NEXT:   DW_AT_name {{.*}}"Bar"

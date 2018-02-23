@@ -34,7 +34,6 @@ add_llvm_library(LLVMCodeGen
   GlobalMerge.cpp
   IfConversion.cpp
   ImplicitNullChecks.cpp
-  IndirectBrExpandPass.cpp
   InlineSpiller.cpp
   InterferenceCache.cpp
   InterleavedAccessPass.cpp

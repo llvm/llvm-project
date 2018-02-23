@@ -2425,7 +2425,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
   def TAILJMPr : ARMPseudoExpand<(outs), (ins tcGPR:$dst),
                                  4, IIC_Br, [],
                                  (BX GPR:$dst)>, Sched<[WriteBr]>,
-                                 Requires<[IsARM, HasV4T]>;
+                                 Requires<[IsARM]>;
 }
 
 // Secure Monitor Call is a system instruction.
@@ -5589,12 +5589,6 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
                     (MOVr PC, GPR:$dst, (ops 14, zero_reg), zero_reg)>,
                   Requires<[IsARM, NoV4T]>, Sched<[WriteBr]>;
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in
-  def TAILJMPr4 : ARMPseudoExpand<(outs), (ins GPR:$dst),
-                    4, IIC_Br, [],
-                    (MOVr PC, GPR:$dst, (ops 14, zero_reg), zero_reg)>,
-                  Requires<[IsARM, NoV4T]>, Sched<[WriteBr]>;
-
 // Large immediate handling.
 
 // 32-bit immediate using two piece mod_imms or movw + movt.
@@ -6059,21 +6053,21 @@ def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
 // significantly more naive than the standard expansion: we conservatively
 // assume seq_cst, strong cmpxchg and omit clrex on failure.
 
-let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
+let Constraints = "@earlyclobber $Rd,@earlyclobber $status",
     mayLoad = 1, mayStore = 1 in {
-def CMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def CMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$status),
                             (ins GPR:$addr, GPR:$desired, GPR:$new),
                             NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def CMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$status),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$status),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
+def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$status),
                              (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
 }

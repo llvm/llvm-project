@@ -592,9 +592,6 @@ def CC_X86_Win64_C : CallingConv<[
   // The 'nest' parameter, if any, is passed in R10.
   CCIfNest<CCAssignToReg<[R10]>>,
 
-  // A SwiftError is passed in R12.
-  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
-
   // 128 bit vectors are passed by pointer
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], CCPassIndirect<i64>>,
 
@@ -1049,8 +1046,6 @@ def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R1
 
 def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
-
-def CSR_Win64_SwiftError : CalleeSavedRegs<(sub CSR_Win64, R12)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // uses rdi to pass a single parameter and rax for the return value. All other

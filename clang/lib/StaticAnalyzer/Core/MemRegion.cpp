@@ -18,7 +18,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
@@ -472,8 +472,6 @@ void ObjCStringRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolicRegion::dumpToStream(raw_ostream &os) const {
-  if (isa<HeapSpaceRegion>(getSuperRegion()))
-    os << "Heap";
   os << "SymRegion{" << sym << '}';
 }
 

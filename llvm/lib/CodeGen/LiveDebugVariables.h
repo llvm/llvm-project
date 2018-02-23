@@ -1,4 +1,4 @@
-//===- LiveDebugVariables.h - Tracking debug info variables -----*- C++ -*-===//
+//===- LiveDebugVariables.h - Tracking debug info variables ----*- c++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,16 +22,17 @@
 #define LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/IR/DebugInfo.h"
 
 namespace llvm {
 
 template <typename T> class ArrayRef;
+class LiveInterval;
 class LiveIntervals;
 class VirtRegMap;
 
 class LLVM_LIBRARY_VISIBILITY LiveDebugVariables : public MachineFunctionPass {
-  void *pImpl = nullptr;
+  void *pImpl;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -61,12 +62,14 @@ public:
   void dump() const;
 
 private:
+
   bool runOnMachineFunction(MachineFunction &) override;
   void releaseMemory() override;
   void getAnalysisUsage(AnalysisUsage &) const override;
   bool doInitialization(Module &) override;
+
 };
 
-} // end namespace llvm
+} // namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
+#endif

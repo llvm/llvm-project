@@ -22,7 +22,6 @@
 #include "CodeGenPGO.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/StmtCXX.h"
@@ -429,43 +428,6 @@ bool CodeGenFunction::ShouldXRayInstrumentFunction() const {
   return CGM.getCodeGenOpts().XRayInstrumentFunctions;
 }
 
-llvm::Constant *
-CodeGenFunction::EncodeAddrForUseInPrologue(llvm::Function *F,
-                                            llvm::Constant *Addr) {
-  // Addresses stored in prologue data can't require run-time fixups and must
-  // be PC-relative. Run-time fixups are undesirable because they necessitate
-  // writable text segments, which are unsafe. And absolute addresses are
-  // undesirable because they break PIE mode.
-
-  // Add a layer of indirection through a private global. Taking its address
-  // won't result in a run-time fixup, even if Addr has linkonce_odr linkage.
-  auto *GV = new llvm::GlobalVariable(CGM.getModule(), Addr->getType(),
-                                      /*isConstant=*/true,
-                                      llvm::GlobalValue::PrivateLinkage, Addr);
-
-  // Create a PC-relative address.
-  auto *GOTAsInt = llvm::ConstantExpr::getPtrToInt(GV, IntPtrTy);
-  auto *FuncAsInt = llvm::ConstantExpr::getPtrToInt(F, IntPtrTy);
-  auto *PCRelAsInt = llvm::ConstantExpr::getSub(GOTAsInt, FuncAsInt);
-  return (IntPtrTy == Int32Ty)
-             ? PCRelAsInt
-             : llvm::ConstantExpr::getTrunc(PCRelAsInt, Int32Ty);
-}
-
-llvm::Value *
-CodeGenFunction::DecodeAddrUsedInPrologue(llvm::Value *F,
-                                          llvm::Value *EncodedAddr) {
-  // Reconstruct the address of the global.
-  auto *PCRelAsInt = Builder.CreateSExt(EncodedAddr, IntPtrTy);
-  auto *FuncAsInt = Builder.CreatePtrToInt(F, IntPtrTy, "func_addr.int");
-  auto *GOTAsInt = Builder.CreateAdd(PCRelAsInt, FuncAsInt, "global_addr.int");
-  auto *GOTAddr = Builder.CreateIntToPtr(GOTAsInt, Int8PtrPtrTy, "global_addr");
-
-  // Load the original pointer through the global.
-  return Builder.CreateLoad(Address(GOTAddr, getPointerAlign()),
-                            "decoded_addr");
-}
-
 /// EmitFunctionInstrumentation - Emit LLVM code to call the specified
 /// instrumentation function with the current function and the call site, if
 /// function instrumentation is enabled.
@@ -758,15 +720,6 @@ static void markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
   Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
 }
 
-/// Return the UBSan prologue signature for \p FD if one is available.
-static llvm::Constant *getPrologueSignature(CodeGenModule &CGM,
-                                            const FunctionDecl *FD) {
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
-    if (!MD->isStatic())
-      return nullptr;
-  return CGM.getTargetCodeGenInfo().getUBSanFunctionSignature(CGM);
-}
-
 void CodeGenFunction::StartFunction(GlobalDecl GD,
                                     QualType RetTy,
                                     llvm::Function *Fn,
@@ -790,19 +743,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   CurFnInfo = &FnInfo;
   assert(CurFn->isDeclaration() && "Function already has body?");
 
-  // If this function has been blacklisted for any of the enabled sanitizers,
-  // disable the sanitizer for the function.
-  do {
-#define SANITIZER(NAME, ID)                                                    \
-  if (SanOpts.empty())                                                         \
-    break;                                                                     \
-  if (SanOpts.has(SanitizerKind::ID))                                          \
-    if (CGM.isInSanitizerBlacklist(SanitizerKind::ID, Fn, Loc))                \
-      SanOpts.set(SanitizerKind::ID, false);
-
-#include "clang/Basic/Sanitizers.def"
-#undef SANITIZER
-  } while (0);
+  if (CGM.isInSanitizerBlacklist(Fn, Loc))
+    SanOpts.clear();
 
   if (D) {
     // Apply the no_sanitize* attributes to SanOpts.
@@ -874,13 +816,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   // prologue data.
   if (getLangOpts().CPlusPlus && SanOpts.has(SanitizerKind::Function)) {
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-      if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
+      if (llvm::Constant *PrologueSig =
+              CGM.getTargetCodeGenInfo().getUBSanFunctionSignature(CGM)) {
         llvm::Constant *FTRTTIConst =
             CGM.GetAddrOfRTTIDescriptor(FD->getType(), /*ForEH=*/true);
-        llvm::Constant *FTRTTIConstEncoded =
-            EncodeAddrForUseInPrologue(Fn, FTRTTIConst);
-        llvm::Constant *PrologueStructElems[] = {PrologueSig,
-                                                 FTRTTIConstEncoded};
+        llvm::Constant *PrologueStructElems[] = { PrologueSig, FTRTTIConst };
         llvm::Constant *PrologueStructConst =
             llvm::ConstantStruct::getAnon(PrologueStructElems, /*Packed=*/true);
         Fn->setPrologueData(PrologueStructConst);
@@ -1043,22 +983,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     }
 
     // Check the 'this' pointer once per function, if it's available.
-    if (CXXABIThisValue) {
+    if (CXXThisValue) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::ObjectSize, true);
       QualType ThisTy = MD->getThisType(getContext());
-
-      // If this is the call operator of a lambda with no capture-default, it
-      // may have a static invoker function, which may call this operator with
-      // a null 'this' pointer.
-      if (isLambdaCallOperator(MD) &&
-          cast<CXXRecordDecl>(MD->getParent())->getLambdaCaptureDefault() ==
-              LCD_None)
-        SkippedChecks.set(SanitizerKind::Null, true);
-
-      EmitTypeCheck(isa<CXXConstructorDecl>(MD) ? TCK_ConstructorCall
-                                                : TCK_MemberCall,
-                    Loc, CXXABIThisValue, ThisTy,
+      EmitTypeCheck(TCK_Load, Loc, CXXThisValue, ThisTy,
                     getContext().getTypeAlignInChars(ThisTy->getPointeeType()),
                     SkippedChecks);
     }

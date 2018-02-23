@@ -186,6 +186,8 @@ if (LIBXML2_FOUND)
   set(CLANG_HAVE_LIBXML 1)
 endif()
 
+find_package(Z3 4.5)
+
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
@@ -379,7 +381,6 @@ if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_BU
 endif()
 
 if(CLANG_ANALYZER_BUILD_Z3)
-  find_package(Z3 4.5)
   if(Z3_FOUND)
     set(CLANG_ANALYZER_WITH_Z3 1)
   else()
@@ -410,8 +411,7 @@ add_subdirectory(include)
 
 # All targets below may depend on all tablegen'd files.
 get_property(CLANG_TABLEGEN_TARGETS GLOBAL PROPERTY CLANG_TABLEGEN_TARGETS)
-add_custom_target(clang-tablegen-targets DEPENDS ${CLANG_TABLEGEN_TARGETS})
-list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
+list(APPEND LLVM_COMMON_DEPENDS ${CLANG_TABLEGEN_TARGETS})
 
 add_subdirectory(lib)
 add_subdirectory(tools)

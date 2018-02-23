@@ -126,9 +126,8 @@ public:
     return true;
   }
 
-  template<typename TypeLocType>
-  bool HandleTemplateSpecializationTypeLoc(TypeLocType TL) {
-    if (const auto *T = TL.getTypePtr()) {
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+    if (const TemplateSpecializationType *T = TL.getTypePtr()) {
       if (IndexCtx.shouldIndexImplicitTemplateInsts()) {
         if (CXXRecordDecl *RD = T->getAsCXXRecordDecl())
           IndexCtx.handleReference(RD, TL.getTemplateNameLoc(),
@@ -140,14 +139,6 @@ public:
       }
     }
     return true;
-  }
-
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
-    return HandleTemplateSpecializationTypeLoc(TL);
-  }
-
-  bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {
-    return HandleTemplateSpecializationTypeLoc(TL);
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {

@@ -6585,7 +6585,8 @@ TreeTransform<Derived>::TransformSwitchStmt(SwitchStmt *S) {
 
   // Rebuild the switch statement.
   StmtResult Switch
-    = getDerived().RebuildSwitchStmtStart(S->getSwitchLoc(), Init.get(), Cond);
+    = getDerived().RebuildSwitchStmtStart(S->getSwitchLoc(),
+                                          S->getInit(), Cond);
   if (Switch.isInvalid())
     return StmtError();
 

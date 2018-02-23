@@ -1,7 +1,8 @@
-; RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-32bit.elf.o --debug-frame | FileCheck %s -check-prefix FRAMES
+; RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-32bit.elf.o -debug-dump=frames | FileCheck %s -check-prefix FRAMES
 ; Note: the input file was generated from Inputs/dwarfdump-test-32bit.elf.c
 
 ; FRAMES: .debug_frame
+; FRAMES-NOT: .eh_frame
 
 ; FRAMES: 00000000 00000010 ffffffff CIE
 ; FRAMES: Version: 1
@@ -24,4 +25,4 @@
 
 ; FRAMES-NOT: CIE
 ; FRAMES-NOT: FDE
-; FRAMES: .eh_frame
+

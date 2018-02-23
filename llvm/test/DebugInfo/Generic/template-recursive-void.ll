@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
+; RUN: llvm-dwarfdump %t | FileCheck %s
 
 ; This was pulled from clang's debug-info-template-recursive.cpp test.
 ; class base { };
@@ -27,7 +27,7 @@ source_filename = "test/DebugInfo/Generic/template-recursive-void.ll"
 !llvm.dbg.cu = !{!29}
 !llvm.module.flags = !{!32, !33}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "filters", scope: null, file: !2, line: 10, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "debug-info-template-recursive.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "bar", file: !2, line: 9, size: 8, align: 8, elements: !4)

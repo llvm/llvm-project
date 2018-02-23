@@ -10,9 +10,9 @@ target triple = "x86_64-apple-macosx10.12.0"
 !llvm.module.flags = !{!6, !7, !8}
 !llvm.ident = !{!9}
 
-; CHECK: ![[G]] = !DIGlobalVariableExpression(var: ![[GVAR:.*]], expr: !DIExpression())
+; CHECK: ![[G]] = !DIGlobalVariableExpression(var: ![[GVAR:.*]])
 ; CHECK: ![[GVAR]] = distinct !DIGlobalVariable(name: "g"
-!0 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !10)
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "debug-info-global-var.c", directory: "/")
 !3 = !{}

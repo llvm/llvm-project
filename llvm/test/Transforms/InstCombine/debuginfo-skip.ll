@@ -1,26 +1,25 @@
-; RUN: opt -instcombine-lower-dbg-declare=0 < %s -instcombine -S | FileCheck %s
-; RUN: opt -instcombine-lower-dbg-declare=1 < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -debug -S -o %t 2>&1 | FileCheck %s
+; RUN: cat %t | FileCheck %s --check-prefix=CHECK-IR
+; REQUIRES: asserts
+
+; Debug output from InstCombine should not have any @llvm.dbg.* instructions visited
+; CHECK-NOT: call void @llvm.dbg.
+
+; The resulting IR should still have them
+; CHECK-IR: call void @llvm.dbg.
 
 define i32 @foo(i32 %j) #0 !dbg !7 {
 entry:
   %j.addr = alloca i32, align 4
   store i32 %j, i32* %j.addr, align 4
   call void @llvm.dbg.declare(metadata i32* %j.addr, metadata !11, metadata !12), !dbg !13
-  call void @llvm.dbg.value(metadata i32 10, metadata !16, metadata !12), !dbg !15
+  call void @llvm.dbg.value(metadata i32 10, i64 0, metadata !16, metadata !12), !dbg !15
   %0 = load i32, i32* %j.addr, align 4, !dbg !14
   ret i32 %0, !dbg !15
 }
 
-; Instcombine can remove the alloca and forward the load to store, but it
-; should convert the declare to dbg value.
-; CHECK-LABEL: define i32 @foo(i32 %j)
-; CHECK-NOT: alloca
-; CHECK: call void @llvm.dbg.value(metadata i32 %j, {{.*}})
-; CHECK: call void @llvm.dbg.value(metadata i32 10, {{.*}})
-; CHECK: ret i32 %j
-
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

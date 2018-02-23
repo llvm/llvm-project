@@ -1,4 +1,4 @@
-//===- llvm/lib/Target/ARM/ARMCallLowering.h - Call lowering ----*- C++ -*-===//
+//===-- llvm/lib/Target/ARM/ARMCallLowering.h - Call lowering -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,28 +6,23 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+///
 /// \file
 /// This file describes how to lower LLVM calls to machine code calls.
-//
+///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_ARM_ARMCALLLOWERING_H
-#define LLVM_LIB_TARGET_ARM_ARMCALLLOWERING_H
+#ifndef LLVM_LIB_TARGET_ARM_ARMCALLLOWERING
+#define LLVM_LIB_TARGET_ARM_ARMCALLLOWERING
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/IR/CallingConv.h"
-#include <cstdint>
-#include <functional>
+#include "llvm/CodeGen/ValueTypes.h"
 
 namespace llvm {
 
 class ARMTargetLowering;
-class MachineFunction;
 class MachineInstrBuilder;
-class MachineIRBuilder;
-class Value;
 
 class ARMCallLowering : public CallLowering {
 public:
@@ -47,7 +42,7 @@ private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
                       unsigned VReg, MachineInstrBuilder &Ret) const;
 
-  using SplitArgTy = std::function<void(unsigned Reg, uint64_t Offset)>;
+  typedef std::function<void(unsigned Reg, uint64_t Offset)> SplitArgTy;
 
   /// Split an argument into one or more arguments that the CC lowering can cope
   /// with (e.g. replace pointers with integers).
@@ -56,7 +51,5 @@ private:
                          MachineFunction &MF,
                          const SplitArgTy &PerformArgSplit) const;
 };
-
-} // end namespace llvm
-
-#endif // LLVM_LIB_TARGET_ARM_ARMCALLLOWERING_H
+} // End of namespace llvm
+#endif

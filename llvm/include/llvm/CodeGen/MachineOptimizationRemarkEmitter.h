@@ -73,9 +73,7 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override {
-    const Function &Fn = getFunction();
-    LLVMContext &Ctx = Fn.getContext();
-    return Ctx.getDiagHandlerPtr()->isPassedOptRemarkEnabled(getPassName());
+    return OptimizationRemark::isEnabled(getPassName());
   }
 };
 
@@ -99,9 +97,7 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override {
-    const Function &Fn = getFunction();
-    LLVMContext &Ctx = Fn.getContext();
-    return Ctx.getDiagHandlerPtr()->isMissedOptRemarkEnabled(getPassName());
+    return OptimizationRemarkMissed::isEnabled(getPassName());
   }
 };
 
@@ -125,9 +121,7 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override {
-    const Function &Fn = getFunction();
-    LLVMContext &Ctx = Fn.getContext();
-    return Ctx.getDiagHandlerPtr()->isAnalysisRemarkEnabled(getPassName());
+    return OptimizationRemarkAnalysis::isEnabled(getPassName());
   }
 };
 
@@ -158,10 +152,10 @@ public:
   /// that are normally too noisy.  In this mode, we can use the extra analysis
   /// (1) to filter trivial false positives or (2) to provide more context so
   /// that non-trivial false positives can be quickly detected by the user.
-  bool allowExtraAnalysis(StringRef PassName) const {
-    return (MF.getFunction()->getContext().getDiagnosticsOutputFile() ||
-            MF.getFunction()->getContext()
-            .getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
+  bool allowExtraAnalysis() const {
+    // For now, only allow this with -fsave-optimization-record since the -Rpass
+    // options are handled in the front-end.
+    return MF.getFunction()->getContext().getDiagnosticsOutputFile();
   }
 
 private:

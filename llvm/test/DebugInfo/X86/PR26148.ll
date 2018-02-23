@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - --debug-loc | FileCheck %s
+; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - | FileCheck %s
 ;
 ; Created using clang -g -O3 from:
 ; struct S0 {
@@ -10,7 +10,7 @@
 ;  b.f3 = p1;
 ;  a = b = c;
 ; }
-;
+; 
 ; int main() { return 0; }
 ;
 ; This is similar to the bug in test/DebugInfo/ARM/PR26163.ll, except that there is an
@@ -19,8 +19,14 @@
 ; AS in 26163, we expect two ranges (as opposed to one), the first one being zero sized
 ;
 ;
-; CHECK: [0x0000000000000004, 0x0000000000000004): DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_reg5 RDI, DW_OP_piece 0x2
-; CHECK: [0x0000000000000004, 0x0000000000000014): DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_piece 0x4
+; CHECK:             Beginning address offset: 0x0000000000000004
+; CHECK:                Ending address offset: 0x0000000000000004
+; CHECK:                 Location description: 10 03 93 04 55 93 02
+; constu 0x00000003, piece 0x00000004, rdi, piece 0x00000002
+; CHECK:             Beginning address offset: 0x0000000000000004
+; CHECK:                Ending address offset: 0x0000000000000014
+; CHECK:                 Location description: 10 03 93 04 10 00
+; constu 0x00000003, piece 0x00000004, constu 0x00000000, piece 0x00000004
 
 source_filename = "test/DebugInfo/X86/PR26148.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -34,21 +40,21 @@ target triple = "x86_64-apple-macosx10.11.0"
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
 ; The attributes are here to force the zero-sized range not to be at the start of
 ; the function, which has special interpretation in DWARF. The fact that this happens
 ; at all is probably an LLVM bug.
 
 define void @fn1(i16 signext %p1) #1 !dbg !16 {
 entry:
-  tail call void @llvm.dbg.value(metadata i16 %p1, metadata !20, metadata !23), !dbg !24
+  tail call void @llvm.dbg.value(metadata i16 %p1, i64 0, metadata !20, metadata !23), !dbg !24
   tail call void @llvm.dbg.declare(metadata %struct.S0* undef, metadata !21, metadata !23), !dbg !25
   tail call void @llvm.dbg.declare(metadata %struct.S0* undef, metadata !22, metadata !23), !dbg !26
-  tail call void @llvm.dbg.value(metadata i32 3, metadata !22, metadata !27), !dbg !26
-  tail call void @llvm.dbg.value(metadata i32 0, metadata !22, metadata !28), !dbg !26
-  tail call void @llvm.dbg.value(metadata i16 %p1, metadata !21, metadata !29), !dbg !25
-  tail call void @llvm.dbg.value(metadata i32 3, metadata !21, metadata !27), !dbg !25
-  tail call void @llvm.dbg.value(metadata i32 0, metadata !21, metadata !28), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 3, i64 0, metadata !22, metadata !27), !dbg !26
+  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !22, metadata !28), !dbg !26
+  tail call void @llvm.dbg.value(metadata i16 %p1, i64 0, metadata !21, metadata !29), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 3, i64 0, metadata !21, metadata !27), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !21, metadata !28), !dbg !25
   store i32 3, i32* bitcast (%struct.S0* @a to i32*), align 4, !dbg !30
   store i32 0, i32* getelementptr inbounds (%struct.S0, %struct.S0* @a, i64 0, i32 1), align 4, !dbg !30
   ret void, !dbg !31
@@ -66,7 +72,7 @@ attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf
 !llvm.module.flags = !{!12, !13, !14}
 !llvm.ident = !{!15}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 4, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 8f258397c5afd7a708bd95770c718e81d08fb11a) (https://github.com/llvm-mirror/llvm 18481855bdfa1b4a424f81be8525db002671348d)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "small.c", directory: "/Users/kfischer/Projects/clangbug")

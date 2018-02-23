@@ -317,7 +317,6 @@ class CoroutineBodyStmt final
   unsigned NumParams;
 
   friend class ASTStmtReader;
-  friend class ASTReader;
   friend TrailingObjects;
 
   Stmt **getStoredStmts() { return getTrailingObjects<Stmt *>(); }
@@ -348,8 +347,6 @@ private:
 
 public:
   static CoroutineBodyStmt *Create(const ASTContext &C, CtorArgs const &Args);
-  static CoroutineBodyStmt *Create(const ASTContext &C, EmptyShell,
-                                   unsigned NumParams);
 
   bool hasDependentPromiseType() const {
     return getPromiseDecl()->getType()->isDependentType();
@@ -446,8 +443,6 @@ public:
     SubStmts[SubStmt::Operand] = Operand;
     SubStmts[SubStmt::PromiseCall] = PromiseCall;
   }
-
-  CoreturnStmt(EmptyShell) : CoreturnStmt({}, {}, {}) {}
 
   SourceLocation getKeywordLoc() const { return CoreturnLoc; }
 

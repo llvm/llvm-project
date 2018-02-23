@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple x86_64-apple-macosx -O0 -filetype=obj -o - %s \
-; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; RUN: llc -mtriple x86_64-gnu-linux -O0 -filetype=obj -o - %s \
-; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=LINUX
+; RUN: | llvm-dwarfdump -debug-dump=info - | FileCheck %s --check-prefix=LINUX
 ; LINUX-NOT: DW_AT_data_bit_offset
 ;
 ; Generated from:
@@ -27,7 +27,7 @@ target triple = "x86_64-apple-macosx"
 !llvm.module.flags = !{!15, !16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "s", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 267633)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "bitfield.c", directory: "/Volumes/Data/llvm")

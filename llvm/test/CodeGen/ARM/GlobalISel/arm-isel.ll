@@ -25,9 +25,8 @@ entry:
 
 define signext i1 @test_sext_i1(i1 %x) {
 ; CHECK-LABEL: test_sext_i1
-; CHECK: mov	r1, #31
-; CHECK: lsl	r0, r0, r1
-; CHECK: asr	r0, r0, r1
+; CHECK: and r0, r0, #1
+; CHECK: rsb r0, r0, #0
 ; CHECK: bx lr
 entry:
   ret i1 %x
@@ -37,16 +36,13 @@ define zeroext i8 @test_ext_i8(i8 %x) {
 ; CHECK-LABEL: test_ext_i8:
 ; CHECK: uxtb r0, r0
 ; CHECK: bx lr
-
 entry:
   ret i8 %x
 }
 
 define signext i16 @test_ext_i16(i16 %x) {
 ; CHECK-LABEL: test_ext_i16:
-; CHECK: mov	r1, #16
-; CHECK: lsl	r0, r0, r1
-; CHECK: asr	r0, r0, r1
+; CHECK: sxth r0, r0
 ; CHECK: bx lr
 entry:
   ret i16 %x
@@ -392,6 +388,8 @@ entry:
 
 define arm_aapcscc i32 @test_cmp_i16_slt(i16 %a, i16 %b) {
 ; CHECK-LABEL: test_cmp_i16_slt:
+; CHECK-DAG: sxth r0, r0
+; CHECK-DAG: sxth r1, r1
 ; CHECK-DAG: mov [[V:r[0-9]+]], #0
 ; CHECK: cmp r0, r1
 ; CHECK: movlt [[V]], #1
@@ -443,9 +441,9 @@ define arm_aapcscc void @test_brcond(i32 %n) {
 ; CHECK-NEXT: movgt [[RCMP:r[0-9]+]], #1
 ; CHECK: tst [[RCMP]], #1
 ; CHECK-NEXT: bne [[FALSE:.L[[:alnum:]_]+]]
-; CHECK: bl brcond1
+; CHECK: blx brcond1
 ; CHECK: [[FALSE]]:
-; CHECK: bl brcond2
+; CHECK: blx brcond2
 entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %if.true, label %if.false

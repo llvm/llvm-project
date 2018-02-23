@@ -397,8 +397,6 @@ private:
   std::unique_ptr<InstrProfReaderIndexBase> Index;
   /// Profile summary data.
   std::unique_ptr<ProfileSummary> Summary;
-  // Index to the current record in the record array.
-  unsigned RecordIndex;
 
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
@@ -407,7 +405,7 @@ private:
 
 public:
   IndexedInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
-      : DataBuffer(std::move(DataBuffer)), RecordIndex(0) {}
+      : DataBuffer(std::move(DataBuffer)) {}
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 

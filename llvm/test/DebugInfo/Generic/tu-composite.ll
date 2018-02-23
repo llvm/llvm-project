@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf -filetype=obj -O0 < %s > %t
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 ; CHECK: [[TYPE:.*]]: DW_TAG_structure_type
 ; Make sure we correctly handle containing type of a struct being a type identifier.
 ; CHECK-NEXT: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]})
@@ -32,21 +32,21 @@
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "virt<bar>")
 ; Make sure we correctly handle type of a template_type being a type identifier.
 ; CHECK: DW_TAG_template_type_parameter
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "T")
 ; Make sure we correctly handle derived-from of a typedef being a type identifier.
 ; CHECK: DW_TAG_typedef
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
 ; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "baz2")
 ; Make sure we correctly handle derived-from of a pointer type being a type identifier.
 ; CHECK: DW_TAG_pointer_type
-; CHECK: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE]]}
+; CHECK: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE]]})
 ; CHECK: DW_TAG_typedef
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
 ; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "baz")
 ; Make sure we correctly handle derived-from of an array type being a type identifier.
 ; CHECK: DW_TAG_array_type
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
 ; IR generated from clang -g with the following source:
 ; struct C {
 ;   virtual void foo();

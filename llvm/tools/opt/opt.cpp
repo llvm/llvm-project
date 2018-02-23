@@ -401,7 +401,6 @@ int main(int argc, char **argv) {
   initializeSjLjEHPreparePass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeGlobalMergePass(Registry);
-  initializeIndirectBrExpandPassPass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeCountingFunctionInserterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
@@ -445,8 +444,7 @@ int main(int argc, char **argv) {
   }
 
   // Load the input module...
-  std::unique_ptr<Module> M =
-      parseIRFile(InputFilename, Err, Context, !NoVerify);
+  std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
 
   if (!M) {
     Err.print(argv[0], errs());

@@ -27,11 +27,11 @@ Target &llvm::getThePPC64LETarget() {
 
 extern "C" void LLVMInitializePowerPCTargetInfo() {
   RegisterTarget<Triple::ppc, /*HasJIT=*/true> X(getThePPC32Target(), "ppc32",
-                                                 "PowerPC 32", "PPC");
+                                                 "PowerPC 32");
 
   RegisterTarget<Triple::ppc64, /*HasJIT=*/true> Y(getThePPC64Target(), "ppc64",
-                                                   "PowerPC 64", "PPC");
+                                                   "PowerPC 64");
 
   RegisterTarget<Triple::ppc64le, /*HasJIT=*/true> Z(
-      getThePPC64LETarget(), "ppc64le", "PowerPC 64 LE", "PPC");
+      getThePPC64LETarget(), "ppc64le", "PowerPC 64 LE");
 }

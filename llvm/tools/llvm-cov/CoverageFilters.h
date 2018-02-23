@@ -14,9 +14,7 @@
 #ifndef LLVM_COV_COVERAGEFILTERS_H
 #define LLVM_COV_COVERAGEFILTERS_H
 
-#include "CoverageSummaryInfo.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
-#include "llvm/Support/SpecialCaseList.h"
 #include <memory>
 #include <vector>
 
@@ -28,8 +26,7 @@ public:
   virtual ~CoverageFilter() {}
 
   /// \brief Return true if the function passes the requirements of this filter.
-  virtual bool matches(const coverage::CoverageMapping &CM,
-                       const coverage::FunctionRecord &Function) const {
+  virtual bool matches(const coverage::FunctionRecord &Function) {
     return true;
   }
 };
@@ -41,8 +38,7 @@ class NameCoverageFilter : public CoverageFilter {
 public:
   NameCoverageFilter(StringRef Name) : Name(Name) {}
 
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+  bool matches(const coverage::FunctionRecord &Function) override;
 };
 
 /// \brief Matches functions whose name matches a certain regular expression.
@@ -52,21 +48,7 @@ class NameRegexCoverageFilter : public CoverageFilter {
 public:
   NameRegexCoverageFilter(StringRef Regex) : Regex(Regex) {}
 
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
-};
-
-/// \brief Matches functions whose name appears in a SpecialCaseList in the
-/// whitelist_fun section.
-class NameWhitelistCoverageFilter : public CoverageFilter {
-  const SpecialCaseList &Whitelist;
-
-public:
-  NameWhitelistCoverageFilter(const SpecialCaseList &Whitelist)
-      : Whitelist(Whitelist) {}
-
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+  bool matches(const coverage::FunctionRecord &Function) override;
 };
 
 /// \brief Matches numbers that pass a certain threshold.
@@ -102,8 +84,7 @@ public:
   RegionCoverageFilter(Operation Op, double Threshold)
       : StatisticThresholdFilter(Op, Threshold) {}
 
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+  bool matches(const coverage::FunctionRecord &Function) override;
 };
 
 /// \brief Matches functions whose line coverage percentage
@@ -114,8 +95,7 @@ public:
   LineCoverageFilter(Operation Op, double Threshold)
       : StatisticThresholdFilter(Op, Threshold) {}
 
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+  bool matches(const coverage::FunctionRecord &Function) override;
 };
 
 /// \brief A collection of filters.
@@ -131,8 +111,7 @@ public:
 
   bool empty() const { return Filters.empty(); }
 
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+  bool matches(const coverage::FunctionRecord &Function) override;
 };
 
 /// \brief A collection of filters.
@@ -140,8 +119,7 @@ public:
 /// in an instance of this class.
 class CoverageFiltersMatchAll : public CoverageFilters {
 public:
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+  bool matches(const coverage::FunctionRecord &Function) override;
 };
 
 } // namespace llvm

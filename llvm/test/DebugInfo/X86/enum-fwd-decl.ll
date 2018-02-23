@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
 source_filename = "test/DebugInfo/X86/enum-fwd-decl.ll"
 
@@ -8,7 +8,7 @@ source_filename = "test/DebugInfo/X86/enum-fwd-decl.ll"
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "e", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.cpp", directory: "/tmp")
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !2, line: 1, size: 16, align: 16, flags: DIFlagFwdDecl)

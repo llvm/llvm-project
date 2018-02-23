@@ -17,6 +17,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 
@@ -148,7 +149,7 @@ TEST(VerifierTest, InvalidFunctionLinkage) {
                                           "have external or weak linkage!"));
 }
 
-TEST(VerifierTest, DetectInvalidDebugInfo) {
+TEST(VerifierTest, StripInvalidDebugInfo) {
   {
     LLVMContext C;
     Module M("M", C);
@@ -163,6 +164,13 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
     NMD->addOperand(File);
     EXPECT_TRUE(verifyModule(M));
+
+    ModulePassManager MPM(true);
+    MPM.addPass(VerifierPass(false));
+    ModuleAnalysisManager MAM(true);
+    MAM.registerPass([&] { return VerifierAnalysis(); });
+    MPM.run(M, MAM);
+    EXPECT_FALSE(verifyModule(M));
   }
   {
     LLVMContext C;
@@ -187,7 +195,35 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     // Now break it by not listing the CU at all.
     M.eraseNamedMetadata(M.getOrInsertNamedMetadata("llvm.dbg.cu"));
     EXPECT_TRUE(verifyModule(M));
+
+    ModulePassManager MPM(true);
+    MPM.addPass(VerifierPass(false));
+    ModuleAnalysisManager MAM(true);
+    MAM.registerPass([&] { return VerifierAnalysis(); });
+    MPM.run(M, MAM);
+    EXPECT_FALSE(verifyModule(M));
   }
+}
+
+TEST(VerifierTest, StripInvalidDebugInfoLegacy) {
+  LLVMContext C;
+  Module M("M", C);
+  DIBuilder DIB(M);
+  DIB.createCompileUnit(dwarf::DW_LANG_C89, DIB.createFile("broken.c", "/"),
+                        "unittest", false, "", 0);
+  DIB.finalize();
+  EXPECT_FALSE(verifyModule(M));
+
+  // Now break it.
+  auto *File = DIB.createFile("not-a-CU.f", ".");
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
+  NMD->addOperand(File);
+  EXPECT_TRUE(verifyModule(M));
+
+  legacy::PassManager Passes;
+  Passes.add(createVerifierPass(false));
+  Passes.run(M);
+  EXPECT_FALSE(verifyModule(M));
 }
 
 } // end anonymous namespace

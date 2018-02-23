@@ -1666,7 +1666,8 @@ private:
   unsigned HasSkippedBody : 1;
 
   /// Indicates if the function declaration will have a body, once we're done
-  /// parsing it.
+  /// parsing it.  (We don't set it to false when we're done parsing, in the
+  /// hopes this is simpler.)
   unsigned WillHaveBody : 1;
 
   /// \brief End part of this FunctionDecl's source range.

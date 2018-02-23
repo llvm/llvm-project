@@ -497,8 +497,8 @@ class MetadataLoader::MetadataLoaderImpl {
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
                     dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
-              auto *DGVE = DIGlobalVariableExpression::getDistinct(
-                  Context, GV, DIExpression::get(Context, {}));
+              auto *DGVE =
+                  DIGlobalVariableExpression::getDistinct(Context, GV, nullptr);
               GVs->replaceOperandWith(I, DGVE);
             }
       }
@@ -510,8 +510,8 @@ class MetadataLoader::MetadataLoaderImpl {
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)
         if (auto *DGV = dyn_cast_or_null<DIGlobalVariable>(MD)) {
-          auto *DGVE = DIGlobalVariableExpression::getDistinct(
-              Context, DGV, DIExpression::get(Context, {}));
+          auto *DGVE =
+              DIGlobalVariableExpression::getDistinct(Context, DGV, nullptr);
           GV.addMetadata(LLVMContext::MD_dbg, *DGVE);
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
@@ -1167,22 +1167,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Tag >= 1u << 16 || Version != 0)
       return error("Invalid record");
 
-    // Deprecated internal hack to support serializing MDModule.
-    // This node has since been deleted.
-    // Upgrading this node is not officially supported.  This code
-    // may be removed in the future.
-    if (Tag == dwarf::DW_TAG_module) {
-      if (Record.size() != 6)
-        return error("Invalid record");
-
-      MetadataList.assignValue(
-          GET_OR_DISTINCT(DIModule, (Context, getMDOrNull(Record[4]),
-                                     getMDString(Record[5]), nullptr, nullptr,
-                                     nullptr)),
-          NextMetadataNo++);
-      break;
-    }
-
     auto *Header = getMDString(Record[3]);
     SmallVector<Metadata *, 8> DwarfOps;
     for (unsigned I = 4, E = Record.size(); I != E; ++I)
@@ -1371,7 +1355,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 19)
+    if (Record.size() < 14 || Record.size() > 18)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1385,8 +1369,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
         Record.size() <= 14 ? 0 : Record[14],
         Record.size() <= 16 ? true : Record[16],
-        Record.size() <= 17 ? false : Record[17],
-        Record.size() <= 18 ? false : Record[18]);
+        Record.size() <= 17 ? false : Record[17]);
 
     MetadataList.assignValue(CU, NextMetadataNo);
     NextMetadataNo++;
@@ -1602,8 +1585,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
       DIGlobalVariableExpression *DGVE = nullptr;
       if (Attach || Expr)
-        DGVE = DIGlobalVariableExpression::getDistinct(
-            Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+        DGVE = DIGlobalVariableExpression::getDistinct(Context, DGV, Expr);
       if (Attach)
         Attach->addDebugInfo(DGVE);
 
@@ -1666,13 +1648,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    Metadata *Expr = getMDOrNull(Record[2]);
-    if (!Expr)
-      Expr = DIExpression::get(Context, {});
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIGlobalVariableExpression,
-                        (Context, getMDOrNull(Record[1]), Expr)),
-        NextMetadataNo);
+    MetadataList.assignValue(GET_OR_DISTINCT(DIGlobalVariableExpression,
+                                             (Context, getMDOrNull(Record[1]),
+                                              getMDOrNull(Record[2]))),
+                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }

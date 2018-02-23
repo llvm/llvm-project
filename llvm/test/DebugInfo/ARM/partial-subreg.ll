@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 ; This tests a fragment that partially covers subregister compositions.
 ;
 ; Our fragment is 96 bits long and lies in a 128-bit register, which
@@ -8,20 +8,23 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_name {{.*}}"subscript.get"
 ; CHECK:  DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	({{.*}}
-; CHECK-NEXT:  [0x{{.*}}, 0x{{.*}}): DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4, DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4
-
+; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	(0x00000000)
+; CHECK: .debug_loc
+; CHECK: 0x00000000: Beginning address offset
+; CHECK-NEXT:           Ending address offset
+; CHECK-NEXT:            Location description: 90 90 02 93 08 90 91 02 93 04
+;                        d16, piece 0x00000008, d17, piece 0x00000004
 source_filename = "simd.ll"
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "armv7-apple-ios7.0"
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
 
 define <3 x float> @_TFV4simd8float2x3g9subscriptFSiVS_6float3(i32, <3 x float>, <3 x float>) !dbg !5 {
 entry:
-  tail call void @llvm.dbg.value(metadata <3 x float> %1, metadata !8, metadata !9), !dbg !10
-  tail call void @llvm.dbg.value(metadata <3 x float> %2, metadata !8, metadata !11), !dbg !10
+  tail call void @llvm.dbg.value(metadata <3 x float> %1, i64 0, metadata !8, metadata !9), !dbg !10
+  tail call void @llvm.dbg.value(metadata <3 x float> %2, i64 0, metadata !8, metadata !11), !dbg !10
   %3 = icmp eq i32 %0, 0, !dbg !12
   br i1 %3, label %7, label %4, !dbg !12
 

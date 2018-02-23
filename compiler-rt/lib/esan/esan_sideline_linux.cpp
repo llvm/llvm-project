@@ -70,7 +70,7 @@ int SidelineThread::runSideline(void *Arg) {
 
   // Set up a signal handler on an alternate stack for safety.
   InternalScopedBuffer<char> StackMap(SigAltStackSize);
-  stack_t SigAltStack;
+  struct sigaltstack SigAltStack;
   SigAltStack.ss_sp = StackMap.data();
   SigAltStack.ss_size = SigAltStackSize;
   SigAltStack.ss_flags = 0;

@@ -167,11 +167,20 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
   }
 
   if (FnD) {
-    FunctionDecl *FD = FnD->getAsFunction();
-    // Track that this function will eventually have a body; Sema needs
-    // to know this.
-    Actions.CheckForFunctionRedefinition(FD);
-    FD->setWillHaveBody(true);
+    // If this is a friend function, mark that it's late-parsed so that
+    // it's still known to be a definition even before we attach the
+    // parsed body.  Sema needs to treat friend function definitions
+    // differently during template instantiation, and it's possible for
+    // the containing class to be instantiated before all its member
+    // function definitions are parsed.
+    //
+    // If you remove this, you can remove the code that clears the flag
+    // after parsing the member.
+    if (D.getDeclSpec().isFriendSpecified()) {
+      FunctionDecl *FD = FnD->getAsFunction();
+      Actions.CheckForFunctionRedefinition(FD);
+      FD->setLateTemplateParsed(true);
+    }
   } else {
     // If semantic analysis could not build a function declaration,
     // just throw away the late-parsed declaration.
@@ -549,6 +558,10 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "current template being instantiated!");
 
   ParseFunctionStatementBody(LM.D, FnScope);
+
+  // Clear the late-template-parsed bit if we set it before.
+  if (LM.D)
+    LM.D->getAsFunction()->setLateTemplateParsed(false);
 
   while (Tok.isNot(tok::eof))
     ConsumeAnyToken();

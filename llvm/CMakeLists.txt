@@ -26,10 +26,10 @@ if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
 endif()
 if(NOT DEFINED LLVM_VERSION_PATCH)
-  set(LLVM_VERSION_PATCH 1)
+  set(LLVM_VERSION_PATCH 0)
 endif()
 if(NOT DEFINED LLVM_VERSION_SUFFIX)
-  set(LLVM_VERSION_SUFFIX "")
+  set(LLVM_VERSION_SUFFIX svn)
 endif()
 
 if (POLICY CMP0048)
@@ -176,11 +176,12 @@ if(LLVM_DEPENDENCY_DEBUGGING)
   endif()
 endif()
 
-option(LLVM_ENABLE_DAGISEL_COV "Debug: Prints tablegen patterns that were used for selecting" OFF)
-option(LLVM_ENABLE_GISEL_COV "Enable collection of GlobalISel rule coverage" OFF)
-if(LLVM_ENABLE_GISEL_COV)
-  set(LLVM_GISEL_COV_PREFIX "${CMAKE_BINARY_DIR}/gisel-coverage-" CACHE STRING "Provide a filename prefix to collect the GlobalISel rule coverage")
+option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" ON)
+if(LLVM_BUILD_GLOBAL_ISEL)
+  add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
 endif()
+
+option(LLVM_ENABLE_DAGISEL_COV "Debug: Prints tablegen patterns that were used for selecting" OFF)
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
@@ -206,6 +207,10 @@ include(VersionFromVCS)
 
 option(LLVM_APPEND_VC_REV
   "Embed the version control system revision id in LLVM" ON)
+
+if( LLVM_APPEND_VC_REV )
+  add_version_info_from_vcs(PACKAGE_VERSION)
+endif()
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -309,7 +314,6 @@ set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 set(LLVM_EXAMPLES_BINARY_DIR ${LLVM_BINARY_DIR}/examples)
 set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-# List of all targets to be built by default:
 set(LLVM_ALL_TARGETS
   AArch64
   AMDGPU
@@ -321,6 +325,7 @@ set(LLVM_ALL_TARGETS
   MSP430
   NVPTX
   PowerPC
+  RISCV
   Sparc
   SystemZ
   X86
@@ -550,8 +555,7 @@ else()
   set(LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION FALSE CACHE INTERNAL "For Visual Studio 2013, manually copy natvis files to Documents\\Visual Studio 2013\\Visualizers" FORCE)
 endif()
 
-if (LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE OR
-    LLVM_ENABLE_IR_PGO)
+if (LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE)
   if(NOT LLVM_PROFILE_MERGE_POOL_SIZE)
     # A pool size of 1-2 is probably sufficient on a SSD. 3-4 should be fine
     # for spining disks. Anything higher may only help on slower mediums.
@@ -559,9 +563,10 @@ if (LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE OR
   endif()
   if(NOT LLVM_PROFILE_FILE_PATTERN)
     if(NOT LLVM_PROFILE_DATA_DIR)
-      file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/profiles" LLVM_PROFILE_DATA_DIR)
+      file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/profiles/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
+    else()
+      file(TO_NATIVE_PATH "${LLVM_PROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
     endif()
-		file(TO_NATIVE_PATH "${LLVM_PROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
   endif()
 endif()
 

@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.Loops,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
-void clang_analyzer_warnIfReached();
 
 #define nil ((id)0)
 
@@ -21,13 +20,11 @@ typedef unsigned long NSUInteger;
 @interface NSArray : NSObject <NSFastEnumeration>
 - (NSUInteger)count;
 - (NSEnumerator *)objectEnumerator;
-+ (NSArray *)arrayWithObjects:(const id [])objects count:(NSUInteger)count;
 @end
 
 @interface NSDictionary : NSObject <NSFastEnumeration>
 - (NSUInteger)count;
 - (id)objectForKey:(id)key;
-+ (id)dictionaryWithObjects:(const id [])objects forKeys:(const id /* <NSCopying> */ [])keys count:(NSUInteger)count;
 @end
 
 @interface NSDictionary (SomeCategory)
@@ -128,7 +125,7 @@ int collectionIsNotEmptyNSArray(NSArray *A) {
   int count = [A count];
   if (count > 0) {
     int i;
-    int j = 0;
+    int j;
     for (NSString *a in A) {
       i = 1;
       j++;
@@ -141,7 +138,7 @@ int collectionIsNotEmptyNSArray(NSArray *A) {
 void onlySuppressExitAfterZeroIterations(NSMutableDictionary *D) {
   if (D.count > 0) {
     int *x;
-    int i = 0;
+    int i;
     for (NSString *key in D) {
       x = 0;
       i++;
@@ -155,7 +152,7 @@ void onlySuppressExitAfterZeroIterations(NSMutableDictionary *D) {
 void onlySuppressLoopExitAfterZeroIterations_WithContinue(NSMutableDictionary *D) {
   if (D.count > 0) {
     int *x;
-    int i = 0;
+    int i;
     for (NSString *key in D) {
       x = 0;
       i++;
@@ -326,20 +323,4 @@ void protocolMethods(NSMutableArray *array) {
 
   for (id key in array)
     clang_analyzer_eval(0); // expected-warning{{FALSE}}
-}
-
-NSArray *globalArray;
-NSDictionary *globalDictionary;
-void boxedArrayEscape(NSMutableArray *array) {
-  if ([array count])
-    return;
-  globalArray = @[array];
-  for (id key in array)
-    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
-
-  if ([array count])
-    return;
-  globalDictionary = @{ @"array" : array };
-  for (id key in array)
-    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }

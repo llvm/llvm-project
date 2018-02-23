@@ -97,8 +97,7 @@ int main(int argc, char **argv) {
 
   // Parse the file now...
   SMDiagnostic Err;
-  std::unique_ptr<Module> M =
-      parseAssemblyFile(InputFilename, Err, Context, nullptr, !DisableVerify);
+  std::unique_ptr<Module> M = parseAssemblyFile(InputFilename, Err, Context);
   if (!M.get()) {
     Err.print(argv[0], errs());
     return 1;

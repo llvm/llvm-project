@@ -4,7 +4,7 @@
 ;  
 ; void (A::*p)() = &A::foo;
 ;
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; Check that the member function pointer is emitted without a DW_AT_size attribute.
 ; CHECK: DW_TAG_ptr_to_member_type
 ; CHECK-NOT: DW_AT_{{.*}}size
@@ -25,7 +25,7 @@ declare void @_ZN1A3fooEv(%struct.A*)
 !llvm.module.flags = !{!14, !15, !16}
 !llvm.ident = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "p", scope: null, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "memberfnptr.cpp", directory: "")
 !3 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !4, size: 64, extraData: !7)

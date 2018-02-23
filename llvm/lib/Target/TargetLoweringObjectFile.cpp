@@ -46,8 +46,8 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
   // `Initialize` can be called more than once.
   delete Mang;
   Mang = new Mangler();
-  InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(), *Ctx,
-                       TM.getCodeModel() == CodeModel::Large);
+  InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(),
+                       TM.getCodeModel(), *Ctx);
 }
 
 TargetLoweringObjectFile::~TargetLoweringObjectFile() {

@@ -274,8 +274,7 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
       assert(Loc.getAs<PostStmt>() ||
              Loc.getAs<PostInitializer>() ||
              Loc.getAs<PostImplicitCall>() ||
-             Loc.getAs<CallExitEnd>() ||
-             Loc.getAs<LoopExit>());
+             Loc.getAs<CallExitEnd>());
       HandlePostStmt(WU.getBlock(), WU.getIndex(), Pred);
       break;
   }
@@ -567,8 +566,7 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
 
   // Do not create extra nodes. Move to the next CFG element.
   if (N->getLocation().getAs<PostInitializer>() ||
-      N->getLocation().getAs<PostImplicitCall>()||
-      N->getLocation().getAs<LoopExit>()) {
+      N->getLocation().getAs<PostImplicitCall>()) {
     WList->enqueue(N, Block, Idx+1);
     return;
   }

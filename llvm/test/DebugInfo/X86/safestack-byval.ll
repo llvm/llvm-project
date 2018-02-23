@@ -14,7 +14,8 @@
 ; }
 
 ; CHECK: ![[ZZZ:.*]] = !DILocalVariable(name: "zzz",
-; CHECK: DBG_VALUE {{.*}} ![[ZZZ]], !DIExpression(DW_OP_deref, DW_OP_constu, 400, DW_OP_minus)
+; CHECK: ![[ZZZ_EXPR:.*]] = !DIExpression(DW_OP_deref, DW_OP_constu, 400, DW_OP_minus)
+; CHECK: DBG_VALUE {{.*}} ![[ZZZ]], ![[ZZZ_EXPR]]
 
 %struct.S = type { [100 x i32] }
 
@@ -32,7 +33,7 @@ entry:
   %zzz.unsafe-byval = bitcast i8* %0 to %struct.S*, !dbg !22
   %1 = bitcast %struct.S* %zzz to i8*, !dbg !24
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 400, i32 8, i1 false), !dbg !24
-  tail call void @llvm.dbg.value(metadata i64 %len, metadata !18, metadata !25), !dbg !24
+  tail call void @llvm.dbg.value(metadata i64 %len, i64 0, metadata !18, metadata !25), !dbg !24
   %arrayidx = getelementptr inbounds %struct.S, %struct.S* %zzz.unsafe-byval, i64 0, i32 0, i64 %len, !dbg !26
   %2 = load i32, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
   store i8* %unsafe_stack_ptr, i8** @__safestack_unsafe_stack_ptr, !dbg !31
@@ -43,7 +44,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2

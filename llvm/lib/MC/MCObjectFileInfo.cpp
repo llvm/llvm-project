@@ -214,10 +214,6 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       Ctx->getMachOSection("__DWARF", "__apple_types", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "types_begin");
 
-  DwarfSwiftASTSection =
-      Ctx->getMachOSection("__DWARF", "__swift_ast", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata());
-
   DwarfAbbrevSection =
       Ctx->getMachOSection("__DWARF", "__debug_abbrev", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "section_abbrev");
@@ -278,7 +274,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   TLSExtraDataSection = TLSTLVSection;
 }
 
-void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
+void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
   switch (T.getArch()) {
   case Triple::mips:
   case Triple::mipsel:
@@ -290,7 +286,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
     break;
   case Triple::x86_64:
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+                     ((CMModel == CodeModel::Large) ? dwarf::DW_EH_PE_sdata8
+                                                    : dwarf::DW_EH_PE_sdata4);
     break;
   case Triple::bpfel:
   case Triple::bpfeb:
@@ -327,18 +324,23 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
     break;
   case Triple::x86_64:
     if (PositionIndependent) {
-      PersonalityEncoding =
-          dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-          (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        ((CMModel == CodeModel::Small || CMModel == CodeModel::Medium)
+         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
       LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+        (CMModel == CodeModel::Small
+         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
       TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                      (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+        ((CMModel == CodeModel::Small || CMModel == CodeModel::Medium)
+         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
     } else {
       PersonalityEncoding =
-          Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-      LSDAEncoding = Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-      TTypeEncoding = Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
+        (CMModel == CodeModel::Small || CMModel == CodeModel::Medium)
+        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = (CMModel == CodeModel::Small)
+        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = (CMModel == CodeModel::Small)
+        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
     }
     break;
   case Triple::hexagon:
@@ -847,9 +849,10 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
-                                            MCContext &ctx,
-                                            bool LargeCodeModel) {
+                                            CodeModel::Model cm,
+                                            MCContext &ctx) {
   PositionIndependent = PIC;
+  CMModel = cm;
   Ctx = &ctx;
 
   // Common.
@@ -887,7 +890,7 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
     break;
   case Triple::ELF:
     Env = IsELF;
-    initELFMCObjectFileInfo(TT, LargeCodeModel);
+    initELFMCObjectFileInfo(TT);
     break;
   case Triple::Wasm:
     Env = IsWasm;

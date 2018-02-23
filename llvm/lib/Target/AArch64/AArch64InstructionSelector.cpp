@@ -20,7 +20,6 @@
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,7 +33,13 @@
 
 #define DEBUG_TYPE "aarch64-isel"
 
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+
 using namespace llvm;
+
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+#error "You shouldn't build this"
+#endif
 
 namespace {
 
@@ -48,13 +53,12 @@ public:
                              const AArch64Subtarget &STI,
                              const AArch64RegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
-  static const char *getName() { return DEBUG_TYPE; }
+  bool select(MachineInstr &I) const override;
 
 private:
   /// tblgen-erated 'select' implementation, used as the initial selector for
   /// the patterns that don't require complex C++.
-  bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+  bool selectImpl(MachineInstr &I) const;
 
   bool selectVaStartAAPCS(MachineInstr &I, MachineFunction &MF,
                           MachineRegisterInfo &MRI) const;
@@ -64,33 +68,7 @@ private:
   bool selectCompareBranch(MachineInstr &I, MachineFunction &MF,
                            MachineRegisterInfo &MRI) const;
 
-  ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
-
-  ComplexRendererFns selectAddrModeUnscaled(MachineOperand &Root,
-                                            unsigned Size) const;
-
-  ComplexRendererFns selectAddrModeUnscaled8(MachineOperand &Root) const {
-    return selectAddrModeUnscaled(Root, 1);
-  }
-  ComplexRendererFns selectAddrModeUnscaled16(MachineOperand &Root) const {
-    return selectAddrModeUnscaled(Root, 2);
-  }
-  ComplexRendererFns selectAddrModeUnscaled32(MachineOperand &Root) const {
-    return selectAddrModeUnscaled(Root, 4);
-  }
-  ComplexRendererFns selectAddrModeUnscaled64(MachineOperand &Root) const {
-    return selectAddrModeUnscaled(Root, 8);
-  }
-  ComplexRendererFns selectAddrModeUnscaled128(MachineOperand &Root) const {
-    return selectAddrModeUnscaled(Root, 16);
-  }
-
-  ComplexRendererFns selectAddrModeIndexed(MachineOperand &Root,
-                                           unsigned Size) const;
-  template <int Width>
-  ComplexRendererFns selectAddrModeIndexed(MachineOperand &Root) const {
-    return selectAddrModeIndexed(Root, Width / 8);
-  }
+  ComplexRendererFn selectArithImmed(MachineOperand &Root) const;
 
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
@@ -343,9 +321,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const TargetRegisterClass *RC = nullptr;
 
   if (RegBank.getID() == AArch64::FPRRegBankID) {
-    if (DstSize <= 16)
-      RC = &AArch64::FPR16RegClass;
-    else if (DstSize <= 32)
+    if (DstSize <= 32)
       RC = &AArch64::FPR32RegClass;
     else if (DstSize <= 64)
       RC = &AArch64::FPR64RegClass;
@@ -537,8 +513,6 @@ bool AArch64InstructionSelector::selectCompareBranch(
   const unsigned CondReg = I.getOperand(0).getReg();
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
   MachineInstr *CCMI = MRI.getVRegDef(CondReg);
-  if (CCMI->getOpcode() == TargetOpcode::G_TRUNC)
-    CCMI = MRI.getVRegDef(CCMI->getOperand(1).getReg());
   if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
     return false;
 
@@ -609,8 +583,7 @@ bool AArch64InstructionSelector::selectVaStartDarwin(
   return true;
 }
 
-bool AArch64InstructionSelector::select(MachineInstr &I,
-                                        CodeGenCoverage &CoverageInfo) const {
+bool AArch64InstructionSelector::select(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -619,14 +592,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   unsigned Opcode = I.getOpcode();
-  // G_PHI requires same handling as PHI
-  if (!isPreISelGenericOpcode(Opcode) || Opcode == TargetOpcode::G_PHI) {
+  if (!isPreISelGenericOpcode(I.getOpcode())) {
     // Certain non-generic instructions also need some special handling.
 
     if (Opcode ==  TargetOpcode::LOAD_STACK_GUARD)
       return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
-    if (Opcode == TargetOpcode::PHI || Opcode == TargetOpcode::G_PHI) {
+    if (Opcode == TargetOpcode::PHI) {
       const unsigned DefReg = I.getOperand(0).getReg();
       const LLT DefTy = MRI.getType(DefReg);
 
@@ -651,7 +623,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
           }
         }
       }
-      I.setDesc(TII.get(TargetOpcode::PHI));
 
       return RBI.constrainGenericRegister(DefReg, *DefRC, MRI);
     }
@@ -668,7 +639,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return false;
   }
 
-  if (selectImpl(I, CoverageInfo))
+  if (selectImpl(I))
     return true;
 
   LLT Ty =
@@ -732,14 +703,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
                      << " constant on bank: " << RB << ", expected: FPR\n");
         return false;
       }
-
-      // The case when we have 0.0 is covered by tablegen. Reject it here so we
-      // can be sure tablegen works correctly and isn't rescued by this code.
-      if (I.getOperand(1).getFPImm()->getValueAPF().isExactlyValue(0.0))
-        return false;
     } else {
-      // s32 and s64 are covered by tablegen.
-      if (Ty != p0) {
+      if (Ty != s32 && Ty != s64 && Ty != p0) {
         DEBUG(dbgs() << "Unable to materialize integer " << Ty
                      << " constant, expected: " << s32 << ", " << s64 << ", or "
                      << p0 << '\n');
@@ -793,55 +758,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
-  case TargetOpcode::G_EXTRACT: {
-    LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
-    // Larger extracts are vectors, same-size extracts should be something else
-    // by now (either split up or simplified to a COPY).
-    if (SrcTy.getSizeInBits() > 64 || Ty.getSizeInBits() > 32)
-      return false;
 
-    I.setDesc(TII.get(AArch64::UBFMXri));
-    MachineInstrBuilder(MF, I).addImm(I.getOperand(2).getImm() +
-                                      Ty.getSizeInBits() - 1);
-
-    unsigned DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
-    BuildMI(MBB, std::next(I.getIterator()), I.getDebugLoc(),
-            TII.get(AArch64::COPY))
-        .addDef(I.getOperand(0).getReg())
-        .addUse(DstReg, 0, AArch64::sub_32);
-    RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                 AArch64::GPR32RegClass, MRI);
-    I.getOperand(0).setReg(DstReg);
-
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
-  case TargetOpcode::G_INSERT: {
-    LLT SrcTy = MRI.getType(I.getOperand(2).getReg());
-    // Larger inserts are vectors, same-size ones should be something else by
-    // now (split up or turned into COPYs).
-    if (Ty.getSizeInBits() > 64 || SrcTy.getSizeInBits() > 32)
-      return false;
-
-    I.setDesc(TII.get(AArch64::BFMXri));
-    unsigned LSB = I.getOperand(3).getImm();
-    unsigned Width = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
-    I.getOperand(3).setImm((64 - LSB) % 64);
-    MachineInstrBuilder(MF, I).addImm(Width - 1);
-
-    unsigned SrcReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
-    BuildMI(MBB, I.getIterator(), I.getDebugLoc(),
-            TII.get(AArch64::SUBREG_TO_REG))
-        .addDef(SrcReg)
-        .addImm(0)
-        .addUse(I.getOperand(2).getReg())
-        .addImm(AArch64::sub_32);
-    RBI.constrainGenericRegister(I.getOperand(2).getReg(),
-                                 AArch64::GPR32RegClass, MRI);
-    I.getOperand(2).setReg(SrcReg);
-
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
     if (Ty != LLT::pointer(0, 64)) {
@@ -849,6 +766,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
             << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
+
     I.setDesc(TII.get(AArch64::ADDXri));
 
     // MOs for a #0 shifted immediate.
@@ -1199,18 +1117,62 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
 
 
   case TargetOpcode::G_INTTOPTR:
-    // The importer is currently unable to import pointer types since they
-    // didn't exist in SelectionDAG.
+  case TargetOpcode::G_BITCAST:
     return selectCopy(I, TII, MRI, TRI, RBI);
 
-  case TargetOpcode::G_BITCAST:
-    // Imported SelectionDAG rules can handle every bitcast except those that
-    // bitcast from a type to the same type. Ideally, these shouldn't occur
-    // but we might not run an optimizer that deletes them.
-    if (MRI.getType(I.getOperand(0).getReg()) ==
-        MRI.getType(I.getOperand(1).getReg()))
-      return selectCopy(I, TII, MRI, TRI, RBI);
-    return false;
+  case TargetOpcode::G_FPEXT: {
+    if (MRI.getType(I.getOperand(0).getReg()) != LLT::scalar(64)) {
+      DEBUG(dbgs() << "G_FPEXT to type " << Ty
+                   << ", expected: " << LLT::scalar(64) << '\n');
+      return false;
+    }
+
+    if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(32)) {
+      DEBUG(dbgs() << "G_FPEXT from type " << Ty
+                   << ", expected: " << LLT::scalar(32) << '\n');
+      return false;
+    }
+
+    const unsigned DefReg = I.getOperand(0).getReg();
+    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+    if (RB.getID() != AArch64::FPRRegBankID) {
+      DEBUG(dbgs() << "G_FPEXT on bank: " << RB << ", expected: FPR\n");
+      return false;
+    }
+
+    I.setDesc(TII.get(AArch64::FCVTDSr));
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
+  }
+
+  case TargetOpcode::G_FPTRUNC: {
+    if (MRI.getType(I.getOperand(0).getReg()) != LLT::scalar(32)) {
+      DEBUG(dbgs() << "G_FPTRUNC to type " << Ty
+                   << ", expected: " << LLT::scalar(32) << '\n');
+      return false;
+    }
+
+    if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(64)) {
+      DEBUG(dbgs() << "G_FPTRUNC from type " << Ty
+                   << ", expected: " << LLT::scalar(64) << '\n');
+      return false;
+    }
+
+    const unsigned DefReg = I.getOperand(0).getReg();
+    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+    if (RB.getID() != AArch64::FPRRegBankID) {
+      DEBUG(dbgs() << "G_FPTRUNC on bank: " << RB << ", expected: FPR\n");
+      return false;
+    }
+
+    I.setDesc(TII.get(AArch64::FCVTSDr));
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
+  }
 
   case TargetOpcode::G_SELECT: {
     if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(1)) {
@@ -1252,9 +1214,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return true;
   }
   case TargetOpcode::G_ICMP: {
-    if (Ty != LLT::scalar(32)) {
+    if (Ty != LLT::scalar(1)) {
       DEBUG(dbgs() << "G_ICMP result has type: " << Ty
-                   << ", expected: " << LLT::scalar(32) << '\n');
+                   << ", expected: " << LLT::scalar(1) << '\n');
       return false;
     }
 
@@ -1299,9 +1261,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   }
 
   case TargetOpcode::G_FCMP: {
-    if (Ty != LLT::scalar(32)) {
+    if (Ty != LLT::scalar(1)) {
       DEBUG(dbgs() << "G_FCMP result has type: " << Ty
-                   << ", expected: " << LLT::scalar(32) << '\n');
+                   << ", expected: " << LLT::scalar(1) << '\n');
       return false;
     }
 
@@ -1374,7 +1336,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
 /// SelectArithImmed - Select an immediate value that can be represented as
 /// a 12-bit value shifted left by either 0 or 12.  If so, return true with
 /// Val set to the 12-bit value and Shift set to the shifter operand.
-InstructionSelector::ComplexRendererFns
+InstructionSelector::ComplexRendererFn
 AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
   MachineInstr &MI = *Root.getParent();
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1394,13 +1356,13 @@ AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
   else if (Root.isReg()) {
     MachineInstr *Def = MRI.getVRegDef(Root.getReg());
     if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
-      return None;
+      return nullptr;
     MachineOperand &Op1 = Def->getOperand(1);
     if (!Op1.isCImm() || Op1.getCImm()->getBitWidth() > 64)
-      return None;
+      return nullptr;
     Immed = Op1.getCImm()->getZExtValue();
   } else
-    return None;
+    return nullptr;
 
   unsigned ShiftAmt;
 
@@ -1410,116 +1372,10 @@ AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
     ShiftAmt = 12;
     Immed = Immed >> 12;
   } else
-    return None;
+    return nullptr;
 
   unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftAmt);
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Immed); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(ShVal); },
-  }};
-}
-
-/// Select a "register plus unscaled signed 9-bit immediate" address.  This
-/// should only match when there is an offset that is not valid for a scaled
-/// immediate addressing mode.  The "Size" argument is the size in bytes of the
-/// memory reference, which is needed here to know what is valid for a scaled
-/// immediate.
-InstructionSelector::ComplexRendererFns
-AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
-                                                   unsigned Size) const {
-  MachineRegisterInfo &MRI =
-      Root.getParent()->getParent()->getParent()->getRegInfo();
-
-  if (!Root.isReg())
-    return None;
-
-  if (!isBaseWithConstantOffset(Root, MRI))
-    return None;
-
-  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
-  if (!RootDef)
-    return None;
-
-  MachineOperand &OffImm = RootDef->getOperand(2);
-  if (!OffImm.isReg())
-    return None;
-  MachineInstr *RHS = MRI.getVRegDef(OffImm.getReg());
-  if (!RHS || RHS->getOpcode() != TargetOpcode::G_CONSTANT)
-    return None;
-  int64_t RHSC;
-  MachineOperand &RHSOp1 = RHS->getOperand(1);
-  if (!RHSOp1.isCImm() || RHSOp1.getCImm()->getBitWidth() > 64)
-    return None;
-  RHSC = RHSOp1.getCImm()->getSExtValue();
-
-  // If the offset is valid as a scaled immediate, don't match here.
-  if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Log2_32(Size)))
-    return None;
-  if (RHSC >= -256 && RHSC < 256) {
-    MachineOperand &Base = RootDef->getOperand(1);
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.add(Base); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
-    }};
-  }
-  return None;
-}
-
-/// Select a "register plus scaled unsigned 12-bit immediate" address.  The
-/// "Size" argument is the size in bytes of the memory reference, which
-/// determines the scale.
-InstructionSelector::ComplexRendererFns
-AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
-                                                  unsigned Size) const {
-  MachineRegisterInfo &MRI =
-      Root.getParent()->getParent()->getParent()->getRegInfo();
-
-  if (!Root.isReg())
-    return None;
-
-  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
-  if (!RootDef)
-    return None;
-
-  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
-    }};
-  }
-
-  if (isBaseWithConstantOffset(Root, MRI)) {
-    MachineOperand &LHS = RootDef->getOperand(1);
-    MachineOperand &RHS = RootDef->getOperand(2);
-    MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
-    MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
-    if (LHSDef && RHSDef) {
-      int64_t RHSC = (int64_t)RHSDef->getOperand(1).getCImm()->getZExtValue();
-      unsigned Scale = Log2_32(Size);
-      if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
-        if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
-          return {{
-              [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
-              [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
-          }};
-
-        return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
-            [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
-        }};
-      }
-    }
-  }
-
-  // Before falling back to our general case, check if the unscaled
-  // instructions can handle this. If so, that's preferable.
-  if (selectAddrModeUnscaled(Root, Size).hasValue())
-    return None;
-
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
-  }};
+  return [=](MachineInstrBuilder &MIB) { MIB.addImm(Immed).addImm(ShVal); };
 }
 
 namespace llvm {

@@ -47,10 +47,13 @@
 
 using namespace llvm;
 
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+#error "This shouldn't be built without GISel"
+#endif
+
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
-namespace {
 struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      CCAssignFn *AssignFn)
@@ -70,18 +73,8 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
                         CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
-    switch (VA.getLocInfo()) {
-    default:
-      MIRBuilder.buildCopy(ValVReg, PhysReg);
-      break;
-    case CCValAssign::LocInfo::SExt:
-    case CCValAssign::LocInfo::ZExt:
-    case CCValAssign::LocInfo::AExt: {
-      auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
-      MIRBuilder.buildTrunc(ValVReg, Copy);
-      break;
-    }
-    }
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
+    // FIXME: assert extension
   }
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
@@ -178,11 +171,10 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
   CCAssignFn *AssignFnVarArg;
   uint64_t StackSize;
 };
-} // namespace
 
 void AArch64CallLowering::splitToValueTypes(
     const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
-    const DataLayout &DL, MachineRegisterInfo &MRI, CallingConv::ID CallConv,
+    const DataLayout &DL, MachineRegisterInfo &MRI,
     const SplitArgTy &PerformArgSplit) const {
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   LLVMContext &Ctx = OrigArg.Ty->getContext();
@@ -200,18 +192,13 @@ void AArch64CallLowering::splitToValueTypes(
   }
 
   unsigned FirstRegIdx = SplitArgs.size();
-  bool NeedsRegBlock = TLI.functionArgumentNeedsConsecutiveRegisters(
-      OrigArg.Ty, CallConv, false);
   for (auto SplitVT : SplitVTs) {
+    // FIXME: set split flags if they're actually used (e.g. i128 on AAPCS).
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
     SplitArgs.push_back(
         ArgInfo{MRI.createGenericVirtualRegister(getLLTForType(*SplitTy, DL)),
                 SplitTy, OrigArg.Flags, OrigArg.IsFixed});
-    if (NeedsRegBlock)
-      SplitArgs.back().Flags.setInConsecutiveRegs();
   }
-
-  SplitArgs.back().Flags.setInConsecutiveRegsLast();
 
   for (unsigned i = 0; i < Offsets.size(); ++i)
     PerformArgSplit(SplitArgs[FirstRegIdx + i].Reg, Offsets[i] * 8);
@@ -235,7 +222,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
-    splitToValueTypes(OrigArg, SplitArgs, DL, MRI, F.getCallingConv(),
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                       [&](unsigned Reg, uint64_t Offset) {
                         MIRBuilder.buildExtract(Reg, VReg, Offset);
                       });
@@ -265,7 +252,7 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     LLT Ty = MRI.getType(VRegs[i]);
     unsigned Dst = VRegs[i];
 
-    splitToValueTypes(OrigArg, SplitArgs, DL, MRI, F.getCallingConv(),
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                       [&](unsigned Reg, uint64_t Offset) {
                         if (!Split) {
                           Split = true;
@@ -326,7 +313,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> SplitArgs;
   for (auto &OrigArg : OrigArgs) {
-    splitToValueTypes(OrigArg, SplitArgs, DL, MRI, CallConv,
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                       [&](unsigned Reg, uint64_t Offset) {
                         MIRBuilder.buildExtract(Reg, OrigArg.Reg, Offset);
                       });
@@ -379,7 +366,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     SmallVector<uint64_t, 8> RegOffsets;
     SmallVector<unsigned, 8> SplitRegs;
-    splitToValueTypes(OrigRet, SplitArgs, DL, MRI, F.getCallingConv(),
+    splitToValueTypes(OrigRet, SplitArgs, DL, MRI,
                       [&](unsigned Reg, uint64_t Offset) {
                         RegOffsets.push_back(Offset);
                         SplitRegs.push_back(Reg);

@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_PROGRAMPOINT_H
 #define LLVM_CLANG_ANALYSIS_PROGRAMPOINT_H
 
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -83,7 +83,6 @@ public:
               PostImplicitCallKind,
               MinImplicitCallKind = PreImplicitCallKind,
               MaxImplicitCallKind = PostImplicitCallKind,
-              LoopExitKind,
               EpsilonKind};
 
 private:
@@ -653,29 +652,6 @@ private:
   static bool isKind(const ProgramPoint &Location) {
     return Location.getKind() == CallExitEndKind;
   }
-};
-
-/// Represents a point when we exit a loop.
-/// When this ProgramPoint is encountered we can be sure that the symbolic
-/// execution of the corresponding LoopStmt is finished on the given path.
-/// Note: It is possible to encounter a LoopExit element when we haven't even
-/// encountered the loop itself. At the current state not all loop exits will
-/// result in a LoopExit program point.
-class LoopExit : public ProgramPoint {
-public:
-    LoopExit(const Stmt *LoopStmt, const LocationContext *LC)
-            : ProgramPoint(LoopStmt, nullptr, LoopExitKind, LC) {}
-
-    const Stmt *getLoopStmt() const {
-      return static_cast<const Stmt *>(getData1());
-    }
-
-private:
-    friend class ProgramPoint;
-    LoopExit() {}
-    static bool isKind(const ProgramPoint &Location) {
-      return Location.getKind() == LoopExitKind;
-    }
 };
 
 /// This is a meta program point, which should be skipped by all the diagnostic

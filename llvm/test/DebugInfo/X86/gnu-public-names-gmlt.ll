@@ -1,6 +1,6 @@
-; RUN: sed -e 's/gnuPubnames: false/gnuPubnames: true/' %s | llc -mtriple=x86_64-pc-linux-gnu -filetype=obj | llvm-dwarfdump -v - | FileCheck --check-prefix=GPUB --check-prefix=CHECK %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-dwarf-pub-sections=Enable | llvm-dwarfdump -v - | FileCheck --check-prefix=PUB --check-prefix=CHECK %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck --check-prefix=NONE %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-gnu-dwarf-pub-sections | llvm-dwarfdump - | FileCheck --check-prefix=GPUB --check-prefix=CHECK %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-dwarf-pub-sections=Enable | llvm-dwarfdump - | FileCheck --check-prefix=PUB --check-prefix=CHECK %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump - | FileCheck --check-prefix=NONE %s
 
 ; Generated from:
 ;   void f1();
@@ -27,10 +27,14 @@
 ; CHECK-NEXT: length = 0x0000000e version = 0x0002 unit_offset = 0x00000000
 ; CHECK-NEXT: Name
 
-; NONE-NOT: .debug_pubnames contents:
-; NONE-NOT: .debug_pubtypes contents:
-; NONE-NOT: .debug_gnu_pubnames contents:
-; NONE-NOT: .debug_gnu_pubtypes contents:
+; NONE: .debug_pubnames contents:
+; NONE: {{^$}}
+; NONE: .debug_pubtypes contents:
+; NONE: {{^$}}
+; NONE: .debug_gnu_pubnames contents:
+; NONE: {{^$}}
+; NONE: .debug_gnu_pubtypes contents:
+; NONE: {{^$}}
 
 
 ; Function Attrs: noinline uwtable
@@ -49,7 +53,7 @@ attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 (trunk 303768) (llvm/trunk 303774)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, gnuPubnames: false)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 (trunk 303768) (llvm/trunk 303774)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "gnu-public-names-gmlt.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

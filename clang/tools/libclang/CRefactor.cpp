@@ -79,8 +79,6 @@ translateOccurrenceKind(rename::SymbolOccurrence::OccurrenceKind Kind) {
     return CXSymbolOccurrence_MatchingDocCommentString;
   case rename::SymbolOccurrence::MatchingFilename:
     return CXSymbolOccurrence_MatchingFilename;
-  case rename::SymbolOccurrence::MatchingStringLiteral:
-    return CXSymbolOccurrence_MatchingStringLiteral;
   }
 }
 
@@ -668,10 +666,7 @@ CXErrorCode performIndexedSymbolSearch(
 
     IndexedSymbols.emplace_back(SymbolName(Symbol.Name, IsObjCSelector),
                                 IndexedOccurrences,
-                                /*IsObjCSelector=*/IsObjCSelector,
-                                /*SearchForStringLiteralOccurrences=*/
-                                Symbol.CursorKind == CXCursor_ObjCInterfaceDecl
-                                );
+                                /*IsObjCSelector=*/IsObjCSelector);
   }
 
   class ToolRunner final : public FrontendActionFactory,
@@ -908,8 +903,6 @@ public:
               std::string(clang_getCString(
                   FileReplacements[I - NumRemoved - 1].ReplacementString)) +
               RefReplacement.ReplacementString;
-          clang_disposeString(
-              FileReplacements[I - NumRemoved - 1].ReplacementString);
           FileReplacements[I - NumRemoved - 1].ReplacementString =
               cxstring::createDup(Replacement);
           NumRemoved++;
@@ -969,8 +962,6 @@ public:
                 std::string(clang_getCString(
                     FileReplacements[I - NumRemoved - 1].ReplacementString)) +
                 RefReplacement.ReplacementString;
-            clang_disposeString(
-                FileReplacements[I - NumRemoved - 1].ReplacementString);
             FileReplacements[I - NumRemoved - 1].ReplacementString =
                 cxstring::createDup(Replacement);
             NumRemoved++;

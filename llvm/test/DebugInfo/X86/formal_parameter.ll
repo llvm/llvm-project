@@ -14,7 +14,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 ;
 ; RUN: opt %s -O2 -S -o %t
 ; RUN: cat %t | FileCheck --check-prefix=LOWERING %s
-; RUN: llc -filetype=obj %t -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj %t -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; Test that we only emit only one DW_AT_formal_parameter "map" for this function.
 ; rdar://problem/14874886
 ;
@@ -49,7 +49,7 @@ declare i32 @lookup(...)
 declare i32 @verify(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

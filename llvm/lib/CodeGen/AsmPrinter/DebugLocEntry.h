@@ -81,7 +81,7 @@ public:
       if (isLocation()) {
         llvm::dbgs() << "Loc = { reg=" << Loc.getReg() << " ";
         if (Loc.isIndirect())
-          llvm::dbgs() << "+0";
+          llvm::dbgs() << '+' << Loc.getOffset();
         llvm::dbgs() << "} ";
       }
       else if (isConstantInt())

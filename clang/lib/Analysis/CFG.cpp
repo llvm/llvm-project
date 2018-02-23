@@ -602,7 +602,6 @@ private:
     return Visit(S, AddStmtChoice::AlwaysAdd);
   }
   CFGBlock *addInitializer(CXXCtorInitializer *I);
-  void addLoopExit(const Stmt *LoopStmt);
   void addAutomaticObjDtors(LocalScope::const_iterator B,
                             LocalScope::const_iterator E, Stmt *S);
   void addLifetimeEnds(LocalScope::const_iterator B,
@@ -651,10 +650,6 @@ private:
 
   void appendLifetimeEnds(CFGBlock *B, VarDecl *VD, Stmt *S) {
     B->appendLifetimeEnds(VD, S, cfg->getBumpVectorContext());
-  }
-
-  void appendLoopExit(CFGBlock *B, const Stmt *LoopStmt) {
-    B->appendLoopExit(LoopStmt, cfg->getBumpVectorContext());
   }
 
   void appendDeleteDtor(CFGBlock *B, CXXRecordDecl *RD, CXXDeleteExpr *DE) {
@@ -1256,16 +1251,6 @@ static QualType getReferenceInitTemporaryType(ASTContext &Context,
   }
 
   return Init->getType();
-}
-
-
-// TODO: Support adding LoopExit element to the CFG in case where the loop is
-// ended by ReturnStmt, GotoStmt or ThrowExpr.
-void CFGBuilder::addLoopExit(const Stmt *LoopStmt){
-  if(!BuildOpts.AddLoopExit)
-    return;
-  autoCreateBlock();
-  appendLoopExit(Block, LoopStmt);
 }
 
 void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
@@ -2558,8 +2543,6 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
 
   addAutomaticObjHandling(ScopePos, save_scope_pos.get(), F);
 
-  addLoopExit(F);
-
   // "for" is a control-flow statement.  Thus we stop processing the current
   // block.
   if (Block) {
@@ -2899,7 +2882,6 @@ CFGBlock *CFGBuilder::VisitWhileStmt(WhileStmt *W) {
     addLocalScopeForVarDecl(VD);
     addAutomaticObjHandling(ScopePos, LoopBeginScopePos, W);
   }
-  addLoopExit(W);
 
   // "while" is a control-flow statement.  Thus we stop processing the current
   // block.
@@ -3062,8 +3044,6 @@ CFGBlock *CFGBuilder::VisitCXXThrowExpr(CXXThrowExpr *T) {
 
 CFGBlock *CFGBuilder::VisitDoStmt(DoStmt *D) {
   CFGBlock *LoopSuccessor = nullptr;
-
-  addLoopExit(D);
 
   // "do...while" is a control-flow statement.  Thus we stop processing the
   // current block.
@@ -4045,7 +4025,6 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
     case CFGElement::Statement:
     case CFGElement::Initializer:
     case CFGElement::NewAllocator:
-    case CFGElement::LoopExit:
     case CFGElement::LifetimeEnds:
       llvm_unreachable("getDestructorDecl should only be used with "
                        "ImplicitDtors");
@@ -4463,9 +4442,6 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
 
     OS << " (Lifetime ends)\n";
 
-  } else if (Optional<CFGLoopExit> LE = E.getAs<CFGLoopExit>()) {
-    const Stmt *LoopStmt = LE->getLoopStmt();
-    OS << LoopStmt->getStmtClassName() << " (LoopExit)\n";
   } else if (Optional<CFGNewAllocator> NE = E.getAs<CFGNewAllocator>()) {
     OS << "CFGNewAllocator(";
     if (const CXXNewExpr *AllocExpr = NE->getAllocatorExpr())

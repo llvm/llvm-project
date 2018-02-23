@@ -290,7 +290,7 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
 
 bool llvm::stripDebugInfo(Function &F) {
   bool Changed = false;
-  if (F.getMetadata(LLVMContext::MD_dbg)) {
+  if (F.getSubprogram()) {
     Changed = true;
     F.setSubprogram(nullptr);
   }
@@ -470,7 +470,7 @@ private:
         CU->getSplitDebugFilename(), DICompileUnit::LineTablesOnly, EnumTypes,
         RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
         CU->getDWOId(), CU->getSplitDebugInlining(),
-        CU->getDebugInfoForProfiling(), CU->getGnuPubnames());
+        CU->getDebugInfoForProfiling());
   }
 
   DILocation *getReplacementMDLocation(DILocation *MLD) {

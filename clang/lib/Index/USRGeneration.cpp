@@ -99,8 +99,6 @@ public:
   void VisitVarDecl(const VarDecl *D);
   void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D);
   void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *D);
-  void VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D);
-  void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D);
 
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
     IgnoreResults = true;
@@ -111,6 +109,14 @@ public:
   }
 
   void VisitUsingDecl(const UsingDecl *D) {
+    IgnoreResults = true;
+  }
+
+  void VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D) {
+    IgnoreResults = true;
+  }
+
+  void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D) {
     IgnoreResults = true;
   }
 
@@ -603,16 +609,6 @@ bool USRGenerator::GenLoc(const Decl *D, bool IncludeOffset) {
   return IgnoreResults;
 }
 
-static void printQualifier(llvm::raw_ostream &Out, ASTContext &Ctx, NestedNameSpecifier *NNS) {
-  // FIXME: Encode the qualifier, don't just print it.
-  PrintingPolicy PO(Ctx.getLangOpts());
-  PO.SuppressTagKeyword = true;
-  PO.SuppressUnwrittenScope = true;
-  PO.ConstantArraySizeAsWritten = false;
-  PO.AnonymousTagLocations = false;
-  NNS->print(Out, PO);
-}
-
 void USRGenerator::VisitType(QualType T) {
   // This method mangles in USR information for types.  It can possibly
   // just reuse the naming-mangling logic used by codegen, although the
@@ -753,12 +749,8 @@ void USRGenerator::VisitType(QualType T) {
     if (const FunctionProtoType *FT = T->getAs<FunctionProtoType>()) {
       Out << 'F';
       VisitType(FT->getReturnType());
-      Out << '(';
-      for (const auto &I : FT->param_types()) {
-        Out << '#';
+      for (const auto &I : FT->param_types())
         VisitType(I);
-      }
-      Out << ')';
       if (FT->isVariadic())
         Out << '.';
       return;
@@ -805,7 +797,13 @@ void USRGenerator::VisitType(QualType T) {
     }
     if (const DependentNameType *DNT = T->getAs<DependentNameType>()) {
       Out << '^';
-      printQualifier(Out, Ctx, DNT->getQualifier());
+      // FIXME: Encode the qualifier, don't just print it.
+      PrintingPolicy PO(Ctx.getLangOpts());
+      PO.SuppressTagKeyword = true;
+      PO.SuppressUnwrittenScope = true;
+      PO.ConstantArraySizeAsWritten = false;
+      PO.AnonymousTagLocations = false;
+      DNT->getQualifier()->print(Out, PO);
       Out << ':' << DNT->getIdentifier()->getName();
       return;
     }
@@ -817,25 +815,6 @@ void USRGenerator::VisitType(QualType T) {
       Out << (T->isExtVectorType() ? ']' : '[');
       Out << VT->getNumElements();
       T = VT->getElementType();
-      continue;
-    }
-    if (const auto *const AT = dyn_cast<ArrayType>(T)) {
-      Out << '{';
-      switch (AT->getSizeModifier()) {
-      case ArrayType::Static:
-        Out << 's';
-        break;
-      case ArrayType::Star:
-        Out << '*';
-        break;
-      case ArrayType::Normal:
-        Out << 'n';
-        break;
-      }
-      if (const auto *const CAT = dyn_cast<ConstantArrayType>(T))
-        Out << CAT->getSize();
-
-      T = AT->getElementType();
       continue;
     }
 
@@ -932,26 +911,6 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
     break;
   }
 }
-
-void USRGenerator::VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D) {
-  if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
-    return;
-  VisitDeclContext(D->getDeclContext());
-  Out << "@UUV@";
-  printQualifier(Out, D->getASTContext(), D->getQualifier());
-  EmitDeclName(D);
-}
-
-void USRGenerator::VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D) {
-  if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
-    return;
-  VisitDeclContext(D->getDeclContext());
-  Out << "@UUT@";
-  printQualifier(Out, D->getASTContext(), D->getQualifier());
-  Out << D->getName(); // Simple name.
-}
-
-
 
 //===----------------------------------------------------------------------===//
 // USR generation functions.

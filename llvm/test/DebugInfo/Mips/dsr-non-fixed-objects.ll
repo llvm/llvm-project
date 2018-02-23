@@ -1,5 +1,7 @@
 ; RUN: llc -march=mips -mcpu=mips32r2 -O0 -filetype=obj -fast-isel=0 <%s | \
-; RUN:    llvm-dwarfdump -v -all - | FileCheck %s
+; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F2
+; RUN: llc -march=mips -mcpu=mips32r2 -O0 -filetype=obj -fast-isel=0 <%s | \
+; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F3
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
@@ -20,9 +22,9 @@ declare void @foo(i32*)
 ;   return w;
 ; }
 
-; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg29 SP_64+36)
-; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
+; c -> DW_OP_breg29(r29): 16
+; F2: DW_AT_location [DW_FORM_exprloc]      (<0x2> 8d 10 )
+; F2: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
 
 ; Function Attrs: nounwind
 define i32 @f2(i32 signext %a, i32 signext %b) !dbg !4 {
@@ -44,9 +46,9 @@ entry:
   ret i32 %2, !dbg !27
 }
 
-; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg23 S7_64+32)
-; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
+; c -> DW_OP_breg23(r23): 16
+; F3: DW_AT_location [DW_FORM_exprloc]      (<0x2> 87 10 )
+; F3: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
 
 define i32* @f3(i32 signext %a, i32 signext %b) !dbg !8 {
 entry:

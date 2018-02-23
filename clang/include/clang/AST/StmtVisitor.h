@@ -29,17 +29,15 @@ template <typename T> struct make_const_ptr { typedef const T *type; };
 /// StmtVisitorBase - This class implements a simple visitor for Stmt
 /// subclasses. Since Expr derives from Stmt, this also includes support for
 /// visiting Exprs.
-template<template <typename> class Ptr, typename ImplClass, typename RetTy=void,
-         class... ParamTys>
+template<template <typename> class Ptr, typename ImplClass, typename RetTy=void>
 class StmtVisitorBase {
 public:
 
 #define PTR(CLASS) typename Ptr<CLASS>::type
 #define DISPATCH(NAME, CLASS) \
-  return static_cast<ImplClass*>(this)->Visit ## NAME( \
-    static_cast<PTR(CLASS)>(S), std::forward<ParamTys>(P)...)
+ return static_cast<ImplClass*>(this)->Visit ## NAME(static_cast<PTR(CLASS)>(S))
 
-  RetTy Visit(PTR(Stmt) S, ParamTys... P) {
+  RetTy Visit(PTR(Stmt) S) {
 
     // If we have a binary expr, dispatch to the subcode of the binop.  A smart
     // optimizer (e.g. LLVM) will fold this comparison into the switch stmt
@@ -113,13 +111,13 @@ public:
   // If the implementation chooses not to implement a certain visit method, fall
   // back on VisitExpr or whatever else is the superclass.
 #define STMT(CLASS, PARENT)                                   \
-  RetTy Visit ## CLASS(PTR(CLASS) S, ParamTys... P) { DISPATCH(PARENT, PARENT); }
+  RetTy Visit ## CLASS(PTR(CLASS) S) { DISPATCH(PARENT, PARENT); }
 #include "clang/AST/StmtNodes.inc"
 
   // If the implementation doesn't implement binary operator methods, fall back
   // on VisitBinaryOperator.
 #define BINOP_FALLBACK(NAME) \
-  RetTy VisitBin ## NAME(PTR(BinaryOperator) S, ParamTys... P) { \
+  RetTy VisitBin ## NAME(PTR(BinaryOperator) S) { \
     DISPATCH(BinaryOperator, BinaryOperator); \
   }
   BINOP_FALLBACK(PtrMemD)                    BINOP_FALLBACK(PtrMemI)
@@ -139,7 +137,7 @@ public:
   // If the implementation doesn't implement compound assignment operator
   // methods, fall back on VisitCompoundAssignOperator.
 #define CAO_FALLBACK(NAME) \
-  RetTy VisitBin ## NAME(PTR(CompoundAssignOperator) S, ParamTys... P) { \
+  RetTy VisitBin ## NAME(PTR(CompoundAssignOperator) S) { \
     DISPATCH(CompoundAssignOperator, CompoundAssignOperator); \
   }
   CAO_FALLBACK(MulAssign) CAO_FALLBACK(DivAssign) CAO_FALLBACK(RemAssign)
@@ -151,7 +149,7 @@ public:
   // If the implementation doesn't implement unary operator methods, fall back
   // on VisitUnaryOperator.
 #define UNARYOP_FALLBACK(NAME) \
-  RetTy VisitUnary ## NAME(PTR(UnaryOperator) S, ParamTys... P) { \
+  RetTy VisitUnary ## NAME(PTR(UnaryOperator) S) { \
     DISPATCH(UnaryOperator, UnaryOperator);    \
   }
   UNARYOP_FALLBACK(PostInc)   UNARYOP_FALLBACK(PostDec)
@@ -165,7 +163,7 @@ public:
 #undef UNARYOP_FALLBACK
 
   // Base case, ignore it. :)
-  RetTy VisitStmt(PTR(Stmt) Node, ParamTys... P) { return RetTy(); }
+  RetTy VisitStmt(PTR(Stmt) Node) { return RetTy(); }
 
 #undef PTR
 #undef DISPATCH
@@ -176,18 +174,18 @@ public:
 ///
 /// This class does not preserve constness of Stmt pointers (see also
 /// ConstStmtVisitor).
-template<typename ImplClass, typename RetTy=void, typename... ParamTys>
+template<typename ImplClass, typename RetTy=void>
 class StmtVisitor
- : public StmtVisitorBase<make_ptr, ImplClass, RetTy, ParamTys...> {};
+ : public StmtVisitorBase<make_ptr, ImplClass, RetTy> {};
 
 /// ConstStmtVisitor - This class implements a simple visitor for Stmt
 /// subclasses. Since Expr derives from Stmt, this also includes support for
 /// visiting Exprs.
 ///
 /// This class preserves constness of Stmt pointers (see also StmtVisitor).
-template<typename ImplClass, typename RetTy=void, typename... ParamTys>
+template<typename ImplClass, typename RetTy=void>
 class ConstStmtVisitor
- : public StmtVisitorBase<make_const_ptr, ImplClass, RetTy, ParamTys...> {};
+ : public StmtVisitorBase<make_const_ptr, ImplClass, RetTy> {};
 
 /// \brief This class implements a simple visitor for OMPClause
 /// subclasses.

@@ -142,9 +142,9 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
 
   if (isThumb) {
     if (ARMArchFeature.empty())
-      ARMArchFeature = "+thumb-mode,+v4t";
+      ARMArchFeature = "+thumb-mode";
     else
-      ARMArchFeature += ",+thumb-mode,+v4t";
+      ARMArchFeature += ",+thumb-mode";
   }
 
   if (TT.isOSNaCl()) {

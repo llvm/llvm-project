@@ -37,20 +37,10 @@ Z::operator int() const {
   return 0;
 }
 
-template <typename T>
-struct Foo { T member; };
-
-template<typename T> using Bar = Foo<T>;
-
-void test_template_alias() {
-  // RUN: env CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:47:1 %s | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
-
-}
-
 // CHECK-MEMBER: FieldDecl:{ResultType double}{TypedText member}
 // CHECK-MEMBER: FieldDecl:{ResultType int}{Text X::}{TypedText member}
 // CHECK-MEMBER: FieldDecl:{ResultType float}{Text Y::}{TypedText member}
-// CHECK-MEMBER: CXXMethod:{ResultType void}{Informative Y::}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i = 17}}{RightParen )}
+// CHECK-MEMBER: CXXMethod:{ResultType void}{Informative Y::}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i}}{RightParen )}
 // CHECK-MEMBER: CXXConversion:{TypedText operator int}{LeftParen (}{RightParen )}{Informative  const}
 // CHECK-MEMBER: CXXMethod:{ResultType Z &}{TypedText operator=}{LeftParen (}{Placeholder const Z &}{RightParen )}
 // CHECK-MEMBER: CXXMethod:{ResultType X &}{Text X::}{TypedText operator=}{LeftParen (}{Placeholder const X &}{RightParen )}
@@ -87,7 +77,7 @@ void test_template_alias() {
 // CHECK-EXPR: FieldDecl:{ResultType double}{TypedText member} (17)
 // CHECK-EXPR: FieldDecl:{ResultType int}{Text X::}{TypedText member} (9)
 // CHECK-EXPR: FieldDecl:{ResultType float}{Text Y::}{TypedText member} (18)
-// CHECK-EXPR: CXXMethod:{ResultType void}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i = 17}}{RightParen )} (37)
+// CHECK-EXPR: CXXMethod:{ResultType void}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i}}{RightParen )} (37)
 // CHECK-EXPR: Namespace:{TypedText N}{Text ::} (75)
 // CHECK-EXPR: Completion contexts:
 // CHECK-EXPR-NEXT: Any type
@@ -98,5 +88,3 @@ void test_template_alias() {
 // CHECK-EXPR-NEXT: Class name
 // CHECK-EXPR-NEXT: Nested name specifier
 // CHECK-EXPR-NEXT: Objective-C interface
-
-// CHECK-TEMPLATE-ALIAS: AliasTemplateDecl:{TypedText Bar}{LeftAngle <}{Placeholder typename T}{RightAngle >} (50)

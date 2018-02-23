@@ -9,12 +9,12 @@ source_filename = "test/Transforms/StripSymbols/2010-06-30-StripDebug.ll"
 ; Function Attrs: nounwind optsize readnone ssp
 define void @foo() #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !12), !dbg !13
+  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !10, metadata !12), !dbg !13
   ret void, !dbg !14
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind optsize readnone ssp }
 attributes #1 = { nounwind readnone }
@@ -22,7 +22,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!4}
 !llvm.dbg.cu = !{!5}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "b.c", directory: "/tmp")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

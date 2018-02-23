@@ -1,15 +1,16 @@
-; RUN: llc < %s - -filetype=obj | llvm-dwarfdump -debug-loc - | FileCheck %s
+; RUN: llc < %s - -filetype=obj | llvm-dwarfdump -debug-dump=loc - | FileCheck %s
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "thumbv7-apple-macosx10.6.7"
 
 ; The S registers on ARM are expressed as pieces of their super-registers in DWARF.
 ;
-; CHECK: DW_OP_regx
+; 0x90   DW_OP_regx of super-register
+; CHECK:            Location description: 90
 
 define void @_Z3foov() optsize ssp !dbg !1 {
 entry:
   %call = tail call float @_Z3barv() optsize, !dbg !11
-  tail call void @llvm.dbg.value(metadata float %call, metadata !5, metadata !DIExpression()), !dbg !11
+  tail call void @llvm.dbg.value(metadata float %call, i64 0, metadata !5, metadata !DIExpression()), !dbg !11
   %call16 = tail call float @_Z2f2v() optsize, !dbg !12
   %cmp7 = fcmp olt float %call, %call16, !dbg !12
   br i1 %cmp7, label %for.body, label %for.end, !dbg !12
@@ -32,7 +33,7 @@ declare float @_Z2f2v() optsize
 
 declare float @_Z2f3f(float) optsize
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20}

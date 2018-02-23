@@ -1,4 +1,0 @@
-[c*]
-fun:*cfi*
-[u*]
-fun:*overflow*

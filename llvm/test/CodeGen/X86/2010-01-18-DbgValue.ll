@@ -1,11 +1,12 @@
-; RUN: llc -mtriple=i686-- -O0 < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -march=x86 -O0 < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK-LABEL: .debug_info contents:
 
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK:   DW_AT_name [DW_FORM_strp]       ( {{.*}}"foo")
 ; CHECK:   DW_TAG_formal_parameter
-; CHECK-NEXT:     DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg {{[^ ]*}})
+; CHECK-NEXT:     DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 {{..}} )
+;                                                             DW_OP_fbreg ??
 ; CHECK-NEXT:     DW_AT_name [DW_FORM_strp]     ( {{.*}}"my_r0")
 
 %struct.Pt = type { double, double }

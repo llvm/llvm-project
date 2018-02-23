@@ -75,7 +75,6 @@ Available checks are:
      of a misaligned reference.
   -  ``-fsanitize=bool``: Load of a ``bool`` value which is neither
      ``true`` nor ``false``.
-  -  ``-fsanitize=builtin``: Passing invalid values to compiler builtins.
   -  ``-fsanitize=bounds``: Out of bounds array indexing, in cases
      where the array bound can be statically determined.
   -  ``-fsanitize=enum``: Load of a value of an enumerated type which
@@ -87,8 +86,7 @@ Available checks are:
   -  ``-fsanitize=float-divide-by-zero``: Floating point division by
      zero.
   -  ``-fsanitize=function``: Indirect call of a function through a
-     function pointer of the wrong type (Darwin/Linux, C++ and x86/x86_64
-     only).
+     function pointer of the wrong type (Linux, C++ and x86/x86_64 only).
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
      parameter which is declared to never be null.
@@ -132,11 +130,11 @@ Available checks are:
      it is often unintentional, so UBSan offers to catch it.
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
-  -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
-    the wrong dynamic type, or that its lifetime has not begun or has ended.
-    Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
-    ``clang``, to make sure C++-specific parts of the runtime library and C++
-    standard libraries are present.
+  -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that
+     it is of the wrong dynamic type, or that its lifetime has not
+     begun or has ended. Incompatible with ``-fno-rtti``. Link must
+     be performed by ``clang++``, not ``clang``, to make sure C++-specific
+     parts of the runtime library and C++ standard libraries are present.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
@@ -155,19 +153,6 @@ Volatile
 
 The ``null``, ``alignment``, ``object-size``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
-
-Minimal Runtime
-===============
-
-There is a minimal UBSan runtime available suitable for use in production
-environments. This runtime has a small attack surface. It only provides very
-basic issue logging and deduplication, and does not support ``-fsanitize=vptr``
-checking.
-
-To use the minimal runtime, add ``-fsanitize-minimal-runtime`` to the clang
-command line options. For example, if you're used to compiling with
-``-fsanitize=undefined``, you could enable the minimal runtime with
-``-fsanitize=undefined -fsanitize-minimal-runtime``.
 
 Stack traces and report symbolization
 =====================================

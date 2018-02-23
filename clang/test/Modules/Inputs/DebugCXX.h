@@ -1,7 +1,4 @@
 /* -*- C++ -*- */
-
-#include "dummy.h"
-
 namespace DebugCXX {
   // Records.
   struct Struct {
@@ -57,9 +54,9 @@ namespace DebugCXX {
 }
 
 // Virtual class with a forward declaration.
-struct Virtual;
-struct Virtual {
-  virtual ~Virtual() {}
+class FwdVirtual;
+class FwdVirtual {
+  virtual ~FwdVirtual() {}
 };
 
 struct PureForwardDecl;

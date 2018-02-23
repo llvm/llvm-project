@@ -25,13 +25,12 @@ namespace llvm {
 namespace dsymutil {
 
 struct LinkOptions {
-  bool Verbose;            ///< Verbosity
-  bool NoOutput;           ///< Skip emitting output
-  bool NoODR;              ///< Do not unique types according to ODR
-  bool NoTimestamp;        ///< Do not check swiftmodule timestamp
+  bool Verbose;  ///< Verbosity
+  bool NoOutput; ///< Skip emitting output
+  bool NoODR;    ///< Do not unique types according to ODR
   std::string PrependPath; ///< -oso-prepend-path
 
-  LinkOptions() : Verbose(false), NoOutput(false), NoTimestamp(false) {}
+  LinkOptions() : Verbose(false), NoOutput(false) {}
 };
 
 /// \brief Extract the DebugMaps from the given file.
@@ -48,8 +47,12 @@ bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,
 /// \brief Link the Dwarf debuginfo as directed by the passed DebugMap
 /// \p DM into a DwarfFile named \p OutputFilename.
 /// \returns false if the link failed.
-bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
+bool linkDwarf(StringRef OutputFilename, const DebugMap &DM,
                const LinkOptions &Options);
+
+/// \brief Exit the dsymutil process, cleaning up every temporary
+/// files that we created.
+LLVM_ATTRIBUTE_NORETURN void exitDsymutil(int ExitStatus);
 
 void warn(const Twine &Warning, const Twine &Context);
 bool error(const Twine &Error, const Twine &Context);

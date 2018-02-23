@@ -70,7 +70,6 @@ private:
                             sys::TimePoint<std::chrono::seconds> Timestamp);
   void resetParserState();
   uint64_t getMainBinarySymbolAddress(StringRef Name);
-  std::vector<StringRef> getMainBinarySymbolNames(uint64_t Value);
   void loadMainBinarySymbols(const MachOObjectFile &MainBinary);
   void loadCurrentObjectFileSymbols(const object::MachOObjectFile &Obj);
   void handleStabSymbolTableEntry(uint32_t StringIndex, uint8_t Type,
@@ -135,8 +134,7 @@ void MachODebugMapParser::switchToNewDebugMapObject(
                    Err.message() + "\n");
   }
 
-  CurrentDebugMapObject =
-      &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
+  CurrentDebugMapObject = &Result->addDebugMapObject(Path, Timestamp);
   loadCurrentObjectFileSymbols(*ErrOrAchObj);
 }
 
@@ -350,13 +348,6 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   if (Type == MachO::N_OSO)
     return switchToNewDebugMapObject(Name, sys::toTimePoint(Value));
 
-  if (Type == MachO::N_AST) {
-    SmallString<80> Path(PathPrefix);
-    sys::path::append(Path, Name);
-    Result->addDebugMapObject(Path, sys::toTimePoint(Value), Type);
-    return;
-  }
-
   // If the last N_OSO object file wasn't found,
   // CurrentDebugMapObject will be null. Do not update anything
   // until we find the next valid N_OSO entry.
@@ -391,21 +382,9 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   }
 
   auto ObjectSymIt = CurrentObjectAddresses.find(Name);
-
-  // If the name of a (non-static) symbol is not in the current object, we
-  // check all its aliases from the main binary.
-  if (ObjectSymIt == CurrentObjectAddresses.end() && Type != MachO::N_STSYM) {
-    for (const auto &Alias : getMainBinarySymbolNames(Value)) {
-      ObjectSymIt = CurrentObjectAddresses.find(Alias);
-      if (ObjectSymIt != CurrentObjectAddresses.end())
-        break;
-    }
-  }
-
   if (ObjectSymIt == CurrentObjectAddresses.end())
     return Warning("could not find object file symbol for symbol " +
                    Twine(Name));
-
   if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
                                         Size))
     return Warning(Twine("failed to insert symbol '") + Name +
@@ -448,17 +427,6 @@ uint64_t MachODebugMapParser::getMainBinarySymbolAddress(StringRef Name) {
   if (Sym == MainBinarySymbolAddresses.end())
     return 0;
   return Sym->second;
-}
-
-/// Get all symbol names in the main binary for the given value.
-std::vector<StringRef>
-MachODebugMapParser::getMainBinarySymbolNames(uint64_t Value) {
-  std::vector<StringRef> Names;
-  for (const auto &Entry : MainBinarySymbolAddresses) {
-    if (Entry.second == Value)
-      Names.push_back(Entry.first());
-  }
-  return Names;
 }
 
 /// Load the interesting main binary symbols' addresses into

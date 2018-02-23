@@ -8,7 +8,6 @@ include(CheckIncludeFileCXX)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
-include(CheckCCompilerFlag)
 include(CheckCXXSourceCompiles)
 include(TestBigEndian)
 
@@ -168,14 +167,6 @@ check_symbol_exists(arc4random "stdlib.h" HAVE_DECL_ARC4RANDOM)
 find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
-
-# Prevent check_symbol_exists from using API that is not supported for a given
-# deployment target.
-check_c_compiler_flag("-Werror=unguarded-availability-new" "C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW")
-if(C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=unguarded-availability-new")
-endif()
-
 check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
 check_symbol_exists(sysconf unistd.h HAVE_SYSCONF)
@@ -609,34 +600,3 @@ else()
 endif()
 
 string(REPLACE " " ";" LLVM_BINDINGS_LIST "${LLVM_BINDINGS}")
-
-function(find_python_module module)
-  string(TOUPPER ${module} module_upper)
-  set(FOUND_VAR PY_${module_upper}_FOUND)
-
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import ${module}"
-    RESULT_VARIABLE status
-    ERROR_QUIET)
-
-  if(status)
-    set(${FOUND_VAR} 0 PARENT_SCOPE)
-    message(STATUS "Could NOT find Python module ${module}")
-  else()
-    set(${FOUND_VAR} 1 PARENT_SCOPE)
-    message(STATUS "Found Python module ${module}")
-  endif()
-endfunction()
-
-set (PYTHON_MODULES
-  pygments
-  yaml
-  )
-foreach(module ${PYTHON_MODULES})
-  find_python_module(${module})
-endforeach()
-
-if(PY_PYGMENTS_FOUND AND PY_YAML_FOUND)
-  set (LLVM_HAVE_OPT_VIEWER_MODULES 1)
-else()
-  set (LLVM_HAVE_OPT_VIEWER_MODULES 0)
-endif()

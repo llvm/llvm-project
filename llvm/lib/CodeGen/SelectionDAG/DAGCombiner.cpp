@@ -1118,30 +1118,22 @@ SDValue DAGCombiner::PromoteIntBinOp(SDValue Op) {
     SDValue RV =
         DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getNode(Opc, DL, PVT, NN0, NN1));
 
-    // We are always replacing N0/N1's use in N and only need
-    // additional replacements if there are additional uses.
-    Replace0 &= !N0->hasOneUse();
-    Replace1 &= (N0 != N1) && !N1->hasOneUse();
-
-    // Combine Op here so it is presreved past replacements.
-    CombineTo(Op.getNode(), RV);
-
-    // If operands have a use ordering, make sur we deal with
-    // predecessor first.
-    if (Replace0 && Replace1 && N0.getNode()->isPredecessorOf(N1.getNode())) {
-      std::swap(N0, N1);
-      std::swap(NN0, NN1);
-    }
-
-    if (Replace0) {
+    // New replace instances of N0 and N1
+    if (Replace0 && N0 && N0.getOpcode() != ISD::DELETED_NODE && NN0 &&
+        NN0.getOpcode() != ISD::DELETED_NODE) {
       AddToWorklist(NN0.getNode());
       ReplaceLoadWithPromotedLoad(N0.getNode(), NN0.getNode());
     }
-    if (Replace1) {
+
+    if (Replace1 && N1 && N1.getOpcode() != ISD::DELETED_NODE && NN1 &&
+        NN1.getOpcode() != ISD::DELETED_NODE) {
       AddToWorklist(NN1.getNode());
       ReplaceLoadWithPromotedLoad(N1.getNode(), NN1.getNode());
     }
-    return Op;
+
+    // Deal with Op being deleted.
+    if (Op && Op.getOpcode() != ISD::DELETED_NODE)
+      return RV;
   }
   return SDValue();
 }
@@ -7438,21 +7430,14 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         SDValue Op = N0.getOperand(0);
         Op = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT.getScalarType());
         AddToWorklist(Op.getNode());
-        SDValue ZExtOrTrunc = DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
-        // Transfer the debug info; the new node is equivalent to N0.
-        DAG.transferDbgValues(N0, ZExtOrTrunc);
-        return ZExtOrTrunc;
+        return DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
       }
     }
 
     if (!LegalOperations || TLI.isOperationLegal(ISD::AND, VT)) {
       SDValue Op = DAG.getAnyExtOrTrunc(N0.getOperand(0), SDLoc(N), VT);
       AddToWorklist(Op.getNode());
-      SDValue And = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT.getScalarType());
-      // We may safely transfer the debug info describing the truncate node over
-      // to the equivalent and operation.
-      DAG.transferDbgValues(N0, And);
-      return And;
+      return DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT.getScalarType());
     }
   }
 
@@ -8477,7 +8462,7 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();
   EVT LD1VT = LD1->getValueType(0);
-  unsigned LD1Bytes = LD1VT.getStoreSize();
+  unsigned LD1Bytes = LD1VT.getSizeInBits() / 8;
   if (ISD::isNON_EXTLoad(LD2) && LD2->hasOneUse() &&
       DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1)) {
     unsigned Align = LD1->getAlignment();
@@ -12410,7 +12395,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
   if (NumStores < 2)
     return false;
 
-  int64_t ElementSizeBits = MemVT.getStoreSizeInBits();
+  int64_t ElementSizeBytes = MemVT.getSizeInBits() / 8;
 
   // The latest Node in the DAG.
   SDLoc DL(StoreNodes[0].MemNode);
@@ -12459,7 +12444,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
     // elements, so this path implies a store of constants.
     assert(IsConstantSrc && "Merged vector elements should use vector store");
 
-    unsigned SizeInBits = NumStores * ElementSizeBits;
+    unsigned SizeInBits = NumStores * ElementSizeBytes * 8;
     APInt StoreInt(SizeInBits, 0);
 
     // Construct a single integer constant which is made of the smaller
@@ -12470,7 +12455,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
       StoreSDNode *St  = cast<StoreSDNode>(StoreNodes[Idx].MemNode);
 
       SDValue Val = St->getValue();
-      StoreInt <<= ElementSizeBits;
+      StoreInt <<= ElementSizeBytes * 8;
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val)) {
         StoreInt |= C->getAPIntValue().zextOrTrunc(SizeInBits);
       } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Val)) {
@@ -12614,37 +12599,25 @@ void DAGCombiner::getStoreMergeCandidates(
         }
 }
 
-// We need to check that merging these stores does not cause a loop in
-// the DAG. Any store candidate may depend on another candidate
+// We need to check that merging these stores does not cause a loop
+// in the DAG. Any store candidate may depend on another candidate
 // indirectly through its operand (we already consider dependencies
 // through the chain). Check in parallel by searching up from
 // non-chain operands of candidates.
-
 bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores) {
-
-  // FIXME: We should be able to truncate a full search of
-  // predecessors by doing a BFS and keeping tabs the originating
-  // stores from which worklist nodes come from in a similar way to
-  // TokenFactor simplfication.
-
   SmallPtrSet<const SDNode *, 16> Visited;
   SmallVector<const SDNode *, 8> Worklist;
-  unsigned int Max = 8192;
-  // Search Ops of store candidates.
+  // search ops of store candidates
   for (unsigned i = 0; i < NumStores; ++i) {
     SDNode *n = StoreNodes[i].MemNode;
     // Potential loops may happen only through non-chain operands
     for (unsigned j = 1; j < n->getNumOperands(); ++j)
       Worklist.push_back(n->getOperand(j).getNode());
   }
-  // Search through DAG. We can stop early if we find a store node.
+  // search through DAG. We can stop early if we find a storenode
   for (unsigned i = 0; i < NumStores; ++i) {
-    if (SDNode::hasPredecessorHelper(StoreNodes[i].MemNode, Visited, Worklist,
-                                     Max))
-      return false;
-    // Check if we ended early, failing conservatively if so.
-    if (Visited.size() >= Max)
+    if (SDNode::hasPredecessorHelper(StoreNodes[i].MemNode, Visited, Worklist))
       return false;
   }
   return true;
@@ -12655,7 +12628,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     return false;
 
   EVT MemVT = St->getMemoryVT();
-  int64_t ElementSizeBytes = MemVT.getStoreSize();
+  int64_t ElementSizeBytes = MemVT.getSizeInBits() / 8;
 
   if (MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)
     return false;
@@ -12766,20 +12739,19 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       unsigned LastLegalVectorType = 1;
       bool LastIntegerTrunc = false;
       bool NonZero = false;
-      unsigned FirstZeroAfterNonZero = NumConsecutiveStores;
       for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
         StoreSDNode *ST = cast<StoreSDNode>(StoreNodes[i].MemNode);
         SDValue StoredVal = ST->getValue();
-        bool IsElementZero = false;
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(StoredVal))
-          IsElementZero = C->isNullValue();
-        else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(StoredVal))
-          IsElementZero = C->getConstantFPValue()->isNullValue();
-        if (IsElementZero) {
-          if (NonZero && FirstZeroAfterNonZero == NumConsecutiveStores)
-            FirstZeroAfterNonZero = i;
+
+        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(StoredVal)) {
+          NonZero |= !C->isNullValue();
+        } else if (ConstantFPSDNode *C =
+                       dyn_cast<ConstantFPSDNode>(StoredVal)) {
+          NonZero |= !C->getConstantFPValue()->isNullValue();
+        } else {
+          // Non-constant.
+          break;
         }
-        NonZero |= !IsElementZero;
 
         // Find a legal type for the constant store.
         unsigned SizeInBits = (i + 1) * ElementSizeBytes * 8;
@@ -12829,34 +12801,23 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         }
       }
 
-      bool UseVector = (LastLegalVectorType > LastLegalType) && !NoVectors;
-      unsigned NumElem = (UseVector) ? LastLegalVectorType : LastLegalType;
-
       // Check if we found a legal integer type that creates a meaningful merge.
-      if (NumElem < 2) {
-        // We know that candidate stores are in order and of correct
-        // shape. While there is no mergeable sequence from the
-        // beginning one may start later in the sequence. The only
-        // reason a merge of size N could have failed where another of
-        // the same size would not have, is if the alignment has
-        // improved or we've dropped a non-zero value. Drop as many
-        // candidates as we can here.
-        unsigned NumSkip = 1;
-        while (
-            (NumSkip < NumConsecutiveStores) &&
-            (NumSkip < FirstZeroAfterNonZero) &&
-            (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign)) {
-          NumSkip++;
-        }
-        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
+      if (LastLegalType < 2 && LastLegalVectorType < 2) {
+        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 1);
         continue;
       }
 
+      bool UseVector = (LastLegalVectorType > LastLegalType) && !NoVectors;
+      unsigned NumElem = (UseVector) ? LastLegalVectorType : LastLegalType;
+
       bool Merged = MergeStoresOfConstantsOrVecElts(
           StoreNodes, MemVT, NumElem, true, UseVector, LastIntegerTrunc);
-      RV |= Merged;
-
+      if (!Merged) {
+        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
+        continue;
+      }
       // Remove merged stores for next iteration.
+      RV = true;
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
       continue;
     }
@@ -12896,23 +12857,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
                                    FirstStoreAlign, &IsFast) &&
             IsFast)
           NumStoresToMerge = i + 1;
-      }
-
-      // Check if we found a legal integer type that creates a meaningful merge.
-      if (NumStoresToMerge < 2) {
-        // We know that candidate stores are in order and of correct
-        // shape. While there is no mergeable sequence from the
-        // beginning one may start later in the sequence. The only
-        // reason a merge of size N could have failed where another of
-        // the same size would not have, is if the alignment has
-        // improved. Drop as many candidates as we can here.
-        unsigned NumSkip = 1;
-        while ((NumSkip < NumConsecutiveStores) &&
-               (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
-          NumSkip++;
-
-        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
-        continue;
       }
 
       bool Merged = MergeStoresOfConstantsOrVecElts(
@@ -13083,19 +13027,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     NumElem = std::min(LastLegalType, NumElem);
 
     if (NumElem < 2) {
-      // We know that candidate stores are in order and of correct
-      // shape. While there is no mergeable sequence from the
-      // beginning one may start later in the sequence. The only
-      // reason a merge of size N could have failed where another of
-      // the same size would not have is if the alignment or either
-      // the load or store has improved. Drop as many candidates as we
-      // can here.
-      unsigned NumSkip = 1;
-      while ((NumSkip < LoadNodes.size()) &&
-             (LoadNodes[NumSkip].MemNode->getAlignment() <= FirstLoadAlign) &&
-             (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
-        NumSkip++;
-      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
+      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 1);
       continue;
     }
 
@@ -16808,8 +16740,8 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   if (Op1->isInvariant() && Op0->writeMem())
     return false;
 
-  unsigned NumBytes0 = Op0->getMemoryVT().getStoreSize();
-  unsigned NumBytes1 = Op1->getMemoryVT().getStoreSize();
+  unsigned NumBytes0 = Op0->getMemoryVT().getSizeInBits() >> 3;
+  unsigned NumBytes1 = Op1->getMemoryVT().getSizeInBits() >> 3;
 
   // Check for BaseIndexOffset matching.
   BaseIndexOffset BasePtr0 = BaseIndexOffset::match(Op0->getBasePtr(), DAG);

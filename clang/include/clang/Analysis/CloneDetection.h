@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file
+/// /file
 /// This file defines classes for searching and anlyzing source code clones.
 ///
 //===----------------------------------------------------------------------===//
@@ -15,7 +15,11 @@
 #ifndef LLVM_CLANG_AST_CLONEDETECTION_H
 #define LLVM_CLANG_AST_CLONEDETECTION_H
 
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
 #include <vector>
 
@@ -26,6 +30,192 @@ class Decl;
 class VarDecl;
 class ASTContext;
 class CompoundStmt;
+
+namespace clone_detection {
+
+/// Returns a string that represents all macro expansions that expanded into the
+/// given SourceLocation.
+///
+/// If 'getMacroStack(A) == getMacroStack(B)' is true, then the SourceLocations
+/// A and B are expanded from the same macros in the same order.
+std::string getMacroStack(SourceLocation Loc, ASTContext &Context);
+
+/// Collects the data of a single Stmt.
+///
+/// This class defines what a code clone is: If it collects for two statements
+/// the same data, then those two statements are considered to be clones of each
+/// other.
+///
+/// All collected data is forwarded to the given data consumer of the type T.
+/// The data consumer class needs to provide a member method with the signature:
+///   update(StringRef Str)
+template <typename T>
+class StmtDataCollector : public ConstStmtVisitor<StmtDataCollector<T>> {
+
+  ASTContext &Context;
+  /// The data sink to which all data is forwarded.
+  T &DataConsumer;
+
+public:
+  /// Collects data of the given Stmt.
+  /// \param S The given statement.
+  /// \param Context The ASTContext of S.
+  /// \param DataConsumer The data sink to which all data is forwarded.
+  StmtDataCollector(const Stmt *S, ASTContext &Context, T &DataConsumer)
+      : Context(Context), DataConsumer(DataConsumer) {
+    this->Visit(S);
+  }
+
+  typedef unsigned DataPiece;
+
+  // Below are utility methods for appending different data to the vector.
+
+  void addData(DataPiece Integer) {
+    DataConsumer.update(
+        StringRef(reinterpret_cast<char *>(&Integer), sizeof(Integer)));
+  }
+
+  void addData(llvm::StringRef Str) { DataConsumer.update(Str); }
+
+  void addData(const QualType &QT) { addData(QT.getAsString()); }
+
+// The functions below collect the class specific data of each Stmt subclass.
+
+// Utility macro for defining a visit method for a given class. This method
+// calls back to the ConstStmtVisitor to visit all parent classes.
+#define DEF_ADD_DATA(CLASS, CODE)                                              \
+  void Visit##CLASS(const CLASS *S) {                                          \
+    CODE;                                                                      \
+    ConstStmtVisitor<StmtDataCollector>::Visit##CLASS(S);                      \
+  }
+
+  DEF_ADD_DATA(Stmt, {
+    addData(S->getStmtClass());
+    // This ensures that macro generated code isn't identical to macro-generated
+    // code.
+    addData(getMacroStack(S->getLocStart(), Context));
+    addData(getMacroStack(S->getLocEnd(), Context));
+  })
+  DEF_ADD_DATA(Expr, { addData(S->getType()); })
+
+  //--- Builtin functionality ----------------------------------------------//
+  DEF_ADD_DATA(ArrayTypeTraitExpr, { addData(S->getTrait()); })
+  DEF_ADD_DATA(ExpressionTraitExpr, { addData(S->getTrait()); })
+  DEF_ADD_DATA(PredefinedExpr, { addData(S->getIdentType()); })
+  DEF_ADD_DATA(TypeTraitExpr, {
+    addData(S->getTrait());
+    for (unsigned i = 0; i < S->getNumArgs(); ++i)
+      addData(S->getArg(i)->getType());
+  })
+
+  //--- Calls --------------------------------------------------------------//
+  DEF_ADD_DATA(CallExpr, {
+    // Function pointers don't have a callee and we just skip hashing it.
+    if (const FunctionDecl *D = S->getDirectCallee()) {
+      // If the function is a template specialization, we also need to handle
+      // the template arguments as they are not included in the qualified name.
+      if (auto Args = D->getTemplateSpecializationArgs()) {
+        std::string ArgString;
+
+        // Print all template arguments into ArgString
+        llvm::raw_string_ostream OS(ArgString);
+        for (unsigned i = 0; i < Args->size(); ++i) {
+          Args->get(i).print(Context.getLangOpts(), OS);
+          // Add a padding character so that 'foo<X, XX>()' != 'foo<XX, X>()'.
+          OS << '\n';
+        }
+        OS.flush();
+
+        addData(ArgString);
+      }
+      addData(D->getQualifiedNameAsString());
+    }
+  })
+
+  //--- Exceptions ---------------------------------------------------------//
+  DEF_ADD_DATA(CXXCatchStmt, { addData(S->getCaughtType()); })
+
+  //--- C++ OOP Stmts ------------------------------------------------------//
+  DEF_ADD_DATA(CXXDeleteExpr, {
+    addData(S->isArrayFormAsWritten());
+    addData(S->isGlobalDelete());
+  })
+
+  //--- Casts --------------------------------------------------------------//
+  DEF_ADD_DATA(ObjCBridgedCastExpr, { addData(S->getBridgeKind()); })
+
+  //--- Miscellaneous Exprs ------------------------------------------------//
+  DEF_ADD_DATA(BinaryOperator, { addData(S->getOpcode()); })
+  DEF_ADD_DATA(UnaryOperator, { addData(S->getOpcode()); })
+
+  //--- Control flow -------------------------------------------------------//
+  DEF_ADD_DATA(GotoStmt, { addData(S->getLabel()->getName()); })
+  DEF_ADD_DATA(IndirectGotoStmt, {
+    if (S->getConstantTarget())
+      addData(S->getConstantTarget()->getName());
+  })
+  DEF_ADD_DATA(LabelStmt, { addData(S->getDecl()->getName()); })
+  DEF_ADD_DATA(MSDependentExistsStmt, { addData(S->isIfExists()); })
+  DEF_ADD_DATA(AddrLabelExpr, { addData(S->getLabel()->getName()); })
+
+  //--- Objective-C --------------------------------------------------------//
+  DEF_ADD_DATA(ObjCIndirectCopyRestoreExpr, { addData(S->shouldCopy()); })
+  DEF_ADD_DATA(ObjCPropertyRefExpr, {
+    addData(S->isSuperReceiver());
+    addData(S->isImplicitProperty());
+  })
+  DEF_ADD_DATA(ObjCAtCatchStmt, { addData(S->hasEllipsis()); })
+
+  //--- Miscellaneous Stmts ------------------------------------------------//
+  DEF_ADD_DATA(CXXFoldExpr, {
+    addData(S->isRightFold());
+    addData(S->getOperator());
+  })
+  DEF_ADD_DATA(GenericSelectionExpr, {
+    for (unsigned i = 0; i < S->getNumAssocs(); ++i) {
+      addData(S->getAssocType(i));
+    }
+  })
+  DEF_ADD_DATA(LambdaExpr, {
+    for (const LambdaCapture &C : S->captures()) {
+      addData(C.isPackExpansion());
+      addData(C.getCaptureKind());
+      if (C.capturesVariable())
+        addData(C.getCapturedVar()->getType());
+    }
+    addData(S->isGenericLambda());
+    addData(S->isMutable());
+  })
+  DEF_ADD_DATA(DeclStmt, {
+    auto numDecls = std::distance(S->decl_begin(), S->decl_end());
+    addData(static_cast<DataPiece>(numDecls));
+    for (const Decl *D : S->decls()) {
+      if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+        addData(VD->getType());
+      }
+    }
+  })
+  DEF_ADD_DATA(AsmStmt, {
+    addData(S->isSimple());
+    addData(S->isVolatile());
+    addData(S->generateAsmString(Context));
+    for (unsigned i = 0; i < S->getNumInputs(); ++i) {
+      addData(S->getInputConstraint(i));
+    }
+    for (unsigned i = 0; i < S->getNumOutputs(); ++i) {
+      addData(S->getOutputConstraint(i));
+    }
+    for (unsigned i = 0; i < S->getNumClobbers(); ++i) {
+      addData(S->getClobber(i));
+    }
+  })
+  DEF_ADD_DATA(AttributedStmt, {
+    for (const Attr *A : S->getAttrs()) {
+      addData(std::string(A->getSpelling()));
+    }
+  })
+};
+} // namespace clone_detection
 
 /// Identifies a list of statements.
 ///
@@ -233,9 +423,9 @@ public:
   ///                    filtered.
   /// \param Filter The filter function that should return true for all groups
   ///               that should be removed from the list.
-  static void filterGroups(
-      std::vector<CloneDetector::CloneGroup> &CloneGroups,
-      llvm::function_ref<bool(const CloneDetector::CloneGroup &)> Filter) {
+  static void
+  filterGroups(std::vector<CloneDetector::CloneGroup> &CloneGroups,
+               std::function<bool(const CloneDetector::CloneGroup &)> Filter) {
     CloneGroups.erase(
         std::remove_if(CloneGroups.begin(), CloneGroups.end(), Filter),
         CloneGroups.end());
@@ -249,29 +439,25 @@ public:
   ///                to the same CloneGroup.
   static void splitCloneGroups(
       std::vector<CloneDetector::CloneGroup> &CloneGroups,
-      llvm::function_ref<bool(const StmtSequence &, const StmtSequence &)>
-          Compare);
+      std::function<bool(const StmtSequence &, const StmtSequence &)> Compare);
 };
 
-/// This constraint moves clones into clone groups of type II via hashing.
-///
-/// Clones with different hash values are moved into separate clone groups.
-/// Collisions are possible, and this constraint does nothing to address this
-/// them. Add the slower RecursiveCloneTypeIIVerifyConstraint later in the
-/// constraint chain, not necessarily immediately, to eliminate hash collisions
-/// through a more detailed analysis.
-class RecursiveCloneTypeIIHashConstraint {
-public:
-  void constrain(std::vector<CloneDetector::CloneGroup> &Sequences);
-};
+/// Searches all children of the given clones for type II clones (i.e. they are
+/// identical in every aspect beside the used variable names).
+class RecursiveCloneTypeIIConstraint {
 
-/// This constraint moves clones into clone groups of type II by comparing them.
-///
-/// Clones that aren't type II clones are moved into separate clone groups.
-/// In contrast to the RecursiveCloneTypeIIHashConstraint, all clones in a clone
-/// group are guaranteed to be be type II clones of each other, but it is too
-/// slow to efficiently handle large amounts of clones.
-class RecursiveCloneTypeIIVerifyConstraint {
+  /// Generates and saves a hash code for the given Stmt.
+  /// \param S The given Stmt.
+  /// \param D The Decl containing S.
+  /// \param StmtsByHash Output parameter that will contain the hash codes for
+  ///                    each StmtSequence in the given Stmt.
+  /// \return The hash code of the given Stmt.
+  ///
+  /// If the given Stmt is a CompoundStmt, this method will also generate
+  /// hashes for all possible StmtSequences in the children of this Stmt.
+  size_t saveHash(const Stmt *S, const Decl *D,
+                  std::vector<std::pair<size_t, StmtSequence>> &StmtsByHash);
+
 public:
   void constrain(std::vector<CloneDetector::CloneGroup> &Sequences);
 };
@@ -288,19 +474,14 @@ public:
   MinComplexityConstraint(unsigned MinComplexity)
       : MinComplexity(MinComplexity) {}
 
-  /// Calculates the complexity of the given StmtSequence.
-  /// \param Limit The limit of complexity we probe for. After reaching
-  ///              this limit during calculation, this method is exiting
-  ///              early to improve performance and returns this limit.
-  size_t calculateStmtComplexity(const StmtSequence &Seq, std::size_t Limit,
+  size_t calculateStmtComplexity(const StmtSequence &Seq,
                                  const std::string &ParentMacroStack = "");
 
   void constrain(std::vector<CloneDetector::CloneGroup> &CloneGroups) {
     CloneConstraint::filterGroups(
         CloneGroups, [this](const CloneDetector::CloneGroup &A) {
           if (!A.empty())
-            return calculateStmtComplexity(A.front(), MinComplexity) <
-                   MinComplexity;
+            return calculateStmtComplexity(A.front()) < MinComplexity;
           else
             return false;
         });

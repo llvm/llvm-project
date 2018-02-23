@@ -271,13 +271,12 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "MachineFunction required");
 
   const X86Subtarget &Subtarget = MF->getSubtarget<X86Subtarget>();
-  const Function *F = MF->getFunction();
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
   bool CallsEHReturn = MF->callsEHReturn();
 
-  CallingConv::ID CC = F->getCallingConv();
+  CallingConv::ID CC = MF->getFunction()->getCallingConv();
 
   // If attribute NoCallerSavedRegisters exists then we set X86_INTR calling
   // convention because it has the CSR list.
@@ -366,20 +365,22 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   if (Is64Bit) {
-    bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
-                     F->getAttributes().hasAttrSomewhere(Attribute::SwiftError);
-    if (IsSwiftCC)
-      return IsWin64 ? CSR_Win64_SwiftError_SaveList
-                     : CSR_64_SwiftError_SaveList;
-
-    if (IsWin64)
-      return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
+    if (IsWin64) {
+      if (!HasSSE)
+        return CSR_Win64_NoSSE_SaveList;
+      return CSR_Win64_SaveList;
+    }
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
+    if (Subtarget.getTargetLowering()->supportSwiftError() &&
+        MF->getFunction()->getAttributes().hasAttrSomewhere(
+            Attribute::SwiftError))
+      return CSR_64_SwiftError_SaveList;
     return CSR_64_SaveList;
   }
-
-  return CallsEHReturn ? CSR_32EHRet_SaveList : CSR_32_SaveList;
+  if (CallsEHReturn)
+    return CSR_32EHRet_SaveList;
+  return CSR_32_SaveList;
 }
 
 const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
@@ -478,14 +479,14 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   // Unlike getCalleeSavedRegs(), we don't have MMI so we can't check
   // callsEHReturn().
   if (Is64Bit) {
-    const Function *F = MF.getFunction();
-    bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
-                     F->getAttributes().hasAttrSomewhere(Attribute::SwiftError);
-    if (IsSwiftCC)
-      return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
-    return IsWin64 ? CSR_Win64_RegMask : CSR_64_RegMask;
+    if (IsWin64)
+      return CSR_Win64_RegMask;
+    if (Subtarget.getTargetLowering()->supportSwiftError() &&
+        MF.getFunction()->getAttributes().hasAttrSomewhere(
+            Attribute::SwiftError))
+      return CSR_64_SwiftError_RegMask;
+    return CSR_64_RegMask;
   }
-
   return CSR_32_RegMask;
 }
 

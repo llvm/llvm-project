@@ -53,7 +53,6 @@
 #include <cassert>
 #include <cstring>
 #include <string>
-#include <tuple>
 #include <utility>
 
 namespace llvm {
@@ -655,33 +654,6 @@ hash_code hash_value(const std::pair<T, U> &arg) {
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
-}
-
-template<unsigned ...Indices>
-struct UnsignedConstantIndexSet { };
-
-template<unsigned I, unsigned N, unsigned ...Indices>
-struct MakeUnsignedConstantIndexSet {
-  typedef typename MakeUnsignedConstantIndexSet<I+1, N, Indices..., I>::Type
-    Type;
-};
-
-template<unsigned N, unsigned ...Indices>
-struct MakeUnsignedConstantIndexSet<N, N, Indices...> {
-  typedef UnsignedConstantIndexSet<Indices...> Type;
-};
-
-template <typename ...Ts, unsigned ...Indices>
-hash_code hash_value_tuple_helper(const std::tuple<Ts...> &arg,
-                                  UnsignedConstantIndexSet<Indices...> indices) {
-  return hash_combine(hash_value(std::get<Indices>(arg))...);
-}
-
-template <typename ...Ts>
-hash_code hash_value(const std::tuple<Ts...> &arg) {
-  return hash_value_tuple_helper(
-           arg, 
-           typename MakeUnsignedConstantIndexSet<0, sizeof...(Ts)>::Type());
 }
 
 } // namespace llvm

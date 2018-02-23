@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -O0 -filetype=obj -o %t %s
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
 ; Generated from:
 ; clang -g -S -emit-llvm -o foo.ll foo.c
@@ -14,7 +14,7 @@ source_filename = "test/DebugInfo/X86/vector.ll"
 !llvm.dbg.cu = !{!8}
 !llvm.module.flags = !{!11}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 3, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.c", directory: "/Users/echristo")
 !3 = !DIDerivedType(tag: DW_TAG_typedef, name: "v4si", file: !2, line: 1, baseType: !4)

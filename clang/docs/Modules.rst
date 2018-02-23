@@ -317,12 +317,11 @@ Module map files use a simplified form of the C99 lexer, with the same rules for
 
 .. parsed-literal::
 
-  ``config_macros`` ``export_as``  ``private``
+  ``config_macros`` ``export``     ``private``
   ``conflict``      ``framework``  ``requires``
   ``exclude``       ``header``     ``textual``
   ``explicit``      ``link``       ``umbrella``
   ``extern``        ``module``     ``use``
-  ``export``
 
 Module map file
 ---------------
@@ -382,7 +381,6 @@ Modules can have a number of different kinds of members, each of which is descri
     *umbrella-dir-declaration*
     *submodule-declaration*
     *export-declaration*
-    *export-as-declaration*
     *use-declaration*
     *link-declaration*
     *config-macros-declaration*
@@ -662,30 +660,6 @@ Note that, if ``Derived.h`` includes ``Base.h``, one can simply use a wildcard e
   compatibility for programs that rely on transitive inclusion (i.e.,
   all of them).
 
-Re-export Declaration
-~~~~~~~~~~~~~~~~~~
-An *export-as-declaration* specifies that the current module will have
-its interface re-exported by the named module.
-
-.. parsed-literal::
-
-  *export-as-declaration*:
-    ``export_as`` *identifier*
-
-The *export-as-declaration* names the module that the current
-module will be re-exported through. Only top-level modules
-can be re-exported, and any given module may only be re-exported
-through a single module.
-
-**Example:** In the following example, the module ``MyFrameworkCore``
-will be re-exported via the module ``MyFramework``:
-
-.. parsed-literal::
-
-  module MyFrameworkCore {
-    export_as MyFramework
-  }
-
 Use declaration
 ~~~~~~~~~~~~~~~
 A *use-declaration* specifies another module that the current top-level module
@@ -853,12 +827,10 @@ express this with a single module map file in the library:
 
   module Foo {
     header "Foo.h"
-    ...
-  }
-
-  module Foo_Private {
-    header "Foo_Private.h"
-    ...
+    
+    explicit module Private {
+      header "Foo_Private.h"
+    }
   }
 
 
@@ -869,7 +841,7 @@ build machinery.
 
 Private module map files, which are named ``module.private.modulemap``
 (or, for backward compatibility, ``module_private.map``), allow one to
-augment the primary module map file with an additional modules. For
+augment the primary module map file with an additional submodule. For
 example, we would split the module map file above into two module map
 files:
 
@@ -879,9 +851,9 @@ files:
   module Foo {
     header "Foo.h"
   }
-
+  
   /* module.private.modulemap */
-  module Foo_Private {
+  explicit module Foo.Private {
     header "Foo_Private.h"
   }
 
@@ -895,12 +867,13 @@ boundaries.
 
 When writing a private module as part of a *framework*, it's recommended that:
 
-* Headers for this module are present in the ``PrivateHeaders`` framework
-  subdirectory.
-* The private module is defined as a *top level module* with the name of the
-  public framework prefixed, like ``Foo_Private`` above. Clang has extra logic
-  to work with this naming, using ``FooPrivate`` or ``Foo.Private`` (submodule)
-  trigger warnings and might not work as expected.
+* Headers for this module are present in the ``PrivateHeaders``
+  framework subdirectory.
+* The private module is defined as a *submodule* of the public framework (if
+  there's one), similar to how ``Foo.Private`` is defined in the example above.
+* The ``explicit`` keyword should be used to guarantee that its content will
+  only be available when the submodule itself is explicitly named (through a
+  ``@import`` for example).
 
 Modularizing a Platform
 =======================

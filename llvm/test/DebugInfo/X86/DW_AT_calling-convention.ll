@@ -1,5 +1,5 @@
 ; RUN: llc < %s -filetype=obj -o %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
+; RUN: llvm-dwarfdump %t | FileCheck %s
 
 ; C++ source to regenerate:
 ; $ cat t.cpp
@@ -47,14 +47,14 @@ target triple = "i386-pc-windows-msvc19.0.23918"
 ; Function Attrs: nounwind readnone
 define x86_fastcallcc i32 @"\01?f@@YIHHH@Z"(i32 inreg %a, i32 inreg %b) #0 !dbg !13 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %b, metadata !15, metadata !17), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !17), !dbg !19
+  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !15, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !16, metadata !17), !dbg !19
   %add = add nsw i32 %b, %a, !dbg !20
   ret i32 %add, !dbg !21
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -63,7 +63,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "fptr", linkageName: "\01?fptr@@3P6IHHH@ZA", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 272067)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")

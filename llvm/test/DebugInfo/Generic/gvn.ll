@@ -27,7 +27,7 @@ entry:
   ; CHECK: %call = tail call i32 @f2(i32 1) #{{[0-9]}}, !dbg
   %call = tail call i32 @f2(i32 1) #0, !dbg !15
   store i32 %call, i32* @a, align 4, !dbg !15, !tbaa !24
-  tail call void @llvm.dbg.value(metadata i32* @a, metadata !22, metadata !28) #0, !dbg !29
+  tail call void @llvm.dbg.value(metadata i32* @a, i64 0, metadata !22, metadata !28) #0, !dbg !29
   %0 = load i32, i32* @b, align 4, !dbg !29, !tbaa !24
   %tobool.i = icmp eq i32 %0, 0, !dbg !29
   br i1 %tobool.i, label %if.end.i, label %land.lhs.true.i.thread, !dbg !30
@@ -58,7 +58,7 @@ declare i32 @f2(i32)
 declare i32 @f4(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
@@ -67,13 +67,13 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!9, !10}
 !llvm.ident = !{!11}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.8.0 (trunk 245562) (llvm/trunk 245569)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "test.c", directory: "/")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
+!6 = !DIGlobalVariableExpression(var: !7)
 !7 = !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !{i32 2, !"Dwarf Version", i32 2}

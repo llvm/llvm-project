@@ -466,7 +466,7 @@ bool GenericTaintChecker::checkPre(const CallExpr *CE, CheckerContext &C) const{
 }
 
 Optional<SVal> GenericTaintChecker::getPointedToSVal(CheckerContext &C,
-                                                     const Expr *Arg) {
+                                            const Expr* Arg) {
   ProgramStateRef State = C.getState();
   SVal AddrVal = State->getSVal(Arg->IgnoreParens(), C.getLocationContext());
   if (AddrVal.isUnknownOrUndef())
@@ -476,18 +476,9 @@ Optional<SVal> GenericTaintChecker::getPointedToSVal(CheckerContext &C,
   if (!AddrLoc)
     return None;
 
-  QualType ArgTy = Arg->getType().getCanonicalType();
-  if (!ArgTy->isPointerType())
-    return None;
-
-  QualType ValTy = ArgTy->getPointeeType();
-
-  // Do not dereference void pointers. Treat them as byte pointers instead.
-  // FIXME: we might want to consider more than just the first byte.
-  if (ValTy->isVoidType())
-    ValTy = C.getASTContext().CharTy;
-
-  return State->getSVal(*AddrLoc, ValTy);
+  const PointerType *ArgTy =
+    dyn_cast<PointerType>(Arg->getType().getCanonicalType().getTypePtr());
+  return State->getSVal(*AddrLoc, ArgTy ? ArgTy->getPointeeType(): QualType());
 }
 
 ProgramStateRef

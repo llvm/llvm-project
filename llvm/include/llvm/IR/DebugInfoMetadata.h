@@ -1068,17 +1068,16 @@ private:
   uint64_t DWOId;
   bool SplitDebugInlining;
   bool DebugInfoForProfiling;
-  bool GnuPubnames;
 
   DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
                 bool IsOptimized, unsigned RuntimeVersion,
                 unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
-                bool DebugInfoForProfiling, bool GnuPubnames, ArrayRef<Metadata *> Ops)
+                bool DebugInfoForProfiling, ArrayRef<Metadata *> Ops)
       : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
         SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
         RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind),
         DWOId(DWOId), SplitDebugInlining(SplitDebugInlining),
-        DebugInfoForProfiling(DebugInfoForProfiling), GnuPubnames(GnuPubnames) {
+        DebugInfoForProfiling(DebugInfoForProfiling) {
     assert(Storage != Uniqued);
   }
   ~DICompileUnit() = default;
@@ -1092,14 +1091,15 @@ private:
           DIGlobalVariableExpressionArray GlobalVariables,
           DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
           uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-          bool GnuPubnames, StorageType Storage, bool ShouldCreate = true) {
-    return getImpl(
-        Context, SourceLanguage, File, getCanonicalMDString(Context, Producer),
-        IsOptimized, getCanonicalMDString(Context, Flags), RuntimeVersion,
-        getCanonicalMDString(Context, SplitDebugFilename), EmissionKind,
-        EnumTypes.get(), RetainedTypes.get(), GlobalVariables.get(),
-        ImportedEntities.get(), Macros.get(), DWOId, SplitDebugInlining,
-        DebugInfoForProfiling, GnuPubnames, Storage, ShouldCreate);
+          StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, SourceLanguage, File,
+                   getCanonicalMDString(Context, Producer), IsOptimized,
+                   getCanonicalMDString(Context, Flags), RuntimeVersion,
+                   getCanonicalMDString(Context, SplitDebugFilename),
+                   EmissionKind, EnumTypes.get(), RetainedTypes.get(),
+                   GlobalVariables.get(), ImportedEntities.get(), Macros.get(),
+                   DWOId, SplitDebugInlining, DebugInfoForProfiling, Storage,
+                   ShouldCreate);
   }
   static DICompileUnit *
   getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
@@ -1108,7 +1108,7 @@ private:
           unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
           Metadata *GlobalVariables, Metadata *ImportedEntities,
           Metadata *Macros, uint64_t DWOId, bool SplitDebugInlining,
-          bool DebugInfoForProfiling, bool GnuPubnames, StorageType Storage,
+          bool DebugInfoForProfiling, StorageType Storage,
           bool ShouldCreate = true);
 
   TempDICompileUnit cloneImpl() const {
@@ -1118,7 +1118,7 @@ private:
                         getEmissionKind(), getEnumTypes(), getRetainedTypes(),
                         getGlobalVariables(), getImportedEntities(),
                         getMacros(), DWOId, getSplitDebugInlining(),
-                        getDebugInfoForProfiling(), getGnuPubnames());
+                        getDebugInfoForProfiling());
   }
 
 public:
@@ -1133,12 +1133,11 @@ public:
        DICompositeTypeArray EnumTypes, DIScopeArray RetainedTypes,
        DIGlobalVariableExpressionArray GlobalVariables,
        DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
-       uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-       bool GnuPubnames),
+       uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
-       DebugInfoForProfiling, GnuPubnames))
+       DebugInfoForProfiling))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, Metadata *File, MDString *Producer,
@@ -1146,11 +1145,11 @@ public:
        MDString *SplitDebugFilename, unsigned EmissionKind, Metadata *EnumTypes,
        Metadata *RetainedTypes, Metadata *GlobalVariables,
        Metadata *ImportedEntities, Metadata *Macros, uint64_t DWOId,
-       bool SplitDebugInlining, bool DebugInfoForProfiling, bool GnuPubnames),
+       bool SplitDebugInlining, bool DebugInfoForProfiling),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
-       DebugInfoForProfiling, GnuPubnames))
+       DebugInfoForProfiling))
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
@@ -1161,7 +1160,6 @@ public:
     return (DebugEmissionKind)EmissionKind;
   }
   bool getDebugInfoForProfiling() const { return DebugInfoForProfiling; }
-  bool getGnuPubnames() const { return GnuPubnames; }
   StringRef getProducer() const { return getStringOperand(1); }
   StringRef getFlags() const { return getStringOperand(2); }
   StringRef getSplitDebugFilename() const { return getStringOperand(3); }
@@ -2089,8 +2087,6 @@ public:
   DITypeRef getType() const { return DITypeRef(getRawType()); }
   uint32_t getAlignInBits() const { return AlignInBits; }
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
-  /// Determines the size of the variable's type.
-  Optional<uint64_t> getSizeInBits() const;
 
   StringRef getFilename() const {
     if (auto *F = getFile())
@@ -2295,23 +2291,8 @@ public:
 
   /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
   /// into a stack value.
-  static DIExpression *prepend(const DIExpression *DIExpr, bool DerefBefore,
-                               int64_t Offset = 0, bool DerefAfter = false,
-                               bool StackValue = false);
-
-  /// Create a DIExpression to describe one part of an aggregate variable that
-  /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
-  /// will be appended to the elements of \c Expr. If \c Expr already contains
-  /// a \c DW_OP_LLVM_fragment \c OffsetInBits is interpreted as an offset
-  /// into the existing fragment.
-  ///
-  /// \param OffsetInBits Offset of the piece in bits.
-  /// \param SizeInBits   Size of the piece in bits.
-  /// \return             Creating a fragment expression may fail if \c Expr
-  ///                     contains arithmetic operations that would be truncated.
-  static Optional<DIExpression *>
-  createFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
-                           unsigned SizeInBits);
+  static DIExpression *prepend(const DIExpression *DIExpr, bool Deref,
+                               int64_t Offset = 0, bool StackValue = false);
 };
 
 /// Global variables.
@@ -2649,7 +2630,7 @@ public:
   Metadata *getRawExpression() const { return getOperand(1); }
 
   DIExpression *getExpression() const {
-    return cast<DIExpression>(getRawExpression());
+    return cast_or_null<DIExpression>(getRawExpression());
   }
 
   static bool classof(const Metadata *MD) {

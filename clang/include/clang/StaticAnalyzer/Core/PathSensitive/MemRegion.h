@@ -21,7 +21,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -1412,18 +1412,21 @@ public:
   bool hasTrait(SymbolRef Sym, InvalidationKinds IK) const;
   bool hasTrait(const MemRegion *MR, InvalidationKinds IK) const;
 };
+  
+} // end GR namespace
+
+} // end clang namespace
 
 //===----------------------------------------------------------------------===//
 // Pretty-printing regions.
 //===----------------------------------------------------------------------===//
-inline raw_ostream &operator<<(raw_ostream &os,
-                               const clang::ento::MemRegion *R) {
+
+namespace llvm {
+static inline raw_ostream &operator<<(raw_ostream &os,
+                                      const clang::ento::MemRegion* R) {
   R->dumpToStream(os);
   return os;
 }
-
-} // namespace ento
-
-} // namespace clang
+} // end llvm namespace
 
 #endif

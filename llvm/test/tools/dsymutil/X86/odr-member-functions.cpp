@@ -4,7 +4,7 @@
    done
  */
 
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-member-functions -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-member-functions -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 struct S {
   __attribute__((always_inline)) void foo() { bar(); }
@@ -61,7 +61,7 @@ void foo() {
 // CHECK-NOT: DW_TAG
 // CHECK: DW_AT_name {{.*}}"s"
 // CHECK-NOT: DW_TAG
-// CHECK: DW_AT_type {{.*}}[[S]]
+// CHECK: DW_AT_type {{.*}}[[S]])
 // CHECK: DW_TAG_inlined_subroutine
 // CHECK-NEXT: DW_AT_abstract_origin{{.*}}[[FOO_SUB]]
 // CHECK-NOT: DW_TAG

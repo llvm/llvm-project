@@ -1,7 +1,7 @@
 ; RUN: llc -O0 %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
+; RUN: llvm-dwarfdump %t | FileCheck %s
 ; RUN: llc -O0 %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t -dwarf-version=3
-; RUN: llvm-dwarfdump -v %t | FileCheck %s -check-prefix=DWARF3
+; RUN: llvm-dwarfdump %t | FileCheck %s -check-prefix=DWARF3
 ; RUN: llc < %s -O0 -mtriple=x86_64-apple-macosx10.7 | FileCheck %s -check-prefix=ASM
 
 ; rdar://13067005
@@ -24,12 +24,10 @@
 
 
 ; CHECK: .debug_line contents:
-; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000038
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple.c
-; CHECK: debug_line[{{.*}}]
-; CHECK-NEXT: Line table prologue:
+; CHECK: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000039
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple2.c
 ; CHECK-NOT: file_names
@@ -43,12 +41,10 @@
 
 
 ; DWARF3: .debug_line contents:
-; DWARF3-NEXT: debug_line[{{.*}}]
 ; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000038
 ; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple.c
-; DWARF3: debug_line[{{.*}}]
-; DWARF3-NEXT: Line table prologue:
+; DWARF3: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000039
 ; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple2.c
 ; DWARF3-NOT: file_names

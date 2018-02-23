@@ -352,8 +352,6 @@ public:
             const LangOptions &LangOpts, const TargetInfo *Target,
             HeaderSearch &HeaderInfo);
 
-  const LangOptions &getLangOpts() const { return LangOpts; }
-
   /// \brief Destroy the module map.
   ///
   ~ModuleMap();

@@ -65,6 +65,14 @@ Tool *BareMetal::buildLinker() const {
   return new tools::baremetal::Linker(*this);
 }
 
+std::string BareMetal::getThreadModel() const {
+  return "single";
+}
+
+bool BareMetal::isThreadModelSupported(const StringRef Model) const {
+  return Model == "single";
+}
+
 std::string BareMetal::getRuntimesDir() const {
   SmallString<128> Dir(getDriver().ResourceDir);
   llvm::sys::path::append(Dir, "lib", "baremetal");
@@ -184,9 +192,10 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_e, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
 
-  if (TC.ShouldLinkCXXStdlib(Args))
-    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    if (C.getDriver().CCCIsCXX())
+      TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lm");
 

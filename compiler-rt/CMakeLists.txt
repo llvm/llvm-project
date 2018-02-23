@@ -21,12 +21,6 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
   )
 
-if(CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_CFG_RESOLVED_INTDIR "${CMAKE_CFG_INTDIR}/")
-else()
-  set(CMAKE_CFG_RESOLVED_INTDIR "")
-endif()
-
 include(base-config-ix)
 include(CompilerRTUtils)
 
@@ -36,8 +30,6 @@ option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY)
-option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
-mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
 
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")

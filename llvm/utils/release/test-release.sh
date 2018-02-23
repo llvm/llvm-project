@@ -403,6 +403,14 @@ function test_llvmCore() {
     fi
 
     if [ $do_test_suite = 'yes' ]; then
+      SandboxDir="$BuildDir/sandbox"
+      Lit=$SandboxDir/bin/lit
+      TestSuiteBuildDir="$BuildDir/test-suite-build"
+      TestSuiteSrcDir="$BuildDir/test-suite.src"
+
+      virtualenv $SandboxDir
+      $SandboxDir/bin/python $BuildDir/llvm.src/utils/lit/setup.py install
+      mkdir -p $TestSuiteBuildDir
       cd $TestSuiteBuildDir
       env CC="$c_compiler" CXX="$cxx_compiler" \
           cmake $TestSuiteSrcDir -DTEST_SUITE_LIT=$Lit
@@ -456,19 +464,6 @@ set -o pipefail
 
 if [ "$do_checkout" = "yes" ]; then
     export_sources
-fi
-
-# Setup the test-suite.  Do this early so we can catch failures before
-# we do the full 3 stage build.
-if [ $do_test_suite = "yes" ]; then
-  SandboxDir="$BuildDir/sandbox"
-  Lit=$SandboxDir/bin/lit
-  TestSuiteBuildDir="$BuildDir/test-suite-build"
-  TestSuiteSrcDir="$BuildDir/test-suite.src"
-
-  virtualenv $SandboxDir
-  $SandboxDir/bin/python $BuildDir/llvm.src/utils/lit/setup.py install
-  mkdir -p $TestSuiteBuildDir
 fi
 
 (
@@ -567,7 +562,7 @@ for Flavor in $Flavors ; do
             # case there are build paths in the debug info. On some systems,
             # sed adds a newline to the output, so pass $p3 through sed too.
             if ! cmp -s \
-                <(env LC_CTYPE=C sed -e 's,Phase2,Phase3,g' -e 's,Phase1,Phase2,g' $p2) \
+                <(env LC_CTYPE=C sed -e 's,Phase2,Phase3,g' $p2) \
                 <(env LC_CTYPE=C sed -e '' $p3) 16 16; then
                 echo "file `basename $p2` differs between phase 2 and phase 3"
             fi

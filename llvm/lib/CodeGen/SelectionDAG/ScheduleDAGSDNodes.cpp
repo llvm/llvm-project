@@ -709,17 +709,18 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
   // source order number as N.
   MachineBasicBlock *BB = Emitter.getBlock();
   MachineBasicBlock::iterator InsertPos = Emitter.getInsertPos();
-  for (auto DV : DAG->GetDbgValues(N)) {
-    if (DV->isInvalidated())
+  ArrayRef<SDDbgValue*> DVs = DAG->GetDbgValues(N);
+  for (unsigned i = 0, e = DVs.size(); i != e; ++i) {
+    if (DVs[i]->isInvalidated())
       continue;
-    unsigned DVOrder = DV->getOrder();
+    unsigned DVOrder = DVs[i]->getOrder();
     if (!Order || DVOrder == Order) {
-      MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
+      MachineInstr *DbgMI = Emitter.EmitDbgValue(DVs[i], VRBaseMap);
       if (DbgMI) {
         Orders.push_back(std::make_pair(DVOrder, DbgMI));
         BB->insert(InsertPos, DbgMI);
       }
-      DV->setIsInvalidated();
+      DVs[i]->setIsInvalidated();
     }
   }
 }
@@ -855,13 +856,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     MachineBasicBlock::iterator BBBegin = BB->getFirstNonPHI();
 
     // Sort the source order instructions and use the order to insert debug
-    // values. Use stable_sort so that DBG_VALUEs are inserted in the same order
-    // regardless of the host's implementation fo std::sort.
-    std::stable_sort(Orders.begin(), Orders.end(), less_first());
-    std::stable_sort(DAG->DbgBegin(), DAG->DbgEnd(),
-                     [](const SDDbgValue *LHS, const SDDbgValue *RHS) {
-                       return LHS->getOrder() < RHS->getOrder();
-                     });
+    // values.
+    std::sort(Orders.begin(), Orders.end(), less_first());
 
     SDDbgInfo::DbgIterator DI = DAG->DbgBegin();
     SDDbgInfo::DbgIterator DE = DAG->DbgEnd();
@@ -873,12 +869,10 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       // Insert all SDDbgValue's whose order(s) are before "Order".
       if (!MI)
         continue;
-      for (; DI != DE; ++DI) {
-        if ((*DI)->getOrder() < LastOrder || (*DI)->getOrder() >= Order)
-          break;
+      for (; DI != DE &&
+             (*DI)->getOrder() >= LastOrder && (*DI)->getOrder() < Order; ++DI) {
         if ((*DI)->isInvalidated())
           continue;
-
         MachineInstr *DbgMI = Emitter.EmitDbgValue(*DI, VRBaseMap);
         if (DbgMI) {
           if (!LastOrder)
@@ -897,13 +891,11 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     // Add trailing DbgValue's before the terminator. FIXME: May want to add
     // some of them before one or more conditional branches?
     SmallVector<MachineInstr*, 8> DbgMIs;
-    for (; DI != DE; ++DI) {
-      if ((*DI)->isInvalidated())
-        continue;
-      assert((*DI)->getOrder() >= LastOrder &&
-             "emitting DBG_VALUE out of order");
-      if (MachineInstr *DbgMI = Emitter.EmitDbgValue(*DI, VRBaseMap))
-        DbgMIs.push_back(DbgMI);
+    while (DI != DE) {
+      if (!(*DI)->isInvalidated())
+        if (MachineInstr *DbgMI = Emitter.EmitDbgValue(*DI, VRBaseMap))
+          DbgMIs.push_back(DbgMI);
+      ++DI;
     }
 
     MachineBasicBlock *InsertBB = Emitter.getBlock();

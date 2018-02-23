@@ -1,5 +1,5 @@
 ; RUN: llc -split-dwarf-file=baz.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump -v -all %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=all %t | FileCheck %s
 ; RUN: llvm-readobj --relocations %t | FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
 
@@ -10,7 +10,7 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "baz.c", directory: "/usr/local/google/home/echristo/tmp")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -75,11 +75,11 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8]  (0x1f1f859683d49324)
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_name [DW_FORM_GNU_str_index]     ( indexed (00000003) string = "a")
-; CHECK: DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[TYPE:0x[0-9a-f]*]]}
+; CHECK: DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[TYPE:0x[0-9a-f]*]]})
 ; CHECK: DW_AT_external [DW_FORM_flag_present]   (true)
 ; CHECK: DW_AT_decl_file [DW_FORM_data1] (0x01)
 ; CHECK: DW_AT_decl_line [DW_FORM_data1] (1)
-; CHECK: DW_AT_location [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0)
+; CHECK: DW_AT_location [DW_FORM_exprloc] (<0x2> fb 00 )
 ; CHECK: [[TYPE]]: DW_TAG_base_type
 ; CHECK: DW_AT_name [DW_FORM_GNU_str_index]     ( indexed (00000004) string = "int")
 

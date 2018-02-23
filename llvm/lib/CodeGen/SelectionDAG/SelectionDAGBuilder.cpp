@@ -45,7 +45,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -99,27 +98,6 @@ LimitFPPrecision("limit-float-precision",
 // %data = load [4096 x i8]* %argPtr
 // store [4096 x i8] %data, [4096 x i8]* %buffer
 static const unsigned MaxParallelChains = 64;
-
-// True if the Value passed requires ABI mangling as it is a parameter to a
-// function or a return value from a function which is not an intrinsic.
-static bool isABIRegCopy(const Value * V) {
-  const bool IsRetInst = V && isa<ReturnInst>(V);
-  const bool IsCallInst = V && isa<CallInst>(V);
-  const bool IsInLineAsm =
-      IsCallInst && static_cast<const CallInst *>(V)->isInlineAsm();
-  const bool IsIndirectFunctionCall =
-      IsCallInst && !IsInLineAsm &&
-      !static_cast<const CallInst *>(V)->getCalledFunction();
-  // It is possible that the call instruction is an inline asm statement or an
-  // indirect function call in which case the return value of
-  // getCalledFunction() would be nullptr.
-  const bool IsInstrinsicCall =
-      IsCallInst && !IsInLineAsm && !IsIndirectFunctionCall &&
-      static_cast<const CallInst *>(V)->getCalledFunction()->getIntrinsicID() !=
-          Intrinsic::not_intrinsic;
-
-  return IsRetInst || (IsCallInst && (!IsInLineAsm && !IsInstrinsicCall));
-}
 
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
@@ -1026,10 +1004,12 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     DIExpression *Expr = DI->getExpression();
     assert(Variable->isValidLocationForIntrinsic(dl) &&
            "Expected inlined-at fields to agree");
+    uint64_t Offset = DI->getOffset();
     SDDbgValue *SDV;
     if (Val.getNode()) {
-      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
-        SDV = getDbgValue(Val, Variable, Expr, dl, DbgSDNodeOrder);
+      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, Offset, false,
+                                    Val)) {
+        SDV = getDbgValue(Val, Variable, Expr, Offset, dl, DbgSDNodeOrder);
         DAG.AddDbgValue(SDV, Val.getNode(), false);
       }
     } else
@@ -1046,9 +1026,13 @@ SDValue SelectionDAGBuilder::getCopyFromRegs(const Value *V, Type *Ty) {
 
   if (It != FuncInfo.ValueMap.end()) {
     unsigned InReg = It->second;
+    bool IsABIRegCopy =
+        V && ((isa<CallInst>(V) &&
+               !(static_cast<const CallInst *>(V))->isInlineAsm()) ||
+              isa<ReturnInst>(V));
 
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                     DAG.getDataLayout(), InReg, Ty, isABIRegCopy(V));
+                     DAG.getDataLayout(), InReg, Ty, IsABIRegCopy);
     SDValue Chain = DAG.getEntryNode();
     Result = RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr,
                                  V);
@@ -1237,9 +1221,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   // If this is an instruction which fast-isel has deferred, select it now.
   if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
     unsigned InReg = FuncInfo.InitializeRegForValue(Inst);
+    bool IsABIRegCopy =
+        V && ((isa<CallInst>(V) &&
+               !(static_cast<const CallInst *>(V))->isInlineAsm()) ||
+              isa<ReturnInst>(V));
 
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), isABIRegCopy(V));
+                     Inst->getType(), IsABIRegCopy);
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
@@ -4081,7 +4069,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
-  if (I.getAlignment() < VT.getStoreSize())
+  if (I.getAlignment() < VT.getSizeInBits() / 8)
     report_fatal_error("Cannot generate unaligned atomic load");
 
   MachineMemOperand *MMO =
@@ -4117,7 +4105,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   EVT VT =
       TLI.getValueType(DAG.getDataLayout(), I.getValueOperand()->getType());
 
-  if (I.getAlignment() < VT.getStoreSize())
+  if (I.getAlignment() < VT.getSizeInBits() / 8)
     report_fatal_error("Cannot generate unaligned atomic store");
 
   SDValue OutChain =
@@ -4765,18 +4753,24 @@ static unsigned getUnderlyingArgReg(const SDValue &N) {
   }
 }
 
-/// If the DbgValueInst is a dbg_value of a function argument, create the
-/// corresponding DBG_VALUE machine instruction for it now.  At the end of
-/// instruction selection, they will be inserted to the entry BB.
+/// EmitFuncArgumentDbgValue - If the DbgValueInst is a dbg_value of a function
+/// argument, create the corresponding DBG_VALUE machine instruction for it now.
+/// At the end of instruction selection, they will be inserted to the entry BB.
 bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
-    DILocation *DL, bool IsDbgDeclare, const SDValue &N) {
+    DILocation *DL, int64_t Offset, bool IsDbgDeclare, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
   if (!Arg)
     return false;
 
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
+
+  // Ignore inlined function arguments here.
+  //
+  // FIXME: Should we be checking DL->inlinedAt() to determine this?
+  if (!Variable->getScope()->getSubprogram()->describes(MF.getFunction()))
+    return false;
 
   bool IsIndirect = false;
   Optional<MachineOperand> Op;
@@ -4799,47 +4793,21 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
   }
 
+  if (!Op) {
+    // Check if ValueMap has reg number.
+    DenseMap<const Value *, unsigned>::iterator VMI = FuncInfo.ValueMap.find(V);
+    if (VMI != FuncInfo.ValueMap.end()) {
+      Op = MachineOperand::CreateReg(VMI->second, false);
+      IsIndirect = IsDbgDeclare;
+    }
+  }
+
   if (!Op && N.getNode())
     // Check if frame index is available.
     if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(N.getNode()))
       if (FrameIndexSDNode *FINode =
           dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
         Op = MachineOperand::CreateFI(FINode->getIndex());
-
-  if (!Op) {
-    // Check if ValueMap has reg number.
-    DenseMap<const Value *, unsigned>::iterator VMI = FuncInfo.ValueMap.find(V);
-    if (VMI != FuncInfo.ValueMap.end()) {
-      const auto &TLI = DAG.getTargetLoweringInfo();
-      RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), VMI->second,
-                       V->getType(), isABIRegCopy(V));
-      unsigned NumRegs =
-          std::accumulate(RFV.RegCount.begin(), RFV.RegCount.end(), 0);
-      if (NumRegs > 1) {
-        unsigned I = 0;
-        unsigned Offset = 0;
-        auto RegisterVT = RFV.RegVTs.begin();
-        for (auto RegCount : RFV.RegCount) {
-          unsigned RegisterSize = (RegisterVT++)->getSizeInBits();
-          for (unsigned E = I + RegCount; I != E; ++I) {
-            // The vregs are guaranteed to be allocated in sequence.
-            Op = MachineOperand::CreateReg(VMI->second + I, false);
-            auto FragmentExpr = DIExpression::createFragmentExpression(
-                Expr, Offset, RegisterSize);
-            if (!FragmentExpr)
-              continue;
-            FuncInfo.ArgDbgValues.push_back(
-                BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
-                        Op->getReg(), Variable, *FragmentExpr));
-            Offset += RegisterSize;
-          }
-        }
-        return true;
-      }
-      Op = MachineOperand::CreateReg(VMI->second, false);
-      IsIndirect = IsDbgDeclare;
-    }
-  }
 
   if (!Op)
     return false;
@@ -4849,12 +4817,12 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (Op->isReg())
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsIndirect,
-                Op->getReg(), Variable, Expr));
+                Op->getReg(), Offset, Variable, Expr));
   else
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE))
             .add(*Op)
-            .addImm(0)
+            .addImm(Offset)
             .addMetadata(Variable)
             .addMetadata(Expr));
 
@@ -4864,18 +4832,18 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 /// Return the appropriate SDDbgValue based on N.
 SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              DILocalVariable *Variable,
-                                             DIExpression *Expr,
+                                             DIExpression *Expr, int64_t Offset,
                                              const DebugLoc &dl,
                                              unsigned DbgSDNodeOrder) {
   if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
     // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
     // stack slot locations as such instead of as indirectly addressed
     // locations.
-    return DAG.getFrameIndexDbgValue(Variable, Expr, FISDN->getIndex(), dl,
+    return DAG.getFrameIndexDbgValue(Variable, Expr, FISDN->getIndex(), 0, dl,
                                      DbgSDNodeOrder);
   }
-  return DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false, dl,
-                         DbgSDNodeOrder);
+  return DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false,
+                         Offset, dl, DbgSDNodeOrder);
 }
 
 // VisualStudio defines setjmp as _setjmp
@@ -5105,48 +5073,30 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     DAG.setRoot(CallResult.second);
     return nullptr;
   }
-  case Intrinsic::dbg_addr:
   case Intrinsic::dbg_declare: {
-    const DbgInfoIntrinsic &DI = cast<DbgInfoIntrinsic>(I);
+    const DbgDeclareInst &DI = cast<DbgDeclareInst>(I);
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
+    const Value *Address = DI.getAddress();
     assert(Variable && "Missing variable");
+    if (!Address) {
+      DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
+      return nullptr;
+    }
 
     // Check if address has undef value.
-    const Value *Address = DI.getVariableLocation();
-    if (!Address || isa<UndefValue>(Address) ||
+    if (isa<UndefValue>(Address) ||
         (Address->use_empty() && !isa<Argument>(Address))) {
       DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       return nullptr;
     }
 
-    bool isParameter = Variable->isParameter() || isa<Argument>(Address);
-
-    // Check if this variable can be described by a frame index, typically
-    // either as a static alloca or a byval parameter.
-    int FI = INT_MAX;
-    if (const auto *AI =
-            dyn_cast<AllocaInst>(Address->stripInBoundsConstantOffsets())) {
-      if (AI->isStaticAlloca()) {
-        auto I = FuncInfo.StaticAllocaMap.find(AI);
-        if (I != FuncInfo.StaticAllocaMap.end())
-          FI = I->second;
-      }
-    } else if (const auto *Arg = dyn_cast<Argument>(
-                   Address->stripInBoundsConstantOffsets())) {
-      FI = FuncInfo.getArgumentFrameIndex(Arg);
-    }
-
-    // llvm.dbg.addr is control dependent and always generates indirect
-    // DBG_VALUE instructions. llvm.dbg.declare is handled as a frame index in
-    // the MachineFunction variable table.
-    if (FI != INT_MAX) {
-      if (Intrinsic == Intrinsic::dbg_addr)
-        DAG.AddDbgValue(DAG.getFrameIndexDbgValue(Variable, Expression, FI, dl,
-                                                  SDNodeOrder),
-                        getRoot().getNode(), isParameter);
+    // Byval arguments with frame indices were already handled after argument
+    // lowering and before isel.
+    const auto *Arg =
+        dyn_cast<Argument>(Address->stripInBoundsConstantOffsets());
+    if (Arg && FuncInfo.getArgumentFrameIndex(Arg) != INT_MAX)
       return nullptr;
-    }
 
     SDValue &N = NodeMap[Address];
     if (!N.getNode() && isa<Argument>(Address))
@@ -5157,25 +5107,26 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
         Address = BCI->getOperand(0);
       // Parameters are handled specially.
+      bool isParameter = Variable->isParameter() || isa<Argument>(Address);
       auto FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
       if (isParameter && FINode) {
         // Byval parameter. We have a frame index at this point.
         SDV = DAG.getFrameIndexDbgValue(Variable, Expression,
-                                        FINode->getIndex(), dl, SDNodeOrder);
+                                        FINode->getIndex(), 0, dl, SDNodeOrder);
       } else if (isa<Argument>(Address)) {
         // Address is an argument, so try to emit its dbg value using
         // virtual register info from the FuncInfo.ValueMap.
-        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true, N);
+        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true, N);
         return nullptr;
       } else {
         SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
-                              true, dl, SDNodeOrder);
+                              true, 0, dl, SDNodeOrder);
       }
       DAG.AddDbgValue(SDV, N.getNode(), isParameter);
     } else {
       // If Address is an argument then try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
-      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true,
+      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true,
                                     N)) {
         DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       }
@@ -5188,13 +5139,15 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
 
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
+    uint64_t Offset = DI.getOffset();
     const Value *V = DI.getValue();
     if (!V)
       return nullptr;
 
     SDDbgValue *SDV;
     if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V)) {
-      SDV = DAG.getConstantDbgValue(Variable, Expression, V, dl, SDNodeOrder);
+      SDV = DAG.getConstantDbgValue(Variable, Expression, V, Offset, dl,
+                                    SDNodeOrder);
       DAG.AddDbgValue(SDV, nullptr, false);
       return nullptr;
     }
@@ -5205,9 +5158,10 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
       N = UnusedArgNodeMap[V];
     if (N.getNode()) {
-      if (EmitFuncArgumentDbgValue(V, Variable, Expression, dl, false, N))
+      if (EmitFuncArgumentDbgValue(V, Variable, Expression, dl, Offset, false,
+                                   N))
         return nullptr;
-      SDV = getDbgValue(N, Variable, Expression, dl, SDNodeOrder);
+      SDV = getDbgValue(N, Variable, Expression, Offset, dl, SDNodeOrder);
       DAG.AddDbgValue(SDV, N.getNode(), false);
       return nullptr;
     }
@@ -8327,9 +8281,13 @@ SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V, unsigned Reg) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
   // notional registers required by the type.
+  bool IsABIRegCopy =
+    V && ((isa<CallInst>(V) &&
+           !(static_cast<const CallInst *>(V))->isInlineAsm()) ||
+          isa<ReturnInst>(V));
 
   RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
-                   V->getType(), isABIRegCopy(V));
+                   V->getType(), IsABIRegCopy);
   SDValue Chain = DAG.getEntryNode();
 
   ISD::NodeType ExtendType = (FuncInfo.PreferredExtendType.find(V) ==
@@ -8782,19 +8740,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
     SDB->setValue(&Arg, Res);
     if (!TM.Options.EnableFastISel && Res.getOpcode() == ISD::BUILD_PAIR) {
-      // We want to associate the argument with the frame index, among
-      // involved operands, that correspond to the lowest address. The
-      // getCopyFromParts function, called earlier, is swapping the order of
-      // the operands to BUILD_PAIR depending on endianness. The result of
-      // that swapping is that the least significant bits of the argument will
-      // be in the first operand of the BUILD_PAIR node, and the most
-      // significant bits will be in the second operand.
-      unsigned LowAddressOp = DAG.getDataLayout().isBigEndian() ? 1 : 0;
       if (LoadSDNode *LNode =
-          dyn_cast<LoadSDNode>(Res.getOperand(LowAddressOp).getNode()))
+          dyn_cast<LoadSDNode>(Res.getOperand(0).getNode()))
         if (FrameIndexSDNode *FI =
             dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
-          FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
+        FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
     }
 
     // Update the SwiftErrorVRegDefMap.

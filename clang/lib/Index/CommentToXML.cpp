@@ -579,7 +579,6 @@ void getSourceTextOfDeclaration(const DeclInfo *ThisDecl,
   PrintingPolicy PPolicy(LangOpts);
   PPolicy.PolishForDeclaration = true;
   PPolicy.TerseOutput = true;
-  PPolicy.ConstantsAsWritten = true;
   ThisDecl->CurrentDecl->print(OS, PPolicy,
                                /*Indentation*/0, /*PrintInstantiation*/false);
 }

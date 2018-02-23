@@ -1699,7 +1699,7 @@ def SwiftName : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def SwiftNewtype : InheritableAttr {
+def SwiftNewtype : Attr {
   let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag, "ExpectedType">;
   let Args = [EnumArgument<"NewtypeKind", "NewtypeKind",
@@ -1733,8 +1733,7 @@ def SwiftVersioned : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];
-  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">,
-              BoolArgument<"IsReplacedByActive">];
+  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">];
   let SemaHandler = 0;
   let Documentation = [Undocumented];
 }
@@ -1743,8 +1742,7 @@ def SwiftVersionedRemoval : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];
-  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
-              BoolArgument<"IsReplacedByActive">];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">];
   let SemaHandler = 0;
   let Documentation = [Undocumented];
   let AdditionalMembers = [{
@@ -2239,7 +2237,7 @@ def AssertCapability : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let DuplicatesAllowedWhileMerging = 1;
-  let Args = [VariadicExprArgument<"Args">];
+  let Args = [ExprArgument<"Expr">];
   let Accessors = [Accessor<"isShared",
                     [GNU<"assert_shared_capability">,
                      CXX11<"clang", "assert_shared_capability">]>];
@@ -2572,9 +2570,9 @@ def DLLImport : InheritableAttr, TargetSpecificAttr<TargetWindows> {
   let Documentation = [DLLImportDocs];
 }
 
-def SelectAny : InheritableAttr {
+def SelectAny : InheritableAttr, TargetSpecificAttr<TargetWindows> {
   let Spellings = [Declspec<"selectany">, GCC<"selectany">];
-  let Documentation = [SelectAnyDocs];
+  let Documentation = [Undocumented];
 }
 
 def Thread : Attr {
@@ -2783,14 +2781,6 @@ def OMPCaptureNoInit : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let SemaHandler = 0;
-  let Documentation = [Undocumented];
-}
-
-def OMPCaptureKind : Attr {
-  // This attribute has no spellings as it is only ever created implicitly.
-  let Spellings = [];
-  let SemaHandler = 0;
-  let Args = [UnsignedArgument<"CaptureKind">];
   let Documentation = [Undocumented];
 }
 

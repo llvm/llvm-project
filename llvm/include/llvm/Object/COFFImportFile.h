@@ -73,7 +73,6 @@ private:
 struct COFFShortExport {
   std::string Name;
   std::string ExtName;
-  std::string SymbolName;
 
   uint16_t Ordinal = 0;
   bool Noname = false;
@@ -99,8 +98,7 @@ struct COFFShortExport {
 std::error_code writeImportLibrary(StringRef ImportName,
                                    StringRef Path,
                                    ArrayRef<COFFShortExport> Exports,
-                                   COFF::MachineTypes Machine,
-                                   bool MakeWeakAliases);
+                                   COFF::MachineTypes Machine);
 
 } // namespace object
 } // namespace llvm

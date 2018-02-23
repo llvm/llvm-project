@@ -17,7 +17,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
@@ -633,4 +633,11 @@ public:
 
 } // end clang namespace
 
+namespace llvm {
+static inline raw_ostream &operator<<(raw_ostream &os,
+                                      const clang::ento::SymExpr *SE) {
+  SE->dumpToStream(os);
+  return os;
+}
+} // end llvm namespace
 #endif

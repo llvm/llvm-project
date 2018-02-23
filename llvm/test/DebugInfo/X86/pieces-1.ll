@@ -1,5 +1,5 @@
 ; RUN: llc -O0 %s -filetype=obj -o %t.o
-; RUN: llvm-dwarfdump -debug-loc %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=loc %t.o | FileCheck %s
 ;
 ; rdar://problem/15928306
 ;
@@ -17,9 +17,14 @@
 ; CHECK: .debug_loc contents:
 ;
 
-; CHECK: [0x0000000000000000, 0x[[LTMP3:.*]]): DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_reg4 RSI, DW_OP_piece 0x4
-; 0x0000000000000006 - 0x0000000000000008: rbp-8, piece 0x8, rax, piece 0x4 )
-; CHECK: [0x[[LTMP3]], {{.*}}): DW_OP_breg6 RBP-8, DW_OP_piece 0x8, DW_OP_reg4 RSI, DW_OP_piece 0x4
+; 0x0000000000000000 - 0x0000000000000006: rdi, piece 0x00000008, rsi, piece 0x00000004
+; CHECK:            Beginning address offset: 0x0000000000000000
+; CHECK:               Ending address offset: [[LTMP3:.*]]
+; CHECK:                Location description: 55 93 08 54 93 04
+; 0x0000000000000006 - 0x0000000000000008: rbp-8, piece 0x00000008, rax, piece 0x00000004 )
+; CHECK:            Beginning address offset: [[LTMP3]]
+; CHECK:               Ending address offset: [[END:.*]]
+; CHECK:                Location description: 76 78 93 08 54 93 04
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -27,8 +32,8 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; Function Attrs: nounwind ssp uwtable
 define i32 @foo(i64 %s.coerce0, i32 %s.coerce1) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.value(metadata i64 %s.coerce0, metadata !20, metadata !24), !dbg !21
-  call void @llvm.dbg.value(metadata i32 %s.coerce1, metadata !22, metadata !27), !dbg !21
+  call void @llvm.dbg.value(metadata i64 %s.coerce0, i64 0, metadata !20, metadata !24), !dbg !21
+  call void @llvm.dbg.value(metadata i32 %s.coerce1, i64 0, metadata !22, metadata !27), !dbg !21
   ret i32 %s.coerce1, !dbg !23
 }
 
@@ -36,7 +41,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
 attributes #1 = { nounwind readnone }

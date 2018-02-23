@@ -1130,7 +1130,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_INITIALIZERS);
-  RECORD(SUBMODULE_EXPORT_AS);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -2313,13 +2312,12 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
 
     // Emit the needed file names.
     llvm::DenseMap<int, int> FilenameMap;
-    FilenameMap[-1] = -1; // For unspecified filenames.
     for (const auto &L : LineTable) {
       if (L.first.ID < 0)
         continue;
       for (auto &LE : L.second) {
         if (FilenameMap.insert(std::make_pair(LE.FilenameID,
-                                              FilenameMap.size() - 1)).second)
+                                              FilenameMap.size())).second)
           AddPath(LineTable.getFilename(LE.FilenameID), Record);
       }
     }
@@ -2792,11 +2790,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Message
   unsigned ConflictAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-  Abbrev = std::make_shared<BitCodeAbbrev>();
-  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_EXPORT_AS));
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
-  unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
-
   // Write the submodule metadata block.
   RecordData::value_type Record[] = {
       getNumberOfModules(WritingModule),
@@ -2932,12 +2925,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     if (!Inits.empty())
       Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
-    // Emit the name of the re-exported module, if any.
-    if (!Mod->ExportAsModule.empty()) {
-      RecordData::value_type Record[] = {SUBMODULE_EXPORT_AS};
-      Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
-    }
-    
     // Queue up the submodules of this module.
     for (auto *M : Mod->submodules())
       Q.push(M);
@@ -5428,9 +5415,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
     return;
   // FIXME: ParmVarDecls that are part of a function type of a parameter of
   // a function/objc method, should not have TU as lexical context.
-  // TemplateTemplateParmDecls that are part of an alias template, should not
-  // have TU as lexical context.
-  if (isa<ParmVarDecl>(D) || isa<TemplateTemplateParmDecl>(D))
+  if (isa<ParmVarDecl>(D))
     return;
 
   SourceManager &SM = Context->getSourceManager();

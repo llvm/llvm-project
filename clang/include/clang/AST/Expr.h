@@ -2345,12 +2345,6 @@ public:
   SourceLocation getLocStart() const LLVM_READONLY;
   SourceLocation getLocEnd() const LLVM_READONLY;
 
-  bool isCallToStdMove() const {
-    const FunctionDecl* FD = getDirectCallee();
-    return getNumArgs() == 1 && FD && FD->isInStdNamespace() &&
-           FD->getIdentifier() && FD->getIdentifier()->isStr("move");
-  }
-
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstCallExprConstant &&
            T->getStmtClass() <= lastCallExprConstant;
@@ -2776,16 +2770,6 @@ public:
   path_iterator path_end() { return path_buffer() + path_size(); }
   path_const_iterator path_begin() const { return path_buffer(); }
   path_const_iterator path_end() const { return path_buffer() + path_size(); }
-
-  const FieldDecl *getTargetUnionField() const {
-    assert(getCastKind() == CK_ToUnion);
-    return getTargetFieldForToUnionCast(getType(), getSubExpr()->getType());
-  }
-
-  static const FieldDecl *getTargetFieldForToUnionCast(QualType unionType,
-                                                       QualType opType);
-  static const FieldDecl *getTargetFieldForToUnionCast(const RecordDecl *RD,
-                                                       QualType opType);
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstCastExprConstant &&

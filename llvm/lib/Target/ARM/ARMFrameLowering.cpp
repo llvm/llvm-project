@@ -479,7 +479,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   if (DPRCSSize > 0) {
     // Since vpush register list cannot have gaps, there may be multiple vpush
     // instructions in the prologue.
-    while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
+    while (MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
       DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(*MBBI));
       LastPush = MBBI++;
     }
@@ -1741,6 +1741,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     (MFI.adjustsStack() && !canSimplifyCallFramePseudos(MF)) ||
     // For large argument stacks fp relative addressed may overflow.
     (HasFP && (MaxFixedOffset - MaxFPOffset) >= (int)EstimatedRSStackSizeLimit);
+  bool ExtraCSSpill = false;
   if (BigFrameOffsets ||
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
@@ -1764,10 +1765,6 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (FramePtr == ARM::R7)
         CS1Spilled = true;
     }
-
-    // This is true when we inserted a spill for an unused register that can now
-    // be used for register scavenging.
-    bool ExtraCSSpill = false;
 
     if (AFI->isThumb1OnlyFunction()) {
       // For Thumb1-only targets, we need some low registers when we save and
@@ -1871,9 +1868,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         SavedRegs.set(Reg);
         NumGPRSpills++;
         CS1Spilled = true;
-        assert(!MRI.isReserved(Reg) && "Should not be reserved");
-        if (!MRI.isPhysRegUsed(Reg))
-          ExtraCSSpill = true;
+        ExtraCSSpill = true;
         UnspilledCS1GPRs.erase(llvm::find(UnspilledCS1GPRs, Reg));
         if (Reg == ARM::LR)
           LRSpilled = true;
@@ -1892,8 +1887,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         UnspilledCS1GPRs.erase(LRPos);
 
       ForceLRSpill = false;
-      if (!MRI.isReserved(ARM::LR) && !MRI.isPhysRegUsed(ARM::LR))
-        ExtraCSSpill = true;
+      ExtraCSSpill = true;
     }
 
     // If stack and double are 8-byte aligned and we are spilling an odd number
@@ -1913,7 +1907,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
             SavedRegs.set(Reg);
             DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
                          << " to make up alignment\n");
-            if (!MRI.isReserved(Reg) && !MRI.isPhysRegUsed(Reg))
+            if (!MRI.isReserved(Reg))
               ExtraCSSpill = true;
             break;
           }
@@ -1923,7 +1917,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         SavedRegs.set(Reg);
         DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
                      << " to make up alignment\n");
-        if (!MRI.isReserved(Reg) && !MRI.isPhysRegUsed(Reg))
+        if (!MRI.isReserved(Reg))
           ExtraCSSpill = true;
       }
     }
@@ -1959,14 +1953,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
           }
         }
       }
-      if (NumExtras == 0) {
-        for (unsigned Reg : Extras) {
-          SavedRegs.set(Reg);
-          if (!MRI.isPhysRegUsed(Reg))
-            ExtraCSSpill = true;
+      if (Extras.size() && NumExtras == 0) {
+        for (unsigned i = 0, e = Extras.size(); i != e; ++i) {
+          SavedRegs.set(Extras[i]);
         }
-      }
-      if (!ExtraCSSpill && !AFI->isThumb1OnlyFunction()) {
+      } else if (!AFI->isThumb1OnlyFunction()) {
         // note: Thumb1 functions spill to R12, not the stack.  Reserve a slot
         // closest to SP or frame pointer.
         assert(RS && "Register scavenging not provided");
@@ -2406,8 +2397,9 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
-  // Return from this function.
-  BuildMI(AllocMBB, DL, TII.get(ST->getReturnOpcode())).add(predOps(ARMCC::AL));
+  // bx lr - Return from this function.
+  Opcode = Thumb ? ARM::tBX_RET : ARM::BX_RET;
+  BuildMI(AllocMBB, DL, TII.get(Opcode)).add(predOps(ARMCC::AL));
 
   // Restore SR0 and SR1 in case of __morestack() was not called.
   // pop {SR0, SR1}

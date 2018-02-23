@@ -62,8 +62,8 @@
 #include <cctype>
 #include <cstring>
 #include <system_error>
-#include <unordered_map>
 #include <utility>
+#include <unordered_map>
 
 using namespace llvm;
 using namespace object;
@@ -191,7 +191,7 @@ cl::opt<bool> PrintFaultMaps("fault-map-section",
 
 cl::opt<DIDumpType> llvm::DwarfDumpType(
     "dwarf", cl::init(DIDT_Null), cl::desc("Dump of dwarf debug sections:"),
-    cl::values(clEnumValN(DIDT_DebugFrame, "frames", ".debug_frame")));
+    cl::values(clEnumValN(DIDT_Frames, "frames", ".debug_frame")));
 
 cl::opt<bool> PrintSource(
     "source",
@@ -871,7 +871,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND) {
-    fmt << format("0x%0" PRIx64, Val);
+    fmt << format("0x%x", Val);
     return;
   } else if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
@@ -883,19 +883,8 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   } else {
     section_iterator SI = O->section_begin();
     // Adjust for the fact that sections are 1-indexed.
-    if (Val == 0) {
-      fmt << "0 (?,?)";
-      return;
-    }
-    uint32_t i = Val - 1;
-    while (i != 0 && SI != O->section_end()) {
-      i--;
-      advance(SI, 1);
-    }
-    if (SI == O->section_end())
-      fmt << Val << " (?,?)";
-    else
-      SI->getName(S);
+    advance(SI, Val - 1);
+    SI->getName(S);
   }
 
   fmt << S;
@@ -1234,7 +1223,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   MCObjectFileInfo MOFI;
   MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
   // FIXME: for now initialize MCObjectFileInfo with default values
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
+  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, CodeModel::Default, Ctx);
 
   std::unique_ptr<MCDisassembler> DisAsm(
     TheTarget->createMCDisassembler(*STI, Ctx));
@@ -2092,10 +2081,11 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   if (PrintFaultMaps)
     printFaultMaps(o);
   if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*o);
+    std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*o));
     // Dump the complete DWARF structure.
     DIDumpOptions DumpOpts;
     DumpOpts.DumpType = DwarfDumpType;
+    DumpOpts.DumpEH = true;
     DICtx->dump(outs(), DumpOpts);
   }
 }
