@@ -3547,6 +3547,16 @@ static void populateExecutedLinesWithFunctionSignature(
     ExecutedLines->operator[](FID.getHashValue()).insert(Line);
 }
 
+static void populateExecutedLinesWithStmt(
+    const Stmt *S, SourceManager &SM,
+    std::unique_ptr<FilesToLineNumsMap> &ExecutedLines) {
+  SourceLocation Loc = S->getSourceRange().getBegin();
+  SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
+  FileID FID = SM.getFileID(ExpansionLoc);
+  unsigned LineNo = SM.getExpansionLineNumber(ExpansionLoc);
+  ExecutedLines->operator[](FID.getHashValue()).insert(LineNo);
+}
+
 /// \return all executed lines including function signatures on the path
 /// starting from \p N.
 static std::unique_ptr<FilesToLineNumsMap>
@@ -3567,13 +3577,21 @@ findExecutedLines(SourceManager &SM, const ExplodedNode *N) {
       populateExecutedLinesWithFunctionSignature(D, SM, ExecutedLines);
 
     } else if (const Stmt *S = PathDiagnosticLocation::getStmt(N)) {
+      populateExecutedLinesWithStmt(S, SM, ExecutedLines);
 
-      // Otherwise: show lines associated with the processed statement.
-      SourceLocation Loc = S->getSourceRange().getBegin();
-      SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
-      FileID FID = SM.getFileID(ExpansionLoc);
-      unsigned LineNo = SM.getExpansionLineNumber(ExpansionLoc);
-      ExecutedLines->operator[](FID.getHashValue()).insert(LineNo);
+      // Show extra context for some parent kinds.
+      const Stmt *P = N->getParentMap().getParent(S);
+
+      // The path exploration can die before the node with the associated
+      // return statement is generated, but we do want to show the whole
+      // return.
+      if (auto *RS = dyn_cast_or_null<ReturnStmt>(P)) {
+        populateExecutedLinesWithStmt(RS, SM, ExecutedLines);
+        P = N->getParentMap().getParent(RS);
+      }
+
+      if (P && (isa<SwitchCase>(P) || isa<LabelStmt>(P)))
+        populateExecutedLinesWithStmt(P, SM, ExecutedLines);
     }
 
     N = N->getFirstPred();
