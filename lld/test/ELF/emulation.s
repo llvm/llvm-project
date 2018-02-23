@@ -230,7 +230,7 @@
 # MIPS-NEXT:     DataEncoding: BigEndian (0x2)
 # MIPS-NEXT:     FileVersion: 1
 # MIPS-NEXT:     OS/ABI: SystemV (0x0)
-# MIPS-NEXT:     ABIVersion: 0
+# MIPS-NEXT:     ABIVersion: 1
 # MIPS-NEXT:     Unused: (00 00 00 00 00 00 00)
 # MIPS-NEXT:   }
 # MIPS-NEXT:   Type: Executable (0x2)
@@ -259,7 +259,7 @@
 # MIPSEL-NEXT:     DataEncoding: LittleEndian (0x1)
 # MIPSEL-NEXT:     FileVersion: 1
 # MIPSEL-NEXT:     OS/ABI: SystemV (0x0)
-# MIPSEL-NEXT:     ABIVersion: 0
+# MIPSEL-NEXT:     ABIVersion: 1
 # MIPSEL-NEXT:     Unused: (00 00 00 00 00 00 00)
 # MIPSEL-NEXT:   }
 # MIPSEL-NEXT:   Type: Executable (0x2)
