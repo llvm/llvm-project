@@ -21,7 +21,7 @@ class InputSegment;
 
 class OutputSegment {
 public:
-  OutputSegment(StringRef N) : Name(N) {}
+  OutputSegment(StringRef N, uint32_t Index) : Name(N), Index(Index) {}
 
   void addInputSegment(InputSegment *Segment) {
     Alignment = std::max(Alignment, Segment->getAlignment());
@@ -36,6 +36,7 @@ public:
   void setSectionOffset(uint32_t Offset) { SectionOffset = Offset; }
 
   StringRef Name;
+  const uint32_t Index;
   uint32_t Alignment = 0;
   uint32_t StartVA = 0;
   std::vector<InputSegment *> InputSegments;

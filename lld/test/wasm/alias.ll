@@ -58,10 +58,10 @@ entry:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            start_alias
+; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            _start
+; CHECK-NEXT:       - Name:            start_alias
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:       - Name:            __heap_base
