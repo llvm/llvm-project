@@ -476,7 +476,8 @@ class CFGBuilder {
   // Information about the currently visited C++ object construction site.
   // This is set in the construction trigger and read when the constructor
   // itself is being visited.
-  ConstructionContext CurrentConstructionContext = {};
+  llvm::DenseMap<CXXConstructExpr *, const ConstructionContext *>
+      ConstructionContextMap{};
 
   bool badCFG = false;
   const CFG::BuildOptions &BuildOpts;
@@ -658,12 +659,12 @@ private:
   // to the trigger statement. The construction context will be unset once
   // it is consumed when the CFG building procedure processes the
   // construct-expression and adds the respective CFGConstructor element.
-  void EnterConstructionContextIfNecessary(
-      ConstructionContext::TriggerTy Trigger, Stmt *Child);
+  void findConstructionContexts(const ConstructionContext *ContextSoFar,
+                                Stmt *Child);
   // Unset the construction context after consuming it. This is done immediately
   // after adding the CFGConstructor element, so there's no need to
   // do this manually in every Visit... function.
-  void ExitConstructionContext();
+  void cleanupConstructionContext(CXXConstructExpr *CE);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
   CFGBlock *createBlock(bool add_successor = true);
@@ -706,10 +707,9 @@ private:
 
   void appendConstructor(CFGBlock *B, CXXConstructExpr *CE) {
     if (BuildOpts.AddRichCXXConstructors) {
-      if (!CurrentConstructionContext.isNull()) {
-        B->appendConstructor(CE, CurrentConstructionContext,
-                             cfg->getBumpVectorContext());
-        ExitConstructionContext();
+      if (const ConstructionContext *CC = ConstructionContextMap.lookup(CE)) {
+        B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
+        cleanupConstructionContext(CE);
         return;
       }
     }
@@ -1152,25 +1152,38 @@ static const VariableArrayType *FindVA(const Type *t) {
   return nullptr;
 }
 
-void CFGBuilder::EnterConstructionContextIfNecessary(
-    ConstructionContext::TriggerTy Trigger, Stmt *Child) {
+void CFGBuilder::findConstructionContexts(
+    const ConstructionContext *ContextSoFar, Stmt *Child) {
   if (!BuildOpts.AddRichCXXConstructors)
     return;
   if (!Child)
     return;
-  if (isa<CXXConstructExpr>(Child)) {
-    assert(CurrentConstructionContext.isNull() &&
-           "Already within a construction context!");
-    CurrentConstructionContext = ConstructionContext(Trigger);
+  if (auto *CE = dyn_cast<CXXConstructExpr>(Child)) {
+    if (const ConstructionContext *PreviousContext =
+            ConstructionContextMap.lookup(CE)) {
+      // We might have visited this child when we were finding construction
+      // contexts within its parents.
+      assert(PreviousContext->isStrictlyMoreSpecificThan(ContextSoFar) &&
+             "Already within a different construction context!");
+    } else {
+      ConstructionContextMap[CE] = ContextSoFar;
+    }
   } else if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Child)) {
-    EnterConstructionContextIfNecessary(Trigger, Cleanups->getSubExpr());
+    findConstructionContexts(ContextSoFar, Cleanups->getSubExpr());
+  } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Child)) {
+    findConstructionContexts(
+        ConstructionContext::create(cfg->getBumpVectorContext(), BTE,
+                                    ContextSoFar),
+        BTE->getSubExpr());
   }
 }
 
-void CFGBuilder::ExitConstructionContext() {
-  assert(!CurrentConstructionContext.isNull() &&
+void CFGBuilder::cleanupConstructionContext(CXXConstructExpr *CE) {
+  assert(BuildOpts.AddRichCXXConstructors &&
+         "We should not be managing construction contexts!");
+  assert(ConstructionContextMap.count(CE) &&
          "Cannot exit construction context without the context!");
-  CurrentConstructionContext = ConstructionContext();
+  ConstructionContextMap.erase(CE);
 }
 
 
@@ -1305,7 +1318,9 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   appendInitializer(Block, I);
 
   if (Init) {
-    EnterConstructionContextIfNecessary(I, Init);
+    findConstructionContexts(
+        ConstructionContext::create(cfg->getBumpVectorContext(), I),
+        Init);
 
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
@@ -2395,7 +2410,9 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   autoCreateBlock();
   appendStmt(Block, DS);
 
-  EnterConstructionContextIfNecessary(DS, Init);
+  findConstructionContexts(
+      ConstructionContext::create(cfg->getBumpVectorContext(), DS),
+      Init);
 
   // Keep track of the last non-null block, as 'Block' can be nulled out
   // if the initializer expression is something like a 'while' in a
@@ -2587,7 +2604,9 @@ CFGBlock *CFGBuilder::VisitReturnStmt(ReturnStmt *R) {
 
   addAutomaticObjHandling(ScopePos, LocalScope::const_iterator(), R);
 
-  EnterConstructionContextIfNecessary(R, R->getRetValue());
+  findConstructionContexts(
+      ConstructionContext::create(cfg->getBumpVectorContext(), R),
+      R->getRetValue());
 
   // If the one of the destructors does not return, we already have the Exit
   // block as a successor.
@@ -3945,7 +3964,9 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E,
     autoCreateBlock();
     appendStmt(Block, E);
 
-    EnterConstructionContextIfNecessary(E, E->getSubExpr());
+    findConstructionContexts(
+        ConstructionContext::create(cfg->getBumpVectorContext(), E),
+        E->getSubExpr());
 
     // We do not want to propagate the AlwaysAdd property.
     asc = asc.withAlwaysAdd(false);
@@ -3966,8 +3987,9 @@ CFGBlock *CFGBuilder::VisitCXXNewExpr(CXXNewExpr *NE,
   autoCreateBlock();
   appendStmt(Block, NE);
 
-  EnterConstructionContextIfNecessary(
-      NE, const_cast<CXXConstructExpr *>(NE->getConstructExpr()));
+  findConstructionContexts(
+      ConstructionContext::create(cfg->getBumpVectorContext(), NE),
+      const_cast<CXXConstructExpr *>(NE->getConstructExpr()));
 
   if (NE->getInitializer())
     Block = Visit(NE->getInitializer());
