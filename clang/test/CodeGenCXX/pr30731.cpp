@@ -16,6 +16,6 @@ struct S : A, virtual B, C {
 
 void f(S* s) { s->f(); }
 
-// CHECK-LABEL: define void @"\01?f@@YAXPAUS@@@Z"
+// CHECK-LABEL: define dso_local void @"\01?f@@YAXPAUS@@@Z"
 // CHECK: call
 // CHECK: ret void

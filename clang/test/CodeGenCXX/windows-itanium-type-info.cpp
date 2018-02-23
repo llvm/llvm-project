@@ -24,17 +24,17 @@ void f() {
   throw base();
 }
 
-// CHECK-DAG: @_ZTIi = dllexport constant
-// CHECK-DAG: @_ZTSi = dllexport constant
+// CHECK-DAG: @_ZTIi = dso_local dllexport constant
+// CHECK-DAG: @_ZTSi = dso_local dllexport constant
 
-// CHECK-DAG: @_ZTI7derived = dllexport constant
-// CHECK-DAG: @_ZTS7derived = dllexport constant
-// CHECK-DAG: @_ZTV7derived = dllexport unnamed_addr constant
+// CHECK-DAG: @_ZTI7derived = dso_local dllexport constant
+// CHECK-DAG: @_ZTS7derived = dso_local dllexport constant
+// CHECK-DAG: @_ZTV7derived = dso_local dllexport unnamed_addr constant
 
 // CHECK-DAG: @_ZTI4base = external dllimport constant
 
-// CHECK-EH-IMPORT: @_ZTS4base = linkonce_odr constant
-// CHECK-EH-IMPORT: @_ZTI4base = linkonce_odr constant
+// CHECK-EH-IMPORT: @_ZTS4base = linkonce_odr dso_local constant
+// CHECK-EH-IMPORT: @_ZTI4base = linkonce_odr dso_local constant
 
 struct __declspec(dllimport) gatekeeper {};
 struct zuul : gatekeeper {
@@ -42,5 +42,5 @@ struct zuul : gatekeeper {
 };
 zuul::~zuul() {}
 
-// CHECK-DAG: @_ZTI10gatekeeper = linkonce_odr constant
-// CHECK-DAG: @_ZTS10gatekeeper = linkonce_odr constant
+// CHECK-DAG: @_ZTI10gatekeeper = linkonce_odr dso_local constant
+// CHECK-DAG: @_ZTS10gatekeeper = linkonce_odr dso_local constant

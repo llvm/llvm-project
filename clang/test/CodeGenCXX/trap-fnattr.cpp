@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -O0 -emit-llvm -ftrapv -ftrap-function=mytrap %s -o - | FileCheck %s -check-prefix=TRAPFUNC
 // RUN: %clang_cc1 -O0 -emit-llvm -ftrapv %s -o - | FileCheck %s -check-prefix=NOOPTION
 
-// TRAPFUNC-LABEL: define void @{{_Z12test_builtinv|\"\\01\?test_builtin@@YAXXZ\"}}
+// TRAPFUNC-LABEL: define {{(dso_local )?}}void @{{_Z12test_builtinv|\"\\01\?test_builtin@@YAXXZ\"}}
 // TRAPFUNC: call void @llvm.trap() [[ATTR0:#[0-9]+]]
 
-// NOOPTION-LABEL: define void @{{_Z12test_builtinv|\"\\01\?test_builtin@@YAXXZ\"}}
+// NOOPTION-LABEL: define {{(dso_local )?}}void @{{_Z12test_builtinv|\"\\01\?test_builtin@@YAXXZ\"}}
 // NOOPTION: call void @llvm.trap(){{$}}
 
 void test_builtin(void) {

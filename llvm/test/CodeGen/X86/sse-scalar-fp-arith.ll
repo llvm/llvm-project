@@ -1117,9 +1117,8 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ;
 ; AVX512-LABEL: add_ss_mask:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm2 {%k1}
+; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %a, i64 0
@@ -1172,9 +1171,8 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ;
 ; AVX512-LABEL: add_sd_mask:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddsd %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm2 {%k1}
+; AVX512-NEXT:    vaddsd %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %1 = extractelement <2 x double> %a, i64 0

@@ -11,7 +11,7 @@ struct __declspec(dllexport) C : A, B {
   virtual void m();
 };
 void C::m() {}
-// CHECK: define dllexport void @_ZThn8_N1C1mEv
+// CHECK: define dso_local dllexport void @_ZThn8_N1C1mEv
 
 struct Base {
   virtual void m();
@@ -20,4 +20,4 @@ struct __declspec(dllexport) Derived : virtual Base {
   virtual void m();
 };
 void Derived::m() {}
-// CHECK: define dllexport void @_ZTv0_n24_N7Derived1mEv
+// CHECK: define dso_local dllexport void @_ZTv0_n24_N7Derived1mEv

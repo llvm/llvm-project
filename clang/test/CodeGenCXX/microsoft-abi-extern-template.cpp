@@ -7,13 +7,13 @@
 // CHECK-SAME:   i8* bitcast (i8* (%struct.Foo*, i32)* @"\01??_G?$Foo@H@@UEAAPEAXI@Z" to i8*)
 // CHECK-SAME: ] }, comdat
 
-// CHECK-LABEL: define %struct.Foo* @"\01?f@@YAPEAU?$Foo@H@@XZ"()
+// CHECK-LABEL: define dso_local %struct.Foo* @"\01?f@@YAPEAU?$Foo@H@@XZ"()
 // CHECK: call %struct.Foo* @"\01??0?$Foo@H@@QEAA@XZ"(%struct.Foo* %{{.*}})
 
-// CHECK: define available_externally %struct.Foo* @"\01??0?$Foo@H@@QEAA@XZ"(%struct.Foo* returned %this)
+// CHECK: define available_externally dso_local %struct.Foo* @"\01??0?$Foo@H@@QEAA@XZ"(%struct.Foo* returned %this)
 // CHECK:   store {{.*}} @"\01??_7?$Foo@H@@6B@"
 
-// CHECK: define linkonce_odr i8* @"\01??_G?$Foo@H@@UEAAPEAXI@Z"(%struct.Foo* %this, i32 %should_call_delete)
+// CHECK: define linkonce_odr dso_local i8* @"\01??_G?$Foo@H@@UEAAPEAXI@Z"(%struct.Foo* %this, i32 %should_call_delete)
 
 struct Base {
   virtual ~Base();

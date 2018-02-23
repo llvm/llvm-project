@@ -198,8 +198,6 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  CurRec->addSuperClass(SC, SubClass.RefRange);
-
   ArrayRef<std::pair<Record *, SMRange>> SCs = SC->getSuperClasses();
   for (const auto &SCPair : SCs) {
     if (CurRec->isSubClassOf(SCPair.first))
@@ -207,6 +205,11 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
                    "Already subclass of '" + SCPair.first->getName() + "'!\n");
     CurRec->addSuperClass(SCPair.first, SCPair.second);
   }
+
+  if (CurRec->isSubClassOf(SC))
+    return Error(SubClass.RefRange.Start,
+                 "Already subclass of '" + SC->getName() + "'!\n");
+  CurRec->addSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -1064,10 +1067,12 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
 
-      Type = resolveTypes(MHSTy, RHSTy);
-      if (!Type) {
-        TokError(Twine("inconsistent types '") + MHSTy->getAsString() +
-                 "' and '" + RHSTy->getAsString() + "' for !if");
+      if (MHSTy->typeIsConvertibleTo(RHSTy)) {
+        Type = RHSTy;
+      } else if (RHSTy->typeIsConvertibleTo(MHSTy)) {
+        Type = MHSTy;
+      } else {
+        TokError("inconsistent types for !if");
         return nullptr;
       }
       break;

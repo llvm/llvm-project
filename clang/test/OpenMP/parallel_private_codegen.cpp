@@ -103,7 +103,7 @@ int main() {
   static int sivar;
   SS ss(sivar);
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
+  // LAMBDA: [[G:@.+]] = {{(dso_local )?}}global i{{[0-9]+}} 1212,
   // LAMBDA-LABEL: @main
   // LAMBDA: alloca [[SS_TY]],
   // LAMBDA: alloca [[CAP_TY:%.+]],
@@ -175,7 +175,7 @@ int main() {
   }();
   return 0;
 #elif defined(BLOCKS)
-  // BLOCKS: [[G:@.+]] = global i{{[0-9]+}} 1212,
+  // BLOCKS: [[G:@.+]] = {{(dso_local )?}}global i{{[0-9]+}} 1212,
   // BLOCKS-LABEL: @main
   // BLOCKS: call
   // BLOCKS: call{{.*}} void {{%.+}}(i8

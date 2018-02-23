@@ -5,7 +5,7 @@ int zex;
 // GCC produces a weak symbol for this because it matches mangled names.
 // Different c++ ABIs may or may not mangle this, so we produce a strong
 // symbol.
-// CHECK: @zex = global i32
+// CHECK: @zex = {{(dso_local )?}}global i32
 
 #pragma weak foo
 struct S {  void foo(); };

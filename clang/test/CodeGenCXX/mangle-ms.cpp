@@ -27,8 +27,8 @@ int _c(void) {return N::anonymous + c;}
 // X64-DAG:   @"\01?_c@@YAHXZ"
 
 const int &NeedsReferenceTemporary = 2;
-// CHECK-DAG: @"\01?NeedsReferenceTemporary@@3ABHB" = constant i32* @"\01?$RT1@NeedsReferenceTemporary@@3ABHB"
-// X64-DAG: @"\01?NeedsReferenceTemporary@@3AEBHEB" = constant i32* @"\01?$RT1@NeedsReferenceTemporary@@3AEBHEB"
+// CHECK-DAG: @"\01?NeedsReferenceTemporary@@3ABHB" = dso_local constant i32* @"\01?$RT1@NeedsReferenceTemporary@@3ABHB"
+// X64-DAG: @"\01?NeedsReferenceTemporary@@3AEBHEB" = dso_local constant i32* @"\01?$RT1@NeedsReferenceTemporary@@3AEBHEB"
 
 class foo {
   static const short d;
@@ -448,22 +448,22 @@ namespace PassObjectSize {
 //   void foo(void *const, __clang::__pass_object_size0);
 // where __clang is a top-level namespace.
 
-// CHECK-DAG: define i32 @"\01?foo@PassObjectSize@@YAHQAHW4__pass_object_size0@__clang@@@Z"
+// CHECK-DAG: define dso_local i32 @"\01?foo@PassObjectSize@@YAHQAHW4__pass_object_size0@__clang@@@Z"
 int foo(int *const i __attribute__((pass_object_size(0)))) { return 0; }
-// CHECK-DAG: define i32 @"\01?bar@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@@Z"
+// CHECK-DAG: define dso_local i32 @"\01?bar@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@@Z"
 int bar(int *const i __attribute__((pass_object_size(1)))) { return 0; }
-// CHECK-DAG: define i32 @"\01?qux@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@0W4__pass_object_size0@3@@Z"
+// CHECK-DAG: define dso_local i32 @"\01?qux@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@0W4__pass_object_size0@3@@Z"
 int qux(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(0)))) { return 0; }
-// CHECK-DAG: define i32 @"\01?zot@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@01@Z"
+// CHECK-DAG: define dso_local i32 @"\01?zot@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@01@Z"
 int zot(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(1)))) { return 0; }
 }
 
 namespace Atomic {
-// CHECK-DAG: define void @"\01?f@Atomic@@YAXU?$_Atomic@H@__clang@@@Z"(
+// CHECK-DAG: define dso_local void @"\01?f@Atomic@@YAXU?$_Atomic@H@__clang@@@Z"(
 void f(_Atomic(int)) {}
 }
 namespace Complex {
-// CHECK-DAG: define void @"\01?f@Complex@@YAXU?$_Complex@H@__clang@@@Z"(
+// CHECK-DAG: define dso_local void @"\01?f@Complex@@YAXU?$_Complex@H@__clang@@@Z"(
 void f(_Complex int) {}
 }
 

@@ -13,7 +13,7 @@ void basic_finally(void) {
   }
 }
 
-// CHECK-LABEL: define void @basic_finally()
+// CHECK-LABEL: define dso_local void @basic_finally()
 // CHECK: invoke void @might_crash()
 // CHECK:     to label %[[invoke_cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -53,7 +53,7 @@ l:
   }
 }
 
-// CHECK-LABEL: define void @label_in_finally()
+// CHECK-LABEL: define dso_local void @label_in_finally()
 // CHECK: invoke void @might_crash()
 // CHECK:     to label %[[invoke_cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -81,7 +81,7 @@ void use_abnormal_termination(void) {
   }
 }
 
-// CHECK-LABEL: define void @use_abnormal_termination()
+// CHECK-LABEL: define dso_local void @use_abnormal_termination()
 // CHECK: invoke void @might_crash()
 // CHECK:     to label %[[invoke_cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -110,7 +110,7 @@ void noreturn_noop_finally() {
   }
 }
 
-// CHECK-LABEL: define void @noreturn_noop_finally()
+// CHECK-LABEL: define dso_local void @noreturn_noop_finally()
 // CHECK: call void @"\01?fin$0@0@noreturn_noop_finally@@"({{.*}})
 // CHECK: ret void
 
@@ -127,7 +127,7 @@ void noreturn_finally() {
   }
 }
 
-// CHECK-LABEL: define void @noreturn_finally()
+// CHECK-LABEL: define dso_local void @noreturn_finally()
 // CHECK: invoke void @might_crash()
 // CHECK:     to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -151,7 +151,7 @@ int finally_with_return() {
   } __finally {
   }
 }
-// CHECK-LABEL: define i32 @finally_with_return()
+// CHECK-LABEL: define dso_local i32 @finally_with_return()
 // CHECK: call void @"\01?fin$0@0@finally_with_return@@"({{.*}})
 // CHECK-NEXT: ret i32 42
 
@@ -173,7 +173,7 @@ int nested___finally___finally() {
   return 0;
 }
 
-// CHECK-LABEL: define i32 @nested___finally___finally
+// CHECK-LABEL: define dso_local i32 @nested___finally___finally
 // CHECK: invoke void @"\01?fin$1@0@nested___finally___finally@@"({{.*}})
 // CHECK:          to label %[[outercont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -208,7 +208,7 @@ int nested___finally___finally_with_eh_edge() {
   }
   return 912;
 }
-// CHECK-LABEL: define i32 @nested___finally___finally_with_eh_edge
+// CHECK-LABEL: define dso_local i32 @nested___finally___finally_with_eh_edge
 // CHECK: invoke void @might_crash()
 // CHECK-NEXT: to label %[[invokecont:[^ ]*]] unwind label %[[lpad1:[^ ]*]]
 //
@@ -252,7 +252,7 @@ void finally_within_finally() {
   }
 }
 
-// CHECK-LABEL: define void @finally_within_finally(
+// CHECK-LABEL: define dso_local void @finally_within_finally(
 // CHECK: invoke void @might_crash(
 
 // CHECK: call void @"\01?fin$0@0@finally_within_finally@@"(

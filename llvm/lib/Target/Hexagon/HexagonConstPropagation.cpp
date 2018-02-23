@@ -1880,10 +1880,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonConstPropagation() : MachineFunctionPass(ID) {
-      PassRegistry &Registry = *PassRegistry::getPassRegistry();
-      initializeHexagonConstPropagationPass(Registry);
-    }
+    HexagonConstPropagation() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon Constant Propagation";
@@ -1903,8 +1900,8 @@ namespace {
 
 char HexagonConstPropagation::ID = 0;
 
-INITIALIZE_PASS(HexagonConstPropagation, "hcp", "Hexagon Constant Propagation",
-                false, false)
+INITIALIZE_PASS(HexagonConstPropagation, "hexagon-constp",
+  "Hexagon Constant Propagation", false, false)
 
 HexagonConstEvaluator::HexagonConstEvaluator(MachineFunction &Fn)
   : MachineConstEvaluator(Fn),
@@ -2022,6 +2019,8 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
     case Hexagon::A2_combineii:  // combine(#s8Ext, #s8)
     case Hexagon::A4_combineii:  // combine(#s8, #u6Ext)
     {
+      if (!MI.getOperand(1).isImm() || !MI.getOperand(2).isImm())
+        return false;
       uint64_t Hi = MI.getOperand(1).getImm();
       uint64_t Lo = MI.getOperand(2).getImm();
       uint64_t Res = (Hi << 32) | (Lo & 0xFFFFFFFF);
@@ -2631,6 +2630,8 @@ bool HexagonConstEvaluator::evaluateHexLogical(const MachineInstr &MI,
       Eval = evaluateANDrr(R1, Register(Src2), Inputs, RC);
       break;
     case Hexagon::A2_andir: {
+      if (!Src2.isImm())
+        return false;
       APInt A(32, Src2.getImm(), true);
       Eval = evaluateANDri(R1, A, Inputs, RC);
       break;
@@ -2640,6 +2641,8 @@ bool HexagonConstEvaluator::evaluateHexLogical(const MachineInstr &MI,
       Eval = evaluateORrr(R1, Register(Src2), Inputs, RC);
       break;
     case Hexagon::A2_orir: {
+      if (!Src2.isImm())
+        return false;
       APInt A(32, Src2.getImm(), true);
       Eval = evaluateORri(R1, A, Inputs, RC);
       break;

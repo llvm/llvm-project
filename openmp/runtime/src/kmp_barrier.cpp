@@ -1883,34 +1883,31 @@ void __kmp_fork_barrier(int gtid, int tid) {
   }
 
 #if OMPT_SUPPORT
-  if (ompt_enabled.enabled) {
-    if (this_thr->th.ompt_thread_info.state ==
-        omp_state_wait_barrier_implicit) {
-      int ds_tid = this_thr->th.th_info.ds.ds_tid;
-      ompt_data_t *tId = (team) ? OMPT_CUR_TASK_DATA(this_thr)
-                                : &(this_thr->th.ompt_thread_info.task_data);
-      this_thr->th.ompt_thread_info.state = omp_state_overhead;
+  if (ompt_enabled.enabled &&
+      this_thr->th.ompt_thread_info.state == omp_state_wait_barrier_implicit) {
+    int ds_tid = this_thr->th.th_info.ds.ds_tid;
+    ompt_data_t *task_data = (team)
+                                 ? OMPT_CUR_TASK_DATA(this_thr)
+                                 : &(this_thr->th.ompt_thread_info.task_data);
+    this_thr->th.ompt_thread_info.state = omp_state_overhead;
 #if OMPT_OPTIONAL
-      void *codeptr = NULL;
-      if (KMP_MASTER_TID(ds_tid) &&
-          (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
-           ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
-        codeptr = team->t.ompt_team_info.master_return_address;
-      if (ompt_enabled.ompt_callback_sync_region_wait) {
-        ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-            ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
-      }
-      if (ompt_enabled.ompt_callback_sync_region) {
-        ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-            ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
-      }
+    void *codeptr = NULL;
+    if (KMP_MASTER_TID(ds_tid) &&
+        (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
+         ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
+      codeptr = team->t.ompt_team_info.master_return_address;
+    if (ompt_enabled.ompt_callback_sync_region_wait) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
+          ompt_sync_region_barrier, ompt_scope_end, NULL, task_data, codeptr);
+    }
+    if (ompt_enabled.ompt_callback_sync_region) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
+          ompt_sync_region_barrier, ompt_scope_end, NULL, task_data, codeptr);
+    }
 #endif
-      if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
-        ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-            ompt_scope_end, NULL, tId, 0, ds_tid);
-      }
-      // return to idle state
-      this_thr->th.ompt_thread_info.state = omp_state_overhead;
+    if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
+      ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
+          ompt_scope_end, NULL, task_data, 0, ds_tid);
     }
   }
 #endif

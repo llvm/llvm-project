@@ -209,7 +209,7 @@ static int getLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
     return NoInformationAvailable;
 
   // Compute output latency.
-  int Latency = 0;
+  int16_t Latency = 0;
   for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
        DefIdx != DefEnd; ++DefIdx) {
     // Lookup the definition's write latency in SubtargetInfo.

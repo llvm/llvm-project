@@ -176,4 +176,5 @@ def Sparc : Target {
   let InstructionSet = SparcInstrInfo;
   let AssemblyParsers  = [SparcAsmParser];
   let AssemblyWriters = [SparcAsmWriter];
+  let AllowRegisterRenaming = 1;
 }

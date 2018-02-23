@@ -77,6 +77,11 @@ public:
   ///
   Record *getInstructionSet() const;
 
+  /// getAllowRegisterRenaming - Return the AllowRegisterRenaming flag value for
+  /// this target.
+  ///
+  bool getAllowRegisterRenaming() const;
+
   /// getAsmParser - Return the AssemblyParser definition for this target.
   ///
   Record *getAsmParser() const;

@@ -146,7 +146,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
     encodeULEB128(wasm::WASM_SYMBOL_TABLE, OS);
 
     encodeULEB128(Section.SymbolTable.size(), SubSection.GetStream());
-#ifndef _NDEBUG
+#ifndef NDEBUG
     uint32_t SymbolIndex = 0;
 #endif
     for (const WasmYAML::SymbolInfo &Info : Section.SymbolTable) {

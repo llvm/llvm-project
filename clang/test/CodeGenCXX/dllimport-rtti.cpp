@@ -12,7 +12,7 @@ struct __declspec(dllimport) S {
 // MSVC-DAG: @"\01??_R3S@@8" = linkonce_odr
 
 // GNU-DAG: @_ZTV1S = available_externally dllimport
-// GNU-DAG: @_ZTI1S = linkonce_odr
+// GNU-DAG: @_ZTI1S = linkonce_odr dso_local
 
 struct U : S {
 } u;
@@ -21,13 +21,13 @@ struct __declspec(dllimport) V {
   virtual void f();
 } v;
 // GNU-DAG: @_ZTV1V = available_externally dllimport
-// GNU-DAG: @_ZTS1V = linkonce_odr
-// GNU-DAG: @_ZTI1V = linkonce_odr
+// GNU-DAG: @_ZTS1V = linkonce_odr dso_local
+// GNU-DAG: @_ZTI1V = linkonce_odr dso_local
 
 struct W {
   __declspec(dllimport) virtual void f();
   virtual void g();
 } w;
-// GNU-DAG: @_ZTV1W = linkonce_odr
-// GNU-DAG: @_ZTS1W = linkonce_odr
-// GNU-DAG: @_ZTI1W = linkonce_odr
+// GNU-DAG: @_ZTV1W = linkonce_odr dso_local
+// GNU-DAG: @_ZTS1W = linkonce_odr dso_local
+// GNU-DAG: @_ZTI1W = linkonce_odr dso_local
