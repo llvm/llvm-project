@@ -50,28 +50,6 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:         SigIndex:        0
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0 ]
-; CHECK-NEXT:   - Type:            GLOBAL
-; CHECK-NEXT:     Globals:         
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:        
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           0
-; CHECK-NEXT:  - Type:            EXPORT
-; CHECK-NEXT:    Exports:
-; CHECK-NEXT:      - Name:            callImport
-; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           1
-; CHECK-NEXT:      - Name:            basicInlineFn
-; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           2
-; CHECK-NEXT:      - Name:            sharedFn
-; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           3
-; CHECK-NEXT:      - Name:            constantData
-; CHECK-NEXT:        Kind:            GLOBAL
-; CHECK-NEXT:        Index:           0
 ; CHECK-NEXT:  - Type:            CODE
 ; CHECK-NEXT:    Relocations:
 ; CHECK-NEXT:      - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
@@ -98,24 +76,44 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:  - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            linking
 ; CHECK-NEXT:    DataSize:        3
-; CHECK-NEXT:    SymbolInfo:
-; CHECK-NEXT:      - Name:            basicInlineFn
-; CHECK-NEXT:        Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:      - Name:            sharedFn
-; CHECK-NEXT:        Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:      - Name:            constantData
-; CHECK-NEXT:        Flags:           [ BINDING_WEAK ]
+; CHECK-NEXT:    SymbolTable:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            funcImport
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        0
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            callImport
+; CHECK-NEXT:         Flags:           [  ]
+; CHECK-NEXT:         Function:        1
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            basicInlineFn
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+; CHECK-NEXT:         Function:        2
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            sharedFn
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+; CHECK-NEXT:         Function:        3
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            constantData
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+; CHECK-NEXT:         Segment:         0
+; CHECK-NEXT:         Size:            3
 ; CHECK-NEXT:    SegmentInfo:
 ; CHECK-NEXT:      - Index:           0
 ; CHECK-NEXT:        Name:            .rodata.constantData
 ; CHECK-NEXT:        Alignment:       1
 ; CHECK-NEXT:        Flags:           [  ]
 ; CHECK-NEXT:    Comdats:
-; CHECK-NEXT:      - Name:            basicInlineFn
+; CHECK-NEXT:        Name:            basicInlineFn
 ; CHECK-NEXT:        Entries:
 ; CHECK-NEXT:          - Kind:            FUNCTION
 ; CHECK-NEXT:            Index:           2
-; CHECK-NEXT:      - Name:            sharedComdat
+; CHECK-NEXT:        Name:            sharedComdat
 ; CHECK-NEXT:        Entries:
 ; CHECK-NEXT:          - Kind:            FUNCTION
 ; CHECK-NEXT:            Index:           3

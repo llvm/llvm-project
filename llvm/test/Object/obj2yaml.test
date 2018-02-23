@@ -645,17 +645,39 @@ ELF-AVR-NEXT:     - Name:            _end
 ELF-AVR-NEXT:       Section:         .data
 ELF-AVR-NEXT:       Value:           0x0000000000800060
 
+
 WASM:      --- !WASM
 WASM-NEXT: FileHeader:
 WASM-NEXT:   Version:         0x00000001
-WASM:      - Type:            EXPORT
-WASM-NEXT:   Exports:         
-WASM-NEXT:     - Name:            main
-WASM-NEXT:       Kind:            FUNCTION
-WASM-NEXT:       Index:           2
-WASM-NEXT:     - Name:            var
-WASM-NEXT:       Kind:            GLOBAL
-WASM-NEXT:       Index:           1
+WASM:        - Type:            CUSTOM
+WASM-NEXT:     Name:            linking
+WASM-NEXT:     DataSize:        20
+WASM-NEXT:     SymbolTable:
+WASM-NEXT:       - Index:           0
+WASM-NEXT:         Kind:            FUNCTION
+WASM-NEXT:         Name:            puts
+WASM-NEXT:         Flags:           [ UNDEFINED ]
+WASM-NEXT:         Function:        0
+WASM-NEXT:       - Index:           1
+WASM:              Name:            SomeOtherFunction
+WASM:            - Index:           2
+WASM:              Name:            main
+WASM:            - Index:           3
+WASM-NEXT:         Kind:            DATA
+WASM-NEXT:         Name:            .L.str
+WASM-NEXT:         Flags:           [ BINDING_LOCAL ]
+WASM-NEXT:         Segment:         0
+WASM-NEXT:         Size:        13
+WASM-NEXT:       - Index:           4
+WASM:              Name:            var
+WASM:          SegmentInfo:
+WASM-NEXT:       - Index:           0
+WASM-NEXT:         Name:            .rodata..L.str
+WASM-NEXT:         Alignment:       1
+WASM-NEXT:         Flags:           [  ]
+WASM-NEXT:       - Index:           1
+WASM:      ...
+
 
 ELF-X86-64-UNWIND:      - Name:            .eh_frame
 ELF-X86-64-UNWIND-NEXT:   Type:            SHT_X86_64_UNWIND

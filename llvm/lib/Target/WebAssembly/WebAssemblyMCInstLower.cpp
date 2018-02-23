@@ -74,7 +74,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
     WasmSym->setReturns(std::move(Returns));
     WasmSym->setParams(std::move(Params));
-    WasmSym->setIsFunction(true);
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   }
 
   return WasmSym;
@@ -91,9 +91,16 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   const WebAssemblySubtarget &Subtarget = Printer.getSubtarget();
 
   // __stack_pointer is a global variable; all other external symbols used by
-  // CodeGen are functions.
-  if (strcmp(Name, "__stack_pointer") == 0)
+  // CodeGen are functions.  It's OK to hardcode knowledge of specific symbols
+  // here; this method is precisely there for fetching the signatures of known
+  // Clang-provided symbols.
+  if (strcmp(Name, "__stack_pointer") == 0) {
+    wasm::ValType iPTR =
+        Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+    WasmSym->setGlobalType(wasm::WasmGlobalType{int32_t(iPTR), true});
     return WasmSym;
+  }
 
   SmallVector<wasm::ValType, 4> Returns;
   SmallVector<wasm::ValType, 4> Params;
@@ -101,7 +108,7 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
   WasmSym->setReturns(std::move(Returns));
   WasmSym->setParams(std::move(Params));
-  WasmSym->setIsFunction(true);
+  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
   return WasmSym;
 }
@@ -189,7 +196,7 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
             MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
             WasmSym->setReturns(std::move(Returns));
             WasmSym->setParams(std::move(Params));
-            WasmSym->setIsFunction(true);
+            WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
             const MCExpr *Expr =
                 MCSymbolRefExpr::create(WasmSym,

@@ -70,9 +70,6 @@ FunctionPass *createX86OptimizeLEAs();
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
 
-/// Return a pass that avoids creating store forward block issues in the hardware.
-FunctionPass *createX86FixupSFB();
-
 /// Return a pass that expands WinAlloca pseudo-instructions.
 FunctionPass *createX86WinAllocaExpander();
 

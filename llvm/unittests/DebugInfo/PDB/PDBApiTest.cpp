@@ -63,7 +63,7 @@ namespace {
 
 class MockSession : public IPDBSession {
   uint64_t getLoadAddress() const override { return 0; }
-  void setLoadAddress(uint64_t Address) override {}
+  bool setLoadAddress(uint64_t Address) override { return false; }
   std::unique_ptr<PDBSymbolExe> getGlobalScope() override { return nullptr; }
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override {
     return nullptr;

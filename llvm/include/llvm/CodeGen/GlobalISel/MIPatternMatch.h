@@ -93,7 +93,7 @@ struct And<Pred, Preds...> : And<Preds...> {
 template <typename... Preds> struct Or {
   template <typename MatchSrc>
   bool match(MachineRegisterInfo &MRI, MatchSrc &&src) {
-    return true;
+    return false;
   }
 };
 

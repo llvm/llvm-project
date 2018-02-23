@@ -1,4 +1,4 @@
-//===--- TypoCorrection.h - Class for typo correction results ---*- C++ -*-===//
+//===- TypoCorrection.h - Class for typo correction results -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,18 +15,36 @@
 #ifndef LLVM_CLANG_SEMA_TYPOCORRECTION_H
 #define LLVM_CLANG_SEMA_TYPOCORRECTION_H
 
-#include "clang/AST/DeclCXX.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/DeclSpec.h"
-#include "clang/Sema/Ownership.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
+#include <cstddef>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
+
+class DeclContext;
+class IdentifierInfo;
+class LangOptions;
+class MemberExpr;
+class NestedNameSpecifier;
+class Sema;
 
 /// @brief Simple class containing the result of Sema::CorrectTypo
 class TypoCorrection {
 public:
   // "Distance" for unusable corrections
-  static const unsigned InvalidDistance = ~0U;
+  static const unsigned InvalidDistance = std::numeric_limits<unsigned>::max();
+
   // The largest distance still considered valid (larger edit distances are
   // mapped to InvalidDistance by getEditDistance).
   static const unsigned MaximumDistance = 10000U;
@@ -43,9 +61,7 @@ public:
                  NestedNameSpecifier *NNS = nullptr, unsigned CharDistance = 0,
                  unsigned QualifierDistance = 0)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), QualifierDistance(QualifierDistance),
-        CallbackDistance(0), ForceSpecifierReplacement(false),
-        RequiresImport(false) {
+        CharDistance(CharDistance), QualifierDistance(QualifierDistance) {
     if (NameDecl)
       CorrectionDecls.push_back(NameDecl);
   }
@@ -53,8 +69,7 @@ public:
   TypoCorrection(NamedDecl *Name, NestedNameSpecifier *NNS = nullptr,
                  unsigned CharDistance = 0)
       : CorrectionName(Name->getDeclName()), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), QualifierDistance(0), CallbackDistance(0),
-        ForceSpecifierReplacement(false), RequiresImport(false) {
+        CharDistance(CharDistance) {
     if (Name)
       CorrectionDecls.push_back(Name);
   }
@@ -62,16 +77,13 @@ public:
   TypoCorrection(DeclarationName Name, NestedNameSpecifier *NNS = nullptr,
                  unsigned CharDistance = 0)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), QualifierDistance(0), CallbackDistance(0),
-        ForceSpecifierReplacement(false), RequiresImport(false) {}
+        CharDistance(CharDistance) {}
 
-  TypoCorrection()
-      : CorrectionNameSpec(nullptr), CharDistance(0), QualifierDistance(0),
-        CallbackDistance(0), ForceSpecifierReplacement(false),
-        RequiresImport(false) {}
+  TypoCorrection() = default;
 
   /// \brief Gets the DeclarationName of the typo correction
   DeclarationName getCorrection() const { return CorrectionName; }
+
   IdentifierInfo *getCorrectionAsIdentifierInfo() const {
     return CorrectionName.getAsIdentifierInfo();
   }
@@ -80,6 +92,7 @@ public:
   NestedNameSpecifier *getCorrectionSpecifier() const {
     return CorrectionNameSpec;
   }
+
   void setCorrectionSpecifier(NestedNameSpecifier *NNS) {
     CorrectionNameSpec = NNS;
     ForceSpecifierReplacement = (NNS != nullptr);
@@ -167,6 +180,7 @@ public:
   void addCorrectionDecl(NamedDecl *CDecl);
 
   std::string getAsString(const LangOptions &LO) const;
+
   std::string getQuoted(const LangOptions &LO) const {
     return "'" + getAsString(LO) + "'";
   }
@@ -214,15 +228,20 @@ public:
     return CorrectionRange;
   }
 
-  typedef SmallVectorImpl<NamedDecl *>::iterator decl_iterator;
+  using decl_iterator = SmallVectorImpl<NamedDecl *>::iterator;
+
   decl_iterator begin() {
     return isKeyword() ? CorrectionDecls.end() : CorrectionDecls.begin();
   }
+
   decl_iterator end() { return CorrectionDecls.end(); }
-  typedef SmallVectorImpl<NamedDecl *>::const_iterator const_decl_iterator;
+
+  using const_decl_iterator = SmallVectorImpl<NamedDecl *>::const_iterator;
+
   const_decl_iterator begin() const {
     return isKeyword() ? CorrectionDecls.end() : CorrectionDecls.begin();
   }
+
   const_decl_iterator end() const { return CorrectionDecls.end(); }
 
   /// \brief Returns whether this typo correction is correcting to a
@@ -246,14 +265,14 @@ private:
 
   // Results.
   DeclarationName CorrectionName;
-  NestedNameSpecifier *CorrectionNameSpec;
+  NestedNameSpecifier *CorrectionNameSpec = nullptr;
   SmallVector<NamedDecl *, 1> CorrectionDecls;
-  unsigned CharDistance;
-  unsigned QualifierDistance;
-  unsigned CallbackDistance;
+  unsigned CharDistance = 0;
+  unsigned QualifierDistance = 0;
+  unsigned CallbackDistance = 0;
   SourceRange CorrectionRange;
-  bool ForceSpecifierReplacement;
-  bool RequiresImport;
+  bool ForceSpecifierReplacement = false;
+  bool RequiresImport = false;
 
   std::vector<PartialDiagnostic> ExtraDiagnostics;
 };
@@ -266,13 +285,9 @@ public:
 
   explicit CorrectionCandidateCallback(IdentifierInfo *Typo = nullptr,
                                        NestedNameSpecifier *TypoNNS = nullptr)
-      : WantTypeSpecifiers(true), WantExpressionKeywords(true),
-        WantCXXNamedCasts(true), WantFunctionLikeCasts(true),
-        WantRemainingKeywords(true), WantObjCSuper(false),
-        IsObjCIvarLookup(false), IsAddressOfOperand(false), Typo(Typo),
-        TypoNNS(TypoNNS) {}
+      : Typo(Typo), TypoNNS(TypoNNS) {}
 
-  virtual ~CorrectionCandidateCallback() {}
+  virtual ~CorrectionCandidateCallback() = default;
 
   /// \brief Simple predicate used by the default RankCandidate to
   /// determine whether to return an edit distance of 0 or InvalidDistance.
@@ -304,16 +319,16 @@ public:
   // Flags for context-dependent keywords. WantFunctionLikeCasts is only
   // used/meaningful when WantCXXNamedCasts is false.
   // TODO: Expand these to apply to non-keywords or possibly remove them.
-  bool WantTypeSpecifiers;
-  bool WantExpressionKeywords;
-  bool WantCXXNamedCasts;
-  bool WantFunctionLikeCasts;
-  bool WantRemainingKeywords;
-  bool WantObjCSuper;
+  bool WantTypeSpecifiers = true;
+  bool WantExpressionKeywords = true;
+  bool WantCXXNamedCasts = true;
+  bool WantFunctionLikeCasts = true;
+  bool WantRemainingKeywords = true;
+  bool WantObjCSuper = false;
   // Temporary hack for the one case where a CorrectTypoContext enum is used
   // when looking up results.
-  bool IsObjCIvarLookup;
-  bool IsAddressOfOperand;
+  bool IsObjCIvarLookup = false;
+  bool IsAddressOfOperand = false;
 
 protected:
   bool MatchesTypo(const TypoCorrection &candidate) {
@@ -349,7 +364,7 @@ public:
 
   bool ValidateCandidate(const TypoCorrection &candidate) override;
 
- private:
+private:
   unsigned NumArgs;
   bool HasExplicitTemplateArgs;
   DeclContext *CurContext;
@@ -372,6 +387,6 @@ public:
   }
 };
 
-}
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_TYPOCORRECTION_H

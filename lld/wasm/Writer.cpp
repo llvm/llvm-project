@@ -759,31 +759,33 @@ void Writer::assignIndexes() {
     }
   }
 
+  auto HandleRelocs = [&](InputChunk *Chunk) {
+    if (!Chunk->Live)
+      return;
+    ObjFile *File = Chunk->File;
+    ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
+    for (const WasmRelocation& Reloc : Chunk->getRelocations()) {
+      if (Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_I32 ||
+          Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_SLEB) {
+        FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
+        if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+          continue;
+        Sym->setTableIndex(TableIndex++);
+        IndirectFunctions.emplace_back(Sym);
+      } else if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
+        File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
+        File->TypeIsUsed[Reloc.Index] = true;
+      }
+    }
+  };
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Handle relocs: " << File->getName() << "\n");
-    auto HandleRelocs = [&](InputChunk *Chunk) {
-      if (!Chunk->Live)
-        return;
-      ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
-      for (const WasmRelocation& Reloc : Chunk->getRelocations()) {
-        if (Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_I32 ||
-            Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_SLEB) {
-          FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
-          if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
-            continue;
-          Sym->setTableIndex(TableIndex++);
-          IndirectFunctions.emplace_back(Sym);
-        } else if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
-          Chunk->File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
-          Chunk->File->TypeIsUsed[Reloc.Index] = true;
-        }
-      }
-    };
 
-    for (InputFunction* Function : File->Functions)
-      HandleRelocs(Function);
-    for (InputSegment* Segment : File->Segments)
-      HandleRelocs(Segment);
+    for (InputChunk* Chunk : File->Functions)
+      HandleRelocs(Chunk);
+    for (InputChunk* Chunk : File->Segments)
+      HandleRelocs(Chunk);
   }
 }
 

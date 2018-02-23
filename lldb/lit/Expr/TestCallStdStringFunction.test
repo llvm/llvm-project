@@ -1,9 +1,6 @@
 # XFAIL: windows
 # -> llvm.org/pr21765
 
-# XFAIL: freebsd
-# -> llvm.org/pr17807
-
 # RUN: %cxx %p/Inputs/call-function.cpp -g -o %t && %lldb -b -s %s -- %t | FileCheck %s
 
 breakpoint set --file call-function.cpp --line 52

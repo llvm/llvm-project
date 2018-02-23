@@ -176,10 +176,10 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
       // TODO: MC converts all floating point immediate operands to double.
       // This is fine for numeric values, but may cause NaNs to change bits.
-      O << toString(APFloat(float(Op.getFPImm())));
+      O << ::toString(APFloat(float(Op.getFPImm())));
     } else {
       assert(Info.OperandType == WebAssembly::OPERAND_F64IMM);
-      O << toString(APFloat(Op.getFPImm()));
+      O << ::toString(APFloat(Op.getFPImm()));
     }
   } else {
     assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||

@@ -17,7 +17,15 @@ entry:
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
-; CHECK-NEXT:     SymbolInfo:
-; CHECK-NEXT:       - Name:            hiddenVis
+; CHECK-NEXT:     SymbolTable:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            defaultVis
+; CHECK-NEXT:         Flags:           [  ]
+; CHECK-NEXT:         Function:        0
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            hiddenVis
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:         Function:        1
 ; CHECK-NEXT: ...

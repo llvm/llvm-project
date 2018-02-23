@@ -368,6 +368,12 @@ TEST(PatternMatchInstr, MatchCombinators) {
   ASSERT_TRUE(match);
   ASSERT_EQ(Src0, Copies[0]);
   ASSERT_EQ(Src1, Copies[1]);
+
+  // Match a case where none of the predicates hold true.
+  match = mi_match(
+      MIBAdd->getOperand(0).getReg(), MRI,
+      m_any_of(m_SpecificType(LLT::scalar(16)), m_GSub(m_Reg(), m_Reg())));
+  ASSERT_FALSE(match);
 }
 } // namespace
 

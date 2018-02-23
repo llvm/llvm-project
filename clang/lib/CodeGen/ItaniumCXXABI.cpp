@@ -3214,10 +3214,10 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     llvmVisibility = CodeGenModule::GetLLVMVisibility(Ty->getVisibility());
 
   TypeName->setVisibility(llvmVisibility);
-  CGM.setDSOLocal(TypeName, Ty->getAsCXXRecordDecl());
+  CGM.setDSOLocal(TypeName);
 
   GV->setVisibility(llvmVisibility);
-  CGM.setDSOLocal(GV, Ty->getAsCXXRecordDecl());
+  CGM.setDSOLocal(GV);
 
   if (CGM.getTriple().isWindowsItaniumEnvironment()) {
     auto RD = Ty->getAsCXXRecordDecl();
