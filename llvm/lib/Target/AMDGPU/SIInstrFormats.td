@@ -186,6 +186,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let isAsmParserOnly = !if(!eq(DisableDecoder{0}, {0}), 0, 1);
   let AsmVariantName = AMDGPUAsmVariants.Default;
+
+  // Avoid changing source registers in a way that violates constant bus read limitations.
+  let hasExtraSrcRegAllocReq = !if(VOP1,1,!if(VOP2,1,!if(VOP3,1,!if(VOPC,1,!if(SDWA,1, !if(VALU,1,0))))));
 }
 
 class PseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
@@ -203,8 +206,6 @@ class VPseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
   : PseudoInstSI<outs, ins, pattern, asm> {
   let VALU = 1;
   let Uses = [EXEC];
-  // Avoid changing source registers in a way that violates constant bus read limitations.
-  let hasExtraSrcRegAllocReq = 1;
 }
 
 class CFPseudoInstSI<dag outs, dag ins, list<dag> pattern = [],

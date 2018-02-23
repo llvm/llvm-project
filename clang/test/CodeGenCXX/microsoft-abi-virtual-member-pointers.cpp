@@ -53,14 +53,14 @@ void f() {
   auto ptr7 = &C::plugh;
 
 
-// CHECK32-LABEL: define void @"\01?f@@YAXXZ"()
+// CHECK32-LABEL: define dso_local void @"\01?f@@YAXXZ"()
 // CHECK32: store i8* bitcast (void (%struct.C*, ...)* @"\01??_9C@@$BA@AE" to i8*), i8** %ptr
 // CHECK32: store i8* bitcast (void (%struct.C*, ...)* @"\01??_9C@@$B3AE" to i8*), i8** %ptr2
 // CHECK32: store i8* bitcast (void (%struct.C*, ...)* @"\01??_9C@@$B7AE" to i8*), i8** %ptr3
 // CHECK32: store i8* bitcast (void (%"struct.(anonymous namespace)::D"*, ...)* @"\01??_9D@?A@@$BA@AE" to i8*), i8** %ptr4
 // CHECK32: }
 //
-// CHECK64-LABEL: define void @"\01?f@@YAXXZ"()
+// CHECK64-LABEL: define dso_local void @"\01?f@@YAXXZ"()
 // CHECK64: store i8* bitcast (void (%struct.C*, ...)* @"\01??_9C@@$BA@AA" to i8*), i8** %ptr
 // CHECK64: store i8* bitcast (void (%struct.C*, ...)* @"\01??_9C@@$B7AA" to i8*), i8** %ptr2
 // CHECK64: store i8* bitcast (void (%struct.C*, ...)* @"\01??_9C@@$BBA@AA" to i8*), i8** %ptr3

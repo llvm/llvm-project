@@ -740,6 +740,10 @@ vblendmpd 485498096{1to8}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x65,0x15,0xf0,0x1c,0xf0,0x1c]     
 vblendmpd 485498096{1to8}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vblendmpd 485498096{1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x65,0x15,0xf0,0x1c,0xf0,0x1c]     
+vblendmpd 485498096{1to8}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x58,0x65,0x92,0xf0,0x1c,0xf0,0x1c]      
 vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2 
@@ -747,6 +751,10 @@ vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2
 // CHECK: vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x65,0x92,0xf0,0x1c,0xf0,0x1c]     
 vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x65,0x92,0xf0,0x1c,0xf0,0x1c]     
+vblendmpd 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vblendmpd -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x58,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -760,9 +768,17 @@ vblendmpd 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
 vblendmpd -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vblendmpd -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
+vblendmpd -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vblendmpd 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x65,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
 vblendmpd 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vblendmpd 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x65,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
+vblendmpd 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vblendmpd -485498096(%edx,%eax,4), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x48,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -820,6 +836,10 @@ vblendmpd 512(%edx,%eax){1to8}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x65,0x54,0x02,0x40]     
 vblendmpd 512(%edx,%eax){1to8}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vblendmpd 512(%edx,%eax){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x65,0x54,0x02,0x40]     
+vblendmpd 512(%edx,%eax){1to8}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vblendmpd (%edx){1to8}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x58,0x65,0x12]      
 vblendmpd (%edx){1to8}, %zmm2, %zmm2 
@@ -827,6 +847,10 @@ vblendmpd (%edx){1to8}, %zmm2, %zmm2
 // CHECK: vblendmpd (%edx){1to8}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x65,0x12]     
 vblendmpd (%edx){1to8}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vblendmpd (%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x65,0x12]     
+vblendmpd (%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vblendmpd (%edx), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x48,0x65,0x12]      
@@ -860,6 +884,10 @@ vblendmps 256(%edx,%eax){1to16}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x65,0x54,0x02,0x40]     
 vblendmps 256(%edx,%eax){1to16}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vblendmps 256(%edx,%eax){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x65,0x54,0x02,0x40]     
+vblendmps 256(%edx,%eax){1to16}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vblendmps 4096(%edx,%eax), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x48,0x65,0x54,0x02,0x40]      
 vblendmps 4096(%edx,%eax), %zmm2, %zmm2 
@@ -880,6 +908,10 @@ vblendmps 485498096{1to16}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x65,0x15,0xf0,0x1c,0xf0,0x1c]     
 vblendmps 485498096{1to16}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vblendmps 485498096{1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x65,0x15,0xf0,0x1c,0xf0,0x1c]     
+vblendmps 485498096{1to16}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x58,0x65,0x92,0xf0,0x1c,0xf0,0x1c]      
 vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2 
@@ -887,6 +919,10 @@ vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2
 // CHECK: vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x65,0x92,0xf0,0x1c,0xf0,0x1c]     
 vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x65,0x92,0xf0,0x1c,0xf0,0x1c]     
+vblendmps 485498096(%edx){1to16}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vblendmps -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x58,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -900,9 +936,17 @@ vblendmps 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
 vblendmps -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vblendmps -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
+vblendmps -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vblendmps 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x65,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
 vblendmps 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vblendmps 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x65,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
+vblendmps 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vblendmps -485498096(%edx,%eax,4), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x48,0x65,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -959,6 +1003,10 @@ vblendmps (%edx){1to16}, %zmm2, %zmm2
 // CHECK: vblendmps (%edx){1to16}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x65,0x12]     
 vblendmps (%edx){1to16}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vblendmps (%edx){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x65,0x12]     
+vblendmps (%edx){1to16}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vblendmps (%edx), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x48,0x65,0x12]      
@@ -17624,6 +17672,10 @@ vpblendmd 256(%edx,%eax){1to16}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x64,0x54,0x02,0x40]     
 vpblendmd 256(%edx,%eax){1to16}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vpblendmd 256(%edx,%eax){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x64,0x54,0x02,0x40]     
+vpblendmd 256(%edx,%eax){1to16}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vpblendmd 4096(%edx,%eax), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x48,0x64,0x54,0x02,0x40]      
 vpblendmd 4096(%edx,%eax), %zmm2, %zmm2 
@@ -17643,6 +17695,10 @@ vpblendmd 485498096{1to16}, %zmm2, %zmm2
 // CHECK: vpblendmd 485498096{1to16}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x64,0x15,0xf0,0x1c,0xf0,0x1c]     
 vpblendmd 485498096{1to16}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vpblendmd 485498096{1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x64,0x15,0xf0,0x1c,0xf0,0x1c]     
+vpblendmd 485498096{1to16}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vpblendmd 485498096(%edx){1to16}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x58,0x64,0x92,0xf0,0x1c,0xf0,0x1c]      
@@ -17664,9 +17720,17 @@ vpblendmd 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
 vpblendmd -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vpblendmd -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
+vpblendmd -485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vpblendmd 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x64,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
 vpblendmd 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vpblendmd 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x64,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
+vpblendmd 485498096(%edx,%eax,4){1to16}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vpblendmd -485498096(%edx,%eax,4), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x48,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -17724,6 +17788,10 @@ vpblendmd (%edx){1to16}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0x6d,0x5a,0x64,0x12]     
 vpblendmd (%edx){1to16}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vpblendmd (%edx){1to16}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0x6d,0xda,0x64,0x12]     
+vpblendmd (%edx){1to16}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vpblendmd (%edx), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0x6d,0x48,0x64,0x12]      
 vpblendmd (%edx), %zmm2, %zmm2 
@@ -17768,6 +17836,10 @@ vpblendmq 485498096{1to8}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x64,0x15,0xf0,0x1c,0xf0,0x1c]     
 vpblendmq 485498096{1to8}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vpblendmq 485498096{1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x64,0x15,0xf0,0x1c,0xf0,0x1c]     
+vpblendmq 485498096{1to8}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x58,0x64,0x92,0xf0,0x1c,0xf0,0x1c]      
 vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2 
@@ -17775,6 +17847,10 @@ vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2
 // CHECK: vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x64,0x92,0xf0,0x1c,0xf0,0x1c]     
 vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x64,0x92,0xf0,0x1c,0xf0,0x1c]     
+vpblendmq 485498096(%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vpblendmq -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x58,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -17788,9 +17864,17 @@ vpblendmq 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
 vpblendmq -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vpblendmq -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]     
+vpblendmq -485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vpblendmq 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x64,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
 vpblendmq 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vpblendmq 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x64,0x94,0x82,0xf0,0x1c,0xf0,0x1c]     
+vpblendmq 485498096(%edx,%eax,4){1to8}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vpblendmq -485498096(%edx,%eax,4), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x48,0x64,0x94,0x82,0x10,0xe3,0x0f,0xe3]      
@@ -17848,6 +17932,10 @@ vpblendmq 512(%edx,%eax){1to8}, %zmm2, %zmm2
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x64,0x54,0x02,0x40]     
 vpblendmq 512(%edx,%eax){1to8}, %zmm2, %zmm2 {%k2} 
 
+// CHECK: vpblendmq 512(%edx,%eax){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x64,0x54,0x02,0x40]     
+vpblendmq 512(%edx,%eax){1to8}, %zmm2, %zmm2 {%k2} {z}
+
 // CHECK: vpblendmq (%edx){1to8}, %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x58,0x64,0x12]      
 vpblendmq (%edx){1to8}, %zmm2, %zmm2 
@@ -17855,6 +17943,10 @@ vpblendmq (%edx){1to8}, %zmm2, %zmm2
 // CHECK: vpblendmq (%edx){1to8}, %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf2,0xed,0x5a,0x64,0x12]     
 vpblendmq (%edx){1to8}, %zmm2, %zmm2 {%k2} 
+
+// CHECK: vpblendmq (%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
+// CHECK: encoding: [0x62,0xf2,0xed,0xda,0x64,0x12]     
+vpblendmq (%edx){1to8}, %zmm2, %zmm2 {%k2} {z}
 
 // CHECK: vpblendmq (%edx), %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf2,0xed,0x48,0x64,0x12]      

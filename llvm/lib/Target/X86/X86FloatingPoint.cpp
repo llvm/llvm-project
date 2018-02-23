@@ -1383,7 +1383,6 @@ void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
 
   // Change from the pseudo instruction to the concrete instruction.
   MI.getOperand(0).setReg(getSTReg(Op1));
-  MI.getOperand(0).setIsRenamable(false);
   MI.RemoveOperand(1);
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 
@@ -1411,7 +1410,6 @@ void FPS::handleCondMovFP(MachineBasicBlock::iterator &I) {
   MI.RemoveOperand(0);
   MI.RemoveOperand(1);
   MI.getOperand(0).setReg(getSTReg(Op1));
-  MI.getOperand(0).setIsRenamable(false);
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 
   // If we kill the second operand, make sure to pop it from the stack.
@@ -1628,7 +1626,6 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       else
         // Operand with a single register class constraint ("t" or "u").
         Op.setReg(X86::ST0 + FPReg);
-      Op.setIsRenamable(false);
     }
 
     // Simulate the inline asm popping its inputs and pushing its outputs.

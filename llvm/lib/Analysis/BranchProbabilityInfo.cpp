@@ -85,6 +85,8 @@ char BranchProbabilityInfoWrapperPass::ID = 0;
 // Probability of the edge BB2->BB3 = 4 / (124 + 4) = 0.03125
 static const uint32_t LBH_TAKEN_WEIGHT = 124;
 static const uint32_t LBH_NONTAKEN_WEIGHT = 4;
+// Unlikely edges within a loop are half as likely as other edges
+static const uint32_t LBH_UNLIKELY_WEIGHT = 62;
 
 /// \brief Unreachable-terminating branch taken probability.
 ///
@@ -457,6 +459,114 @@ static bool isSCCHeader(const BasicBlock *BB, int SccNum,
     return HeaderMapIt->second;
 }
 
+// Compute the unlikely successors to the block BB in the loop L, specifically
+// those that are unlikely because this is a loop, and add them to the
+// UnlikelyBlocks set.
+static void
+computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
+                          SmallPtrSetImpl<const BasicBlock*> &UnlikelyBlocks) {
+  // Sometimes in a loop we have a branch whose condition is made false by
+  // taking it. This is typically something like
+  //  int n = 0;
+  //  while (...) {
+  //    if (++n >= MAX) {
+  //      n = 0;
+  //    }
+  //  }
+  // In this sort of situation taking the branch means that at the very least it
+  // won't be taken again in the next iteration of the loop, so we should
+  // consider it less likely than a typical branch.
+  //
+  // We detect this by looking back through the graph of PHI nodes that sets the
+  // value that the condition depends on, and seeing if we can reach a successor
+  // block which can be determined to make the condition false.
+  //
+  // FIXME: We currently consider unlikely blocks to be half as likely as other
+  // blocks, but if we consider the example above the likelyhood is actually
+  // 1/MAX. We could therefore be more precise in how unlikely we consider
+  // blocks to be, but it would require more careful examination of the form
+  // of the comparison expression.
+  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!BI || !BI->isConditional())
+    return;
+
+  // Check if the branch is based on an instruction compared with a constant
+  CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition());
+  if (!CI || !isa<Instruction>(CI->getOperand(0)) ||
+      !isa<Constant>(CI->getOperand(1)))
+    return;
+
+  // Either the instruction must be a PHI, or a chain of operations involving
+  // constants that ends in a PHI which we can then collapse into a single value
+  // if the PHI value is known.
+  Instruction *CmpLHS = dyn_cast<Instruction>(CI->getOperand(0));
+  PHINode *CmpPHI = dyn_cast<PHINode>(CmpLHS);
+  Constant *CmpConst = dyn_cast<Constant>(CI->getOperand(1));
+  // Collect the instructions until we hit a PHI
+  std::list<BinaryOperator*> InstChain;
+  while (!CmpPHI && CmpLHS && isa<BinaryOperator>(CmpLHS) &&
+         isa<Constant>(CmpLHS->getOperand(1))) {
+    // Stop if the chain extends outside of the loop
+    if (!L->contains(CmpLHS))
+      return;
+    InstChain.push_front(dyn_cast<BinaryOperator>(CmpLHS));
+    CmpLHS = dyn_cast<Instruction>(CmpLHS->getOperand(0));
+    if (CmpLHS)
+      CmpPHI = dyn_cast<PHINode>(CmpLHS);
+  }
+  if (!CmpPHI || !L->contains(CmpPHI))
+    return;
+
+  // Trace the phi node to find all values that come from successors of BB
+  SmallPtrSet<PHINode*, 8> VisitedInsts;
+  SmallVector<PHINode*, 8> WorkList;
+  WorkList.push_back(CmpPHI);
+  VisitedInsts.insert(CmpPHI);
+  while (!WorkList.empty()) {
+    PHINode *P = WorkList.back();
+    WorkList.pop_back();
+    for (BasicBlock *B : P->blocks()) {
+      // Skip blocks that aren't part of the loop
+      if (!L->contains(B))
+        continue;
+      Value *V = P->getIncomingValueForBlock(B);
+      // If the source is a PHI add it to the work list if we haven't
+      // already visited it.
+      if (PHINode *PN = dyn_cast<PHINode>(V)) {
+        if (VisitedInsts.insert(PN).second)
+          WorkList.push_back(PN);
+        continue;
+      }
+      // If this incoming value is a constant and B is a successor of BB, then
+      // we can constant-evaluate the compare to see if it makes the branch be
+      // taken or not.
+      Constant *CmpLHSConst = dyn_cast<Constant>(V);
+      if (!CmpLHSConst ||
+          std::find(succ_begin(BB), succ_end(BB), B) == succ_end(BB))
+        continue;
+      // First collapse InstChain
+      for (Instruction *I : InstChain) {
+        CmpLHSConst = ConstantExpr::get(I->getOpcode(), CmpLHSConst,
+                                        dyn_cast<Constant>(I->getOperand(1)),
+                                        true);
+        if (!CmpLHSConst)
+          break;
+      }
+      if (!CmpLHSConst)
+        continue;
+      // Now constant-evaluate the compare
+      Constant *Result = ConstantExpr::getCompare(CI->getPredicate(),
+                                                  CmpLHSConst, CmpConst, true);
+      // If the result means we don't branch to the block then that block is
+      // unlikely.
+      if (Result &&
+          ((Result->isZeroValue() && B == BI->getSuccessor(0)) ||
+           (Result->isOneValue() && B == BI->getSuccessor(1))))
+        UnlikelyBlocks.insert(B);
+    }
+  }
+}
+
 // Calculate Edge Weights using "Loop Branch Heuristics". Predict backedges
 // as taken, exiting edges as not-taken.
 bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
@@ -470,15 +580,22 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
       return false;
   }
 
+  SmallPtrSet<const BasicBlock*, 8> UnlikelyBlocks;
+  if (L)
+    computeUnlikelySuccessors(BB, L, UnlikelyBlocks);
+
   SmallVector<unsigned, 8> BackEdges;
   SmallVector<unsigned, 8> ExitingEdges;
   SmallVector<unsigned, 8> InEdges; // Edges from header to the loop.
+  SmallVector<unsigned, 8> UnlikelyEdges;
 
   for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     // Use LoopInfo if we have it, otherwise fall-back to SCC info to catch
     // irreducible loops.
     if (L) {
-      if (!L->contains(*I))
+      if (UnlikelyBlocks.count(*I) != 0)
+        UnlikelyEdges.push_back(I.getSuccessorIndex());
+      else if (!L->contains(*I))
         ExitingEdges.push_back(I.getSuccessorIndex());
       else if (L->getHeader() == *I)
         BackEdges.push_back(I.getSuccessorIndex());
@@ -494,39 +611,43 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
     }
   }
 
-  if (BackEdges.empty() && ExitingEdges.empty())
+  if (BackEdges.empty() && ExitingEdges.empty() && UnlikelyEdges.empty())
     return false;
 
   // Collect the sum of probabilities of back-edges/in-edges/exiting-edges, and
   // normalize them so that they sum up to one.
-  BranchProbability Probs[] = {BranchProbability::getZero(),
-                               BranchProbability::getZero(),
-                               BranchProbability::getZero()};
   unsigned Denom = (BackEdges.empty() ? 0 : LBH_TAKEN_WEIGHT) +
                    (InEdges.empty() ? 0 : LBH_TAKEN_WEIGHT) +
+                   (UnlikelyEdges.empty() ? 0 : LBH_UNLIKELY_WEIGHT) +
                    (ExitingEdges.empty() ? 0 : LBH_NONTAKEN_WEIGHT);
-  if (!BackEdges.empty())
-    Probs[0] = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
-  if (!InEdges.empty())
-    Probs[1] = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
-  if (!ExitingEdges.empty())
-    Probs[2] = BranchProbability(LBH_NONTAKEN_WEIGHT, Denom);
 
   if (uint32_t numBackEdges = BackEdges.size()) {
-    auto Prob = Probs[0] / numBackEdges;
+    BranchProbability TakenProb = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
+    auto Prob = TakenProb / numBackEdges;
     for (unsigned SuccIdx : BackEdges)
       setEdgeProbability(BB, SuccIdx, Prob);
   }
 
   if (uint32_t numInEdges = InEdges.size()) {
-    auto Prob = Probs[1] / numInEdges;
+    BranchProbability TakenProb = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
+    auto Prob = TakenProb / numInEdges;
     for (unsigned SuccIdx : InEdges)
       setEdgeProbability(BB, SuccIdx, Prob);
   }
 
   if (uint32_t numExitingEdges = ExitingEdges.size()) {
-    auto Prob = Probs[2] / numExitingEdges;
+    BranchProbability NotTakenProb = BranchProbability(LBH_NONTAKEN_WEIGHT,
+                                                       Denom);
+    auto Prob = NotTakenProb / numExitingEdges;
     for (unsigned SuccIdx : ExitingEdges)
+      setEdgeProbability(BB, SuccIdx, Prob);
+  }
+
+  if (uint32_t numUnlikelyEdges = UnlikelyEdges.size()) {
+    BranchProbability UnlikelyProb = BranchProbability(LBH_UNLIKELY_WEIGHT,
+                                                       Denom);
+    auto Prob = UnlikelyProb / numUnlikelyEdges;
+    for (unsigned SuccIdx : UnlikelyEdges)
       setEdgeProbability(BB, SuccIdx, Prob);
   }
 

@@ -8,7 +8,7 @@ struct S {
 template <>
 const int S<char>::x[] = {1};
 
-// CHECK-LABEL: @"\01?x@?$S@D@@2QBHB" = weak_odr constant [1 x i32] [i32 1], comdat
+// CHECK-LABEL: @"\01?x@?$S@D@@2QBHB" = weak_odr dso_local constant [1 x i32] [i32 1], comdat
 
 template<class T>
 void destroy(T *p) {
@@ -20,11 +20,11 @@ extern "C" void f() {
   destroy((void*)&a);
 }
 
-// CHECK-LABEL: define void @f()
+// CHECK-LABEL: define dso_local void @f()
 // CHECK: call void @"\01??$destroy@X@@YAXPAX@Z"
 // CHECK: ret void
 
-// CHECK-LABEL: define linkonce_odr void @"\01??$destroy@X@@YAXPAX@Z"(i8* %p)
+// CHECK-LABEL: define linkonce_odr dso_local void @"\01??$destroy@X@@YAXPAX@Z"(i8* %p)
 //    The pseudo-dtor expr should not generate calls to anything.
 // CHECK-NOT: call
 // CHECK-NOT: invoke

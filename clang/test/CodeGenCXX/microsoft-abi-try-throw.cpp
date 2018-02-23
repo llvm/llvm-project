@@ -33,7 +33,7 @@ int main() {
 }
 
 #ifdef TRY
-// TRY-LABEL: define void @"\01?qual_catch@@YAXXZ"
+// TRY-LABEL: define dso_local void @"\01?qual_catch@@YAXXZ"
 void qual_catch() {
   try {
     external();

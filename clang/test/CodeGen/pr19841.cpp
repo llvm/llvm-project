@@ -12,7 +12,7 @@ class A {
   unsigned char _highlightColorTableVGA[];
   static const unsigned char b[];
 };
-// CHECK: [[Common_A_b:@[^ ]+]] = constant [1 x i8] zeroinitializer
+// CHECK: [[Common_A_b:@[^ ]+]] = {{(dso_local )?}}constant [1 x i8] zeroinitializer
 class B {
 public:
   Common::RenderMode _configRenderMode;

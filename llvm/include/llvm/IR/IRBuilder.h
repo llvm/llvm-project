@@ -669,6 +669,13 @@ public:
                                   Value *LHS, Value *RHS,
                                   const Twine &Name = "");
 
+  /// Create a call to intrinsic \p ID with 1 or more operands assuming the
+  /// intrinsic and all operands have the same type. If \p FMFSource is
+  /// provided, copy fast-math-flags from that instruction to the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
+                            Instruction *FMFSource = nullptr,
+                            const Twine &Name = "");
+
   /// Create call to the minnum intrinsic.
   CallInst *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "") {
     return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, Name);

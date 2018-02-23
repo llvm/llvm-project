@@ -1842,6 +1842,10 @@ def mstack_alignment : Joined<["-"], "mstack-alignment=">, Group<m_Group>, Flags
   HelpText<"Set the stack alignment">;
 def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Set the stack probe size">;
+def mstack_arg_probe : Flag<["-"], "mstack-arg-probe">, Group<m_Group>,
+  HelpText<"Enable stack probes">;
+def mno_stack_arg_probe : Flag<["-"], "mno-stack-arg-probe">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Disable stack probes which are enabled by default">;
 def mthread_model : Separate<["-"], "mthread-model">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"The thread model to use, e.g. posix, single (posix by default)">, Values<"posix,single">;
 def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,

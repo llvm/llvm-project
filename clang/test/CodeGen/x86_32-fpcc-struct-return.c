@@ -17,15 +17,15 @@ typedef struct { } ZeroSized;
 // CHECK: ret void
 Big returnBig(Big x) { return x; }
 
-// CHECK-PCC-LABEL: define void @returnSmall
+// CHECK-PCC-LABEL: define {{(dso_local )?}}void @returnSmall
 // CHECK-PCC: ret void
-// CHECK-REG-LABEL: define i32 @returnSmall
+// CHECK-REG-LABEL: define {{(dso_local )?}}i32 @returnSmall
 // CHECK-REG: ret i32
 Small returnSmall(Small x) { return x; }
 
-// CHECK-PCC-LABEL: define void @returnShort
+// CHECK-PCC-LABEL: define {{(dso_local )?}}void @returnShort
 // CHECK-PCC: ret void
-// CHECK-REG-LABEL: define i16 @returnShort
+// CHECK-REG-LABEL: define {{(dso_local )?}}i16 @returnShort
 // CHECK-REG: ret i16
 Short returnShort(Short x) { return x; }
 

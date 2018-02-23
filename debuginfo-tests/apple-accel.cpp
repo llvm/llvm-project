@@ -1,6 +1,7 @@
+// REQUIRES: system-darwin
 // Test that clang produces the __apple accelerator tables,
 // e.g., __apple_types, correctly.
-// RUN: %clang %s -target x86_64-apple-macosx10.13.0 -c -g -o %t-ex
+// RUN: %clang %s %target_itanium_abi_host_triple -O0 -c -g -o %t-ex
 // RUN: llvm-objdump -section-headers %t-ex | FileCheck %s
 
 int main (int argc, char const *argv[]) { return argc; }

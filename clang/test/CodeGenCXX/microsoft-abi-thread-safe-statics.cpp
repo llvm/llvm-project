@@ -6,14 +6,14 @@ struct S {
   ~S();
 };
 
-// CHECK-DAG: @"\01?s@?1??f@@YAAAUS@@XZ@4U2@A" = linkonce_odr thread_local global %struct.S zeroinitializer
+// CHECK-DAG: @"\01?s@?1??f@@YAAAUS@@XZ@4U2@A" = linkonce_odr dso_local thread_local global %struct.S zeroinitializer
 // CHECK-DAG: @"\01??__J?1??f@@YAAAUS@@XZ@51" = linkonce_odr thread_local global i32 0
-// CHECK-DAG: @"\01?s@?1??g@@YAAAUS@@XZ@4U2@A" = linkonce_odr global %struct.S zeroinitializer
+// CHECK-DAG: @"\01?s@?1??g@@YAAAUS@@XZ@4U2@A" = linkonce_odr dso_local global %struct.S zeroinitializer
 // CHECK-DAG: @"\01?$TSS0@?1??g@@YAAAUS@@XZ@4HA" = linkonce_odr global i32 0
 // CHECK-DAG: @_Init_thread_epoch = external thread_local global i32, align 4
-// CHECK-DAG: @"\01?j@?1??h@@YAAAUS@@_N@Z@4U2@A" = linkonce_odr thread_local global %struct.S zeroinitializer
+// CHECK-DAG: @"\01?j@?1??h@@YAAAUS@@_N@Z@4U2@A" = linkonce_odr dso_local thread_local global %struct.S zeroinitializer
 // CHECK-DAG: @"\01??__J?1??h@@YAAAUS@@_N@Z@51" = linkonce_odr thread_local global i32 0
-// CHECK-DAG: @"\01?i@?1??h@@YAAAUS@@_N@Z@4U2@A" = linkonce_odr global %struct.S zeroinitializer
+// CHECK-DAG: @"\01?i@?1??h@@YAAAUS@@_N@Z@4U2@A" = linkonce_odr dso_local global %struct.S zeroinitializer
 // CHECK-DAG: @"\01?$TSS0@?1??h@@YAAAUS@@_N@Z@4HA" = linkonce_odr global i32 0
 // CHECK-DAG: @"\01?i@?1??g1@@YAHXZ@4HA" = internal global i32 0, align 4
 // CHECK-DAG: @"\01?$TSS0@?1??g1@@YAHXZ@4HA" = internal global i32 0, align 4
@@ -89,7 +89,7 @@ extern inline S&h(bool b) {
   return b ? j : i;
 }
 
-// CHECK-LABEL: define i32 @"\01?g1@@YAHXZ"()
+// CHECK-LABEL: define dso_local i32 @"\01?g1@@YAHXZ"()
 int f1();
 int g1() {
   static int i = f1();

@@ -465,4 +465,5 @@ def PPC : Target {
 
   let AssemblyParsers = [PPCAsmParser];
   let AssemblyParserVariants = [PPCAsmParserVariant];
+  let AllowRegisterRenaming = 1;
 }

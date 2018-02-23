@@ -555,6 +555,9 @@ void CodeGenModule::Release() {
       getModule().setPIELevel(static_cast<llvm::PIELevel::Level>(PLevel));
   }
 
+  if (CodeGenOpts.NoPLT)
+    getModule().setRtLibUseGOT();
+
   SimplifyPersonality();
 
   if (getCodeGenOpts().EmitDeclMetadata)
@@ -713,8 +716,20 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
 
 static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
                                  llvm::GlobalValue *GV) {
+  // DLLImport explicitly marks the GV as external.
+  if (GV->hasDLLImportStorageClass())
+    return false;
+
   const llvm::Triple &TT = CGM.getTriple();
-  // Only handle ELF for now.
+  // Every other GV is local on COFF.
+  // Make an exception for windows OS in the triple: Some firmware builds use
+  // *-win32-macho triples. This (accidentally?) produced windows relocations
+  // without GOT tables in older clang versions; Keep this behaviour.
+  // FIXME: even thread local variables?
+  if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
+    return true;
+
+  // Only handle COFF and ELF for now.
   if (!TT.isOSBinFormatELF())
     return false;
 

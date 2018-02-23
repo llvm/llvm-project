@@ -44,7 +44,7 @@ namespace VirtualNoreturn {
   };
 
   // CHECK-LABEL: @_ZN15VirtualNoreturn1f
-  // CHECK-INVARIANT-LABEL: define void @_ZN15VirtualNoreturn1f
+  // CHECK-INVARIANT-LABEL: define {{(dso_local )?}}void @_ZN15VirtualNoreturn1f
   void f(A *p) {
     p->f();
     // CHECK: call {{.*}}void %{{[^#]*$}}

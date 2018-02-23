@@ -128,6 +128,10 @@ def FeatureFuseAES : SubtargetFeature<
     "fuse-aes", "HasFuseAES", "true",
     "CPU fuses AES crypto operations">;
 
+def FeatureFuseCCSelect : SubtargetFeature<
+    "fuse-csel", "HasFuseCCSelect", "true",
+    "CPU fuses conditional select operations">;
+
 def FeatureFuseLiterals : SubtargetFeature<
     "fuse-literals", "HasFuseLiterals", "true",
     "CPU fuses literal generation operations">;
@@ -352,6 +356,7 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeatureFPARMv8,
                                      FeatureFuseAddress,
                                      FeatureFuseAES,
+                                     FeatureFuseCCSelect,
                                      FeatureFuseLiterals,
                                      FeatureLSLFast,
                                      FeatureNEON,
@@ -538,4 +543,5 @@ def AArch64 : Target {
   let InstructionSet = AArch64InstrInfo;
   let AssemblyParserVariants = [GenericAsmParserVariant, AppleAsmParserVariant];
   let AssemblyWriters = [GenericAsmWriter, AppleAsmWriter];
+  let AllowRegisterRenaming = 1;
 }

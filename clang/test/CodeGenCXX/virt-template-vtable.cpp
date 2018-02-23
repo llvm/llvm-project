@@ -16,10 +16,10 @@ extern template class A<short>;
 template class A<short>;
 
 
-// CHECK: @_ZTV1B = linkonce_odr unnamed_addr constant
-// CHECK: @_ZTV1AIlE = weak_odr unnamed_addr constant
-// CHECK: @_ZTV1AIsE = weak_odr unnamed_addr constant
-// CHECK: @_ZTV1AIiE = linkonce_odr unnamed_addr constant
+// CHECK: @_ZTV1B = linkonce_odr {{(dso_local )?}}unnamed_addr constant
+// CHECK: @_ZTV1AIlE = weak_odr {{(dso_local )?}}unnamed_addr constant
+// CHECK: @_ZTV1AIsE = weak_odr {{(dso_local )?}}unnamed_addr constant
+// CHECK: @_ZTV1AIiE = linkonce_odr {{(dso_local )?}}unnamed_addr constant
 
 template<class T> struct C {
   virtual void c() {}

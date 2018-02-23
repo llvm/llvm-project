@@ -12,7 +12,7 @@ extern "C" void foo() {
   }
 }
 
-// CHECK-LABEL: define void @foo()
+// CHECK-LABEL: define dso_local void @foo()
 // CHECK: invoke void @might_throw()
 // CHECK: %[[CATCHPAD:[^ ]*]] = catchpad within
 // CHECK: call void asm sideeffect "nop", {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]

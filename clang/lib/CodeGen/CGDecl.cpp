@@ -240,7 +240,6 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
       getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
   GV->setAlignment(getContext().getDeclAlign(&D).getQuantity());
-  setGVProperties(GV, &D);
 
   if (supportsCOMDAT() && GV->isWeakForLinker())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -254,6 +253,8 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     else if (D.hasAttr<DLLExportAttr>())
       GV->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
   }
+
+  setGVProperties(GV, &D);
 
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();
