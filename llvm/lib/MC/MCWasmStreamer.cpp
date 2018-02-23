@@ -113,11 +113,11 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_ELF_TypeFunction:
-    Symbol->setIsFunction(true);
+    Symbol->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     break;
 
   case MCSA_ELF_TypeObject:
-    Symbol->setIsFunction(false);
+    Symbol->setType(wasm::WASM_SYMBOL_TYPE_DATA);
     break;
 
   default:

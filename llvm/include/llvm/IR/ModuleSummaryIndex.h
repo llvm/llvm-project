@@ -26,6 +26,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ScaledNumber.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -59,7 +60,11 @@ struct CalleeInfo {
   // The size of the bit-field might need to be adjusted if more values are
   // added to HotnessType enum.
   uint32_t Hotness : 3;
+
+  /// The value stored in RelBlockFreq has to be interpreted as the digits of
+  /// a scaled number with a scale of \p -ScaleShift.
   uint32_t RelBlockFreq : 29;
+  static constexpr int32_t ScaleShift = 8;
   static constexpr uint64_t MaxRelBlockFreq = (1 << 29) - 1;
 
   CalleeInfo()
@@ -73,10 +78,20 @@ struct CalleeInfo {
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 
-  // When there are multiple edges between the same (caller, callee) pair, the
-  // relative block frequencies are summed up.
-  void updateRelBlockFreq(uint64_t RBF) {
-    uint64_t Sum = SaturatingAdd<uint64_t>(RelBlockFreq, RBF);
+  /// Update \p RelBlockFreq from \p BlockFreq and \p EntryFreq
+  ///
+  /// BlockFreq is divided by EntryFreq and added to RelBlockFreq. To represent
+  /// fractional values, the result is represented as a fixed point number with
+  /// scale of -ScaleShift.
+  void updateRelBlockFreq(uint64_t BlockFreq, uint64_t EntryFreq) {
+    if (EntryFreq == 0)
+      return;
+    using Scaled64 = ScaledNumber<uint64_t>;
+    Scaled64 Temp(BlockFreq, ScaleShift);
+    Temp /= Scaled64::get(EntryFreq);
+
+    uint64_t Sum =
+        SaturatingAdd<uint64_t>(Temp.toInt<uint64_t>(), RelBlockFreq);
     Sum = std::min(Sum, uint64_t(MaxRelBlockFreq));
     RelBlockFreq = static_cast<uint32_t>(Sum);
   }

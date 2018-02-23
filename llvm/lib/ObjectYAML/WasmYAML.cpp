@@ -58,7 +58,7 @@ static void sectionMapping(IO &IO, WasmYAML::LinkingSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
   IO.mapRequired("DataSize", Section.DataSize);
-  IO.mapOptional("SymbolInfo", Section.SymbolInfos);
+  IO.mapOptional("SymbolTable", Section.SymbolTable);
   IO.mapOptional("SegmentInfo", Section.SegmentInfos);
   IO.mapOptional("InitFunctions", Section.InitFunctions);
   IO.mapOptional("Comdats", Section.Comdats);
@@ -366,7 +366,7 @@ void MappingTraits<WasmYAML::DataSegment>::mapping(
 void MappingTraits<WasmYAML::InitFunction>::mapping(
     IO &IO, WasmYAML::InitFunction &Init) {
   IO.mapRequired("Priority", Init.Priority);
-  IO.mapRequired("FunctionIndex", Init.FunctionIndex);
+  IO.mapRequired("Symbol", Init.Symbol);
 }
 
 void ScalarEnumerationTraits<WasmYAML::ComdatKind>::enumeration(
@@ -391,8 +391,23 @@ void MappingTraits<WasmYAML::Comdat>::mapping(
 
 void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
                                                   WasmYAML::SymbolInfo &Info) {
+  IO.mapRequired("Index", Info.Index);
+  IO.mapRequired("Kind", Info.Kind);
   IO.mapRequired("Name", Info.Name);
   IO.mapRequired("Flags", Info.Flags);
+  if (Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION) {
+    IO.mapRequired("Function", Info.ElementIndex);
+  } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_GLOBAL) {
+    IO.mapRequired("Global", Info.ElementIndex);
+  } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_DATA) {
+    if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
+      IO.mapRequired("Segment", Info.DataRef.Segment);
+      IO.mapOptional("Offset", Info.DataRef.Offset, 0u);
+      IO.mapRequired("Size", Info.DataRef.Size);
+    }
+  } else {
+    llvm_unreachable("unsupported symbol kind");
+  }
 }
 
 void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
@@ -414,7 +429,17 @@ void ScalarBitSetTraits<WasmYAML::SymbolFlags>::bitset(
   BCaseMask(BINDING_MASK, BINDING_LOCAL);
   //BCaseMask(VISIBILITY_MASK, VISIBILITY_DEFAULT);
   BCaseMask(VISIBILITY_MASK, VISIBILITY_HIDDEN);
+  BCaseMask(UNDEFINED, UNDEFINED);
 #undef BCaseMask
+}
+
+void ScalarEnumerationTraits<WasmYAML::SymbolKind>::enumeration(
+    IO &IO, WasmYAML::SymbolKind &Kind) {
+#define ECase(X) IO.enumCase(Kind, #X, wasm::WASM_SYMBOL_TYPE_##X);
+  ECase(FUNCTION);
+  ECase(DATA);
+  ECase(GLOBAL);
+#undef ECase
 }
 
 void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(

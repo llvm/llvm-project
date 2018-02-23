@@ -334,3 +334,29 @@ define <4 x i32> @uge_smin(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+; Make sure we can efficiently handle ne smin by turning into sgt.
+define <4 x i32> @ne_smin(<4 x i32> %x) {
+; CHECK-LABEL: ne_smin:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %cmp = icmp ne <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %r = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; Make sure we can efficiently handle ne smax by turning into sgt. We can't fold
+; the constant pool load, but the alternative is a cmpeq+invert which is 3 instructions.
+; The PCMPGT version is two instructions given sufficient register allocation freedom
+; to avoid the last mov to %xmm0 seen here.
+define <4 x i32> @ne_smax(<4 x i32> %x) {
+; CHECK-LABEL: ne_smax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = icmp ne <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %r = sext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %r
+}

@@ -59,7 +59,6 @@
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"

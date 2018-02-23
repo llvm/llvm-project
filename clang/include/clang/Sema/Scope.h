@@ -1,4 +1,4 @@
-//===--- Scope.h - Scope interface ------------------------------*- C++ -*-===//
+//===- Scope.h - Scope interface --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,28 +14,29 @@
 #ifndef LLVM_CLANG_SEMA_SCOPE_H
 #define LLVM_CLANG_SEMA_SCOPE_H
 
-#include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include <cassert>
 
 namespace llvm {
 
 class raw_ostream;
 
-}
+} // namespace llvm
 
 namespace clang {
 
 class Decl;
+class DeclContext;
 class UsingDirectiveDecl;
 class VarDecl;
 
 /// Scope - A scope is a transient data structure that is used while parsing the
 /// program.  It assists with resolving identifiers to the appropriate
 /// declaration.
-///
 class Scope {
 public:
   /// ScopeFlags - These are bitfields that are or'd together when creating a
@@ -131,6 +132,7 @@ public:
     /// We are between inheritance colon and the real class/struct definition scope.
     ClassInheritanceScope = 0x800000,
   };
+
 private:
   /// The parent scope for this scope.  This is null for the translation-unit
   /// scope.
@@ -185,7 +187,7 @@ private:
   /// popped, these declarations are removed from the IdentifierTable's notion
   /// of current declaration.  It is up to the current Action implementation to
   /// implement these semantics.
-  typedef llvm::SmallPtrSet<Decl *, 32> DeclSetTy;
+  using DeclSetTy = llvm::SmallPtrSet<Decl *, 32>;
   DeclSetTy DeclsInScope;
 
   /// The DeclContext with which this scope is associated. For
@@ -193,7 +195,7 @@ private:
   /// entity of a function scope is a function, etc.
   DeclContext *Entity;
 
-  typedef SmallVector<UsingDirectiveDecl *, 2> UsingDirectivesTy;
+  using UsingDirectivesTy = SmallVector<UsingDirectiveDecl *, 2>;
   UsingDirectivesTy UsingDirectives;
 
   /// \brief Used to determine if errors occurred in this scope.
@@ -207,25 +209,23 @@ private:
 
 public:
   Scope(Scope *Parent, unsigned ScopeFlags, DiagnosticsEngine &Diag)
-    : ErrorTrap(Diag) {
+      : ErrorTrap(Diag) {
     Init(Parent, ScopeFlags);
   }
 
   /// getFlags - Return the flags for this scope.
-  ///
   unsigned getFlags() const { return Flags; }
+
   void setFlags(unsigned F) { setFlags(getParent(), F); }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
 
   /// getParent - Return the scope that this is nested in.
-  ///
   const Scope *getParent() const { return AnyParent; }
   Scope *getParent() { return AnyParent; }
 
   /// getFnParent - Return the closest scope that is a function body.
-  ///
   const Scope *getFnParent() const { return FnParent; }
   Scope *getFnParent() { return FnParent; }
 
@@ -275,10 +275,12 @@ public:
     return PrototypeIndex++;
   }
 
-  typedef llvm::iterator_range<DeclSetTy::iterator> decl_range;
+  using decl_range = llvm::iterator_range<DeclSetTy::iterator>;
+
   decl_range decls() const {
     return decl_range(DeclsInScope.begin(), DeclsInScope.end());
   }
+
   bool decl_empty() const { return DeclsInScope.empty(); }
 
   void AddDecl(Decl *D) {
@@ -368,7 +370,6 @@ public:
     return false;
   }
 
-  
   /// isTemplateParamScope - Return true if this scope is a C++
   /// template parameter scope.
   bool isTemplateParamScope() const {
@@ -457,8 +458,8 @@ public:
     UsingDirectives.push_back(UDir);
   }
 
-  typedef llvm::iterator_range<UsingDirectivesTy::iterator>
-    using_directives_range;
+  using using_directives_range =
+      llvm::iterator_range<UsingDirectivesTy::iterator>;
 
   using_directives_range using_directives() {
     return using_directives_range(UsingDirectives.begin(),
@@ -477,25 +478,23 @@ public:
   }
 
   void setNoNRVO() {
-    NRVO.setInt(1);
+    NRVO.setInt(true);
     NRVO.setPointer(nullptr);
   }
 
   void mergeNRVOIntoParent();
 
   /// Init - This is used by the parser to implement scope caching.
-  ///
   void Init(Scope *parent, unsigned flags);
 
   /// \brief Sets up the specified scope flags and adjusts the scope state
   /// variables accordingly.
-  ///
   void AddFlags(unsigned Flags);
 
   void dumpImpl(raw_ostream &OS) const;
   void dump() const;
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_SCOPE_H
