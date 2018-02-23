@@ -14926,7 +14926,8 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
     if (RefersToEnclosingScope) {
       LambdaScopeInfo *const LSI =
           SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
-      if (LSI && !LSI->CallOperator->Encloses(Var->getDeclContext())) {
+      if (LSI && (!LSI->CallOperator ||
+                  !LSI->CallOperator->Encloses(Var->getDeclContext()))) {
         // If a variable could potentially be odr-used, defer marking it so
         // until we finish analyzing the full expression for any
         // lvalue-to-rvalue

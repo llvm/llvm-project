@@ -202,8 +202,6 @@ def no_gnu_unique: F<"no-gnu-unique">,
 def no_merge_exidx_entries: F<"no-merge-exidx-entries">,
   HelpText<"Disable merging .ARM.exidx entries">;
 
-def no_pie: F<"no-pie">, HelpText<"Do not create a position independent executable">;
-
 def no_threads: F<"no-threads">,
   HelpText<"Do not run the linker multi-threaded">;
 
@@ -212,6 +210,8 @@ def no_whole_archive: F<"no-whole-archive">,
 
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
+
+def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
 
 def no_omagic: Flag<["--"], "no-omagic">, MetaVarName<"<magic>">,
   HelpText<"Do not set the text data sections to be writable">;
@@ -351,7 +351,6 @@ def alias_filter: Separate<["-"], "F">, Alias<filter>;
 def alias_format_b: S<"b">, Alias<format>;
 def alias_library: JoinedOrSeparate<["-"], "l">, Alias<library>;
 def alias_library_path: JoinedOrSeparate<["-"], "L">, Alias<library_path>;
-def alias_nopie: F<"nopie">, Alias<no_pie>;
 def alias_omagic: Flag<["-"], "N">, Alias<omagic>;
 def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;

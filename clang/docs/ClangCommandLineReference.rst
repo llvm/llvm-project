@@ -706,6 +706,10 @@ Print source range spans in numeric form
 
 .. option:: -fdiagnostics-show-category=<arg>
 
+.. option:: -fexperimental-isel, -fno-experimental-isel
+
+Enables the experimental global instruction selector
+
 .. option:: -fexperimental-new-pass-manager, -fno-experimental-new-pass-manager
 
 Enables an experimental new pass manager in LLVM.
@@ -2413,6 +2417,10 @@ X86
 .. option:: -mrdrnd, -mno-rdrnd
 
 .. option:: -mrdseed, -mno-rdseed
+
+.. option:: -mretpoline, -mno-retpoline
+
+.. option:: -mretpoline-external-thunk, -mno-retpoline-external-thunk
 
 .. option:: -mrtm, -mno-rtm
 
