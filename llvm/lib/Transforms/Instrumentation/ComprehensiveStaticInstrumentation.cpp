@@ -1188,8 +1188,6 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return;
 
-  DominatorTree *DT = &GetDomTree(F);
-
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
     LoadAndStoreProperties;
   SmallVector<Instruction *, 8> MemIntrinsics;
@@ -1201,6 +1199,8 @@ void CSIImpl::instrumentFunction(Function &F) {
   bool MaySpawn = false;
 
   changeCallsToInvokes(F);
+
+  DominatorTree *DT = &GetDomTree(F);
 
   // Compile lists of all instrumentation points before anything is modified.
   for (BasicBlock &BB : F) {

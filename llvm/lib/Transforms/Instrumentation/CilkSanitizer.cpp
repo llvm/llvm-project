@@ -667,10 +667,6 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return false;
 
-  DominatorTree *DT = &GetDomTree(F);
-  // DetachSSA &DSSA = GetDSSA(F);
-  // MemorySSA &MSSA = GetMSSA(F);
-
   SmallVector<Instruction*, 8> AllLoadsAndStores;
   SmallVector<Instruction*, 8> LocalLoadsAndStores;
   SmallVector<Instruction*, 8> AtomicAccesses;
@@ -683,6 +679,10 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
   bool MaySpawn = false;
 
   changeCallsToInvokes(F);
+
+  DominatorTree *DT = &GetDomTree(F);
+  // DetachSSA &DSSA = GetDSSA(F);
+  // MemorySSA &MSSA = GetMSSA(F);
 
   // TODO: Consider modifying this to choose instrumentation to insert based on
   // fibrils, not basic blocks.
