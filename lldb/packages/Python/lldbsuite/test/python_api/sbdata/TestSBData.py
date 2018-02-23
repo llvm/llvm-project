@@ -25,7 +25,7 @@ class SBDataAPICase(TestBase):
     def test_byte_order_and_address_byte_size(self):
         """Test the SBData::SetData() to ensure the byte order and address 
         byte size are obeyed"""
-        addr_data = '\x11\x22\x33\x44\x55\x66\x77\x88'
+        addr_data = b'\x11\x22\x33\x44\x55\x66\x77\x88'
         error = lldb.SBError()
         data = lldb.SBData()
         data.SetData(error, addr_data, lldb.eByteOrderBig, 4)

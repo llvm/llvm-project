@@ -9,6 +9,7 @@
 
 #include "lld/Common/Driver.h"
 #include "Config.h"
+#include "InputGlobal.h"
 #include "MarkLive.h"
 #include "SymbolTable.h"
 #include "Writer.h"
@@ -59,6 +60,7 @@ private:
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
   std::vector<InputFile *> Files;
+  llvm::wasm::WasmGlobal StackPointerGlobal;
 };
 
 } // anonymous namespace
@@ -222,8 +224,8 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
   return Arg->getValue();
 }
 
-static Symbol* addUndefinedFunction(StringRef Name, const WasmSignature *Type) {
-  return Symtab->addUndefined(Name, Symbol::UndefinedFunctionKind, 0, nullptr,
+static Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type) {
+  return Symtab->addUndefined(Name, WASM_SYMBOL_TYPE_FUNCTION, 0, nullptr,
                               Type);
 }
 
@@ -296,14 +298,25 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
-    static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
+    // Can't export the SP right now because it's mutable, and mutable
+    // globals aren't yet supported in the official binary format.
+    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN if/when the
+    // "mutable global" proposal is accepted.
+    StackPointerGlobal.Type = {WASM_TYPE_I32, true};
+    StackPointerGlobal.InitExpr.Value.Int32 = 0;
+    StackPointerGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    InputGlobal *StackPointer = make<InputGlobal>(StackPointerGlobal);
+    StackPointer->Live = true;
 
+    static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
     // Add synthetic symbols before any others
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", &NullSignature, WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::StackPointer = Symtab->addSyntheticDataSymbol("__stack_pointer");
+    WasmSym::StackPointer = Symtab->addSyntheticGlobal(
+        "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
     WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base");
-    WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol("__dso_handle");
+    WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
+        "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end");
 
     if (!Config->Entry.empty())

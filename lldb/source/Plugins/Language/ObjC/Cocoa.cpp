@@ -871,28 +871,34 @@ bool lldb_private::formatters::NSDataSummaryProvider(
 
   uint64_t value = 0;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name = descriptor->GetClassName().GetCString();
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
-  if (!strcmp(class_name, "NSConcreteData") ||
-      !strcmp(class_name, "NSConcreteMutableData") ||
-      !strcmp(class_name, "__NSCFData")) {
-    uint32_t offset = (is_64bit ? 16 : 8);
+  bool isNSConcreteData = class_name == "NSConcreteData";
+  bool isNSConcreteMutableData = class_name == "NSConcreteMutableData";
+  bool isNSCFData = class_name == "__NSCFData";
+  if (isNSConcreteData || isNSConcreteMutableData || isNSCFData) {
+    uint32_t offset;
+    if (isNSConcreteData)
+      offset = is_64bit ? 8 : 4;
+    else
+      offset = is_64bit ? 16 : 8;
+
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(
         valobj_addr + offset, is_64bit ? 8 : 4, 0, error);
     if (error.Fail())
       return false;
-  } else if (!strcmp(class_name, "_NSInlineData")) {
+  } else if (class_name == "_NSInlineData") {
     uint32_t offset = (is_64bit ? 8 : 4);
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + offset, 2,
                                                       0, error);
     if (error.Fail())
       return false;
-  } else if (!strcmp(class_name, "_NSZeroData")) {
+  } else if (class_name == "_NSZeroData") {
     value = 0;
   } else
     return false;

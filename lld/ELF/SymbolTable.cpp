@@ -599,9 +599,14 @@ template <class ELFT> void SymbolTable::scanShlibUndefined() {
   for (InputFile *F : SharedFiles) {
     for (StringRef U : cast<SharedFile<ELFT>>(F)->getUndefinedSymbols()) {
       Symbol *Sym = find(U);
-      if (!Sym || !Sym->isDefined())
+      if (!Sym)
         continue;
-      Sym->ExportDynamic = true;
+      if (auto *L = dyn_cast<Lazy>(Sym))
+        if (InputFile *File = L->fetch())
+          addFile<ELFT>(File);
+
+      if (Sym->isDefined())
+        Sym->ExportDynamic = true;
     }
   }
 }
