@@ -1641,12 +1641,13 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage);
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  CGM.setGVProperties(VTable, RD);
 
   if (RD->hasAttr<DLLImportAttr>())
     VTable->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
   else if (RD->hasAttr<DLLExportAttr>())
     VTable->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+
+  CGM.setGVProperties(VTable, RD);
 
   return VTable;
 }

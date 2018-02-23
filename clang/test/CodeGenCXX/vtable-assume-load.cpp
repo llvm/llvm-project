@@ -163,7 +163,7 @@ struct __declspec(novtable) S {
 void g(S &s) { s.foo(); }
 
 // if struct has novtable specifier, then we can't generate assumes
-// CHECK-MS-LABEL: define void @"\01?test@testMS@@YAXXZ"()
+// CHECK-MS-LABEL: define dso_local void @"\01?test@testMS@@YAXXZ"()
 // CHECK-MS: call x86_thiscallcc %"struct.testMS::S"* @"\01??0S@testMS@@QAE@XZ"(
 // CHECK-MS-NOT: @llvm.assume
 // CHECK-MS-LABEL: {{^}}}

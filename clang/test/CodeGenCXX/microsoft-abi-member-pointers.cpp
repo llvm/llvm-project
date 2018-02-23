@@ -15,17 +15,17 @@ void PR26313_f(PR26313_FUNC *p) { delete p; }
 struct PR26313_Z;
 int PR26313_Z::**a = nullptr;
 int PR26313_Z::*b = *a;
-// CHECK-DAG: @"\01?a@@3PAPQPR26313_Z@@HA" = global %0* null, align 4
-// CHECK-DAG: @"\01?b@@3PQPR26313_Z@@HQ1@" = global { i32, i32, i32 } { i32 0, i32 0, i32 -1 }, align 4
+// CHECK-DAG: @"\01?a@@3PAPQPR26313_Z@@HA" = dso_local global %0* null, align 4
+// CHECK-DAG: @"\01?b@@3PQPR26313_Z@@HQ1@" = dso_local global { i32, i32, i32 } { i32 0, i32 0, i32 -1 }, align 4
 
 namespace PR20947 {
 struct A;
 int A::**a = nullptr;
-// CHECK-DAG: @"\01?a@PR20947@@3PAPQA@1@HA" = global %{{.*}}* null, align 4
+// CHECK-DAG: @"\01?a@PR20947@@3PAPQA@1@HA" = dso_local global %{{.*}}* null, align 4
 
 struct B;
 int B::*&b = b;
-// CHECK-DAG: @"\01?b@PR20947@@3AAPQB@1@HA" = global %{{.*}}* null, align 4
+// CHECK-DAG: @"\01?b@PR20947@@3AAPQB@1@HA" = dso_local global %{{.*}}* null, align 4
 }
 
 namespace PR20017 {
@@ -35,7 +35,7 @@ struct A {
 };
 struct B;
 auto a = &A<B>::m_fn1;
-// CHECK-DAG: @"\01?a@PR20017@@3P8?$A@UB@PR20017@@@1@AEPQB@1@HXZQ21@" = global i8* bitcast ({ i32, i32, i32 } ({{.*}}*)* @"\01?m_fn1@?$A@UB@PR20017@@@PR20017@@QAEPQB@2@HXZ" to i8*), align 4
+// CHECK-DAG: @"\01?a@PR20017@@3P8?$A@UB@PR20017@@@1@AEPQB@1@HXZQ21@" = dso_local global i8* bitcast ({ i32, i32, i32 } ({{.*}}*)* @"\01?m_fn1@?$A@UB@PR20017@@@PR20017@@QAEPQB@2@HXZ" to i8*), align 4
 }
 
 #ifndef INCOMPLETE_VIRTUAL
@@ -89,24 +89,24 @@ int Virtual    ::*v_d_memptr;
 int NonZeroVBPtr::*n_d_memptr;
 int Unspecified::*u_d_memptr;
 int UnspecSingle::*us_d_memptr;
-// CHECK: @"\01?s_d_memptr@@3PQSingle@@HQ1@" = global i32 -1, align 4
-// CHECK: @"\01?p_d_memptr@@3PQPolymorphic@@HQ1@" = global i32 0, align 4
-// CHECK: @"\01?m_d_memptr@@3PQMultiple@@HQ1@" = global i32 -1, align 4
-// CHECK: @"\01?v_d_memptr@@3PQVirtual@@HQ1@" = global { i32, i32 }
+// CHECK: @"\01?s_d_memptr@@3PQSingle@@HQ1@" = dso_local global i32 -1, align 4
+// CHECK: @"\01?p_d_memptr@@3PQPolymorphic@@HQ1@" = dso_local global i32 0, align 4
+// CHECK: @"\01?m_d_memptr@@3PQMultiple@@HQ1@" = dso_local global i32 -1, align 4
+// CHECK: @"\01?v_d_memptr@@3PQVirtual@@HQ1@" = dso_local global { i32, i32 }
 // CHECK:   { i32 0, i32 -1 }, align 4
-// CHECK: @"\01?n_d_memptr@@3PQNonZeroVBPtr@@HQ1@" = global { i32, i32 }
+// CHECK: @"\01?n_d_memptr@@3PQNonZeroVBPtr@@HQ1@" = dso_local global { i32, i32 }
 // CHECK:   { i32 0, i32 -1 }, align 4
-// CHECK: @"\01?u_d_memptr@@3PQUnspecified@@HQ1@" = global { i32, i32, i32 }
+// CHECK: @"\01?u_d_memptr@@3PQUnspecified@@HQ1@" = dso_local global { i32, i32, i32 }
 // CHECK:   { i32 0, i32 0, i32 -1 }, align 4
-// CHECK: @"\01?us_d_memptr@@3PQUnspecSingle@@HQ1@" = global { i32, i32, i32 }
+// CHECK: @"\01?us_d_memptr@@3PQUnspecSingle@@HQ1@" = dso_local global { i32, i32, i32 }
 // CHECK:   { i32 0, i32 0, i32 -1 }, align 4
 
 void (Single  ::*s_f_memptr)();
 void (Multiple::*m_f_memptr)();
 void (Virtual ::*v_f_memptr)();
-// CHECK: @"\01?s_f_memptr@@3P8Single@@AEXXZQ1@" = global i8* null, align 4
-// CHECK: @"\01?m_f_memptr@@3P8Multiple@@AEXXZQ1@" = global { i8*, i32 } zeroinitializer, align 4
-// CHECK: @"\01?v_f_memptr@@3P8Virtual@@AEXXZQ1@" = global { i8*, i32, i32 } zeroinitializer, align 4
+// CHECK: @"\01?s_f_memptr@@3P8Single@@AEXXZQ1@" = dso_local global i8* null, align 4
+// CHECK: @"\01?m_f_memptr@@3P8Multiple@@AEXXZQ1@" = dso_local global { i8*, i32 } zeroinitializer, align 4
+// CHECK: @"\01?v_f_memptr@@3P8Virtual@@AEXXZQ1@" = dso_local global { i8*, i32, i32 } zeroinitializer, align 4
 
 // We can define Unspecified after locking in the inheritance model.
 struct Unspecified : Multiple, Virtual {
@@ -170,11 +170,11 @@ struct D : C {
 // Try a cast that changes the inheritance model.  Null for D is 0, but null for
 // C is -1.  We need the cast to long in order to hit the non-APValue path.
 int C::*ptr4 = (int C::*) (int D::*) (long D::*) 0;
-// CHECK: @"\01?ptr4@CastParam@@3PQC@1@HQ21@" = global i32 -1, align 4
+// CHECK: @"\01?ptr4@CastParam@@3PQC@1@HQ21@" = dso_local global i32 -1, align 4
 
 // MSVC rejects this but we accept it.
 int C::*ptr5 = (int C::*) (long D::*) 0;
-// CHECK: @"\01?ptr5@CastParam@@3PQC@1@HQ21@" = global i32 -1, align 4
+// CHECK: @"\01?ptr5@CastParam@@3PQC@1@HQ21@" = dso_local global i32 -1, align 4
 }
 
 struct UnspecWithVBPtr;
@@ -191,7 +191,7 @@ void EmitNonVirtualMemberPointers() {
   void (Virtual    ::*v_f_memptr)() = &Virtual::foo;
   void (Unspecified::*u_f_memptr)() = &Unspecified::foo;
   void (UnspecWithVBPtr::*u2_f_memptr)() = &UnspecWithVBPtr::foo;
-// CHECK: define void @"\01?EmitNonVirtualMemberPointers@@YAXXZ"() {{.*}} {
+// CHECK: define dso_local void @"\01?EmitNonVirtualMemberPointers@@YAXXZ"() {{.*}} {
 // CHECK:   alloca i8*, align 4
 // CHECK:   alloca { i8*, i32 }, align 4
 // CHECK:   alloca { i8*, i32, i32 }, align 4
@@ -221,7 +221,7 @@ void podMemPtrs() {
   if (memptr)
     memptr = 0;
 // Check that member pointers use the right offsets and that null is -1.
-// CHECK:      define void @"\01?podMemPtrs@@YAXXZ"() {{.*}} {
+// CHECK:      define dso_local void @"\01?podMemPtrs@@YAXXZ"() {{.*}} {
 // CHECK:        %[[memptr:.*]] = alloca i32, align 4
 // CHECK-NEXT:   store i32 0, i32* %[[memptr]], align 4
 // CHECK-NEXT:   store i32 4, i32* %[[memptr]], align 4
@@ -241,7 +241,7 @@ void polymorphicMemPtrs() {
     memptr = 0;
 // Member pointers for polymorphic classes include the vtable slot in their
 // offset and use 0 to represent null.
-// CHECK:      define void @"\01?polymorphicMemPtrs@@YAXXZ"() {{.*}} {
+// CHECK:      define dso_local void @"\01?polymorphicMemPtrs@@YAXXZ"() {{.*}} {
 // CHECK:        %[[memptr:.*]] = alloca i32, align 4
 // CHECK-NEXT:   store i32 4, i32* %[[memptr]], align 4
 // CHECK-NEXT:   store i32 8, i32* %[[memptr]], align 4
@@ -255,7 +255,7 @@ void polymorphicMemPtrs() {
 
 bool nullTestDataUnspecified(int Unspecified::*mp) {
   return mp;
-// CHECK: define zeroext i1 @"\01?nullTestDataUnspecified@@YA_NPQUnspecified@@H@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?nullTestDataUnspecified@@YA_NPQUnspecified@@H@Z"{{.*}} {
 // CHECK:   %{{.*}} = load { i32, i32, i32 }, { i32, i32, i32 }* %{{.*}}, align 4
 // CHECK:   store { i32, i32, i32 } {{.*}} align 4
 // CHECK:   %[[mp:.*]] = load { i32, i32, i32 }, { i32, i32, i32 }* %{{.*}}, align 4
@@ -271,13 +271,13 @@ bool nullTestDataUnspecified(int Unspecified::*mp) {
 // CHECK: }
 
 // Pass this large type indirectly.
-// X64-LABEL: define zeroext i1 @"\01?nullTestDataUnspecified@@
+// X64-LABEL: define dso_local zeroext i1 @"\01?nullTestDataUnspecified@@
 // X64:             ({ i32, i32, i32 }*)
 }
 
 bool nullTestFunctionUnspecified(void (Unspecified::*mp)()) {
   return mp;
-// CHECK: define zeroext i1 @"\01?nullTestFunctionUnspecified@@YA_NP8Unspecified@@AEXXZ@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?nullTestFunctionUnspecified@@YA_NP8Unspecified@@AEXXZ@Z"{{.*}} {
 // CHECK:   %{{.*}} = load { i8*, i32, i32, i32 }, { i8*, i32, i32, i32 }* %{{.*}}, align 4
 // CHECK:   store { i8*, i32, i32, i32 } {{.*}} align 4
 // CHECK:   %[[mp:.*]] = load { i8*, i32, i32, i32 }, { i8*, i32, i32, i32 }* %{{.*}}, align 4
@@ -291,7 +291,7 @@ int loadDataMemberPointerVirtual(Virtual *o, int Virtual::*memptr) {
   return o->*memptr;
 // Test that we can unpack this aggregate member pointer and load the member
 // data pointer.
-// CHECK: define i32 @"\01?loadDataMemberPointerVirtual@@YAHPAUVirtual@@PQ1@H@Z"{{.*}} {
+// CHECK: define dso_local i32 @"\01?loadDataMemberPointerVirtual@@YAHPAUVirtual@@PQ1@H@Z"{{.*}} {
 // CHECK:   %[[o:.*]] = load %{{.*}}*, %{{.*}}** %{{.*}}, align 4
 // CHECK:   %[[memptr:.*]] = load { i32, i32 }, { i32, i32 }* %{{.*}}, align 4
 // CHECK:   %[[memptr0:.*]] = extractvalue { i32, i32 } %[[memptr:.*]], 0
@@ -312,7 +312,7 @@ int loadDataMemberPointerVirtual(Virtual *o, int Virtual::*memptr) {
 
 // A two-field data memptr on x64 gets coerced to i64 and is passed in a
 // register or memory.
-// X64-LABEL: define i32 @"\01?loadDataMemberPointerVirtual@@YAHPEAUVirtual@@PEQ1@H@Z"
+// X64-LABEL: define dso_local i32 @"\01?loadDataMemberPointerVirtual@@YAHPEAUVirtual@@PEQ1@H@Z"
 // X64:             (%struct.Virtual* %o, i64 %memptr.coerce)
 }
 
@@ -320,7 +320,7 @@ int loadDataMemberPointerUnspecified(Unspecified *o, int Unspecified::*memptr) {
   return o->*memptr;
 // Test that we can unpack this aggregate member pointer and load the member
 // data pointer.
-// CHECK: define i32 @"\01?loadDataMemberPointerUnspecified@@YAHPAUUnspecified@@PQ1@H@Z"{{.*}} {
+// CHECK: define dso_local i32 @"\01?loadDataMemberPointerUnspecified@@YAHPAUUnspecified@@PQ1@H@Z"{{.*}} {
 // CHECK:   %[[o:.*]] = load %{{.*}}*, %{{.*}}** %{{.*}}, align 4
 // CHECK:   %[[memptr:.*]] = load { i32, i32, i32 }, { i32, i32, i32 }* %{{.*}}, align 4
 // CHECK:   %[[memptr0:.*]] = extractvalue { i32, i32, i32 } %[[memptr:.*]], 0
@@ -351,12 +351,12 @@ int loadDataMemberPointerUnspecified(Unspecified *o, int Unspecified::*memptr) {
 void callMemberPointerSingle(Single *o, void (Single::*memptr)()) {
   (o->*memptr)();
 // Just look for an indirect thiscall.
-// CHECK: define void @"\01?callMemberPointerSingle@@{{.*}} {{.*}} {
+// CHECK: define dso_local void @"\01?callMemberPointerSingle@@{{.*}} {{.*}} {
 // CHECK:   call x86_thiscallcc void %{{.*}}(%{{.*}} %{{.*}})
 // CHECK:   ret void
 // CHECK: }
 
-// X64-LABEL: define void @"\01?callMemberPointerSingle@@
+// X64-LABEL: define dso_local void @"\01?callMemberPointerSingle@@
 // X64:           (%struct.Single* %o, i8* %memptr)
 // X64:   bitcast i8* %{{[^ ]*}} to void (%struct.Single*)*
 // X64:   ret void
@@ -364,7 +364,7 @@ void callMemberPointerSingle(Single *o, void (Single::*memptr)()) {
 
 void callMemberPointerMultiple(Multiple *o, void (Multiple::*memptr)()) {
   (o->*memptr)();
-// CHECK: define void @"\01?callMemberPointerMultiple@@{{.*}} {
+// CHECK: define dso_local void @"\01?callMemberPointerMultiple@@{{.*}} {
 // CHECK:   %[[memptr0:.*]] = extractvalue { i8*, i32 } %{{.*}}, 0
 // CHECK:   %[[memptr1:.*]] = extractvalue { i8*, i32 } %{{.*}}, 1
 // CHECK:   %[[this_adjusted:.*]] = getelementptr inbounds i8, i8* %{{.*}}, i32 %[[memptr1]]
@@ -378,7 +378,7 @@ void callMemberPointerMultiple(Multiple *o, void (Multiple::*memptr)()) {
 void callMemberPointerVirtualBase(Virtual *o, void (Virtual::*memptr)()) {
   (o->*memptr)();
 // This shares a lot with virtual data member pointers.
-// CHECK: define void @"\01?callMemberPointerVirtualBase@@{{.*}} {
+// CHECK: define dso_local void @"\01?callMemberPointerVirtualBase@@{{.*}} {
 // CHECK:   %[[memptr0:.*]] = extractvalue { i8*, i32, i32 } %{{.*}}, 0
 // CHECK:   %[[memptr1:.*]] = extractvalue { i8*, i32, i32 } %{{.*}}, 1
 // CHECK:   %[[memptr2:.*]] = extractvalue { i8*, i32, i32 } %{{.*}}, 2
@@ -400,21 +400,21 @@ void callMemberPointerVirtualBase(Virtual *o, void (Virtual::*memptr)()) {
 bool compareSingleFunctionMemptr(void (Single::*l)(), void (Single::*r)()) {
   return l == r;
 // Should only be one comparison here.
-// CHECK: define zeroext i1 @"\01?compareSingleFunctionMemptr@@YA_NP8Single@@AEXXZ0@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?compareSingleFunctionMemptr@@YA_NP8Single@@AEXXZ0@Z"{{.*}} {
 // CHECK-NOT: icmp
 // CHECK:   %[[r:.*]] = icmp eq
 // CHECK-NOT: icmp
 // CHECK:   ret i1 %[[r]]
 // CHECK: }
 
-// X64-LABEL: define zeroext i1 @"\01?compareSingleFunctionMemptr@@
+// X64-LABEL: define dso_local zeroext i1 @"\01?compareSingleFunctionMemptr@@
 // X64:             (i8* %{{[^,]*}}, i8* %{{[^)]*}})
 }
 
 bool compareNeqSingleFunctionMemptr(void (Single::*l)(), void (Single::*r)()) {
   return l != r;
 // Should only be one comparison here.
-// CHECK: define zeroext i1 @"\01?compareNeqSingleFunctionMemptr@@YA_NP8Single@@AEXXZ0@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?compareNeqSingleFunctionMemptr@@YA_NP8Single@@AEXXZ0@Z"{{.*}} {
 // CHECK-NOT: icmp
 // CHECK:   %[[r:.*]] = icmp ne
 // CHECK-NOT: icmp
@@ -424,7 +424,7 @@ bool compareNeqSingleFunctionMemptr(void (Single::*l)(), void (Single::*r)()) {
 
 bool unspecFuncMemptrEq(void (Unspecified::*l)(), void (Unspecified::*r)()) {
   return l == r;
-// CHECK: define zeroext i1 @"\01?unspecFuncMemptrEq@@YA_NP8Unspecified@@AEXXZ0@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?unspecFuncMemptrEq@@YA_NP8Unspecified@@AEXXZ0@Z"{{.*}} {
 // CHECK:   %[[lhs0:.*]] = extractvalue { i8*, i32, i32, i32 } %[[l:.*]], 0
 // CHECK:   %{{.*}} = extractvalue { i8*, i32, i32, i32 } %[[r:.*]], 0
 // CHECK:   %[[cmp0:.*]] = icmp eq i8* %[[lhs0]], %{{.*}}
@@ -445,13 +445,13 @@ bool unspecFuncMemptrEq(void (Unspecified::*l)(), void (Unspecified::*r)()) {
 // CHECK:   ret i1 %{{.*}}
 // CHECK: }
 
-// X64-LABEL: define zeroext i1 @"\01?unspecFuncMemptrEq@@
+// X64-LABEL: define dso_local zeroext i1 @"\01?unspecFuncMemptrEq@@
 // X64:             ({ i8*, i32, i32, i32 }*, { i8*, i32, i32, i32 }*)
 }
 
 bool unspecFuncMemptrNeq(void (Unspecified::*l)(), void (Unspecified::*r)()) {
   return l != r;
-// CHECK: define zeroext i1 @"\01?unspecFuncMemptrNeq@@YA_NP8Unspecified@@AEXXZ0@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?unspecFuncMemptrNeq@@YA_NP8Unspecified@@AEXXZ0@Z"{{.*}} {
 // CHECK:   %[[lhs0:.*]] = extractvalue { i8*, i32, i32, i32 } %[[l:.*]], 0
 // CHECK:   %{{.*}} = extractvalue { i8*, i32, i32, i32 } %[[r:.*]], 0
 // CHECK:   %[[cmp0:.*]] = icmp ne i8* %[[lhs0]], %{{.*}}
@@ -475,7 +475,7 @@ bool unspecFuncMemptrNeq(void (Unspecified::*l)(), void (Unspecified::*r)()) {
 
 bool unspecDataMemptrEq(int Unspecified::*l, int Unspecified::*r) {
   return l == r;
-// CHECK: define zeroext i1 @"\01?unspecDataMemptrEq@@YA_NPQUnspecified@@H0@Z"{{.*}} {
+// CHECK: define dso_local zeroext i1 @"\01?unspecDataMemptrEq@@YA_NPQUnspecified@@H0@Z"{{.*}} {
 // CHECK:   extractvalue { i32, i32, i32 } %{{.*}}, 0
 // CHECK:   extractvalue { i32, i32, i32 } %{{.*}}, 0
 // CHECK:   icmp eq i32
@@ -490,13 +490,13 @@ bool unspecDataMemptrEq(int Unspecified::*l, int Unspecified::*r) {
 // CHECK:   ret i1
 // CHECK: }
 
-// X64-LABEL: define zeroext i1 @"\01?unspecDataMemptrEq@@
+// X64-LABEL: define dso_local zeroext i1 @"\01?unspecDataMemptrEq@@
 // X64:             ({ i32, i32, i32 }*, { i32, i32, i32 }*)
 }
 
 void (Multiple::*convertB2FuncToMultiple(void (B2::*mp)()))() {
   return mp;
-// CHECK: define i64 @"\01?convertB2FuncToMultiple@@YAP8Multiple@@AEXXZP8B2@@AEXXZ@Z"{{.*}} {
+// CHECK: define dso_local i64 @"\01?convertB2FuncToMultiple@@YAP8Multiple@@AEXXZP8B2@@AEXXZ@Z"{{.*}} {
 // CHECK:   store
 // CHECK:   %[[mp:.*]] = load i8*, i8** %{{.*}}, align 4
 // CHECK:   icmp ne i8* %[[mp]], null
@@ -520,7 +520,7 @@ void (B2::*convertMultipleFuncToB2(void (Multiple::*mp)()))() {
 // LLVM from optimizing away the branch.  This is likely a bug in
 // lib/CodeGen/TargetInfo.cpp with how we classify memptr types for returns.
 //
-// CHECK: define i32 @"\01?convertMultipleFuncToB2@@YAP8B2@@AEXXZP8Multiple@@AEXXZ@Z"{{.*}} {
+// CHECK: define dso_local i32 @"\01?convertMultipleFuncToB2@@YAP8B2@@AEXXZP8Multiple@@AEXXZ@Z"{{.*}} {
 // CHECK:   store
 // CHECK:   %[[src:.*]] = load { i8*, i32 }, { i8*, i32 }* %{{.*}}, align 4
 // CHECK:   extractvalue { i8*, i32 } %[[src]], 0
@@ -545,7 +545,7 @@ struct D : B, C { int d; };
 
 void (D::*convertCToD(void (C::*mp)()))() {
   return mp;
-// CHECK: define void @"\01?convertCToD@Test1@@YAP8D@1@AEXXZP8C@1@AEXXZ@Z"{{.*}} {
+// CHECK: define dso_local void @"\01?convertCToD@Test1@@YAP8D@1@AEXXZP8C@1@AEXXZ@Z"{{.*}} {
 // CHECK:   store
 // CHECK:   load { i8*, i32, i32 }, { i8*, i32, i32 }* %{{.*}}, align 4
 // CHECK:   extractvalue { i8*, i32, i32 } %{{.*}}, 0
@@ -585,7 +585,7 @@ struct C : A {
 
 int A::*reinterpret(int B::*mp) {
   return reinterpret_cast<int A::*>(mp);
-// CHECK: define i32 @"\01?reinterpret@Test2@@YAPQA@1@HPQB@1@H@Z"{{.*}}  {
+// CHECK: define dso_local i32 @"\01?reinterpret@Test2@@YAPQA@1@HPQB@1@H@Z"{{.*}}  {
 // CHECK-NOT: select
 // CHECK:   ret i32
 // CHECK: }
@@ -593,7 +593,7 @@ int A::*reinterpret(int B::*mp) {
 
 int A::*reinterpret(int C::*mp) {
   return reinterpret_cast<int A::*>(mp);
-// CHECK: define i32 @"\01?reinterpret@Test2@@YAPQA@1@HPQC@1@H@Z"{{.*}}  {
+// CHECK: define dso_local i32 @"\01?reinterpret@Test2@@YAPQA@1@HPQC@1@H@Z"{{.*}}  {
 // CHECK:   %[[mp:.*]] = load i32, i32*
 // CHECK:   %[[cmp:.*]] = icmp ne i32 %[[mp]], 0
 // CHECK:   select i1 %[[cmp]], i32 %[[mp]], i32 -1
@@ -612,7 +612,7 @@ struct A {
 
 int *load_data(A *a, int A::*mp) {
   return &(a->*mp);
-// CHECK-LABEL: define i32* @"\01?load_data@Test3@@YAPAHPAUA@1@PQ21@H@Z"{{.*}}  {
+// CHECK-LABEL: define dso_local i32* @"\01?load_data@Test3@@YAPAHPAUA@1@PQ21@H@Z"{{.*}}  {
 // CHECK:    %[[a:.*]] = load %"struct.Test3::A"*, %"struct.Test3::A"** %{{.*}}, align 4
 // CHECK:    %[[mp:.*]] = load i32, i32* %{{.*}}, align 4
 // CHECK:    %[[a_i8:.*]] = bitcast %"struct.Test3::A"* %[[a]] to i8*
@@ -631,7 +631,7 @@ struct C : A, B { virtual void g(); };
 void (C::*getmp())() {
   return &C::g;
 }
-// CHECK-LABEL: define i64 @"\01?getmp@Test4@@YAP8C@1@AEXXZXZ"()
+// CHECK-LABEL: define dso_local i64 @"\01?getmp@Test4@@YAP8C@1@AEXXZXZ"()
 // CHECK: store { i8*, i32 } { i8* bitcast (void (%"struct.Test4::C"*, ...)* @"\01??_9C@Test4@@$BA@AE" to i8*), i32 4 }, { i8*, i32 }* %{{.*}}
 //
 
@@ -651,7 +651,7 @@ struct A {
 };
 struct B : public A {};
 void test() { void (B::*a)() = &B::f; }
-// CHECK-LABEL: define void @"\01?test@pr20007@@YAXXZ"
+// CHECK-LABEL: define dso_local void @"\01?test@pr20007@@YAXXZ"
 // CHECK: store i8* bitcast (void (%"struct.pr20007::A"*)* @"\01?f@A@pr20007@@QAEXXZ" to i8*)
 }
 
@@ -663,7 +663,7 @@ struct A {
 struct __single_inheritance B;
 struct B : public A {};
 void test() { void (B::*a)() = &B::f; }
-// CHECK-LABEL: define void @"\01?test@pr20007_kw@@YAXXZ"
+// CHECK-LABEL: define dso_local void @"\01?test@pr20007_kw@@YAXXZ"
 // CHECK: store i8* bitcast (void (%"struct.pr20007_kw::A"*)* @"\01?f@A@pr20007_kw@@QAEXXZ" to i8*)
 }
 
@@ -678,7 +678,7 @@ void test() { (void)(void (B::*)()) &B::f; }
 static_assert(sizeof(int B::*) == 4, "");
 static_assert(sizeof(int A::*) == 4, "");
 #pragma pointers_to_members(best_case)
-// CHECK-LABEL: define void @"\01?test@pr20007_pragma@@YAXXZ"
+// CHECK-LABEL: define dso_local void @"\01?test@pr20007_pragma@@YAXXZ"
 }
 
 namespace pr20007_pragma2 {
@@ -692,7 +692,7 @@ void test() { (void)&B::f; }
 static_assert(sizeof(int B::*) == 4, "");
 static_assert(sizeof(int A::*) == 12, "");
 #pragma pointers_to_members(best_case)
-// CHECK-LABEL: define void @"\01?test@pr20007_pragma2@@YAXXZ"
+// CHECK-LABEL: define dso_local void @"\01?test@pr20007_pragma2@@YAXXZ"
 }
 
 namespace pr23823 {
@@ -738,7 +738,7 @@ struct D : A, C {};
 
 typedef void (D::*DMemPtrTy)();
 
-// CHECK-LABEL: define void @"\01?get_memptr@pr23878@@YAP8D@1@AEXXZXZ"
+// CHECK-LABEL: define dso_local void @"\01?get_memptr@pr23878@@YAP8D@1@AEXXZXZ"
 // CHECK: @"\01??_9C@pr23878@@$BA@AE" to i8*), i32 0, i32 4
 DMemPtrTy get_memptr() { return &D::f; }
 }
@@ -762,7 +762,7 @@ namespace PR24703 {
 struct S;
 
 void f(int S::*&p) {}
-// CHECK-LABEL: define void @"\01?f@PR24703@@YAXAAPQS@1@H@Z"(
+// CHECK-LABEL: define dso_local void @"\01?f@PR24703@@YAXAAPQS@1@H@Z"(
 }
 
 namespace ReferenceToMPTWithIncompleteClass {

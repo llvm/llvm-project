@@ -379,7 +379,8 @@ bool DWARFMappedHash::MemoryTable::ReadHashData(uint32_t hash_data_offset,
 
 DWARFMappedHash::MemoryTable::Result
 DWARFMappedHash::MemoryTable::GetHashDataForName(
-    const char *name, lldb::offset_t *hash_data_offset_ptr, Pair &pair) const {
+    llvm::StringRef name, lldb::offset_t *hash_data_offset_ptr,
+    Pair &pair) const {
   pair.key = m_data.GetU32(hash_data_offset_ptr);
   pair.value.clear();
 
@@ -406,7 +407,7 @@ DWARFMappedHash::MemoryTable::GetHashDataForName(
     // data to parse at least "count" HashData entries.
 
     // First make sure the entire C string matches...
-    const bool match = strcmp(name, strp_cstr) == 0;
+    const bool match = name == strp_cstr;
 
     if (!match && m_header.header_data.HashDataHasFixedByteSize()) {
       // If the string doesn't match and we have fixed size data,
@@ -573,9 +574,9 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
   return die_info_array.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByName(const char *name,
+size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
                                                 DIEArray &die_offsets) {
-  if (!name || !name[0])
+  if (name.empty())
     return 0;
 
   DIEInfoArray die_info_array;
@@ -584,7 +585,7 @@ size_t DWARFMappedHash::MemoryTable::FindByName(const char *name,
   return die_info_array.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(const char *name,
+size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(llvm::StringRef name,
                                                       const dw_tag_t tag,
                                                       DIEArray &die_offsets) {
   DIEInfoArray die_info_array;
@@ -594,8 +595,8 @@ size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(const char *name,
 }
 
 size_t DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
-    const char *name, const dw_tag_t tag, const uint32_t qualified_name_hash,
-    DIEArray &die_offsets) {
+    llvm::StringRef name, const dw_tag_t tag,
+    const uint32_t qualified_name_hash, DIEArray &die_offsets) {
   DIEInfoArray die_info_array;
   if (FindByName(name, die_info_array))
     DWARFMappedHash::ExtractDIEArray(die_info_array, tag, qualified_name_hash,
@@ -604,7 +605,7 @@ size_t DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
 }
 
 size_t DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
-    const char *name, DIEArray &die_offsets, bool must_be_implementation) {
+    llvm::StringRef name, DIEArray &die_offsets, bool must_be_implementation) {
   DIEInfoArray die_info_array;
   if (FindByName(name, die_info_array)) {
     if (must_be_implementation &&
@@ -628,9 +629,9 @@ size_t DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
   return die_offsets.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByName(const char *name,
+size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
                                                 DIEInfoArray &die_info_array) {
-  if (!name || !name[0])
+  if (name.empty())
     return 0;
 
   Pair kv_pair;

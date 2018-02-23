@@ -59,8 +59,11 @@ Value *IRBuilderBase::getCastedInt8PtrValue(Value *Ptr) {
 
 static CallInst *createCallHelper(Value *Callee, ArrayRef<Value *> Ops,
                                   IRBuilderBase *Builder,
-                                  const Twine& Name="") {
+                                  const Twine &Name = "",
+                                  Instruction *FMFSource = nullptr) {
   CallInst *CI = CallInst::Create(Callee, Ops, Name);
+  if (FMFSource)
+    CI->copyFastMathFlags(FMFSource);
   Builder->GetInsertBlock()->getInstList().insert(Builder->GetInsertPoint(),CI);
   Builder->SetInstDebugLocation(CI);
   return CI;  
@@ -646,7 +649,18 @@ CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
 CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID,
                                                Value *LHS, Value *RHS,
                                                const Twine &Name) {
-  Module *M = BB->getParent()->getParent();
-  Function *Fn =  Intrinsic::getDeclaration(M, ID, { LHS->getType() });
+  Module *M = BB->getModule();
+  Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
   return createCallHelper(Fn, { LHS, RHS }, this, Name);
 }
+
+CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
+                                         ArrayRef<Value *> Args,
+                                         Instruction *FMFSource,
+                                         const Twine &Name) {
+  assert(!Args.empty() && "Expected at least one argument to intrinsic");
+  Module *M = BB->getModule();
+  Function *Fn = Intrinsic::getDeclaration(M, ID, { Args.front()->getType() });
+  return createCallHelper(Fn, Args, this, Name, FMFSource);
+}
+

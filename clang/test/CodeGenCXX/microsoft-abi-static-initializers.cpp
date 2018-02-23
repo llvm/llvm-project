@@ -51,7 +51,7 @@ void StaticLocal() {
   static S TheS;
 }
 
-// CHECK-LABEL: define void @"\01?StaticLocal@@YAXXZ"()
+// CHECK-LABEL: define dso_local void @"\01?StaticLocal@@YAXXZ"()
 // CHECK: load i32, i32* @"\01?$S1@?1??StaticLocal@@YAXXZ@4IA"
 // CHECK: store i32 {{.*}}, i32* @"\01?$S1@?1??StaticLocal@@YAXXZ@4IA"
 // CHECK: ret
@@ -93,7 +93,7 @@ void MultipleStatics() {
   static S S34;
   static S S35;
 }
-// CHECK-LABEL: define void @"\01?MultipleStatics@@YAXXZ"()
+// CHECK-LABEL: define dso_local void @"\01?MultipleStatics@@YAXXZ"()
 // CHECK: load i32, i32* @"\01?$S1@?1??MultipleStatics@@YAXXZ@4IA"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: and i32 {{.*}}, 2
@@ -133,7 +133,7 @@ inline S &UnreachableStatic() {
   return s;
 }
 
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.S* @"\01?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local dereferenceable({{[0-9]+}}) %struct.S* @"\01?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: and i32 {{.*}}, 2
 // CHECK: or i32 {{.*}}, 2
 // CHECK: ret
@@ -143,7 +143,7 @@ inline S &getS() {
   return TheS;
 }
 
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.S* @"\01?getS@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local dereferenceable({{[0-9]+}}) %struct.S* @"\01?getS@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: load i32, i32* @"\01??_B?1??getS@@YAAAUS@@XZ@51"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: icmp eq i32 {{.*}}, 0
@@ -158,7 +158,7 @@ inline S &getS() {
 // CHECK: ret %struct.S* @"\01?TheS@?1??getS@@YAAAUS@@XZ@4U2@A"
 
 inline int enum_in_function() {
-  // CHECK-LABEL: define linkonce_odr i32 @"\01?enum_in_function@@YAHXZ"() {{.*}} comdat
+  // CHECK-LABEL: define linkonce_odr dso_local i32 @"\01?enum_in_function@@YAHXZ"() {{.*}} comdat
   static enum e { foo, bar, baz } x;
   // CHECK: @"\01?x@?1??enum_in_function@@YAHXZ@4W4e@?1??1@YAHXZ@A"
   static int y;
@@ -169,7 +169,7 @@ inline int enum_in_function() {
 struct T {
   enum e { foo, bar, baz };
   int enum_in_struct() {
-    // CHECK-LABEL: define linkonce_odr x86_thiscallcc i32 @"\01?enum_in_struct@T@@QAEHXZ"({{.*}}) {{.*}} comdat
+    // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc i32 @"\01?enum_in_struct@T@@QAEHXZ"({{.*}}) {{.*}} comdat
     static int x;
     // CHECK: @"\01?x@?1??enum_in_struct@T@@QAEHXZ@4HA"
     return x++;
@@ -177,7 +177,7 @@ struct T {
 };
 
 inline int switch_test(int x) {
-  // CHECK-LABEL: define linkonce_odr i32 @"\01?switch_test@@YAHH@Z"(i32 %x) {{.*}} comdat
+  // CHECK-LABEL: define linkonce_odr dso_local i32 @"\01?switch_test@@YAHH@Z"(i32 %x) {{.*}} comdat
   switch (x) {
     static int a;
     // CHECK: @"\01?a@?3??switch_test@@YAHH@Z@4HA"
@@ -198,7 +198,7 @@ inline int switch_test(int x) {
 
 int f();
 inline void switch_test2() {
-  // CHECK-LABEL: define linkonce_odr void @"\01?switch_test2@@YAXXZ"() {{.*}} comdat
+  // CHECK-LABEL: define linkonce_odr dso_local void @"\01?switch_test2@@YAXXZ"() {{.*}} comdat
   // CHECK: @"\01?x@?2??switch_test2@@YAXXZ@4HA"
   switch (1) default: static int x = f();
 }
@@ -213,7 +213,7 @@ namespace DynamicDLLImportInitVSMangling {
   template struct __declspec(dllimport) A<int>;
 
   inline int switch_test3() {
-    // CHECK-LABEL: define linkonce_odr i32 @"\01?switch_test3@DynamicDLLImportInitVSMangling@@YAHXZ"() {{.*}} comdat
+    // CHECK-LABEL: define linkonce_odr dso_local i32 @"\01?switch_test3@DynamicDLLImportInitVSMangling@@YAHXZ"() {{.*}} comdat
     static int local;
     // CHECK: @"\01?local@?1??switch_test3@DynamicDLLImportInitVSMangling@@YAHXZ@4HA"
     return local++;
@@ -238,9 +238,9 @@ void force_usage() {
 // CHECK: call i32 @atexit(void ()* @"\01??__Ffoo@?$B@H@@2VA@@A@YAXXZ")
 // CHECK: ret void
 
-// CHECK: define linkonce_odr x86_thiscallcc %class.A* @"\01??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
+// CHECK: define linkonce_odr dso_local x86_thiscallcc %class.A* @"\01??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
 
-// CHECK: define linkonce_odr x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}}) {{.*}} comdat
+// CHECK: define linkonce_odr dso_local x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}}) {{.*}} comdat
 
 // CHECK: define internal void @"\01??__Ffoo@?$B@H@@2VA@@A@YAXXZ"
 // CHECK: call x86_thiscallcc void @"\01??1A@@QAE@XZ"{{.*}}foo

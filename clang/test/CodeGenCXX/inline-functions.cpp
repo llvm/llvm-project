@@ -23,14 +23,14 @@ void B<char>::f() { }
 // We need a final CHECK line here.
 
 // NORMAL-LABEL: define void @_Z1fv
-// MSVCCOMPAT-LABEL: define void @"\01?f@@YAXXZ"
+// MSVCCOMPAT-LABEL: define dso_local void @"\01?f@@YAXXZ"
 void f() { }
 
 // <rdar://problem/8740363>
 inline void f1(int);
 
 // NORMAL-LABEL: define linkonce_odr void @_Z2f1i
-// MSVCCOMPAT-LABEL: define linkonce_odr void @"\01?f1@@YAXH@Z"
+// MSVCCOMPAT-LABEL: define linkonce_odr dso_local void @"\01?f1@@YAXH@Z"
 void f1(int) { }
 
 void test_f1() { f1(17); }
@@ -44,7 +44,7 @@ namespace test1 {
   };
 
   // NORMAL-LABEL: define linkonce_odr void @_ZN5test11C4funcEv(
-  // MSVCCOMPAT-LABEL: define linkonce_odr void @"\01?func@C@test1@@QEAAXXZ"(
+  // MSVCCOMPAT-LABEL: define linkonce_odr dso_local void @"\01?func@C@test1@@QEAAXXZ"(
 
   class C {
   public:
@@ -72,36 +72,36 @@ namespace test2 {
     f(a);
   }
   // NORMAL-LABEL: define linkonce_odr void @_ZN5test21fERKNS_1AE
-  // MSVCCOMPAT-LABEL: define linkonce_odr void @"\01?f@test2@@YAXAEBUA@1@@Z"
+  // MSVCCOMPAT-LABEL: define linkonce_odr dso_local void @"\01?f@test2@@YAXAEBUA@1@@Z"
 }
 
 // NORMAL-NOT: _Z17ExternAndInlineFnv
-// MSVCCOMPAT-LABEL: define weak_odr void @"\01?ExternAndInlineFn@@YAXXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local void @"\01?ExternAndInlineFn@@YAXXZ"
 extern inline void ExternAndInlineFn() {}
 
 // NORMAL-NOT: _Z18InlineThenExternFnv
-// MSVCCOMPAT-LABEL: define weak_odr void @"\01?InlineThenExternFn@@YAXXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local void @"\01?InlineThenExternFn@@YAXXZ"
 inline void InlineThenExternFn() {}
 extern void InlineThenExternFn();
 
 // NORMAL-LABEL: define void @_Z18ExternThenInlineFnv
-// MSVCCOMPAT-LABEL: define void @"\01?ExternThenInlineFn@@YAXXZ"
+// MSVCCOMPAT-LABEL: define dso_local void @"\01?ExternThenInlineFn@@YAXXZ"
 extern void ExternThenInlineFn() {}
 
 // NORMAL-NOT: _Z25ExternThenInlineThenDefFnv
-// MSVCCOMPAT-LABEL: define weak_odr void @"\01?ExternThenInlineThenDefFn@@YAXXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local void @"\01?ExternThenInlineThenDefFn@@YAXXZ"
 extern void ExternThenInlineThenDefFn();
 inline void ExternThenInlineThenDefFn();
 void ExternThenInlineThenDefFn() {}
 
 // NORMAL-NOT: _Z25InlineThenExternThenDefFnv
-// MSVCCOMPAT-LABEL: define weak_odr void @"\01?InlineThenExternThenDefFn@@YAXXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local void @"\01?InlineThenExternThenDefFn@@YAXXZ"
 inline void InlineThenExternThenDefFn();
 extern void InlineThenExternThenDefFn();
 void InlineThenExternThenDefFn() {}
 
 // NORMAL-NOT: _Z17ExternAndConstexprFnv
-// MSVCCOMPAT-LABEL: define weak_odr i32 @"\01?ExternAndConstexprFn@@YAHXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local i32 @"\01?ExternAndConstexprFn@@YAHXZ"
 extern constexpr int ExternAndConstexprFn() { return 0; }
 
 // NORMAL-NOT: _Z11ConstexprFnv
@@ -112,7 +112,7 @@ template <typename T>
 extern inline void ExternInlineOnPrimaryTemplate(T);
 
 // NORMAL-LABEL: define void @_Z29ExternInlineOnPrimaryTemplateIiEvT_
-// MSVCCOMPAT-LABEL: define void @"\01??$ExternInlineOnPrimaryTemplate@H@@YAXH@Z"
+// MSVCCOMPAT-LABEL: define dso_local void @"\01??$ExternInlineOnPrimaryTemplate@H@@YAXH@Z"
 template <>
 void ExternInlineOnPrimaryTemplate(int) {}
 
@@ -120,7 +120,7 @@ template <typename T>
 extern inline void ExternInlineOnPrimaryTemplateAndSpecialization(T);
 
 // NORMAL-NOT: _Z46ExternInlineOnPrimaryTemplateAndSpecializationIiEvT_
-// MSVCCOMPAT-LABEL: define weak_odr void @"\01??$ExternInlineOnPrimaryTemplateAndSpecialization@H@@YAXH@Z"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local void @"\01??$ExternInlineOnPrimaryTemplateAndSpecialization@H@@YAXH@Z"
 template <>
 extern inline void ExternInlineOnPrimaryTemplateAndSpecialization(int) {}
 
@@ -146,5 +146,5 @@ struct S {
 
 __attribute__((used)) inline S<int> Foo() { return S<int>(); }
 // NORMAL-LABEL: define linkonce_odr void @_ZN7PR229593FooEv(
-// MSVCCOMPAT-LABEL: define linkonce_odr i8 @"\01?Foo@PR22959@@YA?AU?$S@H@1@XZ"(
+// MSVCCOMPAT-LABEL: define linkonce_odr dso_local i8 @"\01?Foo@PR22959@@YA?AU?$S@H@1@XZ"(
 }

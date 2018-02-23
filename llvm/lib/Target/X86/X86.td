@@ -1130,4 +1130,5 @@ def X86 : Target {
   let InstructionSet = X86InstrInfo;
   let AssemblyParserVariants = [ATTAsmParserVariant, IntelAsmParserVariant];
   let AssemblyWriters = [ATTAsmWriter, IntelAsmWriter];
+  let AllowRegisterRenaming = 1;
 }

@@ -34,7 +34,7 @@ extern "C" {
 namespace nm {
   float abc = 2;
 }
-// CHECK: @_ZN2nm3abcE = global float
+// CHECK: @_ZN2nm3abcE = {{(dso_local )?}}global float
 
 float foo() {
   _ZN1TD1Ev();

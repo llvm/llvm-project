@@ -480,6 +480,8 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
      << SchedModels.getSchedClassIdx(Inst) << ",\t0";
 
+  CodeGenTarget &Target = CDP.getTargetInfo();
+
   // Emit all of the target independent flags...
   if (Inst.isPseudo)           OS << "|(1ULL<<MCID::Pseudo)";
   if (Inst.isReturn)           OS << "|(1ULL<<MCID::Return)";
@@ -508,8 +510,10 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   if (Inst.Operands.isVariadic)OS << "|(1ULL<<MCID::Variadic)";
   if (Inst.hasSideEffects)     OS << "|(1ULL<<MCID::UnmodeledSideEffects)";
   if (Inst.isAsCheapAsAMove)   OS << "|(1ULL<<MCID::CheapAsAMove)";
-  if (Inst.hasExtraSrcRegAllocReq) OS << "|(1ULL<<MCID::ExtraSrcRegAllocReq)";
-  if (Inst.hasExtraDefRegAllocReq) OS << "|(1ULL<<MCID::ExtraDefRegAllocReq)";
+  if (!Target.getAllowRegisterRenaming() || Inst.hasExtraSrcRegAllocReq)
+    OS << "|(1ULL<<MCID::ExtraSrcRegAllocReq)";
+  if (!Target.getAllowRegisterRenaming() || Inst.hasExtraDefRegAllocReq)
+    OS << "|(1ULL<<MCID::ExtraDefRegAllocReq)";
   if (Inst.isRegSequence) OS << "|(1ULL<<MCID::RegSequence)";
   if (Inst.isExtractSubreg) OS << "|(1ULL<<MCID::ExtractSubreg)";
   if (Inst.isInsertSubreg) OS << "|(1ULL<<MCID::InsertSubreg)";
@@ -550,7 +554,6 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   else
     OS << "OperandInfo" << OpInfo.find(OperandInfo)->second;
 
-  CodeGenTarget &Target = CDP.getTargetInfo();
   if (Inst.HasComplexDeprecationPredicate)
     // Emit a function pointer to the complex predicate method.
     OS << ", -1 "

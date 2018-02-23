@@ -723,6 +723,9 @@ public:
 
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
+  /// Set visibility and dso_local.
+  /// This must be called after dllimport/dllexport is set.
+  /// FIXME: should this set dllimport/dllexport instead?
   void setGVProperties(llvm::GlobalValue *GV, const NamedDecl *D) const;
 
   /// Set the TLS mode for the given LLVM GlobalValue for the thread-local

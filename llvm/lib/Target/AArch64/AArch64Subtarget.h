@@ -113,6 +113,7 @@ protected:
   bool HasArithmeticCbzFusion = false;
   bool HasFuseAddress = false;
   bool HasFuseAES = false;
+  bool HasFuseCCSelect = false;
   bool HasFuseLiterals = false;
   bool DisableLatencySchedHeuristic = false;
   bool UseRSqrt = false;
@@ -239,12 +240,13 @@ public:
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
   bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
+  bool hasFuseCCSelect() const { return HasFuseCCSelect; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
 
   /// \brief Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseLiterals();
+           hasFuseAES() || hasFuseCCSelect() || hasFuseLiterals();
   }
 
   bool useRSqrt() const { return UseRSqrt; }

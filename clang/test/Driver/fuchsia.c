@@ -10,6 +10,7 @@
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
+// CHECK: "-fno-common"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"

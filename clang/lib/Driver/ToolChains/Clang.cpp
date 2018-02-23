@@ -1306,6 +1306,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
 static bool isNoCommonDefault(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   default:
+    if (Triple.isOSFuchsia())
+      return true;
     return false;
 
   case llvm::Triple::xcore:

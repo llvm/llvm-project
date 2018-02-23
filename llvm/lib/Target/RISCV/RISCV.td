@@ -92,4 +92,5 @@ def RISCV : Target {
   let InstructionSet = RISCVInstrInfo;
   let AssemblyParsers = [RISCVAsmParser];
   let AssemblyWriters = [RISCVAsmWriter];
+  let AllowRegisterRenaming = 1;
 }

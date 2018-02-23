@@ -6,7 +6,7 @@ void never_throws() noexcept(true) {
   may_throw();
 }
 
-// CHECK-LABEL: define void @"\01?never_throws@@YAXXZ"()
+// CHECK-LABEL: define dso_local void @"\01?never_throws@@YAXXZ"()
 // CHECK-SAME:          personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
 // CHECK:      invoke void @"\01?may_throw@@YAXXZ"()
 // CHECK:      %[[cp:.*]] = cleanuppad within none []

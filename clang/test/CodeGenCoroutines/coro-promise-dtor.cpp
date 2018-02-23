@@ -28,7 +28,7 @@ coro_t f() {
   co_return;
 }
 
-// CHECK-LABEL: define void @"\01?f@@YA?AUcoro_t@@XZ"(
+// CHECK-LABEL: define dso_local void @"\01?f@@YA?AUcoro_t@@XZ"(
 // CHECK:  %gro.active = alloca i1
 // CHECK:  store i1 false, i1* %gro.active
 

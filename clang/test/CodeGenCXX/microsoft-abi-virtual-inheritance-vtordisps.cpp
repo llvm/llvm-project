@@ -23,7 +23,7 @@ struct D : virtual C {
 
 D::D() {}  // Forces vftable emission.
 
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"\01?f@D@@$4PPPPPPPM@A@AEXXZ"
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"\01?f@D@@$4PPPPPPPM@A@AEXXZ"
 // Note that the vtordisp is applied before really adjusting to D*.
 // CHECK: %[[COERCE_LOAD:.*]] = load %struct.D*, %struct.D** %{{.*}}
 // CHECK: %[[ECX:.*]] = load %struct.D*, %struct.D** %{{.*}}
@@ -36,7 +36,7 @@ D::D() {}  // Forces vftable emission.
 // CHECK: call x86_thiscallcc void @"\01?f@D@@UAEXXZ"(i8* %[[ADJUSTED_i8]])
 // CHECK: ret void
 
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"\01?f@D@@$4PPPPPPPI@3AEXXZ"
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"\01?f@D@@$4PPPPPPPI@3AEXXZ"
 // CHECK: %[[COERCE_LOAD:.*]] = load %struct.D*, %struct.D** %{{.*}}
 // CHECK: %[[ECX:.*]] = load %struct.D*, %struct.D** %{{.*}}
 // CHECK: %[[ECX_i8:.*]] = bitcast %struct.D* %[[ECX]] to i8*
@@ -66,7 +66,7 @@ struct G : virtual F, virtual E {
 
 G::G() {}  // Forces vftable emission.
 
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"\01?f@E@@$R4BA@M@PPPPPPPM@7AEXXZ"(i8*
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"\01?f@E@@$R4BA@M@PPPPPPPM@7AEXXZ"(i8*
 // CHECK: %[[COERCE_LOAD:.*]] = load %struct.E*, %struct.E** %{{.*}}
 // CHECK: %[[ECX:.*]] = load %struct.E*, %struct.E** %{{.*}}
 // CHECK: %[[ECX_i8:.*]] = bitcast %struct.E* %[[ECX]] to i8*
