@@ -833,6 +833,7 @@
 		6D99A3631BBC2F3200979793 /* ArmUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */; };
 		6D9AB3DD1BB2B74E003F2289 /* TypeMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AB3DC1BB2B74E003F2289 /* TypeMap.cpp */; };
 		6DEC6F391BD66D750091ABA6 /* TaskPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */; };
+		7FB88E8E2040CB1100E0D0A3 /* CleanUpTest.cpp in Copy Files */ = {isa = PBXBuildFile; fileRef = 7FB88E8D2040CB1100E0D0A3 /* CleanUpTest.cpp */; };
 		8C26C4261C3EA5F90031DF7C /* TSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C26C4241C3EA4340031DF7C /* TSanRuntime.cpp */; };
 		8C2D6A53197A1EAF006989C9 /* MemoryHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A52197A1EAF006989C9 /* MemoryHistory.cpp */; };
 		8C2D6A5E197A250F006989C9 /* MemoryHistoryASan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A5A197A1FDC006989C9 /* MemoryHistoryASan.cpp */; };
@@ -1339,6 +1340,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				7FB88E8E2040CB1100E0D0A3 /* CleanUpTest.cpp in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2803,6 +2805,7 @@
 		6D9AB3DE1BB2B76B003F2289 /* TypeMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = TypeMap.h; path = include/lldb/Symbol/TypeMap.h; sourceTree = "<group>"; };
 		6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TaskPool.cpp; path = source/Utility/TaskPool.cpp; sourceTree = "<group>"; };
 		6DEC6F3A1BD66D950091ABA6 /* TaskPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TaskPool.h; path = include/lldb/Utility/TaskPool.h; sourceTree = "<group>"; };
+		7FB88E8D2040CB1100E0D0A3 /* CleanUpTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CleanUpTest.cpp; sourceTree = "<group>"; };
 		8C26C4241C3EA4340031DF7C /* TSanRuntime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = TSanRuntime.cpp; path = TSan/TSanRuntime.cpp; sourceTree = "<group>"; };
 		8C26C4251C3EA4340031DF7C /* TSanRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = TSanRuntime.h; path = TSan/TSanRuntime.h; sourceTree = "<group>"; };
 		8C2D6A52197A1EAF006989C9 /* MemoryHistory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MemoryHistory.cpp; path = source/Target/MemoryHistory.cpp; sourceTree = "<group>"; };
@@ -3513,6 +3516,7 @@
 		2321F9421BDD343A00BA9A93 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				7FB88E8D2040CB1100E0D0A3 /* CleanUpTest.cpp */,
 				9A1542F31F0EE44000DEA1D8 /* Helpers */,
 				2321F9431BDD346100BA9A93 /* CMakeLists.txt */,
 				23CB15041D66CD9200EDDDE1 /* Inputs */,
