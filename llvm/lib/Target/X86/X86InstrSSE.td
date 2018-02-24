@@ -1782,34 +1782,36 @@ def : Pat<(v4f32 (X86Movss
           (CVTSI2SSrr_Int VR128:$dst, GR32:$src)>;
 } // Predicates = [UseSSE1]
 
+let Predicates = [HasAVX, NoVLX] in {
 // Convert packed single/double fp to doubleword
 def VCVTPS2DQrr : VPDI<0x5B, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                        "cvtps2dq\t{$src, $dst|$dst, $src}",
-                       [(set VR128:$dst, (int_x86_sse2_cvtps2dq VR128:$src))],
+                       [(set VR128:$dst, (v4i32 (X86cvtp2Int (v4f32 VR128:$src))))],
                        IIC_SSE_CVT_PS_RR>, VEX, Sched<[WriteCvtF2I]>, VEX_WIG;
 def VCVTPS2DQrm : VPDI<0x5B, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        "cvtps2dq\t{$src, $dst|$dst, $src}",
                        [(set VR128:$dst,
-                         (int_x86_sse2_cvtps2dq (loadv4f32 addr:$src)))],
+                         (v4i32 (X86cvtp2Int (loadv4f32 addr:$src))))],
                        IIC_SSE_CVT_PS_RM>, VEX, Sched<[WriteCvtF2ILd]>, VEX_WIG;
 def VCVTPS2DQYrr : VPDI<0x5B, MRMSrcReg, (outs VR256:$dst), (ins VR256:$src),
                         "cvtps2dq\t{$src, $dst|$dst, $src}",
                         [(set VR256:$dst,
-                          (int_x86_avx_cvt_ps2dq_256 VR256:$src))],
+                          (v8i32 (X86cvtp2Int (v8f32 VR256:$src))))],
                         IIC_SSE_CVT_PS_RR>, VEX, VEX_L, Sched<[WriteCvtF2I]>, VEX_WIG;
 def VCVTPS2DQYrm : VPDI<0x5B, MRMSrcMem, (outs VR256:$dst), (ins f256mem:$src),
                         "cvtps2dq\t{$src, $dst|$dst, $src}",
                         [(set VR256:$dst,
-                          (int_x86_avx_cvt_ps2dq_256 (loadv8f32 addr:$src)))],
+                          (v8i32 (X86cvtp2Int (loadv8f32 addr:$src))))],
                         IIC_SSE_CVT_PS_RM>, VEX, VEX_L, Sched<[WriteCvtF2ILd]>, VEX_WIG;
+}
 def CVTPS2DQrr : PDI<0x5B, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                      "cvtps2dq\t{$src, $dst|$dst, $src}",
-                     [(set VR128:$dst, (int_x86_sse2_cvtps2dq VR128:$src))],
+                     [(set VR128:$dst, (v4i32 (X86cvtp2Int (v4f32 VR128:$src))))],
                      IIC_SSE_CVT_PS_RR>, Sched<[WriteCvtF2I]>;
 def CVTPS2DQrm : PDI<0x5B, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                      "cvtps2dq\t{$src, $dst|$dst, $src}",
                      [(set VR128:$dst,
-                       (int_x86_sse2_cvtps2dq (memopv4f32 addr:$src)))],
+                       (v4i32 (X86cvtp2Int (memopv4f32 addr:$src))))],
                      IIC_SSE_CVT_PS_RM>, Sched<[WriteCvtF2ILd]>;
 
 

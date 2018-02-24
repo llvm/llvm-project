@@ -1536,6 +1536,24 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+  case ISD::ADD:
+  case ISD::SUB: {
+    APInt SrcUndef, SrcZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,
+                                   SrcZero, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
+                                   KnownZero, TLO, Depth + 1))
+      return true;
+    KnownZero &= SrcZero;
+    KnownUndef &= SrcUndef;
+    break;
+  }
+  case ISD::TRUNCATE:
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
+                                   KnownZero, TLO, Depth + 1))
+      return true;
+    break;
   default: {
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
       if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts, KnownUndef,

@@ -178,10 +178,15 @@ declare <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double>) nounwind readnone
 
 
 define <8 x i32> @test_x86_avx_cvt_ps2dq_256(<8 x float> %a0) {
-; CHECK-LABEL: test_x86_avx_cvt_ps2dq_256:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtps2dq %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x5b,0xc0]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; AVX-LABEL: test_x86_avx_cvt_ps2dq_256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtps2dq %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x5b,0xc0]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx_cvt_ps2dq_256:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vcvtps2dq %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x5b,0xc0]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> %a0) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
 }
