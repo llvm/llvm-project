@@ -13,13 +13,13 @@ struct S {
   int *z;
 };
 
-// CL20-DAG: @g_extern_var = external addrspace(1) global float
-// CL20-DAG: @l_extern_var = external addrspace(1) global float
+// CL20-DAG: @g_extern_var = external {{(dso_local )?}}addrspace(1) global float
+// CL20-DAG: @l_extern_var = external {{(dso_local )?}}addrspace(1) global float
 // CL20-DAG: @test_static.l_static_var = internal addrspace(1) global float 0.000000e+00
 // CL20-DAG: @g_static_var = internal addrspace(1) global float 0.000000e+00
 
 #ifdef CL20
-// CL20-DAG: @g_s = common addrspace(1) global %struct.S zeroinitializer
+// CL20-DAG: @g_s = common {{(dso_local )?}}addrspace(1) global %struct.S zeroinitializer
 struct S g_s;
 #endif
 
@@ -53,10 +53,10 @@ void fc(constant int *arg) {}
 
 #ifdef CL20
 int i;
-// CL20-DAG: @i = common addrspace(1) global i32 0
+// CL20-DAG: @i = common {{(dso_local )?}}addrspace(1) global i32 0
 int *ptr;
-// CL20SPIR-DAG: @ptr = common addrspace(1) global i32 addrspace(4)* null
-// CL20AMDGCN-DAG: @ptr = common addrspace(1) global i32* null
+// CL20SPIR-DAG: @ptr = common {{(dso_local )?}}addrspace(1) global i32 addrspace(4)* null
+// CL20AMDGCN-DAG: @ptr = common {{(dso_local )?}}addrspace(1) global i32* null
 #endif
 
 // SPIR: i32* %arg
@@ -79,13 +79,13 @@ void f(int *arg) {
 
 typedef int int_td;
 typedef int *intp_td;
-// SPIR: define void @test_typedef(i32 addrspace(1)* %x, i32 addrspace(2)* %y, i32* %z)
+// SPIR: define {{(dso_local )?}}void @test_typedef(i32 addrspace(1)* %x, i32 addrspace(2)* %y, i32* %z)
 void test_typedef(global int_td *x, constant int_td *y, intp_td z) {
   *x = *y;
   *z = 0;
 }
 
-// SPIR: define void @test_struct()
+// SPIR: define {{(dso_local )?}}void @test_struct()
 void test_struct() {
   // SPIR: %ps = alloca %struct.S*
   // CL20SPIR: %ps = alloca %struct.S addrspace(4)*
@@ -99,7 +99,7 @@ void test_struct() {
 #endif
 }
 
-// SPIR-LABEL: define void @test_void_par()
+// SPIR-LABEL: define {{(dso_local )?}}void @test_void_par()
 void test_void_par(void) {}
 
 // On ppc64 returns signext i32.

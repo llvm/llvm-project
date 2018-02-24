@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
   return Test1::GetTest1()->X;
 }
 
-// CHECK: define linkonce_odr void @"\01??$foo@H@@YAXHH@Z"(i32 %{{.+}}, i32 %{{.+}})
+// CHECK: define linkonce_odr dso_local void @"\01??$foo@H@@YAXHH@Z"(i32 %{{.+}}, i32 %{{.+}})
 // CHECK: call i32 @"\01?GetX@?$St@H@@QEAAHHH@Z"(%class.St{{.+}}* [[BAR:%.+]], i32 %{{.+}} i32 %{{.+}})
 // CHECK: call i32 @"\01?PutX@?$St@H@@QEAAHHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
 // CHECK: call i32 @"\01?GetX@?$St@H@@QEAAHHH@Z"(%class.St{{.+}}* [[BAR]], i32 %{{.+}} i32 %{{.+}})

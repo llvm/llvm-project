@@ -21,7 +21,7 @@ extern "C" void use_cxx() {
 
 // Make sure we use __CxxFrameHandler3 for C++ EH.
 
-// CXXEH-LABEL: define void @use_cxx()
+// CXXEH-LABEL: define dso_local void @use_cxx()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
 // CXXEH: call %struct.HasCleanup* @"\01??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // CXXEH: invoke void @might_throw()
@@ -36,7 +36,7 @@ extern "C" void use_cxx() {
 // CXXEH: call void @"\01??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // CXXEH: cleanupret
 
-// NOCXX-LABEL: define void @use_cxx()
+// NOCXX-LABEL: define dso_local void @use_cxx()
 // NOCXX-NOT: invoke
 // NOCXX: call %struct.HasCleanup* @"\01??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // NOCXX-NOT: invoke
@@ -55,7 +55,7 @@ extern "C" void use_seh() {
 
 // Make sure we use __C_specific_handler for SEH.
 
-// CHECK-LABEL: define void @use_seh()
+// CHECK-LABEL: define dso_local void @use_seh()
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw() #[[NOINLINE:[0-9]+]]
 // CHECK:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
@@ -87,7 +87,7 @@ extern "C" void nested_finally() {
   }
 }
 
-// CHECK-LABEL: define void @nested_finally() #{{[0-9]+}}
+// CHECK-LABEL: define dso_local void @nested_finally() #{{[0-9]+}}
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
 // CHECK: call void @"\01?fin$0@0@nested_finally@@"(i8 1, i8* {{.*}})
@@ -108,11 +108,11 @@ void use_seh_in_lambda() {
   might_throw();
 }
 
-// CXXEH-LABEL: define void @"\01?use_seh_in_lambda@@YAXXZ"()
+// CXXEH-LABEL: define dso_local void @"\01?use_seh_in_lambda@@YAXXZ"()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
 // CXXEH: cleanuppad
 
-// NOCXX-LABEL: define void @"\01?use_seh_in_lambda@@YAXXZ"()
+// NOCXX-LABEL: define dso_local void @"\01?use_seh_in_lambda@@YAXXZ"()
 // NOCXX-NOT: invoke
 // NOCXX: ret void
 
@@ -139,7 +139,7 @@ void use_inline() {
   use_seh_in_inline_func();
 }
 
-// CHECK-LABEL: define linkonce_odr void @use_seh_in_inline_func() #{{[0-9]+}}
+// CHECK-LABEL: define linkonce_odr dso_local void @use_seh_in_inline_func() #{{[0-9]+}}
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
 //

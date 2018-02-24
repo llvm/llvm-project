@@ -145,7 +145,7 @@ struct X: virtual C {
   // MANGLING-DAG: @"\01??_7X@Test4@@6B@"
 
   // Also check the mangling of the thunk.
-  // MANGLING-DAG: define linkonce_odr x86_thiscallcc void @"\01?f@C@@WPPPPPPPI@AEXXZ"
+  // MANGLING-DAG: define linkonce_odr dso_local x86_thiscallcc void @"\01?f@C@@WPPPPPPPI@AEXXZ"
 };
 
 X::X() {}

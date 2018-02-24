@@ -17,7 +17,7 @@ int __leave_with___except_simple() {
   }
   return 1;
 }
-// CHECK-LABEL: define i32 @__leave_with___except_simple()
+// CHECK-LABEL: define dso_local i32 @__leave_with___except_simple()
 // CHECK: store i32 15, i32* %myres
 // CHECK-NEXT: br label %[[tryleave:[^ ]*]]
 // CHECK-NOT: store i32 23
@@ -37,7 +37,7 @@ int __leave_with___except() {
   }
   return 1;
 }
-// CHECK-LABEL: define i32 @__leave_with___except()
+// CHECK-LABEL: define dso_local i32 @__leave_with___except()
 // CHECK: invoke void @g()
 // CHECK-NEXT:       to label %[[cont:.*]] unwind label %{{.*}}
 // For __excepts, instead of an explicit __try.__leave label, we could use
@@ -69,7 +69,7 @@ int __leave_with___finally_simple() {
   }
   return 1;
 }
-// CHECK-LABEL: define i32 @__leave_with___finally_simple()
+// CHECK-LABEL: define dso_local i32 @__leave_with___finally_simple()
 // CHECK: store i32 15, i32* %myres
 // CHECK-NEXT: br label %[[tryleave:[^ ]*]]
 // CHECK-NOT: store i32 23
@@ -89,7 +89,7 @@ int __leave_with___finally_noreturn() {
   }
   return 1;
 }
-// CHECK-LABEL: define i32 @__leave_with___finally_noreturn()
+// CHECK-LABEL: define dso_local i32 @__leave_with___finally_noreturn()
 // CHECK: store i32 15, i32* %myres
 // CHECK-NEXT: br label %[[tryleave:[^ ]*]]
 // CHECK-NOT: store i32 23
@@ -109,7 +109,7 @@ int __leave_with___finally() {
   }
   return 1;
 }
-// CHECK-LABEL: define i32 @__leave_with___finally()
+// CHECK-LABEL: define dso_local i32 @__leave_with___finally()
 // CHECK: invoke void @g()
 // CHECK-NEXT:       to label %[[cont:.*]] unwind label %{{.*}}
 // For __finally, there needs to be an explicit __try.__leave, because
@@ -142,7 +142,7 @@ int nested___except___finally() {
   }
   return 1;
 }
-// CHECK-LABEL: define i32 @nested___except___finally()
+// CHECK-LABEL: define dso_local i32 @nested___except___finally()
 
 // CHECK-LABEL: invoke void @g()
 // CHECK-NEXT:       to label %[[g1_cont1:.*]] unwind label %[[g1_lpad:.*]]
@@ -194,7 +194,7 @@ int nested___except___except() {
   return 1;
 }
 // The order of basic blocks in the below doesn't matter.
-// CHECK-LABEL: define i32 @nested___except___except()
+// CHECK-LABEL: define dso_local i32 @nested___except___except()
 
 // CHECK-LABEL: invoke void @g()
 // CHECK-NEXT:       to label %[[g1_cont:.*]] unwind label %[[g1_lpad:.*]]
@@ -247,7 +247,7 @@ int nested___finally___except() {
   return 1;
 }
 // The order of basic blocks in the below doesn't matter.
-// CHECK-LABEL: define i32 @nested___finally___except()
+// CHECK-LABEL: define dso_local i32 @nested___finally___except()
 
 // CHECK-LABEL: invoke void @g()
 // CHECK-NEXT:       to label %[[g1_cont:.*]] unwind label %[[g1_lpad:.*]]
@@ -302,7 +302,7 @@ int nested___finally___finally() {
   return 1;
 }
 // The order of basic blocks in the below doesn't matter.
-// CHECK-LABEL: define i32 @nested___finally___finally()
+// CHECK-LABEL: define dso_local i32 @nested___finally___finally()
 
 // CHECK: invoke void @g()
 // CHECK-NEXT:       to label %[[g1_cont:.*]] unwind label %[[g1_lpad:.*]]

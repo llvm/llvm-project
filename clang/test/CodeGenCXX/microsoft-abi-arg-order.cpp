@@ -13,7 +13,7 @@ void foo(A a, A b, A c) {
 
 // Order of destruction should be left to right.
 //
-// X86-LABEL: define void @"\01?foo@@YAXUA@@00@Z"
+// X86-LABEL: define dso_local void @"\01?foo@@YAXUA@@00@Z"
 // X86:          ([[argmem_ty:<{ %struct.A, %struct.A, %struct.A }>]]* inalloca)
 // X86: %[[a:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 0
 // X86: %[[b:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 1
@@ -23,7 +23,7 @@ void foo(A a, A b, A c) {
 // X86: call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %[[c]])
 // X86: ret void
 
-// X64-LABEL: define void @"\01?foo@@YAXUA@@00@Z"
+// X64-LABEL: define dso_local void @"\01?foo@@YAXUA@@00@Z"
 // X64:         (%struct.A* %[[a:[^,]*]], %struct.A* %[[b:[^,]*]], %struct.A* %[[c:[^)]*]])
 // X64: call void @"\01??1A@@QEAA@XZ"(%struct.A* %[[a]])
 // X64: call void @"\01??1A@@QEAA@XZ"(%struct.A* %[[b]])
@@ -38,7 +38,7 @@ void call_foo() {
 // Order of evaluation should be right to left, and we should clean up the right
 // things as we unwind.
 //
-// X86-LABEL: define void @"\01?call_foo@@YAXXZ"()
+// X86-LABEL: define dso_local void @"\01?call_foo@@YAXXZ"()
 // X86: call i8* @llvm.stacksave()
 // X86: %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty]]
 // X86: %[[arg3:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 2
@@ -59,7 +59,7 @@ void call_foo() {
 //   ehcleanup:
 // X86: call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %[[arg3]])
 
-// X64-LABEL: define void @"\01?call_foo@@YAXXZ"()
+// X64-LABEL: define dso_local void @"\01?call_foo@@YAXXZ"()
 // X64: call %struct.A* @"\01??0A@@QEAA@H@Z"(%struct.A* %[[arg3:[^,]*]], i32 3)
 // X64: invoke %struct.A* @"\01??0A@@QEAA@H@Z"(%struct.A* %[[arg2:[^,]*]], i32 2)
 // X64: invoke %struct.A* @"\01??0A@@QEAA@H@Z"(%struct.A* %[[arg1:[^,]*]], i32 1)

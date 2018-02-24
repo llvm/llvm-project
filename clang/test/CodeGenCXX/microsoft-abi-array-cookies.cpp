@@ -5,7 +5,7 @@ struct ClassWithoutDtor {
 };
 
 void check_array_no_cookies() {
-// CHECK: define void @"\01?check_array_no_cookies@@YAXXZ"() [[NUW:#[0-9]+]]
+// CHECK: define dso_local void @"\01?check_array_no_cookies@@YAXXZ"() [[NUW:#[0-9]+]]
 
 // CHECK: call i8* @"\01??_U@YAPAXI@Z"(i32 42)
   ClassWithoutDtor *array = new ClassWithoutDtor[42];
@@ -62,7 +62,7 @@ namespace PR23990 {
 struct S {
   char x[42];
   void operator delete[](void *p, __SIZE_TYPE__);
-  // CHECK-LABEL: define void @"\01?delete_s@PR23990@@YAXPAUS@1@@Z"(
+  // CHECK-LABEL: define dso_local void @"\01?delete_s@PR23990@@YAXPAUS@1@@Z"(
   // CHECK: call void @"\01??_VS@PR23990@@SAXPAXI@Z"(i8* {{.*}}, i32 42)
 };
 void delete_s(S *s) { delete[] s; }

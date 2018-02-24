@@ -31,6 +31,6 @@ const int &s2 = s.bitfield;
 struct SelfReference { SelfReference &r; };
 extern SelfReference self_reference_1;
 SelfReference self_reference_2 = {self_reference_1};
-// CHECK-CXX98: @self_reference_2 = global %[[SELF_REF:.*]] { %[[SELF_REF]]* @self_reference_1 }
-// CHECK-CXX11: @self_reference_2 = global %[[SELF_REF:.*]] zeroinitializer
+// CHECK-CXX98: @self_reference_2 = {{.*}}global %[[SELF_REF:.*]] { %[[SELF_REF]]* @self_reference_1 }
+// CHECK-CXX11: @self_reference_2 = {{(dso_local )?}}global %[[SELF_REF:.*]] zeroinitializer
 // CHECK-CXX11: call {{.*}}memcpy{{.*}} @self_reference_2 {{.*}} @self_reference_1

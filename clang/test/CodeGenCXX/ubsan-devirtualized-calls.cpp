@@ -32,7 +32,7 @@ struct Derived4 final : Base1 {
 // CHECK: [[UBSAN_TI_DERIVED4_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
 // CHECK: [[UBSAN_TI_DERIVED4_2:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
 
-// CHECK-LABEL: define void @_Z2t1v
+// CHECK-LABEL: define {{(dso_local )?}}void @_Z2t1v
 void t1() {
   Derived1 d1;
   static_cast<Base1 *>(&d1)->f1(); //< Devirt Base1::f1 to Derived1::f1.
@@ -40,7 +40,7 @@ void t1() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED1_1]] {{.*}}, i{{[0-9]+}} %[[D1]]
 }
 
-// CHECK-LABEL: define void @_Z2t2v
+// CHECK-LABEL: define {{(dso_local )?}}void @_Z2t2v
 void t2() {
   Derived2 d2;
   static_cast<Base1 *>(&d2)->f1(); //< Devirt Base1::f1 to Derived2::f1.
@@ -48,7 +48,7 @@ void t2() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED2_1]] {{.*}}, i{{[0-9]+}} %[[D2_1]]
 }
 
-// CHECK-LABEL: define void @_Z2t3v
+// CHECK-LABEL: define {{(dso_local )?}}void @_Z2t3v
 void t3() {
   Derived2 d2;
   static_cast<Base2 *>(&d2)->f1(); //< Devirt Base2::f1 to Derived2::f1.
@@ -56,7 +56,7 @@ void t3() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED2_2]] {{.*}}, i{{[0-9]+}} %[[D2_2]]
 }
 
-// CHECK-LABEL: define void @_Z2t4v
+// CHECK-LABEL: define {{(dso_local )?}}void @_Z2t4v
 void t4() {
   Base1 p;
   Derived3 *badp = static_cast<Derived3 *>(&p); //< Check that &p isa Derived3.
@@ -73,7 +73,7 @@ void t4() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_BASE1]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
 }
 
-// CHECK-LABEL: define void @_Z2t5v
+// CHECK-LABEL: define {{(dso_local )?}}void @_Z2t5v
 void t5() {
   Base1 p;
   Derived4 *badp = static_cast<Derived4 *>(&p); //< Check that &p isa Derived4.

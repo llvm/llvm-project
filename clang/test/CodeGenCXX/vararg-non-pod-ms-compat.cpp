@@ -10,7 +10,7 @@ struct X {
 void vararg(...);
 
 void test(X x) {
-  // CHECK-LABEL: define void @"\01?test@@YAXUX@@@Z"
+  // CHECK-LABEL: define dso_local void @"\01?test@@YAXUX@@@Z"
 
   // X86: %[[argmem:[^ ]*]] = alloca inalloca <{ %struct.X }>
   // X86: call void (<{ %struct.X }>*, ...) bitcast (void (...)* @"\01?vararg@@YAXZZ" to void (<{ %struct.X }>*, ...)*)(<{ %struct.X }>* inalloca %[[argmem]])

@@ -6,11 +6,11 @@ struct f1 {
 
 struct f1 return_f1(void) { while (1); }
 
-// CHECK: define i32 @return_f1()
+// CHECK: define dso_local i32 @return_f1()
 
 void receive_f1(struct f1 a0) { }
 
-// CHECK: define void @receive_f1(float %a0.0)
+// CHECK: define dso_local void @receive_f1(float %a0.0)
 
 struct f2 {
   float f;
@@ -19,11 +19,11 @@ struct f2 {
 
 struct f2 return_f2(void) { while (1); }
 
-// CHECK: define i64 @return_f2()
+// CHECK: define dso_local i64 @return_f2()
 
 void receive_f2(struct f2 a0) { }
 
-// CHECK: define void @receive_f2(float %a0.0, float %a0.1)
+// CHECK: define dso_local void @receive_f2(float %a0.0, float %a0.1)
 
 struct f4 {
   float f;
@@ -34,9 +34,9 @@ struct f4 {
 
 struct f4 return_f4(void) { while (1); }
 
-// CHECK: define void @return_f4(%struct.f4* noalias sret %agg.result)
+// CHECK: define dso_local void @return_f4(%struct.f4* noalias sret %agg.result)
 
 void receive_f4(struct f4 a0) { }
 
-// CHECK: define void @receive_f4(float %a0.0, float %a0.1, float %a0.2, float %a0.3)
+// CHECK: define dso_local void @receive_f4(float %a0.0, float %a0.1, float %a0.2, float %a0.3)
 

@@ -184,6 +184,276 @@ static bool isFunctionMacroExpansion(SourceLocation Loc,
 
 namespace {
 
+/// Put a diagnostic on return statement of all inlined functions
+/// for which  the region of interest \p RegionOfInterest was passed into,
+/// but not written inside, and it has caused an undefined read or a null
+/// pointer dereference outside.
+class NoStoreFuncVisitor final
+    : public BugReporterVisitorImpl<NoStoreFuncVisitor> {
+
+  const SubRegion *RegionOfInterest;
+  static constexpr const char *DiagnosticsMsg =
+      "Returning without writing to '";
+  bool Initialized = false;
+
+  /// Frames writing into \c RegionOfInterest.
+  /// This visitor generates a note only if a function does not write into
+  /// a region of interest. This information is not immediately available
+  /// by looking at the node associated with the exit from the function
+  /// (usually the return statement). To avoid recomputing the same information
+  /// many times (going up the path for each node and checking whether the
+  /// region was written into) we instead pre-compute and store all
+  /// stack frames along the path which write into the region of interest
+  /// on the first \c VisitNode invocation.
+  llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingRegion;
+
+public:
+  NoStoreFuncVisitor(const SubRegion *R) : RegionOfInterest(R) {}
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    static int Tag = 0;
+    ID.AddPointer(&Tag);
+  }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                 const ExplodedNode *PrevN,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override {
+    if (!Initialized) {
+      findModifyingFrames(N);
+      Initialized = true;
+    }
+
+    const LocationContext *Ctx = N->getLocationContext();
+    const StackFrameContext *SCtx = Ctx->getCurrentStackFrame();
+    ProgramStateRef State = N->getState();
+    auto CallExitLoc = N->getLocationAs<CallExitBegin>();
+
+    // No diagnostic if region was modified inside the frame.
+    if (!CallExitLoc || FramesModifyingRegion.count(SCtx))
+      return nullptr;
+
+    CallEventRef<> Call =
+        BRC.getStateManager().getCallEventManager().getCaller(SCtx, State);
+
+    const PrintingPolicy &PP = BRC.getASTContext().getPrintingPolicy();
+    const SourceManager &SM = BRC.getSourceManager();
+    if (auto *CCall = dyn_cast<CXXConstructorCall>(Call)) {
+      const MemRegion *ThisRegion = CCall->getCXXThisVal().getAsRegion();
+      if (RegionOfInterest->isSubRegionOf(ThisRegion) &&
+          !CCall->getDecl()->isImplicit())
+        return notModifiedInConstructorDiagnostics(Ctx, SM, PP, *CallExitLoc,
+                                                   CCall, ThisRegion);
+    }
+
+    ArrayRef<ParmVarDecl *> parameters = getCallParameters(Call);
+    for (unsigned I = 0, E = Call->getNumArgs(); I != E; ++I) {
+      const ParmVarDecl *PVD = parameters[I];
+      SVal S = Call->getArgSVal(I);
+      unsigned IndirectionLevel = 1;
+      QualType T = PVD->getType();
+      while (const MemRegion *R = S.getAsRegion()) {
+        if (RegionOfInterest->isSubRegionOf(R) &&
+            !isPointerToConst(PVD->getType()))
+          return notModifiedDiagnostics(
+              Ctx, SM, PP, *CallExitLoc, Call, PVD, R, IndirectionLevel);
+        QualType PT = T->getPointeeType();
+        if (PT.isNull() || PT->isVoidType()) break;
+        S = State->getSVal(R, PT);
+        T = PT;
+        IndirectionLevel++;
+      }
+    }
+
+    return nullptr;
+  }
+
+private:
+  /// Write to \c FramesModifyingRegion all stack frames along
+  /// the path which modify \c RegionOfInterest.
+  void findModifyingFrames(const ExplodedNode *N) {
+    ProgramStateRef LastReturnState;
+    do {
+      ProgramStateRef State = N->getState();
+      auto CallExitLoc = N->getLocationAs<CallExitBegin>();
+      if (CallExitLoc) {
+        LastReturnState = State;
+      }
+      if (LastReturnState &&
+          wasRegionOfInterestModifiedAt(N, LastReturnState)) {
+        const StackFrameContext *SCtx =
+            N->getLocationContext()->getCurrentStackFrame();
+        while (!SCtx->inTopFrame()) {
+          auto p = FramesModifyingRegion.insert(SCtx);
+          if (!p.second)
+            break; // Frame and all its parents already inserted.
+          SCtx = SCtx->getParent()->getCurrentStackFrame();
+        }
+      }
+
+      N = N->getFirstPred();
+    } while (N);
+  }
+
+  /// \return Whether \c RegionOfInterest was modified at \p N,
+  /// where \p ReturnState is a state associated with the return
+  /// from the current frame.
+  bool wasRegionOfInterestModifiedAt(const ExplodedNode *N,
+                                     ProgramStateRef ReturnState) {
+    SVal ValueAtReturn = ReturnState->getSVal(RegionOfInterest);
+
+    // Writing into region of interest.
+    if (auto PS = N->getLocationAs<PostStmt>())
+      if (auto *BO = PS->getStmtAs<BinaryOperator>())
+        if (BO->isAssignmentOp() && RegionOfInterest->isSubRegionOf(
+                                        N->getSVal(BO->getLHS()).getAsRegion()))
+          return true;
+
+    // SVal after the state is possibly different.
+    SVal ValueAtN = N->getState()->getSVal(RegionOfInterest);
+    if (!ReturnState->areEqual(ValueAtN, ValueAtReturn).isConstrainedTrue() &&
+        (!ValueAtN.isUndef() || !ValueAtReturn.isUndef()))
+      return true;
+
+    return false;
+  }
+
+  /// Get parameters associated with runtime definition in order
+  /// to get the correct parameter name.
+  ArrayRef<ParmVarDecl *> getCallParameters(CallEventRef<> Call) {
+    if (isa<FunctionDecl>(Call->getDecl()))
+      return dyn_cast<FunctionDecl>(Call->getRuntimeDefinition().getDecl())
+          ->parameters();
+    return Call->parameters();
+  }
+
+  /// \return whether \p Ty points to a const type, or is a const reference.
+  bool isPointerToConst(QualType Ty) {
+    return !Ty->getPointeeType().isNull() &&
+           Ty->getPointeeType().getCanonicalType().isConstQualified();
+  }
+
+  std::shared_ptr<PathDiagnosticPiece> notModifiedInConstructorDiagnostics(
+      const LocationContext *Ctx,
+      const SourceManager &SM,
+      const PrintingPolicy &PP,
+      CallExitBegin &CallExitLoc,
+      const CXXConstructorCall *Call,
+      const MemRegion *ArgRegion) {
+
+    SmallString<256> sbuf;
+    llvm::raw_svector_ostream os(sbuf);
+    os << DiagnosticsMsg;
+    bool out = prettyPrintRegionName(
+        "this", "->", /*IsReference=*/true,
+        /*IndirectionLevel=*/1, ArgRegion, os, PP);
+
+    // Return nothing if we have failed to pretty-print.
+    if (!out)
+      return nullptr;
+
+    os << "'";
+    PathDiagnosticLocation L =
+        getPathDiagnosticLocation(nullptr, SM, Ctx, Call);
+    return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  }
+
+  /// \p IndirectionLevel How many times \c ArgRegion has to be dereferenced
+  /// before we get to the super region of \c RegionOfInterest
+  std::shared_ptr<PathDiagnosticPiece>
+  notModifiedDiagnostics(const LocationContext *Ctx,
+                         const SourceManager &SM,
+                         const PrintingPolicy &PP,
+                         CallExitBegin &CallExitLoc,
+                         CallEventRef<> Call,
+                         const ParmVarDecl *PVD,
+                         const MemRegion *ArgRegion,
+                         unsigned IndirectionLevel) {
+
+    PathDiagnosticLocation L = getPathDiagnosticLocation(
+        CallExitLoc.getReturnStmt(), SM, Ctx, Call);
+    SmallString<256> sbuf;
+    llvm::raw_svector_ostream os(sbuf);
+    os << DiagnosticsMsg;
+    bool IsReference = PVD->getType()->isReferenceType();
+    const char *Sep = IsReference && IndirectionLevel == 1 ? "." : "->";
+    bool Success = prettyPrintRegionName(
+        PVD->getQualifiedNameAsString().c_str(),
+        Sep, IsReference, IndirectionLevel, ArgRegion, os, PP);
+
+    // Print the parameter name if the pretty-printing has failed.
+    if (!Success)
+      PVD->printQualifiedName(os);
+    os << "'";
+    return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  }
+
+  /// \return a path diagnostic location for the optionally
+  /// present return statement \p RS.
+  PathDiagnosticLocation getPathDiagnosticLocation(const ReturnStmt *RS,
+                                                   const SourceManager &SM,
+                                                   const LocationContext *Ctx,
+                                                   CallEventRef<> Call) {
+    if (RS)
+      return PathDiagnosticLocation::createBegin(RS, SM, Ctx);
+    return PathDiagnosticLocation(
+        Call->getRuntimeDefinition().getDecl()->getSourceRange().getEnd(), SM);
+  }
+
+  /// Pretty-print region \p ArgRegion starting from parent to \p os.
+  /// \return whether printing has succeeded
+  bool prettyPrintRegionName(const char *TopRegionName,
+                             const char *Sep,
+                             bool IsReference,
+                             int IndirectionLevel,
+                             const MemRegion *ArgRegion,
+                             llvm::raw_svector_ostream &os,
+                             const PrintingPolicy &PP) {
+    SmallVector<const MemRegion *, 5> Subregions;
+    const MemRegion *R = RegionOfInterest;
+    while (R != ArgRegion) {
+      if (!(isa<FieldRegion>(R) || isa<CXXBaseObjectRegion>(R)))
+        return false; // Pattern-matching failed.
+      Subregions.push_back(R);
+      R = dyn_cast<SubRegion>(R)->getSuperRegion();
+    }
+    bool IndirectReference = !Subregions.empty();
+
+    if (IndirectReference)
+      IndirectionLevel--; // Due to "->" symbol.
+
+    if (IsReference)
+      IndirectionLevel--; // Due to reference semantics.
+
+    bool ShouldSurround = IndirectReference && IndirectionLevel > 0;
+
+    if (ShouldSurround)
+      os << "(";
+    for (int i=0; i<IndirectionLevel; i++)
+      os << "*";
+    os << TopRegionName;
+    if (ShouldSurround)
+      os << ")";
+
+    for (auto I = Subregions.rbegin(), E = Subregions.rend(); I != E; ++I) {
+      if (auto *FR = dyn_cast<FieldRegion>(*I)) {
+        os << Sep;
+        FR->getDecl()->getDeclName().print(os, PP);
+        Sep = ".";
+      } else if (isa<CXXBaseObjectRegion>(*I)) {
+        continue; // Just keep going up to the base region.
+      } else {
+        llvm_unreachable("Previous check has missed an unexpected region");
+      }
+    }
+    return true;
+  }
+};
+
+} // namespace
+
+namespace {
+
 class MacroNullReturnSuppressionVisitor final
     : public BugReporterVisitorImpl<MacroNullReturnSuppressionVisitor> {
 
@@ -1215,6 +1485,8 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     if (R) {
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
+      report.addVisitor(
+          llvm::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
 
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
           N, R, EnableNullFPSuppression, report, V);

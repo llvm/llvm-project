@@ -12,26 +12,26 @@ typedef __SIZE_TYPE__ size_t;
 #include <intrin.h>
 
 void test_ReadWriteBarrier() { _ReadWriteBarrier(); }
-// CHECK-LABEL: define void @test_ReadWriteBarrier
+// CHECK-LABEL: define dso_local void @test_ReadWriteBarrier
 // CHECK:   fence syncscope("singlethread") seq_cst
 // CHECK:   ret void
 // CHECK: }
 
 void test_ReadBarrier() { _ReadBarrier(); }
-// CHECK-LABEL: define void @test_ReadBarrier
+// CHECK-LABEL: define dso_local void @test_ReadBarrier
 // CHECK:   fence syncscope("singlethread") seq_cst
 // CHECK:   ret void
 // CHECK: }
 
 void test_WriteBarrier() { _WriteBarrier(); }
-// CHECK-LABEL: define void @test_WriteBarrier
+// CHECK-LABEL: define dso_local void @test_WriteBarrier
 // CHECK:   fence syncscope("singlethread") seq_cst
 // CHECK:   ret void
 // CHECK: }
 
 #if defined(__x86_64__)
 void test__faststorefence() { __faststorefence(); }
-// CHECK-X64-LABEL: define void @test__faststorefence
+// CHECK-X64-LABEL: define dso_local void @test__faststorefence
 // CHECK-X64:   fence seq_cst
 // CHECK-X64:   ret void
 // CHECK-X64: }

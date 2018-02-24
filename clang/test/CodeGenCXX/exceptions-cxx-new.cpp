@@ -12,7 +12,7 @@ void test_catch() {
   }
 }
 
-// CHECK-LABEL: define void @"\01?test_catch@@YAXXZ"(
+// CHECK-LABEL: define dso_local void @"\01?test_catch@@YAXXZ"(
 // CHECK:   invoke i32 @"\01?f@@YAHH@Z"(i32 1)
 // CHECK:         to label %[[NORMAL:.*]] unwind label %[[CATCHSWITCH:.*]]
 
@@ -50,7 +50,7 @@ void test_cleanup() {
   f(1);
 }
 
-// CHECK-LABEL: define {{.*}} @"\01?test_cleanup@@YAXXZ"(
+// CHECK-LABEL: define dso_local {{.*}} @"\01?test_cleanup@@YAXXZ"(
 // CHECK:   invoke i32 @"\01?f@@YAHH@Z"(i32 1)
 // CHECK:           to label %[[LEAVE_FUNC:.*]] unwind label %[[CLEANUP:.*]]
 

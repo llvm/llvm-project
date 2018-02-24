@@ -15,7 +15,7 @@ void HasEHCleanup() {
 }
 
 // With exceptions, we need to clean up at least one of these temporaries.
-// WIN32-LABEL: define void @"\01?HasEHCleanup@@YAXXZ"() {{.*}} {
+// WIN32-LABEL: define dso_local void @"\01?HasEHCleanup@@YAXXZ"() {{.*}} {
 // WIN32:   %[[base:.*]] = call i8* @llvm.stacksave()
 //    If this call throws, we have to restore the stack.
 // WIN32:   call void @"\01?getA@@YA?AUA@@XZ"(%struct.A* sret %{{.*}})
@@ -37,7 +37,7 @@ int HasDeactivatedCleanups() {
   return TakesTwo((TakeRef(A()), A()), (TakeRef(A()), A()));
 }
 
-// WIN32-LABEL: define i32 @"\01?HasDeactivatedCleanups@@YAHXZ"() {{.*}} {
+// WIN32-LABEL: define dso_local i32 @"\01?HasDeactivatedCleanups@@YAHXZ"() {{.*}} {
 // WIN32:   %[[isactive:.*]] = alloca i1
 // WIN32:   call i8* @llvm.stacksave()
 // WIN32:   %[[argmem:.*]] = alloca inalloca [[argmem_ty:<{ %struct.A, %struct.A }>]]
@@ -72,7 +72,7 @@ int HasConditionalCleanup(bool cond) {
   return (cond ? TakesTwo(A(), A()) : CouldThrow());
 }
 
-// WIN32-LABEL: define i32 @"\01?HasConditionalCleanup@@YAH_N@Z"(i1 zeroext %{{.*}}) {{.*}} {
+// WIN32-LABEL: define dso_local i32 @"\01?HasConditionalCleanup@@YAH_N@Z"(i1 zeroext %{{.*}}) {{.*}} {
 // WIN32:   store i1 false
 // WIN32:   br i1
 // WIN32:   call i8* @llvm.stacksave()
@@ -95,7 +95,7 @@ int HasConditionalDeactivatedCleanups(bool cond) {
   return (cond ? TakesTwo((TakeRef(A()), A()), (TakeRef(A()), A())) : CouldThrow());
 }
 
-// WIN32-O0-LABEL: define i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
+// WIN32-O0-LABEL: define dso_local i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
 // WIN32-O0:   alloca i1
 // WIN32-O0:   %[[arg1_cond:.*]] = alloca i1
 //        Start all four cleanups as deactivated.
@@ -130,7 +130,7 @@ int HasConditionalDeactivatedCleanups(bool cond) {
 // WIN32-O0:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
 // WIN32-O0: }
 
-// WIN32-O3-LABEL: define i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
+// WIN32-O3-LABEL: define dso_local i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
 // WIN32-O3:   alloca i1
 // WIN32-O3:   alloca i1
 // WIN32-O3:   %[[arg1_cond:.*]] = alloca i1
@@ -187,7 +187,7 @@ C::C() { foo(); }
 
 // Verify that we don't bother with a vbtable lookup when adjusting the this
 // pointer to call a base destructor from a constructor while unwinding.
-// WIN32-LABEL: define {{.*}} @"\01??0C@crash_on_partial_destroy@@QAE@XZ"{{.*}} {
+// WIN32-LABEL: define dso_local {{.*}} @"\01??0C@crash_on_partial_destroy@@QAE@XZ"{{.*}} {
 // WIN32:      cleanuppad
 //
 //        We shouldn't do any vbptr loads, just constant GEPs.
@@ -217,7 +217,7 @@ void f() {
   g();
 }
 
-// WIN32-LABEL: define void @"\01?f@dont_call_terminate@@YAXXZ"()
+// WIN32-LABEL: define dso_local void @"\01?f@dont_call_terminate@@YAXXZ"()
 // WIN32: invoke void @"\01?g@dont_call_terminate@@YAXXZ"()
 // WIN32-NEXT: to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -239,7 +239,7 @@ void f() {
 }
 }
 
-// WIN32-LABEL: define void @"\01?f@noexcept_false_dtor@@YAXXZ"()
+// WIN32-LABEL: define dso_local void @"\01?f@noexcept_false_dtor@@YAXXZ"()
 // WIN32: invoke i32 @"\01?CouldThrow@@YAHXZ"()
 // WIN32: call x86_thiscallcc void @"\01??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* %{{.*}})
 // WIN32: cleanuppad
@@ -256,7 +256,7 @@ void f() {
   g();
 }
 
-// WIN32-LIFETIME-LABEL: define void @"\01?f@lifetime_marker@@YAXXZ"()
+// WIN32-LIFETIME-LABEL: define dso_local void @"\01?f@lifetime_marker@@YAXXZ"()
 // WIN32-LIFETIME: %[[c:.*]] = alloca %"struct.lifetime_marker::C"
 // WIN32-LIFETIME: %[[bc0:.*]] = bitcast %"struct.lifetime_marker::C"* %c to i8*
 // WIN32-LIFETIME: call void @llvm.lifetime.start.p0i8(i64 1, i8* %[[bc0]])
@@ -293,7 +293,7 @@ struct class_0 : class_1 {
 };
 
 class_0::class_0() {
-  // WIN32: define x86_thiscallcc %struct.class_0* @"\01??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived) 
+  // WIN32: define dso_local x86_thiscallcc %struct.class_0* @"\01??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived) 
   // WIN32: store i32 %is_most_derived, i32* %[[IS_MOST_DERIVED_VAR:.*]], align 4
   // WIN32: %[[IS_MOST_DERIVED_VAL:.*]] = load i32, i32* %[[IS_MOST_DERIVED_VAR]]
   // WIN32: %[[SHOULD_CALL_VBASE_CTORS:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0

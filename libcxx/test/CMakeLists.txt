@@ -9,6 +9,11 @@ endmacro()
 set(LIBCXX_LIT_VARIANT "libcxx" CACHE STRING
     "Configuration variant to use for LIT.")
 
+set(LIBCXX_TEST_LINKER_FLAGS "" CACHE STRING
+    "Additonal linker flags to pass when compiling the tests")
+set(LIBCXX_TEST_COMPILER_FLAGS "" CACHE STRING
+    "Additonal linker flags to pass when compiling the tests")
+
 # The tests shouldn't link to any ABI library when it has been linked into
 # libc++ statically or via a linker script.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_ENABLE_ABI_LINKER_SCRIPT)

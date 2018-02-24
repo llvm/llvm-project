@@ -254,7 +254,6 @@ public:
   ExprValue getSymbolValue(StringRef Name, const Twine &Loc);
 
   void addOrphanSections();
-  void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 

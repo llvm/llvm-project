@@ -14,7 +14,7 @@ extern "C" void test_freefunc(int p1) {
   }
 }
 
-// CHECK-LABEL: define void @test_freefunc(i32 %p1)
+// CHECK-LABEL: define dso_local void @test_freefunc(i32 %p1)
 // CHECK: @llvm.localescape(i32* %[[p1_ptr:[^, ]*]], i32* %[[l1_ptr:[^, ]*]])
 // CHECK: store i32 %p1, i32* %[[p1_ptr]], align 4
 // CHECK: store i32 13, i32* %[[l1_ptr]], align 4
@@ -45,7 +45,7 @@ void S::test_method() {
   }
 }
 
-// CHECK-LABEL: define void @"\01?test_method@S@@QEAAXXZ"(%struct.S* %this)
+// CHECK-LABEL: define dso_local void @"\01?test_method@S@@QEAAXXZ"(%struct.S* %this)
 // CHECK: @llvm.localescape(i32* %[[l1_addr:[^, ]*]])
 // CHECK: store i32 13, i32* %[[l1_addr]], align 4
 // CHECK: invoke void @might_crash()

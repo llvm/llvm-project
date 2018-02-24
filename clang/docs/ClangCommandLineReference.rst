@@ -2192,6 +2192,10 @@ Set the stack alignment
 
 Set the stack probe size
 
+.. option:: -mstack-arg-probe, -mno-stack-arg-probe
+
+Disable stack probes
+
 .. option:: -mstackrealign, -mno-stackrealign
 
 Force realign the stack at entry to every function

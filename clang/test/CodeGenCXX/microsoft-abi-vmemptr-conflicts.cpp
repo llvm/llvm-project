@@ -19,7 +19,7 @@ void f(C *c) {
 }
 }
 
-// CHECK-LABEL: define void @"\01?f@num_params@@YAXPAUC@1@@Z"(%"struct.num_params::C"* %c)
+// CHECK-LABEL: define dso_local void @"\01?f@num_params@@YAXPAUC@1@@Z"(%"struct.num_params::C"* %c)
 // CHECK: call x86_thiscallcc void bitcast (void (%"struct.num_params::C"*, ...)* @"\01??_9C@num_params@@$BA@AE" to void (%"struct.num_params::C"*, i32)*)(%"struct.num_params::C"* %{{.*}}, i32 0)
 // CHECK: call x86_thiscallcc void bitcast (void (%"struct.num_params::C"*, ...)* @"\01??_9C@num_params@@$BA@AE" to void (%"struct.num_params::C"*, i32, i32)*)(%"struct.num_params::C"* %{{.*}}, i32 0, i32 0)
 
@@ -41,7 +41,7 @@ long long f(C *c) {
 }
 }
 
-// CHECK-LABEL: define i64 @"\01?f@i64_return@@YA_JPAUC@1@@Z"(%"struct.i64_return::C"* %c)
+// CHECK-LABEL: define dso_local i64 @"\01?f@i64_return@@YA_JPAUC@1@@Z"(%"struct.i64_return::C"* %c)
 // CHECK: call x86_thiscallcc i32 bitcast (void (%"struct.i64_return::C"*, ...)* @"\01??_9C@i64_return@@$BA@AE" to i32 (%"struct.i64_return::C"*)*)(%"struct.i64_return::C"* %{{.*}})
 // CHECK: call x86_thiscallcc i64 bitcast (void (%"struct.i64_return::C"*, ...)* @"\01??_9C@i64_return@@$BA@AE" to i64 (%"struct.i64_return::C"*)*)(%"struct.i64_return::C"* %{{.*}})
 
@@ -63,7 +63,7 @@ void f(C *c) {
 }
 }
 
-// CHECK-LABEL: define void @"\01?f@sret@@YAXPAUC@1@@Z"(%"struct.sret::C"* %c)
+// CHECK-LABEL: define dso_local void @"\01?f@sret@@YAXPAUC@1@@Z"(%"struct.sret::C"* %c)
 // CHECK: call x86_thiscallcc i32 bitcast (void (%"struct.sret::C"*, ...)* @"\01??_9C@sret@@$BA@AE" to i32 (%"struct.sret::C"*)*)(%"struct.sret::C"* %{{.*}})
 // CHECK: call x86_thiscallcc void bitcast (void (%"struct.sret::C"*, ...)* @"\01??_9C@sret@@$BA@AE" to void (%"struct.sret::C"*, %"struct.sret::Big"*)*)(%"struct.sret::C"* %{{.*}}, %"struct.sret::Big"* sret %{{.*}})
 
@@ -92,7 +92,7 @@ void f(C *c) {
 }
 }
 
-// CHECK-LABEL: define void @"\01?f@cdecl_inalloca@@YAXPAUC@1@@Z"(%"struct.cdecl_inalloca::C"* %c)
+// CHECK-LABEL: define dso_local void @"\01?f@cdecl_inalloca@@YAXPAUC@1@@Z"(%"struct.cdecl_inalloca::C"* %c)
 // CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"\01??_9C@cdecl_inalloca@@$BA@AA" to void (%"struct.cdecl_inalloca::C"*)*)(%"struct.cdecl_inalloca::C"* %{{.*}})
 // CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"\01??_9C@cdecl_inalloca@@$BA@AA" to void (<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>*)*)(<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>* inalloca %{{.*}})
 

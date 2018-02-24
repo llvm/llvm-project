@@ -2351,16 +2351,15 @@ public:
   }
 };
 
-static void addStackProbeSizeTargetAttribute(const Decl *D,
-                                             llvm::GlobalValue *GV,
-                                             CodeGen::CodeGenModule &CGM) {
-  if (D && isa<FunctionDecl>(D)) {
-    if (CGM.getCodeGenOpts().StackProbeSize != 4096) {
-      llvm::Function *Fn = cast<llvm::Function>(GV);
+static void addStackProbeTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                                          CodeGen::CodeGenModule &CGM) {
+  if (llvm::Function *Fn = dyn_cast_or_null<llvm::Function>(GV)) {
 
+    if (CGM.getCodeGenOpts().StackProbeSize != 4096)
       Fn->addFnAttr("stack-probe-size",
                     llvm::utostr(CGM.getCodeGenOpts().StackProbeSize));
-    }
+    if (CGM.getCodeGenOpts().NoStackArgProbe)
+      Fn->addFnAttr("no-stack-arg-probe");
   }
 }
 
@@ -2369,7 +2368,7 @@ void WinX86_32TargetCodeGenInfo::setTargetAttributes(
   X86_32TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
   if (GV->isDeclaration())
     return;
-  addStackProbeSizeTargetAttribute(D, GV, CGM);
+  addStackProbeTargetAttributes(D, GV, CGM);
 }
 
 class WinX86_64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -2429,7 +2428,7 @@ void WinX86_64TargetCodeGenInfo::setTargetAttributes(
     }
   }
 
-  addStackProbeSizeTargetAttribute(D, GV, CGM);
+  addStackProbeTargetAttributes(D, GV, CGM);
 }
 }
 
@@ -5622,7 +5621,7 @@ void WindowsARMTargetCodeGenInfo::setTargetAttributes(
   ARMTargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
   if (GV->isDeclaration())
     return;
-  addStackProbeSizeTargetAttribute(D, GV, CGM);
+  addStackProbeTargetAttributes(D, GV, CGM);
 }
 }
 
@@ -6869,14 +6868,6 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
       Offset = OrigOffset + MinABIStackAlignInBytes;
       return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
     }
-
-    // Use indirect if the aggregate cannot fit into registers for
-    // passing arguments according to the ABI
-    unsigned Threshold = IsO32 ? 16 : 64;
-
-    if(getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(Threshold))
-      return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align), true,
-                                     getContext().getTypeAlign(Ty) / 8 > Align);
 
     // If we have reached here, aggregates are passed directly by coercing to
     // another structure type. Padding is inserted if the offset of the

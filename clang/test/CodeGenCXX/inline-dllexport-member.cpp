@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i686-windows-win32 -fms-extensions -debug-info-kind=limited -emit-llvm %s -o - \
 // RUN:    | FileCheck %s
 
-// CHECK: @"\01?ui@s@@2IB" = weak_odr dllexport constant i32 0, comdat, align 4, !dbg [[UI:![0-9]+]]
+// CHECK: @"\01?ui@s@@2IB" = weak_odr dso_local dllexport constant i32 0, comdat, align 4, !dbg [[UI:![0-9]+]]
 
 struct __declspec(dllexport) s {
   static const unsigned int ui = 0;

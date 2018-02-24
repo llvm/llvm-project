@@ -13,7 +13,7 @@ public:
   void runc();
 };
 
-// CHECK: define void @"\01?runc@t2@@
+// CHECK: define dso_local void @"\01?runc@t2@@
 void t2::runc() {
   double num = 0;
   __asm {
@@ -26,7 +26,7 @@ void t2::runc() {
 	   };
 }
 
-// CHECK: define void @"\01?runc@t1@@
+// CHECK: define dso_local void @"\01?runc@t1@@
 void t1::runc() {
   double num = 0;
   __asm {
@@ -41,7 +41,7 @@ void t1::runc() {
 
 struct s {
   int a;
-  // CHECK: define linkonce_odr void @"\01?func@s@@
+  // CHECK: define linkonce_odr dso_local void @"\01?func@s@@
   void func() {
     __asm mov rax, [this]
     // CHECK: [[THIS_ADDR_S:%.+]] = alloca %struct.s*

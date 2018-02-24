@@ -56,18 +56,18 @@ struct S {
 // CHECK-DAG: [[VEC:@.+]] = internal global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
 // CHECK-DAG: [[S_ARR:@.+]] = internal global [2 x [[S_FLOAT_TY]]] zeroinitializer,
 // CHECK-DAG: [[VAR:@.+]] = internal global [[S_FLOAT_TY]] zeroinitializer,
-// CHECK-DAG: [[TMAIN_T_VAR:@.+]] = linkonce_odr global i{{[0-9]+}} 333,
-// CHECK-DAG: [[TMAIN_VEC:@.+]] = linkonce_odr global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 3, i{{[0-9]+}} 3],
-// CHECK-DAG: [[TMAIN_S_ARR:@.+]] = linkonce_odr global [2 x [[S_INT_TY]]] zeroinitializer,
-// CHECK-DAG: [[TMAIN_VAR:@.+]] = linkonce_odr global [[S_INT_TY]] zeroinitializer,
+// CHECK-DAG: [[TMAIN_T_VAR:@.+]] = linkonce_odr {{(dso_local )?}}global i{{[0-9]+}} 333,
+// CHECK-DAG: [[TMAIN_VEC:@.+]] = linkonce_odr {{(dso_local )?}}global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 3, i{{[0-9]+}} 3],
+// CHECK-DAG: [[TMAIN_S_ARR:@.+]] = linkonce_odr {{(dso_local )?}}global [2 x [[S_INT_TY]]] zeroinitializer,
+// CHECK-DAG: [[TMAIN_VAR:@.+]] = linkonce_odr {{(dso_local )?}}global [[S_INT_TY]] zeroinitializer,
 // TLS-CHECK-DAG: [[T_VAR:@.+]] = internal thread_local global i{{[0-9]+}} 1122,
 // TLS-CHECK-DAG: [[VEC:@.+]] = internal thread_local global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
 // TLS-CHECK-DAG: [[S_ARR:@.+]] = internal thread_local global [2 x [[S_FLOAT_TY]]] zeroinitializer,
 // TLS-CHECK-DAG: [[VAR:@.+]] = internal thread_local global [[S_FLOAT_TY]] zeroinitializer,
-// TLS-CHECK-DAG: [[TMAIN_T_VAR:@.+]] = linkonce_odr thread_local global i{{[0-9]+}} 333,
-// TLS-CHECK-DAG: [[TMAIN_VEC:@.+]] = linkonce_odr thread_local global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 3, i{{[0-9]+}} 3],
-// TLS-CHECK-DAG: [[TMAIN_S_ARR:@.+]] = linkonce_odr thread_local global [2 x [[S_INT_TY]]] zeroinitializer,
-// TLS-CHECK-DAG: [[TMAIN_VAR:@.+]] = linkonce_odr thread_local global [[S_INT_TY]] zeroinitializer,
+// TLS-CHECK-DAG: [[TMAIN_T_VAR:@.+]] = linkonce_odr {{(dso_local )?}}thread_local global i{{[0-9]+}} 333,
+// TLS-CHECK-DAG: [[TMAIN_VEC:@.+]] = linkonce_odr {{(dso_local )?}}thread_local global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 3, i{{[0-9]+}} 3],
+// TLS-CHECK-DAG: [[TMAIN_S_ARR:@.+]] = linkonce_odr {{(dso_local )?}}thread_local global [2 x [[S_INT_TY]]] zeroinitializer,
+// TLS-CHECK-DAG: [[TMAIN_VAR:@.+]] = linkonce_odr {{(dso_local )?}}thread_local global [[S_INT_TY]] zeroinitializer,
 
 template <typename T>
 T tmain() {
@@ -90,7 +90,7 @@ T tmain() {
 
 int main() {
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
+  // LAMBDA: [[G:@.+]] = {{(dso_local )?}}global i{{[0-9]+}} 1212,
   // LAMBDA-LABEL: @main
   // LAMBDA: call{{.*}} void [[OUTER_LAMBDA:@.+]](
   // TLS-LAMBDA: [[G:@.+]] = {{.*}}thread_local {{.*}}global i{{[0-9]+}} 1212,
@@ -152,7 +152,7 @@ int main() {
   }();
   return 0;
 #elif defined(BLOCKS)
-  // BLOCKS: [[G:@.+]] = global i{{[0-9]+}} 1212,
+  // BLOCKS: [[G:@.+]] = {{(dso_local )?}}global i{{[0-9]+}} 1212,
   // BLOCKS-LABEL: @main
   // BLOCKS: call {{.*}}void {{%.+}}(i8
 
