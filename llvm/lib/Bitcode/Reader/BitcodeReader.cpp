@@ -4680,7 +4680,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_SYNC: { // Sync: [bb#, val]
-      if (Record.size() != 1)
+      if (Record.size() != 2)
         return error("Invalid record");
       BasicBlock *Continue = getBasicBlock(Record[0]);
       if (!Continue)
