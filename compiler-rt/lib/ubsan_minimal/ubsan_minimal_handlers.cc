@@ -61,6 +61,19 @@ static void abort_with_message(const char *msg) {
 static void abort_with_message(const char *) { abort(); }
 #endif
 
+#if SANITIZER_DEBUG
+namespace __sanitizer {
+// The DCHECK macro needs this symbol to be defined.
+void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
+  message("Sanitizer CHECK failed: ");
+  message(file);
+  message(":?? : "); // FIXME: Show line number.
+  message(cond);
+  abort();
+}
+} // namespace __sanitizer
+#endif
+
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
 // FIXME: add caller pc to the error message (possibly as "ubsan: error-type
