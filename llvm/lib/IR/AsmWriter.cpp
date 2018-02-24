@@ -1723,6 +1723,8 @@ static void writeDIFile(raw_ostream &Out, const DIFile *N, TypePrinting *,
   // Print all values for checksum together, or not at all.
   if (N->getChecksum())
     Printer.printChecksum(*N->getChecksum());
+  Printer.printString("source", N->getSource().getValueOr(StringRef()),
+                      /* ShouldSkipEmpty */ true);
   Out << ")";
 }
 

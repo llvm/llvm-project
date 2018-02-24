@@ -154,7 +154,7 @@ public:
   // True if this symbol is in the Igot sub-section of the .got.plt or .got.
   unsigned IsInIgot : 1;
 
-  // True if this symbol is preemptible at link or load time.
+  // True if this symbol is preemptible at load time.
   unsigned IsPreemptible : 1;
 
   // True if an undefined or shared symbol is used from a live section.

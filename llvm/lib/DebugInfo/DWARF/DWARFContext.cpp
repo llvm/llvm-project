@@ -466,7 +466,9 @@ void DWARFContext::dump(
     uint32_t offset = 0;
     uint32_t strOffset = 0;
     while (const char *s = strData.getCStr(&offset)) {
-      OS << format("0x%8.8x: \"%s\"\n", strOffset, s);
+      OS << format("0x%8.8x: \"", strOffset);
+      OS.write_escaped(s);
+      OS << "\"\n";
       strOffset = offset;
     }
   }

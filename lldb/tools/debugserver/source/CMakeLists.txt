@@ -100,6 +100,7 @@ set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
 
 if(NOT LLDB_CODESIGN_IDENTITY STREQUAL "")
   set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver> CACHE PATH "Path to debugserver.")
+  set(SKIP_DEBUGSERVER OFF CACHE BOOL "Skip building the in-tree debug server")
 else()
   execute_process(
     COMMAND xcode-select -p
@@ -107,7 +108,7 @@ else()
   string(STRIP ${XCODE_DEV_DIR} XCODE_DEV_DIR)
   set(DEBUGSERVER_PATH
     "${XCODE_DEV_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver" CACHE PATH "Path to debugserver.")
-  set(SKIP_DEBUGSERVER True)
+  set(SKIP_DEBUGSERVER ON CACHE BOOL "Skip building the in-tree debug server")
 endif()
 message(STATUS "Path to the lldb debugserver: ${DEBUGSERVER_PATH}")
 
@@ -124,7 +125,7 @@ if (APPLE)
     find_library(LOCKDOWN_LIBRARY lockdown)
 
     if(NOT BACKBOARD_LIBRARY)
-      set(SKIP_DEBUGSERVER True)
+      set(SKIP_DEBUGSERVER ON CACHE BOOL "Skip building the in-tree debug server" FORCE)
     endif()
   else()
     find_library(COCOA_LIBRARY Cocoa)

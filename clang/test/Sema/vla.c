@@ -68,3 +68,11 @@ void pr23151(int (*p1)[*]) // expected-error {{variable length array must be bou
 int TransformBug(int a) {
  return sizeof(*(int(*)[({ goto v; v: a;})]) 0); // expected-warning {{use of GNU statement expression extension}}
 }
+
+// PR36157
+struct {
+  int a[ // expected-error {{variable length array in struct}}
+    implicitly_declared() // expected-warning {{implicit declaration}}
+  ];
+};
+int (*use_implicitly_declared)() = implicitly_declared; // ok, was implicitly declared at file scope

@@ -190,7 +190,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   // blocks. Lowering invokes when there is no EH support is done in
   // TargetPassConfig::addPassesToHandleExceptions, but this runs after this
   // function and SjLj handling expects all invokes to be lowered before.
-  if (!EnableEmException) {
+  if (!EnableEmException &&
+      TM->Options.ExceptionModel == ExceptionHandling::None) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.

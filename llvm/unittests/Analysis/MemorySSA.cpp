@@ -909,3 +909,45 @@ TEST_F(MemorySSATest, Irreducible) {
   Updater.insertUse(LoadAccess);
   MSSA.verifyMemorySSA();
 }
+
+TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
+  // Create:
+  //   %1 = alloca i8
+  //   ; 1 = MemoryDef(liveOnEntry)
+  //   store i8 0, i8* %1
+  //   ; 2 = MemoryDef(1)
+  //   store i8 0, i8* %1
+  //
+  // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
+  // `2` after `1` is removed.
+  IRBuilder<> B(C);
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  BasicBlock *Entry = BasicBlock::Create(C, "if", F);
+  B.SetInsertPoint(Entry);
+
+  Value *A = B.CreateAlloca(B.getInt8Ty());
+  StoreInst *StoreA = B.CreateStore(B.getInt8(0), A);
+  StoreInst *StoreB = B.CreateStore(B.getInt8(0), A);
+
+  setupAnalyses();
+
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  auto *DefA = cast<MemoryDef>(MSSA.getMemoryAccess(StoreA));
+  auto *DefB = cast<MemoryDef>(MSSA.getMemoryAccess(StoreB));
+
+  MemoryAccess *BClobber = MSSA.getWalker()->getClobberingMemoryAccess(DefB);
+  ASSERT_EQ(DefA, BClobber);
+
+  MemorySSAUpdater(&MSSA).removeMemoryAccess(DefA);
+  StoreA->eraseFromParent();
+
+  EXPECT_EQ(DefB->getDefiningAccess(), MSSA.getLiveOnEntryDef());
+
+  EXPECT_EQ(MSSA.getWalker()->getClobberingMemoryAccess(DefB),
+            MSSA.getLiveOnEntryDef())
+      << "(DefA = " << DefA << ")";
+}

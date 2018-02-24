@@ -747,6 +747,9 @@ HANDLE_DW_LNCT(0x02, directory_index)
 HANDLE_DW_LNCT(0x03, timestamp)
 HANDLE_DW_LNCT(0x04, size)
 HANDLE_DW_LNCT(0x05, MD5)
+// A vendor extension until http://dwarfstd.org/ShowIssue.php?issue=180201.1 is
+// accepted and incorporated into the next DWARF standard.
+HANDLE_DW_LNCT(0x2001, LLVM_source)
 
 // DWARF v5 Macro information.
 HANDLE_DW_MACRO(0x01, define)

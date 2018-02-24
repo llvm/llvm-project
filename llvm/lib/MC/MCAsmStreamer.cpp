@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -215,6 +216,7 @@ public:
                                                StringRef Directory,
                                                StringRef Filename,
                                                MD5::MD5Result *Checksum = 0,
+                                               Optional<StringRef> Source = None,
                                                unsigned CUID = 0) override;
   void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
                              unsigned Column, unsigned Flags,
@@ -1076,13 +1078,13 @@ void MCAsmStreamer::EmitFileDirective(StringRef Filename) {
 
 Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
     unsigned FileNo, StringRef Directory, StringRef Filename,
-    MD5::MD5Result *Checksum, unsigned CUID) {
+    MD5::MD5Result *Checksum, Optional<StringRef> Source, unsigned CUID) {
   assert(CUID == 0);
 
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   unsigned NumFiles = Table.getMCDwarfFiles().size();
   Expected<unsigned> FileNoOrErr =
-      Table.tryGetFile(Directory, Filename, Checksum, FileNo);
+      Table.tryGetFile(Directory, Filename, Checksum, Source, FileNo);
   if (!FileNoOrErr)
     return FileNoOrErr.takeError();
   FileNo = FileNoOrErr.get();
@@ -1113,6 +1115,10 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
   if (Checksum) {
     OS1 << " md5 ";
     PrintQuotedString(Checksum->digest(), OS1);
+  }
+  if (Source) {
+    OS1 << " source ";
+    PrintQuotedString(*Source, OS1);
   }
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->emitDwarfFileDirective(OS1.str());

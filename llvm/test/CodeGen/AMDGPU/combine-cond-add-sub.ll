@@ -19,8 +19,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}sub1:
-; GCN: v_cmp_gt_u32_e{{32|64}} [[CC:[^,]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; GCN: v_subb_u32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, v{{[0-9]+}}, 0, [[CC]]
+; GCN: v_cmp_gt_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_subbrev_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 ; GCN-NOT: v_cndmask
 
 define amdgpu_kernel void @sub1(i32 addrspace(1)* nocapture %arg) {
@@ -134,8 +134,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}sext_flclass:
-; GCN: v_cmp_class_f32_e{{32|64}} [[CC:[^,]+]],
-; GCN: v_subb_u32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, v{{[0-9]+}}, 0, [[CC]]
+; GCN: v_cmp_class_f32_e32 vcc,
+; GCN: v_subbrev_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 ; GCN-NOT: v_cndmask
 
 define amdgpu_kernel void @sext_flclass(i32 addrspace(1)* nocapture %arg, float %x) {

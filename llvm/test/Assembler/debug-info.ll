@@ -1,8 +1,8 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38}
+; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40}
 
 ; CHECK:      !0 = !DISubrange(count: 3)
 ; CHECK-NEXT: !1 = !DISubrange(count: 3, lowerBound: 4)
@@ -89,3 +89,8 @@
 !36 = !DICompositeType(tag: DW_TAG_variant_part, name: "A", scope: !16, size: 64, discriminator: !37)
 !37 = !DIDerivedType(tag: DW_TAG_member, scope: !36, baseType: !38, size: 64, align: 64, flags: DIFlagArtificial)
 !38 = !DIBasicType(name: "u64", size: 64, encoding: DW_ATE_unsigned)
+
+; CHECK-NEXT: !36 = !DIFile(filename: "file", directory: "dir", source: "int source() { }\0A")
+; CHECK-NEXT: !37 = !DIFile(filename: "file", directory: "dir", checksumkind: CSK_MD5, checksum: "3a420e2646916a475e68de8d48f779f5", source: "int source() { }\0A")
+!39 = !DIFile(filename: "file", directory: "dir", source: "int source() { }\0A")
+!40 = !DIFile(filename: "file", directory: "dir", checksumkind: CSK_MD5, checksum: "3a420e2646916a475e68de8d48f779f5", source: "int source() { }\0A")

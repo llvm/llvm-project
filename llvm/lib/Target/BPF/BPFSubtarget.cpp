@@ -30,11 +30,13 @@ BPFSubtarget &BPFSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef FS) {
   initializeEnvironment();
   initSubtargetFeatures(CPU, FS);
+  ParseSubtargetFeatures(CPU, FS);
   return *this;
 }
 
 void BPFSubtarget::initializeEnvironment() {
   HasJmpExt = false;
+  HasAlu32 = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {

@@ -35,6 +35,43 @@ protected:
   DataExtractor StringSection;
 
 public:
+  /// An abstract class representing a single entry in the accelerator tables.
+  class Entry {
+  protected:
+    SmallVector<DWARFFormValue, 3> Values;
+
+    Entry() = default;
+
+    // Make these protected so only (final) subclasses can be copied around.
+    Entry(const Entry &) = default;
+    Entry(Entry &&) = default;
+    Entry &operator=(const Entry &) = default;
+    Entry &operator=(Entry &&) = default;
+    ~Entry() = default;
+
+
+  public:
+    /// Returns the Offset of the Compilation Unit associated with this
+    /// Accelerator Entry or None if the Compilation Unit offset is not recorded
+    /// in this Accelerator Entry.
+    virtual Optional<uint64_t> getCUOffset() const = 0;
+
+    /// Returns the Offset of the Debug Info Entry associated with this
+    /// Accelerator Entry or None if the DIE offset is not recorded in this
+    /// Accelerator Entry.
+    virtual Optional<uint64_t> getDIEOffset() const = 0;
+
+    /// Returns the Tag of the Debug Info Entry associated with this
+    /// Accelerator Entry or None if the Tag is not recorded in this
+    /// Accelerator Entry.
+    virtual Optional<dwarf::Tag> getTag() const = 0;
+
+    /// Returns the raw values of fields in the Accelerator Entry. In general,
+    /// these can only be interpreted with the help of the metadata in the
+    /// owning Accelerator Table.
+    ArrayRef<DWARFFormValue> getValues() const { return Values; }
+  };
+
   DWARFAcceleratorTable(const DWARFDataExtractor &AccelSection,
                         DataExtractor StringSection)
       : AccelSection(AccelSection), StringSection(StringSection) {}
@@ -79,13 +116,31 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
                 uint32_t *DataOffset) const;
 
 public:
-  /// An iterator for the entries associated with one key. Each entry can have
-  /// multiple DWARFFormValues.
-  class ValueIterator : public std::iterator<std::input_iterator_tag,
-                                            ArrayRef<DWARFFormValue>> {
-    const AppleAcceleratorTable *AccelTable = nullptr;
-    SmallVector<DWARFFormValue, 3> AtomForms; ///< The decoded data entry.
+  /// Apple-specific implementation of an Accelerator Entry.
+  class Entry final : public DWARFAcceleratorTable::Entry {
+    const HeaderData *HdrData = nullptr;
 
+    Entry(const HeaderData &Data);
+    Entry() = default;
+
+    void extract(const AppleAcceleratorTable &AccelTable, uint32_t *Offset);
+
+  public:
+    Optional<uint64_t> getCUOffset() const override;
+    Optional<uint64_t> getDIEOffset() const override;
+    Optional<dwarf::Tag> getTag() const override;
+
+    /// Returns the value of the Atom in this Accelerator Entry, if the Entry
+    /// contains such Atom.
+    Optional<DWARFFormValue> lookup(HeaderData::AtomType Atom) const;
+
+    friend class AppleAcceleratorTable;
+    friend class ValueIterator;
+  };
+
+  class ValueIterator : public std::iterator<std::input_iterator_tag, Entry> {
+    const AppleAcceleratorTable *AccelTable = nullptr;
+    Entry Current;           ///< The current entry.
     unsigned DataOffset = 0; ///< Offset into the section.
     unsigned Data = 0; ///< Current data entry.
     unsigned NumData = 0; ///< Number of data entries.
@@ -98,9 +153,7 @@ public:
     /// End marker.
     ValueIterator() = default;
 
-    const ArrayRef<DWARFFormValue> operator*() const {
-      return AtomForms;
-    }
+    const Entry &operator*() const { return Current; }
     ValueIterator &operator++() { Next(); return *this; }
     ValueIterator operator++(int) {
       ValueIterator I = *this;
@@ -124,6 +177,9 @@ public:
   uint32_t getNumHashes();
   uint32_t getSizeHdr();
   uint32_t getHeaderDataLength();
+
+  /// Return the Atom description, which can be used to interpret the raw values
+  /// of the Accelerator Entries in this table.
   ArrayRef<std::pair<HeaderData::AtomType, HeaderData::Form>> getAtomsDesc();
   bool validateForms();
 
@@ -179,6 +235,9 @@ class DWARFDebugNames : public DWARFAcceleratorTable {
   };
 
 public:
+  class NameIndex;
+  class ValueIterator;
+
   /// Dwarf 5 Name Index header.
   struct Header : public HeaderPOD {
     SmallString<8> AugmentationString;
@@ -214,16 +273,41 @@ public:
     void dump(ScopedPrinter &W) const;
   };
 
-  /// A single entry in the Name Index.
-  struct Entry {
-    const Abbrev &Abbr;
+  /// DWARF v5-specific implementation of an Accelerator Entry.
+  class Entry final : public DWARFAcceleratorTable::Entry {
+    const NameIndex *NameIdx;
+    const Abbrev *Abbr;
 
-    /// Values of the index attributes described by Abbr.
-    std::vector<DWARFFormValue> Values;
+    Entry(const NameIndex &NameIdx, const Abbrev &Abbr);
 
-    Entry(const Abbrev &Abbr);
+    /// Returns the Index into the Compilation Unit list of the owning Name
+    /// Index or None if this Accelerator Entry does not have an associated
+    /// Compilation Unit. It is up to the user to verify that the returned Index
+    /// is valid in the owning NameIndex (or use getCUOffset(), which will
+    /// handle that check itself).
+    Optional<uint64_t> getCUIndex() const;
+
+  public:
+    Optional<uint64_t> getCUOffset() const override;
+    Optional<uint64_t> getDIEOffset() const override;
+    Optional<dwarf::Tag> getTag() const override { return tag(); }
+
+    /// .debug_names-specific getter, which always succeeds (DWARF v5 index
+    /// entries always have a tag).
+    dwarf::Tag tag() const { return Abbr->Tag; }
+
+    /// Return the Abbreviation that can be used to interpret the raw values of
+    /// this Accelerator Entry.
+    const Abbrev &getAbbrev() const { return *Abbr; }
+
+    /// Returns the value of the Index Attribute in this Accelerator Entry, if
+    /// the Entry contains such Attribute.
+    Optional<DWARFFormValue> lookup(dwarf::Index Index) const;
 
     void dump(ScopedPrinter &W) const;
+
+    friend class NameIndex;
+    friend class ValueIterator;
   };
 
 private:
@@ -280,15 +364,6 @@ public:
     uint32_t EntryOffsetsBase;
     uint32_t EntriesBase;
 
-    /// Reads offset of compilation unit CU. CU is 0-based.
-    uint32_t getCUOffset(uint32_t CU) const;
-
-    /// Reads offset of local type unit TU, TU is 0-based.
-    uint32_t getLocalTUOffset(uint32_t TU) const;
-
-    /// Reads signature of foreign type unit TU. TU is 0-based.
-    uint64_t getForeignTUOffset(uint32_t TU) const;
-
     /// Reads an entry in the Bucket Array for the given Bucket. The returned
     /// value is a (1-based) index into the Names, StringOffsets and
     /// EntryOffsets arrays. The input Bucket index is 0-based.
@@ -326,13 +401,76 @@ public:
     NameIndex(const DWARFDebugNames &Section, uint32_t Base)
         : Section(Section), Base(Base) {}
 
+    /// Reads offset of compilation unit CU. CU is 0-based.
+    uint32_t getCUOffset(uint32_t CU) const;
+    uint32_t getCUCount() const { return Hdr.CompUnitCount; }
+
+    /// Reads offset of local type unit TU, TU is 0-based.
+    uint32_t getLocalTUOffset(uint32_t TU) const;
+    uint32_t getLocalTUCount() const { return Hdr.LocalTypeUnitCount; }
+
+    /// Reads signature of foreign type unit TU. TU is 0-based.
+    uint64_t getForeignTUSignature(uint32_t TU) const;
+    uint32_t getForeignTUCount() const { return Hdr.ForeignTypeUnitCount; }
+
     llvm::Error extract();
     uint32_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }
     void dump(ScopedPrinter &W) const;
+
+    friend class DWARFDebugNames;
+  };
+
+  class ValueIterator : public std::iterator<std::input_iterator_tag, Entry> {
+
+    /// The Name Index we are currently iterating through. The implementation
+    /// relies on the fact that this can also be used as an iterator into the
+    /// "NameIndices" vector in the Accelerator section.
+    const NameIndex *CurrentIndex = nullptr;
+
+    Optional<Entry> CurrentEntry;
+    unsigned DataOffset = 0; ///< Offset into the section.
+    std::string Key;         ///< The Key we are searching for.
+    Optional<uint32_t> Hash; ///< Hash of Key, if it has been computed.
+
+    bool getEntryAtCurrentOffset();
+    Optional<uint32_t> findEntryOffsetInCurrentIndex();
+    bool findInCurrentIndex();
+    void searchFromStartOfCurrentIndex();
+    void next();
+
+    /// Set the iterator to the "end" state.
+    void setEnd() { *this = ValueIterator(); }
+
+  public:
+    /// Create a "begin" iterator for looping over all entries in the
+    /// accelerator table matching Key. The iterator will run through all Name
+    /// Indexes in the section in sequence.
+    ValueIterator(const DWARFDebugNames &AccelTable, StringRef Key);
+
+    /// End marker.
+    ValueIterator() = default;
+
+    const Entry &operator*() const { return *CurrentEntry; }
+    ValueIterator &operator++() {
+      next();
+      return *this;
+    }
+    ValueIterator operator++(int) {
+      ValueIterator I = *this;
+      next();
+      return I;
+    }
+
+    friend bool operator==(const ValueIterator &A, const ValueIterator &B) {
+      return A.CurrentIndex == B.CurrentIndex && A.DataOffset == B.DataOffset;
+    }
+    friend bool operator!=(const ValueIterator &A, const ValueIterator &B) {
+      return !(A == B);
+    }
   };
 
 private:
-  std::vector<NameIndex> NameIndices;
+  llvm::SmallVector<NameIndex, 0> NameIndices;
 
 public:
   DWARFDebugNames(const DWARFDataExtractor &AccelSection,
@@ -341,6 +479,9 @@ public:
 
   llvm::Error extract() override;
   void dump(raw_ostream &OS) const override;
+
+  /// Look up all entries in the accelerator table matching \c Key.
+  iterator_range<ValueIterator> equal_range(StringRef Key) const;
 };
 
 } // end namespace llvm

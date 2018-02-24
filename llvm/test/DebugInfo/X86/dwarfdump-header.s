@@ -258,8 +258,16 @@ LH_4_end:
 # CHECK: include_directories[  1] = "Directory4a"
 # CHECK: include_directories[  2] = "Directory4b"
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    1 0x00000041 0x00000042 "File4a"
-# CHECK: file_names[  2]    0 0x00000043 0x00000044 "File4b"
+# CHECK: file_names[  1]:
+# CHECK-NEXT: name: "File4a"
+# CHECK-NEXT: dir_index: 1
+# CHECK-NEXT: mod_time: 0x00000041
+# CHECK-NEXT: length: 0x00000042
+# CHECK: file_names[  2]:
+# CHECK-NEXT: name: "File4b"
+# CHECK-NEXT: dir_index: 0
+# CHECK-NEXT: mod_time: 0x00000043
+# CHECK-NEXT: length: 0x00000044
 # CHECK-NOT: file_names
 
 # DWARF v5 line-table header.
@@ -329,9 +337,14 @@ LH_5_end:
 # CHECK: include_directories[  0] = .debug_str[0x00000045] = "Directory5a"
 # CHECK: include_directories[  1] = .debug_str[0x00000051] = "Directory5b"
 # CHECK-NOT: include_directories
-# CHECK: MD5 Checksum
-# CHECK: file_names[  0]    0 00112233445566778899aabbccddeeff .debug_line_str[0x00000000] = "File5a"
-# CHECK: file_names[  1]    1 ffeeddccbbaa99887766554433221100 .debug_line_str[0x00000007] = "File5b"
+# CHECK: file_names[  0]:
+# CHECK-NEXT: name: .debug_line_str[0x00000000] = "File5a"
+# CHECK-NEXT: dir_index: 0
+# CHECK-NEXT: md5_checksum: 00112233445566778899aabbccddeeff
+# CHECK: file_names[  1]:
+# CHECK-NEXT: name: .debug_line_str[0x00000007] = "File5b"
+# CHECK-NEXT: dir_index: 1
+# CHECK-NEXT: md5_checksum: ffeeddccbbaa99887766554433221100
 # CHECK-NOT: file_names
 
         .section .debug_line_str,"MS",@progbits,1
@@ -410,6 +423,14 @@ dwo_LH_5_end:
 # CHECK: include_directories[  0] = .debug_str[0x0000003d] = "DWODirectory5a"
 # CHECK: include_directories[  1] = .debug_str[0x0000004c] = "DWODirectory5b"
 # CHECK-NOT: include_directories
-# CHECK: file_names[  0]    0 0x00000015 0x00000025 "DWOFile5a"
-# CHECK: file_names[  1]    1 0x00000035 0x00000045 "DWOFile5b"
+# CHECK: file_names[  0]:
+# CHECK-NEXT: name: "DWOFile5a"
+# CHECK-NEXT: dir_index: 0
+# CHECK-NEXT: mod_time: 0x00000015
+# CHECK-NEXT: length: 0x00000025
+# CHECK: file_names[  1]:
+# CHECK-NEXT: name: "DWOFile5b"
+# CHECK-NEXT: dir_index: 1
+# CHECK-NEXT: mod_time: 0x00000035
+# CHECK-NEXT: length: 0x00000045
 # CHECK-NOT: file_names

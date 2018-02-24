@@ -39,6 +39,16 @@ def NotHasSignExt :
               AssemblerPredicate<"!FeatureSignExt",
                                  "sign-ext">;
 
+def HasExceptionHandling :
+    Predicate<"Subtarget->hasExceptionHandling()">,
+              AssemblerPredicate<"FeatureExceptionHandling",
+                                 "exception-handling">;
+
+def NotHasExceptionHandling :
+    Predicate<"!Subtarget->hasExceptionHandling()">,
+              AssemblerPredicate<"!FeatureExceptionHandling",
+                                 "exception-handling">;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//

@@ -37,8 +37,8 @@ BPFRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
 BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
-  Reserved.set(BPF::R10); // R10 is read only frame pointer
-  Reserved.set(BPF::R11); // R11 is pseudo stack pointer
+  markSuperRegs(Reserved, BPF::W10); // [W|R]10 is read only frame pointer
+  markSuperRegs(Reserved, BPF::W11); // [W|R]11 is pseudo stack pointer
   return Reserved;
 }
 

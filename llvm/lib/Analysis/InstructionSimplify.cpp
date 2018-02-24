@@ -4251,6 +4251,12 @@ static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZero()))
     return Op1;
 
+  // sqrt(X) * sqrt(X) --> X
+  Value *X;
+  if (FMF.isFast() && Op0 == Op1 &&
+      match(Op0, m_Intrinsic<Intrinsic::sqrt>(m_Value(X))))
+    return X;
+
   return nullptr;
 }
 

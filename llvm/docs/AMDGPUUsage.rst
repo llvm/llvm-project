@@ -780,7 +780,7 @@ The following relocation types are supported:
 DWARF
 -----
 
-Standard DWARF [DWARF]_ Version 2 sections can be generated. These contain
+Standard DWARF [DWARF]_ Version 5 sections can be generated. These contain
 information that maps the code object executable code and data to the source
 language constructs. It can be used by tools such as debuggers and profilers.
 
@@ -836,10 +836,60 @@ Register Mapping
 Source Text
 ~~~~~~~~~~~
 
-*This section is WIP.*
+Source text for online-compiled programs (e.g. those compiled by the OpenCL
+runtime) may be embedded into the DWARF v5 line table using the ``clang
+-gembed-source`` option, described in table :ref:`amdgpu-debug-options`.
 
-.. TODO
-   DWARF extension to include runtime generated source text.
+For example:
+
+``-gembed-source``
+  Enable the embedded source DWARF v5 extension.
+``-gno-embed-source``
+  Disable the embedded source DWARF v5 extension.
+
+  .. table:: AMDGPU Debug Options
+     :name: amdgpu-debug-options
+
+     ==================== ==================================================
+     Debug Flag           Description
+     ==================== ==================================================
+     -g[no-]embed-source  Enable/disable embedding source text in DWARF
+                          debug sections. Useful for environments where
+                          source cannot be written to disk, such as
+                          when performing online compilation.
+     ==================== ==================================================
+
+This option enables one extended content types in the DWARF v5 Line Number
+Program Header, which is used to encode embedded source.
+
+  .. table:: AMDGPU DWARF Line Number Program Header Extended Content Types
+     :name: amdgpu-dwarf-extended-content-types
+
+     ============================  ======================
+     Content Type                  Form
+     ============================  ======================
+     ``DW_LNCT_LLVM_source``       ``DW_FORM_line_strp``
+     ============================  ======================
+
+The source field will contain the UTF-8 encoded, null-terminated source text
+with ``'\n'`` line endings. When the source field is present, consumers can use
+the embedded source instead of attempting to discover the source on disk. When
+the source field is absent, consumers can access the file to get the source
+text.
+
+The above content type appears in the ``file_name_entry_format`` field of the
+line table prologue, and its corresponding value appear in the ``file_names``
+field. The current encoding of the content type is documented in table
+:ref:`amdgpu-dwarf-extended-content-types-encoding`
+
+  .. table:: AMDGPU DWARF Line Number Program Header Extended Content Types Encoding
+     :name: amdgpu-dwarf-extended-content-types-encoding
+
+     ============================  ====================
+     Content Type                  Value
+     ============================  ====================
+     ``DW_LNCT_LLVM_source``       0x2001
+     ============================  ====================
 
 .. _amdgpu-code-conventions:
 
