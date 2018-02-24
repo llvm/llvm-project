@@ -440,7 +440,7 @@ private:
         os << Sep;
         FR->getDecl()->getDeclName().print(os, PP);
         Sep = ".";
-      } else if (auto *CXXR = dyn_cast<CXXBaseObjectRegion>(*I)) {
+      } else if (isa<CXXBaseObjectRegion>(*I)) {
         continue; // Just keep going up to the base region.
       } else {
         llvm_unreachable("Previous check has missed an unexpected region");
