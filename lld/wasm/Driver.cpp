@@ -344,13 +344,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
+  // Handle --export.
   for (auto *Arg : Args.filtered(OPT_export)) {
-    Symbol *Sym = Symtab->find(Arg->getValue());
-    if (!Sym || !Sym->isDefined())
-      error("symbol exported via --export not found: " +
-            Twine(Arg->getValue()));
-    else
+    StringRef Name = Arg->getValue();
+    Symbol *Sym = Symtab->find(Name);
+    if (Sym && Sym->isDefined())
       Sym->setHidden(false);
+    else
+      error("symbol exported via --export not found: " + Name);
   }
 
   if (EntrySym)

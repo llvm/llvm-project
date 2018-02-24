@@ -11,13 +11,17 @@
 ; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NOT: include_directories
-; CHECK: file_names[   1]   0 {{.*}} "a.cpp"
+; CHECK: file_names[   1]
+; CHECK: name: "a.cpp"
+; CHECK-NEXT: dir_index: 0
 ; CHECK-NOT: file_names
 
 ; CHECK: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NOT: include_directories
-; CHECK: file_names[   1]   0 {{.*}} "b.cpp"
+; CHECK: file_names[   1]
+; CHECK: name: "b.cpp"
+; CHECK-NEXT: dir_index: 0
 ; CHECK-NOT: file_names
 
 ; However, if a single line table is emitted and shared between CUs, the

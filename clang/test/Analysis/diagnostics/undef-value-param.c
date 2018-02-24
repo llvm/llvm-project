@@ -12,7 +12,7 @@ void foo(int c, int *x) {
     if (c)
            //expected-note@-1{{Assuming 'c' is not equal to 0}}
            //expected-note@-2{{Taking true branch}}
-        return;
+           return; // expected-note{{Returning without writing to '*x'}}
     *x = 5;
 }
 
@@ -51,7 +51,7 @@ void initStruct(int x, struct WithFields *X) {
   if (x <= 0) //expected-note {{Taking true branch}}
               //expected-note@-1 {{Assuming 'x' is <= 0}}
 
-    return;
+    return; //expected-note{{Returning without writing to 'X->f1'}}
   X->f1 = getValidPtr();
 }
 double testPassingParentRegionStruct(int x) {
@@ -293,17 +293,31 @@ double testPassingParentRegionStruct(int x) {
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
 // CHECK-NEXT:            <key>line</key><integer>15</integer>
-// CHECK-NEXT:            <key>col</key><integer>9</integer>
+// CHECK-NEXT:            <key>col</key><integer>12</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
 // CHECK-NEXT:            <key>line</key><integer>15</integer>
-// CHECK-NEXT:            <key>col</key><integer>14</integer>
+// CHECK-NEXT:            <key>col</key><integer>17</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:          </array>
 // CHECK-NEXT:        </dict>
 // CHECK-NEXT:       </array>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>kind</key><string>event</string>
+// CHECK-NEXT:      <key>location</key>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>line</key><integer>15</integer>
+// CHECK-NEXT:       <key>col</key><integer>12</integer>
+// CHECK-NEXT:       <key>file</key><integer>0</integer>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <key>depth</key><integer>1</integer>
+// CHECK-NEXT:      <key>extended_message</key>
+// CHECK-NEXT:      <string>Returning without writing to &apos;*x&apos;</string>
+// CHECK-NEXT:      <key>message</key>
+// CHECK-NEXT:      <string>Returning without writing to &apos;*x&apos;</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>event</string>
@@ -1041,6 +1055,20 @@ double testPassingParentRegionStruct(int x) {
 // CHECK-NEXT:          </array>
 // CHECK-NEXT:        </dict>
 // CHECK-NEXT:       </array>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>kind</key><string>event</string>
+// CHECK-NEXT:      <key>location</key>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>line</key><integer>54</integer>
+// CHECK-NEXT:       <key>col</key><integer>5</integer>
+// CHECK-NEXT:       <key>file</key><integer>0</integer>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <key>depth</key><integer>1</integer>
+// CHECK-NEXT:      <key>extended_message</key>
+// CHECK-NEXT:      <string>Returning without writing to &apos;X-&gt;f1&apos;</string>
+// CHECK-NEXT:      <key>message</key>
+// CHECK-NEXT:      <string>Returning without writing to &apos;X-&gt;f1&apos;</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>event</string>

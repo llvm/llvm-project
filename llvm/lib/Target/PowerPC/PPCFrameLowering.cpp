@@ -2159,6 +2159,8 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 }
 
 bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
+  if (MF.getInfo<PPCFunctionInfo>()->shrinkWrapDisabled())
+    return false;
   return (MF.getSubtarget<PPCSubtarget>().isSVR4ABI() &&
           MF.getSubtarget<PPCSubtarget>().isPPC64());
 }

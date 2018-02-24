@@ -46,7 +46,6 @@ public:
     UndefinedGlobalKind,
 
     LastDefinedKind = DefinedGlobalKind,
-    InvalidKind,
   };
 
   Kind kind() const { return SymbolKind; }

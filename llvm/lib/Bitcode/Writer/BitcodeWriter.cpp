@@ -1560,6 +1560,9 @@ void ModuleBitcodeWriter::writeDIFile(const DIFile *N,
     Record.push_back(0);
     Record.push_back(VE.getMetadataOrNullID(nullptr));
   }
+  auto Source = N->getRawSource();
+  if (Source)
+    Record.push_back(VE.getMetadataOrNullID(*Source));
 
   Stream.EmitRecord(bitc::METADATA_FILE, Record, Abbrev);
   Record.clear();

@@ -47,7 +47,8 @@ LH_1_end:
 # PART1-NEXT: version: 4
 # PART1-NEXT: prologue_length: 0x00000028
 # PART1:      include_directories[  1] = "Directory1"
-# PART1:      file_names[  1] {{.*}} "File1"
+# PART1:      file_names[  1]
+# PART1:      name: "File1"
 
 # Second line table.
 LH_2_start:
@@ -93,5 +94,6 @@ LH_2_end:
 # PART2-NEXT: prologue_length: 0x00000022
 # PART2-NOT:  prologue:
 # PART2:      include_directories[  1] = "Dir2"
-# PART2:      file_names[  1] {{.*}} "File2"
+# PART2:      file_names[  1]
+# PART2:      name: "File2"
 # PART2-NOT:  prologue:

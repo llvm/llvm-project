@@ -153,18 +153,18 @@ CHECK-NEXT:[0x0000000100000f40, 0x0000000100000f84)
 CHECK-NEXT:[0x0000000100000f90, 0x0000000100000fa9)
 
 CHECK: .debug_line contents:
-CHECK:                Dir  Mod Time   File Len   File Name
-CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
-CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 "basic1.c"
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic1.c"
+CHECK-NEXT: dir_index: 0
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000ea0     23      0      1   0             0  is_stmt
 CHECK-NEXT: 0x0000000100000eb6     24      0      1   0             0  is_stmt prologue_end
 CHECK-NEXT: 0x0000000100000ec4     24      0      1   0             0  is_stmt end_sequence
 
-CHECK:                 Dir  Mod Time   File Len   File Name
-CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
-CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 "basic2.c"
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic2.c"
+CHECK-NEXT: dir_index: 0
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000ed0     19      0      1   0             0  is_stmt
@@ -174,9 +174,9 @@ CHECK-NEXT: 0x0000000100000f20     14      0      1   0             0  is_stmt
 CHECK-NEXT: 0x0000000100000f24     15      0      1   0             0  is_stmt prologue_end
 CHECK-NEXT: 0x0000000100000f37     15      0      1   0             0  is_stmt end_sequence
 
-CHECK:                 Dir  Mod Time   File Len   File Name
-CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
-CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 "basic3.c"
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic3.c"
+CHECK-NEXT: dir_index: 0
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000f40     16      0      1   0             0  is_stmt

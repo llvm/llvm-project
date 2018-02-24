@@ -59,6 +59,8 @@ attributes #1 = { nounwind readnone }
 !26 = !DILocation(line: 7, column: 17, scope: !2)
 !27 = !DILocation(line: 9, column: 9, scope: !2)
 
-; CHECK: file_names[  1]    0 0x00000000 0x00000000 "testprog.c"
+; CHECK: file_names[  1]:
+; CHECK-NEXT: name: "testprog.c"
+; CHECK-NEXT: dir_index: 0
 ; CHECK: 0x0000000000000000      2
 ; CHECK: 0x0000000000000028      7

@@ -11,7 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -373,8 +373,13 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
 
   // The file format, which is the inline null-terminated filename and a
   // directory index.  We don't track file size/timestamp so don't emit them
-  // in the v5 table.  Emit MD5 checksums if we have them.
-  MCOS->EmitIntValue(HasMD5 ? 3 : 2, 1);
+  // in the v5 table.  Emit MD5 checksums and source if we have them.
+  uint64_t Entries = 2;
+  if (HasMD5)
+    Entries += 1;
+  if (HasSource)
+    Entries += 1;
+  MCOS->EmitIntValue(Entries, 1);
   MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_path);
   MCOS->EmitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
                                     : dwarf::DW_FORM_string);
@@ -383,6 +388,11 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   if (HasMD5) {
     MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_MD5);
     MCOS->EmitULEB128IntValue(dwarf::DW_FORM_data16);
+  }
+  if (HasSource) {
+    MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_LLVM_source);
+    MCOS->EmitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
+                                      : dwarf::DW_FORM_string);
   }
   // Then the list of file names. These start at 1.
   MCOS->EmitULEB128IntValue(MCDwarfFiles.size() - 1);
@@ -400,6 +410,15 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
       MCOS->EmitBinaryData(
           StringRef(reinterpret_cast<const char *>(Cksum->Bytes.data()),
                     Cksum->Bytes.size()));
+    }
+    if (HasSource) {
+      if (LineStr)
+        LineStr->emitRef(MCOS, MCDwarfFiles[i].Source.getValueOr(StringRef()));
+      else {
+        MCOS->EmitBytes(
+            MCDwarfFiles[i].Source.getValueOr(StringRef())); // Source and...
+        MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+      }
     }
   }
 }
@@ -500,14 +519,17 @@ void MCDwarfLineTable::EmitCU(MCObjectStreamer *MCOS,
 Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
                                                 StringRef &FileName,
                                                 MD5::MD5Result *Checksum,
+                                                Optional<StringRef> Source,
                                                 unsigned FileNumber) {
-  return Header.tryGetFile(Directory, FileName, Checksum, FileNumber);
+  return Header.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
 }
 
-Expected<unsigned> MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
-                                                      StringRef &FileName,
-                                                      MD5::MD5Result *Checksum,
-                                                      unsigned FileNumber) {
+Expected<unsigned>
+MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
+                                   StringRef &FileName,
+                                   MD5::MD5Result *Checksum,
+                                   Optional<StringRef> &Source,
+                                   unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
   if (FileName.empty()) {
@@ -515,9 +537,11 @@ Expected<unsigned> MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     Directory = "";
   }
   assert(!FileName.empty());
-  // If any files have an MD5 checksum, they all must.
-  if (MCDwarfFiles.empty())
+  // If any files have an MD5 checksum or embedded source, they all must.
+  if (MCDwarfFiles.empty()) {
     HasMD5 = (Checksum != nullptr);
+    HasSource = (Source != None);
+  }
   if (FileNumber == 0) {
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
@@ -544,6 +568,10 @@ Expected<unsigned> MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   // If any files have an MD5 checksum, they all must.
   if (HasMD5 != (Checksum != nullptr))
     return make_error<StringError>("inconsistent use of MD5 checksums",
+                                   inconvertibleErrorCode());
+  // If any files have embedded source, they all must.
+  if (HasSource != (Source != None))
+    return make_error<StringError>("inconsistent use of embedded source",
                                    inconvertibleErrorCode());
 
   if (Directory.empty()) {
@@ -582,6 +610,9 @@ Expected<unsigned> MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   File.Checksum = Checksum;
   if (Checksum)
     HasMD5 = true;
+  File.Source = Source;
+  if (Source)
+    HasSource = true;
 
   // return the allocated FileNumber.
   return FileNumber;

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -40,6 +41,28 @@ using ContentDescriptors = SmallVector<ContentDescriptor, 4>;
 
 } // end anonmyous namespace
 
+void DWARFDebugLine::ContentTypeTracker::trackContentType(
+    dwarf::LineNumberEntryFormat ContentType) {
+  switch (ContentType) {
+  case dwarf::DW_LNCT_timestamp:
+    HasModTime = true;
+    break;
+  case dwarf::DW_LNCT_size:
+    HasLength = true;
+    break;
+  case dwarf::DW_LNCT_MD5:
+    HasMD5 = true;
+    break;
+  case dwarf::DW_LNCT_LLVM_source:
+    HasSource = true;
+    break;
+  default:
+    // We only care about values we consider optional, and new values may be
+    // added in the vendor extension range, so we do not match exhaustively.
+    break;
+  }
+}
+
 DWARFDebugLine::Prologue::Prologue() { clear(); }
 
 void DWARFDebugLine::Prologue::clear() {
@@ -48,7 +71,7 @@ void DWARFDebugLine::Prologue::clear() {
   MinInstLength = MaxOpsPerInst = DefaultIsStmt = LineBase = LineRange = 0;
   OpcodeBase = 0;
   FormParams = DWARFFormParams({0, 0, DWARF32});
-  HasMD5 = false;
+  ContentTypes = ContentTypeTracker();
   StandardOpcodeLengths.clear();
   IncludeDirectories.clear();
   FileNames.clear();
@@ -85,28 +108,26 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
   }
 
   if (!FileNames.empty()) {
-    if (HasMD5)
-      OS << "                Dir  MD5 Checksum                     File Name\n"
-         << "                ---- -------------------------------- -----------"
-            "---------------\n";
-    else
-      OS << "                Dir  Mod Time   File Len   File Name\n"
-         << "                ---- ---------- ---------- -----------"
-            "----------------\n";
     // DWARF v5 starts file indexes at 0.
     uint32_t FileBase = getVersion() >= 5 ? 0 : 1;
     for (uint32_t I = 0; I != FileNames.size(); ++I) {
       const FileNameEntry &FileEntry = FileNames[I];
-      OS << format("file_names[%3u] %4" PRIu64 " ", I + FileBase,
-                   FileEntry.DirIdx);
-      if (HasMD5)
-        OS << FileEntry.Checksum.digest();
-      else
-        OS << format("0x%8.8" PRIx64 " 0x%8.8" PRIx64, FileEntry.ModTime,
-                     FileEntry.Length);
-      OS << ' ';
+      OS <<   format("file_names[%3u]:\n", I + FileBase);
+      OS <<          "           name: ";
       FileEntry.Name.dump(OS, DumpOptions);
-      OS << '\n';
+      OS << '\n'
+         <<   format("      dir_index: %" PRIu64 "\n", FileEntry.DirIdx);
+      if (ContentTypes.HasMD5)
+        OS <<        "   md5_checksum: " << FileEntry.Checksum.digest() << '\n';
+      if (ContentTypes.HasModTime)
+        OS << format("       mod_time: 0x%8.8" PRIx64 "\n", FileEntry.ModTime);
+      if (ContentTypes.HasLength)
+        OS << format("         length: 0x%8.8" PRIx64 "\n", FileEntry.Length);
+      if (ContentTypes.HasSource) {
+        OS <<        "         source: ";
+        FileEntry.Source.dump(OS, DumpOptions);
+        OS << '\n';
+      }
     }
   }
 }
@@ -115,6 +136,7 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
 static void
 parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
+                     DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   while (*OffsetPtr < EndPrologueOffset) {
@@ -138,14 +160,18 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
     FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
     FileNames.push_back(FileEntry);
   }
+
+  ContentTypes.HasModTime = true;
+  ContentTypes.HasLength = true;
 }
 
 // Parse v5 directory/file entry content descriptions.
 // Returns the descriptors, or an empty vector if we did not find a path or
 // ran off the end of the prologue.
 static ContentDescriptors
-parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-                   uint64_t EndPrologueOffset, bool *HasMD5) {
+parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t
+    *OffsetPtr, uint64_t EndPrologueOffset, DWARFDebugLine::ContentTypeTracker
+    *ContentTypes) {
   ContentDescriptors Descriptors;
   int FormatCount = DebugLineData.getU8(OffsetPtr);
   bool HasPath = false;
@@ -158,8 +184,8 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
     Descriptor.Form = dwarf::Form(DebugLineData.getULEB128(OffsetPtr));
     if (Descriptor.Type == dwarf::DW_LNCT_path)
       HasPath = true;
-    else if (Descriptor.Type == dwarf::DW_LNCT_MD5 && HasMD5)
-      *HasMD5 = true;
+    if (ContentTypes)
+      ContentTypes->trackContentType(Descriptor.Type);
     Descriptors.push_back(Descriptor);
   }
   return HasPath ? Descriptors : ContentDescriptors();
@@ -168,8 +194,9 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
 static bool
 parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     const DWARFFormParams &FormParams, const DWARFContext &Ctx,
-                     const DWARFUnit *U, bool &HasMD5,
+                     const DWARFFormParams &FormParams, const DWARFContext
+                     &Ctx, const DWARFUnit *U,
+                     DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   // Get the directory entry description.
@@ -200,7 +227,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
 
   // Get the file entry description.
   ContentDescriptors FileDescriptors =
-      parseV5EntryFormat(DebugLineData, OffsetPtr, EndPrologueOffset, &HasMD5);
+      parseV5EntryFormat(DebugLineData, OffsetPtr, EndPrologueOffset,
+          &ContentTypes);
   if (FileDescriptors.empty())
     return false;
 
@@ -217,6 +245,9 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
       switch (Descriptor.Type) {
       case DW_LNCT_path:
         FileEntry.Name = Value;
+        break;
+      case DW_LNCT_LLVM_source:
+        FileEntry.Source = Value;
         break;
       case DW_LNCT_directory_index:
         FileEntry.DirIdx = Value.getAsUnsignedConstant().getValue();
@@ -285,8 +316,8 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
 
   if (getVersion() >= 5) {
     if (!parseV5DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
-                              FormParams, Ctx, U, HasMD5, IncludeDirectories,
-                              FileNames)) {
+                              FormParams, Ctx, U, ContentTypes,
+                              IncludeDirectories, FileNames)) {
       fprintf(stderr,
               "warning: parsing line table prologue at 0x%8.8" PRIx64
               " found an invalid directory or file table description at"
@@ -295,7 +326,7 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     }
   } else
     parseV2DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
-                         IncludeDirectories, FileNames);
+                         ContentTypes, IncludeDirectories, FileNames);
 
   if (*OffsetPtr != EndPrologueOffset) {
     fprintf(stderr,
@@ -912,6 +943,16 @@ bool DWARFDebugLine::LineTable::hasFileAtIndex(uint64_t FileIndex) const {
   return FileIndex != 0 && FileIndex <= Prologue.FileNames.size();
 }
 
+Optional<StringRef> DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileIndex,
+                                                                FileLineInfoKind Kind) const {
+  if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
+    return None;
+  const FileNameEntry &Entry = Prologue.FileNames[FileIndex - 1];
+  if (Optional<const char *> source = Entry.Source.getAsCString())
+    return StringRef(*source);
+  return None;
+}
+
 bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
                                                    const char *CompDir,
                                                    FileLineInfoKind Kind,
@@ -963,5 +1004,6 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
   Result.Line = Row.Line;
   Result.Column = Row.Column;
   Result.Discriminator = Row.Discriminator;
+  Result.Source = getSourceByIndex(Row.File, Kind);
   return true;
 }

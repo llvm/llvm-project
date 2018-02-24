@@ -55,17 +55,6 @@ private:
   /// Endbr opcode for the current machine function.
   unsigned int EndbrOpcode;
 
-  /// The function looks for an indirect jump terminator in MBB predecessors.
-  ///
-  /// Jump tables are generated when lowering switch-case statements or
-  /// setjmp/longjump functions.
-  /// As a result only indirect jumps use jump tables.
-  /// The function verifies this assumption.
-  ///
-  /// \return true if the input \p MBB has a predecessor MBB with indirect
-  /// branch terminator or false otherwise.
-  bool verifyIndirectJump(const MachineBasicBlock *MBB) const;
-
   /// Adds a new ENDBR instruction to the begining of the MBB.
   /// The function will not add it if already exists.
   /// It will add ENDBR32 or ENDBR64 opcode, depending on the target.
@@ -78,16 +67,6 @@ char X86IndirectBranchTrackingPass::ID = 0;
 
 FunctionPass *llvm::createX86IndirectBranchTrackingPass() {
   return new X86IndirectBranchTrackingPass();
-}
-
-bool X86IndirectBranchTrackingPass::verifyIndirectJump(
-    const MachineBasicBlock *MBB) const {
-  for (auto &PredMBB : MBB->predecessors())
-    for (auto &TermI : PredMBB->terminators())
-      if (TermI.isIndirectBranch())
-        return true;
-
-  return false;
 }
 
 void X86IndirectBranchTrackingPass::addENDBR(MachineBasicBlock &MBB) const {
@@ -148,11 +127,21 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   if (MachineJumpTableInfo *JTI = MF.getJumpTableInfo()) {
     for (const auto &JT : JTI->getJumpTables()) {
       for (auto *MBB : JT.MBBs) {
-        // This assert verifies the assumption that this MBB has an indirect
-        // jump terminator in one of its predecessor.
-        assert(verifyIndirectJump(MBB) &&
+	// This assert verifies the assumption that this MBB has an indirect
+	// jump terminator in one of its predecessor.
+	// Jump tables are generated when lowering switch-case statements or
+	// setjmp/longjump functions. As a result only indirect jumps use jump
+	// tables.
+        #ifndef NDEBUG
+        bool hasIndirectJumpTerm = false;
+        for (auto &PredMBB : MBB->predecessors())
+          for (auto &TermI : PredMBB->terminators())
+            if (TermI.isIndirectBranch())
+              hasIndirectJumpTerm = true;
+        assert(hasIndirectJumpTerm &&
                "The MBB is not the destination of an indirect jump");
-
+	(void)hasIndirectJumpTerm;
+	#endif
         addENDBR(*MBB);
         Changed = true;
       }

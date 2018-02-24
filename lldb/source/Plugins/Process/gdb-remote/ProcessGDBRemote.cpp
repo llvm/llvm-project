@@ -3316,27 +3316,22 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 
     int communication_fd = -1;
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
-    // Auto close the sockets we might open up unless everything goes OK. This
-    // helps us not leak file descriptors when things go wrong.
-    lldb_utility::CleanUp<int, int> our_socket(-1, -1, close);
-    lldb_utility::CleanUp<int, int> gdb_socket(-1, -1, close);
-
     // Use a socketpair on non-Windows systems for security and performance
     // reasons.
-    {
-      int sockets[2]; /* the pair of socket descriptors */
-      if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == -1) {
-        error.SetErrorToErrno();
-        return error;
-      }
-
-      our_socket.set(sockets[0]);
-      gdb_socket.set(sockets[1]);
+    int sockets[2]; /* the pair of socket descriptors */
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == -1) {
+      error.SetErrorToErrno();
+      return error;
     }
 
+    int our_socket = sockets[0];
+    int gdb_socket = sockets[1];
+    CleanUp cleanup_our(close, our_socket);
+    CleanUp cleanup_gdb(close, gdb_socket);
+
     // Don't let any child processes inherit our communication socket
-    SetCloexecFlag(our_socket.get());
-    communication_fd = gdb_socket.get();
+    SetCloexecFlag(our_socket);
+    communication_fd = gdb_socket;
 #endif
 
     error = m_gdb_comm.StartDebugserverProcess(
@@ -3352,8 +3347,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
       // Our process spawned correctly, we can now set our connection to use our
       // end of the socket pair
-      m_gdb_comm.SetConnection(
-          new ConnectionFileDescriptor(our_socket.release(), true));
+      cleanup_our.disable();
+      m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket, true));
 #endif
       StartAsyncThread();
     }

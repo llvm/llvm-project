@@ -1045,3 +1045,57 @@ namespace Mutable {
   constexpr B b;
   constexpr int p = b.n; // expected-error {{constant expression}} expected-note {{mutable}}
 }
+
+namespace IndirectFields {
+
+// Reference indirect field.
+struct A {
+  struct {
+    union {
+      int x = x = 3; // expected-note {{outside its lifetime}}
+    };
+  };
+  constexpr A() {}
+};
+static_assert(A().x == 3, ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'A()'}}
+
+// Reference another indirect field, with different 'this'.
+struct B {
+  struct {
+    union {
+      int x = 3;
+    };
+    int y = x;
+  };
+  constexpr B() {}
+};
+static_assert(B().y == 3, "");
+
+// Nested evaluation of indirect field initializers.
+struct C {
+  union {
+    int x = 1;
+  };
+};
+struct D {
+  struct {
+    C c;
+    int y = c.x + 1;
+  };
+};
+static_assert(D().y == 2, "");
+
+// Explicit 'this'.
+struct E {
+  int n = 0;
+  struct {
+    void *x = this;
+  };
+  void *y = this;
+};
+constexpr E e1 = E();
+static_assert(e1.x != e1.y, "");
+constexpr E e2 = E{0};
+static_assert(e2.x != e2.y, "");
+
+} // namespace IndirectFields

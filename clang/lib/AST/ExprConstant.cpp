@@ -4383,6 +4383,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 #endif
   for (const auto *I : Definition->inits()) {
     LValue Subobject = This;
+    LValue SubobjectParent = This;
     APValue *Value = &Result;
 
     // Determine the subobject to initialize.
@@ -4413,7 +4414,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     } else if (IndirectFieldDecl *IFD = I->getIndirectMember()) {
       // Walk the indirect field decl's chain to find the object to initialize,
       // and make sure we've initialized every step along it.
-      for (auto *C : IFD->chain()) {
+      auto IndirectFieldChain = IFD->chain();
+      for (auto *C : IndirectFieldChain) {
         FD = cast<FieldDecl>(C);
         CXXRecordDecl *CD = cast<CXXRecordDecl>(FD->getParent());
         // Switch the union field if it differs. This happens if we had
@@ -4429,6 +4431,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
             *Value = APValue(APValue::UninitStruct(), CD->getNumBases(),
                              std::distance(CD->field_begin(), CD->field_end()));
         }
+        // Store Subobject as its parent before updating it for the last element
+        // in the chain.
+        if (C == IndirectFieldChain.back())
+          SubobjectParent = Subobject;
         if (!HandleLValueMember(Info, I->getInit(), Subobject, FD))
           return false;
         if (CD->isUnion())
@@ -4440,10 +4446,16 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       llvm_unreachable("unknown base initializer kind");
     }
 
+    // Need to override This for implicit field initializers as in this case
+    // This refers to innermost anonymous struct/union containing initializer,
+    // not to currently constructed class.
+    const Expr *Init = I->getInit();
+    ThisOverrideRAII ThisOverride(*Info.CurrentCall, &SubobjectParent,
+                                  isa<CXXDefaultInitExpr>(Init));
     FullExpressionRAII InitScope(Info);
-    if (!EvaluateInPlace(*Value, Info, Subobject, I->getInit()) ||
-        (FD && FD->isBitField() && !truncateBitfieldValue(Info, I->getInit(),
-                                                          *Value, FD))) {
+    if (!EvaluateInPlace(*Value, Info, Subobject, Init) ||
+        (FD && FD->isBitField() &&
+         !truncateBitfieldValue(Info, Init, *Value, FD))) {
       // If we're checking for a potential constant expression, evaluate all
       // initializers even if some of them fail.
       if (!Info.noteFailure())

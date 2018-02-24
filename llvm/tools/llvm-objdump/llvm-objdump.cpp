@@ -408,7 +408,7 @@ protected:
   std::unordered_map<std::string, std::vector<StringRef>> LineCache;
 
 private:
-  bool cacheSource(const std::string& File);
+  bool cacheSource(const DILineInfo& LineInfoFile);
 
 public:
   SourcePrinter() = default;
@@ -423,23 +423,29 @@ public:
                                StringRef Delimiter = "; ");
 };
 
-bool SourcePrinter::cacheSource(const std::string& File) {
-  auto BufferOrError = MemoryBuffer::getFile(File);
-  if (!BufferOrError)
-    return false;
+bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
+  std::unique_ptr<MemoryBuffer> Buffer;
+  if (LineInfo.Source) {
+    Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
+  } else {
+    auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
+    if (!BufferOrError)
+      return false;
+    Buffer = std::move(*BufferOrError);
+  }
   // Chomp the file to get lines
-  size_t BufferSize = (*BufferOrError)->getBufferSize();
-  const char *BufferStart = (*BufferOrError)->getBufferStart();
+  size_t BufferSize = Buffer->getBufferSize();
+  const char *BufferStart = Buffer->getBufferStart();
   for (const char *Start = BufferStart, *End = BufferStart;
        End < BufferStart + BufferSize; End++)
     if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
         (*End == '\r' && *(End + 1) == '\n')) {
-      LineCache[File].push_back(StringRef(Start, End - Start));
+      LineCache[LineInfo.FileName].push_back(StringRef(Start, End - Start));
       if (*End == '\r')
         End++;
       Start = End + 1;
     }
-  SourceCache[File] = std::move(*BufferOrError);
+  SourceCache[LineInfo.FileName] = std::move(Buffer);
   return true;
 }
 
@@ -463,7 +469,7 @@ void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
     OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
   if (PrintSource) {
     if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
-      if (!cacheSource(LineInfo.FileName))
+      if (!cacheSource(LineInfo))
         return;
     auto FileBuffer = SourceCache.find(LineInfo.FileName);
     if (FileBuffer != SourceCache.end()) {
