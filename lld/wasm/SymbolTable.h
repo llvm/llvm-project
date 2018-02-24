@@ -55,8 +55,6 @@ public:
                          uint32_t Size = 0);
   Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F,
                            InputGlobal *G);
-  Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
-                       InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
   Symbol *addUndefined(StringRef Name, WasmSymbolType Type, uint32_t Flags,
                        InputFile *F, const WasmSignature *Signature = nullptr,
