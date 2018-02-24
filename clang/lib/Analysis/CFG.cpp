@@ -1187,6 +1187,9 @@ void CFGBuilder::findConstructionContexts(
         ConstructionContext::create(cfg->getBumpVectorContext(), BTE,
                                     ContextSoFar),
         BTE->getSubExpr());
+  } else if (auto *CO = dyn_cast<ConditionalOperator>(Child)) {
+    findConstructionContexts(ContextSoFar, CO->getLHS());
+    findConstructionContexts(ContextSoFar, CO->getRHS());
   }
 }
 
