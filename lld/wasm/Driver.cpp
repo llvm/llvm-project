@@ -34,14 +34,9 @@ using namespace llvm::wasm;
 using namespace lld;
 using namespace lld::wasm;
 
-namespace {
+Configuration *lld::wasm::Config;
 
-// Parses command line options.
-class WasmOptTable : public llvm::opt::OptTable {
-public:
-  WasmOptTable();
-  llvm::opt::InputArgList parse(ArrayRef<const char *> Argv);
-};
+namespace {
 
 // Create enum with OPT_xxx values for each option in Options.td
 enum {
@@ -56,16 +51,13 @@ public:
   void link(ArrayRef<const char *> ArgsArr);
 
 private:
-  void createFiles(llvm::opt::InputArgList &Args);
+  void createFiles(opt::InputArgList &Args);
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
   std::vector<InputFile *> Files;
   llvm::wasm::WasmGlobal StackPointerGlobal;
 };
-
 } // anonymous namespace
-
-Configuration *lld::wasm::Config;
 
 bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
                      raw_ostream &Error) {
@@ -91,8 +83,6 @@ bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
   return !errorCount();
 }
 
-// Create OptTable
-
 // Create prefix string literals used in Options.td
 #define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
 #include "Options.inc"
@@ -105,6 +95,12 @@ static const opt::OptTable::Info OptInfo[] = {
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
 #include "Options.inc"
 #undef OPTION
+};
+
+class WasmOptTable : public llvm::opt::OptTable {
+public:
+  WasmOptTable() : OptTable(OptInfo) {}
+  opt::InputArgList parse(ArrayRef<const char *> Argv);
 };
 
 // Set color diagnostics according to -color-diagnostics={auto,always,never}
@@ -138,12 +134,6 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
     return S.str().str();
   return None;
 }
-
-static void printHelp(const char *Argv0) {
-  WasmOptTable().PrintHelp(outs(), Argv0, "LLVM Linker", false);
-}
-
-WasmOptTable::WasmOptTable() : OptTable(OptInfo) {}
 
 opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> Argv) {
   SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
@@ -235,7 +225,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle --help
   if (Args.hasArg(OPT_help)) {
-    printHelp(ArgsArr[0]);
+    Parser.PrintHelp(outs(), ArgsArr[0], "LLVM Linker", false);
+    return;
+  }
+
+  // Handle --version
+  if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v)) {
+    outs() << getLLDVersion() << "\n";
     return;
   }
 
@@ -247,11 +243,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   cl::ParseCommandLineOptions(V.size(), V.data());
 
   errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
-
-  if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v)) {
-    outs() << getLLDVersion() << "\n";
-    return;
-  }
 
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CheckSignatures =

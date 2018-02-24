@@ -937,8 +937,7 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
   if (auto *Sec = dyn_cast<OutputSection>(B))
-    if (Sec->Live)
-      return getRankProximityAux(A, Sec);
+    return getRankProximityAux(A, Sec);
   return -1;
 }
 
@@ -984,20 +983,16 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   int Proximity = getRankProximity(Sec, *I);
   for (; I != E; ++I) {
     auto *CurSec = dyn_cast<OutputSection>(*I);
-    if (!CurSec || !CurSec->Live)
+    if (!CurSec)
       continue;
     if (getRankProximity(Sec, CurSec) != Proximity ||
         Sec->SortRank < CurSec->SortRank)
       break;
   }
 
-  auto IsLiveSection = [](BaseCommand *Cmd) {
-    auto *OS = dyn_cast<OutputSection>(Cmd);
-    return OS && OS->Live;
-  };
-
+  auto IsOutputSec = [](BaseCommand *Cmd) { return isa<OutputSection>(Cmd); };
   auto J = std::find_if(llvm::make_reverse_iterator(I),
-                        llvm::make_reverse_iterator(B), IsLiveSection);
+                        llvm::make_reverse_iterator(B), IsOutputSec);
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put
@@ -1005,7 +1000,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto NextSec = std::find_if(I, E, IsLiveSection);
+  auto NextSec = std::find_if(I, E, IsOutputSec);
   if (NextSec == E)
     return E;
 
@@ -1077,8 +1072,6 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
 static void sortSection(OutputSection *Sec,
                         const DenseMap<const InputSectionBase *, int> &Order) {
-  if (!Sec->Live)
-    return;
   StringRef Name = Sec->Name;
 
   // Sort input sections by section name suffixes for
@@ -1186,7 +1179,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto E = Script->SectionCommands.end();
   auto NonScriptI = std::find_if(I, E, [](BaseCommand *Base) {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
-      return Sec->Live && Sec->SectionIndex == INT_MAX;
+      return Sec->SectionIndex == INT_MAX;
     return false;
   });
 
@@ -1498,7 +1491,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   removeUnusedSyntheticSections();
 
   sortSections();
-  Script->removeEmptyCommands();
 
   // Now that we have the final list, create a list of all the
   // OutputSections for convenience.
@@ -2077,6 +2069,16 @@ static uint16_t getELFType() {
   return ET_EXEC;
 }
 
+static uint8_t getAbiVersion() {
+  if (Config->EMachine == EM_MIPS) {
+    // Increment the ABI version for non-PIC executable files.
+    if (getELFType() == ET_EXEC &&
+        (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
+      return 1;
+  }
+  return 0;
+}
+
 template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
   memcpy(Buf, "\177ELF", 4);
@@ -2087,6 +2089,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_ident[EI_DATA] = Config->IsLE ? ELFDATA2LSB : ELFDATA2MSB;
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
   EHdr->e_ident[EI_OSABI] = Config->OSABI;
+  EHdr->e_ident[EI_ABIVERSION] = getAbiVersion();
   EHdr->e_type = getELFType();
   EHdr->e_machine = Config->EMachine;
   EHdr->e_version = EV_CURRENT;
