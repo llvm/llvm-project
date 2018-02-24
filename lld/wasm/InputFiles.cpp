@@ -201,8 +201,8 @@ void ObjFile::initializeSymbols() {
   ArrayRef<uint32_t> FuncTypes = WasmObj->functionTypes();
   ArrayRef<WasmSignature> Types = WasmObj->types();
 
-  for (const auto &C : WasmObj->comdats())
-    Symtab->addComdat(C, this);
+  for (StringRef Name : WasmObj->comdats())
+    Symtab->addComdat(Name, this);
 
   for (const WasmSegment &S : WasmObj->dataSegments()) {
     InputSegment *Seg = make<InputSegment>(S, this);

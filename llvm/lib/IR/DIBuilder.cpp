@@ -14,6 +14,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
@@ -204,8 +205,9 @@ DIImportedEntity *DIBuilder::createImportedDeclaration(DIScope *Context,
 }
 
 DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
-                              Optional<DIFile::ChecksumInfo<StringRef>> CS) {
-  return DIFile::get(VMContext, Filename, Directory, CS);
+                              Optional<DIFile::ChecksumInfo<StringRef>> CS,
+                              Optional<StringRef> Source) {
+  return DIFile::get(VMContext, Filename, Directory, CS, Source);
 }
 
 DIMacro *DIBuilder::createMacro(DIMacroFile *Parent, unsigned LineNumber,

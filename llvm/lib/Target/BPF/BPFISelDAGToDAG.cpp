@@ -39,13 +39,25 @@ using namespace llvm;
 namespace {
 
 class BPFDAGToDAGISel : public SelectionDAGISel {
+
+  /// Subtarget - Keep a pointer to the BPFSubtarget around so that we can
+  /// make the right decision when generating code for different subtargets.
+  const BPFSubtarget *Subtarget;
+
 public:
-  explicit BPFDAGToDAGISel(BPFTargetMachine &TM) : SelectionDAGISel(TM) {
+  explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
+      : SelectionDAGISel(TM), Subtarget(nullptr) {
     curr_func_ = nullptr;
   }
 
   StringRef getPassName() const override {
     return "BPF DAG->DAG Pattern Instruction Selection";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    // Reset the subtarget each time through.
+    Subtarget = &MF.getSubtarget<BPFSubtarget>();
+    return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
   void PreprocessISelDAG() override;

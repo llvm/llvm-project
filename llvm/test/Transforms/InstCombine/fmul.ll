@@ -172,18 +172,7 @@ define float @test11(float %x, float %y) {
   ret float %c
 }
 
-; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126
-; With unsafe/fast math, sqrt(X) * sqrt(X) is just X.
 declare double @llvm.sqrt.f64(double)
-
-define double @sqrt_squared1(double %f) {
-; CHECK-LABEL: @sqrt_squared1(
-; CHECK-NEXT:    ret double [[F:%.*]]
-;
-  %sqrt = call double @llvm.sqrt.f64(double %f)
-  %mul = fmul fast double %sqrt, %sqrt
-  ret double %mul
-}
 
 ; With unsafe/fast math, sqrt(X) * sqrt(X) is just X,
 ; but make sure another use of the sqrt is intact.

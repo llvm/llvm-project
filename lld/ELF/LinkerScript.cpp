@@ -783,7 +783,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // Given that we want to create the section, we have to worry what impact
   // it will have on the link. For example, if we just create a section with
   // 0 for flags, it would change which PT_LOADs are created.
-  // We could remember that that particular section is dummy and ignore it in
+  // We could remember that particular section is dummy and ignore it in
   // other parts of the linker, but unfortunately there are quite a few places
   // that would need to change:
   //   * The program header creation.

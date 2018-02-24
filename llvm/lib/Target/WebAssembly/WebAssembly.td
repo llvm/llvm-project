@@ -37,6 +37,10 @@ def FeatureSignExt :
                        "HasSignExt", "true",
                        "Enable sign extension operators">;
 
+def FeatureExceptionHandling :
+      SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
+                       "Enable Wasm exception handling">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//

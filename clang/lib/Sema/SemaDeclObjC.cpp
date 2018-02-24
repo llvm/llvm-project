@@ -1835,6 +1835,13 @@ ActOnStartCategoryInterface(SourceLocation AtInterfaceLoc,
   // FIXME: PushOnScopeChains?
   CurContext->addDecl(CDecl);
 
+  // Process the attributes before looking at protocols to ensure that the
+  // availability attribute is attached to the category to provide availability
+  // checking for protocol uses.
+  if (AttrList)
+    ProcessDeclAttributeList(TUScope, CDecl, AttrList);
+  AddPragmaAttributes(TUScope, CDecl);
+
   if (NumProtoRefs) {
     diagnoseUseOfProtocols(*this, CDecl, (ObjCProtocolDecl*const*)ProtoRefs,
                            NumProtoRefs, ProtoLocs);
@@ -1845,10 +1852,6 @@ ActOnStartCategoryInterface(SourceLocation AtInterfaceLoc,
      IDecl->mergeClassExtensionProtocolList((ObjCProtocolDecl*const*)ProtoRefs, 
                                             NumProtoRefs, Context); 
   }
-
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, CDecl, AttrList);
-  AddPragmaAttributes(TUScope, CDecl);
 
   CheckObjCDeclScope(CDecl);
   return ActOnObjCContainerStartDefinition(CDecl);

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
@@ -756,17 +757,22 @@ public:
   unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                   StringRef Filename,
                                   MD5::MD5Result *Checksum = nullptr,
+                                  Optional<StringRef> Source = None,
                                   unsigned CUID = 0) {
     return cantFail(
-        tryEmitDwarfFileDirective(FileNo, Directory, Filename, Checksum, CUID));
+        tryEmitDwarfFileDirective(FileNo, Directory, Filename, Checksum,
+                                  Source, CUID));
   }
 
-  /// Associate a filename with a specified logical file number.  Returns a
-  /// StringError for any problem, or the file number.  This implements the
-  /// DWARF2 '.file 4 "foo.c"' assembler directive.
+  /// Associate a filename with a specified logical file number.
+  /// Also associate a directory, optional checksum, and optional source
+  /// text with the logical file.  This implements the DWARF2
+  /// '.file 4 "dir/foo.c"' assembler directive, and the DWARF5
+  /// '.file 4 "dir/foo.c" md5 "..." source "..."' assembler directive.
   virtual Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
-      MD5::MD5Result *Checksum = nullptr, unsigned CUID = 0);
+      MD5::MD5Result *Checksum = nullptr, Optional<StringRef> Source = None,
+      unsigned CUID = 0);
 
   /// \brief This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.

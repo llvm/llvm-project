@@ -102,8 +102,8 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
 
   Status error = mc.GetAndPut(
       cache_dir, hostname, module_spec,
-      [this, &download_called](const ModuleSpec &module_spec,
-                               const FileSpec &tmp_download_file_spec) {
+      [&download_called](const ModuleSpec &module_spec,
+                         const FileSpec &tmp_download_file_spec) {
         download_called = true;
         EXPECT_STREQ(GetDummyRemotePath().GetCString(),
                      module_spec.GetFileSpec().GetCString());
