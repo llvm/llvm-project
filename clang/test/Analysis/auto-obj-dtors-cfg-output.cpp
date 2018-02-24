@@ -50,7 +50,7 @@ extern const bool UV;
 // CHECK-NEXT:   4: [B1.3] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:   5: const A &b = a;
 // WARNINGS-NEXT:   6: A() (CXXConstructExpr, class A)
-// ANALYZER-NEXT:   6: A() (CXXConstructExpr, [B1.7], class A)
+// ANALYZER-NEXT:   6: A() (CXXConstructExpr, [B1.7], [B1.9], class A)
 // CHECK-NEXT:   7: [B1.6] (BindTemporary)
 // CHECK-NEXT:   8: [B1.7] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:   9: [B1.8]

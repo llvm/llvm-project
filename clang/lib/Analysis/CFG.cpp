@@ -1180,6 +1180,9 @@ void CFGBuilder::findConstructionContexts(
     findConstructionContexts(ContextSoFar, Cleanups->getSubExpr());
   } else if (auto *Cast = dyn_cast<CXXFunctionalCastExpr>(Child)) {
     findConstructionContexts(ContextSoFar, Cast->getSubExpr());
+  } else if (auto *ImplicitCast = dyn_cast<ImplicitCastExpr>(Child)) {
+    if (ImplicitCast->getCastKind() == CK_NoOp)
+      findConstructionContexts(ContextSoFar, ImplicitCast->getSubExpr());
   } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Child)) {
     findConstructionContexts(
         ConstructionContext::create(cfg->getBumpVectorContext(), BTE,
