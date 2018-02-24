@@ -475,7 +475,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   // We have found a module, but we don't use it.
   if (NotUsed) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
-        << RequestingModule->getFullModuleName() << Filename;
+        << RequestingModule->getTopLevelModule()->Name << Filename;
     return;
   }
 
@@ -486,7 +486,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   if (LangOpts.ModulesStrictDeclUse) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
-        << RequestingModule->getFullModuleName() << Filename;
+        << RequestingModule->getTopLevelModule()->Name << Filename;
   } else if (RequestingModule && RequestingModuleIsModuleInterface &&
              LangOpts.isCompilingModule()) {
     // Do not diagnose when we are not compiling a module. 

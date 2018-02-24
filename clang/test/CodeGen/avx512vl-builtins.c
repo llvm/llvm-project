@@ -7019,37 +7019,40 @@ __m256i test_mm256_mask_permutexvar_epi64(__m256i __W, __mmask8 __M, __m256i __X
 
 __m256 test_mm256_mask_permutexvar_ps(__m256 __W, __mmask8 __U, __m256i __X, __m256 __Y) {
   // CHECK-LABEL: @test_mm256_mask_permutexvar_ps
-  // CHECK: @llvm.x86.avx512.mask.permvar.sf.256
+  // CHECK: @llvm.x86.avx2.permps
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_permutexvar_ps(__W, __U, __X, __Y);
 }
 
 __m256 test_mm256_maskz_permutexvar_ps(__mmask8 __U, __m256i __X, __m256 __Y) {
   // CHECK-LABEL: @test_mm256_maskz_permutexvar_ps
-  // CHECK: @llvm.x86.avx512.mask.permvar.sf.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_permutexvar_ps(__U, __X, __Y);
 }
 
 __m256 test_mm256_permutexvar_ps(__m256i __X, __m256 __Y) {
   // CHECK-LABEL: @test_mm256_permutexvar_ps
-  // CHECK: @llvm.x86.avx512.mask.permvar.sf.256
+  // CHECK: @llvm.x86.avx2.permps
   return _mm256_permutexvar_ps( __X, __Y);
 }
 
 __m256i test_mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_maskz_permutexvar_epi32
-  // CHECK: @llvm.x86.avx512.mask.permvar.si.256
+  // CHECK: @llvm.x86.avx2.permd
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_permutexvar_epi32(__M, __X, __Y);
 }
 
 __m256i test_mm256_permutexvar_epi32(__m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_permutexvar_epi32
-  // CHECK: @llvm.x86.avx512.mask.permvar.si.256
+  // CHECK: @llvm.x86.avx2.permd
   return _mm256_permutexvar_epi32(__X, __Y);
 }
 
 __m256i test_mm256_mask_permutexvar_epi32(__m256i __W, __mmask8 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_mask_permutexvar_epi32
-  // CHECK: @llvm.x86.avx512.mask.permvar.si.256
+  // CHECK: @llvm.x86.avx2.permd
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_permutexvar_epi32(__W, __M, __X, __Y);
 }
 
