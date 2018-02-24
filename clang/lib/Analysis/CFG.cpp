@@ -548,6 +548,8 @@ private:
                                                          Stmt *Term,
                                                          CFGBlock *TrueBlock,
                                                          CFGBlock *FalseBlock);
+  CFGBlock *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE,
+                                          AddStmtChoice asc);
   CFGBlock *VisitMemberExpr(MemberExpr *M, AddStmtChoice asc);
   CFGBlock *VisitObjCAtCatchStmt(ObjCAtCatchStmt *S);
   CFGBlock *VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S);
@@ -1840,6 +1842,10 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc) {
     case Stmt::LambdaExprClass:
       return VisitLambdaExpr(cast<LambdaExpr>(S), asc);
 
+    case Stmt::MaterializeTemporaryExprClass:
+      return VisitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(S),
+                                           asc);
+
     case Stmt::MemberExprClass:
       return VisitMemberExpr(cast<MemberExpr>(S), asc);
 
@@ -2973,6 +2979,16 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
   Block = nullptr;
   Succ = EntryConditionBlock;
   return EntryConditionBlock;
+}
+
+CFGBlock *
+CFGBuilder::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE,
+                                          AddStmtChoice asc) {
+  findConstructionContexts(
+      ConstructionContext::create(cfg->getBumpVectorContext(), MTE),
+      MTE->getTemporary());
+
+  return VisitStmt(MTE, asc);
 }
 
 CFGBlock *CFGBuilder::VisitMemberExpr(MemberExpr *M, AddStmtChoice asc) {
@@ -4706,13 +4722,20 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
       OS << " (CXXConstructExpr, ";
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
+        // TODO: Refactor into ConstructionContext::print().
         if (const Stmt *S = CE->getTriggerStmt())
-          Helper.handledStmt((const_cast<Stmt *>(S)), OS);
+          Helper.handledStmt(const_cast<Stmt *>(S), OS);
         else if (const CXXCtorInitializer *I = CE->getTriggerInit())
           print_initializer(OS, Helper, I);
         else
           llvm_unreachable("Unexpected trigger kind!");
         OS << ", ";
+        if (const Stmt *S = CE->getMaterializedTemporary()) {
+          if (S != CE->getTriggerStmt()) {
+            Helper.handledStmt(const_cast<Stmt *>(S), OS);
+            OS << ", ";
+          }
+        }
       }
       OS << CCE->getType().getAsString() << ")";
     } else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {
