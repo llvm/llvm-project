@@ -45,6 +45,11 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// PEI.
   bool MustSaveLR;
 
+  /// Do we have to disable shrink-wrapping? This has to be set if we emit any
+  /// instructions that clobber LR in the entry block because discovering this
+  /// in PEI is too late (happens after shrink-wrapping);
+  bool ShrinkWrapDisabled = false;
+
   /// Does this function have any stack spills.
   bool HasSpills = false;
 
@@ -146,6 +151,12 @@ public:
   /// referenced by builtin_return_address.
   void setMustSaveLR(bool U) { MustSaveLR = U; }
   bool mustSaveLR() const    { return MustSaveLR; }
+
+  /// We certainly don't want to shrink wrap functions if we've emitted a
+  /// MovePCtoLR8 as that has to go into the entry, so the prologue definitely
+  /// has to go into the entry block.
+  void setShrinkWrapDisabled(bool U) { ShrinkWrapDisabled = U; }
+  bool shrinkWrapDisabled() const { return ShrinkWrapDisabled; }
 
   void setHasSpills()      { HasSpills = true; }
   bool hasSpills() const   { return HasSpills; }

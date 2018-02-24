@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 !7 = !{!6}
 
 ; The important part of the following check is that dir = #0.
-;                        Dir  Mod Time   File Len   File Name
-;                        ---- ---------- ---------- ---------------------------
-; CHECK: file_names[  1]    0 0x00000000 0x00000000 "empty.c"
+; CHECK: file_names[  1]:
+; CHECK-NEXT: name: "empty.c"
+; CHECK-NEXT: dir_index: 0
 !5 = !{i32 1, !"Debug Info Version", i32 3}

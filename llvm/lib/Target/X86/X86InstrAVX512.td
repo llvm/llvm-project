@@ -3878,22 +3878,22 @@ multiclass avx512_move_scalar_lowering<string InstrStr, SDNode OpNode,
 
 def : Pat<(_.VT (OpNode _.RC:$src0,
                         (_.VT (scalar_to_vector
-                                  (_.EltVT (X86selects (scalar_to_vector (i8 (trunc GR32:$mask))),
+                                  (_.EltVT (X86selects VK1WM:$mask,
                                                        (_.EltVT _.FRC:$src1),
                                                        (_.EltVT _.FRC:$src2))))))),
           (!cast<Instruction>(InstrStr#rrk)
                         (COPY_TO_REGCLASS _.FRC:$src2, _.RC),
-                        (COPY_TO_REGCLASS GR32:$mask, VK1WM),
+                        VK1WM:$mask,
                         (_.VT _.RC:$src0),
                         (COPY_TO_REGCLASS _.FRC:$src1, _.RC))>;
 
 def : Pat<(_.VT (OpNode _.RC:$src0,
                         (_.VT (scalar_to_vector
-                                  (_.EltVT (X86selects (scalar_to_vector (i8 (trunc GR32:$mask))),
+                                  (_.EltVT (X86selects VK1WM:$mask,
                                                        (_.EltVT _.FRC:$src1),
                                                        (_.EltVT ZeroFP))))))),
           (!cast<Instruction>(InstrStr#rrkz)
-                        (COPY_TO_REGCLASS GR32:$mask, VK1WM),
+                        VK1WM:$mask,
                         (_.VT _.RC:$src0),
                         (COPY_TO_REGCLASS _.FRC:$src1, _.RC))>;
 }

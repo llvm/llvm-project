@@ -46,7 +46,14 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  bool hasFeature(StringRef Feature) const override { return Feature == "bpf"; }
+  bool hasFeature(StringRef Feature) const override {
+    return Feature == "bpf" || Feature == "alu32";
+  }
+
+  void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
+                         bool Enabled) const override {
+    Features[Name] = Enabled;
+  }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
 

@@ -18,7 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -141,10 +141,13 @@ namespace llvm {
     /// Create a file descriptor to hold debugging information for a file.
     /// \param Filename  File name.
     /// \param Directory Directory.
-    /// \param Checksum  Checksum kind (e.g. CSK_MD5, CSK_SHA1, etc.) and value.
+    /// \param Checksum  Optional checksum kind (e.g. CSK_MD5, CSK_SHA1, etc.)
+    ///                  and value.
+    /// \param Source    Optional source text.
     DIFile *
     createFile(StringRef Filename, StringRef Directory,
-               Optional<DIFile::ChecksumInfo<StringRef>> Checksum = None);
+               Optional<DIFile::ChecksumInfo<StringRef>> Checksum = None,
+               Optional<StringRef> Source = None);
 
     /// Create debugging information entry for a macro.
     /// \param Parent     Macro parent (could be nullptr).

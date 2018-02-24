@@ -98,7 +98,9 @@ static cl::opt<llvm::ExceptionHandling> ExceptionModel(
         clEnumValN(ExceptionHandling::SjLj, "sjlj", "SjLj exception handling"),
         clEnumValN(ExceptionHandling::ARM, "arm", "ARM EHABI exceptions"),
         clEnumValN(ExceptionHandling::WinEH, "wineh",
-                   "Windows exception model")));
+                   "Windows exception model"),
+        clEnumValN(ExceptionHandling::Wasm, "wasm",
+                   "WebAssembly exception handling")));
 
 static cl::opt<TargetMachine::CodeGenFileType> FileType(
     "filetype", cl::init(TargetMachine::CGFT_AssemblyFile),

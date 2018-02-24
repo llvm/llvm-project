@@ -1350,7 +1350,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
 
   case bitc::METADATA_FILE: {
-    if (Record.size() != 3 && Record.size() != 5)
+    if (Record.size() != 3 && Record.size() != 5 && Record.size() != 6)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1360,14 +1360,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // and the old encoding for CSK_None in the ChecksumKind. The new
     // representation reserves the value 0 in the ChecksumKind to continue to
     // encode None in a backwards-compatible way.
-    if (Record.size() == 5 && Record[3] && Record[4])
+    if (Record.size() > 4 && Record[3] && Record[4])
       Checksum.emplace(static_cast<DIFile::ChecksumKind>(Record[3]),
                        getMDString(Record[4]));
     MetadataList.assignValue(
         GET_OR_DISTINCT(
             DIFile,
-            (Context, getMDString(Record[1]), getMDString(Record[2]),
-             Checksum)),
+            (Context, getMDString(Record[1]), getMDString(Record[2]), Checksum,
+             Record.size() > 5 ? Optional<MDString *>(getMDString(Record[5]))
+                               : None)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

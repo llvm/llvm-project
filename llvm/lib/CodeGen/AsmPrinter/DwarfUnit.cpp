@@ -302,7 +302,9 @@ MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) {
 unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
   return SplitLineTable
              ? SplitLineTable->getFile(File->getDirectory(),
-                                       File->getFilename(), getMD5AsBytes(File))
+                                       File->getFilename(),
+                                       getMD5AsBytes(File),
+                                       File->getSource())
              : getCU().getOrCreateSourceID(File);
 }
 

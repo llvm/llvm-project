@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCContext.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -532,7 +533,7 @@ MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
 // Dwarf Management
 //===----------------------------------------------------------------------===//
 
-/// getDwarfFile - takes a file name an number to place in the dwarf file and
+/// getDwarfFile - takes a file name and number to place in the dwarf file and
 /// directory tables.  If the file number has already been allocated it is an
 /// error and zero is returned and the client reports the error, else the
 /// allocated file number is returned.  The file numbers may be in any order.
@@ -540,9 +541,10 @@ Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
                                            StringRef FileName,
                                            unsigned FileNumber,
                                            MD5::MD5Result *Checksum,
+                                           Optional<StringRef> Source,
                                            unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];
-  return Table.tryGetFile(Directory, FileName, Checksum, FileNumber);
+  return Table.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
 }
 
 /// isValidDwarfFileNumber - takes a dwarf file number and returns true if it

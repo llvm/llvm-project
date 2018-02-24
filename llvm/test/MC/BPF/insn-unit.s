@@ -1,5 +1,6 @@
 # RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
-# RUN: llvm-objdump -d -r %t | FileCheck %s
+# RUN: llvm-objdump -d -r %t | FileCheck --check-prefixes CHECK,CHECK-64 %s
+# RUN: llvm-objdump -mattr=+alu32 -d -r %t | FileCheck --check-prefixes CHECK,CHECK-32 %s
 
 // ======== BPF_LD Class ========
 // Some extra whitespaces are deliberately added to test the parser.
@@ -33,9 +34,12 @@
   r6 = *(u16 *)(r1 + 8)  // BPF_LDX | BPF_H
   r7 = *(u32 *)(r2 + 16) // BPF_LDX | BPF_W
   r8 = *(u64 *)(r3 - 30) // BPF_LDX | BPF_DW
-// CHECK: 71 05 00 00 00 00 00 00 	r5 = *(u8 *)(r0 + 0)
-// CHECK: 69 16 08 00 00 00 00 00 	r6 = *(u16 *)(r1 + 8)
-// CHECK: 61 27 10 00 00 00 00 00 	r7 = *(u32 *)(r2 + 16)
+// CHECK-64: 71 05 00 00 00 00 00 00 	r5 = *(u8 *)(r0 + 0)
+// CHECK-64: 69 16 08 00 00 00 00 00 	r6 = *(u16 *)(r1 + 8)
+// CHECK-64: 61 27 10 00 00 00 00 00 	r7 = *(u32 *)(r2 + 16)
+// CHECK-32: 71 05 00 00 00 00 00 00 	w5 = *(u8 *)(r0 + 0)
+// CHECK-32: 69 16 08 00 00 00 00 00 	w6 = *(u16 *)(r1 + 8)
+// CHECK-32: 61 27 10 00 00 00 00 00 	w7 = *(u32 *)(r2 + 16)
 // CHECK: 79 38 e2 ff 00 00 00 00 	r8 = *(u64 *)(r3 - 30)
 
 // ======== BPF_STX Class ========
@@ -43,9 +47,12 @@
   *(u16 *)(r1 + 8) = r8   // BPF_STX | BPF_H
   *(u32 *)(r2 + 16) = r9  // BPF_STX | BPF_W
   *(u64 *)(r3 - 30) = r10 // BPF_STX | BPF_DW
-// CHECK: 73 70 00 00 00 00 00 00 	*(u8 *)(r0 + 0) = r7
-// CHECK: 6b 81 08 00 00 00 00 00 	*(u16 *)(r1 + 8) = r8
-// CHECK: 63 92 10 00 00 00 00 00 	*(u32 *)(r2 + 16) = r9
+// CHECK-64: 73 70 00 00 00 00 00 00 	*(u8 *)(r0 + 0) = r7
+// CHECK-64: 6b 81 08 00 00 00 00 00 	*(u16 *)(r1 + 8) = r8
+// CHECK-64: 63 92 10 00 00 00 00 00 	*(u32 *)(r2 + 16) = r9
+// CHECK-32: 73 70 00 00 00 00 00 00 	*(u8 *)(r0 + 0) = w7
+// CHECK-32: 6b 81 08 00 00 00 00 00 	*(u16 *)(r1 + 8) = w8
+// CHECK-32: 63 92 10 00 00 00 00 00 	*(u32 *)(r2 + 16) = w9
 // CHECK: 7b a3 e2 ff 00 00 00 00 	*(u64 *)(r3 - 30) = r10
 
   lock *(u32 *)(r2 + 16) += r9  // BPF_STX | BPF_W | BPF_XADD

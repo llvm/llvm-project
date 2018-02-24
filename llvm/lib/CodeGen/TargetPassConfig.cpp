@@ -653,6 +653,9 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createWinEHPass());
     addPass(createDwarfEHPass());
     break;
+  case ExceptionHandling::Wasm:
+    // TODO to prevent warning
+    break;
   case ExceptionHandling::None:
     addPass(createLowerInvokePass());
 

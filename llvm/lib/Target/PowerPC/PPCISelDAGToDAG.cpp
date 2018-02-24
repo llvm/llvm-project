@@ -417,6 +417,16 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
         BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR), GlobalBaseReg);
       }
     } else {
+      // We must ensure that this sequence is dominated by the prologue.
+      // FIXME: This is a bit of a big hammer since we don't get the benefits
+      // of shrink-wrapping whenever we emit this instruction. Considering
+      // this is used in any function where we emit a jump table, this may be
+      // a significant limitation. We should consider inserting this in the
+      // block where it is used and then commoning this sequence up if it
+      // appears in multiple places.
+      // Note: on ISA 3.0 cores, we can use lnia (addpcis) insteand of
+      // MovePCtoLR8.
+      MF->getInfo<PPCFunctionInfo>()->setShrinkWrapDisabled(true);
       GlobalBaseReg = RegInfo->createVirtualRegister(&PPC::G8RC_and_G8RC_NOX0RegClass);
       BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MovePCtoLR8));
       BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR8), GlobalBaseReg);

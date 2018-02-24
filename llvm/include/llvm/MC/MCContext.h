@@ -11,6 +11,7 @@
 #define LLVM_MC_MCCONTEXT_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -496,7 +497,8 @@ namespace llvm {
     /// Creates an entry in the dwarf file and directory tables.
     Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
                                     unsigned FileNumber,
-                                    MD5::MD5Result *Checksum, unsigned CUID);
+                                    MD5::MD5Result *Checksum,
+                                    Optional<StringRef> Source, unsigned CUID);
 
     bool isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID = 0);
 

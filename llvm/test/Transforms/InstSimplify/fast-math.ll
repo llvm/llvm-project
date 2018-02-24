@@ -203,3 +203,18 @@ define float @fdiv_neg_swapped2(float %f) {
   %div = fdiv nnan float %f, %neg
   ret float %div
 }
+
+; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126
+; With unsafe/fast math, sqrt(X) * sqrt(X) is just X.
+
+declare double @llvm.sqrt.f64(double)
+
+define double @sqrt_squared(double %f) {
+; CHECK-LABEL: @sqrt_squared(
+; CHECK-NEXT:    ret double [[F:%.*]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %f)
+  %mul = fmul fast double %sqrt, %sqrt
+  ret double %mul
+}
+

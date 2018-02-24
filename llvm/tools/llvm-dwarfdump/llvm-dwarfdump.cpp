@@ -336,6 +336,15 @@ static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
 bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                                Twine Filename, raw_ostream &OS);
 
+template <typename AccelTable>
+static llvm::Optional<uint64_t> getDIEOffset(const AccelTable &Accel,
+                                       StringRef Name) {
+  for (const auto &Entry : Accel.equal_range(Name))
+    if (llvm::Optional<uint64_t> Off = Entry.getDIEOffset())
+      return *Off;
+  return None;
+}
+
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
                            raw_ostream &OS) {
   logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
@@ -363,21 +372,14 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
   if (!Find.empty()) {
     DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
       for (auto Name : Find) {
-        auto find = [&](const AppleAcceleratorTable &Accel)
-            -> llvm::Optional<uint64_t> {
-          for (auto Entry : Accel.equal_range(Name))
-            for (auto Atom : Entry)
-              if (auto Offset = Atom.getAsSectionOffset())
-                return Offset;
-          return None;
-        };
-        if (auto Offset = find(DICtx.getAppleNames()))
+        if (auto Offset = getDIEOffset(DICtx.getAppleNames(), Name))
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-        if (auto Offset = find(DICtx.getAppleTypes()))
+        if (auto Offset = getDIEOffset(DICtx.getAppleTypes(), Name))
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-        if (auto Offset = find(DICtx.getAppleNamespaces()))
+        if (auto Offset = getDIEOffset(DICtx.getAppleNamespaces(), Name))
           return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-        // TODO: Add .debug_names support
+        if (auto Offset = getDIEOffset(DICtx.getDebugNames(), Name))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
       }
       return None;
     }();

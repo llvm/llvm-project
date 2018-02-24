@@ -760,7 +760,11 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   for (const ExplodedNode *N = Pred ; N ; N = *N->pred_begin()) {
     ProgramPoint PP = N->getLocation();
     if (PP.getAs<PreStmtPurgeDeadSymbols>() || PP.getAs<BlockEntrance>()) {
-      assert(N->pred_size() == 1);
+      // If the state N has multiple predecessors P, it means that successors
+      // of P are all equivalent.
+      // In turn, that means that all nodes at P are equivalent in terms
+      // of observable behavior at N, and we can follow any of them.
+      // FIXME: a more robust solution which does not walk up the tree.
       continue;
     }
     SrcBlock = PP.castAs<BlockEdge>().getSrc();

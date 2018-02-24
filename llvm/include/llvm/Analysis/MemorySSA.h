@@ -118,10 +118,10 @@ struct DefsOnlyTag {};
 
 } // end namespace MSSAHelpers
 
-enum {
+enum : unsigned {
   // Used to signify what the default invalid ID is for MemoryAccess's
   // getID()
-  INVALID_MEMORYACCESS_ID = 0
+  INVALID_MEMORYACCESS_ID = -1U
 };
 
 template <class T> class memoryaccess_def_iterator_base;
