@@ -3250,7 +3250,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
 
 /// parseDirectiveFile
 /// ::= .file filename
-/// ::= .file number [directory] filename [md5 checksum]
+/// ::= .file number [directory] filename [md5 checksum] [source source-text]
 bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
   // FIXME: I'm not sure what this is.
   int64_t FileNumber = -1;
@@ -3286,23 +3286,36 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
   }
 
   std::string Checksum;
-  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
+
+  Optional<StringRef> Source;
+  bool HasSource = false;
+  std::string SourceString;
+
+  while (!parseOptionalToken(AsmToken::EndOfStatement)) {
     StringRef Keyword;
     if (check(getTok().isNot(AsmToken::Identifier),
               "unexpected token in '.file' directive") ||
-        parseIdentifier(Keyword) ||
-        check(Keyword != "md5", "unexpected token in '.file' directive"))
+        parseIdentifier(Keyword))
       return true;
-    if (getLexer().is(AsmToken::String) &&
-        check(FileNumber == -1, "MD5 checksum specified, but no file number"))
-      return true;
-    if (check(getTok().isNot(AsmToken::String),
-              "unexpected token in '.file' directive") ||
-        parseEscapedString(Checksum) ||
-        check(Checksum.size() != 32, "invalid MD5 checksum specified") ||
-        parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in '.file' directive"))
-      return true;
+    if (Keyword == "md5") {
+      if (check(FileNumber == -1,
+                "MD5 checksum specified, but no file number") ||
+          check(getTok().isNot(AsmToken::String),
+                "unexpected token in '.file' directive") ||
+          parseEscapedString(Checksum) ||
+          check(Checksum.size() != 32, "invalid MD5 checksum specified"))
+        return true;
+    } else if (Keyword == "source") {
+      HasSource = true;
+      if (check(FileNumber == -1,
+                "source specified, but no file number") ||
+          check(getTok().isNot(AsmToken::String),
+                "unexpected token in '.file' directive") ||
+          parseEscapedString(SourceString))
+        return true;
+    } else {
+      return TokError("unexpected token in '.file' directive");
+    }
   }
 
   if (FileNumber == -1)
@@ -3316,13 +3329,18 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
       CKMem = (MD5::MD5Result *)Ctx.allocate(sizeof(MD5::MD5Result), 1);
       memcpy(&CKMem->Bytes, Checksum.data(), 16);
     }
+    if (HasSource) {
+      char *SourceBuf = static_cast<char *>(Ctx.allocate(SourceString.size()));
+      memcpy(SourceBuf, SourceString.data(), SourceString.size());
+      Source = StringRef(SourceBuf, SourceString.size());
+    }
     // If there is -g option as well as debug info from directive file,
     // we turn off -g option, directly use the existing debug info instead.
     if (getContext().getGenDwarfForAssembly())
       getContext().setGenDwarfForAssembly(false);
     else {
       Expected<unsigned> FileNumOrErr = getStreamer().tryEmitDwarfFileDirective(
-          FileNumber, Directory, Filename, CKMem);
+          FileNumber, Directory, Filename, CKMem, Source);
       if (!FileNumOrErr)
         return Error(DirectiveLoc, toString(FileNumOrErr.takeError()));
       FileNumber = FileNumOrErr.get();

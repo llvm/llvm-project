@@ -2434,27 +2434,6 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                                   IIC_FPCompare, []>;
   def XSCMPGTDP : XX3_XT5_XA5_XB5<60, 11, "xscmpgtdp", vsrc, vsfrc, vsfrc,
                                   IIC_FPCompare, []>;
-  def XSCMPNEDP : XX3_XT5_XA5_XB5<60, 27, "xscmpnedp", vsrc, vsfrc, vsfrc,
-                                  IIC_FPCompare, []>;
-  let UseVSXReg = 1 in {
-  // Vector Compare Not Equal
-  def XVCMPNEDP  : XX3Form_Rc<60, 123,
-                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
-                              "xvcmpnedp  $XT, $XA, $XB", IIC_VecFPCompare, []>;
-  let Defs = [CR6] in
-  def XVCMPNEDPo : XX3Form_Rc<60, 123,
-                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
-                              "xvcmpnedp. $XT, $XA, $XB", IIC_VecFPCompare, []>,
-                              isDOT;
-  def XVCMPNESP  : XX3Form_Rc<60,  91,
-                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
-                              "xvcmpnesp  $XT, $XA, $XB", IIC_VecFPCompare, []>;
-  let Defs = [CR6] in
-  def XVCMPNESPo : XX3Form_Rc<60,  91,
-                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
-                              "xvcmpnesp. $XT, $XA, $XB", IIC_VecFPCompare, []>,
-                              isDOT;
-  } // UseVSXReg = 1
 
   //===--------------------------------------------------------------------===//
   // Quad-Precision Floating-Point Conversion Instructions:

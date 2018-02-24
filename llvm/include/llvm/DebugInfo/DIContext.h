@@ -31,6 +31,7 @@ namespace llvm {
 struct DILineInfo {
   std::string FileName;
   std::string FunctionName;
+  Optional<StringRef> Source;
   uint32_t Line = 0;
   uint32_t Column = 0;
   uint32_t StartLine = 0;

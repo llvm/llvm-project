@@ -234,6 +234,37 @@ vector.ph:
   ret <16 x i16> %res
 }
 
+define <16 x i16> @test8a(<16 x i16> %x) nounwind {
+; SSE-LABEL: test8a:
+; SSE:       # %bb.0: # %vector.ph
+; SSE-NEXT:    psubusw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: test8a:
+; AVX1:       # %bb.0: # %vector.ph
+; AVX1-NEXT:    vpsubusw {{.*}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsubusw {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test8a:
+; AVX2:       # %bb.0: # %vector.ph
+; AVX2-NEXT:    vpsubusw {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test8a:
+; AVX512:       # %bb.0: # %vector.ph
+; AVX512-NEXT:    vpsubusw {{.*}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+vector.ph:
+  %0 = icmp ugt <16 x i16> %x, <i16 32766, i16 32765, i16 32764, i16 32763, i16 32762, i16 32761, i16 32760, i16 32759, i16 32758, i16 32757, i16 32756, i16 32755, i16 32754, i16 32753, i16 32752, i16 32751>
+  %1 = add <16 x i16> %x, <i16 -32767, i16 -32766, i16 -32765, i16 -32764, i16 -32763, i16 -32762, i16 -32761, i16 -32760, i16 -32759, i16 -32758, i16 -32757, i16 -32756, i16 -32755, i16 -32754, i16 -32753, i16 -32752>
+  %res = select <16 x i1> %0, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %res
+}
+
 define <16 x i16> @test9(<16 x i16> %x, i16 zeroext %w) nounwind {
 ; SSE-LABEL: test9:
 ; SSE:       # %bb.0: # %vector.ph
@@ -338,6 +369,37 @@ define <32 x i8> @test11(<32 x i8> %x) nounwind {
 vector.ph:
   %0 = icmp ugt <32 x i8> %x, <i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126, i8 126>
   %1 = add <32 x i8> %x, <i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127>
+  %res = select <32 x i1> %0, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %res
+}
+
+define <32 x i8> @test11a(<32 x i8> %x) nounwind {
+; SSE-LABEL: test11a:
+; SSE:       # %bb.0: # %vector.ph
+; SSE-NEXT:    psubusb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psubusb {{.*}}(%rip), %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: test11a:
+; AVX1:       # %bb.0: # %vector.ph
+; AVX1-NEXT:    vpsubusb {{.*}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsubusb {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test11a:
+; AVX2:       # %bb.0: # %vector.ph
+; AVX2-NEXT:    vpsubusb {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test11a:
+; AVX512:       # %bb.0: # %vector.ph
+; AVX512-NEXT:    vpsubusb {{.*}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+vector.ph:
+  %0 = icmp ugt <32 x i8> %x, <i8 126, i8 125, i8 124, i8 123, i8 122, i8 121, i8 120, i8 119, i8 118, i8 117, i8 116, i8 115, i8 114, i8 113, i8 112, i8 111, i8 110, i8 109, i8 108, i8 107, i8 106, i8 105, i8 104, i8 103, i8 102, i8 101, i8 100, i8 99, i8 98, i8 97, i8 96, i8 95>
+  %1 = add <32 x i8> %x, <i8 -127, i8 -126, i8 -125, i8 -124, i8 -123, i8 -122, i8 -121, i8 -120, i8 -119, i8 -118, i8 -117, i8 -116, i8 -115, i8 -114, i8 -113, i8 -112, i8 -111, i8 -110, i8 -109, i8 -108, i8 -107, i8 -106, i8 -105, i8 -104, i8 -103, i8 -102, i8 -101, i8 -100, i8 -99, i8 -98, i8 -97, i8 -96>
   %res = select <32 x i1> %0, <32 x i8> %1, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }

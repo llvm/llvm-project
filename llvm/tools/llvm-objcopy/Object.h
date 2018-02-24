@@ -343,6 +343,8 @@ struct Symbol {
 class SymbolTableSection : public SectionBase {
   MAKE_SEC_WRITER_FRIEND
 
+  void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
+
 protected:
   std::vector<std::unique_ptr<Symbol>> Symbols;
   StringTableSection *SymbolNames = nullptr;
@@ -350,7 +352,6 @@ protected:
   using SymPtr = std::unique_ptr<Symbol>;
 
 public:
-  void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
   void addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
                  SectionBase *DefinedIn, uint64_t Value, uint8_t Visibility,
                  uint16_t Shndx, uint64_t Sz);
@@ -403,12 +404,12 @@ template <class SymTabType>
 class RelocSectionWithSymtabBase : public RelocationSectionBase {
 private:
   SymTabType *Symbols = nullptr;
+  void setSymTab(SymTabType *SymTab) { Symbols = SymTab; }
 
 protected:
   RelocSectionWithSymtabBase() = default;
 
 public:
-  void setSymTab(SymTabType *StrTab) { Symbols = StrTab; }
   void removeSectionReferences(const SectionBase *Sec) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;

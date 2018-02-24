@@ -838,6 +838,13 @@ public:
   Metadata *getProfileSummary();
   /// @}
 
+  /// Returns true if PLT should be avoided for RTLib calls.
+  bool getRtLibUseGOT() const;
+
+  /// Set that PLT should be avoid for RTLib calls.
+  void setRtLibUseGOT();
+
+
   /// Take ownership of the given memory buffer.
   void setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB);
 };

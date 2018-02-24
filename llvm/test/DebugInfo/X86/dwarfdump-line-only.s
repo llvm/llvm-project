@@ -94,7 +94,15 @@ ls_F2:  .asciz "File2"
 # CHECK: include_directories[  0] = .debug_str[0x00000000] = "Directory1"
 # CHECK: include_directories[  1] = .debug_str[0x0000000b] = "Directory2"
 # CHECK-NOT: include_directories
-# CHECK: file_names[  0]    1 0x00000051 0x00000052 .debug_line_str[0x00000000] = "File1"
-# CHECK: file_names[  1]    0 0x00000053 0x00000054 .debug_line_str[0x00000006] = "File2"
+# CHECK: file_names[  0]:
+# CHECK-NEXT: name: .debug_line_str[0x00000000] = "File1"
+# CHECK-NEXT: dir_index: 1
+# CHECK-NEXT: mod_time: 0x00000051
+# CHECK-NEXT: length: 0x00000052
+# CHECK: file_names[  1]:
+# CHECK-NEXT: name: .debug_line_str[0x00000006] = "File2"
+# CHECK-NEXT: dir_index: 0
+# CHECK-NEXT: mod_time: 0x00000053
+# CHECK-NEXT: length: 0x00000054
 # CHECK-NOT: file_names
 # CHECK: 0x0000000000000000 {{.*}} is_stmt end_sequence

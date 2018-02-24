@@ -359,4 +359,5 @@ def Hexagon : Target {
   let AssemblyParsers = [HexagonAsmParser];
   let AssemblyParserVariants = [HexagonAsmParserVariant];
   let AssemblyWriters = [HexagonAsmWriter];
+  let AllowRegisterRenaming = 1;
 }

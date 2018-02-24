@@ -242,4 +242,5 @@ def Mips : Target {
   let InstructionSet = MipsInstrInfo;
   let AssemblyParsers = [MipsAsmParser];
   let AssemblyParserVariants = [MipsAsmParserVariant];
+  let AllowRegisterRenaming = 1;
 }

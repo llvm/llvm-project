@@ -1,5 +1,6 @@
 ; RUN: opt < %s -lcssa -S | FileCheck %s
 ; RUN: opt < %s -passes=lcssa -S | FileCheck %s
+; RUN: opt < %s -debugify -lcssa -S | FileCheck -check-prefix=CHECK2 %s
 
 define void @lcssa(i1 %S2) {
 ; CHECK-LABEL: @lcssa
@@ -18,11 +19,8 @@ post.if:		; preds = %if.false, %if.true
 	br i1 %S2, label %loop.exit, label %loop.interior
 loop.exit:		; preds = %post.if
 ; CHECK: %X3.lcssa = phi i32
-; CHECK: %X4 = add i32 3, %X3.lcssa
-
 ; CHECK2: call void @llvm.dbg.value(metadata i32 %X3.lcssa, metadata !11, metadata !DIExpression()), !dbg !19
-; CHECK2-NEXT: add i32 3, %X3.lcssa
-; CHECK2: ret void
+; CHECK: %X4 = add i32 3, %X3.lcssa
 	%X4 = add i32 3, %X3		; <i32> [#uses=0]
 	ret void
 }

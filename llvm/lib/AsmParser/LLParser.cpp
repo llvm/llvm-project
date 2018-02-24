@@ -4243,9 +4243,10 @@ bool LLParser::ParseDISubroutineType(MDNode *&Result, bool IsDistinct) {
 }
 
 /// ParseDIFileType:
-///   ::= !DIFileType(filename: "path/to/file", directory: "/path/to/dir"
+///   ::= !DIFileType(filename: "path/to/file", directory: "/path/to/dir",
 ///                   checksumkind: CSK_MD5,
-///                   checksum: "000102030405060708090a0b0c0d0e0f")
+///                   checksum: "000102030405060708090a0b0c0d0e0f",
+///                   source: "source file contents")
 bool LLParser::ParseDIFile(MDNode *&Result, bool IsDistinct) {
   // The default constructed value for checksumkind is required, but will never
   // be used, as the parser checks if the field was actually Seen before using
@@ -4254,7 +4255,8 @@ bool LLParser::ParseDIFile(MDNode *&Result, bool IsDistinct) {
   REQUIRED(filename, MDStringField, );                                         \
   REQUIRED(directory, MDStringField, );                                        \
   OPTIONAL(checksumkind, ChecksumKindField, (DIFile::CSK_MD5));                \
-  OPTIONAL(checksum, MDStringField, );
+  OPTIONAL(checksum, MDStringField, );                                         \
+  OPTIONAL(source, MDStringField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4264,8 +4266,11 @@ bool LLParser::ParseDIFile(MDNode *&Result, bool IsDistinct) {
   else if (checksumkind.Seen || checksum.Seen)
     return Lex.Error("'checksumkind' and 'checksum' must be provided together");
 
+  Optional<MDString *> OptSource;
+  if (source.Seen)
+    OptSource = source.Val;
   Result = GET_OR_DISTINCT(DIFile, (Context, filename.Val, directory.Val,
-                                    OptChecksum));
+                                    OptChecksum, OptSource));
   return false;
 }
 

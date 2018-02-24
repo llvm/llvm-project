@@ -101,7 +101,6 @@ NodeId CopyPropagation::getLocalReachingDef(RegisterRef RefRR,
 
 bool CopyPropagation::run() {
   scanBlock(&DFG.getMF().front());
-  MachineRegisterInfo &MRI = DFG.getMF().getRegInfo();
 
   if (trace()) {
     dbgs() << "Copies:\n";
@@ -181,8 +180,6 @@ bool CopyPropagation::run() {
         unsigned NewReg = MinPhysReg(SR);
         Op.setReg(NewReg);
         Op.setSubReg(0);
-        if (MRI.isReserved(NewReg))
-          Op.setIsRenamable(false);
         DFG.unlinkUse(UA, false);
         if (AtCopy != 0) {
           UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(AtCopy));

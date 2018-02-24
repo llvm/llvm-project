@@ -50,6 +50,9 @@ void MachineOperand::setReg(unsigned Reg) {
   if (getReg() == Reg)
     return; // No change.
 
+  // Clear the IsRenamable bit to keep it conservatively correct.
+  IsRenamable = false;
+
   // Otherwise, we have to change the register.  If this operand is embedded
   // into a machine function, we need to update the old and new register's
   // use/def lists.
@@ -110,28 +113,25 @@ bool MachineOperand::isRenamable() const {
   assert(isReg() && "Wrong MachineOperand accessor");
   assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
          "isRenamable should only be checked on physical registers");
-  return IsRenamable;
+  if (!IsRenamable)
+    return false;
+
+  const MachineInstr *MI = getParent();
+  if (!MI)
+    return true;
+
+  if (isDef())
+    return !MI->hasExtraDefRegAllocReq(MachineInstr::IgnoreBundle);
+
+  assert(isUse() && "Reg is not def or use");
+  return !MI->hasExtraSrcRegAllocReq(MachineInstr::IgnoreBundle);
 }
 
 void MachineOperand::setIsRenamable(bool Val) {
   assert(isReg() && "Wrong MachineOperand accessor");
   assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
          "setIsRenamable should only be called on physical registers");
-  if (const MachineInstr *MI = getParent())
-    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
-        (isUse() && MI->hasExtraSrcRegAllocReq()))
-      assert(!Val && "isRenamable should be false for "
-                     "hasExtraDefRegAllocReq/hasExtraSrcRegAllocReq opcodes");
   IsRenamable = Val;
-}
-
-void MachineOperand::setIsRenamableIfNoExtraRegAllocReq() {
-  if (const MachineInstr *MI = getParent())
-    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
-        (isUse() && MI->hasExtraSrcRegAllocReq()))
-      return;
-
-  setIsRenamable(true);
 }
 
 // If this operand is currently a register operand, and if this is in a

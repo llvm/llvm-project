@@ -13,7 +13,9 @@
 ; }
 
 ; CHECK-NOT: failed to compute relocation
-; CHECK: file_names[  1] 0 0x00000000 0x00000000 "dwarfdump-relocs.cl"
+; CHECK: file_names[  1]:
+; CHECK-NEXT: name: "dwarfdump-relocs.cl"
+; CHECK-NEXT: dir_index: 0
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 

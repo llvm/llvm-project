@@ -141,6 +141,10 @@ bool RecordRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
   if (RTy->getRecord() == Rec || Rec->isSubClassOf(RTy->getRecord()))
     return true;
 
+  for (const auto &SCPair : RTy->getRecord()->getSuperClasses())
+    if (Rec->isSubClassOf(SCPair.first))
+      return true;
+
   return false;
 }
 
@@ -169,16 +173,6 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
         return NewType2;
     }
   }
-
-  if (ListRecTy *ListTy1 = dyn_cast<ListRecTy>(T1)) {
-    if (ListRecTy *ListTy2 = dyn_cast<ListRecTy>(T2)) {
-      RecTy* NewType = resolveTypes(ListTy1->getElementType(),
-                                    ListTy2->getElementType());
-      if (NewType)
-        return NewType->getListTy();
-    }
-  }
-
   return nullptr;
 }
 

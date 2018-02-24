@@ -1378,7 +1378,6 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   MachineInstrBuilder LDM, STM;
   if (isThumb1 || !MI->getOperand(1).isDead()) {
     MachineOperand LDWb(MI->getOperand(1));
-    LDWb.setIsRenamable(false);
     LDM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2LDMIA_UPD
                                                  : isThumb1 ? ARM::tLDMIA_UPD
                                                             : ARM::LDMIA_UPD))
@@ -1389,7 +1388,6 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
 
   if (isThumb1 || !MI->getOperand(0).isDead()) {
     MachineOperand STWb(MI->getOperand(0));
-    STWb.setIsRenamable(false);
     STM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2STMIA_UPD
                                                  : isThumb1 ? ARM::tSTMIA_UPD
                                                             : ARM::STMIA_UPD))
@@ -1399,11 +1397,9 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   }
 
   MachineOperand LDBase(MI->getOperand(3));
-  LDBase.setIsRenamable(false);
   LDM.add(LDBase).add(predOps(ARMCC::AL));
 
   MachineOperand STBase(MI->getOperand(2));
-  STBase.setIsRenamable(false);
   STM.add(STBase).add(predOps(ARMCC::AL));
 
   // Sort the scratch registers into ascending order.

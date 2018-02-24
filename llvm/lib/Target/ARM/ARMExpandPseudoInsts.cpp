@@ -608,7 +608,6 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
   MIB.add(MI.getOperand(OpIdx++));
   if (IsExt) {
     MachineOperand VdSrc(MI.getOperand(OpIdx++));
-    VdSrc.setIsRenamable(false);
     MIB.add(VdSrc);
   }
 
@@ -620,7 +619,6 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
 
   // Copy the other source register operand.
   MachineOperand VmSrc(MI.getOperand(OpIdx++));
-  VmSrc.setIsRenamable(false);
   MIB.add(VmSrc);
 
   // Copy the predicate operands.
@@ -1470,7 +1468,6 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       // Copy the destination register.
       MachineOperand Dst(MI.getOperand(OpIdx++));
-      Dst.setIsRenamable(false);
       MIB.add(Dst);
 
       // Copy the predicate operands.

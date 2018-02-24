@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -191,8 +192,11 @@ void MCStreamer::EmitZeros(uint64_t NumBytes) {
 Expected<unsigned>
 MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                       StringRef Filename,
-                                      MD5::MD5Result *Checksum, unsigned CUID) {
-  return getContext().getDwarfFile(Directory, Filename, FileNo, Checksum, CUID);
+                                      MD5::MD5Result *Checksum,
+                                      Optional<StringRef> Source,
+                                      unsigned CUID) {
+  return getContext().getDwarfFile(Directory, Filename, FileNo, Checksum,
+                                   Source, CUID);
 }
 
 void MCStreamer::EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
