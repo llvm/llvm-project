@@ -10007,6 +10007,9 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV32 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=riscv32-unknown-linux < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV32,RISCV32-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=riscv32 \
+// RUN: -fforce-enable-int128 < /dev/null | FileCheck -match-full-lines \
+// RUN: -check-prefixes=RISCV32,RISCV32-INT128 %s
 // RISCV32: #define _ILP32 1
 // RISCV32: #define __ATOMIC_ACQUIRE 2
 // RISCV32: #define __ATOMIC_ACQ_REL 4
@@ -10136,6 +10139,7 @@
 // RISCV32: #define __SIG_ATOMIC_WIDTH__ 32
 // RISCV32: #define __SIZEOF_DOUBLE__ 8
 // RISCV32: #define __SIZEOF_FLOAT__ 4
+// RISCV32-INT128: #define __SIZEOF_INT128__ 16
 // RISCV32: #define __SIZEOF_INT__ 4
 // RISCV32: #define __SIZEOF_LONG_DOUBLE__ 16
 // RISCV32: #define __SIZEOF_LONG_LONG__ 8

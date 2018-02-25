@@ -8450,7 +8450,7 @@ def: Pat<(v16i8 (trunc (v16i16 VR256X:$src))),
 
 multiclass avx512_extend_common<bits<8> opc, string OpcodeStr, OpndItins itins,
               X86VectorVTInfo DestInfo, X86VectorVTInfo SrcInfo,
-              X86MemOperand x86memop, PatFrag LdFrag, SDPatternOperator OpNode>{
+              X86MemOperand x86memop, PatFrag LdFrag, SDNode OpNode>{
   let ExeDomain = DestInfo.ExeDomain in {
   defm rr   : AVX512_maskable<opc, MRMSrcReg, DestInfo, (outs DestInfo.RC:$dst),
                     (ins SrcInfo.RC:$src), OpcodeStr ,"$src", "$src",
@@ -8465,7 +8465,7 @@ multiclass avx512_extend_common<bits<8> opc, string OpcodeStr, OpndItins itins,
 }
 
 multiclass avx512_extend_BW<bits<8> opc, string OpcodeStr,
-          SDPatternOperator OpNode, SDPatternOperator InVecNode, string ExtTy,
+          SDNode OpNode, SDNode InVecNode, string ExtTy,
           OpndItins itins, PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi8")> {
   let Predicates = [HasVLX, HasBWI] in {
     defm Z128:  avx512_extend_common<opc, OpcodeStr, itins, v8i16x_info,
@@ -8484,7 +8484,7 @@ multiclass avx512_extend_BW<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_extend_BD<bits<8> opc, string OpcodeStr,
-          SDPatternOperator OpNode, SDPatternOperator InVecNode, string ExtTy,
+          SDNode OpNode, SDNode InVecNode, string ExtTy,
           OpndItins itins, PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi8")> {
   let Predicates = [HasVLX, HasAVX512] in {
     defm Z128:  avx512_extend_common<opc, OpcodeStr, itins, v4i32x_info,
@@ -8503,7 +8503,7 @@ multiclass avx512_extend_BD<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_extend_BQ<bits<8> opc, string OpcodeStr,
-          SDPatternOperator OpNode, SDPatternOperator InVecNode, string ExtTy,
+          SDNode OpNode, SDNode InVecNode, string ExtTy,
           OpndItins itins, PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi8")> {
   let Predicates = [HasVLX, HasAVX512] in {
     defm Z128:  avx512_extend_common<opc, OpcodeStr, itins, v2i64x_info,
@@ -8522,7 +8522,7 @@ multiclass avx512_extend_BQ<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_extend_WD<bits<8> opc, string OpcodeStr,
-         SDPatternOperator OpNode, SDPatternOperator InVecNode, string ExtTy,
+         SDNode OpNode, SDNode InVecNode, string ExtTy,
          OpndItins itins, PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi16")> {
   let Predicates = [HasVLX, HasAVX512] in {
     defm Z128:  avx512_extend_common<opc, OpcodeStr, itins, v4i32x_info,
@@ -8541,7 +8541,7 @@ multiclass avx512_extend_WD<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_extend_WQ<bits<8> opc, string OpcodeStr,
-         SDPatternOperator OpNode, SDPatternOperator InVecNode, string ExtTy,
+         SDNode OpNode, SDNode InVecNode, string ExtTy,
          OpndItins itins, PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi16")> {
   let Predicates = [HasVLX, HasAVX512] in {
     defm Z128:  avx512_extend_common<opc, OpcodeStr, itins, v2i64x_info,
@@ -8560,7 +8560,7 @@ multiclass avx512_extend_WQ<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_extend_DQ<bits<8> opc, string OpcodeStr,
-         SDPatternOperator OpNode, SDPatternOperator InVecNode, string ExtTy,
+         SDNode OpNode, SDNode InVecNode, string ExtTy,
          OpndItins itins, PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi32")> {
 
   let Predicates = [HasVLX, HasAVX512] in {

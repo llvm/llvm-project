@@ -2781,6 +2781,7 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   if (Opts.Triple.empty())
     Opts.Triple = llvm::sys::getDefaultTargetTriple();
   Opts.OpenCLExtensionsAsWritten = Args.getAllArgValues(OPT_cl_ext_EQ);
+  Opts.ForceEnableInt128 = Args.hasArg(OPT_fforce_enable_int128);
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
