@@ -379,6 +379,8 @@ __cfi_slowpath_diag(u64 CallSiteTypeId, void *Ptr, void *DiagData) {
 }
 #endif
 
+static void EnsureInterceptorsInitialized();
+
 // Setup shadow for dlopen()ed libraries.
 // The actual shadow setup happens after dlopen() returns, which means that
 // a library can not be a target of any CFI checks while its constructors are
@@ -388,6 +390,7 @@ __cfi_slowpath_diag(u64 CallSiteTypeId, void *Ptr, void *DiagData) {
 // We could insert a high-priority constructor into the library, but that would
 // not help with the uninstrumented libraries.
 INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
+  EnsureInterceptorsInitialized();
   EnterLoader();
   void *handle = REAL(dlopen)(filename, flag);
   ExitLoader();
@@ -395,10 +398,25 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
 }
 
 INTERCEPTOR(int, dlclose, void *handle) {
+  EnsureInterceptorsInitialized();
   EnterLoader();
   int res = REAL(dlclose)(handle);
   ExitLoader();
   return res;
+}
+
+static BlockingMutex interceptor_init_lock(LINKER_INITIALIZED);
+static bool interceptors_inited = false;
+
+static void EnsureInterceptorsInitialized() {
+  BlockingMutexLock lock(&interceptor_init_lock);
+  if (interceptors_inited)
+    return;
+
+  INTERCEPT_FUNCTION(dlopen);
+  INTERCEPT_FUNCTION(dlclose);
+
+  interceptors_inited = true;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -410,9 +428,6 @@ void __cfi_init() {
   SanitizerToolName = "CFI";
   InitializeFlags();
   InitShadow();
-
-  INTERCEPT_FUNCTION(dlopen);
-  INTERCEPT_FUNCTION(dlclose);
 
 #ifdef CFI_ENABLE_DIAG
   __ubsan::InitAsPlugin();

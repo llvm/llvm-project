@@ -65,7 +65,7 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 ; SOFT: save %sp, -176, %sp
 ; SOFT: srl %i0, 0, %o0
 ; SOFT-NEXT: call __extendsfdf2
-; SOFT: mov  %o0, %i0
+; SOFT: mov  %o0, %o1
 ; SOFT: mov  %i1, %o0
 ; SOFT: mov  %i2, %o0
 ; SOFT: mov  %i3, %o0
@@ -145,13 +145,11 @@ define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
 ; HARD: fstod %f3
 ; HARD: faddd %f6
 ; HARD: faddd %f16
-; SOFT: mov  %o0, %i1
+; SOFT: mov  %o0, %o1
 ; SOFT-NEXT: mov  %i3, %o0
-; SOFT-NEXT: mov  %i1, %o1
 ; SOFT-NEXT: call __adddf3
-; SOFT: mov  %o0, %i1
+; SOFT: mov  %o0, %o1
 ; SOFT-NEXT: mov  %i0, %o0
-; SOFT-NEXT: mov  %i1, %o1
 ; SOFT-NEXT: call __adddf3
 ; HARD: std %f0, [%i1]
 ; SOFT: stx %o0, [%i5]
@@ -217,8 +215,8 @@ define i32 @inreg_fi(i32 inreg %a0,     ; high bits of %i0
 ; CHECK-LABEL: call_inreg_fi:
 ; Allocate space for 6 arguments, even when only 2 are used.
 ; CHECK: save %sp, -176, %sp
-; HARD:  sllx %i1, 32, %o0
-; HARD:  fmovs %f5, %f1
+; HARD-DAG:  sllx %i1, 32, %o0
+; HARD-DAG:  fmovs %f5, %f1
 ; SOFT:  srl %i2, 0, %i0
 ; SOFT:  sllx %i1, 32, %i1
 ; SOFT:  or %i1, %i0, %o0
@@ -240,8 +238,8 @@ define float @inreg_ff(float inreg %a0,   ; %f0
 }
 
 ; CHECK-LABEL: call_inreg_ff:
-; HARD: fmovs %f3, %f0
-; HARD: fmovs %f5, %f1
+; HARD-DAG: fmovs %f3, %f0
+; HARD-DAG: fmovs %f5, %f1
 ; SOFT: srl %i2, 0, %i0
 ; SOFT: sllx %i1, 32, %i1
 ; SOFT: or %i1, %i0, %o0
@@ -527,9 +525,8 @@ entry:
 ; CHECK:  call sinf
 ; HARD:   ld [%fp+[[Offset1]]], %f1
 ; HARD:   fmuls %f1, %f0, %f0
-; SOFT:   mov  %o0, %i0
+; SOFT:   mov  %o0, %o1
 ; SOFT:   mov  %i1, %o0
-; SOFT:   mov  %i0, %o1
 ; SOFT:   call __mulsf3
 ; SOFT:   sllx %o0, 32, %i0
 
