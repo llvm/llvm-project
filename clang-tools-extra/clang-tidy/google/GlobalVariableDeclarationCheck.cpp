@@ -72,7 +72,7 @@ void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(varDecl(hasGlobalStorage(), hasType(isConstQualified()),
                              unless(isLocalVariable()),
-                             unless(matchesName("::k[A-Z]")))
+                             unless(matchesName("::(k[A-Z]|[A-Z]{2,})")))
                          .bind("global_const"),
                      this);
 }
@@ -88,7 +88,7 @@ void GlobalVariableDeclarationCheck::check(
   if (const auto *Decl = Result.Nodes.getNodeAs<VarDecl>("global_const")) {
     diag(Decl->getLocation(),
          "const global variable '%0' must have a name which starts with "
-         "'k[A-Z]'")
+         "an appropriate prefix")
         << Decl->getName() << generateFixItHint(Decl, true);
   }
 }

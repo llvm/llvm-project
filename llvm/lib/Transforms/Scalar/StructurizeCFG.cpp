@@ -55,12 +55,6 @@ static const char *const FlowBlockName = "Flow";
 
 namespace {
 
-static cl::opt<bool> ForceSkipUniformRegions(
-  "structurizecfg-skip-uniform-regions",
-  cl::Hidden,
-  cl::desc("Force whether the StructurizeCFG pass skips uniform regions"),
-  cl::init(false));
-
 // Definition of the complex types used in this pass.
 
 using BBValuePair = std::pair<BasicBlock *, Value *>;
@@ -248,11 +242,8 @@ class StructurizeCFG : public RegionPass {
 public:
   static char ID;
 
-  explicit StructurizeCFG(bool SkipUniformRegions_ = false)
-      : RegionPass(ID),
-        SkipUniformRegions(SkipUniformRegions_) {
-    if (ForceSkipUniformRegions.getNumOccurrences())
-      SkipUniformRegions = ForceSkipUniformRegions.getValue();
+  explicit StructurizeCFG(bool SkipUniformRegions = false)
+      : RegionPass(ID), SkipUniformRegions(SkipUniformRegions) {
     initializeStructurizeCFGPass(*PassRegistry::getPassRegistry());
   }
 
@@ -894,7 +885,7 @@ static bool hasOnlyUniformBranches(const Region *R,
     if (!Br || !Br->isConditional())
       continue;
 
-    if (!DA.isUniform(Br))
+    if (!DA.isUniform(Br->getCondition()))
       return false;
     DEBUG(dbgs() << "BB: " << BB->getName() << " has uniform terminator\n");
   }

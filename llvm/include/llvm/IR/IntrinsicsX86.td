@@ -3792,14 +3792,12 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Vector convert
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_avx512_mask_cvtdq2ps_128 :
-        GCCBuiltin<"__builtin_ia32_cvtdq2ps128_mask">,
+  def int_x86_avx512_mask_cvtdq2ps_128 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v4f32_ty],
           [llvm_v4i32_ty, llvm_v4f32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvtdq2ps_256 :
-        GCCBuiltin<"__builtin_ia32_cvtdq2ps256_mask">,
+  def int_x86_avx512_mask_cvtdq2ps_256 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v8f32_ty],
           [llvm_v8i32_ty, llvm_v8f32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
@@ -3816,8 +3814,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [llvm_v2f64_ty, llvm_v4i32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvtpd2dq_256 :
-        GCCBuiltin<"__builtin_ia32_cvtpd2dq256_mask">,
+  def int_x86_avx512_mask_cvtpd2dq_256 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v4i32_ty],
           [llvm_v4f64_ty, llvm_v4i32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
@@ -3828,8 +3825,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [llvm_v8f64_ty, llvm_v8i32_ty,  llvm_i8_ty,  llvm_i32_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvtpd2ps_256 :
-        GCCBuiltin<"__builtin_ia32_cvtpd2ps256_mask">,
+  def int_x86_avx512_mask_cvtpd2ps_256 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v4f32_ty],
           [llvm_v4f64_ty, llvm_v4f32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
@@ -3930,14 +3926,12 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [llvm_v16f32_ty, llvm_v16i32_ty,  llvm_i16_ty,  llvm_i32_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvtps2pd_128 :
-        GCCBuiltin<"__builtin_ia32_cvtps2pd128_mask">,
+  def int_x86_avx512_mask_cvtps2pd_128 : // FIXME: remove this intrinsic
           Intrinsic<[llvm_v2f64_ty],
           [llvm_v4f32_ty, llvm_v2f64_ty,  llvm_i8_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvtps2pd_256 :
-        GCCBuiltin<"__builtin_ia32_cvtps2pd256_mask">,
+  def int_x86_avx512_mask_cvtps2pd_256 : // FIXME: remove this intrinsic
           Intrinsic<[llvm_v4f64_ty],
           [llvm_v4f32_ty, llvm_v4f64_ty,  llvm_i8_ty],
           [IntrNoMem]>;
@@ -4044,8 +4038,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [llvm_v2f64_ty, llvm_v4i32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvttpd2dq_256 :
-        GCCBuiltin<"__builtin_ia32_cvttpd2dq256_mask">,
+  def int_x86_avx512_mask_cvttpd2dq_256 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v4i32_ty],
           [llvm_v4f64_ty, llvm_v4i32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
@@ -4110,14 +4103,12 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [llvm_v8f64_ty, llvm_v8i64_ty,  llvm_i8_ty,  llvm_i32_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvttps2dq_128 :
-        GCCBuiltin<"__builtin_ia32_cvttps2dq128_mask">,
+  def int_x86_avx512_mask_cvttps2dq_128 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v4i32_ty],
           [llvm_v4f32_ty, llvm_v4i32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
 
-  def int_x86_avx512_mask_cvttps2dq_256 :
-        GCCBuiltin<"__builtin_ia32_cvttps2dq256_mask">,
+  def int_x86_avx512_mask_cvttps2dq_256 : // TODO: remove this intrinsic
           Intrinsic<[llvm_v8i32_ty],
           [llvm_v8f32_ty, llvm_v8i32_ty,  llvm_i8_ty],
           [IntrNoMem]>;
