@@ -2,7 +2,7 @@
 
 @class NSString;
 static NSString* const myConstString = @"hello";
-// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: const global variable 'myConstString' must have a name which starts with 'k[A-Z]' [google-objc-global-variable-declaration]
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: const global variable 'myConstString' must have a name which starts with an appropriate prefix [google-objc-global-variable-declaration]
 // CHECK-FIXES: static NSString* const kMyConstString = @"hello";
 
 static NSString* MyString = @"hi";
@@ -22,15 +22,23 @@ static NSString* noDef;
 // CHECK-FIXES: static NSString* gNoDef;
 
 static NSString* const _notAlpha = @"NotBeginWithAlpha";
-// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: const global variable '_notAlpha' must have a name which starts with 'k[A-Z]' [google-objc-global-variable-declaration]
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: const global variable '_notAlpha' must have a name which starts with an appropriate prefix [google-objc-global-variable-declaration]
 // CHECK-FIXES: static NSString* const _notAlpha = @"NotBeginWithAlpha";
 
 static NSString* const k_Alpha = @"SecondNotAlpha";
-// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: const global variable 'k_Alpha' must have a name which starts with 'k[A-Z]' [google-objc-global-variable-declaration]
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: const global variable 'k_Alpha' must have a name which starts with an appropriate prefix [google-objc-global-variable-declaration]
 // CHECK-FIXES: static NSString* const k_Alpha = @"SecondNotAlpha";
 
 static NSString* const kGood = @"hello";
+static NSString* const XYGood = @"hello";
 static NSString* gMyIntGood = 0;
+
+extern NSString* const GTLServiceErrorDomain;
+
+enum GTLServiceError {
+  GTLServiceErrorQueryResultMissing = -3000,
+  GTLServiceErrorWaitTimedOut       = -3001,
+};
 
 @implementation Foo
 - (void)f {
