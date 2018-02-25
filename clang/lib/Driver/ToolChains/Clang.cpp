@@ -4750,6 +4750,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fforce_enable_int128,
+                               options::OPT_fno_force_enable_int128)) {
+    if (A->getOption().matches(options::OPT_fforce_enable_int128))
+      CmdArgs.push_back("-fforce-enable-int128");
+  }
+
   // Finally add the compile command to the compilation.
   if (Args.hasArg(options::OPT__SLASH_fallback) &&
       Output.getType() == types::TY_Object &&

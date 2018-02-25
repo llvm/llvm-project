@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple riscv32 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple riscv32 -emit-llvm -fforce-enable-int128 %s -o - \
+// RUN: | FileCheck %s -check-prefixes=CHECK,CHECK-FORCEINT128
 
 #include <stddef.h>
 #include <stdint.h>
@@ -23,6 +25,11 @@ int32_t f_scalar_3(int32_t x) { return x; }
 
 // CHECK-LABEL: define i64 @f_scalar_4(i64 %x)
 int64_t f_scalar_4(int64_t x) { return x; }
+
+#ifdef __SIZEOF_INT128__
+// CHECK-FORCEINT128-LABEL: define i128 @f_scalar_5(i128 %x)
+__int128_t f_scalar_5(__int128_t x) { return x; }
+#endif
 
 // CHECK-LABEL: define float @f_fp_scalar_1(float %x)
 float f_fp_scalar_1(float x) { return x; }
