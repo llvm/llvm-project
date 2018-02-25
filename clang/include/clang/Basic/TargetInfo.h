@@ -358,7 +358,7 @@ public:
 
   /// \brief Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
-    return getPointerWidth(0) >= 64;
+    return (getPointerWidth(0) >= 64) || getTargetOpts().ForceEnableInt128;
   } // FIXME
 
   /// \brief Determine whether the __float128 type is supported on this target.
