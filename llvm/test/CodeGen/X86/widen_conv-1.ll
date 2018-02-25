@@ -8,7 +8,8 @@ define void @convert_v2i64_to_v2i32(<2 x i32>* %dst.addr, <2 x i64> %src) nounwi
 ; X86-LABEL: convert_v2i64_to_v2i32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-NEXT:    psubd %xmm1, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
