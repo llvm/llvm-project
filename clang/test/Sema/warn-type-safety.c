@@ -7,7 +7,7 @@ struct A {};
 typedef struct A *MPI_Datatype;
 
 int wrong1(void *buf, MPI_Datatype datatype)
-    __attribute__(( pointer_with_type_tag )); // expected-error {{'pointer_with_type_tag' attribute requires parameter 1 to be an identifier}}
+    __attribute__(( pointer_with_type_tag )); // expected-error {{'pointer_with_type_tag' attribute requires exactly 3 arguments}}
 
 int wrong2(void *buf, MPI_Datatype datatype)
     __attribute__(( pointer_with_type_tag(mpi,0,7) )); // expected-error {{attribute parameter 2 is out of bounds}}
@@ -32,7 +32,7 @@ int wrong7(void *buf, MPI_Datatype datatype)
 int wrong8(void *buf, MPI_Datatype datatype)
     __attribute__(( pointer_with_type_tag(mpi,1,x) )); // expected-error {{attribute requires parameter 3 to be an integer constant}}
 
-int wrong9 __attribute__(( pointer_with_type_tag(mpi,1,2) )); // expected-error {{attribute only applies to functions and methods}}
+int wrong9 __attribute__(( pointer_with_type_tag(mpi,1,2) )); // expected-error {{'pointer_with_type_tag' attribute only applies to non-K&R-style functions}}
 
 int wrong10(double buf, MPI_Datatype type)
     __attribute__(( pointer_with_type_tag(mpi,1,2) )); // expected-error {{'pointer_with_type_tag' attribute only applies to pointer arguments}}

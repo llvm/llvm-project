@@ -2458,18 +2458,18 @@ def TestTypestate : InheritableAttr {
 // Type safety attributes for `void *' pointers and type tags.
 
 def ArgumentWithTypeTag : InheritableAttr {
-  let Spellings = [GNU<"argument_with_type_tag">,
-                   GNU<"pointer_with_type_tag">];
+  let Spellings = [Clang<"argument_with_type_tag", 1>,
+                   Clang<"pointer_with_type_tag", 1>];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
   let Args = [IdentifierArgument<"ArgumentKind">,
               UnsignedArgument<"ArgumentIdx">,
               UnsignedArgument<"TypeTagIdx">,
-              BoolArgument<"IsPointer">];
-  let HasCustomParsing = 1;
+              BoolArgument<"IsPointer", /*opt*/0, /*fake*/1>];
   let Documentation = [ArgumentWithTypeTagDocs, PointerWithTypeTagDocs];
 }
 
 def TypeTagForDatatype : InheritableAttr {
-  let Spellings = [GNU<"type_tag_for_datatype">];
+  let Spellings = [Clang<"type_tag_for_datatype", 1>];
   let Args = [IdentifierArgument<"ArgumentKind">,
               TypeArgument<"MatchingCType">,
               BoolArgument<"LayoutCompatible">,

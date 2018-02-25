@@ -4554,17 +4554,6 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
     return;
   }
   
-  if (!checkAttributeNumArgs(S, AL, 3))
-    return;
-
-  IdentifierInfo *ArgumentKind = AL.getArgAsIdent(0)->Ident;
-
-  if (!isFunctionOrMethod(D) || !hasFunctionProto(D)) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type)
-      << AL.getName() << ExpectedFunctionOrMethod;
-    return;
-  }
-
   uint64_t ArgumentIdx;
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 2, AL.getArgAsExpr(1),
                                            ArgumentIdx))
@@ -4575,7 +4564,7 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
                                            TypeTagIdx))
     return;
 
-  bool IsPointer = (AL.getName()->getName() == "pointer_with_type_tag");
+  bool IsPointer = AL.getName()->getName() == "pointer_with_type_tag";
   if (IsPointer) {
     // Ensure that buffer has a pointer type.
     QualType BufferTy = getFunctionOrMethodParamType(D, ArgumentIdx);
@@ -4585,10 +4574,9 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
     }
   }
 
-  D->addAttr(::new (S.Context)
-             ArgumentWithTypeTagAttr(AL.getRange(), S.Context, ArgumentKind,
-                                     ArgumentIdx, TypeTagIdx, IsPointer,
-                                     AL.getAttributeSpellingListIndex()));
+  D->addAttr(::new (S.Context) ArgumentWithTypeTagAttr(
+      AL.getRange(), S.Context, AL.getArgAsIdent(0)->Ident, ArgumentIdx,
+      TypeTagIdx, IsPointer, AL.getAttributeSpellingListIndex()));
 }
 
 static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
