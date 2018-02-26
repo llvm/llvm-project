@@ -52,7 +52,7 @@ int main()
     {
 // https://bugs.llvm.org/show_bug.cgi?id=31454
     std::basic_string<veryLarge> s;
-    veryLarge vl;
+    veryLarge vl = {};
     s.push_back(vl);
     s.push_back(vl);
     s.push_back(vl);
