@@ -840,6 +840,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_EXTRACT: {
     LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    (void)DstTy;
     unsigned SrcSize = SrcTy.getSizeInBits();
     // Larger extracts are vectors, same-size extracts should be something else
     // by now (either split up or simplified to a COPY).
