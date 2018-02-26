@@ -356,14 +356,6 @@ public:
     return nullptr;
   }
 
-  /// This method complements getFieldType to return the
-  /// initializer for the specified field.  If getFieldType returns non-null
-  /// this method should return non-null, otherwise it returns null.
-  virtual Init *getFieldInit(Record &R, const RecordVal *RV,
-                             StringInit *FieldName) const {
-    return nullptr;
-  }
-
   /// This method is used by classes that refer to other
   /// variables which may not be defined at the time the expression is formed.
   /// If a value is set for the variable later, this method will be called on
@@ -419,12 +411,6 @@ public:
   /// they are of record type.
   ///
   RecTy *getFieldType(StringInit *FieldName) const override;
-
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  virtual Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                            unsigned Elt) const = 0;
 };
 
 /// '?' - Represents an uninitialized value
@@ -470,11 +456,6 @@ public:
   bool getValue() const { return Value; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
-
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off bit");
-  }
 
   Init *getBit(unsigned Bit) const override {
     assert(Bit < 1 && "Bit index out of range!");
@@ -527,14 +508,6 @@ public:
 
   std::string getAsString() const override;
 
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off bits<n>");
-  }
-
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
   Init *getBit(unsigned Bit) const override {
@@ -567,14 +540,6 @@ public:
 
   std::string getAsString() const override;
 
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off int");
-  }
-
   Init *getBit(unsigned Bit) const override {
     return BitInit::get((Value & (1ULL << Bit)) != 0);
   }
@@ -604,14 +569,6 @@ public:
   std::string getAsString() const override { return "\"" + Value.str() + "\""; }
 
   std::string getAsUnquotedString() const override { return Value; }
-
-  /// resolveListElementReference - This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off string");
-  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off string");
@@ -644,14 +601,6 @@ public:
   }
 
   std::string getAsUnquotedString() const override { return Value; }
-
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off string");
-  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off string");
@@ -718,12 +667,6 @@ public:
   size_t         size () const { return NumValues;  }
   bool           empty() const { return NumValues == 0; }
 
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override;
-
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off list");
   }
@@ -754,9 +697,6 @@ public:
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
   virtual Init *Fold(Record *CurRec, MultiClass *CurMultiClass) const = 0;
-
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override;
 
   Init *getBit(unsigned Bit) const override;
 };
@@ -952,13 +892,6 @@ public:
     return getNameInit()->getAsUnquotedString();
   }
 
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override;
-
-  RecTy *getFieldType(StringInit *FieldName) const override;
-  Init *getFieldInit(Record &R, const RecordVal *RV,
-                     StringInit *FieldName) const override;
-
   /// This method is used by classes that refer to other
   /// variables which may not be defined at the time they expression is formed.
   /// If a value is set for the variable later, this method will be called on
@@ -1003,11 +936,6 @@ public:
   std::string getAsString() const override;
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off bit");
-  }
-
   Init *getBit(unsigned B) const override {
     assert(B < 1 && "Bit index out of range!");
     return const_cast<VarBitInit*>(this);
@@ -1041,12 +969,6 @@ public:
   TypedInit *getVariable() const { return TI; }
   unsigned getElementNum() const { return Element; }
 
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override;
-
   std::string getAsString() const override;
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
@@ -1078,21 +1000,11 @@ public:
   //virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits);
 
   RecTy *getFieldType(StringInit *FieldName) const override;
-  Init *getFieldInit(Record &R, const RecordVal *RV,
-                     StringInit *FieldName) const override;
 
   std::string getAsString() const override;
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off def");
-  }
-
-  /// This method is used to implement
-  /// VarListElementInit::resolveReferences.  If the list element is resolvable
-  /// now, we return the resolved value, otherwise we return null.
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off def");
   }
 };
 
@@ -1117,9 +1029,6 @@ public:
   static FieldInit *get(Init *R, StringInit *FN);
 
   Init *getBit(unsigned Bit) const override;
-
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override;
 
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
@@ -1217,11 +1126,6 @@ public:
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off dag");
-  }
-
-  Init *resolveListElementReference(Record &R, const RecordVal *RV,
-                                    unsigned Elt) const override {
-    llvm_unreachable("Illegal element reference off dag");
   }
 };
 

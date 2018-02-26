@@ -966,6 +966,8 @@ TEST_F(ClangdVFSTest, InsertIncludes) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB;
+  std::string SearchDirArg = (llvm::Twine("-I") + testRoot()).str();
+  CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(), {SearchDirArg.c_str()});
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
                       /*StorePreamblesInMemory=*/true);
@@ -981,8 +983,10 @@ void f() {}
   FS.Files[FooCpp] = Code;
   Server.addDocument(FooCpp, Code);
 
-  auto Inserted = [&](llvm::StringRef Header, llvm::StringRef Expected) {
-    auto Replaces = Server.insertInclude(FooCpp, Code, Header);
+  auto Inserted = [&](llvm::StringRef Original, llvm::StringRef Preferred,
+                      llvm::StringRef Expected) {
+    auto Replaces = Server.insertInclude(
+        FooCpp, Code, Original, Preferred.empty() ? Original : Preferred);
     EXPECT_TRUE(static_cast<bool>(Replaces));
     auto Changed = tooling::applyAllReplacements(Code, *Replaces);
     EXPECT_TRUE(static_cast<bool>(Changed));
@@ -990,8 +994,19 @@ void f() {}
         (llvm::Twine("#include ") + Expected + "").str());
   };
 
-  EXPECT_TRUE(Inserted("\"y.h\"", "\"y.h\""));
-  EXPECT_TRUE(Inserted("<string>", "<string>"));
+  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"","\"y.h\""));
+  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"\"Y.h\"", "\"Y.h\""));
+  EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
+  EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
+
+  std::string OriginalHeader = URI::createFile(testPath("y.h")).toString();
+  std::string PreferredHeader = URI::createFile(testPath("Y.h")).toString();
+  EXPECT_TRUE(Inserted(OriginalHeader,
+                       /*Preferred=*/"", "\"y.h\""));
+  EXPECT_TRUE(Inserted(OriginalHeader,
+                       /*Preferred=*/"<Y.h>", "<Y.h>"));
+  EXPECT_TRUE(Inserted(OriginalHeader, PreferredHeader, "\"Y.h\""));
+  EXPECT_TRUE(Inserted("<y.h>", PreferredHeader, "\"Y.h\""));
 }
 
 } // namespace

@@ -173,9 +173,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     }
   }
 
-  // We don't have a DepMatrix to check legality return false.
-  if (DepMatrix.empty())
-    return false;
   return true;
 }
 

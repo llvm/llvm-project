@@ -297,7 +297,12 @@ struct CompletionCandidate {
           // Command title is not added since this is not a user-facing command.
           Cmd.command = ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE;
           IncludeInsertion Insertion;
-          Insertion.header = D->IncludeHeader;
+          // Fallback to canonical header if declaration location is invalid.
+          Insertion.declaringHeader =
+              IndexResult->CanonicalDeclaration.FileURI.empty()
+                  ? D->IncludeHeader
+                  : IndexResult->CanonicalDeclaration.FileURI;
+          Insertion.preferredHeader = D->IncludeHeader;
           Insertion.textDocument.uri = URIForFile(FileName);
           Cmd.includeInsertion = std::move(Insertion);
           I.command = std::move(Cmd);
