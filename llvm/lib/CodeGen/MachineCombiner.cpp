@@ -559,14 +559,12 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         dbgs() << "\tFor the Pattern (" << (int)P << ") these instructions could be removed\n";
         for (auto const *InstrPtr : DelInstrs) {
           dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
-          InstrPtr->print(dbgs(), false, false, TII);
-          dbgs() << "\n";
+          InstrPtr->print(dbgs(), false, false, false, TII);
         }
         dbgs() << "\tThese instructions could replace the removed ones\n";
         for (auto const *InstrPtr : InsInstrs) {
           dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
-          InstrPtr->print(dbgs(), false, false, TII);
-          dbgs() << "\n";
+          InstrPtr->print(dbgs(), false, false, false, TII);
         }
       });
 
