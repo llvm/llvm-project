@@ -1780,7 +1780,7 @@ void DwarfDebug::emitDebugARanges() {
     }
 
     // Sort the symbols by offset within the section.
-    std::sort(
+    std::stable_sort(
         List.begin(), List.end(), [&](const SymbolCU &A, const SymbolCU &B) {
           unsigned IA = A.Sym ? Asm->OutStreamer->GetSymbolOrder(A.Sym) : 0;
           unsigned IB = B.Sym ? Asm->OutStreamer->GetSymbolOrder(B.Sym) : 0;

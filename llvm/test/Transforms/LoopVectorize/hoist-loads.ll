@@ -37,8 +37,9 @@ for.end:
 }
 
 ; However, we can't hoist loads whose address we have not seen unconditionally
-; accessed.
+; accessed. One wide load is fine, but not the second.
 ; CHECK-LABEL: @dont_hoist_cond_load(
+; CHECK: load <2 x float>
 ; CHECK-NOT: load <2 x float>
 
 define void @dont_hoist_cond_load() {

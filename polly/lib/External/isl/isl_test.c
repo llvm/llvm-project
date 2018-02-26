@@ -6832,6 +6832,35 @@ static int test_compute_divs(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that isl_schedule_get_map is not confused by a schedule tree
+ * with divergent filter node parameters, as can result from a call
+ * to isl_schedule_intersect_domain.
+ */
+static int test_schedule_tree(isl_ctx *ctx)
+{
+	const char *str;
+	isl_union_set *uset;
+	isl_schedule *sched1, *sched2;
+	isl_union_map *umap;
+
+	uset = isl_union_set_read_from_str(ctx, "{ A[i] }");
+	sched1 = isl_schedule_from_domain(uset);
+	uset = isl_union_set_read_from_str(ctx, "{ B[] }");
+	sched2 = isl_schedule_from_domain(uset);
+
+	sched1 = isl_schedule_sequence(sched1, sched2);
+	str = "[n] -> { A[i] : 0 <= i < n; B[] }";
+	uset = isl_union_set_read_from_str(ctx, str);
+	sched1 = isl_schedule_intersect_domain(sched1, uset);
+	umap = isl_schedule_get_map(sched1);
+	isl_schedule_free(sched1);
+	isl_union_map_free(umap);
+	if (!umap)
+		return -1;
+
+	return 0;
+}
+
 /* Check that the reaching domain elements and the prefix schedule
  * at a leaf node are the same before and after grouping.
  */
@@ -7352,6 +7381,7 @@ struct {
 	{ "injective", &test_injective },
 	{ "schedule (whole component)", &test_schedule_whole },
 	{ "schedule (incremental)", &test_schedule_incremental },
+	{ "schedule tree", &test_schedule_tree },
 	{ "schedule tree grouping", &test_schedule_tree_group },
 	{ "tile", &test_tile },
 	{ "union_pw", &test_union_pw },

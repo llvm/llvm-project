@@ -1171,22 +1171,47 @@ void CFGBuilder::findConstructionContexts(
     const ConstructionContext *ContextSoFar, Stmt *Child) {
   if (!BuildOpts.AddRichCXXConstructors)
     return;
+
   if (!Child)
     return;
-  if (auto *CE = dyn_cast<CXXConstructExpr>(Child)) {
-    consumeConstructionContext(ContextSoFar, CE);
-  } else if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Child)) {
+
+  switch(Child->getStmtClass()) {
+  case Stmt::CXXConstructExprClass:
+  case Stmt::CXXTemporaryObjectExprClass: {
+    consumeConstructionContext(ContextSoFar, cast<CXXConstructExpr>(Child));
+    break;
+  }
+  case Stmt::ExprWithCleanupsClass: {
+    auto *Cleanups = cast<ExprWithCleanups>(Child);
     findConstructionContexts(ContextSoFar, Cleanups->getSubExpr());
-  } else if (auto *Cast = dyn_cast<CXXFunctionalCastExpr>(Child)) {
+    break;
+  }
+  case Stmt::CXXFunctionalCastExprClass: {
+    auto *Cast = cast<CXXFunctionalCastExpr>(Child);
     findConstructionContexts(ContextSoFar, Cast->getSubExpr());
-  } else if (auto *ImplicitCast = dyn_cast<ImplicitCastExpr>(Child)) {
-    if (ImplicitCast->getCastKind() == CK_NoOp)
-      findConstructionContexts(ContextSoFar, ImplicitCast->getSubExpr());
-  } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Child)) {
+    break;
+  }
+  case Stmt::ImplicitCastExprClass: {
+    auto *Cast = cast<ImplicitCastExpr>(Child);
+    findConstructionContexts(ContextSoFar, Cast->getSubExpr());
+    break;
+  }
+  case Stmt::CXXBindTemporaryExprClass: {
+    auto *BTE = cast<CXXBindTemporaryExpr>(Child);
     findConstructionContexts(
         ConstructionContext::create(cfg->getBumpVectorContext(), BTE,
                                     ContextSoFar),
         BTE->getSubExpr());
+    break;
+  }
+  case Stmt::ConditionalOperatorClass: {
+    auto *CO = cast<ConditionalOperator>(Child);
+    findConstructionContexts(ContextSoFar, CO->getLHS());
+    findConstructionContexts(ContextSoFar, CO->getRHS());
+    break;
+  }
+  default:
+    break;
   }
 }
 

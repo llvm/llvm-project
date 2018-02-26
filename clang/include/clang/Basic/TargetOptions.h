@@ -60,6 +60,9 @@ public:
   /// \brief The list of OpenCL extensions to enable or disable, as written on
   /// the command line.
   std::vector<std::string> OpenCLExtensionsAsWritten;
+
+  /// \brief If given, enables support for __int128_t and __uint128_t types.
+  bool ForceEnableInt128;
 };
 
 }  // end namespace clang

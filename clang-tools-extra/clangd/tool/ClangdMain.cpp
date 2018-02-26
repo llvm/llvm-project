@@ -149,10 +149,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Ignore -j option if -run-synchonously is used.
-  // FIXME: a warning should be shown here.
-  if (RunSynchronously)
+  if (RunSynchronously) {
+    if (WorkerThreadsCount.getNumOccurrences())
+      llvm::errs() << "Ignoring -j because -run-synchronously is set.\n";
     WorkerThreadsCount = 0;
+  }
 
   // Validate command line arguments.
   llvm::Optional<llvm::raw_fd_ostream> InputMirrorStream;

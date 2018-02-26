@@ -194,12 +194,20 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
                          ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE +
                          " called on non-added file " + FileURI.file())
                             .str());
-    auto Replaces = Server.insertInclude(FileURI.file(), *Code,
-                                         Params.includeInsertion->header);
+    llvm::StringRef DeclaringHeader = Params.includeInsertion->declaringHeader;
+    if (DeclaringHeader.empty())
+      return replyError(
+          ErrorCode::InvalidParams,
+          "declaringHeader must be provided for include insertion.");
+    llvm::StringRef PreferredHeader = Params.includeInsertion->preferredHeader;
+    auto Replaces = Server.insertInclude(
+        FileURI.file(), *Code, DeclaringHeader,
+        PreferredHeader.empty() ? DeclaringHeader : PreferredHeader);
     if (!Replaces) {
       std::string ErrMsg =
           ("Failed to generate include insertion edits for adding " +
-           Params.includeInsertion->header + " into " + FileURI.file())
+           DeclaringHeader + " (" + PreferredHeader + ") into " +
+           FileURI.file())
               .str();
       log(ErrMsg + ":" + llvm::toString(Replaces.takeError()));
       replyError(ErrorCode::InternalError, ErrMsg);
@@ -209,7 +217,8 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
     WorkspaceEdit WE;
     WE.changes = {{FileURI.uri(), Edits}};
 
-    reply("Inserted header " + Params.includeInsertion->header);
+    reply(("Inserted header " + DeclaringHeader + " (" + PreferredHeader + ")")
+              .str());
     ApplyEdit(std::move(WE));
   } else {
     // We should not get here because ExecuteCommandParams would not have

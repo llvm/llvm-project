@@ -13,7 +13,7 @@
 namespace clang {
 namespace clangd {
 
-Context Context::empty() { return Context(/*Data=*/nullptr); }
+Context Context::empty() { return Context(/*DataPtr=*/nullptr); }
 
 Context::Context(std::shared_ptr<const Data> DataPtr)
     : DataPtr(std::move(DataPtr)) {}

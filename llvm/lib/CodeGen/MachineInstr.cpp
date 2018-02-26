@@ -1235,6 +1235,8 @@ void MachineInstr::print(raw_ostream &OS, bool IsStandalone, bool SkipOpers,
   if (const MachineFunction *MF = getMFIfAvailable(*this)) {
     F = &MF->getFunction();
     M = F->getParent();
+    if (!TII)
+      TII = MF->getSubtarget().getInstrInfo();
   }
 
   ModuleSlotTracker MST(M);

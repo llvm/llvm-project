@@ -24828,19 +24828,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
 
     auto InVT = N->getValueType(0);
-    auto InVTSize = InVT.getSizeInBits();
-    const unsigned RegSize =
-        (InVTSize > 128) ? ((InVTSize > 256) ? 512 : 256) : 128;
-    assert((Subtarget.hasBWI() || RegSize < 512) &&
-           "512-bit vector requires AVX512BW");
-    assert((Subtarget.hasAVX2() || RegSize < 256) &&
-           "256-bit vector requires AVX2");
+    assert(InVT.getSizeInBits() < 128);
+    assert(128 % InVT.getSizeInBits() == 0);
+    unsigned NumConcat = 128 / InVT.getSizeInBits();
 
-    auto ElemVT = InVT.getVectorElementType();
-    auto RegVT = EVT::getVectorVT(*DAG.getContext(), ElemVT,
-                                  RegSize / ElemVT.getSizeInBits());
-    assert(RegSize % InVT.getSizeInBits() == 0);
-    unsigned NumConcat = RegSize / InVT.getSizeInBits();
+    EVT RegVT = EVT::getVectorVT(*DAG.getContext(),
+                                 InVT.getVectorElementType(),
+                                 NumConcat * InVT.getVectorNumElements());
 
     SmallVector<SDValue, 16> Ops(NumConcat, DAG.getUNDEF(InVT));
     Ops[0] = N->getOperand(0);
@@ -25140,13 +25134,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // we can split using the k-register rather than memory.
     if (SrcVT == MVT::v64i1 && DstVT == MVT::i64 && Subtarget.hasBWI()) {
       assert(!Subtarget.is64Bit() && "Expected 32-bit mode");
-      SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v32i1,
-                               N->getOperand(0),
-                               DAG.getIntPtrConstant(0, dl));
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
       Lo = DAG.getBitcast(MVT::i32, Lo);
-      SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v32i1,
-                               N->getOperand(0),
-                               DAG.getIntPtrConstant(32, dl));
       Hi = DAG.getBitcast(MVT::i32, Hi);
       SDValue Res = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
       Results.push_back(Res);
@@ -31484,8 +31474,7 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
   if (TValIsAllZeros  && Subtarget.hasAVX512() && Cond.hasOneUse() &&
       CondVT.getVectorElementType() == MVT::i1) {
     // Invert the cond to not(cond) : xor(op,allones)=not(op)
-    SDValue CondNew = DAG.getNode(ISD::XOR, DL, CondVT, Cond,
-                                  DAG.getAllOnesConstant(DL, CondVT));
+    SDValue CondNew = DAG.getNOT(DL, Cond, CondVT);
     // Vselect cond, op1, op2 = Vselect not(cond), op2, op1
     return DAG.getSelect(DL, VT, CondNew, RHS, LHS);
   }
@@ -34370,7 +34359,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
 static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget,
                                 const SDLoc &DL) {
-  if (!VT.isVector() || !VT.isSimple())
+  if (!VT.isVector())
     return SDValue();
   EVT InVT = In.getValueType();
   unsigned NumElems = VT.getVectorNumElements();
@@ -34412,8 +34401,8 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op);
       if (!C)
         return false;
-      uint64_t Val = C->getZExtValue();
-      if (Val < Min || Val > Max)
+      const APInt &Val = C->getAPIntValue();
+      if (Val.ult(Min) || Val.ugt(Max))
         return false;
     }
     return true;
@@ -37636,11 +37625,11 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
-  // PSUBUS is supported, starting from SSE2, but special preprocessing
-  // for v8i32 requires umin, which appears in SSE41.
+  // PSUBUS is supported, starting from SSE2, but truncation for v8i32
+  // is only worth it with SSSE3 (PSHUFB).
   if (!(Subtarget.hasSSE2() && (VT == MVT::v16i8 || VT == MVT::v8i16)) &&
-      !(Subtarget.hasSSE41() && (VT == MVT::v8i32)) &&
-      !(Subtarget.hasAVX2() && (VT == MVT::v32i8 || VT == MVT::v16i16)) &&
+      !(Subtarget.hasSSSE3() && (VT == MVT::v8i32 || VT == MVT::v8i64)) &&
+      !(Subtarget.hasAVX() && (VT == MVT::v32i8 || VT == MVT::v16i16)) &&
       !(Subtarget.useBWIRegs() && (VT == MVT::v64i8 || VT == MVT::v32i16 ||
                                    VT == MVT::v16i32 || VT == MVT::v8i64)))
     return SDValue();
@@ -37648,7 +37637,7 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue SubusLHS, SubusRHS;
   // Try to find umax(a,b) - b or a - umin(a,b) patterns
   // they may be converted to subus(a,b).
-  // TODO: Need to add IR cannonicialization for this code.
+  // TODO: Need to add IR canonicalization for this code.
   if (Op0.getOpcode() == ISD::UMAX) {
     SubusRHS = Op1;
     SDValue MaxLHS = Op0.getOperand(0);
@@ -37672,10 +37661,16 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   } else
     return SDValue();
 
+  auto SUBUSBuilder = [](SelectionDAG &DAG, const SDLoc &DL, SDValue Op0,
+                         SDValue Op1) {
+    return DAG.getNode(X86ISD::SUBUS, DL, Op0.getValueType(), Op0, Op1);
+  };
+
   // PSUBUS doesn't support v8i32/v8i64/v16i32, but it can be enabled with
   // special preprocessing in some cases.
   if (VT != MVT::v8i32 && VT != MVT::v16i32 && VT != MVT::v8i64)
-    return DAG.getNode(X86ISD::SUBUS, SDLoc(N), VT, SubusLHS, SubusRHS);
+    return SplitBinaryOpsAndApply(DAG, Subtarget, SDLoc(N), VT, SubusLHS,
+                                  SubusRHS, SUBUSBuilder);
 
   // Special preprocessing case can be only applied
   // if the value was zero extended from 16 bit,
@@ -37705,8 +37700,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue NewSubusLHS =
       DAG.getZExtOrTrunc(SubusLHS, SDLoc(SubusLHS), ShrinkedType);
   SDValue NewSubusRHS = DAG.getZExtOrTrunc(UMin, SDLoc(SubusRHS), ShrinkedType);
-  SDValue Psubus = DAG.getNode(X86ISD::SUBUS, SDLoc(N), ShrinkedType,
-                               NewSubusLHS, NewSubusRHS);
+  SDValue Psubus =
+      SplitBinaryOpsAndApply(DAG, Subtarget, SDLoc(N), ShrinkedType,
+                             NewSubusLHS, NewSubusRHS, SUBUSBuilder);
   // Zero extend the result, it may be used somewhere as 32 bit,
   // if not zext and following trunc will shrink.
   return DAG.getZExtOrTrunc(Psubus, SDLoc(N), ExtType);

@@ -564,19 +564,6 @@ Init *ListInit::resolveReferences(Record &R, const RecordVal *RV) const {
   return const_cast<ListInit *>(this);
 }
 
-Init *ListInit::resolveListElementReference(Record &R, const RecordVal *IRV,
-                                            unsigned Elt) const {
-  if (Elt >= size())
-    return nullptr;  // Out of range reference.
-  Init *E = getElement(Elt);
-  // If the element is set to some value, or if we are resolving a reference
-  // to a specific variable and that variable is explicitly unset, then
-  // replace the VarListElementInit with it.
-  if (IRV || !isa<UnsetInit>(E))
-    return E;
-  return nullptr;
-}
-
 std::string ListInit::getAsString() const {
   std::string Result = "[";
   const char *sep = "";
@@ -586,24 +573,6 @@ std::string ListInit::getAsString() const {
     Result += Element->getAsString();
   }
   return Result + "]";
-}
-
-Init *OpInit::resolveListElementReference(Record &R, const RecordVal *IRV,
-                                          unsigned Elt) const {
-  Init *Resolved = resolveReferences(R, IRV);
-  OpInit *OResolved = dyn_cast<OpInit>(Resolved);
-  if (OResolved) {
-    Resolved = OResolved->Fold(&R, nullptr);
-  }
-
-  if (Resolved != this) {
-    TypedInit *Typed = cast<TypedInit>(Resolved);
-    if (Init *New = Typed->resolveListElementReference(R, IRV, Elt))
-      return New;
-    return VarListElementInit::get(Typed, Elt);
-  }
-
-  return nullptr;
 }
 
 Init *OpInit::getBit(unsigned Bit) const {
@@ -1279,51 +1248,6 @@ Init *VarInit::getBit(unsigned Bit) const {
   return VarBitInit::get(const_cast<VarInit*>(this), Bit);
 }
 
-Init *VarInit::resolveListElementReference(Record &R,
-                                           const RecordVal *IRV,
-                                           unsigned Elt) const {
-  if (R.isTemplateArg(getNameInit())) return nullptr;
-  if (IRV && IRV->getNameInit() != getNameInit()) return nullptr;
-
-  RecordVal *RV = R.getValue(getNameInit());
-  assert(RV && "Reference to a non-existent variable?");
-  ListInit *LI = dyn_cast<ListInit>(RV->getValue());
-  if (!LI)
-    return VarListElementInit::get(cast<TypedInit>(RV->getValue()), Elt);
-
-  if (Elt >= LI->size())
-    return nullptr;  // Out of range reference.
-  Init *E = LI->getElement(Elt);
-  // If the element is set to some value, or if we are resolving a reference
-  // to a specific variable and that variable is explicitly unset, then
-  // replace the VarListElementInit with it.
-  if (IRV || !isa<UnsetInit>(E))
-    return E;
-  return nullptr;
-}
-
-RecTy *VarInit::getFieldType(StringInit *FieldName) const {
-  if (RecordRecTy *RTy = dyn_cast<RecordRecTy>(getType()))
-    if (const RecordVal *RV = RTy->getRecord()->getValue(FieldName))
-      return RV->getType();
-  return nullptr;
-}
-
-Init *VarInit::getFieldInit(Record &R, const RecordVal *RV,
-                            StringInit *FieldName) const {
-  if (isa<RecordRecTy>(getType()))
-    if (const RecordVal *Val = R.getValue(VarName)) {
-      if (RV != Val && (RV || isa<UnsetInit>(Val->getValue())))
-        return nullptr;
-      Init *TheInit = Val->getValue();
-      assert(TheInit != this && "Infinite loop detected!");
-      if (Init *I = TheInit->getFieldInit(R, RV, FieldName))
-        return I;
-      return nullptr;
-    }
-  return nullptr;
-}
-
 Init *VarInit::resolveReferences(Record &R, const RecordVal *RV) const {
   if (RecordVal *Val = R.getValue(VarName))
     if (RV == Val || (!RV && !isa<UnsetInit>(Val->getValue())))
@@ -1380,9 +1304,15 @@ std::string VarListElementInit::getAsString() const {
 
 Init *
 VarListElementInit::resolveReferences(Record &R, const RecordVal *RV) const {
-  if (Init *I = getVariable()->resolveListElementReference(R, RV,
-                                                           getElementNum()))
-    return I;
+  Init *NewTI = TI->resolveReferences(R, RV);
+  if (ListInit *List = dyn_cast<ListInit>(NewTI)) {
+    // Leave out-of-bounds array references as-is. This can happen without
+    // being an error, e.g. in the untaken "branch" of an !if expression.
+    if (getElementNum() < List->size())
+      return List->getElement(getElementNum());
+  }
+  if (NewTI != TI && isa<TypedInit>(NewTI))
+    return VarListElementInit::get(cast<TypedInit>(NewTI), getElementNum());
   return const_cast<VarListElementInit *>(this);
 }
 
@@ -1390,21 +1320,6 @@ Init *VarListElementInit::getBit(unsigned Bit) const {
   if (getType() == BitRecTy::get())
     return const_cast<VarListElementInit*>(this);
   return VarBitInit::get(const_cast<VarListElementInit*>(this), Bit);
-}
-
-Init *VarListElementInit:: resolveListElementReference(Record &R,
-                                                       const RecordVal *RV,
-                                                       unsigned Elt) const {
-  if (Init *Result = TI->resolveListElementReference(R, RV, Element)) {
-    if (TypedInit *TInit = dyn_cast<TypedInit>(Result)) {
-      if (Init *Result2 = TInit->resolveListElementReference(R, RV, Elt))
-        return Result2;
-      return VarListElementInit::get(TInit, Elt);
-    }
-    return Result;
-  }
-
-  return nullptr;
 }
 
 DefInit *DefInit::get(Record *R) {
@@ -1422,11 +1337,6 @@ RecTy *DefInit::getFieldType(StringInit *FieldName) const {
   if (const RecordVal *RV = Def->getValue(FieldName))
     return RV->getType();
   return nullptr;
-}
-
-Init *DefInit::getFieldInit(Record &R, const RecordVal *RV,
-                            StringInit *FieldName) const {
-  return Def->getValue(FieldName)->getValue();
 }
 
 std::string DefInit::getAsString() const {
@@ -1450,28 +1360,14 @@ Init *FieldInit::getBit(unsigned Bit) const {
   return VarBitInit::get(const_cast<FieldInit*>(this), Bit);
 }
 
-Init *FieldInit::resolveListElementReference(Record &R, const RecordVal *RV,
-                                             unsigned Elt) const {
-  if (Init *ListVal = Rec->getFieldInit(R, RV, FieldName))
-    if (ListInit *LI = dyn_cast<ListInit>(ListVal)) {
-      if (Elt >= LI->size()) return nullptr;
-      Init *E = LI->getElement(Elt);
-
-      // If the element is set to some value, or if we are resolving a
-      // reference to a specific variable and that variable is explicitly
-      // unset, then replace the VarListElementInit with it.
-      if (RV || !isa<UnsetInit>(E))
-        return E;
-    }
-  return nullptr;
-}
-
 Init *FieldInit::resolveReferences(Record &R, const RecordVal *RV) const {
-  Init *NewRec = RV ? Rec->resolveReferences(R, RV) : Rec;
+  Init *NewRec = Rec->resolveReferences(R, RV);
 
-  if (Init *BitsVal = NewRec->getFieldInit(R, RV, FieldName)) {
-    Init *BVR = BitsVal->resolveReferences(R, RV);
-    return BVR->isComplete() ? BVR : const_cast<FieldInit *>(this);
+  if (DefInit *DI = dyn_cast<DefInit>(NewRec)) {
+    Init *FieldVal = DI->getDef()->getValue(FieldName)->getValue();
+    Init *BVR = FieldVal->resolveReferences(R, RV);
+    if (BVR->isComplete())
+      return BVR;
   }
 
   if (NewRec != Rec)
