@@ -331,7 +331,8 @@ void DontDumpShadowMemory(uptr addr, uptr length) {
 }
 
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
-                              uptr *largest_gap_found) {
+                              uptr *largest_gap_found,
+                              uptr *max_occupied_addr) {
   uptr address = 0;
   while (true) {
     MEMORY_BASIC_INFORMATION info;

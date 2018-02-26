@@ -1,7 +1,10 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:                                                 %run %t valid   2>&1
-// RUN:                                             not %run %t invalid 2>&1
-// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid 2>&1
+// RUN:                                                 %run %t valid       2>&1
+// RUN:                                             not %run %t invalid     2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid     2>&1
+// RUN:                                             not %run %t double-free 2>&1 | FileCheck --check-prefix=CHECK-double-free %s
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=1  not %run %t realloc     2>&1 | FileCheck --check-prefix=CHECK-realloc %s
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=0      %run %t realloc     2>&1
 
 // Tests that the various aligned allocation functions work as intended. Also
 // tests for the condition where the alignment is not a power of 2.
@@ -51,6 +54,7 @@ int main(int argc, char **argv)
     // For larger alignment, reduce the number of allocations to avoid running
     // out of potential addresses (on 32-bit).
     for (int i = 19; i <= 24; i++) {
+      alignment = 1U << i;
       for (int k = 0; k < 3; k++) {
         p = memalign(alignment, 0x1000 - (2 * sizeof(void *) * k));
         assert(p);
@@ -77,5 +81,22 @@ int main(int argc, char **argv)
     assert(p == p_unchanged);
     assert(err == EINVAL);
   }
+  if (!strcmp(argv[1], "double-free")) {
+    void *p = NULL;
+    posix_memalign(&p, 0x100, sizeof(int));
+    assert(p);
+    free(p);
+    free(p);
+  }
+  if (!strcmp(argv[1], "realloc")) {
+    // We cannot reallocate a memalign'd chunk.
+    void *p = memalign(16, 16);
+    assert(p);
+    p = realloc(p, 32);
+    free(p);
+  }
   return 0;
 }
+
+// CHECK-double-free: ERROR: invalid chunk state
+// CHECK-realloc: ERROR: allocation type mismatch when reallocating address
