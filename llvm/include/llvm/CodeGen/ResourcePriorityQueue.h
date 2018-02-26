@@ -20,15 +20,15 @@
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 
 namespace llvm {
   class ResourcePriorityQueue;
 
   /// Sorting functions for the Available queue.
-  struct resource_sort : public std::binary_function<SUnit*, SUnit*, bool> {
+  struct resource_sort {
     ResourcePriorityQueue *PQ;
     explicit resource_sort(ResourcePriorityQueue *pq) : PQ(pq) {}
 

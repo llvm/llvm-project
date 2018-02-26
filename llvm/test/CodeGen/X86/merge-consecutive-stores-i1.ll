@@ -1,4 +1,4 @@
-; RUN: llc  -march=x86-64 < %s
+; RUN: llc  -mtriple=x86_64-- < %s
 
 ; Ensure that MergeConsecutiveStores doesn't crash when dealing with
 ; i1 operands.

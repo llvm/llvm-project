@@ -98,20 +98,18 @@ void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
 
 PathDiagnostic::~PathDiagnostic() {}
 
-PathDiagnostic::PathDiagnostic(StringRef CheckName, const Decl *declWithIssue,
-                               StringRef bugtype, StringRef verboseDesc,
-                               StringRef shortDesc, StringRef category,
-                               PathDiagnosticLocation LocationToUnique,
-                               const Decl *DeclToUnique)
-  : CheckName(CheckName),
-    DeclWithIssue(declWithIssue),
-    BugType(StripTrailingDots(bugtype)),
-    VerboseDesc(StripTrailingDots(verboseDesc)),
-    ShortDesc(StripTrailingDots(shortDesc)),
-    Category(StripTrailingDots(category)),
-    UniqueingLoc(LocationToUnique),
-    UniqueingDecl(DeclToUnique),
-    path(pathImpl) {}
+PathDiagnostic::PathDiagnostic(
+    StringRef CheckName, const Decl *declWithIssue, StringRef bugtype,
+    StringRef verboseDesc, StringRef shortDesc, StringRef category,
+    PathDiagnosticLocation LocationToUnique, const Decl *DeclToUnique,
+    std::unique_ptr<FilesToLineNumsMap> ExecutedLines)
+    : CheckName(CheckName), DeclWithIssue(declWithIssue),
+      BugType(StripTrailingDots(bugtype)),
+      VerboseDesc(StripTrailingDots(verboseDesc)),
+      ShortDesc(StripTrailingDots(shortDesc)),
+      Category(StripTrailingDots(category)), UniqueingLoc(LocationToUnique),
+      UniqueingDecl(DeclToUnique), ExecutedLines(std::move(ExecutedLines)),
+      path(pathImpl) {}
 
 static PathDiagnosticCallPiece *
 getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
@@ -553,6 +551,7 @@ getLocationForCaller(const StackFrameContext *SFC,
 
   switch (Source.getKind()) {
   case CFGElement::Statement:
+  case CFGElement::Constructor:
     return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(),
                                   SM, CallerCtx);
   case CFGElement::Initializer: {
@@ -576,8 +575,11 @@ getLocationForCaller(const StackFrameContext *SFC,
       return PathDiagnosticLocation::createEnd(CallerBody, SM, CallerCtx);
     return PathDiagnosticLocation::create(CallerInfo->getDecl(), SM);
   }
+  case CFGElement::NewAllocator: {
+    const CFGNewAllocator &Alloc = Source.castAs<CFGNewAllocator>();
+    return PathDiagnosticLocation(Alloc.getAllocatorExpr(), SM, CallerCtx);
+  }
   case CFGElement::TemporaryDtor:
-  case CFGElement::NewAllocator:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::LoopExit:
@@ -690,6 +692,15 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     return getLocationForCaller(CEE->getCalleeContext(),
                                 CEE->getLocationContext(),
                                 SMng);
+  } else if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
+    CFGElement BlockFront = BE->getBlock()->front();
+    if (auto StmtElt = BlockFront.getAs<CFGStmt>()) {
+      return PathDiagnosticLocation(StmtElt->getStmt()->getLocStart(), SMng);
+    } else if (auto NewAllocElt = BlockFront.getAs<CFGNewAllocator>()) {
+      return PathDiagnosticLocation(
+          NewAllocElt->getAllocatorExpr()->getLocStart(), SMng);
+    }
+    llvm_unreachable("Unexpected CFG element at front of block");
   } else {
     llvm_unreachable("Unexpected ProgramPoint");
   }
@@ -732,6 +743,8 @@ const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
     return CEE->getCalleeContext()->getCallSite();
   if (Optional<PostInitializer> PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
+  if (Optional<CallExitBegin> CEB = P.getAs<CallExitBegin>())
+    return CEB->getReturnStmt();
 
   return nullptr;
 }
@@ -1175,6 +1188,9 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
 StackHintGenerator::~StackHintGenerator() {}
 
 std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
+  if (!N)
+    return getMessageForSymbolNotFound();
+
   ProgramPoint P = N->getLocation();
   CallExitEnd CExit = P.castAs<CallExitEnd>();
 
@@ -1184,16 +1200,11 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   if (!CE)
     return "";
 
-  if (!N)
-    return getMessageForSymbolNotFound();
-
   // Check if one of the parameters are set to the interesting symbol.
-  ProgramStateRef State = N->getState();
-  const LocationContext *LCtx = N->getLocationContext();
   unsigned ArgIndex = 0;
   for (CallExpr::const_arg_iterator I = CE->arg_begin(),
                                     E = CE->arg_end(); I != E; ++I, ++ArgIndex){
-    SVal SV = State->getSVal(*I, LCtx);
+    SVal SV = N->getSVal(*I);
 
     // Check if the variable corresponding to the symbol is passed by value.
     SymbolRef AS = SV.getAsLocSymbol();
@@ -1203,7 +1214,10 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
 
     // Check if the parameter is a pointer to the symbol.
     if (Optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
-      SVal PSV = State->getSVal(Reg->getRegion());
+      // Do not attempt to dereference void*.
+      if ((*I)->getType()->isVoidPointerType())
+        continue;
+      SVal PSV = N->getState()->getSVal(Reg->getRegion());
       SymbolRef AS = PSV.getAsLocSymbol();
       if (AS == Sym) {
         return getMessageForArg(*I, ArgIndex);
@@ -1212,7 +1226,7 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   }
 
   // Check if we are returning the interesting symbol.
-  SVal SV = State->getSVal(CE, LCtx);
+  SVal SV = N->getSVal(CE);
   SymbolRef RetSym = SV.getAsLocSymbol();
   if (RetSym == Sym) {
     return getMessageForReturn(CE);

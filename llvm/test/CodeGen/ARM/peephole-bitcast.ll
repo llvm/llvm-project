@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mcpu=cortex-a8 | FileCheck %s
+; RUN: llc < %s -mtriple=arm-- -mcpu=cortex-a8 | FileCheck %s
 ; XFAIL: *
 ; PR11364
 

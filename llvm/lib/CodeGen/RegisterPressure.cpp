@@ -17,7 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -26,14 +26,14 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -97,7 +97,7 @@ void RegisterPressure::dump(const TargetRegisterInfo *TRI) const {
   dumpRegSetPressure(MaxSetPressure, TRI);
   dbgs() << "Live In: ";
   for (const RegisterMaskPair &P : LiveInRegs) {
-    dbgs() << PrintVRegOrUnit(P.RegUnit, TRI);
+    dbgs() << printVRegOrUnit(P.RegUnit, TRI);
     if (!P.LaneMask.all())
       dbgs() << ':' << PrintLaneMask(P.LaneMask);
     dbgs() << ' ';
@@ -105,7 +105,7 @@ void RegisterPressure::dump(const TargetRegisterInfo *TRI) const {
   dbgs() << '\n';
   dbgs() << "Live Out: ";
   for (const RegisterMaskPair &P : LiveOutRegs) {
-    dbgs() << PrintVRegOrUnit(P.RegUnit, TRI);
+    dbgs() << printVRegOrUnit(P.RegUnit, TRI);
     if (!P.LaneMask.all())
       dbgs() << ':' << PrintLaneMask(P.LaneMask);
     dbgs() << ' ';

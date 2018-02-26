@@ -24,28 +24,19 @@ name:            test_insert_128_idx0
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX:           registers:
-# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
-# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
-# AVX-NEXT:        - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:      registers:
-# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX:               %0 = COPY %ymm0
-# AVX-NEXT:          %1 = COPY %xmm1
-# AVX-NEXT:          %2 = VINSERTF128rr %0, %1, 0
+# AVX:               %0:vr256 = COPY %ymm0
+# AVX-NEXT:          %1:vr128 = COPY %xmm1
+# AVX-NEXT:          %2:vr256 = VINSERTF128rr %0, %1, 0
 # AVX-NEXT:          %ymm0 = COPY %2
 # AVX-NEXT:          RET 0, implicit %ymm0
 #
-# AVX512VL:          %0 = COPY %ymm0
-# AVX512VL-NEXT:     %1 = COPY %xmm1
-# AVX512VL-NEXT:     %2 = VINSERTF32x4Z256rr %0, %1, 0
+# AVX512VL:          %0:vr256x = COPY %ymm0
+# AVX512VL-NEXT:     %1:vr128x = COPY %xmm1
+# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rr %0, %1, 0
 # AVX512VL-NEXT:     %ymm0 = COPY %2
 # AVX512VL-NEXT:     RET 0, implicit %ymm0
 body:             |
@@ -65,23 +56,19 @@ name:            test_insert_128_idx0_undef
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX:           registers:
-# AVX-NEXT:        - { id: 0, class: vecr, preferred-register: '' }
-# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
-# AVX-NEXT:        - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:      registers:
-# AVX512VL-NEXT:   - { id: 0, class: vecr, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# ALL:               %1 = COPY %xmm1
-# ALL-NEXT:          undef %2.sub_xmm = COPY %1
-# ALL-NEXT:          %ymm0 = COPY %2
-# ALL-NEXT:          RET 0, implicit %ymm0
+# AVX:               %1:vr128 = COPY %xmm1
+# AVX-NEXT:          undef %2.sub_xmm:vr256 = COPY %1
+# AVX-NEXT:          %ymm0 = COPY %2
+# AVX-NEXT:          RET 0, implicit %ymm0
+#
+# AVX512VL:          %1:vr128x = COPY %xmm1
+# AVX512VL-NEXT:     undef %2.sub_xmm:vr256x = COPY %1
+# AVX512VL-NEXT:     %ymm0 = COPY %2
+# AVX512VL-NEXT:     RET 0, implicit %ymm0
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -99,28 +86,19 @@ name:            test_insert_128_idx1
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX:           registers:
-# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
-# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
-# AVX-NEXT:        - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:      registers:
-# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX:               %0 = COPY %ymm0
-# AVX-NEXT:          %1 = COPY %xmm1
-# AVX-NEXT:          %2 = VINSERTF128rr %0, %1, 1
+# AVX:               %0:vr256 = COPY %ymm0
+# AVX-NEXT:          %1:vr128 = COPY %xmm1
+# AVX-NEXT:          %2:vr256 = VINSERTF128rr %0, %1, 1
 # AVX-NEXT:          %ymm0 = COPY %2
 # AVX-NEXT:          RET 0, implicit %ymm0
 #
-# AVX512VL:          %0 = COPY %ymm0
-# AVX512VL-NEXT:     %1 = COPY %xmm1
-# AVX512VL-NEXT:     %2 = VINSERTF32x4Z256rr %0, %1, 1
+# AVX512VL:          %0:vr256x = COPY %ymm0
+# AVX512VL-NEXT:     %1:vr128x = COPY %xmm1
+# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rr %0, %1, 1
 # AVX512VL-NEXT:     %ymm0 = COPY %2
 # AVX512VL-NEXT:     RET 0, implicit %ymm0
 body:             |
@@ -139,28 +117,19 @@ name:            test_insert_128_idx1_undef
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX:           registers:
-# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
-# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
-# AVX-NEXT:        - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:      registers:
-# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX:               %0 = IMPLICIT_DEF
-# AVX-NEXT:          %1 = COPY %xmm1
-# AVX-NEXT:          %2 = VINSERTF128rr %0, %1, 1
+# AVX:               %0:vr256 = IMPLICIT_DEF
+# AVX-NEXT:          %1:vr128 = COPY %xmm1
+# AVX-NEXT:          %2:vr256 = VINSERTF128rr %0, %1, 1
 # AVX-NEXT:          %ymm0 = COPY %2
 # AVX-NEXT:          RET 0, implicit %ymm0
 #
-# AVX512VL:          %0 = IMPLICIT_DEF
-# AVX512VL-NEXT:     %1 = COPY %xmm1
-# AVX512VL-NEXT:     %2 = VINSERTF32x4Z256rr %0, %1, 1
+# AVX512VL:          %0:vr256x = IMPLICIT_DEF
+# AVX512VL-NEXT:     %1:vr128x = COPY %xmm1
+# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rr %0, %1, 1
 # AVX512VL-NEXT:     %ymm0 = COPY %2
 # AVX512VL-NEXT:     RET 0, implicit %ymm0
 body:             |
@@ -173,4 +142,3 @@ body:             |
     %ymm0 = COPY %2(<8 x s32>)
     RET 0, implicit %ymm0
 ...
-

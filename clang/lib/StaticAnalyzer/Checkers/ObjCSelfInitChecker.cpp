@@ -132,7 +132,7 @@ static bool hasSelfFlag(SVal val, SelfFlagEnum flag, CheckerContext &C) {
 /// points to and is an object that did not come from the result of calling
 /// an initializer.
 static bool isInvalidSelf(const Expr *E, CheckerContext &C) {
-  SVal exprVal = C.getState()->getSVal(E, C.getLocationContext());
+  SVal exprVal = C.getSVal(E);
   if (!hasSelfFlag(exprVal, SelfFlag_Self, C))
     return false; // value did not come from 'self'.
   if (hasSelfFlag(exprVal, SelfFlag_InitRes, C))
@@ -183,7 +183,7 @@ void ObjCSelfInitChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
     // value out when we return from this method.
     state = state->set<CalledInit>(true);
 
-    SVal V = state->getSVal(Msg.getOriginExpr(), C.getLocationContext());
+    SVal V = C.getSVal(Msg.getOriginExpr());
     addSelfFlag(state, V, SelfFlag_InitRes, C);
     return;
   }

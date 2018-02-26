@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck -check-prefix=X86-64 %s
 ; Win64 has not supported byval yet.
-; RUN: llc < %s -march=x86 | FileCheck -check-prefix=X86 %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck -check-prefix=X86 %s
 
 ; X86: movl	4(%esp), %eax
 ; X86: movl	8(%esp), %edx

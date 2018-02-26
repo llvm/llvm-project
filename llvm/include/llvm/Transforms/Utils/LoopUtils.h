@@ -16,10 +16,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -171,15 +173,25 @@ public:
                                Value *Left, Value *Right);
 
   /// Returns true if Phi is a reduction of type Kind and adds it to the
-  /// RecurrenceDescriptor.
+  /// RecurrenceDescriptor. If either \p DB is non-null or \p AC and \p DT are
+  /// non-null, the minimal bit width needed to compute the reduction will be
+  /// computed.
   static bool AddReductionVar(PHINode *Phi, RecurrenceKind Kind, Loop *TheLoop,
                               bool HasFunNoNaNAttr,
-                              RecurrenceDescriptor &RedDes);
+                              RecurrenceDescriptor &RedDes,
+                              DemandedBits *DB = nullptr,
+                              AssumptionCache *AC = nullptr,
+                              DominatorTree *DT = nullptr);
 
-  /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor is
-  /// returned in RedDes.
+  /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
+  /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are
+  /// non-null, the minimal bit width needed to compute the reduction will be
+  /// computed.
   static bool isReductionPHI(PHINode *Phi, Loop *TheLoop,
-                             RecurrenceDescriptor &RedDes);
+                             RecurrenceDescriptor &RedDes,
+                             DemandedBits *DB = nullptr,
+                             AssumptionCache *AC = nullptr,
+                             DominatorTree *DT = nullptr);
 
   /// Returns true if Phi is a first-order recurrence. A first-order recurrence
   /// is a non-reduction recurrence relation in which the value of the
@@ -216,24 +228,6 @@ public:
 
   /// Returns true if the recurrence kind is an arithmetic kind.
   static bool isArithmeticRecurrenceKind(RecurrenceKind Kind);
-
-  /// Determines if Phi may have been type-promoted. If Phi has a single user
-  /// that ANDs the Phi with a type mask, return the user. RT is updated to
-  /// account for the narrower bit width represented by the mask, and the AND
-  /// instruction is added to CI.
-  static Instruction *lookThroughAnd(PHINode *Phi, Type *&RT,
-                                     SmallPtrSetImpl<Instruction *> &Visited,
-                                     SmallPtrSetImpl<Instruction *> &CI);
-
-  /// Returns true if all the source operands of a recurrence are either
-  /// SExtInsts or ZExtInsts. This function is intended to be used with
-  /// lookThroughAnd to determine if the recurrence has been type-promoted. The
-  /// source operands are added to CI, and IsSigned is updated to indicate if
-  /// all source operands are SExtInsts.
-  static bool getSourceExtensionKind(Instruction *Start, Instruction *Exit,
-                                     Type *RT, bool &IsSigned,
-                                     SmallPtrSetImpl<Instruction *> &Visited,
-                                     SmallPtrSetImpl<Instruction *> &CI);
 
   /// Returns the type of the recurrence. This type can be narrower than the
   /// actual type of the Phi if the recurrence has been type-promoted.
@@ -305,10 +299,13 @@ public:
   /// induction, the induction descriptor \p D will contain the data describing
   /// this induction. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
-  /// analysis, it can be passed through \p Expr.
-  static bool isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
-                             InductionDescriptor &D,
-                             const SCEV *Expr = nullptr);
+  /// analysis, it can be passed through \p Expr. If the def-use chain 
+  /// associated with the phi includes casts (that we know we can ignore
+  /// under proper runtime checks), they are passed through \p CastsToIgnore.
+  static bool 
+  isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
+                 InductionDescriptor &D, const SCEV *Expr = nullptr,
+                 SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
 
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
   /// If \p Phi is an induction, the induction descriptor \p D will contain 
@@ -330,15 +327,13 @@ public:
   /// not have the "fast-math" property. Such operation requires a relaxed FP
   /// mode.
   bool hasUnsafeAlgebra() {
-    return InductionBinOp &&
-      !cast<FPMathOperator>(InductionBinOp)->hasUnsafeAlgebra();
+    return InductionBinOp && !cast<FPMathOperator>(InductionBinOp)->isFast();
   }
 
   /// Returns induction operator that does not have "fast-math" property
   /// and requires FP unsafe mode.
   Instruction *getUnsafeAlgebraInst() {
-    if (!InductionBinOp ||
-        cast<FPMathOperator>(InductionBinOp)->hasUnsafeAlgebra())
+    if (!InductionBinOp || cast<FPMathOperator>(InductionBinOp)->isFast())
       return nullptr;
     return InductionBinOp;
   }
@@ -349,10 +344,18 @@ public:
       Instruction::BinaryOpsEnd;
   }
 
+  /// Returns a reference to the type cast instructions in the induction 
+  /// update chain, that are redundant when guarded with a runtime
+  /// SCEV overflow check.
+  const SmallVectorImpl<Instruction *> &getCastInsts() const { 
+    return RedundantCasts; 
+  }
+
 private:
   /// Private constructor - used by \c isInductionPHI.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
-                      BinaryOperator *InductionBinOp = nullptr);
+                      BinaryOperator *InductionBinOp = nullptr,
+                      SmallVectorImpl<Instruction *> *Casts = nullptr);
 
   /// Start value.
   TrackingVH<Value> StartValue;
@@ -362,6 +365,9 @@ private:
   const SCEV *Step = nullptr;
   // Instruction that advances induction variable.
   BinaryOperator *InductionBinOp = nullptr;
+  // Instructions used for type-casts of the induction variable,
+  // that are redundant when guarded with a runtime SCEV overflow check.
+  SmallVector<Instruction *, 2> RedundantCasts;
 };
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
@@ -423,8 +429,9 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
-                TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
+                TargetLibraryInfo *, TargetTransformInfo *, Loop *,
+                AliasSetTracker *, LoopSafetyInfo *,
+                OptimizationRemarkEmitter *ORE);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -438,20 +445,40 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
                  LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
+/// This function deletes dead loops. The caller of this function needs to
+/// guarantee that the loop is infact dead.
+/// The function requires a bunch or prerequisites to be present:
+///   - The loop needs to be in LCSSA form
+///   - The loop needs to have a Preheader
+///   - A unique dedicated exit block must exist
+///
+/// This also updates the relevant analysis information in \p DT, \p SE, and \p
+/// LI if pointers to those are provided.
+/// It also updates the loop PM if an updater struct is provided.
+
+void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
+                    LoopInfo *LI);
+
 /// \brief Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
 /// the stores in the loop, looking for stores to Must pointers which are
-/// loop invariant. It takes AliasSet, Loop exit blocks vector, loop exit blocks
-/// insertion point vector, PredIteratorCache, LoopInfo, DominatorTree, Loop,
-/// AliasSet information for all instructions of the loop and loop safety
-/// information as arguments. Diagnostics is emitted via \p ORE. It returns
-/// changed status.
-bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock *> &,
+/// loop invariant. It takes a set of must-alias values, Loop exit blocks
+/// vector, loop exit blocks insertion point vector, PredIteratorCache,
+/// LoopInfo, DominatorTree, Loop, AliasSet information for all instructions
+/// of the loop and loop safety information as arguments.
+/// Diagnostics is emitted via \p ORE. It returns changed status.
+bool promoteLoopAccessesToScalars(const SmallSetVector<Value *, 8> &,
+                                  SmallVectorImpl<BasicBlock *> &,
                                   SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
                                   DominatorTree *, const TargetLibraryInfo *,
                                   Loop *, AliasSetTracker *, LoopSafetyInfo *,
                                   OptimizationRemarkEmitter *);
+
+/// Does a BFS from a given node to all of its children inside a given loop.
+/// The returned vector of nodes includes the starting point.
+SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
+                                                     const Loop *CurLoop);
 
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw

@@ -7,8 +7,10 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_deadlock_detector1.cc
   sanitizer_deadlock_detector2.cc
   sanitizer_errno.cc
+  sanitizer_file.cc
   sanitizer_flags.cc
   sanitizer_flag_parser.cc
+  sanitizer_fuchsia.cc
   sanitizer_libc.cc
   sanitizer_libignore.cc
   sanitizer_linux.cc
@@ -16,19 +18,24 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_mac.cc
   sanitizer_persistent_allocator.cc
   sanitizer_platform_limits_linux.cc
+  sanitizer_platform_limits_netbsd.cc
   sanitizer_platform_limits_posix.cc
+  sanitizer_platform_limits_solaris.cc
   sanitizer_posix.cc
   sanitizer_printf.cc
   sanitizer_procmaps_common.cc
   sanitizer_procmaps_freebsd.cc
   sanitizer_procmaps_linux.cc
   sanitizer_procmaps_mac.cc
+  sanitizer_procmaps_solaris.cc
+  sanitizer_solaris.cc
   sanitizer_stackdepot.cc
   sanitizer_stacktrace.cc
   sanitizer_stacktrace_printer.cc
   sanitizer_stoptheworld_mac.cc
   sanitizer_suppressions.cc
   sanitizer_symbolizer.cc
+  sanitizer_symbolizer_fuchsia.cc
   sanitizer_symbolizer_libbacktrace.cc
   sanitizer_symbolizer_mac.cc
   sanitizer_symbolizer_win.cc
@@ -36,7 +43,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_thread_registry.cc
   sanitizer_win.cc)
 
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT OS_NAME MATCHES "SunOS")
   list(APPEND SANITIZER_SOURCES_NOTERMINATION
     sanitizer_linux_x86_64.S)
   list(APPEND SANITIZER_SOURCES_NOTERMINATION
@@ -54,7 +61,9 @@ set(SANITIZER_NOLIBC_SOURCES
 
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cc
+  sanitizer_allocator_checks.cc
   sancov_flags.cc
+  sanitizer_coverage_fuchsia.cc
   sanitizer_coverage_libcdep_new.cc
   sanitizer_coverage_win_sections.cc
   sanitizer_linux_libcdep.cc
@@ -96,9 +105,11 @@ set(SANITIZER_HEADERS
   sanitizer_deadlock_detector_interface.h
   sanitizer_errno.h
   sanitizer_errno_codes.h
+  sanitizer_file.h
   sanitizer_flag_parser.h
   sanitizer_flags.h
   sanitizer_flags.inc
+  sanitizer_fuchsia.h
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h
   sanitizer_lfstack.h
@@ -112,7 +123,9 @@ set(SANITIZER_HEADERS
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
+  sanitizer_platform_limits_netbsd.h
   sanitizer_platform_limits_posix.h
+  sanitizer_platform_limits_solaris.h
   sanitizer_posix.h
   sanitizer_procmaps.h
   sanitizer_quarantine.h
@@ -131,6 +144,7 @@ set(SANITIZER_HEADERS
   sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscall_linux_aarch64.inc
   sanitizer_thread_registry.h
+  sanitizer_vector.h
   sanitizer_win.h)
 
 include_directories(..)
@@ -205,6 +219,38 @@ add_compiler_rt_object_libraries(RTSanitizerCommonLibcNoHooks
   SOURCES ${SANITIZER_LIBCDEP_SOURCES}
   CFLAGS ${SANITIZER_NO_WEAK_HOOKS_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+if(OS_NAME MATCHES "SunOS")
+  # Solaris ld doesn't support the non-standard GNU ld extension of adding
+  # __start_SECNAME and __stop_SECNAME labels to sections whose names are
+  # valid C identifiers.  Instead we add our own definitions for the
+  # __sancov_guards section.
+  add_compiler_rt_object_libraries(SancovBegin
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sancov_begin.S
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_runtime(clang_rt.sancov_begin
+    STATIC
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    OBJECT_LIBS SancovBegin
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_object_libraries(SancovEnd
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sancov_end.S
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_runtime(clang_rt.sancov_end
+    STATIC
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    OBJECT_LIBS SancovEnd
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
 
 if(WIN32)
   add_compiler_rt_object_libraries(SanitizerCommonWeakInterception

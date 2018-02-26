@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 #pragma omp // expected-error {{expected an OpenMP directive}}
 #pragma omp unknown_directive // expected-error {{expected an OpenMP directive}}
 

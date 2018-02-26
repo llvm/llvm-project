@@ -13,32 +13,51 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "split-module"
-
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Comdat.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalIndirectSymbol.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <memory>
 #include <queue>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
+#define DEBUG_TYPE "split-module"
+
 namespace {
-typedef EquivalenceClasses<const GlobalValue *> ClusterMapType;
-typedef DenseMap<const Comdat *, const GlobalValue *> ComdatMembersType;
-typedef DenseMap<const GlobalValue *, unsigned> ClusterIDMapType;
-}
+
+using ClusterMapType = EquivalenceClasses<const GlobalValue *>;
+using ComdatMembersType = DenseMap<const Comdat *, const GlobalValue *>;
+using ClusterIDMapType = DenseMap<const GlobalValue *, unsigned>;
+
+} // end anonymous namespace
 
 static void addNonConstUser(ClusterMapType &GVtoClusterMap,
                             const GlobalValue *GV, const User *U) {
@@ -125,9 +144,9 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
       addAllGlobalValueUsers(GVtoClusterMap, &GV, &GV);
   };
 
-  std::for_each(M->begin(), M->end(), recordGVSet);
-  std::for_each(M->global_begin(), M->global_end(), recordGVSet);
-  std::for_each(M->alias_begin(), M->alias_end(), recordGVSet);
+  llvm::for_each(M->functions(), recordGVSet);
+  llvm::for_each(M->globals(), recordGVSet);
+  llvm::for_each(M->aliases(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
@@ -147,7 +166,8 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
   for (unsigned i = 0; i < N; ++i)
     BalancinQueue.push(std::make_pair(i, 0));
 
-  typedef std::pair<unsigned, ClusterMapType::iterator> SortType;
+  using SortType = std::pair<unsigned, ClusterMapType::iterator>;
+
   SmallVector<SortType, 64> Sets;
   SmallPtrSet<const GlobalValue *, 32> Visited;
 

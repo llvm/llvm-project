@@ -1720,13 +1720,6 @@ void *smallocWarn(size_t size) {
   }
 }
 
-char *dupstrWarn(const char *s) {
-  const int len = strlen(s);
-  char *p = (char*) smallocWarn(len + 1);
-  strcpy(p, s); // expected-warning{{String copy function overflows destination buffer}}
-  return p;
-}
-
 int *radar15580979() {
   int *data = (int *)malloc(32);
   int *p = data ?: (int*)malloc(32); // no warning
@@ -1783,6 +1776,27 @@ void freeIndirectFunctionPtr() {
 void freeFunctionPtr() {
   free((void *)fnptr); // expected-warning {{Argument to free() is a function pointer}}
 }
+
+// Enabling the malloc checker enables some of the buffer-checking portions
+// of the C-string checker.
+void cstringchecker_bounds_nocrash() {
+  char *p = malloc(2);
+  strncpy(p, "AAA", sizeof("AAA")); // expected-warning {{Size argument is greater than the length of the destination buffer}}
+
+  free(p);
+}
+
+void allocateSomeMemory(void *offendingParameter, void **ptr) {
+  *ptr = malloc(1);
+}
+
+void testNoCrashOnOffendingParameter() {
+  // "extern" is necessary to avoid unrelated warnings 
+  // on passing uninitialized value.
+  extern void *offendingParameter;
+  void* ptr;
+  allocateSomeMemory(offendingParameter, &ptr);
+} // expected-warning {{Potential leak of memory pointed to by 'ptr'}}
 
 // ----------------------------------------------------------------------------
 // False negatives.

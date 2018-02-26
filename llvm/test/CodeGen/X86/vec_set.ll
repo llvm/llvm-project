@@ -4,7 +4,7 @@
 
 define void @test(<8 x i16>* %b, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7) nounwind {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -25,7 +25,7 @@ define void @test(<8 x i16>* %b, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]

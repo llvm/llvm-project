@@ -1,4 +1,4 @@
-//===-- HexagonTargetTransformInfo.cpp - Hexagon specific TTI pass --------===//
+//===- HexagonTargetTransformInfo.cpp - Hexagon specific TTI pass ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,8 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonTargetTransformInfo.h"
+#include "HexagonSubtarget.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/IR/User.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 

@@ -53,6 +53,7 @@ static CXTypeKind GetBuiltinTypeKind(const BuiltinType *BT) {
     BTCASE(Float);
     BTCASE(Double);
     BTCASE(LongDouble);
+    BTCASE(Float16);
     BTCASE(Float128);
     BTCASE(NullPtr);
     BTCASE(Overload);
@@ -402,7 +403,10 @@ unsigned clang_getAddressSpace(CXType CT) {
   if (T.getAddressSpace() >= LangAS::FirstTargetAddressSpace) {
     return T.getQualifiers().getAddressSpaceAttributePrintValue();
   }
-  return T.getAddressSpace();
+  // FIXME: this function returns either a LangAS or a target AS
+  // Those values can overlap which makes this function rather unpredictable
+  // for any caller
+  return (unsigned)T.getAddressSpace();
 }
 
 CXString clang_getTypedefName(CXType CT) {
@@ -520,7 +524,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Char_U);
     TKIND(UChar);
     TKIND(Char16);
-    TKIND(Char32);  
+    TKIND(Char32);
     TKIND(UShort);
     TKIND(UInt);
     TKIND(ULong);
@@ -538,6 +542,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Float);
     TKIND(Double);
     TKIND(LongDouble);
+    TKIND(Float16);
     TKIND(Float128);
     TKIND(NullPtr);
     TKIND(Overload);

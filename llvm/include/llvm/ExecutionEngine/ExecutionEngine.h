@@ -535,12 +535,13 @@ private:
   std::shared_ptr<JITSymbolResolver> Resolver;
   TargetOptions Options;
   Optional<Reloc::Model> RelocModel;
-  CodeModel::Model CMModel;
+  Optional<CodeModel::Model> CMModel;
   std::string MArch;
   std::string MCPU;
   SmallVector<std::string, 4> MAttrs;
   bool VerifyModules;
   bool UseOrcMCJITReplacement;
+  bool EmulatedTLS = true;
 
 public:
   /// Default constructor for EngineBuilder.
@@ -641,6 +642,10 @@ public:
     this->UseOrcMCJITReplacement = UseOrcMCJITReplacement;
   }
 
+  void setEmulatedTLS(bool EmulatedTLS) {
+    this->EmulatedTLS = EmulatedTLS;
+  }
+  
   TargetMachine *selectTarget();
 
   /// selectTarget - Pick a target either via -march or by guessing the native

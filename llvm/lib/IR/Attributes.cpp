@@ -245,6 +245,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
   if (hasAttribute(Attribute::SanitizeAddress))
     return "sanitize_address";
+  if (hasAttribute(Attribute::SanitizeHWAddress))
+    return "sanitize_hwaddress";
   if (hasAttribute(Attribute::AlwaysInline))
     return "alwaysinline";
   if (hasAttribute(Attribute::ArgMemOnly))
@@ -327,6 +329,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "sspstrong";
   if (hasAttribute(Attribute::SafeStack))
     return "safestack";
+  if (hasAttribute(Attribute::StrictFP))
+    return "strictfp";
   if (hasAttribute(Attribute::StructRet))
     return "sret";
   if (hasAttribute(Attribute::SanitizeThread))
@@ -788,14 +792,12 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 // AttributeListImpl Definition
 //===----------------------------------------------------------------------===//
 
-/// Map from AttributeList index to the internal array index. Adding one works:
-///   FunctionIndex: ~0U -> 0
-///   ReturnIndex:    0  -> 1
-///   FirstArgIndex: 1.. -> 2..
+/// Map from AttributeList index to the internal array index. Adding one happens
+/// to work, but it relies on unsigned integer wrapping. MSVC warns about
+/// unsigned wrapping in constexpr functions, so write out the conditional. LLVM
+/// folds it to add anyway.
 static constexpr unsigned attrIdxToArrayIdx(unsigned Index) {
-  // MSVC warns about '~0U + 1' wrapping around when this is called on
-  // FunctionIndex, so cast to int first.
-  return static_cast<int>(Index) + 1;
+  return Index == AttributeList::FunctionIndex ? 0 : Index + 1;
 }
 
 AttributeListImpl::AttributeListImpl(LLVMContext &C,

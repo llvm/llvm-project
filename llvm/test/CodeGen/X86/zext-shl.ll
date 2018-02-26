@@ -3,7 +3,7 @@
 
 define i32 @t1(i8 zeroext %x) nounwind {
 ; CHECK-LABEL: t1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shll $5, %eax
 ; CHECK-NEXT:    retl
@@ -15,7 +15,7 @@ define i32 @t1(i8 zeroext %x) nounwind {
 
 define i32 @t2(i8 zeroext %x) nounwind {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shrl $3, %eax
 ; CHECK-NEXT:    retl

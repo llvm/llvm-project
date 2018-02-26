@@ -45,7 +45,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
 
   std::string ErrMsg;
   int result =
-      sys::ExecuteAndWait(*Path, Args.data(), nullptr, nullptr, 0, 0, &ErrMsg);
+      sys::ExecuteAndWait(*Path, Args.data(), nullptr, {}, 0, 0, &ErrMsg);
   if (result) {
     errs() << "error: lipo: " << ErrMsg << "\n";
     return false;
@@ -493,11 +493,14 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
     // Reproduce that behavior for now (there is corresponding code in
     // transferSymbol).
     Writer.WriteZeros(1);
-    typedef NonRelocatableStringpool::MapTy MapTy;
-    for (auto *Entry = NewStrings.getFirstEntry(); Entry;
-         Entry = static_cast<MapTy::MapEntryTy *>(Entry->getValue().second))
-      Writer.writeBytes(
-          StringRef(Entry->getKey().data(), Entry->getKey().size() + 1));
+    std::vector<DwarfStringPoolEntryRef> Strings = NewStrings.getEntries();
+    for (auto EntryRef : Strings) {
+      if (EntryRef.getIndex() == -1U)
+        break;
+      StringRef ZeroTerminated(EntryRef.getString().data(),
+                               EntryRef.getString().size() + 1);
+      Writer.writeBytes(ZeroTerminated);
+    }
   }
 
   assert(OutFile.tell() == StringStart + NewStringsSize);

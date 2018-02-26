@@ -1,0 +1,19 @@
+# RUN: llvm-objcopy %p/Inputs/dynrel.elf %t
+# RUN: llvm-readobj -sections -section-data %t | FileCheck %s
+
+#CHECK:         Name: .rela.plt
+#CHECK-NEXT:    Type: SHT_RELA
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      SHF_ALLOC
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Address:
+#CHECK-NEXT:    Offset:
+#CHECK-NEXT:    Size: 24
+#CHECK-NEXT:    Link:
+#CHECK-NEXT:    Info:
+#CHECK-NEXT:    AddressAlignment: 8
+#CHECK-NEXT:    EntrySize: 24
+#CHECK-NEXT:    SectionData (
+#CHECK-NEXT:       0000: 18202000 00000000 07000000 01000000  |.  .............|
+#CHECK-NEXT:       0010: 00000000 00000000                    |........|
+#CHECK-NEXT:    )

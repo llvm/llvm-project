@@ -14,9 +14,11 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
@@ -64,6 +66,31 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   return storeImpl(new (Ops.size())
                        DILocation(Context, Storage, Line, Column, Ops),
                    Storage, Context.pImpl->DILocations);
+}
+
+const DILocation *
+DILocation::getMergedLocation(const DILocation *LocA, const DILocation *LocB,
+                              const Instruction *ForInst) {
+  if (!LocA || !LocB)
+    return nullptr;
+
+  if (LocA == LocB || !LocA->canDiscriminate(*LocB))
+    return LocA;
+
+  if (!dyn_cast_or_null<CallInst>(ForInst))
+    return nullptr;
+
+  SmallPtrSet<DILocation *, 5> InlinedLocationsA;
+  for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
+    InlinedLocationsA.insert(L);
+  const DILocation *Result = LocB;
+  for (DILocation *L = LocB->getInlinedAt(); L; L = L->getInlinedAt()) {
+    Result = L;
+    if (InlinedLocationsA.count(L))
+      break;
+  }
+  return DILocation::get(Result->getContext(), 0, 0, Result->getScope(),
+                         Result->getInlinedAt());
 }
 
 DINode::DIFlags DINode::getFlag(StringRef Flag) {
@@ -222,8 +249,17 @@ void GenericDINode::recalculateHash() {
 
 DISubrange *DISubrange::getImpl(LLVMContext &Context, int64_t Count, int64_t Lo,
                                 StorageType Storage, bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DISubrange, (Count, Lo));
-  DEFINE_GETIMPL_STORE_NO_OPS(DISubrange, (Count, Lo));
+  auto *CountNode = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), Count));
+  return getImpl(Context, CountNode, Lo, Storage, ShouldCreate);
+}
+
+DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
+                                int64_t Lo, StorageType Storage,
+                                bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DISubrange, (CountNode, Lo));
+  Metadata *Ops[] = { CountNode };
+  DEFINE_GETIMPL_STORE(DISubrange, (CountNode, Lo), Ops);
 }
 
 DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, int64_t Value,
@@ -269,17 +305,18 @@ DICompositeType *DICompositeType::getImpl(
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
     Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
-    Metadata *TemplateParams, MDString *Identifier, StorageType Storage,
-    bool ShouldCreate) {
+    Metadata *TemplateParams, MDString *Identifier, Metadata *Discriminator,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
   // Keep this in sync with buildODRType.
   DEFINE_GETIMPL_LOOKUP(
       DICompositeType, (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-                        VTableHolder, TemplateParams, Identifier));
+                        VTableHolder, TemplateParams, Identifier, Discriminator));
   Metadata *Ops[] = {File,     Scope,        Name,           BaseType,
-                     Elements, VTableHolder, TemplateParams, Identifier};
+                     Elements, VTableHolder, TemplateParams, Identifier,
+                     Discriminator};
   DEFINE_GETIMPL_STORE(DICompositeType, (Tag, Line, RuntimeLang, SizeInBits,
                                          AlignInBits, OffsetInBits, Flags),
                        Ops);
@@ -290,7 +327,7 @@ DICompositeType *DICompositeType::buildODRType(
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
-    Metadata *VTableHolder, Metadata *TemplateParams) {
+    Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -299,7 +336,7 @@ DICompositeType *DICompositeType::buildODRType(
     return CT = DICompositeType::getDistinct(
                Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-               VTableHolder, TemplateParams, &Identifier);
+               VTableHolder, TemplateParams, &Identifier, Discriminator);
 
   // Only mutate CT if it's a forward declaration and the new operands aren't.
   assert(CT->getRawIdentifier() == &Identifier && "Wrong ODR identifier?");
@@ -310,7 +347,8 @@ DICompositeType *DICompositeType::buildODRType(
   CT->mutate(Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits,
              Flags);
   Metadata *Ops[] = {File,     Scope,        Name,           BaseType,
-                     Elements, VTableHolder, TemplateParams, &Identifier};
+                     Elements, VTableHolder, TemplateParams, &Identifier,
+                     Discriminator};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -324,7 +362,7 @@ DICompositeType *DICompositeType::getODRType(
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
-    Metadata *VTableHolder, Metadata *TemplateParams) {
+    Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -333,7 +371,7 @@ DICompositeType *DICompositeType::getODRType(
     CT = DICompositeType::getDistinct(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
-        TemplateParams, &Identifier);
+        TemplateParams, &Identifier, Discriminator);
   return CT;
 }
 
@@ -354,6 +392,8 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 
+// FIXME: Implement this string-enum correspondence with a .def file and macros,
+// so that the association is explicit rather than implied.
 static const char *ChecksumKindName[DIFile::CSK_Last + 1] = {
   "CSK_None",
   "CSK_MD5",
@@ -585,6 +625,29 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
 }
 
+Optional<uint64_t> DIVariable::getSizeInBits() const {
+  // This is used by the Verifier so be mindful of broken types.
+  const Metadata *RawType = getRawType();
+  while (RawType) {
+    // Try to get the size directly.
+    if (auto *T = dyn_cast<DIType>(RawType))
+      if (uint64_t Size = T->getSizeInBits())
+        return Size;
+
+    if (auto *DT = dyn_cast<DIDerivedType>(RawType)) {
+      // Look at the base type.
+      RawType = DT->getRawBaseType();
+      continue;
+    }
+
+    // Missing type or size.
+    break;
+  }
+
+  // Fail gracefully.
+  return None;
+}
+
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     ArrayRef<uint64_t> Elements,
                                     StorageType Storage, bool ShouldCreate) {
@@ -642,6 +705,15 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
+    case dwarf::DW_OP_mul:
+    case dwarf::DW_OP_div:
+    case dwarf::DW_OP_mod:
+    case dwarf::DW_OP_or:
+    case dwarf::DW_OP_and:
+    case dwarf::DW_OP_xor:
+    case dwarf::DW_OP_shl:
+    case dwarf::DW_OP_shr:
+    case dwarf::DW_OP_shra:
     case dwarf::DW_OP_deref:
     case dwarf::DW_OP_xderef:
       break;
@@ -697,12 +769,23 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
-DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
-                                    int64_t Offset, bool StackValue) {
+DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
+                                    int64_t Offset, bool DerefAfter,
+                                    bool StackValue) {
   SmallVector<uint64_t, 8> Ops;
-  appendOffset(Ops, Offset);
-  if (Deref)
+  if (DerefBefore)
     Ops.push_back(dwarf::DW_OP_deref);
+  
+  appendOffset(Ops, Offset);
+  if (DerefAfter)
+    Ops.push_back(dwarf::DW_OP_deref);
+
+  return doPrepend(Expr, Ops, StackValue);
+}
+
+DIExpression *DIExpression::doPrepend(const DIExpression *Expr,
+                                      SmallVectorImpl<uint64_t> &Ops,
+                                      bool StackValue) {
   if (Expr)
     for (auto Op : Expr->expr_ops()) {
       // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
@@ -723,14 +806,23 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
   return DIExpression::get(Expr->getContext(), Ops);
 }
 
-DIExpression *DIExpression::createFragmentExpression(const DIExpression *Expr,
-                                                     unsigned OffsetInBits,
-                                                     unsigned SizeInBits) {
+Optional<DIExpression *> DIExpression::createFragmentExpression(
+    const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
-      if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      switch (Op.getOp()) {
+      default: break;
+      case dwarf::DW_OP_plus:
+      case dwarf::DW_OP_minus:
+        // We can't safely split arithmetic into multiple fragments because we
+        // can't express carry-over between fragments.
+        //
+        // FIXME: We *could* preserve the lowest fragment of a constant offset
+        // operation if the offset fits into SizeInBits.
+        return None;
+      case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
         // Op.getArg(0) is FragmentOffsetInBits.
@@ -738,7 +830,8 @@ DIExpression *DIExpression::createFragmentExpression(const DIExpression *Expr,
         assert((OffsetInBits + SizeInBits <= Op.getArg(0) + Op.getArg(1)) &&
                "new fragment outside of original fragment");
         OffsetInBits += FragmentOffsetInBits;
-        break;
+        continue;
+      }
       }
       Ops.push_back(Op.getOp());
       for (unsigned I = 0; I < Op.getNumArgs(); ++I)

@@ -98,6 +98,7 @@ void MipsTargetStreamer::emitDirectiveSetHardFloat() {
   forbidModuleDirective();
 }
 void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetDspr2() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
 bool MipsTargetStreamer::emitDirectiveCpRestore(
@@ -191,6 +192,21 @@ void MipsTargetStreamer::emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1,
                                  int16_t Imm, SMLoc IDLoc,
                                  const MCSubtargetInfo *STI) {
   emitRRX(Opcode, Reg0, Reg1, MCOperand::createImm(Imm), IDLoc, STI);
+}
+
+void MipsTargetStreamer::emitRRIII(unsigned Opcode, unsigned Reg0,
+                                   unsigned Reg1, int16_t Imm0, int16_t Imm1,
+                                   int16_t Imm2, SMLoc IDLoc,
+                                   const MCSubtargetInfo *STI) {
+  MCInst TmpInst;
+  TmpInst.setOpcode(Opcode);
+  TmpInst.addOperand(MCOperand::createReg(Reg0));
+  TmpInst.addOperand(MCOperand::createReg(Reg1));
+  TmpInst.addOperand(MCOperand::createImm(Imm0));
+  TmpInst.addOperand(MCOperand::createImm(Imm1));
+  TmpInst.addOperand(MCOperand::createImm(Imm2));
+  TmpInst.setLoc(IDLoc);
+  getStreamer().EmitInstruction(TmpInst, *STI);
 }
 
 void MipsTargetStreamer::emitAddu(unsigned DstReg, unsigned SrcReg,
@@ -545,6 +561,11 @@ void MipsTargetAsmStreamer::emitDirectiveSetMips64R6() {
 void MipsTargetAsmStreamer::emitDirectiveSetDsp() {
   OS << "\t.set\tdsp\n";
   MipsTargetStreamer::emitDirectiveSetDsp();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetDspr2() {
+  OS << "\t.set\tdspr2\n";
+  MipsTargetStreamer::emitDirectiveSetDspr2();
 }
 
 void MipsTargetAsmStreamer::emitDirectiveSetNoDsp() {

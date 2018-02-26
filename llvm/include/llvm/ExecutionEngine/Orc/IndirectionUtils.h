@@ -105,10 +105,13 @@ public:
   }
 
   /// @brief Reserve a compile callback.
-  CompileCallbackInfo getCompileCallback() {
-    JITTargetAddress TrampolineAddr = getAvailableTrampolineAddr();
-    auto &Compile = this->ActiveTrampolines[TrampolineAddr];
-    return CompileCallbackInfo(TrampolineAddr, Compile);
+  Expected<CompileCallbackInfo> getCompileCallback() {
+    if (auto TrampolineAddrOrErr = getAvailableTrampolineAddr()) {
+      const auto &TrampolineAddr = *TrampolineAddrOrErr;
+      auto &Compile = this->ActiveTrampolines[TrampolineAddr];
+      return CompileCallbackInfo(TrampolineAddr, Compile);
+    } else
+      return TrampolineAddrOrErr.takeError();
   }
 
   /// @brief Get a CompileCallbackInfo for an existing callback.
@@ -138,9 +141,10 @@ protected:
   std::vector<JITTargetAddress> AvailableTrampolines;
 
 private:
-  JITTargetAddress getAvailableTrampolineAddr() {
+  Expected<JITTargetAddress> getAvailableTrampolineAddr() {
     if (this->AvailableTrampolines.empty())
-      grow();
+      if (auto Err = grow())
+        return std::move(Err);
     assert(!this->AvailableTrampolines.empty() &&
            "Failed to grow available trampolines.");
     JITTargetAddress TrampolineAddr = this->AvailableTrampolines.back();
@@ -149,7 +153,7 @@ private:
   }
 
   // Create new trampolines - to be implemented in subclasses.
-  virtual void grow() = 0;
+  virtual Error grow() = 0;
 
   virtual void anchor();
 };
@@ -188,7 +192,7 @@ private:
             reinterpret_cast<uintptr_t>(TrampolineId)));
   }
 
-  void grow() override {
+  Error grow() override {
     assert(this->AvailableTrampolines.empty() && "Growing prematurely?");
 
     std::error_code EC;
@@ -196,7 +200,8 @@ private:
         sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
             sys::Process::getPageSize(), nullptr,
             sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
-    assert(!EC && "Failed to allocate trampoline block");
+    if (EC)
+      return errorCodeToError(EC);
 
     unsigned NumTrampolines =
         (sys::Process::getPageSize() - TargetT::PointerSize) /
@@ -211,12 +216,13 @@ private:
           static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(
               TrampolineMem + (I * TargetT::TrampolineSize))));
 
-    EC = sys::Memory::protectMappedMemory(TrampolineBlock.getMemoryBlock(),
-                                          sys::Memory::MF_READ |
-                                              sys::Memory::MF_EXEC);
-    assert(!EC && "Failed to mprotect trampoline block");
+    if (auto EC = sys::Memory::protectMappedMemory(
+                    TrampolineBlock.getMemoryBlock(),
+                    sys::Memory::MF_READ | sys::Memory::MF_EXEC))
+      return errorCodeToError(EC);
 
     TrampolineBlocks.push_back(std::move(TrampolineBlock));
+    return Error::success();
   }
 
   sys::OwningMemoryBlock ResolverBlock;

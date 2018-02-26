@@ -15,7 +15,7 @@ c:
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset: 0x44
-// CHECK-NEXT:     Size: 39
+// CHECK-NEXT:     Size: 40
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 1

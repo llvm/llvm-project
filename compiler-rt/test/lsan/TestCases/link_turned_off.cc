@@ -11,7 +11,7 @@
 int argc_copy;
 
 extern "C" {
-int __lsan_is_turned_off() {
+int __attribute__((used)) __lsan_is_turned_off() {
   return (argc_copy == 1);
 }
 }

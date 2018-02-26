@@ -735,6 +735,28 @@ def : Pat <(int_hexagon_A2_not I32:$Rs),
 def : Pat <(int_hexagon_A2_neg I32:$Rs),
            (A2_subri 0, I32:$Rs)>;
 
+// Make sure the patterns with zero immediate value has higher complexity
+// otherwise, we need to updated the predicates for immediates to exclude zero
+let AddedComplexity = 200 in {
+def : Pat <(int_hexagon_S2_asr_i_r_rnd_goodsyntax I32:$Rs, (i32 0)),
+           (A2_tfr I32:$Rs)>;
+def : Pat <(int_hexagon_S2_asr_i_p_rnd_goodsyntax I64:$Rs, (i32 0)),
+           (A2_combinew (HiReg I64:$Rs), (LoReg I64:$Rs))>;
+def : Pat <(int_hexagon_S5_vasrhrnd_goodsyntax I64:$Rs, (i32 0)),
+           (A2_combinew (HiReg I64:$Rs), (LoReg I64:$Rs))>;
+def : Pat <(int_hexagon_S5_asrhub_rnd_sat_goodsyntax I64:$Rs, (i32 0)),
+           (S2_vsathub I64:$Rs)>;
+}
+
+def : Pat <(int_hexagon_S2_asr_i_r_rnd_goodsyntax I32:$Rs, u5_0ImmPred:$imm),
+           (S2_asr_i_r_rnd I32:$Rs, (UDEC1 u5_0ImmPred:$imm))>;
+def : Pat <(int_hexagon_S2_asr_i_p_rnd_goodsyntax I64:$Rs, u6_0ImmPred:$imm),
+           (S2_asr_i_p_rnd I64:$Rs, (UDEC1 u6_0ImmPred:$imm))>;
+def : Pat <(int_hexagon_S5_vasrhrnd_goodsyntax I64:$Rs, u4_0ImmPred:$imm),
+           (S5_vasrhrnd I64:$Rs, (UDEC1 u4_0ImmPred:$imm))>;
+def : Pat <(int_hexagon_S5_asrhub_rnd_sat_goodsyntax I64:$Rs, u4_0ImmPred:$imm),
+           (S5_asrhub_rnd_sat I64:$Rs, (UDEC1 u4_0ImmPred:$imm))>;
+
 // Transfer immediate
 def  : Pat <(int_hexagon_A2_tfril I32:$Rs, u16_0ImmPred:$Is),
             (A2_tfril I32:$Rs, u16_0ImmPred:$Is)>;
@@ -1348,23 +1370,22 @@ def: T_stc_pat<S2_storerd_pci, int_hexagon_circ_std,   s4_3ImmPred, I64>;
 def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred, I32>;
 
 multiclass MaskedStore <InstHexagon MI, Intrinsic IntID> {
-  def : Pat<(IntID VecPredRegs:$src1, IntRegs:$src2, VectorRegs:$src3),
-            (MI VecPredRegs:$src1, IntRegs:$src2, #0, VectorRegs:$src3)>,
-        Requires<[UseHVXSgl]>;
-
-  def : Pat<(!cast<Intrinsic>(IntID#"_128B") VecPredRegs128B:$src1,
-                                             IntRegs:$src2,
-                                             VectorRegs128B:$src3),
-            (!cast<InstHexagon>(MI#"_128B") VecPredRegs128B:$src1,
-                                            IntRegs:$src2, #0,
-                                            VectorRegs128B:$src3)>,
-        Requires<[UseHVXDbl]>;
+  def : Pat<(IntID HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
+            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>;
+  def : Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, IntRegs:$src2,
+                                             HvxVR:$src3),
+            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>;
 }
 
 defm : MaskedStore <V6_vS32b_qpred_ai, int_hexagon_V6_vmaskedstoreq>;
 defm : MaskedStore <V6_vS32b_nqpred_ai, int_hexagon_V6_vmaskedstorenq>;
 defm : MaskedStore <V6_vS32b_nt_qpred_ai, int_hexagon_V6_vmaskedstorentq>;
 defm : MaskedStore <V6_vS32b_nt_nqpred_ai, int_hexagon_V6_vmaskedstorentnq>;
+
+defm : MaskedStore <V6_vS32b_qpred_ai, int_hexagon_V6_vS32b_qpred_ai>;
+defm : MaskedStore <V6_vS32b_nqpred_ai, int_hexagon_V6_vS32b_nqpred_ai>;
+defm : MaskedStore <V6_vS32b_nt_qpred_ai, int_hexagon_V6_vS32b_nt_qpred_ai>;
+defm : MaskedStore <V6_vS32b_nt_nqpred_ai, int_hexagon_V6_vS32b_nt_nqpred_ai>;
 
 //*******************************************************************
 //           SYSTEM

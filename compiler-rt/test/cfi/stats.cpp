@@ -1,9 +1,12 @@
-// RUN: %clangxx_cfi -g -fsanitize-stats -o %t %s
-// RUN: env SANITIZER_STATS_PATH=%t.stats %t
+// RUN: %clangxx_cfi %debug_info_flags -fsanitize-stats -o %t %s
+// RUN: env SANITIZER_STATS_PATH=%t.stats %run %t
 // RUN: sanstats %t.stats | FileCheck %s
 
 // FIXME: We currently emit the wrong debug info under devirtualization.
 // UNSUPPORTED: devirt
+
+// FIXME: %t.stats must be transferred from device to host for this to work on Android.
+// XFAIL: android
 
 struct ABase {};
 

@@ -3,7 +3,7 @@
 
 define void @test_convert_float2_ulong2(<2 x i64>* nocapture %src, <2 x float>* nocapture %dest) nounwind {
 ; CHECK-LABEL: test_convert_float2_ulong2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $20, %esp

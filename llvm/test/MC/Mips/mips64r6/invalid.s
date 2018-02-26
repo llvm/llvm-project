@@ -23,22 +23,51 @@ local_label:
         break 7, 1024     # CHECK: :[[@LINE]]:18: error: expected 10-bit unsigned immediate
         break 1024, 1024  # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
         dati $2, $3, 1    # CHECK: :[[@LINE]]:9: error: source and destination must match
+        dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dext $2, $3, 1, 0    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
+        dext $2, $3, 32, 33  # CHECK: :[[@LINE]]:26: error: expected immediate in range 1 .. 32
+        dextm $2, $3, -1, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dextm $2, $3, 32, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dextm $2, $3, -1, 33 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dextm $2, $3, 32, 33 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dextm $2, $3, 1, 32  # CHECK: :[[@LINE]]:26: error: expected immediate in range 33 .. 64
+        dextm $2, $3, 1, 65  # CHECK: :[[@LINE]]:26: error: expected immediate in range 33 .. 64
+        dextm $3, $4, 31, 34 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
+        dextu $2, $3, 31, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dextu $2, $3, 64, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dextu $2, $3, 32, 0  # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
+        dextu $2, $3, 32, 33 # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
+        dextu $3, $4, 33, 32 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
+        dins $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dins $2, $3, 64, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dins $2, $3, 1, -1   # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
+        dinsm $2, $3, -1, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dinsm $2, $3, 32, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dinsm $2, $3, 0, 1   # CHECK: :[[@LINE]]:26: error: expected immediate in range 2 .. 64
+        dinsm $2, $3, 0, 65  # CHECK: :[[@LINE]]:26: error: expected immediate in range 2 .. 64
+        dinsm $4, $5, 31, 34 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
+        dinsu $2, $3, 31, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dinsu $2, $3, 64, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dinsu $2, $3, 32, 0  # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
+        dinsu $2, $3, 32, 33 # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
+        dinsu $4, $5, 33, 32 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
         lh  $33, 8($4)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhe $34, 8($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhu $35, 8($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhue $36, 8($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lh  $2, 8($34)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhe $4, 8($33)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhe $4, 8($33)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhu $4, 8($35)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhue $4, 8($37)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhue $4, 8($37)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lh  $2, -65536($4) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
         lh  $2, 65536($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhe $4, -512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lhe $4, 512($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhe $4, -512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lhe $4, 512($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhu $4, -65536($2) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
         lhu $4, 65536($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhue $4, -512($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lhue $4, 512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhue $4, -512($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lhue $4, 512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         // FIXME: Following tests are temporarily disabled, until "PredicateControl not in hierarchy" problem is resolved
         bltl  $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         bltul $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
@@ -137,6 +166,10 @@ local_label:
         evp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         jalr.hb $31          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+        lapc $7, 1048576     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $6, -1048580    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $3, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $3, -1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
         lsa     $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         lsa     $2, $3, $4, 5     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate

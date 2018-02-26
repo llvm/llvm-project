@@ -1,4 +1,4 @@
-//===-- MemorySanitizer.cpp - detector of uninitialized reads -------------===//
+//===- MemorySanitizer.cpp - detector of uninitialized reads --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file is a part of MemorySanitizer, a detector of uninitialized
 /// reads.
@@ -88,32 +89,64 @@
 /// implementation ignores the load aspect of CAS/RMW, always returning a clean
 /// value. It implements the store part as a simple atomic store by storing a
 /// clean shadow.
-
+//
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <tuple>
 
 using namespace llvm;
 
@@ -137,18 +170,23 @@ static const size_t kNumberOfAccessSizes = 4;
 static cl::opt<int> ClTrackOrigins("msan-track-origins",
        cl::desc("Track origins (allocation sites) of poisoned memory"),
        cl::Hidden, cl::init(0));
+
 static cl::opt<bool> ClKeepGoing("msan-keep-going",
        cl::desc("keep going after reporting a UMR"),
        cl::Hidden, cl::init(false));
+
 static cl::opt<bool> ClPoisonStack("msan-poison-stack",
        cl::desc("poison uninitialized stack variables"),
        cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClPoisonStackWithCall("msan-poison-stack-with-call",
        cl::desc("poison uninitialized stack variables with a call"),
        cl::Hidden, cl::init(false));
+
 static cl::opt<int> ClPoisonStackPattern("msan-poison-stack-pattern",
        cl::desc("poison uninitialized stack variables with the given pattern"),
        cl::Hidden, cl::init(0xff));
+
 static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
        cl::desc("poison undef temps"),
        cl::Hidden, cl::init(true));
@@ -217,6 +255,8 @@ struct PlatformMemoryMapParams {
   const MemoryMapParams *bits64;
 };
 
+} // end anonymous namespace
+
 // i386 Linux
 static const MemoryMapParams Linux_I386_MemoryMapParams = {
   0x000080000000,  // AndMask
@@ -250,7 +290,7 @@ static const MemoryMapParams Linux_MIPS64_MemoryMapParams = {
 
 // ppc64 Linux
 static const MemoryMapParams Linux_PowerPC64_MemoryMapParams = {
-  0x200000000000,  // AndMask
+  0xE00000000000,  // AndMask
   0x100000000000,  // XorMask
   0x080000000000,  // ShadowBase
   0x1C0000000000,  // OriginBase
@@ -280,6 +320,14 @@ static const MemoryMapParams FreeBSD_X86_64_MemoryMapParams = {
   0x380000000000,  // OriginBase
 };
 
+// x86_64 NetBSD
+static const MemoryMapParams NetBSD_X86_64_MemoryMapParams = {
+  0,               // AndMask
+  0x500000000000,  // XorMask
+  0,               // ShadowBase
+  0x100000000000,  // OriginBase
+};
+
 static const PlatformMemoryMapParams Linux_X86_MemoryMapParams = {
   &Linux_I386_MemoryMapParams,
   &Linux_X86_64_MemoryMapParams,
@@ -305,27 +353,44 @@ static const PlatformMemoryMapParams FreeBSD_X86_MemoryMapParams = {
   &FreeBSD_X86_64_MemoryMapParams,
 };
 
+static const PlatformMemoryMapParams NetBSD_X86_MemoryMapParams = {
+  nullptr,
+  &NetBSD_X86_64_MemoryMapParams,
+};
+
+namespace {
+
 /// \brief An instrumentation pass implementing detection of uninitialized
 /// reads.
 ///
 /// MemorySanitizer: instrument the code in module to find
 /// uninitialized reads.
 class MemorySanitizer : public FunctionPass {
- public:
+public:
+  // Pass identification, replacement for typeid.
+  static char ID; 
+
   MemorySanitizer(int TrackOrigins = 0, bool Recover = false)
       : FunctionPass(ID),
         TrackOrigins(std::max(TrackOrigins, (int)ClTrackOrigins)),
-        Recover(Recover || ClKeepGoing),
-        WarningFn(nullptr) {}
+        Recover(Recover || ClKeepGoing) {}
+
   StringRef getPassName() const override { return "MemorySanitizer"; }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
+
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
-  static char ID;  // Pass identification, replacement for typeid.
 
- private:
+private:
+  friend struct MemorySanitizerVisitor;
+  friend struct VarArgAMD64Helper;
+  friend struct VarArgMIPS64Helper;
+  friend struct VarArgAArch64Helper;
+  friend struct VarArgPowerPC64Helper;
+
   void initializeCallbacks(Module &M);
 
   /// \brief Track origins (allocation points) of uninitialized values.
@@ -335,26 +400,34 @@ class MemorySanitizer : public FunctionPass {
   LLVMContext *C;
   Type *IntptrTy;
   Type *OriginTy;
+
   /// \brief Thread-local shadow storage for function parameters.
   GlobalVariable *ParamTLS;
+
   /// \brief Thread-local origin storage for function parameters.
   GlobalVariable *ParamOriginTLS;
+
   /// \brief Thread-local shadow storage for function return value.
   GlobalVariable *RetvalTLS;
+
   /// \brief Thread-local origin storage for function return value.
   GlobalVariable *RetvalOriginTLS;
+
   /// \brief Thread-local shadow storage for in-register va_arg function
   /// parameters (x86_64-specific).
   GlobalVariable *VAArgTLS;
+
   /// \brief Thread-local shadow storage for va_arg overflow area
   /// (x86_64-specific).
   GlobalVariable *VAArgOverflowSizeTLS;
+
   /// \brief Thread-local space used to pass origin value to the UMR reporting
   /// function.
   GlobalVariable *OriginTLS;
 
   /// \brief The run-time callback to print a warning.
-  Value *WarningFn;
+  Value *WarningFn = nullptr;
+
   // These arrays are indexed by log2(AccessSize).
   Value *MaybeWarningFn[kNumberOfAccessSizes];
   Value *MaybeStoreOriginFn[kNumberOfAccessSizes];
@@ -362,11 +435,14 @@ class MemorySanitizer : public FunctionPass {
   /// \brief Run-time helper that generates a new origin value for a stack
   /// allocation.
   Value *MsanSetAllocaOrigin4Fn;
+
   /// \brief Run-time helper that poisons stack on function entry.
   Value *MsanPoisonStackFn;
+
   /// \brief Run-time helper that records a store (or any event) of an
   /// uninitialized value and returns an updated origin id encoding this info.
   Value *MsanChainOriginFn;
+
   /// \brief MSan runtime replacements for memmove, memcpy and memset.
   Value *MemmoveFn, *MemcpyFn, *MemsetFn;
 
@@ -374,21 +450,20 @@ class MemorySanitizer : public FunctionPass {
   const MemoryMapParams *MapParams;
 
   MDNode *ColdCallWeights;
+
   /// \brief Branch weights for origin store.
   MDNode *OriginStoreWeights;
+
   /// \brief An empty volatile inline asm that prevents callback merge.
   InlineAsm *EmptyAsm;
-  Function *MsanCtorFunction;
 
-  friend struct MemorySanitizerVisitor;
-  friend struct VarArgAMD64Helper;
-  friend struct VarArgMIPS64Helper;
-  friend struct VarArgAArch64Helper;
-  friend struct VarArgPowerPC64Helper;
+  Function *MsanCtorFunction;
 };
-} // anonymous namespace
+
+} // end anonymous namespace
 
 char MemorySanitizer::ID = 0;
+
 INITIALIZE_PASS_BEGIN(
     MemorySanitizer, "msan",
     "MemorySanitizer: detects uninitialized reads.", false, false)
@@ -515,6 +590,15 @@ bool MemorySanitizer::doInitialization(Module &M) {
           report_fatal_error("unsupported architecture");
       }
       break;
+    case Triple::NetBSD:
+      switch (TargetTriple.getArch()) {
+        case Triple::x86_64:
+          MapParams = NetBSD_X86_MemoryMapParams.bits64;
+          break;
+        default:
+          report_fatal_error("unsupported architecture");
+      }
+      break;
     case Triple::Linux:
       switch (TargetTriple.getArch()) {
         case Triple::x86_64:
@@ -586,6 +670,8 @@ namespace {
 /// the function, and should avoid creating new basic blocks. A new
 /// instance of this class is created for each instrumented function.
 struct VarArgHelper {
+  virtual ~VarArgHelper() = default;
+
   /// \brief Visit a CallSite.
   virtual void visitCallSite(CallSite &CS, IRBuilder<> &IRB) = 0;
 
@@ -600,20 +686,21 @@ struct VarArgHelper {
   /// This method is called after visiting all interesting (see above)
   /// instructions in a function.
   virtual void finalizeInstrumentation() = 0;
-
-  virtual ~VarArgHelper() {}
 };
 
 struct MemorySanitizerVisitor;
 
-VarArgHelper*
-CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
-                   MemorySanitizerVisitor &Visitor);
+} // end anonymous namespace
 
-unsigned TypeSizeToSizeIndex(unsigned TypeSize) {
+static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
+                                        MemorySanitizerVisitor &Visitor);
+
+static unsigned TypeSizeToSizeIndex(unsigned TypeSize) {
   if (TypeSize <= 8) return 0;
   return Log2_32_Ceil((TypeSize + 7) / 8);
 }
+
+namespace {
 
 /// This class does all the work for a given function. Store and Load
 /// instructions store and load corresponding shadow and origin
@@ -641,8 +728,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Shadow;
     Value *Origin;
     Instruction *OrigIns;
+
     ShadowOriginAndInsertPoint(Value *S, Value *O, Instruction *I)
-      : Shadow(S), Origin(O), OrigIns(I) { }
+      : Shadow(S), Origin(O), OrigIns(I) {}
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
   SmallVector<StoreInst *, 16> StoreList;
@@ -711,21 +799,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void storeOrigin(IRBuilder<> &IRB, Value *Addr, Value *Shadow, Value *Origin,
-                   unsigned Alignment, bool AsCall) {
+                   Value *OriginPtr, unsigned Alignment, bool AsCall) {
     const DataLayout &DL = F.getParent()->getDataLayout();
     unsigned OriginAlignment = std::max(kMinOriginAlignment, Alignment);
     unsigned StoreSize = DL.getTypeStoreSize(Shadow->getType());
     if (Shadow->getType()->isAggregateType()) {
-      paintOrigin(IRB, updateOrigin(Origin, IRB),
-                  getOriginPtr(Addr, IRB, Alignment), StoreSize,
+      paintOrigin(IRB, updateOrigin(Origin, IRB), OriginPtr, StoreSize,
                   OriginAlignment);
     } else {
       Value *ConvertedShadow = convertToShadowTyNoVec(Shadow, IRB);
       Constant *ConstantShadow = dyn_cast_or_null<Constant>(ConvertedShadow);
       if (ConstantShadow) {
         if (ClCheckConstantShadow && !ConstantShadow->isZeroValue())
-          paintOrigin(IRB, updateOrigin(Origin, IRB),
-                      getOriginPtr(Addr, IRB, Alignment), StoreSize,
+          paintOrigin(IRB, updateOrigin(Origin, IRB), OriginPtr, StoreSize,
                       OriginAlignment);
         return;
       }
@@ -746,8 +832,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Instruction *CheckTerm = SplitBlockAndInsertIfThen(
             Cmp, &*IRB.GetInsertPoint(), false, MS.OriginStoreWeights);
         IRBuilder<> IRBNew(CheckTerm);
-        paintOrigin(IRBNew, updateOrigin(Origin, IRBNew),
-                    getOriginPtr(Addr, IRBNew, Alignment), StoreSize,
+        paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), OriginPtr, StoreSize,
                     OriginAlignment);
       }
     }
@@ -759,22 +844,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *Val = SI->getValueOperand();
       Value *Addr = SI->getPointerOperand();
       Value *Shadow = SI->isAtomic() ? getCleanShadow(Val) : getShadow(Val);
-      Value *ShadowPtr = getShadowPtr(Addr, Shadow->getType(), IRB);
+      Value *ShadowPtr, *OriginPtr;
+      Type *ShadowTy = Shadow->getType();
+      unsigned Alignment = SI->getAlignment();
+      unsigned OriginAlignment = std::max(kMinOriginAlignment, Alignment);
+      std::tie(ShadowPtr, OriginPtr) =
+          getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment);
 
-      StoreInst *NewSI =
-          IRB.CreateAlignedStore(Shadow, ShadowPtr, SI->getAlignment());
+      StoreInst *NewSI = IRB.CreateAlignedStore(Shadow, ShadowPtr, Alignment);
       DEBUG(dbgs() << "  STORE: " << *NewSI << "\n");
-      (void)NewSI;
 
       if (ClCheckAccessAddress)
-        insertShadowCheck(Addr, SI);
+        insertShadowCheck(Addr, NewSI);
 
       if (SI->isAtomic())
         SI->setOrdering(addReleaseOrdering(SI->getOrdering()));
 
       if (MS.TrackOrigins && !SI->isAtomic())
-        storeOrigin(IRB, Addr, Shadow, getOrigin(Val), SI->getAlignment(),
-                    InstrumentWithCalls);
+        storeOrigin(IRB, Addr, Shadow, getOrigin(Val), OriginPtr,
+                    OriginAlignment, InstrumentWithCalls);
     }
   }
 
@@ -855,7 +943,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
     for (BasicBlock *BB : depth_first(&F.getEntryBlock()))
       visit(*BB);
-
 
     // Finalize PHI nodes.
     for (PHINode *PN : ShadowPHINodes) {
@@ -954,39 +1041,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return OffsetLong;
   }
 
-  /// \brief Compute the shadow address that corresponds to a given application
-  /// address.
+  /// \brief Compute the shadow and origin addresses corresponding to a given
+  /// application address.
   ///
   /// Shadow = ShadowBase + Offset
-  Value *getShadowPtr(Value *Addr, Type *ShadowTy,
-                      IRBuilder<> &IRB) {
-    Value *ShadowLong = getShadowPtrOffset(Addr, IRB);
+  /// Origin = (OriginBase + Offset) & ~3ULL
+  std::pair<Value *, Value *> getShadowOriginPtrUserspace(
+      Value *Addr, IRBuilder<> &IRB, Type *ShadowTy, unsigned Alignment,
+      Instruction **FirstInsn) {
+    Value *ShadowOffset = getShadowPtrOffset(Addr, IRB);
+    Value *ShadowLong = ShadowOffset;
     uint64_t ShadowBase = MS.MapParams->ShadowBase;
-    if (ShadowBase != 0)
+    *FirstInsn = dyn_cast<Instruction>(ShadowLong);
+    if (ShadowBase != 0) {
       ShadowLong =
         IRB.CreateAdd(ShadowLong,
                       ConstantInt::get(MS.IntptrTy, ShadowBase));
-    return IRB.CreateIntToPtr(ShadowLong, PointerType::get(ShadowTy, 0));
+    }
+    Value *ShadowPtr =
+        IRB.CreateIntToPtr(ShadowLong, PointerType::get(ShadowTy, 0));
+    Value *OriginPtr = nullptr;
+    if (MS.TrackOrigins) {
+      Value *OriginLong = ShadowOffset;
+      uint64_t OriginBase = MS.MapParams->OriginBase;
+      if (OriginBase != 0)
+        OriginLong = IRB.CreateAdd(OriginLong,
+                                   ConstantInt::get(MS.IntptrTy, OriginBase));
+      if (Alignment < kMinOriginAlignment) {
+        uint64_t Mask = kMinOriginAlignment - 1;
+        OriginLong =
+            IRB.CreateAnd(OriginLong, ConstantInt::get(MS.IntptrTy, ~Mask));
+      }
+      OriginPtr =
+          IRB.CreateIntToPtr(OriginLong, PointerType::get(IRB.getInt32Ty(), 0));
+    }
+    return std::make_pair(ShadowPtr, OriginPtr);
   }
 
-  /// \brief Compute the origin address that corresponds to a given application
-  /// address.
-  ///
-  /// OriginAddr = (OriginBase + Offset) & ~3ULL
-  Value *getOriginPtr(Value *Addr, IRBuilder<> &IRB, unsigned Alignment) {
-    Value *OriginLong = getShadowPtrOffset(Addr, IRB);
-    uint64_t OriginBase = MS.MapParams->OriginBase;
-    if (OriginBase != 0)
-      OriginLong =
-        IRB.CreateAdd(OriginLong,
-                      ConstantInt::get(MS.IntptrTy, OriginBase));
-    if (Alignment < kMinOriginAlignment) {
-      uint64_t Mask = kMinOriginAlignment - 1;
-      OriginLong = IRB.CreateAnd(OriginLong,
-                                 ConstantInt::get(MS.IntptrTy, ~Mask));
-    }
-    return IRB.CreateIntToPtr(OriginLong,
-                              PointerType::get(IRB.getInt32Ty(), 0));
+  std::pair<Value *, Value *> getShadowOriginPtr(Value *Addr, IRBuilder<> &IRB,
+                                                 Type *ShadowTy,
+                                                 unsigned Alignment) {
+    Instruction *FirstInsn = nullptr;
+    std::pair<Value *, Value *> ret =
+        getShadowOriginPtrUserspace(Addr, IRB, ShadowTy, Alignment, &FirstInsn);
+    return ret;
   }
 
   /// \brief Compute the shadow address for a given function argument.
@@ -1012,9 +1110,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   /// \brief Compute the shadow address for a retval.
   Value *getShadowPtrForRetval(Value *A, IRBuilder<> &IRB) {
-    Value *Base = IRB.CreatePointerCast(MS.RetvalTLS, MS.IntptrTy);
-    return IRB.CreateIntToPtr(Base, PointerType::get(getShadowTy(A), 0),
-                              "_msret");
+    return IRB.CreatePointerCast(MS.RetvalTLS,
+                                 PointerType::get(getShadowTy(A), 0),
+                                 "_msret");
   }
 
   /// \brief Compute the origin address for a retval.
@@ -1091,6 +1189,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *getShadow(Value *V) {
     if (!PropagateShadow) return getCleanShadow(V);
     if (Instruction *I = dyn_cast<Instruction>(V)) {
+      if (I->getMetadata("nosanitize"))
+        return getCleanShadow(V);
       // For instructions the shadow is already stored in the map.
       Value *Shadow = ShadowMap[V];
       if (!Shadow) {
@@ -1136,16 +1236,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               Type *EltType = A->getType()->getPointerElementType();
               ArgAlign = DL.getABITypeAlignment(EltType);
             }
+            Value *CpShadowPtr =
+                getShadowOriginPtr(V, EntryIRB, EntryIRB.getInt8Ty(), ArgAlign)
+                    .first;
             if (Overflow) {
               // ParamTLS overflow.
               EntryIRB.CreateMemSet(
-                  getShadowPtr(V, EntryIRB.getInt8Ty(), EntryIRB),
-                  Constant::getNullValue(EntryIRB.getInt8Ty()), Size, ArgAlign);
+                  CpShadowPtr, Constant::getNullValue(EntryIRB.getInt8Ty()),
+                  Size, ArgAlign);
             } else {
               unsigned CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
-              Value *Cpy = EntryIRB.CreateMemCpy(
-                  getShadowPtr(V, EntryIRB.getInt8Ty(), EntryIRB), Base, Size,
-                  CopyAlign);
+              Value *Cpy =
+                  EntryIRB.CreateMemCpy(CpShadowPtr, Base, Size, CopyAlign);
               DEBUG(dbgs() << "  ByValCpy: " << *Cpy << "\n");
               (void)Cpy;
             }
@@ -1190,6 +1292,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isa<Constant>(V)) return getCleanOrigin();
     assert((isa<Instruction>(V) || isa<Argument>(V)) &&
            "Unexpected value type in getOrigin()");
+    if (Instruction *I = dyn_cast<Instruction>(V)) {
+      if (I->getMetadata("nosanitize"))
+        return getCleanOrigin();
+    }
     Value *Origin = OriginMap[V];
     assert(Origin && "Missing origin");
     return Origin;
@@ -1270,6 +1376,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // ------------------- Visitors.
+  using InstVisitor<MemorySanitizerVisitor>::visit;
+  void visit(Instruction &I) {
+    if (!I.getMetadata("nosanitize"))
+      InstVisitor<MemorySanitizerVisitor>::visit(I);
+  }
 
   /// \brief Instrument LoadInst
   ///
@@ -1277,13 +1388,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Optionally, checks that the load address is fully defined.
   void visitLoadInst(LoadInst &I) {
     assert(I.getType()->isSized() && "Load type must have size");
+    assert(!I.getMetadata("nosanitize"));
     IRBuilder<> IRB(I.getNextNode());
     Type *ShadowTy = getShadowTy(&I);
     Value *Addr = I.getPointerOperand();
-    if (PropagateShadow && !I.getMetadata("nosanitize")) {
-      Value *ShadowPtr = getShadowPtr(Addr, ShadowTy, IRB);
-      setShadow(&I,
-                IRB.CreateAlignedLoad(ShadowPtr, I.getAlignment(), "_msld"));
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = I.getAlignment();
+    if (PropagateShadow) {
+      std::tie(ShadowPtr, OriginPtr) =
+          getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment);
+      setShadow(&I, IRB.CreateAlignedLoad(ShadowPtr, Alignment, "_msld"));
     } else {
       setShadow(&I, getCleanShadow(&I));
     }
@@ -1296,10 +1410,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (MS.TrackOrigins) {
       if (PropagateShadow) {
-        unsigned Alignment = I.getAlignment();
         unsigned OriginAlignment = std::max(kMinOriginAlignment, Alignment);
-        setOrigin(&I, IRB.CreateAlignedLoad(getOriginPtr(Addr, IRB, Alignment),
-                                            OriginAlignment));
+        setOrigin(&I, IRB.CreateAlignedLoad(OriginPtr, OriginAlignment));
       } else {
         setOrigin(&I, getCleanOrigin());
       }
@@ -1319,7 +1431,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     IRBuilder<> IRB(&I);
     Value *Addr = I.getOperand(0);
-    Value *ShadowPtr = getShadowPtr(Addr, I.getType(), IRB);
+    Value *ShadowPtr =
+        getShadowOriginPtr(Addr, IRB, I.getType(), /*Alignment*/ 1).first;
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
@@ -1489,14 +1602,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// arguments are initialized.
   template <bool CombineShadow>
   class Combiner {
-    Value *Shadow;
-    Value *Origin;
+    Value *Shadow = nullptr;
+    Value *Origin = nullptr;
     IRBuilder<> &IRB;
     MemorySanitizerVisitor *MSV;
 
   public:
-    Combiner(MemorySanitizerVisitor *MSV, IRBuilder<> &IRB) :
-      Shadow(nullptr), Origin(nullptr), IRB(IRB), MSV(MSV) {}
+    Combiner(MemorySanitizerVisitor *MSV, IRBuilder<> &IRB)
+        : IRB(IRB), MSV(MSV) {}
 
     /// \brief Add a pair of shadow and origin values to the mix.
     Combiner &Add(Value *OpShadow, Value *OpOrigin) {
@@ -1550,8 +1663,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   };
 
-  typedef Combiner<true> ShadowAndOriginCombiner;
-  typedef Combiner<false> OriginCombiner;
+  using ShadowAndOriginCombiner = Combiner<true>;
+  using OriginCombiner = Combiner<false>;
 
   /// \brief Propagate origin for arbitrary operation.
   void setOriginForNaryOp(Instruction &I) {
@@ -1940,18 +2053,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value* Addr = I.getArgOperand(0);
     Value *Shadow = getShadow(&I, 1);
-    Value *ShadowPtr = getShadowPtr(Addr, Shadow->getType(), IRB);
+    Value *ShadowPtr, *OriginPtr;
 
     // We don't know the pointer alignment (could be unaligned SSE store!).
     // Have to assume to worst case.
+    std::tie(ShadowPtr, OriginPtr) =
+        getShadowOriginPtr(Addr, IRB, Shadow->getType(), /*Alignment*/ 1);
     IRB.CreateAlignedStore(Shadow, ShadowPtr, 1);
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
     // FIXME: factor out common code from materializeStores
-    if (MS.TrackOrigins)
-      IRB.CreateStore(getOrigin(&I, 1), getOriginPtr(Addr, IRB, 1));
+    if (MS.TrackOrigins) IRB.CreateStore(getOrigin(&I, 1), OriginPtr);
     return true;
   }
 
@@ -1964,11 +2078,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Addr = I.getArgOperand(0);
 
     Type *ShadowTy = getShadowTy(&I);
+    Value *ShadowPtr, *OriginPtr;
     if (PropagateShadow) {
-      Value *ShadowPtr = getShadowPtr(Addr, ShadowTy, IRB);
       // We don't know the pointer alignment (could be unaligned SSE load!).
       // Have to assume to worst case.
-      setShadow(&I, IRB.CreateAlignedLoad(ShadowPtr, 1, "_msld"));
+      unsigned Alignment = 1;
+      std::tie(ShadowPtr, OriginPtr) =
+          getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment);
+      setShadow(&I, IRB.CreateAlignedLoad(ShadowPtr, Alignment, "_msld"));
     } else {
       setShadow(&I, getCleanShadow(&I));
     }
@@ -1978,7 +2095,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (MS.TrackOrigins) {
       if (PropagateShadow)
-        setOrigin(&I, IRB.CreateLoad(getOriginPtr(Addr, IRB, 1)));
+        setOrigin(&I, IRB.CreateLoad(OriginPtr));
       else
         setOrigin(&I, getCleanOrigin());
     }
@@ -2204,28 +2321,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // intrinsic.
   Intrinsic::ID getSignedPackIntrinsic(Intrinsic::ID id) {
     switch (id) {
-      case llvm::Intrinsic::x86_sse2_packsswb_128:
-      case llvm::Intrinsic::x86_sse2_packuswb_128:
-        return llvm::Intrinsic::x86_sse2_packsswb_128;
+      case Intrinsic::x86_sse2_packsswb_128:
+      case Intrinsic::x86_sse2_packuswb_128:
+        return Intrinsic::x86_sse2_packsswb_128;
 
-      case llvm::Intrinsic::x86_sse2_packssdw_128:
-      case llvm::Intrinsic::x86_sse41_packusdw:
-        return llvm::Intrinsic::x86_sse2_packssdw_128;
+      case Intrinsic::x86_sse2_packssdw_128:
+      case Intrinsic::x86_sse41_packusdw:
+        return Intrinsic::x86_sse2_packssdw_128;
 
-      case llvm::Intrinsic::x86_avx2_packsswb:
-      case llvm::Intrinsic::x86_avx2_packuswb:
-        return llvm::Intrinsic::x86_avx2_packsswb;
+      case Intrinsic::x86_avx2_packsswb:
+      case Intrinsic::x86_avx2_packuswb:
+        return Intrinsic::x86_avx2_packsswb;
 
-      case llvm::Intrinsic::x86_avx2_packssdw:
-      case llvm::Intrinsic::x86_avx2_packusdw:
-        return llvm::Intrinsic::x86_avx2_packssdw;
+      case Intrinsic::x86_avx2_packssdw:
+      case Intrinsic::x86_avx2_packusdw:
+        return Intrinsic::x86_avx2_packssdw;
 
-      case llvm::Intrinsic::x86_mmx_packsswb:
-      case llvm::Intrinsic::x86_mmx_packuswb:
-        return llvm::Intrinsic::x86_mmx_packsswb;
+      case Intrinsic::x86_mmx_packsswb:
+      case Intrinsic::x86_mmx_packuswb:
+        return Intrinsic::x86_mmx_packsswb;
 
-      case llvm::Intrinsic::x86_mmx_packssdw:
-        return llvm::Intrinsic::x86_mmx_packssdw;
+      case Intrinsic::x86_mmx_packssdw:
+        return Intrinsic::x86_mmx_packssdw;
       default:
         llvm_unreachable("unexpected intrinsic id");
     }
@@ -2255,9 +2372,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       S2 = IRB.CreateBitCast(S2, T);
     }
     Value *S1_ext = IRB.CreateSExt(
-        IRB.CreateICmpNE(S1, llvm::Constant::getNullValue(T)), T);
+        IRB.CreateICmpNE(S1, Constant::getNullValue(T)), T);
     Value *S2_ext = IRB.CreateSExt(
-        IRB.CreateICmpNE(S2, llvm::Constant::getNullValue(T)), T);
+        IRB.CreateICmpNE(S2, Constant::getNullValue(T)), T);
     if (isX86_MMX) {
       Type *X86_MMXTy = Type::getX86_MMXTy(*MS.C);
       S1_ext = IRB.CreateBitCast(S1_ext, X86_MMXTy);
@@ -2336,7 +2453,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value* Addr = I.getArgOperand(0);
     Type *Ty = IRB.getInt32Ty();
-    Value *ShadowPtr = getShadowPtr(Addr, Ty, IRB);
+    Value *ShadowPtr = getShadowOriginPtr(Addr, IRB, Ty, /*Alignment*/ 1).first;
 
     IRB.CreateStore(getCleanShadow(Ty),
                     IRB.CreatePointerCast(ShadowPtr, Ty->getPointerTo()));
@@ -2352,227 +2469,228 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Addr = I.getArgOperand(0);
     Type *Ty = IRB.getInt32Ty();
     unsigned Alignment = 1;
+    Value *ShadowPtr, *OriginPtr;
+    std::tie(ShadowPtr, OriginPtr) =
+        getShadowOriginPtr(Addr, IRB, Ty, Alignment);
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
-    Value *Shadow = IRB.CreateAlignedLoad(getShadowPtr(Addr, Ty, IRB),
-                                          Alignment, "_ldmxcsr");
-    Value *Origin = MS.TrackOrigins
-                        ? IRB.CreateLoad(getOriginPtr(Addr, IRB, Alignment))
-                        : getCleanOrigin();
+    Value *Shadow = IRB.CreateAlignedLoad(ShadowPtr, Alignment, "_ldmxcsr");
+    Value *Origin =
+        MS.TrackOrigins ? IRB.CreateLoad(OriginPtr) : getCleanOrigin();
     insertShadowCheck(Shadow, Origin, &I);
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
-    case llvm::Intrinsic::bswap:
+    case Intrinsic::bswap:
       handleBswap(I);
       break;
-    case llvm::Intrinsic::x86_sse_stmxcsr:
+    case Intrinsic::x86_sse_stmxcsr:
       handleStmxcsr(I);
       break;
-    case llvm::Intrinsic::x86_sse_ldmxcsr:
+    case Intrinsic::x86_sse_ldmxcsr:
       handleLdmxcsr(I);
       break;
-    case llvm::Intrinsic::x86_avx512_vcvtsd2usi64:
-    case llvm::Intrinsic::x86_avx512_vcvtsd2usi32:
-    case llvm::Intrinsic::x86_avx512_vcvtss2usi64:
-    case llvm::Intrinsic::x86_avx512_vcvtss2usi32:
-    case llvm::Intrinsic::x86_avx512_cvttss2usi64:
-    case llvm::Intrinsic::x86_avx512_cvttss2usi:
-    case llvm::Intrinsic::x86_avx512_cvttsd2usi64:
-    case llvm::Intrinsic::x86_avx512_cvttsd2usi:
-    case llvm::Intrinsic::x86_avx512_cvtusi2sd:
-    case llvm::Intrinsic::x86_avx512_cvtusi2ss:
-    case llvm::Intrinsic::x86_avx512_cvtusi642sd:
-    case llvm::Intrinsic::x86_avx512_cvtusi642ss:
-    case llvm::Intrinsic::x86_sse2_cvtsd2si64:
-    case llvm::Intrinsic::x86_sse2_cvtsd2si:
-    case llvm::Intrinsic::x86_sse2_cvtsd2ss:
-    case llvm::Intrinsic::x86_sse2_cvtsi2sd:
-    case llvm::Intrinsic::x86_sse2_cvtsi642sd:
-    case llvm::Intrinsic::x86_sse2_cvtss2sd:
-    case llvm::Intrinsic::x86_sse2_cvttsd2si64:
-    case llvm::Intrinsic::x86_sse2_cvttsd2si:
-    case llvm::Intrinsic::x86_sse_cvtsi2ss:
-    case llvm::Intrinsic::x86_sse_cvtsi642ss:
-    case llvm::Intrinsic::x86_sse_cvtss2si64:
-    case llvm::Intrinsic::x86_sse_cvtss2si:
-    case llvm::Intrinsic::x86_sse_cvttss2si64:
-    case llvm::Intrinsic::x86_sse_cvttss2si:
+    case Intrinsic::x86_avx512_vcvtsd2usi64:
+    case Intrinsic::x86_avx512_vcvtsd2usi32:
+    case Intrinsic::x86_avx512_vcvtss2usi64:
+    case Intrinsic::x86_avx512_vcvtss2usi32:
+    case Intrinsic::x86_avx512_cvttss2usi64:
+    case Intrinsic::x86_avx512_cvttss2usi:
+    case Intrinsic::x86_avx512_cvttsd2usi64:
+    case Intrinsic::x86_avx512_cvttsd2usi:
+    case Intrinsic::x86_avx512_cvtusi2sd:
+    case Intrinsic::x86_avx512_cvtusi2ss:
+    case Intrinsic::x86_avx512_cvtusi642sd:
+    case Intrinsic::x86_avx512_cvtusi642ss:
+    case Intrinsic::x86_sse2_cvtsd2si64:
+    case Intrinsic::x86_sse2_cvtsd2si:
+    case Intrinsic::x86_sse2_cvtsd2ss:
+    case Intrinsic::x86_sse2_cvtsi2sd:
+    case Intrinsic::x86_sse2_cvtsi642sd:
+    case Intrinsic::x86_sse2_cvtss2sd:
+    case Intrinsic::x86_sse2_cvttsd2si64:
+    case Intrinsic::x86_sse2_cvttsd2si:
+    case Intrinsic::x86_sse_cvtsi2ss:
+    case Intrinsic::x86_sse_cvtsi642ss:
+    case Intrinsic::x86_sse_cvtss2si64:
+    case Intrinsic::x86_sse_cvtss2si:
+    case Intrinsic::x86_sse_cvttss2si64:
+    case Intrinsic::x86_sse_cvttss2si:
       handleVectorConvertIntrinsic(I, 1);
       break;
-    case llvm::Intrinsic::x86_sse_cvtps2pi:
-    case llvm::Intrinsic::x86_sse_cvttps2pi:
+    case Intrinsic::x86_sse_cvtps2pi:
+    case Intrinsic::x86_sse_cvttps2pi:
       handleVectorConvertIntrinsic(I, 2);
       break;
 
-    case llvm::Intrinsic::x86_avx512_psll_w_512:
-    case llvm::Intrinsic::x86_avx512_psll_d_512:
-    case llvm::Intrinsic::x86_avx512_psll_q_512:
-    case llvm::Intrinsic::x86_avx512_pslli_w_512:
-    case llvm::Intrinsic::x86_avx512_pslli_d_512:
-    case llvm::Intrinsic::x86_avx512_pslli_q_512:
-    case llvm::Intrinsic::x86_avx512_psrl_w_512:
-    case llvm::Intrinsic::x86_avx512_psrl_d_512:
-    case llvm::Intrinsic::x86_avx512_psrl_q_512:
-    case llvm::Intrinsic::x86_avx512_psra_w_512:
-    case llvm::Intrinsic::x86_avx512_psra_d_512:
-    case llvm::Intrinsic::x86_avx512_psra_q_512:
-    case llvm::Intrinsic::x86_avx512_psrli_w_512:
-    case llvm::Intrinsic::x86_avx512_psrli_d_512:
-    case llvm::Intrinsic::x86_avx512_psrli_q_512:
-    case llvm::Intrinsic::x86_avx512_psrai_w_512:
-    case llvm::Intrinsic::x86_avx512_psrai_d_512:
-    case llvm::Intrinsic::x86_avx512_psrai_q_512:
-    case llvm::Intrinsic::x86_avx512_psra_q_256:
-    case llvm::Intrinsic::x86_avx512_psra_q_128:
-    case llvm::Intrinsic::x86_avx512_psrai_q_256:
-    case llvm::Intrinsic::x86_avx512_psrai_q_128:
-    case llvm::Intrinsic::x86_avx2_psll_w:
-    case llvm::Intrinsic::x86_avx2_psll_d:
-    case llvm::Intrinsic::x86_avx2_psll_q:
-    case llvm::Intrinsic::x86_avx2_pslli_w:
-    case llvm::Intrinsic::x86_avx2_pslli_d:
-    case llvm::Intrinsic::x86_avx2_pslli_q:
-    case llvm::Intrinsic::x86_avx2_psrl_w:
-    case llvm::Intrinsic::x86_avx2_psrl_d:
-    case llvm::Intrinsic::x86_avx2_psrl_q:
-    case llvm::Intrinsic::x86_avx2_psra_w:
-    case llvm::Intrinsic::x86_avx2_psra_d:
-    case llvm::Intrinsic::x86_avx2_psrli_w:
-    case llvm::Intrinsic::x86_avx2_psrli_d:
-    case llvm::Intrinsic::x86_avx2_psrli_q:
-    case llvm::Intrinsic::x86_avx2_psrai_w:
-    case llvm::Intrinsic::x86_avx2_psrai_d:
-    case llvm::Intrinsic::x86_sse2_psll_w:
-    case llvm::Intrinsic::x86_sse2_psll_d:
-    case llvm::Intrinsic::x86_sse2_psll_q:
-    case llvm::Intrinsic::x86_sse2_pslli_w:
-    case llvm::Intrinsic::x86_sse2_pslli_d:
-    case llvm::Intrinsic::x86_sse2_pslli_q:
-    case llvm::Intrinsic::x86_sse2_psrl_w:
-    case llvm::Intrinsic::x86_sse2_psrl_d:
-    case llvm::Intrinsic::x86_sse2_psrl_q:
-    case llvm::Intrinsic::x86_sse2_psra_w:
-    case llvm::Intrinsic::x86_sse2_psra_d:
-    case llvm::Intrinsic::x86_sse2_psrli_w:
-    case llvm::Intrinsic::x86_sse2_psrli_d:
-    case llvm::Intrinsic::x86_sse2_psrli_q:
-    case llvm::Intrinsic::x86_sse2_psrai_w:
-    case llvm::Intrinsic::x86_sse2_psrai_d:
-    case llvm::Intrinsic::x86_mmx_psll_w:
-    case llvm::Intrinsic::x86_mmx_psll_d:
-    case llvm::Intrinsic::x86_mmx_psll_q:
-    case llvm::Intrinsic::x86_mmx_pslli_w:
-    case llvm::Intrinsic::x86_mmx_pslli_d:
-    case llvm::Intrinsic::x86_mmx_pslli_q:
-    case llvm::Intrinsic::x86_mmx_psrl_w:
-    case llvm::Intrinsic::x86_mmx_psrl_d:
-    case llvm::Intrinsic::x86_mmx_psrl_q:
-    case llvm::Intrinsic::x86_mmx_psra_w:
-    case llvm::Intrinsic::x86_mmx_psra_d:
-    case llvm::Intrinsic::x86_mmx_psrli_w:
-    case llvm::Intrinsic::x86_mmx_psrli_d:
-    case llvm::Intrinsic::x86_mmx_psrli_q:
-    case llvm::Intrinsic::x86_mmx_psrai_w:
-    case llvm::Intrinsic::x86_mmx_psrai_d:
+    case Intrinsic::x86_avx512_psll_w_512:
+    case Intrinsic::x86_avx512_psll_d_512:
+    case Intrinsic::x86_avx512_psll_q_512:
+    case Intrinsic::x86_avx512_pslli_w_512:
+    case Intrinsic::x86_avx512_pslli_d_512:
+    case Intrinsic::x86_avx512_pslli_q_512:
+    case Intrinsic::x86_avx512_psrl_w_512:
+    case Intrinsic::x86_avx512_psrl_d_512:
+    case Intrinsic::x86_avx512_psrl_q_512:
+    case Intrinsic::x86_avx512_psra_w_512:
+    case Intrinsic::x86_avx512_psra_d_512:
+    case Intrinsic::x86_avx512_psra_q_512:
+    case Intrinsic::x86_avx512_psrli_w_512:
+    case Intrinsic::x86_avx512_psrli_d_512:
+    case Intrinsic::x86_avx512_psrli_q_512:
+    case Intrinsic::x86_avx512_psrai_w_512:
+    case Intrinsic::x86_avx512_psrai_d_512:
+    case Intrinsic::x86_avx512_psrai_q_512:
+    case Intrinsic::x86_avx512_psra_q_256:
+    case Intrinsic::x86_avx512_psra_q_128:
+    case Intrinsic::x86_avx512_psrai_q_256:
+    case Intrinsic::x86_avx512_psrai_q_128:
+    case Intrinsic::x86_avx2_psll_w:
+    case Intrinsic::x86_avx2_psll_d:
+    case Intrinsic::x86_avx2_psll_q:
+    case Intrinsic::x86_avx2_pslli_w:
+    case Intrinsic::x86_avx2_pslli_d:
+    case Intrinsic::x86_avx2_pslli_q:
+    case Intrinsic::x86_avx2_psrl_w:
+    case Intrinsic::x86_avx2_psrl_d:
+    case Intrinsic::x86_avx2_psrl_q:
+    case Intrinsic::x86_avx2_psra_w:
+    case Intrinsic::x86_avx2_psra_d:
+    case Intrinsic::x86_avx2_psrli_w:
+    case Intrinsic::x86_avx2_psrli_d:
+    case Intrinsic::x86_avx2_psrli_q:
+    case Intrinsic::x86_avx2_psrai_w:
+    case Intrinsic::x86_avx2_psrai_d:
+    case Intrinsic::x86_sse2_psll_w:
+    case Intrinsic::x86_sse2_psll_d:
+    case Intrinsic::x86_sse2_psll_q:
+    case Intrinsic::x86_sse2_pslli_w:
+    case Intrinsic::x86_sse2_pslli_d:
+    case Intrinsic::x86_sse2_pslli_q:
+    case Intrinsic::x86_sse2_psrl_w:
+    case Intrinsic::x86_sse2_psrl_d:
+    case Intrinsic::x86_sse2_psrl_q:
+    case Intrinsic::x86_sse2_psra_w:
+    case Intrinsic::x86_sse2_psra_d:
+    case Intrinsic::x86_sse2_psrli_w:
+    case Intrinsic::x86_sse2_psrli_d:
+    case Intrinsic::x86_sse2_psrli_q:
+    case Intrinsic::x86_sse2_psrai_w:
+    case Intrinsic::x86_sse2_psrai_d:
+    case Intrinsic::x86_mmx_psll_w:
+    case Intrinsic::x86_mmx_psll_d:
+    case Intrinsic::x86_mmx_psll_q:
+    case Intrinsic::x86_mmx_pslli_w:
+    case Intrinsic::x86_mmx_pslli_d:
+    case Intrinsic::x86_mmx_pslli_q:
+    case Intrinsic::x86_mmx_psrl_w:
+    case Intrinsic::x86_mmx_psrl_d:
+    case Intrinsic::x86_mmx_psrl_q:
+    case Intrinsic::x86_mmx_psra_w:
+    case Intrinsic::x86_mmx_psra_d:
+    case Intrinsic::x86_mmx_psrli_w:
+    case Intrinsic::x86_mmx_psrli_d:
+    case Intrinsic::x86_mmx_psrli_q:
+    case Intrinsic::x86_mmx_psrai_w:
+    case Intrinsic::x86_mmx_psrai_d:
       handleVectorShiftIntrinsic(I, /* Variable */ false);
       break;
-    case llvm::Intrinsic::x86_avx2_psllv_d:
-    case llvm::Intrinsic::x86_avx2_psllv_d_256:
-    case llvm::Intrinsic::x86_avx512_psllv_d_512:
-    case llvm::Intrinsic::x86_avx2_psllv_q:
-    case llvm::Intrinsic::x86_avx2_psllv_q_256:
-    case llvm::Intrinsic::x86_avx512_psllv_q_512:
-    case llvm::Intrinsic::x86_avx2_psrlv_d:
-    case llvm::Intrinsic::x86_avx2_psrlv_d_256:
-    case llvm::Intrinsic::x86_avx512_psrlv_d_512:
-    case llvm::Intrinsic::x86_avx2_psrlv_q:
-    case llvm::Intrinsic::x86_avx2_psrlv_q_256:
-    case llvm::Intrinsic::x86_avx512_psrlv_q_512:
-    case llvm::Intrinsic::x86_avx2_psrav_d:
-    case llvm::Intrinsic::x86_avx2_psrav_d_256:
-    case llvm::Intrinsic::x86_avx512_psrav_d_512:
-    case llvm::Intrinsic::x86_avx512_psrav_q_128:
-    case llvm::Intrinsic::x86_avx512_psrav_q_256:
-    case llvm::Intrinsic::x86_avx512_psrav_q_512:
+    case Intrinsic::x86_avx2_psllv_d:
+    case Intrinsic::x86_avx2_psllv_d_256:
+    case Intrinsic::x86_avx512_psllv_d_512:
+    case Intrinsic::x86_avx2_psllv_q:
+    case Intrinsic::x86_avx2_psllv_q_256:
+    case Intrinsic::x86_avx512_psllv_q_512:
+    case Intrinsic::x86_avx2_psrlv_d:
+    case Intrinsic::x86_avx2_psrlv_d_256:
+    case Intrinsic::x86_avx512_psrlv_d_512:
+    case Intrinsic::x86_avx2_psrlv_q:
+    case Intrinsic::x86_avx2_psrlv_q_256:
+    case Intrinsic::x86_avx512_psrlv_q_512:
+    case Intrinsic::x86_avx2_psrav_d:
+    case Intrinsic::x86_avx2_psrav_d_256:
+    case Intrinsic::x86_avx512_psrav_d_512:
+    case Intrinsic::x86_avx512_psrav_q_128:
+    case Intrinsic::x86_avx512_psrav_q_256:
+    case Intrinsic::x86_avx512_psrav_q_512:
       handleVectorShiftIntrinsic(I, /* Variable */ true);
       break;
 
-    case llvm::Intrinsic::x86_sse2_packsswb_128:
-    case llvm::Intrinsic::x86_sse2_packssdw_128:
-    case llvm::Intrinsic::x86_sse2_packuswb_128:
-    case llvm::Intrinsic::x86_sse41_packusdw:
-    case llvm::Intrinsic::x86_avx2_packsswb:
-    case llvm::Intrinsic::x86_avx2_packssdw:
-    case llvm::Intrinsic::x86_avx2_packuswb:
-    case llvm::Intrinsic::x86_avx2_packusdw:
+    case Intrinsic::x86_sse2_packsswb_128:
+    case Intrinsic::x86_sse2_packssdw_128:
+    case Intrinsic::x86_sse2_packuswb_128:
+    case Intrinsic::x86_sse41_packusdw:
+    case Intrinsic::x86_avx2_packsswb:
+    case Intrinsic::x86_avx2_packssdw:
+    case Intrinsic::x86_avx2_packuswb:
+    case Intrinsic::x86_avx2_packusdw:
       handleVectorPackIntrinsic(I);
       break;
 
-    case llvm::Intrinsic::x86_mmx_packsswb:
-    case llvm::Intrinsic::x86_mmx_packuswb:
+    case Intrinsic::x86_mmx_packsswb:
+    case Intrinsic::x86_mmx_packuswb:
       handleVectorPackIntrinsic(I, 16);
       break;
 
-    case llvm::Intrinsic::x86_mmx_packssdw:
+    case Intrinsic::x86_mmx_packssdw:
       handleVectorPackIntrinsic(I, 32);
       break;
 
-    case llvm::Intrinsic::x86_mmx_psad_bw:
-    case llvm::Intrinsic::x86_sse2_psad_bw:
-    case llvm::Intrinsic::x86_avx2_psad_bw:
+    case Intrinsic::x86_mmx_psad_bw:
+    case Intrinsic::x86_sse2_psad_bw:
+    case Intrinsic::x86_avx2_psad_bw:
       handleVectorSadIntrinsic(I);
       break;
 
-    case llvm::Intrinsic::x86_sse2_pmadd_wd:
-    case llvm::Intrinsic::x86_avx2_pmadd_wd:
-    case llvm::Intrinsic::x86_ssse3_pmadd_ub_sw_128:
-    case llvm::Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_sse2_pmadd_wd:
+    case Intrinsic::x86_avx2_pmadd_wd:
+    case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+    case Intrinsic::x86_avx2_pmadd_ub_sw:
       handleVectorPmaddIntrinsic(I);
       break;
 
-    case llvm::Intrinsic::x86_ssse3_pmadd_ub_sw:
+    case Intrinsic::x86_ssse3_pmadd_ub_sw:
       handleVectorPmaddIntrinsic(I, 8);
       break;
 
-    case llvm::Intrinsic::x86_mmx_pmadd_wd:
+    case Intrinsic::x86_mmx_pmadd_wd:
       handleVectorPmaddIntrinsic(I, 16);
       break;
 
-    case llvm::Intrinsic::x86_sse_cmp_ss:
-    case llvm::Intrinsic::x86_sse2_cmp_sd:
-    case llvm::Intrinsic::x86_sse_comieq_ss:
-    case llvm::Intrinsic::x86_sse_comilt_ss:
-    case llvm::Intrinsic::x86_sse_comile_ss:
-    case llvm::Intrinsic::x86_sse_comigt_ss:
-    case llvm::Intrinsic::x86_sse_comige_ss:
-    case llvm::Intrinsic::x86_sse_comineq_ss:
-    case llvm::Intrinsic::x86_sse_ucomieq_ss:
-    case llvm::Intrinsic::x86_sse_ucomilt_ss:
-    case llvm::Intrinsic::x86_sse_ucomile_ss:
-    case llvm::Intrinsic::x86_sse_ucomigt_ss:
-    case llvm::Intrinsic::x86_sse_ucomige_ss:
-    case llvm::Intrinsic::x86_sse_ucomineq_ss:
-    case llvm::Intrinsic::x86_sse2_comieq_sd:
-    case llvm::Intrinsic::x86_sse2_comilt_sd:
-    case llvm::Intrinsic::x86_sse2_comile_sd:
-    case llvm::Intrinsic::x86_sse2_comigt_sd:
-    case llvm::Intrinsic::x86_sse2_comige_sd:
-    case llvm::Intrinsic::x86_sse2_comineq_sd:
-    case llvm::Intrinsic::x86_sse2_ucomieq_sd:
-    case llvm::Intrinsic::x86_sse2_ucomilt_sd:
-    case llvm::Intrinsic::x86_sse2_ucomile_sd:
-    case llvm::Intrinsic::x86_sse2_ucomigt_sd:
-    case llvm::Intrinsic::x86_sse2_ucomige_sd:
-    case llvm::Intrinsic::x86_sse2_ucomineq_sd:
+    case Intrinsic::x86_sse_cmp_ss:
+    case Intrinsic::x86_sse2_cmp_sd:
+    case Intrinsic::x86_sse_comieq_ss:
+    case Intrinsic::x86_sse_comilt_ss:
+    case Intrinsic::x86_sse_comile_ss:
+    case Intrinsic::x86_sse_comigt_ss:
+    case Intrinsic::x86_sse_comige_ss:
+    case Intrinsic::x86_sse_comineq_ss:
+    case Intrinsic::x86_sse_ucomieq_ss:
+    case Intrinsic::x86_sse_ucomilt_ss:
+    case Intrinsic::x86_sse_ucomile_ss:
+    case Intrinsic::x86_sse_ucomigt_ss:
+    case Intrinsic::x86_sse_ucomige_ss:
+    case Intrinsic::x86_sse_ucomineq_ss:
+    case Intrinsic::x86_sse2_comieq_sd:
+    case Intrinsic::x86_sse2_comilt_sd:
+    case Intrinsic::x86_sse2_comile_sd:
+    case Intrinsic::x86_sse2_comigt_sd:
+    case Intrinsic::x86_sse2_comige_sd:
+    case Intrinsic::x86_sse2_comineq_sd:
+    case Intrinsic::x86_sse2_ucomieq_sd:
+    case Intrinsic::x86_sse2_ucomilt_sd:
+    case Intrinsic::x86_sse2_ucomile_sd:
+    case Intrinsic::x86_sse2_ucomigt_sd:
+    case Intrinsic::x86_sse2_ucomige_sd:
+    case Intrinsic::x86_sse2_ucomineq_sd:
       handleVectorCompareScalarIntrinsic(I);
       break;
 
-    case llvm::Intrinsic::x86_sse_cmp_ps:
-    case llvm::Intrinsic::x86_sse2_cmp_pd:
+    case Intrinsic::x86_sse_cmp_ps:
+    case Intrinsic::x86_sse2_cmp_pd:
       // FIXME: For x86_avx_cmp_pd_256 and x86_avx_cmp_ps_256 this function
       // generates reasonably looking IR that fails in the backend with "Do not
       // know how to split the result of this operator!".
@@ -2588,6 +2706,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitCallSite(CallSite CS) {
     Instruction &I = *CS.getInstruction();
+    assert(!I.getMetadata("nosanitize"));
     assert((CS.isCall() || CS.isInvoke()) && "Unknown type of CallSite");
     if (CS.isCall()) {
       CallInst *Call = cast<CallInst>(&I);
@@ -2646,9 +2765,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         if (ArgOffset + Size > kParamTLSSize) break;
         unsigned ParamAlignment = CS.getParamAlignment(i);
         unsigned Alignment = std::min(ParamAlignment, kShadowTLSAlignment);
-        Store = IRB.CreateMemCpy(ArgShadowBase,
-                                 getShadowPtr(A, Type::getInt8Ty(*MS.C), IRB),
-                                 Size, Alignment);
+        Value *AShadowPtr =
+            getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment).first;
+
+        Store = IRB.CreateMemCpy(ArgShadowBase, AShadowPtr, Size, Alignment);
       } else {
         Size = DL.getTypeAllocSize(A->getType());
         if (ArgOffset + Size > kParamTLSSize) break;
@@ -2695,6 +2815,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         setOrigin(&I, getCleanOrigin());
         return;
       }
+      // FIXME: NextInsn is likely in a basic block that has not been visited yet.
+      // Anything inserted there will be instrumented by MSan later!
       NextInsn = NormalDest->getFirstInsertionPt();
       assert(NextInsn != NormalDest->end() &&
              "Could not find insertion point for retval shadow load");
@@ -2766,7 +2888,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       IRB.CreateCall(MS.MsanPoisonStackFn,
                      {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len});
     } else {
-      Value *ShadowBase = getShadowPtr(&I, Type::getInt8PtrTy(*MS.C), IRB);
+      Value *ShadowBase =
+          getShadowOriginPtr(&I, IRB, IRB.getInt8Ty(), I.getAlignment()).first;
+
       Value *PoisonValue = IRB.getInt8(PoisonStack ? ClPoisonStackPattern : 0);
       IRB.CreateMemSet(ShadowBase, PoisonValue, Len, I.getAlignment());
     }
@@ -2845,7 +2969,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitLandingPadInst(LandingPadInst &I) {
     // Do nothing.
-    // See http://code.google.com/p/memory-sanitizer/issues/detail?id=1
+    // See https://github.com/google/sanitizers/issues/504
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
   }
@@ -2938,17 +3062,15 @@ struct VarArgAMD64Helper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
-  Value *VAArgTLSCopy;
-  Value *VAArgOverflowSize;
+  Value *VAArgTLSCopy = nullptr;
+  Value *VAArgOverflowSize = nullptr;
 
   SmallVector<CallInst*, 16> VAStartInstrumentationList;
 
-  VarArgAMD64Helper(Function &F, MemorySanitizer &MS,
-                    MemorySanitizerVisitor &MSV)
-    : F(F), MS(MS), MSV(MSV), VAArgTLSCopy(nullptr),
-      VAArgOverflowSize(nullptr) {}
-
   enum ArgKind { AK_GeneralPurpose, AK_FloatingPoint, AK_Memory };
+
+  VarArgAMD64Helper(Function &F, MemorySanitizer &MS,
+                    MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
 
   ArgKind classifyArgument(Value* arg) {
     // A very rough approximation of X86_64 argument classification rules.
@@ -2990,38 +3112,44 @@ struct VarArgAMD64Helper : public VarArgHelper {
         assert(A->getType()->isPointerTy());
         Type *RealTy = A->getType()->getPointerElementType();
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        Value *Base = getShadowPtrForVAArgument(RealTy, IRB, OverflowOffset);
+        Value *ShadowBase =
+            getShadowPtrForVAArgument(RealTy, IRB, OverflowOffset);
         OverflowOffset += alignTo(ArgSize, 8);
-        IRB.CreateMemCpy(Base, MSV.getShadowPtr(A, IRB.getInt8Ty(), IRB),
-                         ArgSize, kShadowTLSAlignment);
+        Value *ShadowPtr, *OriginPtr;
+        std::tie(ShadowPtr, OriginPtr) = MSV.getShadowOriginPtr(
+            A, IRB, IRB.getInt8Ty(), kShadowTLSAlignment);
+
+        IRB.CreateMemCpy(ShadowBase, ShadowPtr, ArgSize, kShadowTLSAlignment);
       } else {
         ArgKind AK = classifyArgument(A);
         if (AK == AK_GeneralPurpose && GpOffset >= AMD64GpEndOffset)
           AK = AK_Memory;
         if (AK == AK_FloatingPoint && FpOffset >= AMD64FpEndOffset)
           AK = AK_Memory;
-        Value *Base;
+        Value *ShadowBase;
         switch (AK) {
           case AK_GeneralPurpose:
-            Base = getShadowPtrForVAArgument(A->getType(), IRB, GpOffset);
+            ShadowBase = getShadowPtrForVAArgument(A->getType(), IRB, GpOffset);
             GpOffset += 8;
             break;
           case AK_FloatingPoint:
-            Base = getShadowPtrForVAArgument(A->getType(), IRB, FpOffset);
+            ShadowBase = getShadowPtrForVAArgument(A->getType(), IRB, FpOffset);
             FpOffset += 16;
             break;
           case AK_Memory:
             if (IsFixed)
               continue;
             uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-            Base = getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
+            ShadowBase =
+                getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
             OverflowOffset += alignTo(ArgSize, 8);
         }
         // Take fixed arguments into account for GpOffset and FpOffset,
         // but don't actually store shadows for them.
         if (IsFixed)
           continue;
-        IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+        IRB.CreateAlignedStore(MSV.getShadow(A), ShadowBase,
+                               kShadowTLSAlignment);
       }
     }
     Constant *OverflowSize =
@@ -3038,31 +3166,32 @@ struct VarArgAMD64Helper : public VarArgHelper {
                               "_msarg");
   }
 
+  void unpoisonVAListTagForInst(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *VAListTag = I.getArgOperand(0);
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
+
+    // Unpoison the whole __va_list_tag.
+    // FIXME: magic ABI constants.
+    IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
+                     /* size */ 24, Alignment, false);
+    // We shouldn't need to zero out the origins, as they're only checked for
+    // nonzero shadow.
+  }
+
   void visitVAStartInst(VAStartInst &I) override {
     if (F.getCallingConv() == CallingConv::Win64)
       return;
-    IRBuilder<> IRB(&I);
     VAStartInstrumentationList.push_back(&I);
-    Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
-
-    // Unpoison the whole __va_list_tag.
-    // FIXME: magic ABI constants.
-    IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */24, /* alignment */8, false);
+    unpoisonVAListTagForInst(I);
   }
 
   void visitVACopyInst(VACopyInst &I) override {
-    if (F.getCallingConv() == CallingConv::Win64)
-      return;
-    IRBuilder<> IRB(&I);
-    Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
-
-    // Unpoison the whole __va_list_tag.
-    // FIXME: magic ABI constants.
-    IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */24, /* alignment */8, false);
+    if (F.getCallingConv() == CallingConv::Win64) return;
+    unpoisonVAListTagForInst(I);
   }
 
   void finalizeInstrumentation() override {
@@ -3087,28 +3216,31 @@ struct VarArgAMD64Helper : public VarArgHelper {
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
 
-      Value *RegSaveAreaPtrPtr =
-        IRB.CreateIntToPtr(
+      Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
           IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         ConstantInt::get(MS.IntptrTy, 16)),
           Type::getInt64PtrTy(*MS.C));
       Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrPtr);
-      Value *RegSaveAreaShadowPtr =
-        MSV.getShadowPtr(RegSaveAreaPtr, IRB.getInt8Ty(), IRB);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy,
-                       AMD64FpEndOffset, 16);
-
-      Value *OverflowArgAreaPtrPtr =
-        IRB.CreateIntToPtr(
+      Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      unsigned Alignment = 16;
+      std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
+          MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 Alignment);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, AMD64FpEndOffset,
+                       Alignment);
+      Value *OverflowArgAreaPtrPtr = IRB.CreateIntToPtr(
           IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         ConstantInt::get(MS.IntptrTy, 8)),
           Type::getInt64PtrTy(*MS.C));
       Value *OverflowArgAreaPtr = IRB.CreateLoad(OverflowArgAreaPtrPtr);
-      Value *OverflowArgAreaShadowPtr =
-        MSV.getShadowPtr(OverflowArgAreaPtr, IRB.getInt8Ty(), IRB);
+      Value *OverflowArgAreaShadowPtr, *OverflowArgAreaOriginPtr;
+      std::tie(OverflowArgAreaShadowPtr, OverflowArgAreaOriginPtr) =
+          MSV.getShadowOriginPtr(OverflowArgAreaPtr, IRB, IRB.getInt8Ty(),
+                                 Alignment);
       Value *SrcPtr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), VAArgTLSCopy,
                                              AMD64FpEndOffset);
-      IRB.CreateMemCpy(OverflowArgAreaShadowPtr, SrcPtr, VAArgOverflowSize, 16);
+      IRB.CreateMemCpy(OverflowArgAreaShadowPtr, SrcPtr, VAArgOverflowSize,
+                       Alignment);
     }
   }
 };
@@ -3118,15 +3250,13 @@ struct VarArgMIPS64Helper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
-  Value *VAArgTLSCopy;
-  Value *VAArgSize;
+  Value *VAArgTLSCopy = nullptr;
+  Value *VAArgSize = nullptr;
 
   SmallVector<CallInst*, 16> VAStartInstrumentationList;
 
   VarArgMIPS64Helper(Function &F, MemorySanitizer &MS,
-                    MemorySanitizerVisitor &MSV)
-    : F(F), MS(MS), MSV(MSV), VAArgTLSCopy(nullptr),
-      VAArgSize(nullptr) {}
+                    MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
 
   void visitCallSite(CallSite &CS, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
@@ -3134,11 +3264,11 @@ struct VarArgMIPS64Helper : public VarArgHelper {
     for (CallSite::arg_iterator ArgIt = CS.arg_begin() +
          CS.getFunctionType()->getNumParams(), End = CS.arg_end();
          ArgIt != End; ++ArgIt) {
-      llvm::Triple TargetTriple(F.getParent()->getTargetTriple());
+      Triple TargetTriple(F.getParent()->getTargetTriple());
       Value *A = *ArgIt;
       Value *Base;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-      if (TargetTriple.getArch() == llvm::Triple::mips64) {
+      if (TargetTriple.getArch() == Triple::mips64) {
         // Adjusting the shadow for argument with size < 8 to match the placement
         // of bits in big endian system
         if (ArgSize < 8)
@@ -3169,19 +3299,24 @@ struct VarArgMIPS64Helper : public VarArgHelper {
     IRBuilder<> IRB(&I);
     VAStartInstrumentationList.push_back(&I);
     Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
     IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */8, /* alignment */8, false);
+                     /* size */ 8, Alignment, false);
   }
 
   void visitVACopyInst(VACopyInst &I) override {
     IRBuilder<> IRB(&I);
+    VAStartInstrumentationList.push_back(&I);
     Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
-    // Unpoison the whole __va_list_tag.
-    // FIXME: magic ABI constants.
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
     IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */8, /* alignment */8, false);
+                     /* size */ 8, Alignment, false);
   }
 
   void finalizeInstrumentation() override {
@@ -3209,13 +3344,15 @@ struct VarArgMIPS64Helper : public VarArgHelper {
         IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         Type::getInt64PtrTy(*MS.C));
       Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrPtr);
-      Value *RegSaveAreaShadowPtr =
-      MSV.getShadowPtr(RegSaveAreaPtr, IRB.getInt8Ty(), IRB);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, CopySize, 8);
+      Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      unsigned Alignment = 8;
+      std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
+          MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 Alignment);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, CopySize, Alignment);
     }
   }
 };
-
 
 /// \brief AArch64-specific implementation of VarArgHelper.
 struct VarArgAArch64Helper : public VarArgHelper {
@@ -3233,17 +3370,15 @@ struct VarArgAArch64Helper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
-  Value *VAArgTLSCopy;
-  Value *VAArgOverflowSize;
+  Value *VAArgTLSCopy = nullptr;
+  Value *VAArgOverflowSize = nullptr;
 
   SmallVector<CallInst*, 16> VAStartInstrumentationList;
 
-  VarArgAArch64Helper(Function &F, MemorySanitizer &MS,
-                    MemorySanitizerVisitor &MSV)
-    : F(F), MS(MS), MSV(MSV), VAArgTLSCopy(nullptr),
-      VAArgOverflowSize(nullptr) {}
-
   enum ArgKind { AK_GeneralPurpose, AK_FloatingPoint, AK_Memory };
+
+  VarArgAArch64Helper(Function &F, MemorySanitizer &MS,
+                    MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
 
   ArgKind classifyArgument(Value* arg) {
     Type *T = arg->getType();
@@ -3324,21 +3459,24 @@ struct VarArgAArch64Helper : public VarArgHelper {
     IRBuilder<> IRB(&I);
     VAStartInstrumentationList.push_back(&I);
     Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
-    // Unpoison the whole __va_list_tag.
-    // FIXME: magic ABI constants (size of va_list).
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
     IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */32, /* alignment */8, false);
+                     /* size */ 32, Alignment, false);
   }
 
   void visitVACopyInst(VACopyInst &I) override {
     IRBuilder<> IRB(&I);
+    VAStartInstrumentationList.push_back(&I);
     Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
-    // Unpoison the whole __va_list_tag.
-    // FIXME: magic ABI constants (size of va_list).
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
     IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */32, /* alignment */8, false);
+                     /* size */ 32, Alignment, false);
   }
 
   // Retrieve a va_list field of 'void*' size.
@@ -3424,7 +3562,9 @@ struct VarArgAArch64Helper : public VarArgHelper {
         IRB.CreateAdd(GrArgSize, GrOffSaveArea);
 
       Value *GrRegSaveAreaShadowPtr =
-        MSV.getShadowPtr(GrRegSaveAreaPtr, IRB.getInt8Ty(), IRB);
+          MSV.getShadowOriginPtr(GrRegSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 /*Alignment*/ 8)
+              .first;
 
       Value *GrSrcPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
                                               GrRegSaveAreaShadowPtrOff);
@@ -3437,7 +3577,9 @@ struct VarArgAArch64Helper : public VarArgHelper {
           IRB.CreateAdd(VrArgSize, VrOffSaveArea);
 
       Value *VrRegSaveAreaShadowPtr =
-        MSV.getShadowPtr(VrRegSaveAreaPtr, IRB.getInt8Ty(), IRB);
+          MSV.getShadowOriginPtr(VrRegSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 /*Alignment*/ 8)
+              .first;
 
       Value *VrSrcPtr = IRB.CreateInBoundsGEP(
         IRB.getInt8Ty(),
@@ -3450,7 +3592,9 @@ struct VarArgAArch64Helper : public VarArgHelper {
 
       // And finally for remaining arguments.
       Value *StackSaveAreaShadowPtr =
-        MSV.getShadowPtr(StackSaveAreaPtr, IRB.getInt8Ty(), IRB);
+          MSV.getShadowOriginPtr(StackSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 /*Alignment*/ 16)
+              .first;
 
       Value *StackSrcPtr =
         IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
@@ -3467,15 +3611,13 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
-  Value *VAArgTLSCopy;
-  Value *VAArgSize;
+  Value *VAArgTLSCopy = nullptr;
+  Value *VAArgSize = nullptr;
 
   SmallVector<CallInst*, 16> VAStartInstrumentationList;
 
   VarArgPowerPC64Helper(Function &F, MemorySanitizer &MS,
-                    MemorySanitizerVisitor &MSV)
-    : F(F), MS(MS), MSV(MSV), VAArgTLSCopy(nullptr),
-      VAArgSize(nullptr) {}
+                    MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
 
   void visitCallSite(CallSite &CS, IRBuilder<> &IRB) override {
     // For PowerPC, we need to deal with alignment of stack arguments -
@@ -3485,12 +3627,12 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
     // compute current offset from stack pointer (which is always properly
     // aligned), and offset for the first vararg, then subtract them.
     unsigned VAArgBase;
-    llvm::Triple TargetTriple(F.getParent()->getTargetTriple());
+    Triple TargetTriple(F.getParent()->getTargetTriple());
     // Parameter save area starts at 48 bytes from frame pointer for ABIv1,
     // and 32 bytes for ABIv2.  This is usually determined by target
     // endianness, but in theory could be overriden by function attribute.
     // For simplicity, we ignore it here (it'd only matter for QPX vectors).
-    if (TargetTriple.getArch() == llvm::Triple::ppc64)
+    if (TargetTriple.getArch() == Triple::ppc64)
       VAArgBase = 48;
     else
       VAArgBase = 32;
@@ -3513,8 +3655,11 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
         if (!IsFixed) {
           Value *Base = getShadowPtrForVAArgument(RealTy, IRB,
                                                   VAArgOffset - VAArgBase);
-          IRB.CreateMemCpy(Base, MSV.getShadowPtr(A, IRB.getInt8Ty(), IRB),
-                           ArgSize, kShadowTLSAlignment);
+          Value *AShadowPtr, *AOriginPtr;
+          std::tie(AShadowPtr, AOriginPtr) = MSV.getShadowOriginPtr(
+              A, IRB, IRB.getInt8Ty(), kShadowTLSAlignment);
+
+          IRB.CreateMemCpy(Base, AShadowPtr, ArgSize, kShadowTLSAlignment);
         }
         VAArgOffset += alignTo(ArgSize, 8);
       } else {
@@ -3572,19 +3717,25 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
     IRBuilder<> IRB(&I);
     VAStartInstrumentationList.push_back(&I);
     Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
     IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */8, /* alignment */8, false);
+                     /* size */ 8, Alignment, false);
   }
 
   void visitVACopyInst(VACopyInst &I) override {
     IRBuilder<> IRB(&I);
     Value *VAListTag = I.getArgOperand(0);
-    Value *ShadowPtr = MSV.getShadowPtr(VAListTag, IRB.getInt8Ty(), IRB);
+    Value *ShadowPtr, *OriginPtr;
+    unsigned Alignment = 8;
+    std::tie(ShadowPtr, OriginPtr) =
+        MSV.getShadowOriginPtr(VAListTag, IRB, IRB.getInt8Ty(), Alignment);
     // Unpoison the whole __va_list_tag.
     // FIXME: magic ABI constants.
     IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     /* size */8, /* alignment */8, false);
+                     /* size */ 8, Alignment, false);
   }
 
   void finalizeInstrumentation() override {
@@ -3612,9 +3763,12 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
         IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                         Type::getInt64PtrTy(*MS.C));
       Value *RegSaveAreaPtr = IRB.CreateLoad(RegSaveAreaPtrPtr);
-      Value *RegSaveAreaShadowPtr =
-      MSV.getShadowPtr(RegSaveAreaPtr, IRB.getInt8Ty(), IRB);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, CopySize, 8);
+      Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      unsigned Alignment = 8;
+      std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
+          MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 Alignment);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, VAArgTLSCopy, CopySize, Alignment);
     }
   }
 };
@@ -3633,26 +3787,26 @@ struct VarArgNoOpHelper : public VarArgHelper {
   void finalizeInstrumentation() override {}
 };
 
-VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
-                                 MemorySanitizerVisitor &Visitor) {
+} // end anonymous namespace
+
+static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
+                                        MemorySanitizerVisitor &Visitor) {
   // VarArg handling is only implemented on AMD64. False positives are possible
   // on other platforms.
-  llvm::Triple TargetTriple(Func.getParent()->getTargetTriple());
-  if (TargetTriple.getArch() == llvm::Triple::x86_64)
+  Triple TargetTriple(Func.getParent()->getTargetTriple());
+  if (TargetTriple.getArch() == Triple::x86_64)
     return new VarArgAMD64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == llvm::Triple::mips64 ||
-           TargetTriple.getArch() == llvm::Triple::mips64el)
+  else if (TargetTriple.getArch() == Triple::mips64 ||
+           TargetTriple.getArch() == Triple::mips64el)
     return new VarArgMIPS64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == llvm::Triple::aarch64)
+  else if (TargetTriple.getArch() == Triple::aarch64)
     return new VarArgAArch64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == llvm::Triple::ppc64 ||
-           TargetTriple.getArch() == llvm::Triple::ppc64le)
+  else if (TargetTriple.getArch() == Triple::ppc64 ||
+           TargetTriple.getArch() == Triple::ppc64le)
     return new VarArgPowerPC64Helper(Func, Msan, Visitor);
   else
     return new VarArgNoOpHelper(Func, Msan, Visitor);
 }
-
-} // anonymous namespace
 
 bool MemorySanitizer::runOnFunction(Function &F) {
   if (&F == MsanCtorFunction)

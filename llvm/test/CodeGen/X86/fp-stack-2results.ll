@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 | grep fldz
-; RUN: llc < %s -march=x86-64 | grep fld1
+; RUN: llc < %s -mtriple=i686-- | grep fldz
+; RUN: llc < %s -mtriple=x86_64-- | grep fld1
 
 %0 = type { x86_fp80, x86_fp80 }
 

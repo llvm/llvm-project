@@ -19,11 +19,11 @@ entry:
 ; CHECK-LABEL: Function: test1:
 
 ; CHECK: NoAlias:      i8* %p, i8* %q
-; CHECK: Just Ref:  Ptr: i8* %p        <->  %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
+; CHECK: Just Ref (MustAlias):  Ptr: i8* %p        <->  %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
 ; CHECK: NoModRef:  Ptr: i8* %q        <->  %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
 ; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-; CHECK: Just Ref:  Ptr: i8* %p        <->  %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
+; CHECK: Both ModRef (MustAlias):  Ptr: i8* %q     <->  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
+; CHECK: Just Ref (MustAlias):  Ptr: i8* %p        <->  %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
 ; CHECK: NoModRef:  Ptr: i8* %q        <->  %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
 ; CHECK: NoModRef:   %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) #{{[0-9]+}} <->   call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
 ; CHECK: NoModRef:   %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) #{{[0-9]+}} <->   %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)

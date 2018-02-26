@@ -17,6 +17,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include "sanitizer_common/sanitizer_platform_limits_posix.h"
 
 namespace __esan {
 
@@ -46,7 +47,8 @@ public:
 private:
   static int runSideline(void *Arg);
   static void registerSignal(int SigNum);
-  static void handleSidelineSignal(int SigNum, void *SigInfo, void *Ctx);
+  static void handleSidelineSignal(int SigNum, __sanitizer_siginfo *SigInfo,
+                                   void *Ctx);
 
   char *Stack;
   SidelineFunc sampleFunc;

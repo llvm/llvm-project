@@ -168,3 +168,30 @@ cond.end:
 for.end:
   ret i32 %or
 }
+
+; Handle PHI with single incoming value having a full mask.
+; PR34523
+
+; CHECK-LABEL: PR34523
+; CHECK: vector.body
+
+define void @PR34523() {
+bb1:
+  br label %bb2
+
+bb2:                                             ; preds = %bb4, %bb1
+  %i = phi i16 [ undef, %bb1 ], [ %_tmp2, %bb4 ]
+  br label %bb3
+
+bb3:                                             ; preds = %bb2
+  %_tmp1 = phi [1 x [1 x i32]]* [ undef, %bb2 ]
+  br label %bb4
+
+bb4:                                             ; preds = %bb3
+  %_tmp2 = add i16 %i, 1
+  %_tmp3 = icmp slt i16 %_tmp2, 2
+  br i1 %_tmp3, label %bb2, label %bb5
+
+bb5:                                             ; preds = %bb4
+  unreachable
+}

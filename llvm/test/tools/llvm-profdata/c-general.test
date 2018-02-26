@@ -1,13 +1,12 @@
-REGENERATE: You need a checkout of clang with compiler-rt to generate the
-REGENERATE: binary file here.  These shell commands can be used to regenerate
-REGENERATE: it.
-REGENERATE:
-REGENERATE: $ SRC=path/to/llvm
-REGENERATE: $ CFE=$SRC/tools/clang
-REGENERATE: $ TESTDIR=$SRC/test/tools/llvm-profdata
-REGENERATE: $ CFE_TESTDIR=$CFE/test/Profile
-REGENERATE: $ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
-REGENERATE: $ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
+You need a checkout of clang with compiler-rt to generate the
+binary file here.  These shell commands can be used to regenerate
+it.
+$ SRC=path/to/llvm
+$ CFE=$SRC/tools/clang
+$ TESTDIR=$SRC/test/tools/llvm-profdata
+$ CFE_TESTDIR=$CFE/test/Profile
+$ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
+$ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
 
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s
 RUN: llvm-profdata show %p/Inputs/c-general.profraw --topn=3 -o - | FileCheck %s --check-prefix=TOPN

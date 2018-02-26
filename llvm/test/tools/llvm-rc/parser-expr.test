@@ -1,0 +1,52 @@
+; RUN: llvm-rc /dry-run /V %p/Inputs/parser-expr.rc | FileCheck %s
+
+; CHECK:  Language: 5, Sublanguage: 1
+; CHECK-NEXT:  Language: 3, Sublanguage: 2
+; CHECK-NEXT:  Language: 4294967293, Sublanguage: 4294967292
+; CHECK-NEXT:  Language: 0, Sublanguage: 1
+; CHECK-NEXT:  Language: 2, Sublanguage: 4
+; CHECK-NEXT:  Language: 3, Sublanguage: 5
+; CHECK-NEXT:  Language: 2, Sublanguage: 0
+; CHECK-NEXT:  Language: 4294967295, Sublanguage: 1
+; CHECK-NEXT:  Language: 1, Sublanguage: 4294967295
+; CHECK-NEXT:  Language: 4294967294, Sublanguage: 1
+; CHECK-NEXT:  Language: 1, Sublanguage: 4294967294
+; CHECK-NEXT:  Language: 2, Sublanguage: 1
+; CHECK-NEXT:  Language: 3, Sublanguage: 5
+; CHECK-NEXT:  Language: 0, Sublanguage: 13
+; CHECK-NEXT:  Language: 5, Sublanguage: 7
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-binary-1.rc 2>&1 | FileCheck %s --check-prefix BINARY1
+
+; BINARY1: llvm-rc: Error parsing file: expected '-', '~', integer or '(', got &
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-binary-2.rc 2>&1 | FileCheck %s --check-prefix BINARY2
+
+; BINARY2: llvm-rc: Error parsing file: expected '-', '~', integer or '(', got |
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-binary-3.rc 2>&1 | FileCheck %s --check-prefix BINARY3
+
+; BINARY3: llvm-rc: Error parsing file: expected '-', '~', integer or '(', got +
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-bad-unary.rc 2>&1 | FileCheck %s --check-prefix UNARY
+
+; UNARY: llvm-rc: Error parsing file: expected ',', got ~
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-unbalanced-1.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED1
+
+; UNBALANCED1: llvm-rc: Error parsing file: expected ')', got ,
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-unbalanced-2.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED2
+
+; UNBALANCED2: llvm-rc: Error parsing file: expected ',', got )
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-expr-unbalanced-3.rc 2>&1 | FileCheck %s --check-prefix UNBALANCED3
+
+; UNBALANCED3: llvm-rc: Error parsing file: expected ',', got )

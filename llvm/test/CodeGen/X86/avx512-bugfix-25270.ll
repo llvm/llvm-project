@@ -5,7 +5,7 @@ declare void @Print__512(<16 x i32>) #0
 
 define void @bar__512(<16 x i32>* %var) #0 {
 ; CHECK-LABEL: bar__512:
-; CHECK:       ## BB#0: ## %allocas
+; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $112, %rsp
 ; CHECK-NEXT:    movq %rdi, %rbx

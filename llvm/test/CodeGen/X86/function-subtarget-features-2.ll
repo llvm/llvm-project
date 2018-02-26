@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -filetype=obj -o - | llvm-objdump -d - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -filetype=obj -o - | llvm-objdump -d - | FileCheck %s
 
 ; This test verifies that we assemble code for different architectures
 ; based on target-cpu and target-features attributes.

@@ -35,12 +35,12 @@ define i32 @test() local_unnamed_addr #0 {
 entry:
     tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds (%struct.test_t1, %struct.test_t1* @g1, i64 0, i32 0), i8* getelementptr inbounds (%struct.test_t1, %struct.test_t1* @test.t1, i64 0, i32 0), i64 3, i32 1, i1 false)
     tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.test_t2* @g2 to i8*), i8* bitcast (%struct.test_t2* @test.t2 to i8*), i64 20, i32 4, i1 false)
-; CHECK:  r1 = <MCOperand Expr:(g1)>ll
+; CHECK:  r1 = g1
 ; CHECK:  r2 = 0
 ; CHECK:  *(u8 *)(r1 + 1) = r2
 ; CHECK:  r3 = 1
 ; CHECK:  *(u8 *)(r1 + 2) = r3
-; CHECK:  r1 = <MCOperand Expr:(g2)>ll
+; CHECK:  r1 = g2
 ; CHECK:  *(u32 *)(r1 + 8) = r3
     ret i32 0
 }

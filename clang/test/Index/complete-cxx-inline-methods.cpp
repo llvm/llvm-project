@@ -25,11 +25,11 @@ private:
 
 // RUN: c-index-test -code-completion-at=%s:4:9 -std=c++98 %s | FileCheck %s
 // RUN: c-index-test -code-completion-at=%s:13:7 -std=c++98 %s | FileCheck %s
-// CHECK:      CXXMethod:{ResultType MyCls::Vec &}{TypedText operator=}{LeftParen (}{Placeholder const MyCls::Vec &}{RightParen )} (34)
+// CHECK:      CXXMethod:{ResultType Vec &}{TypedText operator=}{LeftParen (}{Placeholder const Vec &}{RightParen )} (79)
 // CHECK-NEXT: StructDecl:{TypedText Vec}{Text ::} (75)
 // CHECK-NEXT: FieldDecl:{ResultType int}{TypedText x} (35)
 // CHECK-NEXT: FieldDecl:{ResultType int}{TypedText y} (35)
-// CHECK-NEXT: CXXDestructor:{ResultType void}{TypedText ~Vec}{LeftParen (}{RightParen )} (34)
+// CHECK-NEXT: CXXDestructor:{ResultType void}{TypedText ~Vec}{LeftParen (}{RightParen )} (79)
 // CHECK-NEXT: Completion contexts:
 // CHECK-NEXT: Dot member access
 // CHECK-NEXT: Container Kind: StructDecl

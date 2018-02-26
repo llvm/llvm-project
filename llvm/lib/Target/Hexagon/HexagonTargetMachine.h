@@ -30,8 +30,8 @@ class HexagonTargetMachine : public LLVMTargetMachine {
 public:
   HexagonTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
-                       CodeGenOpt::Level OL);
+                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                       CodeGenOpt::Level OL, bool JIT);
   ~HexagonTargetMachine() override;
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;
 
@@ -39,7 +39,7 @@ public:
 
   void adjustPassManager(PassManagerBuilder &PMB) override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
-  TargetIRAnalysis getTargetIRAnalysis() override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   HexagonTargetObjectFile *getObjFileLowering() const override {
     return static_cast<HexagonTargetObjectFile*>(TLOF.get());

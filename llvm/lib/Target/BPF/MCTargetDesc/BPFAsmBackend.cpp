@@ -31,7 +31,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved) const override;
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -75,6 +76,15 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
       unsigned Idx = IsLittleEndian ? i : Size - i - 1;
       Data[Fixup.getOffset() + Idx] = uint8_t(Value >> (i * 8));
     }
+  } else if (Fixup.getKind() == FK_PCRel_4) {
+    Value = (uint32_t)((Value - 8) / 8);
+    if (IsLittleEndian) {
+      Data[Fixup.getOffset() + 1] = 0x10;
+      support::endian::write32le(&Data[Fixup.getOffset() + 4], Value);
+    } else {
+      Data[Fixup.getOffset() + 1] = 0x1;
+      support::endian::write32be(&Data[Fixup.getOffset() + 4], Value);
+    }
   } else {
     assert(Fixup.getKind() == FK_PCRel_2);
     Value = (uint16_t)((Value - 8) / 8);
@@ -88,20 +98,21 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-MCObjectWriter *BPFAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
+std::unique_ptr<MCObjectWriter>
+BPFAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   return createBPFELFObjectWriter(OS, 0, IsLittleEndian);
 }
 
 MCAsmBackend *llvm::createBPFAsmBackend(const Target &T,
+                                        const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU,
-                                        const MCTargetOptions&) {
+                                        const MCTargetOptions &) {
   return new BPFAsmBackend(/*IsLittleEndian=*/true);
 }
 
 MCAsmBackend *llvm::createBPFbeAsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
-                                          const MCTargetOptions&) {
+                                          const MCTargetOptions &) {
   return new BPFAsmBackend(/*IsLittleEndian=*/false);
 }

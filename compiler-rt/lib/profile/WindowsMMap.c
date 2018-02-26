@@ -18,10 +18,11 @@
 #if defined(_WIN32)
 
 #include "WindowsMMap.h"
-#include "InstrProfiling.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#include "InstrProfiling.h"
 
 #ifdef __USE_FILE_OFFSET64
 # define DWORD_HI(x) (x >> 32)
@@ -120,9 +121,61 @@ int msync(void *addr, size_t length, int flags)
 }
 
 COMPILER_RT_VISIBILITY
-int flock(int fd, int operation)
-{
-  return -1; /* Not supported. */
+int lock(HANDLE handle, DWORD lockType, BOOL blocking) {
+  DWORD flags = lockType;
+  if (!blocking)
+    flags |= LOCKFILE_FAIL_IMMEDIATELY;
+
+  OVERLAPPED overlapped;
+  ZeroMemory(&overlapped, sizeof(OVERLAPPED));
+  overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+  BOOL result = LockFileEx(handle, flags, 0, MAXDWORD, MAXDWORD, &overlapped);
+  if (!result) {
+    DWORD dw = GetLastError();
+
+    // In non-blocking mode, return an error if the file is locked.
+    if (!blocking && dw == ERROR_LOCK_VIOLATION)
+      return -1; // EWOULDBLOCK
+
+    // If the error is ERROR_IO_PENDING, we need to wait until the operation
+    // finishes. Otherwise, we return an error.
+    if (dw != ERROR_IO_PENDING)
+      return -1;
+
+    DWORD dwNumBytes;
+    if (!GetOverlappedResult(handle, &overlapped, &dwNumBytes, TRUE))
+      return -1;
+  }
+
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+int flock(int fd, int operation) {
+  HANDLE handle = (HANDLE)_get_osfhandle(fd);
+  if (handle == INVALID_HANDLE_VALUE)
+    return -1;
+
+  BOOL blocking = (operation & LOCK_NB) == 0;
+  int op = operation & ~LOCK_NB;
+
+  switch (op) {
+  case LOCK_EX:
+    return lock(handle, LOCKFILE_EXCLUSIVE_LOCK, blocking);
+
+  case LOCK_SH:
+    return lock(handle, 0, blocking);
+
+  case LOCK_UN:
+    if (!UnlockFile(handle, 0, 0, MAXDWORD, MAXDWORD))
+      return -1;
+    break;
+
+  default:
+    return -1;
+  }
+
+  return 0;
 }
 
 #undef DWORD_HI

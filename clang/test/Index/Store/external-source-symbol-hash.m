@@ -18,7 +18,7 @@
 @class I2;
 // CHECK: [[@LINE-1]]:8 | class/Swift | c:@M@other_module@objc(cs)I2 | Ref | rel: 0
 enum E3: int;
-// CHECK: [[@LINE-1]]:6 | enum/Swift | c:@M@third_module@E@E3 | Ref | rel: 0
+// CHECK: [[@LINE-1]]:6 | enum/Swift | c:@M@third_module@E@E3 | Decl | rel: 0
 
 void test(id<P1> first, I2 *second, enum E3 third) {}
 // CHECK: [[@LINE-1]]:14 | protocol/Swift | c:@M@some_module@objc(pl)P1 | Ref,RelCont | rel: 1

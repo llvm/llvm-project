@@ -10,13 +10,13 @@
 
 define <16 x i32> @test_mask_vpopcnt_d(<16 x i32> %a, i16 %mask, <16 x i32> %b) {
 ; X86_64-LABEL: test_mask_vpopcnt_d:
-; X86_64:       # BB#0:
+; X86_64:       # %bb.0:
 ; X86_64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X86_64-NEXT:    vpopcntd %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x7d,0x49,0x55,0xc1]
 ; X86_64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mask_vpopcnt_d:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vpopcntd %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x7d,0x49,0x55,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -28,13 +28,13 @@ define <16 x i32> @test_mask_vpopcnt_d(<16 x i32> %a, i16 %mask, <16 x i32> %b) 
 
 define <16 x i32> @test_maskz_vpopcnt_d(i16 %mask, <16 x i32> %a) {
 ; X86_64-LABEL: test_maskz_vpopcnt_d:
-; X86_64:       # BB#0:
+; X86_64:       # %bb.0:
 ; X86_64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X86_64-NEXT:    vpopcntd %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0x55,0xc0]
 ; X86_64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_maskz_vpopcnt_d:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vpopcntd %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0x55,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -46,14 +46,14 @@ define <16 x i32> @test_maskz_vpopcnt_d(i16 %mask, <16 x i32> %a) {
 
 define <8 x i64> @test_mask_vpopcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; X86_64-LABEL: test_mask_vpopcnt_q:
-; X86_64:       # BB#0:
+; X86_64:       # %bb.0:
 ; X86_64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X86_64-NEXT:    vpopcntq %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x49,0x55,0xc8]
 ; X86_64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
 ; X86_64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_mask_vpopcnt_q:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpopcntq %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x49,0x55,0xc8]
@@ -67,13 +67,13 @@ define <8 x i64> @test_mask_vpopcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 
 define <8 x i64> @test_maskz_vpopcnt_q(<8 x i64> %a, i8 %mask) {
 ; X86_64-LABEL: test_maskz_vpopcnt_q:
-; X86_64:       # BB#0:
+; X86_64:       # %bb.0:
 ; X86_64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X86_64-NEXT:    vpopcntq %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xc9,0x55,0xc0]
 ; X86_64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_maskz_vpopcnt_q:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpopcntq %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xc9,0x55,0xc0]

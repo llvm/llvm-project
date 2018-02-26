@@ -7,13 +7,14 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 #ifdef _MSC_VER
 /* For _alloca */
 #include <malloc.h>
 #endif
 #include <string.h>
+
+#include "InstrProfiling.h"
+#include "InstrProfilingInternal.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "InstrProfData.inc"

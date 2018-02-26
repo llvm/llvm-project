@@ -4,18 +4,18 @@
 // CHECK:      File 1, [[@LINE+5]]:12 -> [[@LINE+5]]:38 = #0
 // CHECK-NEXT: File 1, [[@LINE+4]]:15 -> [[@LINE+4]]:28 = (#0 + #2)
 // CHECK-NEXT: File 1, [[@LINE+3]]:21 -> [[@LINE+3]]:22 = (#0 + #2)
-// CHECK-NEXT: File 1, [[@LINE+2]]:24 -> [[@LINE+2]]:26 = #3
+// CHECK: File 1, [[@LINE+2]]:24 -> [[@LINE+2]]:26 = #3
 // CHECK-NEXT: File 1, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = (#0 + #2)
 #define M1 do { if (0) {} } while (0)
 // CHECK-NEXT: File 2, [[@LINE+10]]:15 -> [[@LINE+10]]:41 = #0
 // CHECK-NEXT: File 2, [[@LINE+9]]:18 -> [[@LINE+9]]:31 = (#0 + #4)
 // CHECK-NEXT: File 2, [[@LINE+8]]:24 -> [[@LINE+8]]:25 = (#0 + #4)
-// CHECK-NEXT: File 2, [[@LINE+7]]:27 -> [[@LINE+7]]:29 = #5
+// CHECK: File 2, [[@LINE+7]]:27 -> [[@LINE+7]]:29 = #5
 // CHECK-NEXT: File 2, [[@LINE+6]]:39 -> [[@LINE+6]]:40 = (#0 + #4)
 // CHECK-NEXT: File 3, [[@LINE+5]]:15 -> [[@LINE+5]]:41 = #0
 // CHECK-NEXT: File 3, [[@LINE+4]]:18 -> [[@LINE+4]]:31 = (#0 + #6)
 // CHECK-NEXT: File 3, [[@LINE+3]]:24 -> [[@LINE+3]]:25 = (#0 + #6)
-// CHECK-NEXT: File 3, [[@LINE+2]]:27 -> [[@LINE+2]]:29 = #7
+// CHECK: File 3, [[@LINE+2]]:27 -> [[@LINE+2]]:29 = #7
 // CHECK-NEXT: File 3, [[@LINE+1]]:39 -> [[@LINE+1]]:40 = (#0 + #6)
 #define M2(x) do { if (x) {} } while (0)
 // CHECK-NEXT: File 4, [[@LINE+4]]:15 -> [[@LINE+4]]:38 = #0
@@ -40,7 +40,7 @@
 // CHECK-NEXT: File 9, {{[0-9]+}}:15 -> {{[0-9]+}}:41 = (#0 + #8)
 // CHECK-NEXT: File 9, {{[0-9]+}}:18 -> {{[0-9]+}}:31 = ((#0 + #8) + #9)
 // CHECK-NEXT: File 9, {{[0-9]+}}:24 -> {{[0-9]+}}:25 = ((#0 + #8) + #9)
-// CHECK-NEXT: File 9, {{[0-9]+}}:27 -> {{[0-9]+}}:29 = #10
+// CHECK: File 9, {{[0-9]+}}:27 -> {{[0-9]+}}:29 = #10
 // CHECK-NEXT: File 9, {{[0-9]+}}:39 -> {{[0-9]+}}:40 = ((#0 + #8) + #9)
 
 void func(int x) {

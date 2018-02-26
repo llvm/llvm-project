@@ -139,7 +139,7 @@ indexstore_unit_event_get_unit_name(indexstore_unit_event_t c_evt) {
 timespec
 indexstore_unit_event_get_modification_time(indexstore_unit_event_t c_evt) {
   auto *evt = static_cast<IndexDataStore::UnitEvent*>(c_evt);
-  return evt->ModTime;
+  return toTimeSpec(evt->ModTime);
 }
 
 void

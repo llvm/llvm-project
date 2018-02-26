@@ -17,8 +17,6 @@ foreach Index = 0-15 in {
   def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
 }
 
-def INDIRECT_BASE_ADDR : Register <"INDIRECT_BASE_ADDR">;
-
 }
 
 include "R600RegisterInfo.td"

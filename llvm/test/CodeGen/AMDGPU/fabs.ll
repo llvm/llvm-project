@@ -83,7 +83,7 @@ define amdgpu_kernel void @fabs_fn_fold(float addrspace(1)* %out, float %in0, fl
   ret void
 }
 
-; GCN-LABEL: {{^}}fabs_fold:
+; FUNC-LABEL: {{^}}fabs_fold:
 ; SI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
@@ -92,6 +92,18 @@ define amdgpu_kernel void @fabs_fold(float addrspace(1)* %out, float %in0, float
   %fabs = call float @llvm.fabs.f32(float %in0)
   %fmul = fmul float %fabs, %in1
   store float %fmul, float addrspace(1)* %out
+  ret void
+}
+
+; Make sure we turn some integer operations back into fabs
+; FUNC-LABEL: {{^}}bitpreserve_fabs_f32:
+; GCN: v_add_f32_e64 v{{[0-9]+}}, |s{{[0-9]+}}|, 1.0
+define amdgpu_kernel void @bitpreserve_fabs_f32(float addrspace(1)* %out, float %in) {
+  %in.bc = bitcast float %in to i32
+  %int.abs = and i32 %in.bc, 2147483647
+  %bc = bitcast i32 %int.abs to float
+  %fadd = fadd float %bc, 1.0
+  store float %fadd, float addrspace(1)* %out
   ret void
 }
 

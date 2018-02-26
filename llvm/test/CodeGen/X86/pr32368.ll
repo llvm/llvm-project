@@ -6,21 +6,21 @@
 
 define <4 x float> @PR32368_128(<4 x float>) {
 ; SSE-LABEL: PR32368_128:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    addps %xmm0, %xmm0
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR32368_128:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vaddps %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32368_128:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vaddps %xmm0, %xmm0, %xmm0
@@ -29,7 +29,7 @@ define <4 x float> @PR32368_128(<4 x float>) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR32368_128:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vaddps %xmm0, %xmm0, %xmm0
@@ -48,7 +48,7 @@ define <4 x float> @PR32368_128(<4 x float>) {
 
 define <8 x float> @PR32368_256(<8 x float>) {
 ; SSE-LABEL: PR32368_256:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm2 = [4294967004,4294967004,4294967004,4294967004]
 ; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    andps %xmm2, %xmm1
@@ -60,14 +60,14 @@ define <8 x float> @PR32368_256(<8 x float>) {
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR32368_256:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32368_256:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vaddps %ymm0, %ymm0, %ymm0
@@ -76,7 +76,7 @@ define <8 x float> @PR32368_256(<8 x float>) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR32368_256:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
 ; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vaddps %ymm0, %ymm0, %ymm0
@@ -95,7 +95,7 @@ define <8 x float> @PR32368_256(<8 x float>) {
 
 define <16 x float> @PR32368_512(<16 x float>) {
 ; SSE-LABEL: PR32368_512:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm4 = [4294967004,4294967004,4294967004,4294967004]
 ; SSE-NEXT:    andps %xmm4, %xmm0
 ; SSE-NEXT:    andps %xmm4, %xmm1
@@ -113,7 +113,7 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR32368_512:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004,4294967004]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
@@ -125,7 +125,7 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32368_512:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %ymm2
 ; AVX2-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
@@ -137,7 +137,7 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR32368_512:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vaddps %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0

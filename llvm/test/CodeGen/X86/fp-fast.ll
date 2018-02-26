@@ -3,7 +3,7 @@
 
 define float @test1(float %a) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fadd float %a, %a
@@ -13,7 +13,7 @@ define float @test1(float %a) {
 
 define float @test2(float %a) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fmul float 4.0, %a
@@ -24,7 +24,7 @@ define float @test2(float %a) {
 
 define float @test3(float %a) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fmul float %a, 4.0
@@ -35,7 +35,7 @@ define float @test3(float %a) {
 
 define float @test4(float %a) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fadd float %a, %a
@@ -46,7 +46,7 @@ define float @test4(float %a) {
 
 define float @test5(float %a) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fadd float %a, %a
@@ -57,7 +57,7 @@ define float @test5(float %a) {
 
 define float @test6(float %a) {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fmul float 2.0, %a
@@ -68,7 +68,7 @@ define float @test6(float %a) {
 
 define float @test7(float %a) {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fmul float %a, 2.0
@@ -79,7 +79,7 @@ define float @test7(float %a) {
 
 define float @test8(float %a) {
 ; CHECK-LABEL: test8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %t1 = fmul float %a, 0.0
   %t2 = fadd float %a, %t1
@@ -88,7 +88,7 @@ define float @test8(float %a) {
 
 define float @test9(float %a) {
 ; CHECK-LABEL: test9:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %t1 = fmul float 0.0, %a
   %t2 = fadd float %t1, %a
@@ -97,7 +97,7 @@ define float @test9(float %a) {
 
 define float @test10(float %a) {
 ; CHECK-LABEL: test10:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fsub float -0.0, %a
@@ -107,7 +107,7 @@ define float @test10(float %a) {
 
 define float @test11(float %a) {
 ; CHECK-LABEL: test11:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %t1 = fsub float -0.0, %a

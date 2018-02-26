@@ -33,3 +33,8 @@ int main () {
   int 🌷 = 🌵(🌹);
   return 🌷;
 }
+
+int n; = 3; // expected-warning {{treating Unicode character <U+037E> as identifier character rather than as ';' symbol}}
+int *n꞉꞉v = &n;; // expected-warning 2{{treating Unicode character <U+A789> as identifier character rather than as ':' symbol}}
+                 // expected-warning@-1 {{treating Unicode character <U+037E> as identifier character rather than as ';' symbol}}
+int v＝［＝］（auto）｛return～x；｝（）; // expected-warning 12{{treating Unicode character}}

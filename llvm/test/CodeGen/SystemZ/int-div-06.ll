@@ -1,6 +1,6 @@
 ; Test that divisions by constants are implemented as multiplications.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -asm-verbose=0 | FileCheck %s
 
 ; Check signed 32-bit division.
 define i32 @f1(i32 %a) {

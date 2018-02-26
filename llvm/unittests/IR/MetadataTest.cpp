@@ -932,8 +932,11 @@ typedef MetadataTest DISubrangeTest;
 
 TEST_F(DISubrangeTest, get) {
   auto *N = DISubrange::get(Context, 5, 7);
+  auto Count = N->getCount();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
-  EXPECT_EQ(5, N->getCount());
+  ASSERT_TRUE(Count);
+  ASSERT_TRUE(Count.is<ConstantInt*>());
+  EXPECT_EQ(5, Count.get<ConstantInt*>()->getSExtValue());
   EXPECT_EQ(7, N->getLowerBound());
   EXPECT_EQ(N, DISubrange::get(Context, 5, 7));
   EXPECT_EQ(DISubrange::get(Context, 5, 0), DISubrange::get(Context, 5));
@@ -944,10 +947,32 @@ TEST_F(DISubrangeTest, get) {
 
 TEST_F(DISubrangeTest, getEmptyArray) {
   auto *N = DISubrange::get(Context, -1, 0);
+  auto Count = N->getCount();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
-  EXPECT_EQ(-1, N->getCount());
+  ASSERT_TRUE(Count);
+  ASSERT_TRUE(Count.is<ConstantInt*>());
+  EXPECT_EQ(-1, Count.get<ConstantInt*>()->getSExtValue());
   EXPECT_EQ(0, N->getLowerBound());
   EXPECT_EQ(N, DISubrange::get(Context, -1, 0));
+}
+
+TEST_F(DISubrangeTest, getVariableCount) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *VlaExpr = DILocalVariable::get(Context, Scope, "vla_expr", File, 8,
+                                       Type, 2, Flags, 8);
+
+  auto *N = DISubrange::get(Context, VlaExpr, 0);
+  auto Count = N->getCount();
+  ASSERT_TRUE(Count);
+  ASSERT_TRUE(Count.is<DIVariable*>());
+  EXPECT_EQ(VlaExpr, Count.get<DIVariable*>());
+  ASSERT_TRUE(isa<DIVariable>(N->getRawCountNode()));
+  EXPECT_EQ(0, N->getLowerBound());
+  EXPECT_EQ("vla_expr", Count.get<DIVariable*>()->getName());
+  EXPECT_EQ(N, DISubrange::get(Context, VlaExpr, 0));
 }
 
 typedef MetadataTest DIEnumeratorTest;
@@ -1314,6 +1339,11 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   EXPECT_EQ(nullptr, N->getVTableHolder());
   N->replaceVTableHolder(VTableHolder);
   EXPECT_EQ(VTableHolder, N->getVTableHolder());
+  // As an extension, the containing type can be anything.  This is
+  // used by Rust to associate vtables with their concrete type.
+  DIType *BasicType = getBasicType("basic");
+  N->replaceVTableHolder(BasicType);
+  EXPECT_EQ(BasicType, N->getVTableHolder());
   N->replaceVTableHolder(nullptr);
   EXPECT_EQ(nullptr, N->getVTableHolder());
 
@@ -1323,6 +1353,51 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   EXPECT_EQ(TemplateParams, N->getTemplateParams().get());
   N->replaceTemplateParams(nullptr);
   EXPECT_EQ(nullptr, N->getTemplateParams().get());
+}
+
+TEST_F(DICompositeTypeTest, variant_part) {
+  unsigned Tag = dwarf::DW_TAG_variant_part;
+  StringRef Name = "some name";
+  DIFile *File = getFile();
+  unsigned Line = 1;
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
+  uint64_t SizeInBits = 2;
+  uint32_t AlignInBits = 3;
+  uint64_t OffsetInBits = 4;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
+  unsigned RuntimeLang = 6;
+  StringRef Identifier = "some id";
+  DIDerivedType *Discriminator = cast<DIDerivedType>(getDerivedType());
+  DIDerivedType *Discriminator2 = cast<DIDerivedType>(getDerivedType());
+
+  EXPECT_NE(Discriminator, Discriminator2);
+
+  auto *N = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      Discriminator);
+
+  // Test the hashing.
+  auto *Same = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      Discriminator);
+  auto *Other = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      Discriminator2);
+  auto *NoDisc = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr);
+
+  EXPECT_EQ(N, Same);
+  EXPECT_NE(Same, Other);
+  EXPECT_NE(Same, NoDisc);
+  EXPECT_NE(Other, NoDisc);
+
+  EXPECT_EQ(N->getDiscriminator(), Discriminator);
 }
 
 typedef MetadataTest DISubroutineTypeTest;
@@ -1383,7 +1458,8 @@ TEST_F(DIFileTest, get) {
 
   EXPECT_NE(N, DIFile::get(Context, "other", Directory, CSKind, Checksum));
   EXPECT_NE(N, DIFile::get(Context, Filename, "other", CSKind, Checksum));
-  EXPECT_NE(N, DIFile::get(Context, Filename, Directory, DIFile::CSK_SHA1, Checksum));
+  EXPECT_NE(
+      N, DIFile::get(Context, Filename, Directory, DIFile::CSK_SHA1, Checksum));
   EXPECT_NE(N, DIFile::get(Context, Filename, Directory));
 
   TempDIFile Temp = N->clone();
@@ -2025,6 +2101,18 @@ TEST_F(DIExpressionTest, get) {
 
   TempDIExpression Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+
+  // Test DIExpression::prepend().
+  uint64_t Elts0[] = {dwarf::DW_OP_LLVM_fragment, 0, 32};
+  auto *N0 = DIExpression::get(Context, Elts0);
+  N0 = DIExpression::prepend(N0, true, 64, true, true);
+  uint64_t Elts1[] = {dwarf::DW_OP_deref,
+                      dwarf::DW_OP_plus_uconst, 64,
+                      dwarf::DW_OP_deref,
+                      dwarf::DW_OP_stack_value,
+                      dwarf::DW_OP_LLVM_fragment, 0, 32};
+  auto *N1 = DIExpression::get(Context, Elts1);
+  EXPECT_EQ(N0, N1);
 }
 
 TEST_F(DIExpressionTest, isValid) {
@@ -2467,8 +2555,12 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
   DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, None));
 }
 
-#ifndef NDEBUG
-#ifdef GTEST_HAS_DEATH_TEST
+// Test various assertions in metadata tracking. Don't run these tests if gtest
+// will use SEH to recover from them. Two of these tests get halfway through
+// inserting metadata into DenseMaps for tracking purposes, and then they
+// assert, and we attempt to destroy an LLVMContext with broken invariants,
+// leading to infinite loops.
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
 TEST_F(DistinctMDOperandPlaceholderTest, MetadataAsValue) {
   // This shouldn't crash.
   DistinctMDOperandPlaceholder PH(7);
@@ -2509,7 +2601,6 @@ TEST_F(DistinctMDOperandPlaceholderTest, TrackingMDRefAndDistinctMDNode) {
                  "Placeholders can only be used once");
   }
 }
-#endif
 #endif
 
 } // end namespace

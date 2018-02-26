@@ -17,7 +17,9 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
+#include <cstddef>
 #include <memory>
 #include <system_error>
 #include <type_traits>
@@ -36,21 +38,6 @@ class CompilerInvocation;
 class DeclGroupRef;
 class PCHContainerOperations;
 
-/// A size of the preamble and a flag required by
-/// PreprocessorOptions::PrecompiledPreambleBytes.
-struct PreambleBounds {
-  PreambleBounds(unsigned Size, bool PreambleEndsAtStartOfLine)
-      : Size(Size), PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
-
-  /// \brief Size of the preamble in bytes.
-  unsigned Size;
-  /// \brief Whether the preamble ends at the start of a new line.
-  ///
-  /// Used to inform the lexer as to whether it's starting at the beginning of
-  /// a line after skipping the preamble.
-  bool PreambleEndsAtStartOfLine;
-};
-
 /// \brief Runs lexer to compute suggested preamble bounds.
 PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
                                      llvm::MemoryBuffer *Buffer,
@@ -62,7 +49,7 @@ class PreambleCallbacks;
 /// reuse the PCH for the subsequent runs. Use BuildPreamble to create PCH and
 /// CanReusePreamble + AddImplicitPreamble to make use of it.
 class PrecompiledPreamble {
-  class TempPCHFile;
+  class PCHStorage;
   struct PreambleFileHash;
 
 public:
@@ -85,6 +72,9 @@ public:
   ///
   /// \param PCHContainerOps An instance of PCHContainerOperations.
   ///
+  /// \param StoreInMemory Store PCH in memory. If false, PCH will be stored in
+  /// a temporary file.
+  ///
   /// \param Callbacks A set of callbacks to be executed when building
   /// the preamble.
   static llvm::ErrorOr<PrecompiledPreamble>
@@ -92,13 +82,18 @@ public:
         const llvm::MemoryBuffer *MainFileBuffer, PreambleBounds Bounds,
         DiagnosticsEngine &Diagnostics, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
         std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-        PreambleCallbacks &Callbacks);
+        bool StoreInMemory, PreambleCallbacks &Callbacks);
 
   PrecompiledPreamble(PrecompiledPreamble &&) = default;
   PrecompiledPreamble &operator=(PrecompiledPreamble &&) = default;
 
-  /// PreambleBounds used to build the preamble
+  /// PreambleBounds used to build the preamble.
   PreambleBounds getBounds() const;
+
+  /// Returns the size, in bytes, that preamble takes on disk or in memory.
+  /// For on-disk preambles returns 0 if filesystem operations fail. Intended to
+  /// be used for logging and debugging purposes only.
+  std::size_t getSize() const;
 
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.
@@ -107,12 +102,18 @@ public:
                 vfs::FileSystem *VFS) const;
 
   /// Changes options inside \p CI to use PCH from this preamble. Also remaps
-  /// main file to \p MainFileBuffer.
+  /// main file to \p MainFileBuffer and updates \p VFS to ensure the preamble
+  /// is accessible.
+  /// For in-memory preambles, PrecompiledPreamble instance continues to own
+  /// the MemoryBuffer with the Preamble after this method returns. The caller
+  /// is reponsible for making sure the PrecompiledPreamble instance outlives
+  /// the compiler run and the AST that will be using the PCH.
   void AddImplicitPreamble(CompilerInvocation &CI,
+                           IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
                            llvm::MemoryBuffer *MainFileBuffer) const;
 
 private:
-  PrecompiledPreamble(TempPCHFile PCHFile, std::vector<char> PreambleBytes,
+  PrecompiledPreamble(PCHStorage Storage, std::vector<char> PreambleBytes,
                       bool PreambleEndsAtStartOfLine,
                       llvm::StringMap<PreambleFileHash> FilesInPreamble);
 
@@ -154,6 +155,44 @@ private:
     llvm::Optional<std::string> FilePath;
   };
 
+  class InMemoryPreamble {
+  public:
+    std::string Data;
+  };
+
+  class PCHStorage {
+  public:
+    enum class Kind { Empty, InMemory, TempFile };
+
+    PCHStorage() = default;
+    PCHStorage(TempPCHFile File);
+    PCHStorage(InMemoryPreamble Memory);
+
+    PCHStorage(const PCHStorage &) = delete;
+    PCHStorage &operator=(const PCHStorage &) = delete;
+
+    PCHStorage(PCHStorage &&Other);
+    PCHStorage &operator=(PCHStorage &&Other);
+
+    ~PCHStorage();
+
+    Kind getKind() const;
+
+    TempPCHFile &asFile();
+    const TempPCHFile &asFile() const;
+
+    InMemoryPreamble &asMemory();
+    const InMemoryPreamble &asMemory() const;
+
+  private:
+    void destroy();
+    void setEmpty();
+
+  private:
+    Kind StorageKind = Kind::Empty;
+    llvm::AlignedCharArrayUnion<TempPCHFile, InMemoryPreamble> Storage = {};
+  };
+
   /// Data used to determine if a file used in the preamble has been changed.
   struct PreambleFileHash {
     /// All files have size set.
@@ -183,8 +222,15 @@ private:
     }
   };
 
-  /// Manages the lifetime of temporary file that stores a PCH.
-  TempPCHFile PCHFile;
+  /// Sets up the PreprocessorOptions and changes VFS, so that PCH stored in \p
+  /// Storage is accessible to clang. This method is an implementation detail of
+  /// AddImplicitPreamble.
+  static void setupPreambleStorage(const PCHStorage &Storage,
+                                   PreprocessorOptions &PreprocessorOpts,
+                                   IntrusiveRefCntPtr<vfs::FileSystem> &VFS);
+
+  /// Manages the memory buffer or temporary file that stores the PCH.
+  PCHStorage Storage;
   /// Keeps track of the files that were used when computing the
   /// preamble, with both their buffer size and their modification time.
   ///
@@ -204,6 +250,11 @@ class PreambleCallbacks {
 public:
   virtual ~PreambleCallbacks() = default;
 
+  /// Called before FrontendAction::BeginSourceFile.
+  /// Can be used to store references to various CompilerInstance fields
+  /// (e.g. SourceManager) that may be interesting to the consumers of other
+  /// callbacks.
+  virtual void BeforeExecute(CompilerInstance &CI);
   /// Called after FrontendAction::Execute(), but before
   /// FrontendAction::EndSourceFile(). Can be used to transfer ownership of
   /// various CompilerInstance fields before they are destroyed.
@@ -215,11 +266,9 @@ public:
   /// NOTE: To allow more flexibility a custom ASTConsumer could probably be
   /// used instead, but having only this method allows a simpler API.
   virtual void HandleTopLevelDecl(DeclGroupRef DG);
-  /// Called for each macro defined in the Preamble.
-  /// NOTE: To allow more flexibility a custom PPCallbacks could probably be
-  /// used instead, but having only this method allows a simpler API.
-  virtual void HandleMacroDefined(const Token &MacroNameTok,
-                                  const MacroDirective *MD);
+  /// Creates wrapper class for PPCallbacks so we can also process information
+  /// about includes that are inside of a preamble
+  virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
 };
 
 enum class BuildPreambleError {

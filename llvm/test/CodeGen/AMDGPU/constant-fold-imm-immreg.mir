@@ -2,7 +2,7 @@
 ...
 
 # GCN-LABEL: name: s_fold_and_imm_regimm_32{{$}}
-# GCN: %10 = V_MOV_B32_e32 1543, implicit %exec
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 1543, implicit %exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
 name:            s_fold_and_imm_regimm_32
 alignment:       0
@@ -62,19 +62,19 @@ body:             |
 
 # GCN-LABEL: name: v_fold_and_imm_regimm_32{{$}}
 
-# GCN: %9 = V_MOV_B32_e32 646, implicit %exec
+# GCN: %9:vgpr_32 = V_MOV_B32_e32 646, implicit %exec
 # GCN: FLAT_STORE_DWORD %19, %9,
 
-# GCN: %10 = V_MOV_B32_e32 646, implicit %exec
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 646, implicit %exec
 # GCN: FLAT_STORE_DWORD %19, %10
 
-# GCN: %11 = V_MOV_B32_e32 646, implicit %exec
+# GCN: %11:vgpr_32 = V_MOV_B32_e32 646, implicit %exec
 # GCN: FLAT_STORE_DWORD %19, %11,
 
-# GCN: %12 = V_MOV_B32_e32 1234567, implicit %exec
+# GCN: %12:vgpr_32 = V_MOV_B32_e32 1234567, implicit %exec
 # GCN: FLAT_STORE_DWORD %19, %12,
 
-# GCN: %13 = V_MOV_B32_e32 63, implicit %exec
+# GCN: %13:vgpr_32 = V_MOV_B32_e32 63, implicit %exec
 # GCN: FLAT_STORE_DWORD %19, %13,
 
 name:            v_fold_and_imm_regimm_32
@@ -226,34 +226,34 @@ body:             |
 ---
 # GCN-LABEL: name: v_fold_shl_imm_regimm_32{{$}}
 
-# GCN: %11 = V_MOV_B32_e32 40955904, implicit %exec
+# GCN: %11:vgpr_32 = V_MOV_B32_e32 40955904, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %11,
 
-# GCN: %12 = V_MOV_B32_e32 24, implicit %exec
+# GCN: %12:vgpr_32 = V_MOV_B32_e32 24, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %12,
 
-# GCN: %13 = V_MOV_B32_e32 4096, implicit %exec
+# GCN: %13:vgpr_32 = V_MOV_B32_e32 4096, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %13,
 
-# GCN: %14 = V_MOV_B32_e32 24, implicit %exec
+# GCN: %14:vgpr_32 = V_MOV_B32_e32 24, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %14,
 
-# GCN: %15 = V_MOV_B32_e32 0, implicit %exec
+# GCN: %15:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %15,
 
-# GCN: %22 = V_MOV_B32_e32 4096, implicit %exec
+# GCN: %22:vgpr_32 = V_MOV_B32_e32 4096, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %22,
 
-# GCN: %23 = V_MOV_B32_e32 1, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %23,
 
-# GCN: %25 = V_MOV_B32_e32 2, implicit %exec
+# GCN: %25:vgpr_32 = V_MOV_B32_e32 2, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %25,
 
-# GCN: %26 = V_MOV_B32_e32 7927808, implicit %exec
+# GCN: %26:vgpr_32 = V_MOV_B32_e32 7927808, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %26,
 
-# GCN: %28 = V_MOV_B32_e32 -8, implicit %exec
+# GCN: %28:vgpr_32 = V_MOV_B32_e32 -8, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %28,
 
 name:            v_fold_shl_imm_regimm_32
@@ -367,7 +367,7 @@ body:             |
 ---
 
 # GCN-LABEL: name: s_fold_ashr_imm_regimm_32{{$}}
-# GCN: %11 = V_MOV_B32_e32 243, implicit %exec
+# GCN: %11:vgpr_32 = V_MOV_B32_e32 243, implicit %exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %11, killed %8,
 name:            s_fold_ashr_imm_regimm_32
 alignment:       0
@@ -425,34 +425,34 @@ body:             |
 ...
 
 # GCN-LABEL: name: v_fold_ashr_imm_regimm_32{{$}}
-# GCN: %11 = V_MOV_B32_e32 3903258, implicit %exec
+# GCN: %11:vgpr_32 = V_MOV_B32_e32 3903258, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %11,
 
-# GCN: %12 = V_MOV_B32_e32 62452139, implicit %exec
+# GCN: %12:vgpr_32 = V_MOV_B32_e32 62452139, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %12,
 
-# GCN: %13 = V_MOV_B32_e32 1678031, implicit %exec
+# GCN: %13:vgpr_32 = V_MOV_B32_e32 1678031, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %13,
 
-# GCN: %14 = V_MOV_B32_e32 3, implicit %exec
+# GCN: %14:vgpr_32 = V_MOV_B32_e32 3, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %14,
 
-# GCN: %15 = V_MOV_B32_e32 -1, implicit %exec
+# GCN: %15:vgpr_32 = V_MOV_B32_e32 -1, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %15,
 
-# GCN: %22 = V_MOV_B32_e32 62500, implicit %exec
+# GCN: %22:vgpr_32 = V_MOV_B32_e32 62500, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %22,
 
-# GCN: %23 = V_MOV_B32_e32 500000, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 500000, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %23,
 
-# GCN: %25 = V_MOV_B32_e32 1920, implicit %exec
+# GCN: %25:vgpr_32 = V_MOV_B32_e32 1920, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %25,
 
-# GCN: %26 = V_MOV_B32_e32 487907, implicit %exec
+# GCN: %26:vgpr_32 = V_MOV_B32_e32 487907, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %26,
 
-# GCN: %28 = V_MOV_B32_e32 -1, implicit %exec
+# GCN: %28:vgpr_32 = V_MOV_B32_e32 -1, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %28,
 
 name:            v_fold_ashr_imm_regimm_32
@@ -575,7 +575,7 @@ body:             |
 ---
 
 # GCN-LABEL: name: s_fold_lshr_imm_regimm_32{{$}}
-# GCN: %11 = V_MOV_B32_e32 1048332, implicit %exec
+# GCN: %11:vgpr_32 = V_MOV_B32_e32 1048332, implicit %exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %11, killed %8,
 name:            s_fold_lshr_imm_regimm_32
 alignment:       0
@@ -634,34 +634,34 @@ body:             |
 ---
 
 # GCN-LABEL: name: v_fold_lshr_imm_regimm_32{{$}}
-# GCN: %11 = V_MOV_B32_e32 3903258, implicit %exec
+# GCN: %11:vgpr_32 = V_MOV_B32_e32 3903258, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %11,
 
-# GCN: %12 = V_MOV_B32_e32 62452139, implicit %exec
+# GCN: %12:vgpr_32 = V_MOV_B32_e32 62452139, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %12,
 
-# GCN: %13 = V_MOV_B32_e32 1678031, implicit %exec
+# GCN: %13:vgpr_32 = V_MOV_B32_e32 1678031, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %13,
 
-# GCN: %14 = V_MOV_B32_e32 3, implicit %exec
+# GCN: %14:vgpr_32 = V_MOV_B32_e32 3, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %14,
 
-# GCN: %15 = V_MOV_B32_e32 1, implicit %exec
+# GCN: %15:vgpr_32 = V_MOV_B32_e32 1, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %15,
 
-# GCN: %22 = V_MOV_B32_e32 62500, implicit %exec
+# GCN: %22:vgpr_32 = V_MOV_B32_e32 62500, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %22,
 
-# GCN: %23 = V_MOV_B32_e32 500000, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 500000, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %23,
 
-# GCN: %25 = V_MOV_B32_e32 1920, implicit %exec
+# GCN: %25:vgpr_32 = V_MOV_B32_e32 1920, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %25,
 
-# GCN: %26 = V_MOV_B32_e32 487907, implicit %exec
+# GCN: %26:vgpr_32 = V_MOV_B32_e32 487907, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %26,
 
-# GCN: %28 = V_MOV_B32_e32 1073741823, implicit %exec
+# GCN: %28:vgpr_32 = V_MOV_B32_e32 1073741823, implicit %exec
 # GCN: FLAT_STORE_DWORD %20, %28,
 
 name:            v_fold_lshr_imm_regimm_32
@@ -787,7 +787,7 @@ body:             |
 
 # GCN-LABEL: name: undefined_vreg_operand{{$}}
 # GCN: bb.0
-# GCN-NEXT: FLAT_STORE_DWORD undef %3, undef %1,
+# GCN-NEXT: FLAT_STORE_DWORD undef %3:vreg_64, undef %1:vgpr_32,
 # GCN-NEXT: S_ENDPGM
 name: undefined_vreg_operand
 tracksRegLiveness: true

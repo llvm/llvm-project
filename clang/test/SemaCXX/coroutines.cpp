@@ -66,6 +66,12 @@ struct suspend_never {
   void await_resume() {}
 };
 
+struct auto_await_suspend {
+  bool await_ready();
+  template <typename F> auto await_suspend(F) {}
+  void await_resume();
+};
+
 struct DummyVoidTag {};
 DummyVoidTag no_specialization() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<DummyVoidTag>' has no member named 'promise_type'}}
   co_await a;
@@ -157,6 +163,10 @@ void yield() {
   co_yield "foo"; // expected-error {{no matching}}
   co_yield 1.0;
   co_yield yield; // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
+}
+
+void check_auto_await_suspend() {
+  co_await auto_await_suspend{}; // Should compile successfully.
 }
 
 void coreturn(int n) {

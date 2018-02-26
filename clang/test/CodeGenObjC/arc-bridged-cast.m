@@ -102,5 +102,6 @@ CFStringRef bridge_of_paren_expr() {
   // CHECK-NOT: call i8* @objc_retainAutoreleasedReturnValue(
   // CHECK-NOT: call void @objc_release(
   CFStringRef r = (__bridge CFStringRef)(CreateNSString());
+  r = (__bridge CFStringRef)((NSString *)(CreateNSString()));
   return r;
 }

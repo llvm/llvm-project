@@ -1,9 +1,8 @@
-; RUN: llc < %s -march=arm   -mcpu=cortex-a8 -O0 -filetype=obj -o %t.o
-; RUN: llc < %s -march=thumb -mcpu=cortex-a8 -O0 -filetype=obj -o %t.o
-; RUN: llc < %s -march=arm   -mcpu=cortex-a8 -O2 -filetype=obj -verify-machineinstrs -o %t.o
-; RUN: llc < %s -march=thumb -mcpu=cortex-a8 -O2 -filetype=obj -verify-machineinstrs -o %t.o
+; RUN: llc < %s -mtriple=arm-apple-ios   -mcpu=cortex-a8 -O0 -filetype=obj -o %t.o
+; RUN: llc < %s -mtriple=thumb-apple-ios -mcpu=cortex-a8 -O0 -filetype=obj -o %t.o
+; RUN: llc < %s -mtriple=arm-apple-ios   -mcpu=cortex-a8 -O2 -filetype=obj -verify-machineinstrs -o %t.o
+; RUN: llc < %s -mtriple=thumb-apple-ios -mcpu=cortex-a8 -O2 -filetype=obj -verify-machineinstrs -o %t.o
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
-target triple = "thumbv7-apple-ios"
 
 ; This function comes from the Bullet test.  It is quite big, and exercises the
 ; constant island pass a bit.  It has caused failures, including

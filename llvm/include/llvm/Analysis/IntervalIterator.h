@@ -33,26 +33,32 @@
 #ifndef LLVM_ANALYSIS_INTERVALITERATOR_H
 #define LLVM_ANALYSIS_INTERVALITERATOR_H
 
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/Analysis/Interval.h"
 #include "llvm/Analysis/IntervalPartition.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <cassert>
+#include <iterator>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace llvm {
 
+class BasicBlock;
+
 // getNodeHeader - Given a source graph node and the source graph, return the
 // BasicBlock that is the header node.  This is the opposite of
 // getSourceGraphNode.
-//
 inline BasicBlock *getNodeHeader(BasicBlock *BB) { return BB; }
 inline BasicBlock *getNodeHeader(Interval *I) { return I->getHeaderNode(); }
 
 // getSourceGraphNode - Given a BasicBlock and the source graph, return the
 // source graph node that corresponds to the BasicBlock.  This is the opposite
 // of getNodeHeader.
-//
 inline BasicBlock *getSourceGraphNode(Function *, BasicBlock *BB) {
   return BB;
 }
@@ -64,7 +70,6 @@ inline Interval *getSourceGraphNode(IntervalPartition *IP, BasicBlock *BB) {
 // with the task of adding a node to the new interval, depending on the
 // type of the source node.  In the case of a CFG source graph (BasicBlock
 // case), the BasicBlock itself is added to the interval.
-//
 inline void addNodeToInterval(Interval *Int, BasicBlock *BB) {
   Int->Nodes.push_back(BB);
 }
@@ -75,28 +80,25 @@ inline void addNodeToInterval(Interval *Int, BasicBlock *BB) {
 // case), the BasicBlock itself is added to the interval.  In the case of
 // an IntervalPartition source graph (Interval case), all of the member
 // BasicBlocks are added to the interval.
-//
 inline void addNodeToInterval(Interval *Int, Interval *I) {
   // Add all of the nodes in I as new nodes in Int.
   Int->Nodes.insert(Int->Nodes.end(), I->Nodes.begin(), I->Nodes.end());
 }
 
-
-
-
-
-template<class NodeTy, class OrigContainer_t, class GT = GraphTraits<NodeTy*>,
-         class IGT = GraphTraits<Inverse<NodeTy*> > >
+template<class NodeTy, class OrigContainer_t, class GT = GraphTraits<NodeTy *>,
+         class IGT = GraphTraits<Inverse<NodeTy *>>>
 class IntervalIterator {
-  std::vector<std::pair<Interval*, typename Interval::succ_iterator> > IntStack;
-  std::set<BasicBlock*> Visited;
+  std::vector<std::pair<Interval *, typename Interval::succ_iterator>> IntStack;
+  std::set<BasicBlock *> Visited;
   OrigContainer_t *OrigContainer;
   bool IOwnMem;     // If True, delete intervals when done with them
                     // See file header for conditions of use
-public:
-  typedef std::forward_iterator_tag iterator_category;
 
-  IntervalIterator() {} // End iterator, empty stack
+public:
+  using iterator_category = std::forward_iterator_tag;
+
+  IntervalIterator() = default; // End iterator, empty stack
+
   IntervalIterator(Function *M, bool OwnMemory) : IOwnMem(OwnMemory) {
     OrigContainer = M;
     if (!ProcessInterval(&M->front())) {
@@ -157,6 +159,7 @@ public:
 
     return *this;
   }
+
   IntervalIterator operator++(int) { // Postincrement
     IntervalIterator tmp = *this;
     ++*this;
@@ -171,7 +174,6 @@ private:
   //
   // This method is templated because it may operate on two different source
   // graphs: a basic block graph, or a preexisting interval graph.
-  //
   bool ProcessInterval(NodeTy *Node) {
     BasicBlock *Header = getNodeHeader(Node);
     if (!Visited.insert(Header).second)
@@ -196,7 +198,6 @@ private:
   //
   // This method is templated because it may operate on two different source
   // graphs: a basic block graph, or a preexisting interval graph.
-  //
   void ProcessNode(Interval *Int, NodeTy *Node) {
     assert(Int && "Null interval == bad!");
     assert(Node && "Null Node == bad!");
@@ -241,10 +242,9 @@ private:
   }
 };
 
-typedef IntervalIterator<BasicBlock, Function> function_interval_iterator;
-typedef IntervalIterator<Interval, IntervalPartition>
-                                          interval_part_interval_iterator;
-
+using function_interval_iterator = IntervalIterator<BasicBlock, Function>;
+using interval_part_interval_iterator =
+    IntervalIterator<Interval, IntervalPartition>;
 
 inline function_interval_iterator intervals_begin(Function *F,
                                                   bool DeleteInts = true) {
@@ -263,6 +263,6 @@ inline interval_part_interval_iterator intervals_end(IntervalPartition &IP) {
   return interval_part_interval_iterator();
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_INTERVALITERATOR_H

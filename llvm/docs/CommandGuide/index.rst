@@ -30,6 +30,7 @@ Basic Commands
    llvm-stress
    llvm-symbolizer
    llvm-dwarfdump
+   dsymutil
 
 Debugging Tools
 ~~~~~~~~~~~~~~~
@@ -51,4 +52,5 @@ Developer Tools
    tblgen
    lit
    llvm-build
+   llvm-pdbutil
    llvm-readobj

@@ -3,7 +3,7 @@
 
 define <16 x i16> @foo(<16 x i32> %i) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminud {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NEXT:    retq

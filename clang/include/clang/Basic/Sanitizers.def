@@ -44,6 +44,8 @@ SANITIZER("address", Address)
 // Kernel AddressSanitizer (KASan)
 SANITIZER("kernel-address", KernelAddress)
 
+SANITIZER("hwaddress", HWAddress)
+
 // MemorySanitizer
 SANITIZER("memory", Memory)
 
@@ -134,6 +136,9 @@ SANITIZER("efficiency-working-set", EfficiencyWorkingSet)
 // Meta-group only used internally.
 SANITIZER_GROUP("efficiency-all", Efficiency,
                 EfficiencyCacheFrag | EfficiencyWorkingSet)
+
+// Scudo hardened allocator
+SANITIZER("scudo", Scudo)
 
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.

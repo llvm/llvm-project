@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
 
@@ -33,8 +32,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
 
   // Assume wildcards for unspecified instrs.
   unsigned FirstOpcode =
-    FirstMI ? FirstMI->getOpcode()
-	    : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
+      FirstMI ? FirstMI->getOpcode()
+              : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
   unsigned SecondOpcode = SecondMI.getOpcode();
 
   if (ST.hasArithmeticBccFusion())

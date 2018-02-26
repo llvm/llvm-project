@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -no-integrated-as
-; RUN: llc < %s -march=x86-64 -no-integrated-as
+; RUN: llc < %s -mtriple=i686-- -no-integrated-as
+; RUN: llc < %s -mtriple=x86_64-- -no-integrated-as
 
 ; from gcc.c-torture/compile/920520-1.c
 

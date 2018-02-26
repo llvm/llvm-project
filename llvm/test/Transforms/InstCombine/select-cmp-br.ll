@@ -248,7 +248,7 @@ bb5:                                              ; preds = %entry
 define i32 @test6(i32 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[BB:%.*]], label [[BB]]
+; CHECK-NEXT:    br i1 false, label [[BB:%.*]], label [[BB]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = select i1 [[ARG1:%.*]], i32 [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[TMP]]

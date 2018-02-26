@@ -1,4 +1,4 @@
-//===--- MacroInfo.cpp - Information about #defined identifiers -----------===//
+//===- MacroInfo.cpp - Information about #defined identifiers -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,25 +12,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <utility>
+
 using namespace clang;
 
 MacroInfo::MacroInfo(SourceLocation DefLoc)
-  : Location(DefLoc),
-    ParameterList(nullptr),
-    NumParameters(0),
-    IsDefinitionLengthCached(false),
-    IsFunctionLike(false),
-    IsC99Varargs(false),
-    IsGNUVarargs(false),
-    IsBuiltinMacro(false),
-    HasCommaPasting(false),
-    IsDisabled(false),
-    IsUsed(false),
-    IsAllowRedefinitionsWithoutWarning(false),
-    IsWarnIfUnused(false),
-    UsedForHeaderGuard(false) {
-}
+    : Location(DefLoc), IsDefinitionLengthCached(false), IsFunctionLike(false),
+      IsC99Varargs(false), IsGNUVarargs(false), IsBuiltinMacro(false),
+      HasCommaPasting(false), IsDisabled(false), IsUsed(false),
+      IsAllowRedefinitionsWithoutWarning(false), IsWarnIfUnused(false),
+      UsedForHeaderGuard(false) {}
 
 unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
   assert(!IsDefinitionLengthCached);

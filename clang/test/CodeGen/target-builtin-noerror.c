@@ -72,4 +72,42 @@ void verifyfeaturestrings() {
   (void)__builtin_cpu_supports("avx512pf");
   (void)__builtin_cpu_supports("avx512vbmi");
   (void)__builtin_cpu_supports("avx512ifma");
+  (void)__builtin_cpu_supports("avx5124vnniw");
+  (void)__builtin_cpu_supports("avx5124fmaps");
+  (void)__builtin_cpu_supports("avx512vpopcntdq");
+}
+
+void verifycpustrings() {
+  (void)__builtin_cpu_is("amd");
+  (void)__builtin_cpu_is("amdfam10h");
+  (void)__builtin_cpu_is("amdfam15h");
+  (void)__builtin_cpu_is("amdfam17h");
+  (void)__builtin_cpu_is("atom");
+  (void)__builtin_cpu_is("barcelona");
+  (void)__builtin_cpu_is("bdver1");
+  (void)__builtin_cpu_is("bdver2");
+  (void)__builtin_cpu_is("bdver3");
+  (void)__builtin_cpu_is("bdver4");
+  (void)__builtin_cpu_is("bonnell");
+  (void)__builtin_cpu_is("broadwell");
+  (void)__builtin_cpu_is("btver1");
+  (void)__builtin_cpu_is("btver2");
+  (void)__builtin_cpu_is("cannonlake");
+  (void)__builtin_cpu_is("core2");
+  (void)__builtin_cpu_is("corei7");
+  (void)__builtin_cpu_is("haswell");
+  (void)__builtin_cpu_is("intel");
+  (void)__builtin_cpu_is("istanbul");
+  (void)__builtin_cpu_is("ivybridge");
+  (void)__builtin_cpu_is("knl");
+  (void)__builtin_cpu_is("knm");
+  (void)__builtin_cpu_is("nehalem");
+  (void)__builtin_cpu_is("sandybridge");
+  (void)__builtin_cpu_is("shanghai");
+  (void)__builtin_cpu_is("silvermont");
+  (void)__builtin_cpu_is("skylake");
+  (void)__builtin_cpu_is("skylake-avx512");
+  (void)__builtin_cpu_is("slm");
+  (void)__builtin_cpu_is("westmere");
+  (void)__builtin_cpu_is("znver1");
 }

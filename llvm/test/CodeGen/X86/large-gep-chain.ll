@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -march x86 -o /dev/null
+; RUN: llc < %s -O0 -mtriple=i686-- -o /dev/null
 ; <rdar://problem/12445434>
 
 %0 = type { i32, float* }

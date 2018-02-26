@@ -1,4 +1,4 @@
-; RUN: llc -disable-fp-elim -O0 -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -disable-fp-elim -O0 -fast-isel -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
 ; Test that a variable with multiple entries in the MMI table makes it into the
 ; debug info.
 ;

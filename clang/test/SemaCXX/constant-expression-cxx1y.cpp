@@ -988,3 +988,90 @@ constexpr void Void(int n) {
   void();
 }
 constexpr int void_test = (Void(0), 1);
+
+namespace PR19741 {
+constexpr void addone(int &m) { m++; }
+
+struct S {
+  int m = 0;
+  constexpr S() { addone(m); }
+};
+constexpr bool evalS() {
+  constexpr S s;
+  return s.m == 1;
+}
+static_assert(evalS(), "");
+
+struct Nested {
+  struct First { int x = 42; };
+  union {
+    First first;
+    int second;
+  };
+  int x;
+  constexpr Nested(int x) : first(), x(x) { x = 4; }
+  constexpr Nested() : Nested(42) {
+    addone(first.x);
+    x = 3;
+  }
+};
+constexpr bool evalNested() {
+  constexpr Nested N;
+  return N.first.x == 43;
+}
+static_assert(evalNested(), "");
+} // namespace PR19741
+
+namespace IndirectFields {
+
+// Reference indirect field.
+struct A {
+  struct {
+    union {
+      int x = x = 3; // expected-note {{outside its lifetime}}
+    };
+  };
+  constexpr A() {}
+};
+static_assert(A().x == 3, ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'A()'}}
+
+// Reference another indirect field, with different 'this'.
+struct B {
+  struct {
+    union {
+      int x = 3;
+    };
+    int y = x;
+  };
+  constexpr B() {}
+};
+static_assert(B().y == 3, "");
+
+// Nested evaluation of indirect field initializers.
+struct C {
+  union {
+    int x = 1;
+  };
+};
+struct D {
+  struct {
+    C c;
+    int y = c.x + 1;
+  };
+};
+static_assert(D().y == 2, "");
+
+// Explicit 'this'.
+struct E {
+  int n = 0;
+  struct {
+    void *x = this;
+  };
+  void *y = this;
+};
+constexpr E e1 = E();
+static_assert(e1.x != e1.y, "");
+constexpr E e2 = E{0};
+static_assert(e2.x != e2.y, "");
+
+} // namespace IndirectFields

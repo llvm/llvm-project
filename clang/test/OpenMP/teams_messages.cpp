@@ -1,11 +1,16 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s
+
 void foo() {
 }
 
 #pragma omp teams // expected-error {{unexpected OpenMP directive '#pragma omp teams'}}
 
 int main(int argc, char **argv) {
+  #pragma omp target
+  #pragma omp teams
+  f; // expected-error {{use of undeclared identifier 'f'}}
   #pragma omp target
   #pragma omp teams { // expected-warning {{extra tokens at the end of '#pragma omp teams' are ignored}}
   foo();

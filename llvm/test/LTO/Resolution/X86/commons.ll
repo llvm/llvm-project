@@ -4,7 +4,7 @@
 ; RUN: llvm-dis -o - %t.out.0.0.preopt.bc  | FileCheck %s
 
 ; A strong definition should override the common
-; CHECK: @x = global i32 42, align 4
+; CHECK: @x = dso_local global i32 42, align 4
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -1,4 +1,4 @@
-//===-- MipsAsmPrinter.cpp - Mips LLVM Assembly Printer -------------------===//
+//===- MipsAsmPrinter.cpp - Mips LLVM Assembly Printer --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,41 +14,55 @@
 
 #include "MipsAsmPrinter.h"
 #include "InstPrinter/MipsInstPrinter.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
+#include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
-#include "MipsInstrInfo.h"
 #include "MipsMCInstLower.h"
+#include "MipsMachineFunction.h"
+#include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "MipsTargetStreamer.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
-#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -65,11 +79,11 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (Subtarget->inMips16Mode())
     for (std::map<
              const char *,
-             const llvm::Mips16HardFloatInfo::FuncSignature *>::const_iterator
+             const Mips16HardFloatInfo::FuncSignature *>::const_iterator
              it = MipsFI->StubsNeeded.begin();
          it != MipsFI->StubsNeeded.end(); ++it) {
       const char *Symbol = it->first;
-      const llvm::Mips16HardFloatInfo::FuncSignature *Signature = it->second;
+      const Mips16HardFloatInfo::FuncSignature *Signature = it->second;
       if (StubsNeeded.find(Symbol) == StubsNeeded.end())
         StubsNeeded[Symbol] = Signature;
     }
@@ -94,7 +108,7 @@ bool MipsAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
 #include "MipsGenMCPseudoLowering.inc"
 
 // Lower PseudoReturn/PseudoIndirectBranch/PseudoIndirectBranch64 to JR, JR_MM,
-// JALR, or JALR64 as appropriate for the target
+// JALR, or JALR64 as appropriate for the target.
 void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
                                               const MachineInstr *MI) {
   bool HasLinkReg = false;
@@ -347,6 +361,7 @@ void MipsAsmPrinter::EmitFunctionEntryLabel() {
   if (Subtarget->inMicroMipsMode()) {
     TS.emitDirectiveSetMicroMips();
     TS.setUsesMicroMips();
+    TS.updateABIInfo(*Subtarget);
   } else
     TS.emitDirectiveSetNoMicroMips();
 
@@ -366,7 +381,7 @@ void MipsAsmPrinter::EmitFunctionBodyStart() {
 
   MCInstLowering.Initialize(&MF->getContext());
 
-  bool IsNakedFunction = MF->getFunction()->hasFnAttribute(Attribute::Naked);
+  bool IsNakedFunction = MF->getFunction().hasFnAttribute(Attribute::Naked);
   if (!IsNakedFunction)
     emitFrameDirective();
 
@@ -403,8 +418,9 @@ void MipsAsmPrinter::EmitFunctionBodyEnd() {
 }
 
 void MipsAsmPrinter::EmitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  AsmPrinter::EmitBasicBlockEnd(MBB);
   MipsTargetStreamer &TS = getTargetStreamer();
-  if (MBB.size() == 0)
+  if (MBB.empty())
     TS.emitDirectiveInsn();
 }
 
@@ -483,7 +499,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         return true;
       O << MO.getImm() - 1;
       return false;
-    case 'z': {
+    case 'z':
       // $0 if zero, regular printing otherwise
       if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
         O << "$0";
@@ -491,7 +507,6 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       }
       // If not, call printOperand as normal.
       break;
-    }
     case 'D': // Second part of a double word register operand
     case 'L': // Low order register of a double word register operand
     case 'M': // High order register of a double word register operand
@@ -671,7 +686,6 @@ printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
   printOperand(MI, opNum, O);
   O << ", ";
   printOperand(MI, opNum+1, O);
-  return;
 }
 
 void MipsAsmPrinter::
@@ -706,7 +720,7 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
   StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
   StringRef FS = TM.getTargetFeatureString();
   const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-  const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM);
+  const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM, 0);
 
   bool IsABICalls = STI.isABICalls();
   const MipsABIInfo &ABI = MTM.getABI();
@@ -834,6 +848,7 @@ void MipsAsmPrinter::EmitSwapFPIntParams(const MCSubtargetInfo &STI,
                                          Mips16HardFloatInfo::FPParamVariant PV,
                                          bool LE, bool ToFP) {
   using namespace Mips16HardFloatInfo;
+
   unsigned MovOpc = ToFP ? Mips::MTC1 : Mips::MFC1;
   switch (PV) {
   case FSig:
@@ -866,6 +881,7 @@ void MipsAsmPrinter::EmitSwapFPIntRetval(
     const MCSubtargetInfo &STI, Mips16HardFloatInfo::FPReturnVariant RV,
     bool LE) {
   using namespace Mips16HardFloatInfo;
+
   unsigned MovOpc = Mips::MFC1;
   switch (RV) {
   case FRet:
@@ -888,8 +904,9 @@ void MipsAsmPrinter::EmitSwapFPIntRetval(
 
 void MipsAsmPrinter::EmitFPCallStub(
     const char *Symbol, const Mips16HardFloatInfo::FuncSignature *Signature) {
-  MCSymbol *MSymbol = OutContext.getOrCreateSymbol(StringRef(Symbol));
   using namespace Mips16HardFloatInfo;
+
+  MCSymbol *MSymbol = OutContext.getOrCreateSymbol(StringRef(Symbol));
   bool LE = getDataLayout().isLittleEndian();
   // Construct a local MCSubtargetInfo here.
   // This is because the MachineFunction won't exist (but have not yet been
@@ -1039,11 +1056,11 @@ void MipsAsmPrinter::EmitEndOfAsmFile(Module &M) {
   //
   for (std::map<
            const char *,
-           const llvm::Mips16HardFloatInfo::FuncSignature *>::const_iterator
+           const Mips16HardFloatInfo::FuncSignature *>::const_iterator
            it = StubsNeeded.begin();
        it != StubsNeeded.end(); ++it) {
     const char *Symbol = it->first;
-    const llvm::Mips16HardFloatInfo::FuncSignature *Signature = it->second;
+    const Mips16HardFloatInfo::FuncSignature *Signature = it->second;
     EmitFPCallStub(Symbol, Signature);
   }
   // return to the text section
@@ -1065,16 +1082,16 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   // be patching over the full 48 bytes (12 instructions) with the following
   // pattern:
   //
-  //   ADDIU	SP, SP, -8
+  //   ADDIU    SP, SP, -8
   //   NOP
-  //   SW	RA, 4(SP)
+  //   SW       RA, 4(SP)
   //   SW       T9, 0(SP)
   //   LUI      T9, %hi(__xray_FunctionEntry/Exit)
   //   ORI      T9, T9, %lo(__xray_FunctionEntry/Exit)
   //   LUI      T0, %hi(function_id)
-  //   JALR	T9
-  //   ORI	T0, T0, %lo(function_id)
-  //   LW	T9, 0(SP)
+  //   JALR     T9
+  //   ORI      T0, T0, %lo(function_id)
+  //   LW       T9, 0(SP)
   //   LW       RA, 4(SP)
   //   ADDIU    SP, SP, 8
   //

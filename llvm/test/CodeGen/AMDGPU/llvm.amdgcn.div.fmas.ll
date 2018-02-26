@@ -137,7 +137,6 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; GCN-LABEL: {{^}}test_div_fmas_f32_i1_phi_vcc:
 ; SI: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], vcc
-; SI: s_xor_b64 [[SAVE]], exec, [[SAVE]]
 
 ; SI: buffer_load_dword [[LOAD:v[0-9]+]]
 ; SI: v_cmp_ne_u32_e32 vcc, 0, [[LOAD]]

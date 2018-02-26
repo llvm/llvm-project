@@ -31,9 +31,19 @@
 @ CHECK-V8: sbc.w r6, r3, sp, asr #16     @ encoding: [0x63,0xeb,0x2d,0x46]
 @ CHECK-V8: and.w r6, r3, sp, asr #16     @ encoding: [0x03,0xea,0x2d,0x46]
 @ CHECK-V8: and   sp, r0, #0              @ encoding: [0x00,0xf0,0x00,0x0d]
-@ CHECK-V7: error: instruction variant requires ARMv8 or later
-@ CHECK-V7: error: instruction variant requires ARMv8 or later
-@ CHECK-V7: error: invalid operand for instruction
+@ CHECK-V7: error: invalid instruction, any one of the following would fix this:
+@ CHECK-V7-NEXT: sbc.w r6, r3, sp, asr #16
+@ CHECK-V7: note: instruction variant requires ARMv8 or later
+@ CHECK-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-V7: error: invalid instruction, any one of the following would fix this:
+@ CHECK-V7-NEXT: and.w r6, r3, sp, asr #16
+@ CHECK-V7: note: invalid operand for instruction
+@ CHECK-V7: note: instruction variant requires ARMv8 or later
+@ CHECK-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-V7: error: invalid instruction, any one of the following would fix this:
+@ CHECK-V7-NEXT: and sp, r0, #0
+@ CHECK-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-V7: note: invalid operand for instruction
 
 @ DCPS{1,2,3} (in ARMv8 only)
         dcps1

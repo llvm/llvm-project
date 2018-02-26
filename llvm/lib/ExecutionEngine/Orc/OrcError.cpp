@@ -54,6 +54,8 @@ public:
     case OrcErrorCode::UnknownErrorCodeFromRemote:
       return "Unknown error returned from remote RPC function "
              "(Use StringError to get error message)";
+    case OrcErrorCode::UnknownResourceHandle:
+      return "Unknown resource handle";
     }
     llvm_unreachable("Unhandled error code");
   }

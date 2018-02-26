@@ -32,7 +32,7 @@ def updateReferenceResults(ProjName, ProjBuildMode):
     if not os.path.exists(CreatedResultsPath):
         print >> sys.stderr, "New results not found, was SATestBuild.py "\
                              "previously run?"
-        sys.exit(-1)
+        sys.exit(1)
 
     # Remove reference results: in git, and then again for a good measure
     # with rm, as git might not remove things fully if there are empty
@@ -54,20 +54,7 @@ def updateReferenceResults(ProjName, ProjBuildMode):
     # Clean up the generated difference results.
     SATestBuild.cleanupReferenceResults(RefResultsPath)
 
-    # Remove the created .diffs file before adding.
-    removeDiffsSummaryFiles(RefResultsPath)
-
     runCmd('git add "%s"' % (RefResultsPath,))
-
-
-def removeDiffsSummaryFiles(RefResultsPath):
-    """
-    Remove all auto-generated .diffs files in reference data.
-    """
-    for (Dirpath, Dirnames, Filenames) in os.walk(RefResultsPath):
-        if SATestBuild.DiffsSummaryFileName in Filenames:
-            runCmd("rm '%s'" % os.path.join(
-                Dirpath, SATestBuild.DiffsSummaryFileName))
 
 
 def main(argv):
@@ -75,11 +62,12 @@ def main(argv):
         print >> sys.stderr, "Update static analyzer reference results based "\
                              "\non the previous run of SATestBuild.py.\n"\
                              "\nN.B.: Assumes that SATestBuild.py was just run"
-        sys.exit(-1)
+        sys.exit(1)
 
     with SATestBuild.projectFileHandler() as f:
         for (ProjName, ProjBuildMode) in SATestBuild.iterateOverProjects(f):
             updateReferenceResults(ProjName, int(ProjBuildMode))
+
 
 if __name__ == '__main__':
     main(sys.argv)

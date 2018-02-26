@@ -60,20 +60,26 @@
 
 #include "AArch64.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
 #include <cstdlib>
 #include <tuple>
 
@@ -84,6 +90,7 @@ using namespace llvm;
 STATISTIC(NumConditionsAdjusted, "Number of conditions adjusted");
 
 namespace {
+
 class AArch64ConditionOptimizer : public MachineFunctionPass {
   const TargetInstrInfo *TII;
   MachineDominatorTree *DomTree;
@@ -92,12 +99,14 @@ class AArch64ConditionOptimizer : public MachineFunctionPass {
 public:
   // Stores immediate, compare instruction opcode and branch condition (in this
   // order) of adjusted comparison.
-  typedef std::tuple<int, unsigned, AArch64CC::CondCode> CmpInfo;
+  using CmpInfo = std::tuple<int, unsigned, AArch64CC::CondCode>;
 
   static char ID;
+
   AArch64ConditionOptimizer() : MachineFunctionPass(ID) {
     initializeAArch64ConditionOptimizerPass(*PassRegistry::getPassRegistry());
   }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   MachineInstr *findSuitableCompare(MachineBasicBlock *MBB);
   CmpInfo adjustCmp(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
@@ -105,10 +114,12 @@ public:
   bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
                 int ToImm);
   bool runOnMachineFunction(MachineFunction &MF) override;
+
   StringRef getPassName() const override {
     return "AArch64 Condition Optimizer";
   }
 };
+
 } // end anonymous namespace
 
 char AArch64ConditionOptimizer::ID = 0;
@@ -196,7 +207,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
       return nullptr;
     }
   }
-  DEBUG(dbgs() << "Flags not defined in BB#" << MBB->getNumber() << '\n');
+  DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB) << '\n');
   return nullptr;
 }
 
@@ -316,7 +327,7 @@ bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
 bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                << "********** Function: " << MF.getName() << '\n');
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();

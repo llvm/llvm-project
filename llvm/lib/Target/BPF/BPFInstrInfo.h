@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_BPF_BPFINSTRINFO_H
 
 #include "BPFRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "BPFGenInstrInfo.inc"

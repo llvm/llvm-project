@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPCInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -23,7 +24,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOpcodes.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -38,6 +38,12 @@ FullRegNames("ppc-asm-full-reg-names", cl::Hidden, cl::init(false),
 static cl::opt<bool>
 ShowVSRNumsAsVR("ppc-vsr-nums-as-vr", cl::Hidden, cl::init(false),
              cl::desc("Prints full register names with vs{31-63} as v{0-31}"));
+
+// Prints full register names with percent symbol.
+static cl::opt<bool>
+FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
+                        cl::init(false),
+                        cl::desc("Prints full register names with percent"));
 
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
@@ -84,7 +90,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
       return;
     }
   }
-  
+
   if ((MI->getOpcode() == PPC::OR || MI->getOpcode() == PPC::OR8) &&
       MI->getOperand(1).getReg() == MI->getOperand(2).getReg()) {
     O << "\tmr ";
@@ -94,7 +100,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     printAnnotation(O, Annot);
     return;
   }
-  
+
   if (MI->getOpcode() == PPC::RLDICR ||
       MI->getOpcode() == PPC::RLDICR_32) {
     unsigned char SH = MI->getOperand(2).getImm();
@@ -161,7 +167,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
       return;
     }
   }
-  
+
   if (!printAliasInstr(MI, O))
     printInstruction(MI, O);
   printAnnotation(O, Annot);
@@ -259,7 +265,7 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
     }
     llvm_unreachable("Invalid predicate code");
   }
-  
+
   assert(StringRef(Modifier) == "reg" &&
          "Need to specify 'cc', 'pm' or 'reg' as predicate op modifier!");
   printOperand(MI, OpNo+1, O);
@@ -445,13 +451,57 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
     O << '@' << MCSymbolRefExpr::getVariantKindName(refExp.getKind());
 }
 
+/// showRegistersWithPercentPrefix - Check if this register name should be
+/// printed with a percentage symbol as prefix.
+bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
+  if (!FullRegNamesWithPercent || TT.isOSDarwin() || TT.getOS() == Triple::AIX)
+    return false;
+
+  switch (RegName[0]) {
+  default:
+    return false;
+  case 'r':
+  case 'f':
+  case 'q':
+  case 'v':
+  case 'c':
+    return true;
+  }
+}
+
+/// getVerboseConditionalRegName - This method expands the condition register
+/// when requested explicitly or targetting Darwin.
+const char *PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
+                                                       unsigned RegEncoding)
+                                                       const {
+  if (!TT.isOSDarwin() && !FullRegNames)
+    return nullptr;
+  if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
+    return nullptr;
+  const char *CRBits[] = {
+    "lt", "gt", "eq", "un",
+    "4*cr1+lt", "4*cr1+gt", "4*cr1+eq", "4*cr1+un",
+    "4*cr2+lt", "4*cr2+gt", "4*cr2+eq", "4*cr2+un",
+    "4*cr3+lt", "4*cr3+gt", "4*cr3+eq", "4*cr3+un",
+    "4*cr4+lt", "4*cr4+gt", "4*cr4+eq", "4*cr4+un",
+    "4*cr5+lt", "4*cr5+gt", "4*cr5+eq", "4*cr5+un",
+    "4*cr6+lt", "4*cr6+gt", "4*cr6+eq", "4*cr6+un",
+    "4*cr7+lt", "4*cr7+gt", "4*cr7+eq", "4*cr7+un"
+  };
+  return CRBits[RegEncoding];
+}
+
+// showRegistersWithPrefix - This method determines whether registers
+// should be number-only or include the prefix.
+bool PPCInstPrinter::showRegistersWithPrefix() const {
+  if (TT.getOS() == Triple::AIX)
+    return false;
+  return TT.isOSDarwin() || FullRegNamesWithPercent || FullRegNames;
+}
 
 /// stripRegisterPrefix - This method strips the character prefix from a
-/// register name so that only the number is left.  Used by for linux asm.
+/// register name so that only the number is left.
 static const char *stripRegisterPrefix(const char *RegName) {
-  if (FullRegNames || ShowVSRNumsAsVR)
-    return RegName;
-
   switch (RegName[0]) {
   case 'r':
   case 'f':
@@ -462,7 +512,7 @@ static const char *stripRegisterPrefix(const char *RegName) {
     return RegName + 1;
   case 'c': if (RegName[1] == 'r') return RegName + 2;
   }
-  
+
   return RegName;
 }
 
@@ -487,20 +537,24 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
         Reg = PPC::VSX32 + (Reg - PPC::VF0);
     }
 
-    const char *RegName = getRegisterName(Reg);
-    // The linux and AIX assembler does not take register prefixes.
-    if (!isDarwinSyntax())
+    const char *RegName;
+    RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg));
+    if (RegName == nullptr)
+     RegName = getRegisterName(Reg);
+    if (showRegistersWithPercentPrefix(RegName))
+      O << "%";
+    if (!showRegistersWithPrefix())
       RegName = stripRegisterPrefix(RegName);
-    
+
     O << RegName;
     return;
   }
-  
+
   if (Op.isImm()) {
     O << Op.getImm();
     return;
   }
-  
+
   assert(Op.isExpr() && "unknown operand kind in printOperand");
   Op.getExpr()->print(O, &MAI);
 }

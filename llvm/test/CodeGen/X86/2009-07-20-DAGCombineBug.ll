@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 @bsBuff = internal global i32 0		; <i32*> [#uses=1]
 @llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @bsGetUInt32 to i8*)], section "llvm.metadata"		; <[1 x i8*]*> [#uses=0]

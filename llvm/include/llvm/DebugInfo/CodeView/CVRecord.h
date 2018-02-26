@@ -61,30 +61,38 @@ template <typename Kind> struct RemappedRecord {
   SmallVector<std::pair<uint32_t, TypeIndex>, 8> Mappings;
 };
 
+/// Read a complete record from a stream at a random offset.
+template <typename Kind>
+inline Expected<CVRecord<Kind>> readCVRecordFromStream(BinaryStreamRef Stream,
+                                                       uint32_t Offset) {
+  const RecordPrefix *Prefix = nullptr;
+  BinaryStreamReader Reader(Stream);
+  Reader.setOffset(Offset);
+
+  if (auto EC = Reader.readObject(Prefix))
+    return std::move(EC);
+  if (Prefix->RecordLen < 2)
+    return make_error<CodeViewError>(cv_error_code::corrupt_record);
+  Kind K = static_cast<Kind>(uint16_t(Prefix->RecordKind));
+
+  Reader.setOffset(Offset);
+  ArrayRef<uint8_t> RawData;
+  if (auto EC = Reader.readBytes(RawData, Prefix->RecordLen + sizeof(uint16_t)))
+    return std::move(EC);
+  return codeview::CVRecord<Kind>(K, RawData);
+}
+
 } // end namespace codeview
 
 template <typename Kind>
 struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
   Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::CVRecord<Kind> &Item) {
-    using namespace codeview;
-    const RecordPrefix *Prefix = nullptr;
-    BinaryStreamReader Reader(Stream);
-    uint32_t Offset = Reader.getOffset();
-
-    if (auto EC = Reader.readObject(Prefix))
-      return EC;
-    if (Prefix->RecordLen < 2)
-      return make_error<CodeViewError>(cv_error_code::corrupt_record);
-    Kind K = static_cast<Kind>(uint16_t(Prefix->RecordKind));
-
-    Reader.setOffset(Offset);
-    ArrayRef<uint8_t> RawData;
-    if (auto EC =
-            Reader.readBytes(RawData, Prefix->RecordLen + sizeof(uint16_t)))
-      return EC;
-    Item = codeview::CVRecord<Kind>(K, RawData);
-    Len = Item.length();
+    auto ExpectedRec = codeview::readCVRecordFromStream<Kind>(Stream, 0);
+    if (!ExpectedRec)
+      return ExpectedRec.takeError();
+    Item = *ExpectedRec;
+    Len = ExpectedRec->length();
     return Error::success();
   }
 };

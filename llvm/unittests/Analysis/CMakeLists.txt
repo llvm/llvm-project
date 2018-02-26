@@ -14,6 +14,7 @@ add_llvm_unittest(AnalysisTests
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
   GlobalsModRefTest.cpp
+  ValueLatticeTest.cpp
   LazyCallGraphTest.cpp
   LoopInfoTest.cpp
   MemoryBuiltinsTest.cpp
@@ -21,6 +22,7 @@ add_llvm_unittest(AnalysisTests
   OrderedBasicBlockTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
+  SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
   TBAATest.cpp
   UnrollAnalyzer.cpp

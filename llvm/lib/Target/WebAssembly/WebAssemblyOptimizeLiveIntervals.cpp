@@ -15,14 +15,14 @@
 /// have multiple defs, and then they do, the defs are usually closely related.
 /// Later, after coalescing, tail duplication, and other optimizations, it's
 /// more common to see registers with multiple unrelated defs. This pass
-/// updates LiveIntervalAnalysis to distribute the value numbers across separate
+/// updates LiveIntervals to distribute the value numbers across separate
 /// LiveIntervals.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"

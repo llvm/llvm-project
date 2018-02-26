@@ -7,10 +7,6 @@
 // RUN: env %tool_options='abort_on_error=0, dedup_token_length=3' not %run %t 2>&1   | FileCheck %s --check-prefix=CHECK3 --match-full-lines
 
 // REQUIRES: stable-runtime
-// FIXME: implement SEGV handler in other sanitizers, not just asan.
-// XFAIL: msan
-// XFAIL: lsan
-// XFAIL: tsan
 
 volatile int *null = 0;
 

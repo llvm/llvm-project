@@ -8,7 +8,7 @@
 
 ; Test importing from archive library via gold, using jobs=1 to ensure
 ; output messages are not interleaved.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=-print-imports \

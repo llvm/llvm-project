@@ -52,5 +52,5 @@ b2:                                                                ; preds = %b1
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
+attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b" }
 

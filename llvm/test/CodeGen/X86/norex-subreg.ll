@@ -4,10 +4,10 @@ target triple = "x86_64-apple-macosx10.7"
 
 ; This test case extracts a sub_8bit_hi sub-register:
 ;
-;	%R8B<def> = COPY %BH, %EBX<imp-use,kill>
-;	%ESI<def> = MOVZX32_NOREXrr8 %R8B<kill>
+;	%r8b = COPY %bh, implicit killed %ebx
+;	%esi = MOVZX32_NOREXrr8 killed %r8b
 ;
-; The register allocation above is invalid, %BH can only be encoded without an
+; The register allocation above is invalid, %bh can only be encoded without an
 ; REX prefix, so the destination register must be GR8_NOREX.  The code above
 ; triggers an assertion in copyPhysReg.
 ;
@@ -41,10 +41,10 @@ entry:
 
 ; This test case extracts a sub_8bit_hi sub-register:
 ;
-;       %vreg2<def> = COPY %vreg1:sub_8bit_hi; GR8:%vreg2 GR64_ABCD:%vreg1
-;       TEST8ri %vreg2, 1, %EFLAGS<imp-def>; GR8:%vreg2
+;       %2 = COPY %1:sub_8bit_hi; GR8:%2 GR64_ABCD:%1
+;       TEST8ri %2, 1, implicit-def %eflags; GR8:%2
 ;
-; %vreg2 must be constrained to GR8_NOREX, or the COPY could become impossible.
+; %2 must be constrained to GR8_NOREX, or the COPY could become impossible.
 ;
 ; PR11088
 

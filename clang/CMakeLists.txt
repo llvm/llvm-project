@@ -132,6 +132,9 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       # Note: path not really used, except for checking if lit was found
       set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
+      if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+        add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit utils/llvm-lit)
+      endif()
       if(NOT LLVM_UTILS_PROVIDED)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/FileCheck utils/FileCheck)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/count utils/count)
@@ -181,9 +184,14 @@ endif()
 # we can include cmake files from this directory.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-find_package(LibXml2 2.5.3 QUIET)
-if (LIBXML2_FOUND)
-  set(CLANG_HAVE_LIBXML 1)
+# Don't look for libxml if we're using MSan, since uninstrumented third party
+# code may call MSan interceptors like strlen, leading to false positives.
+if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
+  set (LIBXML2_FOUND 0)
+  find_package(LibXml2 2.5.3 QUIET)
+  if (LIBXML2_FOUND)
+    set(CLANG_HAVE_LIBXML 1)
+  endif()
 endif()
 
 include(CheckIncludeFile)
@@ -227,8 +235,23 @@ if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR
     "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
 endif()
 
+set(CLANG_DEFAULT_OBJCOPY "objcopy" CACHE STRING
+  "Default objcopy executable to use.")
+
 set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING
   "Default OpenMP runtime used by -fopenmp.")
+
+# OpenMP offloading requires at least sm_35 because we use shuffle instructions
+# to generate efficient code for reductions and the atomicMax instruction on
+# 64-bit integers in the implementation of conditional lastprivate.
+set(CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35" CACHE STRING
+  "Default architecture for OpenMP offloading to Nvidia GPUs.")
+string(REGEX MATCH "^sm_([0-9]+)$" MATCHED_ARCH "${CLANG_OPENMP_NVPTX_DEFAULT_ARCH}")
+if (NOT DEFINED MATCHED_ARCH OR "${CMAKE_MATCH_1}" LESS 35)
+  message(WARNING "Resetting default architecture for OpenMP offloading to Nvidia GPUs to sm_35")
+  set(CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35" CACHE STRING
+    "Default architecture for OpenMP offloading to Nvidia GPUs." FORCE)
+endif()
 
 set(CLANG_VENDOR ${PACKAGE_VENDOR} CACHE STRING
   "Vendor-specific text for showing with version information.")
@@ -374,6 +397,8 @@ option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
 option(CLANG_ANALYZER_BUILD_Z3
   "Build the static analyzer with the Z3 constraint manager." OFF)
 
+option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
+
 if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_BUILD_Z3))
   message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
 endif()
@@ -411,7 +436,15 @@ add_subdirectory(include)
 # All targets below may depend on all tablegen'd files.
 get_property(CLANG_TABLEGEN_TARGETS GLOBAL PROPERTY CLANG_TABLEGEN_TARGETS)
 add_custom_target(clang-tablegen-targets DEPENDS ${CLANG_TABLEGEN_TARGETS})
+set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Misc")
 list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
+
+# Force target to be built as soon as possible. Clang modules builds depend
+# header-wise on it as they ship all headers from the umbrella folders. Building
+# an entire module might include header, which depends on intrinsics_gen.
+if(LLVM_ENABLE_MODULES AND NOT CLANG_BUILT_STANDALONE)
+  list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
+endif()
 
 add_subdirectory(lib)
 add_subdirectory(tools)
@@ -508,8 +541,8 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(NEXT_CLANG_STAGE ${NEXT_CLANG_STAGE}-instrumented)
   endif()
   message(STATUS "Setting next clang stage to: ${NEXT_CLANG_STAGE}")
-  
-  
+
+
   set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-stamps/)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
@@ -571,7 +604,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_BINUTILS_INCDIR
     CLANG_REPOSITORY_STRING
     CMAKE_MAKE_PROGRAM
-    CMAKE_OSX_ARCHITECTURES)
+    CMAKE_OSX_ARCHITECTURES
+    LLVM_ENABLE_PROJECTS
+    LLVM_ENABLE_RUNTIMES)
 
   # We don't need to depend on compiler-rt if we're building instrumented
   # because the next stage will use the same compiler used to build this stage.
@@ -621,7 +656,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
   foreach(variableName ${variableNames})
     if(variableName MATCHES "^BOOTSTRAP_")
       string(SUBSTRING ${variableName} 10 -1 varName)
-      string(REPLACE ";" "\;" value "${${variableName}}")
+      string(REPLACE ";" "|" value "${${variableName}}")
       list(APPEND PASSTHROUGH_VARIABLES
         -D${varName}=${value})
     endif()
@@ -637,7 +672,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       if("${${variableName}}" STREQUAL "")
         set(value "")
       else()
-        string(REPLACE ";" "\;" value ${${variableName}})
+        string(REPLACE ";" "|" value "${${variableName}}")
       endif()
       list(APPEND PASSTHROUGH_VARIABLES
         -D${variableName}=${value})
@@ -665,6 +700,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
+    LIST_SEPARATOR |
     )
 
   # exclude really-install from main target

@@ -137,51 +137,6 @@ public:
       return scalar(getScalarSizeInBits());
   }
 
-  /// Get a low-level type with half the size of the original, by halving the
-  /// size of the scalar type involved. For example `s32` will become `s16`,
-  /// `<2 x s32>` will become `<2 x s16>`.
-  LLT halfScalarSize() const {
-    assert(!IsPointer && getScalarSizeInBits() > 1 &&
-           getScalarSizeInBits() % 2 == 0 && "cannot half size of this type");
-    return LLT{/*isPointer=*/false, IsVector ? true : false,
-               IsVector ? getNumElements() : (uint16_t)0,
-               getScalarSizeInBits() / 2, /*AddressSpace=*/0};
-  }
-
-  /// Get a low-level type with twice the size of the original, by doubling the
-  /// size of the scalar type involved. For example `s32` will become `s64`,
-  /// `<2 x s32>` will become `<2 x s64>`.
-  LLT doubleScalarSize() const {
-    assert(!IsPointer && "cannot change size of this type");
-    return LLT{/*isPointer=*/false, IsVector ? true : false,
-               IsVector ? getNumElements() : (uint16_t)0,
-               getScalarSizeInBits() * 2, /*AddressSpace=*/0};
-  }
-
-  /// Get a low-level type with half the size of the original, by halving the
-  /// number of vector elements of the scalar type involved. The source must be
-  /// a vector type with an even number of elements. For example `<4 x s32>`
-  /// will become `<2 x s32>`, `<2 x s32>` will become `s32`.
-  LLT halfElements() const {
-    assert(isVector() && getNumElements() % 2 == 0 && "cannot half odd vector");
-    if (getNumElements() == 2)
-      return scalar(getScalarSizeInBits());
-
-    return LLT{/*isPointer=*/false, /*isVector=*/true,
-               (uint16_t)(getNumElements() / 2), getScalarSizeInBits(),
-               /*AddressSpace=*/0};
-  }
-
-  /// Get a low-level type with twice the size of the original, by doubling the
-  /// number of vector elements of the scalar type involved. The source must be
-  /// a vector type. For example `<2 x s32>` will become `<4 x s32>`. Doubling
-  /// the number of elements in sN produces <2 x sN>.
-  LLT doubleElements() const {
-    return LLT{IsPointer ? true : false, /*isVector=*/true,
-               (uint16_t)(getNumElements() * 2), getScalarSizeInBits(),
-               IsPointer ? getAddressSpace() : 0};
-  }
-
   void print(raw_ostream &OS) const;
 
   bool operator==(const LLT &RHS) const {

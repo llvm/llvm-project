@@ -1,8 +1,10 @@
-RUN: not llvm-dwarfdump %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-type.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-zero-size.elf 2>&1 | FileCheck %s
 CHECK: Invalid data was encountered while parsing the file
+
+RUN: not llvm-dwarfdump %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck --check-prefix=RELA %s
+RELA: Section is not SHT_RELA
 
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-non-null.elf 2>&1 | FileCheck --check-prefix=NON-NULL %s
 NON-NULL: Invalid data was encountered while parsing the file
@@ -45,7 +47,7 @@ RUN: not llvm-readobj -t %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --
 INVALID-SECTION-INDEX: invalid section index
 
 RUN: not llvm-readobj -s %p/Inputs/invalid-section-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE %s
-INVALID-SECTION-SIZE: Invalid data was encountered while parsing the file
+INVALID-SECTION-SIZE: invalid section header entry size (e_shentsize) in ELF header
 
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-symbol-table-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
@@ -53,7 +55,7 @@ INVALID-SYMTAB-SIZE: size is not a multiple of sh_entsize
 
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
-INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file
+INVALID-XINDEX-SIZE: invalid section contents size
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
 INVALID-SH-NUM: invalid e_phentsize
@@ -70,14 +72,20 @@ INVALID-RELOC-SH-OFFSET: invalid section offset
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-sections-address-alignment.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-SEC-ADDRESS-ALIGNMENT %s
-INVALID-SEC-ADDRESS-ALIGNMENT: Invalid data was encountered while parsing the file
+INVALID-SEC-ADDRESS-ALIGNMENT: invalid alignment of section headers
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-section-size2.elf 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
 INVALID-SECTION-SIZE2: invalid section offset
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-sections-num.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
-INVALID-SECTION-NUM: Invalid data was encountered while parsing the file
+INVALID-SECTION-NUM: section table goes past the end of file
 
 RUN: not llvm-readobj -r %p/Inputs/invalid-rel-sym.elf 2>&1 | FileCheck --check-prefix=INVALID-REL-SYM %s
 INVALID-REL-SYM: invalid section offset
+
+RUN: not llvm-readobj -r %p/Inputs/invalid-buffer.elf 2>&1 | FileCheck --check-prefix=INVALID-BUFFER %s
+INVALID-BUFFER: Invalid buffer
+
+RUN: not llvm-readobj %p/Inputs/invalid-coff-header-too-small 2>&1 | FileCheck --check-prefix=COFF-HEADER %s
+COFF-HEADER: The file was not recognized as a valid object file

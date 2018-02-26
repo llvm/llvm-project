@@ -115,7 +115,7 @@ extern "C" {
       const void *beg, const void *mid, const void *end);
 
   // Print the stack trace leading to this call. Useful for debugging user code.
-  void __sanitizer_print_stack_trace();
+  void __sanitizer_print_stack_trace(void);
 
   // Symbolizes the supplied 'pc' using the format string 'fmt'.
   // Outputs at most 'out_buf_size' bytes into 'out_buf'.

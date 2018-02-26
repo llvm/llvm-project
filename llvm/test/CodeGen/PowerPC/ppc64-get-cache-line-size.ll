@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-ppc-prefetching=true -ppc-loop-prefetch-cache-line=64 | FileCheck %s -check-prefix=CHECK-DCBT
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -enable-ppc-prefetching=true | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -enable-ppc-prefetching=true -ppc-loop-prefetch-cache-line=64 | FileCheck %s -check-prefix=CHECK-DCBT
-; RUN: llc < %s -march=ppc64 -mcpu=a2 -enable-ppc-prefetching=true | FileCheck %s -check-prefix=CHECK-DCBT
+; RUN: llc < %s -mtriple=ppc64-- -mcpu=a2 -enable-ppc-prefetching=true | FileCheck %s -check-prefix=CHECK-DCBT
 
 ; Function Attrs: nounwind
 define signext i32 @check_cache_line() local_unnamed_addr {

@@ -74,11 +74,9 @@ if (LLVM_INSTALL_TOOLCHAIN_ONLY)
     RUNTIME DESTINATION bin)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
-    add_custom_target(install-IndexStore
-                      DEPENDS IndexStore
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=IndexStore
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    add_llvm_install_targets(install-IndexStore
+                             DEPENDS IndexStore
+                             COMPONENT IndexStore)
   endif()
 endif()
 

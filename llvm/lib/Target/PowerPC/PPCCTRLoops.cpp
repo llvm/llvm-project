@@ -26,12 +26,17 @@
 #include "PPC.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "PPCTargetTransformInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -64,6 +69,13 @@ using namespace llvm;
 static cl::opt<int> CTRLoopLimit("ppc-max-ctrloop", cl::Hidden, cl::init(-1));
 #endif
 
+// The latency of mtctr is only justified if there are more than 4
+// comparisons that will be removed as a result.
+static cl::opt<unsigned>
+SmallCTRLoopThreshold("min-ctr-loop-threshold", cl::init(4), cl::Hidden,
+                      cl::desc("Loops with a constant trip count smaller than "
+                               "this value will not use the count register."));
+
 STATISTIC(NumCTRLoops, "Number of loops converted to CTR loops");
 
 namespace llvm {
@@ -95,6 +107,8 @@ namespace {
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addPreserved<DominatorTreeWrapperPass>();
       AU.addRequired<ScalarEvolutionWrapperPass>();
+      AU.addRequired<AssumptionCacheTracker>();
+      AU.addRequired<TargetTransformInfoWrapperPass>();
     }
 
   private:
@@ -107,10 +121,12 @@ namespace {
     const PPCTargetLowering *TLI;
     const DataLayout *DL;
     const TargetLibraryInfo *LibInfo;
+    const TargetTransformInfo *TTI;
     LoopInfo *LI;
     ScalarEvolution *SE;
     DominatorTree *DT;
     bool PreserveLCSSA;
+    TargetSchedModel SchedModel;
   };
 
   char PPCCTRLoops::ID = 0;
@@ -179,6 +195,7 @@ bool PPCCTRLoops::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   DL = &F.getParent()->getDataLayout();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   LibInfo = TLIP ? &TLIP->getTLI() : nullptr;
@@ -243,8 +260,8 @@ bool PPCCTRLoops::mightUseCTR(BasicBlock *BB) {
     if (CallInst *CI = dyn_cast<CallInst>(J)) {
       // Inline ASM is okay, unless it clobbers the ctr register.
       if (InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue())) {
-	if (asmClobbersCTR(IA))
-	  return true;
+        if (asmClobbersCTR(IA))
+          return true;
         continue;
       }
 
@@ -437,13 +454,16 @@ bool PPCCTRLoops::mightUseCTR(BasicBlock *BB) {
         return true;
     }
 
+    // FREM is always a call.
+    if (J->getOpcode() == Instruction::FRem)
+      return true;
+
     if (STI->useSoftFloat()) {
       switch(J->getOpcode()) {
       case Instruction::FAdd:
       case Instruction::FSub:
       case Instruction::FMul:
       case Instruction::FDiv:
-      case Instruction::FRem:
       case Instruction::FPTrunc:
       case Instruction::FPExt:
       case Instruction::FPToUI:
@@ -462,9 +482,23 @@ bool PPCCTRLoops::mightUseCTR(BasicBlock *BB) {
 
   return false;
 }
-
 bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   bool MadeChange = false;
+
+  // Do not convert small short loops to CTR loop.
+  unsigned ConstTripCount = SE->getSmallConstantTripCount(L);
+  if (ConstTripCount && ConstTripCount < SmallCTRLoopThreshold) {
+    SmallPtrSet<const Value *, 32> EphValues;
+    auto AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+        *L->getHeader()->getParent());
+    CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
+    CodeMetrics Metrics;
+    for (BasicBlock *BB : L->blocks())
+      Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+    // 6 is an approximate latency for the mtctr instruction.
+    if (Metrics.NumInsts <= (6 * SchedModel.getIssueWidth()))
+      return false;
+  }
 
   // Process nested loops first.
   for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
@@ -659,12 +693,11 @@ check_block:
     }
 
     if (I != BI && clobbersCTR(*I)) {
-      DEBUG(dbgs() << "BB#" << MBB->getNumber() << " (" <<
-                      MBB->getFullName() << ") instruction " << *I <<
-                      " clobbers CTR, invalidating " << "BB#" <<
-                      BI->getParent()->getNumber() << " (" <<
-                      BI->getParent()->getFullName() << ") instruction " <<
-                      *BI << "\n");
+      DEBUG(dbgs() << printMBBReference(*MBB) << " (" << MBB->getFullName()
+                   << ") instruction " << *I << " clobbers CTR, invalidating "
+                   << printMBBReference(*BI->getParent()) << " ("
+                   << BI->getParent()->getFullName() << ") instruction " << *BI
+                   << "\n");
       return false;
     }
 
@@ -678,10 +711,10 @@ check_block:
   if (CheckPreds) {
 queue_preds:
     if (MachineFunction::iterator(MBB) == MBB->getParent()->begin()) {
-      DEBUG(dbgs() << "Unable to find a MTCTR instruction for BB#" <<
-                      BI->getParent()->getNumber() << " (" <<
-                      BI->getParent()->getFullName() << ") instruction " <<
-                      *BI << "\n");
+      DEBUG(dbgs() << "Unable to find a MTCTR instruction for "
+                   << printMBBReference(*BI->getParent()) << " ("
+                   << BI->getParent()->getFullName() << ") instruction " << *BI
+                   << "\n");
       return false;
     }
 

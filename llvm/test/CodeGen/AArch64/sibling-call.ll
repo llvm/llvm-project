@@ -6,7 +6,7 @@ declare void @callee_stack16([8 x i32], i64, i64)
 
 define void @caller_to0_from0() nounwind {
 ; CHECK-LABEL: caller_to0_from0:
-; CHECK-NEXT: // BB
+; CHECK-NEXT: // %bb.
   tail call void @callee_stack0()
   ret void
 ; CHECK-NEXT: b callee_stack0
@@ -14,7 +14,7 @@ define void @caller_to0_from0() nounwind {
 
 define void @caller_to0_from8([8 x i32], i64) nounwind{
 ; CHECK-LABEL: caller_to0_from8:
-; CHECK-NEXT: // BB
+; CHECK-NEXT: // %bb.
 
   tail call void @callee_stack0()
   ret void

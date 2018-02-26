@@ -42,7 +42,7 @@ void t5(void) {
 void t6(void) {
   __asm int 0x2c
 // CHECK: t6
-// CHECK: call void asm sideeffect inteldialect "int $$0x2c", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "int $$44", "~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t7() {
@@ -61,7 +61,7 @@ void t7() {
     mov eax, ebx
   }
 // CHECK: t7
-// CHECK: call void asm sideeffect inteldialect "int $$0x2cU", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "int $$44", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void asm sideeffect inteldialect "", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void asm sideeffect inteldialect "mov eax, ebx", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -94,7 +94,7 @@ void t9() {
 // CHECK: t9
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: push ebx
-// CHECK-SAME: mov ebx, $$0x07
+// CHECK-SAME: mov ebx, $$7
 // CHECK-SAME: pop ebx
 // CHECK-SAME: "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -229,7 +229,7 @@ void t20() {
   __asm mov eax, LENGTH _bar
 // CHECK: mov eax, $$2
   __asm mov eax, [eax + LENGTH foo * 4]
-// CHECK: mov eax, [eax + $$1 * $$4]
+// CHECK: mov eax, [eax + $$4]
 
   __asm mov eax, TYPE foo
 // CHECK: mov eax, $$4
@@ -240,7 +240,7 @@ void t20() {
   __asm mov eax, TYPE _bar
 // CHECK: mov eax, $$1
   __asm mov eax, [eax + TYPE foo * 4]
-// CHECK: mov eax, [eax + $$4 * $$4]
+// CHECK: mov eax, [eax + $$16]
 
   __asm mov eax, SIZE foo
 // CHECK: mov eax, $$4
@@ -249,7 +249,7 @@ void t20() {
   __asm mov eax, SIZE _foo
 // CHECK: mov eax, $$16
   __asm mov eax, [eax + SIZE _foo * 4]
-// CHECK: mov eax, [eax + $$16 * $$4]
+// CHECK: mov eax, [eax + $$64]
   __asm mov eax, SIZE _bar
 // CHECK: mov eax, $$2
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
@@ -265,7 +265,7 @@ void t21() {
 // CHECK: t21
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: push ebx
-// CHECK-SAME: mov ebx, $$07H
+// CHECK-SAME: mov ebx, $$7
 // CHECK-SAME: pop ebx
 // CHECK-SAME: "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -312,13 +312,13 @@ void t24() {
 void t25() {
 // CHECK: t25
   __asm mov eax, 0ffffffffh
-// CHECK: mov eax, $$0ffffffffh
+// CHECK: mov eax, $$4294967295
   __asm mov eax, 0fhU
 // CHECK: mov eax, $$15
   __asm mov eax, 0a2h
-// CHECK: mov eax, $$0a2h
+// CHECK: mov eax, $$162
   __asm mov eax, 10100010b
-// CHECK: mov eax, $$10100010b
+// CHECK: mov eax, $$162
   __asm mov eax, 10100010BU
 // CHECK: mov eax, $$162
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
@@ -344,7 +344,7 @@ void t26() {
 void t27() {
   __asm mov eax, fs:[0h]
 // CHECK: t27
-// CHECK: call void asm sideeffect inteldialect "mov eax, fs:[$$0h]", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "mov eax, fs:[$$0]", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t28() {
@@ -426,18 +426,18 @@ void t33() {
 void t34() {
 // CHECK: t34
   __asm prefetchnta 64[eax]
-// CHECK: prefetchnta $$64[eax]
+// CHECK: prefetchnta [eax + $$64]
   __asm mov eax, dword ptr 4[eax]
-// CHECK: mov eax, dword ptr $$4[eax]
+// CHECK: mov eax, dword ptr [eax + $$4]
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t35() {
 // CHECK: t35
   __asm prefetchnta [eax + (200*64)]
-// CHECK: prefetchnta [eax + ($$200*$$64)]
+// CHECK: prefetchnta [eax + $$12800]
   __asm mov eax, dword ptr [eax + (200*64)]
-// CHECK: mov eax, dword ptr [eax + ($$200*$$64)]
+// CHECK: mov eax, dword ptr [eax + $$12800]
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
@@ -446,29 +446,29 @@ void t36() {
   int arr[4];
   // Work around PR20368: These should be single line blocks
   __asm { mov eax, 4[arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4[arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$8$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 8[arr + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$72$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$72]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 12[4 + arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$16$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$16]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4[4 + arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$12$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4[64 + arr + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$132$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$132]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4[64 + arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, [arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, [arr + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$64$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$64]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, [4 + arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, [4 + arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$8$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, [64 + arr + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$128$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$128]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, [64 + arr - 2*32] }
 // CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
 }
@@ -484,13 +484,13 @@ void t37() {
   __asm mov eax, (4 + 4) * 16
 // CHECK: mov eax, $$128
   __asm mov eax, 4 + 8 * -16
-// CHECK: mov eax, $$4294967172
+// CHECK: mov eax, $$-124
   __asm mov eax, 4 + 16 / -8
 // CHECK: mov eax, $$2
   __asm mov eax, (16 + 16) / -8
-// CHECK: mov eax, $$4294967292
+// CHECK: mov eax, $$-4
   __asm mov eax, ~15
-// CHECK: mov eax, $$4294967280
+// CHECK: mov eax, $$-16
   __asm mov eax, 6 ^ 3
 // CHECK: mov eax, $$5
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
@@ -501,21 +501,21 @@ void t38() {
   int arr[4];
   // Work around PR20368: These should be single line blocks
   __asm { mov eax, 4+4[arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$8$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, (4+4)[arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$12$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 8*2[arr + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$80$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$80]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 12+20[4 + arr] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$36$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$36]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4*16+4[4 + arr + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$76$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$76]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4*4[64 + arr + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$144$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$144]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 4*(4-2)[64 + arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$8$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
   __asm { mov eax, 32*(4-2)[arr - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$0$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"([4 x i32]* %{{.*}})
 }
 
 void cpuid() {
@@ -527,7 +527,7 @@ void cpuid() {
 typedef struct {
   int a;
   int b;
-} A;
+} A, *pA;
 
 typedef struct {
   int b1;
@@ -539,24 +539,28 @@ typedef struct {
   A   c2;
   int c3;
   B   c4;
-} C;
+} C, *pC;
 
 void t39() {
 // CHECK-LABEL: define void @t39
   __asm mov eax, [eax].A.b
-// CHECK: mov eax, [eax].4
+// CHECK: mov eax, [eax + $$4]
   __asm mov eax, [eax] A.b
-// CHECK: mov eax, [eax] .4
+// CHECK: mov eax, [eax + $$4]
+  __asm mov eax, [eax] pA.b
+// CHECK: mov eax, [eax + $$4]
   __asm mov eax, fs:[0] A.b
-// CHECK: mov eax, fs:[$$0] .4
+// CHECK: mov eax, fs:[$$4]
   __asm mov eax, [eax].B.b2.a
-// CHECK: mov eax, [eax].4
+// CHECK: mov eax, [eax + $$4]
   __asm mov eax, [eax] B.b2.b
-// CHECK: mov eax, [eax] .8
+// CHECK: mov eax, [eax + $$8]
   __asm mov eax, fs:[0] C.c2.b
-// CHECK: mov eax, fs:[$$0] .8
+// CHECK: mov eax, fs:[$$8]
   __asm mov eax, [eax]C.c4.b2.b
-// CHECK: mov eax, [eax].24
+// CHECK: mov eax, [eax + $$24]
+  __asm mov eax, [eax]pC.c4.b2.b
+// CHECK: mov eax, [eax + $$24]
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
@@ -573,17 +577,17 @@ void t40(float a) {
 void t41(unsigned short a) {
 // CHECK-LABEL: define void @t41(i16 zeroext %a)
   __asm mov cs, a;
-// CHECK: mov cs, word ptr $0
+// CHECK: mov cs, $0
   __asm mov ds, a;
-// CHECK: mov ds, word ptr $1
+// CHECK: mov ds, $1
   __asm mov es, a;
-// CHECK: mov es, word ptr $2
+// CHECK: mov es, $2
   __asm mov fs, a;
-// CHECK: mov fs, word ptr $3
+// CHECK: mov fs, $3
   __asm mov gs, a;
-// CHECK: mov gs, word ptr $4
+// CHECK: mov gs, $4
   __asm mov ss, a;
-// CHECK: mov ss, word ptr $5
+// CHECK: mov ss, $5
 // CHECK: "*m,*m,*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}})
 }
 
@@ -600,37 +604,78 @@ void t43() {
   C strct;
 // Work around PR20368: These should be single line blocks
  __asm { mov eax, 4[strct.c1] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, 4[strct.c3 + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$8$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, 8[strct.c2.a + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$72$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$72]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, 12[4 + strct.c2.b] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$16$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$16]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, 4[4 + strct.c4.b2.b + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$12$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$12]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, 4[64 + strct.c1 + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$132$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$132]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, 4[64 + strct.c2.a - 2*32] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, [strct.c4.b1 + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, [strct.c4.b2.a + 4 + 32*2 - 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$64$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$64]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, [4 + strct.c1] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$4$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$4]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, [4 + strct.c2.b + 4] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$8$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$8]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, [64 + strct.c3 + (2*32)] }
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$128$0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
+// CHECK: call void asm sideeffect inteldialect "mov eax, $0[$$128]", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
   __asm { mov eax, [64 + strct.c4.b2.b - 2*32] }
 // CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
 }
 
+void t44() {
+  // CHECK-LABEL: define void @t44
+  __asm {
+    mov cr0, eax
+    mov cr2, ebx
+    mov cr3, ecx
+    mov cr4, edx
+  }
+  // CHECK: call void asm sideeffect inteldialect "mov cr0, eax\0A\09mov cr2, ebx\0A\09mov cr3, ecx\0A\09mov cr4, edx", "~{cr0},~{cr2},~{cr3},~{cr4},~{dirflag},~{fpsr},~{flags}"()
+}
+
+void t45() {
+  // CHECK-LABEL: define void @t45
+  __asm {
+    mov dr0, eax
+    mov dr1, ebx
+    mov dr2, ebx
+    mov dr3, ecx
+    mov dr6, edx
+    mov dr7, ecx
+  }
+  // CHECK: call void asm sideeffect inteldialect "mov dr0, eax\0A\09mov dr1, ebx\0A\09mov dr2, ebx\0A\09mov dr3, ecx\0A\09mov dr6, edx\0A\09mov dr7, ecx", "~{dr0},~{dr1},~{dr2},~{dr3},~{dr6},~{dr7},~{dirflag},~{fpsr},~{flags}"()
+}
+
+void t46() {
+  // CHECK-LABEL: define void @t46
+  __asm add eax, -128[eax]
+  // CHECK: call void asm sideeffect inteldialect "add eax, [eax + $$-128]", "~{eax},~{flags},~{dirflag},~{fpsr},~{flags}"()
+}
+
+void t47() {
+  // CHECK-LABEL: define void @t47
+  __asm {
+    bndmk bnd0, dword ptr [eax]
+    bndmk bnd1, dword ptr [ebx]
+    bndmk bnd2, dword ptr [ecx]
+    bndmk bnd3, dword ptr [edx]
+  }
+  // CHECK: call void asm sideeffect inteldialect "bndmk bnd0, dword ptr [eax]\0A\09bndmk bnd1, dword ptr [ebx]\0A\09bndmk bnd2, dword ptr [ecx]\0A\09bndmk bnd3, dword ptr [edx]", "~{bnd0},~{bnd1},~{bnd2},~{bnd3},~{dirflag},~{fpsr},~{flags}"()
+}
+
 void dot_operator(){
-// CHECK-LABEL: define void @dot_operator
+  // CHECK-LABEL: define void @dot_operator
 	__asm { mov eax, 3[ebx]A.b}
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$3[ebx].4", "~{eax},~{dirflag},~{fpsr},~{flags}"
+  // CHECK: call void asm sideeffect inteldialect "mov eax, [ebx + $$7]", "~{eax},~{dirflag},~{fpsr},~{flags}"
 }
 
 void call_clobber() {
@@ -693,10 +738,12 @@ void label5() {
 void label6(){
   __asm {
       jmp short label
+      jc  short label
+      jz  short label
     label:
   }
   // CHECK-LABEL: define void @label6
-  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.${:uid}__label\0A\09{{.*}}__MSASMLABEL_.${:uid}__label:", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: jmp {{.*}}__MSASMLABEL_.${:uid}__label\0A\09jc {{.*}}__MSASMLABEL_.${:uid}__label\0A\09jz {{.*}}__MSASMLABEL_.${:uid}__label\0A\09{{.*}}__MSASMLABEL_.${:uid}__label:"
 }
 
 // Don't include mxcsr in the clobber list.

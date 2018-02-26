@@ -51,7 +51,6 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };
-char R600Packetizer::ID = 0;
 
 class R600PacketizerList : public VLIWPacketizerList {
 private:
@@ -403,6 +402,15 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
 }
 
 } // end anonymous namespace
+
+INITIALIZE_PASS_BEGIN(R600Packetizer, DEBUG_TYPE,
+                     "R600 Packetizer", false, false)
+INITIALIZE_PASS_END(R600Packetizer, DEBUG_TYPE,
+                    "R600 Packetizer", false, false)
+
+char R600Packetizer::ID = 0;
+
+char &llvm::R600PacketizerID = R600Packetizer::ID;
 
 llvm::FunctionPass *llvm::createR600Packetizer() {
   return new R600Packetizer();

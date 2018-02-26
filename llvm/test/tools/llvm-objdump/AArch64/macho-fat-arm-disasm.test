@@ -1,0 +1,7 @@
+RUN: llvm-objdump -d -m -no-show-raw-insn -arch all %p/Inputs/fat.macho-armv7s-arm64 | FileCheck %s
+REQUIRES: arm-registered-target
+
+CHECK: (architecture armv7s):
+CHECK: bx	r12
+CHECK: (architecture arm64):
+CHECK: fmul	d16, d0, d2

@@ -24,6 +24,13 @@ def FeatureSoftMulDiv
   : SubtargetFeature<"soft-mul-div", "UseSoftMulDiv", "true",
                      "Use software emulation for integer multiply and divide">;
 
+def FeatureNoFSMULD
+  : SubtargetFeature<"no-fsmuld", "HasNoFSMULD", "true",
+                     "Disable the fsmuld instruction.">;
+def FeatureNoFMULS
+  : SubtargetFeature<"no-fmuls", "HasNoFMULS", "true",
+                     "Disable the fmuls instruction.">;
+
 def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
@@ -51,9 +58,9 @@ def UsePopc : SubtargetFeature<"popc", "UsePopc", "true",
                                "Use the popc (population count) instruction">;
 
 def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
-                              "Use software emulation for floating point">;  
+                              "Use software emulation for floating point">;
 
-//==== Features added predmoninantly for LEON subtarget support                               
+//==== Features added predmoninantly for LEON subtarget support
 include "LeonFeatures.td"
 
 //===----------------------------------------------------------------------===//
@@ -79,7 +86,7 @@ class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;
 
 def : Proc<"generic",         []>;
-def : Proc<"v7",              [FeatureSoftMulDiv]>;
+def : Proc<"v7",              [FeatureSoftMulDiv, FeatureNoFSMULD]>;
 def : Proc<"v8",              []>;
 def : Proc<"supersparc",      []>;
 def : Proc<"sparclite",       []>;
@@ -91,9 +98,18 @@ def : Proc<"tsc701",          []>;
 def : Proc<"myriad2",         [FeatureLeon, LeonCASA]>;
 def : Proc<"myriad2.1",       [FeatureLeon, LeonCASA]>;
 def : Proc<"myriad2.2",       [FeatureLeon, LeonCASA]>;
+def : Proc<"myriad2.3",       [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2100",          [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2150",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2155",          [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2450",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2455",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2x5x",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2080",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2085",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2480",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2485",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2x8x",          [FeatureLeon, LeonCASA]>;
 def : Proc<"v9",              [FeatureV9]>;
 def : Proc<"ultrasparc",      [FeatureV9, FeatureV8Deprecated, FeatureVIS]>;
 def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,
@@ -128,8 +144,8 @@ def : Processor<"leon3", LEON3Itineraries,
 
 // LEON 3 FT (UT699). Provides features for the UT699 processor
 // - covers all the erratum fixes for LEON3, but does not support the CASA instruction.
-def : Processor<"ut699", LEON3Itineraries, 
-                [FeatureLeon, InsertNOPLoad, FixFSMULD, ReplaceFMULS, FixAllFDIVSQRT]>;
+def : Processor<"ut699", LEON3Itineraries,
+                [FeatureLeon, InsertNOPLoad, FeatureNoFSMULD, FeatureNoFMULS, FixAllFDIVSQRT]>;
 
 // LEON3 FT (GR712RC). Provides features for the GR712RC processor.
 // - covers all the erratum fixed for LEON3 and support for the CASA instruction. 

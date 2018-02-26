@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
-#include <signal.h>
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
@@ -22,82 +21,26 @@
 
 namespace __asan {
 
-void ErrorStackOverflow::Print() {
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report(
-      "ERROR: AddressSanitizer: %s on address %p"
-      " (pc %p bp %p sp %p T%d)\n", scariness.GetDescription(),
-      (void *)addr, (void *)pc, (void *)bp, (void *)sp, tid);
-  Printf("%s", d.EndWarning());
-  scariness.Print();
-  BufferedStackTrace stack;
-  GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, pc, bp, context,
-                                  common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-  ReportErrorSummary(scariness.GetDescription(), &stack);
-}
-
-static void MaybeDumpInstructionBytes(uptr pc) {
-  if (!flags()->dump_instruction_bytes || (pc < GetPageSizeCached())) return;
-  InternalScopedString str(1024);
-  str.append("First 16 instruction bytes at pc: ");
-  if (IsAccessibleMemoryRange(pc, 16)) {
-    for (int i = 0; i < 16; ++i) {
-      PrintMemoryByte(&str, "", ((u8 *)pc)[i], /*in_shadow*/ false, " ");
-    }
-    str.append("\n");
-  } else {
-    str.append("unaccessible\n");
-  }
-  Report("%s", str.data());
-}
-
-static void MaybeDumpRegisters(void *context) {
-  if (!flags()->dump_registers) return;
-  SignalContext::DumpAllRegisters(context);
-}
-
-static void MaybeReportNonExecRegion(uptr pc) {
-#if SANITIZER_FREEBSD || SANITIZER_LINUX
-  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-  MemoryMappedSegment segment;
-  while (proc_maps.Next(&segment)) {
-    if (pc >= segment.start && pc < segment.end && !segment.IsExecutable())
-      Report("Hint: PC is at a non-executable region. Maybe a wild jump?\n");
-  }
+static void OnStackUnwind(const SignalContext &sig,
+                          const void *callback_context,
+                          BufferedStackTrace *stack) {
+  bool fast = common_flags()->fast_unwind_on_fatal;
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+  // On FreeBSD the slow unwinding that leverages _Unwind_Backtrace()
+  // yields the call stack of the signal's handler and not of the code
+  // that raised the signal (as it does on Linux).
+  fast = true;
 #endif
+  // Tests and maybe some users expect that scariness is going to be printed
+  // just before the stack. As only asan has scariness score we have no
+  // corresponding code in the sanitizer_common and we use this callback to
+  // print it.
+  static_cast<const ScarinessScoreBase *>(callback_context)->Print();
+  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context, fast);
 }
 
 void ErrorDeadlySignal::Print() {
-  Decorator d;
-  Printf("%s", d.Warning());
-  const char *description = __sanitizer::DescribeSignalOrException(signo);
-  Report(
-      "ERROR: AddressSanitizer: %s on unknown address %p (pc %p bp %p sp %p "
-      "T%d)\n",
-      description, (void *)addr, (void *)pc, (void *)bp, (void *)sp, tid);
-  Printf("%s", d.EndWarning());
-  if (pc < GetPageSizeCached()) Report("Hint: pc points to the zero page.\n");
-  if (is_memory_access) {
-    const char *access_type =
-        write_flag == SignalContext::WRITE
-            ? "WRITE"
-            : (write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
-    Report("The signal is caused by a %s memory access.\n", access_type);
-    if (addr < GetPageSizeCached())
-      Report("Hint: address points to the zero page.\n");
-  }
-  MaybeReportNonExecRegion(pc);
-  scariness.Print();
-  BufferedStackTrace stack;
-  GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, pc, bp, context,
-                                  common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-  MaybeDumpInstructionBytes(pc);
-  MaybeDumpRegisters(context);
-  Printf("AddressSanitizer can not provide additional info.\n");
-  ReportErrorSummary(description, &stack);
+  ReportDeadlySignal(signal, tid, &OnStackUnwind, &scariness);
 }
 
 void ErrorDoubleFree::Print() {
@@ -109,7 +52,7 @@ void ErrorDoubleFree::Print() {
       "thread T%d%s:\n",
       scariness.GetDescription(), addr_description.addr, tid,
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   scariness.Print();
   GET_STACK_TRACE_FATAL(second_free_stack->trace[0],
                         second_free_stack->top_frame_bp);
@@ -118,7 +61,7 @@ void ErrorDoubleFree::Print() {
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
-void ErrorNewDeleteSizeMismatch::Print() {
+void ErrorNewDeleteTypeMismatch::Print() {
   Decorator d;
   Printf("%s", d.Warning());
   char tname[128];
@@ -127,11 +70,29 @@ void ErrorNewDeleteSizeMismatch::Print() {
       "T%d%s:\n",
       scariness.GetDescription(), addr_description.addr, tid,
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
-  Printf("%s  object passed to delete has wrong type:\n", d.EndWarning());
-  Printf(
-      "  size of the allocated type:   %zd bytes;\n"
-      "  size of the deallocated type: %zd bytes.\n",
-      addr_description.chunk_access.chunk_size, delete_size);
+  Printf("%s  object passed to delete has wrong type:\n", d.Default());
+  if (delete_size != 0) {
+    Printf(
+        "  size of the allocated type:   %zd bytes;\n"
+        "  size of the deallocated type: %zd bytes.\n",
+        addr_description.chunk_access.chunk_size, delete_size);
+  }
+  const uptr user_alignment =
+      addr_description.chunk_access.user_requested_alignment;
+  if (delete_alignment != user_alignment) {
+    char user_alignment_str[32];
+    char delete_alignment_str[32];
+    internal_snprintf(user_alignment_str, sizeof(user_alignment_str),
+                      "%zd bytes", user_alignment);
+    internal_snprintf(delete_alignment_str, sizeof(delete_alignment_str),
+                      "%zd bytes", delete_alignment);
+    static const char *kDefaultAlignment = "default-aligned";
+    Printf(
+        "  alignment of the allocated type:   %s;\n"
+        "  alignment of the deallocated type: %s.\n",
+        user_alignment > 0 ? user_alignment_str : kDefaultAlignment,
+        delete_alignment > 0 ? delete_alignment_str : kDefaultAlignment);
+  }
   CHECK_GT(free_stack->size, 0);
   scariness.Print();
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
@@ -152,7 +113,7 @@ void ErrorFreeNotMalloced::Print() {
       "which was not malloc()-ed: %p in thread T%d%s\n",
       addr_description.Address(), tid,
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   CHECK_GT(free_stack->size, 0);
   scariness.Print();
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
@@ -173,7 +134,7 @@ void ErrorAllocTypeMismatch::Print() {
          scariness.GetDescription(),
          alloc_names[alloc_type], dealloc_names[dealloc_type],
          addr_description.addr);
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   CHECK_GT(dealloc_stack->size, 0);
   scariness.Print();
   GET_STACK_TRACE_FATAL(dealloc_stack->trace[0], dealloc_stack->top_frame_bp);
@@ -192,7 +153,7 @@ void ErrorMallocUsableSizeNotOwned::Print() {
       "ERROR: AddressSanitizer: attempting to call malloc_usable_size() for "
       "pointer which is not owned: %p\n",
       addr_description.Address());
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   stack->Print();
   addr_description.Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
@@ -205,7 +166,7 @@ void ErrorSanitizerGetAllocatedSizeNotOwned::Print() {
       "ERROR: AddressSanitizer: attempting to call "
       "__sanitizer_get_allocated_size() for pointer which is not owned: %p\n",
       addr_description.Address());
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   stack->Print();
   addr_description.Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
@@ -222,7 +183,7 @@ void ErrorStringFunctionMemoryRangesOverlap::Print() {
       bug_type, addr1_description.Address(),
       addr1_description.Address() + length1, addr2_description.Address(),
       addr2_description.Address() + length2);
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   scariness.Print();
   stack->Print();
   addr1_description.Print();
@@ -235,7 +196,7 @@ void ErrorStringFunctionSizeOverflow::Print() {
   Printf("%s", d.Warning());
   Report("ERROR: AddressSanitizer: %s: (size=%zd)\n",
          scariness.GetDescription(), size);
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   scariness.Print();
   stack->Print();
   addr_description.Print();
@@ -263,7 +224,7 @@ void ErrorODRViolation::Print() {
   Printf("%s", d.Warning());
   Report("ERROR: AddressSanitizer: %s (%p):\n", scariness.GetDescription(),
          global1.beg);
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   InternalScopedString g1_loc(256), g2_loc(256);
   PrintGlobalLocation(&g1_loc, global1);
   PrintGlobalLocation(&g2_loc, global2);
@@ -292,7 +253,7 @@ void ErrorInvalidPointerPair::Print() {
   Printf("%s", d.Warning());
   Report("ERROR: AddressSanitizer: %s: %p %p\n", scariness.GetDescription(),
          addr1_description.Address(), addr2_description.Address());
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
   GET_STACK_TRACE_FATAL(pc, bp);
   stack.Print();
   addr1_description.Print();
@@ -477,9 +438,14 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   InternalScopedString str(4096 * 8);
   str.append("Shadow bytes around the buggy address:\n");
   for (int i = -5; i <= 5; i++) {
+    uptr row_shadow_addr = aligned_shadow + i * n_bytes_per_row;
+    // Skip rows that would be outside the shadow range. This can happen when
+    // the user address is near the bottom, top, or shadow gap of the address
+    // space.
+    if (!AddrIsInShadow(row_shadow_addr)) continue;
     const char *prefix = (i == 0) ? "=>" : "  ";
-    PrintShadowBytes(&str, prefix, (u8 *)(aligned_shadow + i * n_bytes_per_row),
-                     (u8 *)shadow_addr, n_bytes_per_row);
+    PrintShadowBytes(&str, prefix, (u8 *)row_shadow_addr, (u8 *)shadow_addr,
+                     n_bytes_per_row);
   }
   if (flags()->print_legend) PrintLegend(&str);
   Printf("%s", str.data());
@@ -491,13 +457,13 @@ void ErrorGeneric::Print() {
   uptr addr = addr_description.Address();
   Report("ERROR: AddressSanitizer: %s on address %p at pc %p bp %p sp %p\n",
          bug_descr, (void *)addr, pc, bp, sp);
-  Printf("%s", d.EndWarning());
+  Printf("%s", d.Default());
 
   char tname[128];
   Printf("%s%s of size %zu at %p thread T%d%s%s\n", d.Access(),
          access_size ? (is_write ? "WRITE" : "READ") : "ACCESS", access_size,
          (void *)addr, tid,
-         ThreadNameWithParenthesis(tid, tname, sizeof(tname)), d.EndAccess());
+         ThreadNameWithParenthesis(tid, tname, sizeof(tname)), d.Default());
 
   scariness.Print();
   GET_STACK_TRACE_FATAL(pc, bp);

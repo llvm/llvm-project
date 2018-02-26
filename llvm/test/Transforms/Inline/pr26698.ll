@@ -1,5 +1,5 @@
-; RUN: opt -S -inline < %s | FileCheck %s
-; RUN: opt -S -passes='cgscc(inline)' < %s | FileCheck %s
+; RUN: opt -S -inline -inline-threshold=100 -inline-cold-callsite-threshold=100 < %s | FileCheck %s
+; RUN: opt -S -passes='cgscc(inline)' -inline-threshold=100 -inline-cold-callsite-threshold=100 < %s | FileCheck %s
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 

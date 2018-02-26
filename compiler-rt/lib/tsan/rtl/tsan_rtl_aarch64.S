@@ -6,7 +6,7 @@
 #if !defined(__APPLE__)
 .section .bss
 .type	__tsan_pointer_chk_guard, %object
-ASM_SIZE(ASM_TSAN_SYMBOL_INTERCEPTOR(__tsan_pointer_chk_guard))
+ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(__tsan_pointer_chk_guard))
 __tsan_pointer_chk_guard:
 .zero	8
 #endif
@@ -51,7 +51,7 @@ _sigsetjmp$non_lazy_ptr:
 // original ones.
 ASM_HIDDEN(_Z18InitializeGuardPtrv)
 .global _Z18InitializeGuardPtrv
-ASM_TYPE_FUNCTION(ASM_TSAN_SYMBOL_INTERCEPTOR(_Z18InitializeGuardPtrv))
+ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(_Z18InitializeGuardPtrv))
 _Z18InitializeGuardPtrv:
   CFI_STARTPROC
   // Allocates a jmp_buf for the setjmp call.
@@ -88,14 +88,14 @@ _Z18InitializeGuardPtrv:
   CFI_DEF_CFA (31, 0)
   ret
   CFI_ENDPROC
-ASM_SIZE(ASM_TSAN_SYMBOL_INTERCEPTOR(_Z18InitializeGuardPtrv))
+ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(_Z18InitializeGuardPtrv))
 #endif
 
 ASM_HIDDEN(__tsan_setjmp)
 .comm _ZN14__interception11real_setjmpE,8,8
-.globl ASM_TSAN_SYMBOL_INTERCEPTOR(setjmp)
-ASM_TYPE_FUNCTION(ASM_TSAN_SYMBOL_INTERCEPTOR(setjmp))
-ASM_TSAN_SYMBOL_INTERCEPTOR(setjmp):
+.globl ASM_SYMBOL_INTERCEPTOR(setjmp)
+ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(setjmp))
+ASM_SYMBOL_INTERCEPTOR(setjmp):
   CFI_STARTPROC
 
   // save env parameters for function call
@@ -125,7 +125,7 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(setjmp):
 #endif
 
   // call tsan interceptor
-  bl      ASM_TSAN_SYMBOL(__tsan_setjmp)
+  bl      ASM_SYMBOL(__tsan_setjmp)
 
   // restore env parameter
   mov     x0, x19
@@ -148,12 +148,12 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(setjmp):
   br      x1
 
   CFI_ENDPROC
-ASM_SIZE(ASM_TSAN_SYMBOL_INTERCEPTOR(setjmp))
+ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(setjmp))
 
 .comm _ZN14__interception12real__setjmpE,8,8
-.globl ASM_TSAN_SYMBOL_INTERCEPTOR(_setjmp)
-ASM_TYPE_FUNCTION(ASM_TSAN_SYMBOL_INTERCEPTOR(_setjmp))
-ASM_TSAN_SYMBOL_INTERCEPTOR(_setjmp):
+.globl ASM_SYMBOL_INTERCEPTOR(_setjmp)
+ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(_setjmp))
+ASM_SYMBOL_INTERCEPTOR(_setjmp):
   CFI_STARTPROC
 
   // save env parameters for function call
@@ -183,7 +183,7 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(_setjmp):
 #endif
 
   // call tsan interceptor
-  bl      ASM_TSAN_SYMBOL(__tsan_setjmp)
+  bl      ASM_SYMBOL(__tsan_setjmp)
 
   // Restore jmp_buf parameter
   mov     x0, x19
@@ -206,12 +206,12 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(_setjmp):
   br      x1
 
   CFI_ENDPROC
-ASM_SIZE(ASM_TSAN_SYMBOL_INTERCEPTOR(_setjmp))
+ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(_setjmp))
 
 .comm _ZN14__interception14real_sigsetjmpE,8,8
-.globl ASM_TSAN_SYMBOL_INTERCEPTOR(sigsetjmp)
-ASM_TYPE_FUNCTION(ASM_TSAN_SYMBOL_INTERCEPTOR(sigsetjmp))
-ASM_TSAN_SYMBOL_INTERCEPTOR(sigsetjmp):
+.globl ASM_SYMBOL_INTERCEPTOR(sigsetjmp)
+ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(sigsetjmp))
+ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   CFI_STARTPROC
 
   // save env parameters for function call
@@ -243,7 +243,7 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(sigsetjmp):
 #endif
 
   // call tsan interceptor
-  bl      ASM_TSAN_SYMBOL(__tsan_setjmp)
+  bl      ASM_SYMBOL(__tsan_setjmp)
 
   // restore env parameter
   mov     w1, w20
@@ -268,13 +268,13 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(sigsetjmp):
 #endif
   br      x2
   CFI_ENDPROC
-ASM_SIZE(ASM_TSAN_SYMBOL_INTERCEPTOR(sigsetjmp))
+ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(sigsetjmp))
 
 #if !defined(__APPLE__)
 .comm _ZN14__interception16real___sigsetjmpE,8,8
-.globl ASM_TSAN_SYMBOL_INTERCEPTOR(__sigsetjmp)
-ASM_TYPE_FUNCTION(ASM_TSAN_SYMBOL_INTERCEPTOR(__sigsetjmp))
-ASM_TSAN_SYMBOL_INTERCEPTOR(__sigsetjmp):
+.globl ASM_SYMBOL_INTERCEPTOR(__sigsetjmp)
+ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(__sigsetjmp))
+ASM_SYMBOL_INTERCEPTOR(__sigsetjmp):
   CFI_STARTPROC
 
   // save env parameters for function call
@@ -303,7 +303,7 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(__sigsetjmp):
 #endif
 
   // call tsan interceptor
-  bl      ASM_TSAN_SYMBOL(__tsan_setjmp)
+  bl      ASM_SYMBOL(__tsan_setjmp)
 
   mov     w1, w20
   mov     x0, x19
@@ -321,12 +321,12 @@ ASM_TSAN_SYMBOL_INTERCEPTOR(__sigsetjmp):
   ldr     x2, [x2, #:got_lo12:_ZN14__interception16real___sigsetjmpE]
   ldr     x2, [x2]
 #else
-  adrp    x2, ASM_TSAN_SYMBOL(__sigsetjmp)@page
-  add     x2, x2, ASM_TSAN_SYMBOL(__sigsetjmp)@pageoff
+  adrp    x2, ASM_SYMBOL(__sigsetjmp)@page
+  add     x2, x2, ASM_SYMBOL(__sigsetjmp)@pageoff
 #endif
   br      x2
   CFI_ENDPROC
-ASM_SIZE(ASM_TSAN_SYMBOL_INTERCEPTOR(__sigsetjmp))
+ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(__sigsetjmp))
 #endif
 
 #if defined(__linux__)

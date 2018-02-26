@@ -1,4 +1,5 @@
 ; RUN: opt < %s -rewrite-statepoints-for-gc -spp-print-base-pointers -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-print-base-pointers -S 2>&1 | FileCheck %s
 
 ; CHECK: derived %next_element_ptr base %array_obj
 

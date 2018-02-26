@@ -51,6 +51,18 @@ namespace X86 {
     TO_ZERO = 3,
     CUR_DIRECTION = 4
   };
+
+  /// The constants to describe instr prefixes if there are
+  enum IPREFIXES {
+    IP_NO_PREFIX = 0,
+    IP_HAS_OP_SIZE = 1,
+    IP_HAS_AD_SIZE = 2,
+    IP_HAS_REPEAT_NE = 4,
+    IP_HAS_REPEAT = 8,
+    IP_HAS_LOCK = 16,
+    NO_SCHED_INFO = 32 // Don't add sched comment to the current instr because
+                       // it was already added
+  };
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that
@@ -356,13 +368,15 @@ namespace X86II {
     // OpSize - OpSizeFixed implies instruction never needs a 0x66 prefix.
     // OpSize16 means this is a 16-bit instruction and needs 0x66 prefix in
     // 32-bit mode. OpSize32 means this is a 32-bit instruction needs a 0x66
-    // prefix in 16-bit mode.
+    // prefix in 16-bit mode. OpSizeIgnore means that the instruction may
+    // take a optional 0x66 byte but should not emit with one.
     OpSizeShift = 7,
     OpSizeMask = 0x3 << OpSizeShift,
 
-    OpSizeFixed = 0 << OpSizeShift,
-    OpSize16    = 1 << OpSizeShift,
-    OpSize32    = 2 << OpSizeShift,
+    OpSizeFixed  = 0 << OpSizeShift,
+    OpSize16     = 1 << OpSizeShift,
+    OpSize32     = 2 << OpSizeShift,
+    OpSizeIgnore = 3 << OpSizeShift,
 
     // AsSize - AdSizeX implies this instruction determines its need of 0x67
     // prefix from a normal ModRM memory operand. The other types indicate that

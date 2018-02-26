@@ -35,16 +35,17 @@ class X86TargetMachine final : public LLVMTargetMachine {
 public:
   X86TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
-                   Optional<Reloc::Model> RM, CodeModel::Model CM,
-                   CodeGenOpt::Level OL);
+                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                   CodeGenOpt::Level OL, bool JIT);
   ~X86TargetMachine() override;
 
   const X86Subtarget *getSubtargetImpl(const Function &F) const override;
-  // The no argument getSubtargetImpl, while it exists on some targets, is
-  // deprecated and should not be used.
+  // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
+  // subtargets are per-function entities based on the target-specific
+  // attributes of each function.
   const X86Subtarget *getSubtargetImpl() const = delete;
 
-  TargetIRAnalysis getTargetIRAnalysis() override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   // Set up the pass pipeline.
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

@@ -38,8 +38,8 @@ public:
   using TaskTy = std::function<void()>;
   using PackagedTaskTy = std::packaged_task<void()>;
 
-  /// Construct a pool with the number of core available on the system (or
-  /// whatever the value returned by std::thread::hardware_concurrency() is).
+  /// Construct a pool with the number of threads found by
+  /// hardware_concurrency().
   ThreadPool();
 
   /// Construct a pool of \p ThreadCount threads

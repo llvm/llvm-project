@@ -6,14 +6,14 @@
 
 define i32 @return_v2hi() nounwind {
 ; X86-LABEL: return_v2hi:
-; X86:       ## BB#0: ## %entry
+; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: return_v2hi:
-; X64:       ## BB#0: ## %entry
+; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:

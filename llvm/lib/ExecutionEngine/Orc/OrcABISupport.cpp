@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Process.h"
 
 namespace llvm {
@@ -117,7 +116,7 @@ void OrcAArch64::writeTrampolines(uint8_t *TrampolineMem, void *ResolverAddr,
 
   for (unsigned I = 0; I < NumTrampolines; ++I, OffsetToPtr -= TrampolineSize) {
     Trampolines[3 * I + 0] = 0xaa1e03f1;                      // mov x17, x30
-    Trampolines[3 * I + 1] = 0x58000010 | (OffsetToPtr << 3); // mov x16, Lptr
+    Trampolines[3 * I + 1] = 0x58000010 | (OffsetToPtr << 3); // adr x16, Lptr
     Trampolines[3 * I + 2] = 0xd63f0200;                      // blr x16
   }
 

@@ -12,11 +12,13 @@ set(SCUDO_SOURCES
   scudo_flags.cpp
   scudo_crc32.cpp
   scudo_interceptors.cpp
-  scudo_new_delete.cpp
   scudo_termination.cpp
-  scudo_tls_android.cpp
-  scudo_tls_linux.cpp
+  scudo_tsd_exclusive.cpp
+  scudo_tsd_shared.cpp
   scudo_utils.cpp)
+
+set(SCUDO_CXX_SOURCES
+  scudo_new_delete.cpp)
 
 # Enable the SSE 4.2 instruction set for scudo_crc32.cpp, if available.
 if (COMPILER_RT_HAS_MSSE4_2_FLAG)
@@ -30,15 +32,41 @@ if (COMPILER_RT_HAS_MCRC_FLAG)
 endif()
 
 if(COMPILER_RT_HAS_SCUDO)
-  foreach(arch ${SCUDO_SUPPORTED_ARCH})
-    add_compiler_rt_runtime(clang_rt.scudo
-      STATIC
-      ARCHS ${arch}
-      SOURCES ${SCUDO_SOURCES}
-              $<TARGET_OBJECTS:RTInterception.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonNoTermination.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-      CFLAGS ${SCUDO_CFLAGS}
-      PARENT_TARGET scudo)
-  endforeach()
+  set(SCUDO_DYNAMIC_LIBS ${SANITIZER_COMMON_LINK_LIBS})
+  append_list_if(COMPILER_RT_HAS_LIBDL dl SCUDO_DYNAMIC_LIBS)
+  append_list_if(COMPILER_RT_HAS_LIBRT rt SCUDO_DYNAMIC_LIBS)
+  append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread SCUDO_DYNAMIC_LIBS)
+  append_list_if(COMPILER_RT_HAS_LIBLOG log SCUDO_DYNAMIC_LIBS)
+
+  add_compiler_rt_runtime(clang_rt.scudo
+    STATIC
+    ARCHS ${SCUDO_SUPPORTED_ARCH}
+    SOURCES ${SCUDO_SOURCES}
+    OBJECT_LIBS RTSanitizerCommonNoTermination
+                RTSanitizerCommonLibc
+                RTInterception
+                RTUbsan
+    CFLAGS ${SCUDO_CFLAGS}
+    PARENT_TARGET scudo)
+
+  add_compiler_rt_runtime(clang_rt.scudo_cxx
+    STATIC
+    ARCHS ${SCUDO_SUPPORTED_ARCH}
+    SOURCES ${SCUDO_CXX_SOURCES}
+    OBJECT_LIBS RTUbsan_cxx
+    CFLAGS ${SCUDO_CFLAGS}
+    PARENT_TARGET scudo)
+
+  add_compiler_rt_runtime(clang_rt.scudo
+    SHARED
+    ARCHS ${SCUDO_SUPPORTED_ARCH}
+    SOURCES ${SCUDO_SOURCES} ${SCUDO_CXX_SOURCES}
+    OBJECT_LIBS RTSanitizerCommonNoTermination
+                RTSanitizerCommonLibc
+                RTInterception
+                RTUbsan
+                RTUbsan_cxx
+    CFLAGS ${SCUDO_CFLAGS}
+    LINK_LIBS ${SCUDO_DYNAMIC_LIBS}
+    PARENT_TARGET scudo)
 endif()

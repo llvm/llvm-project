@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep imul
+; RUN: llc < %s -mtriple=i686-- | not grep imul
 
 	%struct.eebb = type { %struct.eebb*, i16* }
 	%struct.hf = type { %struct.hf*, i16*, i8*, i32, i32, %struct.eebb*, i32, i32, i8*, i8*, i8*, i8*, i16*, i8*, i16*, %struct.ri, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [30 x i32], %struct.eebb, i32, i8* }

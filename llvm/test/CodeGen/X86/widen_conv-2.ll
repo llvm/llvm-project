@@ -6,7 +6,7 @@
 
 define void @convert_v2i16_v2i32(<2 x i32>* %dst.addr, <2 x i16> %src) nounwind {
 ; X86-LABEL: convert_v2i16_v2i32:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    psllq $48, %xmm0
 ; X86-NEXT:    psrad $16, %xmm0
@@ -15,7 +15,7 @@ define void @convert_v2i16_v2i32(<2 x i32>* %dst.addr, <2 x i16> %src) nounwind 
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert_v2i16_v2i32:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psllq $48, %xmm0
 ; X64-NEXT:    psrad $16, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]

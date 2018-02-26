@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
@@ -49,8 +49,8 @@ define amdgpu_kernel void @s_test_sub_self_v2i16(<2 x i16> addrspace(1)* %out, <
 ; GCN-LABEL: {{^}}s_test_sub_v2i16_kernarg:
 ; GFX9: v_pk_sub_i16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 
-; VI: v_subrev_i32_e32
-; VI: v_subrev_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_subrev_u32_e32
+; VI: v_subrev_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 define amdgpu_kernel void @s_test_sub_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
   %add = sub <2 x i16> %a, %b
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out
@@ -152,18 +152,19 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(<2 x i16> addrspace(
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_sub_v2i16_zext_to_v2i32:
-; GFX9: flat_load_dword [[A:v[0-9]+]]
-; GFX9: flat_load_dword [[B:v[0-9]+]]
+; GFX9: global_load_dword [[A:v[0-9]+]]
+; GFX9: global_load_dword [[B:v[0-9]+]]
 
 ; GFX9: v_pk_sub_i16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
 ; GFX9-DAG: v_lshrrev_b32_e32 v[[ELT1:[0-9]+]], 16, [[ADD]]
 ; GFX9: buffer_store_dwordx2 v{{\[}}[[ELT0]]:[[ELT1]]{{\]}}
 
-; VI: flat_load_ushort v[[A_HI:[0-9]+]]
 ; VI: flat_load_ushort v[[A_LO:[0-9]+]]
-; VI: flat_load_ushort v[[B_HI:[0-9]+]]
+; VI: flat_load_ushort v[[A_HI:[0-9]+]]
+
 ; VI: flat_load_ushort v[[B_LO:[0-9]+]]
+; VI: flat_load_ushort v[[B_HI:[0-9]+]]
 
 ; VI: v_sub_u16_e32 v[[ADD_HI:[0-9]+]], v[[A_HI]], v[[B_HI]]
 ; VI-NOT: and
@@ -188,8 +189,8 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_sub_v2i16_zext_to_v2i64:
 ; GFX9: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
-; GFX9: flat_load_dword [[A:v[0-9]+]]
-; GFX9: flat_load_dword [[B:v[0-9]+]]
+; GFX9: global_load_dword [[A:v[0-9]+]]
+; GFX9: global_load_dword [[B:v[0-9]+]]
 
 ; GFX9: v_pk_sub_i16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
@@ -220,8 +221,8 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_sub_v2i16_sext_to_v2i32:
-; GFX9: flat_load_dword [[A:v[0-9]+]]
-; GFX9: flat_load_dword [[B:v[0-9]+]]
+; GFX9: global_load_dword [[A:v[0-9]+]]
+; GFX9: global_load_dword [[B:v[0-9]+]]
 
 ; GFX9: v_pk_sub_i16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9-DAG: v_bfe_i32 v[[ELT0:[0-9]+]], [[ADD]], 0, 16
@@ -246,8 +247,8 @@ define amdgpu_kernel void @v_test_sub_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_sub_v2i16_sext_to_v2i64:
-; GCN: flat_load_dword
-; GCN: flat_load_dword
+; GCN: {{flat|global}}_load_dword
+; GCN: {{flat|global}}_load_dword
 
 ; GFX9: v_pk_sub_i16
 ; GFX9: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}

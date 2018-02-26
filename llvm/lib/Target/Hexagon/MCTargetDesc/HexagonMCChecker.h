@@ -1,4 +1,4 @@
-//===----- HexagonMCChecker.h - Instruction bundle checking ---------------===//
+//===- HexagonMCChecker.h - Instruction bundle checking ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,17 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HEXAGONMCCHECKER_H
-#define HEXAGONMCCHECKER_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCHECKER_H
+#define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCHECKER_H
 
-#include "MCTargetDesc/HexagonMCShuffler.h"
-#include <queue>
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/SMLoc.h"
 #include <set>
-
-using namespace llvm;
+#include <utility>
 
 namespace llvm {
-class MCOperandInfo;
+
+class MCContext;
+class MCInst;
+class MCInstrInfo;
+class MCRegisterInfo;
+class MCSubtargetInfo;
 
 /// Check for a valid bundle.
 class HexagonMCChecker {
@@ -34,72 +41,36 @@ class HexagonMCChecker {
   bool ReportErrors;
 
   /// Set of definitions: register #, if predicated, if predicated true.
-  typedef std::pair<unsigned, bool> PredSense;
+  using PredSense = std::pair<unsigned, bool>;
   static const PredSense Unconditional;
-  typedef std::multiset<PredSense> PredSet;
-  typedef std::multiset<PredSense>::iterator PredSetIterator;
+  using PredSet = std::multiset<PredSense>;
+  using PredSetIterator = std::multiset<PredSense>::iterator;
 
-  typedef llvm::DenseMap<unsigned, PredSet>::iterator DefsIterator;
-  llvm::DenseMap<unsigned, PredSet> Defs;
-
-  /// Information about how a new-value register is defined or used:
-  ///   PredReg = predicate register, 0 if use/def not predicated,
-  ///   Cond    = true/false for if(PredReg)/if(!PredReg) respectively,
-  ///   IsFloat = true if definition produces a floating point value
-  ///             (not valid for uses),
-  ///   IsNVJ   = true if the use is a new-value branch (not valid for
-  ///             definitions).
-  struct NewSense {
-    unsigned PredReg;
-    bool IsFloat, IsNVJ, Cond;
-    // The special-case "constructors":
-    static NewSense Jmp(bool isNVJ) {
-      NewSense NS = {/*PredReg=*/0, /*IsFloat=*/false, /*IsNVJ=*/isNVJ,
-                     /*Cond=*/false};
-      return NS;
-    }
-    static NewSense Use(unsigned PR, bool True) {
-      NewSense NS = {/*PredReg=*/PR, /*IsFloat=*/false, /*IsNVJ=*/false,
-                     /*Cond=*/True};
-      return NS;
-    }
-    static NewSense Def(unsigned PR, bool True, bool Float) {
-      NewSense NS = {/*PredReg=*/PR, /*IsFloat=*/Float, /*IsNVJ=*/false,
-                     /*Cond=*/True};
-      return NS;
-    }
-  };
-  /// Set of definitions that produce new register:
-  typedef llvm::SmallVector<NewSense, 2> NewSenseList;
-  typedef llvm::DenseMap<unsigned, NewSenseList>::iterator NewDefsIterator;
-  llvm::DenseMap<unsigned, NewSenseList> NewDefs;
+  using DefsIterator = DenseMap<unsigned, PredSet>::iterator;
+  DenseMap<unsigned, PredSet> Defs;
 
   /// Set of weak definitions whose clashes should be enforced selectively.
-  typedef std::set<unsigned>::iterator SoftDefsIterator;
+  using SoftDefsIterator = std::set<unsigned>::iterator;
   std::set<unsigned> SoftDefs;
 
   /// Set of temporary definitions not committed to the register file.
-  typedef std::set<unsigned>::iterator TmpDefsIterator;
+  using TmpDefsIterator = std::set<unsigned>::iterator;
   std::set<unsigned> TmpDefs;
 
   /// Set of new predicates used.
-  typedef std::set<unsigned>::iterator NewPredsIterator;
+  using NewPredsIterator = std::set<unsigned>::iterator;
   std::set<unsigned> NewPreds;
 
   /// Set of predicates defined late.
-  typedef std::multiset<unsigned>::iterator LatePredsIterator;
+  using LatePredsIterator = std::multiset<unsigned>::iterator;
   std::multiset<unsigned> LatePreds;
 
   /// Set of uses.
-  typedef std::set<unsigned>::iterator UsesIterator;
+  using UsesIterator = std::set<unsigned>::iterator;
   std::set<unsigned> Uses;
 
-  /// Set of new values used: new register, if new-value jump.
-  typedef llvm::DenseMap<unsigned, NewSense>::iterator NewUsesIterator;
-  llvm::DenseMap<unsigned, NewSense> NewUses;
-
   /// Pre-defined set of read-only registers.
-  typedef std::set<unsigned>::iterator ReadOnlyIterator;
+  using ReadOnlyIterator = std::set<unsigned>::iterator;
   std::set<unsigned> ReadOnly;
 
   void init();
@@ -107,6 +78,9 @@ class HexagonMCChecker {
   void initReg(MCInst const &, unsigned, unsigned &PredReg, bool &isTrue);
 
   bool registerUsed(unsigned Register);
+  std::tuple<MCInst const *, unsigned, HexagonMCInstrInfo::PredicateInfo>
+  registerProducer(unsigned Register,
+                   HexagonMCInstrInfo::PredicateInfo Predicated);
 
   // Checks performed.
   bool checkBranches();
@@ -114,39 +88,43 @@ class HexagonMCChecker {
   bool checkNewValues();
   bool checkRegisters();
   bool checkRegistersReadOnly();
-  bool checkEndloopBranches();
   void checkRegisterCurDefs();
   bool checkSolo();
   bool checkShuffle();
   bool checkSlots();
   bool checkAXOK();
+  bool checkHWLoop();
+  bool checkCOFMax1();
 
   static void compoundRegisterMap(unsigned &);
 
   bool isPredicateRegister(unsigned R) const {
     return (Hexagon::P0 == R || Hexagon::P1 == R || Hexagon::P2 == R ||
             Hexagon::P3 == R);
-  };
+  }
+
   bool isLoopRegister(unsigned R) const {
     return (Hexagon::SA0 == R || Hexagon::LC0 == R || Hexagon::SA1 == R ||
             Hexagon::LC1 == R);
-  };
-
-  bool hasValidNewValueDef(const NewSense &Use, const NewSenseList &Defs) const;
+  }
 
 public:
   explicit HexagonMCChecker(MCContext &Context, MCInstrInfo const &MCII,
                             MCSubtargetInfo const &STI, MCInst &mcb,
                             const MCRegisterInfo &ri, bool ReportErrors = true);
+  explicit HexagonMCChecker(HexagonMCChecker const &Check,
+                            MCSubtargetInfo const &STI, bool CopyReportErrors);
 
   bool check(bool FullCheck = true);
   void reportErrorRegisters(unsigned Register);
   void reportErrorNewValue(unsigned Register);
-  void reportError(SMLoc Loc, llvm::Twine const &Msg);
-  void reportError(llvm::Twine const &Msg);
-  void reportWarning(llvm::Twine const &Msg);
+  void reportError(SMLoc Loc, Twine const &Msg);
+  void reportNote(SMLoc Loc, Twine const &Msg);
+  void reportError(Twine const &Msg);
+  void reportWarning(Twine const &Msg);
+  void reportBranchErrors();
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif // HEXAGONMCCHECKER_H
+#endif // LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCHECKER_H

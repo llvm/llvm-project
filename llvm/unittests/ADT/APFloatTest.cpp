@@ -849,6 +849,23 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
 }
 
+TEST(APFloatTest, fromToStringSpecials) {
+  auto expects = [] (const char *first, const char *second) {
+    std::string roundtrip = convertToString(convertToDoubleFromString(second), 0, 3);
+    EXPECT_STREQ(first, roundtrip.c_str());
+  };
+  expects("+Inf", "+Inf");
+  expects("+Inf", "INFINITY");
+  expects("+Inf", "inf");
+  expects("-Inf", "-Inf");
+  expects("-Inf", "-INFINITY");
+  expects("-Inf", "-inf");
+  expects("NaN", "NaN");
+  expects("NaN", "nan");
+  expects("NaN", "-NaN");
+  expects("NaN", "-nan");
+}
+
 TEST(APFloatTest, fromHexadecimalString) {
   EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble(),  "0x1p0").convertToDouble());
   EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble(), "+0x1p0").convertToDouble());
@@ -1349,6 +1366,24 @@ TEST(APFloatTest, isInteger) {
   EXPECT_TRUE(T.isInteger());
 }
 
+TEST(DoubleAPFloatTest, isInteger) {
+  APFloat F1(-0.0);
+  APFloat F2(-0.0);
+  llvm::detail::DoubleAPFloat T(APFloat::PPCDoubleDouble(), std::move(F1),
+                                std::move(F2));
+  EXPECT_TRUE(T.isInteger());
+  APFloat F3(3.14159);
+  APFloat F4(-0.0);
+  llvm::detail::DoubleAPFloat T2(APFloat::PPCDoubleDouble(), std::move(F3),
+                                std::move(F4));
+  EXPECT_FALSE(T2.isInteger());
+  APFloat F5(-0.0);
+  APFloat F6(3.14159);
+  llvm::detail::DoubleAPFloat T3(APFloat::PPCDoubleDouble(), std::move(F5),
+                                std::move(F6));
+  EXPECT_FALSE(T3.isInteger());
+}
+
 TEST(APFloatTest, getLargest) {
   EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle()).convertToFloat());
   EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble()).convertToDouble());
@@ -1437,16 +1472,16 @@ TEST(APFloatTest, getZero) {
   const unsigned NumGetZeroTests = 12;
   for (unsigned i = 0; i < NumGetZeroTests; ++i) {
     APFloat test = APFloat::getZero(*GetZeroTest[i].semantics,
-				    GetZeroTest[i].sign);
+                                    GetZeroTest[i].sign);
     const char *pattern = GetZeroTest[i].sign? "-0x0p+0" : "0x0p+0";
     APFloat expected = APFloat(*GetZeroTest[i].semantics,
-			       pattern);
+                               pattern);
     EXPECT_TRUE(test.isZero());
     EXPECT_TRUE(GetZeroTest[i].sign? test.isNegative() : !test.isNegative());
     EXPECT_TRUE(test.bitwiseIsEqual(expected));
     for (unsigned j = 0, je = GetZeroTest[i].bitPatternLength; j < je; ++j) {
       EXPECT_EQ(GetZeroTest[i].bitPattern[j],
-		test.bitcastToAPInt().getRawData()[j]);
+                test.bitcastToAPInt().getRawData()[j]);
     }
   }
 }
@@ -3270,6 +3305,20 @@ TEST(APFloatTest, mod) {
     APFloat f2(APFloat::IEEEdouble(), "1.0");
     EXPECT_EQ(f1.mod(f2), APFloat::opInvalidOp);
     EXPECT_TRUE(f1.isNaN());
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "-4.0");
+    APFloat f2(APFloat::IEEEdouble(), "-2.0");
+    APFloat expected(APFloat::IEEEdouble(), "-0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "-4.0");
+    APFloat f2(APFloat::IEEEdouble(), "2.0");
+    APFloat expected(APFloat::IEEEdouble(), "-0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
   }
 }
 

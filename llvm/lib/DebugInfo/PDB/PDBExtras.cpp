@@ -9,7 +9,6 @@
 
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -94,56 +93,11 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_DataKind &Data) {
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
                                    const codeview::RegisterId &Reg) {
   switch (Reg) {
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, AL, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, CL, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, DL, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, BL, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, AH, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, CH, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, DH, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, BH, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, AX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, CX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, DX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, BX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, SP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, BP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, SI, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, DI, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, EAX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, ECX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, EDX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, EBX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, ESP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, EBP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, ESI, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, EDI, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, ES, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, CS, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, SS, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, DS, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, FS, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, GS, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, IP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RAX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RBX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RCX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RDX, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RSI, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RDI, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RBP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, RSP, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R8, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R9, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R10, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R11, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R12, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R13, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R14, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(codeview::RegisterId, R15, OS)
-  default:
-    OS << static_cast<int>(Reg);
+#define CV_REGISTER(name, val) case codeview::RegisterId::name: OS << #name; return OS;
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
   }
+  OS << static_cast<int>(Reg);
   return OS;
 }
 
@@ -208,6 +162,7 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_Lang &Lang) {
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, JScript, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, MSIL, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, HLSL, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, D, OS)
   }
   return OS;
 }

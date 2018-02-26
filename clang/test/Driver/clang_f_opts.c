@@ -1,7 +1,7 @@
 // REQUIRES: clang-driver
 
 // RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fblocks -fbuiltin -fmath-errno -fcommon -fpascal-strings -fsplit-stack %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS1 %s
-// RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-asm -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fno-show-source-location -fshort-enums -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS2 %s
+// RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-asm -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fno-show-source-location -fshort-enums %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS2 %s
 
 // CHECK-OPTIONS1: -split-stacks
 // CHECK-OPTIONS1: -fgnu-keywords
@@ -12,7 +12,6 @@
 // CHECK-OPTIONS2: -fno-gnu-keywords
 // CHECK-OPTIONS2: -fno-builtin
 // CHECK-OPTIONS2: -fshort-enums
-// CHECK-OPTIONS2: -fshort-wchar
 // CHECK-OPTIONS2: -fno-common
 // CHECK-OPTIONS2: -fno-show-source-location
 
@@ -52,6 +51,9 @@
 // RUN: %clang -### -S -freroll-loops -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
 // CHECK-REROLL-LOOPS: "-freroll-loops"
 // CHECK-NO-REROLL-LOOPS-NOT: "-freroll-loops"
+
+// RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
+// CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
 // RUN: %clang -### -S -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
@@ -463,15 +465,15 @@
 // RUN: %clang -### -S -fno-unsigned-char %s 2>&1 | FileCheck -check-prefix=CHAR-SIGN4 %s
 // CHAR-SIGN4-NOT: -fno-signed-char
 
-// RUN: %clang -### -fshort-wchar -fno-short-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR1 -check-prefix=DELIMITERS %s
-// RUN: %clang -### -fno-short-wchar -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR2 -check-prefix=DELIMITERS %s
+// RUN: %clang -target x86_64-unknown-none-none -### -fshort-wchar -fno-short-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR1 -check-prefix=DELIMITERS %s
+// RUN: %clang -target x86_64-unknown-none-none -### -fno-short-wchar -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR2 -check-prefix=DELIMITERS %s
 // Make sure we don't match the -NOT lines with the linker invocation.
 // Delimiters match the start of the cc1 and the start of the linker lines
 // DELIMITERS: {{^ *"}}
-// CHECK-WCHAR1: -fno-short-wchar
-// CHECK-WCHAR1-NOT: -fshort-wchar
-// CHECK-WCHAR2: -fshort-wchar
-// CHECK-WCHAR2-NOT: -fno-short-wchar
+// CHECK-WCHAR1: -fwchar-type=int
+// CHECK-WCHAR1-NOT: -fwchar-type=short
+// CHECK-WCHAR2: -fwchar-type=short
+// CHECK-WCHAR2-NOT: -fwchar-type=int
 // DELIMITERS: {{^ *"}}
 
 // RUN: %clang -### -fno-experimental-new-pass-manager -fexperimental-new-pass-manager %s 2>&1 | FileCheck --check-prefix=CHECK-PM --check-prefix=CHECK-NEW-PM %s
@@ -496,3 +498,8 @@
 // RUN: %clang -### -S -fno-allow-editor-placeholders %s 2>&1 | FileCheck -check-prefix=CHECK-NO-ALLOW-PLACEHOLDERS %s
 // CHECK-ALLOW-PLACEHOLDERS: -fallow-editor-placeholders
 // CHECK-NO-ALLOW-PLACEHOLDERS-NOT: -fallow-editor-placeholders
+
+// RUN: %clang -### -target x86_64-unknown-windows-msvc -fno-short-wchar %s 2>&1 | FileCheck -check-prefix CHECK-WINDOWS-ISO10646 %s
+// CHECK-WINDOWS-ISO10646: "-fwchar-type=int"
+// CHECK-WINDOWS-ISO10646: "-fsigned-wchar"
+

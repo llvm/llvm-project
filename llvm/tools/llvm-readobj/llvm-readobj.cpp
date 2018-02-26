@@ -22,12 +22,13 @@
 #include "llvm-readobj.h"
 #include "Error.h"
 #include "ObjDumper.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
+#include "WindowsResourceDumper.h"
+#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFFImportFile.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
@@ -39,9 +40,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/TargetSelect.h"
-#include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -198,11 +196,6 @@ namespace opts {
   cl::opt<bool> MipsOptions("mips-options",
                             cl::desc("Display the MIPS .MIPS.options section"));
 
-  // -amdgpu-code-object-metadata
-  cl::opt<bool> AMDGPUCodeObjectMetadata(
-      "amdgpu-code-object-metadata",
-      cl::desc("Display AMDGPU code object metadata"));
-
   // -coff-imports
   cl::opt<bool>
   COFFImports("coff-imports", cl::desc("Display the PE/COFF import table"));
@@ -356,8 +349,8 @@ struct ReadObjTypeTableBuilder {
       : Allocator(), IDTable(Allocator), TypeTable(Allocator) {}
 
   llvm::BumpPtrAllocator Allocator;
-  llvm::codeview::TypeTableBuilder IDTable;
-  llvm::codeview::TypeTableBuilder TypeTable;
+  llvm::codeview::MergingTypeTableBuilder IDTable;
+  llvm::codeview::MergingTypeTableBuilder TypeTable;
 };
 }
 static ReadObjTypeTableBuilder CVTypes;
@@ -438,9 +431,6 @@ static void dumpObject(const ObjectFile *Obj) {
       if (opts::MipsOptions)
         Dumper->printMipsOptions();
     }
-    if (Obj->getArch() == llvm::Triple::amdgcn)
-      if (opts::AMDGPUCodeObjectMetadata)
-        Dumper->printAMDGPUCodeObjectMetadata();
     if (opts::SectionGroups)
       Dumper->printGroupSections();
     if (opts::HashHistogram)
@@ -522,6 +512,15 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary) {
   }
 }
 
+/// @brief Dumps \a WinRes, Windows Resource (.res) file;
+static void dumpWindowsResourceFile(WindowsResource *WinRes) {
+  ScopedPrinter Printer{outs()};
+  WindowsRes::Dumper Dumper(WinRes, Printer);
+  if (auto Err = Dumper.printData())
+    reportError(WinRes->getFileName(), std::move(Err));
+}
+
+
 /// @brief Opens \a File and dumps it.
 static void dumpInput(StringRef File) {
 
@@ -540,6 +539,8 @@ static void dumpInput(StringRef File) {
     dumpObject(Obj);
   else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(&Binary))
     dumpCOFFImportFile(Import);
+  else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(&Binary))
+    dumpWindowsResourceFile(WinRes);
   else
     reportError(File, readobj_error::unrecognized_file_format);
 }
@@ -564,8 +565,7 @@ int main(int argc, const char *argv[]) {
   if (opts::InputFilenames.size() == 0)
     opts::InputFilenames.push_back("-");
 
-  std::for_each(opts::InputFilenames.begin(), opts::InputFilenames.end(),
-                dumpInput);
+  llvm::for_each(opts::InputFilenames, dumpInput);
 
   if (opts::CodeViewMergedTypes) {
     ScopedPrinter W(outs());

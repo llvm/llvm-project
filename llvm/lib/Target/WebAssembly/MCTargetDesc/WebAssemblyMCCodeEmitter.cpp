@@ -61,8 +61,13 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   uint64_t Start = OS.tell();
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  assert(Binary < UINT8_MAX && "Multi-byte opcodes not supported yet");
-  OS << uint8_t(Binary);
+  if (Binary <= UINT8_MAX) {
+    OS << uint8_t(Binary);
+  } else {
+    assert(Binary <= UINT16_MAX && "Several-byte opcodes not supported yet");
+    OS << uint8_t(Binary >> 8)
+       << uint8_t(Binary);
+  }
 
   // For br_table instructions, encode the size of the table. In the MCInst,
   // there's an index operand, one operand for each table entry, and the
@@ -116,10 +121,9 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     } else if (MO.isExpr()) {
       const MCOperandInfo &Info = Desc.OpInfo[i];
       llvm::MCFixupKind FixupKind;
-      size_t PaddedSize;
+      size_t PaddedSize = 5;
       if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i32);
-        PaddedSize = 5;
       } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i64);
         PaddedSize = 10;
@@ -127,10 +131,8 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                  Info.OperandType == WebAssembly::OPERAND_OFFSET32 ||
                  Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
-        PaddedSize = 5;
       } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_global_index);
-        PaddedSize = 5;
       } else {
         llvm_unreachable("unexpected symbolic operand kind");
       }
@@ -138,7 +140,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           OS.tell() - Start, MO.getExpr(),
           FixupKind, MI.getLoc()));
       ++MCNumFixups;
-      encodeULEB128(0, OS, PaddedSize - 1);
+      encodeULEB128(0, OS, PaddedSize);
     } else {
       llvm_unreachable("unexpected operand kind");
     }

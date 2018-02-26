@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s
+
 void foo() {
 }
 
@@ -28,14 +30,14 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp task depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
   #pragma omp task depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp task' are ignored}}
   #pragma omp task depend (out: ) // expected-error {{expected expression}}
-  #pragma omp task depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected variable name, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
+  #pragma omp task depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected addressable lvalue expression, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
   #pragma omp task depend (out :S1) // expected-error {{'S1' does not refer to a value}}
-  #pragma omp task depend(in : argv[1][1] = '2') // expected-error {{expected variable name, array element or array section}}
-  #pragma omp task depend (in : vec[1]) // expected-error {{expected variable name, array element or array section}}
+  #pragma omp task depend(in : argv[1][1] = '2')
+  #pragma omp task depend (in : vec[1]) // expected-error {{expected addressable lvalue expression, array element or array section}}
   #pragma omp task depend (in : argv[0])
   #pragma omp task depend (in : ) // expected-error {{expected expression}}
-  #pragma omp task depend (in : main) // expected-error {{expected variable name, array element or array section}}
-  #pragma omp task depend(in : a[0]) // expected-error{{expected variable name, array element or array section}}
+  #pragma omp task depend (in : main)
+  #pragma omp task depend(in : a[0]) // expected-error{{expected addressable lvalue expression, array element or array section}}
   #pragma omp task depend (in : vec[1:2]) // expected-error {{ value is not an array or pointer}}
   #pragma omp task depend (in : argv[ // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}
   #pragma omp task depend (in : argv[: // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}

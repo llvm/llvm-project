@@ -6,12 +6,12 @@
 
 define i32 @pr31323(i32) {
 ; X32-LABEL: pr31323:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: pr31323:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:

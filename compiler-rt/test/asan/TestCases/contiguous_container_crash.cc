@@ -37,7 +37,7 @@ void BadBounds() {
 void BadAlignment() {
   int t[100];
 // CHECK-BAD-ALIGNMENT: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_contiguous_container
-// CHECK-BAD-ALIGNMENT: ERROR: beg is not aligned by 8
+// CHECK-BAD-ALIGNMENT: ERROR: beg is not aligned by {{[0-9]+}}
   __sanitizer_annotate_contiguous_container(&t[1], &t[0] + 100, &t[1] + 10,
                                             &t[0] + 50);
 }

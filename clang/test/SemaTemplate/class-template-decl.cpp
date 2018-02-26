@@ -57,8 +57,7 @@ void f() {
   template<typename T> class X; // expected-error{{expression}}
 }
 
-template<typename T> class X1 var; // expected-warning{{variable templates are a C++14 extension}} \
-                                   // expected-error {{variable has incomplete type 'class X1'}} \
+template<typename T> class X1 var; // expected-error {{variable has incomplete type 'class X1'}} \
                                    // expected-note {{forward declaration of 'X1'}}
 
 namespace M {

@@ -31,6 +31,8 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -41,10 +43,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <utility>
 
@@ -71,17 +71,17 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
           ? CSR_iOS_SaveList
           : (UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList);
 
-  const Function *F = MF->getFunction();
-  if (F->getCallingConv() == CallingConv::GHC) {
+  const Function &F = MF->getFunction();
+  if (F.getCallingConv() == CallingConv::GHC) {
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
     return CSR_NoRegs_SaveList;
-  } else if (F->hasFnAttribute("interrupt")) {
+  } else if (F.hasFnAttribute("interrupt")) {
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
       return UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList;
-    } else if (F->getFnAttribute("interrupt").getValueAsString() == "FIQ") {
+    } else if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
       // Fast interrupt mode gives the handler a private copy of R8-R14, so less
       // need to be saved to restore user-mode state.
       return CSR_FIQ_SaveList;
@@ -93,7 +93,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   if (STI.getTargetLowering()->supportSwiftError() &&
-      F->getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
+      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
     if (STI.isTargetDarwin())
       return CSR_iOS_SwiftError_SaveList;
 
@@ -101,7 +101,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       CSR_AAPCS_SwiftError_SaveList;
   }
 
-  if (STI.isTargetDarwin() && F->getCallingConv() == CallingConv::CXX_FAST_TLS)
+  if (STI.isTargetDarwin() && F.getCallingConv() == CallingConv::CXX_FAST_TLS)
     return MF->getInfo<ARMFunctionInfo>()->isSplitCSR()
                ? CSR_iOS_CXX_TLS_PE_SaveList
                : CSR_iOS_CXX_TLS_SaveList;
@@ -111,7 +111,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const MCPhysReg *ARMBaseRegisterInfo::getCalleeSavedRegsViaCopy(
     const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
-  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
+  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
       MF->getInfo<ARMFunctionInfo>()->isSplitCSR())
     return CSR_iOS_CXX_TLS_ViaCopy_SaveList;
   return nullptr;
@@ -126,7 +126,7 @@ ARMBaseRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_NoRegs_RegMask;
 
   if (STI.getTargetLowering()->supportSwiftError() &&
-      MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+      MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return STI.isTargetDarwin() ? CSR_iOS_SwiftError_RegMask
                                 : CSR_AAPCS_SwiftError_RegMask;
 
@@ -280,7 +280,7 @@ static unsigned getPairedGPR(unsigned Reg, bool Odd, const MCRegisterInfo *RI) {
 }
 
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
-void
+bool
 ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                            ArrayRef<MCPhysReg> Order,
                                            SmallVectorImpl<MCPhysReg> &Hints,
@@ -300,7 +300,7 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     break;
   default:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
-    return;
+    return false;
   }
 
   // This register should preferably be even (Odd == 0) or odd (Odd == 1).
@@ -308,7 +308,7 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   // the paired register as the first hint.
   unsigned Paired = Hint.second;
   if (Paired == 0)
-    return;
+    return false;
 
   unsigned PairedPhys = 0;
   if (TargetRegisterInfo::isPhysicalRegister(Paired)) {
@@ -331,6 +331,7 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
       continue;
     Hints.push_back(Reg);
   }
+  return false;
 }
 
 void
@@ -391,15 +392,11 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 
 bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
-  const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
   // We can't realign the stack if:
   // 1. Dynamic stack realignment is explicitly disabled,
-  // 2. This is a Thumb1 function (it's not useful, so we don't bother), or
-  // 3. There are VLAs in the function and the base pointer is disabled.
+  // 2. There are VLAs in the function and the base pointer is disabled.
   if (!TargetRegisterInfo::canRealignStack(MF))
-    return false;
-  if (AFI->isThumb1OnlyFunction())
     return false;
   // Stack realignment requires a frame pointer.  If we already started
   // register allocation with frame pointer elimination, it is too late now.
@@ -443,7 +440,7 @@ void ARMBaseRegisterInfo::emitLoadConstPool(
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineConstantPool *ConstantPool = MF.getConstantPool();
   const Constant *C =
-        ConstantInt::get(Type::getInt32Ty(MF.getFunction()->getContext()), Val);
+        ConstantInt::get(Type::getInt32Ty(MF.getFunction().getContext()), Val);
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::LDRcp))
@@ -807,7 +804,8 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                   unsigned SubReg,
                                   const TargetRegisterClass *DstRC,
                                   unsigned DstSubReg,
-                                  const TargetRegisterClass *NewRC) const {
+                                  const TargetRegisterClass *NewRC,
+                                  LiveIntervals &LIS) const {
   auto MBB = MI->getParent();
   auto MF = MBB->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();

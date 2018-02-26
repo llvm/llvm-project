@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- < %s | FileCheck %s
 
 @Te0 = external global [256 x i32]		; <[256 x i32]*> [#uses=5]
 @Te1 = external global [256 x i32]		; <[256 x i32]*> [#uses=4]

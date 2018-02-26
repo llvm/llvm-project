@@ -1,4 +1,4 @@
-//===-- Mips16InstrInfo.cpp - Mips16 Instruction Information --------------===//
+//===- Mips16InstrInfo.cpp - Mips16 Instruction Information ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,27 +10,38 @@
 // This file contains the Mips16 implementation of the TargetInstrInfo class.
 //
 //===----------------------------------------------------------------------===//
+
 #include "Mips16InstrInfo.h"
-#include "InstPrinter/MipsInstPrinter.h"
-#include "MipsMachineFunction.h"
-#include "MipsTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 #include <cctype>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <iterator>
+#include <vector>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mips16-instrinfo"
 
 Mips16InstrInfo::Mips16InstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, Mips::Bimm16), RI() {}
+    : MipsInstrInfo(STI, Mips::Bimm16) {}
 
 const MipsRegisterInfo &Mips16InstrInfo::getRegisterInfo() const {
   return RI;
@@ -71,11 +82,9 @@ void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if ((SrcReg == Mips::HI0) &&
            (Mips::CPU16RegsRegClass.contains(DestReg)))
     Opc = Mips::Mfhi16, SrcReg = 0;
-
   else if ((SrcReg == Mips::LO0) &&
            (Mips::CPU16RegsRegClass.contains(DestReg)))
     Opc = Mips::Mflo16, SrcReg = 0;
-
 
   assert(Opc && "Cannot copy registers");
 
@@ -190,6 +199,7 @@ static void addSaveRestoreRegs(MachineInstrBuilder &MIB,
     }
   }
 }
+
 // Adjust SP by FrameSize bytes. Save RA, S0, S1
 void Mips16InstrInfo::makeFrame(unsigned SP, int64_t FrameSize,
                                 MachineBasicBlock &MBB,
@@ -256,7 +266,6 @@ void Mips16InstrInfo::restoreFrame(unsigned SP, int64_t FrameSize,
 // This can only be called at times that we know that there is at least one free
 // register.
 // This is clearly safe at prologue and epilogue.
-//
 void Mips16InstrInfo::adjustStackPtrBig(unsigned SP, int64_t Amount,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
@@ -473,47 +482,4 @@ bool Mips16InstrInfo::validImmediate(unsigned Opcode, unsigned Reg,
     return isInt<15>(Amount);
   }
   llvm_unreachable("unexpected Opcode in validImmediate");
-}
-
-/// Measure the specified inline asm to determine an approximation of its
-/// length.
-/// Comments (which run till the next SeparatorString or newline) do not
-/// count as an instruction.
-/// Any other non-whitespace text is considered an instruction, with
-/// multiple instructions separated by SeparatorString or newlines.
-/// Variable-length instructions are not handled here; this function
-/// may be overloaded in the target code to do that.
-/// We implement the special case of the .space directive taking only an
-/// integer argument, which is the size in bytes. This is used for creating
-/// inline code spacing for testing purposes using inline assembly.
-///
-unsigned Mips16InstrInfo::getInlineAsmLength(const char *Str,
-                                             const MCAsmInfo &MAI) const {
-
-  // Count the number of instructions in the asm.
-  bool atInsnStart = true;
-  unsigned Length = 0;
-  for (; *Str; ++Str) {
-    if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
-                                strlen(MAI.getSeparatorString())) == 0)
-      atInsnStart = true;
-    if (atInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
-      if (strncmp(Str, ".space", 6)==0) {
-        char *EStr; int Sz;
-        Sz = strtol(Str+6, &EStr, 10);
-        while (isspace(*EStr)) ++EStr;
-        if (*EStr=='\0') {
-          DEBUG(dbgs() << "parsed .space " << Sz << '\n');
-          return Sz;
-        }
-      }
-      Length += MAI.getMaxInstLength();
-      atInsnStart = false;
-    }
-    if (atInsnStart && strncmp(Str, MAI.getCommentString().data(),
-                               MAI.getCommentString().size()) == 0)
-      atInsnStart = false;
-  }
-
-  return Length;
 }

@@ -121,6 +121,9 @@ struct Uncommon {
   /// COFF-specific: the name of the symbol that a weak external resolves to
   /// if not defined.
   Str COFFWeakExternFallbackName;
+
+  /// Specified section name, if any.
+  Str SectionName;
 };
 
 struct Header {
@@ -128,7 +131,7 @@ struct Header {
   /// when the format changes, but it does not need to be incremented if a
   /// change to LLVM would cause it to create a different symbol table.
   Word Version;
-  enum { kCurrentVersion = 0 };
+  enum { kCurrentVersion = 1 };
 
   /// The producer's version string (LLVM_VERSION_STRING " " LLVM_REVISION).
   /// Consumers should rebuild the symbol table from IR if the producer's
@@ -165,6 +168,7 @@ struct Symbol {
   // Copied from storage::Uncommon.
   uint32_t CommonSize, CommonAlign;
   StringRef COFFWeakExternFallbackName;
+  StringRef SectionName;
 
   /// Returns the mangled symbol name.
   StringRef getName() const { return Name; }
@@ -215,6 +219,8 @@ struct Symbol {
     assert(isWeak() && isIndirect());
     return COFFWeakExternFallbackName;
   }
+
+  StringRef getSectionName() const { return SectionName; }
 };
 
 /// This class can be used to read a Symtab and Strtab produced by
@@ -300,7 +306,10 @@ class Reader::SymbolRef : public Symbol {
       CommonSize = UncI->CommonSize;
       CommonAlign = UncI->CommonAlign;
       COFFWeakExternFallbackName = R->str(UncI->COFFWeakExternFallbackName);
-    }
+      SectionName = R->str(UncI->SectionName);
+    } else
+      // Reset this field so it can be queried unconditionally for all symbols.
+      SectionName = "";
   }
 
 public:

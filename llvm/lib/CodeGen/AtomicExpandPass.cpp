@@ -1,4 +1,4 @@
-//===-- AtomicExpandPass.cpp - Expand atomic instructions -------===//
+//===- AtomicExpandPass.cpp - Expand atomic instructions ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,31 +15,54 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/AtomicExpandUtils.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "atomic-expand"
 
 namespace {
+
   class AtomicExpand: public FunctionPass {
-    const TargetLowering *TLI;
+    const TargetLowering *TLI = nullptr;
+
   public:
     static char ID; // Pass identification, replacement for typeid
-    AtomicExpand() : FunctionPass(ID), TLI(nullptr) {
+
+    AtomicExpand() : FunctionPass(ID) {
       initializeAtomicExpandPass(*PassRegistry::getPassRegistry());
     }
 
@@ -92,39 +115,41 @@ namespace {
     llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                    CreateCmpXchgInstFun CreateCmpXchg);
   };
-}
+
+} // end anonymous namespace
 
 char AtomicExpand::ID = 0;
+
 char &llvm::AtomicExpandID = AtomicExpand::ID;
+
 INITIALIZE_PASS(AtomicExpand, DEBUG_TYPE, "Expand Atomic instructions",
                 false, false)
 
 FunctionPass *llvm::createAtomicExpandPass() { return new AtomicExpand(); }
 
-namespace {
 // Helper functions to retrieve the size of atomic instructions.
-unsigned getAtomicOpSize(LoadInst *LI) {
+static unsigned getAtomicOpSize(LoadInst *LI) {
   const DataLayout &DL = LI->getModule()->getDataLayout();
   return DL.getTypeStoreSize(LI->getType());
 }
 
-unsigned getAtomicOpSize(StoreInst *SI) {
+static unsigned getAtomicOpSize(StoreInst *SI) {
   const DataLayout &DL = SI->getModule()->getDataLayout();
   return DL.getTypeStoreSize(SI->getValueOperand()->getType());
 }
 
-unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
+static unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
   const DataLayout &DL = RMWI->getModule()->getDataLayout();
   return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
 }
 
-unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
+static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
   const DataLayout &DL = CASI->getModule()->getDataLayout();
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
 }
 
 // Helper functions to retrieve the alignment of atomic instructions.
-unsigned getAtomicOpAlign(LoadInst *LI) {
+static unsigned getAtomicOpAlign(LoadInst *LI) {
   unsigned Align = LI->getAlignment();
   // In the future, if this IR restriction is relaxed, we should
   // return DataLayout::getABITypeAlignment when there's no align
@@ -133,7 +158,7 @@ unsigned getAtomicOpAlign(LoadInst *LI) {
   return Align;
 }
 
-unsigned getAtomicOpAlign(StoreInst *SI) {
+static unsigned getAtomicOpAlign(StoreInst *SI) {
   unsigned Align = SI->getAlignment();
   // In the future, if this IR restriction is relaxed, we should
   // return DataLayout::getABITypeAlignment when there's no align
@@ -142,7 +167,7 @@ unsigned getAtomicOpAlign(StoreInst *SI) {
   return Align;
 }
 
-unsigned getAtomicOpAlign(AtomicRMWInst *RMWI) {
+static unsigned getAtomicOpAlign(AtomicRMWInst *RMWI) {
   // TODO(PR27168): This instruction has no alignment attribute, but unlike the
   // default alignment for load/store, the default here is to assume
   // it has NATURAL alignment, not DataLayout-specified alignment.
@@ -150,7 +175,7 @@ unsigned getAtomicOpAlign(AtomicRMWInst *RMWI) {
   return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
 }
 
-unsigned getAtomicOpAlign(AtomicCmpXchgInst *CASI) {
+static unsigned getAtomicOpAlign(AtomicCmpXchgInst *CASI) {
   // TODO(PR27168): same comment as above.
   const DataLayout &DL = CASI->getModule()->getDataLayout();
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
@@ -160,13 +185,11 @@ unsigned getAtomicOpAlign(AtomicCmpXchgInst *CASI) {
 // and is of appropriate alignment, to be passed through for target
 // lowering. (Versus turning into a __atomic libcall)
 template <typename Inst>
-bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
+static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   unsigned Align = getAtomicOpAlign(I);
   return Align >= Size && Size <= TLI->getMaxAtomicSizeInBitsSupported() / 8;
 }
-
-} // end anonymous namespace
 
 bool AtomicExpand::runOnFunction(Function &F) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
@@ -320,16 +343,10 @@ bool AtomicExpand::bracketInstWithFences(Instruction *I, AtomicOrdering Order) {
   auto LeadingFence = TLI->emitLeadingFence(Builder, I, Order);
 
   auto TrailingFence = TLI->emitTrailingFence(Builder, I, Order);
-  // The trailing fence is emitted before the instruction instead of after
-  // because there is no easy way of setting Builder insertion point after
-  // an instruction. So we must erase it from the BB, and insert it back
-  // in the right place.
   // We have a guard here because not every atomic operation generates a
   // trailing fence.
-  if (TrailingFence) {
-    TrailingFence->removeFromParent();
-    TrailingFence->insertAfter(I);
-  }
+  if (TrailingFence)
+    TrailingFence->moveAfter(I);
 
   return (LeadingFence || TrailingFence);
 }
@@ -562,6 +579,7 @@ struct PartwordMaskValues {
   Value *Mask;
   Value *Inv_Mask;
 };
+
 } // end anonymous namespace
 
 /// This is a helper function which builds instructions to provide
@@ -580,7 +598,6 @@ struct PartwordMaskValues {
 ///       include only the part that would've been loaded from Addr.
 ///
 /// Inv_Mask: The inverse of Mask.
-
 static PartwordMaskValues createMaskInstrs(IRBuilder<> &Builder, Instruction *I,
                                            Type *ValueType, Value *Addr,
                                            unsigned WordSize) {
@@ -686,7 +703,6 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
 /// part of the value.
 void AtomicExpand::expandPartwordAtomicRMW(
     AtomicRMWInst *AI, TargetLoweringBase::AtomicExpansionKind ExpansionKind) {
-
   assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg);
 
   AtomicOrdering MemOpOrder = AI->getOrdering();
@@ -942,7 +958,6 @@ AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *
   CI->eraseFromParent();
   return NewCI;
 }
-
 
 bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   AtomicOrdering SuccessOrder = CI->getSuccessOrdering();

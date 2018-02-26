@@ -43,11 +43,11 @@ class DIE;
 class DIEAbbrev;
 class DwarfDebug;
 class GCMetadataPrinter;
+class GCStrategy;
 class GlobalIndirectSymbol;
 class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
-class GCStrategy;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
 class MachineFunction;
@@ -58,6 +58,7 @@ class MachineModuleInfo;
 class MachineOptimizationRemarkEmitter;
 class MCAsmInfo;
 class MCCFIInstruction;
+struct MCCodePaddingContext;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -76,11 +77,9 @@ class TargetMachine;
 class AsmPrinter : public MachineFunctionPass {
 public:
   /// Target machine description.
-  ///
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  ///
   const MCAsmInfo *MAI;
 
   /// This is the context for the output file that we are streaming. This owns
@@ -103,7 +102,6 @@ public:
 
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
-  ///
   MCSymbol *CurrentFnSym = nullptr;
 
   /// The symbol used to represent the start of the current function for the
@@ -116,7 +114,7 @@ public:
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
-  /// Enable print [latency:throughput] in output
+  /// Enable print [latency:throughput] in output.
   bool EnablePrintSchedInfo = false;
 
 private:
@@ -128,8 +126,8 @@ private:
   void *GCMetadataPrinters = nullptr; // Really a DenseMap.
 
   /// Emit comments in assembly output if this is true.
-  ///
   bool VerboseAsm;
+
   static char ID;
 
   /// If VerboseAsm is set, a pointer to the loop info for this function.
@@ -149,6 +147,7 @@ private:
           TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
           TimerGroupDescription(TimerGroupDescription) {}
   };
+
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
   SmallVector<HandlerInfo, 1> Handlers;
@@ -187,11 +186,9 @@ public:
   bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.
-  ///
   bool isVerbose() const { return VerboseAsm; }
 
   /// Return a unique ID for the current function.
-  ///
   unsigned getFunctionNumber() const;
 
   MCSymbol *getFunctionBegin() const { return CurrentFnBegin; }
@@ -235,13 +232,15 @@ public:
 
   // The table will contain these structs that point to the sled, the function
   // containing the sled, and what kind of sled (and whether they should always
-  // be instrumented).
+  // be instrumented). We also use a version identifier that the runtime can use
+  // to decide what to do with the sled, depending on the version of the sled.
   struct XRayFunctionEntry {
     const MCSymbol *Sled;
     const MCSymbol *Function;
     SledKind Kind;
     bool AlwaysInstrument;
     const class Function *Fn;
+    uint8_t Version;
 
     void emit(int, MCStreamer *, const MCSymbol *) const;
   };
@@ -249,8 +248,12 @@ public:
   // All the sleds to be emitted.
   SmallVector<XRayFunctionEntry, 4> Sleds;
 
+  // A unique ID used for ELF sections associated with a particular function.
+  unsigned XRayFnUniqueID = 0;
+
   // Helper function to record a given XRay sled.
-  void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind);
+  void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind,
+                  uint8_t Version = 0);
 
   /// Emit a table with all XRay instrumentation points.
   void emitXRayTable();
@@ -260,7 +263,6 @@ public:
   //===------------------------------------------------------------------===//
 
   /// Record analysis usage.
-  ///
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   /// Set up the AsmPrinter when we are working on a new module. If your pass
@@ -293,8 +295,10 @@ public:
 
   void emitFrameAlloc(const MachineInstr &MI);
 
+  void emitStackSizeSection(const MachineFunction &MF);
+
   enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };
-  CFIMoveType needsCFIMoves();
+  CFIMoveType needsCFIMoves() const;
 
   /// Returns false if needsCFIMoves() == CFI_M_EH for any function
   /// in the module.
@@ -305,12 +309,10 @@ public:
   /// Print to the current output stream assembly representations of the
   /// constants in the constant pool MCP. This is used to print out constants
   /// which have been "spilled to memory" by the code generator.
-  ///
   virtual void EmitConstantPool();
 
   /// Print assembly representations of the jump tables used by the current
   /// function to the current output stream.
-  ///
   virtual void EmitJumpTableInfo();
 
   /// Emit the specified global variable to the .s file.
@@ -325,7 +327,6 @@ public:
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  ///
   void EmitAlignment(unsigned NumBits, const GlobalObject *GO = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
@@ -379,7 +380,7 @@ public:
   virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB) const;
 
   /// Targets can override this to emit stuff at the end of a basic block.
-  virtual void EmitBasicBlockEnd(const MachineBasicBlock &MBB) {}
+  virtual void EmitBasicBlockEnd(const MachineBasicBlock &MBB);
 
   /// Targets should implement this to emit instructions.
   virtual void EmitInstruction(const MachineInstr *) {
@@ -443,15 +444,12 @@ public:
   void printOffset(int64_t Offset, raw_ostream &OS) const;
 
   /// Emit a byte directive and value.
-  ///
   void EmitInt8(int Value) const;
 
   /// Emit a short directive and value.
-  ///
   void EmitInt16(int Value) const;
 
   /// Emit a long directive and value.
-  ///
   void EmitInt32(int Value) const;
 
   /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
@@ -481,8 +479,12 @@ public:
   void EmitSLEB128(int64_t Value, const char *Desc = nullptr) const;
 
   /// Emit the specified unsigned leb128 value.
-  void EmitULEB128(uint64_t Value, const char *Desc = nullptr,
-                   unsigned PadTo = 0) const;
+  void EmitULEB128(uint64_t Value, const char *Desc = nullptr) const;
+
+  /// Emit the specified unsigned leb128 value padded to a specific number
+  /// bytes
+  void EmitPaddedULEB128(uint64_t Value, unsigned PadTo,
+                         const char *Desc = nullptr) const;
 
   /// Emit a .byte 42 directive that corresponds to an encoding.  If verbose
   /// assembly output is enabled, we output comments describing the encoding.
@@ -506,7 +508,12 @@ public:
   /// When possible, emit a DwarfStringPool section offset without any
   /// relocations, and without using the symbol.  Otherwise, defers to \a
   /// emitDwarfSymbolReference().
-  void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const;
+  void emitDwarfStringOffset(DwarfStringPoolEntry S) const;
+
+  /// Emit the 4-byte offset of a string from the start of its section.
+  void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
+    emitDwarfStringOffset(S.getEntry());
+  }
 
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }
@@ -622,10 +629,13 @@ private:
   void EmitModuleIdents(Module &M);
   void EmitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool isCtor);
+
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &C);
   /// Emit GlobalAlias or GlobalIFunc.
   void emitGlobalIndirectSymbol(Module &M,
                                 const GlobalIndirectSymbol& GIS);
+  void setupCodePaddingContext(const MachineBasicBlock &MBB,
+                               MCCodePaddingContext &Context) const;
 };
 
 } // end namespace llvm

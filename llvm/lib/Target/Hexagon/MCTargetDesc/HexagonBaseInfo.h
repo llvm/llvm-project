@@ -1,4 +1,4 @@
-//===-- HexagonBaseInfo.h - Top level definitions for Hexagon --*- C++ -*--===//
+//===- HexagonBaseInfo.h - Top level definitions for Hexagon ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,15 +18,12 @@
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 
 #include "HexagonDepITypes.h"
-#include "HexagonMCTargetDesc.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <stdint.h>
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 
 namespace llvm {
 
 /// HexagonII - This namespace holds all of the target specific flags that
 /// instruction info tracks.
-///
 namespace HexagonII {
   unsigned const TypeCVI_FIRST = TypeCVI_HIST;
   unsigned const TypeCVI_LAST = TypeCVI_VX_LATE;
@@ -48,16 +45,13 @@ namespace HexagonII {
     PostInc        = 6   // Post increment addressing mode
   };
 
-  // MemAccessSize is represented as 1+log2(N) where N is size in bits.
-  enum class MemAccessSize {
-    NoMemAccess = 0,            // Not a memory access instruction.
-    ByteAccess = 1,             // Byte access instruction (memb).
-    HalfWordAccess = 2,         // Half word access instruction (memh).
-    WordAccess = 3,             // Word access instruction (memw).
-    DoubleWordAccess = 4,       // Double word access instruction (memd)
-                    // 5,       // We do not have a 16 byte vector access.
-    Vector64Access = 7,         // 64 Byte vector access instruction (vmem).
-    Vector128Access = 8         // 128 Byte vector access instruction (vmem).
+  enum MemAccessSize {
+    NoMemAccess = 0,
+    ByteAccess,
+    HalfWordAccess,
+    WordAccess,
+    DoubleWordAccess,
+    HVXVectorAccess
   };
 
   // MCInstrDesc TSFlags
@@ -74,8 +68,8 @@ namespace HexagonII {
     SoloAXPos  = 7,
     SoloAXMask = 0x1,
     // Only A-type instruction in first slot or nothing.
-    SoloAin1Pos  = 8,
-    SoloAin1Mask = 0x1,
+    RestrictSlot1AOKPos  = 8,
+    RestrictSlot1AOKMask = 0x1,
 
     // Predicated instructions.
     PredicatedPos  = 9,
@@ -128,6 +122,16 @@ namespace HexagonII {
     ExtentAlignPos  = 33,
     ExtentAlignMask = 0x3,
 
+    CofMax1Pos = 35,
+    CofMax1Mask = 0x1,
+    CofRelax1Pos = 36,
+    CofRelax1Mask = 0x1,
+    CofRelax2Pos = 37,
+    CofRelax2Mask = 0x1,
+
+    RestrictNoSlot1StorePos  = 38,
+    RestrictNoSlot1StoreMask = 0x1,
+
     // Addressing mode for load/store instructions.
     AddrModePos  = 41,
     AddrModeMask = 0x7,
@@ -158,8 +162,9 @@ namespace HexagonII {
     PrefersSlot3Pos = 56,
     PrefersSlot3Mask = 0x1,
 
-    CofMax1Pos = 60,
-    CofMax1Mask = 0x1,
+    // v65
+    HasTmpDstPos = 59,
+    HasTmpDstMask = 0x1,
 
     CVINewPos = 61,
     CVINewMask = 0x1
@@ -266,8 +271,18 @@ namespace HexagonII {
     INST_ICLASS_ALU32_3   = 0xf0000000
   };
 
-} // End namespace HexagonII.
+  LLVM_ATTRIBUTE_UNUSED
+  static unsigned getMemAccessSizeInBytes(MemAccessSize S) {
+    switch (S) {
+      case ByteAccess:        return 1;
+      case HalfWordAccess:    return 2;
+      case WordAccess:        return 4;
+      case DoubleWordAccess:  return 8;
+      default:                return 0;
+    }
+  }
+} // end namespace HexagonII
 
-} // End namespace llvm.
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H

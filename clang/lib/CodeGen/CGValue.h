@@ -20,6 +20,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Type.h"
 #include "Address.h"
+#include "CodeGenTBAA.h"
 
 namespace llvm {
   class Constant;
@@ -148,20 +149,15 @@ static inline AlignmentSource getFieldAlignmentSource(AlignmentSource Source) {
 
 class LValueBaseInfo {
   AlignmentSource AlignSource;
-  bool MayAlias;
 
 public:
-  explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type,
-                 bool Alias = false)
-    : AlignSource(Source), MayAlias(Alias) {}
+  explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type)
+    : AlignSource(Source) {}
   AlignmentSource getAlignmentSource() const { return AlignSource; }
   void setAlignmentSource(AlignmentSource Source) { AlignSource = Source; }
-  bool getMayAlias() const { return MayAlias; }
-  void setMayAlias(bool Alias) { MayAlias = Alias; }
 
   void mergeForCast(const LValueBaseInfo &Info) {
     setAlignmentSource(Info.getAlignmentSource());
-    setMayAlias(getMayAlias() || Info.getMayAlias());
   }
 };
 
@@ -220,6 +216,7 @@ class LValue {
   bool ImpreciseLifetime : 1;
 
   LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
 
   // This flag shows if a nontemporal load/stores should be used when accessing
   // this lvalue.
@@ -227,18 +224,9 @@ class LValue {
 
   Expr *BaseIvarExp;
 
-  /// Used by struct-path-aware TBAA.
-  QualType TBAABaseType;
-  /// Offset relative to the base type.
-  uint64_t TBAAOffset;
-
-  /// TBAAInfo - TBAA information to attach to dereferences of this LValue.
-  llvm::MDNode *TBAAInfo;
-
 private:
-  void Initialize(QualType Type, Qualifiers Quals,
-                  CharUnits Alignment, LValueBaseInfo BaseInfo,
-                  llvm::MDNode *TBAAInfo = nullptr) {
+  void Initialize(QualType Type, Qualifiers Quals, CharUnits Alignment,
+                  LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     this->Type = Type;
@@ -247,6 +235,7 @@ private:
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->BaseInfo = BaseInfo;
+    this->TBAAInfo = TBAAInfo;
 
     // Initialize Objective-C flags.
     this->Ivar = this->ObjIsArray = this->NonGC = this->GlobalObjCRef = false;
@@ -254,11 +243,6 @@ private:
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
     this->BaseIvarExp = nullptr;
-
-    // Initialize fields for TBAA.
-    this->TBAABaseType = Type;
-    this->TBAAOffset = 0;
-    this->TBAAInfo = TBAAInfo;
   }
 
 public:
@@ -318,19 +302,13 @@ public:
   Expr *getBaseIvarExp() const { return BaseIvarExp; }
   void setBaseIvarExp(Expr *V) { BaseIvarExp = V; }
 
-  QualType getTBAABaseType() const { return TBAABaseType; }
-  void setTBAABaseType(QualType T) { TBAABaseType = T; }
-
-  uint64_t getTBAAOffset() const { return TBAAOffset; }
-  void setTBAAOffset(uint64_t O) { TBAAOffset = O; }
-
-  llvm::MDNode *getTBAAInfo() const { return TBAAInfo; }
-  void setTBAAInfo(llvm::MDNode *N) { TBAAInfo = N; }
+  TBAAAccessInfo getTBAAInfo() const { return TBAAInfo; }
+  void setTBAAInfo(TBAAAccessInfo Info) { TBAAInfo = Info; }
 
   const Qualifiers &getQuals() const { return Quals; }
   Qualifiers &getQuals() { return Quals; }
 
-  unsigned getAddressSpace() const { return Quals.getAddressSpace(); }
+  LangAS getAddressSpace() const { return Quals.getAddressSpace(); }
 
   CharUnits getAlignment() const { return CharUnits::fromQuantity(Alignment); }
   void setAlignment(CharUnits A) { Alignment = A.getQuantity(); }
@@ -383,10 +361,8 @@ public:
   // global register lvalue
   llvm::Value *getGlobalReg() const { assert(isGlobalReg()); return V; }
 
-  static LValue MakeAddr(Address address, QualType type,
-                         ASTContext &Context,
-                         LValueBaseInfo BaseInfo,
-                         llvm::MDNode *TBAAInfo = nullptr) {
+  static LValue MakeAddr(Address address, QualType type, ASTContext &Context,
+                         LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
     Qualifiers qs = type.getQualifiers();
     qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
 
@@ -399,24 +375,26 @@ public:
   }
 
   static LValue MakeVectorElt(Address vecAddress, llvm::Value *Idx,
-                              QualType type, LValueBaseInfo BaseInfo) {
+                              QualType type, LValueBaseInfo BaseInfo,
+                              TBAAAccessInfo TBAAInfo) {
     LValue R;
     R.LVType = VectorElt;
     R.V = vecAddress.getPointer();
     R.VectorIdx = Idx;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 BaseInfo);
+                 BaseInfo, TBAAInfo);
     return R;
   }
 
   static LValue MakeExtVectorElt(Address vecAddress, llvm::Constant *Elts,
-                                 QualType type, LValueBaseInfo BaseInfo) {
+                                 QualType type, LValueBaseInfo BaseInfo,
+                                 TBAAAccessInfo TBAAInfo) {
     LValue R;
     R.LVType = ExtVectorElt;
     R.V = vecAddress.getPointer();
     R.VectorElts = Elts;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 BaseInfo);
+                 BaseInfo, TBAAInfo);
     return R;
   }
 
@@ -426,15 +404,15 @@ public:
   /// bit-field refers to.
   /// \param Info - The information describing how to perform the bit-field
   /// access.
-  static LValue MakeBitfield(Address Addr,
-                             const CGBitFieldInfo &Info,
-                             QualType type,
-                             LValueBaseInfo BaseInfo) {
+  static LValue MakeBitfield(Address Addr, const CGBitFieldInfo &Info,
+                             QualType type, LValueBaseInfo BaseInfo,
+                             TBAAAccessInfo TBAAInfo) {
     LValue R;
     R.LVType = BitField;
     R.V = Addr.getPointer();
     R.BitFieldInfo = &Info;
-    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo);
+    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo,
+                 TBAAInfo);
     return R;
   }
 
@@ -443,7 +421,7 @@ public:
     R.LVType = GlobalReg;
     R.V = Reg.getPointer();
     R.Initialize(type, type.getQualifiers(), Reg.getAlignment(),
-                 LValueBaseInfo(AlignmentSource::Decl, false));
+                 LValueBaseInfo(AlignmentSource::Decl), TBAAAccessInfo());
     return R;
   }
 

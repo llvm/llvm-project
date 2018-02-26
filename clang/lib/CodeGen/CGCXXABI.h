@@ -73,9 +73,10 @@ protected:
     return CGF.CXXStructorImplicitParamValue;
   }
 
-  /// Perform prolog initialization of the parameter variable suitable
-  /// for 'this' emitted by buildThisParam.
-  void EmitThisParam(CodeGenFunction &CGF);
+  /// Loads the incoming C++ this pointer as it was passed by the caller.
+  llvm::Value *loadIncomingCXXThis(CodeGenFunction &CGF);
+
+  void setCXXABIThisValue(CodeGenFunction &CGF, llvm::Value *ThisPtr);
 
   ASTContext &getContext() const { return CGM.getContext(); }
 
@@ -358,13 +359,6 @@ public:
     return CharUnits::Zero();
   }
 
-  /// Perform ABI-specific "this" parameter adjustment in a virtual function
-  /// prologue.
-  virtual llvm::Value *adjustThisParameterInVirtualFunctionPrologue(
-      CodeGenFunction &CGF, GlobalDecl GD, llvm::Value *This) {
-    return This;
-  }
-
   /// Emit the ABI-specific prolog for the function.
   virtual void EmitInstanceFunctionProlog(CodeGenFunction &CGF) = 0;
 
@@ -588,6 +582,13 @@ public:
   /// Emit a single constructor/destructor with the given type from a C++
   /// constructor Decl.
   virtual void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) = 0;
+
+  /// Load a vtable from This, an object of polymorphic type RD, or from one of
+  /// its virtual bases if it does not have its own vtable. Returns the vtable
+  /// and the class from which the vtable was loaded.
+  virtual std::pair<llvm::Value *, const CXXRecordDecl *>
+  LoadVTablePtr(CodeGenFunction &CGF, Address This,
+                const CXXRecordDecl *RD) = 0;
 };
 
 // Create an instance of a C++ ABI class:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep fs
+; RUN: llc < %s -mtriple=i686-- | grep fs
 
 define i32 @foo() nounwind readonly {
 entry:

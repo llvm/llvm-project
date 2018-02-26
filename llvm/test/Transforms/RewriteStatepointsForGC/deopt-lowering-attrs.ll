@@ -1,4 +1,5 @@
 ; RUN: opt -rewrite-statepoints-for-gc -S < %s | FileCheck %s
+; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 ; Check that the "deopt-lowering" function attribute gets transcoded into
 ; flags on the resulting statepoint
 

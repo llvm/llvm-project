@@ -49,9 +49,10 @@ INITIALIZE_PASS_END(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
 static cl::opt<bool> VerifyPredicateInfo(
     "verify-predicateinfo", cl::init(false), cl::Hidden,
     cl::desc("Verify PredicateInfo in legacy printer pass."));
-namespace {
 DEBUG_COUNTER(RenameCounter, "predicateinfo-rename",
-              "Controls which variables are renamed with predicateinfo")
+              "Controls which variables are renamed with predicateinfo");
+
+namespace {
 // Given a predicate info that is a type of branching terminator, get the
 // branching block.
 const BasicBlock *getBranchBlock(const PredicateBase *PB) {
@@ -610,7 +611,12 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
     }
 
     convertUsesToDFSOrdered(Op, OrderedUses);
-    std::sort(OrderedUses.begin(), OrderedUses.end(), Compare);
+    // Here we require a stable sort because we do not bother to try to
+    // assign an order to the operands the uses represent. Thus, two
+    // uses in the same instruction do not have a strict sort order
+    // currently and will be considered equal. We could get rid of the
+    // stable sort by creating one if we wanted.
+    std::stable_sort(OrderedUses.begin(), OrderedUses.end(), Compare);
     SmallVector<ValueDFS, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with
     // top of stack, which will represent the reaching def.

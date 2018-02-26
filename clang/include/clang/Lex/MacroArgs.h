@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <vector>
 
 namespace clang {
@@ -26,7 +27,10 @@ namespace clang {
 
 /// MacroArgs - An instance of this class captures information about
 /// the formal arguments specified to a function-like macro invocation.
-class MacroArgs {
+class MacroArgs final 
+    : private llvm::TrailingObjects<MacroArgs, Token> {
+
+  friend TrailingObjects;
   /// NumUnexpArgTokens - The number of raw, unexpanded tokens for the
   /// arguments.  All of the actual argument tokens are allocated immediately
   /// after the MacroArgs object in memory.  This is all of the arguments
@@ -89,7 +93,7 @@ public:
   /// getPreExpArgument - Return the pre-expanded form of the specified
   /// argument.
   const std::vector<Token> &
-    getPreExpArgument(unsigned Arg, const MacroInfo *MI, Preprocessor &PP);
+    getPreExpArgument(unsigned Arg, Preprocessor &PP);
 
   /// getStringifiedArgument - Compute, cache, and return the specified argument
   /// that has been 'stringified' as required by the # operator.
@@ -107,6 +111,20 @@ public:
   /// function, or if in strict mode and the C99 varargs macro had only a ...
   /// argument, this returns false.
   bool isVarargsElidedUse() const { return VarargsElided; }
+
+  /// Returns true if the macro was defined with a variadic (ellipsis) parameter
+  /// AND was invoked with at least one token supplied as a variadic argument.
+  ///
+  /// \code 
+  ///   #define F(a)  a
+  ///   #define V(a, ...) __VA_OPT__(a)
+  ///   F()    <-- returns false on this invocation.
+  ///   V(,a)  <-- returns true on this invocation.
+  ///   V(,)   <-- returns false on this invocation.
+  /// \endcode
+  ///
+ 
+  bool invokedWithVariadicArgument(const MacroInfo *const MI) const;
 
   /// StringifyArgument - Implement C99 6.10.3.2p2, converting a sequence of
   /// tokens into the literal string token that should be produced by the C #

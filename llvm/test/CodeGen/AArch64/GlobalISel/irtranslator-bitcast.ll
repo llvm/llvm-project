@@ -23,7 +23,7 @@ define i32 @test_bitcast_invalid_vreg() {
   %tmp15 = add i32 30, 30
 
 ; At this point we mapped 46 values. The 'i32 100' constant will grow the map.
-; CHECK:  %46(s32) = G_CONSTANT i32 100
+; CHECK:  %46:_(s32) = G_CONSTANT i32 100
 ; CHECK:  %w0 = COPY %46(s32)
   %res = bitcast i32 100 to i32
   ret i32 %res

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=core2 -o %t
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -o %t
 ; RUN: not grep unpcklps %t
 
 define i32 @foo() nounwind {

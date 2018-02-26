@@ -124,6 +124,12 @@ public:
 
     /// We are currently in the filter expression of an SEH except block.
     SEHFilterScope = 0x200000,
+
+    /// This is a compound statement scope.
+    CompoundStmtScope = 0x400000,
+
+    /// We are between inheritance colon and the real class/struct definition scope.
+    ClassInheritanceScope = 0x800000,
   };
 private:
   /// The parent scope for this scope.  This is null for the translation-unit
@@ -428,6 +434,11 @@ public:
 
   /// \brief Determine whether this scope is a SEH '__except' block.
   bool isSEHExceptScope() const { return getFlags() & Scope::SEHExceptScope; }
+
+  /// \brief Determine whether this scope is a compound statement scope.
+  bool isCompoundStmtScope() const {
+    return getFlags() & Scope::CompoundStmtScope;
+  }
 
   /// \brief Returns if rhs has a higher scope depth than this.
   ///

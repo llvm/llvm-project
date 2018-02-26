@@ -3,6 +3,8 @@ RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-x64.dll | FileChe
 
 RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-data-end.exe | FileCheck %s --check-prefix=DATAEND
 
+RUN: llvm-readobj -coff-load-config %S/Inputs/coff-no-load-config.exe | FileCheck %s --check-prefix=NOCONFIG
+
 X86: LoadConfig [
 X86:   Size: 0x5C
 X86:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
@@ -91,3 +93,6 @@ X64: ]
 DATAEND: SEHTable [
 DATAEND-NEXT:   0x402006
 DATAEND-NEXT: ]
+
+NOCONFIG: Format: COFF-x86-64
+NOCONFIG-NOT: LoadConfig

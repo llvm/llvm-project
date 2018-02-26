@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -std=c++14 -fexceptions -fsized-deallocation -faligned-allocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++1z -fexceptions -fsized-deallocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
 
+// RUN: %clang_cc1 -std=c++1z -fexceptions -fsized-deallocation %s -emit-llvm -triple x86_64-windows-msvc -o - | FileCheck %s --check-prefix=CHECK-MS
+
 // Check that we don't used aligned (de)allocation without -faligned-allocation or C++1z.
 // RUN: %clang_cc1 -std=c++14 -DUNALIGNED -fexceptions %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNALIGNED
 // RUN: %clang_cc1 -std=c++1z -DUNALIGNED -fexceptions -fno-aligned-allocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNALIGNED
@@ -27,14 +29,28 @@ struct OVERALIGNED A { A(); int n[128]; };
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
 // CHECK: %[[ALLOC:.*]] = call i8* @_ZnwmSt11align_val_t(i64 512, i64 32)
 // CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
+// CHECK-MS-LABEL: define {{.*}} @"\01?a0@@YAPEAXXZ"()
+// CHECK-MS: %[[ALLOC:.*]] = call i8* @"\01??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 512, i64 32)
+// CHECK-MS: cleanuppad
+// CHECK-MS: call void @"\01??3@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
 void *a0() { return new A; }
 
+// FIXME: Why don't we call the sized array deallocation overload in this case?
+// The size is known.
+//
 // CHECK-LABEL: define {{.*}} @_Z2a1l(
 // CHECK: %[[ALLOC:.*]] = call i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
 // CHECK: call void @_ZdaPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
+// CHECK-MS-LABEL: define {{.*}} @"\01?a1@@YAPEAXJ@Z"(
+// CHECK-MS: %[[ALLOC:.*]] = call i8* @"\01??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 %{{.*}}, i64 32)
+// No array cookie.
+// CHECK-MS-NOT: store
+// CHECK-MS: invoke %struct.A* @"\01??0A@@QEAA@XZ"(
+// CHECK-MS: cleanuppad
+// CHECK-MS: call void @"\01??_V@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
 void *a1(long n) { return new A[n]; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a2P1A(

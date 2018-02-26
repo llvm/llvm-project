@@ -27,7 +27,7 @@ void CopyFileToErr(const std::string &Path);
 
 void WriteToFile(const Unit &U, const std::string &Path);
 
-void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
+void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,
                             long *Epoch, size_t MaxSize, bool ExitOnError);
 
 // Returns "Dir/FileName" or equivalent for the current OS.
@@ -53,9 +53,18 @@ void RawPrint(const char *Str);
 
 // Platform specific functions:
 bool IsFile(const std::string &Path);
+size_t FileSize(const std::string &Path);
 
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
-                             std::vector<std::string> *V, bool TopDir);
+                             Vector<std::string> *V, bool TopDir);
+
+struct SizedFile {
+  std::string File;
+  size_t Size;
+  bool operator<(const SizedFile &B) const { return Size < B.Size; }
+};
+
+void GetSizedFilesFromDir(const std::string &Dir, Vector<SizedFile> *V);
 
 char GetSeparator();
 

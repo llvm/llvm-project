@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep cvtsi2sd
+; RUN: llc < %s -mtriple=x86_64-- | grep cvtsi2sd
 
 ; LSR previously eliminated the sitofp by introducing an induction
 ; variable which stepped by a bogus ((double)UINT32_C(-1)). It's theoretically

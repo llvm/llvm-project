@@ -69,6 +69,9 @@ public:
     return true;
   }
 
+  llvm::ExceptionHandling GetExceptionModel(
+      const llvm::opt::ArgList &Args) const override;
+
   SanitizerMask getSupportedSanitizers() const override;
 
 protected:

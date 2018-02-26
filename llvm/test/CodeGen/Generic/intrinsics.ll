@@ -45,3 +45,12 @@ define i8* @barrier(i8* %p) {
         %q = call i8* @llvm.invariant.group.barrier(i8* %p)
         ret i8* %q
 }
+
+; sideeffect
+
+declare void @llvm.sideeffect()
+
+define void @test_sideeffect() {
+    call void @llvm.sideeffect()
+    ret void
+}

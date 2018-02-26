@@ -1,4 +1,4 @@
-; RUN: llc -asm-verbose=false -march=x86-64 -mtriple=x86_64-apple-darwin -o - < %s | FileCheck %s
+; RUN: llc -asm-verbose=false -mtriple=x86_64-apple-darwin -o - < %s | FileCheck %s
 
 ; LSR should leave non-affine expressions alone because it currently
 ; doesn't know how to do anything with them, and when it tries, it

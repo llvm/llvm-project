@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -45,7 +46,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetCallingConv.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cmath>
@@ -405,7 +405,7 @@ SDValue LanaiTargetLowering::LowerFormalArguments(
   case CallingConv::Fast:
     return LowerCCCArguments(Chain, CallConv, IsVarArg, Ins, DL, DAG, InVals);
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   }
 }
 
@@ -431,7 +431,7 @@ SDValue LanaiTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return LowerCCCCallTo(Chain, Callee, CallConv, IsVarArg, IsTailCall, Outs,
                           OutVals, Ins, DL, DAG, InVals);
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   }
 }
 
@@ -513,7 +513,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
   // The Lanai ABI for returning structs by value requires that we copy
   // the sret argument into rv for the return. Save the argument into
   // a virtual register so that we can access it from the return points.
-  if (MF.getFunction()->hasStructRetAttr()) {
+  if (MF.getFunction().hasStructRetAttr()) {
     unsigned Reg = LanaiMFI->getSRetReturnReg();
     if (!Reg) {
       Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i32));
@@ -568,7 +568,7 @@ LanaiTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // the sret argument into rv for the return. We saved the argument into
   // a virtual register in the entry block, so now we copy the value out
   // and into rv.
-  if (DAG.getMachineFunction().getFunction()->hasStructRetAttr()) {
+  if (DAG.getMachineFunction().getFunction().hasStructRetAttr()) {
     MachineFunction &MF = DAG.getMachineFunction();
     LanaiMachineFunctionInfo *LanaiMFI = MF.getInfo<LanaiMachineFunctionInfo>();
     unsigned Reg = LanaiMFI->getSRetReturnReg();

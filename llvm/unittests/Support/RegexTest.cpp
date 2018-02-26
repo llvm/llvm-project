@@ -171,4 +171,12 @@ TEST_F(RegexTest, MatchInvalid) {
   EXPECT_FALSE(r1.match("X"));
 }
 
+// https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=3727
+TEST_F(RegexTest, OssFuzz3727Regression) {
+  // Wrap in a StringRef so the NUL byte doesn't terminate the string
+  Regex r(StringRef("[[[=GS\x00[=][", 10));
+  std::string Error;
+  EXPECT_FALSE(r.isValid(Error));
+}
+
 }

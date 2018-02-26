@@ -302,6 +302,9 @@ private:
   // (we'd want these groups be at the end).
   void regroupNoUserInstructions();
 
+  // Give Reserved color to export instructions
+  void colorExports();
+
   void createBlocksForVariant(SISchedulerBlockCreatorVariant BlockVariant);
 
   void topologicalSort();

@@ -16,7 +16,6 @@
 #define LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include <cstdint>
 #include <cstring>
@@ -26,6 +25,7 @@
 
 namespace llvm {
 
+class Module;
 class raw_ostream;
 
 namespace lowertypetests {

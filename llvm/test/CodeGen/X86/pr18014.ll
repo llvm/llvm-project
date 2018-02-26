@@ -6,7 +6,7 @@
 
 define <4 x i32> @foo(<4 x i32>* %p, <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    blendvps %xmm0, %xmm1, %xmm2

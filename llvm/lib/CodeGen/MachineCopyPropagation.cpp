@@ -12,19 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <iterator>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-cp"
@@ -32,9 +39,10 @@ using namespace llvm;
 STATISTIC(NumDeletes, "Number of dead copies deleted");
 
 namespace {
-  typedef SmallVector<unsigned, 4> RegList;
-  typedef DenseMap<unsigned, RegList> SourceMap;
-  typedef DenseMap<unsigned, MachineInstr*> Reg2MIMap;
+
+using RegList = SmallVector<unsigned, 4>;
+using SourceMap = DenseMap<unsigned, RegList>;
+using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
 
   class MachineCopyPropagation : public MachineFunctionPass {
     const TargetRegisterInfo *TRI;
@@ -43,6 +51,7 @@ namespace {
 
   public:
     static char ID; // Pass identification, replacement for typeid
+
     MachineCopyPropagation() : MachineFunctionPass(ID) {
       initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
     }
@@ -67,16 +76,23 @@ namespace {
 
     /// Candidates for deletion.
     SmallSetVector<MachineInstr*, 8> MaybeDeadCopies;
+
     /// Def -> available copies map.
     Reg2MIMap AvailCopyMap;
+
     /// Def -> copies map.
     Reg2MIMap CopyMap;
+
     /// Src -> Def map
     SourceMap SrcMap;
+
     bool Changed;
   };
-}
+
+} // end anonymous namespace
+
 char MachineCopyPropagation::ID = 0;
+
 char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 
 INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
@@ -170,6 +186,8 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy, unsigned Src,
 
   // Check that the existing copy uses the correct sub registers.
   MachineInstr &PrevCopy = *CI->second;
+  if (PrevCopy.getOperand(0).isDead())
+    return false;
   if (!isNopCopy(PrevCopy, Src, Def, TRI))
     return false;
 
@@ -207,19 +225,19 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // The two copies cancel out and the source of the first copy
       // hasn't been overridden, eliminate the second one. e.g.
-      //  %ECX<def> = COPY %EAX
-      //  ... nothing clobbered EAX.
-      //  %EAX<def> = COPY %ECX
+      //  %ecx = COPY %eax
+      //  ... nothing clobbered eax.
+      //  %eax = COPY %ecx
       // =>
-      //  %ECX<def> = COPY %EAX
+      //  %ecx = COPY %eax
       //
       // or
       //
-      //  %ECX<def> = COPY %EAX
-      //  ... nothing clobbered EAX.
-      //  %ECX<def> = COPY %EAX
+      //  %ecx = COPY %eax
+      //  ... nothing clobbered eax.
+      //  %ecx = COPY %eax
       // =>
-      //  %ECX<def> = COPY %EAX
+      //  %ecx = COPY %eax
       if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
         continue;
 
@@ -243,11 +261,11 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // If 'Def' is previously source of another copy, then this earlier copy's
       // source is no longer available. e.g.
-      // %xmm9<def> = copy %xmm2
+      // %xmm9 = copy %xmm2
       // ...
-      // %xmm2<def> = copy %xmm0
+      // %xmm2 = copy %xmm0
       // ...
-      // %xmm2<def> = copy %xmm9
+      // %xmm2 = copy %xmm9
       ClobberRegister(Def);
       for (const MachineOperand &MO : MI->implicit_operands()) {
         if (!MO.isReg() || !MO.isDef())
@@ -269,7 +287,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // it's no longer available for copy propagation.
       RegList &DestList = SrcMap[Src];
       if (!is_contained(DestList, Def))
-        DestList.push_back(Def);
+          DestList.push_back(Def);
 
       continue;
     }
@@ -360,7 +378,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 }
 
 bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   Changed = false;
@@ -374,4 +392,3 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
 
   return Changed;
 }
-

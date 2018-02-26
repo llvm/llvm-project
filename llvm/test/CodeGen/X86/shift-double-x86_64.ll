@@ -5,7 +5,7 @@
 
 define i64 @test1(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $63, %edx
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shldq %cl, %rsi, %rdi
@@ -21,7 +21,7 @@ define i64 @test1(i64 %hi, i64 %lo, i64 %bits) nounwind {
 
 define i64 @test2(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $63, %edx
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shrdq %cl, %rdi, %rsi
@@ -37,7 +37,7 @@ define i64 @test2(i64 %hi, i64 %lo, i64 %bits) nounwind {
 
 define i64 @test3(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shldq %cl, %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -51,7 +51,7 @@ define i64 @test3(i64 %hi, i64 %lo, i64 %bits) nounwind {
 
 define i64 @test4(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shrdq %cl, %rdi, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
@@ -65,7 +65,7 @@ define i64 @test4(i64 %hi, i64 %lo, i64 %bits) nounwind {
 
 define i64 @test5(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shldq %cl, %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -80,7 +80,7 @@ define i64 @test5(i64 %hi, i64 %lo, i64 %bits) nounwind {
 
 define i64 @test6(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shrdq %cl, %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -95,7 +95,7 @@ define i64 @test6(i64 %hi, i64 %lo, i64 %bits) nounwind {
 
 define i64 @test7(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shrdq %cl, %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax

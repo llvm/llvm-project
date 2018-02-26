@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
 
 define double @t(double %x) nounwind ssp noimplicitfloat {
 entry:

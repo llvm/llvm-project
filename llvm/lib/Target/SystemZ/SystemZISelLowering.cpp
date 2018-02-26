@@ -221,7 +221,17 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_MAX,  MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i32, Custom);
+
+  // Even though i128 is not a legal type, we still need to custom lower
+  // the atomic operations in order to exploit SystemZ instructions.
+  setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
+  setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
+
+  // We can use the CC result of compare-and-swap to implement
+  // the "success" result of ATOMIC_CMP_SWAP_WITH_SUCCESS.
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Custom);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i64, Custom);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
@@ -587,9 +597,104 @@ bool SystemZTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   return true;
 }
 
+// Information about the addressing mode for a memory access.
+struct AddressingMode {
+  // True if a long displacement is supported.
+  bool LongDisplacement;
+
+  // True if use of index register is supported.
+  bool IndexReg;
+  
+  AddressingMode(bool LongDispl, bool IdxReg) :
+    LongDisplacement(LongDispl), IndexReg(IdxReg) {}
+};
+
+// Return the desired addressing mode for a Load which has only one use (in
+// the same block) which is a Store.
+static AddressingMode getLoadStoreAddrMode(bool HasVector,
+                                          Type *Ty) {
+  // With vector support a Load->Store combination may be combined to either
+  // an MVC or vector operations and it seems to work best to allow the
+  // vector addressing mode.
+  if (HasVector)
+    return AddressingMode(false/*LongDispl*/, true/*IdxReg*/);
+
+  // Otherwise only the MVC case is special.
+  bool MVC = Ty->isIntegerTy(8);
+  return AddressingMode(!MVC/*LongDispl*/, !MVC/*IdxReg*/);
+}
+
+// Return the addressing mode which seems most desirable given an LLVM
+// Instruction pointer.
+static AddressingMode
+supportedAddressingMode(Instruction *I, bool HasVector) {
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    default: break;
+    case Intrinsic::memset:
+    case Intrinsic::memmove:
+    case Intrinsic::memcpy:
+      return AddressingMode(false/*LongDispl*/, false/*IdxReg*/);
+    }
+  }
+
+  if (isa<LoadInst>(I) && I->hasOneUse()) {
+    auto *SingleUser = dyn_cast<Instruction>(*I->user_begin());
+    if (SingleUser->getParent() == I->getParent()) {
+      if (isa<ICmpInst>(SingleUser)) {
+        if (auto *C = dyn_cast<ConstantInt>(SingleUser->getOperand(1)))
+          if (isInt<16>(C->getSExtValue()) || isUInt<16>(C->getZExtValue()))
+            // Comparison of memory with 16 bit signed / unsigned immediate
+            return AddressingMode(false/*LongDispl*/, false/*IdxReg*/);
+      } else if (isa<StoreInst>(SingleUser))
+        // Load->Store
+        return getLoadStoreAddrMode(HasVector, I->getType());
+    }
+  } else if (auto *StoreI = dyn_cast<StoreInst>(I)) {
+    if (auto *LoadI = dyn_cast<LoadInst>(StoreI->getValueOperand()))
+      if (LoadI->hasOneUse() && LoadI->getParent() == I->getParent())
+        // Load->Store
+        return getLoadStoreAddrMode(HasVector, LoadI->getType());
+  }
+
+  if (HasVector && (isa<LoadInst>(I) || isa<StoreInst>(I))) {
+
+    // * Use LDE instead of LE/LEY for z13 to avoid partial register
+    //   dependencies (LDE only supports small offsets).
+    // * Utilize the vector registers to hold floating point
+    //   values (vector load / store instructions only support small
+    //   offsets).
+
+    Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
+                         I->getOperand(0)->getType());
+    bool IsFPAccess = MemAccessTy->isFloatingPointTy();
+    bool IsVectorAccess = MemAccessTy->isVectorTy();
+
+    // A store of an extracted vector element will be combined into a VSTE type
+    // instruction.
+    if (!IsVectorAccess && isa<StoreInst>(I)) {
+      Value *DataOp = I->getOperand(0);
+      if (isa<ExtractElementInst>(DataOp))
+        IsVectorAccess = true;
+    }
+
+    // A load which gets inserted into a vector element will be combined into a
+    // VLE type instruction.
+    if (!IsVectorAccess && isa<LoadInst>(I) && I->hasOneUse()) {
+      User *LoadUser = *I->user_begin();
+      if (isa<InsertElementInst>(LoadUser))
+        IsVectorAccess = true;
+    }
+
+    if (IsFPAccess || IsVectorAccess)
+      return AddressingMode(false/*LongDispl*/, true/*IdxReg*/);
+  }
+
+  return AddressingMode(true/*LongDispl*/, true/*IdxReg*/);
+}
+
 bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
-                                                  const AddrMode &AM, Type *Ty,
-                                                  unsigned AS) const {
+       const AddrMode &AM, Type *Ty, unsigned AS, Instruction *I) const {
   // Punt on globals for now, although they can be used in limited
   // RELATIVE LONG cases.
   if (AM.BaseGV)
@@ -599,48 +704,19 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!isInt<20>(AM.BaseOffs))
     return false;
 
-  // Indexing is OK but no scale factor can be applied.
-  return AM.Scale == 0 || AM.Scale == 1;
-}
+  AddressingMode SupportedAM(true, true);
+  if (I != nullptr)
+    SupportedAM = supportedAddressingMode(I, Subtarget.hasVector());
 
-bool SystemZTargetLowering::isFoldableMemAccessOffset(Instruction *I,
-                                                      int64_t Offset) const {
-  // This only applies to z13.
-  if (!Subtarget.hasVector())
-    return true;
-
-  // * Use LDE instead of LE/LEY to avoid partial register
-  //   dependencies (LDE only supports small offsets).
-  // * Utilize the vector registers to hold floating point
-  //   values (vector load / store instructions only support small
-  //   offsets).
-
-  assert (isa<LoadInst>(I) || isa<StoreInst>(I));
-  Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
-                       I->getOperand(0)->getType());
-  bool IsFPAccess = MemAccessTy->isFloatingPointTy();
-  bool IsVectorAccess = MemAccessTy->isVectorTy();
-
-  // A store of an extracted vector element will be combined into a VSTE type
-  // instruction.
-  if (!IsVectorAccess && isa<StoreInst>(I)) {
-    Value *DataOp = I->getOperand(0);
-    if (isa<ExtractElementInst>(DataOp))
-      IsVectorAccess = true;
-  }
-
-  // A load which gets inserted into a vector element will be combined into a
-  // VLE type instruction.
-  if (!IsVectorAccess && isa<LoadInst>(I) && I->hasOneUse()) {
-    User *LoadUser = *I->user_begin();
-    if (isa<InsertElementInst>(LoadUser))
-      IsVectorAccess = true;
-  }
-
-  if (!isUInt<12>(Offset) && (IsFPAccess || IsVectorAccess))
+  if (!SupportedAM.LongDisplacement && !isUInt<12>(AM.BaseOffs))
     return false;
 
-  return true;
+  if (!SupportedAM.IndexReg)
+    // No indexing allowed.
+    return AM.Scale == 0;
+  else
+    // Indexing is OK but no scale factor can be applied.
+    return AM.Scale == 0 || AM.Scale == 1;
 }
 
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {
@@ -1768,11 +1844,14 @@ static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
                               ISD::SEXTLOAD :
                               ISD::ZEXTLOAD);
   if (C.Op0.getValueType() != MVT::i32 ||
-      Load->getExtensionType() != ExtType)
+      Load->getExtensionType() != ExtType) {
     C.Op0 = DAG.getExtLoad(ExtType, SDLoc(Load), MVT::i32, Load->getChain(),
                            Load->getBasePtr(), Load->getPointerInfo(),
                            Load->getMemoryVT(), Load->getAlignment(),
                            Load->getMemOperand()->getFlags());
+    // Update the chain uses.
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), C.Op0.getValue(1));
+  }
 
   // Make sure that the second operand is an i32 with the right value.
   if (C.Op1.getValueType() != MVT::i32 ||
@@ -2122,6 +2201,7 @@ static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
       NewC.Op0.getOpcode() == ISD::SHL &&
       isSimpleShift(NewC.Op0, ShiftVal) &&
       (MaskVal >> ShiftVal != 0) &&
+      ((CmpVal >> ShiftVal) << ShiftVal) == CmpVal &&
       (NewCCMask = getTestUnderMaskCond(BitSize, NewC.CCMask,
                                         MaskVal >> ShiftVal,
                                         CmpVal >> ShiftVal,
@@ -2132,6 +2212,7 @@ static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
              NewC.Op0.getOpcode() == ISD::SRL &&
              isSimpleShift(NewC.Op0, ShiftVal) &&
              (MaskVal << ShiftVal != 0) &&
+             ((CmpVal << ShiftVal) >> ShiftVal) == CmpVal &&
              (NewCCMask = getTestUnderMaskCond(BitSize, NewC.CCMask,
                                                MaskVal << ShiftVal,
                                                CmpVal << ShiftVal,
@@ -2864,9 +2945,13 @@ SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
   // but we need this case for bitcasts that are created during lowering
   // and which are then lowered themselves.
   if (auto *LoadN = dyn_cast<LoadSDNode>(In))
-    if (ISD::isNormalLoad(LoadN))
-      return DAG.getLoad(ResVT, DL, LoadN->getChain(), LoadN->getBasePtr(),
-                         LoadN->getMemOperand());
+    if (ISD::isNormalLoad(LoadN)) {
+      SDValue NewLoad = DAG.getLoad(ResVT, DL, LoadN->getChain(),
+                                    LoadN->getBasePtr(), LoadN->getMemOperand());
+      // Update the chain uses.
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LoadN, 1), NewLoad.getValue(1));
+      return NewLoad;
+    }
 
   if (InVT == MVT::i32 && ResVT == MVT::f32) {
     SDValue In64;
@@ -2954,8 +3039,8 @@ SDValue SystemZTargetLowering::
 lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
-  bool RealignOpt = !MF.getFunction()-> hasFnAttribute("no-realign-stack");
-  bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
+  bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
+  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
@@ -3277,28 +3362,28 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
-// Op is an atomic load.  Lower it into a serialization followed
-// by a normal volatile load.
+// Op is an atomic load.  Lower it into a normal volatile load.
 SDValue SystemZTargetLowering::lowerATOMIC_LOAD(SDValue Op,
                                                 SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
-  SDValue Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
-                                             MVT::Other, Node->getChain()), 0);
   return DAG.getExtLoad(ISD::EXTLOAD, SDLoc(Op), Op.getValueType(),
-                        Chain, Node->getBasePtr(),
+                        Node->getChain(), Node->getBasePtr(),
                         Node->getMemoryVT(), Node->getMemOperand());
 }
 
-// Op is an atomic store.  Lower it into a normal volatile store followed
-// by a serialization.
+// Op is an atomic store.  Lower it into a normal volatile store.
 SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
   SDValue Chain = DAG.getTruncStore(Node->getChain(), SDLoc(Op), Node->getVal(),
                                     Node->getBasePtr(), Node->getMemoryVT(),
                                     Node->getMemOperand());
-  return SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op), MVT::Other,
-                                    Chain), 0);
+  // We have to enforce sequential consistency by performing a
+  // serialization operation after the store.
+  if (Node->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+    Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
+                                       MVT::Other, Chain), 0);
+  return Chain;
 }
 
 // Op is an 8-, 16-bit or 32-bit ATOMIC_LOAD_* operation.  Lower the first
@@ -3411,25 +3496,38 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_SUB(SDValue Op,
   return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_SUB);
 }
 
-// Node is an 8- or 16-bit ATOMIC_CMP_SWAP operation.  Lower the first two
-// into a fullword ATOMIC_CMP_SWAPW operation.
+// Lower 8/16/32/64-bit ATOMIC_CMP_SWAP_WITH_SUCCESS node.
 SDValue SystemZTargetLowering::lowerATOMIC_CMP_SWAP(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
-
-  // We have native support for 32-bit compare and swap.
-  EVT NarrowVT = Node->getMemoryVT();
-  EVT WideVT = MVT::i32;
-  if (NarrowVT == WideVT)
-    return Op;
-
-  int64_t BitSize = NarrowVT.getSizeInBits();
   SDValue ChainIn = Node->getOperand(0);
   SDValue Addr = Node->getOperand(1);
   SDValue CmpVal = Node->getOperand(2);
   SDValue SwapVal = Node->getOperand(3);
   MachineMemOperand *MMO = Node->getMemOperand();
   SDLoc DL(Node);
+
+  // We have native support for 32-bit and 64-bit compare and swap, but we
+  // still need to expand extracting the "success" result from the CC.
+  EVT NarrowVT = Node->getMemoryVT();
+  EVT WideVT = NarrowVT == MVT::i64 ? MVT::i64 : MVT::i32;
+  if (NarrowVT == WideVT) {
+    SDVTList Tys = DAG.getVTList(WideVT, MVT::Other, MVT::Glue);
+    SDValue Ops[] = { ChainIn, Addr, CmpVal, SwapVal };
+    SDValue AtomicOp = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_CMP_SWAP,
+                                               DL, Tys, Ops, NarrowVT, MMO);
+    SDValue Success = emitSETCC(DAG, DL, AtomicOp.getValue(2),
+                                SystemZ::CCMASK_CS, SystemZ::CCMASK_CS_EQ);
+
+    DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), AtomicOp.getValue(0));
+    DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Success);
+    DAG.ReplaceAllUsesOfValueWith(Op.getValue(2), AtomicOp.getValue(1));
+    return SDValue();
+  }
+
+  // Convert 8-bit and 16-bit compare and swap to a loop, implemented
+  // via a fullword ATOMIC_CMP_SWAPW operation.
+  int64_t BitSize = NarrowVT.getSizeInBits();
   EVT PtrVT = Addr.getValueType();
 
   // Get the address of the containing word.
@@ -3448,12 +3546,18 @@ SDValue SystemZTargetLowering::lowerATOMIC_CMP_SWAP(SDValue Op,
                                     DAG.getConstant(0, DL, WideVT), BitShift);
 
   // Construct the ATOMIC_CMP_SWAPW node.
-  SDVTList VTList = DAG.getVTList(WideVT, MVT::Other);
+  SDVTList VTList = DAG.getVTList(WideVT, MVT::Other, MVT::Glue);
   SDValue Ops[] = { ChainIn, AlignedAddr, CmpVal, SwapVal, BitShift,
                     NegBitShift, DAG.getConstant(BitSize, DL, WideVT) };
   SDValue AtomicOp = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_CMP_SWAPW, DL,
                                              VTList, Ops, NarrowVT, MMO);
-  return AtomicOp;
+  SDValue Success = emitSETCC(DAG, DL, AtomicOp.getValue(2),
+                              SystemZ::CCMASK_ICMP, SystemZ::CCMASK_CMP_EQ);
+
+  DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), AtomicOp.getValue(0));
+  DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Success);
+  DAG.ReplaceAllUsesOfValueWith(Op.getValue(2), AtomicOp.getValue(1));
+  return SDValue();
 }
 
 SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
@@ -3468,7 +3572,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
-  bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   SDValue Chain = Op.getOperand(0);
   SDValue NewSP = Op.getOperand(1);
@@ -4681,7 +4785,7 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_UMIN);
   case ISD::ATOMIC_LOAD_UMAX:
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_UMAX);
-  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     return lowerATOMIC_CMP_SWAP(Op, DAG);
   case ISD::STACKSAVE:
     return lowerSTACKSAVE(Op, DAG);
@@ -4716,6 +4820,92 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   default:
     llvm_unreachable("Unexpected node to lower");
   }
+}
+
+// Lower operations with invalid operand or result types (currently used
+// only for 128-bit integer types).
+
+static SDValue lowerI128ToGR128(SelectionDAG &DAG, SDValue In) {
+  SDLoc DL(In);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
+                           DAG.getIntPtrConstant(0, DL));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
+                           DAG.getIntPtrConstant(1, DL));
+  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, DL,
+                                    MVT::Untyped, Hi, Lo);
+  return SDValue(Pair, 0);
+}
+
+static SDValue lowerGR128ToI128(SelectionDAG &DAG, SDValue In) {
+  SDLoc DL(In);
+  SDValue Hi = DAG.getTargetExtractSubreg(SystemZ::subreg_h64,
+                                          DL, MVT::i64, In);
+  SDValue Lo = DAG.getTargetExtractSubreg(SystemZ::subreg_l64,
+                                          DL, MVT::i64, In);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128, Lo, Hi);
+}
+
+void
+SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
+                                             SmallVectorImpl<SDValue> &Results,
+                                             SelectionDAG &DAG) const {
+  switch (N->getOpcode()) {
+  case ISD::ATOMIC_LOAD: {
+    SDLoc DL(N);
+    SDVTList Tys = DAG.getVTList(MVT::Untyped, MVT::Other);
+    SDValue Ops[] = { N->getOperand(0), N->getOperand(1) };
+    MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
+    SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_LOAD_128,
+                                          DL, Tys, Ops, MVT::i128, MMO);
+    Results.push_back(lowerGR128ToI128(DAG, Res));
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_STORE: {
+    SDLoc DL(N);
+    SDVTList Tys = DAG.getVTList(MVT::Other);
+    SDValue Ops[] = { N->getOperand(0),
+                      lowerI128ToGR128(DAG, N->getOperand(2)),
+                      N->getOperand(1) };
+    MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
+    SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_STORE_128,
+                                          DL, Tys, Ops, MVT::i128, MMO);
+    // We have to enforce sequential consistency by performing a
+    // serialization operation after the store.
+    if (cast<AtomicSDNode>(N)->getOrdering() ==
+        AtomicOrdering::SequentiallyConsistent)
+      Res = SDValue(DAG.getMachineNode(SystemZ::Serialize, DL,
+                                       MVT::Other, Res), 0);
+    Results.push_back(Res);
+    break;
+  }
+  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: {
+    SDLoc DL(N);
+    SDVTList Tys = DAG.getVTList(MVT::Untyped, MVT::Other, MVT::Glue);
+    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
+                      lowerI128ToGR128(DAG, N->getOperand(2)),
+                      lowerI128ToGR128(DAG, N->getOperand(3)) };
+    MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
+    SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_CMP_SWAP_128,
+                                          DL, Tys, Ops, MVT::i128, MMO);
+    SDValue Success = emitSETCC(DAG, DL, Res.getValue(2),
+                                SystemZ::CCMASK_CS, SystemZ::CCMASK_CS_EQ);
+    Success = DAG.getZExtOrTrunc(Success, DL, N->getValueType(1));
+    Results.push_back(lowerGR128ToI128(DAG, Res));
+    Results.push_back(Success);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  default:
+    llvm_unreachable("Unexpected node to lower");
+  }
+}
+
+void
+SystemZTargetLowering::ReplaceNodeResults(SDNode *N,
+                                          SmallVectorImpl<SDValue> &Results,
+                                          SelectionDAG &DAG) const {
+  return LowerOperationWrapper(N, Results, DAG);
 }
 
 const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -4818,6 +5008,10 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(ATOMIC_LOADW_UMIN);
     OPCODE(ATOMIC_LOADW_UMAX);
     OPCODE(ATOMIC_CMP_SWAPW);
+    OPCODE(ATOMIC_CMP_SWAP);
+    OPCODE(ATOMIC_LOAD_128);
+    OPCODE(ATOMIC_STORE_128);
+    OPCODE(ATOMIC_CMP_SWAP_128);
     OPCODE(LRV);
     OPCODE(STRV);
     OPCODE(PREFETCH);
@@ -5068,7 +5262,8 @@ SDValue SystemZTargetLowering::combineSTORE(
   }
   // Combine STORE (BSWAP) into STRVH/STRV/STRVG
   // See comment in combineBSWAP about volatile accesses.
-  if (!SN->isVolatile() &&
+  if (!SN->isTruncatingStore() &&
+      !SN->isVolatile() &&
       Op1.getOpcode() == ISD::BSWAP &&
       Op1.getNode()->hasOneUse() &&
       (Op1.getValueType() == MVT::i16 ||
@@ -5841,8 +6036,40 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   MBB->addSuccessor(LoopMBB);
   MBB->addSuccessor(DoneMBB);
 
+  // If the CC def wasn't dead in the ATOMIC_CMP_SWAPW, mark CC as live-in
+  // to the block after the loop.  At this point, CC may have been defined
+  // either by the CR in LoopMBB or by the CS in SetMBB.
+  if (!MI.registerDefIsDead(SystemZ::CC))
+    DoneMBB->addLiveIn(SystemZ::CC);
+
   MI.eraseFromParent();
   return DoneMBB;
+}
+
+// Emit a move from two GR64s to a GR128.
+MachineBasicBlock *
+SystemZTargetLowering::emitPair128(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Hi = MI.getOperand(1).getReg();
+  unsigned Lo = MI.getOperand(2).getReg();
+  unsigned Tmp1 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+  unsigned Tmp2 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Tmp1);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Tmp2)
+    .addReg(Tmp1).addReg(Hi).addImm(SystemZ::subreg_h64);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Dest)
+    .addReg(Tmp2).addReg(Lo).addImm(SystemZ::subreg_l64);
+
+  MI.eraseFromParent();
+  return MBB;
 }
 
 // Emit an extension from a GR64 to a GR128.  ClearEven is true
@@ -6238,6 +6465,8 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::CondStoreF64Inv:
     return emitCondStore(MI, MBB, SystemZ::STD, 0, true);
 
+  case SystemZ::PAIR128:
+    return emitPair128(MI, MBB);
   case SystemZ::AEXT128:
     return emitExt128(MI, MBB, false);
   case SystemZ::ZEXT128:

@@ -18,17 +18,16 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -329,10 +328,10 @@ void GCMachineCodeAnalysis::FindStackOffsets(MachineFunction &MF) {
 
 bool GCMachineCodeAnalysis::runOnMachineFunction(MachineFunction &MF) {
   // Quick exit for functions that do not use GC.
-  if (!MF.getFunction()->hasGC())
+  if (!MF.getFunction().hasGC())
     return false;
 
-  FI = &getAnalysis<GCModuleInfo>().getFunctionInfo(*MF.getFunction());
+  FI = &getAnalysis<GCModuleInfo>().getFunctionInfo(MF.getFunction());
   MMI = &getAnalysis<MachineModuleInfo>();
   TII = MF.getSubtarget().getInstrInfo();
 

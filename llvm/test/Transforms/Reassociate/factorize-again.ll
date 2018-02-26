@@ -1,10 +1,20 @@
 ; RUN: opt -S -reassociate < %s | FileCheck %s
 
-; CHECK-LABEL: main
-; CHECK: %2 = fsub
-; CHECK: %3 = fsub
-; CHECK: fadd fast float %3, %2
 define void @main(float, float) {
+; CHECK-LABEL: @main(
+; CHECK-NEXT:  wrapper_entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub float undef, %0
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub float undef, %1
+; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.rsqrt.f32(float undef)
+; CHECK-NEXT:    [[REASS_ADD2:%.*]] = fadd fast float [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[REASS_MUL3:%.*]] = fmul fast float [[REASS_ADD2]], undef
+; CHECK-NEXT:    [[REASS_ADD1:%.*]] = fadd fast float [[REASS_MUL3]], fmul (float undef, float undef)
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast float [[REASS_ADD1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @foo2(float [[REASS_MUL]], float 0.000000e+00)
+; CHECK-NEXT:    [[MUL36:%.*]] = fmul fast float [[TMP5]], 1.500000e+00
+; CHECK-NEXT:    call void @foo1(i32 4, float [[MUL36]])
+; CHECK-NEXT:    ret void
+;
 wrapper_entry:
   %2 = fsub float undef, %0
   %3 = fsub float undef, %1

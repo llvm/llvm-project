@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
-; RUN: llc < %s -march=x86    | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
+; RUN: llc < %s -mtriple=i686--    | FileCheck %s
 
 ;CHECK-LABEL: test
 define <2 x i256> @test() {

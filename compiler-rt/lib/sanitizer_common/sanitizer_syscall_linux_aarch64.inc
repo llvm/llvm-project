@@ -127,6 +127,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
 
 #define internal_syscall(...) __SYSCALL_DISP(__internal_syscall, __VA_ARGS__)
 
+#define internal_syscall_ptr internal_syscall
+#define internal_syscall64 internal_syscall
+
 // Helper function used to avoid cobbler errno.
 bool internal_iserror(uptr retval, int *rverrno) {
   if (retval >= (uptr)-4095) {

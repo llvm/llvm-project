@@ -281,21 +281,19 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
 // We build up the list of spills for every case where a use is separated
 // from the definition by a suspend point.
 
-struct Spill : std::pair<Value *, Instruction *> {
-  using base = std::pair<Value *, Instruction *>;
+namespace {
+class Spill {
+  Value *Def;
+  Instruction *User;
 
-  Spill(Value *Def, User *U) : base(Def, cast<Instruction>(U)) {}
+public:
+  Spill(Value *Def, llvm::User *U) : Def(Def), User(cast<Instruction>(U)) {}
 
-  Value *def() const { return first; }
-  Instruction *user() const { return second; }
-  BasicBlock *userBlock() const { return second->getParent(); }
-
-  std::pair<Value *, BasicBlock *> getKey() const {
-    return {def(), userBlock()};
-  }
-
-  bool operator<(Spill const &rhs) const { return getKey() < rhs.getKey(); }
+  Value *def() const { return Def; }
+  Instruction *user() const { return User; }
+  BasicBlock *userBlock() const { return User->getParent(); }
 };
+} // namespace
 
 // Note that there may be more than one record with the same value of Def in
 // the SpillInfo vector.
@@ -734,8 +732,8 @@ static bool materializable(Instruction &V) {
 // Check for structural coroutine intrinsics that should not be spilled into
 // the coroutine frame.
 static bool isCoroutineStructureIntrinsic(Instruction &I) {
-  return isa<CoroIdInst>(&I) || isa<CoroBeginInst>(&I) ||
-         isa<CoroSaveInst>(&I) || isa<CoroSuspendInst>(&I);
+  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I) ||
+         isa<CoroSuspendInst>(&I);
 }
 
 // For every use of the value that is across suspend point, recreate that value
@@ -842,6 +840,156 @@ static void splitAround(Instruction *I, const Twine &Name) {
   splitBlockIfNotFirst(I->getNextNode(), "After" + Name);
 }
 
+static bool isSuspendBlock(BasicBlock *BB) {
+  return isa<AnyCoroSuspendInst>(BB->front());
+}
+
+typedef SmallPtrSet<BasicBlock*, 8> VisitedBlocksSet;
+
+/// Does control flow starting at the given block ever reach a suspend
+/// instruction before reaching a block in VisitedOrFreeBBs?
+static bool isSuspendReachableFrom(BasicBlock *From,
+                                   VisitedBlocksSet &VisitedOrFreeBBs) {
+  // Eagerly try to add this block to the visited set.  If it's already
+  // there, stop recursing; this path doesn't reach a suspend before
+  // either looping or reaching a freeing block.
+  if (!VisitedOrFreeBBs.insert(From).second)
+    return false;
+
+  // We assume that we'll already have split suspends into their own blocks.
+  if (isSuspendBlock(From))
+    return true;
+
+  // Recurse on the successors.
+  for (auto Succ : successors(From)) {
+    if (isSuspendReachableFrom(Succ, VisitedOrFreeBBs))
+      return true;
+  }
+
+  return false;
+}
+
+/// Is the given alloca "local", i.e. bounded in lifetime to not cross a
+/// suspend point?
+static bool isLocalAlloca(CoroAllocaAllocInst *AI) {
+  // Seed the visited set with all the basic blocks containing a free
+  // so that we won't pass them up.
+  VisitedBlocksSet VisitedOrFreeBBs;
+  for (auto User : AI->users()) {
+    if (auto FI = dyn_cast<CoroAllocaFreeInst>(User))
+      VisitedOrFreeBBs.insert(FI->getParent());
+  }
+
+  return !isSuspendReachableFrom(AI->getParent(), VisitedOrFreeBBs);
+}
+
+/// After we split the coroutine, will the given basic block be along
+/// an obvious exit path for the resumption function?
+static bool willLeaveFunctionImmediatelyAfter(BasicBlock *BB,
+                                              unsigned depth = 3) {
+  // If we've bottomed out our depth count, stop searching and assume
+  // that the path might loop back.
+  if (depth == 0) return false;
+
+  // If this is a suspend block, we're about to exit the resumption function.
+  if (isSuspendBlock(BB)) return true;
+
+  // Recurse into the successors.
+  for (auto Succ : successors(BB)) {
+    if (!willLeaveFunctionImmediatelyAfter(Succ, depth - 1))
+      return false;
+  }
+
+  // If none of the successors leads back in a loop, we're on an exit/abort.
+  return true;
+}
+
+static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
+  // Look for a free that isn't sufficiently obviously followed by
+  // either a suspend or a termination, i.e. something that will leave
+  // the coro resumption frame.
+  for (auto U : AI->users()) {
+    auto FI = dyn_cast<CoroAllocaFreeInst>(U);
+    if (!FI) continue;
+
+    if (!willLeaveFunctionImmediatelyAfter(FI->getParent()))
+      return true;
+  }
+
+  // If we never found one, we don't need a stack save.
+  return false;
+}
+
+/// Turn each of the given local allocas into a normal (dynamic) alloca
+/// instruction.
+static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
+                              SmallVectorImpl<Instruction*> &DeadInsts) {
+  for (auto AI : LocalAllocas) {
+    auto M = AI->getModule();
+    IRBuilder<> Builder(AI);
+
+    // Save the stack depth.  Try to avoid doing this if the stackrestore
+    // is going to immediately precede a return or something.
+    Value *StackSave = nullptr;
+    if (localAllocaNeedsStackSave(AI))
+      StackSave = Builder.CreateCall(
+                            Intrinsic::getDeclaration(M, Intrinsic::stacksave));
+
+    // Allocate memory.
+    auto Alloca = Builder.CreateAlloca(Builder.getInt8Ty(), AI->getSize());
+    Alloca->setAlignment(AI->getAlignment());
+
+    for (auto U : AI->users()) {
+      // Replace gets with the allocation.
+      if (isa<CoroAllocaGetInst>(U)) {
+        U->replaceAllUsesWith(Alloca);
+
+      // Replace frees with stackrestores.  This is safe because
+      // alloca.alloc is required to obey a stack discipline, although we
+      // don't enforce that structurally.
+      } else {
+        auto FI = cast<CoroAllocaFreeInst>(U);
+        if (StackSave) {
+          Builder.SetInsertPoint(FI);
+          Builder.CreateCall(
+                    Intrinsic::getDeclaration(M, Intrinsic::stackrestore),
+                             StackSave);
+        }
+      }
+      DeadInsts.push_back(cast<Instruction>(U));
+    }
+
+    DeadInsts.push_back(AI);
+  }
+}
+
+/// Turn the given coro.alloca.alloc call into a dynamic allocation.
+/// This happens during the all-instructions iteration, so it must not
+/// delete the call.
+static Instruction *lowerNonLocalAlloca(CoroAllocaAllocInst *AI,
+                                        coro::Shape &Shape,
+                                   SmallVectorImpl<Instruction*> &DeadInsts) {
+  IRBuilder<> Builder(AI);
+  auto Alloc = Shape.emitAlloc(Builder, AI->getSize(), nullptr);
+
+  for (User *U : AI->users()) {
+    if (isa<CoroAllocaGetInst>(U)) {
+      U->replaceAllUsesWith(Alloc);
+    } else {
+      auto FI = cast<CoroAllocaFreeInst>(U);
+      Builder.SetInsertPoint(FI);
+      Shape.emitDealloc(Builder, Alloc, nullptr);
+    }
+    DeadInsts.push_back(cast<Instruction>(U));
+  }
+
+  // Push this on last so that it gets deleted after all the others.
+  DeadInsts.push_back(AI);
+
+  // Return the new allocation value so that we can check for needed spills.
+  return cast<Instruction>(Alloc);
+}
+
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   // Lower coro.dbg.declare to coro.dbg.value, since we are going to rewrite
   // access to local variables.
@@ -874,6 +1022,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
 
   IRBuilder<> Builder(F.getContext());
   SpillInfo Spills;
+  SmallVector<CoroAllocaAllocInst*, 4> LocalAllocas;
+  SmallVector<Instruction*, 4> DeadInstructions;
 
   for (int Repeat = 0; Repeat < 4; ++Repeat) {
     // See if there are materializable instructions across suspend points.
@@ -901,13 +1051,41 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
-    if (isCoroutineStructureIntrinsic(I))
+    if (isCoroutineStructureIntrinsic(I) || &I == Shape.CoroBegin)
       continue;
+
     // The Coroutine Promise always included into coroutine frame, no need to
     // check for suspend crossing.
     if (Shape.ABI == coro::ABI::Switch &&
         Shape.SwitchLowering.PromiseAlloca == &I)
       continue;
+
+    // Handle alloca.alloc specially here.
+    if (auto AI = dyn_cast<CoroAllocaAllocInst>(&I)) {
+      // Check whether the alloca's lifetime is bounded by suspend points.
+      if (isLocalAlloca(AI)) {
+        LocalAllocas.push_back(AI);
+        continue;
+      }
+
+      // If not, do a quick rewrite of the alloca and then add spills of
+      // the rewritten value.  The rewrite doesn't invalidate anything in
+      // Spills because the other alloca intrinsics have no other operands
+      // besides AI, and it doesn't invalidate the iteration because we delay
+      // erasing AI.
+      auto Alloc = lowerNonLocalAlloca(AI, Shape, DeadInstructions);
+
+      for (User *U : Alloc->users()) {
+        if (Checker.isDefinitionAcrossSuspend(*Alloc, U))
+          Spills.emplace_back(Alloc, U);
+      }
+      continue;
+    }
+
+    // Ignore alloca.get; we process this as part of coro.alloca.alloc.
+    if (isa<CoroAllocaGetInst>(I)) {
+      continue;
+    }
 
     for (User *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U)) {
@@ -922,4 +1100,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   moveSpillUsesAfterCoroBegin(F, Spills, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, Spills);
   Shape.FramePtr = insertSpills(Spills, Shape);
+  lowerLocalAllocas(LocalAllocas, DeadInstructions);
+
+  for (auto I : DeadInstructions)
+    I->eraseFromParent();
 }

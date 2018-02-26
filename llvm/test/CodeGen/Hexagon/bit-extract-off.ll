@@ -19,5 +19,5 @@ b5:                                               ; preds = %b5, %b4
 
 declare double @fabs(double) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
-attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
+attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

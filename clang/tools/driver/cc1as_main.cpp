@@ -397,7 +397,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     if (Opts.ShowEncoding) {
       CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
       MCTargetOptions Options;
-      MAB = TheTarget->createMCAsmBackend(*MRI, Opts.Triple, Opts.CPU, Options);
+      MAB = TheTarget->createMCAsmBackend(*STI, *MRI, Options);
     }
     auto FOut = llvm::make_unique<formatted_raw_ostream>(*Out);
     Str.reset(TheTarget->createAsmStreamer(
@@ -415,12 +415,11 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
     MCTargetOptions Options;
-    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, Opts.Triple,
-                                                      Opts.CPU, Options);
+    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, Options);
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
-        T, Ctx, *MAB, *Out, CE, *STI, Opts.RelaxAll,
-        Opts.IncrementalLinkerCompatible,
+                T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *Out, std::unique_ptr<MCCodeEmitter>(CE), *STI,
+        Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     Str.get()->InitSections(Opts.NoExecStack);
   }
@@ -504,7 +503,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Asm.ShowHelp) {
     std::unique_ptr<OptTable> Opts(driver::createDriverOptTable());
     Opts->PrintHelp(llvm::outs(), "clang -cc1as", "Clang Integrated Assembler",
-                    /*Include=*/driver::options::CC1AsOption, /*Exclude=*/0);
+                    /*Include=*/driver::options::CC1AsOption, /*Exclude=*/0,
+                    /*ShowAllAliases=*/false);
     return 0;
   }
 

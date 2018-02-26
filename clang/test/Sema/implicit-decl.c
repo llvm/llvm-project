@@ -9,8 +9,7 @@ void func() {
    int32_t *vector[16];
    const char compDesc[16 + 1];
    int32_t compCount = 0;
-   if (_CFCalendarDecomposeAbsoluteTimeV(compDesc, vector, compCount)) { // expected-note {{previous implicit declaration is here}} \
-         expected-error {{implicit declaration of function '_CFCalendarDecomposeAbsoluteTimeV' is invalid in C99}}
+   if (_CFCalendarDecomposeAbsoluteTimeV(compDesc, vector, compCount)) { // expected-error {{implicit declaration of function '_CFCalendarDecomposeAbsoluteTimeV' is invalid in C99}} expected-note {{previous implicit declaration}}
    }
 
    printg("Hello, World!\n"); // expected-error{{implicit declaration of function 'printg' is invalid in C99}} \
@@ -18,7 +17,7 @@ void func() {
 
   __builtin_is_les(1, 3); // expected-error{{use of unknown builtin '__builtin_is_les'}}
 }
-Boolean _CFCalendarDecomposeAbsoluteTimeV(const char *componentDesc, int32_t **vector, int32_t count) { // expected-error{{conflicting types for '_CFCalendarDecomposeAbsoluteTimeV'}}
+Boolean _CFCalendarDecomposeAbsoluteTimeV(const char *componentDesc, int32_t **vector, int32_t count) { // expected-error {{conflicting types}}
  return 0;
 }
 

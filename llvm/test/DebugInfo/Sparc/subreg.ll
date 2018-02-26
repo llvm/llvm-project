@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj -O0 < %s -mtriple sparc64-unknown-linux-gnu | llvm-dwarfdump - --debug-loc | FileCheck %s
 ; The undescribable 128-bit register should be split into two 64-bit registers.
-; CHECK: {{.*}} - {{.*}}: DW_OP_regx D0, DW_OP_piece 0x8, DW_OP_regx D1, DW_OP_piece 0x8
+; CHECK: [{{.*}}, {{.*}}): DW_OP_regx D0, DW_OP_piece 0x8, DW_OP_regx D1, DW_OP_piece 0x8
 
 target datalayout = "E-m:e-i64:64-n32:64-S128"
 target triple = "sparc64"

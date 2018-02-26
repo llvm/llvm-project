@@ -22,6 +22,7 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+class MemoryBuffer;
 namespace pdb {
 class PDBFile;
 
@@ -31,13 +32,19 @@ public:
                 std::unique_ptr<BumpPtrAllocator> Allocator);
   ~NativeSession() override;
 
-  static Error createFromPdb(StringRef Path,
+  static Error createFromPdb(std::unique_ptr<MemoryBuffer> MB,
                              std::unique_ptr<IPDBSession> &Session);
   static Error createFromExe(StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
 
   std::unique_ptr<PDBSymbolCompiland>
   createCompilandSymbol(DbiModuleDescriptor MI);
+
+  std::unique_ptr<PDBSymbolTypeEnum>
+  createEnumSymbol(codeview::TypeIndex Index);
+
+  std::unique_ptr<IPDBEnumSymbols>
+  createTypeEnumerator(codeview::TypeLeafKind Kind);
 
   SymIndexId findSymbolByTypeIndex(codeview::TypeIndex TI);
 
@@ -75,6 +82,8 @@ public:
   getSourceFileById(uint32_t FileId) const override;
 
   std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const override;
+
+  std::unique_ptr<IPDBEnumTables> getEnumTables() const override;
 
   PDBFile &getPDBFile() { return *Pdb; }
   const PDBFile &getPDBFile() const { return *Pdb; }

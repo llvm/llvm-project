@@ -3,18 +3,18 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(clang-rename ClangRename.cpp)
+add_clang_tool(clang-rename ClangRename.cpp)
 
 target_link_libraries(clang-rename
+  PRIVATE
   clangBasic
   clangFrontend
   clangRewrite
   clangTooling
   clangToolingCore
   clangToolingRefactor
+  clangToolingRefactoring
   )
-
-install(TARGETS clang-rename RUNTIME DESTINATION bin)
 
 install(PROGRAMS clang-rename.py
   DESTINATION share/clang

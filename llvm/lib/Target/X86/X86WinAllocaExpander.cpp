@@ -25,9 +25,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 
 using namespace llvm;
 
@@ -279,9 +279,9 @@ bool X86WinAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
   SlotSize = TRI->getSlotSize();
 
   StackProbeSize = 4096;
-  if (MF.getFunction()->hasFnAttribute("stack-probe-size")) {
+  if (MF.getFunction().hasFnAttribute("stack-probe-size")) {
     MF.getFunction()
-        ->getFnAttribute("stack-probe-size")
+        .getFnAttribute("stack-probe-size")
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
   }

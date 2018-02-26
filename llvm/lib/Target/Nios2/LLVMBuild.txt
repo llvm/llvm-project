@@ -19,6 +19,7 @@
 
 [common]
 subdirectories =
+    InstPrinter 
     MCTargetDesc
     TargetInfo
 
@@ -33,6 +34,7 @@ name = Nios2
 parent = Target
 #Whether this target defines an assembly parser, assembly printer, disassembler
 #, and supports JIT compilation.They are optional.
+has_asmprinter = 1
 
 [component_1]
 #component_1 is a Library type and name is Nios2CodeGen.After build it will
@@ -46,12 +48,14 @@ parent = Nios2
 #dependencies for this component.When tools are built, the build system will
 #include the transitive closure of all required_libraries for the components
 #the tool needs.
-required_libraries = CodeGen
+required_libraries = AsmPrinter
+                     CodeGen
                      Core
                      GlobalISel
                      MC
                      Nios2Desc
                      Nios2Info
+                     SelectionDAG
                      Support
                      Target
 #end of required_libraries

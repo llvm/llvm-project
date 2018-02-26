@@ -1,16 +1,15 @@
 ========================
-LLVM 5.0.0 Release Notes
+LLVM 6.0.0 Release Notes
 ========================
 
 .. contents::
     :local:
 
-
 Introduction
 ============
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
-release 5.0.0.  Here we describe the status of LLVM, including major improvements
+release 6.0.0.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
 from the `LLVM releases web site <http://llvm.org/releases/>`_.
@@ -23,227 +22,240 @@ them.
 
 Non-comprehensive list of changes in this release
 =================================================
+.. NOTE
+   For small 1-3 sentence descriptions, just add an entry at the end of
+   this list. If your description won't fit comfortably in one bullet
+   point (e.g. maybe you would like to give an example of the
+   functionality, or simply have a lot to talk about), see the `NOTE` below
+   for adding a new subsection.
 
-* LLVM's ``WeakVH`` has been renamed to ``WeakTrackingVH`` and a new ``WeakVH``
-  has been introduced.  The new ``WeakVH`` nulls itself out on deletion, but
-  does not track values across RAUW.
+* The ``Redirects`` argument of ``llvm::sys::ExecuteAndWait`` and
+  ``llvm::sys::ExecuteNoWait`` was changed to an ``ArrayRef`` of optional
+  ``StringRef``'s to make it safer and more convenient to use.
 
-* A new library named ``BinaryFormat`` has been created which holds a collection
-  of code which previously lived in ``Support``.  This includes the
-  ``file_magic`` structure and ``identify_magic`` functions, as well as all the
-  structure and type definitions for DWARF, ELF, COFF, WASM, and MachO file
-  formats.
+* The backend name was added to the Target Registry to allow run-time
+  information to be fed back into TableGen. Out-of-tree targets will need to add
+  the name used in the `def X : Target` definition to the call to
+  `RegisterTarget`.
 
-* The tool ``llvm-pdbdump`` has been renamed ``llvm-pdbutil`` to better reflect
-  its nature as a general purpose PDB manipulation / diagnostics tool that does
-  more than just dumping contents.
+* The ``Debugify`` pass was added to ``opt`` to facilitate testing of debug
+  info preservation. This pass attaches synthetic ``DILocations`` and
+  ``DIVariables`` to the instructions in a ``Module``. The ``CheckDebugify``
+  pass determines how much of the metadata is lost.
 
-* The ``BBVectorize`` pass has been removed. It was fully replaced and no
-  longer used back in 2014 but we didn't get around to removing it. Now it is
-  gone. The SLP vectorizer is the suggested non-loop vectorization pass.
+* Significantly improved quality of CodeView debug info for Windows.
 
-* A new tool opt-viewer.py has been added to visualize optimization remarks in
-  HTML.  The tool processes the YAML files produced by clang with the
-  -fsave-optimization-record option.
+* Preliminary support for Sanitizers and sibling features on X86(_64) NetBSD
+  (ASan, UBsan, TSan, MSan, SafeStack, libFuzzer).
 
-* A new CMake macro ``LLVM_REVERSE_ITERATION`` has been added. If enabled, all
-  supported unordered LLVM containers would be iterated in reverse order. This
-  is useful for uncovering non-determinism caused by iteration of unordered
-  containers. Currently, it supports reverse iteration of SmallPtrSet and
-  DenseMap.
+* Note..
 
-* A new tool ``llvm-dlltool`` has been added to create short import libraries
-  from GNU style definition files. The tool utilizes the PE COFF SPEC Import
-  Library Format and PE COFF Auxiliary Weak Externals Format to achieve
-  compatibility with LLD and MSVC LINK.
+.. NOTE
+   If you would like to document a larger change, then you can add a
+   subsection about it right here. You can copy the following boilerplate
+   and un-indent it (the indentation causes it to be inside this comment).
 
+   Special New Feature
+   -------------------
+
+   Makes programs 10x faster by doing Special New Thing.
 
 Changes to the LLVM IR
 ----------------------
 
-* The datalayout string may now indicate an address space to use for
-  the pointer type of ``alloca`` rather than the default of 0.
+* The fast-math-flags (FMF) have been updated. Previously, the 'fast' flag
+  indicated that floating-point reassociation was allowed and all other flags
+  were set too. The 'fast' flag still exists, but there is a new flag called
+  'reassoc' to indicate specifically that reassociation is allowed. A new bit
+  called 'afn' was also added to selectively allow approximations for common
+  mathlib functions like square-root. The new flags provide more flexibility
+  to enable/disable specific floating-point optimizations. Making the
+  optimizer respond appropriately to these flags is an ongoing effort.
 
-* Added ``speculatable`` attribute indicating a function which has no
-  side-effects which could inhibit hoisting of calls.
+Changes to the AArch64 Target
+-----------------------------
 
-Changes to the Arm Targets
---------------------------
+During this release:
 
-During this release the AArch64 target has:
+ * Enabled the new GlobalISel instruction selection framework by default at ``-O0``.
 
-* A much improved Global ISel at O0.
-* Support for ARMv8.1 8.2 and 8.3 instructions.
-* New scheduler information for ThunderX2.
-* Some SVE type changes but not much more than that.
-* Made instruction fusion more aggressive, resulting in speedups
-  for code making use of AArch64 AES instructions. AES fusion has been
-  enabled for most Cortex-A cores and the AArch64MacroFusion pass was moved
-  to the generic MacroFusion pass.
-* Added preferred function alignments for most Cortex-A cores.
-* OpenMP "offload-to-self" base support.
+Changes to the ARM Target
+-------------------------
 
 During this release the ARM target has:
 
-* Improved, but still mostly broken, Global ISel.
-* Scheduling models update, new schedule for Cortex-A57.
-* Hardware breakpoint support in LLDB.
-* New assembler error handling, with spelling corrections and multiple
-  suggestions on how to fix problems.
-* Improved mixed ARM/Thumb code generation. Some cases in which wrong
-  relocations were emitted have been fixed.
-* Added initial support for mixed ARM/Thumb link-time optimization, using the
-  thumb-mode target feature.
+* Got support for enabling SjLj exception handling on platforms where it
+  isn't the default.
+
+
+Changes to the Hexagon Target
+-----------------------------
+
+* The Hexagon backend now supports V65 ISA.
+
+* The ``-mhvx`` option now takes an optional value that specified the ISA
+  version of the HVX coprocessor.  The available values are v60, v62 and v65.
+  By default, the value is set to be the same as the CPU version.
+
+* The compiler option ``-mhvx-double`` is deprecated and will be removed in
+  the next release of the compiler. Programmers should use ``-mhvx-length``
+  option to specify the desired vector length: ``-mhvx-length=64b`` for
+  64-byte vectors and ``-mhvx-length=128b`` for 128-byte vectors. While the
+  current default vector length is 64 bytes, users should always specify the
+  length explicitly, since the default value may change in the future.
+
+* The target feature ``hvx-double`` is deprecated and will be removed in the
+  next release. LLVM IR generators should use target features ``hvx-length64b``
+  and ``hvx-length128b`` to indicate the vector length. The length should
+  always be specified when HVX code generation is enabled.
+
 
 Changes to the MIPS Target
 --------------------------
 
-* The microMIPS64R6 backend is deprecated and will be removed in the next
-  release.
+Fixed numerous bugs:
 
-* The MIPS backend now directly supports vector types for arguments and return
-  values (previously this required ABI specific LLVM IR).
+* fpowi on MIPS64 giving incorrect results when used with a negative integer.
+* Usage of the asm 'c' constraint with the wrong datatype causing an
+  assert/crash.
+* Fixed a conversion bug when using the DSP ASE.
+* Fixed an inconsistency where objects were not marked as using the microMIPS as
+  when the micromips function attribute or the ".set micromips" directive was
+  used.
+* Reordered the MIPSR6 specific hazard scheduler pass to after the delay slot
+  filler, fixing a class of rare edge case bugs where the delay slot filler
+  would violate ISA restrictions.
+* Fixed a crash when using a type of unknown size with gp relative addressing.
+* Corrected the j macro for microMIPS.
+* Corrected the encoding of movep for microMIPS32r6.
+* Fixed an issue with the usage of insert instructions having an invalid set of
+  operands.
+* Fixed an issue where TLS symbols where not marked as such.
+* Enabled the usage of register scavanging with MSA, due to its' shorter offsets
+  for loads and stores.
+* Corrected the ELF headers when using the DSP ASE.
 
-* Added documentation for how the MIPS backend handles address lowering.
+New features:
 
-* Added a GCC compatible option -m(no-)madd4 to control the generation of four
-  operand multiply addition/subtraction instructions.
+* The long branch pass now generates some R6 specific instructions when
+  targeting MIPSR6.
+* The delay slot filler now performs more branch conversions if delay slots
+  cannot be filled.
+* The MIPS MT ASE is now fully supported.
+* Added support for the ``lapc`` pseudo instruction.
+* Improved the selection of multiple instructions (``dext``, ``nmadd``,
+  ``nmsub``).
+* Further improved microMIPS codesize reduction.
 
-* Added basic support for the XRay instrumentation system.
+Deprecation notices:
 
-* Added support for more assembly aliases and macros.
-
-* Added support for the ``micromips`` and ``nomicromips`` function attributes
-  which control micromips code generation on a per function basis.
-
-* Added the ``long-calls`` feature for non-pic environments. This feature is
-  used where the callee is out of range of the caller using a standard call
-  sequence. It must be enabled specifically.
-
-* Added support for performing microMIPS code generation via function
-  attributes.
-
-* Added experimental support for the static relocation model for the N64 ABI.
-
-* Added partial support for the MT ASE.
-
-* Added basic support for code size reduction for microMIPS.
-
-* Fixed numerous bugs including: multi-precision arithmetic support, various
-  vectorization bugs, debug information for thread local variables, debug
-  sections lacking the correct flags, crashing when disassembling sections
-  whose size is not a multiple of two or four.
-
+* microMIPS64R6 support was been deprecated since 5.0, and has now been
+  completely removed.
 
 Changes to the PowerPC Target
 -----------------------------
 
-* Additional support and exploitation of POWER ISA 3.0: vabsdub, vabsduh,
-  vabsduw, modsw, moduw, modsd, modud, lxv, stxv, vextublx, vextubrx, vextuhlx,
-  vextuhrx, vextuwlx, vextuwrx, vextsb2w, vextsb2d, vextsh2w, vextsh2d, and
-  vextsw2d
+ During this release ...
 
-* Implemented Optimal Code Sequences from The PowerPC Compiler Writer's Guide.
+Changes to the SystemZ Target
+-----------------------------
 
-* Enable -fomit-frame-pointer by default.
+During this release the SystemZ target has:
 
-* Improved handling of bit reverse intrinsic.
+* Added support for 128-bit atomic operations.
 
-* Improved handling of memcpy and memcmp functions.
-
-* Improved handling of branches with static branch hints.
-
-* Improved codegen for atomic load_acquire.
-
-* Improved block placement during code layout
-
-* Many improvements to instruction selection and code generation
-
+* Added support for the "o" constraint for inline asm statements.
 
 Changes to the X86 Target
 -------------------------
 
-* Added initial AMD Ryzen (znver1) scheduler support.
+During this release the X86 target has:
 
-* Added support for Intel Goldmont CPUs.
+* Added support for enabling SjLj exception handling on platforms where it
+  isn't the default.
 
-* Add support for avx512vpopcntdq instructions.
+* Added intrinsics for Intel Extensions: VAES, GFNI, VPCLMULQDQ, AVX512VBMI2, AVX512BITALG, AVX512VNNI.
 
-* Added heuristics to convert CMOV into branches when it may be profitable.
+* Added support for Intel Icelake CPU.
 
-* More aggressive inlining of memcmp calls.
+* Fixed some X87 codegen bugs.
 
-* Improve vXi64 shuffles on 32-bit targets.
+* Added instruction scheduling information for Intel Sandy Bridge, Ivy Bridge, Haswell, Broadwell, and Skylake CPUs.
 
-* Improved use of PMOVMSKB for any_of/all_of comparision reductions.
+* Improved scheduler model for AMD Jaguar CPUs.
 
-* Improved Silvermont, Sandybridge, and Jaguar (btver2) schedulers.
+* Improved llvm-mc's disassembler for some EVEX encoded instructions.
 
-* Improved support for AVX512 vector rotations.
+* Add support for i8 and i16 vector signed/unsigned min/max horizontal reductions.
 
-* Added support for AMD Lightweight Profiling (LWP) instructions.
+* Improved codegen for memory comparisons
 
-* Avoid using slow LEA instructions.
+* Improved codegen for i32 vector multiplies
 
-* Use alternative sequences for multiply by constant.
+* Improved codegen for scalar integer absolute values
 
-* Improved lowering of strided shuffles.
+* Improved codegen for vector integer rotations (XOP and AVX512)
 
-* Improved the AVX512 cost model used by the vectorizer.
+* Improved codegen of data being transferred between GPRs and K-registers.
 
-* Fix scalar code performance when AVX512 is enabled by making i1's illegal.
+* Improved codegen for vector truncations.
 
-* Fixed many inline assembly bugs.
+* Improved folding of address computations into gather/scatter instructions.
 
-* Preliminary support for tracing NetBSD processes and core files with a single
-  thread in LLDB.
+* Gained initial support recognizing variable shuffles from vector element extracts and inserts.
+
+* Improved documentation for SSE/AVX intrinsics in *intrin.h header files.
 
 Changes to the AMDGPU Target
 -----------------------------
 
-* Initial gfx9 support
+ During this release ...
 
 Changes to the AVR Target
 -----------------------------
 
-This release consists mainly of bugfixes and implementations of features
-required for compiling basic Rust programs.
+ During this release ...
 
-* Enable the branch relaxation pass so that we don't crash on large
-  stack load/stores
+Changes to the OCaml bindings
+-----------------------------
 
-* Add support for lowering bit-rotations to the native ``ror`` and ``rol``
-  instructions
-
-* Fix bug where function pointers were treated as pointers to RAM and not
-  pointers to program memory
-
-* Fix broken code generation for shift-by-variable expressions
-
-* Support zero-sized types in argument lists; this is impossible in C,
-  but possible in Rust
+ During this release ...
 
 
 Changes to the C API
 --------------------
 
-* Deprecated the ``LLVMAddBBVectorizePass`` interface since the ``BBVectorize``
-  pass has been removed. It is now a no-op and will be removed in the next
-  release. Use ``LLVMAddSLPVectorizePass`` instead to get the supported SLP
-  vectorizer.
+ During this release ...
 
 
-External Open Source Projects Using LLVM 5
+External Open Source Projects Using LLVM 6
 ==========================================
+
+JFS - JIT Fuzzing Solver
+------------------------
+
+`JFS <https://github.com/delcypher/jfs>`_ is an experimental constraint solver
+designed to investigate using coverage guided fuzzing as an incomplete strategy
+for solving boolean, BitVector, and floating-point constraints.
+It is built on top of LLVM, Clang, LibFuzzer, and Z3.
+
+The solver works by generating a C++ program where the reachability of an
+`abort()` statement is equivalent to finding a satisfying assignment to the
+constraints. This program is then compiled by Clang with `SanitizerCoverage
+<https://releases.llvm.org/6.0.0/tools/clang/docs/SanitizerCoverage.html>`_
+instrumentation and then fuzzed using :doc:`LibFuzzer <LibFuzzer>`.
 
 Zig Programming Language
 ------------------------
 
 `Zig <http://ziglang.org>`_  is an open-source programming language designed
-for robustness, optimality, and clarity. It integrates closely with C and is
-intended to eventually take the place of C. It uses LLVM to produce highly
-optimized native code and to cross-compile for any target out of the box. Zig
-is in alpha; with a beta release expected in September.
+for robustness, optimality, and clarity. It is intended to replace C. It
+provides high level features such as Generics,
+Compile Time Function Execution, and Partial Evaluation, yet exposes low level
+LLVM IR features such as Aliases. Zig uses Clang to provide automatic
+import of .h symbols - even inline functions and macros. Zig uses LLD combined
+with lazily building compiler-rt to provide out-of-the-box cross-compiling for
+all supported targets.
 
 LDC - the LLVM-based D compiler
 -------------------------------
@@ -259,7 +271,6 @@ combined with LLVM as backend to produce efficient native code. LDC targets
 x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux on ARM
 and PowerPC (32/64 bit). Ports to other architectures like AArch64 and MIPS64
 are underway.
-
 
 Additional Information
 ======================

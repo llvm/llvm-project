@@ -86,9 +86,9 @@ const Target *TargetRegistry::lookupTarget(const std::string &TT,
   return &*I;
 }
 
-void TargetRegistry::RegisterTarget(Target &T,
-                                    const char *Name,
+void TargetRegistry::RegisterTarget(Target &T, const char *Name,
                                     const char *ShortDesc,
+                                    const char *BackendName,
                                     Target::ArchMatchFnTy ArchMatchFn,
                                     bool HasJIT) {
   assert(Name && ShortDesc && ArchMatchFn &&
@@ -105,6 +105,7 @@ void TargetRegistry::RegisterTarget(Target &T,
 
   T.Name = Name;
   T.ShortDesc = ShortDesc;
+  T.BackendName = BackendName;
   T.ArchMatchFn = ArchMatchFn;
   T.HasJIT = HasJIT;
 }
@@ -114,7 +115,7 @@ static int TargetArraySortFn(const std::pair<StringRef, const Target *> *LHS,
   return LHS->first.compare(RHS->first);
 }
 
-void TargetRegistry::printRegisteredTargetsForVersion() {
+void TargetRegistry::printRegisteredTargetsForVersion(raw_ostream &OS) {
   std::vector<std::pair<StringRef, const Target*> > Targets;
   size_t Width = 0;
   for (const auto &T : TargetRegistry::targets()) {
@@ -123,7 +124,6 @@ void TargetRegistry::printRegisteredTargetsForVersion() {
   }
   array_pod_sort(Targets.begin(), Targets.end(), TargetArraySortFn);
 
-  raw_ostream &OS = outs();
   OS << "  Registered Targets:\n";
   for (unsigned i = 0, e = Targets.size(); i != e; ++i) {
     OS << "    " << Targets[i].first;

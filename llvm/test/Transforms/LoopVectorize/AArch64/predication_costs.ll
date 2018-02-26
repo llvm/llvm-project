@@ -18,8 +18,8 @@ target triple = "aarch64--linux-gnu"
 ; Cost of udiv:
 ;   (udiv(2) + extractelement(6) + insertelement(3)) / 2 = 5
 ;
-; CHECK: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ;
 define i32 @predicated_udiv(i32* %a, i32* %b, i1 %c, i64 %n) {
 entry:
@@ -59,8 +59,8 @@ for.end:
 ; Cost of store:
 ;   (store(4) + extractelement(3)) / 2 = 3
 ;
-; CHECK: Found an estimated cost of 3 for VF 2 For instruction: store i32 %tmp2, i32* %tmp0, align 4
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, i32* %tmp0, align 4
+; CHECK: Found an estimated cost of 3 for VF 2 For instruction: store i32 %tmp2, i32* %tmp0, align 4
 ;
 define void @predicated_store(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -98,10 +98,10 @@ for.end:
 ; Cost of udiv:
 ;   (udiv(2) + extractelement(3) + insertelement(3)) / 2 = 4
 ;
-; CHECK: Found an estimated cost of 2 for VF 2 For instruction: %tmp3 = add nsw i32 %tmp2, %x
-; CHECK: Found an estimated cost of 4 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Scalarizing: %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Found an estimated cost of 2 for VF 2 For instruction: %tmp3 = add nsw i32 %tmp2, %x
+; CHECK: Found an estimated cost of 4 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ;
 define i32 @predicated_udiv_scalarized_operand(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -143,10 +143,10 @@ for.end:
 ; Cost of store:
 ;   store(4) / 2 = 2
 ;
-; CHECK: Found an estimated cost of 2 for VF 2 For instruction: %tmp2 = add nsw i32 %tmp1, %x
-; CHECK: Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp2, i32* %tmp0, align 4
 ; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, i32* %tmp0, align 4
+; CHECK: Found an estimated cost of 2 for VF 2 For instruction: %tmp2 = add nsw i32 %tmp1, %x
+; CHECK: Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp2, i32* %tmp0, align 4
 ;
 define void @predicated_store_scalarized_operand(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -192,16 +192,16 @@ for.end:
 ; Cost of store:
 ;   store(4) / 2 = 2
 ;
-; CHECK:     Found an estimated cost of 1 for VF 2 For instruction: %tmp2 = add i32 %tmp1, %x
-; CHECK:     Found an estimated cost of 5 for VF 2 For instruction: %tmp3 = sdiv i32 %tmp1, %tmp2
-; CHECK:     Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp3, %tmp2
-; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: %tmp5 = sub i32 %tmp4, %x
-; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp5, i32* %tmp0, align 4
 ; CHECK-NOT: Scalarizing: %tmp2 = add i32 %tmp1, %x
 ; CHECK:     Scalarizing and predicating: %tmp3 = sdiv i32 %tmp1, %tmp2
 ; CHECK:     Scalarizing and predicating: %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK:     Scalarizing: %tmp5 = sub i32 %tmp4, %x
 ; CHECK:     Scalarizing and predicating: store i32 %tmp5, i32* %tmp0, align 4
+; CHECK:     Found an estimated cost of 1 for VF 2 For instruction: %tmp2 = add i32 %tmp1, %x
+; CHECK:     Found an estimated cost of 5 for VF 2 For instruction: %tmp3 = sdiv i32 %tmp1, %tmp2
+; CHECK:     Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp3, %tmp2
+; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: %tmp5 = sub i32 %tmp4, %x
+; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp5, i32* %tmp0, align 4
 ;
 define void @predication_multi_context(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:

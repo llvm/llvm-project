@@ -1,3 +1,20 @@
+// Test for the --autocompletion flag, which is an API used for shell
+// autocompletion. You may have to update tests in this file when you
+// add/modify flags, change HelpTexts or the values of some flags.
+
+// Some corner cases.
+// RUN: %clang --autocomplete= | FileCheck %s -check-prefix=ALL_FLAGS
+// RUN: %clang --autocomplete=# | FileCheck %s -check-prefix=ALL_FLAGS
+// Let's pick some example flags that are hopefully unlikely to change.
+// ALL_FLAGS: -fast
+// ALL_FLAGS: -fastcp
+// ALL_FLAGS: -fastf
+// Just test that this doesn't crash:
+// RUN: %clang --autocomplete=,
+// RUN: %clang --autocomplete==
+// RUN: %clang --autocomplete=,,
+// RUN: %clang --autocomplete=-
+
 // RUN: %clang --autocomplete=-fsyn | FileCheck %s -check-prefix=FSYN
 // FSYN: -fsyntax-only
 // RUN: %clang --autocomplete=-std= | FileCheck %s -check-prefix=STD
@@ -89,3 +106,7 @@
 // WARNING-NEXT: -Wmax-unsigned-zero
 // RUN: %clang --autocomplete=-Wno-invalid-pp- | FileCheck %s -check-prefix=NOWARNING
 // NOWARNING: -Wno-invalid-pp-token
+// RUN: %clang --autocomplete=-analyzer-checker, | FileCheck %s -check-prefix=ANALYZER
+// ANALYZER: unix.Malloc
+// RUN: %clang --autocomplete=-std=, | FileCheck %s -check-prefix=STDVAL
+// STDVAL: c99

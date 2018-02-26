@@ -8,4 +8,4 @@ bxj r13
 
 @ CHECK: bxj	sp                      @ encoding: [0xcd,0xf3,0x00,0x8f]
 @ UNDEF:  error: r13 (SP) is an unpredictable operand to BXJ
-@ ARM_MODE: error: instruction requires: arm-mode
+@ ARM_MODE: error: instruction requires: !armv*m

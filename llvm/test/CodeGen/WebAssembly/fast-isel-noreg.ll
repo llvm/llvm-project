@@ -32,4 +32,58 @@ entry:
   ret i32 0
 }
 
+; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, 24
+; CHECK: i32.shl
+; CHECK: i32.const {{.*}}, 24
+; CHECK: i32.shr_s
+; CHECK: i32.const {{.*}}, 64
+; CHECK: br_if 0, $pop0
+define hidden i32 @d() #0 {
+entry:
+  %t = icmp slt i8 ptrtoint (void ()* @addr to i8), 64
+  br i1 %t, label %a, label %b
+a:
+  unreachable
+b:
+  ret i32 0
+}
+
+; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, 255
+; CHECK: i32.and
+; CHECK: i32.const {{.*}}, 64
+; CHECK: br_if 0, $pop0
+define hidden i32 @e() #0 {
+entry:
+  %t = icmp ult i8 ptrtoint (void ()* @addr to i8), 64
+  br i1 %t, label %a, label %b
+a:
+  unreachable
+b:
+  ret i32 0
+}
+
+; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, 24
+; CHECK: i32.shl
+; CHECK: i32.const {{.*}}, 24
+; CHECK: i32.shr_s
+define hidden i32 @f() #0 {
+entry:
+  %t = sext i8 ptrtoint (void ()* @addr to i8) to i32
+  ret i32 %t
+}
+
+; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, 255
+; CHECK: i32.and
+define hidden i32 @g() #0 {
+entry:
+  %t = zext i8 ptrtoint (void ()* @addr to i8) to i32
+  ret i32 %t
+}
+
+declare void @addr()
+
 attributes #0 = { noinline optnone }

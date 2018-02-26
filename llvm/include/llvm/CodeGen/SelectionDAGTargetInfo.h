@@ -1,4 +1,4 @@
-//==-- llvm/CodeGen/SelectionDAGTargetInfo.h - SelectionDAG Info -*- C++ -*-==//
+//==- llvm/CodeGen/SelectionDAGTargetInfo.h - SelectionDAG Info --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,21 +16,24 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 #define LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CodeGen.h"
+#include <utility>
 
 namespace llvm {
+
+class SelectionDAG;
 
 //===----------------------------------------------------------------------===//
 /// Targets can subclass this to parameterize the
 /// SelectionDAG lowering and instruction selection process.
 ///
 class SelectionDAGTargetInfo {
-  SelectionDAGTargetInfo(const SelectionDAGTargetInfo &) = delete;
-  void operator=(const SelectionDAGTargetInfo &) = delete;
-
 public:
   explicit SelectionDAGTargetInfo() = default;
+  SelectionDAGTargetInfo(const SelectionDAGTargetInfo &) = delete;
+  SelectionDAGTargetInfo &operator=(const SelectionDAGTargetInfo &) = delete;
   virtual ~SelectionDAGTargetInfo();
 
   /// Emit target-specific code that performs a memcpy.
@@ -144,6 +147,7 @@ public:
                            MachinePointerInfo SrcPtrInfo) const {
     return std::make_pair(SDValue(), SDValue());
   }
+
   // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
   // than FMUL and ADD is delegated to the machine combiner.
   virtual bool generateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const {
@@ -151,6 +155,6 @@ public:
   }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H

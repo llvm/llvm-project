@@ -17,7 +17,7 @@ main:                                   # @main
 	.quad	0
 	.text
 .L.main:
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	li 3, 0
 	addis 4, 2, a@got@tprel@ha
 	ld 4, a@got@tprel@l(4)

@@ -1,0 +1,6 @@
+; Test that the native PDB reader can enumerate the enum types.
+; RUN: llvm-pdbutil pretty -native -enums %p/../Inputs/every-type.pdb \
+; RUN:   | FileCheck -check-prefix=ENUMS %s
+
+ENUMS:  enum FooClass::NestedEnum {
+ENUMS-NEXT:  }

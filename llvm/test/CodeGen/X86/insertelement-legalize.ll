@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 ; Test to check that we properly legalize an insert vector element
 define void @test(<2 x i64> %val, <2 x i64>* %dst, i64 %x) nounwind {

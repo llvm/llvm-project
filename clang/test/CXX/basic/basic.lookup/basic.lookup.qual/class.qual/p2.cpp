@@ -73,6 +73,7 @@ void other_contexts() {
   int a;
   {
     X0::X0(a); // expected-error{{qualified reference to 'X0' is a constructor name rather than a type in this context}}
+    // expected-warning@-1 {{redundant parentheses around declaration of variable named 'a'}} expected-note@-1 2{{}}
   }
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-cext=0 < %s | FileCheck %s
 
 @i65_l = external global i65
 @i65_s = external global i65

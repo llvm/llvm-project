@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -O1 | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 | FileCheck --check-prefix=CHECK-OPT  %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- -O1 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- | FileCheck --check-prefix=CHECK-OPT  %s
 
         %struct.__db_region = type { %struct.__mutex_t, [4 x i8], %struct.anon, i32, [1 x i32] }
         %struct.__mutex_t = type { i32 }

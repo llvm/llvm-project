@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/DwarfDebug.h - Dwarf Debug Framework ------*- C++ -*--===//
+//===- llvm/CodeGen/DwarfDebug.h - Dwarf Debug Framework --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,39 +14,52 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
+#include "AddressPool.h"
 #include "DbgValueHistoryCalculator.h"
 #include "DebugHandlerBase.h"
 #include "DebugLocStream.h"
-#include "DwarfAccelTable.h"
 #include "DwarfFile.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CodeGen/DIE.h"
-#include "llvm/CodeGen/LexicalScopes.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Target/TargetOptions.h"
+#include <cassert>
+#include <cstdint>
+#include <limits>
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
 class AsmPrinter;
 class ByteStreamer;
-class ConstantInt;
-class ConstantFP;
 class DebugLocEntry;
+class DIE;
 class DwarfCompileUnit;
-class DwarfDebug;
 class DwarfTypeUnit;
 class DwarfUnit;
-class MachineModuleInfo;
+class LexicalScope;
+class MachineFunction;
+class MCSection;
+class MCSymbol;
+class MDNode;
+class Module;
 
 //===----------------------------------------------------------------------===//
 /// This class is used to track local variable information.
@@ -88,7 +101,7 @@ public:
     assert(!MInsn && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
-    assert(FI != INT_MAX && "Expected valid index");
+    assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
 
     FrameIndexExprs.push_back({FI, E});
   }
@@ -110,10 +123,12 @@ public:
   // Accessors.
   const DILocalVariable *getVariable() const { return Var; }
   const DILocation *getInlinedAt() const { return IA; }
+
   const DIExpression *getSingleExpression() const {
     assert(MInsn && FrameIndexExprs.size() <= 1);
     return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
   }
+
   void setDIE(DIE &D) { TheDIE = &D; }
   DIE *getDIE() const { return TheDIE; }
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
@@ -133,6 +148,7 @@ public:
 
     return dwarf::DW_TAG_variable;
   }
+
   /// Return true if DbgVariable is artificial.
   bool isArtificial() const {
     if (Var->isArtificial())
@@ -158,6 +174,7 @@ public:
            "Invalid Expr for DBG_VALUE");
     return !FrameIndexExprs.empty();
   }
+
   bool isBlockByrefVariable() const;
   const DIType *getType() const;
 
@@ -167,10 +184,10 @@ private:
   }
 };
 
-
 /// Helper used to pair up a symbol and its DWARF compile unit.
 struct SymbolCU {
   SymbolCU(DwarfCompileUnit *CU, const MCSymbol *Sym) : Sym(Sym), CU(CU) {}
+
   const MCSymbol *Sym;
   DwarfCompileUnit *CU;
 };
@@ -206,7 +223,7 @@ class DwarfDebug : public DebugHandlerBase {
       ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
-  const MachineFunction *CurFn;
+  const MachineFunction *CurFn = nullptr;
 
   /// If nonnull, stores the CU in which the previous subprogram was contained.
   const DwarfCompileUnit *PrevCU;
@@ -244,6 +261,12 @@ class DwarfDebug : public DebugHandlerBase {
   bool HasAppleExtensionAttributes;
   bool HasSplitDwarf;
 
+  /// Whether to generate the DWARF v5 string offsets table.
+  /// It consists of a series of contributions, each preceded by a header.
+  /// The pre-DWARF v5 string offsets table for split dwarf is, in contrast,
+  /// a monolithic sequence of string offsets.
+  bool UseSegmentedStringOffsetsTable;
+
   /// Separated Dwarf Variables
   /// In general these will all be for bits that are left in the
   /// original object file, rather than things that are meant
@@ -259,20 +282,21 @@ class DwarfDebug : public DebugHandlerBase {
   // 0, referencing the comp_dir of all the type units that use it.
   MCDwarfDwoLineTable SplitTypeUnitFileTable;
   /// @}
-  
+
   /// True iff there are multiple CUs in this module.
   bool SingleCU;
   bool IsDarwin;
 
   AddressPool AddrPool;
 
-  DwarfAccelTable AccelNames;
-  DwarfAccelTable AccelObjC;
-  DwarfAccelTable AccelNamespace;
-  DwarfAccelTable AccelTypes;
+  /// Apple accelerator tables.
+  AccelTable<AppleAccelTableOffsetData> AccelNames;
+  AccelTable<AppleAccelTableOffsetData> AccelObjC;
+  AccelTable<AppleAccelTableOffsetData> AccelNamespace;
+  AccelTable<AppleAccelTableTypeData> AccelTypes;
 
   // Identify a debugger for "tuning" the debug info.
-  DebuggerKind DebuggerTuning;
+  DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
 
@@ -280,7 +304,7 @@ class DwarfDebug : public DebugHandlerBase {
     return InfoHolder.getUnits();
   }
 
-  typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
+  using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
 
   void ensureAbstractVariableIsCreated(DwarfCompileUnit &CU, InlinedVariable Var,
                                        const MDNode *Scope);
@@ -307,9 +331,12 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit the abbreviation section.
   void emitAbbreviations();
 
+  /// Emit the string offsets table header.
+  void emitStringOffsetsTableHeader();
+
   /// Emit a specified accelerator table.
-  void emitAccel(DwarfAccelTable &Accel, MCSection *Section,
-                 StringRef TableName);
+  template <typename AccelTableT>
+  void emitAccel(AccelTableT &Accel, MCSection *Section, StringRef TableName);
 
   /// Emit visible names into a hashed accelerator table section.
   void emitAccelNames();
@@ -370,6 +397,9 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Emit the debug line dwo section.
   void emitDebugLineDWO();
+
+  /// Emit the dwo stringoffsets table header.
+  void emitStringOffsetsTableHeaderDWO();
 
   /// Emit the debug str dwo section.
   void emitDebugStrDWO();
@@ -475,6 +505,16 @@ public:
   /// split dwarf proposal support.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
+  /// Returns whether to generate a string offsets table with (possibly shared)
+  /// contributions from each CU and type unit. This implies the use of
+  /// DW_FORM_strx* indirect references with DWARF v5 and beyond. Note that
+  /// DW_FORM_GNU_str_index is also an indirect reference, but it is used with
+  /// a pre-DWARF v5 implementation of split DWARF sections, which uses a
+  /// monolithic string offsets table.
+  bool useSegmentedStringOffsetsTable() const {
+    return UseSegmentedStringOffsetsTable;
+  }
+
   bool shareAcrossDWOCUs() const;
 
   /// Returns the Dwarf Version.
@@ -518,6 +558,9 @@ public:
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
 
+  /// Find the matching DwarfCompileUnit for the given CU DIE.
+  DwarfCompileUnit *lookupCU(const DIE *Die) { return CUDieMap.lookup(Die); }
+
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
   ///
   /// Returns whether we are "tuning" for a given debugger.
@@ -527,6 +570,7 @@ public:
   bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
   /// @}
 };
-} // End of namespace llvm
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H

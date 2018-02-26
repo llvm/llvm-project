@@ -2,10 +2,10 @@
 
 ; Test the GHC call convention works (x86-32)
 
-@base = external global i32 ; assigned to register: EBX
-@sp   = external global i32 ; assigned to register: EBP
-@hp   = external global i32 ; assigned to register: EDI
-@r1   = external global i32 ; assigned to register: ESI
+@base = external global i32 ; assigned to register: ebx
+@sp   = external global i32 ; assigned to register: ebp
+@hp   = external global i32 ; assigned to register: edi
+@r1   = external global i32 ; assigned to register: esi
 
 define void @zap(i32 %a, i32 %b) nounwind {
 entry:

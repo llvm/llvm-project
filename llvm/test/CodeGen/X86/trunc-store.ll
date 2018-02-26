@@ -28,14 +28,14 @@
 
 define void @fn1() {
 ; CHECK-LABEL: fn1:
-; CHECK:       # BB#0: # %for.cond
+; CHECK:       # %bb.0: # %for.cond
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpq $8, %rax
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # BB#2: # %middle.block
+; CHECK-NEXT:  # %bb.2: # %middle.block
 ; CHECK-NEXT:    retq
 for.cond:
   br label %vector.body

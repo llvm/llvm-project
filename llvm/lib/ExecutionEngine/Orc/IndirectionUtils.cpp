@@ -28,6 +28,11 @@ createLocalCompileCallbackManager(const Triple &T,
   switch (T.getArch()) {
     default: return nullptr;
 
+    case Triple::aarch64: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
+      return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+    }
+
     case Triple::x86: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
       return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
@@ -42,6 +47,7 @@ createLocalCompileCallbackManager(const Triple &T,
         return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
       }
     }
+
   }
 }
 
@@ -49,6 +55,12 @@ std::function<std::unique_ptr<IndirectStubsManager>()>
 createLocalIndirectStubsManagerBuilder(const Triple &T) {
   switch (T.getArch()) {
     default: return nullptr;
+
+    case Triple::aarch64:
+      return [](){
+        return llvm::make_unique<
+                       orc::LocalIndirectStubsManager<orc::OrcAArch64>>();
+      };
 
     case Triple::x86:
       return [](){
@@ -68,6 +80,7 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
                      orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
         };
       }
+
   }
 }
 

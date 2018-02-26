@@ -4,12 +4,12 @@
 
 define <8 x i32> @v8i32_cmpgt(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 ; X32-LABEL: v8i32_cmpgt:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v8i32_cmpgt:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp slt <8 x i32> %i, %j
@@ -19,12 +19,12 @@ define <8 x i32> @v8i32_cmpgt(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 
 define <4 x i64> @v4i64_cmpgt(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 ; X32-LABEL: v4i64_cmpgt:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v4i64_cmpgt:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp slt <4 x i64> %i, %j
@@ -34,12 +34,12 @@ define <4 x i64> @v4i64_cmpgt(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 
 define <16 x i16> @v16i16_cmpgt(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 ; X32-LABEL: v16i16_cmpgt:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpgtw %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v16i16_cmpgt:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpgtw %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp slt <16 x i16> %i, %j
@@ -49,12 +49,12 @@ define <16 x i16> @v16i16_cmpgt(<16 x i16> %i, <16 x i16> %j) nounwind readnone 
 
 define <32 x i8> @v32i8_cmpgt(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; X32-LABEL: v32i8_cmpgt:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v32i8_cmpgt:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp slt <32 x i8> %i, %j
@@ -64,12 +64,12 @@ define <32 x i8> @v32i8_cmpgt(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 
 define <8 x i32> @int256_cmpeq(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 ; X32-LABEL: int256_cmpeq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: int256_cmpeq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp eq <8 x i32> %i, %j
@@ -79,12 +79,12 @@ define <8 x i32> @int256_cmpeq(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 
 define <4 x i64> @v4i64_cmpeq(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 ; X32-LABEL: v4i64_cmpeq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v4i64_cmpeq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp eq <4 x i64> %i, %j
@@ -94,12 +94,12 @@ define <4 x i64> @v4i64_cmpeq(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 
 define <16 x i16> @v16i16_cmpeq(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 ; X32-LABEL: v16i16_cmpeq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v16i16_cmpeq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp eq <16 x i16> %i, %j
@@ -109,12 +109,12 @@ define <16 x i16> @v16i16_cmpeq(<16 x i16> %i, <16 x i16> %j) nounwind readnone 
 
 define <32 x i8> @v32i8_cmpeq(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; X32-LABEL: v32i8_cmpeq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: v32i8_cmpeq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %bincmp = icmp eq <32 x i8> %i, %j

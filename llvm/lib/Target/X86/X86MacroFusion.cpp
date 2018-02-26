@@ -14,8 +14,8 @@
 
 #include "X86MacroFusion.h"
 #include "X86Subtarget.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/CodeGen/MacroFusion.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
 
@@ -27,10 +27,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const MachineInstr *FirstMI,
                                    const MachineInstr &SecondMI) {
   const X86Subtarget &ST = static_cast<const X86Subtarget&>(TSI);
-  // Check if this processor supports macro-fusion. Since this is a minor
-  // heuristic, we haven't specifically reserved a feature. hasAVX is a decent
-  // proxy for SandyBridge+.
-  if (!ST.hasAVX())
+  // Check if this processor supports macro-fusion.
+  if (!ST.hasMacroFusion())
     return false;
 
   enum {
@@ -84,10 +82,10 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   case X86::TEST32i32:
   case X86::TEST64i32:
   case X86::TEST64ri32:
-  case X86::TEST8rm:
-  case X86::TEST16rm:
-  case X86::TEST32rm:
-  case X86::TEST64rm:
+  case X86::TEST8mr:
+  case X86::TEST16mr:
+  case X86::TEST32mr:
+  case X86::TEST64mr:
   case X86::TEST8ri_NOREX:
   case X86::AND16i16:
   case X86::AND16ri:

@@ -88,5 +88,5 @@
         sdxc1     $f11,$a2($t2)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         suxc1     $f12,$k1($t1)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         swxc1     $f19,$t0($k0)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        ldc1      $f11,16391($s0)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        sdc1      $f31,30574($t5)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        ldc1      $f11,16391($s0)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        sdc1      $f31,30574($t5)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

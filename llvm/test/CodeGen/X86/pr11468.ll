@@ -1,4 +1,4 @@
-; RUN: llc < %s -stackrealign -stack-alignment=32 -march=x86-64 -mattr=+avx -mtriple=i686-apple-darwin10 | FileCheck %s
+; RUN: llc < %s -stackrealign -stack-alignment=32 -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; PR11468
 
 define void @f(i64 %sz) uwtable {

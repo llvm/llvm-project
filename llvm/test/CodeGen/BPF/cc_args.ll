@@ -1,4 +1,4 @@
-; RUN: not llc < %s -march=bpfel -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -march=bpfel -show-mc-encoding | FileCheck %s
 
 define void @test() #0 {
 entry:
@@ -12,7 +12,7 @@ entry:
 ; CHECK: call f_i32
   call void @f_i32(i32 12345678)
 
-; CHECK: r1 = 72623859790382856ll # encoding: [0x18,0x01,0x00,0x00,0x08,0x07,0x06,0x05,0x00,0x00,0x00,0x00,0x04,0x03,0x02,0x01]
+; CHECK: r1 = 72623859790382856 ll # encoding: [0x18,0x01,0x00,0x00,0x08,0x07,0x06,0x05,0x00,0x00,0x00,0x00,0x04,0x03,0x02,0x01]
 ; CHECK: call f_i64
   call void @f_i64(i64 72623859790382856)
 
@@ -28,7 +28,7 @@ entry:
   call void @f_i16_i32_i16(i16 2, i32 3, i16 4)
 
 ; CHECK: r1 = 5
-; CHECK: r2 = 7262385979038285ll
+; CHECK: r2 = 7262385979038285 ll
 ; CHECK: r3 = 6
 ; CHECK: call f_i16_i64_i16
   call void @f_i16_i64_i16(i16 5, i64 7262385979038285, i16 6)

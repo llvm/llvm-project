@@ -6,6 +6,7 @@ declare void @g1()
 declare void @g2()
 declare void @g3()
 declare void @g4()
+declare i32 @g5()
 
 define void @test1(i32 %a, i32 %b) {
 entry:
@@ -362,5 +363,41 @@ for.end:
 
 for.end15:
   call void @g4()
+  ret void
+}
+
+; Test that an irreducible loop gets heavily weighted back-edges.
+define void @test9(i32 %i, i32 %x, i32 %c) {
+entry:
+  %tobool = icmp eq i32 %c, 0
+  br i1 %tobool, label %if.end, label %midloop
+; CHECK:  edge entry -> if.end probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK:  edge entry -> midloop probability is 0x50000000 / 0x80000000 = 62.50%
+
+if.end:
+  br label %for.cond
+; CHECK:  edge if.end -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+for.cond:
+  %i.addr.0 = phi i32 [ %inc, %for.inc ], [ 0, %if.end ]
+  %cmp = icmp slt i32 %i.addr.0, %x
+  br i1 %cmp, label %midloop, label %end
+; CHECK:  edge for.cond -> midloop probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
+; CHECK:  edge for.cond -> end probability is 0x04000000 / 0x80000000 = 3.12%
+
+midloop:
+  %i.addr.1 = phi i32 [ %i, %entry ], [ %i.addr.0, %for.cond ]
+  %call1 = call i32 @g5()
+  %tobool2 = icmp eq i32 %call1, 0
+  br i1 %tobool2, label %for.inc, label %end
+; CHECK:  edge midloop -> for.inc probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
+; CHECK:  edge midloop -> end probability is 0x04000000 / 0x80000000 = 3.12%
+
+for.inc:
+  %inc = add nsw i32 %i.addr.1, 1
+  br label %for.cond
+; CHECK:  edge for.inc -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+end:
   ret void
 }

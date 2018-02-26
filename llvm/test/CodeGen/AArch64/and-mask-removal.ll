@@ -1,4 +1,4 @@
-; RUN: llc -O0 -fast-isel=false -mtriple=arm64-apple-darwin  < %s  | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-darwin  < %s  | FileCheck %s
 
 @board = common global [400 x i8] zeroinitializer, align 1
 @next_string = common global i32 0, align 4

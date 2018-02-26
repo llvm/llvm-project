@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 | FileCheck %s
 ; Increment in loop bb.i28.i adjusted to 2, to prevent loop reversal from
 ; kicking in.
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -o - < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -o - < %s | FileCheck %s
 
 ; This used to be classified as a tail call because of a mismatch in the
 ; arguments seen by Analysis.cpp and ISelLowering. As seen by ISelLowering, they

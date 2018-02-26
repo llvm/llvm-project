@@ -16,6 +16,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -58,10 +59,10 @@ unsigned WebAssemblyELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-MCObjectWriter *llvm::createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
-                                                       bool Is64Bit,
-                                                       uint8_t OSABI) {
-  MCELFObjectTargetWriter *MOTW =
-      new WebAssemblyELFObjectWriter(Is64Bit, OSABI);
-  return createELFObjectWriter(MOTW, OS, /*IsLittleEndian=*/true);
+std::unique_ptr<MCObjectWriter>
+llvm::createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
+                                       bool Is64Bit,
+                                       uint8_t OSABI) {
+  auto MOTW = llvm::make_unique<WebAssemblyELFObjectWriter>(Is64Bit, OSABI);
+  return createELFObjectWriter(std::move(MOTW), OS, /*IsLittleEndian=*/true);
 }

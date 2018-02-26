@@ -3,11 +3,11 @@
 --- |
   target datalayout = "E-m:e-i64:64-n32:64"
   target triple = "powerpc64-unknown-linux-gnu"
-  
+
   @d = global i32 15, align 4
   @b = global i32* @d, align 8
   @a = common global i32 0, align 4
-  
+
   ; Function Attrs: nounwind
   define signext i32 @main() #0 {
   entry:
@@ -31,7 +31,7 @@
     store i32 %or.1, i32* %0, align 4
     ret i32 %or.1
   }
-  
+
   attributes #0 = { nounwind "target-cpu"="ppc64" }
 
 ...
@@ -40,7 +40,7 @@ name:            main
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0 }
   - { id: 1, class: g8rc_and_g8rc_nox0 }
   - { id: 2, class: gprc }
@@ -52,7 +52,7 @@ registers:
   - { id: 8, class: gprc }
   - { id: 9, class: gprc }
   - { id: 10, class: g8rc }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -76,9 +76,9 @@ body:             |
     %3 = LI 0
     %4 = RLWIMI %3, killed %2, 0, 0, 31
     ; CHECK-LABEL: name: main
-    ; CHECK: %[[REG1:[0-9]+]] = LI 0
-    ; CHECK: %[[REG2:[0-9]+]] = COPY %[[REG1]]
-    ; CHECK: %[[REG2]] = RLWIMI %[[REG2]], killed %2, 0, 0, 31
+    ; CHECK: %[[REG1:[0-9]+]]:gprc = LI 0
+    ; CHECK: %[[REG2:[0-9]+]]:gprc = COPY %[[REG1]]
+    ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], killed %2, 0, 0, 31
     %8 = RLWIMI %3, %4, 0, 0, 31
     STW %4, 0, %1 :: (store 4 into %ir.0)
     %10 = EXTSW_32_64 %8

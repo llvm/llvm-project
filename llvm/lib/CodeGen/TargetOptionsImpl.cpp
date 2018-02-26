@@ -13,11 +13,11 @@
 
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
 /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -28,7 +28,7 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
     return true;
 
   // Check to see if we should eliminate non-leaf frame pointers.
-  if (MF.getFunction()->hasFnAttribute("no-frame-pointer-elim-non-leaf"))
+  if (MF.getFunction().hasFnAttribute("no-frame-pointer-elim-non-leaf"))
     return MF.getFrameInfo().hasCalls();
 
   return false;

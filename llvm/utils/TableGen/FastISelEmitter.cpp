@@ -159,10 +159,11 @@ struct OperandsSignature {
       TreePredicateFn PredFn = ImmPredicates.getPredicate(Code-1);
 
       // Emit the type check.
-      OS << "VT == "
-         << getEnumName(PredFn.getOrigPatFragRecord()->getTree(0)->getType(0))
-         << " && ";
-
+      TreePattern *TP = PredFn.getOrigPatFragRecord();
+      ValueTypeByHwMode VVT = TP->getTree(0)->getType(0);
+      assert(VVT.isSimple() &&
+             "Cannot use variable value types with fast isel");
+      OS << "VT == " << getEnumName(VVT.getSimple().SimpleTy) << " && ";
 
       OS << PredFn.getFnName() << "(imm" << i <<')';
       EmittedAnything = true;
@@ -217,10 +218,6 @@ struct OperandsSignature {
           PredNo = ImmediatePredicates.getIDFor(PredFn)+1;
         }
 
-        // Handle unmatched immediate sizes here.
-        //if (Op->getType(0) != VT)
-        //  return false;
-
         Operands.push_back(OpKind::getImm(PredNo));
         continue;
       }
@@ -240,12 +237,12 @@ struct OperandsSignature {
         return false;
       }
 
-      assert(Op->hasTypeSet(0) && "Type infererence not done?");
+      assert(Op->hasConcreteType(0) && "Type infererence not done?");
 
       // For now, all the operands must have the same type (if they aren't
       // immediates).  Note that this causes us to reject variable sized shifts
       // on X86.
-      if (Op->getType(0) != VT)
+      if (Op->getSimpleType(0) != VT)
         return false;
 
       DefInit *OpDI = dyn_cast<DefInit>(Op->getLeafValue());
@@ -366,7 +363,7 @@ struct OperandsSignature {
 
 namespace {
 class FastISelMap {
-  // A multimap is needed instead of a "plain" map because the key is 
+  // A multimap is needed instead of a "plain" map because the key is
   // the instruction's complexity (an int) and they are not unique.
   typedef std::multimap<int, InstructionMemo> PredMap;
   typedef std::map<MVT::SimpleValueType, PredMap> RetPredMap;
@@ -377,7 +374,7 @@ class FastISelMap {
 
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
-  // This is used to check that there are no duplicate predicates            
+  // This is used to check that there are no duplicate predicates
   typedef std::multimap<std::string, bool> PredCheckMap;
   typedef std::map<MVT::SimpleValueType, PredCheckMap> RetPredCheckMap;
   typedef std::map<MVT::SimpleValueType, RetPredCheckMap> TypeRetPredCheckMap;
@@ -398,10 +395,10 @@ public:
   void collectPatterns(CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
   void printFunctionDefinitions(raw_ostream &OS);
-private:  
-  void emitInstructionCode(raw_ostream &OS, 
+private:
+  void emitInstructionCode(raw_ostream &OS,
                            const OperandsSignature &Operands,
-                           const PredMap &PM, 
+                           const PredMap &PM,
                            const std::string &RetVTName);
 };
 } // End anonymous namespace
@@ -506,11 +503,11 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     Record *InstPatOp = InstPatNode->getOperator();
     std::string OpcodeName = getOpcodeName(InstPatOp, CGP);
     MVT::SimpleValueType RetVT = MVT::isVoid;
-    if (InstPatNode->getNumTypes()) RetVT = InstPatNode->getType(0);
+    if (InstPatNode->getNumTypes()) RetVT = InstPatNode->getSimpleType(0);
     MVT::SimpleValueType VT = RetVT;
     if (InstPatNode->getNumChildren()) {
       assert(InstPatNode->getChild(0)->getNumTypes() == 1);
-      VT = InstPatNode->getChild(0)->getType(0);
+      VT = InstPatNode->getChild(0)->getSimpleType(0);
     }
 
     // For now, filter out any instructions with predicates.
@@ -575,7 +572,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
       PhysRegInputs,
       PredicateCheck
     };
-    
+
     int complexity = Pattern.getPatternComplexity(CGP);
 
     if (SimplePatternsCheck[Operands][OpcodeName][VT]
@@ -615,9 +612,9 @@ void FastISelMap::printImmediatePredicates(raw_ostream &OS) {
   OS << "\n\n";
 }
 
-void FastISelMap::emitInstructionCode(raw_ostream &OS, 
+void FastISelMap::emitInstructionCode(raw_ostream &OS,
                                       const OperandsSignature &Operands,
-                                      const PredMap &PM, 
+                                      const PredMap &PM,
                                       const std::string &RetVTName) {
   // Emit code for each possible instruction. There may be
   // multiple if there are subtarget concerns.  A reverse iterator

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i386-unknown-linux-gnu
+; RUN: llc < %s -mtriple=i386-unknown-linux-gnu
 ; PR3995
 
         %struct.vtable = type { i32 (...)** }

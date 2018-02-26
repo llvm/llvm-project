@@ -17,9 +17,9 @@
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <memory>
 
 namespace llvm {
@@ -130,6 +130,7 @@ public:
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
     OPC_CheckType,
+    OPC_CheckTypeRes,
     OPC_SwitchType,
     OPC_CheckChild0Type, OPC_CheckChild1Type, OPC_CheckChild2Type,
     OPC_CheckChild3Type, OPC_CheckChild4Type, OPC_CheckChild5Type,
@@ -274,6 +275,8 @@ public:
   virtual bool ComplexPatternFuncMutatesDAG() const {
     return false;
   }
+
+  bool isOrEquivalentToAdd(const SDNode *N) const;
 
 private:
 

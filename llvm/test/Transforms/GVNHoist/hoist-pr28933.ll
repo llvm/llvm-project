@@ -1,9 +1,8 @@
-; RUN: opt -S -gvn-hoist -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -gvn-hoist -verify-memoryssa -newgvn < %s | FileCheck %s
 
 ; Check that we end up with one load and one store, in the right order
 ; CHECK-LABEL:  define void @test_it(
 ; CHECK: store
-; CHECK-NEXT: load
 ; CHECK-NOT: store
 ; CHECK-NOT: load
         

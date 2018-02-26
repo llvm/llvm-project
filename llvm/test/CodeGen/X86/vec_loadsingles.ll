@@ -4,7 +4,7 @@
 
 define <4 x float> @merge_2_floats(float* nocapture %p) nounwind readonly {
 ; ALL-LABEL: merge_2_floats:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retq
   %tmp1 = load float, float* %p
@@ -19,7 +19,7 @@ define <4 x float> @merge_2_floats(float* nocapture %p) nounwind readonly {
 ; two i64s of a <4 x i64> as a load of two i32s.
 define <4 x i64> @merge_2_floats_into_4() {
 ; ALL-LABEL: merge_2_floats_into_4:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movq (%rax), %rax
 ; ALL-NEXT:    vmovups (%rax), %xmm0
 ; ALL-NEXT:    retq
@@ -37,7 +37,7 @@ define <4 x i64> @merge_2_floats_into_4() {
 
 define <4 x float> @merge_4_floats(float* %ptr) {
 ; ALL-LABEL: merge_4_floats:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovups (%rdi), %xmm0
 ; ALL-NEXT:    retq
   %a = load float, float* %ptr, align 8
@@ -61,12 +61,12 @@ define <4 x float> @merge_4_floats(float* %ptr) {
 
 define <8 x float> @merge_8_floats(float* %ptr) {
 ; FAST32-LABEL: merge_8_floats:
-; FAST32:       # BB#0:
+; FAST32:       # %bb.0:
 ; FAST32-NEXT:    vmovups (%rdi), %ymm0
 ; FAST32-NEXT:    retq
 ;
 ; SLOW32-LABEL: merge_8_floats:
-; SLOW32:       # BB#0:
+; SLOW32:       # %bb.0:
 ; SLOW32-NEXT:    vmovups (%rdi), %xmm0
 ; SLOW32-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; SLOW32-NEXT:    retq
@@ -98,12 +98,12 @@ define <8 x float> @merge_8_floats(float* %ptr) {
 
 define <4 x double> @merge_4_doubles(double* %ptr) {
 ; FAST32-LABEL: merge_4_doubles:
-; FAST32:       # BB#0:
+; FAST32:       # %bb.0:
 ; FAST32-NEXT:    vmovups (%rdi), %ymm0
 ; FAST32-NEXT:    retq
 ;
 ; SLOW32-LABEL: merge_4_doubles:
-; SLOW32:       # BB#0:
+; SLOW32:       # %bb.0:
 ; SLOW32-NEXT:    vmovups (%rdi), %xmm0
 ; SLOW32-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; SLOW32-NEXT:    retq
@@ -126,12 +126,12 @@ define <4 x double> @merge_4_doubles(double* %ptr) {
 ; first of the combined loads is offset from the base address.
 define <4 x double> @merge_4_doubles_offset(double* %ptr) {
 ; FAST32-LABEL: merge_4_doubles_offset:
-; FAST32:       # BB#0:
+; FAST32:       # %bb.0:
 ; FAST32-NEXT:    vmovups 32(%rdi), %ymm0
 ; FAST32-NEXT:    retq
 ;
 ; SLOW32-LABEL: merge_4_doubles_offset:
-; SLOW32:       # BB#0:
+; SLOW32:       # %bb.0:
 ; SLOW32-NEXT:    vmovups 32(%rdi), %xmm0
 ; SLOW32-NEXT:    vinsertf128 $1, 48(%rdi), %ymm0, %ymm0
 ; SLOW32-NEXT:    retq

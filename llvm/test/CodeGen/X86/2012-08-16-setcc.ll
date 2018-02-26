@@ -5,7 +5,7 @@
 
 define i32 @and_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 ; CHECK-LABEL: and_1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    andb %dil, %sil
 ; CHECK-NEXT:    cmovnel %edx, %eax
@@ -18,7 +18,7 @@ define i32 @and_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 
 define zeroext i1 @and_2(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: and_2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb %dil, %sil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -29,7 +29,7 @@ define zeroext i1 @and_2(i8 zeroext %a, i8 zeroext %b) {
 
 define i32 @xor_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 ; CHECK-LABEL: xor_1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorb %dil, %sil
 ; CHECK-NEXT:    cmovnel %edx, %eax
@@ -42,7 +42,7 @@ define i32 @xor_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 
 define zeroext i1 @xor_2(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: xor_2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorb %dil, %sil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq

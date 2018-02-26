@@ -55,6 +55,22 @@ def SDT_ZAtomicCmpSwapW     : SDTypeProfile<1, 6,
                                              SDTCisVT<4, i32>,
                                              SDTCisVT<5, i32>,
                                              SDTCisVT<6, i32>]>;
+def SDT_ZAtomicCmpSwap      : SDTypeProfile<1, 3,
+                                            [SDTCisInt<0>,
+                                             SDTCisPtrTy<1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisSameAs<0, 3>]>;
+def SDT_ZAtomicLoad128      : SDTypeProfile<1, 1,
+                                            [SDTCisVT<0, untyped>,
+                                             SDTCisPtrTy<1>]>;
+def SDT_ZAtomicStore128     : SDTypeProfile<0, 2,
+                                            [SDTCisVT<0, untyped>,
+                                             SDTCisPtrTy<1>]>;
+def SDT_ZAtomicCmpSwap128   : SDTypeProfile<1, 3,
+                                            [SDTCisVT<0, untyped>,
+                                             SDTCisPtrTy<1>,
+                                             SDTCisVT<2, untyped>,
+                                             SDTCisVT<3, untyped>]>;
 def SDT_ZMemMemLength       : SDTypeProfile<0, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,
@@ -285,7 +301,26 @@ def z_atomic_loadw_min  : AtomicWOp<"ATOMIC_LOADW_MIN">;
 def z_atomic_loadw_max  : AtomicWOp<"ATOMIC_LOADW_MAX">;
 def z_atomic_loadw_umin : AtomicWOp<"ATOMIC_LOADW_UMIN">;
 def z_atomic_loadw_umax : AtomicWOp<"ATOMIC_LOADW_UMAX">;
-def z_atomic_cmp_swapw  : AtomicWOp<"ATOMIC_CMP_SWAPW", SDT_ZAtomicCmpSwapW>;
+
+def z_atomic_cmp_swap   : SDNode<"SystemZISD::ATOMIC_CMP_SWAP",
+                                 SDT_ZAtomicCmpSwap,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
+                                  SDNPOutGlue, SDNPMemOperand]>;
+def z_atomic_cmp_swapw  : SDNode<"SystemZISD::ATOMIC_CMP_SWAPW",
+                                 SDT_ZAtomicCmpSwapW,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
+                                  SDNPOutGlue, SDNPMemOperand]>;
+
+def z_atomic_load_128   : SDNode<"SystemZISD::ATOMIC_LOAD_128",
+                                 SDT_ZAtomicLoad128,
+                                 [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def z_atomic_store_128  : SDNode<"SystemZISD::ATOMIC_STORE_128",
+                                 SDT_ZAtomicStore128,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def z_atomic_cmp_swap_128 : SDNode<"SystemZISD::ATOMIC_CMP_SWAP_128",
+                                   SDT_ZAtomicCmpSwap128,
+                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
+                                    SDNPOutGlue, SDNPMemOperand]>;
 
 def z_mvc               : SDNode<"SystemZISD::MVC", SDT_ZMemMemLength,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;

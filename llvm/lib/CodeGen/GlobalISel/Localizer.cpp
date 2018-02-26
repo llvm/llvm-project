@@ -113,7 +113,7 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
               MBBWithLocalDef.insert(std::make_pair(MBBAndReg, NewReg)).first;
           DEBUG(dbgs() << "Inserted: " << *LocalizedMI);
         }
-        DEBUG(dbgs() << "Update use with: " << PrintReg(NewVRegIt->second)
+        DEBUG(dbgs() << "Update use with: " << printReg(NewVRegIt->second)
                      << '\n');
         // Update the user reg.
         MOUse.setReg(NewVRegIt->second);

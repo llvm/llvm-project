@@ -18,18 +18,17 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "ubsan_init.h"
+#include "ubsan_signals_standalone.h"
 
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"), used))
-void (*__local_ubsan_preinit)(void) = __ubsan::InitAsStandalone;
-#else
-// Use a dynamic initializer.
+namespace __ubsan {
+
 class UbsanStandaloneInitializer {
  public:
   UbsanStandaloneInitializer() {
-    __ubsan::InitAsStandalone();
+    InitAsStandalone();
+    InitializeDeadlySignals();
   }
 };
 static UbsanStandaloneInitializer ubsan_standalone_initializer;
-#endif  // SANITIZER_CAN_USE_PREINIT_ARRAY
 
+} // namespace __ubsan

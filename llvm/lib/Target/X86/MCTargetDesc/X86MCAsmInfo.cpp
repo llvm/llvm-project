@@ -13,10 +13,7 @@
 
 #include "X86MCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
@@ -27,11 +24,11 @@ enum AsmWriterFlavorTy {
   ATT = 0, Intel = 1
 };
 
-static cl::opt<AsmWriterFlavorTy>
-AsmWriterFlavor("x86-asm-syntax", cl::init(ATT),
-  cl::desc("Choose style of code to emit from X86 backend:"),
-  cl::values(clEnumValN(ATT,   "att",   "Emit AT&T-style assembly"),
-             clEnumValN(Intel, "intel", "Emit Intel-style assembly")));
+static cl::opt<AsmWriterFlavorTy> AsmWriterFlavor(
+    "x86-asm-syntax", cl::init(ATT), cl::Hidden,
+    cl::desc("Choose style of code to emit from X86 backend:"),
+    cl::values(clEnumValN(ATT, "att", "Emit AT&T-style assembly"),
+               clEnumValN(Intel, "intel", "Emit Intel-style assembly")));
 
 static cl::opt<bool>
 MarkedJTDataRegions("mark-data-regions", cl::init(true),

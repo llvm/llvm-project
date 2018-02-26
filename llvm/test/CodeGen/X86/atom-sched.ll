@@ -1,7 +1,7 @@
-; RUN: llc <%s -O2 -mcpu=atom -march=x86 -relocation-model=static | FileCheck -check-prefix=atom %s
-; RUN: llc <%s -O2 -mcpu=slm -march=x86 -relocation-model=static | FileCheck -check-prefix=slm %s
-; RUN: llc <%s -O2 -mcpu=goldmont -march=x86 -relocation-model=static | FileCheck -check-prefix=slm %s
-; RUN: llc <%s -O2 -mcpu=core2 -march=x86 -relocation-model=static | FileCheck %s
+; RUN: llc <%s -O2 -mcpu=atom -mtriple=i686-- -relocation-model=static | FileCheck -check-prefix=atom %s
+; RUN: llc <%s -O2 -mcpu=slm -mtriple=i686-- -relocation-model=static | FileCheck -check-prefix=slm %s
+; RUN: llc <%s -O2 -mcpu=goldmont -mtriple=i686-- -relocation-model=static | FileCheck -check-prefix=slm %s
+; RUN: llc <%s -O2 -mcpu=core2 -mtriple=i686-- -relocation-model=static | FileCheck %s
 ;
 
 @a = common global i32 0, align 4

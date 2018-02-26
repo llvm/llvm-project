@@ -80,7 +80,7 @@ INITIALIZE_PASS(SingleLoopExtractor, "loop-extract-single",
 //
 Pass *llvm::createLoopExtractorPass() { return new LoopExtractor(); }
 
-bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
+bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (skipLoop(L))
     return false;
 
@@ -143,7 +143,8 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
       Changed = true;
       // After extraction, the loop is replaced by a function call, so
       // we shouldn't try to run any more loop passes on it.
-      LI.markAsRemoved(L);
+      LPM.markLoopAsDeleted(*L);
+      LI.erase(L);
     }
     ++NumExtracted;
   }

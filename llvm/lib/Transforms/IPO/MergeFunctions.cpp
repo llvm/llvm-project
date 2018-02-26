@@ -89,28 +89,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <set>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -119,7 +136,6 @@ using namespace llvm;
 
 STATISTIC(NumFunctionsMerged, "Number of functions merged");
 STATISTIC(NumThunksWritten, "Number of thunks generated");
-STATISTIC(NumAliasesWritten, "Number of aliases generated");
 STATISTIC(NumDoubleWeak, "Number of new functions created");
 
 static cl::opt<unsigned> NumFunctionsForSanityCheck(
@@ -154,10 +170,12 @@ namespace {
 class FunctionNode {
   mutable AssertingVH<Function> F;
   FunctionComparator::FunctionHash Hash;
+
 public:
   // Note the hash is recalculated potentially multiple times, but it is cheap.
   FunctionNode(Function *F)
     : F(F), Hash(FunctionComparator::functionHash(*F))  {}
+
   Function *getFunc() const { return F; }
   FunctionComparator::FunctionHash getHash() const { return Hash; }
 
@@ -174,13 +192,12 @@ public:
 /// by considering all pointer types to be equivalent. Once identified,
 /// MergeFunctions will fold them by replacing a call to one to a call to a
 /// bitcast of the other.
-///
 class MergeFunctions : public ModulePass {
 public:
   static char ID;
+
   MergeFunctions()
-    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)), FNodesInTree(),
-      HasGlobalAliases(false) {
+    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)) {
     initializeMergeFunctionsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -191,8 +208,10 @@ private:
   // not need to become larger with another pointer.
   class FunctionNodeCmp {
     GlobalNumberState* GlobalNumbers;
+
   public:
     FunctionNodeCmp(GlobalNumberState* GN) : GlobalNumbers(GN) {}
+
     bool operator()(const FunctionNode &LHS, const FunctionNode &RHS) const {
       // Order first by hashes, then full function comparison.
       if (LHS.getHash() != RHS.getHash())
@@ -201,7 +220,7 @@ private:
       return FCmp.compare() == -1;
     }
   };
-  typedef std::set<FunctionNode, FunctionNodeCmp> FnTreeType;
+  using FnTreeType = std::set<FunctionNode, FunctionNodeCmp>;
 
   GlobalNumberState GlobalNumbers;
 
@@ -209,9 +228,9 @@ private:
   /// analyzed again.
   std::vector<WeakTrackingVH> Deferred;
 
+#ifndef NDEBUG
   /// Checks the rules of order relation introduced among functions set.
   /// Returns true, if sanity check has been passed, and false if failed.
-#ifndef NDEBUG
   bool doSanityCheck(std::vector<WeakTrackingVH> &Worklist);
 #endif
 
@@ -236,9 +255,6 @@ private:
   /// again.
   void mergeTwoFunctions(Function *F, Function *G);
 
-  /// Replace G with a thunk or an alias to F. Deletes G.
-  void writeThunkOrAlias(Function *F, Function *G);
-
   /// Fill PDIUnrelatedWL with instructions from the entry block that are
   /// unrelated to parameter related debug info.
   void filterInstsUnrelatedToPDI(BasicBlock *GEntryBlock,
@@ -256,29 +272,25 @@ private:
   /// delete G.
   void writeThunk(Function *F, Function *G);
 
-  /// Replace G with an alias to F. Deletes G.
-  void writeAlias(Function *F, Function *G);
-
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
 
   /// The set of all distinct functions. Use the insert() and remove() methods
   /// to modify it. The map allows efficient lookup and deferring of Functions.
   FnTreeType FnTree;
+
   // Map functions to the iterators of the FunctionNode which contains them
   // in the FnTree. This must be updated carefully whenever the FnTree is
   // modified, i.e. in insert(), remove(), and replaceFunctionInTree(), to avoid
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   ValueMap<Function*, FnTreeType::iterator> FNodesInTree;
-
-  /// Whether or not the target supports global aliases.
-  bool HasGlobalAliases;
 };
 
 } // end anonymous namespace
 
 char MergeFunctions::ID = 0;
+
 INITIALIZE_PASS(MergeFunctions, "mergefunc", "Merge Functions", false, false)
 
 ModulePass *llvm::createMergeFunctionsPass() {
@@ -454,19 +466,6 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
   }
 }
 
-// Replace G with an alias to F if possible, or else a thunk to F. Deletes G.
-void MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
-  if (HasGlobalAliases && G->hasGlobalUnnamedAddr()) {
-    if (G->hasExternalLinkage() || G->hasLocalLinkage() ||
-        G->hasWeakLinkage()) {
-      writeAlias(F, G);
-      return;
-    }
-  }
-
-  writeThunk(F, G);
-}
-
 // Helper for writeThunk,
 // Selects proper bitcast operation,
 // but a bit simpler then CastInst::getCastOpcode.
@@ -499,7 +498,6 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
 // parameter debug info, from the entry block.
 void MergeFunctions::eraseInstsUnrelatedToPDI(
     std::vector<Instruction *> &PDIUnrelatedWL) {
-
   DEBUG(dbgs() << " Erasing instructions (in reverse order of appearance in "
                   "entry block) unrelated to parameter debug info from entry "
                   "block: {\n");
@@ -517,7 +515,6 @@ void MergeFunctions::eraseInstsUnrelatedToPDI(
 
 // Reduce G to its entry block.
 void MergeFunctions::eraseTail(Function *G) {
-
   std::vector<BasicBlock *> WorklistBB;
   for (Function::iterator BBI = std::next(G->begin()), BBE = G->end();
        BBI != BBE; ++BBI) {
@@ -542,7 +539,6 @@ void MergeFunctions::eraseTail(Function *G) {
 // PDIUnrelatedWL with such instructions.
 void MergeFunctions::filterInstsUnrelatedToPDI(
     BasicBlock *GEntryBlock, std::vector<Instruction *> &PDIUnrelatedWL) {
-
   std::set<Instruction *> PDIRelated;
   for (BasicBlock::iterator BI = GEntryBlock->begin(), BIE = GEntryBlock->end();
        BI != BIE; ++BI) {
@@ -652,9 +648,18 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (!G->isInterposable() && !MergeFunctionsPDI) {
-    // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
-    // above).
-    replaceDirectCallers(G, F);
+    if (G->hasGlobalUnnamedAddr()) {
+      // G might have been a key in our GlobalNumberState, and it's illegal
+      // to replace a key in ValueMap<GlobalValue *> with a non-global.
+      GlobalNumbers.erase(G);
+      // If G's address is not significant, replace it entirely.
+      Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
+      G->replaceAllUsesWith(BitcastF);
+    } else {
+      // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
+      // above).
+      replaceDirectCallers(G, F);
+    }
   }
 
   // If G was internal then we may have replaced all uses of G with F. If so,
@@ -663,6 +668,16 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (G->hasLocalLinkage() && G->use_empty() && !MergeFunctionsPDI) {
     G->eraseFromParent();
     return;
+  }
+
+  // Don't merge tiny functions using a thunk, since it can just end up
+  // making the function larger.
+  if (F->size() == 1) {
+    if (F->front().size() <= 2) {
+      DEBUG(dbgs() << "writeThunk: " << F->getName()
+                   << " is too small to bother creating a thunk for\n");
+      return;
+    }
   }
 
   BasicBlock *GEntryBlock = nullptr;
@@ -691,7 +706,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   SmallVector<Value *, 16> Args;
   unsigned i = 0;
   FunctionType *FFTy = F->getFunctionType();
-  for (Argument & AI : H->args()) {
+  for (Argument &AI : H->args()) {
     Args.push_back(createCast(Builder, &AI, FFTy->getParamType(i)));
     ++i;
   }
@@ -734,20 +749,6 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   ++NumThunksWritten;
 }
 
-// Replace G with an alias to F and delete G.
-void MergeFunctions::writeAlias(Function *F, Function *G) {
-  auto *GA = GlobalAlias::create(G->getLinkage(), "", F);
-  F->setAlignment(std::max(F->getAlignment(), G->getAlignment()));
-  GA->takeName(G);
-  GA->setVisibility(G->getVisibility());
-  removeUsers(G);
-  G->replaceAllUsesWith(GA);
-  G->eraseFromParent();
-
-  DEBUG(dbgs() << "writeAlias: " << GA->getName() << '\n');
-  ++NumAliasesWritten;
-}
-
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
   if (F->isInterposable()) {
@@ -763,19 +764,14 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
     unsigned MaxAlignment = std::max(G->getAlignment(), H->getAlignment());
 
-    if (HasGlobalAliases) {
-      writeAlias(F, G);
-      writeAlias(F, H);
-    } else {
-      writeThunk(F, G);
-      writeThunk(F, H);
-    }
+    writeThunk(F, G);
+    writeThunk(F, H);
 
     F->setAlignment(MaxAlignment);
     F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
   } else {
-    writeThunkOrAlias(F, G);
+    writeThunk(F, G);
   }
 
   ++NumFunctionsMerged;
@@ -815,18 +811,6 @@ bool MergeFunctions::insert(Function *NewFunction) {
   }
 
   const FunctionNode &OldF = *Result.first;
-
-  // Don't merge tiny functions, since it can just end up making the function
-  // larger.
-  // FIXME: Should still merge them if they are unnamed_addr and produce an
-  // alias.
-  if (NewFunction->size() == 1) {
-    if (NewFunction->front().size() <= 2) {
-      DEBUG(dbgs() << NewFunction->getName()
-                   << " is to small to bother merging\n");
-      return false;
-    }
-  }
 
   // Impose a total order (by name) on the replacement of functions. This is
   // important when operating on more than one module independently to prevent

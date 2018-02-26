@@ -31,9 +31,13 @@ static cl::opt<bool> PrintPartialAlias("print-partial-aliases", cl::ReallyHidden
 static cl::opt<bool> PrintMustAlias("print-must-aliases", cl::ReallyHidden);
 
 static cl::opt<bool> PrintNoModRef("print-no-modref", cl::ReallyHidden);
-static cl::opt<bool> PrintMod("print-mod", cl::ReallyHidden);
 static cl::opt<bool> PrintRef("print-ref", cl::ReallyHidden);
+static cl::opt<bool> PrintMod("print-mod", cl::ReallyHidden);
 static cl::opt<bool> PrintModRef("print-modref", cl::ReallyHidden);
+static cl::opt<bool> PrintMust("print-must", cl::ReallyHidden);
+static cl::opt<bool> PrintMustRef("print-mustref", cl::ReallyHidden);
+static cl::opt<bool> PrintMustMod("print-mustmod", cl::ReallyHidden);
+static cl::opt<bool> PrintMustModRef("print-mustmodref", cl::ReallyHidden);
 
 static cl::opt<bool> EvalAAMD("evaluate-aa-metadata", cl::ReallyHidden);
 
@@ -244,23 +248,42 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
       if (ElTy->isSized()) Size = DL.getTypeStoreSize(ElTy);
 
       switch (AA.getModRefInfo(C, Pointer, Size)) {
-      case MRI_NoModRef:
+      case ModRefInfo::NoModRef:
         PrintModRefResults("NoModRef", PrintNoModRef, I, Pointer,
                            F.getParent());
         ++NoModRefCount;
         break;
-      case MRI_Mod:
+      case ModRefInfo::Mod:
         PrintModRefResults("Just Mod", PrintMod, I, Pointer, F.getParent());
         ++ModCount;
         break;
-      case MRI_Ref:
+      case ModRefInfo::Ref:
         PrintModRefResults("Just Ref", PrintRef, I, Pointer, F.getParent());
         ++RefCount;
         break;
-      case MRI_ModRef:
+      case ModRefInfo::ModRef:
         PrintModRefResults("Both ModRef", PrintModRef, I, Pointer,
                            F.getParent());
         ++ModRefCount;
+        break;
+      case ModRefInfo::Must:
+        PrintModRefResults("Must", PrintMust, I, Pointer, F.getParent());
+        ++MustCount;
+        break;
+      case ModRefInfo::MustMod:
+        PrintModRefResults("Just Mod (MustAlias)", PrintMustMod, I, Pointer,
+                           F.getParent());
+        ++MustModCount;
+        break;
+      case ModRefInfo::MustRef:
+        PrintModRefResults("Just Ref (MustAlias)", PrintMustRef, I, Pointer,
+                           F.getParent());
+        ++MustRefCount;
+        break;
+      case ModRefInfo::MustModRef:
+        PrintModRefResults("Both ModRef (MustAlias)", PrintMustModRef, I,
+                           Pointer, F.getParent());
+        ++MustModRefCount;
         break;
       }
     }
@@ -272,21 +295,40 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
       if (D == C)
         continue;
       switch (AA.getModRefInfo(*C, *D)) {
-      case MRI_NoModRef:
+      case ModRefInfo::NoModRef:
         PrintModRefResults("NoModRef", PrintNoModRef, *C, *D, F.getParent());
         ++NoModRefCount;
         break;
-      case MRI_Mod:
+      case ModRefInfo::Mod:
         PrintModRefResults("Just Mod", PrintMod, *C, *D, F.getParent());
         ++ModCount;
         break;
-      case MRI_Ref:
+      case ModRefInfo::Ref:
         PrintModRefResults("Just Ref", PrintRef, *C, *D, F.getParent());
         ++RefCount;
         break;
-      case MRI_ModRef:
+      case ModRefInfo::ModRef:
         PrintModRefResults("Both ModRef", PrintModRef, *C, *D, F.getParent());
         ++ModRefCount;
+        break;
+      case ModRefInfo::Must:
+        PrintModRefResults("Must", PrintMust, *C, *D, F.getParent());
+        ++MustCount;
+        break;
+      case ModRefInfo::MustMod:
+        PrintModRefResults("Just Mod (MustAlias)", PrintMustMod, *C, *D,
+                           F.getParent());
+        ++MustModCount;
+        break;
+      case ModRefInfo::MustRef:
+        PrintModRefResults("Just Ref (MustAlias)", PrintMustRef, *C, *D,
+                           F.getParent());
+        ++MustRefCount;
+        break;
+      case ModRefInfo::MustModRef:
+        PrintModRefResults("Both ModRef (MustAlias)", PrintMustModRef, *C, *D,
+                           F.getParent());
+        ++MustModRefCount;
         break;
       }
     }
@@ -325,7 +367,8 @@ AAEvaluator::~AAEvaluator() {
   }
 
   // Display the summary for mod/ref analysis
-  int64_t ModRefSum = NoModRefCount + ModCount + RefCount + ModRefCount;
+  int64_t ModRefSum = NoModRefCount + RefCount + ModCount + ModRefCount +
+                      MustCount + MustRefCount + MustModCount + MustModRefCount;
   if (ModRefSum == 0) {
     errs() << "  Alias Analysis Mod/Ref Evaluator Summary: no "
               "mod/ref!\n";
@@ -339,10 +382,22 @@ AAEvaluator::~AAEvaluator() {
     PrintPercent(RefCount, ModRefSum);
     errs() << "  " << ModRefCount << " mod & ref responses ";
     PrintPercent(ModRefCount, ModRefSum);
+    errs() << "  " << MustCount << " must responses ";
+    PrintPercent(MustCount, ModRefSum);
+    errs() << "  " << MustModCount << " must mod responses ";
+    PrintPercent(MustModCount, ModRefSum);
+    errs() << "  " << MustRefCount << " must ref responses ";
+    PrintPercent(MustRefCount, ModRefSum);
+    errs() << "  " << MustModRefCount << " must mod & ref responses ";
+    PrintPercent(MustModRefCount, ModRefSum);
     errs() << "  Alias Analysis Evaluator Mod/Ref Summary: "
            << NoModRefCount * 100 / ModRefSum << "%/"
            << ModCount * 100 / ModRefSum << "%/" << RefCount * 100 / ModRefSum
-           << "%/" << ModRefCount * 100 / ModRefSum << "%\n";
+           << "%/" << ModRefCount * 100 / ModRefSum << "%/"
+           << MustCount * 100 / ModRefSum << "%/"
+           << MustRefCount * 100 / ModRefSum << "%/"
+           << MustModCount * 100 / ModRefSum << "%/"
+           << MustModRefCount * 100 / ModRefSum << "%\n";
   }
 }
 

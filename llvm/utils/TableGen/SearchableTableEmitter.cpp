@@ -20,7 +20,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
-#include <sstream>
 #include <string>
 #include <vector>
 using namespace llvm;

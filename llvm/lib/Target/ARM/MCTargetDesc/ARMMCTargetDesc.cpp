@@ -16,6 +16,8 @@
 #include "ARMMCAsmInfo.h"
 #include "InstPrinter/ARMInstPrinter.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -131,16 +133,13 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 #include "ARMGenSubtargetInfo.inc"
 
 std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
-  bool isThumb =
-      TT.getArch() == Triple::thumb || TT.getArch() == Triple::thumbeb;
-
   std::string ARMArchFeature;
 
-  unsigned ArchID = ARM::parseArch(TT.getArchName());
-  if (ArchID != ARM::AK_INVALID &&  (CPU.empty() || CPU == "generic"))
+  ARM::ArchKind ArchID = ARM::parseArch(TT.getArchName());
+  if (ArchID != ARM::ArchKind::INVALID &&  (CPU.empty() || CPU == "generic"))
     ARMArchFeature = (ARMArchFeature + "+" + ARM::getArchName(ArchID)).str();
 
-  if (isThumb) {
+  if (TT.isThumb()) {
     if (ARMArchFeature.empty())
       ARMArchFeature = "+thumb-mode,+v4t";
     else
@@ -201,18 +200,22 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
 }
 
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
-                                     MCAsmBackend &MAB, raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createARMELFStreamer(Ctx, MAB, OS, Emitter, false,
-                              (T.getArch() == Triple::thumb ||
-                               T.getArch() == Triple::thumbeb));
+                                     std::unique_ptr<MCAsmBackend> &&MAB,
+                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                     bool RelaxAll) {
+  return createARMELFStreamer(
+      Ctx, std::move(MAB), OS, std::move(Emitter), false,
+      (T.getArch() == Triple::thumb || T.getArch() == Triple::thumbeb));
 }
 
-static MCStreamer *createARMMachOStreamer(MCContext &Ctx, MCAsmBackend &MAB,
-                                          raw_pwrite_stream &OS,
-                                          MCCodeEmitter *Emitter, bool RelaxAll,
-                                          bool DWARFMustBeAtTheEnd) {
-  return createMachOStreamer(Ctx, MAB, OS, Emitter, false, DWARFMustBeAtTheEnd);
+static MCStreamer *
+createARMMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&MAB,
+                       raw_pwrite_stream &OS,
+                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
+                       bool DWARFMustBeAtTheEnd) {
+  return createMachOStreamer(Ctx, std::move(MAB), OS, std::move(Emitter), false,
+                             DWARFMustBeAtTheEnd);
 }
 
 static MCInstPrinter *createARMMCInstPrinter(const Triple &T,

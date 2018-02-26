@@ -13,9 +13,11 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
@@ -377,45 +379,60 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
 
 unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                                  DWARFAttribute &AttrValue) {
-  const DWARFObject &DObj = DCtx.getDWARFObj();
   unsigned NumErrors = 0;
+  auto ReportError = [&](const Twine &TitleMsg) {
+    ++NumErrors;
+    error() << TitleMsg << '\n';
+    Die.dump(OS, 0, DumpOpts);
+    OS << "\n";
+  };
+
+  const DWARFObject &DObj = DCtx.getDWARFObj();
   const auto Attr = AttrValue.Attr;
   switch (Attr) {
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DObj.getRangeSection().Data.size()) {
-        ++NumErrors;
-        error() << "DW_AT_ranges offset is beyond .debug_ranges "
-                   "bounds:\n";
-        Die.dump(OS, 0, DumpOpts);
-        OS << "\n";
-      }
-    } else {
-      ++NumErrors;
-      error() << "DIE has invalid DW_AT_ranges encoding:\n";
-      Die.dump(OS, 0, DumpOpts);
-      OS << "\n";
+      if (*SectionOffset >= DObj.getRangeSection().Data.size())
+        ReportError("DW_AT_ranges offset is beyond .debug_ranges bounds:");
+      break;
     }
+    ReportError("DIE has invalid DW_AT_ranges encoding:");
     break;
   case DW_AT_stmt_list:
     // Make sure the offset in the DW_AT_stmt_list attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DObj.getLineSection().Data.size()) {
-        ++NumErrors;
-        error() << "DW_AT_stmt_list offset is beyond .debug_line "
-                   "bounds: "
-                << format("0x%08" PRIx64, *SectionOffset) << "\n";
-        Die.dump(OS, 0, DumpOpts);
-        OS << "\n";
-      }
-    } else {
-      ++NumErrors;
-      error() << "DIE has invalid DW_AT_stmt_list encoding:\n";
-      Die.dump(OS, 0, DumpOpts);
-      OS << "\n";
+      if (*SectionOffset >= DObj.getLineSection().Data.size())
+        ReportError("DW_AT_stmt_list offset is beyond .debug_line bounds: " +
+                    llvm::formatv("{0:x8}", *SectionOffset));
+      break;
+    }
+    ReportError("DIE has invalid DW_AT_stmt_list encoding:");
+    break;
+  case DW_AT_location: {
+    auto VerifyLocation = [&](StringRef D) {
+      DWARFUnit *U = Die.getDwarfUnit();
+      DataExtractor Data(D, DCtx.isLittleEndian(), 0);
+      DWARFExpression Expression(Data, U->getVersion(),
+                                 U->getAddressByteSize());
+      bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
+        return Op.isError();
+      });
+      if (Error)
+        ReportError("DIE contains invalid DWARF expression:");
+    };
+    if (Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock()) {
+      // Verify inlined location.
+      VerifyLocation(llvm::toStringRef(*Expr));
+    } else if (auto LocOffset = AttrValue.Value.getAsUnsignedConstant()) {
+      // Verify location list.
+      if (auto DebugLoc = DCtx.getDebugLoc())
+        if (auto LocList = DebugLoc->getLocationListAtOffset(*LocOffset))
+          for (const auto &Entry : LocList->Entries)
+            VerifyLocation({Entry.Loc.data(), Entry.Loc.size()});
     }
     break;
+  }
 
   default:
     break;
@@ -657,13 +674,13 @@ bool DWARFVerifier::handleDebugLine() {
   return NumDebugLineErrors == 0;
 }
 
-unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
-                                         DataExtractor *StrData,
-                                         const char *SectionName) {
+unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
+                                              DataExtractor *StrData,
+                                              const char *SectionName) {
   unsigned NumErrors = 0;
   DWARFDataExtractor AccelSectionData(DCtx.getDWARFObj(), *AccelSection,
                                       DCtx.isLittleEndian(), 0);
-  DWARFAcceleratorTable AccelTable(AccelSectionData, *StrData);
+  AppleAcceleratorTable AccelTable(AccelSectionData, *StrData);
 
   OS << "Verifying " << SectionName << "...\n";
 
@@ -674,8 +691,8 @@ unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
   }
 
   // Verify that the section is not too short.
-  if (!AccelTable.extract()) {
-    error() << "Section is smaller than size described in section header.\n";
+  if (Error E = AccelTable.extract()) {
+    error() << toString(std::move(E)) << '\n';
     return 1;
   }
 
@@ -767,16 +784,16 @@ bool DWARFVerifier::handleAccelTables() {
   unsigned NumErrors = 0;
   if (!D.getAppleNamesSection().Data.empty())
     NumErrors +=
-        verifyAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
+        verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
   if (!D.getAppleTypesSection().Data.empty())
     NumErrors +=
-        verifyAccelTable(&D.getAppleTypesSection(), &StrData, ".apple_types");
+        verifyAppleAccelTable(&D.getAppleTypesSection(), &StrData, ".apple_types");
   if (!D.getAppleNamespacesSection().Data.empty())
-    NumErrors += verifyAccelTable(&D.getAppleNamespacesSection(), &StrData,
+    NumErrors += verifyAppleAccelTable(&D.getAppleNamespacesSection(), &StrData,
                                   ".apple_namespaces");
   if (!D.getAppleObjCSection().Data.empty())
     NumErrors +=
-        verifyAccelTable(&D.getAppleObjCSection(), &StrData, ".apple_objc");
+        verifyAppleAccelTable(&D.getAppleObjCSection(), &StrData, ".apple_objc");
   return NumErrors == 0;
 }
 

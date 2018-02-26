@@ -1,4 +1,4 @@
-//===-- MachineSSAUpdater.h - Unstructured SSA Update Tool ------*- C++ -*-===//
+//===- MachineSSAUpdater.h - Unstructured SSA Update Tool -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,18 +14,17 @@
 #ifndef LLVM_CODEGEN_MACHINESSAUPDATER_H
 #define LLVM_CODEGEN_MACHINESSAUPDATER_H
 
-#include "llvm/Support/Compiler.h"
-
 namespace llvm {
-  class MachineBasicBlock;
-  class MachineFunction;
-  class MachineInstr;
-  class MachineOperand;
-  class MachineRegisterInfo;
-  class TargetInstrInfo;
-  class TargetRegisterClass;
-  template<typename T> class SmallVectorImpl;
-  template<typename T> class SSAUpdaterTraits;
+
+class MachineBasicBlock;
+class MachineFunction;
+class MachineInstr;
+class MachineOperand;
+class MachineRegisterInfo;
+class TargetInstrInfo;
+class TargetRegisterClass;
+template<typename T> class SmallVectorImpl;
+template<typename T> class SSAUpdaterTraits;
 
 /// MachineSSAUpdater - This class updates SSA form for a set of virtual
 /// registers defined in multiple blocks.  This is used when code duplication
@@ -38,7 +37,7 @@ private:
   /// AvailableVals - This keeps track of which value to use on a per-block
   /// basis.  When we insert PHI nodes, we keep track of them here.
   //typedef DenseMap<MachineBasicBlock*, unsigned > AvailableValsTy;
-  void *AV;
+  void *AV = nullptr;
 
   /// VR - Current virtual register whose uses are being updated.
   unsigned VR;
@@ -52,11 +51,14 @@ private:
 
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
+
 public:
   /// MachineSSAUpdater constructor.  If InsertedPHIs is specified, it will be
   /// filled in with all PHI Nodes created by rewriting.
   explicit MachineSSAUpdater(MachineFunction &MF,
                         SmallVectorImpl<MachineInstr*> *InsertedPHIs = nullptr);
+  MachineSSAUpdater(const MachineSSAUpdater &) = delete;
+  MachineSSAUpdater &operator=(const MachineSSAUpdater &) = delete;
   ~MachineSSAUpdater();
 
   /// Initialize - Reset this object to get ready for a new set of SSA
@@ -93,7 +95,6 @@ public:
   /// their respective blocks.  However, the use of X happens in the *middle* of
   /// a block.  Because of this, we need to insert a new PHI node in SomeBB to
   /// merge the appropriate values, and this value isn't live out of the block.
-  ///
   unsigned GetValueInMiddleOfBlock(MachineBasicBlock *BB);
 
   /// RewriteUse - Rewrite a use of the symbolic value.  This handles PHI nodes,
@@ -105,11 +106,8 @@ public:
 
 private:
   unsigned GetValueAtEndOfBlockInternal(MachineBasicBlock *BB);
-
-  void operator=(const MachineSSAUpdater&) = delete;
-  MachineSSAUpdater(const MachineSSAUpdater&) = delete;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINESSAUPDATER_H

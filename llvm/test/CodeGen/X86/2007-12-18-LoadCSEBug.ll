@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=generic | grep "(%esp)" | count 2
+; RUN: llc < %s -mtriple=i686-- -mcpu=generic | grep "(%esp)" | count 2
 ; PR1872
 
 	%struct.c34007g__designated___XUB = type { i32, i32, i32, i32 }

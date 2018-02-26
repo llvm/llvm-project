@@ -16,9 +16,9 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -54,11 +54,11 @@ static bool doesNotGeneratecode(const MachineInstr &MI) {
 }
 
 bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getFunction()->hasFnAttribute("patchable-function"))
+  if (!MF.getFunction().hasFnAttribute("patchable-function"))
     return false;
 
 #ifndef NDEBUG
-  Attribute PatchAttr = MF.getFunction()->getFnAttribute("patchable-function");
+  Attribute PatchAttr = MF.getFunction().getFnAttribute("patchable-function");
   StringRef PatchType = PatchAttr.getValueAsString();
   assert(PatchType == "prologue-short-redirect" && "Only possibility today!");
 #endif

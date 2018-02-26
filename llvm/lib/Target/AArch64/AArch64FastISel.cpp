@@ -1,4 +1,4 @@
-//===-- AArch6464FastISel.cpp - AArch64 FastISel implementation -----------===//
+//===- AArch6464FastISel.cpp - AArch64 FastISel implementation ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -53,6 +53,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -63,6 +64,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -78,10 +80,10 @@ namespace {
 class AArch64FastISel final : public FastISel {
   class Address {
   public:
-    typedef enum {
+    using BaseKind = enum {
       RegBase,
       FrameIndexBase
-    } BaseKind;
+    };
 
   private:
     BaseKind Kind = RegBase;
@@ -474,26 +476,27 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
     // ADRP + LDRX
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::ADRP),
             ADRPReg)
-      .addGlobalAddress(GV, 0, AArch64II::MO_GOT | AArch64II::MO_PAGE);
+        .addGlobalAddress(GV, 0, AArch64II::MO_PAGE | OpFlags);
 
     ResultReg = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::LDRXui),
             ResultReg)
-      .addReg(ADRPReg)
-      .addGlobalAddress(GV, 0, AArch64II::MO_GOT | AArch64II::MO_PAGEOFF |
-                        AArch64II::MO_NC);
+        .addReg(ADRPReg)
+        .addGlobalAddress(GV, 0,
+                          AArch64II::MO_PAGEOFF | AArch64II::MO_NC | OpFlags);
   } else {
     // ADRP + ADDX
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::ADRP),
             ADRPReg)
-      .addGlobalAddress(GV, 0, AArch64II::MO_PAGE);
+        .addGlobalAddress(GV, 0, AArch64II::MO_PAGE | OpFlags);
 
     ResultReg = createResultReg(&AArch64::GPR64spRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::ADDXri),
             ResultReg)
-      .addReg(ADRPReg)
-      .addGlobalAddress(GV, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
-      .addImm(0);
+        .addReg(ADRPReg)
+        .addGlobalAddress(GV, 0,
+                          AArch64II::MO_PAGEOFF | AArch64II::MO_NC | OpFlags)
+        .addImm(0);
   }
   return ResultReg;
 }
@@ -943,7 +946,6 @@ bool AArch64FastISel::computeCallAddress(const Value *V, Address &Addr) {
 
   return false;
 }
-
 
 bool AArch64FastISel::isTypeLegal(Type *Ty, MVT &VT) {
   EVT evt = TLI.getValueType(DL, Ty, true);
@@ -5134,11 +5136,12 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
     return selectAtomicCmpXchg(cast<AtomicCmpXchgInst>(I));
   }
 
-  // fall-back to target-independent instruction selection.
-  return selectOperator(I, I->getOpcode());
   // Silence warnings.
   (void)&CC_AArch64_DarwinPCS_VarArg;
   (void)&CC_AArch64_Win64_VarArg;
+
+  // fall-back to target-independent instruction selection.
+  return selectOperator(I, I->getOpcode());
 }
 
 namespace llvm {

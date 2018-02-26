@@ -15,7 +15,7 @@ regBankSelected: true
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    %0 = COPY %w0
+# CHECK:    %0:gpr32 = COPY %w0
 # CHECK:    CBZW %0, %bb.1
 # CHECK:    B %bb.0
 body:             |
@@ -41,7 +41,7 @@ regBankSelected: true
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    %0 = COPY %x0
+# CHECK:    %0:gpr64 = COPY %x0
 # CHECK:    CBZX %0, %bb.1
 # CHECK:    B %bb.0
 body:             |
@@ -67,7 +67,7 @@ regBankSelected: true
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    %0 = COPY %w0
+# CHECK:    %0:gpr32 = COPY %w0
 # CHECK:    CBNZW %0, %bb.1
 # CHECK:    B %bb.0
 body:             |
@@ -93,7 +93,7 @@ regBankSelected: true
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    %0 = COPY %x0
+# CHECK:    %0:gpr64 = COPY %x0
 # CHECK:    CBNZX %0, %bb.1
 # CHECK:    B %bb.0
 body:             |

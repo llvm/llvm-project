@@ -20,16 +20,6 @@ void LLVMOrcDisposeSharedModuleRef(LLVMSharedModuleRef SharedMod) {
   delete unwrap(SharedMod);
 }
 
-LLVMSharedObjectBufferRef
-LLVMOrcMakeSharedObjectBuffer(LLVMMemoryBufferRef ObjBuffer) {
-  return wrap(new std::shared_ptr<MemoryBuffer>(unwrap(ObjBuffer)));
-}
-
-void
-LLVMOrcDisposeSharedObjectBufferRef(LLVMSharedObjectBufferRef SharedObjBuffer) {
-  delete unwrap(SharedObjBuffer);
-}
-
 LLVMOrcJITStackRef LLVMOrcCreateInstance(LLVMTargetMachineRef TM) {
   TargetMachine *TM2(unwrap(TM));
 
@@ -103,6 +93,18 @@ LLVMOrcAddLazilyCompiledIR(LLVMOrcJITStackRef JITStack,
   OrcCBindingsStack &J = *unwrap(JITStack);
   std::shared_ptr<Module> *M(unwrap(Mod));
   return J.addIRModuleLazy(*RetHandle, *M, SymbolResolver, SymbolResolverCtx);
+}
+
+LLVMOrcErrorCode
+LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack,
+                     LLVMOrcModuleHandle *RetHandle,
+                     LLVMMemoryBufferRef Obj,
+                     LLVMOrcSymbolResolverFn SymbolResolver,
+                     void *SymbolResolverCtx) {
+  OrcCBindingsStack &J = *unwrap(JITStack);
+  std::unique_ptr<MemoryBuffer> O(unwrap(Obj));
+  return J.addObject(*RetHandle, std::move(O), SymbolResolver,
+                     SymbolResolverCtx);
 }
 
 LLVMOrcErrorCode LLVMOrcRemoveModule(LLVMOrcJITStackRef JITStack,

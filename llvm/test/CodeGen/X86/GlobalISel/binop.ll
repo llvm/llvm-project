@@ -6,7 +6,7 @@
 
 define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
 ; ALL-LABEL: test_sub_i64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    subq %rsi, %rdi
 ; ALL-NEXT:    movq %rdi, %rax
 ; ALL-NEXT:    retq
@@ -16,7 +16,7 @@ define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
 
 define i32 @test_sub_i32(i32 %arg1, i32 %arg2) {
 ; ALL-LABEL: test_sub_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    subl %esi, %edi
 ; ALL-NEXT:    movl %edi, %eax
 ; ALL-NEXT:    retq
@@ -26,12 +26,12 @@ define i32 @test_sub_i32(i32 %arg1, i32 %arg2) {
 
 define float @test_add_float(float %arg1, float %arg2) {
 ; SSE-LABEL: test_add_float:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_add_float:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = fadd float %arg1, %arg2
@@ -40,12 +40,12 @@ define float @test_add_float(float %arg1, float %arg2) {
 
 define double @test_add_double(double %arg1, double %arg2) {
 ; SSE-LABEL: test_add_double:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_add_double:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = fadd double %arg1, %arg2
@@ -54,12 +54,12 @@ define double @test_add_double(double %arg1, double %arg2) {
 
 define float @test_sub_float(float %arg1, float %arg2) {
 ; SSE-LABEL: test_sub_float:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_sub_float:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = fsub float %arg1, %arg2
@@ -68,12 +68,12 @@ define float @test_sub_float(float %arg1, float %arg2) {
 
 define double @test_sub_double(double %arg1, double %arg2) {
 ; SSE-LABEL: test_sub_double:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_sub_double:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = fsub double %arg1, %arg2
@@ -82,12 +82,12 @@ define double @test_sub_double(double %arg1, double %arg2) {
 
 define <4 x i32>  @test_add_v4i32(<4 x i32> %arg1, <4 x i32>  %arg2) {
 ; SSE-LABEL: test_add_v4i32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_add_v4i32:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = add <4 x i32>  %arg1, %arg2
@@ -96,12 +96,12 @@ define <4 x i32>  @test_add_v4i32(<4 x i32> %arg1, <4 x i32>  %arg2) {
 
 define <4 x i32>  @test_sub_v4i32(<4 x i32> %arg1, <4 x i32>  %arg2) {
 ; SSE-LABEL: test_sub_v4i32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_sub_v4i32:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = sub <4 x i32>  %arg1, %arg2
@@ -110,12 +110,12 @@ define <4 x i32>  @test_sub_v4i32(<4 x i32> %arg1, <4 x i32>  %arg2) {
 
 define <4 x float>  @test_add_v4f32(<4 x float> %arg1, <4 x float>  %arg2) {
 ; SSE-LABEL: test_add_v4f32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_add_v4f32:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = fadd <4 x float>  %arg1, %arg2
@@ -124,12 +124,12 @@ define <4 x float>  @test_add_v4f32(<4 x float> %arg1, <4 x float>  %arg2) {
 
 define <4 x float>  @test_sub_v4f32(<4 x float> %arg1, <4 x float>  %arg2) {
 ; SSE-LABEL: test_sub_v4f32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_sub_v4f32:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0
 ; ALL_AVX-NEXT:    retq
   %ret = fsub <4 x float>  %arg1, %arg2
@@ -138,12 +138,12 @@ define <4 x float>  @test_sub_v4f32(<4 x float> %arg1, <4 x float>  %arg2) {
 
 define i32  @test_copy_float(float %val) {
 ; SSE-LABEL: test_copy_float:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_copy_float:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vmovd %xmm0, %eax
 ; ALL_AVX-NEXT:    retq
   %r = bitcast float %val to i32
@@ -152,12 +152,12 @@ define i32  @test_copy_float(float %val) {
 
 define float  @test_copy_i32(i32 %val) {
 ; SSE-LABEL: test_copy_i32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %edi, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_copy_i32:
-; ALL_AVX:       # BB#0:
+; ALL_AVX:       # %bb.0:
 ; ALL_AVX-NEXT:    vmovd %edi, %xmm0
 ; ALL_AVX-NEXT:    retq
   %r = bitcast i32 %val to float

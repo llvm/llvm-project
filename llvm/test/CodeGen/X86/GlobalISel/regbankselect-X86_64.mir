@@ -35,7 +35,7 @@
     %ret = fadd double %arg1, %arg2
     ret double %ret
   }
-  
+
   define void @test_fsub_float() {
     %ret1 = fsub float undef, undef
     %ret2 = fsub double undef, undef
@@ -53,7 +53,7 @@
     %ret2 = fdiv double undef, undef
     ret void
   }
-  
+
 
   define <4 x i32> @test_add_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
     %ret = add <4 x i32> %arg1, %arg2
@@ -180,7 +180,7 @@
   entry:
     ret i32* @g_int
   }
-  
+
   define i8 @test_undef() {
     ret i8 undef
   }
@@ -198,7 +198,7 @@
     %r = fadd float %a, undef
     ret float %r
   }
-  
+
   define i32 @test_i32(i32 %a, i32 %f, i32 %t) {
   entry:
     %cmp = icmp sgt i32 %a, 0
@@ -237,6 +237,10 @@
     ret double %conv
   }
 
+  define void @test_fconstant() {
+    ret void
+  }
+
 ...
 ---
 name:            test_add_i8
@@ -258,8 +262,8 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
 
-    %0(s8) = COPY %edi
-    %1(s8) = COPY %esi
+    %0(s8) = COPY %dil
+    %1(s8) = COPY %sil
     %2(s8) = G_ADD %0, %1
     %al = COPY %2(s8)
     RET 0, implicit %al
@@ -285,8 +289,8 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
 
-    %0(s16) = COPY %edi
-    %1(s16) = COPY %esi
+    %0(s16) = COPY %di
+    %1(s16) = COPY %si
     %2(s16) = G_ADD %0, %1
     %ax = COPY %2(s16)
     RET 0, implicit %ax
@@ -371,10 +375,10 @@ registers:
   - { id: 4, class: _ }
   - { id: 5, class: _ }
   - { id: 6, class: _ }
-  - { id: 7, class: _ }  
+  - { id: 7, class: _ }
 body:             |
   bb.1 (%ir-block.0):
-    
+
     %0(s64) = IMPLICIT_DEF
     %1(s32) = IMPLICIT_DEF
     %2(s16) = IMPLICIT_DEF
@@ -827,9 +831,9 @@ body:             |
 
     %0(s32) = COPY %xmm0
     %1(p0) = COPY %rdi
-    ; CHECK:      %1(p0) = COPY %rdi
+    ; CHECK:      %1:gpr(p0) = COPY %rdi
 
-    ; FAST-NEXT:  %2(s32) = COPY %0(s32)
+    ; FAST-NEXT:  %2:gpr(s32) = COPY %0(s32)
     ; FAST-NEXT:  G_STORE %2(s32), %1(p0) :: (store 4 into %ir.p1)
 
     ; GREEDY-NEXT:  G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
@@ -865,9 +869,9 @@ body:             |
     %0(s64) = COPY %xmm0
     %1(p0) = COPY %rdi
 
-    ; CHECK:       %1(p0) = COPY %rdi
+    ; CHECK:       %1:gpr(p0) = COPY %rdi
 
-    ; FAST-NEXT:   %2(s64) = COPY %0(s64)
+    ; FAST-NEXT:   %2:gpr(s64) = COPY %0(s64)
     ; FAST-NEXT:   G_STORE %2(s64), %1(p0) :: (store 8 into %ir.p1)
 
     ; GREEDY-NEXT: G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
@@ -969,8 +973,8 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
 
-    %0(s8) = COPY %edi
-    %1(s8) = COPY %esi
+    %0(s8) = COPY %dil
+    %1(s8) = COPY %sil
     %2(s1) = G_ICMP intpred(eq), %0(s8), %1
     %al = COPY %2(s1)
     RET 0, implicit %al
@@ -994,8 +998,8 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
 
-    %0(s16) = COPY %edi
-    %1(s16) = COPY %esi
+    %0(s16) = COPY %di
+    %1(s16) = COPY %si
     %2(s1) = G_ICMP intpred(eq), %0(s16), %1
     %al = COPY %2(s1)
     RET 0, implicit %al
@@ -1157,7 +1161,7 @@ regBankSelected: false
 # CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _, preferred-register: '' }
-# CHECK:           %0(p0) = G_GLOBAL_VALUE @g_int
+# CHECK:           %0:gpr(p0) = G_GLOBAL_VALUE @g_int
 # CHECK-NEXT:      %rax = COPY %0(p0)
 # CHECK-NEXT:      RET 0, implicit %rax
 body:             |
@@ -1181,7 +1185,7 @@ liveins:
 fixedStack:
 stack:
 constants:
-# CHECK:           %0(s8) = G_IMPLICIT_DEF
+# CHECK:           %0:gpr(s8) = G_IMPLICIT_DEF
 # CHECK-NEXT:      %al = COPY %0(s8)
 # CHECK-NEXT:      RET 0, implicit %al
 body:             |
@@ -1209,16 +1213,16 @@ liveins:
 fixedStack:
 stack:
 constants:
-# CHECK:           %0(s8) = COPY %edi
-# CHECK-NEXT:      %1(s8) = G_IMPLICIT_DEF
-# CHECK-NEXT:      %2(s8) = G_ADD %0, %1
+# CHECK:           %0:gpr(s8) = COPY %dil
+# CHECK-NEXT:      %1:gpr(s8) = G_IMPLICIT_DEF
+# CHECK-NEXT:      %2:gpr(s8) = G_ADD %0, %1
 # CHECK-NEXT:      %al = COPY %2(s8)
 # CHECK-NEXT:      RET 0, implicit %al
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s8) = G_IMPLICIT_DEF
     %2(s8) = G_ADD %0, %1
     %al = COPY %2(s8)
@@ -1239,7 +1243,7 @@ liveins:
 fixedStack:
 stack:
 constants:
-# CHECK:           %0(s32) = G_IMPLICIT_DEF
+# CHECK:           %0:gpr(s32) = G_IMPLICIT_DEF
 # CHECK-NEXT:      %xmm0 = COPY %0(s32)
 # CHECK-NEXT:      RET 0, implicit %xmm0
 body:             |
@@ -1268,10 +1272,10 @@ liveins:
 fixedStack:
 stack:
 constants:
-# CHECK:           %0(s32) = COPY %xmm0
-# CHECK-NEXT:      %1(s32) = G_IMPLICIT_DEF
-# CHECK-NEXT:      %3(s32) = COPY %1(s32)
-# CHECK-NEXT:      %2(s32) = G_FADD %0, %3
+# CHECK:           %0:vecr(s32) = COPY %xmm0
+# CHECK-NEXT:      %1:gpr(s32) = G_IMPLICIT_DEF
+# CHECK-NEXT:      %3:vecr(s32) = COPY %1(s32)
+# CHECK-NEXT:      %2:vecr(s32) = G_FADD %0, %3
 # CHECK-NEXT:      %xmm0 = COPY %2(s32)
 # CHECK-NEXT:      RET 0, implicit %xmm0
 body:             |
@@ -1307,12 +1311,12 @@ registers:
   - { id: 4, class: _, preferred-register: '' }
   - { id: 5, class: _, preferred-register: '' }
 # CHECK:       bb.3.cond.end:
-# CHECK-NEXT:      %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+# CHECK-NEXT:      %5:gpr(s32) = G_PHI %1(s32), %bb.1, %2(s32), %bb.2
 # CHECK-NEXT:      %eax = COPY %5(s32)
 # CHECK-NEXT:      RET 0, implicit %eax
 body:             |
   bb.0.entry:
-    successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: %edi, %edx, %esi
 
     %0(s32) = COPY %edi
@@ -1320,19 +1324,19 @@ body:             |
     %2(s32) = COPY %edx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
-    G_BRCOND %4(s1), %bb.1.cond.true
-    G_BR %bb.2.cond.false
+    G_BRCOND %4(s1), %bb.1
+    G_BR %bb.2
 
   bb.1.cond.true:
-    successors: %bb.3.cond.end(0x80000000)
+    successors: %bb.3(0x80000000)
 
-    G_BR %bb.3.cond.end
+    G_BR %bb.3
 
   bb.2.cond.false:
-    successors: %bb.3.cond.end(0x80000000)
+    successors: %bb.3(0x80000000)
 
   bb.3.cond.end:
-    %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+    %5(s32) = G_PHI %1(s32), %bb.1, %2(s32), %bb.2
     %eax = COPY %5(s32)
     RET 0, implicit %eax
 
@@ -1359,12 +1363,12 @@ registers:
   - { id: 4, class: _, preferred-register: '' }
   - { id: 5, class: _, preferred-register: '' }
 # CHECK:         bb.3.cond.end:
-# CHECK-NEXT:      %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+# CHECK-NEXT:      %5:vecr(s32) = G_PHI %1(s32), %bb.1, %2(s32), %bb.2
 # CHECK-NEXT:      %xmm0 = COPY %5(s32)
 # CHECK-NEXT:      RET 0, implicit %xmm0
 body:             |
   bb.0.entry:
-    successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: %edi, %xmm0, %xmm1
 
     %0(s32) = COPY %edi
@@ -1372,19 +1376,19 @@ body:             |
     %2(s32) = COPY %xmm1
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
-    G_BRCOND %4(s1), %bb.1.cond.true
-    G_BR %bb.2.cond.false
+    G_BRCOND %4(s1), %bb.1
+    G_BR %bb.2
 
   bb.1.cond.true:
-    successors: %bb.3.cond.end(0x80000000)
+    successors: %bb.3(0x80000000)
 
-    G_BR %bb.3.cond.end
+    G_BR %bb.3
 
   bb.2.cond.false:
-    successors: %bb.3.cond.end(0x80000000)
+    successors: %bb.3(0x80000000)
 
   bb.3.cond.end:
-    %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+    %5(s32) = G_PHI %1(s32), %bb.1, %2(s32), %bb.2
     %xmm0 = COPY %5(s32)
     RET 0, implicit %xmm0
 
@@ -1411,4 +1415,18 @@ body:             |
     RET 0, implicit %xmm0
 
 ...
-
+---
+name:            test_fconstant
+# ALL-LABEL: name:            test_fconstant
+legalized:       true
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body: |
+  bb.0:
+    %0(s32) = G_FCONSTANT float 1.0
+    %1(s64) = G_FCONSTANT double 2.0
+...

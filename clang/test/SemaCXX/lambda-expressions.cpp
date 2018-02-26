@@ -583,3 +583,43 @@ namespace PR25627_dont_odr_use_local_consts {
     (void) [] { X<N> x; };
   }
 }
+
+namespace ConversionOperatorDoesNotHaveDeducedReturnType {
+  auto x = [](int){};
+  auto y = [](auto) -> void {};
+  using T = decltype(x);
+  using U = decltype(y);
+  using ExpectedTypeT = void (*)(int);
+  template<typename T>
+    using ExpectedTypeU = void (*)(T);
+
+  struct X {
+    friend T::operator ExpectedTypeT() const;
+
+    // Formally, this is invalid, because the return type of the conversion
+    // function for a generic lambda expression is an unspecified decltype
+    // type, which this should not match. However, this declaration is
+    // functionally equivalent to that one, so we're permitted to choose to
+    // accept this.
+    template<typename T>
+      friend U::operator ExpectedTypeU<T>() const;
+  };
+
+  // This used to crash in return type deduction for the conversion opreator.
+  struct A { int n; void f() { +[](decltype(n)) {}; } };
+}
+
+namespace TypoCorrection {
+template <typename T> struct X {};
+// expected-note@-1 {{template parameter is declared here}}
+
+template <typename T>
+void Run(const int& points) {
+// expected-note@-1 {{'points' declared here}}
+  auto outer_lambda = []() {
+    auto inner_lambda = [](const X<Points>&) {};
+    // expected-error@-1 {{use of undeclared identifier 'Points'; did you mean 'points'?}}
+    // expected-error@-2 {{template argument for template type parameter must be a type}}
+  };
+}
+}

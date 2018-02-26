@@ -13,17 +13,122 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64LegalizerInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Target/TargetOpcodes.h"
 
 using namespace llvm;
 
-AArch64LegalizerInfo::AArch64LegalizerInfo() {
+/// FIXME: The following static functions are SizeChangeStrategy functions
+/// that are meant to temporarily mimic the behaviour of the old legalization
+/// based on doubling/halving non-legal types as closely as possible. This is
+/// not entirly possible as only legalizing the types that are exactly a power
+/// of 2 times the size of the legal types would require specifying all those
+/// sizes explicitly.
+/// In practice, not specifying those isn't a problem, and the below functions
+/// should disappear quickly as we add support for legalizing non-power-of-2
+/// sized types further.
+static void
+addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
+                                const LegalizerInfo::SizeAndActionsVec &v) {
+  for (unsigned i = 0; i < v.size(); ++i) {
+    result.push_back(v[i]);
+    if (i + 1 < v[i].first && i + 1 < v.size() &&
+        v[i + 1].first != v[i].first + 1)
+      result.push_back({v[i].first + 1, LegalizerInfo::Unsupported});
+  }
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1_narrow_128_ToLargest(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 2);
+  LegalizerInfo::SizeAndActionsVec result = {{1, LegalizerInfo::WidenScalar},
+                                             {2, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  assert(Largest + 1 < 128);
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  result.push_back({128, LegalizerInfo::NarrowScalar});
+  result.push_back({129, LegalizerInfo::Unsupported});
+  return result;
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_16(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 17);
+  LegalizerInfo::SizeAndActionsVec result = {{1, LegalizerInfo::Unsupported},
+                                             {16, LegalizerInfo::WidenScalar},
+                                             {17, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1_8(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 9);
+  LegalizerInfo::SizeAndActionsVec result = {
+      {1, LegalizerInfo::WidenScalar},  {2, LegalizerInfo::Unsupported},
+      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 17);
+  LegalizerInfo::SizeAndActionsVec result = {
+      {1, LegalizerInfo::WidenScalar},  {2, LegalizerInfo::Unsupported},
+      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
+      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1_8_16_narrowToLargest(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 17);
+  LegalizerInfo::SizeAndActionsVec result = {
+      {1, LegalizerInfo::WidenScalar},  {2, LegalizerInfo::Unsupported},
+      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
+      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::NarrowScalar});
+  return result;
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1_8_16_32(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 33);
+  LegalizerInfo::SizeAndActionsVec result = {
+      {1, LegalizerInfo::WidenScalar},  {2, LegalizerInfo::Unsupported},
+      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
+      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported},
+      {32, LegalizerInfo::WidenScalar}, {33, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
+
+AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   using namespace TargetOpcode;
   const LLT p0 = LLT::pointer(0, 64);
   const LLT s1 = LLT::scalar(1);
@@ -31,6 +136,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
   const LLT v2s32 = LLT::vector(2, 32);
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
@@ -38,11 +144,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   for (auto Ty : {p0, s1, s8, s16, s32, s64})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
 
-  for (auto Ty : {s16, s32, s64})
+  for (auto Ty : {s16, s32, s64, p0})
     setAction({G_PHI, Ty}, Legal);
 
-  for (auto Ty : {s1, s8})
-    setAction({G_PHI, Ty}, WidenScalar);
+  setLegalizeScalarToDifferentSizeStrategy(G_PHI, 0, widen_1_8);
+
+  for (auto Ty : { s32, s64 })
+    setAction({G_BSWAP, Ty}, Legal);
 
   for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL}) {
     // These operations naturally get the right answer when used on
@@ -50,15 +158,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : {s32, s64, v2s32, v4s32, v2s64})
       setAction({BinOp, Ty}, Legal);
 
-    for (auto Ty : {s1, s8, s16})
-      setAction({BinOp, Ty}, WidenScalar);
+    if (BinOp != G_ADD)
+      setLegalizeScalarToDifferentSizeStrategy(BinOp, 0,
+                                               widen_1_8_16_narrowToLargest);
   }
 
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s64}, Legal);
 
-  for (auto Ty : {s1, s8, s16, s32})
-    setAction({G_GEP, 1, Ty}, WidenScalar);
+  setLegalizeScalarToDifferentSizeStrategy(G_GEP, 1, widen_1_8_16_32);
 
   setAction({G_PTR_MASK, p0}, Legal);
 
@@ -66,16 +174,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 
-    for (auto Ty : {s1, s8, s16})
-      setAction({BinOp, Ty}, WidenScalar);
+    setLegalizeScalarToDifferentSizeStrategy(BinOp, 0, widen_1_8_16);
   }
 
   for (unsigned BinOp : {G_SREM, G_UREM})
     for (auto Ty : { s1, s8, s16, s32, s64 })
       setAction({BinOp, Ty}, Lower);
 
-  for (unsigned Op : {G_SMULO, G_UMULO})
-      setAction({Op, s64}, Lower);
+  for (unsigned Op : {G_SMULO, G_UMULO}) {
+    setAction({Op, 0, s64}, Lower);
+    setAction({Op, 1, s1}, Legal);
+  }
 
   for (unsigned Op : {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULH, G_UMULH}) {
     for (auto Ty : { s32, s64 })
@@ -97,8 +206,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_INSERT, Ty}, Legal);
     setAction({G_INSERT, 1, Ty}, Legal);
   }
+  setLegalizeScalarToDifferentSizeStrategy(G_INSERT, 0,
+                                           widen_1_8_16_narrowToLargest);
   for (auto Ty : {s1, s8, s16}) {
-    setAction({G_INSERT, Ty}, WidenScalar);
     setAction({G_INSERT, 1, Ty}, Legal);
     // FIXME: Can't widen the sources because that violates the constraints on
     // G_INSERT (It seems entirely reasonable that inputs shouldn't overlap).
@@ -114,7 +224,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : {s8, s16, s32, s64, p0, v2s32})
       setAction({MemOp, Ty}, Legal);
 
-    setAction({MemOp, s1}, WidenScalar);
+    setLegalizeScalarToDifferentSizeStrategy(MemOp, 0,
+                                             widen_1_narrow_128_ToLargest);
 
     // And everything's fine in addrspace 0.
     setAction({MemOp, 1, p0}, Legal);
@@ -128,20 +239,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
 
   setAction({G_CONSTANT, p0}, Legal);
 
-  for (auto Ty : {s1, s8, s16})
-    setAction({TargetOpcode::G_CONSTANT, Ty}, WidenScalar);
-
-  setAction({TargetOpcode::G_FCONSTANT, s16}, WidenScalar);
+  setLegalizeScalarToDifferentSizeStrategy(G_CONSTANT, 0, widen_1_8_16);
+  setLegalizeScalarToDifferentSizeStrategy(G_FCONSTANT, 0, widen_16);
 
   setAction({G_ICMP, 1, s32}, Legal);
   setAction({G_ICMP, 1, s64}, Legal);
   setAction({G_ICMP, 1, p0}, Legal);
 
-  for (auto Ty : {s1, s8, s16}) {
-    setAction({G_ICMP, Ty}, WidenScalar);
-    setAction({G_FCMP, Ty}, WidenScalar);
-    setAction({G_ICMP, 1, Ty}, WidenScalar);
-  }
+  setLegalizeScalarToDifferentSizeStrategy(G_ICMP, 0, widen_1_8_16);
+  setLegalizeScalarToDifferentSizeStrategy(G_FCMP, 0, widen_1_8_16);
+  setLegalizeScalarToDifferentSizeStrategy(G_ICMP, 1, widen_1_8_16);
 
   setAction({G_ICMP, s32}, Legal);
   setAction({G_FCMP, s32}, Legal);
@@ -155,12 +262,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_ANYEXT, Ty}, Legal);
   }
 
-  for (auto Ty : { s1, s8, s16, s32 }) {
-    setAction({G_ZEXT, 1, Ty}, Legal);
-    setAction({G_SEXT, 1, Ty}, Legal);
-    setAction({G_ANYEXT, 1, Ty}, Legal);
-  }
-
   // FP conversions
   for (auto Ty : { s16, s32 }) {
     setAction({G_FPTRUNC, Ty}, Legal);
@@ -172,12 +273,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_FPEXT, Ty}, Legal);
   }
 
-  for (auto Ty : { s1, s8, s16, s32 })
-    setAction({G_TRUNC, Ty}, Legal);
-
-  for (auto Ty : { s8, s16, s32, s64 })
-    setAction({G_TRUNC, 1, Ty}, Legal);
-
   // Conversions
   for (auto Ty : { s32, s64 }) {
     setAction({G_FPTOSI, 0, Ty}, Legal);
@@ -185,12 +280,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_SITOFP, 1, Ty}, Legal);
     setAction({G_UITOFP, 1, Ty}, Legal);
   }
-  for (auto Ty : { s1, s8, s16 }) {
-    setAction({G_FPTOSI, 0, Ty}, WidenScalar);
-    setAction({G_FPTOUI, 0, Ty}, WidenScalar);
-    setAction({G_SITOFP, 1, Ty}, WidenScalar);
-    setAction({G_UITOFP, 1, Ty}, WidenScalar);
-  }
+  setLegalizeScalarToDifferentSizeStrategy(G_FPTOSI, 0, widen_1_8_16);
+  setLegalizeScalarToDifferentSizeStrategy(G_FPTOUI, 0, widen_1_8_16);
+  setLegalizeScalarToDifferentSizeStrategy(G_SITOFP, 1, widen_1_8_16);
+  setLegalizeScalarToDifferentSizeStrategy(G_UITOFP, 1, widen_1_8_16);
 
   for (auto Ty : { s32, s64 }) {
     setAction({G_FPTOSI, 1, Ty}, Legal);
@@ -205,8 +298,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   setAction({G_BRINDIRECT, p0}, Legal);
 
   // Select
-  for (auto Ty : {s1, s8, s16})
-    setAction({G_SELECT, Ty}, WidenScalar);
+  setLegalizeScalarToDifferentSizeStrategy(G_SELECT, 0, widen_1_8_16);
 
   for (auto Ty : {s32, s64, p0})
     setAction({G_SELECT, Ty}, Legal);
@@ -226,7 +318,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   setAction({G_INTTOPTR, 1, s64}, Legal);
 
   // Casts for 32 and 64-bit width type are just copies.
-  for (auto Ty : {s1, s8, s16, s32, s64}) {
+  // Same for 128-bit width type, except they are on the FPR bank.
+  for (auto Ty : {s1, s8, s16, s32, s64, s128}) {
     setAction({G_BITCAST, 0, Ty}, Legal);
     setAction({G_BITCAST, 1, Ty}, Legal);
   }
@@ -256,6 +349,41 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
 
   for (auto Ty : {s8, s16, s32, s64, p0})
     setAction({G_VAARG, Ty}, Custom);
+
+  if (ST.hasLSE()) {
+    for (auto Ty : {s8, s16, s32, s64}) {
+      setAction({G_ATOMIC_CMPXCHG_WITH_SUCCESS, Ty}, Lower);
+      setAction({G_ATOMIC_CMPXCHG, Ty}, Legal);
+    }
+    setAction({G_ATOMIC_CMPXCHG, 1, p0}, Legal);
+
+    for (unsigned Op :
+         {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+          G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
+          G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX}) {
+      for (auto Ty : {s8, s16, s32, s64}) {
+        setAction({Op, Ty}, Legal);
+      }
+      setAction({Op, 1, p0}, Legal);
+    }
+  }
+
+  // Merge/Unmerge
+  for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES})
+    for (int Sz : {8, 16, 32, 64, 128, 192, 256, 384, 512}) {
+      LLT ScalarTy = LLT::scalar(Sz);
+      setAction({Op, ScalarTy}, Legal);
+      setAction({Op, 1, ScalarTy}, Legal);
+      if (Sz < 32)
+        continue;
+      for (int EltSize = 8; EltSize <= 64; EltSize *= 2) {
+        if (EltSize >= Sz)
+          continue;
+        LLT VecTy = LLT::vector(Sz / EltSize, EltSize);
+        setAction({Op, VecTy}, Legal);
+        setAction({Op, 1, VecTy}, Legal);
+      }
+    }
 
   computeTables();
 }

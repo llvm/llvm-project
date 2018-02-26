@@ -1,6 +1,6 @@
 ;; LowerFP_TO_SINT should not create a stack object if it's not needed.
 
-; RUN: llc < %s -march=x86 -mattr=+sse2 | not grep add
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 | not grep add
 
 define i32 @main(i32 %argc, i8** %argv) {
 cond_false.i.i.i:               ; preds = %bb.i5

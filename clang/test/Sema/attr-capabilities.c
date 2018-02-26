@@ -11,8 +11,8 @@ typedef union { int a; char* b; } __attribute__((capability("mutex"))) MutexUnio
 // Test an invalid capability name
 struct __attribute__((capability("wrong"))) IncorrectName {}; // expected-warning {{invalid capability name 'wrong'; capability name must be 'mutex' or 'role'}}
 
-int Test1 __attribute__((capability("test1")));  // expected-error {{'capability' attribute only applies to structs, unions, and typedefs}}
-int Test2 __attribute__((shared_capability("test2"))); // expected-error {{'shared_capability' attribute only applies to structs, unions, and typedefs}}
+int Test1 __attribute__((capability("test1")));  // expected-error {{'capability' attribute only applies to structs, unions, classes, and typedefs}}
+int Test2 __attribute__((shared_capability("test2"))); // expected-error {{'shared_capability' attribute only applies to structs, unions, classes, and typedefs}}
 int Test3 __attribute__((acquire_capability("test3")));  // expected-warning {{'acquire_capability' attribute only applies to functions}}
 int Test4 __attribute__((try_acquire_capability("test4"))); // expected-error {{'try_acquire_capability' attribute only applies to functions}}
 int Test5 __attribute__((release_capability("test5"))); // expected-warning {{'release_capability' attribute only applies to functions}}
@@ -36,9 +36,6 @@ void Func6(void) __attribute__((requires_shared_capability(BadCapability))) {}  
 
 void Func7(void) __attribute__((assert_capability(GUI))) {}
 void Func8(void) __attribute__((assert_shared_capability(GUI))) {}
-
-void Func9(void) __attribute__((assert_capability())) {} // expected-error {{'assert_capability' attribute takes one argument}}
-void Func10(void) __attribute__((assert_shared_capability())) {} // expected-error {{'assert_shared_capability' attribute takes one argument}}
 
 void Func11(void) __attribute__((acquire_capability(GUI))) {}
 void Func12(void) __attribute__((acquire_shared_capability(GUI))) {}

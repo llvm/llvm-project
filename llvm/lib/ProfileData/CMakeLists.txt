@@ -1,4 +1,5 @@
 add_llvm_library(LLVMProfileData
+  GCOV.cpp
   InstrProf.cpp
   InstrProfReader.cpp
   InstrProfWriter.cpp

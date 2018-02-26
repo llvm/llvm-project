@@ -14,22 +14,30 @@
 
 #include "Hexagon.h"
 #include "HexagonAsmPrinter.h"
-#include "HexagonMachineFunctionInfo.h"
+#include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 using namespace llvm;
 
 namespace llvm {
-  void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
-                        MCInst &MCB, HexagonAsmPrinter &AP);
-}
+
+void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
+                      MCInst &MCB, HexagonAsmPrinter &AP);
+
+} // end namespace llvm
 
 static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
                               HexagonAsmPrinter &Printer, bool MustExtend) {

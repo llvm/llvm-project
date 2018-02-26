@@ -37,7 +37,7 @@ static unsigned getMaxWaves(unsigned SGPRs, unsigned VGPRs,
                                       ST.getOccupancyWithNumVGPRs(VGPRs));
   return std::min(MinRegOccupancy,
                   ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
-                                                  *MF.getFunction()));
+                                                  MF.getFunction()));
 }
 
 void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
@@ -315,7 +315,7 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(MachineSchedContext *C,
   ST(MF.getSubtarget<SISubtarget>()),
   MFI(*MF.getInfo<SIMachineFunctionInfo>()),
   StartingOccupancy(ST.getOccupancyWithLocalMemSize(MFI.getLDSSize(),
-                                                    *MF.getFunction())),
+                                                    MF.getFunction())),
   MinOccupancy(StartingOccupancy), Stage(0), RegionIdx(0) {
 
   DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
@@ -330,8 +330,9 @@ void GCNScheduleDAGMILive::schedule() {
 
   std::vector<MachineInstr*> Unsched;
   Unsched.reserve(NumRegionInstrs);
-  for (auto &I : *this)
+  for (auto &I : *this) {
     Unsched.push_back(&I);
+  }
 
   GCNRegPressure PressureBefore;
   if (LIS) {
@@ -387,10 +388,14 @@ void GCNScheduleDAGMILive::schedule() {
   DEBUG(dbgs() << "Attempting to revert scheduling.\n");
   RegionEnd = RegionBegin;
   for (MachineInstr *MI : Unsched) {
+    if (MI->isDebugValue())
+      continue;
+
     if (MI->getIterator() != RegionEnd) {
       BB->remove(MI);
       BB->insert(RegionEnd, MI);
-      LIS->handleMove(*MI, true);
+      if (!MI->isDebugValue())
+        LIS->handleMove(*MI, true);
     }
     // Reset read-undef flags and update them later.
     for (auto &Op : MI->operands())
@@ -398,13 +403,15 @@ void GCNScheduleDAGMILive::schedule() {
         Op.setIsUndef(false);
     RegisterOperands RegOpers;
     RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
-    if (ShouldTrackLaneMasks) {
-      // Adjust liveness and add missing dead+read-undef flags.
-      SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
-    } else {
-      // Adjust for missing dead-def flags.
-      RegOpers.detectDeadDefs(*MI, *LIS);
+    if (!MI->isDebugValue()) {
+      if (ShouldTrackLaneMasks) {
+        // Adjust liveness and add missing dead+read-undef flags.
+        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
+        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+      } else {
+        // Adjust for missing dead-def flags.
+        RegOpers.detectDeadDefs(*MI, *LIS);
+      }
     }
     RegionEnd = MI->getIterator();
     ++RegionEnd;
@@ -531,9 +538,8 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
       }
 
       DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      DEBUG(dbgs() << MF.getName()
-            << ":BB#" << MBB->getNumber() << " " << MBB->getName()
-            << "\n  From: " << *begin() << "    To: ";
+      DEBUG(dbgs() << MF.getName() << ":" << printMBBReference(*MBB) << " "
+                   << MBB->getName() << "\n  From: " << *begin() << "    To: ";
             if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
             else dbgs() << "End";
             dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');

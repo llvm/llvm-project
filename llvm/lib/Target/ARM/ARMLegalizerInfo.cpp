@@ -17,12 +17,60 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Target/TargetOpcodes.h"
 
 using namespace llvm;
+
+/// FIXME: The following static functions are SizeChangeStrategy functions
+/// that are meant to temporarily mimic the behaviour of the old legalization
+/// based on doubling/halving non-legal types as closely as possible. This is
+/// not entirly possible as only legalizing the types that are exactly a power
+/// of 2 times the size of the legal types would require specifying all those
+/// sizes explicitly.
+/// In practice, not specifying those isn't a problem, and the below functions
+/// should disappear quickly as we add support for legalizing non-power-of-2
+/// sized types further.
+static void
+addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
+                                const LegalizerInfo::SizeAndActionsVec &v) {
+  for (unsigned i = 0; i < v.size(); ++i) {
+    result.push_back(v[i]);
+    if (i + 1 < v[i].first && i + 1 < v.size() &&
+        v[i + 1].first != v[i].first + 1)
+      result.push_back({v[i].first + 1, LegalizerInfo::Unsupported});
+  }
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 17);
+  LegalizerInfo::SizeAndActionsVec result = {
+      {1, LegalizerInfo::Unsupported},
+      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
+      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 17);
+  LegalizerInfo::SizeAndActionsVec result = {
+      {1, LegalizerInfo::WidenScalar},  {2, LegalizerInfo::Unsupported},
+      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
+      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
 
 static bool AEABI(const ARMSubtarget &ST) {
   return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
@@ -49,14 +97,15 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   }
 
   for (unsigned Op : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR}) {
-    for (auto Ty : {s1, s8, s16})
-      setAction({Op, Ty}, WidenScalar);
+    if (Op != G_ADD)
+      setLegalizeScalarToDifferentSizeStrategy(
+          Op, 0, widenToLargerTypesUnsupportedOtherwise);
     setAction({Op, s32}, Legal);
   }
 
   for (unsigned Op : {G_SDIV, G_UDIV}) {
-    for (auto Ty : {s8, s16})
-      setAction({Op, Ty}, WidenScalar);
+    setLegalizeScalarToDifferentSizeStrategy(Op, 0,
+        widenToLargerTypesUnsupportedOtherwise);
     if (ST.hasDivideInARMMode())
       setAction({Op, s32}, Legal);
     else
@@ -64,8 +113,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   }
 
   for (unsigned Op : {G_SREM, G_UREM}) {
-    for (auto Ty : {s8, s16})
-      setAction({Op, Ty}, WidenScalar);
+    setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
     if (ST.hasDivideInARMMode())
       setAction({Op, s32}, Lower);
     else if (AEABI(ST))
@@ -74,11 +122,18 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       setAction({Op, s32}, Libcall);
   }
 
-  for (unsigned Op : {G_SEXT, G_ZEXT}) {
+  for (unsigned Op : {G_SEXT, G_ZEXT, G_ANYEXT}) {
     setAction({Op, s32}, Legal);
-    for (auto Ty : {s1, s8, s16})
-      setAction({Op, 1, Ty}, Legal);
   }
+
+  setAction({G_INTTOPTR, p0}, Legal);
+  setAction({G_INTTOPTR, 1, s32}, Legal);
+
+  setAction({G_PTRTOINT, s32}, Legal);
+  setAction({G_PTRTOINT, 1, p0}, Legal);
+
+  for (unsigned Op : {G_ASHR, G_LSHR, G_SHL})
+    setAction({Op, s32}, Legal);
 
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
@@ -90,18 +145,19 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   setAction({G_BRCOND, s1}, Legal);
 
   setAction({G_CONSTANT, s32}, Legal);
-  for (auto Ty : {s1, s8, s16})
-    setAction({G_CONSTANT, Ty}, WidenScalar);
+  setAction({G_CONSTANT, p0}, Legal);
+  setLegalizeScalarToDifferentSizeStrategy(G_CONSTANT, 0, widen_1_8_16);
 
   setAction({G_ICMP, s1}, Legal);
-  for (auto Ty : {s8, s16})
-    setAction({G_ICMP, 1, Ty}, WidenScalar);
+  setLegalizeScalarToDifferentSizeStrategy(G_ICMP, 1,
+      widenToLargerTypesUnsupportedOtherwise);
   for (auto Ty : {s32, p0})
     setAction({G_ICMP, 1, Ty}, Legal);
 
   if (!ST.useSoftFloat() && ST.hasVFP2()) {
-    setAction({G_FADD, s32}, Legal);
-    setAction({G_FADD, s64}, Legal);
+    for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      for (auto Ty : {s32, s64})
+        setAction({BinOp, Ty}, Legal);
 
     setAction({G_LOAD, s64}, Legal);
     setAction({G_STORE, s64}, Legal);
@@ -109,9 +165,15 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({G_FCMP, s1}, Legal);
     setAction({G_FCMP, 1, s32}, Legal);
     setAction({G_FCMP, 1, s64}, Legal);
+
+    setAction({G_MERGE_VALUES, s64}, Legal);
+    setAction({G_MERGE_VALUES, 1, s32}, Legal);
+    setAction({G_UNMERGE_VALUES, s32}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, s64}, Legal);
   } else {
-    for (auto Ty : {s32, s64})
-      setAction({G_FADD, Ty}, Libcall);
+    for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      for (auto Ty : {s32, s64})
+        setAction({BinOp, Ty}, Libcall);
 
     setAction({G_FCMP, s1}, Legal);
     setAction({G_FCMP, 1, s32}, Custom);
@@ -259,7 +321,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
     // Our divmod libcalls return a struct containing the quotient and the
     // remainder. We need to create a virtual register for it.
-    auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
     Type *ArgTy = Type::getInt32Ty(Ctx);
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     auto RetVal = MRI.createGenericVirtualRegister(
@@ -300,7 +362,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
       return true;
     }
 
-    auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
     assert((OpSize == 32 || OpSize == 64) && "Unsupported operand size");
     auto *ArgTy = OpSize == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     auto *RetTy = Type::getInt32Ty(Ctx);

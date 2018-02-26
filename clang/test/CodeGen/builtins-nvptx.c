@@ -636,3 +636,36 @@ __device__ void nvvm_ldg(const void *p) {
   typedef double double2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_d2((const double2 *)p);
 }
+
+// CHECK-LABEL: nvvm_shfl
+__device__ void nvvm_shfl(int i, float f, int a, int b) {
+  // CHECK: call i32 @llvm.nvvm.shfl.down.i32(i32
+  __nvvm_shfl_down_i32(i, a, b);
+  // CHECK: call float @llvm.nvvm.shfl.down.f32(float
+  __nvvm_shfl_down_f32(f, a, b);
+  // CHECK: call i32 @llvm.nvvm.shfl.up.i32(i32
+  __nvvm_shfl_up_i32(i, a, b);
+  // CHECK: call float @llvm.nvvm.shfl.up.f32(float
+  __nvvm_shfl_up_f32(f, a, b);
+  // CHECK: call i32 @llvm.nvvm.shfl.bfly.i32(i32
+  __nvvm_shfl_bfly_i32(i, a, b);
+  // CHECK: call float @llvm.nvvm.shfl.bfly.f32(float
+  __nvvm_shfl_bfly_f32(f, a, b);
+  // CHECK: call i32 @llvm.nvvm.shfl.idx.i32(i32
+  __nvvm_shfl_idx_i32(i, a, b);
+  // CHECK: call float @llvm.nvvm.shfl.idx.f32(float
+  __nvvm_shfl_idx_f32(f, a, b);
+  // CHECK: ret void
+}
+
+__device__ void nvvm_vote(int pred) {
+  // CHECK: call i1 @llvm.nvvm.vote.all(i1
+  __nvvm_vote_all(pred);
+  // CHECK: call i1 @llvm.nvvm.vote.any(i1
+  __nvvm_vote_any(pred);
+  // CHECK: call i1 @llvm.nvvm.vote.uni(i1
+  __nvvm_vote_uni(pred);
+  // CHECK: call i32 @llvm.nvvm.vote.ballot(i1
+  __nvvm_vote_ballot(pred);
+  // CHECK: ret void
+}

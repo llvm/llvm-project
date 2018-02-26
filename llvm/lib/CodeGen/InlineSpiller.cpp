@@ -1,4 +1,4 @@
-//===-------- InlineSpiller.cpp - Insert spills and restores inline -------===//
+//===- InlineSpiller.cpp - Insert spills and restores inline --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,31 +12,52 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LiveRangeCalc.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
-#include "llvm/CodeGen/LiveStackAnalysis.h"
+#include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include <cassert>
+#include <iterator>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -56,6 +77,7 @@ static cl::opt<bool> DisableHoisting("disable-spill-hoist", cl::Hidden,
                                      cl::desc("Disable inline spill hoisting"));
 
 namespace {
+
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
   LiveIntervals &LIS;
@@ -64,7 +86,6 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineDominatorTree &MDT;
   MachineLoopInfo &Loops;
   VirtRegMap &VRM;
-  MachineFrameInfo &MFI;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
@@ -72,13 +93,17 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
 
   InsertPointAnalysis IPA;
 
-  // Map from StackSlot to its original register.
-  DenseMap<int, unsigned> StackSlotToReg;
+  // Map from StackSlot to the LiveInterval of the original register.
+  // Note the LiveInterval of the original register may have been deleted
+  // after it is spilled. We keep a copy here to track the range where
+  // spills can be moved.
+  DenseMap<int, std::unique_ptr<LiveInterval>> StackSlotToOrigLI;
+
   // Map from pair of (StackSlot and Original VNI) to a set of spills which
   // have the same stackslot and have equal values defined by Original VNI.
   // These spills are mergeable and are hoist candiates.
-  typedef MapVector<std::pair<int, VNInfo *>, SmallPtrSet<MachineInstr *, 16>>
-      MergeableSpillsMap;
+  using MergeableSpillsMap =
+      MapVector<std::pair<int, VNInfo *>, SmallPtrSet<MachineInstr *, 16>>;
   MergeableSpillsMap MergeableSpills;
 
   /// This is the map from original register to a set containing all its
@@ -86,8 +111,8 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   /// sibling there and use it as the source of the new spill.
   DenseMap<unsigned, SmallSetVector<unsigned, 16>> Virt2SiblingsMap;
 
-  bool isSpillCandBB(unsigned OrigReg, VNInfo &OrigVNI, MachineBasicBlock &BB,
-                     unsigned &LiveReg);
+  bool isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
+                     MachineBasicBlock &BB, unsigned &LiveReg);
 
   void rmRedundantSpills(
       SmallPtrSet<MachineInstr *, 16> &Spills,
@@ -101,7 +126,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
       DenseMap<MachineDomTreeNode *, unsigned> &SpillsToKeep,
       DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill);
 
-  void runHoistSpills(unsigned OrigReg, VNInfo &OrigVNI,
+  void runHoistSpills(LiveInterval &OrigLI, VNInfo &OrigVNI,
                       SmallPtrSet<MachineInstr *, 16> &Spills,
                       SmallVectorImpl<MachineInstr *> &SpillsToRm,
                       DenseMap<MachineBasicBlock *, unsigned> &SpillsToIns);
@@ -114,8 +139,7 @@ public:
         AA(&pass.getAnalysis<AAResultsWrapperPass>().getAAResults()),
         MDT(pass.getAnalysis<MachineDominatorTree>()),
         Loops(pass.getAnalysis<MachineLoopInfo>()), VRM(vrm),
-        MFI(mf.getFrameInfo()), MRI(mf.getRegInfo()),
-        TII(*mf.getSubtarget().getInstrInfo()),
+        MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()),
         MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()),
         IPA(LIS, mf.getNumBlockIDs()) {}
@@ -135,7 +159,6 @@ class InlineSpiller : public Spiller {
   MachineDominatorTree &MDT;
   MachineLoopInfo &Loops;
   VirtRegMap &VRM;
-  MachineFrameInfo &MFI;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
@@ -163,7 +186,7 @@ class InlineSpiller : public Spiller {
   // Object records spills information and does the hoisting.
   HoistSpillHelper HSpiller;
 
-  ~InlineSpiller() override {}
+  ~InlineSpiller() override = default;
 
 public:
   InlineSpiller(MachineFunctionPass &pass, MachineFunction &mf, VirtRegMap &vrm)
@@ -172,8 +195,7 @@ public:
         AA(&pass.getAnalysis<AAResultsWrapperPass>().getAAResults()),
         MDT(pass.getAnalysis<MachineDominatorTree>()),
         Loops(pass.getAnalysis<MachineLoopInfo>()), VRM(vrm),
-        MFI(mf.getFrameInfo()), MRI(mf.getRegInfo()),
-        TII(*mf.getSubtarget().getInstrInfo()),
+        MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()),
         MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()),
         HSpiller(pass, mf, vrm) {}
@@ -196,7 +218,7 @@ private:
   void reMaterializeAll();
 
   bool coalesceStackAccess(MachineInstr *MI, unsigned Reg);
-  bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> >,
+  bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>>,
                          MachineInstr *LoadMI = nullptr);
   void insertReload(unsigned VReg, SlotIndex, MachineBasicBlock::iterator MI);
   void insertSpill(unsigned VReg, bool isKill, MachineBasicBlock::iterator MI);
@@ -204,19 +226,17 @@ private:
   void spillAroundUses(unsigned Reg);
   void spillAll();
 };
-}
 
-namespace llvm {
+} // end anonymous namespace
 
-Spiller::~Spiller() { }
-void Spiller::anchor() { }
+Spiller::~Spiller() = default;
 
-Spiller *createInlineSpiller(MachineFunctionPass &pass,
-                             MachineFunction &mf,
-                             VirtRegMap &vrm) {
+void Spiller::anchor() {}
+
+Spiller *llvm::createInlineSpiller(MachineFunctionPass &pass,
+                                   MachineFunction &mf,
+                                   VirtRegMap &vrm) {
   return new InlineSpiller(pass, mf, vrm);
-}
-
 }
 
 //===----------------------------------------------------------------------===//
@@ -340,7 +360,7 @@ bool InlineSpiller::isSibling(unsigned Reg) {
 ///
 ///   x = def
 ///   spill x
-///   y = use x<kill>
+///   y = use killed x
 ///
 /// This hoist only helps when the copy kills its source.
 ///
@@ -457,7 +477,6 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
   } while (!WorkList.empty());
 }
 
-
 //===----------------------------------------------------------------------===//
 //                            Rematerialization
 //===----------------------------------------------------------------------===//
@@ -496,7 +515,6 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
 
 /// reMaterializeFor - Attempt to rematerialize before MI instead of reloading.
 bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
-
   // Analyze instruction
   SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
   MIBundleOperands::VirtRegInfo RI =
@@ -654,7 +672,6 @@ void InlineSpiller::reMaterializeAll() {
   DEBUG(dbgs() << RegsToSpill.size() << " registers to spill after remat.\n");
 }
 
-
 //===----------------------------------------------------------------------===//
 //                                 Spilling
 //===----------------------------------------------------------------------===//
@@ -731,7 +748,7 @@ static void dumpMachineInstrRangeWithSlotIndex(MachineBasicBlock::iterator B,
 /// @param LoadMI Load instruction to use instead of stack slot when non-null.
 /// @return       True on success.
 bool InlineSpiller::
-foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
+foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
                   MachineInstr *LoadMI) {
   if (Ops.empty())
     return false;
@@ -904,7 +921,7 @@ void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
 
 /// spillAroundUses - insert spill code around each use of Reg.
 void InlineSpiller::spillAroundUses(unsigned Reg) {
-  DEBUG(dbgs() << "spillAroundUses " << PrintReg(Reg) << '\n');
+  DEBUG(dbgs() << "spillAroundUses " << printReg(Reg) << '\n');
   LiveInterval &OldLI = LIS.getInterval(Reg);
 
   // Iterate over instructions using Reg.
@@ -1060,7 +1077,7 @@ void InlineSpiller::spill(LiveRangeEdit &edit) {
   DEBUG(dbgs() << "Inline spilling "
                << TRI.getRegClassName(MRI.getRegClass(edit.getReg()))
                << ':' << edit.getParent()
-               << "\nFrom original " << PrintReg(Original) << '\n');
+               << "\nFrom original " << printReg(Original) << '\n');
   assert(edit.getParent().isSpillable() &&
          "Attempting to spill already spilled value.");
   assert(DeadDefs.empty() && "Previous spill didn't remove dead defs");
@@ -1076,49 +1093,52 @@ void InlineSpiller::spill(LiveRangeEdit &edit) {
 }
 
 /// Optimizations after all the reg selections and spills are done.
-///
 void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
-///
 void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                                             unsigned Original) {
-  StackSlotToReg[StackSlot] = Original;
+  BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
+  LiveInterval &OrigLI = LIS.getInterval(Original);
+  // save a copy of LiveInterval in StackSlotToOrigLI because the original
+  // LiveInterval may be cleared after all its references are spilled.
+  if (StackSlotToOrigLI.find(StackSlot) == StackSlotToOrigLI.end()) {
+    auto LI = llvm::make_unique<LiveInterval>(OrigLI.reg, OrigLI.weight);
+    LI->assign(OrigLI, Allocator);
+    StackSlotToOrigLI[StackSlot] = std::move(LI);
+  }
   SlotIndex Idx = LIS.getInstructionIndex(Spill);
-  VNInfo *OrigVNI = LIS.getInterval(Original).getVNInfoAt(Idx.getRegSlot());
+  VNInfo *OrigVNI = StackSlotToOrigLI[StackSlot]->getVNInfoAt(Idx.getRegSlot());
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
   MergeableSpills[MIdx].insert(&Spill);
 }
 
 /// When a spill is removed, remove the spill from MergeableSpills map.
 /// Return true if the spill is removed successfully.
-///
 bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr &Spill,
                                              int StackSlot) {
-  int Original = StackSlotToReg[StackSlot];
-  if (!Original)
+  auto It = StackSlotToOrigLI.find(StackSlot);
+  if (It == StackSlotToOrigLI.end())
     return false;
   SlotIndex Idx = LIS.getInstructionIndex(Spill);
-  VNInfo *OrigVNI = LIS.getInterval(Original).getVNInfoAt(Idx.getRegSlot());
+  VNInfo *OrigVNI = It->second->getVNInfoAt(Idx.getRegSlot());
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
   return MergeableSpills[MIdx].erase(&Spill);
 }
 
 /// Check BB to see if it is a possible target BB to place a hoisted spill,
 /// i.e., there should be a living sibling of OrigReg at the insert point.
-///
-bool HoistSpillHelper::isSpillCandBB(unsigned OrigReg, VNInfo &OrigVNI,
+bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
                                      MachineBasicBlock &BB, unsigned &LiveReg) {
   SlotIndex Idx;
-  LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+  unsigned OrigReg = OrigLI.reg;
   MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, BB);
   if (MI != BB.end())
     Idx = LIS.getInstructionIndex(*MI);
   else
     Idx = LIS.getMBBEndIdx(&BB).getPrevSlot();
   SmallSetVector<unsigned, 16> &Siblings = Virt2SiblingsMap[OrigReg];
-  assert((LIS.getInterval(OrigReg)).getVNInfoAt(Idx) == &OrigVNI &&
-         "Unexpected VNI");
+  assert(OrigLI.getVNInfoAt(Idx) == &OrigVNI && "Unexpected VNI");
 
   for (auto const SibReg : Siblings) {
     LiveInterval &LI = LIS.getInterval(SibReg);
@@ -1133,7 +1153,6 @@ bool HoistSpillHelper::isSpillCandBB(unsigned OrigReg, VNInfo &OrigVNI,
 
 /// Remove redundant spills in the same BB. Save those redundant spills in
 /// SpillsToRm, and save the spill to keep and its BB in SpillBBToSpill map.
-///
 void HoistSpillHelper::rmRedundantSpills(
     SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
@@ -1166,7 +1185,6 @@ void HoistSpillHelper::rmRedundantSpills(
 /// time. \p SpillBBToSpill will be populated as part of the process and
 /// maps a basic block to the first store occurring in the basic block.
 /// \post SpillsToRm.union(Spills\@post) == Spills\@pre
-///
 void HoistSpillHelper::getVisitOrders(
     MachineBasicBlock *Root, SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineDomTreeNode *> &Orders,
@@ -1254,9 +1272,9 @@ void HoistSpillHelper::getVisitOrders(
 /// Try to hoist spills according to BB hotness. The spills to removed will
 /// be saved in \p SpillsToRm. The spills to be inserted will be saved in
 /// \p SpillsToIns.
-///
 void HoistSpillHelper::runHoistSpills(
-    unsigned OrigReg, VNInfo &OrigVNI, SmallPtrSet<MachineInstr *, 16> &Spills,
+    LiveInterval &OrigLI, VNInfo &OrigVNI,
+    SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
     DenseMap<MachineBasicBlock *, unsigned> &SpillsToIns) {
   // Visit order of dominator tree nodes.
@@ -1280,9 +1298,10 @@ void HoistSpillHelper::runHoistSpills(
   // nodes set and the cost of all the spills inside those nodes.
   // The nodes set are the locations where spills are to be inserted
   // in the subtree of current node.
-  typedef std::pair<SmallPtrSet<MachineDomTreeNode *, 16>, BlockFrequency>
-      NodesCostPair;
+  using NodesCostPair =
+      std::pair<SmallPtrSet<MachineDomTreeNode *, 16>, BlockFrequency>;
   DenseMap<MachineDomTreeNode *, NodesCostPair> SpillsInSubTreeMap;
+
   // Iterate Orders set in reverse order, which will be a bottom-up order
   // in the dominator tree. Once we visit a dom tree node, we know its
   // children have already been visited and the spill locations in the
@@ -1331,7 +1350,7 @@ void HoistSpillHelper::runHoistSpills(
 
     // Check whether Block is a possible candidate to insert spill.
     unsigned LiveReg = 0;
-    if (!isSpillCandBB(OrigReg, OrigVNI, *Block, LiveReg))
+    if (!isSpillCandBB(OrigLI, OrigVNI, *Block, LiveReg))
       continue;
 
     // If there are multiple spills that could be merged, bias a little
@@ -1391,18 +1410,12 @@ void HoistSpillHelper::runHoistSpills(
 /// bottom-up order, and for each node, we will decide whether to hoist spills
 /// inside its subtree to that node. In this way, we can get benefit locally
 /// even if hoisting all the equal spills to one cold place is impossible.
-///
 void HoistSpillHelper::hoistAllSpills() {
   SmallVector<unsigned, 4> NewVRegs;
   LiveRangeEdit Edit(nullptr, NewVRegs, MF, LIS, &VRM, this);
 
-  // Save the mapping between stackslot and its original reg.
-  DenseMap<int, unsigned> SlotToOrigReg;
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
-    int Slot = VRM.getStackSlot(Reg);
-    if (Slot != VirtRegMap::NO_STACK_SLOT)
-      SlotToOrigReg[Slot] = VRM.getOriginal(Reg);
     unsigned Original = VRM.getPreSplitReg(Reg);
     if (!MRI.def_empty(Reg))
       Virt2SiblingsMap[Original].insert(Reg);
@@ -1411,8 +1424,7 @@ void HoistSpillHelper::hoistAllSpills() {
   // Each entry in MergeableSpills contains a spill set with equal values.
   for (auto &Ent : MergeableSpills) {
     int Slot = Ent.first.first;
-    unsigned OrigReg = SlotToOrigReg[Slot];
-    LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+    LiveInterval &OrigLI = *StackSlotToOrigLI[Slot];
     VNInfo *OrigVNI = Ent.first.second;
     SmallPtrSet<MachineInstr *, 16> &EqValSpills = Ent.second;
     if (Ent.second.empty())
@@ -1431,7 +1443,7 @@ void HoistSpillHelper::hoistAllSpills() {
     // SpillsToIns is the spill set to be newly inserted after hoisting.
     DenseMap<MachineBasicBlock *, unsigned> SpillsToIns;
 
-    runHoistSpills(OrigReg, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
+    runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
 
     DEBUG({
       dbgs() << "Finally inserted spills in BB: ";

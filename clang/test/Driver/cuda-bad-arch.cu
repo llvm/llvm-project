@@ -12,6 +12,12 @@
 
 // BAD: error: Unsupported CUDA gpu architecture
 
+// RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_21 \
+// RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
+// RUN: | FileCheck -check-prefix BAD_CUDA9 %s
+
+// BAD_CUDA9: GPU arch sm_21 is supported by CUDA versions between 7.0 and 8.0
+
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_20 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c %s 2>&1 \

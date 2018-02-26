@@ -15,22 +15,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalSplit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Transforms/IPO.h"
-
-#include <set>
+#include <cstdint>
+#include <vector>
 
 using namespace llvm;
 
-namespace {
-
-bool splitGlobal(GlobalVariable &GV) {
+static bool splitGlobal(GlobalVariable &GV) {
   // If the address of the global is taken outside of the module, we cannot
   // apply this transformation.
   if (!GV.hasLocalLinkage())
@@ -130,7 +138,7 @@ bool splitGlobal(GlobalVariable &GV) {
   return true;
 }
 
-bool splitGlobals(Module &M) {
+static bool splitGlobals(Module &M) {
   // First, see if the module uses either of the llvm.type.test or
   // llvm.type.checked.load intrinsics, which indicates that splitting globals
   // may be beneficial.
@@ -151,12 +159,16 @@ bool splitGlobals(Module &M) {
   return Changed;
 }
 
+namespace {
+
 struct GlobalSplit : public ModulePass {
   static char ID;
+
   GlobalSplit() : ModulePass(ID) {
     initializeGlobalSplitPass(*PassRegistry::getPassRegistry());
   }
-  bool runOnModule(Module &M) {
+
+  bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
 
@@ -164,10 +176,11 @@ struct GlobalSplit : public ModulePass {
   }
 };
 
-}
+} // end anonymous namespace
+
+char GlobalSplit::ID = 0;
 
 INITIALIZE_PASS(GlobalSplit, "globalsplit", "Global splitter", false, false)
-char GlobalSplit::ID = 0;
 
 ModulePass *llvm::createGlobalSplitPass() {
   return new GlobalSplit;

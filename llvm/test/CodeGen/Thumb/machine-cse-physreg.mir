@@ -21,15 +21,15 @@ body:             |
   bb.0:
     liveins: %r0
     %0 = COPY %r0
-    %1, %cpsr = tLSLri %0, 2, 14, _
-    tCMPi8 %0, 5, 14, _, implicit-def %cpsr
+    %1, %cpsr = tLSLri %0, 2, 14, %noreg
+    tCMPi8 %0, 5, 14, %noreg, implicit-def %cpsr
     tBcc %bb.8, 8, %cpsr
 
   bb.1:
-    %2, %cpsr = tLSLri %0, 2, 14, _
+    %2, %cpsr = tLSLri %0, 2, 14, %noreg
 
   bb.8:
     liveins: %cpsr
     %3 = COPY %cpsr
-    tSTRi killed %3, %0, 0, 14, _
+    tSTRi killed %3, %0, 0, 14, %noreg
 ...

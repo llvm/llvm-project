@@ -4,20 +4,18 @@
 export module FooBar;
 
 export {
-  // CHECK-LABEL: define i32 @_Z1fv(
+  // CHECK-DAG: define i32 @_Z1fv(
   int f() { return 0; }
 }
 
-// CHECK-LABEL: define weak_odr void @_Z2f2v(
+// CHECK-DAG: define weak_odr void @_ZW6FooBarE2f2v(
 inline void f2() { }
 
+// CHECK-DAG: define void @_ZW6FooBarE2f3v(
+static void f3() {}
+export void use_f3() { f3(); }
+
 // FIXME: Emit global variables and their initializers with this TU.
-// Emit an initialization function that other TUs can call, with guard variable.
-
-// FIXME: Mangle non-exported symbols so they don't collide with
-// non-exported symbols from other modules?
-
-// FIXME: Formally-internal-linkage symbols that are used from an exported
-// symbol need a mangled name and external linkage.
+// Emit an initialization function that other TUs can call, with guard variable?
 
 // FIXME: const-qualified variables don't have implicit internal linkage when owned by a module.

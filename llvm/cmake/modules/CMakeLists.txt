@@ -129,9 +129,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   if (NOT CMAKE_CONFIGURATION_TYPES)
     # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
     add_custom_target(cmake-exports)
-    add_custom_target(install-cmake-exports
-                      COMMAND "${CMAKE_COMMAND}"
-                                  -DCMAKE_INSTALL_COMPONENT=cmake-exports
-                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    add_llvm_install_targets(install-cmake-exports
+                             COMPONENT cmake-exports)
   endif()
 endif()

@@ -1,4 +1,4 @@
-//===-- RegisterCoalescer.h - Register Coalescing Interface -----*- C++ -*-===//
+//===- RegisterCoalescer.h - Register Coalescing Interface ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,10 +17,9 @@
 
 namespace llvm {
 
-  class MachineInstr;
-  class TargetRegisterInfo;
-  class TargetRegisterClass;
-  class TargetInstrInfo;
+class MachineInstr;
+class TargetRegisterClass;
+class TargetRegisterInfo;
 
   /// A helper class for register coalescers. When deciding if
   /// two registers can be coalesced, CoalescerPair can determine if a copy
@@ -30,43 +29,40 @@ namespace llvm {
 
     /// The register that will be left after coalescing. It can be a
     /// virtual or physical register.
-    unsigned DstReg;
+    unsigned DstReg = 0;
 
     /// The virtual register that will be coalesced into dstReg.
-    unsigned SrcReg;
+    unsigned SrcReg = 0;
 
     /// The sub-register index of the old DstReg in the new coalesced register.
-    unsigned DstIdx;
+    unsigned DstIdx = 0;
 
     /// The sub-register index of the old SrcReg in the new coalesced register.
-    unsigned SrcIdx;
+    unsigned SrcIdx = 0;
 
     /// True when the original copy was a partial subregister copy.
-    bool Partial;
+    bool Partial = false;
 
     /// True when both regs are virtual and newRC is constrained.
-    bool CrossClass;
+    bool CrossClass = false;
 
     /// True when DstReg and SrcReg are reversed from the original
     /// copy instruction.
-    bool Flipped;
+    bool Flipped = false;
 
     /// The register class of the coalesced register, or NULL if DstReg
     /// is a physreg. This register class may be a super-register of both
     /// SrcReg and DstReg.
-    const TargetRegisterClass *NewRC;
+    const TargetRegisterClass *NewRC = nullptr;
 
   public:
-    CoalescerPair(const TargetRegisterInfo &tri)
-      : TRI(tri), DstReg(0), SrcReg(0), DstIdx(0), SrcIdx(0),
-        Partial(false), CrossClass(false), Flipped(false), NewRC(nullptr) {}
+    CoalescerPair(const TargetRegisterInfo &tri) : TRI(tri) {}
 
     /// Create a CoalescerPair representing a virtreg-to-physreg copy.
     /// No need to call setRegisters().
     CoalescerPair(unsigned VirtReg, unsigned PhysReg,
                   const TargetRegisterInfo &tri)
-      : TRI(tri), DstReg(PhysReg), SrcReg(VirtReg), DstIdx(0), SrcIdx(0),
-        Partial(false), CrossClass(false), Flipped(false), NewRC(nullptr) {}
+      : TRI(tri), DstReg(PhysReg), SrcReg(VirtReg) {}
 
     /// Set registers to match the copy instruction MI. Return
     /// false if MI is not a coalescable copy instruction.
@@ -111,6 +107,7 @@ namespace llvm {
     /// Return the register class of the coalesced register.
     const TargetRegisterClass *getNewRC() const { return NewRC; }
   };
-} // End llvm namespace
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_REGISTERCOALESCER_H

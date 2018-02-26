@@ -6,7 +6,7 @@
 
 define <4 x float> @ExeDepsFix_broadcastss(<4 x float> %arg, <4 x float> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastss:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
@@ -21,7 +21,7 @@ define <4 x float> @ExeDepsFix_broadcastss(<4 x float> %arg, <4 x float> %arg2) 
 
 define <8 x float> @ExeDepsFix_broadcastss256(<8 x float> %arg, <8 x float> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastss256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*}}(%rip), %ymm2
 ; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
@@ -36,7 +36,7 @@ define <8 x float> @ExeDepsFix_broadcastss256(<8 x float> %arg, <8 x float> %arg
 
 define <4 x float> @ExeDepsFix_broadcastss_inreg(<4 x float> %arg, <4 x float> %arg2, i32 %broadcastvalue) {
 ; CHECK-LABEL: ExeDepsFix_broadcastss_inreg:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    vpbroadcastd %xmm2, %xmm2
 ; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -54,7 +54,7 @@ define <4 x float> @ExeDepsFix_broadcastss_inreg(<4 x float> %arg, <4 x float> %
 
 define <8 x float> @ExeDepsFix_broadcastss256_inreg(<8 x float> %arg, <8 x float> %arg2, i32 %broadcastvalue) {
 ; CHECK-LABEL: ExeDepsFix_broadcastss256_inreg:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    vpbroadcastd %xmm2, %ymm2
 ; CHECK-NEXT:    vpand %ymm2, %ymm0, %ymm0
@@ -73,7 +73,7 @@ define <8 x float> @ExeDepsFix_broadcastss256_inreg(<8 x float> %arg, <8 x float
 ; In that case the broadcast is directly folded into vandpd.
 define <2 x double> @ExeDepsFix_broadcastsd(<2 x double> %arg, <2 x double> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastsd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vandpd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -87,7 +87,7 @@ define <2 x double> @ExeDepsFix_broadcastsd(<2 x double> %arg, <2 x double> %arg
 
 define <4 x double> @ExeDepsFix_broadcastsd256(<4 x double> %arg, <4 x double> %arg2) {
 ; CHECK-LABEL: ExeDepsFix_broadcastsd256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm2
 ; CHECK-NEXT:    vandpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
@@ -104,7 +104,7 @@ define <4 x double> @ExeDepsFix_broadcastsd256(<4 x double> %arg, <4 x double> %
 ; vpand and there is nothing more you can do to match vmaxpd.
 define <2 x double> @ExeDepsFix_broadcastsd_inreg(<2 x double> %arg, <2 x double> %arg2, i64 %broadcastvalue) {
 ; CHECK-LABEL: ExeDepsFix_broadcastsd_inreg:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovq %rdi, %xmm2
 ; CHECK-NEXT:    vpbroadcastq %xmm2, %xmm2
 ; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -122,7 +122,7 @@ define <2 x double> @ExeDepsFix_broadcastsd_inreg(<2 x double> %arg, <2 x double
 
 define <4 x double> @ExeDepsFix_broadcastsd256_inreg(<4 x double> %arg, <4 x double> %arg2, i64 %broadcastvalue) {
 ; CHECK-LABEL: ExeDepsFix_broadcastsd256_inreg:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovq %rdi, %xmm2
 ; CHECK-NEXT:    vpbroadcastq %xmm2, %ymm2
 ; CHECK-NEXT:    vpand %ymm2, %ymm0, %ymm0

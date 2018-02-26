@@ -1,4 +1,4 @@
-; RUN: llc -O0 -fast-isel=false -march=x86 < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel=false -mtriple=i686-- < %s | FileCheck %s
 
 ; No need for branching when the default and only destination follows
 ; immediately after the switch.

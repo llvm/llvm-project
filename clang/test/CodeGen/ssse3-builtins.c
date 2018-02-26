@@ -7,19 +7,25 @@
 
 __m128i test_mm_abs_epi8(__m128i a) {
   // CHECK-LABEL: test_mm_abs_epi8
-  // CHECK: call <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8> %{{.*}})
+  // CHECK: [[SUB:%.+]] = sub <16 x i8> zeroinitializer, [[A:%.+]]
+  // CHECK: [[CMP:%.+]] = icmp sgt <16 x i8> [[A]], zeroinitializer
+  // CHECK: %{{.*}} = select <16 x i1> [[CMP]], <16 x i8> [[A]], <16 x i8> [[SUB]]
   return _mm_abs_epi8(a);
 }
 
 __m128i test_mm_abs_epi16(__m128i a) {
   // CHECK-LABEL: test_mm_abs_epi16
-  // CHECK: call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %{{.*}})
+  // CHECK: [[SUB:%.+]] = sub <8 x i16> zeroinitializer, [[A:%.+]]
+  // CHECK: [[CMP:%.+]] = icmp sgt <8 x i16> [[A]], zeroinitializer
+  // CHECK: %{{.*}} = select <8 x i1> [[CMP]], <8 x i16> [[A]], <8 x i16> [[SUB]]
   return _mm_abs_epi16(a);
 }
 
 __m128i test_mm_abs_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_abs_epi32
-  // CHECK: call <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32> %{{.*}})
+  // CHECK: [[SUB:%.+]] = sub <4 x i32> zeroinitializer, [[A:%.+]]
+  // CHECK: [[CMP:%.+]] = icmp sgt <4 x i32> [[A]], zeroinitializer
+  // CHECK: %{{.*}} = select <4 x i1> [[CMP]], <4 x i32> [[A]], <4 x i32> [[SUB]]
   return _mm_abs_epi32(a);
 }
 

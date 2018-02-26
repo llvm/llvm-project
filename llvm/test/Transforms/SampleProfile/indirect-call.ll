@@ -17,14 +17,16 @@ define void @test_inline(i64* (i32*)*, i32* %x) !dbg !6 {
   store i64* (i32*)* %0, i64* (i32*)** %2
   %3 = load i64* (i32*)*, i64* (i32*)** %2
 ; CHECK: icmp {{.*}} @foo_inline2
+; CHECK: br {{.*}} !prof ![[BR1:[0-9]+]]
 ; CHECK: if.true.direct_targ:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect:
 ; CHECK: icmp {{.*}} @foo_inline1
+; CHECK: br {{.*}} !prof ![[BR2:[0-9]+]]
 ; CHECK: if.true.direct_targ1:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect2:
-; CHECK: call
+; CHECK: call {{.*}} !prof ![[VP:[0-9]+]]
   call i64* %3(i32* %x), !dbg !7
   ret void
 }
@@ -69,6 +71,19 @@ define void @test_noinline(void ()*) !dbg !12 {
   ret void
 }
 
+; CHECK-LABEL: @test_noinline_bitcast
+; If the indirect call has been promoted to a direct call with bitcast,
+; do not inline it.
+define float @test_noinline_bitcast(float ()*) !dbg !26 {
+  %2 = alloca float ()*
+  store float ()* %0, float ()** %2
+; CHECK: icmp
+; CHECK: call
+  %3 = load float ()*, float ()** %2
+  %4 = call float %3(), !dbg !27
+  ret float %4
+}
+
 ; CHECK-LABEL: @test_norecursive_inline
 ; If the indirect call target is the caller, we should not promote it.
 define void @test_norecursive_inline() !dbg !24 {
@@ -77,6 +92,32 @@ define void @test_norecursive_inline() !dbg !24 {
   %1 = load void ()*, void ()** @y, align 8
   call void %1(), !dbg !25
   ret void
+}
+
+define i32* @return_arg(i32* readnone returned) !dbg !29{
+  ret i32* %0
+}
+
+; CHECK-LABEL: @return_arg_caller
+; When the promoted indirect call returns a parameter that was defined by the
+; return value of a previous direct call. Checks both direct call and promoted
+; indirect call are inlined.
+define i32* @return_arg_caller(i32* (i32*)* nocapture) !dbg !30{
+; CHECK-NOT: call i32* @foo_inline1
+; CHECK: if.true.direct_targ:
+; CHECK-NOT: call
+; CHECK: if.false.orig_indirect:
+; CHECK: call
+  %2 = call i32* @foo_inline1(i32* null), !dbg !31
+  %cmp = icmp ne i32* %2, null
+  br i1 %cmp, label %then, label %else
+
+then:
+  %3 = tail call i32* %0(i32* %2), !dbg !32
+  ret i32* %3
+
+else:
+  ret i32* null
 }
 
 @x = global i32 0, align 4
@@ -114,6 +155,10 @@ define void @foo_direct() !dbg !21 {
   ret void
 }
 
+define i32 @foo_direct_i32() !dbg !28 {
+  ret i32 0;
+}
+
 ; CHECK-LABEL: @test_direct
 ; We should not promote a direct call.
 define void @test_direct() !dbg !22 {
@@ -135,6 +180,9 @@ define void @test_direct() !dbg !22 {
 !4 = !DILocation(line: 4, scope: !3)
 !5 = !DILocation(line: 6, scope: !3)
 ; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 3457, i64 9191153033785521275, i64 2059, i64 -1069303473483922844, i64 1398}
+; CHECK: ![[BR1]] = !{!"branch_weights", i32 4000, i32 4000}
+; CHECK: ![[BR2]] = !{!"branch_weights", i32 3000, i32 1000}
+; CHECK: ![[VP]] = !{!"VP", i32 0, i64 8000, i64 -6391416044382067764, i64 1000}
 !6 = distinct !DISubprogram(name: "test_inline", scope: !1, file: !1, line: 6, unit: !0)
 !7 = !DILocation(line: 7, scope: !6)
 !8 = distinct !DISubprogram(name: "test_inline_strip", scope: !1, file: !1, line: 8, unit: !0)
@@ -155,3 +203,10 @@ define void @test_direct() !dbg !22 {
 !23 = !DILocation(line: 23, scope: !22)
 !24 = distinct !DISubprogram(name: "test_norecursive_inline", scope: !1, file: !1, line: 12, unit: !0)
 !25 = !DILocation(line: 13, scope: !24)
+!26 = distinct !DISubprogram(name: "test_noinline_bitcast", scope: !1, file: !1, line: 12, unit: !0)
+!27 = !DILocation(line: 13, scope: !26)
+!28 = distinct !DISubprogram(name: "foo_direct_i32", scope: !1, file: !1, line: 11, unit: !0)
+!29 = distinct !DISubprogram(name: "return_arg", scope: !1, file: !1, line: 11, unit: !0)
+!30 = distinct !DISubprogram(name: "return_arg_caller", scope: !1, file: !1, line: 11, unit: !0)
+!31 = !DILocation(line: 12, scope: !30)
+!32 = !DILocation(line: 13, scope: !30)

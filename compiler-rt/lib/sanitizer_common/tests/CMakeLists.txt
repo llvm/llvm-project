@@ -34,7 +34,8 @@ set(SANITIZER_UNITTESTS
   sanitizer_suppressions_test.cc
   sanitizer_symbolizer_test.cc
   sanitizer_test_main.cc
-  sanitizer_thread_registry_test.cc)
+  sanitizer_thread_registry_test.cc
+  sanitizer_vector_test.cc)
 
 set(SANITIZER_TEST_HEADERS
   sanitizer_pthread_wrappers.h

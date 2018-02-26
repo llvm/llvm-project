@@ -6,7 +6,7 @@ declare i64 @llvm.ctpop.i64(i64) nounwind readnone
 
 define i32 @test1(i64 %x) nounwind readnone {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leaq -1(%rdi), %rcx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testq %rcx, %rdi
@@ -22,7 +22,7 @@ define i32 @test1(i64 %x) nounwind readnone {
 
 define i32 @test2(i64 %x) nounwind readnone {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leaq -1(%rdi), %rcx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testq %rcx, %rdi
@@ -36,7 +36,7 @@ define i32 @test2(i64 %x) nounwind readnone {
 
 define i32 @test3(i64 %x) nounwind readnone {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    popcntq %rdi, %rcx
 ; CHECK-NEXT:    andb $63, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -52,10 +52,10 @@ define i32 @test3(i64 %x) nounwind readnone {
 
 define i8 @test4(i8 %x) nounwind readnone {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    popcntw %di, %ax
-; CHECK-NEXT:    # kill: %AL<def> %AL<kill> %AX<kill>
+; CHECK-NEXT:    popcntl %edi, %eax
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %x2 = and i8 %x, 127
   %count = tail call i8 @llvm.ctpop.i8(i8 %x2)

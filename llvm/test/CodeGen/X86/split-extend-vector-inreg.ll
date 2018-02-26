@@ -4,10 +4,10 @@
 
 define <4 x i64> @autogen_SD88863() {
 ; X32-LABEL: autogen_SD88863:
-; X32:       # BB#0: # %BB
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32:       # %bb.0: # %BB
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3]
 ; X32-NEXT:    movb $1, %al
 ; X32-NEXT:    .p2align 4, 0x90
@@ -15,14 +15,14 @@ define <4 x i64> @autogen_SD88863() {
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    testb %al, %al
 ; X32-NEXT:    jne .LBB0_1
-; X32-NEXT:  # BB#2: # %CF240
+; X32-NEXT:  # %bb.2: # %CF240
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: autogen_SD88863:
-; X64:       # BB#0: # %BB
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64:       # %bb.0: # %BB
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3]
 ; X64-NEXT:    movb $1, %al
 ; X64-NEXT:    .p2align 4, 0x90
@@ -30,7 +30,7 @@ define <4 x i64> @autogen_SD88863() {
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne .LBB0_1
-; X64-NEXT:  # BB#2: # %CF240
+; X64-NEXT:  # %bb.2: # %CF240
 ; X64-NEXT:    retq
 BB:
   %I26 = insertelement <4 x i64> undef, i64 undef, i32 2

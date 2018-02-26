@@ -66,12 +66,15 @@ bool ParseCommandLineOptions(int argc, const char *const *argv,
 void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = "");
 
+// Function pointer type for printing version information.
+using VersionPrinterTy = std::function<void(raw_ostream &)>;
+
 ///===---------------------------------------------------------------------===//
 /// SetVersionPrinter - Override the default (LLVM specific) version printer
 ///                     used to print out the version when --version is given
 ///                     on the command line. This allows other systems using the
 ///                     CommandLine utilities to print their own version string.
-void SetVersionPrinter(void (*func)());
+void SetVersionPrinter(VersionPrinterTy func);
 
 ///===---------------------------------------------------------------------===//
 /// AddExtraVersionPrinter - Add an extra printer to use in addition to the
@@ -80,7 +83,7 @@ void SetVersionPrinter(void (*func)());
 ///                          which will be called after the basic LLVM version
 ///                          printing is complete. Each can then add additional
 ///                          information specific to the tool.
-void AddExtraVersionPrinter(void (*func)());
+void AddExtraVersionPrinter(VersionPrinterTy func);
 
 // PrintOptionValues - Print option values.
 // With -print-options print the difference between option values and defaults.
@@ -263,7 +266,7 @@ public:
   StringRef ValueStr; // String describing what the value of this option is
   OptionCategory *Category; // The Category this option belongs to
   SmallPtrSet<SubCommand *, 4> Subs; // The subcommands this option belongs to.
-  bool FullyInitialized = false; // Has addArguemnt been called?
+  bool FullyInitialized = false; // Has addArgument been called?
 
   inline enum NumOccurrencesFlag getNumOccurrencesFlag() const {
     return (enum NumOccurrencesFlag)Occurrences;
@@ -345,6 +348,8 @@ public:
   virtual void printOptionInfo(size_t GlobalWidth) const = 0;
 
   virtual void printOptionValue(size_t GlobalWidth, bool Force) const = 0;
+
+  virtual void setDefault() = 0;
 
   static void printHelpStr(StringRef HelpStr, size_t Indent,
                            size_t FirstLineIndentedBy);
@@ -1315,6 +1320,20 @@ class opt : public Option,
     }
   }
 
+  template <class T, class = typename std::enable_if<
+            std::is_assignable<T&, T>::value>::type>
+  void setDefaultImpl() {
+    const OptionValue<DataType> &V = this->getDefault();
+    if (V.hasValue())
+      this->setValue(V.getValue());
+  }
+
+  template <class T, class = typename std::enable_if<
+            !std::is_assignable<T&, T>::value>::type>
+  void setDefaultImpl(...) {}
+
+  void setDefault() override { setDefaultImpl<DataType>(); }
+
   void done() {
     addArgument();
     Parser.initialize();
@@ -1490,6 +1509,8 @@ class list : public Option, public list_storage<DataType, StorageClass> {
   void printOptionValue(size_t /*GlobalWidth*/, bool /*Force*/) const override {
   }
 
+  void setDefault() override {}
+
   void done() {
     addArgument();
     Parser.initialize();
@@ -1631,6 +1652,8 @@ class bits : public Option, public bits_storage<DataType, Storage> {
   void printOptionValue(size_t /*GlobalWidth*/, bool /*Force*/) const override {
   }
 
+  void setDefault() override {}
+
   void done() {
     addArgument();
     Parser.initialize();
@@ -1680,6 +1703,8 @@ class alias : public Option {
   // Aliases do not need to print their values.
   void printOptionValue(size_t /*GlobalWidth*/, bool /*Force*/) const override {
   }
+
+  void setDefault() override { AliasFor->setDefault(); }
 
   ValueExpected getValueExpectedFlagDefault() const override {
     return AliasFor->getValueExpectedFlag();
@@ -1736,8 +1761,6 @@ void PrintVersionMessage();
 
 /// This function just prints the help message, exactly the same way as if the
 /// -help or -help-hidden option had been given on the command line.
-///
-/// NOTE: THIS FUNCTION TERMINATES THE PROGRAM!
 ///
 /// \param Hidden if true will print hidden options
 /// \param Categorized if true print options in categories
@@ -1838,6 +1861,33 @@ void TokenizeWindowsCommandLine(StringRef Source, StringSaver &Saver,
 using TokenizerCallback = void (*)(StringRef Source, StringSaver &Saver,
                                    SmallVectorImpl<const char *> &NewArgv,
                                    bool MarkEOLs);
+
+/// Tokenizes content of configuration file.
+///
+/// \param [in] Source The string representing content of config file.
+/// \param [in] Saver Delegates back to the caller for saving parsed strings.
+/// \param [out] NewArgv All parsed strings are appended to NewArgv.
+/// \param [in] MarkEOLs Added for compatibility with TokenizerCallback.
+///
+/// It works like TokenizeGNUCommandLine with ability to skip comment lines.
+///
+void tokenizeConfigFile(StringRef Source, StringSaver &Saver,
+                        SmallVectorImpl<const char *> &NewArgv,
+                        bool MarkEOLs = false);
+
+/// Reads command line options from the given configuration file.
+///
+/// \param [in] CfgFileName Path to configuration file.
+/// \param [in] Saver  Objects that saves allocated strings.
+/// \param [out] Argv Array to which the read options are added.
+/// \return true if the file was successfully read.
+///
+/// It reads content of the specified file, tokenizes it and expands "@file"
+/// commands resolving file names in them relative to the directory where
+/// CfgFilename resides.
+///
+bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
+                    SmallVectorImpl<const char *> &Argv);
 
 /// \brief Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.  Argv should contain the command line

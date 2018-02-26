@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7 | grep sarl | not grep esp
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 | grep sarl | not grep esp
 
 define signext   i16 @t(i16* %qmatrix, i16* %dct, i16* %acBaseTable, i16* %acExtTable, i16 signext  %acBaseRes, i16 signext  %acMaskRes, i16 signext  %acExtRes, i32* %bitptr, i32* %source, i32 %markerPrefix, i8** %byteptr, i32 %scale, i32 %round, i32 %bits) {
 entry:

@@ -9,7 +9,7 @@ entry:
 
   ; CHECK-LABEL: test0f
   ; CHECK: movi.2d v[[TEMP:[0-9]+]], #0000000000000000
-  ; CHECK: ins.s v[[TEMP]][0], v{{[0-9]+}}[0]
+  ; CHECK: mov.s v[[TEMP]][0], v{{[0-9]+}}[0]
   ; CHECK: str q[[TEMP]], [x0]
   ; CHECK: ret
 
@@ -27,7 +27,7 @@ entry:
   ; CHECK-LABEL: test1f
   ; CHECK: fmov  s[[TEMP:[0-9]+]], #1.0000000
   ; CHECK: dup.4s  v[[TEMP2:[0-9]+]], v[[TEMP]][0]
-  ; CHECK: ins.s v[[TEMP2]][0], v0[0]
+  ; CHECK: mov.s v[[TEMP2]][0], v0[0]
   ; CHECK: str q[[TEMP2]], [x0]
   ; CHECK: ret
 }

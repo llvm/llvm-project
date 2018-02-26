@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "BodyFarm.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -23,6 +22,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/Analyses/PseudoConstantAnalysis.h"
+#include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/Support/BumpVector.h"
@@ -63,18 +63,14 @@ AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
   cfgBuildOptions.forcedBlkExprs = &forcedBlkExprs;
 }
 
-AnalysisDeclContextManager::AnalysisDeclContextManager(bool useUnoptimizedCFG,
-                                                       bool addImplicitDtors,
-                                                       bool addInitializers,
-                                                       bool addTemporaryDtors,
-                                                       bool addLifetime,
-                                                       bool addLoopExit,
-                                                       bool synthesizeBodies,
-                                                       bool addStaticInitBranch,
-                                                       bool addCXXNewAllocator,
-                                                       CodeInjector *injector)
-  : Injector(injector), SynthesizeBodies(synthesizeBodies)
-{
+AnalysisDeclContextManager::AnalysisDeclContextManager(
+    ASTContext &ASTCtx, bool useUnoptimizedCFG, bool addImplicitDtors,
+    bool addInitializers, bool addTemporaryDtors, bool addLifetime,
+    bool addLoopExit, bool synthesizeBodies, bool addStaticInitBranch,
+    bool addCXXNewAllocator, bool addRichCXXConstructors,
+    CodeInjector *injector)
+    : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
+      SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
   cfgBuildOptions.AddImplicitDtors = addImplicitDtors;
   cfgBuildOptions.AddInitializers = addInitializers;
@@ -83,14 +79,10 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(bool useUnoptimizedCFG,
   cfgBuildOptions.AddLoopExit = addLoopExit;
   cfgBuildOptions.AddStaticInitBranches = addStaticInitBranch;
   cfgBuildOptions.AddCXXNewAllocator = addCXXNewAllocator;
+  cfgBuildOptions.AddRichCXXConstructors = addRichCXXConstructors;
 }
 
 void AnalysisDeclContextManager::clear() { Contexts.clear(); }
-
-static BodyFarm &getBodyFarm(ASTContext &C, CodeInjector *injector = nullptr) {
-  static BodyFarm *BF = new BodyFarm(C, injector);
-  return *BF;
-}
 
 Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   IsAutosynthesized = false;
@@ -99,8 +91,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     if (auto *CoroBody = dyn_cast_or_null<CoroutineBodyStmt>(Body))
       Body = CoroBody->getBody();
     if (Manager && Manager->synthesizeBodies()) {
-      Stmt *SynthesizedBody =
-          getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(FD);
+      Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(FD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -111,8 +102,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
     if (Manager && Manager->synthesizeBodies()) {
-      Stmt *SynthesizedBody =
-          getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(MD);
+      Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(MD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -317,6 +307,8 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
   return AC.get();
 }
 
+BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
+
 const StackFrameContext *
 AnalysisDeclContext::getStackFrame(LocationContext const *Parent, const Stmt *S,
                                const CFGBlock *Blk, unsigned Idx) {
@@ -473,28 +465,54 @@ bool LocationContext::isParentOf(const LocationContext *LC) const {
   return false;
 }
 
-void LocationContext::dumpStack(raw_ostream &OS, StringRef Indent) const {
+static void printLocation(raw_ostream &OS, const SourceManager &SM,
+                          SourceLocation SLoc) {
+  if (SLoc.isFileID() && SM.isInMainFile(SLoc))
+    OS << "line " << SM.getExpansionLineNumber(SLoc);
+  else
+    SLoc.print(OS, SM);
+}
+
+void LocationContext::dumpStack(
+    raw_ostream &OS, StringRef Indent, const char *NL, const char *Sep,
+    std::function<void(const LocationContext *)> printMoreInfoPerContext) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
 
+  const SourceManager &SM =
+      getAnalysisDeclContext()->getASTContext().getSourceManager();
+
   unsigned Frame = 0;
   for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
+
     switch (LCtx->getKind()) {
     case StackFrame:
-      OS << Indent << '#' << Frame++ << ' ';
-      cast<StackFrameContext>(LCtx)->getDecl()->print(OS, PP);
-      OS << '\n';
+      OS << Indent << '#' << Frame << ' ';
+      ++Frame;
+      if (const NamedDecl *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
+        OS << "Calling " << D->getQualifiedNameAsString();
+      else
+        OS << "Calling anonymous code";
+      if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
+        OS << " at ";
+        printLocation(OS, SM, S->getLocStart());
+      }
       break;
     case Scope:
-      OS << Indent << "    (scope)\n";
+      OS << "Entering scope";
       break;
     case Block:
-      OS << Indent << "    (block context: "
-                   << cast<BlockInvocationContext>(LCtx)->getContextData()
-                   << ")\n";
+      OS << "Invoking block";
+      if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
+        OS << " defined at ";
+        printLocation(OS, SM, D->getLocStart());
+      }
       break;
     }
+    OS << NL;
+
+    printMoreInfoPerContext(LCtx);
   }
 }
 
@@ -609,8 +627,6 @@ AnalysisDeclContext::~AnalysisDeclContext() {
     delete M;
   }
 }
-
-AnalysisDeclContextManager::~AnalysisDeclContextManager() {}
 
 LocationContext::~LocationContext() {}
 

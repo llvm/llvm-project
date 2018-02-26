@@ -1,7 +1,5 @@
 ; RUN: llc %s -march=mips -mcpu=mips32r3 -mattr=micromips -filetype=asm \
 ; RUN: -relocation-model=pic -O3 -o - | FileCheck %s
-; RUN: llc %s -march=mips64 -mcpu=mips64r6 -mattr=micromips -filetype=asm \
-; RUN: -relocation-model=pic -O3 -o - | FileCheck %s
 
 ; The purpose of this test is to check whether the CodeGen selects
 ; LW16 instruction with the base register in a range of $2-$7, $16, $17.

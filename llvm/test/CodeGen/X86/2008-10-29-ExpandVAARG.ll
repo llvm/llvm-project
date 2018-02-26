@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; PR2977
 define i8* @ap_php_conv_p2(){
 entry:

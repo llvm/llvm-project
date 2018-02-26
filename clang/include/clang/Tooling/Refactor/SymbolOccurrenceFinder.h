@@ -27,7 +27,7 @@ namespace tooling {
 namespace rename {
 
 // FIXME: make this an AST matcher. Wouldn't that be awesome??? I agree!
-std::vector<SymbolOccurrence>
+std::vector<OldSymbolOccurrence>
 findSymbolOccurrences(const SymbolOperation &Operation, Decl *Decl);
 
 } // end namespace rename

@@ -15,10 +15,13 @@
 #ifndef LLVM_LIB_TARGET_X86_INSTPRINTER_X86INSTCOMMENTS_H
 #define LLVM_LIB_TARGET_X86_INSTPRINTER_X86INSTCOMMENTS_H
 
+#include "llvm/CodeGen/MachineInstr.h"
+
 namespace llvm {
 
   enum AsmComments {
-    AC_EVEX_2_VEX = 0x2 // For instr that was compressed from EVEX to VEX.
+    // For instr that was compressed from EVEX to VEX.
+    AC_EVEX_2_VEX = MachineInstr::TAsmComments
   };
 
   class MCInst;

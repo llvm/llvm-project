@@ -65,6 +65,7 @@ class GPR64<bits<16> num, string n, GPR32 low, GPR32 high>
  : SystemZRegWithSubregs<n, [low, high]> {
   let HWEncoding = num;
   let SubRegIndices = [subreg_l32, subreg_h32];
+  let CoveredBySubRegs = 1;
 }
 
 // 8 even-odd pairs of GPR64s.
@@ -72,6 +73,7 @@ class GPR128<bits<16> num, string n, GPR64 low, GPR64 high>
  : SystemZRegWithSubregs<n, [low, high]> {
   let HWEncoding = num;
   let SubRegIndices = [subreg_l64, subreg_h64];
+  let CoveredBySubRegs = 1;
 }
 
 // General-purpose registers
@@ -194,6 +196,7 @@ class FPR128<bits<16> num, string n, FPR64 low, FPR64 high>
  : SystemZRegWithSubregs<n, [low, high]> {
   let HWEncoding = num;
   let SubRegIndices = [subreg_l64, subreg_h64];
+  let CoveredBySubRegs = 1;
 }
 
 // Floating-point registers.  Registers 16-31 require the vector facility.

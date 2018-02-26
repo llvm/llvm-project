@@ -48,10 +48,9 @@ lab4:
 ; CHECK-LABEL: jump_table:
 
 ; ARM: adr     r[[R_TAB_BASE:[0-9]+]], [[LJTI:\.LJTI[0-9]+_[0-9]+]]
-; ARM: lsl     r[[R_TAB_IDX:[0-9]+]], r{{[0-9]+}}, #2
-; ARM_ABS: ldr     pc, [r[[R_TAB_IDX]], r[[R_TAB_BASE]]]
-; ARM_PC:  ldr     r[[R_OFFSET:[0-9]+]], [r[[R_TAB_IDX]], r[[R_TAB_BASE]]]
-; ARM_PC:  add     pc, r[[R_OFFSET]], r[[R_TAB_BASE]]
+; ARM_ABS: ldr     pc, [r[[R_TAB_BASE]], r{{[0-9]+}}, lsl #2]
+; ARM_PC:  ldr     r[[R_OFFSET:[0-9]+]], [r[[R_TAB_BASE]], r{{[0-9]+}}, lsl #2]
+; ARM_PC:  add     pc, r[[R_TAB_BASE]], r[[R_OFFSET]]
 ; ARM: [[LJTI]]
 ; ARM_ABS: .long [[LBB1:\.LBB[0-9]+_[0-9]+]]
 ; ARM_ABS: .long [[LBB2:\.LBB[0-9]+_[0-9]+]]

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep flds
+; RUN: llc < %s -mtriple=i686-- | grep flds
 ; This should be a flds, not fldt.
 define x86_fp80 @test2() nounwind  {
 entry:

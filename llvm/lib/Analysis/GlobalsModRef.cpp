@@ -84,12 +84,18 @@ class GlobalsAAResult::FunctionInfo {
 
   /// The bit that flags that this function may read any global. This is
   /// chosen to mix together with ModRefInfo bits.
+  /// FIXME: This assumes ModRefInfo lattice will remain 4 bits!
+  /// It overlaps with ModRefInfo::Must bit!
+  /// FunctionInfo.getModRefInfo() masks out everything except ModRef so
+  /// this remains correct, but the Must info is lost.
   enum { MayReadAnyGlobal = 4 };
 
   /// Checks to document the invariants of the bit packing here.
-  static_assert((MayReadAnyGlobal & MRI_ModRef) == 0,
+  static_assert((MayReadAnyGlobal & static_cast<int>(ModRefInfo::MustModRef)) ==
+                    0,
                 "ModRef and the MayReadAnyGlobal flag bits overlap.");
-  static_assert(((MayReadAnyGlobal | MRI_ModRef) >>
+  static_assert(((MayReadAnyGlobal |
+                  static_cast<int>(ModRefInfo::MustModRef)) >>
                  AlignedMapPointerTraits::NumLowBitsAvailable) == 0,
                 "Insufficient low bits to store our flag and ModRef info.");
 
@@ -124,14 +130,22 @@ public:
     return *this;
   }
 
+  /// This method clears MayReadAnyGlobal bit added by GlobalsAAResult to return
+  /// the corresponding ModRefInfo. It must align in functionality with
+  /// clearMust().
+  ModRefInfo globalClearMayReadAnyGlobal(int I) const {
+    return ModRefInfo((I & static_cast<int>(ModRefInfo::ModRef)) |
+                      static_cast<int>(ModRefInfo::NoModRef));
+  }
+
   /// Returns the \c ModRefInfo info for this function.
   ModRefInfo getModRefInfo() const {
-    return ModRefInfo(Info.getInt() & MRI_ModRef);
+    return globalClearMayReadAnyGlobal(Info.getInt());
   }
 
   /// Adds new \c ModRefInfo for this function to its state.
   void addModRefInfo(ModRefInfo NewMRI) {
-    Info.setInt(Info.getInt() | NewMRI);
+    Info.setInt(Info.getInt() | static_cast<int>(setMust(NewMRI)));
   }
 
   /// Returns whether this function may read any global variable, and we don't
@@ -144,17 +158,18 @@ public:
   /// Returns the \c ModRefInfo info for this function w.r.t. a particular
   /// global, which may be more precise than the general information above.
   ModRefInfo getModRefInfoForGlobal(const GlobalValue &GV) const {
-    ModRefInfo GlobalMRI = mayReadAnyGlobal() ? MRI_Ref : MRI_NoModRef;
+    ModRefInfo GlobalMRI =
+        mayReadAnyGlobal() ? ModRefInfo::Ref : ModRefInfo::NoModRef;
     if (AlignedMap *P = Info.getPointer()) {
       auto I = P->Map.find(&GV);
       if (I != P->Map.end())
-        GlobalMRI = ModRefInfo(GlobalMRI | I->second);
+        GlobalMRI = unionModRef(GlobalMRI, I->second);
     }
     return GlobalMRI;
   }
 
   /// Add mod/ref info from another function into ours, saturating towards
-  /// MRI_ModRef.
+  /// ModRef.
   void addFunctionInfo(const FunctionInfo &FI) {
     addModRefInfo(FI.getModRefInfo());
 
@@ -173,7 +188,7 @@ public:
       Info.setPointer(P);
     }
     auto &GlobalMRI = P->Map[&GV];
-    GlobalMRI = ModRefInfo(GlobalMRI | NewMRI);
+    GlobalMRI = unionModRef(GlobalMRI, NewMRI);
   }
 
   /// Clear a global's ModRef info. Should be used when a global is being
@@ -230,9 +245,9 @@ FunctionModRefBehavior GlobalsAAResult::getModRefBehavior(const Function *F) {
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
   if (FunctionInfo *FI = getFunctionInfo(F)) {
-    if (FI->getModRefInfo() == MRI_NoModRef)
+    if (!isModOrRefSet(FI->getModRefInfo()))
       Min = FMRB_DoesNotAccessMemory;
-    else if ((FI->getModRefInfo() & MRI_Mod) == 0)
+    else if (!isModSet(FI->getModRefInfo()))
       Min = FMRB_OnlyReadsMemory;
   }
 
@@ -246,9 +261,9 @@ GlobalsAAResult::getModRefBehavior(ImmutableCallSite CS) {
   if (!CS.hasOperandBundles())
     if (const Function *F = CS.getCalledFunction())
       if (FunctionInfo *FI = getFunctionInfo(F)) {
-        if (FI->getModRefInfo() == MRI_NoModRef)
+        if (!isModOrRefSet(FI->getModRefInfo()))
           Min = FMRB_DoesNotAccessMemory;
-        else if ((FI->getModRefInfo() & MRI_Mod) == 0)
+        else if (!isModSet(FI->getModRefInfo()))
           Min = FMRB_OnlyReadsMemory;
       }
 
@@ -297,7 +312,7 @@ void GlobalsAAResult::AnalyzeGlobals(Module &M) {
             Handles.emplace_front(*this, Reader);
             Handles.front().I = Handles.begin();
           }
-          FunctionInfos[Reader].addModRefInfoForGlobal(GV, MRI_Ref);
+          FunctionInfos[Reader].addModRefInfoForGlobal(GV, ModRefInfo::Ref);
         }
 
         if (!GV.isConstant()) // No need to keep track of writers to constants
@@ -306,7 +321,7 @@ void GlobalsAAResult::AnalyzeGlobals(Module &M) {
               Handles.emplace_front(*this, Writer);
               Handles.front().I = Handles.begin();
             }
-            FunctionInfos[Writer].addModRefInfoForGlobal(GV, MRI_Mod);
+            FunctionInfos[Writer].addModRefInfoForGlobal(GV, ModRefInfo::Mod);
           }
         ++NumNonAddrTakenGlobalVars;
 
@@ -502,13 +517,13 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         if (F->doesNotAccessMemory()) {
           // Can't do better than that!
         } else if (F->onlyReadsMemory()) {
-          FI.addModRefInfo(MRI_Ref);
+          FI.addModRefInfo(ModRefInfo::Ref);
           if (!F->isIntrinsic() && !F->onlyAccessesArgMemory())
             // This function might call back into the module and read a global -
             // consider every global as possibly being read by this function.
             FI.setMayReadAnyGlobal();
         } else {
-          FI.addModRefInfo(MRI_ModRef);
+          FI.addModRefInfo(ModRefInfo::ModRef);
           // Can't say anything useful unless it's an intrinsic - they don't
           // read or write global variables of the kind considered here.
           KnowNothing = !F->isIntrinsic();
@@ -544,7 +559,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
     // Scan the function bodies for explicit loads or stores.
     for (auto *Node : SCC) {
-      if (FI.getModRefInfo() == MRI_ModRef)
+      if (isModAndRefSet(FI.getModRefInfo()))
         break; // The mod/ref lattice saturates here.
 
       // Don't prove any properties based on the implementation of an optnone
@@ -554,7 +569,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         continue;
 
       for (Instruction &I : instructions(Node->getFunction())) {
-        if (FI.getModRefInfo() == MRI_ModRef)
+        if (isModAndRefSet(FI.getModRefInfo()))
           break; // The mod/ref lattice saturates here.
 
         // We handle calls specially because the graph-relevant aspects are
@@ -563,13 +578,13 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
           if (isAllocationFn(&I, &TLI) || isFreeCall(&I, &TLI)) {
             // FIXME: It is completely unclear why this is necessary and not
             // handled by the above graph code.
-            FI.addModRefInfo(MRI_ModRef);
+            FI.addModRefInfo(ModRefInfo::ModRef);
           } else if (Function *Callee = CS.getCalledFunction()) {
             // The callgraph doesn't include intrinsic calls.
             if (Callee->isIntrinsic()) {
               FunctionModRefBehavior Behaviour =
                   AAResultBase::getModRefBehavior(Callee);
-              FI.addModRefInfo(ModRefInfo(Behaviour & MRI_ModRef));
+              FI.addModRefInfo(createModRefInfo(Behaviour));
             }
           }
           continue;
@@ -578,15 +593,15 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         // All non-call instructions we use the primary predicates for whether
         // thay read or write memory.
         if (I.mayReadFromMemory())
-          FI.addModRefInfo(MRI_Ref);
+          FI.addModRefInfo(ModRefInfo::Ref);
         if (I.mayWriteToMemory())
-          FI.addModRefInfo(MRI_Mod);
+          FI.addModRefInfo(ModRefInfo::Mod);
       }
     }
 
-    if ((FI.getModRefInfo() & MRI_Mod) == 0)
+    if (!isModSet(FI.getModRefInfo()))
       ++NumReadMemFunctions;
-    if (FI.getModRefInfo() == MRI_NoModRef)
+    if (!isModOrRefSet(FI.getModRefInfo()))
       ++NumNoMemFunctions;
 
     // Finally, now that we know the full effect on this SCC, clone the
@@ -867,8 +882,9 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
 ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
                                                      const GlobalValue *GV) {
   if (CS.doesNotAccessMemory())
-    return MRI_NoModRef;
-  ModRefInfo ConservativeResult = CS.onlyReadsMemory() ? MRI_Ref : MRI_ModRef;
+    return ModRefInfo::NoModRef;
+  ModRefInfo ConservativeResult =
+      CS.onlyReadsMemory() ? ModRefInfo::Ref : ModRefInfo::ModRef;
 
   // Iterate through all the arguments to the called function. If any argument
   // is based on GV, return the conservative result.
@@ -889,12 +905,12 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
   }
 
   // We identified all objects in the argument list, and none of them were GV.
-  return MRI_NoModRef;
+  return ModRefInfo::NoModRef;
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfo(ImmutableCallSite CS,
                                           const MemoryLocation &Loc) {
-  unsigned Known = MRI_ModRef;
+  ModRefInfo Known = ModRefInfo::ModRef;
 
   // If we are asking for mod/ref info of a direct call with a pointer to a
   // global we are tracking, return information if we have it.
@@ -904,12 +920,12 @@ ModRefInfo GlobalsAAResult::getModRefInfo(ImmutableCallSite CS,
       if (const Function *F = CS.getCalledFunction())
         if (NonAddressTakenGlobals.count(GV))
           if (const FunctionInfo *FI = getFunctionInfo(F))
-            Known = FI->getModRefInfoForGlobal(*GV) |
-              getModRefInfoForArgument(CS, GV);
+            Known = unionModRef(FI->getModRefInfoForGlobal(*GV),
+                                getModRefInfoForArgument(CS, GV));
 
-  if (Known == MRI_NoModRef)
-    return MRI_NoModRef; // No need to query other mod/ref analyses
-  return ModRefInfo(Known & AAResultBase::getModRefInfo(CS, Loc));
+  if (!isModOrRefSet(Known))
+    return ModRefInfo::NoModRef; // No need to query other mod/ref analyses
+  return intersectModRef(Known, AAResultBase::getModRefInfo(CS, Loc));
 }
 
 GlobalsAAResult::GlobalsAAResult(const DataLayout &DL,

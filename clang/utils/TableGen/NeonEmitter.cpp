@@ -773,19 +773,19 @@ void Type::applyTypespec(bool &Quad) {
       break;
     case 'h':
       Float = true;
-    // Fall through
+      LLVM_FALLTHROUGH;
     case 's':
       ElementBitwidth = 16;
       break;
     case 'f':
       Float = true;
-    // Fall through
+      LLVM_FALLTHROUGH;
     case 'i':
       ElementBitwidth = 32;
       break;
     case 'd':
       Float = true;
-    // Fall through
+      LLVM_FALLTHROUGH;
     case 'l':
       ElementBitwidth = 64;
       break;
@@ -859,6 +859,10 @@ void Type::applyModifier(char Mod) {
   case 'F':
     Float = true;
     ElementBitwidth = 64;
+    break;
+  case 'H':
+    Float = true;
+    ElementBitwidth = 16;
     break;
   case 'g':
     if (AppliedQuad)
@@ -1006,7 +1010,7 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
 }
 
 static bool isFloatingPointProtoModifier(char Mod) {
-  return Mod == 'F' || Mod == 'f';
+  return Mod == 'F' || Mod == 'f' || Mod == 'H';
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
@@ -2102,7 +2106,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
     OverloadInfo &OI = I.second;
 
     OS << "case NEON::BI__builtin_neon_" << I.first << ": ";
-    OS << "mask = 0x" << utohexstr(OI.Mask) << "ULL";
+    OS << "mask = 0x" << Twine::utohexstr(OI.Mask) << "ULL";
     if (OI.PtrArgNum >= 0)
       OS << "; PtrArgNum = " << OI.PtrArgNum;
     if (OI.HasConstPtr)
@@ -2316,7 +2320,7 @@ void NeonEmitter::run(raw_ostream &OS) {
 
     Type T2 = T;
     T2.makeScalar();
-    OS << utostr(T.getNumElements()) << "))) ";
+    OS << T.getNumElements() << "))) ";
     OS << T2.str();
     OS << " " << T.str() << ";\n";
   }
@@ -2346,7 +2350,7 @@ void NeonEmitter::run(raw_ostream &OS) {
       Type VT(TS, M);
       OS << "typedef struct " << VT.str() << " {\n";
       OS << "  " << T.str() << " val";
-      OS << "[" << utostr(NumMembers) << "]";
+      OS << "[" << NumMembers << "]";
       OS << ";\n} ";
       OS << VT.str() << ";\n";
       OS << "\n";

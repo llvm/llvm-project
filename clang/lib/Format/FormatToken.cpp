@@ -25,10 +25,9 @@ namespace format {
 const char *getTokenTypeName(TokenType Type) {
   static const char *const TokNames[] = {
 #define TYPE(X) #X,
-LIST_TOKEN_TYPES
+      LIST_TOKEN_TYPES
 #undef TYPE
-    nullptr
-  };
+      nullptr};
 
   if (Type < NUM_TOKEN_TYPES)
     return TokNames[Type];
@@ -52,6 +51,7 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_wchar_t:
   case tok::kw_bool:

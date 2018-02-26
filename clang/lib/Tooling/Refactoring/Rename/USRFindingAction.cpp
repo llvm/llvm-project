@@ -39,6 +39,21 @@ using namespace llvm;
 namespace clang {
 namespace tooling {
 
+const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl) {
+  // If FoundDecl is a constructor or destructor, we want to instead take
+  // the Decl of the corresponding class.
+  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
+    FoundDecl = CtorDecl->getParent();
+  else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl))
+    FoundDecl = DtorDecl->getParent();
+  // FIXME: (Alex L): Canonicalize implicit template instantions, just like
+  // the indexer does it.
+
+  // Note: please update the declaration's doc comment every time the
+  // canonicalization rules are changed.
+  return FoundDecl;
+}
+
 namespace {
 // \brief NamedDeclFindingConsumer should delegate finding USRs of given Decl to
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
@@ -58,6 +73,7 @@ public:
         if (checkIfOverriddenFunctionAscends(OverriddenMethod))
           USRSet.insert(getUSRForDecl(OverriddenMethod));
       }
+      addUSRsOfInstantiatedMethods(MethodDecl);
     } else if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
       handleCXXRecordDecl(RecordDecl);
     } else if (const auto *TemplateDecl =
@@ -69,9 +85,13 @@ public:
     return std::vector<std::string>(USRSet.begin(), USRSet.end());
   }
 
+  bool shouldVisitTemplateInstantiations() const { return true; }
+
   bool VisitCXXMethodDecl(const CXXMethodDecl *MethodDecl) {
     if (MethodDecl->isVirtual())
       OverriddenMethods.push_back(MethodDecl);
+    if (MethodDecl->getInstantiatedFromMemberFunction())
+      InstantiatedMethods.push_back(MethodDecl);
     return true;
   }
 
@@ -122,6 +142,20 @@ private:
       addUSRsOfOverridenFunctions(OverriddenMethod);
   }
 
+  void addUSRsOfInstantiatedMethods(const CXXMethodDecl *MethodDecl) {
+    // For renaming a class template method, all references of the instantiated
+    // member methods should be renamed too, so add USRs of the instantiated
+    // methods to the USR set.
+    USRSet.insert(getUSRForDecl(MethodDecl));
+    if (const auto *FT = MethodDecl->getInstantiatedFromMemberFunction())
+      USRSet.insert(getUSRForDecl(FT));
+    for (const auto *Method : InstantiatedMethods) {
+      if (USRSet.find(getUSRForDecl(
+              Method->getInstantiatedFromMemberFunction())) != USRSet.end())
+        USRSet.insert(getUSRForDecl(Method));
+    }
+  }
+
   bool checkIfOverriddenFunctionAscends(const CXXMethodDecl *MethodDecl) {
     for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
       if (USRSet.find(getUSRForDecl(OverriddenMethod)) != USRSet.end())
@@ -135,9 +169,16 @@ private:
   ASTContext &Context;
   std::set<std::string> USRSet;
   std::vector<const CXXMethodDecl *> OverriddenMethods;
+  std::vector<const CXXMethodDecl *> InstantiatedMethods;
   std::vector<const ClassTemplatePartialSpecializationDecl *> PartialSpecs;
 };
 } // namespace
+
+std::vector<std::string> getUSRsForDeclaration(const NamedDecl *ND,
+                                               ASTContext &Context) {
+  AdditionalUSRFinder Finder(ND, Context);
+  return Finder.Find();
+}
 
 class NamedDeclFindingConsumer : public ASTConsumer {
 public:
@@ -183,8 +224,11 @@ private:
         return false;
       }
 
-      if (Force)
+      if (Force) {
+        SpellingNames.push_back(std::string());
+        USRList.push_back(std::vector<std::string>());
         return true;
+      }
 
       unsigned CouldNotFindSymbolNamed = Engine.getCustomDiagID(
           DiagnosticsEngine::Error, "clang-rename could not find symbol %0");
@@ -193,13 +237,7 @@ private:
       return false;
     }
 
-    // If FoundDecl is a constructor or destructor, we want to instead take
-    // the Decl of the corresponding class.
-    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
-      FoundDecl = CtorDecl->getParent();
-    else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl))
-      FoundDecl = DtorDecl->getParent();
-
+    FoundDecl = getCanonicalSymbolDeclaration(FoundDecl);
     SpellingNames.push_back(FoundDecl->getNameAsString());
     AdditionalUSRFinder Finder(FoundDecl, Context);
     USRList.push_back(Finder.Find());

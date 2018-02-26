@@ -89,6 +89,17 @@ public:
   bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 
+  /// Returns the line number corresponding to the special case list entry if
+  /// the special case list contains a line
+  /// \code
+  ///   @Prefix:<E>=@Category
+  /// \endcode
+  /// where @Query satisfies wildcard expression <E> in a given @Section.
+  /// Returns zero if there is no blacklist entry corresponding to this
+  /// expression.
+  unsigned inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
+                          StringRef Category = StringRef()) const;
+
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
@@ -96,25 +107,25 @@ protected:
                       std::string &Error);
   bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
+  SpecialCaseList() = default;
   SpecialCaseList(SpecialCaseList const &) = delete;
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
   /// Represents a set of regular expressions.  Regular expressions which are
-  /// "literal" (i.e. no regex metacharacters) are stored in Strings, while all
-  /// others are represented as a single pipe-separated regex in RegEx.  The
-  /// reason for doing so is efficiency; StringSet is much faster at matching
+  /// "literal" (i.e. no regex metacharacters) are stored in Strings.  The
+  /// reason for doing so is efficiency; StringMap is much faster at matching
   /// literal strings than Regex.
   class Matcher {
   public:
-    bool insert(std::string Regexp, std::string &REError);
-    void compile();
-    bool match(StringRef Query) const;
+    bool insert(std::string Regexp, unsigned LineNumber, std::string &REError);
+    // Returns the line number in the source file that this query matches to.
+    // Returns zero if no match is found.
+    unsigned match(StringRef Query) const;
 
   private:
-    StringSet<> Strings;
+    StringMap<unsigned> Strings;
     TrigramIndex Trigrams;
-    std::unique_ptr<Regex> RegEx;
-    std::string UncompiledRegEx;
+    std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
@@ -127,19 +138,15 @@ protected:
   };
 
   std::vector<Section> Sections;
-  bool IsCompiled;
 
-  SpecialCaseList();
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   bool parse(const MemoryBuffer *MB, StringMap<size_t> &SectionsMap,
              std::string &Error);
-  /// compile() should be called once, after parsing all the memory buffers.
-  void compile();
 
   // Helper method for derived classes to search by Prefix, Query, and Category
   // once they have already resolved a section entry.
-  bool inSection(const SectionEntries &Entries, StringRef Prefix,
-                 StringRef Query, StringRef Category) const;
+  unsigned inSectionBlame(const SectionEntries &Entries, StringRef Prefix,
+                          StringRef Query, StringRef Category) const;
 };
 
 }  // namespace llvm

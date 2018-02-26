@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SectionKind.h"
@@ -268,6 +269,9 @@ namespace llvm {
                                        unsigned UniqueID,
                                        const MCSymbolELF *Associated);
 
+    /// \brief Map of currently defined macros.
+    StringMap<MCAsmMacro> MacroMap;
+
   public:
     explicit MCContext(const MCAsmInfo *MAI, const MCRegisterInfo *MRI,
                        const MCObjectFileInfo *MOFI,
@@ -441,53 +445,27 @@ namespace llvm {
     getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
                               unsigned UniqueID = GenericSectionID);
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags) {
-      return getWasmSection(Section, Type, Flags, nullptr);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K) {
+      return getWasmSection(Section, K, nullptr);
     }
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags, const char *BeginSymName) {
-      return getWasmSection(Section, Type, Flags, "", BeginSymName);
-    }
-
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags, const Twine &Group) {
-      return getWasmSection(Section, Type, Flags, Group, nullptr);
-    }
-
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags, const Twine &Group,
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                   const char *BeginSymName) {
-      return getWasmSection(Section, Type, Flags, Group, ~0, BeginSymName);
+      return getWasmSection(Section, K, "", ~0, BeginSymName);
     }
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags, const Twine &Group,
-                                  unsigned UniqueID) {
-      return getWasmSection(Section, Type, Flags, Group, UniqueID, nullptr);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
+                                  const Twine &Group, unsigned UniqueID) {
+      return getWasmSection(Section, K, Group, UniqueID, nullptr);
     }
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags, const Twine &Group,
-                                  unsigned UniqueID, const char *BeginSymName);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
+                                  const Twine &Group, unsigned UniqueID,
+                                  const char *BeginSymName);
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
-                                  unsigned Flags, const MCSymbolWasm *Group,
-                                  unsigned UniqueID, const char *BeginSymName);
-
-    /// Get a section with the provided group identifier. This section is
-    /// named by concatenating \p Prefix with '.' then \p Suffix. The \p Type
-    /// describes the type of the section and \p Flags are used to further
-    /// configure this named section.
-    MCSectionWasm *getWasmNamedSection(const Twine &Prefix, const Twine &Suffix,
-                                       unsigned Type, unsigned Flags);
-
-    MCSectionWasm *createWasmRelSection(const Twine &Name, unsigned Type,
-                                        unsigned Flags,
-                                        const MCSymbolWasm *Group);
-
-    void renameWasmSection(MCSectionWasm *Section, StringRef Name);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
+                                  const MCSymbolWasm *Group, unsigned UniqueID,
+                                  const char *BeginSymName);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
@@ -644,6 +622,17 @@ namespace llvm {
     // FIXME: We should really do something about that.
     LLVM_ATTRIBUTE_NORETURN void reportFatalError(SMLoc L,
                                                   const Twine &Msg);
+
+    const MCAsmMacro *lookupMacro(StringRef Name) {
+      StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);
+      return (I == MacroMap.end()) ? nullptr : &I->getValue();
+    }
+
+    void defineMacro(StringRef Name, MCAsmMacro Macro) {
+      MacroMap.insert(std::make_pair(Name, std::move(Macro)));
+    }
+
+    void undefineMacro(StringRef Name) { MacroMap.erase(Name); }
   };
 
 } // end namespace llvm

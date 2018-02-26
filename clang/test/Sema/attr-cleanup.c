@@ -2,16 +2,16 @@
 
 void c1(int *a);
 
-extern int g1 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute ignored}}
-int g2 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute ignored}}
-static int g3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute ignored}}
+extern int g1 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
+int g2 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
+static int g3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 
 void t1()
 {
     int v1 __attribute((cleanup)); // expected-error {{'cleanup' attribute takes one argument}}
     int v2 __attribute((cleanup(1, 2))); // expected-error {{'cleanup' attribute takes one argument}}
 
-    static int v3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute ignored}}
+    static int v3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 
     int v4 __attribute((cleanup(h))); // expected-error {{use of undeclared identifier 'h'}}
 
@@ -46,3 +46,5 @@ void t5() {
 void t6(void) {
   int i __attribute__((cleanup((void *)0)));  // expected-error {{'cleanup' argument is not a function}}
 }
+
+void t7(__attribute__((cleanup(c4))) int a) {} // expected-warning {{'cleanup' attribute only applies to local variables}}

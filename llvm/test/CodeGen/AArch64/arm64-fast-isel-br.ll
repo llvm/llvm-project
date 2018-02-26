@@ -1,4 +1,4 @@
-; RUN: llc -O0 -fast-isel-abort=1 -mtriple=arm64-apple-darwin -mcpu=cyclone -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -mtriple=arm64-apple-darwin -mcpu=cyclone -verify-machineinstrs < %s | FileCheck %s
 
 define void @branch1() nounwind uwtable ssp {
   %x = alloca i32, align 4

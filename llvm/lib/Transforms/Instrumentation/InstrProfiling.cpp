@@ -43,7 +43,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -245,6 +244,9 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
+    // Skip 'infinite' loops:
+    if (ExitBlocks.size() == 0)
+      return false;
     unsigned MaxProm = getMaxNumOfPromotionsInLoop(&L);
     if (MaxProm == 0)
       return false;
@@ -428,7 +430,30 @@ void InstrProfiling::promoteCounterLoadStores(Function *F) {
   }
 }
 
+/// Check if the module contains uses of any profiling intrinsics.
+static bool containsProfilingIntrinsics(Module &M) {
+  if (auto *F = M.getFunction(
+          Intrinsic::getName(llvm::Intrinsic::instrprof_increment)))
+    if (!F->use_empty())
+      return true;
+  if (auto *F = M.getFunction(
+          Intrinsic::getName(llvm::Intrinsic::instrprof_increment_step)))
+    if (!F->use_empty())
+      return true;
+  if (auto *F = M.getFunction(
+          Intrinsic::getName(llvm::Intrinsic::instrprof_value_profile)))
+    if (!F->use_empty())
+      return true;
+  return false;
+}
+
 bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
+  // Improve compile time by avoiding linear scans when there is no work.
+  GlobalVariable *CoverageNamesVar =
+      M.getNamedGlobal(getCoverageUnusedNamesVarName());
+  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
+    return false;
+
   bool MadeChange = false;
 
   this->M = &M;
@@ -462,8 +487,7 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   for (Function &F : M)
     MadeChange |= lowerIntrinsics(&F);
 
-  if (GlobalVariable *CoverageNamesVar =
-          M.getNamedGlobal(getCoverageUnusedNamesVarName())) {
+  if (CoverageNamesVar) {
     lowerCoverageData(CoverageNamesVar);
     MadeChange = true;
   }

@@ -1,4 +1,4 @@
-//===--- RDFGraph.h ---------------------------------------------*- C++ -*-===//
+//===- RDFGraph.h -----------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -111,7 +111,7 @@
 //
 //   DFG dump:[
 //   f1: Function foo
-//   b2: === BB#0 === preds(0), succs(0):
+//   b2: === %bb.0 === preds(0), succs(0):
 //   p3: phi [d4<r0>(,d12,u9):]
 //   p5: phi [d6<r1>(,,u10):]
 //   s7: add [d8<r2>(,,u13):, u9<r0>(d4):, u10<r1>(d6):]
@@ -183,7 +183,7 @@
 //   This is typically used to prevent keeping registers artificially live
 //   in cases when they are defined via predicated instructions. For example:
 //     r0 = add-if-true cond, r10, r11                (1)
-//     r0 = add-if-false cond, r12, r13, r0<imp-use>  (2)
+//     r0 = add-if-false cond, r12, r13, implicit r0  (2)
 //     ... = r0                                       (3)
 //   Before (1), r0 is not intended to be live, and the use of r0 in (3) is
 //   not meant to be reached by any def preceding (1). However, since the
@@ -226,17 +226,13 @@
 #define LLVM_LIB_TARGET_HEXAGON_RDFGRAPH_H
 
 #include "RDFRegisters.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -250,17 +246,19 @@ static_assert(sizeof(uint32_t) == sizeof(unsigned), "Those should be equal");
 
 namespace llvm {
 
-  class MachineBasicBlock;
-  class MachineFunction;
-  class MachineInstr;
-  class MachineOperand;
-  class MachineDominanceFrontier;
-  class MachineDominatorTree;
-  class TargetInstrInfo;
+class MachineBasicBlock;
+class MachineDominanceFrontier;
+class MachineDominatorTree;
+class MachineFunction;
+class MachineInstr;
+class MachineOperand;
+class raw_ostream;
+class TargetInstrInfo;
+class TargetRegisterInfo;
 
 namespace rdf {
 
-  typedef uint32_t NodeId;
+  using NodeId = uint32_t;
 
   struct DataFlowGraph;
 
@@ -335,7 +333,7 @@ namespace rdf {
   };
 
   template <typename T> struct NodeAddr {
-    NodeAddr() : Addr(nullptr) {}
+    NodeAddr() = default;
     NodeAddr(T A, NodeId I) : Addr(A), Id(I) {}
 
     // Type cast (casting constructor). The reason for having this class
@@ -351,7 +349,7 @@ namespace rdf {
       return !operator==(NA);
     }
 
-    T Addr;
+    T Addr = nullptr;
     NodeId Id = 0;
   };
 
@@ -408,11 +406,11 @@ namespace rdf {
     const uint32_t IndexMask;
     char *ActiveEnd = nullptr;
     std::vector<char*> Blocks;
-    typedef BumpPtrAllocatorImpl<MallocAllocator, 65536> AllocatorTy;
+    using AllocatorTy = BumpPtrAllocatorImpl<MallocAllocator, 65536>;
     AllocatorTy MemPool;
   };
 
-  typedef std::set<RegisterRef> RegisterSet;
+  using RegisterSet = std::set<RegisterRef>;
 
   struct TargetOperandInfo {
     TargetOperandInfo(const TargetInstrInfo &tii) : TII(tii) {}
@@ -437,10 +435,12 @@ namespace rdf {
     LaneBitmask getLaneMaskForIndex(uint32_t K) const {
       return K == 0 ? LaneBitmask::getAll() : get(K);
     }
+
     uint32_t getIndexForLaneMask(LaneBitmask LM) {
       assert(LM.any());
       return LM.all() ? 0 : insert(LM);
     }
+
     uint32_t getIndexForLaneMask(LaneBitmask LM) const {
       assert(LM.any());
       return LM.all() ? 0 : find(LM);
@@ -463,8 +463,10 @@ namespace rdf {
 
     // Insert node NA after "this" in the circular chain.
     void append(NodeAddr<NodeBase*> NA);
+
     // Initialize all members to 0.
     void init() { memset(this, 0, sizeof *this); }
+
     void setNext(NodeId N) { Next = N; }
 
   protected:
@@ -508,9 +510,8 @@ namespace rdf {
   static_assert(sizeof(NodeBase) <= NodeAllocator::NodeMemSize,
         "NodeBase must be at most NodeAllocator::NodeMemSize bytes");
 
-//  typedef std::vector<NodeAddr<NodeBase*>> NodeList;
-  typedef SmallVector<NodeAddr<NodeBase*>,4> NodeList;
-  typedef std::set<NodeId> NodeSet;
+  using NodeList = SmallVector<NodeAddr<NodeBase *>, 4>;
+  using NodeSet = std::set<NodeId>;
 
   struct RefNode : public NodeBase {
     RefNode() = default;
@@ -672,9 +673,9 @@ namespace rdf {
       bool empty() const { return Stack.empty() || top() == bottom(); }
 
     private:
-      typedef NodeAddr<DefNode*> value_type;
+      using value_type = NodeAddr<DefNode *>;
       struct Iterator {
-        typedef DefStack::value_type value_type;
+        using value_type = DefStack::value_type;
 
         Iterator &up() { Pos = DS.nextUp(Pos); return *this; }
         Iterator &down() { Pos = DS.nextDown(Pos); return *this; }
@@ -691,17 +692,19 @@ namespace rdf {
         bool operator!=(const Iterator &It) const { return Pos != It.Pos; }
 
       private:
+        friend struct DefStack;
+
         Iterator(const DefStack &S, bool Top);
 
         // Pos-1 is the index in the StorageType object that corresponds to
         // the top of the DefStack.
         const DefStack &DS;
         unsigned Pos;
-        friend struct DefStack;
       };
 
     public:
-      typedef Iterator iterator;
+      using iterator = Iterator;
+
       iterator top() const { return Iterator(*this, true); }
       iterator bottom() const { return Iterator(*this, false); }
       unsigned size() const;
@@ -713,7 +716,8 @@ namespace rdf {
 
     private:
       friend struct Iterator;
-      typedef std::vector<value_type> StorageType;
+
+      using StorageType = std::vector<value_type>;
 
       bool isDelimiter(const StorageType::value_type &P, NodeId N = 0) const {
         return (P.Addr == nullptr) && (N == 0 || P.Id == N);
@@ -727,7 +731,7 @@ namespace rdf {
 
     // Make this std::unordered_map for speed of accessing elements.
     // Map: Register (physical or virtual) -> DefStack
-    typedef std::unordered_map<RegisterId,DefStack> DefStackMap;
+    using DefStackMap = std::unordered_map<RegisterId, DefStack>;
 
     void build(unsigned Options = BuildOptions::None);
     void pushAllDefs(NodeAddr<InstrNode*> IA, DefStackMap &DM);
@@ -839,13 +843,11 @@ namespace rdf {
     locateNextRef(NodeAddr<InstrNode*> IA, NodeAddr<RefNode*> RA,
         Predicate P) const;
 
-    typedef std::map<NodeId,RegisterSet> BlockRefsMap;
+    using BlockRefsMap = std::map<NodeId, RegisterSet>;
 
     void buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In);
-    void buildBlockRefs(NodeAddr<BlockNode*> BA, BlockRefsMap &RefM);
-    void recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
-        NodeAddr<BlockNode*> BA);
-    void buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
+    void recordDefsForDF(BlockRefsMap &PhiM, NodeAddr<BlockNode*> BA);
+    void buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
         NodeAddr<BlockNode*> BA);
     void removeUnusedPhis();
 
@@ -923,7 +925,6 @@ namespace rdf {
     return MM;
   }
 
-
   template <typename T> struct Print;
   template <typename T>
   raw_ostream &operator<< (raw_ostream &OS, const Print<T> &P);
@@ -931,6 +932,7 @@ namespace rdf {
   template <typename T>
   struct Print {
     Print(const T &x, const DataFlowGraph &g) : Obj(x), G(g) {}
+
     const T &Obj;
     const DataFlowGraph &G;
   };

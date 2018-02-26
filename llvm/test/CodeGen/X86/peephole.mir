@@ -19,18 +19,18 @@ registers:
 
 body: |
   bb.0:
-    ; CHECK: %1 = VMOVDI2SSrr %0
-    ; CHECK: %7 = COPY %0
+    ; CHECK: %1:fr32 = VMOVDI2SSrr %0
+    ; CHECK: %7:gr32 = COPY %0
     ; CHECK: NOOP implicit %7
     %0 = MOV32ri 42
     %1 = VMOVDI2SSrr %0
     %2 = MOVSS2DIrr %1
     NOOP implicit %2
 
-    ; CHECK: %4 = VMOVDI2SSrr %3
+    ; CHECK: %4:fr32 = VMOVDI2SSrr %3
     ; CHECK-NOT: COPY
-    ; CHECK: %5 = MOVSS2DIrr %4
-    ; CHECK: %6 = SUBREG_TO_REG %5, 0
+    ; CHECK: %5:gr32 = MOVSS2DIrr %4
+    ; CHECK: %6:gr64 = SUBREG_TO_REG %5, 0
     ; CHECK: NOOP implicit %6
     %3 = MOV32ri 42
     %4 = VMOVDI2SSrr %3

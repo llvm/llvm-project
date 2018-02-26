@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | \
 ; RUN:   not grep addi
-; RUN: llc -verify-machineinstrs -code-model=small < %s -march=ppc64 | \
+; RUN: llc -verify-machineinstrs -code-model=small < %s -mtriple=ppc64-- | \
 ; RUN:   not grep addi
 
 @Glob = global i64 4

@@ -119,6 +119,53 @@ Example:
   guard: 0x71bcdc 4 PC 0x4ecdc7 in main trace-pc-guard-example.cc:4:17
   guard: 0x71bcd0 1 PC 0x4ecd20 in foo() trace-pc-guard-example.cc:2:14
 
+Inline 8bit-counters
+====================
+
+**Experimental, may change or disappear in future**
+
+With ``-fsanitize-coverage=inline-8bit-counters`` the compiler will insert
+inline counter increments on every edge.
+This is similar to ``-fsanitize-coverage=trace-pc-guard`` but instead of a
+callback the instrumentation simply increments a counter.
+
+Users need to implement a single function to capture the counters at startup.
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_8bit_counters_init(char *start, char *end) {
+    // [start,end) is the array of 8-bit counters created for the current DSO.
+    // Capture this array in order to read/modify the counters.
+  }
+
+PC-Table
+========
+
+**Experimental, may change or disappear in future**
+
+With ``-fsanitize-coverage=pc-table`` the compiler will create a table of
+instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters`` or
+``-fsanitize-coverage=trace-pc-guard``.
+
+Users need to implement a single function to capture the PC table at startup:
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
+                                const uintptr_t *pcs_end) {
+    // [pcs_beg,pcs_end) is the array of ptr-sized integers representing
+    // pairs [PC,PCFlags] for every instrumented block in the current DSO.
+    // Capture this array in order to read the PCs and their Flags.
+    // The number of PCs and PCFlags for a given DSO is the same as the number
+    // of 8-bit counters (-fsanitize-coverage=inline-8bit-counters) or
+    // trace_pc_guard callbacks (-fsanitize-coverage=trace-pc-guard)
+    // A PCFlags describes the basic block:
+    //  * bit0: 1 if the block is the function entry block, 0 otherwise.
+  }
+
+
 Tracing PCs
 ===========
 
@@ -130,7 +177,6 @@ These callbacks are not implemented in the Sanitizer run-time and should be defi
 by the user.
 This mechanism is used for fuzzing the Linux kernel
 (https://github.com/google/syzkaller).
-
 
 Instrumentation points
 ======================
@@ -211,6 +257,14 @@ the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
   void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2);
   void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2);
 
+  // Called before a comparison instruction if exactly one of the arguments is constant.
+  // Arg1 and Arg2 are arguments of the comparison, Arg1 is a compile-time constant. 
+  // These callbacks are emitted by -fsanitize-coverage=trace-cmp since 2017-08-11
+  void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2);
+  void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2);
+  void __sanitizer_cov_trace_const_cmp4(uint32_t Arg1, uint32_t Arg2);
+  void __sanitizer_cov_trace_const_cmp8(uint64_t Arg1, uint64_t Arg2);
+
   // Called before a switch statement.
   // Val is the switch operand.
   // Cases[0] is the number of case constants.
@@ -226,9 +280,6 @@ the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
   // Called before a GetElemementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
-
-
-This interface is a subject to change.
 
 Default implementation
 ======================

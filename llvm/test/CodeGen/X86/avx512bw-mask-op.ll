@@ -3,7 +3,7 @@
 
 define i32 @mask32(i32 %x) {
 ; CHECK-LABEL: mask32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    knotd %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
@@ -19,7 +19,7 @@ define i32 @mask32(i32 %x) {
 
 define i64 @mask64(i64 %x) {
 ; CHECK-LABEL: mask64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k0
 ; CHECK-NEXT:    knotq %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, %rax
@@ -39,7 +39,7 @@ define i64 @mask64(i64 %x) {
 
 define void @mask32_mem(i32* %ptr) {
 ; CHECK-LABEL: mask32_mem:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd (%rdi), %k0
 ; CHECK-NEXT:    knotd %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, (%rdi)
@@ -57,7 +57,7 @@ define void @mask32_mem(i32* %ptr) {
 
 define void @mask64_mem(i64* %ptr) {
 ; CHECK-LABEL: mask64_mem:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq (%rdi), %k0
 ; CHECK-NEXT:    knotq %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, (%rdi)
@@ -79,7 +79,7 @@ define void @mask64_mem(i64* %ptr) {
 
 define i32 @mand32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mand32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    xorl %esi, %edi
@@ -97,7 +97,7 @@ define i32 @mand32(i32 %x, i32 %y) {
 
 define i32 @mand32_mem(<32 x i1>* %x, <32 x i1>* %y) {
 ; CHECK-LABEL: mand32_mem:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd (%rdi), %k0
 ; CHECK-NEXT:    kmovd (%rsi), %k1
 ; CHECK-NEXT:    kandd %k1, %k0, %k2
@@ -116,7 +116,7 @@ define i32 @mand32_mem(<32 x i1>* %x, <32 x i1>* %y) {
 
 define i64 @mand64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mand64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    andq %rsi, %rax
 ; CHECK-NEXT:    xorq %rsi, %rdi
@@ -134,7 +134,7 @@ define i64 @mand64(i64 %x, i64 %y) {
 
 define i64 @mand64_mem(<64 x i1>* %x, <64 x i1>* %y) {
 ; CHECK-LABEL: mand64_mem:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq (%rdi), %k0
 ; CHECK-NEXT:    kmovq (%rsi), %k1
 ; CHECK-NEXT:    kandq %k1, %k0, %k2
@@ -153,7 +153,7 @@ define i64 @mand64_mem(<64 x i1>* %x, <64 x i1>* %y) {
 
 define i32 @test_v32i1_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_v32i1_add:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    kxord %k1, %k0, %k0
@@ -168,7 +168,7 @@ define i32 @test_v32i1_add(i32 %x, i32 %y) {
 
 define i32 @test_v32i1_sub(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_v32i1_sub:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    kxord %k1, %k0, %k0
@@ -183,7 +183,7 @@ define i32 @test_v32i1_sub(i32 %x, i32 %y) {
 
 define i32 @test_v32i1_mul(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_v32i1_mul:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    kandd %k1, %k0, %k0
@@ -198,7 +198,7 @@ define i32 @test_v32i1_mul(i32 %x, i32 %y) {
 
 define i64 @test_v64i1_add(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_v64i1_add:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k0
 ; CHECK-NEXT:    kmovq %rsi, %k1
 ; CHECK-NEXT:    kxorq %k1, %k0, %k0
@@ -213,7 +213,7 @@ define i64 @test_v64i1_add(i64 %x, i64 %y) {
 
 define i64 @test_v64i1_sub(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_v64i1_sub:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k0
 ; CHECK-NEXT:    kmovq %rsi, %k1
 ; CHECK-NEXT:    kxorq %k1, %k0, %k0
@@ -228,7 +228,7 @@ define i64 @test_v64i1_sub(i64 %x, i64 %y) {
 
 define i64 @test_v64i1_mul(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_v64i1_mul:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k0
 ; CHECK-NEXT:    kmovq %rsi, %k1
 ; CHECK-NEXT:    kandq %k1, %k0, %k0

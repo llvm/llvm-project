@@ -45,9 +45,26 @@ using namespace llvm;
 
 #define DEBUG_TYPE "simplifycfg"
 
-static cl::opt<unsigned>
-UserBonusInstThreshold("bonus-inst-threshold", cl::Hidden, cl::init(1),
-   cl::desc("Control the number of bonus instructions (default = 1)"));
+static cl::opt<unsigned> UserBonusInstThreshold(
+    "bonus-inst-threshold", cl::Hidden, cl::init(1),
+    cl::desc("Control the number of bonus instructions (default = 1)"));
+
+static cl::opt<bool> UserKeepLoops(
+    "keep-loops", cl::Hidden, cl::init(true),
+    cl::desc("Preserve canonical loop structure (default = true)"));
+
+static cl::opt<bool> UserSwitchToLookup(
+    "switch-to-lookup", cl::Hidden, cl::init(false),
+    cl::desc("Convert switches to lookup tables (default = false)"));
+
+static cl::opt<bool> UserForwardSwitchCond(
+    "forward-switch-cond", cl::Hidden, cl::init(false),
+    cl::desc("Forward switch condition to phi ops (default = false)"));
+
+static cl::opt<bool> UserSinkCommonInsts(
+    "sink-common-insts", cl::Hidden, cl::init(false),
+    cl::desc("Sink common instructions (default = false)"));
+
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
@@ -129,9 +146,7 @@ static bool mergeEmptyReturnBlocks(Function &F) {
 /// Call SimplifyCFG on all the blocks in the function,
 /// iterating until no more changes are made.
 static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
-                                   AssumptionCache *AC,
-                                   unsigned BonusInstThreshold,
-                                   bool LateSimplifyCFG) {
+                                   const SimplifyCFGOptions &Options) {
   bool Changed = false;
   bool LocalChange = true;
 
@@ -146,7 +161,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
     for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
-      if (SimplifyCFG(&*BBIt++, TTI, BonusInstThreshold, AC, &LoopHeaders, LateSimplifyCFG)) {
+      if (simplifyCFG(&*BBIt++, TTI, Options, &LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }
@@ -157,12 +172,10 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 }
 
 static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
-                                AssumptionCache *AC, int BonusInstThreshold,
-                                bool LateSimplifyCFG) {
+                                const SimplifyCFGOptions &Options) {
   bool EverChanged = removeUnreachableBlocks(F);
   EverChanged |= mergeEmptyReturnBlocks(F);
-  EverChanged |= iterativelySimplifyCFG(F, TTI, AC, BonusInstThreshold,
-                                        LateSimplifyCFG);
+  EverChanged |= iterativelySimplifyCFG(F, TTI, Options);
 
   // If neither pass changed anything, we're done.
   if (!EverChanged) return false;
@@ -176,28 +189,37 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
     return true;
 
   do {
-    EverChanged = iterativelySimplifyCFG(F, TTI, AC, BonusInstThreshold,
-                                         LateSimplifyCFG);
+    EverChanged = iterativelySimplifyCFG(F, TTI, Options);
     EverChanged |= removeUnreachableBlocks(F);
   } while (EverChanged);
 
   return true;
 }
 
-SimplifyCFGPass::SimplifyCFGPass()
-    : BonusInstThreshold(UserBonusInstThreshold),
-      LateSimplifyCFG(true) {}
-
-SimplifyCFGPass::SimplifyCFGPass(int BonusInstThreshold, bool LateSimplifyCFG)
-    : BonusInstThreshold(BonusInstThreshold),
-      LateSimplifyCFG(LateSimplifyCFG) {}
+// Command-line settings override compile-time settings.
+SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &Opts) {
+  Options.BonusInstThreshold = UserBonusInstThreshold.getNumOccurrences()
+                                   ? UserBonusInstThreshold
+                                   : Opts.BonusInstThreshold;
+  Options.ForwardSwitchCondToPhi = UserForwardSwitchCond.getNumOccurrences()
+                                       ? UserForwardSwitchCond
+                                       : Opts.ForwardSwitchCondToPhi;
+  Options.ConvertSwitchToLookupTable = UserSwitchToLookup.getNumOccurrences()
+                                           ? UserSwitchToLookup
+                                           : Opts.ConvertSwitchToLookupTable;
+  Options.NeedCanonicalLoop = UserKeepLoops.getNumOccurrences()
+                                  ? UserKeepLoops
+                                  : Opts.NeedCanonicalLoop;
+  Options.SinkCommonInsts = UserSinkCommonInsts.getNumOccurrences()
+                                ? UserSinkCommonInsts
+                                : Opts.SinkCommonInsts;
+}
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
-
-  if (!simplifyFunctionCFG(F, TTI, &AC, BonusInstThreshold, LateSimplifyCFG))
+  Options.AC = &AM.getResult<AssumptionAnalysis>(F);
+  if (!simplifyFunctionCFG(F, TTI, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<GlobalsAA>();
@@ -205,53 +227,52 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
 }
 
 namespace {
-struct BaseCFGSimplifyPass : public FunctionPass {
-  unsigned BonusInstThreshold;
+struct CFGSimplifyPass : public FunctionPass {
+  static char ID;
+  SimplifyCFGOptions Options;
   std::function<bool(const Function &)> PredicateFtor;
-  bool LateSimplifyCFG;
 
-  BaseCFGSimplifyPass(int T, bool LateSimplifyCFG,
-                      std::function<bool(const Function &)> Ftor,
-                      char &ID)
-      : FunctionPass(ID), PredicateFtor(std::move(Ftor)),
-        LateSimplifyCFG(LateSimplifyCFG) {
-    BonusInstThreshold = (T == -1) ? UserBonusInstThreshold : unsigned(T);
+  CFGSimplifyPass(unsigned Threshold = 1, bool ForwardSwitchCond = false,
+                  bool ConvertSwitch = false, bool KeepLoops = true,
+                  bool SinkCommon = false,
+                  std::function<bool(const Function &)> Ftor = nullptr)
+      : FunctionPass(ID), PredicateFtor(std::move(Ftor)) {
+
+    initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
+
+    // Check for command-line overrides of options for debug/customization.
+    Options.BonusInstThreshold = UserBonusInstThreshold.getNumOccurrences()
+                                    ? UserBonusInstThreshold
+                                    : Threshold;
+
+    Options.ForwardSwitchCondToPhi = UserForwardSwitchCond.getNumOccurrences()
+                                         ? UserForwardSwitchCond
+                                         : ForwardSwitchCond;
+
+    Options.ConvertSwitchToLookupTable = UserSwitchToLookup.getNumOccurrences()
+                                             ? UserSwitchToLookup
+                                             : ConvertSwitch;
+
+    Options.NeedCanonicalLoop =
+        UserKeepLoops.getNumOccurrences() ? UserKeepLoops : KeepLoops;
+
+    Options.SinkCommonInsts = UserSinkCommonInsts.getNumOccurrences()
+                                  ? UserSinkCommonInsts
+                                  : SinkCommon;
   }
+
   bool runOnFunction(Function &F) override {
     if (skipFunction(F) || (PredicateFtor && !PredicateFtor(F)))
       return false;
 
-    AssumptionCache *AC =
-        &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    const TargetTransformInfo &TTI =
-        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return simplifyFunctionCFG(F, TTI, AC, BonusInstThreshold, LateSimplifyCFG);
+    Options.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    return simplifyFunctionCFG(F, TTI, Options);
   }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-
-struct CFGSimplifyPass : public BaseCFGSimplifyPass {
-  static char ID; // Pass identification, replacement for typeid
-
-  CFGSimplifyPass(int T = -1,
-                  std::function<bool(const Function &)> Ftor = nullptr)
-                  : BaseCFGSimplifyPass(T, false, Ftor, ID) {
-    initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
-  }
-};
-
-struct LateCFGSimplifyPass : public BaseCFGSimplifyPass {
-  static char ID; // Pass identification, replacement for typeid
-
-  LateCFGSimplifyPass(int T = -1,
-                      std::function<bool(const Function &)> Ftor = nullptr)
-                      : BaseCFGSimplifyPass(T, true, Ftor, ID) {
-    initializeLateCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
   }
 };
 }
@@ -264,24 +285,12 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
                     false)
 
-char LateCFGSimplifyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LateCFGSimplifyPass, "latesimplifycfg",
-                      "Simplify the CFG more aggressively", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(LateCFGSimplifyPass, "latesimplifycfg",
-                    "Simplify the CFG more aggressively", false, false)
-
 // Public interface to the CFGSimplification pass
 FunctionPass *
-llvm::createCFGSimplificationPass(int Threshold,
-    std::function<bool(const Function &)> Ftor) {
-  return new CFGSimplifyPass(Threshold, std::move(Ftor));
-}
-
-// Public interface to the LateCFGSimplification pass
-FunctionPass *
-llvm::createLateCFGSimplificationPass(int Threshold, 
+llvm::createCFGSimplificationPass(unsigned Threshold, bool ForwardSwitchCond,
+                                  bool ConvertSwitch, bool KeepLoops,
+                                  bool SinkCommon,
                                   std::function<bool(const Function &)> Ftor) {
-  return new LateCFGSimplifyPass(Threshold, std::move(Ftor));
+  return new CFGSimplifyPass(Threshold, ForwardSwitchCond, ConvertSwitch,
+                             KeepLoops, SinkCommon, std::move(Ftor));
 }

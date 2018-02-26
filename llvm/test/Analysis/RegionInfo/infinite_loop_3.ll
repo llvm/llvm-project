@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -regions -analyze < %s 
-; RUN: opt -regions -stats < %s 2>&1 | FileCheck -check-prefix=STAT %s
+; RUN: opt -regions -stats -disable-output < %s 2>&1 | FileCheck -check-prefix=STAT %s
 
 ; RUN: opt -regions -print-region-style=bb  -analyze < %s 2>&1 | FileCheck -check-prefix=BBIT %s
 ; RUN: opt -regions -print-region-style=rn  -analyze < %s 2>&1 | FileCheck -check-prefix=RNIT %s
@@ -38,16 +38,10 @@ define void @normal_condition() nounwind {
 	ret void
 }
 ; CHECK-NOT: =>
-; CHECK: [0] 0 => <Function Return>
-; CHECK-NEXT: [1] 1 => 3
-; CHECK-NEXT: [1] 7 => 1
-; STAT: 3 region - The # of regions
-; STAT: 2 region - The # of simple regions
+; CHECK:[0] 0 => <Function Return>
+; CHECK-NOT:  [1]
+; STAT: 1 region - The # of regions
 
 ; BBIT: 0, 7, 1, 2, 5, 11, 6, 12, 3, 4, 8, 9, 13, 10, 14,
-; BBIT: 7, 8, 9, 13, 10, 14,
-; BBIT: 1, 2, 5, 11, 6, 12,
 
-; RNIT: 0, 7 => 1, 1 => 3, 3, 4,
-; RNIT: 7, 8, 9, 13, 10, 14,
-; RNIT: 1, 2, 5, 11, 6, 12,
+; RNIT: 0, 7, 1, 2, 5, 11, 6, 12, 3, 4, 8, 9, 13, 10, 14,

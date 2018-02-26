@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm-none-eabi -mcpu=cortex-m23 -march=thumb | \
+; RUN: llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m23 | \
 ; RUN:     FileCheck %s -check-prefix=CHECK
 
 define i32 @f1(i32 %a, i32 %b) {

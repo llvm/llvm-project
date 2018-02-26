@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=i386 | \
+; RUN: llc < %s -mtriple=i686-- -mcpu=i386 | \
 ; RUN:    not grep "movl %eax, %edx"
 
 define i32 @foo(i32 %t, i32 %C) {

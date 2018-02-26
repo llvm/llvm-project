@@ -57,32 +57,6 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY FixFSMULD : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  FixFSMULD();
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "FixFSMULD: Erratum Fix LBR31: do not select FSMULD";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY ReplaceFMULS : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  ReplaceFMULS();
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "ReplaceFMULS: Erratum Fix LBR32: replace FMULS instruction with a "
-           "routine using conversions/double precision operations to replace "
-           "FMULS";
-  }
-};
-
 class LLVM_LIBRARY_VISIBILITY DetectRoundChange
     : public LEONMachineFunctionPass {
 public:

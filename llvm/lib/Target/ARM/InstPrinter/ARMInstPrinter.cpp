@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMInstPrinter.h"
+#include "Utils/ARMBaseInfo.h"
+#include "ARMBaseRegisterInfo.h"
+#include "ARMBaseRegisterInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -789,152 +792,48 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
-  unsigned SpecRegRBit = Op.getImm() >> 4;
-  unsigned Mask = Op.getImm() & 0xf;
   const FeatureBitset &FeatureBits = STI.getFeatureBits();
-
   if (FeatureBits[ARM::FeatureMClass]) {
-    unsigned SYSm = Op.getImm();
+
+    unsigned SYSm = Op.getImm() & 0xFFF; // 12-bit SYSm
     unsigned Opcode = MI->getOpcode();
 
     // For writes, handle extended mask bits if the DSP extension is present.
     if (Opcode == ARM::t2MSR_M && FeatureBits[ARM::FeatureDSP]) {
-      switch (SYSm) {
-      case 0x400:
-        O << "apsr_g";
-        return;
-      case 0xc00:
-        O << "apsr_nzcvqg";
-        return;
-      case 0x401:
-        O << "iapsr_g";
-        return;
-      case 0xc01:
-        O << "iapsr_nzcvqg";
-        return;
-      case 0x402:
-        O << "eapsr_g";
-        return;
-      case 0xc02:
-        O << "eapsr_nzcvqg";
-        return;
-      case 0x403:
-        O << "xpsr_g";
-        return;
-      case 0xc03:
-        O << "xpsr_nzcvqg";
-        return;
+      auto TheReg =ARMSysReg::lookupMClassSysRegBy12bitSYSmValue(SYSm);
+      if (TheReg && TheReg->isInRequiredFeatures({ARM::FeatureDSP})) {
+          O << TheReg->Name;
+          return;
       }
     }
 
     // Handle the basic 8-bit mask.
     SYSm &= 0xff;
-
     if (Opcode == ARM::t2MSR_M && FeatureBits [ARM::HasV7Ops]) {
       // ARMv7-M deprecates using MSR APSR without a _<bits> qualifier as an
       // alias for MSR APSR_nzcvq.
-      switch (SYSm) {
-      case 0:
-        O << "apsr_nzcvq";
-        return;
-      case 1:
-        O << "iapsr_nzcvq";
-        return;
-      case 2:
-        O << "eapsr_nzcvq";
-        return;
-      case 3:
-        O << "xpsr_nzcvq";
-        return;
+      auto TheReg = ARMSysReg::lookupMClassSysRegAPSRNonDeprecated(SYSm);
+      if (TheReg) {
+          O << TheReg->Name;
+          return;
       }
     }
 
-    switch (SYSm) {
-    default:
-      llvm_unreachable("Unexpected mask value!");
-    case 0:
-      O << "apsr";
-      return;
-    case 1:
-      O << "iapsr";
-      return;
-    case 2:
-      O << "eapsr";
-      return;
-    case 3:
-      O << "xpsr";
-      return;
-    case 5:
-      O << "ipsr";
-      return;
-    case 6:
-      O << "epsr";
-      return;
-    case 7:
-      O << "iepsr";
-      return;
-    case 8:
-      O << "msp";
-      return;
-    case 9:
-      O << "psp";
-      return;
-    case 16:
-      O << "primask";
-      return;
-    case 17:
-      O << "basepri";
-      return;
-    case 18:
-      O << "basepri_max";
-      return;
-    case 19:
-      O << "faultmask";
-      return;
-    case 20:
-      O << "control";
-      return;
-    case 10:
-      O << "msplim";
-      return;
-    case 11:
-      O << "psplim";
-      return;
-    case 0x88:
-      O << "msp_ns";
-      return;
-    case 0x89:
-      O << "psp_ns";
-      return;
-    case 0x8a:
-      O << "msplim_ns";
-      return;
-    case 0x8b:
-      O << "psplim_ns";
-      return;
-    case 0x90:
-      O << "primask_ns";
-      return;
-    case 0x91:
-      O << "basepri_ns";
-      return;
-    case 0x92:
-      O << "basepri_max_ns";
-      return;
-    case 0x93:
-      O << "faultmask_ns";
-      return;
-    case 0x94:
-      O << "control_ns";
-      return;
-    case 0x98:
-      O << "sp_ns";
+    auto TheReg = ARMSysReg::lookupMClassSysRegBy8bitSYSmValue(SYSm);
+    if (TheReg) {
+      O << TheReg->Name;
       return;
     }
+
+    llvm_unreachable("Unexpected mask value!");
+    return;
   }
 
   // As special cases, CPSR_f, CPSR_s and CPSR_fs prefer printing as
   // APSR_nzcvq, APSR_g and APSRnzcvqg, respectively.
+  unsigned SpecRegRBit = Op.getImm() >> 4;
+  unsigned Mask = Op.getImm() & 0xf;
+
   if (!SpecRegRBit && (Mask == 8 || Mask == 4 || Mask == 12)) {
     O << "APSR_";
     switch (Mask) {
@@ -974,51 +873,13 @@ void ARMInstPrinter::printBankedRegOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   uint32_t Banked = MI->getOperand(OpNum).getImm();
-  uint32_t R = (Banked & 0x20) >> 5;
-  uint32_t SysM = Banked & 0x1f;
+  auto TheReg = ARMBankedReg::lookupBankedRegByEncoding(Banked);
+  assert(TheReg && "invalid banked register operand");
+  std::string Name = TheReg->Name;
 
-  // Nothing much we can do about this, the encodings are specified in B9.2.3 of
-  // the ARM ARM v7C, and are all over the shop.
-  if (R) {
-    O << "SPSR_";
-
-    switch (SysM) {
-    case 0x0e:
-      O << "fiq";
-      return;
-    case 0x10:
-      O << "irq";
-      return;
-    case 0x12:
-      O << "svc";
-      return;
-    case 0x14:
-      O << "abt";
-      return;
-    case 0x16:
-      O << "und";
-      return;
-    case 0x1c:
-      O << "mon";
-      return;
-    case 0x1e:
-      O << "hyp";
-      return;
-    default:
-      llvm_unreachable("Invalid banked SPSR register");
-    }
-  }
-
-  assert(!R && "should have dealt with SPSR regs");
-  const char *RegNames[] = {
-      "r8_usr", "r9_usr", "r10_usr", "r11_usr", "r12_usr", "sp_usr",  "lr_usr",
-      "",       "r8_fiq", "r9_fiq",  "r10_fiq", "r11_fiq", "r12_fiq", "sp_fiq",
-      "lr_fiq", "",       "lr_irq",  "sp_irq",  "lr_svc",  "sp_svc",  "lr_abt",
-      "sp_abt", "lr_und", "sp_und",  "",        "",        "",        "",
-      "lr_mon", "sp_mon", "elr_hyp", "sp_hyp"};
-  const char *Name = RegNames[SysM];
-  assert(Name[0] && "invalid banked register operand");
-
+  uint32_t isSPSR = (Banked & 0x20) >> 5;
+  if (isSPSR)
+    Name.replace(0, 4, "SPSR"); // convert 'spsr_' to 'SPSR_'
   O << Name;
 }
 
@@ -1674,3 +1535,12 @@ void ARMInstPrinter::printVectorListFourSpaced(const MCInst *MI, unsigned OpNum,
   printRegName(O, MI->getOperand(OpNum).getReg() + 6);
   O << "}";
 }
+
+template<int64_t Angle, int64_t Remainder>
+void ARMInstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNo).getImm();
+  O << "#" << (Val * Angle) + Remainder;
+}
+

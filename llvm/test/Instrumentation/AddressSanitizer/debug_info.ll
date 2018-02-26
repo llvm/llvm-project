@@ -24,9 +24,9 @@ entry:
 ;   CHECK: entry:
 ; Verify that llvm.dbg.declare calls are in the entry basic block.
 ;   CHECK-NOT: %entry
-;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ARG_ID:[0-9]+]], metadata !DIExpression())
+;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ARG_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32))
 ;   CHECK-NOT: %entry
-;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[VAR_ID:[0-9]+]], metadata !DIExpression())
+;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[VAR_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 48))
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 

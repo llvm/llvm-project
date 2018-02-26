@@ -18,9 +18,9 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 namespace llvm {
 
@@ -116,7 +116,7 @@ public:
     return SchedModel.getProcResource(PIdx);
   }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char *getResourceName(unsigned PIdx) const {
     if (!PIdx)
       return "MOps";

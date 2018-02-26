@@ -7,7 +7,7 @@
 
 define internal void @PR2585() {
 ; X32-LABEL: PR2585:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
 ; X32-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -15,7 +15,7 @@ define internal void @PR2585() {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR2585:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
 ; X64-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

@@ -9,22 +9,22 @@
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32* @test_global_ptrv() #3 {
 ; X64-LABEL: test_global_ptrv:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    leaq g_int, %rax
 ; X64-NEXT:    retq
 ;
 ; X64_DARWIN_PIC-LABEL: test_global_ptrv:
-; X64_DARWIN_PIC:       ## BB#0: ## %entry
+; X64_DARWIN_PIC:       ## %bb.0: ## %entry
 ; X64_DARWIN_PIC-NEXT:    leaq _g_int(%rip), %rax
 ; X64_DARWIN_PIC-NEXT:    retq
 ;
 ; X32-LABEL: test_global_ptrv:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    leal g_int, %eax
 ; X32-NEXT:    retl
 ;
 ; X32ABI-LABEL: test_global_ptrv:
-; X32ABI:       # BB#0: # %entry
+; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    leal g_int, %eax
 ; X32ABI-NEXT:    retq
 entry:
@@ -34,25 +34,25 @@ entry:
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32 @test_global_valv() #3 {
 ; X64-LABEL: test_global_valv:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    leaq g_int, %rax
 ; X64-NEXT:    movl (%rax), %eax
 ; X64-NEXT:    retq
 ;
 ; X64_DARWIN_PIC-LABEL: test_global_valv:
-; X64_DARWIN_PIC:       ## BB#0: ## %entry
+; X64_DARWIN_PIC:       ## %bb.0: ## %entry
 ; X64_DARWIN_PIC-NEXT:    leaq _g_int(%rip), %rax
 ; X64_DARWIN_PIC-NEXT:    movl (%rax), %eax
 ; X64_DARWIN_PIC-NEXT:    retq
 ;
 ; X32-LABEL: test_global_valv:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    leal g_int, %eax
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    retl
 ;
 ; X32ABI-LABEL: test_global_valv:
-; X32ABI:       # BB#0: # %entry
+; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    leal g_int, %eax
 ; X32ABI-NEXT:    movl (%eax), %eax
 ; X32ABI-NEXT:    retq

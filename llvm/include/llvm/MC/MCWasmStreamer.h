@@ -10,6 +10,8 @@
 #ifndef LLVM_MC_MCWASMSTREAMER_H
 #define LLVM_MC_MCWASMSTREAMER_H
 
+#include "MCAsmBackend.h"
+#include "MCCodeEmitter.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -17,18 +19,17 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
-class MCAsmBackend;
 class MCAssembler;
-class MCCodeEmitter;
 class MCExpr;
 class MCInst;
 class raw_ostream;
 
 class MCWasmStreamer : public MCObjectStreamer {
 public:
-  MCWasmStreamer(MCContext &Context, MCAsmBackend &TAB, raw_pwrite_stream &OS,
-                 MCCodeEmitter *Emitter)
-      : MCObjectStreamer(Context, TAB, OS, Emitter), SeenIdent(false) {}
+  MCWasmStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                 raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter)
+      : MCObjectStreamer(Context, std::move(TAB), OS, std::move(Emitter)),
+        SeenIdent(false) {}
 
   ~MCWasmStreamer() override;
 

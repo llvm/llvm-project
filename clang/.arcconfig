@@ -1,4 +1,4 @@
 {
-  "project_id" : "clang",
+  "repository.callsign" : "C",
   "conduit_uri" : "https://reviews.llvm.org/"
 }

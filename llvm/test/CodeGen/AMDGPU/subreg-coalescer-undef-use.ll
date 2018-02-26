@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -o - %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
 ; Don't crash when the use of an undefined value is only detected by the
 ; register coalescer because it is hidden with subregister insert/extract.
 target triple="amdgcn--"
@@ -10,7 +10,6 @@ target triple="amdgcn--"
 ; CHECK: v_mbcnt_lo_u32_b32_e64
 ; CHECK-NEXT: v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_and_saveexec_b64 s[2:3], vcc
-; CHECK-NEXT: s_xor_b64 s[2:3], exec, s[2:3]
 ; BB0_1:
 ; CHECK: s_load_dword s0, s[0:1], 0xa
 ; CHECK-NEXT: s_waitcnt lgkmcnt(0)

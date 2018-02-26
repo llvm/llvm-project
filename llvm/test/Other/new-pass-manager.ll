@@ -24,7 +24,6 @@
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-CGSCC-PASS-NEXT: Starting CGSCC pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
 ; CHECK-CGSCC-PASS-NEXT: Finished CGSCC pass manager run
@@ -409,7 +408,6 @@
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Starting CGSCC pass manager run
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Starting CGSCC pass manager run
@@ -452,10 +450,14 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: FunctionToLoopPassAdaptor
+; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Function pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LoopSimplify
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Invalidating all non-preserved analyses
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LCSSAPass
+; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScalarEvolutionAnalysis

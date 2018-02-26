@@ -692,7 +692,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       return Visit(E->getSubExpr());
     }
 
-    // fallthrough
+    LLVM_FALLTHROUGH;
 
   case CK_NoOp:
   case CK_UserDefinedConversion:

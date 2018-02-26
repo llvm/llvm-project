@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -verify %s
 
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify %s
+
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp target simd'}}
 #pragma omp target simd
 

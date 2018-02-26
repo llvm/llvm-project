@@ -1,4 +1,4 @@
-//===- AMDGPUAliasAnalysis ---------------------------------------*- C++ -*-==//
+//===- AMDGPUAliasAnalysis ------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,13 +12,21 @@
 
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPU.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -26,6 +34,7 @@ using namespace llvm;
 
 // Register this pass...
 char AMDGPUAAWrapperPass::ID = 0;
+
 INITIALIZE_PASS(AMDGPUAAWrapperPass, "amdgpu-aa",
                 "AMDGPU Address space based Alias Analysis", false, true)
 
@@ -120,8 +129,11 @@ bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
     switch (F->getCallingConv()) {
     default:
       return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
-    case CallingConv::AMDGPU_VS:
+    case CallingConv::AMDGPU_LS:
+    case CallingConv::AMDGPU_HS:
+    case CallingConv::AMDGPU_ES:
     case CallingConv::AMDGPU_GS:
+    case CallingConv::AMDGPU_VS:
     case CallingConv::AMDGPU_PS:
     case CallingConv::AMDGPU_CS:
     case CallingConv::AMDGPU_KERNEL:

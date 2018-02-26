@@ -26,9 +26,12 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Function.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/CommandLine.h"
@@ -36,9 +39,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -159,7 +159,7 @@ bool RegBankSelect::repairReg(
   // same types because the type is a placeholder when this function is called.
   MachineInstr *MI =
       MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY).addDef(Dst).addUse(Src);
-  DEBUG(dbgs() << "Copy: " << PrintReg(Src) << " to: " << PrintReg(Dst)
+  DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
                << '\n');
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the
@@ -221,9 +221,8 @@ uint64_t RegBankSelect::getRepairCost(
     // into a new virtual register.
     // We would also need to propagate this information in the
     // repairing placement.
-    unsigned Cost =
-        RBI->copyCost(*DesiredRegBrank, *CurRegBank,
-                      RegisterBankInfo::getSizeInBits(MO.getReg(), *MRI, *TRI));
+    unsigned Cost = RBI->copyCost(*DesiredRegBrank, *CurRegBank,
+                                  RBI->getSizeInBits(MO.getReg(), *MRI, *TRI));
     // TODO: use a dedicated constant for ImpossibleCost.
     if (Cost != std::numeric_limits<unsigned>::max())
       return Cost;
@@ -602,9 +601,9 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
   Mode SaveOptMode = OptMode;
-  if (F->hasFnAttribute(Attribute::OptimizeNone))
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
     OptMode = Mode::Fast;
   init(MF);
 

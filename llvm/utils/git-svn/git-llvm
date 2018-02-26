@@ -107,7 +107,7 @@ def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
 
     start = time.time()
     p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=err_pipe,
-                         stdin=subprocess.PIPE)
+                         stdin=subprocess.PIPE, universal_newlines=True)
     stdout, stderr = p.communicate(input=stdin)
     elapsed = time.time() - start
 
@@ -178,7 +178,7 @@ def clean_and_update_svn(svn_repo):
 
     # Unfortunately it appears there's no svn equivalent for git clean, so we
     # have to do it ourselves.
-    for line in svn(svn_repo, 'status').split('\n'):
+    for line in svn(svn_repo, 'status', '--no-ignore').split('\n'):
         if not line.startswith('?'):
             continue
         filename = line[1:].strip()
@@ -252,7 +252,7 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
     if not subrepos:
         raise RuntimeError('Empty diff for rev %s?' % rev)
 
-    status = svn(svn_repo, 'status')
+    status = svn(svn_repo, 'status', '--no-ignore')
     if status:
         die("Can't push git rev %s because svn status is not empty:\n%s" %
             (rev, status))
@@ -272,10 +272,11 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
                    "first?")
             sys.exit(2)
 
-    status_lines = svn(svn_repo, 'status').split('\n')
+    status_lines = svn(svn_repo, 'status', '--no-ignore').split('\n')
 
-    for l in (l for l in status_lines if l.startswith('?')):
-        svn(svn_repo, 'add', l[1:].strip())
+    for l in (l for l in status_lines if (l.startswith('?') or
+                                          l.startswith('I'))):
+        svn(svn_repo, 'add', '--no-ignore', l[1:].strip())
     for l in (l for l in status_lines if l.startswith('!')):
         svn(svn_repo, 'remove', l[1:].strip())
 

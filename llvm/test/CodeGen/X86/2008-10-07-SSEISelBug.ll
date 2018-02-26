@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse,-sse2
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse,-sse2
 
 define <4 x float> @f(float %w) nounwind {
 entry:

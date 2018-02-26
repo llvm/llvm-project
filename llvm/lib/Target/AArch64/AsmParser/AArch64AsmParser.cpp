@@ -59,12 +59,19 @@ using namespace llvm;
 
 namespace {
 
+enum class RegKind {
+  Scalar,
+  NeonVector,
+  SVEDataVector,
+  SVEPredicateVector
+};
+
 class AArch64AsmParser : public MCTargetAsmParser {
 private:
   StringRef Mnemonic; ///< Instruction mnemonic.
 
   // Map of register aliases registers via the .req directive.
-  StringMap<std::pair<bool, unsigned>> RegisterReqs;
+  StringMap<std::pair<RegKind, unsigned>> RegisterReqs;
 
   AArch64TargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
@@ -77,7 +84,7 @@ private:
   void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond);
   bool parseCondCode(OperandVector &Operands, bool invertCondCode);
-  unsigned matchRegisterNameAlias(StringRef Name, bool isVector);
+  unsigned matchRegisterNameAlias(StringRef Name, RegKind Kind);
   int tryParseRegister();
   int tryMatchVectorRegister(StringRef &Kind, bool expected);
   bool parseRegister(OperandVector &Operands);
@@ -114,6 +121,8 @@ private:
 
   /// }
 
+  OperandMatchResultTy tryParseSVERegister(int &Reg, StringRef &Kind,
+                                           RegKind MatchKind);
   OperandMatchResultTy tryParseOptionalShiftExtend(OperandVector &Operands);
   OperandMatchResultTy tryParseBarrierOperand(OperandVector &Operands);
   OperandMatchResultTy tryParseMRSSystemRegister(OperandVector &Operands);
@@ -126,8 +135,11 @@ private:
   OperandMatchResultTy tryParseFPImm(OperandVector &Operands);
   OperandMatchResultTy tryParseAddSubImm(OperandVector &Operands);
   OperandMatchResultTy tryParseGPR64sp0Operand(OperandVector &Operands);
-  bool tryParseVectorRegister(OperandVector &Operands);
+  bool tryParseNeonVectorRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseGPRSeqPair(OperandVector &Operands);
+  template <bool ParseSuffix>
+  OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
+  OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -139,7 +151,7 @@ public:
 
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI) {
+    : MCTargetAsmParser(Options, STI, MII) {
     IsILP32 = Options.getABIName() == "ilp32";
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();
@@ -194,7 +206,9 @@ private:
 
   struct RegOp {
     unsigned RegNum;
-    bool isVector;
+    RegKind Kind;
+
+    int ElementWidth;
   };
 
   struct VectorListOp {
@@ -464,6 +478,15 @@ public:
       return false;
     int64_t Val = MCE->getValue();
     return (Val >= -256 && Val < 256);
+  }
+  bool isSImm10s8() const {
+    if (!isImm())
+      return false;
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+    if (!MCE)
+      return false;
+    int64_t Val = MCE->getValue();
+    return (Val >= -4096 && Val < 4089 && (Val & 7) == 0);
   }
   bool isSImm7s4() const {
     if (!isImm())
@@ -795,35 +818,79 @@ public:
     return SysReg.PStateField != -1U;
   }
 
-  bool isReg() const override { return Kind == k_Register && !Reg.isVector; }
-  bool isVectorReg() const { return Kind == k_Register && Reg.isVector; }
+  bool isReg() const override {
+    return Kind == k_Register;
+  }
 
-  bool isVectorRegLo() const {
-    return Kind == k_Register && Reg.isVector &&
+  bool isScalarReg() const {
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar;
+  }
+
+  bool isNeonVectorReg() const {
+    return Kind == k_Register && Reg.Kind == RegKind::NeonVector;
+  }
+
+  bool isNeonVectorRegLo() const {
+    return Kind == k_Register && Reg.Kind == RegKind::NeonVector &&
            AArch64MCRegisterClasses[AArch64::FPR128_loRegClassID].contains(
                Reg.RegNum);
   }
 
+  template <unsigned Class> bool isSVEVectorReg() const {
+    RegKind RK;
+    switch (Class) {
+    case AArch64::ZPRRegClassID:
+      RK = RegKind::SVEDataVector;
+      break;
+    case AArch64::PPRRegClassID:
+    case AArch64::PPR_3bRegClassID:
+      RK = RegKind::SVEPredicateVector;
+      break;
+    default:
+      llvm_unreachable("Unsupport register class");
+    }
+
+    return (Kind == k_Register && Reg.Kind == RK) &&
+           AArch64MCRegisterClasses[Class].contains(getReg());
+  }
+
+  template <int ElementWidth, unsigned Class>
+  bool isSVEVectorRegOfWidth() const {
+    return isSVEVectorReg<Class>() &&
+           (ElementWidth == -1 || Reg.ElementWidth == ElementWidth);
+  }
+
   bool isGPR32as64() const {
-    return Kind == k_Register && !Reg.isVector &&
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
       AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(Reg.RegNum);
   }
 
   bool isWSeqPair() const {
-    return Kind == k_Register && !Reg.isVector &&
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
            AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID].contains(
                Reg.RegNum);
   }
 
   bool isXSeqPair() const {
-    return Kind == k_Register && !Reg.isVector &&
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
            AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID].contains(
                Reg.RegNum);
   }
 
   bool isGPR64sp0() const {
-    return Kind == k_Register && !Reg.isVector &&
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
       AArch64MCRegisterClasses[AArch64::GPR64spRegClassID].contains(Reg.RegNum);
+  }
+
+  template<int64_t Angle, int64_t Remainder>
+  bool isComplexRotation() const {
+    if (!isImm()) return false;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    uint64_t Value = CE->getValue();
+
+    return (Value % Angle == Remainder && Value <= 270);
   }
 
   /// Is this a vector list with the type implicit (presumably attached to the
@@ -1213,6 +1280,12 @@ public:
     Inst.addOperand(MCOperand::createImm(MCE->getValue()));
   }
 
+  void addSImm10s8Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 8));
+  }
+
   void addSImm7s4Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
@@ -1512,6 +1585,18 @@ public:
     Inst.addOperand(MCOperand::createImm((~Value >> Shift) & 0xffff));
   }
 
+  void addComplexRotationEvenOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 90));
+  }
+
+  void addComplexRotationOddOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm((MCE->getValue() - 90) / 180));
+  }
+
   void print(raw_ostream &OS) const override;
 
   static std::unique_ptr<AArch64Operand>
@@ -1526,10 +1611,22 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateReg(unsigned RegNum, bool isVector, SMLoc S, SMLoc E, MCContext &Ctx) {
+  CreateReg(unsigned RegNum, RegKind Kind, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = make_unique<AArch64Operand>(k_Register, Ctx);
     Op->Reg.RegNum = RegNum;
-    Op->Reg.isVector = isVector;
+    Op->Reg.Kind = Kind;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
+  CreateReg(unsigned RegNum, RegKind Kind, unsigned ElementWidth,
+            SMLoc S, SMLoc E, MCContext &Ctx) {
+    auto Op = make_unique<AArch64Operand>(k_Register, Ctx);
+    Op->Reg.RegNum = RegNum;
+    Op->Reg.ElementWidth = ElementWidth;
+    Op->Reg.Kind = Kind;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1753,7 +1850,7 @@ static unsigned MatchRegisterName(StringRef Name);
 
 /// }
 
-static unsigned matchVectorRegName(StringRef Name) {
+static unsigned MatchNeonVectorRegName(StringRef Name) {
   return StringSwitch<unsigned>(Name.lower())
       .Case("v0", AArch64::Q0)
       .Case("v1", AArch64::Q1)
@@ -1810,6 +1907,76 @@ static bool isValidVectorKind(StringRef Name) {
       .Case(".d", true)
       // Needed for fp16 scalar pairwise reductions
       .Case(".2h", true)
+      // another special case for the ARMv8.2a dot product operand
+      .Case(".4b", true)
+      .Default(false);
+}
+
+static unsigned matchSVEDataVectorRegName(StringRef Name) {
+  return StringSwitch<unsigned>(Name.lower())
+      .Case("z0", AArch64::Z0)
+      .Case("z1", AArch64::Z1)
+      .Case("z2", AArch64::Z2)
+      .Case("z3", AArch64::Z3)
+      .Case("z4", AArch64::Z4)
+      .Case("z5", AArch64::Z5)
+      .Case("z6", AArch64::Z6)
+      .Case("z7", AArch64::Z7)
+      .Case("z8", AArch64::Z8)
+      .Case("z9", AArch64::Z9)
+      .Case("z10", AArch64::Z10)
+      .Case("z11", AArch64::Z11)
+      .Case("z12", AArch64::Z12)
+      .Case("z13", AArch64::Z13)
+      .Case("z14", AArch64::Z14)
+      .Case("z15", AArch64::Z15)
+      .Case("z16", AArch64::Z16)
+      .Case("z17", AArch64::Z17)
+      .Case("z18", AArch64::Z18)
+      .Case("z19", AArch64::Z19)
+      .Case("z20", AArch64::Z20)
+      .Case("z21", AArch64::Z21)
+      .Case("z22", AArch64::Z22)
+      .Case("z23", AArch64::Z23)
+      .Case("z24", AArch64::Z24)
+      .Case("z25", AArch64::Z25)
+      .Case("z26", AArch64::Z26)
+      .Case("z27", AArch64::Z27)
+      .Case("z28", AArch64::Z28)
+      .Case("z29", AArch64::Z29)
+      .Case("z30", AArch64::Z30)
+      .Case("z31", AArch64::Z31)
+      .Default(0);
+}
+
+static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
+  return StringSwitch<unsigned>(Name.lower())
+      .Case("p0", AArch64::P0)
+      .Case("p1", AArch64::P1)
+      .Case("p2", AArch64::P2)
+      .Case("p3", AArch64::P3)
+      .Case("p4", AArch64::P4)
+      .Case("p5", AArch64::P5)
+      .Case("p6", AArch64::P6)
+      .Case("p7", AArch64::P7)
+      .Case("p8", AArch64::P8)
+      .Case("p9", AArch64::P9)
+      .Case("p10", AArch64::P10)
+      .Case("p11", AArch64::P11)
+      .Case("p12", AArch64::P12)
+      .Case("p13", AArch64::P13)
+      .Case("p14", AArch64::P14)
+      .Case("p15", AArch64::P15)
+      .Default(0);
+}
+
+static bool isValidSVEKind(StringRef Name) {
+  return StringSwitch<bool>(Name.lower())
+      .Case(".b", true)
+      .Case(".h", true)
+      .Case(".s", true)
+      .Case(".d", true)
+      .Case(".q", true)
       .Default(false);
 }
 
@@ -1841,19 +2008,31 @@ bool AArch64AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
 
 // Matches a register name or register alias previously defined by '.req'
 unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
-                                                  bool isVector) {
-  unsigned RegNum = isVector ? matchVectorRegName(Name)
-                             : MatchRegisterName(Name);
+                                                  RegKind Kind) {
+  unsigned RegNum = 0;
+  if ((RegNum = matchSVEDataVectorRegName(Name)))
+    return Kind == RegKind::SVEDataVector ? RegNum : 0;
 
-  if (RegNum == 0) {
+  if ((RegNum = matchSVEPredicateVectorRegName(Name)))
+    return Kind == RegKind::SVEPredicateVector ? RegNum : 0;
+
+  if ((RegNum = MatchNeonVectorRegName(Name)))
+    return Kind == RegKind::NeonVector ? RegNum : 0;
+
+  // The parsed register must be of RegKind Scalar
+  if ((RegNum = MatchRegisterName(Name)))
+    return Kind == RegKind::Scalar ? RegNum : 0;
+
+  if (!RegNum) {
     // Check for aliases registered via .req. Canonicalize to lower case.
     // That's more consistent since register names are case insensitive, and
     // it's how the original entry was passed in from MC/MCParser/AsmParser.
     auto Entry = RegisterReqs.find(Name.lower());
     if (Entry == RegisterReqs.end())
       return 0;
+
     // set RegNum if the match is the right kind of register
-    if (isVector == Entry->getValue().first)
+    if (Kind == Entry->getValue().first)
       RegNum = Entry->getValue().second;
   }
   return RegNum;
@@ -1869,7 +2048,8 @@ int AArch64AsmParser::tryParseRegister() {
     return -1;
 
   std::string lowerCase = Tok.getString().lower();
-  unsigned RegNum = matchRegisterNameAlias(lowerCase, false);
+  unsigned RegNum = matchRegisterNameAlias(lowerCase, RegKind::Scalar);
+
   // Also handle a few aliases of registers.
   if (RegNum == 0)
     RegNum = StringSwitch<unsigned>(lowerCase)
@@ -1900,7 +2080,7 @@ int AArch64AsmParser::tryMatchVectorRegister(StringRef &Kind, bool expected) {
   // a '.'.
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
-  unsigned RegNum = matchRegisterNameAlias(Head, true);
+  unsigned RegNum = matchRegisterNameAlias(Head, RegKind::NeonVector);
 
   if (RegNum) {
     if (Next != StringRef::npos) {
@@ -2519,8 +2699,8 @@ AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-/// tryParseVectorRegister - Parse a vector register operand.
-bool AArch64AsmParser::tryParseVectorRegister(OperandVector &Operands) {
+/// tryParseNeonVectorRegister - Parse a vector register operand.
+bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier))
     return true;
@@ -2532,7 +2712,9 @@ bool AArch64AsmParser::tryParseVectorRegister(OperandVector &Operands) {
   if (Reg == -1)
     return true;
   Operands.push_back(
-      AArch64Operand::CreateReg(Reg, true, S, getLoc(), getContext()));
+      AArch64Operand::CreateReg(Reg, RegKind::NeonVector, S, getLoc(),
+                                getContext()));
+
   // If there was an explicit qualifier, that goes on as a literal text
   // operand.
   if (!Kind.empty())
@@ -2563,19 +2745,85 @@ bool AArch64AsmParser::tryParseVectorRegister(OperandVector &Operands) {
   return false;
 }
 
+// tryParseSVEDataVectorRegister - Try to parse a SVE vector register name with
+// optional kind specifier. If it is a register specifier, eat the token
+// and return it.
+OperandMatchResultTy
+AArch64AsmParser::tryParseSVERegister(int &Reg, StringRef &Kind,
+                                      RegKind MatchKind) {
+  MCAsmParser &Parser = getParser();
+  const AsmToken &Tok = Parser.getTok();
+
+  if (Tok.isNot(AsmToken::Identifier))
+    return MatchOperand_NoMatch;
+
+  StringRef Name = Tok.getString();
+  // If there is a kind specifier, it's separated from the register name by
+  // a '.'.
+  size_t Start = 0, Next = Name.find('.');
+  StringRef Head = Name.slice(Start, Next);
+  unsigned RegNum = matchRegisterNameAlias(Head, MatchKind);
+
+  if (RegNum) {
+    if (Next != StringRef::npos) {
+      Kind = Name.slice(Next, StringRef::npos);
+      if (!isValidSVEKind(Kind)) {
+        TokError("invalid sve vector kind qualifier");
+        return MatchOperand_ParseFail;
+      }
+    }
+    Parser.Lex(); // Eat the register token.
+
+    Reg = RegNum;
+    return MatchOperand_Success;
+  }
+
+  return MatchOperand_NoMatch;
+}
+
+/// tryParseSVEPredicateVector - Parse a SVE predicate register operand.
+OperandMatchResultTy
+AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
+  // Check for a SVE predicate register specifier first.
+  const SMLoc S = getLoc();
+  StringRef Kind;
+  int RegNum = -1;
+  auto Res = tryParseSVERegister(RegNum, Kind, RegKind::SVEPredicateVector);
+  if (Res != MatchOperand_Success)
+    return Res;
+
+  unsigned ElementWidth = StringSwitch<unsigned>(Kind.lower())
+                              .Case("", -1)
+                              .Case(".b", 8)
+                              .Case(".h", 16)
+                              .Case(".s", 32)
+                              .Case(".d", 64)
+                              .Case(".q", 128)
+                              .Default(0);
+
+  if (!ElementWidth)
+    return MatchOperand_NoMatch;
+
+  Operands.push_back(
+      AArch64Operand::CreateReg(RegNum, RegKind::SVEPredicateVector,
+                                ElementWidth, S, getLoc(), getContext()));
+
+  return MatchOperand_Success;
+}
+
 /// parseRegister - Parse a non-vector register operand.
 bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
-  // Try for a vector register.
-  if (!tryParseVectorRegister(Operands))
+  // Try for a vector (neon) register.
+  if (!tryParseNeonVectorRegister(Operands))
     return false;
 
   // Try for a scalar register.
   int64_t Reg = tryParseRegister();
   if (Reg == -1)
     return true;
-  Operands.push_back(
-      AArch64Operand::CreateReg(Reg, false, S, getLoc(), getContext()));
+  Operands.push_back(AArch64Operand::CreateReg(Reg, RegKind::Scalar, S,
+      getLoc(), getContext()));
 
   return false;
 }
@@ -2743,7 +2991,7 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
   if (!Tok.is(AsmToken::Identifier))
     return MatchOperand_NoMatch;
 
-  unsigned RegNum = matchRegisterNameAlias(Tok.getString().lower(), false);
+  unsigned RegNum = matchRegisterNameAlias(Tok.getString().lower(), RegKind::Scalar);
 
   MCContext &Ctx = getContext();
   const MCRegisterInfo *RI = Ctx.getRegisterInfo();
@@ -2755,7 +3003,7 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
 
   if (!parseOptionalToken(AsmToken::Comma)) {
     Operands.push_back(
-        AArch64Operand::CreateReg(RegNum, false, S, getLoc(), Ctx));
+        AArch64Operand::CreateReg(RegNum, RegKind::Scalar, S, getLoc(), Ctx));
     return MatchOperand_Success;
   }
 
@@ -2774,7 +3022,7 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
   }
 
   Operands.push_back(
-      AArch64Operand::CreateReg(RegNum, false, S, getLoc(), Ctx));
+      AArch64Operand::CreateReg(RegNum, RegKind::Scalar, S, getLoc(), Ctx));
   return MatchOperand_Success;
 }
 
@@ -2783,9 +3031,12 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
 bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
                                   bool invertCondCode) {
   MCAsmParser &Parser = getParser();
+
+  OperandMatchResultTy ResTy =
+      MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/ true);
+
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  OperandMatchResultTy ResTy = MatchOperandParserImpl(Operands, Mnemonic);
   if (ResTy == MatchOperand_Success)
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
@@ -2902,7 +3153,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
       return true;
 
     if (Operands.size() < 2 ||
-        !static_cast<AArch64Operand &>(*Operands[1]).isReg())
+        !static_cast<AArch64Operand &>(*Operands[1]).isScalarReg())
       return Error(Loc, "Only valid when first operand is register");
 
     bool IsXReg =
@@ -3257,7 +3508,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
   }
 }
 
-std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS);
+static std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS,
+                                             unsigned VariantID = 0);
 
 bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
                                       OperandVector &Operands) {
@@ -3297,6 +3549,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
                  "expected compatible register or floating-point constant");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
+  case Match_InvalidMemoryIndexedSImm10:
+    return Error(Loc, "index must be a multiple of 8 in range [-4096, 4088].");
   case Match_InvalidMemoryIndexed4SImm7:
     return Error(Loc, "index must be a multiple of 4 in range [-256, 252].");
   case Match_InvalidMemoryIndexed8SImm7:
@@ -3383,12 +3637,28 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "expected readable system register");
   case Match_MSR:
     return Error(Loc, "expected writable system register or pstate");
+  case Match_InvalidComplexRotationEven:
+    return Error(Loc, "complex rotation must be 0, 90, 180 or 270.");
+  case Match_InvalidComplexRotationOdd:
+    return Error(Loc, "complex rotation must be 90 or 270.");
   case Match_MnemonicFail: {
     std::string Suggestion = AArch64MnemonicSpellCheck(
         ((AArch64Operand &)*Operands[0]).getToken(),
         ComputeAvailableFeatures(STI->getFeatureBits()));
     return Error(Loc, "unrecognized instruction mnemonic" + Suggestion);
   }
+  case Match_InvalidSVEPredicateAnyReg:
+  case Match_InvalidSVEPredicateBReg:
+  case Match_InvalidSVEPredicateHReg:
+  case Match_InvalidSVEPredicateSReg:
+  case Match_InvalidSVEPredicateDReg:
+    return Error(Loc, "invalid predicate register.");
+  case Match_InvalidSVEPredicate3bAnyReg:
+  case Match_InvalidSVEPredicate3bBReg:
+  case Match_InvalidSVEPredicate3bHReg:
+  case Match_InvalidSVEPredicate3bSReg:
+  case Match_InvalidSVEPredicate3bDReg:
+    return Error(Loc, "restricted predicate has range [0, 7].");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -3411,7 +3681,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (NumOperands == 4 && Tok == "lsl") {
     AArch64Operand &Op2 = static_cast<AArch64Operand &>(*Operands[2]);
     AArch64Operand &Op3 = static_cast<AArch64Operand &>(*Operands[3]);
-    if (Op2.isReg() && Op3.isImm()) {
+    if (Op2.isScalarReg() && Op3.isImm()) {
       const MCConstantExpr *Op3CE = dyn_cast<MCConstantExpr>(Op3.getImm());
       if (Op3CE) {
         uint64_t Op3Val = Op3CE->getValue();
@@ -3443,7 +3713,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     AArch64Operand LSBOp = static_cast<AArch64Operand &>(*Operands[2]);
     AArch64Operand WidthOp = static_cast<AArch64Operand &>(*Operands[3]);
 
-    if (Op1.isReg() && LSBOp.isImm() && WidthOp.isImm()) {
+    if (Op1.isScalarReg() && LSBOp.isImm() && WidthOp.isImm()) {
       const MCConstantExpr *LSBCE = dyn_cast<MCConstantExpr>(LSBOp.getImm());
       const MCConstantExpr *WidthCE = dyn_cast<MCConstantExpr>(WidthOp.getImm());
 
@@ -3482,8 +3752,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands[0] = AArch64Operand::CreateToken(
               "bfm", false, Op.getStartLoc(), getContext());
         Operands[2] = AArch64Operand::CreateReg(
-            RegWidth == 32 ? AArch64::WZR : AArch64::XZR, false, SMLoc(),
-            SMLoc(), getContext());
+            RegWidth == 32 ? AArch64::WZR : AArch64::XZR, RegKind::Scalar,
+            SMLoc(), SMLoc(), getContext());
         Operands[3] = AArch64Operand::CreateImm(
             ImmRExpr, LSBOp.getStartLoc(), LSBOp.getEndLoc(), getContext());
         Operands.emplace_back(
@@ -3499,7 +3769,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       AArch64Operand &Op3 = static_cast<AArch64Operand &>(*Operands[3]);
       AArch64Operand &Op4 = static_cast<AArch64Operand &>(*Operands[4]);
 
-      if (Op1.isReg() && Op3.isImm() && Op4.isImm()) {
+      if (Op1.isScalarReg() && Op3.isImm() && Op4.isImm()) {
         const MCConstantExpr *Op3CE = dyn_cast<MCConstantExpr>(Op3.getImm());
         const MCConstantExpr *Op4CE = dyn_cast<MCConstantExpr>(Op4.getImm());
 
@@ -3563,7 +3833,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       AArch64Operand &Op3 = static_cast<AArch64Operand &>(*Operands[3]);
       AArch64Operand &Op4 = static_cast<AArch64Operand &>(*Operands[4]);
 
-      if (Op1.isReg() && Op3.isImm() && Op4.isImm()) {
+      if (Op1.isScalarReg() && Op3.isImm() && Op4.isImm()) {
         const MCConstantExpr *Op3CE = dyn_cast<MCConstantExpr>(Op3.getImm());
         const MCConstantExpr *Op4CE = dyn_cast<MCConstantExpr>(Op4.getImm());
 
@@ -3610,6 +3880,31 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       }
     }
   }
+
+  // The Cyclone CPU and early successors didn't execute the zero-cycle zeroing
+  // instruction for FP registers correctly in some rare circumstances. Convert
+  // it to a safe instruction and warn (because silently changing someone's
+  // assembly is rude).
+  if (getSTI().getFeatureBits()[AArch64::FeatureZCZeroingFPWorkaround] &&
+      NumOperands == 4 && Tok == "movi") {
+    AArch64Operand &Op1 = static_cast<AArch64Operand &>(*Operands[1]);
+    AArch64Operand &Op2 = static_cast<AArch64Operand &>(*Operands[2]);
+    AArch64Operand &Op3 = static_cast<AArch64Operand &>(*Operands[3]);
+    if ((Op1.isToken() && Op2.isNeonVectorReg() && Op3.isImm()) ||
+        (Op1.isNeonVectorReg() && Op2.isToken() && Op3.isImm())) {
+      StringRef Suffix = Op1.isToken() ? Op1.getToken() : Op2.getToken();
+      if (Suffix.lower() == ".2d" &&
+          cast<MCConstantExpr>(Op3.getImm())->getValue() == 0) {
+        Warning(IDLoc, "instruction movi.2d with immediate #0 may not function"
+                " correctly on this CPU, converting to equivalent movi.16b");
+        // Switch the suffix to .16b.
+        unsigned Idx = Op1.isToken() ? 1 : 2;
+        Operands[Idx] = AArch64Operand::CreateToken(".16b", false, IDLoc,
+                                                  getContext());
+      }
+    }
+  }
+
   // FIXME: Horrible hack for sxtw and uxtw with Wn src and Xd dst operands.
   //        InstAlias can't quite handle this since the reg classes aren't
   //        subclasses.
@@ -3617,24 +3912,26 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // The source register can be Wn here, but the matcher expects a
     // GPR64. Twiddle it here if necessary.
     AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[2]);
-    if (Op.isReg()) {
+    if (Op.isScalarReg()) {
       unsigned Reg = getXRegFromWReg(Op.getReg());
-      Operands[2] = AArch64Operand::CreateReg(Reg, false, Op.getStartLoc(),
-                                              Op.getEndLoc(), getContext());
+      Operands[2] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
+                                              Op.getStartLoc(), Op.getEndLoc(),
+                                              getContext());
     }
   }
   // FIXME: Likewise for sxt[bh] with a Xd dst operand
   else if (NumOperands == 3 && (Tok == "sxtb" || Tok == "sxth")) {
     AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[1]);
-    if (Op.isReg() &&
+    if (Op.isScalarReg() &&
         AArch64MCRegisterClasses[AArch64::GPR64allRegClassID].contains(
             Op.getReg())) {
       // The source register can be Wn here, but the matcher expects a
       // GPR64. Twiddle it here if necessary.
       AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[2]);
-      if (Op.isReg()) {
+      if (Op.isScalarReg()) {
         unsigned Reg = getXRegFromWReg(Op.getReg());
-        Operands[2] = AArch64Operand::CreateReg(Reg, false, Op.getStartLoc(),
+        Operands[2] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
+                                                Op.getStartLoc(),
                                                 Op.getEndLoc(), getContext());
       }
     }
@@ -3642,15 +3939,16 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   // FIXME: Likewise for uxt[bh] with a Xd dst operand
   else if (NumOperands == 3 && (Tok == "uxtb" || Tok == "uxth")) {
     AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[1]);
-    if (Op.isReg() &&
+    if (Op.isScalarReg() &&
         AArch64MCRegisterClasses[AArch64::GPR64allRegClassID].contains(
             Op.getReg())) {
       // The source register can be Wn here, but the matcher expects a
       // GPR32. Twiddle it here if necessary.
       AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[1]);
-      if (Op.isReg()) {
+      if (Op.isScalarReg()) {
         unsigned Reg = getWRegFromXReg(Op.getReg());
-        Operands[1] = AArch64Operand::CreateReg(Reg, false, Op.getStartLoc(),
+        Operands[1] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
+                                                Op.getStartLoc(),
                                                 Op.getEndLoc(), getContext());
       }
     }
@@ -3764,6 +4062,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed8SImm7:
   case Match_InvalidMemoryIndexed16SImm7:
   case Match_InvalidMemoryIndexedSImm9:
+  case Match_InvalidMemoryIndexedSImm10:
   case Match_InvalidImm0_1:
   case Match_InvalidImm0_7:
   case Match_InvalidImm0_15:
@@ -3782,6 +4081,18 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidIndexS:
   case Match_InvalidIndexD:
   case Match_InvalidLabel:
+  case Match_InvalidComplexRotationEven:
+  case Match_InvalidComplexRotationOdd:
+  case Match_InvalidSVEPredicateAnyReg:
+  case Match_InvalidSVEPredicateBReg:
+  case Match_InvalidSVEPredicateHReg:
+  case Match_InvalidSVEPredicateSReg:
+  case Match_InvalidSVEPredicateDReg:
+  case Match_InvalidSVEPredicate3bAnyReg:
+  case Match_InvalidSVEPredicate3bBReg:
+  case Match_InvalidSVEPredicate3bHReg:
+  case Match_InvalidSVEPredicate3bSReg:
+  case Match_InvalidSVEPredicate3bDReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
@@ -3862,8 +4173,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  unsigned ID = AArch64::parseArch(Arch);
-  if (ID == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID))
+  AArch64::ArchKind ID = AArch64::parseArch(Arch);
+  if (ID == AArch64::ArchKind::INVALID)
     return Error(ArchLoc, "unknown arch name");
 
   if (parseToken(AsmToken::EndOfStatement))
@@ -4107,18 +4418,46 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   MCAsmParser &Parser = getParser();
   Parser.Lex(); // Eat the '.req' token.
   SMLoc SRegLoc = getLoc();
-  unsigned RegNum = tryParseRegister();
-  bool IsVector = false;
+  int RegNum = tryParseRegister();
+  RegKind RegisterKind = RegKind::Scalar;
 
-  if (RegNum == static_cast<unsigned>(-1)) {
+  if (RegNum == -1) {
     StringRef Kind;
+    RegisterKind = RegKind::NeonVector;
     RegNum = tryMatchVectorRegister(Kind, false);
     if (!Kind.empty())
       return Error(SRegLoc, "vector register without type specifier expected");
-    IsVector = true;
   }
 
-  if (RegNum == static_cast<unsigned>(-1))
+  if (RegNum == -1) {
+    StringRef Kind;
+    RegisterKind = RegKind::SVEDataVector;
+    OperandMatchResultTy Res =
+        tryParseSVERegister(RegNum, Kind, RegKind::SVEDataVector);
+
+    if (Res == MatchOperand_ParseFail)
+      return true;
+
+    if (Res == MatchOperand_Success && !Kind.empty())
+      return Error(SRegLoc,
+                   "sve vector register without type specifier expected");
+  }
+
+  if (RegNum == -1) {
+    StringRef Kind;
+    RegisterKind = RegKind::SVEPredicateVector;
+    OperandMatchResultTy Res =
+        tryParseSVERegister(RegNum, Kind, RegKind::SVEPredicateVector);
+
+    if (Res == MatchOperand_ParseFail)
+      return true;
+
+    if (Res == MatchOperand_Success && !Kind.empty())
+      return Error(SRegLoc,
+                   "sve predicate register without type specifier expected");
+  }
+
+  if (RegNum == -1)
     return Error(SRegLoc, "register name or alias expected");
 
   // Shouldn't be anything else.
@@ -4126,7 +4465,7 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
                  "unexpected input in .req directive"))
     return true;
 
-  auto pair = std::make_pair(IsVector, RegNum);
+  auto pair = std::make_pair(RegisterKind, (unsigned) RegNum);
   if (RegisterReqs.insert(std::make_pair(Name, pair)).first->second != pair)
     Warning(L, "ignoring redefinition of register alias '" + Name + "'");
 
@@ -4206,6 +4545,7 @@ extern "C" void LLVMInitializeAArch64AsmParser() {
 #define GET_REGISTER_MATCHER
 #define GET_SUBTARGET_FEATURE_NAME
 #define GET_MATCHER_IMPLEMENTATION
+#define GET_MNEMONIC_SPELL_CHECKER
 #include "AArch64GenAsmMatcher.inc"
 
 // Define this matcher function after the auto-generated include so we
@@ -4337,8 +4677,43 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
            &AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID]);
   }
 
-  Operands.push_back(AArch64Operand::CreateReg(Pair, false, S, getLoc(),
-      getContext()));
+  Operands.push_back(AArch64Operand::CreateReg(Pair, RegKind::Scalar, S,
+      getLoc(), getContext()));
+
+  return MatchOperand_Success;
+}
+
+template <bool ParseSuffix>
+OperandMatchResultTy
+AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
+  const SMLoc S = getLoc();
+  // Check for a SVE vector register specifier first.
+  int RegNum = -1;
+  StringRef Kind;
+
+  OperandMatchResultTy Res =
+      tryParseSVERegister(RegNum, Kind, RegKind::SVEDataVector);
+
+  if (Res != MatchOperand_Success)
+    return Res;
+
+  if (ParseSuffix && Kind.empty())
+    return MatchOperand_NoMatch;
+
+  unsigned ElementWidth = StringSwitch<unsigned>(Kind.lower())
+                        .Case("", -1)
+                        .Case(".b", 8)
+                        .Case(".h", 16)
+                        .Case(".s", 32)
+                        .Case(".d", 64)
+                        .Case(".q", 128)
+                        .Default(0);
+  if (!ElementWidth)
+    return MatchOperand_NoMatch;
+
+  Operands.push_back(
+    AArch64Operand::CreateReg(RegNum, RegKind::SVEDataVector, ElementWidth,
+                              S, S, getContext()));
 
   return MatchOperand_Success;
 }

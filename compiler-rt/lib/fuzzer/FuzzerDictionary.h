@@ -120,7 +120,7 @@ private:
 bool ParseOneDictionaryEntry(const std::string &Str, Unit *U);
 // Parses the dictionary file, fills Units, returns true iff all lines
 // were parsed succesfully.
-bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units);
+bool ParseDictionaryFile(const std::string &Text, Vector<Unit> *Units);
 
 }  // namespace fuzzer
 

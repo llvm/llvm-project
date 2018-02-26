@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -march=x86-64 -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
-; RUN: llc < %s -O0 -march=x86 -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X32
+; RUN: llc < %s -O0 -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
+; RUN: llc < %s -O0 -mtriple=i686-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X32
 
 @sc8 = external global i8
 

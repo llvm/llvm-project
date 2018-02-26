@@ -4,14 +4,14 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-apple-ios9.0"
 
 ; CHECK-LABEL: name: test_varargs
-; CHECK: [[ANSWER:%[0-9]+]](s32) = G_CONSTANT i32 42
-; CHECK: [[D_ONE:%[0-9]+]](s64) = G_FCONSTANT double 1.000000e+00
-; CHECK: [[TWELVE:%[0-9]+]](s64) = G_CONSTANT i64 12
-; CHECK: [[THREE:%[0-9]+]](s8) = G_CONSTANT i8 3
-; CHECK: [[ONE:%[0-9]+]](s16) = G_CONSTANT i16 1
-; CHECK: [[FOUR:%[0-9]+]](s32) = G_CONSTANT i32 4
-; CHECK: [[F_ONE:%[0-9]+]](s32) = G_FCONSTANT float 1.000000e+00
-; CHECK: [[TWO:%[0-9]+]](s64) = G_FCONSTANT double 2.000000e+00
+; CHECK: [[ANSWER:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+; CHECK: [[D_ONE:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
+; CHECK: [[TWELVE:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+; CHECK: [[THREE:%[0-9]+]]:_(s8) = G_CONSTANT i8 3
+; CHECK: [[ONE:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+; CHECK: [[FOUR:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+; CHECK: [[F_ONE:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+; CHECK: [[TWO:%[0-9]+]]:_(s64) = G_FCONSTANT double 2.000000e+00
 
 ; CHECK: %w0 = COPY [[ANSWER]]
 ; CHECK: %d0 = COPY [[D_ONE]]

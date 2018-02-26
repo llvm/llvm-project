@@ -18,5 +18,6 @@ Target &llvm::getTheXCoreTarget() {
 }
 
 extern "C" void LLVMInitializeXCoreTargetInfo() {
-  RegisterTarget<Triple::xcore> X(getTheXCoreTarget(), "xcore", "XCore");
+  RegisterTarget<Triple::xcore> X(getTheXCoreTarget(), "xcore", "XCore",
+                                  "XCore");
 }

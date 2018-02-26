@@ -18,7 +18,7 @@
 
 define i32 @f1(float %x, i32 %y) {
 ; CHECK-LABEL: f1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -31,7 +31,7 @@ define i32 @f1(float %x, i32 %y) {
 
 define i32 @f2(float %x, i32 %y) {
 ; CHECK-LABEL: f2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -44,7 +44,7 @@ define i32 @f2(float %x, i32 %y) {
 
 define i32 @f3(float %x) {
 ; CHECK-LABEL: f3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
@@ -57,7 +57,7 @@ define i32 @f3(float %x) {
 
 define i32 @f4(float %x) {
 ; CHECK-LABEL: f4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    andl $2, %eax
 ; CHECK-NEXT:    retq
@@ -70,7 +70,7 @@ define i32 @f4(float %x) {
 
 define float @f5(float %x, i32 %y) {
 ; CHECK-LABEL: f5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %edi, %xmm1
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -84,7 +84,7 @@ define float @f5(float %x, i32 %y) {
 
 define float @f6(float %x, i32 %y) {
 ; CHECK-LABEL: f6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %edi, %xmm1
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -98,7 +98,7 @@ define float @f6(float %x, i32 %y) {
 
 define float @f7(float %x) {
 ; CHECK-LABEL: f7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -112,7 +112,7 @@ define float @f7(float %x) {
 
 define float @f8(float %x) {
 ; CHECK-LABEL: f8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -126,7 +126,7 @@ define float @f8(float %x) {
 
 define i32 @f9(float %x, float %y) {
 ; CHECK-LABEL: f9:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    retq
@@ -140,7 +140,7 @@ define i32 @f9(float %x, float %y) {
 
 define float @f10(float %x, float %y) {
 ; CHECK-LABEL: f10:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -152,7 +152,7 @@ define float @f10(float %x, float %y) {
 
 define float @or(float %x, float %y) {
 ; CHECK-LABEL: or:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -164,7 +164,7 @@ define float @or(float %x, float %y) {
 
 define float @xor(float %x, float %y) {
 ; CHECK-LABEL: xor:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -176,7 +176,7 @@ define float @xor(float %x, float %y) {
 
 define float @f7_or(float %x) {
 ; CHECK-LABEL: f7_or:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -188,7 +188,7 @@ define float @f7_or(float %x) {
 
 define float @f7_xor(float %x) {
 ; CHECK-LABEL: f7_xor:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -202,7 +202,7 @@ define float @f7_xor(float %x) {
 
 define double @doubles(double %x, double %y) {
 ; CHECK-LABEL: doubles:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast double %x to i64
@@ -214,7 +214,7 @@ define double @doubles(double %x, double %y) {
 
 define double @f7_double(double %x) {
 ; CHECK-LABEL: f7_double:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -230,7 +230,7 @@ define double @f7_double(double %x) {
 
 define float @movmsk(float %x) {
 ; CHECK-LABEL: movmsk:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -242,7 +242,7 @@ define float @movmsk(float %x) {
 
 define double @bitcast_fabs(double %x) {
 ; CHECK-LABEL: bitcast_fabs:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast double %x to i64
@@ -253,7 +253,7 @@ define double @bitcast_fabs(double %x) {
 
 define float @bitcast_fneg(float %x) {
 ; CHECK-LABEL: bitcast_fneg:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -264,7 +264,7 @@ define float @bitcast_fneg(float %x) {
 
 define <2 x double> @bitcast_fabs_vec(<2 x double> %x) {
 ; CHECK-LABEL: bitcast_fabs_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <2 x double> %x to <2 x i64>
@@ -275,7 +275,7 @@ define <2 x double> @bitcast_fabs_vec(<2 x double> %x) {
 
 define <4 x float> @bitcast_fneg_vec(<4 x float> %x) {
 ; CHECK-LABEL: bitcast_fneg_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <4 x float> %x to <4 x i32>

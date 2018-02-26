@@ -262,6 +262,9 @@ int main() {
 	//expected-note-re@-2 {{{{^}}Calling default constructor for 'M'}}
 #endif
   Y *y = new Y;
+#if !PUREONLY
+  //expected-note-re@-2 {{{{^}}Calling default constructor for 'Y'}}
+#endif
   delete y;
   header::Z z;
 #if !PUREONLY

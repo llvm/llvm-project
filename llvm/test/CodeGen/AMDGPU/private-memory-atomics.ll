@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s
 
 ; This works because promote allocas pass replaces these with LDS atomics.

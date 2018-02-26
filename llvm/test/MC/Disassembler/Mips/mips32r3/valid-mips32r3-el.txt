@@ -1,4 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=mipsel-unknown-linux -mcpu=mips32r3 | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=mipsel-unknown-linux -mcpu=mips32r3 -mattr=+fp64 | FileCheck %s
 0x05 0x73 0x20 0x46 # CHECK: abs.d $f12, $f14
 0x85 0x39 0x00 0x46 # CHECK: abs.s $f6, $f7
 0x20 0x48 0xc7 0x00 # CHECK: add $9, $6, $7

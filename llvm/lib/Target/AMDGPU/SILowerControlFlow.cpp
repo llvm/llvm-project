@@ -21,31 +21,31 @@
 /// EXEC to update the predicates.
 ///
 /// For example:
-/// %VCC = V_CMP_GT_F32 %VGPR1, %VGPR2
-/// %SGPR0 = SI_IF %VCC
-///   %VGPR0 = V_ADD_F32 %VGPR0, %VGPR0
-/// %SGPR0 = SI_ELSE %SGPR0
-///   %VGPR0 = V_SUB_F32 %VGPR0, %VGPR0
-/// SI_END_CF %SGPR0
+/// %vcc = V_CMP_GT_F32 %vgpr1, %vgpr2
+/// %sgpr0 = SI_IF %vcc
+///   %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0
+/// %sgpr0 = SI_ELSE %sgpr0
+///   %vgpr0 = V_SUB_F32 %vgpr0, %vgpr0
+/// SI_END_CF %sgpr0
 ///
 /// becomes:
 ///
-/// %SGPR0 = S_AND_SAVEEXEC_B64 %VCC  // Save and update the exec mask
-/// %SGPR0 = S_XOR_B64 %SGPR0, %EXEC  // Clear live bits from saved exec mask
+/// %sgpr0 = S_AND_SAVEEXEC_B64 %vcc  // Save and update the exec mask
+/// %sgpr0 = S_XOR_B64 %sgpr0, %exec  // Clear live bits from saved exec mask
 /// S_CBRANCH_EXECZ label0            // This instruction is an optional
 ///                                   // optimization which allows us to
 ///                                   // branch if all the bits of
 ///                                   // EXEC are zero.
-/// %VGPR0 = V_ADD_F32 %VGPR0, %VGPR0 // Do the IF block of the branch
+/// %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0 // Do the IF block of the branch
 ///
 /// label0:
-/// %SGPR0 = S_OR_SAVEEXEC_B64 %EXEC   // Restore the exec mask for the Then block
-/// %EXEC = S_XOR_B64 %SGPR0, %EXEC    // Clear live bits from saved exec mask
+/// %sgpr0 = S_OR_SAVEEXEC_B64 %exec   // Restore the exec mask for the Then block
+/// %exec = S_XOR_B64 %sgpr0, %exec    // Clear live bits from saved exec mask
 /// S_BRANCH_EXECZ label1              // Use our branch optimization
 ///                                    // instruction again.
-/// %VGPR0 = V_SUB_F32 %VGPR0, %VGPR   // Do the THEN block
+/// %vgpr0 = V_SUB_F32 %vgpr0, %vgpr   // Do the THEN block
 /// label1:
-/// %EXEC = S_OR_B64 %EXEC, %SGPR0     // Re-enable saved exec mask bits
+/// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -53,7 +53,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -63,9 +63,9 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <iterator>
 
@@ -134,6 +134,39 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
+static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
+                       const SIInstrInfo *TII) {
+  unsigned SaveExecReg = MI.getOperand(0).getReg();
+  auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
+
+  if (U == MRI->use_instr_nodbg_end() ||
+      std::next(U) != MRI->use_instr_nodbg_end() ||
+      U->getOpcode() != AMDGPU::SI_END_CF)
+    return false;
+
+  // Check for SI_KILL_*_TERMINATOR on path from if to endif.
+  // if there is any such terminator simplififcations are not safe.
+  auto SMBB = MI.getParent();
+  auto EMBB = U->getParent();
+  DenseSet<const MachineBasicBlock*> Visited;
+  SmallVector<MachineBasicBlock*, 4> Worklist(SMBB->succ_begin(),
+                                              SMBB->succ_end());
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+
+    if (MBB == EMBB || !Visited.insert(MBB).second)
+      continue;
+    for(auto &Term : MBB->terminators())
+      if (TII->isKillTerminator(Term.getOpcode()))
+        return false;
+
+    Worklist.append(MBB->succ_begin(), MBB->succ_end());
+  }
+
+  return true;
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -149,9 +182,15 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineOperand &ImpDefSCC = MI.getOperand(4);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
 
+  // If there is only one use of save exec register and that use is SI_END_CF,
+  // we can optimize SI_IF by returning the full saved exec mask instead of
+  // just cleared bits.
+  bool SimpleIf = isSimpleIf(MI, MRI, TII);
+
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
-  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned CopyReg = SimpleIf ? SaveExecReg
+                       : MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
   MachineInstr *CopyExec =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addReg(AMDGPU::EXEC)
@@ -166,11 +205,14 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     .addReg(Cond.getReg());
   setImpSCCDefDead(*And, true);
 
-  MachineInstr *Xor =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
-    .addReg(Tmp)
-    .addReg(CopyReg);
-  setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
+  MachineInstr *Xor = nullptr;
+  if (!SimpleIf) {
+    Xor =
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
+      .addReg(Tmp)
+      .addReg(CopyReg);
+    setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
+  }
 
   // Use a copy that is a terminator to get correct spill code placement it with
   // fast regalloc.
@@ -194,7 +236,8 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // register.
   LIS->ReplaceMachineInstrInMaps(MI, *And);
 
-  LIS->InsertMachineInstrInMaps(*Xor);
+  if (!SimpleIf)
+    LIS->InsertMachineInstrInMaps(*Xor);
   LIS->InsertMachineInstrInMaps(*SetExec);
   LIS->InsertMachineInstrInMaps(*NewBr);
 
@@ -207,7 +250,8 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->removeInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(Tmp);
-  LIS->createAndComputeVirtRegInterval(CopyReg);
+  if (!SimpleIf)
+    LIS->createAndComputeVirtRegInterval(CopyReg);
 }
 
 void SILowerControlFlow::emitElse(MachineInstr &MI) {

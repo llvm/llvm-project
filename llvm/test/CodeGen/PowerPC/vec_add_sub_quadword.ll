@@ -8,7 +8,7 @@ define <1 x i128> @out_of_bounds_insertelement(<1 x i128> %x, i128 %val) nounwin
        %result = add <1 x i128> %x, %tmpvec
        ret <1 x i128> %result
 ; CHECK-LABEL: @out_of_bounds_insertelement
-; CHECK: # BB#0:
+; CHECK: # %bb.0:
 ; CHECK-NEXT: blr
 }
 

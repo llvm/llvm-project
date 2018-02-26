@@ -36,31 +36,31 @@ namespace brace_initializers {
 
   void test() {
     (void)(POD){1, 2};
-    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'struct brace_initializers::POD'
-    // CHECK: CompoundLiteralExpr {{.*}} 'struct brace_initializers::POD'
-    // CHECK-NEXT: InitListExpr {{.*}} 'struct brace_initializers::POD'
+    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
+    // CHECK: CompoundLiteralExpr {{.*}} 'brace_initializers::POD'
+    // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::POD'
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasDtor){1, 2};
-    // CHECK: CXXBindTemporaryExpr {{.*}} 'struct brace_initializers::HasDtor'
-    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'struct brace_initializers::HasDtor'
-    // CHECK-NEXT: InitListExpr {{.*}} 'struct brace_initializers::HasDtor'
+    // CHECK: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasDtor'
+    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'brace_initializers::HasDtor'
+    // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::HasDtor'
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
 #if __cplusplus >= 201103L
     (void)(HasCtor){1, 2};
-    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'struct brace_initializers::HasCtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'struct brace_initializers::HasCtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'struct brace_initializers::HasCtor'
+    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasCtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'brace_initializers::HasCtor'
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'brace_initializers::HasCtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasCtorDtor){1, 2};
-    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'struct brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NEXT: CompoundLiteralExpr {{.*}} 'struct brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'struct brace_initializers::HasCtorDtor'
+    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11-NEXT: CompoundLiteralExpr {{.*}} 'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'brace_initializers::HasCtorDtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 #endif

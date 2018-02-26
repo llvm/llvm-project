@@ -120,7 +120,7 @@ public:
   bool parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
                                 std::vector<CalleeSavedInfo> &CSIInfo,
                                 const yaml::StringValue &RegisterSource,
-                                int FrameIdx);
+                                bool IsRestored, int FrameIdx);
 
   bool parseStackObjectsDebugInfo(PerFunctionMIParsingState &PFS,
                                   const yaml::MachineStackObject &Object,
@@ -441,6 +441,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
 
     if (StringRef(VReg.Class.Value).equals("_")) {
       Info.Kind = VRegInfo::GENERIC;
+      Info.D.RegBank = nullptr;
     } else {
       const auto *RC = getRegClass(MF, VReg.Class.Value);
       if (RC) {
@@ -550,7 +551,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                         const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   const yaml::MachineFrameInfo &YamlMFI = YamlMF.FrameInfo;
   MFI.setFrameAddressIsTaken(YamlMFI.IsFrameAddressTaken);
   MFI.setReturnAddressIsTaken(YamlMFI.IsReturnAddressTaken);
@@ -590,6 +591,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     else
       ObjectIdx = MFI.CreateFixedSpillStackObject(Object.Size, Object.Offset);
     MFI.setObjectAlignment(ObjectIdx, Object.Alignment);
+    MFI.setStackID(ObjectIdx, Object.StackID);
     if (!PFS.FixedStackObjectSlots.insert(std::make_pair(Object.ID.Value,
                                                          ObjectIdx))
              .second)
@@ -597,7 +599,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                    Twine("redefinition of fixed stack object '%fixed-stack.") +
                        Twine(Object.ID.Value) + "'");
     if (parseCalleeSavedRegister(PFS, CSIInfo, Object.CalleeSavedRegister,
-                                 ObjectIdx))
+                                 Object.CalleeSavedRestored, ObjectIdx))
       return true;
   }
 
@@ -622,13 +624,15 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
           Object.Size, Object.Alignment,
           Object.Type == yaml::MachineStackObject::SpillSlot, Alloca);
     MFI.setObjectOffset(ObjectIdx, Object.Offset);
+    MFI.setStackID(ObjectIdx, Object.StackID);
+
     if (!PFS.StackObjectSlots.insert(std::make_pair(Object.ID.Value, ObjectIdx))
              .second)
       return error(Object.ID.SourceRange.Start,
                    Twine("redefinition of stack object '%stack.") +
                        Twine(Object.ID.Value) + "'");
     if (parseCalleeSavedRegister(PFS, CSIInfo, Object.CalleeSavedRegister,
-                                 ObjectIdx))
+                                 Object.CalleeSavedRestored, ObjectIdx))
       return true;
     if (Object.LocalOffset)
       MFI.mapLocalFrameObject(ObjectIdx, Object.LocalOffset.getValue());
@@ -653,14 +657,16 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
 
 bool MIRParserImpl::parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
     std::vector<CalleeSavedInfo> &CSIInfo,
-    const yaml::StringValue &RegisterSource, int FrameIdx) {
+    const yaml::StringValue &RegisterSource, bool IsRestored, int FrameIdx) {
   if (RegisterSource.Value.empty())
     return false;
   unsigned Reg = 0;
   SMDiagnostic Error;
   if (parseNamedRegisterReference(PFS, Reg, RegisterSource.Value, Error))
     return error(Error, RegisterSource.SourceRange);
-  CSIInfo.push_back(CalleeSavedInfo(Reg, FrameIdx));
+  CalleeSavedInfo CSI(Reg, FrameIdx);
+  CSI.setRestored(IsRestored);
+  CSIInfo.push_back(CSI);
   return false;
 }
 
@@ -716,9 +722,13 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
     MachineConstantPool &ConstantPool, const yaml::MachineFunction &YamlMF) {
   DenseMap<unsigned, unsigned> &ConstantPoolSlots = PFS.ConstantPoolSlots;
   const MachineFunction &MF = PFS.MF;
-  const auto &M = *MF.getFunction()->getParent();
+  const auto &M = *MF.getFunction().getParent();
   SMDiagnostic Error;
   for (const auto &YamlConstant : YamlMF.Constants) {
+    if (YamlConstant.IsTargetSpecific)
+      // FIXME: Support target-specific constant pools
+      return error(YamlConstant.Value.SourceRange.Start,
+                   "Can't parse target-specific constant pool entries yet");
     const Constant *Value = dyn_cast_or_null<Constant>(
         parseConstantValue(YamlConstant.Value.Value, Error, M));
     if (!Value)

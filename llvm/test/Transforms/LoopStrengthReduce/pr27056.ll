@@ -45,6 +45,7 @@ try.cont:                                         ; preds = %for.end
 ; CHECK-LABEL: define void @b_copy_ctor(
 ; CHECK:       catchpad
 ; CHECK-NEXT:  icmp eq %struct.L
-; CHECK-NEXT:  getelementptr {{.*}} i64 sub (i64 0, i64 ptrtoint (%struct.L* @GV2 to i64))
+; CHECK-NEXT:  %4 = sub i64 0, %1
+; CHECK-NEXT:  getelementptr {{.*}} getelementptr inbounds (%struct.L, %struct.L* @GV2, i32 0, i32 0), i64 %4
 
 declare void @a_copy_ctor()

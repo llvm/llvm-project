@@ -11,7 +11,7 @@ define i32 @f1(i8 *%src1, i8 *%src2) {
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: clst %r2, %r3
 ; CHECK-NEXT: jo [[LABEL]]
-; CHECK-NEXT: BB#{{[0-9]+}}
+; CHECK-NEXT: %bb.{{[0-9]+}}
 ; CHECK-NEXT: ipm [[REG:%r[0-5]]]
 ; CHECK: srl [[REG]], 28
 ; CHECK: rll %r2, [[REG]], 31
@@ -27,7 +27,7 @@ define void @f2(i8 *%src1, i8 *%src2, i32 *%dest) {
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: clst %r2, %r3
 ; CHECK-NEXT: jo [[LABEL]]
-; CHECK-NEXT: BB#{{[0-9]+}}
+; CHECK-NEXT: %bb.{{[0-9]+}}
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %res = call i32 @strcmp(i8 *%src1, i8 *%src2)
@@ -50,7 +50,7 @@ define i32 @f3(i8 *%src1, i8 *%src2, i32 *%dest) {
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: clst %r2, %r3
 ; CHECK-NEXT: jo [[LABEL]]
-; CHECK-NEXT: BB#{{[0-9]+}}
+; CHECK-NEXT: %bb.{{[0-9]+}}
 ; CHECK-NEXT: ipm [[REG:%r[0-5]]]
 ; CHECK: srl [[REG]], 28
 ; CHECK: rll %r2, [[REG]], 31

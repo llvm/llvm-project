@@ -107,8 +107,6 @@ void ObjCSuperDeallocChecker::checkPreObjCMessage(const ObjCMethodCall &M,
   }
 
   reportUseAfterDealloc(ReceiverSymbol, Desc, M.getOriginExpr(), C);
-
-  return;
 }
 
 void ObjCSuperDeallocChecker::checkPreCall(const CallEvent &Call,

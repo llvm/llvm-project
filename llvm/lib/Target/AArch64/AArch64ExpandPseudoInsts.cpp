@@ -1,4 +1,4 @@
-//==-- AArch64ExpandPseudoInsts.cpp - Expand pseudo instructions --*- C++ -*-=//
+//===- AArch64ExpandPseudoInsts.cpp - Expand pseudo instructions ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,23 +18,43 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <utility>
+
 using namespace llvm;
 
 #define AARCH64_EXPAND_PSEUDO_NAME "AArch64 pseudo instruction expansion pass"
 
 namespace {
+
 class AArch64ExpandPseudo : public MachineFunctionPass {
 public:
+  const AArch64InstrInfo *TII;
+
   static char ID;
+
   AArch64ExpandPseudo() : MachineFunctionPass(ID) {
     initializeAArch64ExpandPseudoPass(*PassRegistry::getPassRegistry());
   }
-
-  const AArch64InstrInfo *TII;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -55,8 +75,10 @@ private:
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI);
 };
+
+} // end anonymous namespace
+
 char AArch64ExpandPseudo::ID = 0;
-}
 
 INITIALIZE_PASS(AArch64ExpandPseudo, "aarch64-expand-pseudo",
                 AARCH64_EXPAND_PSEUDO_NAME, false, false)
@@ -151,12 +173,12 @@ static bool canUseOrr(uint64_t Chunk, uint64_t &Encoding) {
 /// This allows us to materialize constants like |A|B|A|A| or |A|B|C|A| (order
 /// of the chunks doesn't matter), assuming |A|A|A|A| can be materialized with
 /// an ORR instruction.
-///
 static bool tryToreplicateChunks(uint64_t UImm, MachineInstr &MI,
                                  MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator &MBBI,
                                  const AArch64InstrInfo *TII) {
-  typedef DenseMap<uint64_t, unsigned> CountMap;
+  using CountMap = DenseMap<uint64_t, unsigned>;
+
   CountMap Counts;
 
   // Scan the constant and count how often every chunk occurs.
@@ -242,7 +264,7 @@ static bool tryToreplicateChunks(uint64_t UImm, MachineInstr &MI,
 /// starts a contiguous sequence of ones if we look at the bits from the LSB
 /// towards the MSB.
 static bool isStartChunk(uint64_t Chunk) {
-  if (Chunk == 0 || Chunk == UINT64_MAX)
+  if (Chunk == 0 || Chunk == std::numeric_limits<uint64_t>::max())
     return false;
 
   return isMask_64(~Chunk);
@@ -252,7 +274,7 @@ static bool isStartChunk(uint64_t Chunk) {
 /// ends a contiguous sequence of ones if we look at the bits from the LSB
 /// towards the MSB.
 static bool isEndChunk(uint64_t Chunk) {
-  if (Chunk == 0 || Chunk == UINT64_MAX)
+  if (Chunk == 0 || Chunk == std::numeric_limits<uint64_t>::max())
     return false;
 
   return isMask_64(Chunk);
@@ -285,7 +307,6 @@ static uint64_t updateImm(uint64_t Imm, unsigned Idx, bool Clear) {
 ///
 /// We are also looking for constants like |S|A|B|E| where the contiguous
 /// sequence of ones wraps around the MSB into the LSB.
-///
 static bool trySequenceOfOnes(uint64_t UImm, MachineInstr &MI,
                               MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator &MBBI,
@@ -651,16 +672,15 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   MI.eraseFromParent();
 
   // Recompute livein lists.
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   LivePhysRegs LiveRegs;
-  computeLiveIns(LiveRegs, MRI, *DoneBB);
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
   // Do an extra pass around the loop to get loop carried registers right.
   StoreBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
 
   return true;
 }
@@ -668,7 +688,6 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
 bool AArch64ExpandPseudo::expandCMP_SWAP_128(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
-
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   MachineOperand &DestLo = MI.getOperand(0);
@@ -746,16 +765,15 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   MI.eraseFromParent();
 
   // Recompute liveness bottom up.
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   LivePhysRegs LiveRegs;
-  computeLiveIns(LiveRegs, MRI, *DoneBB);
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
   // Do an extra pass in the loop to get the loop carried dependencies right.
   StoreBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
 
   return true;
 }

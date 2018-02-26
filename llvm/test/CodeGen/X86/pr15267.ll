@@ -3,7 +3,7 @@
 
 define <4 x i3> @test1(<4 x i3>* %in) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $3, %ecx
@@ -22,7 +22,7 @@ define <4 x i3> @test1(<4 x i3>* %in) nounwind {
 
 define <4 x i1> @test2(<4 x i1>* %in) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl %ecx
@@ -41,7 +41,7 @@ define <4 x i1> @test2(<4 x i1>* %in) nounwind {
 
 define <4 x i64> @test3(<4 x i1>* %in) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    movq %rax, %rcx
 ; CHECK-NEXT:    shlq $62, %rcx
@@ -70,7 +70,7 @@ define <4 x i64> @test3(<4 x i1>* %in) nounwind {
 
 define <16 x i4> @test4(<16 x i4>* %in) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $4, %ecx

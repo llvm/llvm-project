@@ -210,7 +210,12 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Distro Distro(D.getVFS());
 
-  if (Distro.IsOpenSUSE() || Distro.IsUbuntu()) {
+  if (Distro.IsAlpineLinux()) {
+    ExtraOpts.push_back("-z");
+    ExtraOpts.push_back("now");
+  }
+
+  if (Distro.IsOpenSUSE() || Distro.IsUbuntu() || Distro.IsAlpineLinux()) {
     ExtraOpts.push_back("-z");
     ExtraOpts.push_back("relro");
   }
@@ -232,7 +237,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // Android loader does not support .gnu.hash.
   // Hexagon linker/loader does not support .gnu.hash
   if (!IsMips && !IsAndroid && !IsHexagon) {
-    if (Distro.IsRedhat() || Distro.IsOpenSUSE() ||
+    if (Distro.IsRedhat() || Distro.IsOpenSUSE() || Distro.IsAlpineLinux() ||
         (Distro.IsUbuntu() && Distro >= Distro::UbuntuMaverick))
       ExtraOpts.push_back("--hash-style=gnu");
 
@@ -248,7 +253,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   ExtraOpts.push_back("--build-id");
 #endif
 
-  if (Distro.IsOpenSUSE())
+  if (IsAndroid || Distro.IsOpenSUSE())
     ExtraOpts.push_back("--enable-new-dtags");
 
   // The selection of paths to try here is designed to match the patterns which
@@ -810,7 +815,10 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
+bool Linux::isPIEDefault() const {
+  return (getTriple().isAndroid() && !getTriple().isAndroidVersionLT(16)) ||
+          getTriple().isMusl() || getSanitizerArgs().requiresPIE();
+}
 
 SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
@@ -834,7 +842,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::SafeStack;
   if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::DataFlow;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64)
     Res |= SanitizerKind::Leak;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64)
     Res |= SanitizerKind::Thread;
@@ -842,9 +850,12 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::Memory;
   if (IsX86_64 || IsMIPS64)
     Res |= SanitizerKind::Efficiency;
-  if (IsX86 || IsX86_64) {
+  if (IsX86 || IsX86_64)
     Res |= SanitizerKind::Function;
-  }
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch)
+    Res |= SanitizerKind::Scudo;
+  if (IsAArch64)
+    Res |= SanitizerKind::HWAddress;
   return Res;
 }
 

@@ -94,6 +94,15 @@ public:
     Adapters.reserve(ParamCount);
   }
 
+  formatv_object_base(formatv_object_base const &rhs) = delete;
+
+  formatv_object_base(formatv_object_base &&rhs)
+      : Fmt(std::move(rhs.Fmt)),
+        Adapters(), // Adapters are initialized by formatv_object
+        Replacements(std::move(rhs.Replacements)) {
+    Adapters.reserve(rhs.Adapters.size());
+  };
+
   void format(raw_ostream &S) const {
     for (auto &R : Replacements) {
       if (R.Type == ReplacementType::Empty)
@@ -147,6 +156,14 @@ public:
   formatv_object(StringRef Fmt, Tuple &&Params)
       : formatv_object_base(Fmt, std::tuple_size<Tuple>::value),
         Parameters(std::move(Params)) {
+    Adapters = apply_tuple(create_adapters(), Parameters);
+  }
+
+  formatv_object(formatv_object const &rhs) = delete;
+
+  formatv_object(formatv_object &&rhs)
+      : formatv_object_base(std::move(rhs)),
+        Parameters(std::move(rhs.Parameters)) {
     Adapters = apply_tuple(create_adapters(), Parameters);
   }
 };
@@ -213,9 +230,8 @@ public:
 // For a given parameter of type T, the following steps are executed in order
 // until a match is found:
 //
-//   1. If the parameter is of class type, and contains a method
-//      void format(raw_ostream &Stream, StringRef Options)
-//      Then this method is invoked to produce the formatted output.  The
+//   1. If the parameter is of class type, and inherits from format_adapter,
+//      Then format() is invoked on it to produce the formatted output.  The
 //      implementation should write the formatted text into `Stream`.
 //   2. If there is a suitable template specialization of format_provider<>
 //      for type T containing a method whose signature is:
@@ -241,6 +257,13 @@ inline auto formatv(const char *Fmt, Ts &&... Vals) -> formatv_object<decltype(
       Fmt,
       std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
 }
+
+// Allow a formatv_object to be formatted (no options supported).
+template <typename T> struct format_provider<formatv_object<T>> {
+  static void format(const formatv_object<T> &V, raw_ostream &OS, StringRef) {
+    OS << V;
+  }
+};
 
 } // end namespace llvm
 

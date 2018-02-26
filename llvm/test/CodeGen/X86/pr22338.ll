@@ -4,31 +4,29 @@
 
 define i32 @fn() {
 ; X86-LABEL: fn:
-; X86:       # BB#0: # %entry
-; X86-NEXT:    cmpl $1, %eax
-; X86-NEXT:    sete %cl
-; X86-NEXT:    movl $-1, %eax
-; X86-NEXT:    jne .LBB0_2
-; X86-NEXT:  # BB#1: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:  .LBB0_2: # %entry
+; X86-NEXT:    cmpl $1, %eax
+; X86-NEXT:    setne %al
+; X86-NEXT:    sete %cl
+; X86-NEXT:    negl %eax
 ; X86-NEXT:    addb %cl, %cl
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    .p2align 4, 0x90
-; X86-NEXT:  .LBB0_3: # %bb1
+; X86-NEXT:  .LBB0_1: # %bb1
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    je .LBB0_3
-; X86-NEXT:  # BB#4: # %bb2
+; X86-NEXT:    je .LBB0_1
+; X86-NEXT:  # %bb.2: # %bb2
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fn:
-; X64:       # BB#0: # %entry
-; X64-NEXT:    xorl %edx, %edx
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $1, %eax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    sete %cl
-; X64-NEXT:    movl $-1, %eax
-; X64-NEXT:    cmovel %edx, %eax
+; X64-NEXT:    negl %eax
 ; X64-NEXT:    addb %cl, %cl
 ; X64-NEXT:    shll %cl, %eax
 ; X64-NEXT:    .p2align 4, 0x90
@@ -36,7 +34,7 @@ define i32 @fn() {
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # BB#2: # %bb2
+; X64-NEXT:  # %bb.2: # %bb2
 ; X64-NEXT:    retq
 entry:
   %cmp1 = icmp ne i32 undef, 1

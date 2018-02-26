@@ -289,14 +289,14 @@ enum ThrowState {
 
 static bool isThrowCaught(const CXXThrowExpr *Throw,
                           const CXXCatchStmt *Catch) {
+  const Type *CaughtType = Catch->getCaughtType().getTypePtrOrNull();
+  if (!CaughtType)
+    return true;
   const Type *ThrowType = nullptr;
   if (Throw->getSubExpr())
     ThrowType = Throw->getSubExpr()->getType().getTypePtrOrNull();
   if (!ThrowType)
     return false;
-  const Type *CaughtType = Catch->getCaughtType().getTypePtrOrNull();
-  if (!CaughtType)
-    return true;
   if (ThrowType->isReferenceType())
     ThrowType = ThrowType->castAs<ReferenceType>()
                     ->getPointeeType()
@@ -361,8 +361,7 @@ static bool hasThrowOutNonThrowingFunc(SourceLocation &OpLoc, CFG *BodyCFG) {
   SmallVector<CFGBlock *, 16> Stack;
   Stack.push_back(&BodyCFG->getEntry());
   while (!Stack.empty()) {
-    CFGBlock *CurBlock = Stack.back();
-    Stack.pop_back();
+    CFGBlock *CurBlock = Stack.pop_back_val();
 
     unsigned ID = CurBlock->getBlockID();
     ThrowState CurState = States[ID];
@@ -426,7 +425,7 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
 
 static bool isNoexcept(const FunctionDecl *FD) {
   const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (FPT->isNothrow(FD->getASTContext()))
+  if (FPT->isNothrow(FD->getASTContext()) || FD->hasAttr<NoThrowAttr>())
     return true;
   return false;
 }
@@ -1276,7 +1275,7 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     tok::r_square, tok::r_square
   };
 
-  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus1z;
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17;
 
   StringRef MacroName;
   if (PreferClangAttr)
@@ -1292,16 +1291,15 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
 
 static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
                                             bool PerFunction) {
-  // Only perform this analysis when using C++11.  There is no good workflow
-  // for this warning when not using C++11.  There is no good way to silence
-  // the warning (no attribute is available) unless we are using C++11's support
-  // for generalized attributes.  Once could use pragmas to silence the warning,
-  // but as a general solution that is gross and not in the spirit of this
-  // warning.
+  // Only perform this analysis when using [[]] attributes. There is no good
+  // workflow for this warning when not using C++11. There is no good way to
+  // silence the warning (no attribute is available) unless we are using 
+  // [[]] attributes. One could use pragmas to silence the warning, but as a
+  // general solution that is gross and not in the spirit of this warning.
   //
-  // NOTE: This an intermediate solution.  There are on-going discussions on
+  // NOTE: This an intermediate solution. There are on-going discussions on
   // how to properly support this warning outside of C++11 with an annotation.
-  if (!AC.getASTContext().getLangOpts().CPlusPlus11)
+  if (!AC.getASTContext().getLangOpts().DoubleSquareBracketAttributes)
     return;
 
   FallthroughMapper FM(S);
@@ -2082,10 +2080,10 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   //     time.
   DiagnosticsEngine &Diags = S.getDiagnostics();
 
-  // Do not do any analysis for declarations in system headers if we are
-  // going to just ignore them.
-  if (Diags.getSuppressSystemWarnings() &&
-      S.SourceMgr.isInSystemHeader(D->getLocation()))
+  // Do not do any analysis if we are going to just ignore them.
+  if (Diags.getIgnoreAllWarnings() ||
+      (Diags.getSuppressSystemWarnings() &&
+       S.SourceMgr.isInSystemHeader(D->getLocation())))
     return;
 
   // For code in dependent contexts, we'll do this at instantiation time.

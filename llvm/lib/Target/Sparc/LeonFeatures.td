@@ -52,20 +52,6 @@ def InsertNOPLoad: SubtargetFeature<
   "LEON3 erratum fix: Insert a NOP instruction after every single-cycle load instruction when the next instruction is another load/store instruction" 
 >;
 
-def FixFSMULD : SubtargetFeature<
-  "fixfsmuld",
-  "FixFSMULD",
-  "true",
-  "LEON erratum fix: Do not use FSMULD" 
->;
-
-def ReplaceFMULS : SubtargetFeature<
-  "replacefmuls",
-  "ReplaceFMULS",
-  "true",
-  "LEON erratum fix: Replace FMULS instruction with FMULD and relevant conversion instructions" 
->;
-
 def DetectRoundChange : SubtargetFeature<
   "detectroundchange",
   "DetectRoundChange",

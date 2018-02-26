@@ -1,10 +1,11 @@
-# RUN: llvm-mc -triple=mipsel-unknown-linux -mcpu=mips32r6 -filetype=obj -o %T/test_ELF_O32R6.o %s
-# RUN: llc -mtriple=mipsel-unknown-linux -mcpu=mips32r6 -filetype=obj -o %T/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
-# RUN: llvm-rtdyld -triple=mipsel-unknown-linux -mcpu=mips32r6 -verify -map-section test_ELF_O32R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32R6.o,.text=0x10000 -check=%s %/T/test_ELF_O32R6.o %T/test_ELF_ExternalFunction_O32R6.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=mipsel-unknown-linux -mcpu=mips32r6 -filetype=obj -o %t/test_ELF_O32R6.o %s
+# RUN: llc -mtriple=mipsel-unknown-linux -mcpu=mips32r6 -filetype=obj -o %t/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-rtdyld -triple=mipsel-unknown-linux -mcpu=mips32r6 -verify -map-section test_ELF_O32R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32R6.o,.text=0x10000 -check=%s %t/test_ELF_O32R6.o %t/test_ELF_ExternalFunction_O32R6.o
 
-# RUN: llvm-mc -triple=mips-unknown-linux -mcpu=mips32r6 -filetype=obj -o %T/test_ELF_O32R6.o %s
-# RUN: llc -mtriple=mips-unknown-linux -mcpu=mips32r6 -filetype=obj -o %T/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
-# RUN: llvm-rtdyld -triple=mips-unknown-linux -mcpu=mips32r6 -verify -map-section test_ELF_O32R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32R6.o,.text=0x10000 -check=%s %/T/test_ELF_O32R6.o %T/test_ELF_ExternalFunction_O32R6.o
+# RUN: llvm-mc -triple=mips-unknown-linux -mcpu=mips32r6 -filetype=obj -o %t/test_ELF_O32R6.o %s
+# RUN: llc -mtriple=mips-unknown-linux -mcpu=mips32r6 -filetype=obj -o %t/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-rtdyld -triple=mips-unknown-linux -mcpu=mips32r6 -verify -map-section test_ELF_O32R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32R6.o,.text=0x10000 -check=%s %t/test_ELF_O32R6.o %t/test_ELF_ExternalFunction_O32R6.o
 
 	.text
 	.abicalls

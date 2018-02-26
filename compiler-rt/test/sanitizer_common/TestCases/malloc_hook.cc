@@ -2,6 +2,7 @@
 
 // Malloc/free hooks are not supported on Windows.
 // XFAIL: win32
+// XFAIL: ubsan
 
 #include <stdlib.h>
 #include <unistd.h>

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i386-pc-linux | FileCheck %s
+; RUN: llc < %s -mtriple=i386-pc-linux | FileCheck %s
 
 @a = external global i96, align 4
 @b = external global i64, align 8

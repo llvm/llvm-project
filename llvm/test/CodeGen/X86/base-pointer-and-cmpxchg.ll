@@ -19,23 +19,23 @@
 ; USE_BASE_64: movq %rsp, %rbx
 ; USE_BASE_32: movl %esp, %ebx
 ;
-; Make sure the base pointer is saved before the RBX argument for
+; Make sure the base pointer is saved before the rbx argument for
 ; cmpxchg16b is set.
 ;
-; Because of how the test is written, we spill SAVE_RBX.
+; Because of how the test is written, we spill SAVE_rbx.
 ; However, it would have been perfectly fine to just keep it in register.
-; USE_BASE: movq %rbx, [[SAVE_RBX_SLOT:[0-9]*\(%[er]bx\)]]
+; USE_BASE: movq %rbx, [[SAVE_rbx_SLOT:[0-9]*\(%[er]bx\)]]
 ;
-; SAVE_RBX must be in register before we clobber rbx.
+; SAVE_rbx must be in register before we clobber rbx.
 ; It is fine to use any register but rbx and the ones defined and use
 ; by cmpxchg. Since such regex would be complicated to write, just stick
 ; to the numbered registers. The bottom line is: if this test case fails
 ; because of that regex, this is likely just the regex being too conservative. 
-; USE_BASE: movq [[SAVE_RBX_SLOT]], [[SAVE_RBX:%r[0-9]+]]
+; USE_BASE: movq [[SAVE_rbx_SLOT]], [[SAVE_rbx:%r[0-9]+]]
 ;
 ; USE_BASE: movq {{[^ ]+}}, %rbx
 ; USE_BASE-NEXT: cmpxchg16b
-; USE_BASE-NEXT: movq [[SAVE_RBX]], %rbx
+; USE_BASE-NEXT: movq [[SAVE_rbx]], %rbx
 ;
 ; DONT_USE_BASE-NOT: movq %rsp, %rbx
 ; DONT_USE_BASE-NOT: movl %esp, %ebx

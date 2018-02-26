@@ -20,8 +20,11 @@ __fixdfsi(fp_t a) {
 }
 
 #if defined(__ARM_EABI__)
+#if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI si_int __aeabi_d2iz(fp_t a) {
   return __fixdfsi(a);
 }
+#else
+AEABI_RTABI si_int __aeabi_d2iz(fp_t a) COMPILER_RT_ALIAS(__fixdfsi);
 #endif
-
+#endif

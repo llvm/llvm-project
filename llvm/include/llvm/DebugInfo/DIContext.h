@@ -57,7 +57,7 @@ struct DILineInfo {
                     RHS.StartLine, RHS.Discriminator);
   }
 
-  operator bool() const { return (*this) != DILineInfo(); }
+  explicit operator bool() const { return *this != DILineInfo(); }
 
   void dump(raw_ostream &OS) {
     OS << "Line info: ";
@@ -153,6 +153,7 @@ enum DIDumpType : unsigned {
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
   unsigned RecurseDepth = -1U;
+  bool ShowAddresses = true;
   bool ShowChildren = false;
   bool ShowParents = false;
   bool ShowForm = false;

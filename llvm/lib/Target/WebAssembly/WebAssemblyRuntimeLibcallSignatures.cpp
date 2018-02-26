@@ -223,6 +223,8 @@ RuntimeLibcallSignatures[RTLIB::UNKNOWN_LIBCALL] = {
 /* SINCOS_F80 */ unsupported,
 /* SINCOS_F128 */ func_i64_i64_iPTR_iPTR,
 /* SINCOS_PPCF128 */ unsupported,
+/* SINCOS_STRET_F32 */ unsupported,
+/* SINCOS_STRET_F64 */ unsupported,
 /* POW_F32 */ f32_func_f32_f32,
 /* POW_F64 */ f64_func_f64_f64,
 /* POW_F80 */ unsupported,
@@ -390,8 +392,9 @@ RuntimeLibcallSignatures[RTLIB::UNKNOWN_LIBCALL] = {
 
 // MEMORY
 /* MEMCPY */ iPTR_func_iPTR_iPTR_iPTR,
-/* MEMSET */ iPTR_func_iPTR_i32_iPTR,
 /* MEMMOVE */ iPTR_func_iPTR_iPTR_iPTR,
+/* MEMSET */ iPTR_func_iPTR_i32_iPTR,
+/* BZERO */ unsupported,
 
 // ELEMENT-WISE ATOMIC MEMORY
 /* MEMCPY_ELEMENT_UNORDERED_ATOMIC_1 */ unsupported,
@@ -687,6 +690,8 @@ RuntimeLibcallNames[RTLIB::UNKNOWN_LIBCALL] = {
 /* SINCOS_F80 */ nullptr,
 /* SINCOS_F128 */ "sincosl",
 /* SINCOS_PPCF128 */ nullptr,
+/* SINCOS_STRET_F32 */ nullptr,
+/* SINCOS_STRET_F64 */ nullptr,
 /* POW_F32 */ "powf",
 /* POW_F64 */ "pow",
 /* POW_F80 */ nullptr,
@@ -850,6 +855,7 @@ RuntimeLibcallNames[RTLIB::UNKNOWN_LIBCALL] = {
 /* MEMCPY */ "memcpy",
 /* MEMMOVE */ "memset",
 /* MEMSET */ "memmove",
+/* BZERO */ nullptr,
 /* MEMCPY_ELEMENT_UNORDERED_ATOMIC_1 */ nullptr,
 /* MEMCPY_ELEMENT_UNORDERED_ATOMIC_2 */ nullptr,
 /* MEMCPY_ELEMENT_UNORDERED_ATOMIC_4 */ nullptr,

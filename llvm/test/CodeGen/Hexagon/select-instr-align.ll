@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-hexagon-hvx < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
 ; CHECK-LABEL: aligned_load:
 ; CHECK: = vmem({{.*}})
 ; CHECK-LABEL: aligned_store:

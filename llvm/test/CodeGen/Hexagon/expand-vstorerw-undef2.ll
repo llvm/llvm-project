@@ -210,7 +210,7 @@ b34:                                              ; preds = %b34, %b24
   br i1 %v146, label %b33, label %b34
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 attributes #3 = { nobuiltin nounwind }

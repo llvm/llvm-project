@@ -12,9 +12,9 @@
 ; with "clang++ -S -emit-llvm -mllvm -asan-skip-promotable-allocas=0 -fsanitize=address -O0 -g test.cc"
 
 ; The address of the (potentially now malloc'ed) alloca ends up
-; in RDI, after which it is spilled to the stack. We record the
+; in rdi, after which it is spilled to the stack. We record the
 ; spill OFFSET on the stack for checking the debug info below.
-; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%RDI+0]
+; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%rdi+0]
 ; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
 ; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]
@@ -32,7 +32,7 @@
 ; CHECK: DW_OP_breg5
 ; DWARF:       DW_TAG_formal_parameter
 ; DWARF:         DW_AT_location
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg5 RDI+0, DW_OP_deref
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0, DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
@@ -40,7 +40,7 @@
 ; CHECK: DW_OP_breg7
 ; CHECK-NEXT: [[OFFSET]]
 ; CHECK: DW_OP_deref
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_deref, DW_OP_deref)
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_deref, DW_OP_deref)
 
 ; ModuleID = 'test.cc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

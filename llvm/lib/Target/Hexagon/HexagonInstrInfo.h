@@ -14,14 +14,13 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONINSTRINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONINSTRINFO_H
 
-#include "HexagonRegisterInfo.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include <cstdint>
 #include <vector>
 
@@ -30,11 +29,19 @@
 
 namespace llvm {
 
-struct EVT;
 class HexagonSubtarget;
+class MachineBranchProbabilityInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineOperand;
+class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
-  const HexagonRegisterInfo RI;
+  const HexagonSubtarget &Subtarget;
+
+  enum BundleAttribute {
+    memShufDisabledMask = 0x4
+  };
 
   virtual void anchor();
 
@@ -42,7 +49,6 @@ public:
   explicit HexagonInstrInfo(HexagonSubtarget &ST);
 
   /// TargetInstrInfo overrides.
-  ///
 
   /// If the specified machine instruction is a direct
   /// load from a stack slot, return the virtual or physical register number of
@@ -84,7 +90,6 @@ public:
   ///
   /// If AllowModify is true, then this routine is allowed to modify the basic
   /// block (e.g. delete instructions after the unconditional branch).
-  ///
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
@@ -251,7 +256,7 @@ public:
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions after register allocation.
   ScheduleHazardRecognizer*
-  CreateTargetPostRAHazardRecognizer(const InstrItineraryData*,
+  CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                      const ScheduleDAG *DAG) const override;
 
   /// For a comparison instruction, return the source registers
@@ -325,14 +330,12 @@ public:
   bool isTailCall(const MachineInstr &MI) const override;
 
   /// HexagonInstrInfo specifics.
-  ///
 
-  const HexagonRegisterInfo &getRegisterInfo() const { return RI; }
-
-  unsigned createVR(MachineFunction* MF, MVT VT) const;
+  unsigned createVR(MachineFunction *MF, MVT VT) const;
 
   bool isAbsoluteSet(const MachineInstr &MI) const;
   bool isAccumulator(const MachineInstr &MI) const;
+  bool isAddrModeWithOffset(const MachineInstr &MI) const;
   bool isComplex(const MachineInstr &MI) const;
   bool isCompoundBranchInstr(const MachineInstr &MI) const;
   bool isConstExtended(const MachineInstr &MI) const;
@@ -387,7 +390,8 @@ public:
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset,
+                     const TargetRegisterInfo *TRI, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,
@@ -413,13 +417,9 @@ public:
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
-  short getAbsoluteForm(const MachineInstr &MI) const;
   unsigned getAddrMode(const MachineInstr &MI) const;
   unsigned getBaseAndOffset(const MachineInstr &MI, int &Offset,
                             unsigned &AccessSize) const;
-  short getBaseWithLongOffset(short Opcode) const;
-  short getBaseWithLongOffset(const MachineInstr &MI) const;
-  short getBaseWithRegOffset(const MachineInstr &MI) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
   unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup
@@ -438,7 +438,6 @@ public:
   HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
                                                          const;
   short getEquivalentHWInstr(const MachineInstr &MI) const;
-  MachineInstr *getFirstNonDbgInst(MachineBasicBlock *BB) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
@@ -462,12 +461,42 @@ public:
 
   void immediateExtend(MachineInstr &MI) const;
   bool invertAndChangeJumpTarget(MachineInstr &MI,
-                                 MachineBasicBlock* NewTarget) const;
+                                 MachineBasicBlock *NewTarget) const;
   void genAllInsnTimingClasses(MachineFunction &MF) const;
   bool reversePredSense(MachineInstr &MI) const;
   unsigned reversePrediction(unsigned Opcode) const;
   bool validateBranchCond(const ArrayRef<MachineOperand> &Cond) const;
-  short xformRegToImmOffset(const MachineInstr &MI) const;
+
+  void setBundleNoShuf(MachineBasicBlock::instr_iterator MIB) const;
+  bool getBundleNoShuf(const MachineInstr &MIB) const;
+  // Addressing mode relations.
+  short changeAddrMode_abs_io(short Opc) const;
+  short changeAddrMode_io_abs(short Opc) const;
+  short changeAddrMode_io_pi(short Opc) const;
+  short changeAddrMode_io_rr(short Opc) const;
+  short changeAddrMode_pi_io(short Opc) const;
+  short changeAddrMode_rr_io(short Opc) const;
+  short changeAddrMode_rr_ur(short Opc) const;
+  short changeAddrMode_ur_rr(short Opc) const;
+
+  short changeAddrMode_abs_io(const MachineInstr &MI) const {
+    return changeAddrMode_abs_io(MI.getOpcode());
+  }
+  short changeAddrMode_io_abs(const MachineInstr &MI) const {
+    return changeAddrMode_io_abs(MI.getOpcode());
+  }
+  short changeAddrMode_io_rr(const MachineInstr &MI) const {
+    return changeAddrMode_io_rr(MI.getOpcode());
+  }
+  short changeAddrMode_rr_io(const MachineInstr &MI) const {
+    return changeAddrMode_rr_io(MI.getOpcode());
+  }
+  short changeAddrMode_rr_ur(const MachineInstr &MI) const {
+    return changeAddrMode_rr_ur(MI.getOpcode());
+  }
+  short changeAddrMode_ur_rr(const MachineInstr &MI) const {
+    return changeAddrMode_ur_rr(MI.getOpcode());
+  }
 };
 
 } // end namespace llvm

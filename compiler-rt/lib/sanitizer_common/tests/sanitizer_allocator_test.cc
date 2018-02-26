@@ -20,6 +20,7 @@
 
 #include "gtest/gtest.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <vector>
@@ -238,6 +239,23 @@ TEST(SanitizerCommon, SizeClassAllocator64VeryCompact) {
 
 TEST(SanitizerCommon, SizeClassAllocator32Compact) {
   TestSizeClassAllocator<Allocator32Compact>();
+}
+
+struct AP32SeparateBatches {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = kAddressSpaceSize;
+  static const uptr kMetadataSize = 16;
+  typedef DefaultSizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = ::kRegionSizeLog;
+  typedef FlatByteMap<kFlatByteMapSize> ByteMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags =
+      SizeClassAllocator32FlagMasks::kUseSeparateSizeClassForBatch;
+};
+typedef SizeClassAllocator32<AP32SeparateBatches> Allocator32SeparateBatches;
+
+TEST(SanitizerCommon, SizeClassAllocator32SeparateBatches) {
+  TestSizeClassAllocator<Allocator32SeparateBatches>();
 }
 
 template <class Allocator>
@@ -995,6 +1013,282 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
 }
 
 #endif
+
+#if SANITIZER_CAN_USE_ALLOCATOR64
+
+class NoMemoryMapper {
+ public:
+  uptr last_request_buffer_size;
+
+  NoMemoryMapper() : last_request_buffer_size(0) {}
+
+  uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+    last_request_buffer_size = buffer_size;
+    return 0;
+  }
+  void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {}
+};
+
+class RedZoneMemoryMapper {
+ public:
+  RedZoneMemoryMapper() {
+    const auto page_size = GetPageSize();
+    buffer = MmapOrDie(3ULL * page_size, "");
+    MprotectNoAccess(reinterpret_cast<uptr>(buffer), page_size);
+    MprotectNoAccess(reinterpret_cast<uptr>(buffer) + page_size * 2, page_size);
+  }
+  ~RedZoneMemoryMapper() {
+    UnmapOrDie(buffer, 3 * GetPageSize());
+  }
+
+  uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+    const auto page_size = GetPageSize();
+    CHECK_EQ(buffer_size, page_size);
+    memset(reinterpret_cast<void*>(reinterpret_cast<uptr>(buffer) + page_size),
+           0, page_size);
+    return reinterpret_cast<uptr>(buffer) + page_size;
+  }
+  void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {}
+
+ private:
+  void *buffer;
+};
+
+TEST(SanitizerCommon, SizeClassAllocator64PackedCounterArray) {
+  NoMemoryMapper no_memory_mapper;
+  typedef Allocator64::PackedCounterArray<NoMemoryMapper>
+      NoMemoryPackedCounterArray;
+
+  for (int i = 0; i < 64; i++) {
+    // Various valid counter's max values packed into one word.
+    NoMemoryPackedCounterArray counters_2n(1, 1ULL << i, &no_memory_mapper);
+    EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
+
+    // Check the "all bit set" values too.
+    NoMemoryPackedCounterArray counters_2n1_1(1, ~0ULL >> i, &no_memory_mapper);
+    EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
+
+    // Verify the packing ratio, the counter is expected to be packed into the
+    // closest power of 2 bits.
+    NoMemoryPackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
+    EXPECT_EQ(8ULL * RoundUpToPowerOfTwo(i + 1),
+              no_memory_mapper.last_request_buffer_size);
+  }
+
+  RedZoneMemoryMapper memory_mapper;
+  typedef Allocator64::PackedCounterArray<RedZoneMemoryMapper>
+      RedZonePackedCounterArray;
+  // Go through 1, 2, 4, 8, .. 64 bits per counter.
+  for (int i = 0; i < 7; i++) {
+    // Make sure counters request one memory page for the buffer.
+    const u64 kNumCounters = (GetPageSize() / 8) * (64 >> i);
+    RedZonePackedCounterArray counters(kNumCounters,
+                                       1ULL << ((1 << i) - 1),
+                                       &memory_mapper);
+    counters.Inc(0);
+    for (u64 c = 1; c < kNumCounters - 1; c++) {
+      ASSERT_EQ(0ULL, counters.Get(c));
+      counters.Inc(c);
+      ASSERT_EQ(1ULL, counters.Get(c - 1));
+    }
+    ASSERT_EQ(0ULL, counters.Get(kNumCounters - 1));
+    counters.Inc(kNumCounters - 1);
+
+    if (i > 0) {
+      counters.IncRange(0, kNumCounters - 1);
+      for (u64 c = 0; c < kNumCounters; c++)
+        ASSERT_EQ(2ULL, counters.Get(c));
+    }
+  }
+}
+
+class RangeRecorder {
+ public:
+  std::string reported_pages;
+
+  RangeRecorder()
+      : page_size_scaled_log(
+            Log2(GetPageSizeCached() >> Allocator64::kCompactPtrScale)),
+        last_page_reported(0) {}
+
+  void ReleasePageRangeToOS(u32 from, u32 to) {
+    from >>= page_size_scaled_log;
+    to >>= page_size_scaled_log;
+    ASSERT_LT(from, to);
+    if (!reported_pages.empty())
+      ASSERT_LT(last_page_reported, from);
+    reported_pages.append(from - last_page_reported, '.');
+    reported_pages.append(to - from, 'x');
+    last_page_reported = to;
+  }
+ private:
+  const uptr page_size_scaled_log;
+  u32 last_page_reported;
+};
+
+TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
+  typedef Allocator64::FreePagesRangeTracker<RangeRecorder> RangeTracker;
+
+  // 'x' denotes a page to be released, '.' denotes a page to be kept around.
+  const char* test_cases[] = {
+      "",
+      ".",
+      "x",
+      "........",
+      "xxxxxxxxxxx",
+      "..............xxxxx",
+      "xxxxxxxxxxxxxxxxxx.....",
+      "......xxxxxxxx........",
+      "xxx..........xxxxxxxxxxxxxxx",
+      "......xxxx....xxxx........",
+      "xxx..........xxxxxxxx....xxxxxxx",
+      "x.x.x.x.x.x.x.x.x.x.x.x.",
+      ".x.x.x.x.x.x.x.x.x.x.x.x",
+      ".x.x.x.x.x.x.x.x.x.x.x.x.",
+      "x.x.x.x.x.x.x.x.x.x.x.x.x",
+  };
+
+  for (auto test_case : test_cases) {
+    RangeRecorder range_recorder;
+    RangeTracker tracker(&range_recorder);
+    for (int i = 0; test_case[i] != 0; i++)
+      tracker.NextPage(test_case[i] == 'x');
+    tracker.Done();
+    // Strip trailing '.'-pages before comparing the results as they are not
+    // going to be reported to range_recorder anyway.
+    const char* last_x = strrchr(test_case, 'x');
+    std::string expected(
+        test_case,
+        last_x == nullptr ? 0 : (last_x - test_case + 1));
+    EXPECT_STREQ(expected.c_str(), range_recorder.reported_pages.c_str());
+  }
+}
+
+class ReleasedPagesTrackingMemoryMapper {
+ public:
+  std::set<u32> reported_pages;
+
+  uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+    reported_pages.clear();
+    return reinterpret_cast<uptr>(calloc(1, buffer_size));
+  }
+  void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {
+    free(reinterpret_cast<void*>(buffer));
+  }
+
+  void ReleasePageRangeToOS(u32 from, u32 to) {
+    uptr page_size_scaled =
+        GetPageSizeCached() >> Allocator64::kCompactPtrScale;
+    for (u32 i = from; i < to; i += page_size_scaled)
+      reported_pages.insert(i);
+  }
+};
+
+template <class Allocator>
+void TestReleaseFreeMemoryToOS() {
+  ReleasedPagesTrackingMemoryMapper memory_mapper;
+  const uptr kAllocatedPagesCount = 1024;
+  const uptr page_size = GetPageSizeCached();
+  const uptr page_size_scaled = page_size >> Allocator::kCompactPtrScale;
+  std::mt19937 r;
+  uint32_t rnd_state = 42;
+
+  for (uptr class_id = 1; class_id <= Allocator::SizeClassMapT::kLargestClassID;
+      class_id++) {
+    const uptr chunk_size = Allocator::SizeClassMapT::Size(class_id);
+    const uptr chunk_size_scaled = chunk_size >> Allocator::kCompactPtrScale;
+    const uptr max_chunks =
+        kAllocatedPagesCount * GetPageSizeCached() / chunk_size;
+
+    // Generate the random free list.
+    std::vector<u32> free_array;
+    bool in_free_range = false;
+    uptr current_range_end = 0;
+    for (uptr i = 0; i < max_chunks; i++) {
+      if (i == current_range_end) {
+        in_free_range = (my_rand_r(&rnd_state) & 1U) == 1;
+        current_range_end += my_rand_r(&rnd_state) % 100 + 1;
+      }
+      if (in_free_range)
+        free_array.push_back(i * chunk_size_scaled);
+    }
+    if (free_array.empty())
+      continue;
+    // Shuffle free_list to verify that ReleaseFreeMemoryToOS does not depend on
+    // the list ordering.
+    std::shuffle(free_array.begin(), free_array.end(), r);
+
+    Allocator::ReleaseFreeMemoryToOS(&free_array[0], free_array.size(),
+                                     chunk_size, kAllocatedPagesCount,
+                                     &memory_mapper);
+
+    // Verify that there are no released pages touched by used chunks and all
+    // ranges of free chunks big enough to contain the entire memory pages had
+    // these pages released.
+    uptr verified_released_pages = 0;
+    std::set<u32> free_chunks(free_array.begin(), free_array.end());
+
+    u32 current_chunk = 0;
+    in_free_range = false;
+    u32 current_free_range_start = 0;
+    for (uptr i = 0; i <= max_chunks; i++) {
+      bool is_free_chunk = free_chunks.find(current_chunk) != free_chunks.end();
+
+      if (is_free_chunk) {
+        if (!in_free_range) {
+          in_free_range = true;
+          current_free_range_start = current_chunk;
+        }
+      } else {
+        // Verify that this used chunk does not touch any released page.
+        for (uptr i_page = current_chunk / page_size_scaled;
+             i_page <= (current_chunk + chunk_size_scaled - 1) /
+                       page_size_scaled;
+             i_page++) {
+          bool page_released =
+              memory_mapper.reported_pages.find(i_page * page_size_scaled) !=
+              memory_mapper.reported_pages.end();
+          ASSERT_EQ(false, page_released);
+        }
+
+        if (in_free_range) {
+          in_free_range = false;
+          // Verify that all entire memory pages covered by this range of free
+          // chunks were released.
+          u32 page = RoundUpTo(current_free_range_start, page_size_scaled);
+          while (page + page_size_scaled <= current_chunk) {
+            bool page_released =
+                memory_mapper.reported_pages.find(page) !=
+                memory_mapper.reported_pages.end();
+            ASSERT_EQ(true, page_released);
+            verified_released_pages++;
+            page += page_size_scaled;
+          }
+        }
+      }
+
+      current_chunk += chunk_size_scaled;
+    }
+
+    ASSERT_EQ(memory_mapper.reported_pages.size(), verified_released_pages);
+  }
+}
+
+TEST(SanitizerCommon, SizeClassAllocator64ReleaseFreeMemoryToOS) {
+  TestReleaseFreeMemoryToOS<Allocator64>();
+}
+
+#if !SANITIZER_ANDROID
+TEST(SanitizerCommon, SizeClassAllocator64CompactReleaseFreeMemoryToOS) {
+  TestReleaseFreeMemoryToOS<Allocator64Compact>();
+}
+
+TEST(SanitizerCommon, SizeClassAllocator64VeryCompactReleaseFreeMemoryToOS) {
+  TestReleaseFreeMemoryToOS<Allocator64VeryCompact>();
+}
+#endif  // !SANITIZER_ANDROID
+
+#endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 TEST(SanitizerCommon, TwoLevelByteMap) {
   const u64 kSize1 = 1 << 6, kSize2 = 1 << 12;

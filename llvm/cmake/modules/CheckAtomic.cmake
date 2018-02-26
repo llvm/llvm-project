@@ -1,13 +1,14 @@
 # atomic builtins are required for threading support.
 
 INCLUDE(CheckCXXSourceCompiles)
+INCLUDE(CheckLibraryExists)
 
 # Sometimes linking against libatomic is required for atomic ops, if
 # the platform doesn't support lock-free atomics.
 
 function(check_working_cxx_atomics varname)
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-  set(CMAKE_REQUIRED_FLAGS "-std=c++11")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11")
   CHECK_CXX_SOURCE_COMPILES("
 #include <atomic>
 std::atomic<int> x;
@@ -80,7 +81,6 @@ endif()
 ## assumes C++11 <atomic> works.
 CHECK_CXX_SOURCE_COMPILES("
 #ifdef _MSC_VER
-#include <Intrin.h> /* Workaround for PR19898. */
 #include <windows.h>
 #endif
 int main() {

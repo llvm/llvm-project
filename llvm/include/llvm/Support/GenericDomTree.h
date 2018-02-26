@@ -14,8 +14,8 @@
 /// graph types.
 ///
 /// Unlike ADT/* graph algorithms, generic dominator tree has more requirements
-/// on the graph's NodeRef. The NodeRef should be a pointer and, depending on
-/// the implementation, e.g. NodeRef->getParent() return the parent node.
+/// on the graph's NodeRef. The NodeRef should be a pointer and,
+/// NodeRef->getParent() must return the parent node that is also a pointer.
 ///
 /// FIXME: Maybe GenericDomTree needs a TreeTraits, instead of GraphTraits.
 ///
@@ -24,12 +24,6 @@
 #ifndef LLVM_SUPPORT_GENERICDOMTREE_H
 #define LLVM_SUPPORT_GENERICDOMTREE_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -38,6 +32,13 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -45,7 +46,7 @@ template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase;
 
 namespace DomTreeBuilder {
-template <class DomTreeT>
+template <typename DomTreeT>
 struct SemiNCAInfo;
 }  // namespace DomTreeBuilder
 
@@ -187,16 +188,50 @@ void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
 
 namespace DomTreeBuilder {
 // The routines below are provided in a separate header but referenced here.
-template <typename DomTreeT, typename FuncT>
-void Calculate(DomTreeT &DT, FuncT &F);
+template <typename DomTreeT>
+void Calculate(DomTreeT &DT);
 
-template <class DomTreeT>
+template <typename DomTreeT>
 void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
 
-template <class DomTreeT>
+template <typename DomTreeT>
 void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
+
+// UpdateKind and Update are used by the batch update API and it's easiest to
+// define them here.
+enum class UpdateKind : unsigned char { Insert, Delete };
+
+template <typename NodePtr>
+struct Update {
+  using NodeKindPair = PointerIntPair<NodePtr, 1, UpdateKind>;
+
+  NodePtr From;
+  NodeKindPair ToAndKind;
+
+  Update(UpdateKind Kind, NodePtr From, NodePtr To)
+      : From(From), ToAndKind(To, Kind) {}
+
+  UpdateKind getKind() const { return ToAndKind.getInt(); }
+  NodePtr getFrom() const { return From; }
+  NodePtr getTo() const { return ToAndKind.getPointer(); }
+  bool operator==(const Update &RHS) const {
+    return From == RHS.From && ToAndKind == RHS.ToAndKind;
+  }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const Update &U) {
+    OS << (U.getKind() == UpdateKind::Insert ? "Insert " : "Delete ");
+    U.getFrom()->printAsOperand(OS, false);
+    OS << " -> ";
+    U.getTo()->printAsOperand(OS, false);
+    return OS;
+  }
+};
+
+template <typename DomTreeT>
+void ApplyUpdates(DomTreeT &DT,
+                  ArrayRef<typename DomTreeT::UpdateType> Updates);
 
 template <typename DomTreeT>
 bool Verify(const DomTreeT &DT);
@@ -208,14 +243,30 @@ bool Verify(const DomTreeT &DT);
 /// various graphs in the LLVM IR or in the code generator.
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase {
+ public:
+  static_assert(std::is_pointer<typename GraphTraits<NodeT *>::NodeRef>::value,
+                "Currently DominatorTreeBase supports only pointer nodes");
+  using NodeType = NodeT;
+  using NodePtr = NodeT *;
+  using ParentPtr = decltype(std::declval<NodeT *>()->getParent());
+  static_assert(std::is_pointer<ParentPtr>::value,
+                "Currently NodeT's parent must be a pointer type");
+  using ParentType = typename std::remove_pointer<ParentPtr>::type;
+  static constexpr bool IsPostDominator = IsPostDom;
+
+  using UpdateType = DomTreeBuilder::Update<NodePtr>;
+  using UpdateKind = DomTreeBuilder::UpdateKind;
+  static constexpr UpdateKind Insert = UpdateKind::Insert;
+  static constexpr UpdateKind Delete = UpdateKind::Delete;
+
  protected:
-  std::vector<NodeT *> Roots;
+  // Dominators always have a single root, postdominators can have more.
+  SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
 
   using DomTreeNodeMapType =
      DenseMap<NodeT *, std::unique_ptr<DomTreeNodeBase<NodeT>>>;
   DomTreeNodeMapType DomTreeNodes;
   DomTreeNodeBase<NodeT> *RootNode;
-  using ParentPtr = decltype(std::declval<NodeT *>()->getParent());
   ParentPtr Parent = nullptr;
 
   mutable bool DFSInfoValid = false;
@@ -224,12 +275,6 @@ class DominatorTreeBase {
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
 
  public:
-  static_assert(std::is_pointer<typename GraphTraits<NodeT *>::NodeRef>::value,
-                "Currently DominatorTreeBase supports only pointer nodes");
-  using NodeType = NodeT;
-  using NodePtr = NodeT *;
-  static constexpr bool IsPostDominator = IsPostDom;
-
   DominatorTreeBase() {}
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
@@ -260,7 +305,7 @@ class DominatorTreeBase {
   /// multiple blocks if we are computing post dominators.  For forward
   /// dominators, this will always be a single block (the entry node).
   ///
-  const std::vector<NodeT *> &getRoots() const { return Roots; }
+  const SmallVectorImpl<NodeT *> &getRoots() const { return Roots; }
 
   /// isPostDominator - Returns true if analysis based of postdoms
   ///
@@ -412,14 +457,15 @@ class DominatorTreeBase {
   }
 
   /// findNearestCommonDominator - Find nearest common dominator basic block
-  /// for basic block A and B. If there is no such block then return NULL.
+  /// for basic block A and B. If there is no such block then return nullptr.
   NodeT *findNearestCommonDominator(NodeT *A, NodeT *B) const {
+    assert(A && B && "Pointers are not valid");
     assert(A->getParent() == B->getParent() &&
            "Two blocks are not in same function");
 
     // If either A or B is a entry block then it is nearest common dominator
     // (for forward-dominators).
-    if (!this->isPostDominator()) {
+    if (!isPostDominator()) {
       NodeT &Entry = A->getParent()->front();
       if (A == &Entry || B == &Entry)
         return &Entry;
@@ -457,6 +503,41 @@ class DominatorTreeBase {
   // API to update (Post)DominatorTree information based on modifications to
   // the CFG...
 
+  /// Inform the dominator tree about a sequence of CFG edge insertions and
+  /// deletions and perform a batch update on the tree.
+  ///
+  /// This function should be used when there were multiple CFG updates after
+  /// the last dominator tree update. It takes care of performing the updates
+  /// in sync with the CFG and optimizes away the redundant operations that
+  /// cancel each other.
+  /// The functions expects the sequence of updates to be balanced. Eg.:
+  ///  - {{Insert, A, B}, {Delete, A, B}, {Insert, A, B}} is fine, because
+  ///    logically it results in a single insertions.
+  ///  - {{Insert, A, B}, {Insert, A, B}} is invalid, because it doesn't make
+  ///    sense to insert the same edge twice.
+  ///
+  /// What's more, the functions assumes that it's safe to ask every node in the
+  /// CFG about its children and inverse children. This implies that deletions
+  /// of CFG edges must not delete the CFG nodes before calling this function.
+  ///
+  /// Batch updates should be generally faster when performing longer sequences
+  /// of updates than calling insertEdge/deleteEdge manually multiple times, as
+  /// it can reorder the updates and remove redundant ones internally.
+  /// The batch updater is also able to detect sequences of zero and exactly one
+  /// update -- it's optimized to do less work in these cases.
+  ///
+  /// Note that for postdominators it automatically takes care of applying
+  /// updates on reverse edges internally (so there's no need to swap the
+  /// From and To pointers when constructing DominatorTree::UpdateType).
+  /// The type of updates is the same for DomTreeBase<T> and PostDomTreeBase<T>
+  /// with the same template parameter T.
+  ///
+  /// \param Updates An unordered sequence of updates to perform.
+  ///
+  void applyUpdates(ArrayRef<UpdateType> Updates) {
+    DomTreeBuilder::ApplyUpdates(*this, Updates);
+  }
+
   /// Inform the dominator tree about a CFG edge insertion and update the tree.
   ///
   /// This function has to be called just before or just after making the update
@@ -476,11 +557,10 @@ class DominatorTreeBase {
 
   /// Inform the dominator tree about a CFG edge deletion and update the tree.
   ///
-  /// This function has to be called just after making the update
-  /// on the actual CFG. There cannot be any other updates that the dominator
-  /// tree doesn't know about. The only exception is when the deletion that the
-  /// tree is informed about makes some (domominator) subtree unreachable -- in
-  /// this case, it is fine to perform deletions within this subtree.
+  /// This function has to be called just after making the update on the actual
+  /// CFG. An internal functions checks if the edge doesn't exist in the CFG in
+  /// DEBUG mode. There cannot be any other updates that the
+  /// dominator tree doesn't know about.
   ///
   /// Note that for postdominators it automatically takes care of deleting
   /// a reverse edge internally (so there's no need to swap the parameters).
@@ -559,11 +639,12 @@ class DominatorTreeBase {
     assert(Node && "Removing node that isn't in dominator tree.");
     assert(Node->getChildren().empty() && "Node is not a leaf node.");
 
+    DFSInfoValid = false;
+
     // Remove node from immediate dominator's children list.
     DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
     if (IDom) {
-      typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          find(IDom->Children, Node);
+      const auto I = find(IDom->Children, Node);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
@@ -571,6 +652,15 @@ class DominatorTreeBase {
     }
 
     DomTreeNodes.erase(BB);
+
+    if (!IsPostDom) return;
+
+    // Remember to update PostDominatorTree roots.
+    auto RIt = llvm::find(Roots, BB);
+    if (RIt != Roots.end()) {
+      std::swap(*RIt, Roots.back());
+      Roots.pop_back();
+    }
   }
 
   /// splitBlock - BB is split and now it has one successor. Update dominator
@@ -586,7 +676,7 @@ class DominatorTreeBase {
   ///
   void print(raw_ostream &O) const {
     O << "=============================--------------------------------\n";
-    if (this->isPostDominator())
+    if (IsPostDominator)
       O << "Inorder PostDominator Tree: ";
     else
       O << "Inorder Dominator Tree: ";
@@ -596,6 +686,14 @@ class DominatorTreeBase {
 
     // The postdom tree can have a null root if there are no returns.
     if (getRootNode()) PrintDomTree<NodeT>(getRootNode(), O, 1);
+    if (IsPostDominator) {
+      O << "Roots: ";
+      for (const NodePtr Block : Roots) {
+        Block->printAsOperand(O, false);
+        O << " ";
+      }
+      O << "\n";
+    }
   }
 
 public:
@@ -607,28 +705,25 @@ public:
       return;
     }
 
-    unsigned DFSNum = 0;
-
     SmallVector<std::pair<const DomTreeNodeBase<NodeT> *,
                           typename DomTreeNodeBase<NodeT>::const_iterator>,
                 32> WorkStack;
 
     const DomTreeNodeBase<NodeT> *ThisRoot = getRootNode();
-
+    assert((!Parent || ThisRoot) && "Empty constructed DomTree");
     if (!ThisRoot)
       return;
 
-    // Even in the case of multiple exits that form the post dominator root
-    // nodes, do not iterate over all exits, but start from the virtual root
-    // node. Otherwise bbs, that are not post dominated by any exit but by the
-    // virtual root node, will never be assigned a DFS number.
-    WorkStack.push_back(std::make_pair(ThisRoot, ThisRoot->begin()));
+    // Both dominators and postdominators have a single root node. In the case
+    // case of PostDominatorTree, this node is a virtual root.
+    WorkStack.push_back({ThisRoot, ThisRoot->begin()});
+
+    unsigned DFSNum = 0;
     ThisRoot->DFSNumIn = DFSNum++;
 
     while (!WorkStack.empty()) {
       const DomTreeNodeBase<NodeT> *Node = WorkStack.back().first;
-      typename DomTreeNodeBase<NodeT>::const_iterator ChildIt =
-          WorkStack.back().second;
+      const auto ChildIt = WorkStack.back().second;
 
       // If we visited all of the children of this node, "recurse" back up the
       // stack setting the DFOutNum.
@@ -640,7 +735,7 @@ public:
         const DomTreeNodeBase<NodeT> *Child = *ChildIt;
         ++WorkStack.back().second;
 
-        WorkStack.push_back(std::make_pair(Child, Child->begin()));
+        WorkStack.push_back({Child, Child->begin()});
         Child->DFSNumIn = DFSNum++;
       }
     }
@@ -650,23 +745,9 @@ public:
   }
 
   /// recalculate - compute a dominator tree for the given function
-  template <class FT> void recalculate(FT &F) {
-    using TraitsTy = GraphTraits<FT *>;
-    reset();
-    Parent = &F;
-
-    if (!IsPostDominator) {
-      // Initialize root
-      NodeT *entry = TraitsTy::getEntryNode(&F);
-      addRoot(entry);
-    } else {
-      // Initialize the roots list
-      for (auto *Node : nodes(&F))
-        if (TraitsTy::child_begin(Node) == TraitsTy::child_end(Node))
-          addRoot(Node);
-    }
-
-    DomTreeBuilder::Calculate(*this, F);
+  void recalculate(ParentType &Func) {
+    Parent = &Func;
+    DomTreeBuilder::Calculate(*this);
   }
 
   /// verify - check parent and sibling property

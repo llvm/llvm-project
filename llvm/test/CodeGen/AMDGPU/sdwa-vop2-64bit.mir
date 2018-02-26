@@ -6,15 +6,15 @@
 
 # GCN-LABEL: {{^}}name: vop2_64bit
 
-# GCN: %{{[0-9]+}} = V_BCNT_U32_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def %vcc, implicit %exec
-# GCN: %{{[0-9]+}} = V_BFM_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def %vcc, implicit %exec
-# GCN: %{{[0-9]+}} = V_CVT_PKNORM_I16_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 0, implicit-def %vcc, implicit %exec
-# GCN: %{{[0-9]+}} = V_READLANE_B32 killed %{{[0-9]+}}, 0, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}}:vgpr_32 = V_BCNT_U32_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}}:vgpr_32 = V_BFM_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}}:vgpr_32 = V_CVT_PKNORM_I16_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 0, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}}:sgpr_32 = V_READLANE_B32 killed %{{[0-9]+}}, 0, implicit-def %vcc, implicit %exec
 
 ---
 name:            vop2_64bit
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
   - { id: 2, class: sreg_64 }
@@ -37,7 +37,7 @@ registers:
 body:             |
   bb.0:
     liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
-  
+
     %2 = COPY %sgpr30_sgpr31
     %1 = COPY %vgpr2_vgpr3
     %0 = COPY %vgpr0_vgpr1

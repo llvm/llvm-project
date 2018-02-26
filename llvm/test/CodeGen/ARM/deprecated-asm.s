@@ -25,7 +25,7 @@
 	.type	foo,%function
 foo:                                    @ @foo
 	.fnstart
-@ BB#0:                                 @ %entry
+@ %bb.0:                                @ %entry
 	mov	r0, #0
 	bx	lr
         stmia   r4!, {r12-r14}

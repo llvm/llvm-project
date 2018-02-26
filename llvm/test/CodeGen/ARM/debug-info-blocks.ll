@@ -6,8 +6,8 @@
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
-; CHECK-NEXT:    0x{{.*}} - 0x{{.*}}: {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
-; CHECK-NEXT:    0x{{.*}} - 0x{{.*}}: {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
+; CHECK-NEXT:    [0x{{.*}}, 0x{{.*}}): {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
+; CHECK-NEXT:    [0x{{.*}}, 0x{{.*}}): {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
 ; CHECK-NEXT: DW_AT_name {{.*}} "mydata"
 
 ; Radar 9331779

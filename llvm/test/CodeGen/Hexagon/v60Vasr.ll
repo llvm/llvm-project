@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60  < %s | FileCheck %s
+; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
 
 ; CHECK: vasr(v{{[0-9]+}}.h,v{{[0-9]+}}.h,r{{[0-7]+}}):sat
 

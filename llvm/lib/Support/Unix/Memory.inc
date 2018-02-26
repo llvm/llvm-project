@@ -27,7 +27,7 @@
 #if defined(__mips__)
 #  if defined(__OpenBSD__)
 #    include <mips64/sysarch.h>
-#  else
+#  elif !defined(__FreeBSD__)
 #    include <sys/cachectl.h>
 #  endif
 #endif
@@ -102,6 +102,10 @@ Memory::allocateMappedMemory(size_t NumBytes,
 
   int Protect = getPosixProtectionFlags(PFlags);
 
+#if defined(__NetBSD__) && defined(PROT_MPROTECT)
+  Protect |= PROT_MPROTECT(PROT_READ | PROT_WRITE | PROT_EXEC);
+#endif
+
   // Use any near hint and the page size to set a page-aligned starting address
   uintptr_t Start = NearBlock ? reinterpret_cast<uintptr_t>(NearBlock->base()) +
                                       NearBlock->size() : 0;
@@ -122,8 +126,12 @@ Memory::allocateMappedMemory(size_t NumBytes,
   Result.Address = Addr;
   Result.Size = NumPages*PageSize;
 
-  if (PFlags & MF_EXEC)
-    Memory::InvalidateInstructionCache(Result.Address, Result.Size);
+  // Rely on protectMappedMemory to invalidate instruction cache.
+  if (PFlags & MF_EXEC) {
+    EC = Memory::protectMappedMemory (Result, PFlags);
+    if (EC != std::error_code())
+      return MemoryBlock();
+  }
 
   return Result;
 }
@@ -152,141 +160,34 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
     return std::error_code(EINVAL, std::generic_category());
 
   int Protect = getPosixProtectionFlags(Flags);
-
   uintptr_t Start = alignAddr((uint8_t *)M.Address - PageSize + 1, PageSize);
   uintptr_t End = alignAddr((uint8_t *)M.Address + M.Size, PageSize);
+
+  bool InvalidateCache = (Flags & MF_EXEC);
+
+#if defined(__arm__) || defined(__aarch64__)
+  // Certain ARM implementations treat icache clear instruction as a memory read,
+  // and CPU segfaults on trying to clear cache on !PROT_READ page.  Therefore we need
+  // to temporarily add PROT_READ for the sake of flushing the instruction caches.
+  if (InvalidateCache && !(Protect & PROT_READ)) {
+    int Result = ::mprotect((void *)Start, End - Start, Protect | PROT_READ);
+    if (Result != 0)
+      return std::error_code(errno, std::generic_category());
+
+    Memory::InvalidateInstructionCache(M.Address, M.Size);
+    InvalidateCache = false;
+  }
+#endif
+
   int Result = ::mprotect((void *)Start, End - Start, Protect);
 
   if (Result != 0)
     return std::error_code(errno, std::generic_category());
 
-  if (Flags & MF_EXEC)
+  if (InvalidateCache)
     Memory::InvalidateInstructionCache(M.Address, M.Size);
 
   return std::error_code();
-}
-
-/// AllocateRWX - Allocate a slab of memory with read/write/execute
-/// permissions.  This is typically used for JIT applications where we want
-/// to emit code to the memory then jump to it.  Getting this type of memory
-/// is very OS specific.
-///
-MemoryBlock
-Memory::AllocateRWX(size_t NumBytes, const MemoryBlock* NearBlock,
-                    std::string *ErrMsg) {
-  if (NumBytes == 0) return MemoryBlock();
-
-  static const size_t PageSize = Process::getPageSize();
-  size_t NumPages = (NumBytes+PageSize-1)/PageSize;
-
-  int fd = -1;
-
-  int flags = MAP_PRIVATE |
-#ifdef MAP_ANONYMOUS
-  MAP_ANONYMOUS
-#else
-  MAP_ANON
-#endif
-  ;
-
-  void* start = NearBlock ? (unsigned char*)NearBlock->base() +
-                            NearBlock->size() : nullptr;
-
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  void *pa = ::mmap(start, PageSize*NumPages, PROT_READ|PROT_EXEC,
-                    flags, fd, 0);
-#elif defined(__NetBSD__) && defined(PROT_MPROTECT)
-  void *pa =
-      ::mmap(start, PageSize * NumPages,
-             PROT_READ | PROT_WRITE | PROT_MPROTECT(PROT_EXEC), flags, fd, 0);
-#else
-  void *pa = ::mmap(start, PageSize*NumPages, PROT_READ|PROT_WRITE|PROT_EXEC,
-                    flags, fd, 0);
-#endif
-  if (pa == MAP_FAILED) {
-    if (NearBlock) //Try again without a near hint
-      return AllocateRWX(NumBytes, nullptr);
-
-    MakeErrMsg(ErrMsg, "Can't allocate RWX Memory");
-    return MemoryBlock();
-  }
-
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)pa,
-                                (vm_size_t)(PageSize*NumPages), 0,
-                                VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_COPY);
-  if (KERN_SUCCESS != kr) {
-    MakeErrMsg(ErrMsg, "vm_protect max RX failed");
-    return MemoryBlock();
-  }
-
-  kr = vm_protect(mach_task_self(), (vm_address_t)pa,
-                  (vm_size_t)(PageSize*NumPages), 0,
-                  VM_PROT_READ | VM_PROT_WRITE);
-  if (KERN_SUCCESS != kr) {
-    MakeErrMsg(ErrMsg, "vm_protect RW failed");
-    return MemoryBlock();
-  }
-#endif
-
-  MemoryBlock result;
-  result.Address = pa;
-  result.Size = NumPages*PageSize;
-
-  return result;
-}
-
-bool Memory::ReleaseRWX(MemoryBlock &M, std::string *ErrMsg) {
-  if (M.Address == nullptr || M.Size == 0) return false;
-  if (0 != ::munmap(M.Address, M.Size))
-    return MakeErrMsg(ErrMsg, "Can't release RWX Memory");
-  return false;
-}
-
-bool Memory::setWritable (MemoryBlock &M, std::string *ErrMsg) {
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  if (M.Address == 0 || M.Size == 0) return false;
-  Memory::InvalidateInstructionCache(M.Address, M.Size);
-  kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)M.Address,
-    (vm_size_t)M.Size, 0, VM_PROT_READ | VM_PROT_WRITE);
-  return KERN_SUCCESS == kr;
-#else
-  return true;
-#endif
-}
-
-bool Memory::setExecutable (MemoryBlock &M, std::string *ErrMsg) {
-  if (M.Address == nullptr || M.Size == 0) return false;
-  Memory::InvalidateInstructionCache(M.Address, M.Size);
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)M.Address,
-    (vm_size_t)M.Size, 0, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_COPY);
-  return KERN_SUCCESS == kr;
-#else
-  return true;
-#endif
-}
-
-bool Memory::setRangeWritable(const void *Addr, size_t Size) {
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)Addr,
-                                (vm_size_t)Size, 0,
-                                VM_PROT_READ | VM_PROT_WRITE);
-  return KERN_SUCCESS == kr;
-#else
-  return true;
-#endif
-}
-
-bool Memory::setRangeExecutable(const void *Addr, size_t Size) {
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)Addr,
-                                (vm_size_t)Size, 0,
-                                VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_COPY);
-  return KERN_SUCCESS == kr;
-#else
-  return true;
-#endif
 }
 
 /// InvalidateInstructionCache - Before the JIT can run a block of code

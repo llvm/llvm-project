@@ -58,7 +58,8 @@ private:
 bool DeadCodeElimination::isLiveInstr(const MachineInstr *MI) const {
   if (MI->mayStore() || MI->isBranch() || MI->isCall() || MI->isReturn())
     return true;
-  if (MI->hasOrderedMemoryRef() || MI->hasUnmodeledSideEffects())
+  if (MI->hasOrderedMemoryRef() || MI->hasUnmodeledSideEffects() ||
+      MI->isPosition())
     return true;
   if (MI->isPHI())
     return false;

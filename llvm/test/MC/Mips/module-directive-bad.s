@@ -157,6 +157,10 @@
     .module fp=64
 # CHECK: :[[@LINE-1]]:13: error: .module directive must appear before any code
 
+    .set dspr2
+    .module fp=64
+# CHECK: :[[@LINE-1]]:13: error: .module directive must appear before any code
+
     .llvm_internal_mips_reallow_module_directive
     .module fp=32
 # CHECK-NOT: :[[@LINE-1]]:13: error: .module directive must appear before any code

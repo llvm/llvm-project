@@ -31,31 +31,61 @@ struct compat {
   static constexpr int b = 2;
   static constexpr int c = 3;
   static inline constexpr int d = 4;
+  static const int e = 5;
+  static const int f = 6;
+  static const int g = 7;
 };
 const int &compat_use_before_redecl = compat::b;
 const int compat::a;
 const int compat::b;
 const int compat::c;
 const int compat::d;
+const int compat::e;
+constexpr int compat::f;
+constexpr inline int compat::g;
 const int &compat_use_after_redecl1 = compat::c;
 const int &compat_use_after_redecl2 = compat::d;
-// CHECK: @_ZN6compat1bE = weak_odr constant i32 2
-// CHECK: @_ZN6compat1aE = weak_odr constant i32 1
-// CHECK: @_ZN6compat1cE = weak_odr constant i32 3
-// CHECK: @_ZN6compat1dE = linkonce_odr constant i32 4
+const int &compat_use_after_redecl3 = compat::g;
+// CHECK-DAG: @_ZN6compat1bE = weak_odr constant i32 2
+// CHECK-DAG: @_ZN6compat1aE = weak_odr constant i32 1
+// CHECK-DAG: @_ZN6compat1cE = weak_odr constant i32 3
+// CHECK-DAG: @_ZN6compat1dE = linkonce_odr constant i32 4
+// CHECK-DAG: @_ZN6compat1eE = constant i32 5
+// CHECK-DAG: @_ZN6compat1fE = weak_odr constant i32 6
+// CHECK-DAG: @_ZN6compat1gE = linkonce_odr constant i32 7
 
 template<typename T> struct X {
   static int a;
   static inline int b;
   static int c;
+  static const int d;
+  static int e;
 };
 // CHECK: @_ZN1XIiE1aE = linkonce_odr global i32 10
 // CHECK: @_ZN1XIiE1bE = global i32 20
 // CHECK-NOT: @_ZN1XIiE1cE
+// CHECK: @_ZN1XIiE1dE = linkonce_odr constant i32 40
+// CHECK: @_ZN1XIiE1eE = linkonce_odr global i32 50
 template<> inline int X<int>::a = 10;
 int &use3 = X<int>::a;
 template<> int X<int>::b = 20;
 template<> inline int X<int>::c = 30;
+template<typename T> constexpr int X<T>::d = 40;
+template<typename T> inline int X<T>::e = 50;
+const int *use_x_int_d = &X<int>::d;
+const int *use_x_int_e = &X<int>::e;
+
+template<typename T> struct Y;
+template<> struct Y<int> {
+  static constexpr int a = 123;
+  static constexpr int b = 456;
+  static constexpr int c = 789;
+};
+// CHECK: @_ZN1YIiE1aE = weak_odr constant i32 123
+constexpr int Y<int>::a;
+// CHECK: @_ZN1YIiE1bE = linkonce_odr constant i32 456
+const int &yib = Y<int>::b;
+// CHECK-NOT: @_ZN1YIiE1cE
 
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK: call i32 @_Z1fv

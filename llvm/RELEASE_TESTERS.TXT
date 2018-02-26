@@ -47,6 +47,6 @@ T: ARM, AArch64
 O: Linux
 
 N: Simon Dardis
-E: simon.dardis@imgtec.com
+E: simon.dardis@mips.com
 T: MIPS
 O: Linux

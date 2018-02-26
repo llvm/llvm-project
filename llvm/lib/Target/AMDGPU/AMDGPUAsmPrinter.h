@@ -17,6 +17,7 @@
 
 #include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUHSAMetadataStreamer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include <cstddef>
@@ -40,7 +41,7 @@ private:
     // the end are tracked separately.
     int32_t NumVGPR = 0;
     int32_t NumExplicitSGPR = 0;
-    uint32_t PrivateSegmentSize = 0;
+    uint64_t PrivateSegmentSize = 0;
     bool UsesVCC = false;
     bool UsesFlatScratch = false;
     bool HasDynamicallySizedStack = false;
@@ -60,7 +61,7 @@ private:
     uint32_t DX10Clamp = 0;
     uint32_t DebugMode = 0;
     uint32_t IEEEMode = 0;
-    uint32_t ScratchSize = 0;
+    uint64_t ScratchSize = 0;
 
     uint64_t ComputePGMRSrc1 = 0;
 
@@ -113,9 +114,13 @@ private:
   SIProgramInfo CurrentProgramInfo;
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
 
+  AMDGPU::HSAMD::MetadataStreamer HSAMetadataStream;
+  std::map<uint32_t, uint32_t> PALMetadataMap;
+
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
   SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF) const;
 
+  void readPALMetadata(Module &M);
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;
@@ -123,13 +128,23 @@ private:
                               unsigned &NumSGPR,
                               unsigned &NumVGPR) const;
 
+  AMDGPU::HSAMD::Kernel::CodeProps::Metadata getHSACodeProps(
+      const MachineFunction &MF,
+      const SIProgramInfo &ProgramInfo) const;
+  AMDGPU::HSAMD::Kernel::DebugProps::Metadata getHSADebugProps(
+      const MachineFunction &MF,
+      const SIProgramInfo &ProgramInfo) const;
+
   /// \brief Emit register usage information so that the GPU driver
   /// can correctly setup the GPU state.
   void EmitProgramInfoR600(const MachineFunction &MF);
-  void EmitProgramInfoSI(const MachineFunction &MF, const SIProgramInfo &KernelInfo);
+  void EmitProgramInfoSI(const MachineFunction &MF,
+                         const SIProgramInfo &KernelInfo);
+  void EmitPALMetadata(const MachineFunction &MF,
+                       const SIProgramInfo &KernelInfo);
   void emitCommonFunctionComments(uint32_t NumVGPR,
                                   uint32_t NumSGPR,
-                                  uint32_t ScratchSize,
+                                  uint64_t ScratchSize,
                                   uint64_t CodeSize);
 
 public:
@@ -140,7 +155,7 @@ public:
 
   const MCSubtargetInfo* getSTI() const;
 
-  AMDGPUTargetStreamer& getTargetStreamer() const;
+  AMDGPUTargetStreamer* getTargetStreamer() const;
 
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -166,6 +181,8 @@ public:
 
   void EmitFunctionEntryLabel() override;
 
+  void EmitBasicBlockStart(const MachineBasicBlock &MBB) const override;
+
   void EmitGlobalVariable(const GlobalVariable *GV) override;
 
   void EmitStartOfAsmFile(Module &M) override;
@@ -180,8 +197,8 @@ public:
                        raw_ostream &O) override;
 
 protected:
-  std::vector<std::string> DisasmLines, HexLines;
-  size_t DisasmLineMaxLen;
+  mutable std::vector<std::string> DisasmLines, HexLines;
+  mutable size_t DisasmLineMaxLen;
   AMDGPUAS AMDGPUASI;
 };
 

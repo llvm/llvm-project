@@ -3,7 +3,7 @@
 
 define zeroext i1 @ne_neg1_and_ne_zero(i32 %x) nounwind {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    add r1, r0, #1
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    cmp r1, #1
@@ -19,7 +19,7 @@ define zeroext i1 @ne_neg1_and_ne_zero(i32 %x) nounwind {
 
 define zeroext i1 @and_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: and_eq:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    eor r2, r2, r3
 ; CHECK-NEXT:    eor r0, r0, r1
 ; CHECK-NEXT:    orrs r0, r0, r2
@@ -34,7 +34,7 @@ define zeroext i1 @and_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 
 define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: or_ne:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    eor r2, r2, r3
 ; CHECK-NEXT:    eor r0, r0, r1
 ; CHECK-NEXT:    orrs r0, r0, r2
@@ -48,7 +48,7 @@ define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 
 define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) nounwind {
 ; CHECK-LABEL: and_eq_vec:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    vmov d19, r2, r3

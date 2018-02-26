@@ -6,6 +6,14 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
@@ -15,6 +23,16 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -33,15 +51,15 @@ struct TT{
 // TCHECK:  [[S1:%.+]] = type { double }
 
 // CHECK-DAG:  [[SIZET:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i[[SZ:32|64]] 4]
-// CHECK:  [[MAPT:@.+]] = private unnamed_addr constant [1 x i32] [i32 288]
-// CHECK-DAG:  [[MAPT2:@.+]] = private unnamed_addr constant [9 x i32] [i32 288, i32 161, i32 288, i32 161, i32 161, i32 288, i32 288, i32 161, i32 161]
+// CHECK:  [[MAPT:@.+]] = private unnamed_addr constant [1 x i64] [i64 288]
+// CHECK-DAG:  [[MAPT2:@.+]] = private unnamed_addr constant [9 x i64] [i64 288, i64 161, i64 288, i64 161, i64 161, i64 288, i64 288, i64 161, i64 161]
 // CHECK-DAG:  [[SIZET3:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] zeroinitializer
-// CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [1 x i32] [i32 32]
-// CHECK-DAG:  [[MAPT4:@.+]] = private unnamed_addr constant [5 x i32] [i32 35, i32 288, i32 288, i32 288, i32 161]
+// CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [1 x i64] [i64 32]
+// CHECK-DAG:  [[MAPT4:@.+]] = private unnamed_addr constant [5 x i64] [i64 547, i64 288, i64 288, i64 288, i64 161]
 // CHECK-DAG:  [[SIZET5:@.+]] = private unnamed_addr constant [3 x i{{32|64}}] [i[[SZ]] 4, i[[SZ]] 1, i[[SZ]] 40]
-// CHECK-DAG:  [[MAPT5:@.+]] = private unnamed_addr constant [3 x i32] [i32 288, i32 288, i32 161]
+// CHECK-DAG:  [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 288, i64 288, i64 161]
 // CHECK-DAG:  [[SIZET6:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i[[SZ]] 4, i[[SZ]] 40]
-// CHECK-DAG:  [[MAPT6:@.+]] = private unnamed_addr constant [2 x i32] [i32 288, i32 161]
+// CHECK-DAG:  [[MAPT6:@.+]] = private unnamed_addr constant [2 x i64] [i64 288, i64 161]
 
 
 // CHECK: define {{.*}}[[FOO:@.+]](
@@ -68,7 +86,6 @@ int foo(int n, double *ptr) {
   // CHECK:  [[C:%.+]] = alloca [5 x [10 x double]],
   // CHECK:  [[D:%.+]] = alloca [[TT]],
   // CHECK:  [[ACAST:%.+]] = alloca i{{[0-9]+}},
-  // CHECK:  {{.+}} = alloca i{{[0-9]+}},
   // CHECK:  [[BASE_PTR_ARR:%.+]] = alloca [1 x i8*],
   // CHECK:  [[PTR_ARR:%.+]] = alloca [1 x i8*],
   // CHECK:  [[A2CAST:%.+]] = alloca i{{[0-9]+}},
@@ -101,7 +118,7 @@ int foo(int n, double *ptr) {
   // CHECK:  store i{{[0-9]+}} [[ACAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR2]],
   // CHECK:  [[BASE_PTR_GEP_ARG:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  {{.+}} = call i32 @__tgt_target(i32 -1, {{.+}}, i32 1, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i32* getelementptr inbounds ([1 x i32], [1 x i32]* [[MAPT]], i32 0, i32 0))
+  // CHECK:  {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 1, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT]], i32 0, i32 0))
   
   // TCHECK:  define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -220,11 +237,11 @@ int foo(int n, double *ptr) {
   // CHECK:  [[BASE_PTR_GEP_ARG2:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG2:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[SIZES_ARG2:%.+]] = getelementptr inbounds [9 x i[[SZ]]], [9 x i[[SZ]]]* [[SIZET2]],  i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK: {{.+}} = call i32 @__tgt_target(i32 -1, {{.+}}, i32 9, i8** [[BASE_PTR_GEP_ARG2]], i8** [[PTR_GEP_ARG2]], i[[SZ]]* [[SIZES_ARG2]], i32* getelementptr inbounds ([9 x i32], [9 x i32]* [[MAPT2]], i32 0, i32 0))
+  // CHECK: {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 9, i8** [[BASE_PTR_GEP_ARG2]], i8** [[PTR_GEP_ARG2]], i[[SZ]]* [[SIZES_ARG2]], i64* getelementptr inbounds ([9 x i64], [9 x i64]* [[MAPT2]], i32 0, i32 0))
   
   // make sure that firstprivate variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A2_IN:%.+]], [10 x float]* {{.+}} [[B_IN:%.+]], i{{[0-9]+}} [[BN_SZ:%.+]], float* [[BN_IN:%.+]], [5 x [10 x double]]* {{.+}} [[C_IN:%.+]], i{{[0-9]+}} [[CN_SZ1:%.+]], i{{[0-9]+}} [[CN_SZ2:%.+]], double* [[CN_IN:%.+]], [[TT]]* {{.+}} [[D_IN:%.+]])
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A2_IN:%.+]], [10 x float]* {{.+}} [[B_IN:%.+]], i{{[0-9]+}} [[BN_SZ:%.+]], float* {{.+}} [[BN_IN:%.+]], [5 x [10 x double]]* {{.+}} [[C_IN:%.+]], i{{[0-9]+}} [[CN_SZ1:%.+]], i{{[0-9]+}} [[CN_SZ2:%.+]], double* {{.+}} [[CN_IN:%.+]], [[TT]]* {{.+}} [[D_IN:%.+]])
   // TCHECK:  [[A2_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x float]*,
   // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -311,7 +328,7 @@ int foo(int n, double *ptr) {
 
   // CHECK:  [[BASE_PTR_GEP_ARG3:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG3:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK: {{.+}} = call i32 @__tgt_target(i32 -1, {{.+}}, i32 1, i8** [[BASE_PTR_GEP_ARG3]], i8** [[PTR_GEP_ARG3]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET3]], i32 0, i32 0), i32* getelementptr inbounds ([1 x i32], [1 x i32]* [[MAPT3]], i32 0, i32 0))
+  // CHECK: {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 1, i8** [[BASE_PTR_GEP_ARG3]], i8** [[PTR_GEP_ARG3]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT3]], i32 0, i32 0))
 
   // TCHECK:  define void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]])
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
@@ -447,7 +464,7 @@ struct S1 {
   // CHECK:  store i{{[0-9]+}} [[B_SIZE:%.+]], i{{[0-9]+}}* [[SIZES_GEP4_4]],
 
   // only check that we use the map types stored in the global variable
-  // CHECK:  call i32 @__tgt_target(i32 -1, {{.+}}, i32 5, i8** {{.+}}, i8** {{.+}}, i{{[0-9]+}}* {{.+}}, i32* getelementptr inbounds ([5 x i32], [5 x i32]* [[MAPT4]], i32 0, i32 0))
+  // CHECK:  call i32 @__tgt_target(i64 -1, {{.+}}, i32 5, i8** {{.+}}, i8** {{.+}}, i{{[0-9]+}}* {{.+}}, i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT4]], i32 0, i32 0))
   
   // TCHECK: define void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[B_IN:%.+]], i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i{{[0-9]+}}{{.+}} [[C_IN:%.+]])
   // TCHECK:  [[TH_ADDR:%.+]] = alloca [[S1]]*,
@@ -520,7 +537,7 @@ struct S1 {
   // CHECK:  store [10 x i{{[0-9]+}}]* [[B]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 
   // only check that the right sizes and map types are used
-  // CHECK:  call i32 @__tgt_target(i32 -1, {{.+}}, i32 3, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([3 x i[[SZ]]], [3 x i[[SZ]]]* [[SIZET5]], i32 0, i32 0), i32* getelementptr inbounds ([3 x i32], [3 x i32]* [[MAPT5]], i32 0, i32 0))
+  // CHECK:  call i32 @__tgt_target(i64 -1, {{.+}}, i32 3, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([3 x i[[SZ]]], [3 x i[[SZ]]]* [[SIZET5]], i32 0, i32 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT5]], i32 0, i32 0))
 };
 
 
@@ -558,7 +575,7 @@ int bar(int n, double *ptr){
 // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP6_1]] to [10 x i{{[0-9]+}}]**
 // CHECK:  store [10 x i{{[0-9]+}}]* [[B]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 
-// CHECK:  call i32 @__tgt_target(i32 -1, {{.+}}, i32 2, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET6]], i32 0, i32 0), i32* getelementptr inbounds ([2 x i32], [2 x i32]* [[MAPT6]], i32 0, i32 0))
+// CHECK:  call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET6]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT6]], i32 0, i32 0))
 
 
 // TCHECK: define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])

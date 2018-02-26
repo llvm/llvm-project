@@ -8,6 +8,7 @@ add_clang_unittest(ClangAnalysisTests
   )
 
 target_link_libraries(ClangAnalysisTests
+  PRIVATE
   clangAnalysis
   clangAST
   clangASTMatchers

@@ -167,8 +167,8 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
 #else  // !SANITIZER_GO
     "app      (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
 #endif
-    "stacks: %ld unique IDs, %ld kB allocated\n"
-    "threads: %ld total, %ld live\n"
+    "stacks: %zd unique IDs, %zd kB allocated\n"
+    "threads: %zd total, %zd live\n"
     "------------------------------\n",
     ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
     MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
@@ -231,7 +231,7 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
 
 void InitializePlatformEarly() {
 #if defined(__aarch64__)
-  uptr max_vm = GetMaxVirtualAddress() + 1;
+  uptr max_vm = GetMaxUserVirtualAddress() + 1;
   if (max_vm != Mapping::kHiAppMemEnd) {
     Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
            max_vm, Mapping::kHiAppMemEnd);

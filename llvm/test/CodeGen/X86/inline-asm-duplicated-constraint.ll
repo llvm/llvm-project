@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -no-integrated-as -mtriple=x86_64-linux-gnu | FileCheck %s
+; RUN: llc < %s -no-integrated-as -mtriple=x86_64-linux-gnu | FileCheck %s
 
 ; CHECK-LABEL: test1:
 ; CHECK: movl	(%rdi), %eax

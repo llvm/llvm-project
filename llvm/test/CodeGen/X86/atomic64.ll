@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -march=x86-64 -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
+; RUN: llc < %s -O0 -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
 
 @sc64 = external global i64
 

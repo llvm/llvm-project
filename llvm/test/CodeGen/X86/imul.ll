@@ -174,14 +174,14 @@ define i64 @mul18446744073709551615_64(i64 %A) {
 
 define i32 @test(i32 %a) {
 ; X64-LABEL: test:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shll $5, %eax
@@ -194,7 +194,7 @@ entry:
 
 define i32 @test1(i32 %a) {
 ; X64-LABEL: test1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    subl %edi, %eax
@@ -202,7 +202,7 @@ define i32 @test1(i32 %a) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test1:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shll $5, %eax
@@ -217,15 +217,15 @@ entry:
 
 define i32 @test2(i32 %a) {
 ; X64-LABEL: test2:
-; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    leal (%rax,%rdi), %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shll $5, %eax
@@ -238,8 +238,8 @@ entry:
 
 define i32 @test3(i32 %a) {
 ; X64-LABEL: test3:
-; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    leal (%rax,%rdi), %eax
@@ -247,7 +247,7 @@ define i32 @test3(i32 %a) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shll $5, %eax
@@ -261,14 +261,14 @@ entry:
 
 define i64 @test4(i64 %a) {
 ; X64-LABEL: test4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlq $5, %rax
 ; X64-NEXT:    subq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test4:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shll $5, %ecx
@@ -284,7 +284,7 @@ entry:
 
 define i64 @test5(i64 %a) {
 ; X64-LABEL: test5:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlq $5, %rax
 ; X64-NEXT:    subq %rdi, %rax
@@ -292,11 +292,9 @@ define i64 @test5(i64 %a) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test5:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi0:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi1:
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -318,14 +316,14 @@ entry:
 
 define i64 @test6(i64 %a) {
 ; X64-LABEL: test6:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlq $5, %rax
 ; X64-NEXT:    leaq (%rax,%rdi), %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test6:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shll $5, %ecx
@@ -341,7 +339,7 @@ entry:
 
 define i64 @test7(i64 %a) {
 ; X64-LABEL: test7:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlq $5, %rax
 ; X64-NEXT:    leaq (%rax,%rdi), %rax
@@ -349,11 +347,9 @@ define i64 @test7(i64 %a) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test7:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi2:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi3:
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -374,17 +370,15 @@ entry:
 
 define i64 @testOverflow(i64 %a) {
 ; X64-LABEL: testOverflow:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    imulq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: testOverflow:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi4:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi5:
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $-1, %edx

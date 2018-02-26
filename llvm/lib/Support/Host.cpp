@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Host.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -208,8 +209,43 @@ StringRef sys::detail::getHostCPUNameForARM(
             .Case("0x06f", "krait") // APQ8064
             .Case("0x201", "kryo")
             .Case("0x205", "kryo")
+            .Case("0x211", "kryo")
+            .Case("0x800", "cortex-a73")
+            .Case("0x801", "cortex-a73")
             .Case("0xc00", "falkor")
+            .Case("0xc01", "saphira")
             .Default("generic");
+
+  if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
+    // The Exynos chips have a convoluted ID scheme that doesn't seem to follow
+    // any predictive pattern across variants and parts.
+    unsigned Variant = 0, Part = 0;
+
+    // Look for the CPU variant line, whose value is a 1 digit hexadecimal
+    // number, corresponding to the Variant bits in the CP15/C0 register.
+    for (auto I : Lines)
+      if (I.consume_front("CPU variant"))
+        I.ltrim("\t :").getAsInteger(0, Variant);
+
+    // Look for the CPU part line, whose value is a 3 digit hexadecimal
+    // number, corresponding to the PartNum bits in the CP15/C0 register.
+    for (auto I : Lines)
+      if (I.consume_front("CPU part"))
+        I.ltrim("\t :").getAsInteger(0, Part);
+
+    unsigned Exynos = (Variant << 12) | Part;
+    switch (Exynos) {
+    default:
+      // Default by falling through to Exynos M1.
+      LLVM_FALLTHROUGH;
+
+    case 0x1001:
+      return "exynos-m1";
+
+    case 0x4001:
+      return "exynos-m2";
+    }
+  }
 
   return "generic";
 }
@@ -268,120 +304,53 @@ StringRef sys::detail::getHostCPUNameForS390x(
   return "generic";
 }
 
+StringRef sys::detail::getHostCPUNameForBPF() {
+#if !defined(__linux__) || !defined(__x86_64__)
+  return "generic";
+#else
+  uint8_t insns[40] __attribute__ ((aligned (8))) =
+      /* BPF_MOV64_IMM(BPF_REG_0, 0) */
+    { 0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      /* BPF_MOV64_IMM(BPF_REG_2, 1) */
+      0xb7, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+      /* BPF_JMP_REG(BPF_JLT, BPF_REG_0, BPF_REG_2, 1) */
+      0xad, 0x20, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
+      /* BPF_MOV64_IMM(BPF_REG_0, 1) */
+      0xb7, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+      /* BPF_EXIT_INSN() */
+      0x95, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+
+  struct bpf_prog_load_attr {
+    uint32_t prog_type;
+    uint32_t insn_cnt;
+    uint64_t insns;
+    uint64_t license;
+    uint32_t log_level;
+    uint32_t log_size;
+    uint64_t log_buf;
+    uint32_t kern_version;
+    uint32_t prog_flags;
+  } attr = {};
+  attr.prog_type = 1; /* BPF_PROG_TYPE_SOCKET_FILTER */
+  attr.insn_cnt = 5;
+  attr.insns = (uint64_t)insns;
+  attr.license = (uint64_t)"DUMMY";
+
+  int fd = syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr, sizeof(attr));
+  if (fd >= 0) {
+    close(fd);
+    return "v2";
+  }
+  return "v1";
+#endif
+}
+
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
 
 enum VendorSignatures {
   SIG_INTEL = 0x756e6547 /* Genu */,
   SIG_AMD = 0x68747541 /* Auth */
-};
-
-enum ProcessorVendors {
-  VENDOR_INTEL = 1,
-  VENDOR_AMD,
-  VENDOR_OTHER,
-  VENDOR_MAX
-};
-
-enum ProcessorTypes {
-  INTEL_BONNELL = 1,
-  INTEL_CORE2,
-  INTEL_COREI7,
-  AMDFAM10H,
-  AMDFAM15H,
-  INTEL_SILVERMONT,
-  INTEL_KNL,
-  AMD_BTVER1,
-  AMD_BTVER2,
-  AMDFAM17H,
-  // Entries below this are not in libgcc/compiler-rt.
-  INTEL_i386,
-  INTEL_i486,
-  INTEL_PENTIUM,
-  INTEL_PENTIUM_PRO,
-  INTEL_PENTIUM_II,
-  INTEL_PENTIUM_III,
-  INTEL_PENTIUM_IV,
-  INTEL_PENTIUM_M,
-  INTEL_CORE_DUO,
-  INTEL_X86_64,
-  INTEL_NOCONA,
-  INTEL_PRESCOTT,
-  AMD_i486,
-  AMDPENTIUM,
-  AMDATHLON,
-  INTEL_GOLDMONT,
-  CPU_TYPE_MAX
-};
-
-enum ProcessorSubtypes {
-  INTEL_COREI7_NEHALEM = 1,
-  INTEL_COREI7_WESTMERE,
-  INTEL_COREI7_SANDYBRIDGE,
-  AMDFAM10H_BARCELONA,
-  AMDFAM10H_SHANGHAI,
-  AMDFAM10H_ISTANBUL,
-  AMDFAM15H_BDVER1,
-  AMDFAM15H_BDVER2,
-  AMDFAM15H_BDVER3,
-  AMDFAM15H_BDVER4,
-  AMDFAM17H_ZNVER1,
-  INTEL_COREI7_IVYBRIDGE,
-  INTEL_COREI7_HASWELL,
-  INTEL_COREI7_BROADWELL,
-  INTEL_COREI7_SKYLAKE,
-  INTEL_COREI7_SKYLAKE_AVX512,
-  // Entries below this are not in libgcc/compiler-rt.
-  INTEL_PENTIUM_MMX,
-  INTEL_CORE2_65,
-  INTEL_CORE2_45,
-  AMDPENTIUM_K6,
-  AMDPENTIUM_K62,
-  AMDPENTIUM_K63,
-  AMDPENTIUM_GEODE,
-  AMDATHLON_CLASSIC,
-  AMDATHLON_XP,
-  AMDATHLON_K8,
-  AMDATHLON_K8SSE3,
-  CPU_SUBTYPE_MAX
-};
-
-enum ProcessorFeatures {
-  FEATURE_CMOV = 0,
-  FEATURE_MMX,
-  FEATURE_POPCNT,
-  FEATURE_SSE,
-  FEATURE_SSE2,
-  FEATURE_SSE3,
-  FEATURE_SSSE3,
-  FEATURE_SSE4_1,
-  FEATURE_SSE4_2,
-  FEATURE_AVX,
-  FEATURE_AVX2,
-  FEATURE_SSE4_A,
-  FEATURE_FMA4,
-  FEATURE_XOP,
-  FEATURE_FMA,
-  FEATURE_AVX512F,
-  FEATURE_BMI,
-  FEATURE_BMI2,
-  FEATURE_AES,
-  FEATURE_PCLMUL,
-  FEATURE_AVX512VL,
-  FEATURE_AVX512BW,
-  FEATURE_AVX512DQ,
-  FEATURE_AVX512CD,
-  FEATURE_AVX512ER,
-  FEATURE_AVX512PF,
-  FEATURE_AVX512VBMI,
-  FEATURE_AVX512IFMA,
-  FEATURE_AVX5124VNNIW,
-  FEATURE_AVX5124FMAPS,
-  FEATURE_AVX512VPOPCNTDQ,
-  // Only one bit free left in the first 32 features.
-  FEATURE_MOVBE = 32,
-  FEATURE_ADX,
-  FEATURE_EM64T
 };
 
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
@@ -536,57 +505,29 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     return;
   switch (Family) {
   case 3:
-    *Type = INTEL_i386;
+    *Type = X86::INTEL_i386;
     break;
   case 4:
-    switch (Model) {
-    case 0: // Intel486 DX processors
-    case 1: // Intel486 DX processors
-    case 2: // Intel486 SX processors
-    case 3: // Intel487 processors, IntelDX2 OverDrive processors,
-            // IntelDX2 processors
-    case 4: // Intel486 SL processor
-    case 5: // IntelSX2 processors
-    case 7: // Write-Back Enhanced IntelDX2 processors
-    case 8: // IntelDX4 OverDrive processors, IntelDX4 processors
-    default:
-      *Type = INTEL_i486;
-      break;
-    }
+    *Type = X86::INTEL_i486;
     break;
   case 5:
-    switch (Model) {
-    case 1: // Pentium OverDrive processor for Pentium processor (60, 66),
-            // Pentium processors (60, 66)
-    case 2: // Pentium OverDrive processor for Pentium processor (75, 90,
-            // 100, 120, 133), Pentium processors (75, 90, 100, 120, 133,
-            // 150, 166, 200)
-    case 3: // Pentium OverDrive processors for Intel486 processor-based
-            // systems
-      *Type = INTEL_PENTIUM;
-      break;
-    case 4: // Pentium OverDrive processor with MMX technology for Pentium
-            // processor (75, 90, 100, 120, 133), Pentium processor with
-            // MMX technology (166, 200)
-      *Type = INTEL_PENTIUM;
-      *Subtype = INTEL_PENTIUM_MMX;
-      break;
-    default:
-      *Type = INTEL_PENTIUM;
+    if (Features & (1 << X86::FEATURE_MMX)) {
+      *Type = X86::INTEL_PENTIUM_MMX;
       break;
     }
+    *Type = X86::INTEL_PENTIUM;
     break;
   case 6:
     switch (Model) {
     case 0x01: // Pentium Pro processor
-      *Type = INTEL_PENTIUM_PRO;
+      *Type = X86::INTEL_PENTIUM_PRO;
       break;
     case 0x03: // Intel Pentium II OverDrive processor, Pentium II processor,
                // model 03
     case 0x05: // Pentium II processor, model 05, Pentium II Xeon processor,
                // model 05, and Intel Celeron processor, model 05
     case 0x06: // Celeron processor, model 06
-      *Type = INTEL_PENTIUM_II;
+      *Type = X86::INTEL_PENTIUM_II;
       break;
     case 0x07: // Pentium III processor, model 07, and Pentium III Xeon
                // processor, model 07
@@ -594,18 +535,18 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // model 08, and Celeron processor, model 08
     case 0x0a: // Pentium III Xeon processor, model 0Ah
     case 0x0b: // Pentium III processor, model 0Bh
-      *Type = INTEL_PENTIUM_III;
+      *Type = X86::INTEL_PENTIUM_III;
       break;
     case 0x09: // Intel Pentium M processor, Intel Celeron M processor model 09.
     case 0x0d: // Intel Pentium M processor, Intel Celeron M processor, model
                // 0Dh. All processors are manufactured using the 90 nm process.
     case 0x15: // Intel EP80579 Integrated Processor and Intel EP80579
                // Integrated Processor with Intel QuickAssist Technology
-      *Type = INTEL_PENTIUM_M;
+      *Type = X86::INTEL_PENTIUM_M;
       break;
     case 0x0e: // Intel Core Duo processor, Intel Core Solo processor, model
                // 0Eh. All processors are manufactured using the 65 nm process.
-      *Type = INTEL_CORE_DUO;
+      *Type = X86::INTEL_CORE_DUO;
       break;   // yonah
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -614,8 +555,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // 0Fh. All processors are manufactured using the 65 nm process.
     case 0x16: // Intel Celeron processor model 16h. All processors are
                // manufactured using the 65 nm process
-      *Type = INTEL_CORE2; // "core2"
-      *Subtype = INTEL_CORE2_65;
+      *Type = X86::INTEL_CORE2; // "core2"
+      *Subtype = X86::INTEL_CORE2_65;
       break;
     case 0x17: // Intel Core 2 Extreme processor, Intel Xeon processor, model
                // 17h. All processors are manufactured using the 45 nm process.
@@ -623,8 +564,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // 45nm: Penryn , Wolfdale, Yorkfield (XE)
     case 0x1d: // Intel Xeon processor MP. All processors are manufactured using
                // the 45 nm process.
-      *Type = INTEL_CORE2; // "penryn"
-      *Subtype = INTEL_CORE2_45;
+      *Type = X86::INTEL_CORE2; // "penryn"
+      *Subtype = X86::INTEL_CORE2_45;
       break;
     case 0x1a: // Intel Core i7 processor and Intel Xeon processor. All
                // processors are manufactured using the 45 nm process.
@@ -632,26 +573,26 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // As found in a Summer 2010 model iMac.
     case 0x1f:
     case 0x2e:             // Nehalem EX
-      *Type = INTEL_COREI7; // "nehalem"
-      *Subtype = INTEL_COREI7_NEHALEM;
+      *Type = X86::INTEL_COREI7; // "nehalem"
+      *Subtype = X86::INTEL_COREI7_NEHALEM;
       break;
     case 0x25: // Intel Core i7, laptop version.
     case 0x2c: // Intel Core i7 processor and Intel Xeon processor. All
                // processors are manufactured using the 32 nm process.
     case 0x2f: // Westmere EX
-      *Type = INTEL_COREI7; // "westmere"
-      *Subtype = INTEL_COREI7_WESTMERE;
+      *Type = X86::INTEL_COREI7; // "westmere"
+      *Subtype = X86::INTEL_COREI7_WESTMERE;
       break;
     case 0x2a: // Intel Core i7 processor. All processors are manufactured
                // using the 32 nm process.
     case 0x2d:
-      *Type = INTEL_COREI7; //"sandybridge"
-      *Subtype = INTEL_COREI7_SANDYBRIDGE;
+      *Type = X86::INTEL_COREI7; //"sandybridge"
+      *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
       break;
     case 0x3a:
     case 0x3e:             // Ivy Bridge EP
-      *Type = INTEL_COREI7; // "ivybridge"
-      *Subtype = INTEL_COREI7_IVYBRIDGE;
+      *Type = X86::INTEL_COREI7; // "ivybridge"
+      *Subtype = X86::INTEL_COREI7_IVYBRIDGE;
       break;
 
     // Haswell:
@@ -659,8 +600,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x3f:
     case 0x45:
     case 0x46:
-      *Type = INTEL_COREI7; // "haswell"
-      *Subtype = INTEL_COREI7_HASWELL;
+      *Type = X86::INTEL_COREI7; // "haswell"
+      *Subtype = X86::INTEL_COREI7_HASWELL;
       break;
 
     // Broadwell:
@@ -668,8 +609,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x47:
     case 0x4f:
     case 0x56:
-      *Type = INTEL_COREI7; // "broadwell"
-      *Subtype = INTEL_COREI7_BROADWELL;
+      *Type = X86::INTEL_COREI7; // "broadwell"
+      *Subtype = X86::INTEL_COREI7_BROADWELL;
       break;
 
     // Skylake:
@@ -677,14 +618,20 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x5e: // Skylake desktop
     case 0x8e: // Kaby Lake mobile
     case 0x9e: // Kaby Lake desktop
-      *Type = INTEL_COREI7; // "skylake"
-      *Subtype = INTEL_COREI7_SKYLAKE;
+      *Type = X86::INTEL_COREI7; // "skylake"
+      *Subtype = X86::INTEL_COREI7_SKYLAKE;
       break;
 
     // Skylake Xeon:
     case 0x55:
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      break;
+
+    // Cannonlake:
+    case 0x66:
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_CANNONLAKE; // "cannonlake"
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -692,7 +639,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x27: // 32 nm Atom Medfield
     case 0x35: // 32 nm Atom Midview
     case 0x36: // 32 nm Atom Midview
-      *Type = INTEL_BONNELL;
+      *Type = X86::INTEL_BONNELL;
       break; // "bonnell"
 
     // Atom Silvermont codes from the Intel software optimization guide.
@@ -702,115 +649,121 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x5a:
     case 0x5d:
     case 0x4c: // really airmont
-      *Type = INTEL_SILVERMONT;
+      *Type = X86::INTEL_SILVERMONT;
       break; // "silvermont"
     // Goldmont:
-    case 0x5c:
-    case 0x5f:
-      *Type = INTEL_GOLDMONT;
+    case 0x5c: // Apollo Lake
+    case 0x5f: // Denverton
+    case 0x7a: // Gemini Lake
+      *Type = X86::INTEL_GOLDMONT;
       break; // "goldmont"
     case 0x57:
-      *Type = INTEL_KNL; // knl
+      *Type = X86::INTEL_KNL; // knl
+      break;
+    case 0x85:
+      *Type = X86::INTEL_KNM; // knm
       break;
 
     default: // Unknown family 6 CPU, try to guess.
-      if (Features & (1 << FEATURE_AVX512F)) {
-        *Type = INTEL_KNL; // knl
+      if (Features & (1 << X86::FEATURE_AVX512VBMI)) {
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_CANNONLAKE;
         break;
       }
-      if (Features2 & (1 << (FEATURE_ADX - 32))) {
-        *Type = INTEL_COREI7;
-        *Subtype = INTEL_COREI7_BROADWELL;
+
+      if (Features & (1 << X86::FEATURE_AVX512VL)) {
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512;
         break;
       }
-      if (Features & (1 << FEATURE_AVX2)) {
-        *Type = INTEL_COREI7;
-        *Subtype = INTEL_COREI7_HASWELL;
+
+      if (Features & (1 << X86::FEATURE_AVX512ER)) {
+        *Type = X86::INTEL_KNL; // knl
         break;
       }
-      if (Features & (1 << FEATURE_AVX)) {
-        *Type = INTEL_COREI7;
-        *Subtype = INTEL_COREI7_SANDYBRIDGE;
-        break;
-      }
-      if (Features & (1 << FEATURE_SSE4_2)) {
-        if (Features2 & (1 << (FEATURE_MOVBE - 32))) {
-          *Type = INTEL_SILVERMONT;
+
+      if (Features2 & (1 << (X86::FEATURE_CLFLUSHOPT - 32))) {
+        if (Features2 & (1 << (X86::FEATURE_SHA - 32))) {
+          *Type = X86::INTEL_GOLDMONT;
         } else {
-          *Type = INTEL_COREI7;
-          *Subtype = INTEL_COREI7_NEHALEM;
+          *Type = X86::INTEL_COREI7;
+          *Subtype = X86::INTEL_COREI7_SKYLAKE;
         }
         break;
       }
-      if (Features & (1 << FEATURE_SSE4_1)) {
-        *Type = INTEL_CORE2; // "penryn"
-        *Subtype = INTEL_CORE2_45;
+      if (Features2 & (1 << (X86::FEATURE_ADX - 32))) {
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_BROADWELL;
         break;
       }
-      if (Features & (1 << FEATURE_SSSE3)) {
-        if (Features2 & (1 << (FEATURE_MOVBE - 32))) {
-          *Type = INTEL_BONNELL; // "bonnell"
+      if (Features & (1 << X86::FEATURE_AVX2)) {
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_HASWELL;
+        break;
+      }
+      if (Features & (1 << X86::FEATURE_AVX)) {
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
+        break;
+      }
+      if (Features & (1 << X86::FEATURE_SSE4_2)) {
+        if (Features2 & (1 << (X86::FEATURE_MOVBE - 32))) {
+          *Type = X86::INTEL_SILVERMONT;
         } else {
-          *Type = INTEL_CORE2; // "core2"
-          *Subtype = INTEL_CORE2_65;
+          *Type = X86::INTEL_COREI7;
+          *Subtype = X86::INTEL_COREI7_NEHALEM;
         }
         break;
       }
-      if (Features2 & (1 << (FEATURE_EM64T - 32))) {
-        *Type = INTEL_X86_64;
-        break; // x86-64
-      }
-      if (Features & (1 << FEATURE_SSE2)) {
-        *Type = INTEL_PENTIUM_M;
+      if (Features & (1 << X86::FEATURE_SSE4_1)) {
+        *Type = X86::INTEL_CORE2; // "penryn"
+        *Subtype = X86::INTEL_CORE2_45;
         break;
       }
-      if (Features & (1 << FEATURE_SSE)) {
-        *Type = INTEL_PENTIUM_III;
+      if (Features & (1 << X86::FEATURE_SSSE3)) {
+        if (Features2 & (1 << (X86::FEATURE_MOVBE - 32))) {
+          *Type = X86::INTEL_BONNELL; // "bonnell"
+        } else {
+          *Type = X86::INTEL_CORE2; // "core2"
+          *Subtype = X86::INTEL_CORE2_65;
+        }
         break;
       }
-      if (Features & (1 << FEATURE_MMX)) {
-        *Type = INTEL_PENTIUM_II;
+      if (Features2 & (1 << (X86::FEATURE_EM64T - 32))) {
+        *Type = X86::INTEL_CORE2; // "core2"
+        *Subtype = X86::INTEL_CORE2_65;
         break;
       }
-      *Type = INTEL_PENTIUM_PRO;
+      if (Features & (1 << X86::FEATURE_SSE3)) {
+        *Type = X86::INTEL_CORE_DUO;
+        break;
+      }
+      if (Features & (1 << X86::FEATURE_SSE2)) {
+        *Type = X86::INTEL_PENTIUM_M;
+        break;
+      }
+      if (Features & (1 << X86::FEATURE_SSE)) {
+        *Type = X86::INTEL_PENTIUM_III;
+        break;
+      }
+      if (Features & (1 << X86::FEATURE_MMX)) {
+        *Type = X86::INTEL_PENTIUM_II;
+        break;
+      }
+      *Type = X86::INTEL_PENTIUM_PRO;
       break;
     }
     break;
   case 15: {
-    switch (Model) {
-    case 0: // Pentium 4 processor, Intel Xeon processor. All processors are
-            // model 00h and manufactured using the 0.18 micron process.
-    case 1: // Pentium 4 processor, Intel Xeon processor, Intel Xeon
-            // processor MP, and Intel Celeron processor. All processors are
-            // model 01h and manufactured using the 0.18 micron process.
-    case 2: // Pentium 4 processor, Mobile Intel Pentium 4 processor - M,
-            // Intel Xeon processor, Intel Xeon processor MP, Intel Celeron
-            // processor, and Mobile Intel Celeron processor. All processors
-            // are model 02h and manufactured using the 0.13 micron process.
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
-                                                         : INTEL_PENTIUM_IV);
-      break;
-
-    case 3: // Pentium 4 processor, Intel Xeon processor, Intel Celeron D
-            // processor. All processors are model 03h and manufactured using
-            // the 90 nm process.
-    case 4: // Pentium 4 processor, Pentium 4 processor Extreme Edition,
-            // Pentium D processor, Intel Xeon processor, Intel Xeon
-            // processor MP, Intel Celeron D processor. All processors are
-            // model 04h and manufactured using the 90 nm process.
-    case 6: // Pentium 4 processor, Pentium D processor, Pentium processor
-            // Extreme Edition, Intel Xeon processor, Intel Xeon processor
-            // MP, Intel Celeron D processor. All processors are model 06h
-            // and manufactured using the 65 nm process.
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_NOCONA
-                                                         : INTEL_PRESCOTT);
-      break;
-
-    default:
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
-                                                         : INTEL_PENTIUM_IV);
+    if (Features2 & (1 << (X86::FEATURE_EM64T - 32))) {
+      *Type = X86::INTEL_NOCONA;
       break;
     }
+    if (Features & (1 << X86::FEATURE_SSE3)) {
+      *Type = X86::INTEL_PRESCOTT;
+      break;
+    }
+    *Type = X86::INTEL_PENTIUM_IV;
     break;
   }
   default:
@@ -826,85 +779,83 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   // from the information returned from CPUID.
   switch (Family) {
   case 4:
-    *Type = AMD_i486;
+    *Type = X86::AMD_i486;
     break;
   case 5:
-    *Type = AMDPENTIUM;
+    *Type = X86::AMDPENTIUM;
     switch (Model) {
     case 6:
     case 7:
-      *Subtype = AMDPENTIUM_K6;
+      *Subtype = X86::AMDPENTIUM_K6;
       break; // "k6"
     case 8:
-      *Subtype = AMDPENTIUM_K62;
+      *Subtype = X86::AMDPENTIUM_K62;
       break; // "k6-2"
     case 9:
     case 13:
-      *Subtype = AMDPENTIUM_K63;
+      *Subtype = X86::AMDPENTIUM_K63;
       break; // "k6-3"
     case 10:
-      *Subtype = AMDPENTIUM_GEODE;
+      *Subtype = X86::AMDPENTIUM_GEODE;
       break; // "geode"
     }
     break;
   case 6:
-    *Type = AMDATHLON;
-    if (Features & (1 << FEATURE_SSE)) {
-      *Subtype = AMDATHLON_XP;
+    if (Features & (1 << X86::FEATURE_SSE)) {
+      *Type = X86::AMD_ATHLON_XP;
       break; // "athlon-xp"
     }
-    *Subtype = AMDATHLON_CLASSIC;
+    *Type = X86::AMD_ATHLON;
     break; // "athlon"
   case 15:
-    *Type = AMDATHLON;
-    if (Features & (1 << FEATURE_SSE3)) {
-      *Subtype = AMDATHLON_K8SSE3;
+    if (Features & (1 << X86::FEATURE_SSE3)) {
+      *Type = X86::AMD_K8SSE3;
       break; // "k8-sse3"
     }
-    *Subtype = AMDATHLON_K8;
+    *Type = X86::AMD_K8;
     break; // "k8"
   case 16:
-    *Type = AMDFAM10H; // "amdfam10"
+    *Type = X86::AMDFAM10H; // "amdfam10"
     switch (Model) {
     case 2:
-      *Subtype = AMDFAM10H_BARCELONA;
+      *Subtype = X86::AMDFAM10H_BARCELONA;
       break;
     case 4:
-      *Subtype = AMDFAM10H_SHANGHAI;
+      *Subtype = X86::AMDFAM10H_SHANGHAI;
       break;
     case 8:
-      *Subtype = AMDFAM10H_ISTANBUL;
+      *Subtype = X86::AMDFAM10H_ISTANBUL;
       break;
     }
     break;
   case 20:
-    *Type = AMD_BTVER1;
+    *Type = X86::AMD_BTVER1;
     break; // "btver1";
   case 21:
-    *Type = AMDFAM15H;
+    *Type = X86::AMDFAM15H;
     if (Model >= 0x60 && Model <= 0x7f) {
-      *Subtype = AMDFAM15H_BDVER4;
+      *Subtype = X86::AMDFAM15H_BDVER4;
       break; // "bdver4"; 60h-7Fh: Excavator
     }
     if (Model >= 0x30 && Model <= 0x3f) {
-      *Subtype = AMDFAM15H_BDVER3;
+      *Subtype = X86::AMDFAM15H_BDVER3;
       break; // "bdver3"; 30h-3Fh: Steamroller
     }
     if (Model >= 0x10 && Model <= 0x1f) {
-      *Subtype = AMDFAM15H_BDVER2;
+      *Subtype = X86::AMDFAM15H_BDVER2;
       break; // "bdver2"; 10h-1Fh: Piledriver
     }
     if (Model <= 0x0f) {
-      *Subtype = AMDFAM15H_BDVER1;
+      *Subtype = X86::AMDFAM15H_BDVER1;
       break; // "bdver1"; 00h-0Fh: Bulldozer
     }
     break;
   case 22:
-    *Type = AMD_BTVER2;
+    *Type = X86::AMD_BTVER2;
     break; // "btver2"
   case 23:
-    *Type = AMDFAM17H;
-    *Subtype = AMDFAM17H_ZNVER1;
+    *Type = X86::AMDFAM17H;
+    *Subtype = X86::AMDFAM17H_ZNVER1;
     break;
   default:
     break; // "generic"
@@ -919,33 +870,33 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   unsigned EAX, EBX;
 
   if ((EDX >> 15) & 1)
-    Features |= 1 << FEATURE_CMOV;
+    Features |= 1 << X86::FEATURE_CMOV;
   if ((EDX >> 23) & 1)
-    Features |= 1 << FEATURE_MMX;
+    Features |= 1 << X86::FEATURE_MMX;
   if ((EDX >> 25) & 1)
-    Features |= 1 << FEATURE_SSE;
+    Features |= 1 << X86::FEATURE_SSE;
   if ((EDX >> 26) & 1)
-    Features |= 1 << FEATURE_SSE2;
+    Features |= 1 << X86::FEATURE_SSE2;
 
   if ((ECX >> 0) & 1)
-    Features |= 1 << FEATURE_SSE3;
+    Features |= 1 << X86::FEATURE_SSE3;
   if ((ECX >> 1) & 1)
-    Features |= 1 << FEATURE_PCLMUL;
+    Features |= 1 << X86::FEATURE_PCLMUL;
   if ((ECX >> 9) & 1)
-    Features |= 1 << FEATURE_SSSE3;
+    Features |= 1 << X86::FEATURE_SSSE3;
   if ((ECX >> 12) & 1)
-    Features |= 1 << FEATURE_FMA;
+    Features |= 1 << X86::FEATURE_FMA;
   if ((ECX >> 19) & 1)
-    Features |= 1 << FEATURE_SSE4_1;
+    Features |= 1 << X86::FEATURE_SSE4_1;
   if ((ECX >> 20) & 1)
-    Features |= 1 << FEATURE_SSE4_2;
+    Features |= 1 << X86::FEATURE_SSE4_2;
   if ((ECX >> 23) & 1)
-    Features |= 1 << FEATURE_POPCNT;
+    Features |= 1 << X86::FEATURE_POPCNT;
   if ((ECX >> 25) & 1)
-    Features |= 1 << FEATURE_AES;
+    Features |= 1 << X86::FEATURE_AES;
 
   if ((ECX >> 22) & 1)
-    Features2 |= 1 << (FEATURE_MOVBE - 32);
+    Features2 |= 1 << (X86::FEATURE_MOVBE - 32);
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
@@ -956,45 +907,49 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasAVX512Save = HasAVX && ((EAX & 0xe0) == 0xe0);
 
   if (HasAVX)
-    Features |= 1 << FEATURE_AVX;
+    Features |= 1 << X86::FEATURE_AVX;
 
   bool HasLeaf7 =
       MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
   if (HasLeaf7 && ((EBX >> 3) & 1))
-    Features |= 1 << FEATURE_BMI;
+    Features |= 1 << X86::FEATURE_BMI;
   if (HasLeaf7 && ((EBX >> 5) & 1) && HasAVX)
-    Features |= 1 << FEATURE_AVX2;
+    Features |= 1 << X86::FEATURE_AVX2;
   if (HasLeaf7 && ((EBX >> 9) & 1))
-    Features |= 1 << FEATURE_BMI2;
+    Features |= 1 << X86::FEATURE_BMI2;
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512F;
+    Features |= 1 << X86::FEATURE_AVX512F;
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512DQ;
+    Features |= 1 << X86::FEATURE_AVX512DQ;
   if (HasLeaf7 && ((EBX >> 19) & 1))
-    Features2 |= 1 << (FEATURE_ADX - 32);
+    Features2 |= 1 << (X86::FEATURE_ADX - 32);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512IFMA;
+    Features |= 1 << X86::FEATURE_AVX512IFMA;
+  if (HasLeaf7 && ((EBX >> 23) & 1))
+    Features2 |= 1 << (X86::FEATURE_CLFLUSHOPT - 32);
   if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512PF;
+    Features |= 1 << X86::FEATURE_AVX512PF;
   if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512ER;
+    Features |= 1 << X86::FEATURE_AVX512ER;
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512CD;
+    Features |= 1 << X86::FEATURE_AVX512CD;
+  if (HasLeaf7 && ((EBX >> 29) & 1))
+    Features2 |= 1 << (X86::FEATURE_SHA - 32);
   if (HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512BW;
+    Features |= 1 << X86::FEATURE_AVX512BW;
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512VL;
+    Features |= 1 << X86::FEATURE_AVX512VL;
 
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512VBMI;
+    Features |= 1 << X86::FEATURE_AVX512VBMI;
   if (HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512VPOPCNTDQ;
+    Features |= 1 << X86::FEATURE_AVX512VPOPCNTDQ;
 
   if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX5124VNNIW;
+    Features |= 1 << X86::FEATURE_AVX5124VNNIW;
   if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX5124FMAPS;
+    Features |= 1 << X86::FEATURE_AVX5124FMAPS;
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
@@ -1002,14 +957,14 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
   if (HasExtLeaf1 && ((ECX >> 6) & 1))
-    Features |= 1 << FEATURE_SSE4_A;
+    Features |= 1 << X86::FEATURE_SSE4_A;
   if (HasExtLeaf1 && ((ECX >> 11) & 1))
-    Features |= 1 << FEATURE_XOP;
+    Features |= 1 << X86::FEATURE_XOP;
   if (HasExtLeaf1 && ((ECX >> 16) & 1))
-    Features |= 1 << FEATURE_FMA4;
+    Features |= 1 << X86::FEATURE_FMA4;
 
   if (HasExtLeaf1 && ((EDX >> 29) & 1))
-    Features2 |= 1 << (FEATURE_EM64T - 32);
+    Features2 |= 1 << (X86::FEATURE_EM64T - 32);
 
   *FeaturesOut  = Features;
   *Features2Out = Features2;
@@ -1037,135 +992,28 @@ StringRef sys::getHostCPUName() {
   detectX86FamilyModel(EAX, &Family, &Model);
   getAvailableFeatures(ECX, EDX, MaxLeaf, &Features, &Features2);
 
-  unsigned Type;
-  unsigned Subtype;
+  unsigned Type = 0;
+  unsigned Subtype = 0;
 
   if (Vendor == SIG_INTEL) {
     getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
                                     Features2, &Type, &Subtype);
-    switch (Type) {
-    case INTEL_i386:
-      return "i386";
-    case INTEL_i486:
-      return "i486";
-    case INTEL_PENTIUM:
-      if (Subtype == INTEL_PENTIUM_MMX)
-        return "pentium-mmx";
-      return "pentium";
-    case INTEL_PENTIUM_PRO:
-      return "pentiumpro";
-    case INTEL_PENTIUM_II:
-      return "pentium2";
-    case INTEL_PENTIUM_III:
-      return "pentium3";
-    case INTEL_PENTIUM_IV:
-      return "pentium4";
-    case INTEL_PENTIUM_M:
-      return "pentium-m";
-    case INTEL_CORE_DUO:
-      return "yonah";
-    case INTEL_CORE2:
-      switch (Subtype) {
-      case INTEL_CORE2_65:
-        return "core2";
-      case INTEL_CORE2_45:
-        return "penryn";
-      default:
-        llvm_unreachable("Unexpected subtype!");
-      }
-    case INTEL_COREI7:
-      switch (Subtype) {
-      case INTEL_COREI7_NEHALEM:
-        return "nehalem";
-      case INTEL_COREI7_WESTMERE:
-        return "westmere";
-      case INTEL_COREI7_SANDYBRIDGE:
-        return "sandybridge";
-      case INTEL_COREI7_IVYBRIDGE:
-        return "ivybridge";
-      case INTEL_COREI7_HASWELL:
-        return "haswell";
-      case INTEL_COREI7_BROADWELL:
-        return "broadwell";
-      case INTEL_COREI7_SKYLAKE:
-        return "skylake";
-      case INTEL_COREI7_SKYLAKE_AVX512:
-        return "skylake-avx512";
-      default:
-        llvm_unreachable("Unexpected subtype!");
-      }
-    case INTEL_BONNELL:
-      return "bonnell";
-    case INTEL_SILVERMONT:
-      return "silvermont";
-    case INTEL_GOLDMONT:
-      return "goldmont";
-    case INTEL_KNL:
-      return "knl";
-    case INTEL_X86_64:
-      return "x86-64";
-    case INTEL_NOCONA:
-      return "nocona";
-    case INTEL_PRESCOTT:
-      return "prescott";
-    default:
-      break;
-    }
   } else if (Vendor == SIG_AMD) {
     getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
-    switch (Type) {
-    case AMD_i486:
-      return "i486";
-    case AMDPENTIUM:
-      switch (Subtype) {
-      case AMDPENTIUM_K6:
-        return "k6";
-      case AMDPENTIUM_K62:
-        return "k6-2";
-      case AMDPENTIUM_K63:
-        return "k6-3";
-      case AMDPENTIUM_GEODE:
-        return "geode";
-      default:
-        return "pentium";
-      }
-    case AMDATHLON:
-      switch (Subtype) {
-      case AMDATHLON_CLASSIC:
-        return "athlon";
-      case AMDATHLON_XP:
-        return "athlon-xp";
-      case AMDATHLON_K8:
-        return "k8";
-      case AMDATHLON_K8SSE3:
-        return "k8-sse3";
-      default:
-        llvm_unreachable("Unexpected subtype!");
-      }
-    case AMDFAM10H:
-      return "amdfam10";
-    case AMD_BTVER1:
-      return "btver1";
-    case AMDFAM15H:
-      switch (Subtype) {
-      default: // There are gaps in the subtype detection.
-      case AMDFAM15H_BDVER1:
-        return "bdver1";
-      case AMDFAM15H_BDVER2:
-        return "bdver2";
-      case AMDFAM15H_BDVER3:
-        return "bdver3";
-      case AMDFAM15H_BDVER4:
-        return "bdver4";
-      }
-    case AMD_BTVER2:
-      return "btver2";
-    case AMDFAM17H:
-      return "znver1";
-    default:
-      break;
-    }
   }
+
+  // Check subtypes first since those are more specific.
+#define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
+  if (Subtype == X86::ENUM) \
+    return ARCHNAME;
+#include "llvm/Support/X86TargetParser.def"
+
+  // Now check types.
+#define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
+  if (Type == X86::ENUM) \
+    return ARCHNAME;
+#include "llvm/Support/X86TargetParser.def"
+
   return "generic";
 }
 
@@ -1323,95 +1171,99 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
 
-  Features["cmov"] = (EDX >> 15) & 1;
-  Features["mmx"] = (EDX >> 23) & 1;
-  Features["sse"] = (EDX >> 25) & 1;
-  Features["sse2"] = (EDX >> 26) & 1;
-  Features["sse3"] = (ECX >> 0) & 1;
-  Features["ssse3"] = (ECX >> 9) & 1;
+  Features["cmov"]   = (EDX >> 15) & 1;
+  Features["mmx"]    = (EDX >> 23) & 1;
+  Features["sse"]    = (EDX >> 25) & 1;
+  Features["sse2"]   = (EDX >> 26) & 1;
+
+  Features["sse3"]   = (ECX >>  0) & 1;
+  Features["pclmul"] = (ECX >>  1) & 1;
+  Features["ssse3"]  = (ECX >>  9) & 1;
+  Features["cx16"]   = (ECX >> 13) & 1;
   Features["sse4.1"] = (ECX >> 19) & 1;
   Features["sse4.2"] = (ECX >> 20) & 1;
-
-  Features["pclmul"] = (ECX >> 1) & 1;
-  Features["cx16"] = (ECX >> 13) & 1;
-  Features["movbe"] = (ECX >> 22) & 1;
+  Features["movbe"]  = (ECX >> 22) & 1;
   Features["popcnt"] = (ECX >> 23) & 1;
-  Features["aes"] = (ECX >> 25) & 1;
-  Features["rdrnd"] = (ECX >> 30) & 1;
+  Features["aes"]    = (ECX >> 25) & 1;
+  Features["rdrnd"]  = (ECX >> 30) & 1;
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
   // switch, then we have full AVX support.
   bool HasAVXSave = ((ECX >> 27) & 1) && ((ECX >> 28) & 1) &&
                     !getX86XCR0(&EAX, &EDX) && ((EAX & 0x6) == 0x6);
-  Features["avx"] = HasAVXSave;
-  Features["fma"] = HasAVXSave && (ECX >> 12) & 1;
-  Features["f16c"] = HasAVXSave && (ECX >> 29) & 1;
-
-  // Only enable XSAVE if OS has enabled support for saving YMM state.
-  Features["xsave"] = HasAVXSave && (ECX >> 26) & 1;
-
   // AVX512 requires additional context to be saved by the OS.
   bool HasAVX512Save = HasAVXSave && ((EAX & 0xe0) == 0xe0);
+
+  Features["avx"]   = HasAVXSave;
+  Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
+  // Only enable XSAVE if OS has enabled support for saving YMM state.
+  Features["xsave"] = ((ECX >> 26) & 1) && HasAVXSave;
+  Features["f16c"]  = ((ECX >> 29) & 1) && HasAVXSave;
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  Features["lzcnt"] = HasExtLeaf1 && ((ECX >> 5) & 1);
-  Features["sse4a"] = HasExtLeaf1 && ((ECX >> 6) & 1);
-  Features["prfchw"] = HasExtLeaf1 && ((ECX >> 8) & 1);
-  Features["xop"] = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
-  Features["lwp"] = HasExtLeaf1 && ((ECX >> 15) & 1);
-  Features["fma4"] = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
-  Features["tbm"] = HasExtLeaf1 && ((ECX >> 21) & 1);
+  Features["lzcnt"]  = HasExtLeaf1 && ((ECX >>  5) & 1);
+  Features["sse4a"]  = HasExtLeaf1 && ((ECX >>  6) & 1);
+  Features["prfchw"] = HasExtLeaf1 && ((ECX >>  8) & 1);
+  Features["xop"]    = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
+  Features["lwp"]    = HasExtLeaf1 && ((ECX >> 15) & 1);
+  Features["fma4"]   = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
+  Features["tbm"]    = HasExtLeaf1 && ((ECX >> 21) & 1);
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
-                     !getX86CpuIDAndInfoEx(0x80000008,0x0, &EAX, &EBX, &ECX, &EDX);
+                     !getX86CpuIDAndInfo(0x80000008, &EAX, &EBX, &ECX, &EDX);
   Features["clzero"] = HasExtLeaf8 && ((EBX >> 0) & 1);
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
+  Features["fsgsbase"]   = HasLeaf7 && ((EBX >>  0) & 1);
+  Features["sgx"]        = HasLeaf7 && ((EBX >>  2) & 1);
+  Features["bmi"]        = HasLeaf7 && ((EBX >>  3) & 1);
   // AVX2 is only supported if we have the OS save support from AVX.
-  Features["avx2"] = HasAVXSave && HasLeaf7 && ((EBX >> 5) & 1);
-
-  Features["fsgsbase"] = HasLeaf7 && ((EBX >> 0) & 1);
-  Features["sgx"] = HasLeaf7 && ((EBX >> 2) & 1);
-  Features["bmi"] = HasLeaf7 && ((EBX >> 3) & 1);
-  Features["bmi2"] = HasLeaf7 && ((EBX >> 8) & 1);
-  Features["rtm"] = HasLeaf7 && ((EBX >> 11) & 1);
-  Features["rdseed"] = HasLeaf7 && ((EBX >> 18) & 1);
-  Features["adx"] = HasLeaf7 && ((EBX >> 19) & 1);
-  Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
-  Features["clwb"] = HasLeaf7 && ((EBX >> 24) & 1);
-  Features["sha"] = HasLeaf7 && ((EBX >> 29) & 1);
-
+  Features["avx2"]       = HasLeaf7 && ((EBX >>  5) & 1) && HasAVXSave;
+  Features["bmi2"]       = HasLeaf7 && ((EBX >>  8) & 1);
+  Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
-  Features["avx512f"] = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  Features["avx512dq"] = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
+  Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
+  Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
+  Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
+  Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
   Features["avx512ifma"] = HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save;
-  Features["avx512pf"] = HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save;
-  Features["avx512er"] = HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save;
-  Features["avx512cd"] = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
-  Features["avx512bw"] = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
-  Features["avx512vl"] = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
+  Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
+  Features["clwb"]       = HasLeaf7 && ((EBX >> 24) & 1);
+  Features["avx512pf"]   = HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save;
+  Features["avx512er"]   = HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save;
+  Features["avx512cd"]   = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
+  Features["sha"]        = HasLeaf7 && ((EBX >> 29) & 1);
+  Features["avx512bw"]   = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
+  Features["avx512vl"]   = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
 
-  Features["prefetchwt1"] = HasLeaf7 && (ECX & 1);
-  Features["avx512vbmi"] = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
-  Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;  
-  // Enable protection keys
-  Features["pku"] = HasLeaf7 && ((ECX >> 4) & 1);
+  Features["prefetchwt1"]     = HasLeaf7 && ((ECX >>  0) & 1);
+  Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
+  Features["pku"]             = HasLeaf7 && ((ECX >>  4) & 1);
+  Features["avx512vbmi2"]     = HasLeaf7 && ((ECX >>  6) & 1) && HasAVX512Save;
+  Features["shstk"]           = HasLeaf7 && ((ECX >>  7) & 1);
+  Features["gfni"]            = HasLeaf7 && ((ECX >>  8) & 1);
+  Features["vaes"]            = HasLeaf7 && ((ECX >>  9) & 1) && HasAVXSave;
+  Features["vpclmulqdq"]      = HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave;
+  Features["avx512vnni"]      = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
+  Features["avx512bitalg"]    = HasLeaf7 && ((ECX >> 12) & 1) && HasAVX512Save;
+  Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
+  Features["ibt"]             = HasLeaf7 && ((EDX >> 20) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
 
   // Only enable XSAVE if OS has enabled support for saving YMM state.
-  Features["xsaveopt"] = HasAVXSave && HasLeafD && ((EAX >> 0) & 1);
-  Features["xsavec"] = HasAVXSave && HasLeafD && ((EAX >> 1) & 1);
-  Features["xsaves"] = HasAVXSave && HasLeafD && ((EAX >> 3) & 1);
+  Features["xsaveopt"] = HasLeafD && ((EAX >> 0) & 1) && HasAVXSave;
+  Features["xsavec"]   = HasLeafD && ((EAX >> 1) & 1) && HasAVXSave;
+  Features["xsaves"]   = HasLeafD && ((EAX >> 3) & 1) && HasAVXSave;
 
   return true;
 }

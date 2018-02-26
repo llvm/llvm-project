@@ -6,7 +6,7 @@
 ; location info.
 ; 
 ; CHECK:      [[DLOC:![0-9]+]] = !DILocation(line: 2, column: 2, scope: !{{[0-9]+}})
-; CHECK:      TEST64rr{{.*}}%rsi, %rsi, implicit-def %eflags
+; CHECK:      TEST64rr{{.*}}%rsi, renamable %rsi, implicit-def %eflags
 ; CHECK-NEXT: JNE_1{{.*}}, debug-location [[DLOC]]
 
 target triple = "x86_64-unknown-linux-gnu"

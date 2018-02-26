@@ -57,8 +57,8 @@ public:
   };
 
 private:
-  /// \brief The static option information table.
-  ArrayRef<Info> OptionInfos;
+  /// \brief The option information table.
+  std::vector<Info> OptionInfos;
   bool IgnoreCase;
 
   unsigned TheInputOptionID = 0;
@@ -143,6 +143,17 @@ public:
   std::vector<std::string> findByPrefix(StringRef Cur,
                                         unsigned short DisableFlags) const;
 
+  /// Add Values to Option's Values class
+  ///
+  /// \param [in] Option - Prefix + Name of the flag which Values will be
+  ///  changed. For example, "-analyzer-checker".
+  /// \param [in] Values - String of Values seperated by ",", such as
+  ///  "foo, bar..", where foo and bar is the argument which the Option flag
+  ///  takes
+  ///
+  /// \return true in success, and false in fail.
+  bool addValues(const char *Option, const char *Values);
+
   /// \brief Parse a single argument; returning the new argument and
   /// updating Index.
   ///
@@ -191,12 +202,16 @@ public:
   /// \param FlagsToInclude - If non-zero, only include options with any
   ///                         of these flags set.
   /// \param FlagsToExclude - Exclude options with any of these flags set.
-  void PrintHelp(raw_ostream &OS, const char *Name,
-                 const char *Title, unsigned FlagsToInclude,
-                 unsigned FlagsToExclude) const;
+  /// \param ShowAllAliases - If true, display all options including aliases
+  ///                         that don't have help texts. By default, we display
+  ///                         only options that are not hidden and have help
+  ///                         texts.
+  void PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
+                 unsigned FlagsToInclude, unsigned FlagsToExclude,
+                 bool ShowAllAliases) const;
 
-  void PrintHelp(raw_ostream &OS, const char *Name,
-                  const char *Title, bool ShowHidden = false) const;
+  void PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
+                 bool ShowHidden = false, bool ShowAllAliases = false) const;
 };
 
 } // end namespace opt

@@ -15,6 +15,7 @@
 #define LLVM_OBJECT_BINARY_H
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
@@ -43,6 +44,8 @@ protected:
     ID_COFFImportFile,
     ID_IR,                 // LLVM IR
 
+    ID_WinRes, // Windows resource (.res) file.
+
     // Object and children.
     ID_StartObjects,
     ID_COFF,
@@ -56,8 +59,6 @@ protected:
     ID_MachO32B, // MachO 32-bit, big endian
     ID_MachO64L, // MachO 64-bit, little endian
     ID_MachO64B, // MachO 64-bit, big endian
-
-    ID_WinRes, // Windows resource (.res) file.
 
     ID_Wasm,
 
@@ -142,6 +143,16 @@ public:
     if (isELF())
       return Triple::ELF;
     return Triple::UnknownObjectFormat;
+  }
+
+  static std::error_code checkOffset(MemoryBufferRef M, uintptr_t Addr,
+                                     const uint64_t Size) {
+    if (Addr + Size < Addr || Addr + Size < Size ||
+        Addr + Size > uintptr_t(M.getBufferEnd()) ||
+        Addr < uintptr_t(M.getBufferStart())) {
+      return object_error::unexpected_eof;
+    }
+    return std::error_code();
   }
 };
 

@@ -164,8 +164,6 @@ class CodeGenTypes {
 
   llvm::SmallSet<const Type *, 8> RecordsWithOpaqueMemberPointers;
 
-  unsigned ClangCallConvToLLVMCallConv(CallingConv CC);
-
 public:
   CodeGenTypes(CodeGenModule &cgm);
   ~CodeGenTypes();
@@ -178,6 +176,10 @@ public:
   const TargetInfo &getTarget() const { return Target; }
   CGCXXABI &getCXXABI() const { return TheCXXABI; }
   llvm::LLVMContext &getLLVMContext() { return TheModule.getContext(); }
+  const CodeGenOptions &getCodeGenOpts() const;
+
+  /// Convert clang calling convention to LLVM callilng convention.
+  unsigned ClangCallConvToLLVMCallConv(CallingConv CC);
 
   /// ConvertType - Convert type T into a llvm::Type.
   llvm::Type *ConvertType(QualType T);

@@ -18,6 +18,6 @@ void test() {
 // CHECK: 0.	Program arguments: {{.*}}clang
 // CHECK-NEXT: 1.	<eof> parser at end of file
 // CHECK-NEXT: 2. While analyzing stack: 
-// CHECK-NEXT:  #0 void inlined()
-// CHECK-NEXT:  #1 void test()
+// CHECK-NEXT:  #0 Calling inlined at line 15
+// CHECK-NEXT:  #1 Calling test
 // CHECK-NEXT: 3.	{{.*}}crash-trace.c:{{[0-9]+}}:3: Error evaluating statement

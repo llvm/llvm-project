@@ -9,7 +9,7 @@
 ; Expect no line table entry since there are no functions and file references in this compile unit
 ; CHECK: .debug_line contents:
 ; CHECK: Line table prologue:
-; CHECK: total_length: 0x00000019
+; CHECK: total_length: 0x0000001a
 ; CHECK-NOT: file_names[
 
 ; CHECK-NOT: .debug_pubnames contents:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
 
 ; Example that requires splitting and expanding a vector shift.
 define <2 x i64> @update(<2 x i64> %val) nounwind readnone {

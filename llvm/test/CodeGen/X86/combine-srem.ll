@@ -6,11 +6,11 @@
 ; fold (srem undef, x) -> 0
 define <4 x i32> @combine_vec_srem_undef0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_srem_undef0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_srem_undef0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    retq
   %1 = srem <4 x i32> undef, %x
   ret <4 x i32> %1
@@ -19,11 +19,11 @@ define <4 x i32> @combine_vec_srem_undef0(<4 x i32> %x) {
 ; fold (srem x, undef) -> undef
 define <4 x i32> @combine_vec_srem_undef1(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_srem_undef1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_srem_undef1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    retq
   %1 = srem <4 x i32> %x, undef
   ret <4 x i32> %1
@@ -32,17 +32,17 @@ define <4 x i32> @combine_vec_srem_undef1(<4 x i32> %x) {
 ; fold (srem x, y) -> (urem x, y) iff x and y are positive
 define <4 x i32> @combine_vec_srem_by_pos0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_srem_by_pos0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_srem_by_pos0:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_srem_by_pos0:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -53,12 +53,12 @@ define <4 x i32> @combine_vec_srem_by_pos0(<4 x i32> %x) {
 
 define <4 x i32> @combine_vec_srem_by_pos1(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_srem_by_pos1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_srem_by_pos1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>

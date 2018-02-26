@@ -152,6 +152,11 @@ void f_dynamic_noexcept_none() throw();
 void f_dynamic_noexcept() throw(int);
 void f_dynamic_noexcept_any() throw(...);
 
+enum EnumType { Enumerator };
+struct Z {
+    EnumType e = Enumerator;
+};
+
 // RUN: c-index-test -cursor-at=%s:6:4 %s | FileCheck -check-prefix=CHECK-COMPLETION-1 %s
 // CHECK-COMPLETION-1: CXXConstructor=X:6:3
 // CHECK-COMPLETION-1-NEXT: Completion string: {TypedText X}{LeftParen (}{Placeholder int}{Comma , }{Placeholder int}{RightParen )}
@@ -274,4 +279,7 @@ void f_dynamic_noexcept_any() throw(...);
 // CHECK-FORRANGE: 141:13 VarDecl=lv:141:13 (Definition) Extent=[141:8 - 141:17] Spelling=lv ([141:13 - 141:15])
 // CHECK-FORRANGE: 141:18 DeclRefExpr=coll:140:20 Extent=[141:18 - 141:22] Spelling=coll ([141:18 - 141:22])
 // CHECK-FORRANGE: 142:11 DeclRefExpr=lv:141:13 Extent=[142:11 - 142:13] Spelling=lv ([142:11 - 142:13])
+
+// RUN: c-index-test -cursor-at=%s:157:18 -std=c++11 %s | FileCheck -check-prefix=CHECK-INCLASSINITIALIZER %s
+// CHECK-INCLASSINITIALIZER: 157:18 DeclRefExpr=Enumerator:155:17 Extent=[157:18 - 157:28] Spelling=Enumerator ([157:18 - 157:28])
 

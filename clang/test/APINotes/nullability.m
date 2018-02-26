@@ -1,9 +1,9 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: %clang_cc1 -fmodules  -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -Wno-private-module -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 
 // Test with Swift version 3.0. This should only affect the few APIs that have an entry in the 3.0 tables.
 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fapinotes-swift-version=3.0 -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify -DSWIFT_VERSION_3_0 -fmodules-ignore-macro=SWIFT_VERSION_3_0
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -Wno-private-module -fapinotes-swift-version=3.0 -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify -DSWIFT_VERSION_3_0 -fmodules-ignore-macro=SWIFT_VERSION_3_0
 
 #import <SomeKit/SomeKit.h>
 

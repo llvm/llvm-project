@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 ; CHECK: movl {{.}}12, %eax
 ; CHECK: movl {{.}}24, %edx

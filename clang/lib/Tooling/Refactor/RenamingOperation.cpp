@@ -29,7 +29,7 @@ namespace clang {
 namespace tooling {
 namespace rename {
 
-bool isNewNameValid(const SymbolName &NewName, bool IsSymbolObjCSelector,
+bool isNewNameValid(const OldSymbolName &NewName, bool IsSymbolObjCSelector,
                     IdentifierTable &IDs, const LangOptions &LangOpts) {
   Token Tok;
   if (IsSymbolObjCSelector) {
@@ -53,16 +53,17 @@ bool isNewNameValid(const SymbolName &NewName, bool IsSymbolObjCSelector,
   return true;
 }
 
-bool isNewNameValid(const SymbolName &NewName, const SymbolOperation &Operation,
-                    IdentifierTable &IDs, const LangOptions &LangOpts) {
+bool isNewNameValid(const OldSymbolName &NewName,
+                    const SymbolOperation &Operation, IdentifierTable &IDs,
+                    const LangOptions &LangOpts) {
   assert(!Operation.symbols().empty());
   return isNewNameValid(NewName,
                         Operation.symbols().front().ObjCSelector.hasValue(),
                         IDs, LangOpts);
 }
 
-void determineNewNames(SymbolName NewName, const SymbolOperation &Operation,
-                       SmallVectorImpl<SymbolName> &NewNames,
+void determineNewNames(OldSymbolName NewName, const SymbolOperation &Operation,
+                       SmallVectorImpl<OldSymbolName> &NewNames,
                        const LangOptions &LangOpts) {
   auto Symbols = Operation.symbols();
   assert(!Symbols.empty());
@@ -76,7 +77,7 @@ void determineNewNames(SymbolName NewName, const SymbolOperation &Operation,
 
     auto AddName = [&](const NamedDecl *D, StringRef Name) {
       assert(Symbols.front().FoundDecl == D && "decl is missing");
-      NewNames.push_back(SymbolName(Name, LangOpts));
+      NewNames.push_back(OldSymbolName(Name, LangOpts));
       Symbols = Symbols.drop_front();
     };
 

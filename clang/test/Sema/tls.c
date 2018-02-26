@@ -19,8 +19,4 @@
 // Haiku does not suppport TLS.
 // RUN: not %clang_cc1 -triple i586-pc-haiku -fsyntax-only %s
 
-// Bitrig suppports TLS.
-// RUN: %clang_cc1 -triple x86_64-pc-bitrig -fsyntax-only %s
-// RUN: %clang_cc1 -triple armv6-unknown-bitrig -fsyntax-only %s
-
 __thread int x;

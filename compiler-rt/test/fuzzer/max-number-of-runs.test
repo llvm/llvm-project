@@ -1,0 +1,10 @@
+RUN: %cpp_compiler %S/AccumulateAllocationsTest.cpp -o %t-AccumulateAllocationsTest
+
+RUN: %t-AccumulateAllocationsTest -seed=1 -runs=2 2>&1 | FileCheck %s --check-prefix=CHECK1
+CHECK1: Done 2 runs
+
+RUN: %t-AccumulateAllocationsTest -seed=1 -runs=3 2>&1 | FileCheck %s --check-prefix=CHECK2
+CHECK2: Done 3 runs
+
+RUN: %t-AccumulateAllocationsTest -seed=1 -runs=4 2>&1 | FileCheck %s --check-prefix=CHECK3
+CHECK3: Done 4 runs

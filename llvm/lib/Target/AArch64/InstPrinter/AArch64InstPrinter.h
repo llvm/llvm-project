@@ -158,10 +158,16 @@ protected:
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printSIMDType10Operand(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
+  template<int64_t Angle, int64_t Remainder>
+  void printComplexRotationOp(const MCInst *MI, unsigned OpNo,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
   template<unsigned size>
   void printGPRSeqPairsClassOperand(const MCInst *MI, unsigned OpNum,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O);
+  template <char = 0>
+  void printSVERegOp(const MCInst *MI, unsigned OpNum,
+                    const MCSubtargetInfo &STI, raw_ostream &O);
 };
 
 class AArch64AppleInstPrinter : public AArch64InstPrinter {

@@ -622,7 +622,7 @@ define i32 @test35() nounwind {
              i8* getelementptr (%t1, %t1* bitcast (%t0* @s to %t1*), i32 0, i32 1, i32 0)) nounwind
   ret i32 0
 ; CHECK-LABEL: @test35(
-; CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[NUW:#[0-9]+]]
+; CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[$NUW:#[0-9]+]]
 }
 
 ; Don't treat signed offsets as unsigned.
@@ -942,4 +942,4 @@ define <2 x i32*> @PR32414(i32** %ptr) {
   ret <2 x i32*> %tmp1
 }
 
-; CHECK: attributes [[NUW]] = { nounwind }
+; CHECK: attributes [[$NUW]] = { nounwind }

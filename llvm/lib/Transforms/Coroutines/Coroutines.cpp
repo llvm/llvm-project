@@ -1,4 +1,4 @@
-//===-- Coroutines.cpp ----------------------------------------------------===//
+//===- Coroutines.cpp -----------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,18 +6,38 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 // This file implements the common infrastructure for Coroutine Passes.
+//
 //===----------------------------------------------------------------------===//
 
+#include "CoroInstr.h"
 #include "CoroInternal.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
 
 using namespace llvm;
 
@@ -131,7 +151,6 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
 // that names are intrinsic names.
 bool coro::declaresIntrinsics(Module &M,
                               std::initializer_list<StringRef> List) {
-
   for (StringRef Name : List) {
     assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
     if (M.getNamedValue(Name))
@@ -385,7 +404,17 @@ void coro::Shape::buildFrom(Function &F) {
       auto SI = Suspend->value_begin(), SE = Suspend->value_end();
       auto RI = ResultTys.begin(), RE = ResultTys.end();
       for (; SI != SE && RI != RE; ++SI, ++RI) {
-        if ((*SI)->getType() != *RI) {
+        auto SrcTy = (*SI)->getType();
+        if (SrcTy != *RI) {
+          // The optimizer likes to eliminate bitcasts leading into variadic
+          // calls, but that messes with our invariants.  Re-insert the
+          // bitcast and ignore this type mismatch.
+          if (CastInst::isBitCastable(SrcTy, *RI)) {
+            auto BCI = new BitCastInst(*SI, *RI, "", Suspend);
+            SI->set(BCI);
+            continue;
+          }
+
 #ifndef NDEBUG
           Suspend->dump();
           Prototype->getFunctionType()->dump();
@@ -404,10 +433,15 @@ void coro::Shape::buildFrom(Function &F) {
 
       // Check that the result type of the suspend matches the resume types.
       Type *SResultTy = Suspend->getType();
-      ArrayRef<Type*> SuspendResultTys =
-        (isa<StructType>(SResultTy)
-           ? cast<StructType>(SResultTy)->elements()
-           : SResultTy); // forms an ArrayRef using SResultTy, be careful
+      ArrayRef<Type*> SuspendResultTys;
+      if (SResultTy->isVoidTy()) {
+        // leave as empty array
+      } else if (auto SResultStructTy = dyn_cast<StructType>(SResultTy)) {
+        SuspendResultTys = SResultStructTy->elements();
+      } else {
+        // forms an ArrayRef using SResultTy, be careful
+        SuspendResultTys = SResultTy;
+      }
       if (SuspendResultTys.size() != ResumeTys.size()) {
 #ifndef NDEBUG
         Suspend->dump();

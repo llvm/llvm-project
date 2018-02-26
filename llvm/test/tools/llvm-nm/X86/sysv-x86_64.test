@@ -1,0 +1,13 @@
+RUN: llvm-nm -f sysv %p/Inputs/hello.obj.elf-x86_64 | FileCheck %s --check-prefix=ELF --strict-whitespace
+RUN: llvm-nm -f sysv %p/Inputs/hello.obj.macho-x86_64 2>&1 | FileCheck %s --check-prefix=MACHO --strict-whitespace
+
+ELF: Name                  Value           Class        Type         Size             Line  Section
+ELF: main                |0000000000000000|   T  |                  |0000000000000015|     |
+ELF: puts                |                |   U  |                  |                |     |
+
+MACHO: Name                  Value           Class        Type         Size             Line  Section
+MACHO: EH_frame0           |0000000000000068|   s  |                  |0000000000000000|     |
+MACHO: L_.str              |000000000000003b|   s  |                  |0000000000000000|     |
+MACHO: _main               |0000000000000000|   T  |                  |0000000000000000|     |
+MACHO: _main.eh            |0000000000000080|   S  |                  |0000000000000000|     |
+MACHO: _printf             |                |   U  |                  |                |     |

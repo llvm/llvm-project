@@ -22,6 +22,7 @@ entry:
 ; CHECK-LABEL: Func1
 
 ; CHECK-STATIC: alloca [192 x i8]
+; CHECK-STATIC: %asan_local_stack_base = alloca i64
 ; CHECK-DYNAMIC: alloca i8, i64 192
 
 ; CHECK-NOT: alloca
@@ -43,6 +44,7 @@ entry:
 ; CHECK-LABEL: Func2
 
 ; CHECK-STATIC: alloca [864 x i8]
+; CHECK-STATIC: %asan_local_stack_base = alloca i64
 ; CHECK-DYNAMIC: alloca i8, i64 864
 
 ; CHECK-NOT: alloca
@@ -65,6 +67,7 @@ entry:
 ; CHECK-LABEL: Func3
 
 ; CHECK-STATIC: alloca [768 x i8]
+; CHECK-STATIC: %asan_local_stack_base = alloca i64
 ; CHECK-DYNAMIC: alloca i8, i64 768
 
 ; CHECK-NOT: alloca

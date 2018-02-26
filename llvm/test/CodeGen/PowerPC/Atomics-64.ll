@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64 -verify-machineinstrs
+; RUN: llc < %s -verify-machineinstrs
 ;
 ; This test is disabled until PPCISelLowering learns to insert proper 64-bit
 ; code for ATOMIC_CMP_SWAP. Currently, it is inserting 32-bit instructions with

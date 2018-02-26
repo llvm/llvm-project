@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_XCORE_XCOREINSTRINFO_H
 
 #include "XCoreRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "XCoreGenInstrInfo.inc"

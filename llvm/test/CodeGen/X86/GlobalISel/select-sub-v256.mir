@@ -29,29 +29,15 @@ name:            test_sub_v32i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX2:            registers:
-# AVX2-NEXT:         - { id: 0, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 1, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:        registers:
-# AVX512VL-NEXT:     - { id: 0, class: vr256, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 1, class: vr256, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512BWVL:      registers:
-# AVX512BWVL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPSUBBYrr %0, %1
+# AVX2:                %2:vr256 = VPSUBBYrr %0, %1
 #
-# AVX512VL:            %2 = VPSUBBYrr %0, %1
+# AVX512VL:            %2:vr256 = VPSUBBYrr %0, %1
 #
-# AVX512BWVL:          %2 = VPSUBBZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPSUBBZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -69,29 +55,15 @@ name:            test_sub_v16i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX2:            registers:
-# AVX2-NEXT:         - { id: 0, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 1, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:        registers:
-# AVX512VL-NEXT:     - { id: 0, class: vr256, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 1, class: vr256, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512BWVL:      registers:
-# AVX512BWVL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPSUBWYrr %0, %1
+# AVX2:                %2:vr256 = VPSUBWYrr %0, %1
 #
-# AVX512VL:            %2 = VPSUBWYrr %0, %1
+# AVX512VL:            %2:vr256 = VPSUBWYrr %0, %1
 #
-# AVX512BWVL:          %2 = VPSUBWZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPSUBWZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -109,29 +81,15 @@ name:            test_sub_v8i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX2:            registers:
-# AVX2-NEXT:         - { id: 0, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 1, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:        registers:
-# AVX512VL-NEXT:     - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 1, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 2, class: vr256x, preferred-register: '' }
-#
-# AVX512BWVL:      registers:
-# AVX512BWVL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPSUBDYrr %0, %1
+# AVX2:                %2:vr256 = VPSUBDYrr %0, %1
 #
-# AVX512VL:            %2 = VPSUBDZ256rr %0, %1
+# AVX512VL:            %2:vr256x = VPSUBDZ256rr %0, %1
 #
-# AVX512BWVL:          %2 = VPSUBDZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPSUBDZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -149,29 +107,15 @@ name:            test_sub_v4i64
 alignment:       4
 legalized:       true
 regBankSelected: true
-# AVX2:            registers:
-# AVX2-NEXT:         - { id: 0, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 1, class: vr256, preferred-register: '' }
-# AVX2-NEXT:         - { id: 2, class: vr256, preferred-register: '' }
-#
-# AVX512VL:        registers:
-# AVX512VL-NEXT:     - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 1, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:     - { id: 2, class: vr256x, preferred-register: '' }
-#
-# AVX512BWVL:      registers:
-# AVX512BWVL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
-# AVX512BWVL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPSUBQYrr %0, %1
+# AVX2:                %2:vr256 = VPSUBQYrr %0, %1
 #
-# AVX512VL:            %2 = VPSUBQZ256rr %0, %1
+# AVX512VL:            %2:vr256x = VPSUBQZ256rr %0, %1
 #
-# AVX512BWVL:          %2 = VPSUBQZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPSUBQZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1

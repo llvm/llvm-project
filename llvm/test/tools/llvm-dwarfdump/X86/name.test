@@ -61,3 +61,9 @@ RUN:   | FileCheck %s --check-prefix=MULTI
 RUN: llvm-dwarfdump %S/../../dsymutil/Inputs/libfat-test.a \
 RUN:   -x -name=.*86.*_var \
 RUN:   | FileCheck %s --check-prefix=MULTI
+
+Test the -show-children behavior.
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -name="brief.c" - | FileCheck %s -check-prefix=NOCHILDREN
+NOCHILDREN: DW_AT_name ("brief.c")
+NOCHILDREN-NOT: DW_TAG

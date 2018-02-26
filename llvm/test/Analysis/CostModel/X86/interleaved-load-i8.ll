@@ -10,8 +10,8 @@ define i32 @doit_stride3(i8* nocapture readonly %Ptr, i32 %Nels)  {
 ;CHECK: LV: Found an estimated cost of 11 for VF 2 For instruction:   %0 = load i8
 ;CHECK: LV: Found an estimated cost of 5 for VF 4 For instruction:   %0 = load i8
 ;CHECK: LV: Found an estimated cost of 10 for VF 8 For instruction:   %0 = load i8
-;CHECK: LV: Found an estimated cost of 20 for VF 16 For instruction:   %0 = load i8
-;CHECK: LV: Found an estimated cost of 45 for VF 32 For instruction:   %0 = load i8
+;CHECK: LV: Found an estimated cost of 13 for VF 16 For instruction:   %0 = load i8
+;CHECK: LV: Found an estimated cost of 16 for VF 32 For instruction:   %0 = load i8
 entry:
   %cmp13 = icmp sgt i32 %Nels, 0
   br i1 %cmp13, label %for.body.preheader, label %for.end

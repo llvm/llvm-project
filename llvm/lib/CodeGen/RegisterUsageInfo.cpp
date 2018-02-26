@@ -12,17 +12,17 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -97,7 +97,7 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
 
     for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
       if (MachineOperand::clobbersPhysReg(&(FPRMPair->second[0]), PReg))
-        OS << TRI->getName(PReg) << " ";
+        OS << printReg(PReg, TRI) << " ";
     }
     OS << "\n";
   }

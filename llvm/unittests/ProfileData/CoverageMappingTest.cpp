@@ -418,12 +418,12 @@ TEST_P(CoverageMappingTest, multiple_regions_end_after_parent_ends) {
   // 7| c} d{   e{
   // 8|
   // 9| d}      e} F}
-  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9); //< F
-  addCMR(Counter::getCounter(0), "file1", 1, 1, 3, 5); //< a
-  addCMR(Counter::getCounter(0), "file1", 3, 5, 5, 4); //< b
-  addCMR(Counter::getCounter(1), "file1", 3, 5, 7, 3); //< c
-  addCMR(Counter::getCounter(1), "file1", 7, 3, 9, 2); //< d
-  addCMR(Counter::getCounter(1), "file1", 7, 7, 9, 7); //< e
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9); // < F
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 3, 5); // < a
+  addCMR(Counter::getCounter(0), "file1", 3, 5, 5, 4); // < b
+  addCMR(Counter::getCounter(1), "file1", 3, 5, 7, 3); // < c
+  addCMR(Counter::getCounter(1), "file1", 7, 3, 9, 2); // < d
+  addCMR(Counter::getCounter(1), "file1", 7, 7, 9, 7); // < e
 
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
   const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
@@ -464,6 +464,34 @@ TEST_P(CoverageMappingTest, multiple_regions_end_after_parent_ends) {
   EXPECT_EQ(CoverageSegment(9, 2, 0, false), Segments[5]);
   EXPECT_EQ(CoverageSegment(9, 7, 1, false), Segments[6]);
   EXPECT_EQ(CoverageSegment(9, 9, false), Segments[7]);
+}
+
+TEST_P(CoverageMappingTest, multiple_completed_segments_at_same_loc) {
+  ProfileWriter.addRecord({"func1", 0x1234, {0, 1, 2}}, Err);
+  startFunction("func1", 0x1234);
+
+  // PR35495
+  addCMR(Counter::getCounter(1), "file1", 2, 1, 18, 2);
+  addCMR(Counter::getCounter(0), "file1", 8, 10, 14, 6);
+  addCMR(Counter::getCounter(0), "file1", 8, 12, 14, 6);
+  addCMR(Counter::getCounter(1), "file1", 9, 1, 14, 6);
+  addCMR(Counter::getCounter(2), "file1", 11, 13, 11, 14);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(7U, Segments.size());
+  EXPECT_EQ(CoverageSegment(2, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(8, 10, 0, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(8, 12, 0, true), Segments[2]);
+  EXPECT_EQ(CoverageSegment(9, 1, 1, true), Segments[3]);
+  EXPECT_EQ(CoverageSegment(11, 13, 2, true), Segments[4]);
+  // Use count=1 (from 9:1 -> 14:6), not count=0 (from 8:12 -> 14:6).
+  EXPECT_EQ(CoverageSegment(11, 14, 1, false), Segments[5]);
+  EXPECT_EQ(CoverageSegment(18, 2, false), Segments[6]);
 }
 
 TEST_P(CoverageMappingTest, dont_emit_redundant_segments) {
@@ -648,9 +676,10 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
 
   unsigned Line = 0;
-  unsigned LineCounts[] = {20, 20, 20, 20, 10, 10, 10, 10, 10, 0, 0};
+  unsigned LineCounts[] = {20, 20, 20, 20, 30, 10, 10, 10, 10, 0, 0};
   for (const auto &LCS : getLineCoverageStats(Data)) {
     ASSERT_EQ(Line + 1, LCS.getLine());
+    errs() << "Line: " << Line + 1 << ", count = " << LCS.getExecutionCount() << "\n";
     ASSERT_EQ(LineCounts[Line], LCS.getExecutionCount());
     ++Line;
   }

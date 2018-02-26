@@ -8,7 +8,7 @@
 ; There is no AVX broadcast from double to 128-bit vector because movddup has been around since SSE3 (grrr).
 define <2 x double> @splat_v2f64(<2 x double> %x) #0 {
 ; CHECK-LABEL: splat_v2f64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ define <2 x double> @splat_v2f64(<2 x double> %x) #0 {
 
 define <4 x double> @splat_v4f64(<4 x double> %x) #1 {
 ; CHECK-LABEL: splat_v4f64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -28,7 +28,7 @@ define <4 x double> @splat_v4f64(<4 x double> %x) #1 {
 
 define <4 x float> @splat_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: splat_v4f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -38,7 +38,7 @@ define <4 x float> @splat_v4f32(<4 x float> %x) #0 {
 
 define <8 x float> @splat_v8f32(<8 x float> %x) #1 {
 ; CHECK-LABEL: splat_v8f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
 ; CHECK-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -50,13 +50,13 @@ define <8 x float> @splat_v8f32(<8 x float> %x) #1 {
 ; We also generate vmovddup for AVX2 because it's one byte smaller than vpbroadcastq.
 define <2 x i64> @splat_v2i64(<2 x i64> %x) #1 {
 ; AVX-LABEL: splat_v2i64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v2i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -68,7 +68,7 @@ define <2 x i64> @splat_v2i64(<2 x i64> %x) #1 {
 ; and then we fake it: use vmovddup to splat 64-bit value.
 define <4 x i64> @splat_v4i64(<4 x i64> %x) #0 {
 ; AVX-LABEL: splat_v4i64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
 ; AVX-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
@@ -77,7 +77,7 @@ define <4 x i64> @splat_v4i64(<4 x i64> %x) #0 {
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v4i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -88,13 +88,13 @@ define <4 x i64> @splat_v4i64(<4 x i64> %x) #0 {
 ; AVX can't do integer splats, so fake it: use vbroadcastss to splat 32-bit value.
 define <4 x i32> @splat_v4i32(<4 x i32> %x) #1 {
 ; AVX-LABEL: splat_v4i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v4i32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -105,7 +105,7 @@ define <4 x i32> @splat_v4i32(<4 x i32> %x) #1 {
 ; AVX can't do integer splats, so fake it: use vbroadcastss to splat 32-bit value.
 define <8 x i32> @splat_v8i32(<8 x i32> %x) #0 {
 ; AVX-LABEL: splat_v8i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
@@ -114,7 +114,7 @@ define <8 x i32> @splat_v8i32(<8 x i32> %x) #0 {
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v8i32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -125,12 +125,12 @@ define <8 x i32> @splat_v8i32(<8 x i32> %x) #0 {
 ; AVX can't do integer splats, and there's no broadcast fakery for 16-bit. Could use pshuflw, etc?
 define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 ; AVX-LABEL: splat_v8i16:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v8i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastw {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -141,7 +141,7 @@ define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 ; AVX can't do integer splats, and there's no broadcast fakery for 16-bit. Could use pshuflw, etc?
 define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX-LABEL: splat_v16i16:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
@@ -150,7 +150,7 @@ define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v16i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastw {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -161,12 +161,12 @@ define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX can't do integer splats, and there's no broadcast fakery for 8-bit. Could use pshufb, etc?
 define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 ; AVX-LABEL: splat_v16i8:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v16i8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastb {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -177,7 +177,7 @@ define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 ; AVX can't do integer splats, and there's no broadcast fakery for 8-bit. Could use pshufb, etc?
 define <32 x i8> @splat_v32i8(<32 x i8> %x) #0 {
 ; AVX-LABEL: splat_v32i8:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
@@ -186,7 +186,7 @@ define <32 x i8> @splat_v32i8(<32 x i8> %x) #0 {
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v32i8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastb {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq

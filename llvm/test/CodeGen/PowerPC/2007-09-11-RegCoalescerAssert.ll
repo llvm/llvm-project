@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64--
 
         %struct.TCMalloc_SpinLock = type { i32 }
 

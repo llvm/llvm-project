@@ -30,8 +30,12 @@ void OverloadedOperatorCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void OverloadedOperatorCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *D = Result.Nodes.getNodeAs<FunctionDecl>("decl"))
-    diag(D->getLocStart(), "cannot overload %0") << D;
+  const auto *D = Result.Nodes.getNodeAs<FunctionDecl>("decl");
+  assert(D && "No FunctionDecl captured!");
+  
+  SourceLocation Loc = D->getLocStart();
+  if (Loc.isValid())
+    diag(Loc, "cannot overload %0") << D;
 }
 
 } // namespace fuchsia

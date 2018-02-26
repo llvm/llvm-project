@@ -17,11 +17,11 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -104,8 +104,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
   if (DstSubReg == InsReg) {
     // No need to insert an identity copy instruction.
     // Watch out for case like this:
-    // %RAX<def> = SUBREG_TO_REG 0, %EAX<kill>, 3
-    // We must leave %RAX live.
+    // %rax = SUBREG_TO_REG 0, killed %eax, 3
+    // We must leave %rax live.
     if (DstReg != InsReg) {
       MI->setDesc(TII->get(TargetOpcode::KILL));
       MI->RemoveOperand(3);     // SubIdx

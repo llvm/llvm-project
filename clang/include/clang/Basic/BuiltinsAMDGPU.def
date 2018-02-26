@@ -21,6 +21,7 @@
 // SI+ only builtins.
 //===----------------------------------------------------------------------===//
 
+BUILTIN(__builtin_amdgcn_dispatch_ptr, "Uc*2", "nc")
 BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*2", "nc")
 BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*2", "nc")
 
@@ -120,6 +121,8 @@ TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
 // Special builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_read_exec, "LUi", "nc")
+BUILTIN(__builtin_amdgcn_read_exec_lo, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_read_exec_hi, "Ui", "nc")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.

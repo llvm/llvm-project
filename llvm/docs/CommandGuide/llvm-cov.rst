@@ -361,14 +361,15 @@ EXPORT COMMAND
 SYNOPSIS
 ^^^^^^^^
 
-:program:`llvm-cov export` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]]
+:program:`llvm-cov export` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]] [*SOURCES*]
 
 DESCRIPTION
 ^^^^^^^^^^^
 
 The :program:`llvm-cov export` command exports regions, functions, expansions,
 and summaries of the coverage of the binaries *BIN*,... using the profile data
-*PROFILE* as JSON.
+*PROFILE* as JSON. It can optionally be filtered to only export the coverage
+for the files listed in *SOURCES*.
 
 For information on compiling programs for coverage and generating profile data,
 see :ref:`llvm-cov-show`.
@@ -382,3 +383,10 @@ OPTIONS
  It is an error to specify an architecture that is not included in the
  universal binary or to use an architecture that does not match a
  non-universal binary.
+
+.. option:: -summary-only
+
+ Export only summary information for each file in the coverage data. This mode
+ will not export coverage information for smaller units such as individual
+ functions or regions. The result will be the same as produced by :program:
+ `llvm-cov report` command, but presented in JSON format rather than text.

@@ -57,7 +57,7 @@ bool SanitizerSpecialCaseList::inSection(SanitizerMask Mask, StringRef Prefix,
                                          StringRef Category) const {
   for (auto &S : SanitizerSections)
     if ((S.Mask & Mask) &&
-        SpecialCaseList::inSection(S.Entries, Prefix, Query, Category))
+        SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category))
       return true;
 
   return false;

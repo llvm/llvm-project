@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 | grep addss | not grep esp
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 | grep addss | not grep esp
 
 define fastcc void @fht(float* %fz, i16 signext  %n) {
 entry:

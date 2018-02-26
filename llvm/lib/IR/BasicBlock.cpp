@@ -264,7 +264,8 @@ const BasicBlock *BasicBlock::getUniqueSuccessor() const {
 }
 
 iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
-  return make_range<phi_iterator>(dyn_cast<PHINode>(&front()), nullptr);
+  PHINode *P = empty() ? nullptr : dyn_cast<PHINode>(&*begin());
+  return make_range<phi_iterator>(P, nullptr);
 }
 
 /// This method is used to notify a BasicBlock that the
@@ -446,4 +447,17 @@ bool BasicBlock::isLandingPad() const {
 /// Return the landingpad instruction associated with the landing pad.
 const LandingPadInst *BasicBlock::getLandingPadInst() const {
   return dyn_cast<LandingPadInst>(getFirstNonPHI());
+}
+
+Optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
+  const TerminatorInst *TI = getTerminator();
+  if (MDNode *MDIrrLoopHeader =
+      TI->getMetadata(LLVMContext::MD_irr_loop)) {
+    MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
+    if (MDName->getString().equals("loop_header_weight")) {
+      auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
+      return Optional<uint64_t>(CI->getValue().getZExtValue());
+    }
+  }
+  return Optional<uint64_t>();
 }

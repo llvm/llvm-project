@@ -112,6 +112,9 @@ struct SpellingRegion {
     ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
   }
 
+  SpellingRegion(SourceManager &SM, SourceMappingRegion &R)
+      : SpellingRegion(SM, R.getStartLoc(), R.getEndLoc()) {}
+
   /// Check if the start and end locations appear in source order, i.e
   /// top->bottom, left->right.
   bool isInSourceOrder() const {
@@ -445,6 +448,9 @@ struct CounterCoverageMappingBuilder
   /// expressions cross file or macro boundaries.
   SourceLocation MostRecentLocation;
 
+  /// Location of the last terminated region.
+  Optional<std::pair<SourceLocation, size_t>> LastTerminatedRegion;
+
   /// \brief Return a counter for the subtraction of \c RHS from \c LHS
   Counter subtractCounters(Counter LHS, Counter RHS) {
     return Builder.subtract(LHS, RHS);
@@ -493,12 +499,14 @@ struct CounterCoverageMappingBuilder
     DeferredRegion = None;
 
     // If the region ends in an expansion, find the expansion site.
-    if (SM.getFileID(DeferredEndLoc) != SM.getMainFileID()) {
-      FileID StartFile = SM.getFileID(DR.getStartLoc());
+    FileID StartFile = SM.getFileID(DR.getStartLoc());
+    if (SM.getFileID(DeferredEndLoc) != StartFile) {
       if (isNestedIn(DeferredEndLoc, StartFile)) {
         do {
           DeferredEndLoc = getIncludeOrExpansionLoc(DeferredEndLoc);
         } while (StartFile != SM.getFileID(DeferredEndLoc));
+      } else {
+        return Index;
       }
     }
 
@@ -518,6 +526,27 @@ struct CounterCoverageMappingBuilder
     handleFileExit(DeferredEndLoc);
     RegionStack.push_back(DR);
     return Index;
+  }
+
+  /// Complete a deferred region created after a terminated region at the
+  /// top-level.
+  void completeTopLevelDeferredRegion(Counter Count,
+                                      SourceLocation DeferredEndLoc) {
+    if (DeferredRegion || !LastTerminatedRegion)
+      return;
+
+    if (LastTerminatedRegion->second != RegionStack.size())
+      return;
+
+    SourceLocation Start = LastTerminatedRegion->first;
+    if (SM.getFileID(Start) != SM.getMainFileID())
+      return;
+
+    SourceMappingRegion DR = RegionStack.back();
+    DR.setStartLoc(Start);
+    DR.setDeferred(false);
+    DeferredRegion = DR;
+    completeDeferred(Count, DeferredEndLoc);
   }
 
   /// \brief Pop regions from the stack into the function's list of regions.
@@ -557,6 +586,7 @@ struct CounterCoverageMappingBuilder
           MostRecentLocation = getIncludeOrExpansionLoc(EndLoc);
 
         assert(SM.isWrittenInSameFile(Region.getStartLoc(), EndLoc));
+        assert(SpellingRegion(SM, Region).isInSourceOrder());
         SourceRegions.push_back(Region);
 
         if (ParentOfDeferredRegion) {
@@ -567,7 +597,7 @@ struct CounterCoverageMappingBuilder
           if (!DeferredRegion.hasValue() &&
               // File IDs aren't gathered within macro expansions, so it isn't
               // useful to try and create a deferred region inside of one.
-              (SM.getFileID(EndLoc) == SM.getMainFileID()))
+              !EndLoc.isMacroID())
             DeferredRegion =
                 SourceMappingRegion(Counter::getZero(), EndLoc, None);
         }
@@ -576,6 +606,12 @@ struct CounterCoverageMappingBuilder
         ParentOfDeferredRegion = true;
       }
       RegionStack.pop_back();
+
+      // If the zero region pushed after the last terminated region no longer
+      // exists, clear its cached information.
+      if (LastTerminatedRegion &&
+          RegionStack.size() < LastTerminatedRegion->second)
+        LastTerminatedRegion = None;
     }
     assert(!ParentOfDeferredRegion && "Deferred region with no parent");
   }
@@ -686,9 +722,11 @@ struct CounterCoverageMappingBuilder
       SourceLocation Loc = MostRecentLocation;
       while (isNestedIn(Loc, ParentFile)) {
         SourceLocation FileStart = getStartOfFileOrMacro(Loc);
-        if (StartLocs.insert(FileStart).second)
+        if (StartLocs.insert(FileStart).second) {
           SourceRegions.emplace_back(*ParentCounter, FileStart,
                                      getEndOfFileOrMacro(Loc));
+          assert(SpellingRegion(SM, SourceRegions.back()).isInSourceOrder());
+        }
         Loc = getIncludeOrExpansionLoc(Loc);
       }
     }
@@ -712,10 +750,45 @@ struct CounterCoverageMappingBuilder
   void terminateRegion(const Stmt *S) {
     extendRegion(S);
     SourceMappingRegion &Region = getRegion();
+    SourceLocation EndLoc = getEnd(S);
     if (!Region.hasEndLoc())
-      Region.setEndLoc(getEnd(S));
+      Region.setEndLoc(EndLoc);
     pushRegion(Counter::getZero());
-    getRegion().setDeferred(true);
+    auto &ZeroRegion = getRegion();
+    ZeroRegion.setDeferred(true);
+    LastTerminatedRegion = {EndLoc, RegionStack.size()};
+  }
+
+  /// Find a valid gap range between \p AfterLoc and \p BeforeLoc.
+  Optional<SourceRange> findGapAreaBetween(SourceLocation AfterLoc,
+                                           SourceLocation BeforeLoc) {
+    // If the start and end locations of the gap are both within the same macro
+    // file, the range may not be in source order.
+    if (AfterLoc.isMacroID() || BeforeLoc.isMacroID())
+      return None;
+    if (!SM.isWrittenInSameFile(AfterLoc, BeforeLoc))
+      return None;
+    return {{AfterLoc, BeforeLoc}};
+  }
+
+  /// Find the source range after \p AfterStmt and before \p BeforeStmt.
+  Optional<SourceRange> findGapAreaBetween(const Stmt *AfterStmt,
+                                           const Stmt *BeforeStmt) {
+    return findGapAreaBetween(getPreciseTokenLocEnd(getEnd(AfterStmt)),
+                              getStart(BeforeStmt));
+  }
+
+  /// Emit a gap region between \p StartLoc and \p EndLoc with the given count.
+  void fillGapAreaWithCount(SourceLocation StartLoc, SourceLocation EndLoc,
+                            Counter Count) {
+    if (StartLoc == EndLoc)
+      return;
+    assert(SpellingRegion(SM, StartLoc, EndLoc).isInSourceOrder());
+    handleFileExit(StartLoc);
+    size_t Index = pushRegion(Count, StartLoc, EndLoc);
+    getRegion().setGap(true);
+    handleFileExit(EndLoc);
+    popRegions(Index);
   }
 
   /// \brief Keep counts of breaks and continues inside loops.
@@ -813,10 +886,12 @@ struct CounterCoverageMappingBuilder
   void VisitGotoStmt(const GotoStmt *S) { terminateRegion(S); }
 
   void VisitLabelStmt(const LabelStmt *S) {
+    Counter LabelCount = getRegionCounter(S);
     SourceLocation Start = getStart(S);
+    completeTopLevelDeferredRegion(LabelCount, Start);
     // We can't extendRegion here or we risk overlapping with our new region.
     handleFileExit(Start);
-    pushRegion(getRegionCounter(S), Start);
+    pushRegion(LabelCount, Start);
     Visit(S->getSubStmt());
   }
 
@@ -864,6 +939,11 @@ struct CounterCoverageMappingBuilder
     propagateCounts(CondCount, S->getCond());
     adjustForOutOfOrderTraversal(getEnd(S));
 
+    // The body count applies to the area immediately after the increment.
+    auto Gap = findGapAreaBetween(S->getCond(), S->getBody());
+    if (Gap)
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
+
     Counter OutCount =
         addCounters(BC.BreakCount, subtractCounters(CondCount, BodyCount));
     if (OutCount != ParentCount)
@@ -899,27 +979,41 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     Counter BodyCount = getRegionCounter(S);
 
+    // The loop increment may contain a break or continue.
+    if (S->getInc())
+      BreakContinueStack.emplace_back();
+
     // Handle the body first so that we can get the backedge count.
-    BreakContinueStack.push_back(BreakContinue());
+    BreakContinueStack.emplace_back();
     extendRegion(S->getBody());
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
-    BreakContinue BC = BreakContinueStack.pop_back_val();
+    BreakContinue BodyBC = BreakContinueStack.pop_back_val();
 
     // The increment is essentially part of the body but it needs to include
     // the count for all the continue statements.
-    if (const Stmt *Inc = S->getInc())
-      propagateCounts(addCounters(BackedgeCount, BC.ContinueCount), Inc);
+    BreakContinue IncrementBC;
+    if (const Stmt *Inc = S->getInc()) {
+      propagateCounts(addCounters(BackedgeCount, BodyBC.ContinueCount), Inc);
+      IncrementBC = BreakContinueStack.pop_back_val();
+    }
 
     // Go back to handle the condition.
-    Counter CondCount =
-        addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
+    Counter CondCount = addCounters(
+        addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
+        IncrementBC.ContinueCount);
     if (const Expr *Cond = S->getCond()) {
       propagateCounts(CondCount, Cond);
       adjustForOutOfOrderTraversal(getEnd(S));
     }
 
-    Counter OutCount =
-        addCounters(BC.BreakCount, subtractCounters(CondCount, BodyCount));
+    // The body count applies to the area immediately after the increment.
+    auto Gap = findGapAreaBetween(getPreciseTokenLocEnd(S->getRParenLoc()),
+                                  getStart(S->getBody()));
+    if (Gap)
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
+
+    Counter OutCount = addCounters(BodyBC.BreakCount, IncrementBC.BreakCount,
+                                   subtractCounters(CondCount, BodyCount));
     if (OutCount != ParentCount)
       pushRegion(OutCount);
   }
@@ -936,6 +1030,12 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getBody());
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
+
+    // The body count applies to the area immediately after the range.
+    auto Gap = findGapAreaBetween(getPreciseTokenLocEnd(S->getRParenLoc()),
+                                  getStart(S->getBody()));
+    if (Gap)
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
     Counter LoopCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
@@ -956,6 +1056,12 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getBody());
     Counter BackedgeCount = propagateCounts(BodyCount, S->getBody());
     BreakContinue BC = BreakContinueStack.pop_back_val();
+
+    // The body count applies to the area immediately after the collection.
+    auto Gap = findGapAreaBetween(getPreciseTokenLocEnd(S->getRParenLoc()),
+                                  getStart(S->getBody()));
+    if (Gap)
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
     Counter LoopCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
@@ -1048,12 +1154,21 @@ struct CounterCoverageMappingBuilder
     // counter for the body when looking at the coverage.
     propagateCounts(ParentCount, S->getCond());
 
+    // The 'then' count applies to the area immediately after the condition.
+    auto Gap = findGapAreaBetween(S->getCond(), S->getThen());
+    if (Gap)
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ThenCount);
+
     extendRegion(S->getThen());
     Counter OutCount = propagateCounts(ThenCount, S->getThen());
 
     Counter ElseCount = subtractCounters(ParentCount, ThenCount);
     if (const Stmt *Else = S->getElse()) {
-      extendRegion(S->getElse());
+      // The 'else' count applies to the area immediately after the 'then'.
+      Gap = findGapAreaBetween(S->getThen(), Else);
+      if (Gap)
+        fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);
+      extendRegion(Else);
       OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
     } else
       OutCount = addCounters(OutCount, ElseCount);
@@ -1090,9 +1205,16 @@ struct CounterCoverageMappingBuilder
     Visit(E->getCond());
 
     if (!isa<BinaryConditionalOperator>(E)) {
+      // The 'then' count applies to the area immediately after the condition.
+      auto Gap =
+          findGapAreaBetween(E->getQuestionLoc(), getStart(E->getTrueExpr()));
+      if (Gap)
+        fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), TrueCount);
+
       extendRegion(E->getTrueExpr());
       propagateCounts(TrueCount, E->getTrueExpr());
     }
+
     extendRegion(E->getFalseExpr());
     propagateCounts(subtractCounters(ParentCount, TrueCount),
                     E->getFalseExpr());

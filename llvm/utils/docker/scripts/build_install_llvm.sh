@@ -11,7 +11,7 @@
 set -e
 
 function show_usage() {
-  usage=$(cat << EOF
+  cat << EOF
 Usage: build_install_llvm.sh [options] -- [cmake-args]
 
 Checkout svn sources and run cmake with the specified arguments. Used
@@ -25,6 +25,10 @@ Available options:
                       'branches/release_40'
                       (default: 'trunk')
   -r|--revision       svn revision to checkout
+  -c|--cherrypick     revision to cherry-pick. Can be specified multiple times.
+                      Cherry-picks are performed in the sorted order using the
+                      following command:
+                      'svn patch <(svn diff -c \$rev)'.
   -p|--llvm-project   name of an svn project to checkout. Will also add the
                       project to a list LLVM_ENABLE_PROJECTS, passed to CMake.
                       For clang, please use 'clang', not 'cfe'.
@@ -37,17 +41,17 @@ Required options: At least one --install-target.
 
 All options after '--' are passed to CMake invocation.
 EOF
-)
-  echo "$usage"
 }
 
 LLVM_SVN_REV=""
+CHERRYPICKS=""
 LLVM_BRANCH=""
 CMAKE_ARGS=""
 CMAKE_INSTALL_TARGETS=""
 # We always checkout llvm
 LLVM_PROJECTS="llvm"
 CMAKE_LLVM_ENABLE_PROJECTS=""
+CLANG_TOOLS_EXTRA_ENABLED=0
 
 function contains_project() {
   local TARGET_PROJ="$1"
@@ -60,11 +64,27 @@ function contains_project() {
   return 1
 }
 
+function append_project() {
+  local PROJ="$1"
+
+  LLVM_PROJECTS="$LLVM_PROJECTS $PROJ"
+  if [ "$CMAKE_LLVM_ENABLE_PROJECTS" != "" ]; then
+    CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLE_PROJECTS;$PROJ"
+  else
+    CMAKE_LLVM_ENABLE_PROJECTS="$PROJ"
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -r|--revision)
       shift
       LLVM_SVN_REV="$1"
+      shift
+      ;;
+    -c|--cherrypick)
+      shift
+      CHERRYPICKS="$CHERRYPICKS $1"
       shift
       ;;
     -b|--branch)
@@ -75,19 +95,27 @@ while [[ $# -gt 0 ]]; do
     -p|--llvm-project)
       shift
       PROJ="$1"
+      shift
+
       if [ "$PROJ" == "cfe" ]; then
         PROJ="clang"
       fi
-      if ! contains_project "$PROJ" ; then
-        LLVM_PROJECTS="$LLVM_PROJECTS $PROJ"
-        if [ "$CMAKE_LLVM_ENABLE_PROJECTS" != "" ]; then
-          CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLE_PROJECTS;"
+
+      if [ "$PROJ" == "clang-tools-extra" ]; then
+        if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
+          echo "Project 'clang-tools-extra' is already enabled, ignoring extra occurences."
+        else
+          CLANG_TOOLS_EXTRA_ENABLED=1
         fi
-        CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLED_PROJECTS$PROJ"
+
+        continue
+      fi
+
+      if ! contains_project "$PROJ" ; then
+        append_project "$PROJ"
       else
         echo "Project '$PROJ' is already enabled, ignoring extra occurences."
       fi
-      shift
       ;;
     -i|--install-target)
       shift
@@ -114,15 +142,48 @@ if [ "$CMAKE_INSTALL_TARGETS" == "" ]; then
   exit 1
 fi
 
+if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
+  if ! contains_project "clang"; then
+    echo "Project 'clang-tools-extra' was enabled without 'clang'."
+    echo "Adding 'clang' to a list of projects."
+
+    append_project "clang"
+  fi
+fi
+
 if [ "$LLVM_BRANCH" == "" ]; then
   LLVM_BRANCH="trunk"
 fi
 
-if [ "$LLVM_SVN_REVISION" != "" ]; then
-  SVN_REV_ARG="-r$LLVM_SVN_REVISION"
+if [ "$LLVM_SVN_REV" != "" ]; then
+  SVN_REV_ARG="-r$LLVM_SVN_REV"
+  echo "Checking out svn revision r$LLVM_SVN_REV."
 else
   SVN_REV_ARG=""
+  echo "Checking out latest svn revision."
 fi
+
+# Sort cherrypicks and remove duplicates.
+CHERRYPICKS="$(echo "$CHERRYPICKS" | xargs -n1 | sort | uniq | xargs)"
+
+function apply_cherrypicks() {
+  local CHECKOUT_DIR="$1"
+
+  [ "$CHERRYPICKS" == "" ] || echo "Applying cherrypicks"
+  pushd "$CHECKOUT_DIR"
+
+  # This function is always called on a sorted list of cherrypicks.
+  for CHERRY_REV in $CHERRYPICKS; do
+    echo "Cherry-picking r$CHERRY_REV into $CHECKOUT_DIR"
+
+    local PATCH_FILE="$(mktemp)"
+    svn diff -c $CHERRY_REV > "$PATCH_FILE"
+    svn patch "$PATCH_FILE"
+    rm "$PATCH_FILE"
+  done
+
+  popd
+}
 
 CLANG_BUILD_DIR=/tmp/clang-build
 CLANG_INSTALL_DIR=/tmp/clang-install
@@ -140,13 +201,34 @@ for LLVM_PROJECT in $LLVM_PROJECTS; do
   fi
 
   echo "Checking out https://llvm.org/svn/llvm-project/$SVN_PROJECT to $CLANG_BUILD_DIR/src/$LLVM_PROJECT"
-  # FIXME: --trust-server-cert is required to workaround 'SSL issuer is not
-  #        trusted' error. Using https seems preferable to http either way,
-  #        albeit this is not secure.
-  svn co -q $SVN_REV_ARG --trust-server-cert \
+  svn co -q $SVN_REV_ARG \
     "https://llvm.org/svn/llvm-project/$SVN_PROJECT/$LLVM_BRANCH" \
     "$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
+
+  # We apply cherrypicks to all repositories regardless of whether the revision
+  # changes this repository or not. For repositories not affected by the
+  # cherrypick, applying the cherrypick is a no-op.
+  apply_cherrypicks "$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
 done
+
+if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
+  echo "Checking out https://llvm.org/svn/llvm-project/clang-tools-extra to $CLANG_BUILD_DIR/src/clang/tools/extra"
+  svn co -q $SVN_REV_ARG \
+    "https://llvm.org/svn/llvm-project/clang-tools-extra/$LLVM_BRANCH" \
+    "$CLANG_BUILD_DIR/src/clang/tools/extra"
+
+  apply_cherrypicks "$CLANG_BUILD_DIR/src/clang/tools/extra"
+fi
+
+CHECKSUMS_FILE="/tmp/checksums/checksums.txt"
+
+if [ -f "$CHECKSUMS_FILE" ]; then
+  echo "Validating checksums for LLVM checkout..."
+  python "$(dirname $0)/llvm_checksum/llvm_checksum.py" -c "$CHECKSUMS_FILE" \
+    --partial --multi_dir "$CLANG_BUILD_DIR/src"
+else
+  echo "Skipping checksumming checks..."
+fi
 
 mkdir "$CLANG_BUILD_DIR/build"
 pushd "$CLANG_BUILD_DIR/build"

@@ -99,6 +99,9 @@ namespace  {
     const CommandTraits *Traits;
     const SourceManager *SM;
 
+    /// The policy to use for printing; can be defaulted.
+    PrintingPolicy PrintPolicy;
+
     /// Pending[i] is an action to dump an entity at level i.
     llvm::SmallVector<std::function<void(bool isLastChild)>, 32> Pending;
 
@@ -207,12 +210,17 @@ namespace  {
   public:
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
               const SourceManager *SM)
-      : OS(OS), Traits(Traits), SM(SM),
-        ShowColors(SM && SM->getDiagnostics().getShowColors()) { }
+        : ASTDumper(OS, Traits, SM,
+                    SM && SM->getDiagnostics().getShowColors()) {}
 
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
               const SourceManager *SM, bool ShowColors)
-      : OS(OS), Traits(Traits), SM(SM), ShowColors(ShowColors) {}
+        : ASTDumper(OS, Traits, SM, ShowColors, LangOptions()) {}
+    ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
+              const SourceManager *SM, bool ShowColors,
+              const PrintingPolicy &PrintPolicy)
+        : OS(OS), Traits(Traits), SM(SM), PrintPolicy(PrintPolicy),
+          ShowColors(ShowColors) {}
 
     void setDeserialize(bool D) { Deserialize = D; }
 
@@ -537,6 +545,7 @@ namespace  {
     void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node);
     void VisitCXXThisExpr(const CXXThisExpr *Node);
     void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *Node);
+    void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr *Node);
     void VisitCXXConstructExpr(const CXXConstructExpr *Node);
     void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *Node);
     void VisitCXXNewExpr(const CXXNewExpr *Node);
@@ -645,13 +654,13 @@ void ASTDumper::dumpBareType(QualType T, bool Desugar) {
   ColorScope Color(*this, TypeColor);
 
   SplitQualType T_split = T.split();
-  OS << "'" << QualType::getAsString(T_split) << "'";
+  OS << "'" << QualType::getAsString(T_split, PrintPolicy) << "'";
 
   if (Desugar && !T.isNull()) {
     // If the type is sugared, also dump a (shallow) desugared type.
     SplitQualType D_split = T.getSplitDesugaredType();
     if (T_split != D_split)
-      OS << ":'" << QualType::getAsString(D_split) << "'";
+      OS << ":'" << QualType::getAsString(D_split, PrintPolicy) << "'";
   }
 }
 
@@ -1184,26 +1193,28 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
          I != E; ++I)
       dumpCXXCtorInitializer(*I);
 
-  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D))
+  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
     if (MD->size_overridden_methods() != 0) {
-      auto dumpOverride =
-        [=](const CXXMethodDecl *D) {
-          SplitQualType T_split = D->getType().split();
-          OS << D << " " << D->getParent()->getName() << "::"
-             << D->getNameAsString() << " '" << QualType::getAsString(T_split) << "'";
-        };
+      auto dumpOverride = [=](const CXXMethodDecl *D) {
+        SplitQualType T_split = D->getType().split();
+        OS << D << " " << D->getParent()->getName()
+           << "::" << D->getNameAsString() << " '"
+           << QualType::getAsString(T_split, PrintPolicy) << "'";
+      };
 
       dumpChild([=] {
-        auto FirstOverrideItr = MD->begin_overridden_methods();
+        auto Overrides = MD->overridden_methods();
         OS << "Overrides: [ ";
-        dumpOverride(*FirstOverrideItr);
+        dumpOverride(*Overrides.begin());
         for (const auto *Override :
-               llvm::make_range(FirstOverrideItr + 1,
-                                MD->end_overridden_methods()))
+             llvm::make_range(Overrides.begin() + 1, Overrides.end())) {
+          OS << ", ";
           dumpOverride(Override);
+        }
         OS << " ]";
       });
     }
+  }
 
   if (D->doesThisDeclarationHaveABody())
     dumpStmt(D->getBody());
@@ -1313,6 +1324,16 @@ void ASTDumper::VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
   dumpStmt(D->getCombiner());
   if (auto *Initializer = D->getInitializer()) {
     OS << " initializer";
+    switch (D->getInitializerKind()) {
+    case OMPDeclareReductionDecl::DirectInit:
+      OS << " omp_priv = ";
+      break;
+    case OMPDeclareReductionDecl::CopyInit:
+      OS << " omp_priv ()";
+      break;
+    case OMPDeclareReductionDecl::CallInit:
+      break;
+    }
     dumpStmt(Initializer);
   }
 }
@@ -1362,6 +1383,128 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
   if (!D->isCompleteDefinition())
     return;
 
+  dumpChild([=] {
+    {
+      ColorScope Color(*this, DeclKindNameColor);
+      OS << "DefinitionData";
+    }
+#define FLAG(fn, name) if (D->fn()) OS << " " #name;
+    FLAG(isParsingBaseSpecifiers, parsing_base_specifiers);
+
+    FLAG(isGenericLambda, generic);
+    FLAG(isLambda, lambda);
+
+    FLAG(canPassInRegisters, pass_in_registers);
+    FLAG(isEmpty, empty);
+    FLAG(isAggregate, aggregate);
+    FLAG(isStandardLayout, standard_layout);
+    FLAG(isTriviallyCopyable, trivially_copyable);
+    FLAG(isPOD, pod);
+    FLAG(isTrivial, trivial);
+    FLAG(isPolymorphic, polymorphic);
+    FLAG(isAbstract, abstract);
+    FLAG(isLiteral, literal);
+
+    FLAG(hasUserDeclaredConstructor, has_user_declared_ctor);
+    FLAG(hasConstexprNonCopyMoveConstructor, has_constexpr_non_copy_move_ctor);
+    FLAG(hasMutableFields, has_mutable_fields);
+    FLAG(hasVariantMembers, has_variant_members);
+    FLAG(allowConstDefaultInit, can_const_default_init);
+
+    dumpChild([=] {
+      {
+        ColorScope Color(*this, DeclKindNameColor);
+        OS << "DefaultConstructor";
+      }
+      FLAG(hasDefaultConstructor, exists);
+      FLAG(hasTrivialDefaultConstructor, trivial);
+      FLAG(hasNonTrivialDefaultConstructor, non_trivial);
+      FLAG(hasUserProvidedDefaultConstructor, user_provided);
+      FLAG(hasConstexprDefaultConstructor, constexpr);
+      FLAG(needsImplicitDefaultConstructor, needs_implicit);
+      FLAG(defaultedDefaultConstructorIsConstexpr, defaulted_is_constexpr);
+    });
+
+    dumpChild([=] {
+      {
+        ColorScope Color(*this, DeclKindNameColor);
+        OS << "CopyConstructor";
+      }
+      FLAG(hasSimpleCopyConstructor, simple);
+      FLAG(hasTrivialCopyConstructor, trivial);
+      FLAG(hasNonTrivialCopyConstructor, non_trivial);
+      FLAG(hasUserDeclaredCopyConstructor, user_declared);
+      FLAG(hasCopyConstructorWithConstParam, has_const_param);
+      FLAG(needsImplicitCopyConstructor, needs_implicit);
+      FLAG(needsOverloadResolutionForCopyConstructor,
+           needs_overload_resolution);
+      if (!D->needsOverloadResolutionForCopyConstructor())
+        FLAG(defaultedCopyConstructorIsDeleted, defaulted_is_deleted);
+      FLAG(implicitCopyConstructorHasConstParam, implicit_has_const_param);
+    });
+
+    dumpChild([=] {
+      {
+        ColorScope Color(*this, DeclKindNameColor);
+        OS << "MoveConstructor";
+      }
+      FLAG(hasMoveConstructor, exists);
+      FLAG(hasSimpleMoveConstructor, simple);
+      FLAG(hasTrivialMoveConstructor, trivial);
+      FLAG(hasNonTrivialMoveConstructor, non_trivial);
+      FLAG(hasUserDeclaredMoveConstructor, user_declared);
+      FLAG(needsImplicitMoveConstructor, needs_implicit);
+      FLAG(needsOverloadResolutionForMoveConstructor,
+           needs_overload_resolution);
+      if (!D->needsOverloadResolutionForMoveConstructor())
+        FLAG(defaultedMoveConstructorIsDeleted, defaulted_is_deleted);
+    });
+
+    dumpChild([=] {
+      {
+        ColorScope Color(*this, DeclKindNameColor);
+        OS << "CopyAssignment";
+      }
+      FLAG(hasTrivialCopyAssignment, trivial);
+      FLAG(hasNonTrivialCopyAssignment, non_trivial);
+      FLAG(hasCopyAssignmentWithConstParam, has_const_param);
+      FLAG(hasUserDeclaredCopyAssignment, user_declared);
+      FLAG(needsImplicitCopyAssignment, needs_implicit);
+      FLAG(needsOverloadResolutionForCopyAssignment, needs_overload_resolution);
+      FLAG(implicitCopyAssignmentHasConstParam, implicit_has_const_param);
+    });
+
+    dumpChild([=] {
+      {
+        ColorScope Color(*this, DeclKindNameColor);
+        OS << "MoveAssignment";
+      }
+      FLAG(hasMoveAssignment, exists);
+      FLAG(hasSimpleMoveAssignment, simple);
+      FLAG(hasTrivialMoveAssignment, trivial);
+      FLAG(hasNonTrivialMoveAssignment, non_trivial);
+      FLAG(hasUserDeclaredMoveAssignment, user_declared);
+      FLAG(needsImplicitMoveAssignment, needs_implicit);
+      FLAG(needsOverloadResolutionForMoveAssignment, needs_overload_resolution);
+    });
+
+    dumpChild([=] {
+      {
+        ColorScope Color(*this, DeclKindNameColor);
+        OS << "Destructor";
+      }
+      FLAG(hasSimpleDestructor, simple);
+      FLAG(hasIrrelevantDestructor, irrelevant);
+      FLAG(hasTrivialDestructor, trivial);
+      FLAG(hasNonTrivialDestructor, non_trivial);
+      FLAG(hasUserDeclaredDestructor, user_declared);
+      FLAG(needsImplicitDestructor, needs_implicit);
+      FLAG(needsOverloadResolutionForDestructor, needs_overload_resolution);
+      if (!D->needsOverloadResolutionForDestructor())
+        FLAG(defaultedDestructorIsDeleted, defaulted_is_deleted);
+    });
+  });
+
   for (const auto &I : D->bases()) {
     dumpChild([=] {
       if (I.isVirtual())
@@ -1402,7 +1545,7 @@ void ASTDumper::VisitTemplateDeclSpecialization(const SpecializationDecl *D,
     case TSK_ExplicitInstantiationDefinition:
       if (!DumpExplicitInst)
         break;
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case TSK_Undeclared:
     case TSK_ImplicitInstantiation:
       if (DumpRefOnly)
@@ -2168,12 +2311,24 @@ void ASTDumper::VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *Node) {
      << " <" << Node->getCastKindName() << ">";
 }
 
+void ASTDumper::VisitCXXUnresolvedConstructExpr(
+    const CXXUnresolvedConstructExpr *Node) {
+  VisitExpr(Node);
+  dumpType(Node->getTypeAsWritten());
+  if (Node->isListInitialization())
+    OS << " list";
+}
+
 void ASTDumper::VisitCXXConstructExpr(const CXXConstructExpr *Node) {
   VisitExpr(Node);
   CXXConstructorDecl *Ctor = Node->getConstructor();
   dumpType(Ctor->getType());
   if (Node->isElidable())
     OS << " elidable";
+  if (Node->isListInitialization())
+    OS << " list";
+  if (Node->isStdInitListInitialization())
+    OS << " std::initializer_list";
   if (Node->requiresZeroInitialization())
     OS << " zeroing";
 }
@@ -2537,15 +2692,19 @@ LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS) const {
 LLVM_DUMP_METHOD void Decl::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize) const {
-  ASTDumper P(OS, &getASTContext().getCommentCommandTraits(),
-              &getASTContext().getSourceManager());
+  const ASTContext &Ctx = getASTContext();
+  const SourceManager &SM = Ctx.getSourceManager();
+  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &SM,
+              SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
   P.setDeserialize(Deserialize);
   P.dumpDecl(this);
 }
 
 LLVM_DUMP_METHOD void Decl::dumpColor() const {
-  ASTDumper P(llvm::errs(), &getASTContext().getCommentCommandTraits(),
-              &getASTContext().getSourceManager(), /*ShowColors*/true);
+  const ASTContext &Ctx = getASTContext();
+  ASTDumper P(llvm::errs(), &Ctx.getCommentCommandTraits(),
+              &Ctx.getSourceManager(), /*ShowColors*/ true,
+              Ctx.getPrintingPolicy());
   P.dumpDecl(this);
 }
 
@@ -2560,7 +2719,9 @@ LLVM_DUMP_METHOD void DeclContext::dumpLookups(raw_ostream &OS,
   while (!DC->isTranslationUnit())
     DC = DC->getParent();
   ASTContext &Ctx = cast<TranslationUnitDecl>(DC)->getASTContext();
-  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &Ctx.getSourceManager());
+  const SourceManager &SM = Ctx.getSourceManager();
+  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &Ctx.getSourceManager(),
+              SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
   P.setDeserialize(Deserialize);
   P.dumpLookups(this, DumpDecls);
 }

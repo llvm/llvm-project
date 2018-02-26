@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -O0 -fast-isel=0 %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -O0 -fast-isel=0 -global-isel=false %s -o - | FileCheck %s
 
 define { i8, i1 } @test_cmpxchg_8(i8* %addr, i8 %desired, i8 %new) nounwind {
 ; CHECK-LABEL: test_cmpxchg_8:

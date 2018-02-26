@@ -3,18 +3,15 @@
 
 define float @test1(i32 %scale) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 %scale, 1
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 %scale, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SCALE:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[SCALE]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP2]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP4]], float [[TMP3]], float 0.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
-  %tmp1 = icmp sgt i32 1, %scale
-  %tmp2 = select i1 %tmp1, i32 1, i32 %scale
-  %tmp3 = sitofp i32 %tmp2 to float
-  %tmp4 = icmp sgt i32 %tmp2, 0
-  %sel = select i1 %tmp4, float %tmp3, float 0.000000e+00
+  %1 = icmp sgt i32 1, %scale
+  %2 = select i1 %1, i32 1, i32 %scale
+  %3 = sitofp i32 %2 to float
+  %4 = icmp sgt i32 %2, 0
+  %sel = select i1 %4, float %3, float 0.000000e+00
   ret float %sel
 }
-

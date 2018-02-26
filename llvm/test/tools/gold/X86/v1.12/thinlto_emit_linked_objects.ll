@@ -13,7 +13,7 @@
 ; RUN: rm -f %t2.o.thinlto.bc
 ; RUN: rm -f %t.o.imports
 ; RUN: rm -f %t2.o.imports
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only=%t3 \
 ; RUN:    --plugin-opt=thinlto-emit-imports-files \

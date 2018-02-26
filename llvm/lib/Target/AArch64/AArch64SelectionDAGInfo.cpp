@@ -25,11 +25,11 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   ConstantSDNode *SizeValue = dyn_cast<ConstantSDNode>(Size);
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
-  const char *bzeroEntry =
-      (V && V->isNullValue()) ? STI.getBZeroEntry() : nullptr;
+  const char *bzeroName = (V && V->isNullValue())
+      ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO) : nullptr;
   // For small size (< 256), it is not beneficial to use bzero
   // instead of memset.
-  if (bzeroEntry && (!SizeValue || SizeValue->getZExtValue() > 256)) {
+  if (bzeroName && (!SizeValue || SizeValue->getZExtValue() > 256)) {
     const AArch64TargetLowering &TLI = *STI.getTargetLowering();
 
     EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
@@ -45,7 +45,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     CLI.setDebugLoc(dl)
         .setChain(Chain)
         .setLibCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-                      DAG.getExternalSymbol(bzeroEntry, IntPtr),
+                      DAG.getExternalSymbol(bzeroName, IntPtr),
                       std::move(Args))
         .setDiscardResult();
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);

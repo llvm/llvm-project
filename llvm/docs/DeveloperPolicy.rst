@@ -188,7 +188,7 @@ problem, we have a notion of an 'owner' for a piece of the code.  The sole
 responsibility of a code owner is to ensure that a commit to their area of the
 code is appropriately reviewed, either by themself or by someone else.  The list
 of current code owners can be found in the file
-`CODE_OWNERS.TXT <http://llvm.org/klaus/llvm/blob/master/CODE_OWNERS.TXT>`_
+`CODE_OWNERS.TXT <http://git.llvm.org/klaus/llvm/blob/master/CODE_OWNERS.TXT>`_
 in the root of the LLVM source tree.
 
 Note that code ownership is completely different than reviewers: anyone can

@@ -20,7 +20,7 @@ entry:
   ret void
 }
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
 
 !1 = !{!2, !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}

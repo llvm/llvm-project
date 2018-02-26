@@ -137,6 +137,9 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
       {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
       {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
 
+      {"VBROADCASTF64X2Z128rm", "VBROADCASTF128", false},
+      {"VBROADCASTI64X2Z128rm", "VBROADCASTI128", false},
+
       {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
       {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
       {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},
@@ -145,7 +148,21 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
       {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
       {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
       {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
-      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false}
+      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false},
+
+      // These will require some custom adjustment in the conversion pass.
+      {"VALIGNDZ128rri",      "VPALIGNRrri",     true},
+      {"VALIGNQZ128rri",      "VPALIGNRrri",     true},
+      {"VALIGNDZ128rmi",      "VPALIGNRrmi",     true},
+      {"VALIGNQZ128rmi",      "VPALIGNRrmi",     true},
+      {"VSHUFF32X4Z256rmi",   "VPERM2F128rm",    false},
+      {"VSHUFF32X4Z256rri",   "VPERM2F128rr",    false},
+      {"VSHUFF64X2Z256rmi",   "VPERM2F128rm",    false},
+      {"VSHUFF64X2Z256rri",   "VPERM2F128rr",    false},
+      {"VSHUFI32X4Z256rmi",   "VPERM2I128rm",    false},
+      {"VSHUFI32X4Z256rri",   "VPERM2I128rr",    false},
+      {"VSHUFI64X2Z256rmi",   "VPERM2I128rm",    false},
+      {"VSHUFI64X2Z256rri",   "VPERM2I128rr",    false},
   };
 
   // Print the manually added entries

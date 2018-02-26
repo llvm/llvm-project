@@ -31,7 +31,7 @@ bb.nph:                                           ; preds = %entry
 ; ARM-NOT: LCPI0_1:
 ; ARM: .section
 
-; THUMB: BB#1
+; THUMB: %bb.1
 ; THUMB: ldr r2, LCPI0_0
 ; THUMB: add r2, pc
 ; THUMB: ldr r{{[0-9]+}}, [r2]

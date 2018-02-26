@@ -10,6 +10,9 @@
 // lit doesn't set options anyway.
 // RUN: not %run %t 2>&1
 
+// Android needs abort_on_error=0
+// UNSUPPORTED: android
+
 namespace __sanitizer {
 void Die();
 }

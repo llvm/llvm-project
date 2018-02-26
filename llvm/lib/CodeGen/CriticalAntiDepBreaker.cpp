@@ -1,4 +1,4 @@
-//===----- CriticalAntiDepBreaker.cpp - Anti-dep breaker -------- ---------===//
+//===- CriticalAntiDepBreaker.cpp - Anti-dep breaker ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,14 +14,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "CriticalAntiDepBreaker.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <map>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -35,8 +50,7 @@ CriticalAntiDepBreaker::CriticalAntiDepBreaker(MachineFunction &MFi,
       Classes(TRI->getNumRegs(), nullptr), KillIndices(TRI->getNumRegs(), 0),
       DefIndices(TRI->getNumRegs(), 0), KeepRegs(TRI->getNumRegs(), false) {}
 
-CriticalAntiDepBreaker::~CriticalAntiDepBreaker() {
-}
+CriticalAntiDepBreaker::~CriticalAntiDepBreaker() = default;
 
 void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   const unsigned BBSize = BB->size();
@@ -156,11 +170,11 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
   // FIXME: The issue with predicated instruction is more complex. We are being
   // conservative here because the kill markers cannot be trusted after
   // if-conversion:
-  // %R6<def> = LDR %SP, %reg0, 92, pred:14, pred:%reg0; mem:LD4[FixedStack14]
+  // %r6 = LDR %sp, %reg0, 92, pred:14, pred:%reg0; mem:LD4[FixedStack14]
   // ...
-  // STR %R0, %R6<kill>, %reg0, 0, pred:0, pred:%CPSR; mem:ST4[%395]
-  // %R6<def> = LDR %SP, %reg0, 100, pred:0, pred:%CPSR; mem:LD4[FixedStack12]
-  // STR %R0, %R6<kill>, %reg0, 0, pred:14, pred:%reg0; mem:ST4[%396](align=8)
+  // STR %r0, killed %r6, %reg0, 0, pred:0, pred:%cpsr; mem:ST4[%395]
+  // %r6 = LDR %sp, %reg0, 100, pred:0, pred:%cpsr; mem:LD4[FixedStack12]
+  // STR %r0, killed %r6, %reg0, 0, pred:14, pred:%reg0; mem:ST4[%396](align=8)
   //
   // The first R6 kill is not really a kill since it's killed by a predicated
   // instruction which may not be executed. The second R6 def may or may not
@@ -333,8 +347,7 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
 bool
 CriticalAntiDepBreaker::isNewRegClobberedByRefs(RegRefIter RegRefBegin,
                                                 RegRefIter RegRefEnd,
-                                                unsigned NewReg)
-{
+                                                unsigned NewReg) {
   for (RegRefIter I = RegRefBegin; I != RegRefEnd; ++I ) {
     MachineOperand *RefOper = I->second;
 
@@ -381,8 +394,7 @@ findSuitableFreeRegister(RegRefIter RegRefBegin,
                          unsigned AntiDepReg,
                          unsigned LastNewReg,
                          const TargetRegisterClass *RC,
-                         SmallVectorImpl<unsigned> &Forbid)
-{
+                         SmallVectorImpl<unsigned> &Forbid) {
   ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(RC);
   for (unsigned i = 0; i != Order.size(); ++i) {
     unsigned NewReg = Order[i];
@@ -423,7 +435,7 @@ findSuitableFreeRegister(RegRefIter RegRefBegin,
 }
 
 unsigned CriticalAntiDepBreaker::
-BreakAntiDependencies(const std::vector<SUnit>& SUnits,
+BreakAntiDependencies(const std::vector<SUnit> &SUnits,
                       MachineBasicBlock::iterator Begin,
                       MachineBasicBlock::iterator End,
                       unsigned InsertPosIndex,
@@ -436,7 +448,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
   // This is used for updating debug information.
   //
   // FIXME: Replace this with the existing map in ScheduleDAGInstrs::MISUnitMap
-  DenseMap<MachineInstr*,const SUnit*> MISUnitMap;
+  DenseMap<MachineInstr *, const SUnit *> MISUnitMap;
 
   // Find the node at the bottom of the critical path.
   const SUnit *Max = nullptr;
@@ -454,7 +466,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
     DEBUG(dbgs() << "Available regs:");
     for (unsigned Reg = 0; Reg < TRI->getNumRegs(); ++Reg) {
       if (KillIndices[Reg] == ~0u)
-        DEBUG(dbgs() << " " << TRI->getName(Reg));
+        DEBUG(dbgs() << " " << printReg(Reg, TRI));
     }
     DEBUG(dbgs() << '\n');
   }
@@ -634,9 +646,9 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
                                                      LastNewReg[AntiDepReg],
                                                      RC, ForbidRegs)) {
         DEBUG(dbgs() << "Breaking anti-dependence edge on "
-              << TRI->getName(AntiDepReg)
-              << " with " << RegRefs.count(AntiDepReg) << " references"
-              << " using " << TRI->getName(NewReg) << "!\n");
+                     << printReg(AntiDepReg, TRI) << " with "
+                     << RegRefs.count(AntiDepReg) << " references"
+                     << " using " << printReg(NewReg, TRI) << "!\n");
 
         // Update the references to the old register to refer to the new
         // register.

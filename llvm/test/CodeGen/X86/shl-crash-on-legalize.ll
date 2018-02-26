@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @_Z3foov() local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z3foov:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    retq
 entry:

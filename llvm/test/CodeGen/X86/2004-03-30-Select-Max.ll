@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah | FileCheck %s
 ; CHECK-NOT: {{j[lgbe]}}
 
 define i32 @max(i32 %A, i32 %B) nounwind {

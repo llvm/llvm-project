@@ -85,9 +85,7 @@ namespace test4 {
 
   // CHECK:    define [[A:%.*]]* @_ZN5test44testEs(i16 signext
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
-  // CHECK-NEXT: [[T0:%.*]] = icmp slt i32 [[N]], 0
-  // CHECK-NEXT: [[T1:%.*]] = select i1 [[T0]], i32 -1, i32 [[N]]
-  // CHECK-NEXT: call i8* @_Znaj(i32 [[T1]])
+  // CHECK-NEXT: call i8* @_Znaj(i32 [[N]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[N]]
   elt *test(short s) {
     return new elt[s];
@@ -104,9 +102,7 @@ namespace test5 {
 
   // CHECK:    define [[A:%.*]]* @_ZN5test54testEi(i32
   // CHECK:      [[N:%.*]] = load i32, i32*
-  // CHECK-NEXT: [[T0:%.*]] = icmp slt i32 [[N]], 0
-  // CHECK-NEXT: [[T1:%.*]] = select i1 [[T0]], i32 -1, i32 [[N]]
-  // CHECK-NEXT: call i8* @_Znaj(i32 [[T1]])
+  // CHECK-NEXT: call i8* @_Znaj(i32 [[N]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[N]]
   elt *test(int s) {
     return new elt[s];
@@ -169,13 +165,11 @@ namespace test8 {
 
   // CHECK:    define [[A:%.*]]* @_ZN5test84testEx(i64
   // CHECK:      [[N:%.*]] = load i64, i64*
-  // CHECK-NEXT: [[T0:%.*]] = icmp uge i64 [[N]], 4294967296
   // CHECK-NEXT: [[T1:%.*]] = trunc i64 [[N]] to i32
   // CHECK-NEXT: [[T2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[T1]], i32 4)
   // CHECK-NEXT: [[T3:%.*]] = extractvalue { i32, i1 } [[T2]], 1
-  // CHECK-NEXT: [[T4:%.*]] = or i1 [[T0]], [[T3]]
   // CHECK-NEXT: [[T5:%.*]] = extractvalue { i32, i1 } [[T2]], 0
-  // CHECK-NEXT: [[T6:%.*]] = select i1 [[T4]], i32 -1, i32 [[T5]]
+  // CHECK-NEXT: [[T6:%.*]] = select i1 [[T3]], i32 -1, i32 [[T5]]
   // CHECK-NEXT: call i8* @_Znaj(i32 [[T6]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[T1]]
   elt *test(long long s) {
@@ -194,13 +188,11 @@ namespace test9 {
 
   // CHECK:    define [[A:%.*]]* @_ZN5test94testEy(i64
   // CHECK:      [[N:%.*]] = load i64, i64*
-  // CHECK-NEXT: [[T0:%.*]] = icmp uge i64 [[N]], 4294967296
   // CHECK-NEXT: [[T1:%.*]] = trunc i64 [[N]] to i32
   // CHECK-NEXT: [[T2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[T1]], i32 4)
   // CHECK-NEXT: [[T3:%.*]] = extractvalue { i32, i1 } [[T2]], 1
-  // CHECK-NEXT: [[T4:%.*]] = or i1 [[T0]], [[T3]]
   // CHECK-NEXT: [[T5:%.*]] = extractvalue { i32, i1 } [[T2]], 0
-  // CHECK-NEXT: [[T6:%.*]] = select i1 [[T4]], i32 -1, i32 [[T5]]
+  // CHECK-NEXT: [[T6:%.*]] = select i1 [[T3]], i32 -1, i32 [[T5]]
   // CHECK-NEXT: call i8* @_Znaj(i32 [[T6]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[T1]]
   elt *test(unsigned long long s) {

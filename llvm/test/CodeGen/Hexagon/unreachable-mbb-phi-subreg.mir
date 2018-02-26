@@ -17,9 +17,8 @@ body: |
 
   bb.2:
     ; Make sure that the subregister from the PHI operand is preserved.
-    ; CHECK: %[[REG:[0-9]+]] = COPY %0.isub_lo
+    ; CHECK: %[[REG:[0-9]+]]:intregs = COPY %0.isub_lo
     ; CHECK: %r0 = COPY %[[REG]]
     %1 : intregs = PHI %0.isub_lo, %bb.0, %0.isub_hi, %bb.1
     %r0 = COPY %1
 ...
-

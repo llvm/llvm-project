@@ -414,6 +414,7 @@ def IIC_VTBX1      : InstrItinClass;
 def IIC_VTBX2      : InstrItinClass;
 def IIC_VTBX3      : InstrItinClass;
 def IIC_VTBX4      : InstrItinClass;
+def IIC_VDOTPROD   : InstrItinClass;
 
 //===----------------------------------------------------------------------===//
 // Processor instruction itineraries.

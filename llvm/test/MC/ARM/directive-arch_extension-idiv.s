@@ -25,10 +25,10 @@
 idiv:
 	udiv r0, r1, r2
 @ CHECK-ARMv6: error: instruction requires: divide in ARM
-@ CHECK-THUMBv6: error: instruction requires: divide in ARM arm-mode
+@ CHECK-THUMBv6: error: instruction requires: divide in THUMB armv8m.base
 	sdiv r0, r1, r2
 @ CHECK-ARMv6: error: instruction requires: divide in ARM
-@ CHECK-THUMBv6: error: instruction requires: divide in ARM arm-mode
+@ CHECK-THUMBv6: error: instruction requires: divide in THUMB armv8m.base
 
 	.arch_extension noidiv
 @ CHECK-V6: error: architectural extension 'idiv' is not allowed for the current base architecture
@@ -42,12 +42,12 @@ idiv:
 noidiv:
 	udiv r0, r1, r2
 @ CHECK-ARMv6: error: instruction requires: divide in ARM
-@ CHECK-THUMBv6: error: instruction requires: divide in ARM arm-mode
+@ CHECK-THUMBv6: error: instruction requires: divide in THUMB armv8m.base
 @ CHECK-ARMv7: error: instruction requires: divide in ARM
 @ CHECK-THUMBv7: error: instruction requires: divide in THUMB
 	sdiv r0, r1, r2
 @ CHECK-ARMv6: error: instruction requires: divide in ARM
-@ CHECK-THUMBv6: error: instruction requires: divide in ARM arm-mode
+@ CHECK-THUMBv6: error: instruction requires: divide in THUMB armv8m.base
 @ CHECK-ARMv7: error: instruction requires: divide in ARM
 @ CHECK-THUMBv7: error: instruction requires: divide in THUMB
 

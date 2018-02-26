@@ -7,7 +7,7 @@ Sections:
     Tables:         
       - ElemType:        ANYFUNC
         Limits:
-          Flags:           0x00000001
+          Flags:           [ HAS_MAX ]
           Initial:         0x00000010
           Maximum:         0x00000011
 ...
@@ -19,7 +19,7 @@ Sections:
 # CHECK:    Tables:         
 # CHECK:      - ElemType:        ANYFUNC
 # CHECK:        Limits:
-# CHECK:          Flags:           0x00000001
+# CHECK:          Flags:           [ HAS_MAX ]
 # CHECK:          Initial:         0x00000010
 # CHECK:          Maximum:         0x00000011
 # CHECK: ...

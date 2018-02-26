@@ -8,9 +8,9 @@
 void f2();
 void f2() { }
 
-// CHECK-10_4-LABEL: define void @f3
-// CHECK-10_5-LABEL: define void @f3
-// CHECK-10_6-LABEL: define void @f3
+// CHECK-10_4-LABEL: define hidden void @f3
+// CHECK-10_5-LABEL: define hidden void @f3
+// CHECK-10_6-LABEL: define hidden void @f3
 void f3() __attribute__((availability(macosx,introduced=10.5)));
 void f3() { }
 

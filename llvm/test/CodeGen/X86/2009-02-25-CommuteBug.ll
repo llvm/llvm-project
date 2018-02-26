@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mattr=+sse2 -stats 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -stats 2>&1 | FileCheck %s
 ; rdar://6608609
 
 ; CHECK-NOT: commuted

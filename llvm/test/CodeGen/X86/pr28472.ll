@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}same_dynamic_index_fp_vector_type:
-; CHECK: # BB#0:
+; CHECK: # %bb.0:
 ; CHECK-NEXT: retq
 define float @same_dynamic_index_fp_vector_type(float %val, i32 %idx) {
 bb:

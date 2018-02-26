@@ -19,6 +19,10 @@ post.if:		; preds = %if.false, %if.true
 loop.exit:		; preds = %post.if
 ; CHECK: %X3.lcssa = phi i32
 ; CHECK: %X4 = add i32 3, %X3.lcssa
+
+; CHECK2: call void @llvm.dbg.value(metadata i32 %X3.lcssa, metadata !11, metadata !DIExpression()), !dbg !19
+; CHECK2-NEXT: add i32 3, %X3.lcssa
+; CHECK2: ret void
 	%X4 = add i32 3, %X3		; <i32> [#uses=0]
 	ret void
 }

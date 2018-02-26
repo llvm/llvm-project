@@ -1,0 +1,4 @@
+# RUN: llvm-objcopy -O binary %p/Inputs/pt-phdr.elf %t
+# RUN: wc -c < %t | FileCheck %s
+
+# CHECK: 4110

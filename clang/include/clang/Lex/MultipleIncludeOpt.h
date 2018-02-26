@@ -92,7 +92,7 @@ public:
     TheMacro = nullptr;
   }
 
-  /// getHasReadAnyTokensVal - This is used for the \#ifndef hande-shake at the
+  /// getHasReadAnyTokensVal - This is used for the \#ifndef handshake at the
   /// top of the file when reading preprocessor directives.  Otherwise, reading
   /// the "ifndef x" would count as reading tokens.
   bool getHasReadAnyTokensVal() const { return ReadAnyTokens; }

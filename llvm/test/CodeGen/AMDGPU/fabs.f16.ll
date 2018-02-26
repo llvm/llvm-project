@@ -1,15 +1,15 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; DAGCombiner will transform:
 ; (fabs (f16 bitcast (i16 a))) => (f16 bitcast (and (i16 a), 0x7FFFFFFF))
 ; unless isFabsFree returns true
 
 ; GCN-LABEL: {{^}}s_fabs_free_f16:
-; GCN: flat_load_ushort [[VAL:v[0-9]+]],
+; GCN: {{flat|global}}_load_ushort [[VAL:v[0-9]+]],
 ; GCN: v_and_b32_e32 [[RESULT:v[0-9]+]], 0x7fff, [[VAL]]
-; GCN: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
 define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc= bitcast i16 %in to half
@@ -20,7 +20,7 @@ define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 
 ; GCN-LABEL: {{^}}s_fabs_f16:
 ; CI: flat_load_ushort [[VAL:v[0-9]+]],
-; CI: v_and_b32_e32 [[CVT0:v[0-9]+]], 0x7fff, [[VAL]]
+; CI: v_and_b32_e32 [[RESULT:v[0-9]+]], 0x7fff, [[VAL]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
@@ -67,7 +67,7 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:     v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
-; GCN: flat_store_dwordx2
+; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   store <4 x half> %fabs, <4 x half> addrspace(1)* %out
@@ -75,8 +75,8 @@ define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half
 }
 
 ; GCN-LABEL: {{^}}fabs_fold_f16:
-; GCN: flat_load_ushort [[IN0:v[0-9]+]]
-; GCN: flat_load_ushort [[IN1:v[0-9]+]]
+; GCN: {{flat|global}}_load_ushort [[IN0:v[0-9]+]]
+; GCN: {{flat|global}}_load_ushort [[IN1:v[0-9]+]]
 
 ; CI-DAG: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], [[IN0]]
 ; CI-DAG: v_cvt_f32_f16_e64 [[ABS_CVT1:v[0-9]+]], |[[IN1]]|
@@ -95,7 +95,7 @@ define amdgpu_kernel void @fabs_fold_f16(half addrspace(1)* %out, half %in0, hal
 }
 
 ; GCN-LABEL: {{^}}v_fabs_v2f16:
-; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7fff7fff, [[VAL]]
 define amdgpu_kernel void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -118,7 +118,7 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 }
 
 ; GCN-LABEL: {{^}}v_fabs_fold_v2f16:
-; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 
 ; CI: v_cvt_f32_f16_e32
 ; CI: v_cvt_f32_f16_e32
@@ -127,8 +127,7 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 ; CI: v_mul_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32
 
-; VI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16,
-; VI: v_mul_f16_sdwa v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI: v_mul_f16_sdwa v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_mul_f16_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
 
 ; GFX9: v_and_b32_e32 [[FABS:v[0-9]+]], 0x7fff7fff, [[VAL]]

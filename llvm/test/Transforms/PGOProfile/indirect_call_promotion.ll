@@ -1,13 +1,19 @@
-; RUN: opt < %s -pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo | FileCheck %s --check-prefix=ICALL-PROM-SAMPLEPGO
-; RUN: opt < %s -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
-; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
+; RUN: opt < %s -pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -passes=pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
+; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
+; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
+
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func3 with count 150 out of 160
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func1 with count 10 out of 10
+
+; PASS2-REMARK: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
+; PASS2-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
+; PASS2-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func3
+; PASS2-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func1
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -37,8 +43,7 @@ entry:
 define i32 @bar() {
 entry:
   %tmp = load i32 ()*, i32 ()** @foo, align 8
-; ICALL-PROM:   [[BITCAST:%[0-9]+]] = bitcast i32 ()* %tmp to i8*
-; ICALL-PROM:   [[CMP:%[0-9]+]] = icmp eq i8* [[BITCAST]], bitcast (i32 ()* @func4 to i8*)
+; ICALL-PROM:   [[CMP:%[0-9]+]] = icmp eq i32 ()* %tmp, @func4
 ; ICALL-PROM:   br i1 [[CMP]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ:
 ; ICALL-PROM:   [[DIRCALL_RET:%[0-9]+]] = call i32 @func4()

@@ -3,7 +3,7 @@
 
 define double @test1_add(double %A, double %B) {
 ; SSE41-LABEL: test1_add:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    paddd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -15,7 +15,7 @@ define double @test1_add(double %A, double %B) {
 
 define double @test2_add(double %A, double %B) {
 ; SSE41-LABEL: test2_add:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    paddw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -27,7 +27,7 @@ define double @test2_add(double %A, double %B) {
 
 define double @test3_add(double %A, double %B) {
 ; SSE41-LABEL: test3_add:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    paddb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
@@ -39,7 +39,7 @@ define double @test3_add(double %A, double %B) {
 
 define double @test1_sub(double %A, double %B) {
 ; SSE41-LABEL: test1_sub:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psubd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -51,7 +51,7 @@ define double @test1_sub(double %A, double %B) {
 
 define double @test2_sub(double %A, double %B) {
 ; SSE41-LABEL: test2_sub:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psubw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -63,7 +63,7 @@ define double @test2_sub(double %A, double %B) {
 
 define double @test3_sub(double %A, double %B) {
 ; SSE41-LABEL: test3_sub:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psubb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
@@ -75,7 +75,7 @@ define double @test3_sub(double %A, double %B) {
 
 define double @test1_mul(double %A, double %B) {
 ; SSE41-LABEL: test1_mul:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -87,7 +87,7 @@ define double @test1_mul(double %A, double %B) {
 
 define double @test2_mul(double %A, double %B) {
 ; SSE41-LABEL: test2_mul:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmullw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -100,7 +100,7 @@ define double @test2_mul(double %A, double %B) {
 ; There is no legal ISD::MUL with type MVT::v8i16.
 define double @test3_mul(double %A, double %B) {
 ; SSE41-LABEL: test3_mul:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; SSE41-NEXT:    pmullw %xmm2, %xmm0
@@ -115,7 +115,7 @@ define double @test3_mul(double %A, double %B) {
 
 define double @test1_and(double %A, double %B) {
 ; SSE41-LABEL: test1_and:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    andps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -127,7 +127,7 @@ define double @test1_and(double %A, double %B) {
 
 define double @test2_and(double %A, double %B) {
 ; SSE41-LABEL: test2_and:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    andps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -139,7 +139,7 @@ define double @test2_and(double %A, double %B) {
 
 define double @test3_and(double %A, double %B) {
 ; SSE41-LABEL: test3_and:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    andps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
@@ -151,7 +151,7 @@ define double @test3_and(double %A, double %B) {
 
 define double @test1_or(double %A, double %B) {
 ; SSE41-LABEL: test1_or:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    orps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -163,7 +163,7 @@ define double @test1_or(double %A, double %B) {
 
 define double @test2_or(double %A, double %B) {
 ; SSE41-LABEL: test2_or:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    orps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -175,7 +175,7 @@ define double @test2_or(double %A, double %B) {
 
 define double @test3_or(double %A, double %B) {
 ; SSE41-LABEL: test3_or:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    orps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
@@ -187,7 +187,7 @@ define double @test3_or(double %A, double %B) {
 
 define double @test1_xor(double %A, double %B) {
 ; SSE41-LABEL: test1_xor:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -199,7 +199,7 @@ define double @test1_xor(double %A, double %B) {
 
 define double @test2_xor(double %A, double %B) {
 ; SSE41-LABEL: test2_xor:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -211,7 +211,7 @@ define double @test2_xor(double %A, double %B) {
 
 define double @test3_xor(double %A, double %B) {
 ; SSE41-LABEL: test3_xor:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
@@ -223,7 +223,7 @@ define double @test3_xor(double %A, double %B) {
 
 define double @test_fadd(double %A, double %B) {
 ; SSE41-LABEL: test_fadd:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    addps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x float>
@@ -235,7 +235,7 @@ define double @test_fadd(double %A, double %B) {
 
 define double @test_fsub(double %A, double %B) {
 ; SSE41-LABEL: test_fsub:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    subps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x float>
@@ -247,7 +247,7 @@ define double @test_fsub(double %A, double %B) {
 
 define double @test_fmul(double %A, double %B) {
 ; SSE41-LABEL: test_fmul:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    mulps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %1 = bitcast double %A to <2 x float>

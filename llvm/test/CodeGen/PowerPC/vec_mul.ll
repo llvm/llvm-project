@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -march=ppc32 -mattr=+altivec -mattr=-vsx -mattr=-power8-altivec | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -march=ppc64 -mattr=+altivec -mattr=-vsx -mcpu=pwr7 | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -march=ppc64 -mattr=+altivec -mattr=-vsx -mcpu=pwr8 -mattr=-power8-altivec | FileCheck %s -check-prefix=CHECK-LE
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -march=ppc64 -mattr=+altivec -mattr=+vsx -mcpu=pwr7 | FileCheck %s -check-prefix=CHECK-VSX
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -march=ppc64 -mattr=+altivec -mattr=+vsx -mcpu=pwr8 -mattr=-power8-altivec | FileCheck %s -check-prefix=CHECK-LE-VSX
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-altivec | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mcpu=pwr7 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mcpu=pwr8 -mattr=-power8-altivec | FileCheck %s -check-prefix=CHECK-LE
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+altivec -mattr=+vsx -mcpu=pwr7 | FileCheck %s -check-prefix=CHECK-VSX
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=+vsx -mcpu=pwr8 -mattr=-power8-altivec | FileCheck %s -check-prefix=CHECK-LE-VSX
 
 define <4 x i32> @test_v4i32(<4 x i32>* %X, <4 x i32>* %Y) {
 	%tmp = load <4 x i32>, <4 x i32>* %X		; <<4 x i32>> [#uses=1]

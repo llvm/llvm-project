@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=powerpc-apple-darwin | FileCheck %s
 
 define double @fabs(double %f) {
 ; CHECK-LABEL: fabs:
-; CHECK:       ; BB#0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    fabs f1, f1
 ; CHECK-NEXT:    blr
 ;
@@ -12,7 +12,7 @@ define double @fabs(double %f) {
 
 define float @bitcast_fabs(float %x) {
 ; CHECK-LABEL: bitcast_fabs:
-; CHECK:       ; BB#0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    stfs f1, -8(r1)
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop

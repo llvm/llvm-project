@@ -75,6 +75,18 @@ FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
   return FeatureBits;
 }
 
+bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
+  SubtargetFeatures T(FS);
+  FeatureBitset Set, All;
+  for (std::string F : T.getFeatures()) {
+    SubtargetFeatures::ApplyFeatureFlag(Set, F, ProcFeatures);
+    if (F[0] == '-')
+      F[0] = '+';
+    SubtargetFeatures::ApplyFeatureFlag(All, F, ProcFeatures);
+  }
+  return (FeatureBits & All) == Set;
+}
+
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
   assert(ProcSchedModels && "Processor machine model not available!");
 
@@ -102,7 +114,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
 
 InstrItineraryData
 MCSubtargetInfo::getInstrItineraryForCPU(StringRef CPU) const {
-  const MCSchedModel SchedModel = getSchedModelForCPU(CPU);
+  const MCSchedModel &SchedModel = getSchedModelForCPU(CPU);
   return InstrItineraryData(SchedModel, Stages, OperandCycles, ForwardingPaths);
 }
 

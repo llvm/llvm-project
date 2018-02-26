@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -stats 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -stats 2>&1 | FileCheck %s
 ; CHECK: 7 asm-printer
 
 define i32 @g(i32 %a, i32 %b) nounwind {

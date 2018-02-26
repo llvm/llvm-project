@@ -13,7 +13,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/TypeName.h"
+#include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
@@ -58,21 +58,27 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(const CVTypeArray &Types,
                                                    uint32_t NumRecords)
     : LazyRandomTypeCollection(Types, NumRecords, PartialOffsetArray()) {}
 
-void LazyRandomTypeCollection::reset(StringRef Data, uint32_t RecordCountHint) {
+void LazyRandomTypeCollection::reset(BinaryStreamReader &Reader,
+                                     uint32_t RecordCountHint) {
   Count = 0;
   PartialOffsets = PartialOffsetArray();
 
-  BinaryStreamReader Reader(Data, support::little);
-  error(Reader.readArray(Types, Reader.getLength()));
+  error(Reader.readArray(Types, Reader.bytesRemaining()));
 
   // Clear and then resize, to make sure existing data gets destroyed.
   Records.clear();
   Records.resize(RecordCountHint);
 }
 
+void LazyRandomTypeCollection::reset(StringRef Data, uint32_t RecordCountHint) {
+  BinaryStreamReader Reader(Data, support::little);
+  reset(Reader, RecordCountHint);
+}
+
 void LazyRandomTypeCollection::reset(ArrayRef<uint8_t> Data,
                                      uint32_t RecordCountHint) {
-  reset(toStringRef(Data), RecordCountHint);
+  BinaryStreamReader Reader(Data, support::little);
+  reset(Reader, RecordCountHint);
 }
 
 uint32_t LazyRandomTypeCollection::getOffsetOfType(TypeIndex Index) {
@@ -83,9 +89,20 @@ uint32_t LazyRandomTypeCollection::getOffsetOfType(TypeIndex Index) {
 }
 
 CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
-  error(ensureTypeExists(Index));
+  auto EC = ensureTypeExists(Index);
+  error(std::move(EC));
   assert(contains(Index));
 
+  return Records[Index.toArrayIndex()].Type;
+}
+
+Optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
+  if (auto EC = ensureTypeExists(Index)) {
+    consumeError(std::move(EC));
+    return None;
+  }
+
+  assert(contains(Index));
   return Records[Index.toArrayIndex()].Type;
 }
 
@@ -112,6 +129,9 @@ StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {
 }
 
 bool LazyRandomTypeCollection::contains(TypeIndex Index) {
+  if (Index.isSimple() || Index.isNoneType())
+    return false;
+
   if (Records.size() <= Index.toArrayIndex())
     return false;
   if (!Records[Index.toArrayIndex()].Type.valid())

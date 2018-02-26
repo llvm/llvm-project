@@ -29,9 +29,10 @@ def err_drv_no_cuda_installation : Error<
 def err_drv_no_cuda_libdevice : Error<
   "cannot find libdevice for %0. Provide path to different CUDA installation "
   "via --cuda-path, or pass -nocudalib to build without linking with libdevice.">;
-def err_drv_cuda_version_too_low : Error<
-  "GPU arch %1 requires CUDA version at least %3, but installation at %0 is %2. "
-  "Use --cuda-path to specify a different CUDA install, or pass "
+def err_drv_cuda_version_unsupported : Error<
+  "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
+  "but installation at %3 is %4.  Use --cuda-path to specify a different CUDA "
+  "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
   "--no-cuda-version-check.">;
 def err_drv_cuda_nvptx_host : Error<"unsupported use of NVPTX for host compilation.">;
 def err_drv_invalid_thread_model_for_target : Error<
@@ -69,6 +70,10 @@ def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
 def err_drv_invalid_Xarch_argument_isdriver : Error<
   "invalid Xarch argument: '%0', cannot change driver behavior inside Xarch argument">;
+def err_drv_Xopenmp_target_missing_triple : Error<
+  "cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>">;
+def err_drv_invalid_Xopenmp_target_with_args : Error<
+  "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
 def err_drv_argument_not_allowed_with : Error<
@@ -97,15 +102,35 @@ def err_drv_force_crash : Error<
   "failing because %select{environment variable 'FORCE_CLANG_DIAGNOSTICS_CRASH' is set|'-gen-reproducer' is used}0">;
 def err_drv_invalid_mfloat_abi : Error<
   "invalid float ABI '%0'">;
+def err_drv_invalid_mtp : Error<
+  "invalid thread pointer reading mode '%0'">;
+def err_drv_missing_arg_mtp : Error<
+  "missing argument to '%0'">;
 def err_drv_invalid_libcxx_deployment : Error<
   "invalid deployment target for -stdlib=libc++ (requires %0 or later)">;
 def err_drv_invalid_argument_to_fdebug_prefix_map : Error<
   "invalid argument '%0' to -fdebug-prefix-map">;
 def err_drv_malformed_sanitizer_blacklist : Error<
   "malformed sanitizer blacklist: '%0'">;
+def err_drv_duplicate_config : Error<
+  "no more than one option '--config' is allowed">;
+def err_drv_config_file_not_exist : Error<
+  "configuration file '%0' does not exist">;
+def err_drv_config_file_not_found : Error<
+  "configuration file '%0' cannot be found">;
+def note_drv_config_file_searched_in : Note<
+  "was searched for in the directory: %0">;
+def err_drv_cannot_read_config_file : Error<
+  "cannot read configuration file '%0'">;
+def err_drv_nested_config_file: Error<
+  "option '--config' is not allowed inside configuration file">;
 
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;
+def err_cpu_unsupported_isa
+  : Error<"CPU '%0' does not support '%1' execution mode">;
+def err_arch_unsupported_isa
+  : Error<"Architecture '%0' does not support '%1' execution mode">;
 
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
@@ -251,6 +276,9 @@ def err_analyzer_config_no_value : Error<
 def err_analyzer_config_multiple_values : Error<
   "analyzer-config option '%0' should contain only one '='">;
 
+def err_drv_invalid_hvx_length : Error<
+  "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
+
 def err_drv_modules_validate_once_requires_timestamp : Error<
   "option '-fmodules-validate-once-per-build-session' requires "
   "'-fbuild-session-timestamp=<seconds since Epoch>' or '-fbuild-session-file=<file>'">;
@@ -277,9 +305,27 @@ def warn_target_unsupported_nan2008 : Warning<
 def warn_target_unsupported_nanlegacy : Warning<
   "ignoring '-mnan=legacy' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;
+def warn_target_unsupported_abslegacy : Warning<
+  "ignoring '-mabs=legacy' option because the '%0' architecture does not support it">,
+  InGroup<UnsupportedAbs>;
+def warn_target_unsupported_abs2008 : Warning<
+  "ignoring '-mabs=2008' option because the '%0' architecture does not support it">,
+  InGroup<UnsupportedAbs>;
 def warn_target_unsupported_compact_branches : Warning<
   "ignoring '-mcompact-branches=' option because the '%0' architecture does not"
   " support it">, InGroup<UnsupportedCB>;
+def warn_drv_unsupported_gpopt : Warning<
+  "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
+  " usage of }0-mabicalls">,
+  InGroup<UnsupportedGPOpt>;
+def warn_drv_unsupported_longcalls : Warning<
+  "ignoring '-mlong-calls' option as it is not currently supported with "
+  "%select{|the implicit usage of }0-mabicalls">,
+  InGroup<OptionIgnored>;
+def warn_drv_unsupported_abicalls : Warning<
+  "ignoring '-mabicalls' option as it cannot be used with "
+  "non position-independent code and the N64 ABI">,
+  InGroup<OptionIgnored>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,
@@ -300,4 +346,20 @@ def warn_drv_msvc_not_found : Warning<
   "unable to find a Visual Studio installation; "
   "try running Clang from a developer command prompt">,
   InGroup<DiagGroup<"msvc-not-found">>;
+
+def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
+  "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
+  InGroup<OptionIgnored>;
+
+def note_drv_verify_prefix_spelling : Note<
+  "-verify prefixes must start with a letter and contain only alphanumeric"
+  " characters, hyphens, and underscores">;
+
+def warn_drv_experimental_isel_incomplete : Warning<
+  "-fexperimental-isel support for the '%0' architecture is incomplete">,
+  InGroup<ExperimentalISel>;
+
+def warn_drv_experimental_isel_incomplete_opt : Warning<
+  "-fexperimental-isel support is incomplete for this architecture at the current optimization level">,
+  InGroup<ExperimentalISel>;
 }

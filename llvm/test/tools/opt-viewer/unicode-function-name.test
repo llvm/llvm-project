@@ -1,0 +1,7 @@
+RUN: %opt-viewer -s %p/Inputs/unicode-function-name -o %t %p/Inputs/unicode-function-name/s.opt.yaml --no-highlight --demangler=llvm-cxxfilt
+RUN: diff %p/Outputs/unicode-function-name/index.html %t/index.html
+RUN: diff %p/Outputs/unicode-function-name/s.swift.html %t/s.swift.html
+
+# Also test the pygments code path without actually checking the output since
+# that may slightly vary between pygment versions
+RUN: %opt-viewer -s %p/Inputs/unicode-function-name -o %t.unused %p/Inputs/unicode-function-name/s.opt.yaml --demangler=llvm-cxxfilt

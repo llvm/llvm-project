@@ -22,7 +22,8 @@
 using namespace llvm;
 
 LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
-  : VoidTy(C, Type::VoidTyID),
+  : DiagHandler(llvm::make_unique<DiagnosticHandler>()),
+    VoidTy(C, Type::VoidTyID),
     LabelTy(C, Type::LabelTyID),
     HalfTy(C, Type::HalfTyID),
     FloatTy(C, Type::FloatTyID),

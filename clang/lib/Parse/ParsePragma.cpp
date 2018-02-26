@@ -95,6 +95,44 @@ struct PragmaFPContractHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+// Pragma STDC implementations.
+
+/// PragmaSTDC_FENV_ACCESSHandler - "\#pragma STDC FENV_ACCESS ...".
+struct PragmaSTDC_FENV_ACCESSHandler : public PragmaHandler {
+  PragmaSTDC_FENV_ACCESSHandler() : PragmaHandler("FENV_ACCESS") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &Tok) override {
+    tok::OnOffSwitch OOS;
+    if (PP.LexOnOffSwitch(OOS))
+     return;
+    if (OOS == tok::OOS_ON)
+      PP.Diag(Tok, diag::warn_stdc_fenv_access_not_supported);
+  }
+};
+
+/// PragmaSTDC_CX_LIMITED_RANGEHandler - "\#pragma STDC CX_LIMITED_RANGE ...".
+struct PragmaSTDC_CX_LIMITED_RANGEHandler : public PragmaHandler {
+  PragmaSTDC_CX_LIMITED_RANGEHandler() : PragmaHandler("CX_LIMITED_RANGE") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &Tok) override {
+    tok::OnOffSwitch OOS;
+    PP.LexOnOffSwitch(OOS);
+  }
+};
+
+/// PragmaSTDC_UnknownHandler - "\#pragma STDC ...".
+struct PragmaSTDC_UnknownHandler : public PragmaHandler {
+  PragmaSTDC_UnknownHandler() = default;
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &UnknownTok) override {
+    // C99 6.10.6p2, unknown forms are not allowed.
+    PP.Diag(UnknownTok, diag::ext_stdc_pragma_ignored);
+  }
+};
+
 struct PragmaFPHandler : public PragmaHandler {
   PragmaFPHandler() : PragmaHandler("fp") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
@@ -232,6 +270,15 @@ void Parser::initializePragmaHandlers() {
 
   FPContractHandler.reset(new PragmaFPContractHandler());
   PP.AddPragmaHandler("STDC", FPContractHandler.get());
+
+  STDCFENVHandler.reset(new PragmaSTDC_FENV_ACCESSHandler());
+  PP.AddPragmaHandler("STDC", STDCFENVHandler.get());
+
+  STDCCXLIMITHandler.reset(new PragmaSTDC_CX_LIMITED_RANGEHandler());
+  PP.AddPragmaHandler("STDC", STDCCXLIMITHandler.get());
+
+  STDCUnknownHandler.reset(new PragmaSTDC_UnknownHandler());
+  PP.AddPragmaHandler("STDC", STDCUnknownHandler.get());
 
   PCSectionHandler.reset(new PragmaClangSectionHandler(Actions));
   PP.AddPragmaHandler("clang", PCSectionHandler.get());
@@ -371,6 +418,15 @@ void Parser::resetPragmaHandlers() {
   PP.RemovePragmaHandler("STDC", FPContractHandler.get());
   FPContractHandler.reset();
 
+  PP.RemovePragmaHandler("STDC", STDCFENVHandler.get());
+  STDCFENVHandler.reset();
+
+  PP.RemovePragmaHandler("STDC", STDCCXLIMITHandler.get());
+  STDCCXLIMITHandler.reset();
+
+  PP.RemovePragmaHandler("STDC", STDCUnknownHandler.get());
+  STDCUnknownHandler.reset();
+
   PP.RemovePragmaHandler("clang", OptimizeHandler.get());
   OptimizeHandler.reset();
 
@@ -422,15 +478,20 @@ void Parser::HandlePragmaPack() {
   assert(Tok.is(tok::annot_pragma_pack));
   PragmaPackInfo *Info =
     static_cast<PragmaPackInfo *>(Tok.getAnnotationValue());
-  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  SourceLocation PragmaLoc = Tok.getLocation();
   ExprResult Alignment;
   if (Info->Alignment.is(tok::numeric_constant)) {
     Alignment = Actions.ActOnNumericConstant(Info->Alignment);
-    if (Alignment.isInvalid())
+    if (Alignment.isInvalid()) {
+      ConsumeAnnotationToken();
       return;
+    }
   }
   Actions.ActOnPragmaPack(PragmaLoc, Info->Action, Info->SlotLabel,
                           Alignment.get());
+  // Consume the token after processing the pragma to enable pragma-specific
+  // #include warnings.
+  ConsumeAnnotationToken();
 }
 
 void Parser::HandlePragmaMSStruct() {
@@ -446,8 +507,10 @@ void Parser::HandlePragmaAlign() {
   Sema::PragmaOptionsAlignKind Kind =
     static_cast<Sema::PragmaOptionsAlignKind>(
     reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
-  SourceLocation PragmaLoc = ConsumeAnnotationToken();
-  Actions.ActOnPragmaOptionsAlign(Kind, PragmaLoc);
+  Actions.ActOnPragmaOptionsAlign(Kind, Tok.getLocation());
+  // Consume the token after processing the pragma to enable pragma-specific
+  // #include warnings.
+  ConsumeAnnotationToken();
 }
 
 void Parser::HandlePragmaDump() {
@@ -528,7 +591,8 @@ StmtResult Parser::HandlePragmaCaptured()
 
   SourceLocation Loc = Tok.getLocation();
 
-  ParseScope CapturedRegionScope(this, Scope::FnScope | Scope::DeclScope);
+  ParseScope CapturedRegionScope(this, Scope::FnScope | Scope::DeclScope |
+                                           Scope::CompoundStmtScope);
   Actions.ActOnCapturedRegionStart(Loc, getCurScope(), CR_Default,
                                    /*NumParams=*/1);
 

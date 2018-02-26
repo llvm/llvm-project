@@ -1,0 +1,13 @@
+REQUIRES: linux
+
+No gc-sections:
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t
+RUN: nm %t | grep UnusedFunctionShouldBeRemovedByLinker | count 1
+
+With gc-sections. Currently, we can't remove unused code.
+DISABLED: %cpp_compiler %S/GcSectionsTest.cpp -o %t -ffunction-sections -Wl,-gc-sections
+DISABLED: nm %t | grep UnusedFunctionShouldBeRemovedByLinker | count 1
+
+With gc sections, with trace-pc. Unused code is removed.
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -fsanitize-coverage=0 -fsanitize-coverage=trace-pc -ffunction-sections -Wl,-gc-sections
+RUN: nm %t | not grep UnusedFunctionShouldBeRemovedByLinker

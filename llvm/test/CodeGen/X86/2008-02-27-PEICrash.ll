@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
 
 define i64 @__divsc3(float %a, float %b, float %c, float %d) nounwind readnone  {
 entry:

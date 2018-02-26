@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,core,alpha.core.CallAndMessageUnInitRefArg -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,core,alpha.core.CallAndMessageUnInitRefArg -analyzer-output=text -DTEST_INLINABLE_ALLOCATORS -verify %s
 // Passing uninitialized const data to unknown function
 
 #include "Inputs/system-header-simulator-cxx.h"
@@ -52,7 +53,7 @@ int& f6_1_sub(int &p) {
 }
 
 void f6_1(void) {
-  int t;
+  int t; // expected-note{{'t' declared without an initial value}}
   int p = f6_1_sub(t); //expected-warning {{Assigned value is garbage or undefined}}
                        //expected-note@-1 {{Calling 'f6_1_sub'}}
                        //expected-note@-2 {{Returning from 'f6_1_sub'}}

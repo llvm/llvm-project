@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 void foo() {
 }
 
@@ -18,14 +20,14 @@ public:
   const S2 &operator =(const S2&) const;
   S2 &operator =(const S2&);
   static float S2s; // expected-note {{static data member is predetermined as shared}}
-  static const float S2sc;
+  static const float S2sc; // expected-note {{static data member is predetermined as shared}}
 };
-const float S2::S2sc = 0; // expected-note {{static data member is predetermined as shared}}
+const float S2::S2sc = 0;
 const S2 b;
 const S2 ba[5];
 class S3 {
   int a;
-  S3 &operator=(const S3 &s3); // expected-note 2 {{implicitly declared private here}}
+  S3 &operator=(const S3 &s3); // expected-note {{implicitly declared private here}}
 
 public:
   S3() : a(0) {}
@@ -52,7 +54,7 @@ public:
 };
 class S6 {
   int a;
-  S6() : a(0) {}
+  S6() : a(0) {} // expected-note {{implicitly declared private here}}
 
 public:
   S6(const S6 &s6) : a(s6.a) {}
@@ -215,10 +217,12 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute lastprivate(j)
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute firstprivate(m) lastprivate(m) // expected-error {{'operator=' is a private member of 'S3'}}
+// expected-error@+1 {{firstprivate variable cannot be lastprivate}} expected-note@+1 {{defined as firstprivate}}
+#pragma omp target teams distribute firstprivate(m) lastprivate(m)
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute lastprivate(n) firstprivate(n) // OK
+// expected-error@+1 {{lastprivate variable cannot be firstprivate}} expected-note@+1 {{defined as lastprivate}}
+#pragma omp target teams distribute lastprivate(n) firstprivate(n) // expected-error {{calling a private constructor of class 'S6'}}
   for (i = 0; i < argc; ++i) foo();
 
   static int si;

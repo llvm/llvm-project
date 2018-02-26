@@ -16,7 +16,7 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYISELLOWERING_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYISELLOWERING_H
 
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 
@@ -48,6 +48,9 @@ class WebAssemblyTargetLowering final : public TargetLowering {
                            const TargetLibraryInfo *LibInfo) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *> getRegForInlineAsmConstraint(
       const TargetRegisterInfo *TRI, StringRef Constraint,
@@ -55,7 +58,8 @@ class WebAssemblyTargetLowering final : public TargetLowering {
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
   bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, unsigned Align,
                                       bool *Fast) const override;
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;

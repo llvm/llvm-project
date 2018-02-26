@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- | FileCheck %s
 ; CHECK-NOT: __floatditf
 
 define i64 @__fixunstfdi(ppc_fp128 %a) nounwind  {

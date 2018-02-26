@@ -18,6 +18,8 @@
 def X86xtest: SDNode<"X86ISD::XTEST", SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>,
                      [SDNPHasChain, SDNPSideEffect]>;
 
+let SchedRW = [WriteSystem] in {
+
 let usesCustomInserter = 1 in
 def XBEGIN : I<0, Pseudo, (outs GR32:$dst), (ins),
                "# XBEGIN", [(set GR32:$dst, (int_x86_xbegin))]>,
@@ -45,11 +47,14 @@ def XTEST : I<0x01, MRM_D6, (outs), (ins),
 def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
                  "xabort\t$imm",
                  [(int_x86_xabort imm:$imm)]>, Requires<[HasRTM]>;
+} // SchedRW
 
 // HLE prefixes
+let SchedRW = [WriteSystem] in {
 
 let isAsmParserOnly = 1 in {
 def XACQUIRE_PREFIX : I<0xF2, RawFrm, (outs), (ins), "xacquire", []>;
 def XRELEASE_PREFIX : I<0xF3, RawFrm, (outs), (ins), "xrelease", []>;
 }
 
+} // SchedRW

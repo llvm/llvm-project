@@ -57,7 +57,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   if (!B->getRHS()->getType()->isScalarType())
     return;
 
-  SVal Denom = C.getState()->getSVal(B->getRHS(), C.getLocationContext());
+  SVal Denom = C.getSVal(B->getRHS());
   Optional<DefinedSVal> DV = Denom.getAs<DefinedSVal>();
 
   // Divide-by-undefined handled in the generic checking for uses of

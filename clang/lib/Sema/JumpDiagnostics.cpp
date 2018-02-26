@@ -323,7 +323,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       BuildScopeInformation(Var, ParentScope);
       ++StmtsToSkip;
     }
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case Stmt::GotoStmtClass:
     // Remember both what scope a goto is in as well as the fact that we have

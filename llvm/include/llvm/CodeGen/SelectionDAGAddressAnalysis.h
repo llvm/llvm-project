@@ -1,5 +1,4 @@
-//===-- llvm/CodeGen/SelectionDAGAddressAnalysis.h  ------- DAG Address Analysis
-//---*- C++ -*-===//
+//===- SelectionDAGAddressAnalysis.h - DAG Address Analysis -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +6,17 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
 
 #ifndef LLVM_CODEGEN_SELECTIONDAGADDRESSANALYSIS_H
 #define LLVM_CODEGEN_SELECTIONDAGADDRESSANALYSIS_H
 
-#include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include <cstdint>
 
 namespace llvm {
+
+class SelectionDAG;
+
 /// Helper struct to parse and store a memory address as base + index + offset.
 /// We ignore sign extensions when it is safe to do so.
 /// The following two expressions are not equivalent. To differentiate we need
@@ -34,12 +34,11 @@ class BaseIndexOffset {
 private:
   SDValue Base;
   SDValue Index;
-  int64_t Offset;
-  bool IsIndexSignExt;
+  int64_t Offset = 0;
+  bool IsIndexSignExt = false;
 
 public:
-  BaseIndexOffset() : Offset(0), IsIndexSignExt(false) {}
-
+  BaseIndexOffset() = default;
   BaseIndexOffset(SDValue Base, SDValue Index, int64_t Offset,
                   bool IsIndexSignExt)
       : Base(Base), Index(Index), Offset(Offset),
@@ -57,8 +56,9 @@ public:
                       int64_t &Off);
 
   /// Parses tree in Ptr for base, index, offset addresses.
-  static BaseIndexOffset match(SDValue Ptr, const SelectionDAG &DAG);
+  static BaseIndexOffset match(LSBaseSDNode *N, const SelectionDAG &DAG);
 };
-} // namespace llvm
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_SELECTIONDAGADDRESSANALYSIS_H

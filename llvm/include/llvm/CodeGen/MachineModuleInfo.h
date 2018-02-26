@@ -125,6 +125,16 @@ class MachineModuleInfo : public ImmutablePass {
   /// comments in lib/Target/X86/X86FrameLowering.cpp for more details.
   bool UsesMorestackAddr;
 
+  /// True if the module contains split-stack functions. This is used to
+  /// emit .note.GNU-split-stack section as required by the linker for
+  /// special handling split-stack function calling no-split-stack function.
+  bool HasSplitStack;
+
+  /// True if the module contains no-split-stack functions. This is used to
+  /// emit .note.GNU-no-split-stack section when it also contains split-stack
+  /// functions.
+  bool HasNosplitStack;
+
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
   /// Next unique number available for a MachineFunction.
@@ -145,7 +155,6 @@ public:
   const MCContext &getContext() const { return Context; }
   MCContext &getContext() { return Context; }
 
-  void setModule(const Module *M) { TheModule = M; }
   const Module *getModule() const { return TheModule; }
 
   /// Returns the MachineFunction constructed for the IR function \p F.
@@ -192,6 +201,22 @@ public:
 
   void setUsesMorestackAddr(bool b) {
     UsesMorestackAddr = b;
+  }
+
+  bool hasSplitStack() const {
+    return HasSplitStack;
+  }
+
+  void setHasSplitStack(bool b) {
+    HasSplitStack = b;
+  }
+
+  bool hasNosplitStack() const {
+    return HasNosplitStack;
+  }
+
+  void setHasNosplitStack(bool b) {
+    HasNosplitStack = b;
   }
 
   /// Return the symbol to be used for the specified basic block when its

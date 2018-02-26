@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Index/IndexingAction.h"
-#include "clang/Index/IndexDataConsumer.h"
 #include "FileIndexRecord.h"
 #include "IndexingContext.h"
 #include "ClangIndexRecordWriter.h"
@@ -19,6 +18,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Index/IndexDataConsumer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 
@@ -49,16 +49,18 @@ bool IndexDataConsumer::handleModuleOccurence(const ImportDecl *ImportD,
 namespace {
 
 class IndexASTConsumer : public ASTConsumer {
+  std::shared_ptr<Preprocessor> PP;
   IndexingContext &IndexCtx;
 
 public:
-  IndexASTConsumer(IndexingContext &IndexCtx)
-    : IndexCtx(IndexCtx) {}
+  IndexASTConsumer(std::shared_ptr<Preprocessor> PP, IndexingContext &IndexCtx)
+      : PP(std::move(PP)), IndexCtx(IndexCtx) {}
 
 protected:
   void Initialize(ASTContext &Context) override {
     IndexCtx.setASTContext(Context);
     IndexCtx.getDataConsumer().initialize(Context);
+    IndexCtx.getDataConsumer().setPreprocessor(PP);
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
@@ -87,9 +89,11 @@ protected:
     : DataConsumer(std::move(dataConsumer)),
       IndexCtx(Opts, *DataConsumer) {}
 
-  std::unique_ptr<IndexASTConsumer> createIndexASTConsumer(CompilerInstance &CI) {
+  std::unique_ptr<IndexASTConsumer>
+  createIndexASTConsumer(CompilerInstance &CI) {
     IndexCtx.setSysrootPath(CI.getHeaderSearchOpts().Sysroot);
-    return llvm::make_unique<IndexASTConsumer>(IndexCtx);
+    return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
+                                               IndexCtx);
   }
 
   void finish() {
@@ -180,6 +184,7 @@ void index::indexASTUnit(ASTUnit &Unit,
   IndexingContext IndexCtx(Opts, *DataConsumer);
   IndexCtx.setASTContext(Unit.getASTContext());
   DataConsumer->initialize(Unit.getASTContext());
+  DataConsumer->setPreprocessor(Unit.getPreprocessorPtr());
   indexTranslationUnit(Unit, IndexCtx);
   DataConsumer->finish();
 }
@@ -205,7 +210,7 @@ void index::indexModuleFile(serialization::ModuleFile &Mod,
   IndexCtx.setASTContext(Ctx);
   DataConsumer->initialize(Ctx);
 
-  for (const Decl *D :Reader.getModuleFileLevelDecls(Mod)) {
+  for (const Decl *D : Reader.getModuleFileLevelDecls(Mod)) {
     IndexCtx.indexTopLevelDecl(D);
   }
   DataConsumer->finish();
@@ -240,7 +245,8 @@ private:
                            FileID FID, unsigned Offset,
                            ASTNodeInfo ASTNode) override {
     // Ignore the predefines buffer.
-    if (FID == PP->getPredefinesFileID())
+    const FileEntry *FE = PP->getSourceManager().getFileEntryForID(FID);
+    if (!FE)
       return true;
 
     FileIndexRecord &Rec = getFileIndexRecord(FID);
@@ -446,7 +452,8 @@ protected:
     DepCollector.setSysrootPath(IndexCtx.getSysrootPath());
     DepCollector.attachToPreprocessor(PP);
 
-    return llvm::make_unique<IndexASTConsumer>(IndexCtx);
+    return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
+                                               IndexCtx);
   }
 
   void finish(CompilerInstance &CI);

@@ -119,7 +119,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned NumStmts = Record.readInt();
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
-  S->setStmts(Record.getContext(), Stmts);
+  S->setStmts(Stmts);
   S->LBraceLoc = ReadSourceLocation();
   S->RBraceLoc = ReadSourceLocation();
 }
@@ -1854,6 +1854,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_task_reduction:
     C = OMPTaskReductionClause::CreateEmpty(Context, Reader->Record.readInt());
     break;
+  case OMPC_in_reduction:
+    C = OMPInReductionClause::CreateEmpty(Context, Reader->Record.readInt());
+    break;
   case OMPC_linear:
     C = OMPLinearClause::CreateEmpty(Context, Reader->Record.readInt());
     break;
@@ -2192,6 +2195,44 @@ void OMPClauseReader::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
   C->setReductionOps(Vars);
 }
 
+void OMPClauseReader::VisitOMPInReductionClause(OMPInReductionClause *C) {
+  VisitOMPClauseWithPostUpdate(C);
+  C->setLParenLoc(Reader->ReadSourceLocation());
+  C->setColonLoc(Reader->ReadSourceLocation());
+  NestedNameSpecifierLoc NNSL = Reader->Record.readNestedNameSpecifierLoc();
+  DeclarationNameInfo DNI;
+  Reader->ReadDeclarationNameInfo(DNI);
+  C->setQualifierLoc(NNSL);
+  C->setNameInfo(DNI);
+
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setVarRefs(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setPrivates(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setLHSExprs(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setRHSExprs(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setReductionOps(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setTaskgroupDescriptors(Vars);
+}
+
 void OMPClauseReader::VisitOMPLinearClause(OMPLinearClause *C) {
   VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation());
@@ -2306,6 +2347,7 @@ void OMPClauseReader::VisitOMPDependClause(OMPDependClause *C) {
 }
 
 void OMPClauseReader::VisitOMPDeviceClause(OMPDeviceClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setDevice(Reader->Record.readSubExpr());
   C->setLParenLoc(Reader->ReadSourceLocation());
 }
@@ -2766,6 +2808,7 @@ void ASTStmtReader::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *D) {
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setReductionRef(Record.readSubExpr());
 }
 
 void ASTStmtReader::VisitOMPFlushDirective(OMPFlushDirective *D) {
@@ -2877,6 +2920,7 @@ void ASTStmtReader::VisitOMPTargetUpdateDirective(OMPTargetUpdateDirective *D) {
 void ASTStmtReader::VisitOMPDistributeParallelForDirective(
     OMPDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setHasCancel(Record.readInt());
 }
 
 void ASTStmtReader::VisitOMPDistributeParallelForSimdDirective(
@@ -2916,6 +2960,7 @@ void ASTStmtReader::VisitOMPTeamsDistributeParallelForSimdDirective(
 void ASTStmtReader::VisitOMPTeamsDistributeParallelForDirective(
     OMPTeamsDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setHasCancel(Record.readInt());
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsDirective(OMPTargetTeamsDirective *D) {
@@ -2933,6 +2978,7 @@ void ASTStmtReader::VisitOMPTargetTeamsDistributeDirective(
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForDirective(
     OMPTargetTeamsDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setHasCancel(Record.readInt());
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
@@ -3035,7 +3081,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_COMPOUND:
-      S = new (Context) CompoundStmt(Empty);
+      S = CompoundStmt::CreateEmpty(
+          Context, /*NumStmts=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
     case STMT_CASE:

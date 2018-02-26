@@ -19,8 +19,8 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/Target/TargetInstrInfo.h"
 
 namespace {
 using namespace llvm;

@@ -371,6 +371,9 @@ BUILTIN(__nvvm_bitcast_i2f, "fi", "")
 BUILTIN(__nvvm_bitcast_ll2d, "dLLi", "")
 BUILTIN(__nvvm_bitcast_d2ll, "LLid", "")
 
+// FNS
+TARGET_BUILTIN(__nvvm_fns, "UiUiUii", "n", "ptx60")
+
 // Sync
 
 BUILTIN(__syncthreads, "v", "")
@@ -378,6 +381,9 @@ BUILTIN(__nvvm_bar0_popc, "ii", "")
 BUILTIN(__nvvm_bar0_and, "ii", "")
 BUILTIN(__nvvm_bar0_or, "ii", "")
 BUILTIN(__nvvm_bar_sync, "vi", "n")
+TARGET_BUILTIN(__nvvm_bar_warp_sync, "vUi", "n", "ptx60")
+TARGET_BUILTIN(__nvvm_barrier_sync, "vUi", "n", "ptx60")
+TARGET_BUILTIN(__nvvm_barrier_sync_cnt, "vUiUi", "n", "ptx60")
 
 // Shuffle
 
@@ -389,6 +395,33 @@ BUILTIN(__nvvm_shfl_bfly_i32, "iiii", "")
 BUILTIN(__nvvm_shfl_bfly_f32, "ffii", "")
 BUILTIN(__nvvm_shfl_idx_i32, "iiii", "")
 BUILTIN(__nvvm_shfl_idx_f32, "ffii", "")
+
+TARGET_BUILTIN(__nvvm_shfl_sync_down_i32, "iUiiii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_down_f32, "fUifii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_up_i32, "iUiiii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_up_f32, "fUifii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_bfly_i32, "iUiiii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_bfly_f32, "fUifii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_idx_i32, "iUiiii", "", "ptx60")
+TARGET_BUILTIN(__nvvm_shfl_sync_idx_f32, "fUifii", "", "ptx60")
+
+// Vote
+BUILTIN(__nvvm_vote_all, "bb", "")
+BUILTIN(__nvvm_vote_any, "bb", "")
+BUILTIN(__nvvm_vote_uni, "bb", "")
+BUILTIN(__nvvm_vote_ballot, "Uib", "")
+
+TARGET_BUILTIN(__nvvm_vote_all_sync, "bUib", "", "ptx60")
+TARGET_BUILTIN(__nvvm_vote_any_sync, "bUib", "", "ptx60")
+TARGET_BUILTIN(__nvvm_vote_uni_sync, "bUib", "", "ptx60")
+TARGET_BUILTIN(__nvvm_vote_ballot_sync, "UiUib", "", "ptx60")
+
+// Match
+TARGET_BUILTIN(__nvvm_match_any_sync_i32, "UiUiUi", "", "ptx60")
+TARGET_BUILTIN(__nvvm_match_any_sync_i64, "WiUiWi", "", "ptx60")
+// These return a pair {value, predicate}, which requires custom lowering.
+TARGET_BUILTIN(__nvvm_match_all_sync_i32p, "UiUiUii*", "", "ptx60")
+TARGET_BUILTIN(__nvvm_match_all_sync_i64p, "WiUiWii*", "", "ptx60")
 
 // Membar
 
@@ -451,7 +484,7 @@ TARGET_BUILTIN(__nvvm_atom_cta_add_gen_f, "ffD*f", "n", "satom")
 TARGET_BUILTIN(__nvvm_atom_sys_add_gen_f, "ffD*f", "n", "satom")
 BUILTIN(__nvvm_atom_add_g_d, "ddD*1d", "n")
 BUILTIN(__nvvm_atom_add_s_d, "ddD*3d", "n")
-BUILTIN(__nvvm_atom_add_gen_d, "ddD*d", "n")
+TARGET_BUILTIN(__nvvm_atom_add_gen_d, "ddD*d", "n", "satom")
 TARGET_BUILTIN(__nvvm_atom_cta_add_gen_d, "ddD*d", "n", "satom")
 TARGET_BUILTIN(__nvvm_atom_sys_add_gen_d, "ddD*d", "n", "satom")
 
@@ -657,6 +690,19 @@ BUILTIN(__nvvm_ldg_ull2, "E2ULLiE2ULLiC*", "")
 BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
 BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
 BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
+
+// Builtins to support WMMA instructions on sm_70
+TARGET_BUILTIN(__hmma_m16n16k16_ld_a, "vi*iC*UiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_ld_b, "vi*iC*UiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_ld_c_f16, "vi*iC*UiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_ld_c_f32, "vf*fC*UiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_st_c_f16, "vi*i*UiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_st_c_f32, "vf*f*UiIi", "", "ptx60")
+
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f16f16, "vi*iC*iC*iC*IiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f32f16, "vf*iC*iC*iC*IiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f32f32, "vf*iC*iC*fC*IiIi", "", "ptx60")
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", "ptx60")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

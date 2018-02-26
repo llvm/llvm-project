@@ -62,18 +62,13 @@ entry:
 ; FP + large frame: spill FP+SR = entsp 2 + 100000
 ; CHECKFP-LABEL: f4:
 ; CHECKFP: entsp 65535
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_offset 262140
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_offset 15, 0
 ; CHECKFP-NEXT: extsp 34467
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_offset 400008
 ; CHECKFP-NEXT: stw r10, sp[1]
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_offset 10, -400004
 ; CHECKFP-NEXT: ldaw r10, sp[0]
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_register 10
 ; CHECKFP-NEXT: set sp, r10
 ; CHECKFP-NEXT: ldw r10, sp[1]
@@ -83,12 +78,9 @@ entry:
 ; !FP + large frame: spill SR+SR = entsp 2 + 100000
 ; CHECK-LABEL: f4:
 ; CHECK: entsp 65535
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_def_cfa_offset 262140
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_offset 15, 0
 ; CHECK-NEXT: extsp 34467
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_def_cfa_offset 400008
 ; CHECK-NEXT: ldaw sp, sp[65535]
 ; CHECK-NEXT: retsp 34467
@@ -109,28 +101,20 @@ entry:
 ; CHECKFP-NEXT: .text
 ; CHECKFP-LABEL: f6:
 ; CHECKFP: entsp 65535
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_offset 262140
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_offset 15, 0
 ; CHECKFP-NEXT: extsp 65535
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_offset 524280
 ; CHECKFP-NEXT: extsp 65535
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_offset 786420
 ; CHECKFP-NEXT: extsp 3398
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_offset 800012
 ; CHECKFP-NEXT: stw r10, sp[1]
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_offset 10, -800008
 ; CHECKFP-NEXT: ldaw r10, sp[0]
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_def_cfa_register 10
 ; CHECKFP-NEXT: ldw r1, cp[.LCPI[[CNST0]]]
 ; CHECKFP-NEXT: stw [[REG:r[4-9]+]], r10[r1]
-; CHECKFP-NEXT: .Lcfi{{[0-9]+}}
 ; CHECKFP-NEXT: .cfi_offset 4, -4
 ; CHECKFP-NEXT: mov [[REG]], r0
 ; CHECKFP-NEXT: extsp 1
@@ -162,23 +146,17 @@ entry:
 ; CHECK-NEXT: .text
 ; CHECK-LABEL: f6:
 ; CHECK: entsp 65535
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_def_cfa_offset 262140
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_offset 15, 0
 ; CHECK-NEXT: extsp 65535
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_def_cfa_offset 524280
 ; CHECK-NEXT: extsp 65535
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_def_cfa_offset 786420
 ; CHECK-NEXT: extsp 3399
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_def_cfa_offset 800016
 ; CHECK-NEXT: ldaw r1, sp[0]
 ; CHECK-NEXT: ldw r2, cp[.LCPI[[CNST0]]]
 ; CHECK-NEXT: stw [[REG:r[4-9]+]], r1[r2]
-; CHECK-NEXT: .Lcfi{{[0-9]+}}
 ; CHECK-NEXT: .cfi_offset 4, -4
 ; CHECK-NEXT: mov [[REG]], r0
 ; CHECK-NEXT: ldaw r0, sp[3]

@@ -34,19 +34,61 @@ class MCStreamer;
 class MCTargetAsmParser;
 class SourceMgr;
 
-class InlineAsmIdentifierInfo {
-public:
-  void *OpDecl;
-  bool IsVarDecl;
-  unsigned Length, Size, Type;
-
-  void clear() {
-    OpDecl = nullptr;
-    IsVarDecl = false;
-    Length = 1;
-    Size = 0;
-    Type = 0;
+struct InlineAsmIdentifierInfo {
+  enum IdKind {
+    IK_Invalid,  // Initial state. Unexpected after a successful parsing.
+    IK_Label,    // Function/Label reference.
+    IK_EnumVal,  // Value of enumeration type.
+    IK_Var       // Variable.
+  };
+  // Represents an Enum value
+  struct EnumIdentifier {
+    int64_t EnumVal;
+  };
+  // Represents a label/function reference
+  struct LabelIdentifier {
+    void *Decl;
+  };
+  // Represents a variable
+  struct VariableIdentifier {
+    void *Decl;
+    bool IsGlobalLV;
+    unsigned Length;
+    unsigned Size;
+    unsigned Type;
+  };
+  // An InlineAsm identifier can only be one of those
+  union {
+    EnumIdentifier Enum;
+    LabelIdentifier Label;
+    VariableIdentifier Var;
+  };
+  bool isKind(IdKind kind) const { return Kind == kind; }
+  // Initializers
+  void setEnum(int64_t enumVal) {
+    assert(isKind(IK_Invalid) && "should be initialized only once");
+    Kind = IK_EnumVal;
+    Enum.EnumVal = enumVal;
   }
+  void setLabel(void *decl) {
+    assert(isKind(IK_Invalid) && "should be initialized only once");
+    Kind = IK_Label;
+    Label.Decl = decl;
+  }
+  void setVar(void *decl, bool isGlobalLV, unsigned size, unsigned type) {
+    assert(isKind(IK_Invalid) && "should be initialized only once");
+    Kind = IK_Var;
+    Var.Decl = decl;
+    Var.IsGlobalLV = isGlobalLV;
+    Var.Size = size;
+    Var.Type = type;
+    Var.Length = size / type;
+  }
+  InlineAsmIdentifierInfo() : Kind(IK_Invalid) {}
+
+private:
+  // Discriminate using the current kind.
+  IdKind Kind;
 };
 
 /// \brief Generic Sema callback for assembly parser.
@@ -54,9 +96,9 @@ class MCAsmParserSemaCallback {
 public:
   virtual ~MCAsmParserSemaCallback();
 
-  virtual void *LookupInlineAsmIdentifier(StringRef &LineBuf,
-                                          InlineAsmIdentifierInfo &Info,
-                                          bool IsUnevaluatedContext) = 0;
+  virtual void LookupInlineAsmIdentifier(StringRef &LineBuf,
+                                         InlineAsmIdentifierInfo &Info,
+                                         bool IsUnevaluatedContext) = 0;
   virtual StringRef LookupInlineAsmLabel(StringRef Identifier, SourceMgr &SM,
                                          SMLoc Location, bool Create) = 0;
   virtual bool LookupInlineAsmField(StringRef Base, StringRef Member,
@@ -85,10 +127,12 @@ private:
 protected: // Can only create subclasses.
   MCAsmParser();
 
+  /// Flag tracking whether any errors have been encountered.
   bool HadError = false;
+  /// Enable print [latency:throughput] in output file.
+  bool EnablePrintSchedInfo = false;
 
   SmallVector<MCPendingError, 1> PendingErrors;
-  /// Flag tracking whether any errors have been encountered.
 
 public:
   MCAsmParser(const MCAsmParser &) = delete;
@@ -120,6 +164,9 @@ public:
 
   bool getShowParsedOperands() const { return ShowParsedOperands; }
   void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
+
+  void setEnablePrintSchedInfo(bool Value) { EnablePrintSchedInfo = Value; }
+  bool shouldPrintSchedInfo() { return EnablePrintSchedInfo; }
 
   /// \brief Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;

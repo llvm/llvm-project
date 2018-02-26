@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mcpu=cyclone | FileCheck %s
-; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -O0 -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -O0 -fast-isel -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
 
 define <16 x i8> @foo(<16 x i8> %a) nounwind optsize readnone ssp {
 ; CHECK: uaddlv.16b h0, v0

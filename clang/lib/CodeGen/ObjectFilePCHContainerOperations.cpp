@@ -71,9 +71,8 @@ class PCHContainerGenerator : public ASTConsumer {
     }
 
     bool VisitImportDecl(ImportDecl *D) {
-      auto *Import = cast<ImportDecl>(D);
-      if (!Import->getImportedOwningModule())
-        DI.EmitImportDecl(*Import);
+      if (!D->getImportedOwningModule())
+        DI.EmitImportDecl(*D);
       return true;
     }
 
@@ -227,6 +226,11 @@ public:
 
     if (const RecordDecl *RD = dyn_cast<RecordDecl>(D))
       Builder->getModuleDebugInfo()->completeRequiredType(RD);
+  }
+
+  void HandleImplicitImportDecl(ImportDecl *D) override {
+    if (!D->getImportedOwningModule())
+      Builder->getModuleDebugInfo()->EmitImportDecl(*D);
   }
 
   /// Emit a container holding the serialized AST.

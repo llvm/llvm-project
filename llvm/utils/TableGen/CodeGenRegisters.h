@@ -15,6 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 
+#include "InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -72,6 +73,10 @@ namespace llvm {
     mutable LaneBitmask LaneMask;
     mutable SmallVector<MaskRolPair,1> CompositionLaneMaskTransform;
 
+    /// A list of subregister indexes concatenated resulting in this
+    /// subregister index. This is the reverse of CodeGenRegBank::ConcatIdx.
+    SmallVector<CodeGenSubRegIndex*,4> ConcatenationOf;
+
     // Are all super-registers containing this SubRegIndex covered by their
     // sub-registers?
     bool AllSuperRegsCovered;
@@ -122,6 +127,12 @@ namespace llvm {
 
     // Compute LaneMask from Composed. Return LaneMask.
     LaneBitmask computeLaneMask() const;
+
+    void setConcatenationOf(ArrayRef<CodeGenSubRegIndex*> Parts);
+
+    /// Replaces subregister indexes in the `ConcatenationOf` list with
+    /// list of subregisters they are composed of (if any). Do this recursively.
+    void computeConcatTransitiveClosure();
 
   private:
     CompMap Composed;
@@ -309,9 +320,8 @@ namespace llvm {
   public:
     unsigned EnumValue;
     StringRef Namespace;
-    SmallVector<MVT::SimpleValueType, 4> VTs;
-    unsigned SpillSize;
-    unsigned SpillAlignment;
+    SmallVector<ValueTypeByHwMode, 4> VTs;
+    RegSizeInfoByHwMode RSI;
     int CopyCost;
     bool Allocatable;
     StringRef AltOrderSelect;
@@ -328,13 +338,10 @@ namespace llvm {
 
     const std::string &getName() const { return Name; }
     std::string getQualifiedName() const;
-    ArrayRef<MVT::SimpleValueType> getValueTypes() const {return VTs;}
-    bool hasValueType(MVT::SimpleValueType VT) const {
-      return std::find(VTs.begin(), VTs.end(), VT) != VTs.end();
-    }
+    ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
     unsigned getNumValueTypes() const { return VTs.size(); }
 
-    MVT::SimpleValueType getValueTypeNum(unsigned VTNum) const {
+    ValueTypeByHwMode getValueTypeNum(unsigned VTNum) const {
       if (VTNum < VTs.size())
         return VTs[VTNum];
       llvm_unreachable("VTNum greater than number of ValueTypes in RegClass!");
@@ -429,18 +436,15 @@ namespace llvm {
     // the topological order used for the EnumValues.
     struct Key {
       const CodeGenRegister::Vec *Members;
-      unsigned SpillSize;
-      unsigned SpillAlignment;
+      RegSizeInfoByHwMode RSI;
 
-      Key(const CodeGenRegister::Vec *M, unsigned S = 0, unsigned A = 0)
-        : Members(M), SpillSize(S), SpillAlignment(A) {}
+      Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I)
+        : Members(M), RSI(I) {}
 
       Key(const CodeGenRegisterClass &RC)
-        : Members(&RC.getMembers()),
-          SpillSize(RC.SpillSize),
-          SpillAlignment(RC.SpillAlignment) {}
+        : Members(&RC.getMembers()), RSI(RC.RSI) {}
 
-      // Lexicographical order of (Members, SpillSize, SpillAlignment).
+      // Lexicographical order of (Members, RegSizeInfoByHwMode).
       bool operator<(const Key&) const;
     };
 
@@ -502,6 +506,8 @@ namespace llvm {
   // them.
   class CodeGenRegBank {
     SetTheory Sets;
+
+    const CodeGenHwModes &CGH;
 
     std::deque<CodeGenSubRegIndex> SubRegIndices;
     DenseMap<Record*, CodeGenSubRegIndex*> Def2SubRegIdx;
@@ -586,9 +592,11 @@ namespace llvm {
     void computeRegUnitLaneMasks();
 
   public:
-    CodeGenRegBank(RecordKeeper&);
+    CodeGenRegBank(RecordKeeper&, const CodeGenHwModes&);
 
     SetTheory &getSets() { return Sets; }
+
+    const CodeGenHwModes &getHwModes() const { return CGH; }
 
     // Sub-register indices. The first NumNamedIndices are defined by the user
     // in the .td files. The rest are synthesized such that all sub-registers
@@ -608,12 +616,6 @@ namespace llvm {
     // non-overlapping sibling indices.
     CodeGenSubRegIndex *
       getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8>&);
-
-    void
-    addConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &Parts,
-                         CodeGenSubRegIndex *Idx) {
-      ConcatIdx.insert(std::make_pair(Parts, Idx));
-    }
 
     const std::deque<CodeGenRegister> &getRegisters() { return Registers; }
 

@@ -96,7 +96,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
-; Direct Spill Slot [RSP+0]
+; Direct Spill Slot [rsp+0]
 ; CHECK: .byte	2
 ; CHECK: .byte	0
 ; CHECK: .short 8
@@ -133,7 +133,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1
-; Direct Spill Slot [RSP+0]
+; Direct Spill Slot [rsp+0]
 ; CHECK: .byte	2
 ; CHECK: .byte	0
 ; CHECK: .short 8

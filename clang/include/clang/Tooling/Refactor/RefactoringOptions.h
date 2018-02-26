@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTIONS_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTIONS_H
+#ifndef LLVM_CLANG_TOOLING_REFACTOR_OLD_REFACTORING_OPTIONS_H
+#define LLVM_CLANG_TOOLING_REFACTOR_OLD_REFACTORING_OPTIONS_H
 
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
@@ -25,7 +25,7 @@ namespace option {
 
 namespace detail {
 
-struct BoolOptionBase : RefactoringOption {
+struct BoolOptionBase : OldRefactoringOption {
 protected:
   bool Value = false;
   void serializeImpl(const SerializationContext &Context, const char *Name);
@@ -56,4 +56,4 @@ struct AvoidTextualMatches final : detail::BoolOption<AvoidTextualMatches> {
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTIONS_H
+#endif // LLVM_CLANG_TOOLING_REFACTOR_OLD_REFACTORING_OPTIONS_H

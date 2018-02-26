@@ -2,7 +2,7 @@
 ; RUN: llc -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 ;
-; CHECK: @DEBUG_VALUE: h:x <- [DW_OP_plus_uconst {{.*}}] [%R{{.*}}+0]
+; CHECK: @DEBUG_VALUE: h:x <- [DW_OP_plus_uconst {{.*}}] [%r{{.*}}+0]
 ; DWARF: DW_TAG_formal_parameter
 ; DWARF:       DW_AT_location
 ; DWARF-NEXT:    DW_OP_reg0 R0

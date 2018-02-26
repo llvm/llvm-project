@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-pc-linux-gnu -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -show-mc-encoding | FileCheck %s
 
 ; PR8365
 ; CHECK: andl	$-64, %edi              # encoding: [0x83,0xe7,0xc0]

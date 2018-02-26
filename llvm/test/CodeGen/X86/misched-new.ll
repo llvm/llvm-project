@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=x86-64 -mcpu=core2 -x86-early-ifcvt -enable-misched \
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -x86-early-ifcvt -enable-misched \
 ; RUN:          -misched=shuffle -misched-bottomup -verify-machineinstrs \
 ; RUN:     | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=core2 -x86-early-ifcvt -enable-misched \
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -x86-early-ifcvt -enable-misched \
 ; RUN:          -misched=shuffle -misched-topdown -verify-machineinstrs \
 ; RUN:     | FileCheck %s --check-prefix TOPDOWN
 ; REQUIRES: asserts

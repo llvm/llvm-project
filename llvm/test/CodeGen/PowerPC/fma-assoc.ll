@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -fp-contract=fast -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK -check-prefix=CHECK-SAFE %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -fp-contract=fast -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK -check-prefix=CHECK-SAFE %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX -check-prefix=CHECK-VSX-SAFE %s
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -fp-contract=fast -enable-unsafe-fp-math -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK -check-prefix=CHECK-UNSAFE %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -fp-contract=fast -enable-unsafe-fp-math -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK -check-prefix=CHECK-UNSAFE %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -enable-unsafe-fp-math -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX -check-prefix=CHECK-UNSAFE-VSX %s
 
 define double @test_FMADD_ASSOC1(double %A, double %B, double %C,

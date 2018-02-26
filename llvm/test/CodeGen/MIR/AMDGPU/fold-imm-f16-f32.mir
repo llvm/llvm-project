@@ -111,7 +111,7 @@
 #  literal constant.
 
 # CHECK-LABEL: name: add_f32_1.0_one_f16_use
-# CHECK: %13 = V_ADD_F16_e32  1065353216, killed %11, implicit %exec
+# CHECK: %13:vgpr_32 = V_ADD_F16_e32  1065353216, killed %11, implicit %exec
 
 name:            add_f32_1.0_one_f16_use
 alignment:       0
@@ -170,9 +170,9 @@ body:             |
 # operands
 
 # CHECK-LABEL: name: add_f32_1.0_multi_f16_use
-# CHECK: %13 = V_MOV_B32_e32 1065353216, implicit %exec
-# CHECK: %14 = V_ADD_F16_e32 killed %11, %13, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 killed %12, killed %13, implicit %exec
+# CHECK: %13:vgpr_32 = V_MOV_B32_e32 1065353216, implicit %exec
+# CHECK: %14:vgpr_32 = V_ADD_F16_e32 killed %11, %13, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32 killed %12, killed %13, implicit %exec
 
 
 name:            add_f32_1.0_multi_f16_use
@@ -238,8 +238,8 @@ body:             |
 #  immediate, and folded into the single f16 use as a literal constant
 
 # CHECK-LABEL: name: add_f32_1.0_one_f32_use_one_f16_use
-# CHECK: %15 = V_ADD_F16_e32 1065353216, %11, implicit %exec
-# CHECK: %16 = V_ADD_F32_e32 1065353216, killed %13, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32 1065353216, %11, implicit %exec
+# CHECK: %16:vgpr_32 = V_ADD_F32_e32 1065353216, killed %13, implicit %exec
 
 name:            add_f32_1.0_one_f32_use_one_f16_use
 alignment:       0
@@ -306,10 +306,10 @@ body:             |
 #  constant, and not folded as a multi-use literal for the f16 cases
 
 # CHECK-LABEL: name: add_f32_1.0_one_f32_use_multi_f16_use
-# CHECK: %14 = V_MOV_B32_e32 1065353216, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32  %11, %14, implicit %exec
-# CHECK: %16 = V_ADD_F16_e32 %12,  %14, implicit %exec
-# CHECK: %17 = V_ADD_F32_e32 1065353216, killed %13, implicit %exec
+# CHECK: %14:vgpr_32 = V_MOV_B32_e32 1065353216, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32  %11, %14, implicit %exec
+# CHECK: %16:vgpr_32 = V_ADD_F16_e32 %12,  %14, implicit %exec
+# CHECK: %17:vgpr_32 = V_ADD_F32_e32 1065353216, killed %13, implicit %exec
 
 name:            add_f32_1.0_one_f32_use_multi_f16_use
 alignment:       0
@@ -375,9 +375,9 @@ body:             |
 ...
 ---
 # CHECK-LABEL: name: add_i32_1_multi_f16_use
-# CHECK: %13 = V_MOV_B32_e32 1, implicit %exec
-# CHECK: %14 = V_ADD_F16_e32 1, killed %11, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 1, killed %12, implicit %exec
+# CHECK: %13:vgpr_32 = V_MOV_B32_e32 1, implicit %exec
+# CHECK: %14:vgpr_32 = V_ADD_F16_e32 1, killed %11, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32 1, killed %12, implicit %exec
 
 
 name:            add_i32_1_multi_f16_use
@@ -440,10 +440,10 @@ body:             |
 ---
 
 # CHECK-LABEL: name: add_i32_m2_one_f32_use_multi_f16_use
-# CHECK: %14 = V_MOV_B32_e32 -2, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 -2, %11, implicit %exec
-# CHECK: %16 = V_ADD_F16_e32 -2, %12, implicit %exec
-# CHECK: %17 = V_ADD_F32_e32 -2, killed %13, implicit %exec
+# CHECK: %14:vgpr_32 = V_MOV_B32_e32 -2, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32 -2, %11, implicit %exec
+# CHECK: %16:vgpr_32 = V_ADD_F16_e32 -2, %12, implicit %exec
+# CHECK: %17:vgpr_32 = V_ADD_F32_e32 -2, killed %13, implicit %exec
 
 name:            add_i32_m2_one_f32_use_multi_f16_use
 alignment:       0
@@ -513,9 +513,9 @@ body:             |
 #  constant, and not folded as a multi-use literal for the f16 cases
 
 # CHECK-LABEL: name: add_f16_1.0_multi_f32_use
-# CHECK: %13 = V_MOV_B32_e32 15360, implicit %exec
-# CHECK: %14 = V_ADD_F32_e32 %11, %13, implicit %exec
-# CHECK: %15 = V_ADD_F32_e32 %12, %13, implicit %exec
+# CHECK: %13:vgpr_32 = V_MOV_B32_e32 15360, implicit %exec
+# CHECK: %14:vgpr_32 = V_ADD_F32_e32 %11, %13, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F32_e32 %12, %13, implicit %exec
 
 name:            add_f16_1.0_multi_f32_use
 alignment:       0
@@ -580,9 +580,9 @@ body:             |
 # FIXME: Should be able to fold this
 
 # CHECK-LABEL: name: add_f16_1.0_other_high_bits_multi_f16_use
-# CHECK: %13 = V_MOV_B32_e32 80886784, implicit %exec
-# CHECK: %14 = V_ADD_F16_e32 %11, %13, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 %12, %13, implicit %exec
+# CHECK: %13:vgpr_32 = V_MOV_B32_e32 80886784, implicit %exec
+# CHECK: %14:vgpr_32 = V_ADD_F16_e32 %11, %13, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32 %12, %13, implicit %exec
 
 name:            add_f16_1.0_other_high_bits_multi_f16_use
 alignment:       0
@@ -647,9 +647,9 @@ body:             |
 # f32 instruction.
 
 # CHECK-LABEL: name: add_f16_1.0_other_high_bits_use_f16_f32
-# CHECK: %13 = V_MOV_B32_e32 305413120, implicit %exec
-# CHECK: %14 = V_ADD_F32_e32 %11, %13, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 %12, %13, implicit %exec
+# CHECK: %13:vgpr_32 = V_MOV_B32_e32 305413120, implicit %exec
+# CHECK: %14:vgpr_32 = V_ADD_F32_e32 %11, %13, implicit %exec
+# CHECK: %15:vgpr_32 = V_ADD_F16_e32 %12, %13, implicit %exec
 name:            add_f16_1.0_other_high_bits_use_f16_f32
 alignment:       0
 exposesReturnsTwice: false

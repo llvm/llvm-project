@@ -7,7 +7,7 @@ target triple = "i386-unknown-linux-gnu"
 
 define i32 @main() {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl d, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $31, %ecx

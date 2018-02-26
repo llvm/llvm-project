@@ -1,4 +1,4 @@
-//===--------------------- R600MergeVectorRegisters.cpp -------------------===//
+//===- R600MergeVectorRegisters.cpp ---------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,16 +12,16 @@
 /// common data and/or have enough undef subreg using swizzle abilities.
 ///
 /// For instance let's consider the following pseudo code :
-/// vreg5<def> = REG_SEQ vreg1, sub0, vreg2, sub1, vreg3, sub2, undef, sub3
+/// %5 = REG_SEQ %1, sub0, %2, sub1, %3, sub2, undef, sub3
 /// ...
-/// vreg7<def> = REG_SEQ vreg1, sub0, vreg3, sub1, undef, sub2, vreg4, sub3
-/// (swizzable Inst) vreg7, SwizzleMask : sub0, sub1, sub2, sub3
+/// %7 = REG_SEQ %1, sub0, %3, sub1, undef, sub2, %4, sub3
+/// (swizzable Inst) %7, SwizzleMask : sub0, sub1, sub2, sub3
 ///
 /// is turned into :
-/// vreg5<def> = REG_SEQ vreg1, sub0, vreg2, sub1, vreg3, sub2, undef, sub3
+/// %5 = REG_SEQ %1, sub0, %2, sub1, %3, sub2, undef, sub3
 /// ...
-/// vreg7<def> = INSERT_SUBREG vreg4, sub3
-/// (swizzable Inst) vreg7, SwizzleMask : sub0, sub2, sub1, sub3
+/// %7 = INSERT_SUBREG %4, sub3
+/// (swizzable Inst) %7, SwizzleMask : sub0, sub2, sub1, sub3
 ///
 /// This allow regalloc to reduce register pressure for vector registers and
 /// to reduce MOV count.
@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/PassAnalysisSupport.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -98,8 +98,13 @@ public:
 
 class R600VectorRegMerger : public MachineFunctionPass {
 private:
+  using InstructionSetMap = DenseMap<unsigned, std::vector<MachineInstr *>>;
+
   MachineRegisterInfo *MRI;
-  const R600InstrInfo *TII;
+  const R600InstrInfo *TII = nullptr;
+  DenseMap<MachineInstr *, RegSeqInfo> PreviousRegSeq;
+  InstructionSetMap PreviousRegSeqByReg;
+  InstructionSetMap PreviousRegSeqByUndefCount;
 
   bool canSwizzle(const MachineInstr &MI) const;
   bool areAllUsesSwizzeable(unsigned Reg) const;
@@ -116,16 +121,10 @@ private:
   void RemoveMI(MachineInstr *);
   void trackRSI(const RegSeqInfo &RSI);
 
-  typedef DenseMap<unsigned, std::vector<MachineInstr *>> InstructionSetMap;
-  DenseMap<MachineInstr *, RegSeqInfo> PreviousRegSeq;
-  InstructionSetMap PreviousRegSeqByReg;
-  InstructionSetMap PreviousRegSeqByUndefCount;
-
 public:
   static char ID;
 
-  R600VectorRegMerger() : MachineFunctionPass(ID),
-  TII(nullptr) { }
+  R600VectorRegMerger() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -143,9 +142,16 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };
 
-} // end anonymous namespace.
+} // end anonymous namespace
+
+INITIALIZE_PASS_BEGIN(R600VectorRegMerger, DEBUG_TYPE,
+                     "R600 Vector Reg Merger", false, false)
+INITIALIZE_PASS_END(R600VectorRegMerger, DEBUG_TYPE,
+                    "R600 Vector Reg Merger", false, false)
 
 char R600VectorRegMerger::ID = 0;
+
+char &llvm::R600VectorRegMergerID = R600VectorRegMerger::ID;
 
 bool R600VectorRegMerger::canSwizzle(const MachineInstr &MI)
     const {
@@ -330,7 +336,7 @@ void R600VectorRegMerger::trackRSI(const RegSeqInfo &RSI) {
 }
 
 bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(*Fn.getFunction()))
+  if (skipFunction(Fn.getFunction()))
     return false;
 
   const R600Subtarget &ST = Fn.getSubtarget<R600Subtarget>();

@@ -179,7 +179,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
 
   if (const MemRegion *SValMemRegion = V.getAsRegion()) {
     const ProgramStateRef State = C.getState();
-    const SVal PSV = State->getSVal(SValMemRegion);
+    const SVal PSV = State->getSVal(SValMemRegion, C.getASTContext().CharTy);
     if (PSV.isUndef()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         LazyInit_BT(BD, BT);

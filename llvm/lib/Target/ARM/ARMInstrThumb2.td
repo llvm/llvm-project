@@ -2336,6 +2336,8 @@ def t2USAT16: T2SatI<(ins imm0_15:$sat_imm, rGPR:$Rn),
 
 def : T2Pat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
              (t2SSAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
+def : T2Pat<(ARMusatnoshift GPRnopc:$Rn, imm0_31:$imm),
+             (t2USAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
 def : T2Pat<(int_arm_ssat GPR:$a, imm1_32:$pos),
             (t2SSAT imm1_32:$pos, GPR:$a, 0)>;
 def : T2Pat<(int_arm_usat GPR:$a, imm0_31:$pos),
@@ -3843,13 +3845,13 @@ let isReMaterializable = 1 in {
 def t2MOV_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
                                 IIC_iMOVix2addpc,
                           [(set rGPR:$dst, (ARMWrapperPIC tglobaladdr:$addr))]>,
-                          Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
+                          Requires<[IsThumb, HasV8MBaseline, UseMovtInPic]>;
 
 }
 
 def : T2Pat<(ARMWrapperPIC tglobaltlsaddr :$dst),
             (t2MOV_ga_pcrel tglobaltlsaddr:$dst)>,
-      Requires<[IsThumb2, UseMovt]>;
+      Requires<[IsThumb2, UseMovtInPic]>;
 def : T2Pat<(ARMWrapper tglobaltlsaddr:$dst),
             (t2MOVi32imm tglobaltlsaddr:$dst)>,
       Requires<[IsThumb2, UseMovt]>;
@@ -3964,6 +3966,7 @@ multiclass t2LdStCop<bits<4> op31_28, bit load, bit Dbit, string asm, list<dag> 
   }
 }
 
+let DecoderNamespace = "Thumb2CoProc" in {
 defm t2LDC   : t2LdStCop<0b1110, 1, 0, "ldc", [(int_arm_ldc imm:$cop, imm:$CRd, addrmode5:$addr)]>;
 defm t2LDCL  : t2LdStCop<0b1110, 1, 1, "ldcl", [(int_arm_ldcl imm:$cop, imm:$CRd, addrmode5:$addr)]>;
 defm t2LDC2  : t2LdStCop<0b1111, 1, 0, "ldc2", [(int_arm_ldc2 imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
@@ -3973,6 +3976,7 @@ defm t2STC   : t2LdStCop<0b1110, 0, 0, "stc", [(int_arm_stc imm:$cop, imm:$CRd, 
 defm t2STCL  : t2LdStCop<0b1110, 0, 1, "stcl", [(int_arm_stcl imm:$cop, imm:$CRd, addrmode5:$addr)]>;
 defm t2STC2  : t2LdStCop<0b1111, 0, 0, "stc2", [(int_arm_stc2 imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 defm t2STC2L : t2LdStCop<0b1111, 0, 1, "stc2l", [(int_arm_stc2l imm:$cop, imm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+}
 
 
 //===----------------------------------------------------------------------===//
@@ -4125,6 +4129,8 @@ class t2MovRCopro<bits<4> Op, string opc, bit direction, dag oops, dag iops,
   let Inst{7-5}   = opc2;
   let Inst{3-0}   = CRm;
   let Inst{19-16} = CRn;
+
+  let DecoderNamespace = "Thumb2CoProc";
 }
 
 class t2MovRRCopro<bits<4> Op, string opc, bit direction, dag oops, dag iops,
@@ -4145,6 +4151,8 @@ class t2MovRRCopro<bits<4> Op, string opc, bit direction, dag oops, dag iops,
   let Inst{11-8}  = cop;
   let Inst{7-4}   = opc1;
   let Inst{3-0}   = CRm;
+
+  let DecoderNamespace = "Thumb2CoProc";
 }
 
 /* from ARM core register to coprocessor */
@@ -4243,6 +4251,7 @@ def t2CDP : T2Cop<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
   let Inst{23-20} = opc1;
 
   let Predicates = [IsThumb2, PreV8];
+  let DecoderNamespace = "Thumb2CoProc";
 }
 
 def t2CDP2 : T2Cop<0b1111, (outs), (ins p_imm:$cop, imm0_15:$opc1,
@@ -4268,6 +4277,7 @@ def t2CDP2 : T2Cop<0b1111, (outs), (ins p_imm:$cop, imm0_15:$opc1,
   let Inst{23-20} = opc1;
 
   let Predicates = [IsThumb2, PreV8];
+  let DecoderNamespace = "Thumb2CoProc";
 }
 
 
@@ -4498,6 +4508,8 @@ def : t2InstAlias<"tst${p} $Rn, $Rm",
 def : InstAlias<"dmb${p}", (t2DMB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
+// Armv8-R 'Data Full Barrier'
+def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
 
 // Alias for LDR, LDRB, LDRH, LDRSB, and LDRSH without the ".w" optional
 // width specifier.

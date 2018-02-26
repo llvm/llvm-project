@@ -121,7 +121,7 @@ namespace PotentiallyConstructed {
     T &a = *p;
     static_assert(noexcept(a = a) == D, "");
     static_assert(noexcept(a = static_cast<T&&>(a)) == E, "");
-    static_assert(noexcept(delete &a) == F, ""); // expected-warning 2{{abstract}}
+    static_assert(noexcept(delete &a) == F, "");
 
     // These are last because the first failure here causes instantiation to bail out.
     static_assert(noexcept(new (nothrow) T()) == A, ""); // expected-error 2{{abstract}}

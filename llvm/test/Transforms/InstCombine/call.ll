@@ -287,3 +287,14 @@ entry:
 ; CHECK-LABEL: @test17(
 ; CHECK: call i32 @pr28655(i32 0)
 ; CHECK: ret i32 0
+
+define void @non_vararg(i8*, i32) {
+  ret void
+}
+
+define void @test_cast_to_vararg(i8* %this) {
+; CHECK-LABEL: test_cast_to_vararg
+; CHECK:  call void @non_vararg(i8* %this, i32 42)
+  call void (i8*, ...) bitcast (void (i8*, i32)* @non_vararg to void (i8*, ...)*)(i8* %this, i32 42)
+  ret void
+}

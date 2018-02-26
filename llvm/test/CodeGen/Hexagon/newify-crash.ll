@@ -40,5 +40,5 @@ b18:                                              ; preds = %b7
 declare <32 x i32> @llvm.hexagon.V6.vaddhsat.128B(<32 x i32>, <32 x i32>) #1
 declare void @f0() #0
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b" }
 attributes #1 = { nounwind readnone }

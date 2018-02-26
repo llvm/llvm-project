@@ -3,7 +3,7 @@
 ; register operands in the correct order when modifying the opcode of an
 ; instruction to V_ADD_I32_e32.
 
-; CHECK: %{{[0-9]+}} = V_ADD_I32_e32 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def %vcc, implicit %exec
+; CHECK: %{{[0-9]+}}:vgpr_32 = V_ADD_I32_e32 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def %vcc, implicit %exec
 
 define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:

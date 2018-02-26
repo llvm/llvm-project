@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 void foo() {
 }
 
@@ -18,9 +20,9 @@ public:
   S2 &operator=(const S2 &);
   const S2 &operator=(const S2 &) const;
   static float S2s; // expected-note {{static data member is predetermined as shared}}
-  static const float S2sc;
+  static const float S2sc; // expected-note {{static data member is predetermined as shared}}
 };
-const float S2::S2sc = 0; // expected-note {{static data member is predetermined as shared}}
+const float S2::S2sc = 0;
 const S2 b;
 const S2 ba[5];
 class S3 {
@@ -209,6 +211,8 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for simd private(xa), lastprivate(xa) // expected-error {{private variable cannot be lastprivate}} expected-note {{defined as private}}
   for (i = 0; i < argc; ++i)
     foo();
+// expected-note@+2 {{defined as lastprivate}}
+// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be lastprivate, predetermined as linear}}
 #pragma omp target parallel for simd lastprivate(i)
   for (i = 0; i < argc; ++i)
     foo();

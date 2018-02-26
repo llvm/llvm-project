@@ -4,7 +4,6 @@ add_llvm_library(LLVMCodeGen
   Analysis.cpp
   AtomicExpandPass.cpp
   BasicTargetTransformInfo.cpp
-  BranchCoalescing.cpp
   BranchFolding.cpp
   BranchRelaxation.cpp
   BuiltinGCs.cpp
@@ -12,7 +11,6 @@ add_llvm_library(LLVMCodeGen
   CallingConvLower.cpp
   CodeGen.cpp
   CodeGenPrepare.cpp
-  CountingFunctionInserter.cpp
   CriticalAntiDepBreaker.cpp
   DeadMachineInstructionElim.cpp
   DetectDeadLanes.cpp
@@ -22,6 +20,7 @@ add_llvm_library(LLVMCodeGen
   EdgeBundles.cpp
   ExecutionDepsFix.cpp
   ExpandISelPseudos.cpp
+  ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   FaultMaps.cpp
@@ -34,6 +33,7 @@ add_llvm_library(LLVMCodeGen
   GlobalMerge.cpp
   IfConversion.cpp
   ImplicitNullChecks.cpp
+  IndirectBrExpandPass.cpp
   InlineSpiller.cpp
   InterferenceCache.cpp
   InterleavedAccessPass.cpp
@@ -43,7 +43,7 @@ add_llvm_library(LLVMCodeGen
   LexicalScopes.cpp
   LiveDebugValues.cpp
   LiveDebugVariables.cpp
-  LiveIntervalAnalysis.cpp
+  LiveIntervals.cpp
   LiveInterval.cpp
   LiveIntervalUnion.cpp
   LivePhysRegs.cpp
@@ -52,7 +52,7 @@ add_llvm_library(LLVMCodeGen
   LiveRangeShrink.cpp
   LiveRegMatrix.cpp
   LiveRegUnits.cpp
-  LiveStackAnalysis.cpp
+  LiveStacks.cpp
   LiveVariables.cpp
   LLVMTargetMachine.cpp
   LocalStackSlotAllocation.cpp
@@ -77,6 +77,7 @@ add_llvm_library(LLVMCodeGen
   MachineLoopInfo.cpp
   MachineModuleInfo.cpp
   MachineModuleInfoImpls.cpp
+  MachineOperand.cpp
   MachineOptimizationRemarkEmitter.cpp
   MachineOutliner.cpp
   MachinePassRegistry.cpp
@@ -114,6 +115,7 @@ add_llvm_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   RenameIndependentSubregs.cpp
+  MIRCanonicalizerPass.cpp
   RegisterUsageInfo.cpp
   RegUsageInfoCollector.cpp
   RegUsageInfoPropagate.cpp

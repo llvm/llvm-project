@@ -1735,8 +1735,23 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
         CapExprSet AssertLocks;
         Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
         for (const auto &AssertLock : AssertLocks)
-          Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
-                                      AssertLock, LK_Shared, Loc, false, true),
+          Analyzer->addLock(FSet,
+                            llvm::make_unique<LockableFactEntry>(
+                                AssertLock, LK_Shared, Loc, false, true),
+                            ClassifyDiagnostic(A));
+        break;
+      }
+
+      case attr::AssertCapability: {
+        AssertCapabilityAttr *A = cast<AssertCapabilityAttr>(At);
+        CapExprSet AssertLocks;
+        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
+        for (const auto &AssertLock : AssertLocks)
+          Analyzer->addLock(FSet,
+                            llvm::make_unique<LockableFactEntry>(
+                                AssertLock,
+                                A->isShared() ? LK_Shared : LK_Exclusive, Loc,
+                                false, true),
                             ClassifyDiagnostic(A));
         break;
       }

@@ -1778,7 +1778,7 @@ We do get this at the codegen level, so something knows about it, but
 instcombine should catch it earlier:
 
 _foo:                                   ## @foo
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	movl	%edi, %eax
 	sarl	$4, %eax
 	ret
@@ -2234,13 +2234,13 @@ void foo(funcs f, int which) {
 which we compile to:
 
 foo:                                    # @foo
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
        pushq   %rbp
        movq    %rsp, %rbp
        testl   %esi, %esi
        movq    %rdi, %rax
        je      .LBB0_2
-# BB#1:                                 # %if.then
+# %bb.1:                                # %if.then
        movl    $5, %edi
        callq   *%rax
        popq    %rbp

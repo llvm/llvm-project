@@ -18,6 +18,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
@@ -53,6 +54,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   DivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   bool HasUnsafeFPMath = false;
+  AMDGPUAS AMDGPUASI;
 
   /// \brief Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
@@ -123,6 +125,15 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   ///
   /// \returns True.
   bool promoteUniformBitreverseToI32(IntrinsicInst &I) const;
+  /// \brief Widen a scalar load.
+  ///
+  /// \details \p Widen scalar load for uniform, small type loads from constant
+  //  memory / to a full 32-bits and then truncate the input to allow a scalar
+  //  load instead of a vector load.
+  //
+  /// \returns True.
+
+  bool canWidenScalarExtLoad(LoadInst &I) const;
 
 public:
   static char ID;
@@ -133,6 +144,7 @@ public:
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitBinaryOperator(BinaryOperator &I);
+  bool visitLoadInst(LoadInst &I);
   bool visitICmpInst(ICmpInst &I);
   bool visitSelectInst(SelectInst &I);
 
@@ -221,6 +233,16 @@ static bool promotedOpIsNUW(const Instruction &I) {
   default:
     return false;
   }
+}
+
+bool AMDGPUCodeGenPrepare::canWidenScalarExtLoad(LoadInst &I) const {
+  Type *Ty = I.getType();
+  const DataLayout &DL = Mod->getDataLayout();
+  int TySize = DL.getTypeSizeInBits(Ty);
+  unsigned Align = I.getAlignment() ?
+                   I.getAlignment() : DL.getABITypeAlignment(Ty);
+
+  return I.isSimple() && TySize < 32 && Align >= 4 && DA->isUniform(&I);
 }
 
 bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(BinaryOperator &I) const {
@@ -378,7 +400,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
     return false;
 
   FastMathFlags FMF = FPOp->getFastMathFlags();
-  bool UnsafeDiv = HasUnsafeFPMath || FMF.unsafeAlgebra() ||
+  bool UnsafeDiv = HasUnsafeFPMath || FMF.isFast() ||
                                       FMF.allowReciprocal();
 
   // With UnsafeDiv node will be optimized to just rcp and mul.
@@ -441,6 +463,29 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
     Changed |= promoteUniformOpToI32(I);
 
   return Changed;
+}
+
+bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst  &I) {
+  if (I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
+      canWidenScalarExtLoad(I)) {
+    IRBuilder<> Builder(&I);
+    Builder.SetCurrentDebugLocation(I.getDebugLoc());
+
+    Type *I32Ty = Builder.getInt32Ty();
+    Type *PT = PointerType::get(I32Ty, I.getPointerAddressSpace());
+    Value *BitCast= Builder.CreateBitCast(I.getPointerOperand(), PT);
+    Value *WidenLoad = Builder.CreateLoad(BitCast);
+
+    int TySize = Mod->getDataLayout().getTypeSizeInBits(I.getType());
+    Type *IntNTy = Builder.getIntNTy(TySize);
+    Value *ValTrunc = Builder.CreateTrunc(WidenLoad, IntNTy);
+    Value *ValOrig = Builder.CreateBitCast(ValTrunc, I.getType());
+    I.replaceAllUsesWith(ValOrig);
+    I.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUCodeGenPrepare::visitICmpInst(ICmpInst &I) {

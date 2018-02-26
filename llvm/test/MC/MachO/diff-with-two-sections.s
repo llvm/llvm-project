@@ -82,6 +82,6 @@ Ltmp4 = Leh_func_begin0-Ltmp3
 // CHECK-NEXT: MinVersion {
 // CHECK-NEXT:   Cmd: LC_VERSION_MIN_MACOSX
 // CHECK-NEXT:   Size: 16
-// CHECK-NEXT:   Version: 9.0
+// CHECK-NEXT:   Version: 10.5
 // CHECK-NEXT:   SDK: n/a
 // CHECK-NEXT: }

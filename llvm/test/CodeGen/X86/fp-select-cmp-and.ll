@@ -3,7 +3,7 @@
 
 define double @test1(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltsd %xmm2, %xmm0
 ; CHECK-NEXT:    andpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -14,7 +14,7 @@ define double @test1(double %a, double %b, double %eps) {
 
 define double @test2(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmplesd %xmm2, %xmm0
 ; CHECK-NEXT:    andpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -25,7 +25,7 @@ define double @test2(double %a, double %b, double %eps) {
 
 define double @test3(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
 ; CHECK-NEXT:    andpd %xmm1, %xmm2
 ; CHECK-NEXT:    movapd %xmm2, %xmm0
@@ -37,7 +37,7 @@ define double @test3(double %a, double %b, double %eps) {
 
 define double @test4(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm2
 ; CHECK-NEXT:    andpd %xmm1, %xmm2
 ; CHECK-NEXT:    movapd %xmm2, %xmm0
@@ -49,7 +49,7 @@ define double @test4(double %a, double %b, double %eps) {
 
 define double @test5(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltsd %xmm2, %xmm0
 ; CHECK-NEXT:    andnpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -60,7 +60,7 @@ define double @test5(double %a, double %b, double %eps) {
 
 define double @test6(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmplesd %xmm2, %xmm0
 ; CHECK-NEXT:    andnpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -71,7 +71,7 @@ define double @test6(double %a, double %b, double %eps) {
 
 define double @test7(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
 ; CHECK-NEXT:    andnpd %xmm1, %xmm2
 ; CHECK-NEXT:    movapd %xmm2, %xmm0
@@ -83,7 +83,7 @@ define double @test7(double %a, double %b, double %eps) {
 
 define double @test8(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm2
 ; CHECK-NEXT:    andnpd %xmm1, %xmm2
 ; CHECK-NEXT:    movapd %xmm2, %xmm0
@@ -95,7 +95,7 @@ define double @test8(double %a, double %b, double %eps) {
 
 define float @test9(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test9:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltss %xmm2, %xmm0
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -106,7 +106,7 @@ define float @test9(float %a, float %b, float %eps) {
 
 define float @test10(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test10:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpless %xmm2, %xmm0
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -117,7 +117,7 @@ define float @test10(float %a, float %b, float %eps) {
 
 define float @test11(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test11:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltss %xmm0, %xmm2
 ; CHECK-NEXT:    andps %xmm1, %xmm2
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
@@ -129,7 +129,7 @@ define float @test11(float %a, float %b, float %eps) {
 
 define float @test12(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test12:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpless %xmm0, %xmm2
 ; CHECK-NEXT:    andps %xmm1, %xmm2
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
@@ -141,7 +141,7 @@ define float @test12(float %a, float %b, float %eps) {
 
 define float @test13(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test13:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltss %xmm2, %xmm0
 ; CHECK-NEXT:    andnps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -152,7 +152,7 @@ define float @test13(float %a, float %b, float %eps) {
 
 define float @test14(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test14:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpless %xmm2, %xmm0
 ; CHECK-NEXT:    andnps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -163,7 +163,7 @@ define float @test14(float %a, float %b, float %eps) {
 
 define float @test15(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test15:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpltss %xmm0, %xmm2
 ; CHECK-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
@@ -175,7 +175,7 @@ define float @test15(float %a, float %b, float %eps) {
 
 define float @test16(float %a, float %b, float %eps) {
 ; CHECK-LABEL: test16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpless %xmm0, %xmm2
 ; CHECK-NEXT:    andnps %xmm1, %xmm2
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
@@ -187,7 +187,7 @@ define float @test16(float %a, float %b, float %eps) {
 
 define float @test17(float %a, float %b, float %c, float %eps) {
 ; CHECK-LABEL: test17:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpless %xmm0, %xmm3
 ; CHECK-NEXT:    andps %xmm3, %xmm2
 ; CHECK-NEXT:    andnps %xmm1, %xmm3
@@ -201,7 +201,7 @@ define float @test17(float %a, float %b, float %c, float %eps) {
 
 define double @test18(double %a, double %b, double %c, double %eps) {
 ; CHECK-LABEL: test18:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm3
 ; CHECK-NEXT:    andpd %xmm3, %xmm2
 ; CHECK-NEXT:    andnpd %xmm1, %xmm3

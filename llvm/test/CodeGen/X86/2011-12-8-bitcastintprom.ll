@@ -5,7 +5,7 @@
 ; Make sure that the conversion between v4i8 to v2i16 is not a simple bitcast.
 define void @prom_bug(<4 x i8> %t, i16* %p) {
 ; SSE2-LABEL: prom_bug:
-; SSE2:       ## BB#0:
+; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
@@ -16,7 +16,7 @@ define void @prom_bug(<4 x i8> %t, i16* %p) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: prom_bug:
-; SSE41:       ## BB#0:
+; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq

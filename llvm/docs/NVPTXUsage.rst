@@ -499,7 +499,7 @@ The output we get from ``llc`` (as of LLVM 3.4):
     .reg .s32   %r<2>;
     .reg .s64   %rl<8>;
 
-  // BB#0:                                // %entry
+  // %bb.0:                                // %entry
     ld.param.u64    %rl1, [kernel_param_0];
     mov.u32         %r1, %tid.x;
     mul.wide.s32    %rl2, %r1, 4;
@@ -897,7 +897,7 @@ This gives us the following PTX (excerpt):
     .reg .s32   %r<21>;
     .reg .s64   %rl<8>;
 
-  // BB#0:                                // %entry
+  // %bb.0:                                // %entry
     ld.param.u64  %rl2, [kernel_param_0];
     mov.u32   %r3, %tid.x;
     ld.param.u64  %rl3, [kernel_param_1];
@@ -921,7 +921,7 @@ This gives us the following PTX (excerpt):
     abs.f32   %f4, %f1;
     setp.gtu.f32  %p4, %f4, 0f7F800000;
     @%p4 bra  BB0_4;
-  // BB#3:                                // %__nv_isnanf.exit5.i
+  // %bb.3:                                // %__nv_isnanf.exit5.i
     abs.f32   %f5, %f2;
     setp.le.f32 %p5, %f5, 0f7F800000;
     @%p5 bra  BB0_5;
@@ -953,7 +953,7 @@ This gives us the following PTX (excerpt):
     selp.f32  %f110, 0f7F800000, %f99, %p16;
     setp.eq.f32 %p17, %f110, 0f7F800000;
     @%p17 bra   BB0_28;
-  // BB#27:
+  // %bb.27:
     fma.rn.f32  %f110, %f110, %f108, %f110;
   BB0_28:                                 // %__internal_accurate_powf.exit.i
     setp.lt.f32 %p18, %f1, 0f00000000;

@@ -20,6 +20,14 @@ define void @test2(i32* %P) {
 ; CHECK-NEXT: ret void
 }
 
+define void @store_at_gep_off_null(i64 %offset) {
+; CHECK-LABEL: @store_at_gep_off_null
+; CHECK: store i32 undef, i32* %ptr
+   %ptr = getelementptr i32, i32 *null, i64 %offset
+   store i32 24, i32* %ptr
+   ret void
+}
+
 ;; Simple sinking tests
 
 ; "if then else"

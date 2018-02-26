@@ -553,6 +553,12 @@ TEST(FormatVariadicTest, Adapter) {
             formatv("{0,=34:X-}", fmt_repeat(fmt_pad(N, 1, 3), 5)).str());
 }
 
+TEST(FormatVariadicTest, MoveConstructor) {
+  auto fmt = formatv("{0} {1}", 1, 2);
+  auto fmt2 = std::move(fmt);
+  std::string S = fmt2;
+  EXPECT_EQ("1 2", S);
+}
 TEST(FormatVariadicTest, ImplicitConversions) {
   std::string S = formatv("{0} {1}", 1, 2);
   EXPECT_EQ("1 2", S);
@@ -571,4 +577,35 @@ TEST(FormatVariadicTest, FormatAdapter) {
   // Not supposed to compile
   // const Format cvar(1);
   // EXPECT_EQ("Format", formatv("{0}", cvar).str());
+}
+
+TEST(FormatVariadicTest, FormatFormatvObject) {
+  EXPECT_EQ("Format", formatv("F{0}t", formatv("o{0}a", "rm")).str());
+  EXPECT_EQ("[   ! ]", formatv("[{0,+5}]", formatv("{0,-2}", "!")).str());
+}
+
+namespace {
+struct Recorder {
+  int Copied = 0, Moved = 0;
+  Recorder() = default;
+  Recorder(const Recorder &Copy) : Copied(1 + Copy.Copied), Moved(Copy.Moved) {}
+  Recorder(const Recorder &&Move)
+      : Copied(Move.Copied), Moved(1 + Move.Moved) {}
+};
+} // namespace
+namespace llvm {
+template <> struct format_provider<Recorder> {
+  static void format(const Recorder &R, raw_ostream &OS, StringRef style) {
+    OS << R.Copied << "C " << R.Moved << "M";
+  }
+};
+} // namespace
+
+TEST(FormatVariadicTest, CopiesAndMoves) {
+  Recorder R;
+  EXPECT_EQ("0C 0M", formatv("{0}", R).str());
+  EXPECT_EQ("0C 3M", formatv("{0}", std::move(R)).str());
+  EXPECT_EQ("0C 3M", formatv("{0}", Recorder()).str());
+  EXPECT_EQ(0, R.Copied);
+  EXPECT_EQ(0, R.Moved);
 }

@@ -71,7 +71,7 @@ void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
 // Must declare the symbols in the global namespace.
 static void *DoSearch(const char* SymbolName) {
 #define EXPLICIT_SYMBOL(SYM) \
-   extern void *SYM; if (!strcmp(SymbolName, #SYM)) return &SYM
+   extern void *SYM; if (!strcmp(SymbolName, #SYM)) return (void*)&SYM
 
   // If this is darwin, it has some funky issues, try to solve them here.  Some
   // important symbols are marked 'private external' which doesn't allow

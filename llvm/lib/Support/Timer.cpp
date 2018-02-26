@@ -362,8 +362,10 @@ void TimerGroup::printAll(raw_ostream &OS) {
 
 void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
                                 const char *suffix, double Value) {
-  assert(!yaml::needsQuotes(Name) && "TimerGroup name needs no quotes");
-  assert(!yaml::needsQuotes(R.Name) && "Timer name needs no quotes");
+  assert(yaml::needsQuotes(Name) == yaml::QuotingType::None &&
+         "TimerGroup name needs no quotes");
+  assert(yaml::needsQuotes(R.Name) == yaml::QuotingType::None &&
+         "Timer name needs no quotes");
   OS << "\t\"time." << Name << '.' << R.Name << suffix << "\": " << Value;
 }
 

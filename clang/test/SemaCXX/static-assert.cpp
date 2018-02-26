@@ -51,3 +51,20 @@ StaticAssertProtected<X> sap2; // expected-note {{instantiation}}
 
 static_assert(true); // expected-warning {{C++17 extension}}
 static_assert(false); // expected-error-re {{failed{{$}}}} expected-warning {{extension}}
+
+
+// Diagnostics for static_assert with multiple conditions
+template<typename T> struct first_trait {
+  static const bool value = false;
+};
+
+template<>
+struct first_trait<X> {
+  static const bool value = true;
+};
+
+template<typename T> struct second_trait {
+  static const bool value = false;
+};
+
+static_assert(first_trait<X>::value && second_trait<X>::value, "message"); // expected-error{{static_assert failed due to requirement 'second_trait<X>::value' "message"}}

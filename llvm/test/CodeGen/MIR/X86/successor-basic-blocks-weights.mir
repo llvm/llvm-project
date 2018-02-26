@@ -21,14 +21,14 @@
 name:            foo
 body: |
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:         successors: %bb.1.less(0x2a3d70a4), %bb.2.exit(0x55c28f5c)
+  ; CHECK:         successors: %bb.1(0x2a3d70a4), %bb.2(0x55c28f5c)
   ; CHECK-LABEL: bb.1.less:
   bb.0.entry:
-    successors: %bb.1.less (33), %bb.2.exit(67)
+    successors: %bb.1 (33), %bb.2(67)
     liveins: %edi
 
     CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit killed %eflags
+    JG_1 %bb.2, implicit killed %eflags
 
   bb.1.less:
     %eax = MOV32r0 implicit-def dead %eflags

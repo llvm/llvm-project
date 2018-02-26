@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -march=ppc32 | grep fmul | count 2
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -march=ppc32 -enable-unsafe-fp-math | \
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- | grep fmul | count 2
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -enable-unsafe-fp-math | \
 ; RUN:   grep fmul | count 1
 
 define double @foo(double %X) nounwind {

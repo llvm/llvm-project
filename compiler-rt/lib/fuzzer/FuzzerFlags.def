@@ -21,6 +21,8 @@ FUZZER_FLAG_INT(experimental_len_control, 0, "experimental flag")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
+FUZZER_FLAG_INT(reduce_depth, 0, "Experimental/internal. "
+                "Reduce depth if mutations lose unique features")
 FUZZER_FLAG_INT(shuffle, 1, "Shuffle inputs at startup")
 FUZZER_FLAG_INT(prefer_small, 1,
     "If 1, always prefer smaller inputs during the corpus shuffle.")
@@ -38,7 +40,12 @@ FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")
-FUZZER_FLAG_STRING(merge_control_file, "internal flag")
+FUZZER_FLAG_STRING(merge_inner, "internal flag")
+FUZZER_FLAG_STRING(merge_control_file,
+                   "Specify a control file used for the merge proccess. "
+                   "If a merge process gets killed it tries to leave this file "
+                   "in a state suitable for resuming the merge. "
+                   "By default a temporary file will be used.")
 FUZZER_FLAG_STRING(save_coverage_summary, "Experimental:"
                    " save coverage summary to a given file."
                    " Used with -merge=1")
@@ -59,7 +66,6 @@ FUZZER_FLAG_INT(cleanse_crash, 0, "If 1, tries to cleanse the provided"
   )
 FUZZER_FLAG_INT(minimize_crash_internal_step, 0, "internal flag")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
-FUZZER_FLAG_INT(use_indir_calls, 1, "Use indirect caller-callee counters")
 FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")
 FUZZER_FLAG_INT(use_value_profile, 0,
@@ -91,12 +97,15 @@ FUZZER_FLAG_STRING(exact_artifact_path,
                    "and will not use checksum in the file name. Do not "
                    "use the same path for several parallel processes.")
 FUZZER_FLAG_INT(print_pcs, 0, "If 1, print out newly covered PCs.")
+FUZZER_FLAG_INT(print_funcs, 2, "If >=1, print out at most this number of "
+                                "newly covered functions.")
 FUZZER_FLAG_INT(print_final_stats, 0, "If 1, print statistics at exit.")
 FUZZER_FLAG_INT(print_corpus_stats, 0,
   "If 1, print statistics on corpus elements at exit.")
 FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
                                    " at exit.")
-FUZZER_FLAG_INT(dump_coverage, 0, "If 1, dump coverage information as a"
+FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated."
+                                  " If 1, dump coverage information as a"
                                   " .sancov file at exit.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
@@ -106,15 +115,24 @@ FUZZER_FLAG_INT(handle_fpe, 1, "If 1, try to intercept SIGFPE.")
 FUZZER_FLAG_INT(handle_int, 1, "If 1, try to intercept SIGINT.")
 FUZZER_FLAG_INT(handle_term, 1, "If 1, try to intercept SIGTERM.")
 FUZZER_FLAG_INT(handle_xfsz, 1, "If 1, try to intercept SIGXFSZ.")
+FUZZER_FLAG_INT(handle_usr1, 1, "If 1, try to intercept SIGUSR1.")
+FUZZER_FLAG_INT(handle_usr2, 1, "If 1, try to intercept SIGUSR2.")
 FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "if 2, close stderr; if 3, close both. "
-    "Be careful, this will also close e.g. asan's stderr/stdout.")
+    "Be careful, this will also close e.g. stderr of asan.")
 FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
     "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
+FUZZER_FLAG_INT(purge_allocator_interval, 1, "Purge allocator caches and "
+    "quarantines every <N> seconds. When rss_limit_mb is specified (>0), "
+    "purging starts when RSS exceeds 50% of rss_limit_mb. Pass "
+    "purge_allocator_interval=-1 to disable this functionality.")
 FUZZER_FLAG_INT(trace_malloc, 0, "If >= 1 will print all mallocs/frees. "
     "If >= 2 will also print stack traces.")
 FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
     "reaching this limit of RSS memory usage.")
+FUZZER_FLAG_INT(malloc_limit_mb, 0, "If non-zero, the fuzzer will exit "
+    "if the target tries to allocate this number of Mb with one malloc call. "
+    "If zero (default) same limit as rss_limit_mb is applied.")
 FUZZER_FLAG_STRING(exit_on_src_pos, "Exit if a newly found PC originates"
     " from the given source location. Example: -exit_on_src_pos=foo.cc:123. "
     "Used primarily for testing libFuzzer itself.")
@@ -128,12 +146,5 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
 FUZZER_FLAG_STRING(run_equivalence_server, "Experimental")
 FUZZER_FLAG_STRING(use_equivalence_server, "Experimental")
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
-
-FUZZER_DEPRECATED_FLAG(exit_on_first)
-FUZZER_DEPRECATED_FLAG(save_minimized_corpus)
-FUZZER_DEPRECATED_FLAG(sync_command)
-FUZZER_DEPRECATED_FLAG(sync_timeout)
-FUZZER_DEPRECATED_FLAG(test_single_input)
-FUZZER_DEPRECATED_FLAG(drill)
-FUZZER_DEPRECATED_FLAG(truncate_units)
-FUZZER_DEPRECATED_FLAG(output_csv)
+FUZZER_FLAG_INT(use_clang_coverage, 0, "Experimental")
+FUZZER_FLAG_INT(use_feature_frequency, 0, "Experimental/internal")

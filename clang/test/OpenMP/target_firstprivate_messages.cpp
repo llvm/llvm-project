@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 struct S1; // expected-note 2 {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {

@@ -58,7 +58,7 @@ define <4 x i8*> @test5() {
 
 define <16 x i32*> @test6() {
 ; CHECK-LABEL: @test6
-; CHECK-NEXT: ret <16 x i32*> getelementptr ([24 x [42 x [3 x i32]]], [24 x [42 x [3 x i32]]]* @v, <16 x i64> zeroinitializer, <16 x i64> zeroinitializer, <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, <16 x i64> zeroinitializer)
+; CHECK-NEXT: ret <16 x i32*> getelementptr inbounds ([24 x [42 x [3 x i32]]], [24 x [42 x [3 x i32]]]* @v, <16 x i64> zeroinitializer, <16 x i64> zeroinitializer, <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, <16 x i64> zeroinitializer)
   %VectorGep = getelementptr [24 x [42 x [3 x i32]]], [24 x [42 x [3 x i32]]]* @v, i64 0, i64 0, <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, i64 0
   ret <16 x i32*> %VectorGep
 }

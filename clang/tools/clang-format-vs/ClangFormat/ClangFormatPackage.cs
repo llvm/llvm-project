@@ -326,7 +326,13 @@ namespace LLVM.ClangFormat
 
             string filePath = Vsix.GetDocumentPath(view);
             var path = Path.GetDirectoryName(filePath);
+
             string text = view.TextBuffer.CurrentSnapshot.GetText();
+            if (!text.EndsWith(Environment.NewLine))
+            {
+                view.TextBuffer.Insert(view.TextBuffer.CurrentSnapshot.Length, Environment.NewLine);
+                text += Environment.NewLine;
+            }
 
             RunClangFormatAndApplyReplacements(text, 0, text.Length, path, filePath, options, view);
         }

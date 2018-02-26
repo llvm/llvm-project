@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -55,7 +56,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MipsRelocationEntry &RHS) {
 
 class MipsELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI, bool _isN64,
+  MipsELFObjectWriter(uint8_t OSABI, bool HasRelocationAddend, bool Is64,
                       bool IsLittleEndian);
 
   ~MipsELFObjectWriter() override = default;
@@ -209,11 +210,10 @@ static void dumpRelocs(const char *Prefix, const Container &Relocs) {
 }
 #endif
 
-MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
-                                         bool _isN64, bool IsLittleEndian)
-    : MCELFObjectTargetWriter(_is64Bit, OSABI, ELF::EM_MIPS,
-                              /*HasRelocationAddend*/ _isN64,
-                              /*IsN64*/ _isN64) {}
+MipsELFObjectWriter::MipsELFObjectWriter(uint8_t OSABI,
+                                         bool HasRelocationAddend, bool Is64,
+                                         bool IsLittleEndian)
+    : MCELFObjectTargetWriter(Is64, OSABI, ELF::EM_MIPS, HasRelocationAddend) {}
 
 unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCValue &Target,
@@ -282,7 +282,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_TPRel_8:
     return ELF::R_MIPS_TLS_TPREL64;
   case FK_GPRel_4:
-    if (isN64()) {
+    if (is64Bit()) {
       unsigned Type = (unsigned)ELF::R_MIPS_NONE;
       Type = setRType((unsigned)ELF::R_MIPS_GPREL32, Type);
       Type = setRType2((unsigned)ELF::R_MIPS_64, Type);
@@ -656,11 +656,13 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-MCObjectWriter *llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS,
-                                                uint8_t OSABI,
-                                                bool IsLittleEndian,
-                                                bool Is64Bit) {
-  MCELFObjectTargetWriter *MOTW =
-      new MipsELFObjectWriter(Is64Bit, OSABI, Is64Bit, IsLittleEndian);
-  return createELFObjectWriter(MOTW, OS, IsLittleEndian);
+std::unique_ptr<MCObjectWriter>
+llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS, const Triple &TT,
+                                bool IsN32) {
+  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  bool IsN64 = TT.isArch64Bit() && !IsN32;
+  bool HasRelocationAddend = TT.isArch64Bit();
+  auto MOTW = llvm::make_unique<MipsELFObjectWriter>(
+      OSABI, HasRelocationAddend, IsN64, TT.isLittleEndian());
+  return createELFObjectWriter(std::move(MOTW), OS, TT.isLittleEndian());
 }

@@ -57,8 +57,11 @@ __floatsisf(int a) {
 }
 
 #if defined(__ARM_EABI__)
+#if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI fp_t __aeabi_i2f(int a) {
   return __floatsisf(a);
 }
+#else
+AEABI_RTABI fp_t __aeabi_i2f(int a) COMPILER_RT_ALIAS(__floatsisf);
 #endif
-
+#endif

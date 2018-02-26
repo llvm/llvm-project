@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
 ; PR2566
 
 @0 = external global i16		; <i16*>:0 [#uses=1]

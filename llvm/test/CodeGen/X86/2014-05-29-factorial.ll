@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; CHECK: decq [[X:%rdi|%rcx]]
 ; CHECK-NOT: testq [[X]], [[X]]
 

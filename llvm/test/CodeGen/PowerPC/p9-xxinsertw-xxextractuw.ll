@@ -439,6 +439,69 @@ entry:
   ret float %conv
 }
 
+; Verify we generate optimal code for unsigned vector int elem extract followed
+; by conversion to double
+
+define double @conv2dlbTestui0(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dlbTestui0
+; CHECK: xxextractuw [[SW:[0-9]+]], 34, 12
+; CHECK: xscvuxddp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dlbTestui0
+; CHECK-BE: xxextractuw [[CP:[0-9]+]], 34, 0
+; CHECK-BE: xscvuxddp 1, [[CP]]
+  %0 = extractelement <4 x i32> %a, i32 0
+  %1 = uitofp i32 %0 to double
+  ret double %1
+}
+
+define double @conv2dlbTestui1(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dlbTestui1
+; CHECK: xxextractuw [[SW:[0-9]+]], 34, 8
+; CHECK: xscvuxddp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dlbTestui1
+; CHECK-BE: xxextractuw [[CP:[0-9]+]], 34, 4
+; CHECK-BE: xscvuxddp 1, [[CP]]
+  %0 = extractelement <4 x i32> %a, i32 1
+  %1 = uitofp i32 %0 to double
+  ret double %1
+}
+
+define double @conv2dlbTestui2(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dlbTestui2
+; CHECK: xxextractuw [[SW:[0-9]+]], 34, 4
+; CHECK: xscvuxddp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dlbTestui2
+; CHECK-BE: xxextractuw [[CP:[0-9]+]], 34, 8
+; CHECK-BE: xscvuxddp 1, [[CP]]
+  %0 = extractelement <4 x i32> %a, i32 2
+  %1 = uitofp i32 %0 to double
+  ret double %1
+}
+
+define double @conv2dlbTestui3(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dlbTestui3
+; CHECK: xxextractuw [[SW:[0-9]+]], 34, 0
+; CHECK: xscvuxddp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dlbTestui3
+; CHECK-BE: xxextractuw [[CP:[0-9]+]], 34, 12
+; CHECK-BE: xscvuxddp 1, [[CP]]
+  %0 = extractelement <4 x i32> %a, i32 3
+  %1 = uitofp i32 %0 to double
+  ret double %1
+}
+
+; verify we don't crash for variable elem extract
+define double @conv2dlbTestuiVar(<4 x i32> %a, i32 zeroext %elem) {
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 %elem
+  %conv = uitofp i32 %vecext to double
+  ret double %conv
+}
+
 define <4 x float> @_Z10testInsEltILj0EDv4_ffET0_S1_T1_(<4 x float> %a, float %b) {
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj0EDv4_ffET0_S1_T1_
@@ -971,10 +1034,10 @@ entry:
 define <4 x float> @insertVarF(<4 x float> %a, float %f, i32 %el) {
 entry:
 ; CHECK-LABEL: insertVarF
-; CHECK: stxsspx 1,
+; CHECK: stfsx 1,
 ; CHECK: lxv
 ; CHECK-BE-LABEL: insertVarF
-; CHECK-BE: stxsspx 1,
+; CHECK-BE: stfsx 1,
 ; CHECK-BE: lxv
   %vecins = insertelement <4 x float> %a, float %f, i32 %el
   ret <4 x float> %vecins

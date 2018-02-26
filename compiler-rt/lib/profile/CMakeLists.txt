@@ -38,6 +38,14 @@ int main() {
 
 " COMPILER_RT_TARGET_HAS_FCNTL_LCK)
 
+CHECK_CXX_SOURCE_COMPILES("
+#include <sys/utsname.h>
+int main() {
+ return 0;
+}
+
+" COMPILER_RT_TARGET_HAS_UNAME)
+
 add_compiler_rt_component(profile)
 
 set(PROFILE_SOURCES
@@ -76,6 +84,12 @@ if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_FCNTL_LCK=1)
+endif()
+
+if(COMPILER_RT_TARGET_HAS_UNAME)
+ set(EXTRA_FLAGS
+     ${EXTRA_FLAGS}
+     -DCOMPILER_RT_HAS_UNAME=1)
 endif()
 
 # This appears to be a C-only warning banning the use of locals in aggregate

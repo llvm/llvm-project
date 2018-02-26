@@ -2,7 +2,7 @@
 
 define <8 x i8> @vtrni8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vtrni8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.8 d17, d16
@@ -19,7 +19,7 @@ define <8 x i8> @vtrni8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <16 x i8> @vtrni8_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vtrni8_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr [[LDR1:d[0-9]+]], [r1]
 ; CHECK-NEXT:    vldr [[LDR0:d[0-9]+]], [r0]
 ; CHECK-NEXT:    vtrn.8 [[LDR0]], [[LDR1]]
@@ -34,7 +34,7 @@ define <16 x i8> @vtrni8_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <4 x i16> @vtrni16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: vtrni16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.16 d17, d16
@@ -51,7 +51,7 @@ define <4 x i16> @vtrni16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 
 define <8 x i16> @vtrni16_Qres(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: vtrni16_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr [[LDR1:d[0-9]+]], [r1]
 ; CHECK-NEXT:    vldr [[LDR0:d[0-9]+]], [r0]
 ; CHECK-NEXT:    vtrn.16 [[LDR0]], [[LDR1]]
@@ -66,7 +66,7 @@ define <8 x i16> @vtrni16_Qres(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 
 define <2 x i32> @vtrni32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-LABEL: vtrni32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.32 d17, d16
@@ -83,7 +83,7 @@ define <2 x i32> @vtrni32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <4 x i32> @vtrni32_Qres(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-LABEL: vtrni32_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr [[LDR1:d[0-9]+]], [r1]
 ; CHECK-NEXT:    vldr [[LDR0:d[0-9]+]], [r0]
 ; CHECK-NEXT:    vtrn.32 [[LDR0]], [[LDR1]]
@@ -98,7 +98,7 @@ define <4 x i32> @vtrni32_Qres(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <2 x float> @vtrnf(<2 x float>* %A, <2 x float>* %B) nounwind {
 ; CHECK-LABEL: vtrnf:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.32 d17, d16
@@ -115,7 +115,7 @@ define <2 x float> @vtrnf(<2 x float>* %A, <2 x float>* %B) nounwind {
 
 define <4 x float> @vtrnf_Qres(<2 x float>* %A, <2 x float>* %B) nounwind {
 ; CHECK-LABEL: vtrnf_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr [[LDR1:d[0-9]+]], [r1]
 ; CHECK-NEXT:    vldr [[LDR0:d[0-9]+]], [r0]
 ; CHECK-NEXT:    vtrn.32 [[LDR0]], [[LDR1]]
@@ -130,7 +130,7 @@ define <4 x float> @vtrnf_Qres(<2 x float>* %A, <2 x float>* %B) nounwind {
 
 define <16 x i8> @vtrnQi8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vtrn.8 q9, q8
@@ -148,7 +148,7 @@ define <16 x i8> @vtrnQi8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <32 x i8> @vtrnQi8_QQres(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi8_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vtrn.8 q9, q8
@@ -163,7 +163,7 @@ define <32 x i8> @vtrnQi8_QQres(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <8 x i16> @vtrnQi16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vtrn.16 q9, q8
@@ -181,7 +181,7 @@ define <8 x i16> @vtrnQi16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <16 x i16> @vtrnQi16_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi16_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vtrn.16 q9, q8
@@ -196,7 +196,7 @@ define <16 x i16> @vtrnQi16_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <4 x i32> @vtrnQi32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vtrn.32 q9, q8
@@ -214,7 +214,7 @@ define <4 x i32> @vtrnQi32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 
 define <8 x i32> @vtrnQi32_QQres(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi32_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vtrn.32 q9, q8
@@ -229,7 +229,7 @@ define <8 x i32> @vtrnQi32_QQres(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 
 define <4 x float> @vtrnQf(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; CHECK-LABEL: vtrnQf:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vtrn.32 q9, q8
@@ -247,7 +247,7 @@ define <4 x float> @vtrnQf(<4 x float>* %A, <4 x float>* %B) nounwind {
 
 define <8 x float> @vtrnQf_QQres(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; CHECK-LABEL: vtrnQf_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vtrn.32 q9, q8
@@ -263,7 +263,7 @@ define <8 x float> @vtrnQf_QQres(<4 x float>* %A, <4 x float>* %B) nounwind {
 
 define <8 x i8> @vtrni8_undef(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vtrni8_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.8 d17, d16
@@ -280,7 +280,7 @@ define <8 x i8> @vtrni8_undef(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <16 x i8> @vtrni8_undef_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vtrni8_undef_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr [[LDR1:d[0-9]+]], [r1]
 ; CHECK-NEXT:    vldr [[LDR0:d[0-9]+]], [r0]
 ; CHECK-NEXT:    vtrn.8 [[LDR0]], [[LDR1]]
@@ -295,7 +295,7 @@ define <16 x i8> @vtrni8_undef_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <8 x i16> @vtrnQi16_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi16_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vtrn.16 q9, q8
@@ -313,7 +313,7 @@ define <8 x i16> @vtrnQi16_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <16 x i16> @vtrnQi16_undef_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vtrnQi16_undef_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vtrn.16 q9, q8
@@ -375,7 +375,7 @@ define <8 x i8> @vtrn_mismatched_builvector1(<8 x i8> %tr0, <8 x i8> %tr1,
 define void @lower_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
   ; CHECK-LABEL: lower_twice_no_vtrn:
-  ; CHECK: @ BB#0:
+  ; CHECK: @ %bb.0:
   ; CHECK-NEXT: vldr d16, [r1]
   ; CHECK-NEXT: vldr d18, [r0]
   ; CHECK-NEXT: vtrn.16 d18, d16
@@ -394,7 +394,7 @@ entry:
 define void @upper_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
   ; CHECK-LABEL: upper_twice_no_vtrn:
-  ; CHECK: @ BB#0:
+  ; CHECK: @ %bb.0:
   ; CHECK-NEXT: vldr d16, [r1]
   ; CHECK-NEXT: vldr d18, [r0]
   ; CHECK-NEXT: vtrn.16 d18, d16

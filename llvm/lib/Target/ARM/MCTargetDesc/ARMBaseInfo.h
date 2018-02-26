@@ -19,72 +19,9 @@
 
 #include "ARMMCTargetDesc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "Utils/ARMBaseInfo.h"
 
 namespace llvm {
-
-// Enums corresponding to ARM condition codes
-namespace ARMCC {
-  // The CondCodes constants map directly to the 4-bit encoding of the
-  // condition field for predicated instructions.
-  enum CondCodes { // Meaning (integer)          Meaning (floating-point)
-    EQ,            // Equal                      Equal
-    NE,            // Not equal                  Not equal, or unordered
-    HS,            // Carry set                  >, ==, or unordered
-    LO,            // Carry clear                Less than
-    MI,            // Minus, negative            Less than
-    PL,            // Plus, positive or zero     >, ==, or unordered
-    VS,            // Overflow                   Unordered
-    VC,            // No overflow                Not unordered
-    HI,            // Unsigned higher            Greater than, or unordered
-    LS,            // Unsigned lower or same     Less than or equal
-    GE,            // Greater than or equal      Greater than or equal
-    LT,            // Less than                  Less than, or unordered
-    GT,            // Greater than               Greater than
-    LE,            // Less than or equal         <, ==, or unordered
-    AL             // Always (unconditional)     Always (unconditional)
-  };
-
-  inline static CondCodes getOppositeCondition(CondCodes CC) {
-    switch (CC) {
-    default: llvm_unreachable("Unknown condition code");
-    case EQ: return NE;
-    case NE: return EQ;
-    case HS: return LO;
-    case LO: return HS;
-    case MI: return PL;
-    case PL: return MI;
-    case VS: return VC;
-    case VC: return VS;
-    case HI: return LS;
-    case LS: return HI;
-    case GE: return LT;
-    case LT: return GE;
-    case GT: return LE;
-    case LE: return GT;
-    }
-  }
-} // namespace ARMCC
-
-inline static const char *ARMCondCodeToString(ARMCC::CondCodes CC) {
-  switch (CC) {
-  case ARMCC::EQ:  return "eq";
-  case ARMCC::NE:  return "ne";
-  case ARMCC::HS:  return "hs";
-  case ARMCC::LO:  return "lo";
-  case ARMCC::MI:  return "mi";
-  case ARMCC::PL:  return "pl";
-  case ARMCC::VS:  return "vs";
-  case ARMCC::VC:  return "vc";
-  case ARMCC::HI:  return "hi";
-  case ARMCC::LS:  return "ls";
-  case ARMCC::GE:  return "ge";
-  case ARMCC::LT:  return "lt";
-  case ARMCC::GT:  return "gt";
-  case ARMCC::LE:  return "le";
-  case ARMCC::AL:  return "al";
-  }
-  llvm_unreachable("Unknown condition code");
-}
 
 namespace ARM_PROC {
   enum IMod {
@@ -291,7 +228,10 @@ namespace ARMII {
 
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
-    MO_OPTION_MASK = 0x0f,
+    MO_OPTION_MASK = 0x3,
+
+    /// MO_GOT - On a symbol operand, this represents a GOT relative relocation.
+    MO_GOT = 0x8,
 
     /// MO_SBREL - On a symbol operand, this represents a static base relative
     /// relocation. Used in movw and movt instructions.
@@ -406,6 +346,7 @@ namespace ARMII {
     NVExtFrm      = 39 << FormShift,
     NVMulSLFrm    = 40 << FormShift,
     NVTBLFrm      = 41 << FormShift,
+    N3RegCplxFrm  = 43 << FormShift,
 
     //===------------------------------------------------------------------===//
     // Misc flags.

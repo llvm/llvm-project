@@ -21,5 +21,4 @@ define void @normal_condition() nounwind {
 
 ; CHECK:      Region tree:
 ; CHECK-NEXT: [0] 0 => <Function Return>
-; CHECK-NEXT:   [1] 7 => 3
 ; CHECK-NEXT: End region tree

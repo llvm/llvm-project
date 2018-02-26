@@ -13,9 +13,9 @@
 # RUN: FileCheck < %t.cfgset.out %s
 
 # CHECK: -- Testing:
-# CHECK: PASS: googletest-timeout :: DummySubDir/OneTest/FirstTest.subTestA
-# CHECK: TIMEOUT: googletest-timeout :: DummySubDir/OneTest/FirstTest.subTestB
-# CHECK: TIMEOUT: googletest-timeout :: DummySubDir/OneTest/FirstTest.subTestC
+# CHECK: PASS: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestA
+# CHECK: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestB
+# CHECK: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestC
 # CHECK: Expected Passes    : 1
 # CHECK: Individual Timeouts: 2
 

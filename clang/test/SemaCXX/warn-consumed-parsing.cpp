@@ -22,15 +22,15 @@ class AttrTester0 {
   void callableWhen()   __attribute__ ((callable_when())); // expected-error {{'callable_when' attribute takes at least 1 argument}}
 };
 
-int var0 SET_TYPESTATE(consumed); // expected-warning {{'set_typestate' attribute only applies to methods}}
-int var1 TEST_TYPESTATE(consumed); // expected-warning {{'test_typestate' attribute only applies to methods}}
-int var2 CALLABLE_WHEN("consumed"); // expected-warning {{'callable_when' attribute only applies to methods}}
+int var0 SET_TYPESTATE(consumed); // expected-warning {{'set_typestate' attribute only applies to functions}}
+int var1 TEST_TYPESTATE(consumed); // expected-warning {{'test_typestate' attribute only applies to}}
+int var2 CALLABLE_WHEN("consumed"); // expected-warning {{'callable_when' attribute only applies to}}
 int var3 CONSUMABLE(consumed); // expected-warning {{'consumable' attribute only applies to classes}}
 int var4 RETURN_TYPESTATE(consumed); // expected-warning {{'return_typestate' attribute only applies to functions}}
 
-void function0() SET_TYPESTATE(consumed); // expected-warning {{'set_typestate' attribute only applies to methods}}
-void function1() TEST_TYPESTATE(consumed); // expected-warning {{'test_typestate' attribute only applies to methods}}
-void function2() CALLABLE_WHEN("consumed"); // expected-warning {{'callable_when' attribute only applies to methods}}
+void function0() SET_TYPESTATE(consumed); // expected-warning {{'set_typestate' attribute only applies to}}
+void function1() TEST_TYPESTATE(consumed); // expected-warning {{'test_typestate' attribute only applies to}}
+void function2() CALLABLE_WHEN("consumed"); // expected-warning {{'callable_when' attribute only applies to}}
 void function3() CONSUMABLE(consumed); // expected-warning {{'consumable' attribute only applies to classes}}
 
 class CONSUMABLE(unknown) AttrTester1 {

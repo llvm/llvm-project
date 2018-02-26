@@ -16,11 +16,13 @@
 
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
+#include <string>
 
 namespace llvm {
 
 struct InstrItinerary;
 struct InstrStage;
+class FeatureBitset;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
@@ -44,9 +46,9 @@ MCInstrInfo *createHexagonMCInstrInfo();
 MCRegisterInfo *createHexagonMCRegisterInfo(StringRef TT);
 
 namespace Hexagon_MC {
-  StringRef ParseHexagonTriple(const Triple &TT, StringRef CPU);
-  StringRef selectHexagonCPU(const Triple &TT, StringRef CPU);
+  StringRef selectHexagonCPU(StringRef CPU);
 
+  FeatureBitset completeHVXFeatures(const FeatureBitset &FB);
   /// Create a Hexagon MCSubtargetInfo instance. This is exposed so Asm parser,
   /// etc. do not need to go through TargetRegistry.
   MCSubtargetInfo *createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU,
@@ -59,12 +61,13 @@ MCCodeEmitter *createHexagonMCCodeEmitter(const MCInstrInfo &MCII,
                                           MCContext &MCT);
 
 MCAsmBackend *createHexagonAsmBackend(const Target &T,
+                                      const MCSubtargetInfo &STI,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 
-MCObjectWriter *createHexagonELFObjectWriter(raw_pwrite_stream &OS,
-                                             uint8_t OSABI, StringRef CPU);
+std::unique_ptr<MCObjectWriter>
+createHexagonELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
+                             StringRef CPU);
 
 unsigned HexagonGetLastSlot();
 
@@ -79,6 +82,7 @@ unsigned HexagonGetLastSlot();
 // Defines symbolic names for the Hexagon instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_SCHED_ENUM
 #include "HexagonGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

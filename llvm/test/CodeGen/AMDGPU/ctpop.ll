@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC -check-prefix=VI %s
-; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=FUNC -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=FUNC -check-prefix=VI %s
+; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
@@ -42,8 +42,10 @@ define amdgpu_kernel void @v_ctpop_i32(i32 addrspace(1)* noalias %out, i32 addrs
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_add_chain_i32:
-; GCN: {{buffer|flat}}_load_dword [[VAL0:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[VAL1:v[0-9]+]],
+; SI: buffer_load_dword [[VAL0:v[0-9]+]],
+; SI: buffer_load_dword [[VAL1:v[0-9]+]],
+; VI: flat_load_dword [[VAL0:v[0-9]+]],
+; VI: flat_load_dword [[VAL1:v[0-9]+]],
 ; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], [[VAL1]], 0
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
 ; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
@@ -56,8 +58,8 @@ define amdgpu_kernel void @v_ctpop_add_chain_i32(i32 addrspace(1)* noalias %out,
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %tid
   %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %tid
-  %val0 = load i32, i32 addrspace(1)* %in0.gep, align 4
-  %val1 = load i32, i32 addrspace(1)* %in1.gep, align 4
+  %val0 = load volatile i32, i32 addrspace(1)* %in0.gep, align 4
+  %val1 = load volatile i32, i32 addrspace(1)* %in1.gep, align 4
   %ctpop0 = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
   %ctpop1 = call i32 @llvm.ctpop.i32(i32 %val1) nounwind readnone
   %add = add i32 %ctpop0, %ctpop1
@@ -280,8 +282,8 @@ define amdgpu_kernel void @v_ctpop_i32_add_var_inv(i32 addrspace(1)* noalias %ou
 ; SI: buffer_load_dword [[VAR:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
 ; SI: buffer_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAR]], [[VAL]]
-; VI: flat_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
 ; VI: flat_load_dword [[VAR:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
+; VI: flat_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
 ; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
@@ -306,7 +308,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_vvar_inv(i32 addrspace(1)* noalias %o
 ; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xd
 ; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x34
 ; GCN: s_bcnt1_i32_b32  [[SRESULT:s[0-9]+]], [[VAL]]
-; GCN: v_mov_b32_e32 [[RESULT]], [[SRESULT]]
+; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 ; EG: BCNT_INT

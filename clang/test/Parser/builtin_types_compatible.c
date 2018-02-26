@@ -41,3 +41,20 @@ static void test()
 
 }
 
+enum E1 { E1Foo };
+enum E2 { E2Foo };
+
+static void testGccCompatibility() {
+  _Static_assert(__builtin_types_compatible_p(const volatile int, int), "");
+  _Static_assert(__builtin_types_compatible_p(int[5], int[]), "");
+  _Static_assert(!__builtin_types_compatible_p(int[5], int[4]), "");
+  _Static_assert(!__builtin_types_compatible_p(int *, int **), "");
+  _Static_assert(!__builtin_types_compatible_p(const int *, int *), "");
+  _Static_assert(!__builtin_types_compatible_p(enum E1, enum E2), "");
+
+  // GCC's __builtin_types_compatible_p ignores qualifiers on arrays.
+  _Static_assert(__builtin_types_compatible_p(const int[4], int[4]), "");
+  _Static_assert(__builtin_types_compatible_p(int[4], const int[4]), "");
+  _Static_assert(__builtin_types_compatible_p(const int[5][4], int[][4]), "");
+  _Static_assert(!__builtin_types_compatible_p(const int(*)[], int(*)[]), "");
+}

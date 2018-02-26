@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
@@ -317,7 +316,8 @@ Error CVSymbolDumperImpl::visitKnownRecord(
 
 Error CVSymbolDumperImpl::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterRelSym &DefRangeRegisterRel) {
-  W.printNumber("BaseRegister", DefRangeRegisterRel.Hdr.Register);
+  W.printEnum("BaseRegister", uint16_t(DefRangeRegisterRel.Hdr.Register),
+              getRegisterNames());
   W.printBoolean("HasSpilledUDTMember",
                  DefRangeRegisterRel.hasSpilledUDTMember());
   W.printNumber("OffsetInParent", DefRangeRegisterRel.offsetInParent());
@@ -330,7 +330,8 @@ Error CVSymbolDumperImpl::visitKnownRecord(
 
 Error CVSymbolDumperImpl::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
-  W.printNumber("Register", DefRangeRegister.Hdr.Register);
+  W.printEnum("Register", uint16_t(DefRangeRegister.Hdr.Register),
+              getRegisterNames());
   W.printNumber("MayHaveNoName", DefRangeRegister.Hdr.MayHaveNoName);
   printLocalVariableAddrRange(DefRangeRegister.Range,
                               DefRangeRegister.getRelocationOffset());
@@ -340,7 +341,8 @@ Error CVSymbolDumperImpl::visitKnownRecord(
 
 Error CVSymbolDumperImpl::visitKnownRecord(
     CVSymbol &CVR, DefRangeSubfieldRegisterSym &DefRangeSubfieldRegister) {
-  W.printNumber("Register", DefRangeSubfieldRegister.Hdr.Register);
+  W.printEnum("Register", uint16_t(DefRangeSubfieldRegister.Hdr.Register),
+              getRegisterNames());
   W.printNumber("MayHaveNoName", DefRangeSubfieldRegister.Hdr.MayHaveNoName);
   W.printNumber("OffsetInParent", DefRangeSubfieldRegister.Hdr.OffsetInParent);
   printLocalVariableAddrRange(DefRangeSubfieldRegister.Range,
@@ -393,7 +395,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                      FrameCookie.getRelocationOffset(),
                                      FrameCookie.CodeOffset, &LinkageName);
   }
-  W.printHex("Register", FrameCookie.Register);
+  W.printEnum("Register", uint16_t(FrameCookie.Register), getRegisterNames());
   W.printEnum("CookieKind", uint16_t(FrameCookie.CookieKind),
               getFrameCookieKindNames());
   W.printHex("Flags", FrameCookie.Flags);

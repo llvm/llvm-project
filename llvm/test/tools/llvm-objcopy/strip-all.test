@@ -1,0 +1,29 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy --strip-all %t %t2
+# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .blarg
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .gnu.warning.foo
+    Type:            SHT_PROGBITS
+
+# CHECK: SectionHeaderCount: 5
+
+# CHECK: Name: .bss
+# CHECK: Name: .text
+# CHECK: Name: .gnu.warning.foo
+# CHECK: Name: .shstrtab

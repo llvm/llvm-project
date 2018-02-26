@@ -8,6 +8,6 @@ void __attribute__((naked,disable_tail_calls)) foo2(int a) { // expected-error {
   __asm__("");
 }
 
-int g0 __attribute__((disable_tail_calls)); // expected-warning {{'disable_tail_calls' attribute only applies to functions and methods}}
+int g0 __attribute__((disable_tail_calls)); // expected-warning {{'disable_tail_calls' attribute only applies to functions and Objective-C methods}}
 
 int foo3(int a) __attribute__((disable_tail_calls("abc"))); // expected-error {{'disable_tail_calls' attribute takes no arguments}}

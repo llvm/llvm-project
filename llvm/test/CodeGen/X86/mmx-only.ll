@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -mattr=+mmx | FileCheck %s
-; RUN: llc < %s -march=x86 -mattr=+mmx,-sse | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+mmx | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+mmx,-sse | FileCheck %s
 
 ; Test that turning off sse doesn't turn off mmx.
 

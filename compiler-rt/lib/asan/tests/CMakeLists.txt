@@ -23,6 +23,7 @@ set(ASAN_UNITTEST_HEADERS
 set(ASAN_UNITTEST_COMMON_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
+  ${COMPILER_RT_ASAN_SHADOW_SCALE_LLVM_FLAG}
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/asan
@@ -52,6 +53,7 @@ list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -g)
 
 # Use -D instead of definitions to please custom compile command.
 list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
+  ${COMPILER_RT_ASAN_SHADOW_SCALE_FLAG}
   -DASAN_HAS_BLACKLIST=1
   -DASAN_HAS_EXCEPTIONS=1
   -DASAN_UAR=0)
@@ -205,7 +207,7 @@ function(add_asan_tests arch test_runtime)
       add_compiler_rt_test(AsanDynamicUnitTests "${dynamic_test_name}" "${arch}"
         SUBDIR "dynamic"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
-        DEPS gtest asan ${ASAN_INST_TEST_OBJECTS}
+        DEPS asan ${ASAN_INST_TEST_OBJECTS}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
         )
     endif()
@@ -265,7 +267,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
       FOLDER "Compiler-RT Runtime tests")
 
     add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-inline")
-    add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-with-calls"
+    add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-calls"
       CFLAGS -mllvm -asan-instrumentation-with-call-threshold=0)
   endforeach()
 endif()

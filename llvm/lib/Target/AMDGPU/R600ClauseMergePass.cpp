@@ -44,7 +44,6 @@ static bool isCFAlu(const MachineInstr &MI) {
 class R600ClauseMergePass : public MachineFunctionPass {
 
 private:
-  static char ID;
   const R600InstrInfo *TII;
 
   unsigned getCFAluSize(const MachineInstr &MI) const;
@@ -62,6 +61,8 @@ private:
                        const MachineInstr &LatrCFAlu) const;
 
 public:
+  static char ID;
+
   R600ClauseMergePass() : MachineFunctionPass(ID) { }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -69,7 +70,16 @@ public:
   StringRef getPassName() const override;
 };
 
+} // end anonymous namespace
+
+INITIALIZE_PASS_BEGIN(R600ClauseMergePass, DEBUG_TYPE,
+                      "R600 Clause Merge", false, false)
+INITIALIZE_PASS_END(R600ClauseMergePass, DEBUG_TYPE,
+                    "R600 Clause Merge", false, false)
+
 char R600ClauseMergePass::ID = 0;
+
+char &llvm::R600ClauseMergePassID = R600ClauseMergePass::ID;
 
 unsigned R600ClauseMergePass::getCFAluSize(const MachineInstr &MI) const {
   assert(isCFAlu(MI));
@@ -170,7 +180,7 @@ bool R600ClauseMergePass::mergeIfPossible(MachineInstr &RootCFAlu,
 }
 
 bool R600ClauseMergePass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
@@ -204,9 +214,6 @@ bool R600ClauseMergePass::runOnMachineFunction(MachineFunction &MF) {
 StringRef R600ClauseMergePass::getPassName() const {
   return "R600 Merge Clause Markers Pass";
 }
-
-} // end anonymous namespace
-
 
 llvm::FunctionPass *llvm::createR600ClauseMergePass() {
   return new R600ClauseMergePass();

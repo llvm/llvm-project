@@ -228,15 +228,13 @@ bb:
   ret void
 }
 
+; FIXME: Can we avoid waitcnt between the two halves?
 ; GCN-LABEL: {{^}}fma_vector_vector_neg_scalar_lo_scalar_hi:
 ; GCN: ds_read_b32 [[VEC0:v[0-9]+]]
 ; GCN: ds_read_b32 [[VEC1:v[0-9]+]]
-; GCN: ds_read_u16 [[SCALAR0:v[0-9]+]]
-; GCN: ds_read_u16 [[SCALAR1:v[0-9]+]]
-
-; FIXME: Remove and
-; GCN: v_and_b32_e32 [[SCALAR0]], 0xffff, [[SCALAR0]]
-; GCN: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[SCALAR1]], 16, [[SCALAR0]]
+; GCN: ds_read_u16 [[PACKED:v[0-9]+]]
+; GCN: s_waitcnt
+; GCN: ds_read_u16_d16_hi [[PACKED]]
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[PACKED]] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}
 define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(<2 x half> addrspace(1)* %out, <2 x half> addrspace(3)* %lds, half addrspace(3)* %arg2) #0 {

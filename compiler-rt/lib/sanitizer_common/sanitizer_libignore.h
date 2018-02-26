@@ -66,14 +66,16 @@ class LibIgnore {
     return (pc >= range.begin && pc < range.end);
   }
 
-  static const uptr kMaxLibs = 128;
+  static const uptr kMaxIgnoredRanges = 128;
+  static const uptr kMaxInstrumentedRanges = 1024;
+  static const uptr kMaxLibs = 1024;
 
   // Hot part:
   atomic_uintptr_t ignored_ranges_count_;
-  LibCodeRange ignored_code_ranges_[kMaxLibs];
+  LibCodeRange ignored_code_ranges_[kMaxIgnoredRanges];
 
   atomic_uintptr_t instrumented_ranges_count_;
-  LibCodeRange instrumented_code_ranges_[kMaxLibs];
+  LibCodeRange instrumented_code_ranges_[kMaxInstrumentedRanges];
 
   // Cold part:
   BlockingMutex mutex_;

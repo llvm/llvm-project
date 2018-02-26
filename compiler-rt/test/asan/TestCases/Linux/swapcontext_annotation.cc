@@ -16,6 +16,7 @@
 
 #include <pthread.h>
 #include <setjmp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <sys/time.h>
 #include <ucontext.h>

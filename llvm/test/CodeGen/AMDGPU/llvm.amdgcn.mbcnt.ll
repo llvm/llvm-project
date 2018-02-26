@@ -14,6 +14,24 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}mbcnt_lo_known_bits:
+; GCN: v_mbcnt_lo_u32_b32
+; GCN-NOT: and
+define i32 @mbcnt_lo_known_bits(i32 %x, i32 %y) #0 {
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 %x, i32 %y)
+  %mask = and i32 %lo, 63
+  ret i32 %mask
+}
+
+; GCN-LABEL: {{^}}mbcnt_hi_known_bits:
+; GCN: v_mbcnt_hi_u32_b32
+; GCN-NOT: and
+define i32 @mbcnt_hi_known_bits(i32 %x, i32 %y) #0 {
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %x, i32 %y)
+  %mask = and i32 %hi, 63
+  ret i32 %mask
+}
+
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1

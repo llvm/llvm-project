@@ -141,3 +141,63 @@ define <2 x i64> @PR24922(<2 x i64> %v) {
   %result = select <2 x i1> <i1 icmp eq (i64 extractelement (<2 x i64> bitcast (<4 x i32> <i32 15, i32 15, i32 15, i32 15> to <2 x i64>), i64 0), i64 0), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
   ret <2 x i64> %result
 }
+
+; The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
+
+define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
+; CHECK-LABEL: @inselt_shuf_no_demand(
+; CHECK-NEXT:    ret <4 x float> undef
+;
+  %out1 = insertelement <4 x float> undef, float %a1, i32 1
+  %out12 = insertelement <4 x float> %out1, float %a2, i32 2
+  %out123 = insertelement <4 x float> %out12, float %a3, i32 3
+  %shuffle = shufflevector <4 x float> %out123, <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %shuffle
+}
+
+; The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
+
+define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a3) {
+; CHECK-LABEL: @inselt_shuf_no_demand_commute(
+; CHECK-NEXT:    ret <4 x float> undef
+;
+  %out1 = insertelement <4 x float> undef, float %a1, i32 1
+  %out12 = insertelement <4 x float> %out1, float %a2, i32 2
+  %out123 = insertelement <4 x float> %out12, float %a3, i32 3
+  %shuffle = shufflevector <4 x float> undef, <4 x float> %out123, <4 x i32> <i32 4, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %shuffle
+}
+
+; The add uses 'out012' giving it multiple uses after the shuffle is transformed to also
+; use 'out012'. The analysis should be able to see past that.
+
+define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b) {
+; CHECK-LABEL: @inselt_shuf_no_demand_multiuse(
+; CHECK-NEXT:    [[OUT0:%.*]] = insertelement <4 x i32> undef, i32 %a0, i32 0
+; CHECK-NEXT:    [[OUT01:%.*]] = insertelement <4 x i32> [[OUT0]], i32 %a1, i32 1
+; CHECK-NEXT:    [[FOO:%.*]] = add <4 x i32> [[OUT01]], %b
+; CHECK-NEXT:    ret <4 x i32> [[FOO]]
+;
+  %out0 = insertelement <4 x i32> undef, i32 %a0, i32 0
+  %out01 = insertelement <4 x i32> %out0, i32 %a1, i32 1
+  %out012 = insertelement <4 x i32> %out01, i32 %a0, i32 2
+  %foo = add <4 x i32> %out012, %b
+  %out0123 = insertelement <4 x i32> %foo, i32 %a1, i32 3
+  %shuffle = shufflevector <4 x i32> %out0123, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  ret <4 x i32> %shuffle
+}
+
+; FIXME: We should be able to look past the bogus use of 'out12' and kill 'out1'.
+
+define <4 x float> @inselt_shuf_no_demand_bogus_insert_index_in_chain(float %a1, float %a2, float %a3, i32 %variable_index) {
+; CHECK-LABEL: @inselt_shuf_no_demand_bogus_insert_index_in_chain(
+; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> undef, float [[A2:%.*]], i32 [[VARIABLE_INDEX:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[OUT12]]
+;
+  %out1 = insertelement <4 x float> undef, float %a1, i32 1
+  %out12 = insertelement <4 x float> %out1, float %a2, i32 %variable_index ; something unexpected
+  %out123 = insertelement <4 x float> %out12, float %a3, i32 3
+  %shuffle = shufflevector <4 x float> %out123, <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %shuffle
+}
+

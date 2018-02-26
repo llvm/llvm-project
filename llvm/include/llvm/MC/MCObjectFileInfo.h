@@ -123,8 +123,12 @@ protected:
   /// Section for newer gnu pubtypes.
   MCSection *DwarfGnuPubTypesSection;
 
+  // Section for Swift AST
+  MCSection *DwarfSwiftASTSection;
+
   MCSection *COFFDebugSymbolsSection;
   MCSection *COFFDebugTypesSection;
+  MCSection *COFFGlobalTypeHashesSection;
 
   /// Extra TLS Variable Data section.
   ///
@@ -150,6 +154,9 @@ protected:
   ///
   /// It is initialized on demand so it can be overwritten (with uniquing).
   MCSection *EHFrameSection;
+
+  /// Section containing metadata on function stack sizes.
+  MCSection *StackSizesSection;
 
   // ELF specific sections.
   MCSection *DataRelROSection;
@@ -267,6 +274,7 @@ public:
   MCSection *getDwarfAddrSection() const { return DwarfAddrSection; }
   MCSection *getDwarfCUIndexSection() const { return DwarfCUIndexSection; }
   MCSection *getDwarfTUIndexSection() const { return DwarfTUIndexSection; }
+  MCSection *getDwarfSwiftASTSection() const { return DwarfSwiftASTSection; }
 
   MCSection *getCOFFDebugSymbolsSection() const {
     return COFFDebugSymbolsSection;
@@ -274,7 +282,9 @@ public:
   MCSection *getCOFFDebugTypesSection() const {
     return COFFDebugTypesSection;
   }
-
+  MCSection *getCOFFGlobalTypeHashesSection() const {
+    return COFFGlobalTypeHashesSection;
+  }
 
   MCSection *getTLSExtraDataSection() const { return TLSExtraDataSection; }
   const MCSection *getTLSDataSection() const { return TLSDataSection; }
@@ -282,6 +292,8 @@ public:
 
   MCSection *getStackMapSection() const { return StackMapSection; }
   MCSection *getFaultMapSection() const { return FaultMapSection; }
+
+  MCSection *getStackSizesSection() const { return StackSizesSection; }
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }

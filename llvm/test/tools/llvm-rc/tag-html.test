@@ -1,0 +1,35 @@
+; RUN: rm -rf %t && mkdir %t && cd %t
+; RUN: cp %p/Inputs/webpage*.html .
+; RUN: llvm-rc /FO %t/tag-html.res %p/Inputs/tag-html.rc
+; RUN: llvm-readobj %t/tag-html.res | FileCheck %s --check-prefix HTML
+
+; HTML: Resource type (int): 23
+; HTML-NEXT: Resource name (int): 100
+; HTML-NEXT: Data version: 0
+; HTML-NEXT: Memory flags: 0x30
+; HTML-NEXT: Language ID: 1033
+; HTML-NEXT: Version (major): 0
+; HTML-NEXT: Version (minor): 0
+; HTML-NEXT: Characteristics: 0
+; HTML-NEXT: Data size: 45
+; HTML-NEXT: Data: (
+; HTML-NEXT:   0000: 3C68746D 6C3E0A20 203C626F 64793E0A  |<html>.  <body>.|
+; HTML-NEXT:   0010: 20202020 48656C6C 6F210A20 203C2F62  |    Hello!.  </b|
+; HTML-NEXT:   0020: 6F64793E 0A3C2F68 746D6C3E 0A        |ody>.</html>.|
+; HTML-NEXT: )
+
+; HTML-DAG: Resource type (int): 23
+; HTML-NEXT: Resource name (string): KITTEN
+; HTML-NEXT: Data version: 0
+; HTML-NEXT: Memory flags: 0x30
+; HTML-NEXT: Language ID: 1033
+; HTML-NEXT: Version (major): 0
+; HTML-NEXT: Version (minor): 0
+; HTML-NEXT: Characteristics: 0
+; HTML-NEXT: Data size: 61
+; HTML-NEXT: Data: (
+; HTML-NEXT:   0000: 3C212D2D 2053686F 756C6420 6E6F7420  |<!-- Should not |
+; HTML-NEXT:   0010: 656D6265 64207468 6520696D 6167652E  |embed the image.|
+; HTML-NEXT:   0020: 202D2D3E 0A3C696D 67207372 633D226B  | -->.<img src="k|
+; HTML-NEXT:   0030: 69747465 6E732E62 6D70223E 0A        |ittens.bmp">.|
+; HTML-NEXT: )

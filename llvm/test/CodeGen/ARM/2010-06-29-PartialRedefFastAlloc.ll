@@ -4,8 +4,8 @@ target triple = "thumbv7-apple-darwin10"
 
 ; This tests the fast register allocator's handling of partial redefines:
 ;
-;      %reg1028:dsub_0<def>, %reg1028:dsub_1<def> = VLD1q64 %reg1025...
-;      %reg1030:dsub_1<def> = COPY %reg1028:dsub_0<kill>
+;      %reg1028:dsub_0, %reg1028:dsub_1 = VLD1q64 %reg1025...
+;      %reg1030:dsub_1 = COPY killed %reg1028:dsub_0
 ;
 ; %reg1028 gets allocated %Q0, and if %reg1030 is reloaded for the partial
 ; redef, it cannot also get %Q0.

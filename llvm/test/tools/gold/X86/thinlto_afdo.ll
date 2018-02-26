@@ -3,7 +3,7 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; RUN: rm -f %t1.o.4.opt.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=save-temps \

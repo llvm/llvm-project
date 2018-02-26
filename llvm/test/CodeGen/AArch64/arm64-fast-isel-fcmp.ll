@@ -1,4 +1,4 @@
-; RUN: llc -O0 -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
 
 define zeroext i1 @fcmp_float1(float %a) {
 ; CHECK-LABEL: fcmp_float1

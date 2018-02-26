@@ -1,0 +1,85 @@
+#RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2 -global-isel                       -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK64 --check-prefix=CHECK_SMALL --check-prefix=CHECK_SMALL64 --check-prefix=CHECK_NOPIC64
+#RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2 -global-isel -code-model=large     -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK64 --check-prefix=CHECK_LARGE --check-prefix=CHECK_LARGE64
+#RUN: llc -mtriple=i386-linux-gnu   -mattr=+sse2 -global-isel                       -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK32 --check-prefix=CHECK_SMALL --check-prefix=CHECK_SMALL32
+#RUN: llc -mtriple=i386-linux-gnu   -mattr=+sse2 -global-isel -code-model=large     -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK32 --check-prefix=CHECK_LARGE --check-prefix=CHECK_LARGE32
+#RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2 -global-isel -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK64 --check-prefix=CHECK_SMALL --check-prefix=CHECK_SMALL64 --check-prefix=CHECK_PIC64
+
+--- |
+  define float @test_float() {
+  entry:
+    ret float 5.500000e+00
+  }
+
+  define double @test_double() {
+  entry:
+    ret double 5.500000e+00
+  }
+---
+name:            test_float
+# CHECK64-LABEL: name:  test_float
+#
+# CHECK32-LABEL: name:  test_float
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vecr, preferred-register: '' }
+# CHECK_SMALL64:          %0:fr32 = MOVSSrm %rip, 1, %noreg, %const.0, %noreg
+# CHECK_SMALL64-NEXT:     %xmm0 = COPY %0
+# CHECK_SMALL64-NEXT:     RET 0, implicit %xmm0
+#
+# CHECK_LARGE64:          %1:gr64 = MOV64ri %const.0
+# CHECK_LARGE64-NEXT:     %0:fr32 = MOVSSrm %1, 1, %noreg, 0, %noreg :: (load 8 from constant-pool, align 32)
+# CHECK_LARGE64-NEXT:     %xmm0 = COPY %0
+# CHECK_LARGE64-NEXT:     RET 0, implicit %xmm0
+#
+# CHECK32:                %0:fr32 = MOVSSrm %noreg, 1, %noreg, %const.0, %noreg
+# CHECK32-NEXT:           %xmm0 = COPY %0
+# CHECK32-NEXT:           RET 0, implicit %xmm0
+body:             |
+  bb.1.entry:
+    %0(s32) = G_FCONSTANT float 5.500000e+00
+    %xmm0 = COPY %0(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_double
+# CHECK64-LABEL: name:  test_double
+#
+# CHECK32-LABEL: name:  test_double
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+# CHECK_SMALL64:      registers:
+# CHECK_SMALL64-NEXT:  - { id: 0, class: fr64, preferred-register: '' }
+#
+# CHECK_LARGE64:      registers:
+# CHECK_LARGE64-NEXT:   - { id: 0, class: fr64, preferred-register: '' }
+# CHECK_LARGE64-NEXT:   - { id: 1, class: gr64, preferred-register: '' }
+#
+# CHECK32:            registers:
+# CHECK32-NEXT:         - { id: 0, class: fr64, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr, preferred-register: '' }
+# CHECK_SMALL64:          %0:fr64 = MOVSDrm %rip, 1, %noreg, %const.0, %noreg
+# CHECK_SMALL64-NEXT:     %xmm0 = COPY %0
+# CHECK_SMALL64-NEXT:     RET 0, implicit %xmm0
+#
+# CHECK_LARGE64:          %1:gr64 = MOV64ri %const.0
+# CHECK_LARGE64-NEXT:     %0:fr64 = MOVSDrm %1, 1, %noreg, 0, %noreg :: (load 8 from constant-pool, align 64)
+# CHECK_LARGE64-NEXT:     %xmm0 = COPY %0
+# CHECK_LARGE64-NEXT:     RET 0, implicit %xmm0
+#
+# CHECK32:                %0:fr64 = MOVSDrm %noreg, 1, %noreg, %const.0, %noreg
+# CHECK32-NEXT:           %xmm0 = COPY %0
+# CHECK32-NEXT:           RET 0, implicit %xmm0
+body:             |
+  bb.1.entry:
+    %0(s64) = G_FCONSTANT double 5.500000e+00
+    %xmm0 = COPY %0(s64)
+    RET 0, implicit %xmm0
+
+...

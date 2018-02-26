@@ -17,7 +17,7 @@ foo:
         .long   34                      # Length of Unit
         .short  4                       # DWARF version number
         .long   .L.debug_abbrev_begin   # Offset Into Abbrev. Section
-        .byte   8                       # Address Size (in bytes)
+        .byte   4                       # Address Size (in bytes)
         .byte   1                       # Abbrev [1] 0xb:0x1b DW_TAG_compile_unit
         .long   info_string0            # DW_AT_producer
         .short  12                      # DW_AT_language
@@ -53,9 +53,9 @@ foo:
 
 # CHECK:      Relocations [
 # CHECK:        Section ({{[^ ]+}}) .rel.debug_line {
-# CHECK-NEXT:     0x2D R_386_32 .text 0x0
+# CHECK-NEXT:     0x2E R_386_32 .text 0x0
 # CHECK-NEXT:   }
 
 # DWARF-DUMP: Address            Line   Column File   ISA Discriminator Flags
 # DWARF-DUMP: ------------------ ------ ------ ------ --- ------------- -------------
-# DWARF-DUMP: 0x0001021300000000     1      0      1   0             1  is_stmt
+# DWARF-DUMP: 0x0000000000000000     2      0      1   0             1  is_stmt

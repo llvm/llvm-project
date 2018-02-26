@@ -206,6 +206,14 @@ public:
     VK_ARM_TLSLDO,         // symbol(tlsldo)
     VK_ARM_TLSDESCSEQ,
 
+    VK_AVR_NONE,
+    VK_AVR_LO8,
+    VK_AVR_HI8,
+    VK_AVR_HLO8,
+    VK_AVR_DIFF8,
+    VK_AVR_DIFF16,
+    VK_AVR_DIFF32,
+
     VK_PPC_LO,             // symbol@l
     VK_PPC_HI,             // symbol@h
     VK_PPC_HA,             // symbol@ha

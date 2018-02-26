@@ -255,7 +255,7 @@ class Replacements {
 
   /// \brief Merges \p Replaces into the current replacements. \p Replaces
   /// refers to code after applying the current replacements.
-  Replacements merge(const Replacements &Replaces) const;
+  LLVM_NODISCARD Replacements merge(const Replacements &Replaces) const;
 
   // Returns the affected ranges in the changed code.
   std::vector<Range> getAffectedRanges() const;

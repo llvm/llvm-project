@@ -107,8 +107,7 @@ namespace clang {
 
 namespace llvm {
   template <class T>
-  class PointerLikeTypeTraits<clang::OpaquePtr<T> > {
-  public:
+  struct PointerLikeTypeTraits<clang::OpaquePtr<T> > {
     static inline void *getAsVoidPointer(clang::OpaquePtr<T> P) {
       // FIXME: Doesn't work? return P.getAs< void >();
       return P.getAsOpaquePtr();

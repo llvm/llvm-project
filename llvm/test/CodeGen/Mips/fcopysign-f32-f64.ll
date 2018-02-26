@@ -1,9 +1,9 @@
-; RUN: llc  < %s -march=mips64el -mcpu=mips4 -target-abi=n64 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64
-; RUN: llc  < %s -march=mips64el -mcpu=mips64 -target-abi=n64 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64R2
+; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips4 \
+; RUN:   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64 \
+; RUN:   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64r2 \
+; RUN:   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64R2
 
 declare double @copysign(double, double) nounwind readnone
 
@@ -48,7 +48,7 @@ entry:
 ; 64:     dmtc1   $[[OR]], $f0
 
 ; 64R2: ext   ${{[0-9]+}}, ${{[0-9]+}}, 31, 1
-; 64R2: dins  $[[INS:[0-9]+]], ${{[0-9]+}}, 63, 1
+; 64R2: dinsu $[[INS:[0-9]+]], ${{[0-9]+}}, 63, 1
 ; 64R2: dmtc1 $[[INS]], $f0
 
   %add = fadd double %d, 1.000000e+00

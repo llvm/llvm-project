@@ -46,6 +46,38 @@ using namespace clang;
 using namespace llvm;
 
 namespace clang {
+  class BackendConsumer;
+  class ClangDiagnosticHandler final : public DiagnosticHandler {
+  public:
+    ClangDiagnosticHandler(const CodeGenOptions &CGOpts, BackendConsumer *BCon)
+        : CodeGenOpts(CGOpts), BackendCon(BCon) {}
+  
+    bool handleDiagnostics(const DiagnosticInfo &DI) override;
+
+    bool isAnalysisRemarkEnabled(StringRef PassName) const override {
+      return (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
+              CodeGenOpts.OptimizationRemarkAnalysisPattern->match(PassName));
+    }
+    bool isMissedOptRemarkEnabled(StringRef PassName) const override {
+      return (CodeGenOpts.OptimizationRemarkMissedPattern &&
+              CodeGenOpts.OptimizationRemarkMissedPattern->match(PassName));
+    }
+    bool isPassedOptRemarkEnabled(StringRef PassName) const override {
+      return (CodeGenOpts.OptimizationRemarkPattern &&
+              CodeGenOpts.OptimizationRemarkPattern->match(PassName));
+    }
+
+    bool isAnyRemarkEnabled() const override {
+      return (CodeGenOpts.OptimizationRemarkAnalysisPattern ||
+              CodeGenOpts.OptimizationRemarkMissedPattern ||
+              CodeGenOpts.OptimizationRemarkPattern);
+    }
+
+  private:
+    const CodeGenOptions &CodeGenOpts;
+    BackendConsumer *BackendCon;
+  };
+
   class BackendConsumer : public ASTConsumer {
     using LinkModule = CodeGenAction::LinkModule;
 
@@ -224,21 +256,20 @@ namespace clang {
       void *OldContext = Ctx.getInlineAsmDiagnosticContext();
       Ctx.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, this);
 
-      LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
+      std::unique_ptr<DiagnosticHandler> OldDiagnosticHandler =
           Ctx.getDiagnosticHandler();
-      void *OldDiagnosticContext = Ctx.getDiagnosticContext();
-      Ctx.setDiagnosticHandler(DiagnosticHandler, this);
+      Ctx.setDiagnosticHandler(llvm::make_unique<ClangDiagnosticHandler>(
+        CodeGenOpts, this));
       Ctx.setDiagnosticsHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
       if (CodeGenOpts.DiagnosticsHotnessThreshold != 0)
         Ctx.setDiagnosticsHotnessThreshold(
             CodeGenOpts.DiagnosticsHotnessThreshold);
 
-      std::unique_ptr<llvm::tool_output_file> OptRecordFile;
+      std::unique_ptr<llvm::ToolOutputFile> OptRecordFile;
       if (!CodeGenOpts.OptRecordFile.empty()) {
         std::error_code EC;
-        OptRecordFile =
-          llvm::make_unique<llvm::tool_output_file>(CodeGenOpts.OptRecordFile,
-                                                    EC, sys::fs::F_None);
+        OptRecordFile = llvm::make_unique<llvm::ToolOutputFile>(
+            CodeGenOpts.OptRecordFile, EC, sys::fs::F_None);
         if (EC) {
           Diags.Report(diag::err_cannot_open_file) <<
             CodeGenOpts.OptRecordFile << EC.message();
@@ -264,7 +295,7 @@ namespace clang {
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
-      Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext);
+      Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
       if (OptRecordFile)
         OptRecordFile->keep();
@@ -297,11 +328,6 @@ namespace clang {
                                      unsigned LocCookie) {
       SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);
       ((BackendConsumer*)Context)->InlineAsmDiagHandler2(SM, Loc);
-    }
-
-    static void DiagnosticHandler(const llvm::DiagnosticInfo &DI,
-                                  void *Context) {
-      ((BackendConsumer *)Context)->DiagnosticHandlerImpl(DI);
     }
 
     /// Get the best possible source location to represent a diagnostic that
@@ -341,6 +367,11 @@ namespace clang {
   };
 
   void BackendConsumer::anchor() {}
+}
+
+bool ClangDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
+  BackendCon->DiagnosticHandlerImpl(DI);
+  return true;
 }
 
 /// ConvertBackendLocation - Convert a location in a temporary llvm::SourceMgr
@@ -602,6 +633,10 @@ void BackendConsumer::EmitOptimizationMessage(
 
 void BackendConsumer::OptimizationRemarkHandler(
     const llvm::DiagnosticInfoOptimizationBase &D) {
+  // Without hotness information, don't show noisy remarks.
+  if (D.isVerbose() && !D.getHotness())
+    return;
+
   if (D.isPassed()) {
     // Optimization remarks are active only if the -Rpass flag has a regular
     // expression that matches the name of the pass name in \p D.

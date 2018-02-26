@@ -1,9 +1,19 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - | opt -instnamer -S | FileCheck %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - | opt -instnamer -S | FileCheck -enable-var-scope %s
+
+// This is initially assumed convergent, but can be deduced to not require it.
+
+// CHECK-LABEL: define spir_func void @non_convfun() local_unnamed_addr #0
+// CHECK: ret void
+__attribute__((noinline))
+void non_convfun(void) {
+  volatile int* p;
+  *p = 0;
+}
 
 void convfun(void) __attribute__((convergent));
-void non_convfun(void);
 void nodupfun(void) __attribute__((noduplicate));
 
+// External functions should be assumed convergent.
 void f(void);
 void g(void);
 
@@ -17,19 +27,23 @@ void g(void);
 //      non_convfun();
 //    }
 //
-// CHECK: define spir_func void @test_merge_if(i32 %[[a:.+]])
-// CHECK: %[[tobool:.+]] = icmp eq i32 %[[a]], 0
+// CHECK-LABEL: define spir_func void @test_merge_if(i32 %a) local_unnamed_addr #1 {
+// CHECK: %[[tobool:.+]] = icmp eq i32 %a, 0
 // CHECK: br i1 %[[tobool]], label %[[if_end3_critedge:.+]], label %[[if_then:.+]]
+
 // CHECK: [[if_then]]:
 // CHECK: tail call spir_func void @f()
 // CHECK: tail call spir_func void @non_convfun()
 // CHECK: tail call spir_func void @g()
+
 // CHECK: br label %[[if_end3:.+]]
+
 // CHECK: [[if_end3_critedge]]:
 // CHECK: tail call spir_func void @non_convfun()
 // CHECK: br label %[[if_end3]]
+
 // CHECK: [[if_end3]]:
-// CHECK-LABEL: ret void
+// CHECK: ret void
 
 void test_merge_if(int a) {
   if (a) {
@@ -41,13 +55,13 @@ void test_merge_if(int a) {
   }
 }
 
-// CHECK-DAG: declare spir_func void @f()
-// CHECK-DAG: declare spir_func void @non_convfun()
-// CHECK-DAG: declare spir_func void @g()
+// CHECK-DAG: declare spir_func void @f() local_unnamed_addr #2
+// CHECK-DAG: declare spir_func void @g() local_unnamed_addr #2
+
 
 // Test two if's are not merged.
-// CHECK: define spir_func void @test_no_merge_if(i32 %[[a:.+]])
-// CHECK:  %[[tobool:.+]] = icmp eq i32 %[[a]], 0
+// CHECK-LABEL: define spir_func void @test_no_merge_if(i32 %a) local_unnamed_addr #1
+// CHECK:  %[[tobool:.+]] = icmp eq i32 %a, 0
 // CHECK: br i1 %[[tobool]], label %[[if_end:.+]], label %[[if_then:.+]]
 // CHECK: [[if_then]]:
 // CHECK: tail call spir_func void @f()
@@ -56,7 +70,7 @@ void test_merge_if(int a) {
 // CHECK: br label %[[if_end]]
 // CHECK: [[if_end]]:
 // CHECK:  %[[tobool_pr:.+]] = phi i1 [ true, %[[if_then]] ], [ false, %{{.+}} ]
-// CHECK:  tail call spir_func void @convfun() #[[attr5:.+]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4:.+]]
 // CHECK:  br i1 %[[tobool_pr]], label %[[if_then2:.+]], label %[[if_end3:.+]]
 // CHECK: [[if_then2]]:
 // CHECK: tail call spir_func void @g()
@@ -74,20 +88,20 @@ void test_no_merge_if(int a) {
   }
 }
 
-// CHECK: declare spir_func void @convfun(){{[^#]*}} #[[attr2:[0-9]+]]
+// CHECK: declare spir_func void @convfun(){{[^#]*}} #2
 
 // Test loop is unrolled for convergent function.
-// CHECK-LABEL: define spir_func void @test_unroll()
-// CHECK:  tail call spir_func void @convfun() #[[attr5:[0-9]+]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
-// CHECK:  tail call spir_func void @convfun() #[[attr5]]
+// CHECK-LABEL: define spir_func void @test_unroll() local_unnamed_addr #1
+// CHECK:  tail call spir_func void @convfun() #[[attr4:[0-9]+]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
+// CHECK:  tail call spir_func void @convfun() #[[attr4]]
 // CHECK-LABEL:  ret void
 
 void test_unroll() {
@@ -101,7 +115,7 @@ void test_unroll() {
 // CHECK: [[for_cond_cleanup:.+]]:
 // CHECK:  ret void
 // CHECK: [[for_body]]:
-// CHECK:  tail call spir_func void @nodupfun() #[[attr6:[0-9]+]]
+// CHECK:  tail call spir_func void @nodupfun() #[[attr5:[0-9]+]]
 // CHECK-NOT: call spir_func void @nodupfun()
 // CHECK:  br i1 %{{.+}}, label %[[for_body]], label %[[for_cond_cleanup]]
 
@@ -112,7 +126,16 @@ void test_not_unroll() {
 
 // CHECK: declare spir_func void @nodupfun(){{[^#]*}} #[[attr3:[0-9]+]]
 
-// CHECK-DAG: attributes #[[attr2]] = { {{[^}]*}}convergent{{[^}]*}} }
-// CHECK-DAG: attributes #[[attr3]] = { {{[^}]*}}noduplicate{{[^}]*}} }
-// CHECK-DAG: attributes #[[attr5]] = { {{[^}]*}}convergent{{[^}]*}} }
-// CHECK-DAG: attributes #[[attr6]] = { {{[^}]*}}noduplicate{{[^}]*}} }
+// CHECK-LABEL: @assume_convergent_asm
+// CHECK: tail call void asm sideeffect "s_barrier", ""() #4
+kernel void assume_convergent_asm()
+{
+  __asm__ volatile("s_barrier");
+}
+
+// CHECK: attributes #0 = { noinline norecurse nounwind "
+// CHECK: attributes #1 = { {{[^}]*}}convergent{{[^}]*}} }
+// CHECK: attributes #2 = { {{[^}]*}}convergent{{[^}]*}} }
+// CHECK: attributes #3 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }
+// CHECK: attributes #4 = { {{[^}]*}}convergent{{[^}]*}} }
+// CHECK: attributes #5 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }

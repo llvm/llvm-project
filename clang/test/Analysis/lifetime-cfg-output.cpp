@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-lifetime=true -analyzer-config cfg-implicit-dtors=false %s > %t 2>&1
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-lifetime=true,cfg-rich-constructors=false -analyzer-config cfg-implicit-dtors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 extern bool UV;

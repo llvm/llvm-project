@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -mcpu=i486 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -mcpu=i486 < %s | FileCheck %s
 
 define i32 @test1(i32 %g, i32* %j) {
   %tobool = icmp eq i32 %g, 0

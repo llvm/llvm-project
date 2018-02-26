@@ -222,7 +222,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::EH_RESTORE: {
     // Restore ESP and EBP, and optionally ESI if required.
     bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(
-        MBB.getParent()->getFunction()->getPersonalityFn()));
+        MBB.getParent()->getFunction().getPersonalityFn()));
     X86FL->restoreWin32EHStackPointers(MBB, MBBI, DL, /*RestoreSP=*/IsSEH);
     MBBI->eraseFromParent();
     return true;

@@ -1,0 +1,288 @@
+# RUN: llc -mcpu=haswell -filetype=obj -start-before stack-protector -O2 %s -o - | llvm-objdump -d - | FileCheck %s
+
+# Test 1:
+#
+# Source C code:
+# volatile int y;
+# volatile int x;
+# 
+# int switchCase(int z, int w) {
+# 	int result = 0;
+# 	while (x > 0 && y < 0) {
+# 		switch(z) {
+# 			case 0:
+# 			result+=result*5;break;
+# 			case 1:
+# 			result--; break;
+# 			case 2:
+# 			result *= result; break;
+# 			case 3:
+# 			result <<= 7; break;
+# 			case 4:
+# 			result >>= 7; break;
+# 			case 5:
+# 			result = result * 16 | ~result; break;
+# 		}
+# 	}
+# 	return result;
+# }
+#
+# CHECK:       49:       eb 4a   jmp     74 <switchCase+0x95>
+# CHECK:       57:       eb 3c   jmp     60 <switchCase+0x95>
+# CHECK:       65:       eb 2e   jmp     46 <switchCase+0x95>
+# CHECK:       73:       eb 20   jmp     32 <switchCase+0x95>
+# CHECK:       81:       eb 12   jmp     18 <switchCase+0x95>
+# CHECK:       93:       7f 8b   jg      -117 <switchCase+0x20>
+
+# Test 2:
+#
+# Source C code:
+# 
+# int ifElse(int z) {
+# 	int w = 0;
+# 	while(1) {
+# 		if(x < 0)
+# 			w++;
+# 		else if(y > 0)
+# 			w--;
+# 		else if((x & y) == 3)
+# 			w*=2;
+# 		else if ((x | y) == 18)
+# 			w += 2;
+# 		else if ((y ^ x) == 154)
+# 			w -= 3;
+# 		else if(((y ^ x) & 1) != 0)
+# 			break;
+# 	}
+# 	return w;
+# }
+#
+# CHECK:       129:       eb 13   jmp     19 <ifElse+0x7e>
+# CHECK:       12e:       eb a0   jmp     -96 <ifElse+0x10>
+# CHECK:       132:       eb 9c   jmp     -100 <ifElse+0x10>
+# CHECK:       137:       eb 97   jmp     -105 <ifElse+0x10>
+# CHECK:       13c:       eb 92   jmp     -110 <ifElse+0x10>
+--- |
+  ; ModuleID = 'D:\iusers\opaparo\dev_test\branch_instruction_and_target_split_perf_nops.ll'
+  source_filename = "D:\5C\5Ciusers\5C\5Copaparo\5C\5Cdev_test\5C\5Cbranch_instruction_and_target_split_perf_nops.c"
+  target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-pc-windows-msvc19.0.24210"
+  
+  @x = common global i32 0, align 4
+  @y = common global i32 0, align 4
+  
+  ; Function Attrs: norecurse nounwind uwtable
+  define i32 @switchCase(i32 %z, i32 %w) local_unnamed_addr #0 {
+  entry:
+    %0 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %cmp19 = icmp sgt i32 %0, 0
+    br i1 %cmp19, label %land.rhs.preheader, label %while.end
+  
+  land.rhs.preheader:                               ; preds = %entry
+    br label %land.rhs
+  
+  land.rhs:                                         ; preds = %sw.epilog, %land.rhs.preheader
+    %result.020 = phi i32 [ %result.1, %sw.epilog ], [ 0, %land.rhs.preheader ]
+    %1 = load volatile i32, i32* @y, align 4, !tbaa !3
+    %cmp1 = icmp slt i32 %1, 0
+    br i1 %cmp1, label %while.body, label %while.end
+  
+  while.body:                                       ; preds = %land.rhs
+    switch i32 %z, label %sw.epilog [
+      i32 0, label %sw.bb
+      i32 1, label %sw.bb2
+      i32 2, label %sw.bb3
+      i32 3, label %sw.bb5
+      i32 4, label %sw.bb6
+      i32 5, label %sw.bb7
+    ]
+  
+  sw.bb:                                            ; preds = %while.body
+    %add = mul nsw i32 %result.020, 6
+    br label %sw.epilog
+  
+  sw.bb2:                                           ; preds = %while.body
+    %dec = add nsw i32 %result.020, -1
+    br label %sw.epilog
+  
+  sw.bb3:                                           ; preds = %while.body
+    %mul4 = mul nsw i32 %result.020, %result.020
+    br label %sw.epilog
+  
+  sw.bb5:                                           ; preds = %while.body
+    %shl = shl i32 %result.020, 7
+    br label %sw.epilog
+  
+  sw.bb6:                                           ; preds = %while.body
+    %shr = ashr i32 %result.020, 7
+    br label %sw.epilog
+  
+  sw.bb7:                                           ; preds = %while.body
+    %mul8 = shl nsw i32 %result.020, 4
+    %neg = xor i32 %result.020, -1
+    %or = or i32 %mul8, %neg
+    br label %sw.epilog
+  
+  sw.epilog:                                        ; preds = %sw.bb7, %sw.bb6, %sw.bb5, %sw.bb3, %sw.bb2, %sw.bb, %while.body
+    %result.1 = phi i32 [ %result.020, %while.body ], [ %or, %sw.bb7 ], [ %shr, %sw.bb6 ], [ %shl, %sw.bb5 ], [ %mul4, %sw.bb3 ], [ %dec, %sw.bb2 ], [ %add, %sw.bb ]
+    %2 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %cmp = icmp sgt i32 %2, 0
+    br i1 %cmp, label %land.rhs, label %while.end
+  
+  while.end:                                        ; preds = %sw.epilog, %land.rhs, %entry
+    %result.0.lcssa = phi i32 [ 0, %entry ], [ %result.020, %land.rhs ], [ %result.1, %sw.epilog ]
+    ret i32 %result.0.lcssa
+  }
+  
+  ; Function Attrs: norecurse nounwind uwtable
+  define i32 @ifElse(i32 %z) local_unnamed_addr #0 {
+  entry:
+    br label %while.cond.outer
+  
+  while.cond.outer:                                 ; preds = %if.then, %if.then2, %if.then5, %if.then8, %if.then11, %entry
+    %w.0.ph = phi i32 [ 0, %entry ], [ %sub, %if.then11 ], [ %add, %if.then8 ], [ %mul, %if.then5 ], [ %dec, %if.then2 ], [ %inc, %if.then ]
+    br label %while.cond
+  
+  while.cond:                                       ; preds = %if.else12, %while.cond.outer
+    %0 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %cmp = icmp slt i32 %0, 0
+    br i1 %cmp, label %if.then, label %if.else
+  
+  if.then:                                          ; preds = %while.cond
+    %inc = add nsw i32 %w.0.ph, 1
+    br label %while.cond.outer
+  
+  if.else:                                          ; preds = %while.cond
+    %1 = load volatile i32, i32* @y, align 4, !tbaa !3
+    %cmp1 = icmp sgt i32 %1, 0
+    br i1 %cmp1, label %if.then2, label %if.else3
+  
+  if.then2:                                         ; preds = %if.else
+    %dec = add nsw i32 %w.0.ph, -1
+    br label %while.cond.outer
+  
+  if.else3:                                         ; preds = %if.else
+    %2 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %3 = load volatile i32, i32* @y, align 4, !tbaa !3
+    %and = and i32 %3, %2
+    %cmp4 = icmp eq i32 %and, 3
+    br i1 %cmp4, label %if.then5, label %if.else6
+  
+  if.then5:                                         ; preds = %if.else3
+    %mul = shl nsw i32 %w.0.ph, 1
+    br label %while.cond.outer
+  
+  if.else6:                                         ; preds = %if.else3
+    %4 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %5 = load volatile i32, i32* @y, align 4, !tbaa !3
+    %or = or i32 %5, %4
+    %cmp7 = icmp eq i32 %or, 18
+    br i1 %cmp7, label %if.then8, label %if.else9
+  
+  if.then8:                                         ; preds = %if.else6
+    %add = add nsw i32 %w.0.ph, 2
+    br label %while.cond.outer
+  
+  if.else9:                                         ; preds = %if.else6
+    %6 = load volatile i32, i32* @y, align 4, !tbaa !3
+    %7 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %xor = xor i32 %7, %6
+    %cmp10 = icmp eq i32 %xor, 154
+    br i1 %cmp10, label %if.then11, label %if.else12
+  
+  if.then11:                                        ; preds = %if.else9
+    %sub = add nsw i32 %w.0.ph, -3
+    br label %while.cond.outer
+  
+  if.else12:                                        ; preds = %if.else9
+    %8 = load volatile i32, i32* @y, align 4, !tbaa !3
+    %9 = load volatile i32, i32* @x, align 4, !tbaa !3
+    %xor13 = xor i32 %9, %8
+    %and14 = and i32 %xor13, 1
+    %cmp15 = icmp eq i32 %and14, 0
+    br i1 %cmp15, label %while.cond, label %while.end
+  
+  while.end:                                        ; preds = %if.else12
+    ret i32 %w.0.ph
+  }
+  
+  attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="haswell" "target-features"="+aes,+avx,+avx2,+bmi,+bmi2,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 2}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{!"clang version 6.0.0 (ssh://git-amr-1.devtools.intel.com:29418/dpd_icl-llvm_clang_worldread 3789ad4283ec09df1ed8411abbb227d76e7ef8cb) (ssh://git-amr-1.devtools.intel.com:29418/dpd_icl-llvm_llvm_worldread 42897913cc9fac0d94e8636d9aed4dc193d7864e)"}
+  !3 = !{!4, !4, i64 0}
+  !4 = !{!"int", !5, i64 0}
+  !5 = !{!"omnipotent char", !6, i64 0}
+  !6 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            switchCase
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+liveins:         
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+
+...
+---
+name:            ifElse
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+liveins:         
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+
+...

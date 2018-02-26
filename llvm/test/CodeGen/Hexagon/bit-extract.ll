@@ -72,4 +72,4 @@ entry:
   ret i32 %bf.ashr
 }
 
-attributes #0 = { noinline norecurse nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { noinline norecurse nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

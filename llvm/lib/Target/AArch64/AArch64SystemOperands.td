@@ -322,6 +322,9 @@ def : ROSysReg<"PMCEID0_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b110>;
 def : ROSysReg<"PMCEID1_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b111>;
 def : ROSysReg<"MIDR_EL1",           0b11, 0b000, 0b0000, 0b0000, 0b000>;
 def : ROSysReg<"CCSIDR_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b000>;
+def : ROSysReg<"CCSIDR2_EL1",        0b11, 0b001, 0b0000, 0b0000, 0b010> {
+  let Requires = [{ {AArch64::HasV8_3aOps} }];
+}
 def : ROSysReg<"CLIDR_EL1",          0b11, 0b001, 0b0000, 0b0000, 0b001>;
 def : ROSysReg<"CTR_EL0",            0b11, 0b011, 0b0000, 0b0000, 0b001>;
 def : ROSysReg<"MPIDR_EL1",          0b11, 0b000, 0b0000, 0b0000, 0b101>;
@@ -342,6 +345,9 @@ def : ROSysReg<"ID_ISAR2_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b010>;
 def : ROSysReg<"ID_ISAR3_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b011>;
 def : ROSysReg<"ID_ISAR4_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b100>;
 def : ROSysReg<"ID_ISAR5_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b101>;
+def : ROSysReg<"ID_ISAR6_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b111> {
+  let Requires = [{ {AArch64::HasV8_2aOps} }];
+}
 def : ROSysReg<"ID_AA64PFR0_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b000>;
 def : ROSysReg<"ID_AA64PFR1_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b001>;
 def : ROSysReg<"ID_AA64DFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b000>;
@@ -1014,6 +1020,21 @@ def : RWSysReg<"ERXMISC1_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b001>;
 def : RWSysReg<"DISR_EL1",      0b11, 0b000, 0b1100, 0b0001, 0b001>;
 def : RWSysReg<"VDISR_EL2",     0b11, 0b100, 0b1100, 0b0001, 0b001>;
 def : RWSysReg<"VSESR_EL2",     0b11, 0b100, 0b0101, 0b0010, 0b011>;
+}
+
+// v8.3a "Pointer authentication extension" registers
+//                              Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::HasV8_3aOps} }] in {
+def : RWSysReg<"APIAKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b000>;
+def : RWSysReg<"APIAKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b001>;
+def : RWSysReg<"APIBKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b010>;
+def : RWSysReg<"APIBKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b011>;
+def : RWSysReg<"APDAKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0010, 0b000>;
+def : RWSysReg<"APDAKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0010, 0b001>;
+def : RWSysReg<"APDBKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0010, 0b010>;
+def : RWSysReg<"APDBKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0010, 0b011>;
+def : RWSysReg<"APGAKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0011, 0b000>;
+def : RWSysReg<"APGAKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0011, 0b001>;
 }
 
 // Cyclone specific system registers

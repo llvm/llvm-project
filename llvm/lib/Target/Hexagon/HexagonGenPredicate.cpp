@@ -1,4 +1,4 @@
-//===--- HexagonGenPredicate.cpp ------------------------------------------===//
+//===- HexagonGenPredicate.cpp --------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,13 +19,13 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <iterator>
 #include <map>
@@ -74,15 +74,14 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR)
     LLVM_ATTRIBUTE_UNUSED;
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR) {
-    return OS << PrintReg(PR.Reg.R, &PR.TRI, PR.Reg.S);
+    return OS << printReg(PR.Reg.R, &PR.TRI, PR.Reg.S);
   }
 
   class HexagonGenPredicate : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonGenPredicate() : MachineFunctionPass(ID), TII(nullptr), TRI(nullptr),
-        MRI(nullptr) {
+    HexagonGenPredicate() : MachineFunctionPass(ID) {
       initializeHexagonGenPredicatePass(*PassRegistry::getPassRegistry());
     }
 
@@ -99,13 +98,13 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
-    typedef SetVector<MachineInstr*> VectOfInst;
-    typedef std::set<Register> SetOfReg;
-    typedef std::map<Register,Register> RegToRegMap;
+    using VectOfInst = SetVector<MachineInstr *>;
+    using SetOfReg = std::set<Register>;
+    using RegToRegMap = std::map<Register, Register>;
 
-    const HexagonInstrInfo *TII;
-    const HexagonRegisterInfo *TRI;
-    MachineRegisterInfo *MRI;
+    const HexagonInstrInfo *TII = nullptr;
+    const HexagonRegisterInfo *TRI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
     SetOfReg PredGPRs;
     VectOfInst PUsers;
     RegToRegMap G2P;
@@ -122,9 +121,9 @@ namespace {
     bool eliminatePredCopies(MachineFunction &MF);
   };
 
-  char HexagonGenPredicate::ID = 0;
-
 } // end anonymous namespace
+
+char HexagonGenPredicate::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonGenPredicate, "hexagon-gen-pred",
   "Hexagon generate predicate operations", false, false)
@@ -224,11 +223,12 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
 
 void HexagonGenPredicate::processPredicateGPR(const Register &Reg) {
   DEBUG(dbgs() << __func__ << ": "
-               << PrintReg(Reg.R, TRI, Reg.S) << "\n");
-  typedef MachineRegisterInfo::use_iterator use_iterator;
+               << printReg(Reg.R, TRI, Reg.S) << "\n");
+  using use_iterator = MachineRegisterInfo::use_iterator;
+
   use_iterator I = MRI->use_begin(Reg.R), E = MRI->use_end();
   if (I == E) {
-    DEBUG(dbgs() << "Dead reg: " << PrintReg(Reg.R, TRI, Reg.S) << '\n');
+    DEBUG(dbgs() << "Dead reg: " << printReg(Reg.R, TRI, Reg.S) << '\n');
     MachineInstr *DefI = MRI->getVRegDef(Reg.R);
     DefI->eraseFromParent();
     return;
@@ -492,7 +492,7 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
 }
 
 bool HexagonGenPredicate::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   TII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
@@ -512,7 +512,8 @@ bool HexagonGenPredicate::runOnMachineFunction(MachineFunction &MF) {
     Again = false;
     VectOfInst Processed, Copy;
 
-    typedef VectOfInst::iterator iterator;
+    using iterator = VectOfInst::iterator;
+
     Copy = PUsers;
     for (iterator I = Copy.begin(), E = Copy.end(); I != E; ++I) {
       MachineInstr *MI = *I;

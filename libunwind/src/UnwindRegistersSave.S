@@ -237,6 +237,109 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
 DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   teq $0, $0
 
+#elif defined(__powerpc64__)
+
+//
+// extern int unw_getcontext(unw_context_t* thread_state)
+//
+// On entry:
+//  thread_state pointer is in r3
+//
+DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
+  std   %r0,   16(%r3)
+  mflr  %r0
+  std   %r0,    0(%r3)  // store lr as ssr0
+  std   %r1,   24(%r3)
+  std   %r2,   32(%r3)
+  std   %r3,   40(%r3)
+  std   %r4,   48(%r3)
+  std   %r5,   56(%r3)
+  std   %r6,   64(%r3)
+  std   %r7,   72(%r3)
+  std   %r8,   80(%r3)
+  std   %r9,   88(%r3)
+  std   %r10,  96(%r3)
+  std   %r11, 104(%r3)
+  std   %r12, 112(%r3)
+  std   %r13, 120(%r3)
+  std   %r14, 128(%r3)
+  std   %r15, 136(%r3)
+  std   %r16, 144(%r3)
+  std   %r17, 152(%r3)
+  std   %r18, 160(%r3)
+  std   %r19, 168(%r3)
+  std   %r20, 176(%r3)
+  std   %r21, 184(%r3)
+  std   %r22, 192(%r3)
+  std   %r23, 200(%r3)
+  std   %r24, 208(%r3)
+  std   %r25, 216(%r3)
+  std   %r26, 224(%r3)
+  std   %r27, 232(%r3)
+  std   %r28, 240(%r3)
+  std   %r29, 248(%r3)
+  std   %r30, 256(%r3)
+  std   %r31, 264(%r3)
+
+  mfcr  %r0
+  std   %r0,  272(%r3)
+
+  mfxer %r0
+  std   %r0,  280(%r3)
+
+  mflr  %r0
+  std   %r0,  288(%r3)
+
+  mfctr %r0
+  std   %r0,  296(%r3)
+
+  mfvrsave    %r0
+  std   %r0,  304(%r3)
+
+  // save float registers
+  stfd  %f0,  312(%r3)
+  stfd  %f1,  320(%r3)
+  stfd  %f2,  328(%r3)
+  stfd  %f3,  336(%r3)
+  stfd  %f4,  344(%r3)
+  stfd  %f5,  352(%r3)
+  stfd  %f6,  360(%r3)
+  stfd  %f7,  368(%r3)
+  stfd  %f8,  376(%r3)
+  stfd  %f9,  384(%r3)
+  stfd  %f10, 392(%r3)
+  stfd  %f11, 400(%r3)
+  stfd  %f12, 408(%r3)
+  stfd  %f13, 416(%r3)
+  stfd  %f14, 424(%r3)
+  stfd  %f15, 432(%r3)
+  stfd  %f16, 440(%r3)
+  stfd  %f17, 448(%r3)
+  stfd  %f18, 456(%r3)
+  stfd  %f19, 464(%r3)
+  stfd  %f20, 472(%r3)
+  stfd  %f21, 480(%r3)
+  stfd  %f22, 488(%r3)
+  stfd  %f23, 496(%r3)
+  stfd  %f24, 504(%r3)
+  stfd  %f25, 512(%r3)
+  stfd  %f26, 520(%r3)
+  stfd  %f27, 528(%r3)
+  stfd  %f28, 536(%r3)
+  stfd  %f29, 544(%r3)
+  stfd  %f30, 552(%r3)
+  stfd  %f31, 560(%r3)
+
+  mffs  %f0
+  stfd  %f0,  568(%r3)
+
+  //TODO: save vector registers
+
+
+  li    %r3,  0   // return UNW_ESUCCESS
+  blr
+
+
 #elif defined(__ppc__)
 
 ;

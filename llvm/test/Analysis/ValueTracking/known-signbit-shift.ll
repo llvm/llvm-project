@@ -27,28 +27,22 @@ define i1 @test_shift_negative(i32 %a, i32 %b) {
 }
 
 ; If sign bit is a known zero, it cannot be a known one.
-; This test should not crash opt.
+; This test should not crash opt. The shift produces poison.
 define i32 @test_no_sign_bit_conflict1(i1 %b) {
 ; CHECK-LABEL: @test_no_sign_bit_conflict1(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 %b, i32 -2147221504, i32 -2147483648
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 0
 ;
-entry:
   %sel = select i1 %b, i32 8193, i32 8192
   %mul = shl nsw i32 %sel, 18
   ret i32 %mul
 }
 
 ; If sign bit is a known one, it cannot be a known zero.
-; This test should not crash opt.
+; This test should not crash opt. The shift produces poison.
 define i32 @test_no_sign_bit_conflict2(i1 %b) {
 ; CHECK-LABEL: @test_no_sign_bit_conflict2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 %b, i32 2147221504, i32 2146959360
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 0
 ;
-entry:
   %sel = select i1 %b, i32 -8193, i32 -8194
   %mul = shl nsw i32 %sel, 18
   ret i32 %mul

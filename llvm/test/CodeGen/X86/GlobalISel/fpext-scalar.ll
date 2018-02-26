@@ -3,7 +3,7 @@
 
 define double @test(float %a) {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:

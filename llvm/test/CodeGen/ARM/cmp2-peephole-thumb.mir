@@ -80,24 +80,24 @@ body:             |
 
     %1 = COPY %r1
     %0 = COPY %r0
-    %2, %cpsr = tMUL %0, %1, 14, _
-    tSTRspi %2, %stack.1.mul, 0, 14, _ :: (store 4 into %ir.mul)
-    tCMPi8 %2, 0, 14, _, implicit-def %cpsr
+    %2, %cpsr = tMUL %0, %1, 14, %noreg
+    tSTRspi %2, %stack.1.mul, 0, 14, %noreg :: (store 4 into %ir.mul)
+    tCMPi8 %2, 0, 14, %noreg, implicit-def %cpsr
     tBcc %bb.2.if.end, 12, %cpsr
-    tB %bb.1.if.then, 14, _
+    tB %bb.1.if.then, 14, %noreg
 
   bb.1.if.then:
-    %4, %cpsr = tMOVi8 42, 14, _
-    tSTRspi killed %4, %stack.0.retval, 0, 14, _ :: (store 4 into %ir.retval)
-    tB %bb.3.return, 14, _
+    %4, %cpsr = tMOVi8 42, 14, %noreg
+    tSTRspi killed %4, %stack.0.retval, 0, 14, %noreg :: (store 4 into %ir.retval)
+    tB %bb.3.return, 14, %noreg
 
   bb.2.if.end:
-    %3, %cpsr = tMOVi8 1, 14, _
-    tSTRspi killed %3, %stack.0.retval, 0, 14, _ :: (store 4 into %ir.retval)
+    %3, %cpsr = tMOVi8 1, 14, %noreg
+    tSTRspi killed %3, %stack.0.retval, 0, 14, %noreg :: (store 4 into %ir.retval)
 
   bb.3.return:
-    %5 = tLDRspi %stack.0.retval, 0, 14, _ :: (dereferenceable load 4 from %ir.retval)
+    %5 = tLDRspi %stack.0.retval, 0, 14, %noreg :: (dereferenceable load 4 from %ir.retval)
     %r0 = COPY %5
-    tBX_RET 14, _, implicit %r0
+    tBX_RET 14, %noreg, implicit %r0
 
 ...

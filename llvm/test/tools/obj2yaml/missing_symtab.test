@@ -1,0 +1,5 @@
+# RUN: obj2yaml %S/Inputs/crt1.o | FileCheck %s
+# test that we don't crash when passed object files without a symbol table
+# CHECK-LABEL: FileHeader:
+# CHECK-LABEL: Sections:
+# CHECK-LABEL: Symbols:

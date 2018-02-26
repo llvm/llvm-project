@@ -325,6 +325,13 @@ enum UnitType : unsigned char {
   DW_UT_hi_user = 0xff
 };
 
+enum Index {
+#define HANDLE_DW_IDX(ID, NAME) DW_IDX_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_IDX_lo_user = 0x2000,
+  DW_IDX_hi_user = 0x3fff
+};
+
 inline bool isUnitType(uint8_t UnitType) {
   switch (UnitType) {
   case DW_UT_compile:
@@ -345,7 +352,6 @@ inline bool isUnitType(dwarf::Tag T) {
   case DW_TAG_type_unit:
   case DW_TAG_partial_unit:
   case DW_TAG_skeleton_unit:
-  case DW_TAG_imported_unit:
     return true;
   default:
     return false;
@@ -355,12 +361,15 @@ inline bool isUnitType(dwarf::Tag T) {
 // Constants for the DWARF v5 Accelerator Table Proposal
 enum AcceleratorTable {
   // Data layout descriptors.
-  DW_ATOM_null = 0u,       // Marker as the end of a list of atoms.
+  DW_ATOM_null = 0u,       ///  Marker as the end of a list of atoms.
   DW_ATOM_die_offset = 1u, // DIE offset in the debug_info section.
   DW_ATOM_cu_offset = 2u, // Offset of the compile unit header that contains the
                           // item in question.
   DW_ATOM_die_tag = 3u,   // A tag entry.
   DW_ATOM_type_flags = 4u, // Set of flags for a type.
+
+  DW_ATOM_type_type_flags = 5u, // Dsymutil type extension.
+  DW_ATOM_qual_name_hash = 6u,  // Dsymutil qualified hash extension.
 
   // DW_ATOM_type_flags values.
 
@@ -411,7 +420,6 @@ StringRef CaseString(unsigned Case);
 StringRef ConventionString(unsigned Convention);
 StringRef InlineCodeString(unsigned Code);
 StringRef ArrayOrderString(unsigned Order);
-StringRef DiscriminantString(unsigned Discriminant);
 StringRef LNStandardString(unsigned Standard);
 StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);
@@ -421,6 +429,7 @@ StringRef UnitTypeString(unsigned);
 StringRef AtomTypeString(unsigned Atom);
 StringRef GDBIndexEntryKindString(GDBIndexEntryKind Kind);
 StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
+StringRef IndexString(unsigned Idx);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -517,9 +526,6 @@ private:
 
 /// Constants that define the DWARF format as 32 or 64 bit.
 enum DwarfFormat : uint8_t { DWARF32, DWARF64 };
-
-/// The Bernstein hash function used by the accelerator tables.
-uint32_t djbHash(StringRef Buffer);
 
 } // End of namespace dwarf
 

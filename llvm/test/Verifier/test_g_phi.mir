@@ -1,4 +1,5 @@
-#RUN: not llc -mtriple=aarch64-unknown-unknown -o - -global-isel -run-pass=legalizer -verify-machineinstrs %s 2>&1 | FileCheck %s
+#RUN: not llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
 --- |
   ; ModuleID = 'test.ll'
   source_filename = "test.ll"

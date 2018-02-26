@@ -1,0 +1,74 @@
+# RUN: llc -march=hexagon -run-pass hexagon-cext-opt -hexagon-cext-threshold=3 %s -o - | FileCheck %s
+
+--- |
+  define void @test0() { ret void }
+  define void @test1() { ret void }
+  define void @test2() { ret void }
+  @global_address = global [1024 x i32] zeroinitializer, align 8
+...
+
+# CHECK-LABEL: name: test0
+# CHECK: [[B:%[0-9]+]]:intregs = A2_tfrsi @global_address
+# CHECK: L2_loadri_io [[B]], 0
+# CHECK: L2_loadri_io [[B]], 4
+# CHECK: L2_loadri_io [[B]], 8
+---
+name: test0
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+body: |
+  bb.0:
+    %0 = PS_loadriabs @global_address
+    %1 = PS_loadriabs @global_address+4
+    %2 = PS_loadriabs @global_address+8
+...
+
+# CHECK-LABEL: name: test1
+# CHECK: [[C:%[0-9]+]]:intregs = COPY %r0
+# CHECK: [[B:%[0-9]+]]:intregs = A2_addi [[C]], @global_address
+# CHECK: L2_loadri_io [[B]], 0
+# CHECK: L2_loadri_io [[B]], 4
+# CHECK: L2_loadri_io [[B]], 8
+---
+name: test1
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+body: |
+  bb.0:
+    liveins: %r0
+    %0 = COPY %r0
+    %1 = L4_loadri_ur %0, 0, @global_address
+    %2 = L4_loadri_ur %0, 0, @global_address+4
+    %3 = L4_loadri_ur %0, 0, @global_address+8
+...
+
+# CHECK-LABEL: name: test2
+# CHECK: [[C:%[0-9]+]]:intregs = COPY %r0
+# CHECK: [[B:%[0-9]+]]:intregs = A2_tfrsi @global_address + 4
+# CHECK: [[T0:%[0-9]+]]:intregs = A2_addi [[B]], -4
+# CHECK: %r0 = COPY [[T0]]
+# CHECK: [[T1:%[0-9]+]]:intregs = A2_addi [[B]], -2
+# CHECK: %r1 = COPY [[T1]]
+# CHECK: L4_loadri_rr [[B]], [[C]], 0
+---
+name: test2
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+body: |
+  bb.0:
+    liveins: %r0
+    %0 = COPY %r0
+    %1 = A2_tfrsi @global_address
+    %r0 = COPY %1
+    %2 = A2_tfrsi @global_address+2
+    %r1 = COPY %2
+    %3 = L4_loadri_ur %0, 0, @global_address+4
+...

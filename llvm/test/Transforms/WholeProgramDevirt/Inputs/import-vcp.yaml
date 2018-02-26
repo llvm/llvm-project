@@ -8,6 +8,8 @@ TypeIdMap:
           1:
             Kind: VirtualConstProp
             Info: 0
+            Byte: 42
+            Bit: 0
   typeid2:
     WPDRes:
       8:
@@ -16,4 +18,6 @@ TypeIdMap:
           3:
             Kind: VirtualConstProp
             Info: 0
+            Byte: 43
+            Bit: 128
 ...

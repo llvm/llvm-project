@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -std=c++11 -verify -fopenmp-simd %s
+
 struct ST {
   int *a;
 };

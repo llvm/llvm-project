@@ -14,10 +14,10 @@
 // are all subclasses of the CallInst class.  Note that none of these classes
 // has state or virtual methods, which is an important part of this gross/neat
 // hack working.
-// 
+//
 // In some cases, arguments to intrinsics need to be generic and are defined as
 // type pointer to empty struct { }*.  To access the real item of interest the
-// cast instruction needs to be stripped away. 
+// cast instruction needs to be stripped away.
 //
 //===----------------------------------------------------------------------===//
 
@@ -98,7 +98,7 @@ Value *InstrProfIncrementInst::getStep() const {
 ConstrainedFPIntrinsic::RoundingMode
 ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = getNumArgOperands();
-  Metadata *MD = 
+  Metadata *MD =
       dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return rmInvalid;
@@ -118,7 +118,7 @@ ConstrainedFPIntrinsic::getRoundingMode() const {
 ConstrainedFPIntrinsic::ExceptionBehavior
 ConstrainedFPIntrinsic::getExceptionBehavior() const {
   unsigned NumOperands = getNumArgOperands();
-  Metadata *MD = 
+  Metadata *MD =
       dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return ebInvalid;
@@ -132,7 +132,7 @@ ConstrainedFPIntrinsic::getExceptionBehavior() const {
 
 bool ConstrainedFPIntrinsic::isUnaryOp() const {
   switch (getIntrinsicID()) {
-    default: 
+    default:
       return false;
     case Intrinsic::experimental_constrained_sqrt:
     case Intrinsic::experimental_constrained_sin:
@@ -147,3 +147,13 @@ bool ConstrainedFPIntrinsic::isUnaryOp() const {
       return true;
   }
 }
+
+bool ConstrainedFPIntrinsic::isTernaryOp() const {
+  switch (getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::experimental_constrained_fma:
+      return true;
+  }
+}
+

@@ -591,7 +591,9 @@ if.end:
 
 ; Another infinite loop test this time with two nested infinite loop.
 ; CHECK-LABEL: infiniteloop3
-; CHECK: # %end
+; CHECK: Lfunc_begin[[FUNCNUM:[0-9]+]]
+; CHECK: bclr
+; CHECK: Lfunc_end[[FUNCNUM]]
 define void @infiniteloop3() {
 entry:
   br i1 undef, label %loop2a, label %body

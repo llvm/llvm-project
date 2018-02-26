@@ -19,5 +19,5 @@ Target &llvm::getTheMSP430Target() {
 
 extern "C" void LLVMInitializeMSP430TargetInfo() {
   RegisterTarget<Triple::msp430> X(getTheMSP430Target(), "msp430",
-                                   "MSP430 [experimental]");
+                                   "MSP430 [experimental]", "MSP430");
 }

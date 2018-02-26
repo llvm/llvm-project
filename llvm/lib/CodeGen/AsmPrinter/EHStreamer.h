@@ -1,4 +1,4 @@
-//===-- EHStreamer.h - Exception Handling Directive Streamer ---*- C++ -*--===//
+//===- EHStreamer.h - Exception Handling Directive Streamer -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,17 +16,16 @@
 
 #include "AsmPrinterHandler.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
-struct LandingPadInfo;
-class MachineModuleInfo;
-class MachineInstr;
-class MachineFunction;
-class MCSymbol;
-class MCSymbolRefExpr;
 
-template <typename T>
-class SmallVectorImpl;
+class AsmPrinter;
+struct LandingPadInfo;
+class MachineInstr;
+class MachineModuleInfo;
+class MCSymbol;
+template <typename T> class SmallVectorImpl;
 
 /// Emits exception handling directives.
 class LLVM_LIBRARY_VISIBILITY EHStreamer : public AsmPrinterHandler {
@@ -45,11 +44,12 @@ protected:
   struct PadRange {
     // The index of the landing pad.
     unsigned PadIndex;
+
     // The index of the begin and end labels in the landing pad's label lists.
     unsigned RangeIndex;
   };
 
-  typedef DenseMap<MCSymbol *, PadRange> RangeMapType;
+  using RangeMapType = DenseMap<MCSymbol *, PadRange>;
 
   /// Structure describing an entry in the actions table.
   struct ActionEntry {
@@ -66,6 +66,7 @@ protected:
 
     // LPad contains the landing pad start labels.
     const LandingPadInfo *LPad; // Null indicates that there is no landing pad.
+
     unsigned Action;
   };
 
@@ -131,7 +132,7 @@ public:
   /// `false' otherwise.
   static bool callToNoUnwindFunction(const MachineInstr *MI);
 };
-}
 
-#endif
+} // end namespace llvm
 
+#endif // LLVM_LIB_CODEGEN_ASMPRINTER_EHSTREAMER_H

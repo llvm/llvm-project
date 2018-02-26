@@ -20,4 +20,5 @@ int main() {
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK-Linux:   Location is TLS of main thread.
 // CHECK-FreeBSD:   Location is TLS of main thread.
+// CHECK-NetBSD:   Location is TLS of main thread.
 // CHECK-Darwin:   Location is heap block of size 4

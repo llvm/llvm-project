@@ -73,7 +73,7 @@ entry:
 ;   return a;
 ; }
 ;
-; 
+;
 ; CHECK-LABEL: @f4
 ; CHECK-NOT: select
 ; CHECK: br i1 %cmp
@@ -93,7 +93,6 @@ if.end:
   %a.0 = phi double [%add, %if.then], [ %a, %entry ]
   ret double %a.0
 }
-
 
 ; Verify that sqrt(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f5
@@ -231,6 +230,18 @@ entry:
   ret double %result
 }
 
+; Verify that fma(42.1) isn't simplified when the rounding mode is
+; unknown.
+; CHECK-LABEL: f17
+; CHECK: call double @llvm.experimental.constrained.fma
+define double @f17() {
+entry:
+  %result = call double @llvm.experimental.constrained.fma.f64(double 42.1, double 42.1, double 42.1,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict")
+  ret double %result
+}
+
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
 declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
@@ -248,3 +259,4 @@ declare double @llvm.experimental.constrained.log10.f64(double, metadata, metada
 declare double @llvm.experimental.constrained.log2.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.rint.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)

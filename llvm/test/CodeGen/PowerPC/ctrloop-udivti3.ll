@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64 | FileCheck %s
+; RUN: llc < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

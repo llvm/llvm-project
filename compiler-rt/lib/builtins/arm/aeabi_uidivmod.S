@@ -21,9 +21,11 @@
 #endif
 
         .syntax unified
+        .text
+        DEFINE_CODE_STATE
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_uidivmod)
-#if __ARM_ARCH_ISA_THUMB == 1
+#if defined(USE_THUMB_1)
         cmp     r0, r1
         bcc     LOCAL_LABEL(case_denom_larger)
         push    {r0, r1, lr}
@@ -36,7 +38,7 @@ LOCAL_LABEL(case_denom_larger):
         movs    r1, r0
         movs    r0, #0
         JMP     (lr)
-#else
+#else // defined(USE_THUMB_1)
         push    { lr }
         sub     sp, sp, #4
         mov     r2, sp

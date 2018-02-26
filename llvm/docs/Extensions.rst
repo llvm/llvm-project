@@ -288,3 +288,31 @@ standard stack probe emission.
 
 The MSVC environment does not emit code for VLAs currently.
 
+Windows on ARM64
+----------------
+
+Stack Probe Emission
+^^^^^^^^^^^^^^^^^^^^
+
+The reference implementation (Microsoft Visual Studio 2017) emits stack probes
+in the following fashion:
+
+.. code-block:: gas
+
+  mov x15, #constant
+  bl __chkstk
+  sub sp, sp, x15, lsl #4
+
+However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
+larger binaries, LLVM supports the use of ``-mcode-model=large`` to allow a 8GiB
+(±4GiB) range via a slight deviation.  It will generate an indirect jump as
+follows:
+
+.. code-block:: gas
+
+  mov x15, #constant
+  adrp x16, __chkstk
+  add x16, x16, :lo12:__chkstk
+  blr x16
+  sub sp, sp, x15, lsl #4
+

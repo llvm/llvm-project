@@ -36,6 +36,7 @@ define i32 @trunc_vXi32() {
 define i32 @trunc_vXi16() {
   ; SSE: cost of 0 {{.*}} %V2i64 = trunc
   ; AVX: cost of 0 {{.*}} %V2i64 = trunc
+  ; AVX512: cost of 0 {{.*}} %V2i64 = trunc
   %V2i64 = trunc <2 x i64> undef to <2 x i16>
 
   ; SSE: cost of 1 {{.*}} %V4i64 = trunc
@@ -46,6 +47,7 @@ define i32 @trunc_vXi16() {
 
   ; SSE: cost of 3 {{.*}} %V8i64 = trunc
   ; AVX: cost of 0 {{.*}} %V8i64 = trunc
+  ; AVX512: cost of 1 {{.*}} %V8i64 = trunc
   %V8i64 = trunc <8 x i64> undef to <8 x i16>
 
   ; SSE2: cost of 3 {{.*}} %V4i32 = trunc
@@ -79,6 +81,7 @@ define i32 @trunc_vXi16() {
 define i32 @trunc_vXi8() {
   ; SSE: cost of 0 {{.*}} %V2i64 = trunc
   ; AVX: cost of 0 {{.*}} %V2i64 = trunc
+  ; AVX512: cost of 0 {{.*}} %V2i64 = trunc
   %V2i64 = trunc <2 x i64> undef to <2 x i8>
 
   ; SSE: cost of 1 {{.*}} %V4i64 = trunc
@@ -89,16 +92,19 @@ define i32 @trunc_vXi8() {
 
   ; SSE: cost of 3 {{.*}} %V8i64 = trunc
   ; AVX: cost of 0 {{.*}} %V8i64 = trunc
+  ; AVX512: cost of 0 {{.*}} %V8i64 = trunc
   %V8i64 = trunc <8 x i64> undef to <8 x i8>
 
   ; SSE: cost of 0 {{.*}} %V2i32 = trunc
   ; AVX: cost of 0 {{.*}} %V2i32 = trunc
+  ; AVX512: cost of 0 {{.*}} %V2i32 = trunc
   %V2i32 = trunc <2 x i32> undef to <2 x i8>
 
   ; SSE2: cost of 3 {{.*}} %V4i32 = trunc
   ; SSSE3: cost of 3 {{.*}} %V4i32 = trunc
   ; SSE42: cost of 1 {{.*}} %V4i32 = trunc
   ; AVX: cost of 1 {{.*}} %V4i32 = trunc
+  ; AVX512: cost of 1 {{.*}} %V4i32 = trunc
   %V4i32 = trunc <4 x i32> undef to <4 x i8>
 
   ; SSE2: cost of 4 {{.*}} %V8i32 = trunc
@@ -111,30 +117,37 @@ define i32 @trunc_vXi8() {
 
   ; SSE: cost of 7 {{.*}} %V16i32 = trunc
   ; AVX: cost of 7 {{.*}} %V16i32 = trunc
+  ; AVX512: cost of 1 {{.*}} %V16i32 = trunc
   %V16i32 = trunc <16 x i32> undef to <16 x i8>
 
   ; SSE: cost of 0 {{.*}} %V2i16 = trunc
   ; AVX: cost of 0 {{.*}} %V2i16 = trunc
+  ; AVX512: cost of 0 {{.*}} %V2i16 = trunc
   %V2i16 = trunc <2 x i16> undef to <2 x i8>
 
   ; SSE2: cost of 4 {{.*}} %V4i16 = trunc
   ; SSSE3: cost of 4 {{.*}} %V4i16 = trunc
   ; SSE42: cost of 2 {{.*}} %V4i16 = trunc
   ; AVX: cost of 2 {{.*}} %V4i16 = trunc
+  ; AVX512: cost of 2 {{.*}} %V4i16 = trunc
   %V4i16 = trunc <4 x i16> undef to <4 x i8>
 
   ; SSE2: cost of 2 {{.*}} %V8i16 = trunc
   ; SSSE3: cost of 2 {{.*}} %V8i16 = trunc
   ; SSE42: cost of 1 {{.*}} %V8i16 = trunc
   ; AVX: cost of 1 {{.*}} %V8i16 = trunc
+  ; AVX512: cost of 1 {{.*}} %V8i16 = trunc
   %V8i16 = trunc <8 x i16> undef to <8 x i8>
 
   ; SSE: cost of 3 {{.*}} %V16i16 = trunc
   ; AVX: cost of 4 {{.*}} %V16i16 = trunc
+  ; AVX512: cost of 4 {{.*}} %V16i16 = trunc
   %V16i16 = trunc <16 x i16> undef to <16 x i8>
 
   ; SSE: cost of 7 {{.*}} %V32i16 = trunc
   ; AVX: cost of 9 {{.*}} %V32i16 = trunc
+  ; AVX512F: cost of 9 {{.*}} %V32i16 = trunc
+  ; AVX512BW: cost of 0 {{.*}} %V32i16 = trunc
   %V32i16 = trunc <32 x i16> undef to <32 x i8>
 
   ret i32 undef

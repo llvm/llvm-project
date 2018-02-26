@@ -4,12 +4,12 @@
 
 define <16 x i16> @phaddw1(<16 x i16> %x, <16 x i16> %y) {
 ; X32-LABEL: phaddw1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phaddw1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 8, i32 10, i32 12, i32 14, i32 24, i32 26, i32 28, i32 30>
@@ -20,12 +20,12 @@ define <16 x i16> @phaddw1(<16 x i16> %x, <16 x i16> %y) {
 
 define <16 x i16> @phaddw2(<16 x i16> %x, <16 x i16> %y) {
 ; X32-LABEL: phaddw2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phaddw2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 17, i32 19, i32 21, i32 23, i32 9, i32 11, i32 13, i32 15, i32 25, i32 27, i32 29, i32 31>
@@ -36,12 +36,12 @@ define <16 x i16> @phaddw2(<16 x i16> %x, <16 x i16> %y) {
 
 define <8 x i32> @phaddd1(<8 x i32> %x, <8 x i32> %y) {
 ; X32-LABEL: phaddd1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phaddd1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
@@ -52,12 +52,12 @@ define <8 x i32> @phaddd1(<8 x i32> %x, <8 x i32> %y) {
 
 define <8 x i32> @phaddd2(<8 x i32> %x, <8 x i32> %y) {
 ; X32-LABEL: phaddd2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phaddd2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 1, i32 2, i32 9, i32 10, i32 5, i32 6, i32 13, i32 14>
@@ -68,12 +68,12 @@ define <8 x i32> @phaddd2(<8 x i32> %x, <8 x i32> %y) {
 
 define <8 x i32> @phaddd3(<8 x i32> %x) {
 ; X32-LABEL: phaddd3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phaddd3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 undef, i32 2, i32 8, i32 10, i32 4, i32 6, i32 undef, i32 14>
@@ -84,12 +84,12 @@ define <8 x i32> @phaddd3(<8 x i32> %x) {
 
 define <16 x i16> @phsubw1(<16 x i16> %x, <16 x i16> %y) {
 ; X32-LABEL: phsubw1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphsubw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phsubw1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphsubw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 8, i32 10, i32 12, i32 14, i32 24, i32 26, i32 28, i32 30>
@@ -100,12 +100,12 @@ define <16 x i16> @phsubw1(<16 x i16> %x, <16 x i16> %y) {
 
 define <8 x i32> @phsubd1(<8 x i32> %x, <8 x i32> %y) {
 ; X32-LABEL: phsubd1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phsubd1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
@@ -116,12 +116,12 @@ define <8 x i32> @phsubd1(<8 x i32> %x, <8 x i32> %y) {
 
 define <8 x i32> @phsubd2(<8 x i32> %x, <8 x i32> %y) {
 ; X32-LABEL: phsubd2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: phsubd2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %a = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 undef, i32 8, i32 undef, i32 4, i32 6, i32 12, i32 14>

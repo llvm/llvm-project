@@ -6,12 +6,12 @@
 
 define void @PR33960() {
 ; X86-LABEL: PR33960:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $0, b
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR33960:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $0, {{.*}}(%rip)
 ; X64-NEXT:    retq
 entry:

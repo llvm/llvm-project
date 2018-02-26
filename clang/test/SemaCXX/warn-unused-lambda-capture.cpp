@@ -191,3 +191,12 @@ void test_templated() {
 void test_use_template() {
   test_templated<int>(); // expected-note{{in instantiation of function template specialization 'test_templated<int>' requested here}}
 }
+
+namespace pr35555 {
+int a;
+void b() {
+  int c[a];
+  auto vla_used = [&c] { return c[0]; };
+  auto vla_unused = [&c] {}; // expected-warning{{lambda capture 'c' is not used}}
+}
+} // namespace pr35555

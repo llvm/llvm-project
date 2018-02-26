@@ -5,7 +5,7 @@
 
 define float @Test1(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       Test1:BB#0
+; CHECK:       Test1:%bb.0
 
 ; CHECK:       VMULS
 ; > VMULS common latency = 5
@@ -44,7 +44,7 @@ define float @Test1(float %f1, float %f2, float %f3, float %f4, float %f5, float
 ; ASIMD form
 define <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       Test2:BB#0
+; CHECK:       Test2:%bb.0
 
 ; CHECK:       VMULfd
 ; > VMULfd common latency = 5
@@ -82,7 +82,7 @@ define <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 
 
 define float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       Test3:BB#0
+; CHECK:       Test3:%bb.0
 
 ; CHECK:       VMULS
 ; > VMULS common latency = 5
@@ -121,7 +121,7 @@ define float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float
 ; ASIMD form
 define <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       Test4:BB#0
+; CHECK:       Test4:%bb.0
 
 ; CHECK:       VMULfd
 ; > VMULfd common latency = 5
@@ -159,7 +159,7 @@ define <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 
 
 define float @Test5(float %f1, float %f2, float %f3) {
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       Test5:BB#0
+; CHECK:       Test5:%bb.0
 
 ; CHECK-DEFAULT: VNMLS
 ; CHECK-FAST:    VFNMS
@@ -178,7 +178,7 @@ define float @Test5(float %f1, float %f2, float %f3) {
 
 define float @Test6(float %f1, float %f2, float %f3) {
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       Test6:BB#0
+; CHECK:       Test6:%bb.0
 
 ; CHECK-DEFAULT: VNMLA
 ; CHECK-FAST:    VFNMA

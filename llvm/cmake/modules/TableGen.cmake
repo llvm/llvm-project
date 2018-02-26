@@ -52,6 +52,13 @@ function(tablegen project ofn)
       list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
     endif()
   endif()
+  if (LLVM_ENABLE_GISEL_COV)
+    list(FIND ARGN "-gen-global-isel" idx)
+    if( NOT idx EQUAL -1 )
+      list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-gisel-coverage")
+      list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
+    endif()
+  endif()
 
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
@@ -110,19 +117,6 @@ function(add_public_tablegen_target target)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} ${target} PARENT_SCOPE)
 endfunction()
 
-if(LLVM_USE_HOST_TOOLS)
-  llvm_ExternalProject_BuildCmd(tblgen_build_cmd LLVMSupport
-    ${LLVM_NATIVE_BUILD}
-    CONFIGURATION Release)
-  add_custom_command(OUTPUT LIB_LLVMTABLEGEN
-      COMMAND ${tblgen_build_cmd}
-      DEPENDS CONFIGURE_LLVM_NATIVE
-      WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
-      COMMENT "Building libLLVMTableGen for native TableGen..."
-      USES_TERMINAL)
-  add_custom_target(NATIVE_LIB_LLVMTABLEGEN DEPENDS LIB_LLVMTABLEGEN)
-endif(LLVM_USE_HOST_TOOLS)
-
 macro(add_tablegen target project)
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
@@ -166,7 +160,7 @@ macro(add_tablegen target project)
                                     CONFIGURATION Release)
       add_custom_command(OUTPUT ${${project}_TABLEGEN_EXE}
         COMMAND ${tblgen_build_cmd}
-        DEPENDS ${target} NATIVE_LIB_LLVMTABLEGEN
+        DEPENDS CONFIGURE_LLVM_NATIVE ${target}
         WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
         COMMENT "Building native TableGen..."
         USES_TERMINAL)

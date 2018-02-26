@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
+; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS
+; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
 
 ; Combine sin / cos into a single call unless they may write errno (as
 ; captured by readnone attrbiute, controlled by clang -fmath-errno
@@ -116,10 +118,10 @@ entry:
 ; GNU_SINCOS: faddp %st(1)
 
 ; GNU_SINCOS_FASTMATH-LABEL: test3:
-; GNU_SINCOS_FASTMATH: fsin
-; GNU_SINCOS_FASTMATH: fcos
+; GNU_SINCOS_FASTMATH: callq sincosl
+; GNU_SINCOS_FASTMATH: fldt 16(%{{[re]}}sp)
+; GNU_SINCOS_FASTMATH: fldt 32(%{{[re]}}sp)
 ; GNU_SINCOS_FASTMATH: faddp %st(1)
-; GNU_SINCOS_FASTMATH: ret
   %call = tail call x86_fp80 @sinl(x86_fp80 %x) readnone
   %call1 = tail call x86_fp80 @cosl(x86_fp80 %x) readnone
   %add = fadd x86_fp80 %call, %call1

@@ -373,7 +373,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::HHVM:          Out << "hhvmcc"; break;
   case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
   case CallingConv::AMDGPU_VS:     Out << "amdgpu_vs"; break;
+  case CallingConv::AMDGPU_LS:     Out << "amdgpu_ls"; break;
   case CallingConv::AMDGPU_HS:     Out << "amdgpu_hs"; break;
+  case CallingConv::AMDGPU_ES:     Out << "amdgpu_es"; break;
   case CallingConv::AMDGPU_GS:     Out << "amdgpu_gs"; break;
   case CallingConv::AMDGPU_PS:     Out << "amdgpu_ps"; break;
   case CallingConv::AMDGPU_CS:     Out << "amdgpu_cs"; break;
@@ -1106,10 +1108,12 @@ static void writeAtomicRMWOperation(raw_ostream &Out,
 
 static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
   if (const FPMathOperator *FPO = dyn_cast<const FPMathOperator>(U)) {
-    // Unsafe algebra implies all the others, no need to write them all out
-    if (FPO->hasUnsafeAlgebra())
+    // 'Fast' is an abbreviation for all fast-math-flags.
+    if (FPO->isFast())
       Out << " fast";
     else {
+      if (FPO->hasAllowReassoc())
+        Out << " reassoc";
       if (FPO->hasNoNaNs())
         Out << " nnan";
       if (FPO->hasNoInfs())
@@ -1120,6 +1124,8 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
         Out << " arcp";
       if (FPO->hasAllowContract())
         Out << " contract";
+      if (FPO->hasApproxFunc())
+        Out << " afn";
     }
   }
 
@@ -1615,10 +1621,15 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
 }
 
 static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
-                            TypePrinting *, SlotTracker *, const Module *) {
+                            TypePrinting *TypePrinter, SlotTracker *Machine,
+                            const Module *Context) {
   Out << "!DISubrange(";
-  MDFieldPrinter Printer(Out);
-  Printer.printInt("count", N->getCount(), /* ShouldSkipZero */ false);
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  if (auto *CE = N->getCount().dyn_cast<ConstantInt*>())
+    Printer.printInt("count", CE->getSExtValue(), /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("count", N->getCount().dyn_cast<DIVariable*>(),
+                          /*ShouldSkipNull */ false);
   Printer.printInt("lowerBound", N->getLowerBound());
   Out << ")";
 }
@@ -1690,6 +1701,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printMetadata("vtableHolder", N->getRawVTableHolder());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printString("identifier", N->getIdentifier());
+  Printer.printMetadata("discriminator", N->getRawDiscriminator());
   Out << ")";
 }
 
@@ -2491,6 +2503,11 @@ static void PrintVisibility(GlobalValue::VisibilityTypes Vis,
   }
 }
 
+static void PrintDSOLocation(bool IsDSOLocal, formatted_raw_ostream &Out){
+  if (IsDSOLocal)
+    Out << "dso_local ";
+}
+
 static void PrintDLLStorageClass(GlobalValue::DLLStorageClassTypes SCT,
                                  formatted_raw_ostream &Out) {
   switch (SCT) {
@@ -2561,6 +2578,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     Out << "external ";
 
   Out << getLinkagePrintName(GV->getLinkage());
+  PrintDSOLocation(GV->isDSOLocal(), Out);
   PrintVisibility(GV->getVisibility(), Out);
   PrintDLLStorageClass(GV->getDLLStorageClass(), Out);
   PrintThreadLocalModel(GV->getThreadLocalMode(), Out);
@@ -2607,6 +2625,7 @@ void AssemblyWriter::printIndirectSymbol(const GlobalIndirectSymbol *GIS) {
   Out << " = ";
 
   Out << getLinkagePrintName(GIS->getLinkage());
+  PrintDSOLocation(GIS->isDSOLocal(), Out);
   PrintVisibility(GIS->getVisibility(), Out);
   PrintDLLStorageClass(GIS->getDLLStorageClass(), Out);
   PrintThreadLocalModel(GIS->getThreadLocalMode(), Out);
@@ -2718,6 +2737,7 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "define ";
 
   Out << getLinkagePrintName(F->getLinkage());
+  PrintDSOLocation(F->isDSOLocal(), Out);
   PrintVisibility(F->getVisibility(), Out);
   PrintDLLStorageClass(F->getDLLStorageClass(), Out);
 

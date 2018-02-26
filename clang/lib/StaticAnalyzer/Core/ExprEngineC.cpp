@@ -20,6 +20,24 @@ using namespace clang;
 using namespace ento;
 using llvm::APSInt;
 
+/// \brief Optionally conjure and return a symbol for offset when processing
+/// an expression \p Expression.
+/// If \p Other is a location, conjure a symbol for \p Symbol
+/// (offset) if it is unknown so that memory arithmetic always
+/// results in an ElementRegion.
+/// \p Count The number of times the current basic block was visited.
+static SVal conjureOffsetSymbolOnLocation(
+    SVal Symbol, SVal Other, Expr* Expression, SValBuilder &svalBuilder,
+    unsigned Count, const LocationContext *LCtx) {
+  QualType Ty = Expression->getType();
+  if (Other.getAs<Loc>() &&
+      Ty->isIntegralOrEnumerationType() &&
+      Symbol.isUnknown()) {
+    return svalBuilder.conjureSymbolVal(Expression, LCtx, Ty, Count);
+  }
+  return Symbol;
+}
+
 void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
                                      ExplodedNode *Pred,
                                      ExplodedNodeSet &Dst) {
@@ -63,24 +81,13 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       StmtNodeBuilder Bldr(*it, Tmp2, *currBldrCtx);
 
       if (B->isAdditiveOp()) {
-        // If one of the operands is a location, conjure a symbol for the other
-        // one (offset) if it's unknown so that memory arithmetic always
-        // results in an ElementRegion.
         // TODO: This can be removed after we enable history tracking with
         // SymSymExpr.
         unsigned Count = currBldrCtx->blockCount();
-        if (LeftV.getAs<Loc>() &&
-            RHS->getType()->isIntegralOrEnumerationType() &&
-            RightV.isUnknown()) {
-          RightV = svalBuilder.conjureSymbolVal(RHS, LCtx, RHS->getType(),
-                                                Count);
-        }
-        if (RightV.getAs<Loc>() &&
-            LHS->getType()->isIntegralOrEnumerationType() &&
-            LeftV.isUnknown()) {
-          LeftV = svalBuilder.conjureSymbolVal(LHS, LCtx, LHS->getType(),
-                                               Count);
-        }
+        RightV = conjureOffsetSymbolOnLocation(
+            RightV, LeftV, RHS, svalBuilder, Count, LCtx);
+        LeftV = conjureOffsetSymbolOnLocation(
+            LeftV, RightV, LHS, svalBuilder, Count, LCtx);
       }
 
       // Although we don't yet model pointers-to-members, we do need to make
@@ -92,12 +99,10 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Process non-assignments except commas or short-circuited
       // logical expressions (LAnd and LOr).
       SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
-      if (Result.isUnknown()) {
-        Bldr.generateNode(B, *it, state);
-        continue;
+      if (!Result.isUnknown()) {
+        state = state->BindExpr(B, LCtx, Result);
       }
 
-      state = state->BindExpr(B, LCtx, Result);
       Bldr.generateNode(B, *it, state);
       continue;
     }
@@ -530,7 +535,7 @@ void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
   const Expr *Init = CL->getInitializer();
   SVal V = State->getSVal(CL->getInitializer(), LCtx);
 
-  if (isa<CXXConstructExpr>(Init)) {
+  if (isa<CXXConstructExpr>(Init) || isa<CXXStdInitializerListExpr>(Init)) {
     // No work needed. Just pass the value up to this expression.
   } else {
     assert(isa<InitListExpr>(Init));
@@ -627,6 +632,16 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
+
+  if (B->getType()->isVectorType()) {
+    // FIXME: We do not model vector arithmetic yet. When adding support for
+    // that, note that the CFG-based reasoning below does not apply, because
+    // logical operators on vectors are not short-circuit. Currently they are
+    // modeled as short-circuit in Clang CFG but this is incorrect.
+    // Do not set the value for the expression. It'd be UnknownVal by default.
+    Bldr.generateNode(B, Pred, state);
+    return;
+  }
 
   ExplodedNode *N = Pred;
   while (!N->getLocation().getAs<BlockEntrance>()) {
@@ -1028,7 +1043,14 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
 
     // Propagate unknown and undefined values.
     if (V2_untested.isUnknownOrUndef()) {
-      Bldr.generateNode(U, *I, state->BindExpr(U, LCtx, V2_untested));
+      state = state->BindExpr(U, LCtx, V2_untested);
+
+      // Perform the store, so that the uninitialized value detection happens.
+      Bldr.takeNodes(*I);
+      ExplodedNodeSet Dst3;
+      evalStore(Dst3, U, U, *I, state, loc, V2_untested);
+      Bldr.addNodes(Dst3);
+
       continue;
     }
     DefinedSVal V2 = V2_untested.castAs<DefinedSVal>();

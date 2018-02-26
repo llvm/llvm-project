@@ -48,8 +48,8 @@ static bool bogusfd(int fd) {
 }
 
 static FdSync *allocsync(ThreadState *thr, uptr pc) {
-  FdSync *s = (FdSync*)user_alloc(thr, pc, sizeof(FdSync), kDefaultAlignment,
-      false);
+  FdSync *s = (FdSync*)user_alloc_internal(thr, pc, sizeof(FdSync),
+      kDefaultAlignment, false);
   atomic_store(&s->rc, 1, memory_order_relaxed);
   return s;
 }
@@ -79,7 +79,7 @@ static FdDesc *fddesc(ThreadState *thr, uptr pc, int fd) {
   if (l1 == 0) {
     uptr size = kTableSizeL2 * sizeof(FdDesc);
     // We need this to reside in user memory to properly catch races on it.
-    void *p = user_alloc(thr, pc, size, kDefaultAlignment, false);
+    void *p = user_alloc_internal(thr, pc, size, kDefaultAlignment, false);
     internal_memset(p, 0, size);
     MemoryResetRange(thr, (uptr)&fddesc, (uptr)p, size);
     if (atomic_compare_exchange_strong(pl1, &l1, (uptr)p, memory_order_acq_rel))

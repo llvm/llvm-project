@@ -1,4 +1,4 @@
-//===-- AMDGPUTargetTransformInfo.h - AMDGPU specific TTI -------*- C++ -*-===//
+//===- AMDGPUTargetTransformInfo.h - AMDGPU specific TTI --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,37 +6,75 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file a TargetTransformInfo::Concept conforming object specific to the
 /// AMDGPU target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETTRANSFORMINFO_H
 
 #include "AMDGPU.h"
+#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/IR/Function.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
 
 namespace llvm {
+
 class AMDGPUTargetLowering;
+class Loop;
+class ScalarEvolution;
+class Type;
+class Value;
 
 class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
-  typedef BasicTTIImplBase<AMDGPUTTIImpl> BaseT;
-  typedef TargetTransformInfo TTI;
+  using BaseT = BasicTTIImplBase<AMDGPUTTIImpl>;
+  using TTI = TargetTransformInfo;
+
   friend BaseT;
 
   const AMDGPUSubtarget *ST;
   const AMDGPUTargetLowering *TLI;
   bool IsGraphicsShader;
 
+  const FeatureBitset InlineFeatureIgnoreList = {
+    // Codegen control options which don't matter.
+    AMDGPU::FeatureEnableLoadStoreOpt,
+    AMDGPU::FeatureEnableSIScheduler,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
+    AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeaturePromoteAlloca,
+    AMDGPU::FeatureUnalignedBufferAccess,
+    AMDGPU::FeatureUnalignedScratchAccess,
+
+    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
+    AMDGPU::FeatureDebuggerEmitPrologue,
+    AMDGPU::FeatureDebuggerInsertNops,
+    AMDGPU::FeatureDebuggerReserveRegs,
+
+    // Property of the kernel/environment which can't actually differ.
+    AMDGPU::FeatureSGPRInitBug,
+    AMDGPU::FeatureXNACK,
+    AMDGPU::FeatureTrapHandler,
+
+    // Perf-tuning features
+    AMDGPU::FeatureFastFMAF32,
+    AMDGPU::HalfRate64Ops
+  };
+
   const AMDGPUSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
-
 
   static inline int getFullRateInstrCost() {
     return TargetTransformInfo::TCC_Basic;
@@ -78,7 +116,7 @@ public:
 
   unsigned getHardwareNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(bool Vector) const;
-  unsigned getRegisterBitWidth(bool Vector) const ;
+  unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
 
@@ -93,6 +131,8 @@ public:
                                     unsigned AddrSpace) const;
 
   unsigned getMaxInterleaveFactor(unsigned VF);
+
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
   int getArithmeticInstrCost(
     unsigned Opcode, Type *Ty,
@@ -121,8 +161,13 @@ public:
 
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                           Type *SubTp);
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const;
+
+  unsigned getInliningThresholdMultiplier() { return 9; }
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETTRANSFORMINFO_H

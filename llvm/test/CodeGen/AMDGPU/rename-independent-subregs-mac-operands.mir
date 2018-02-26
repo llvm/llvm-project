@@ -2,7 +2,7 @@
 ---
 
 # GCN-LABEL: name: mac_invalid_operands
-# GCN: undef %18.sub0 = V_MAC_F32_e32 undef %3, undef %9, undef %18.sub0, implicit %exec
+# GCN: undef %18.sub0:vreg_128 = V_MAC_F32_e32 undef %3:vgpr_32, undef %9:vgpr_32, undef %18.sub0, implicit %exec
 
 name:            mac_invalid_operands
 alignment:       0
@@ -73,13 +73,13 @@ body:             |
 
 # GCN-LABEL: name: vreg_does_not_dominate
 
-# GCN: undef %8.sub1 = V_MAC_F32_e32 undef %2, undef %1, undef %8.sub1, implicit %exec
-# GCN: undef %7.sub0 = V_MOV_B32_e32 0, implicit %exec
-# GCN: undef %9.sub2 = COPY %7.sub0
+# GCN: undef %8.sub1:vreg_128 = V_MAC_F32_e32 undef %2:vgpr_32, undef %1:vgpr_32, undef %8.sub1, implicit %exec
+# GCN: undef %7.sub0:vreg_128 = V_MOV_B32_e32 0, implicit %exec
+# GCN: undef %9.sub2:vreg_128 = COPY %7.sub0
 
-# GCN: undef %6.sub3 = V_ADD_F32_e32 undef %3, undef %3, implicit %exec
-# GCN: undef %7.sub0 = V_ADD_F32_e64 0, 0, 0, 0, 0, 0, implicit %exec
-# GCN: %8.sub1 = V_ADD_F32_e32 %8.sub1, %8.sub1, implicit %exec
+# GCN: undef %6.sub3:vreg_128 = V_ADD_F32_e32 undef %3:vgpr_32, undef %3:vgpr_32, implicit %exec
+# GCN: undef %7.sub0:vreg_128 = V_ADD_F32_e64 0, 0, 0, 0, 0, 0, implicit %exec
+# GCN: %8.sub1:vreg_128 = V_ADD_F32_e32 %8.sub1, %8.sub1, implicit %exec
 
 # GCN: BUFFER_STORE_DWORD_OFFEN %6.sub3, %0,
 # GCN: BUFFER_STORE_DWORD_OFFEN %9.sub2, %0,
@@ -137,8 +137,8 @@ body:             |
 
 # GCN-LABEL: name: inf_loop_tied_operand
 # GCN: bb.0:
-# GCN-NEXT: undef %2.sub0 = V_MAC_F32_e32 1073741824, undef %0, undef %2.sub0, implicit %exec
-# GCN-NEXT: dead undef %3.sub1 = COPY %2.sub0
+# GCN-NEXT: undef %2.sub0:vreg_128 = V_MAC_F32_e32 1073741824, undef %0:vgpr_32, undef %2.sub0, implicit %exec
+# GCN-NEXT: dead undef %3.sub1:vreg_128 = COPY %2.sub0
 
 name:            inf_loop_tied_operand
 tracksRegLiveness: true

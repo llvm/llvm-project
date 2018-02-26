@@ -25,7 +25,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/BasicBlock.h"
@@ -81,25 +80,21 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // The new PHI node value is added as an operand of a PHI node in either
   // the loop header or the loop exit block.
   for (BasicBlock *Succ : successors(Latch)) {
-    for (Instruction &BBI : *Succ) {
-      PHINode *PN = dyn_cast<PHINode>(&BBI);
-      // Exit when we passed all PHI nodes.
-      if (!PN)
-        break;
+    for (PHINode &PN : Succ->phis()) {
       // Add a new PHI node to the prolog end block and add the
       // appropriate incoming values.
-      PHINode *NewPN = PHINode::Create(PN->getType(), 2, PN->getName() + ".unr",
+      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
                                        PrologExit->getFirstNonPHI());
       // Adding a value to the new PHI node from the original loop preheader.
       // This is the value that skips all the prolog code.
-      if (L->contains(PN)) {
-        NewPN->addIncoming(PN->getIncomingValueForBlock(NewPreHeader),
+      if (L->contains(&PN)) {
+        NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader),
                            PreHeader);
       } else {
-        NewPN->addIncoming(UndefValue::get(PN->getType()), PreHeader);
+        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
       }
 
-      Value *V = PN->getIncomingValueForBlock(Latch);
+      Value *V = PN.getIncomingValueForBlock(Latch);
       if (Instruction *I = dyn_cast<Instruction>(V)) {
         if (L->contains(I)) {
           V = VMap.lookup(I);
@@ -112,10 +107,10 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
       // Update the existing PHI node operand with the value from the
       // new PHI node.  How this is done depends on if the existing
       // PHI node is in the original loop block, or the exit block.
-      if (L->contains(PN)) {
-        PN->setIncomingValue(PN->getBasicBlockIndex(NewPreHeader), NewPN);
+      if (L->contains(&PN)) {
+        PN.setIncomingValue(PN.getBasicBlockIndex(NewPreHeader), NewPN);
       } else {
-        PN->addIncoming(NewPN, PrologExit);
+        PN.addIncoming(NewPN, PrologExit);
       }
     }
   }
@@ -192,11 +187,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   // Exit (EpilogPN)
 
   // Update PHI nodes at NewExit and Exit.
-  for (Instruction &BBI : *NewExit) {
-    PHINode *PN = dyn_cast<PHINode>(&BBI);
-    // Exit when we passed all PHI nodes.
-    if (!PN)
-      break;
+  for (PHINode &PN : NewExit->phis()) {
     // PN should be used in another PHI located in Exit block as
     // Exit was split by SplitBlockPredecessors into Exit and NewExit
     // Basicaly it should look like:
@@ -208,14 +199,14 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     //
     // There is EpilogPreHeader incoming block instead of NewExit as
     // NewExit was spilt 1 more time to get EpilogPreHeader.
-    assert(PN->hasOneUse() && "The phi should have 1 use");
-    PHINode *EpilogPN = cast<PHINode> (PN->use_begin()->getUser());
+    assert(PN.hasOneUse() && "The phi should have 1 use");
+    PHINode *EpilogPN = cast<PHINode>(PN.use_begin()->getUser());
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
 
     // Add incoming PreHeader from branch around the Loop
-    PN->addIncoming(UndefValue::get(PN->getType()), PreHeader);
+    PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
 
-    Value *V = PN->getIncomingValueForBlock(Latch);
+    Value *V = PN.getIncomingValueForBlock(Latch);
     Instruction *I = dyn_cast<Instruction>(V);
     if (I && L->contains(I))
       // If value comes from an instruction in the loop add VMap value.
@@ -243,23 +234,19 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     // Skip this as we already updated phis in exit blocks.
     if (!L->contains(Succ))
       continue;
-    for (Instruction &BBI : *Succ) {
-      PHINode *PN = dyn_cast<PHINode>(&BBI);
-      // Exit when we passed all PHI nodes.
-      if (!PN)
-        break;
+    for (PHINode &PN : Succ->phis()) {
       // Add new PHI nodes to the loop exit block and update epilog
       // PHIs with the new PHI values.
-      PHINode *NewPN = PHINode::Create(PN->getType(), 2, PN->getName() + ".unr",
+      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
                                        NewExit->getFirstNonPHI());
       // Adding a value to the new PHI node from the unrolling loop preheader.
-      NewPN->addIncoming(PN->getIncomingValueForBlock(NewPreHeader), PreHeader);
+      NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
       // Adding a value to the new PHI node from the unrolling loop latch.
-      NewPN->addIncoming(PN->getIncomingValueForBlock(Latch), Latch);
+      NewPN->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
 
       // Update the existing PHI node operand with the value from the new PHI
       // node.  Corresponding instruction in epilog loop should be PHI.
-      PHINode *VPN = cast<PHINode>(VMap[&BBI]);
+      PHINode *VPN = cast<PHINode>(VMap[&PN]);
       VPN->setIncomingValue(VPN->getBasicBlockIndex(EpilogPreHeader), NewPN);
     }
   }
@@ -294,7 +281,8 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
 /// Return the new cloned loop that is created when CreateRemainderLoop is true.
 static Loop *
 CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
-                const bool UseEpilogRemainder, BasicBlock *InsertTop,
+                const bool UseEpilogRemainder, const bool UnrollRemainder,
+                BasicBlock *InsertTop,
                 BasicBlock *InsertBot, BasicBlock *Preheader,
                 std::vector<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
                 ValueToValueMapTy &VMap, DominatorTree *DT, LoopInfo *LI) {
@@ -393,35 +381,14 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
   if (CreateRemainderLoop) {
     Loop *NewLoop = NewLoops[L];
     assert(NewLoop && "L should have been cloned");
+
+    // Only add loop metadata if the loop is not going to be completely
+    // unrolled.
+    if (UnrollRemainder)
+      return NewLoop;
+
     // Add unroll disable metadata to disable future unrolling for this loop.
-    SmallVector<Metadata *, 4> MDs;
-    // Reserve first location for self reference to the LoopID metadata node.
-    MDs.push_back(nullptr);
-    MDNode *LoopID = NewLoop->getLoopID();
-    if (LoopID) {
-      // First remove any existing loop unrolling metadata.
-      for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-        bool IsUnrollMetadata = false;
-        MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-        if (MD) {
-          const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-          IsUnrollMetadata = S && S->getString().startswith("llvm.loop.unroll.");
-        }
-        if (!IsUnrollMetadata)
-          MDs.push_back(LoopID->getOperand(i));
-      }
-    }
-
-    LLVMContext &Context = NewLoop->getHeader()->getContext();
-    SmallVector<Metadata *, 1> DisableOperands;
-    DisableOperands.push_back(MDString::get(Context, "llvm.loop.unroll.disable"));
-    MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-    MDs.push_back(DisableNode);
-
-    MDNode *NewLoopID = MDNode::get(Context, MDs);
-    // Set operand 0 to refer to the loop id itself.
-    NewLoopID->replaceOperandWith(0, NewLoopID);
-    NewLoop->setLoopID(NewLoopID);
+    NewLoop->setLoopAlreadyUnrolled();
     return NewLoop;
   }
   else
@@ -435,12 +402,9 @@ canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
                              BasicBlock *LatchExit, bool PreserveLCSSA,
                              bool UseEpilogRemainder) {
 
-  // Support runtime unrolling for multiple exit blocks and multiple exiting
-  // blocks.
-  if (!UnrollRuntimeMultiExit)
-    return false;
-  // Even if runtime multi exit is enabled, we currently have some correctness
-  // constrains in unrolling a multi-exit loop.
+  // We currently have some correctness constrains in unrolling a multi-exit
+  // loop. Check for these below.
+
   // We rely on LCSSA form being preserved when the exit blocks are transformed.
   if (!PreserveLCSSA)
     return false;
@@ -470,7 +434,54 @@ canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
   return true;
 }
 
+/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
+/// we return true only if UnrollRuntimeMultiExit is set to true.
+static bool canProfitablyUnrollMultiExitLoop(
+    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
+    bool PreserveLCSSA, bool UseEpilogRemainder) {
 
+#if !defined(NDEBUG)
+  SmallVector<BasicBlock *, 8> OtherExitsDummyCheck;
+  assert(canSafelyUnrollMultiExitLoop(L, OtherExitsDummyCheck, LatchExit,
+                                      PreserveLCSSA, UseEpilogRemainder) &&
+         "Should be safe to unroll before checking profitability!");
+#endif
+
+  // Priority goes to UnrollRuntimeMultiExit if it's supplied.
+  if (UnrollRuntimeMultiExit.getNumOccurrences())
+    return UnrollRuntimeMultiExit;
+
+  // The main pain point with multi-exit loop unrolling is that once unrolled,
+  // we will not be able to merge all blocks into a straight line code.
+  // There are branches within the unrolled loop that go to the OtherExits.
+  // The second point is the increase in code size, but this is true
+  // irrespective of multiple exits.
+
+  // Note: Both the heuristics below are coarse grained. We are essentially
+  // enabling unrolling of loops that have a single side exit other than the
+  // normal LatchExit (i.e. exiting into a deoptimize block).
+  // The heuristics considered are:
+  // 1. low number of branches in the unrolled version.
+  // 2. high predictability of these extra branches.
+  // We avoid unrolling loops that have more than two exiting blocks. This
+  // limits the total number of branches in the unrolled loop to be atmost
+  // the unroll factor (since one of the exiting blocks is the latch block).
+  SmallVector<BasicBlock*, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  if (ExitingBlocks.size() > 2)
+    return false;
+
+  // The second heuristic is that L has one exit other than the latchexit and
+  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
+  // taken, which also implies the branch leading to the deoptimize block is
+  // highly predictable.
+  return (OtherExits.size() == 1 &&
+          OtherExits[0]->getTerminatingDeoptimizeCall());
+  // TODO: These can be fine-tuned further to consider code size or deopt states
+  // that are captured by the deoptimize exit block.
+  // Also, we can extend this to support more cases, if we actually
+  // know of kinds of multiexit loops that would benefit from unrolling.
+}
 
 /// Insert code in the prolog/epilog code when unrolling a loop with a
 /// run-time trip-count.
@@ -513,10 +524,14 @@ canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
 bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool AllowExpensiveTripCount,
                                       bool UseEpilogRemainder,
+                                      bool UnrollRemainder,
                                       LoopInfo *LI, ScalarEvolution *SE,
-                                      DominatorTree *DT, bool PreserveLCSSA) {
+                                      DominatorTree *DT, AssumptionCache *AC,
+                                      bool PreserveLCSSA) {
   DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   DEBUG(L->dump());
+  DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n" :
+        dbgs() << "Using prolog remainder.\n");
 
   // Make sure the loop is in canonical form.
   if (!L->isLoopSimplifyForm()) {
@@ -538,8 +553,11 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
          "one of the loop latch successors should be the exit block!");
   // These are exit blocks other than the target of the latch exiting block.
   SmallVector<BasicBlock *, 4> OtherExits;
-  bool isMultiExitUnrollingEnabled = canSafelyUnrollMultiExitLoop(
-      L, OtherExits, LatchExit, PreserveLCSSA, UseEpilogRemainder);
+  bool isMultiExitUnrollingEnabled =
+      canSafelyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
+                                   UseEpilogRemainder) &&
+      canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
+                                       UseEpilogRemainder);
   // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
   if (!isMultiExitUnrollingEnabled &&
       (!L->getExitingBlock() || OtherExits.size())) {
@@ -618,8 +636,13 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
     SmallVector<BasicBlock*, 4> Preds(predecessors(LatchExit));
     NewExit = SplitBlockPredecessors(LatchExit, Preds, ".unr-lcssa",
                                      DT, LI, PreserveLCSSA);
+    // NewExit gets its DebugLoc from LatchExit, which is not part of the
+    // original Loop.
+    // Fix this by setting Loop's DebugLoc to NewExit.
+    auto *NewExitTerminator = NewExit->getTerminator();
+    NewExitTerminator->setDebugLoc(Header->getTerminator()->getDebugLoc());
     // Split NewExit to insert epilog remainder loop.
-    EpilogPreHeader = SplitBlock(NewExit, NewExit->getTerminator(), DT, LI);
+    EpilogPreHeader = SplitBlock(NewExit, NewExitTerminator, DT, LI);
     EpilogPreHeader->setName(Header->getName() + ".epil.preheader");
   } else {
     // If prolog remainder
@@ -724,7 +747,8 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   BasicBlock *InsertBot = UseEpilogRemainder ? LatchExit : PrologExit;
   BasicBlock *InsertTop = UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
   Loop *remainderLoop = CloneLoopBlocks(
-      L, ModVal, CreateRemainderLoop, UseEpilogRemainder, InsertTop, InsertBot,
+      L, ModVal, CreateRemainderLoop, UseEpilogRemainder, UnrollRemainder,
+      InsertTop, InsertBot,
       NewPreHeader, NewBlocks, LoopBlocks, VMap, DT, LI);
 
   // Insert the cloned blocks into the function.
@@ -753,11 +777,15 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
      // Add the incoming values from the remainder code to the end of the phi
      // node.
      for (unsigned i =0; i < oldNumOperands; i++){
-       Value *newVal = VMap[Phi->getIncomingValue(i)];
+       Value *newVal = VMap.lookup(Phi->getIncomingValue(i));
        // newVal can be a constant or derived from values outside the loop, and
-       // hence need not have a VMap value.
-       if (!newVal)
+       // hence need not have a VMap value. Also, since lookup already generated
+       // a default "null" VMap entry for this value, we need to populate that
+       // VMap entry correctly, with the mapped entry being itself.
+       if (!newVal) {
          newVal = Phi->getIncomingValue(i);
+         VMap[Phi->getIncomingValue(i)] = Phi->getIncomingValue(i);
+       }
        Phi->addIncoming(newVal,
                            cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
      }
@@ -866,6 +894,16 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
     // preserve LoopSimplifyForm.
     if (remainderLoop)
       formDedicatedExitBlocks(remainderLoop, DT, LI, PreserveLCSSA);
+  }
+
+  if (remainderLoop && UnrollRemainder) {
+    DEBUG(dbgs() << "Unrolling remainder loop\n");
+    UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
+               /*Force*/ false, /*AllowRuntime*/ false,
+               /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
+               /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
+               /*PeelCount*/ 0, /*UnrollRemainder*/ false, LI, SE, DT, AC,
+               /*ORE*/ nullptr, PreserveLCSSA);
   }
 
   NumRuntimeUnrolled++;

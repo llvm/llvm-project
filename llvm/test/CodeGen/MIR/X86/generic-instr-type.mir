@@ -37,18 +37,18 @@ registers:
 body: |
   bb.0:
     liveins: %edi, %xmm0
-    ; CHECK:      %1(s32) = G_ADD %0
+    ; CHECK:      %1:_(s32) = G_ADD %0
     %0(s32) = COPY %edi
     %6(<2 x s32>) = COPY %xmm0
     %7(s64) = COPY %rdi
 
     %1(s32) = G_ADD %0, %0
-    ; CHECK:      %2(<2 x s32>) = G_ADD %6, %6
+    ; CHECK:      %2:_(<2 x s32>) = G_ADD %6, %6
     %2(<2 x s32>) = G_ADD %6, %6
-    ; CHECK:      %3(s64) = G_ADD %7, %7
+    ; CHECK:      %3:_(s64) = G_ADD %7, %7
     %3(s64) = G_ADD %7, %7
 
-    ; CHECK:      %5(s48) = G_ADD %8, %8
+    ; CHECK:      %5:_(s48) = G_ADD %8, %8
     %8(s48) = G_TRUNC %7
     %5(s48) = G_ADD %8, %8
 ...

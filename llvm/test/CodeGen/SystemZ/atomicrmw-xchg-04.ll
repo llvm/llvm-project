@@ -77,8 +77,8 @@ define i64 @f6(i64 %dummy, i64 %base, i64 %index, i64 %b) {
 ; use the sequence above.
 define i64 @f7(i64 %dummy, i64 *%ptr) {
 ; CHECK-LABEL: f7:
-; CHECK: llilf [[VALUE:%r[0-9+]]], 3000000000
-; CHECK: lg %r2, 0(%r3)
+; CHECK-DAG: llilf [[VALUE:%r[0-9+]]], 3000000000
+; CHECK-DAG: lg %r2, 0(%r3)
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: csg %r2, [[VALUE]], 0(%r3)
 ; CHECK: jl [[LABEL]]

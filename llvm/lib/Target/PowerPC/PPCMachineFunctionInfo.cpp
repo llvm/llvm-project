@@ -43,3 +43,17 @@ MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol() const {
                                            "func_toc" +
                                            Twine(MF.getFunctionNumber()));
 }
+
+bool PPCFunctionInfo::isLiveInSExt(unsigned VReg) const {
+  for (const std::pair<unsigned, ISD::ArgFlagsTy> &LiveIn : LiveInAttrs)
+    if (LiveIn.first == VReg)
+      return LiveIn.second.isSExt();
+  return false;
+}
+
+bool PPCFunctionInfo::isLiveInZExt(unsigned VReg) const {
+  for (const std::pair<unsigned, ISD::ArgFlagsTy> &LiveIn : LiveInAttrs)
+    if (LiveIn.first == VReg)
+      return LiveIn.second.isZExt();
+  return false;
+}

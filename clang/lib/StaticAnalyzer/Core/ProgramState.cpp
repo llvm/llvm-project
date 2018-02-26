@@ -260,7 +260,9 @@ SVal ProgramState::getSVal(Loc location, QualType T) const {
   // be a constant value, use that value instead to lessen the burden
   // on later analysis stages (so we have less symbolic values to reason
   // about).
-  if (!T.isNull()) {
+  // We only go into this branch if we can convert the APSInt value we have
+  // to the type of T, which is not always the case (e.g. for void).
+  if (!T.isNull() && (T->isIntegralOrEnumerationType() || Loc::isLocType(T))) {
     if (SymbolRef sym = V.getAsSymbol()) {
       if (const llvm::APSInt *Int = getStateManager()
                                     .getConstraintManager()
@@ -352,6 +354,17 @@ ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
   return CM.assume(this, inBound.castAs<DefinedSVal>(), Assumption);
 }
 
+ConditionTruthVal ProgramState::isNonNull(SVal V) const {
+  ConditionTruthVal IsNull = isNull(V);
+  if (IsNull.isUnderconstrained())
+    return IsNull;
+  return ConditionTruthVal(!IsNull.getValue());
+}
+
+ConditionTruthVal ProgramState::areEqual(SVal Lhs, SVal Rhs) const {
+  return stateMgr->getSValBuilder().areEqual(this, Lhs, Rhs);
+}
+
 ConditionTruthVal ProgramState::isNull(SVal V) const {
   if (V.isZeroConstant())
     return true;
@@ -424,24 +437,24 @@ void ProgramState::setStore(const StoreRef &newStore) {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::print(raw_ostream &Out,
-                         const char *NL, const char *Sep) const {
+void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
+                         const LocationContext *LC) const {
   // Print the store.
   ProgramStateManager &Mgr = getStateManager();
   Mgr.getStoreManager().print(getStore(), Out, NL, Sep);
 
   // Print out the environment.
-  Env.print(Out, NL, Sep);
+  Env.print(Out, NL, Sep, LC);
 
   // Print out the constraints.
   Mgr.getConstraintManager().print(this, Out, NL, Sep);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine()->printState(Out, this, NL, Sep);
+  Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
 }
 
-void ProgramState::printDOT(raw_ostream &Out) const {
-  print(Out, "\\l", "\\|");
+void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LC) const {
+  print(Out, "\\l", "\\|", LC);
 }
 
 LLVM_DUMP_METHOD void ProgramState::dump() const {
@@ -779,8 +792,7 @@ bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
           // complete. For example, this would not currently identify
           // overlapping fields in a union as tainted. To identify this we can
           // check for overlapping/nested byte offsets.
-          if (Kind == I.second &&
-              (R == I.first || R->isSubRegionOf(I.first)))
+          if (Kind == I.second && R->isSubRegionOf(I.first))
             return true;
         }
       }

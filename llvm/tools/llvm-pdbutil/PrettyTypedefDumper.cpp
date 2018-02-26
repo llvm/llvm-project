@@ -12,7 +12,6 @@
 #include "LinePrinter.h"
 #include "PrettyBuiltinDumper.h"
 #include "PrettyFunctionDumper.h"
-#include "llvm-pdbutil.h"
 
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"

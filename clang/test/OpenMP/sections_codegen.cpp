@@ -1,10 +1,16 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
-// CHECK: [[IMPLICIT_BARRIER_SECTIONS_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_SECTIONS_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
+// CHECK-DAG: [[SECTIONS_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 1026, i32 0, i32 0, i8*
 // CHECK-LABEL: foo
 void foo() {};
 // CHECK-LABEL: bar
@@ -29,7 +35,7 @@ int main() {
   {
 // CHECK:      store i32 0, i32* [[LB_PTR:%.+]],
 // CHECK:      store i32 1, i32* [[UB_PTR:%.+]],
-// CHECK:      call void @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST_PTR:%.+]], i32* [[LB_PTR]], i32* [[UB_PTR]], i32* [[STRIDE_PTR:%.+]], i32 1, i32 1)
+// CHECK:      call void @__kmpc_for_static_init_4(%{{.+}}* [[SECTIONS_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST_PTR:%.+]], i32* [[LB_PTR]], i32* [[UB_PTR]], i32* [[STRIDE_PTR:%.+]], i32 1, i32 1)
 // <<UB = min(UB, GlobalUB);>>
 // CHECK:      [[UB:%.+]] = load i32, i32* [[UB_PTR]]
 // CHECK:      [[CMP:%.+]] = icmp slt i32 [[UB]], 1
@@ -69,7 +75,7 @@ int main() {
 // CHECK-NEXT: br label %[[INNER_FOR_COND]]
 // CHECK:      [[INNER_LOOP_END]]
   }
-// CHECK:      call void @__kmpc_for_static_fini(%{{.+}}* @{{.+}}, i32 [[GTID]])
+// CHECK:      call void @__kmpc_for_static_fini(%{{.+}}* [[SECTIONS_LOC]], i32 [[GTID]])
 // CHECK:      call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_SECTIONS_LOC]],
 #pragma omp sections nowait
   {

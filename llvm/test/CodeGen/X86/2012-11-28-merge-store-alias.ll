@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 -mtriple=x86_64-pc-win64 | FileCheck %s
+; RUN: llc < %s -mcpu=corei7 -mtriple=x86_64-pc-win64 | FileCheck %s
 
 ; CHECK: merge_stores_can
 ; CHECK: callq foo

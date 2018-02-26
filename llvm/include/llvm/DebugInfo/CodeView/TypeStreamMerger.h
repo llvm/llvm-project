@@ -19,7 +19,9 @@ namespace llvm {
 namespace codeview {
 
 class TypeIndex;
-class TypeTableBuilder;
+struct GloballyHashedType;
+class GlobalTypeTableBuilder;
+class MergingTypeTableBuilder;
 
 /// \brief Merge one set of type records into another.  This method assumes
 /// that all records are type records, and there are no Id records present.
@@ -34,7 +36,7 @@ class TypeTableBuilder;
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
-Error mergeTypeRecords(TypeTableBuilder &Dest,
+Error mergeTypeRecords(MergingTypeTableBuilder &Dest,
                        SmallVectorImpl<TypeIndex> &SourceToDest,
                        const CVTypeArray &Types);
 
@@ -59,7 +61,7 @@ Error mergeTypeRecords(TypeTableBuilder &Dest,
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
-Error mergeIdRecords(TypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
+Error mergeIdRecords(MergingTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
                      SmallVectorImpl<TypeIndex> &SourceToDest,
                      const CVTypeArray &Ids);
 
@@ -78,10 +80,26 @@ Error mergeIdRecords(TypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
-Error mergeTypeAndIdRecords(TypeTableBuilder &DestIds,
-                            TypeTableBuilder &DestTypes,
+Error mergeTypeAndIdRecords(MergingTypeTableBuilder &DestIds,
+                            MergingTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes);
+
+Error mergeTypeAndIdRecords(GlobalTypeTableBuilder &DestIds,
+                            GlobalTypeTableBuilder &DestTypes,
+                            SmallVectorImpl<TypeIndex> &SourceToDest,
+                            const CVTypeArray &IdsAndTypes,
+                            ArrayRef<GloballyHashedType> Hashes);
+
+Error mergeTypeRecords(GlobalTypeTableBuilder &Dest,
+                       SmallVectorImpl<TypeIndex> &SourceToDest,
+                       const CVTypeArray &Types,
+                       ArrayRef<GloballyHashedType> Hashes);
+
+Error mergeIdRecords(GlobalTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
+                     SmallVectorImpl<TypeIndex> &SourceToDest,
+                     const CVTypeArray &Ids,
+                     ArrayRef<GloballyHashedType> Hashes);
 
 } // end namespace codeview
 } // end namespace llvm

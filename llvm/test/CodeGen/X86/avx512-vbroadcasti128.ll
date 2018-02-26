@@ -8,23 +8,11 @@
 ;
 
 define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
-; X64-AVX512VL-LABEL: test_broadcast_2f64_4f64:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX512VL-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512VL-NEXT:    retq
-;
-; X64-AVX512BWVL-LABEL: test_broadcast_2f64_4f64:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX512BWVL-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512BWVL-NEXT:    retq
-;
-; X64-AVX512DQVL-LABEL: test_broadcast_2f64_4f64:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vbroadcastf64x2 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX512DQVL-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512DQVL-NEXT:    retq
+; X64-AVX512-LABEL: test_broadcast_2f64_4f64:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX512-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
  %1 = load <2 x double>, <2 x double> *%p
  %2 = shufflevector <2 x double> %1, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
  %3 = fadd <4 x double> %2, <double 1.0, double 2.0, double 3.0, double 4.0>
@@ -32,23 +20,11 @@ define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
 }
 
 define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
-; X64-AVX512VL-LABEL: test_broadcast_2i64_4i64:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX512VL-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512VL-NEXT:    retq
-;
-; X64-AVX512BWVL-LABEL: test_broadcast_2i64_4i64:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX512BWVL-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512BWVL-NEXT:    retq
-;
-; X64-AVX512DQVL-LABEL: test_broadcast_2i64_4i64:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vbroadcasti64x2 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX512DQVL-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512DQVL-NEXT:    retq
+; X64-AVX512-LABEL: test_broadcast_2i64_4i64:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX512-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
  %1 = load <2 x i64>, <2 x i64> *%p
  %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
  %3 = add <4 x i64> %2, <i64 1, i64 2, i64 3, i64 4>
@@ -57,7 +33,7 @@ define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 
 define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_4f32_8f32:
-; X64-AVX512:       ## BB#0:
+; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-AVX512-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    retq
@@ -69,7 +45,7 @@ define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 
 define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_4i32_8i32:
-; X64-AVX512:       ## BB#0:
+; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-AVX512-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    retq
@@ -81,7 +57,7 @@ define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 
 define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_8i16_16i16:
-; X64-AVX512:       ## BB#0:
+; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-AVX512-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    retq
@@ -93,7 +69,7 @@ define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 
 define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_16i8_32i8:
-; X64-AVX512:       ## BB#0:
+; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-AVX512-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    retq
@@ -108,23 +84,11 @@ define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 ;
 
 define <8 x double> @test_broadcast_2f64_8f64(<2 x double> *%p) nounwind {
-; X64-AVX512VL-LABEL: test_broadcast_2f64_8f64:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; X64-AVX512VL-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
-; X64-AVX512VL-NEXT:    retq
-;
-; X64-AVX512BWVL-LABEL: test_broadcast_2f64_8f64:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; X64-AVX512BWVL-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
-; X64-AVX512BWVL-NEXT:    retq
-;
-; X64-AVX512DQVL-LABEL: test_broadcast_2f64_8f64:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vbroadcastf64x2 {{.*#+}} zmm0 = mem[0,1,0,1,0,1,0,1]
-; X64-AVX512DQVL-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
-; X64-AVX512DQVL-NEXT:    retq
+; X64-AVX512-LABEL: test_broadcast_2f64_8f64:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X64-AVX512-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
  %1 = load <2 x double>, <2 x double> *%p
  %2 = shufflevector <2 x double> %1, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
  %3 = fadd <8 x double> %2, <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0>
@@ -132,23 +96,11 @@ define <8 x double> @test_broadcast_2f64_8f64(<2 x double> *%p) nounwind {
 }
 
 define <8 x i64> @test_broadcast_2i64_8i64(<2 x i64> *%p) nounwind {
-; X64-AVX512VL-LABEL: test_broadcast_2i64_8i64:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; X64-AVX512VL-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
-; X64-AVX512VL-NEXT:    retq
-;
-; X64-AVX512BWVL-LABEL: test_broadcast_2i64_8i64:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; X64-AVX512BWVL-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
-; X64-AVX512BWVL-NEXT:    retq
-;
-; X64-AVX512DQVL-LABEL: test_broadcast_2i64_8i64:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vbroadcasti64x2 {{.*#+}} zmm0 = mem[0,1,0,1,0,1,0,1]
-; X64-AVX512DQVL-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
-; X64-AVX512DQVL-NEXT:    retq
+; X64-AVX512-LABEL: test_broadcast_2i64_8i64:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X64-AVX512-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
  %1 = load <2 x i64>, <2 x i64> *%p
  %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
  %3 = add <8 x i64> %2, <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8>
@@ -157,7 +109,7 @@ define <8 x i64> @test_broadcast_2i64_8i64(<2 x i64> *%p) nounwind {
 
 define <16 x float> @test_broadcast_4f32_16f32(<4 x float> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_4f32_16f32:
-; X64-AVX512:       ## BB#0:
+; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    vaddps {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512-NEXT:    retq
@@ -169,7 +121,7 @@ define <16 x float> @test_broadcast_4f32_16f32(<4 x float> *%p) nounwind {
 
 define <16 x i32> @test_broadcast_4i32_16i32(<4 x i32> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_4i32_16i32:
-; X64-AVX512:       ## BB#0:
+; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    vpaddd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512-NEXT:    retq
@@ -181,20 +133,20 @@ define <16 x i32> @test_broadcast_4i32_16i32(<4 x i32> *%p) nounwind {
 
 define <32 x i16> @test_broadcast_8i16_32i16(<8 x i16> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_8i16_32i16:
-; X64-AVX512VL:       ## BB#0:
+; X64-AVX512VL:       ## %bb.0:
 ; X64-AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
 ; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_8i16_32i16:
-; X64-AVX512BWVL:       ## BB#0:
+; X64-AVX512BWVL:       ## %bb.0:
 ; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512BWVL-NEXT:    vpaddw {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_8i16_32i16:
-; X64-AVX512DQVL:       ## BB#0:
+; X64-AVX512DQVL:       ## %bb.0:
 ; X64-AVX512DQVL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
 ; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm1
@@ -207,20 +159,20 @@ define <32 x i16> @test_broadcast_8i16_32i16(<8 x i16> *%p) nounwind {
 
 define <64 x i8> @test_broadcast_16i8_64i8(<16 x i8> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_16i8_64i8:
-; X64-AVX512VL:       ## BB#0:
+; X64-AVX512VL:       ## %bb.0:
 ; X64-AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
 ; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_16i8_64i8:
-; X64-AVX512BWVL:       ## BB#0:
+; X64-AVX512BWVL:       ## %bb.0:
 ; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512BWVL-NEXT:    vpaddb {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_16i8_64i8:
-; X64-AVX512DQVL:       ## BB#0:
+; X64-AVX512DQVL:       ## %bb.0:
 ; X64-AVX512DQVL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1]
 ; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm1
@@ -233,27 +185,27 @@ define <64 x i8> @test_broadcast_16i8_64i8(<16 x i8> *%p) nounwind {
 
 define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
 ; X64-AVX512VL-LABEL: PR29088:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-AVX512VL:       ## %bb.0:
+; X64-AVX512VL-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX512VL-NEXT:    vmovdqa %ymm1, (%rsi)
-; X64-AVX512VL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: PR29088:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-AVX512BWVL:       ## %bb.0:
+; X64-AVX512BWVL-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX512BWVL-NEXT:    vmovdqa %ymm1, (%rsi)
-; X64-AVX512BWVL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: PR29088:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X64-AVX512DQVL:       ## %bb.0:
+; X64-AVX512DQVL-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512DQVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX512DQVL-NEXT:    vmovaps %ymm1, (%rsi)
-; X64-AVX512DQVL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512DQVL-NEXT:    retq
   %ld = load <4 x i32>, <4 x i32>* %p0
   store <8 x float> zeroinitializer, <8 x float>* %p1

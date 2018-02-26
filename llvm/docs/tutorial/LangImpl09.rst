@@ -197,7 +197,7 @@ expressions:
     if (DblTy)
       return DblTy;
 
-    DblTy = DBuilder->createBasicType("double", 64, 64, dwarf::DW_ATE_float);
+    DblTy = DBuilder->createBasicType("double", 64, dwarf::DW_ATE_float);
     return DblTy;
   }
 
@@ -208,7 +208,8 @@ And then later on in ``main`` when we're constructing our module:
   DBuilder = new DIBuilder(*TheModule);
 
   KSDbgInfo.TheCU = DBuilder->createCompileUnit(
-      dwarf::DW_LANG_C, "fib.ks", ".", "Kaleidoscope Compiler", 0, "", 0);
+      dwarf::DW_LANG_C, DBuilder->createFile("fib.ks", "."),
+      "Kaleidoscope Compiler", 0, "", 0);
 
 There are a couple of things to note here. First, while we're producing a
 compile unit for a language called Kaleidoscope we used the language

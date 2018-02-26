@@ -28,5 +28,5 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   for (auto Flag : Flags)
     fprintf(stderr, "%s ", Flag.c_str());
   fprintf(stderr, "\n");
-  exit(0);
+  return 0;
 }

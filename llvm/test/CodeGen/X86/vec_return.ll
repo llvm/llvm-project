@@ -4,7 +4,7 @@
 ; Without any typed operations, always use the smaller xorps.
 define <2 x double> @test() {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retl
 	ret <2 x double> zeroinitializer
@@ -13,7 +13,7 @@ define <2 x double> @test() {
 ; Prefer a constant pool load here.
 define <4 x i32> @test2() nounwind  {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,0,1,0]
 ; CHECK-NEXT:    retl
 	ret <4 x i32> < i32 0, i32 0, i32 1, i32 0 >

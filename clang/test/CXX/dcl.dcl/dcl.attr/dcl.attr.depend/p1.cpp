@@ -7,8 +7,8 @@
 [[carries_dependency]] void f1(); // FIXME: warn here
 [[carries_dependency]] int f2(); // ok
 int f3(int param [[carries_dependency]]); // ok
-[[carries_dependency]] int (*f4)(); // expected-error {{'carries_dependency' attribute only applies to functions, methods, and parameters}}
-int (*f5 [[carries_dependency]])(); // expected-error {{'carries_dependency' attribute only applies to functions, methods, and parameters}}
+[[carries_dependency]] int (*f4)(); // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
+int (*f5 [[carries_dependency]])(); // expected-error {{'carries_dependency' attribute only applies to}}
 int (*f6)() [[carries_dependency]]; // expected-error {{'carries_dependency' attribute cannot be applied to types}}
 int (*f7)(int n [[carries_dependency]]); // expected-error {{'[[carries_dependency]]' attribute only allowed on parameter in a function declaration}}
 int (((f8)))(int n [[carries_dependency]]); // ok
@@ -21,7 +21,7 @@ struct S {
 };
 void f() {
   [[carries_dependency]] int f(int n [[carries_dependency]]); // ok
-  [[carries_dependency]] // expected-error {{'carries_dependency' attribute only applies to functions, methods, and parameters}}
+  [[carries_dependency]] // expected-error {{'carries_dependency' attribute only applies to}}
       int (*p)(int n [[carries_dependency]]); // expected-error {{'[[carries_dependency]]' attribute only allowed on parameter in a function declaration}}
 }
 

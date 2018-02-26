@@ -20,11 +20,9 @@
 #define CLEAR_FRAME_AND_RETURN \
     pop    {r4, r7, pc}
 
-	.syntax unified
-	.text
-#if __ARM_ARCH_ISA_THUMB == 2
-	.thumb
-#endif
+   .syntax unified
+   .text
+   DEFINE_CODE_STATE
 
 	.p2align 3
 // Ok, APCS and AAPCS agree on 32 bit args, so it's safe to use the same routine.
@@ -33,11 +31,7 @@ DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_idiv, __divsi3)
 @ int __divsi3(int divident, int divisor)
 @   Calculate and return the quotient of the (signed) division.
 
-#if __ARM_ARCH_ISA_THUMB == 2
-DEFINE_COMPILERRT_THUMB_FUNCTION(__divsi3)
-#else
 DEFINE_COMPILERRT_FUNCTION(__divsi3)
-#endif
 #if __ARM_ARCH_EXT_IDIV__
    tst     r1,r1
    beq     LOCAL_LABEL(divzero)
@@ -49,14 +43,14 @@ LOCAL_LABEL(divzero):
 #else
 ESTABLISH_FRAME
 //  Set aside the sign of the quotient.
-#  if __ARM_ARCH_ISA_THUMB == 1
+#  if defined(USE_THUMB_1)
     movs    r4,     r0
     eors    r4,     r1
 #  else
     eor     r4,     r0, r1
 #  endif
 //  Take absolute value of a and b via abs(x) = (x^(x >> 31)) - (x >> 31).
-#  if   __ARM_ARCH_ISA_THUMB == 1
+#  if defined(USE_THUMB_1)
     asrs    r2,     r0, #31
     asrs    r3,     r1, #31
     eors    r0,     r2
@@ -72,7 +66,7 @@ ESTABLISH_FRAME
 //  abs(a) / abs(b)
     bl      SYMBOL_NAME(__udivsi3)
 //  Apply sign of quotient to result and return.
-#  if __ARM_ARCH_ISA_THUMB == 1
+#  if defined(USE_THUMB_1)
     asrs    r4,     #31
     eors    r0,     r4
     subs    r0,     r0, r4

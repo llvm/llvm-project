@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep mov | count 3
+; RUN: llc < %s -mtriple=i686-- | grep mov | count 3
 
 define fastcc i32 @_Z18yy_get_next_bufferv() nounwind {
 entry:

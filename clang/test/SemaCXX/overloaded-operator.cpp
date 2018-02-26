@@ -531,3 +531,57 @@ namespace NoADLForMemberOnlyOperators {
     b3 / 0; // expected-note {{in instantiation of}} expected-error {{invalid operands to}}
   }
 }
+
+
+namespace PR27027 {
+  template <class T> void operator+(T, T) = delete; // expected-note 4 {{candidate}}
+  template <class T> void operator+(T) = delete; // expected-note 4 {{candidate}}
+
+  struct A {} a_global;
+  void f() {
+    A a;
+    +a; // expected-error {{overload resolution selected deleted operator '+'}}
+    a + a; // expected-error {{overload resolution selected deleted operator '+'}}
+    bool operator+(A);
+    extern bool operator+(A, A);
+    +a; // OK
+    a + a;
+  }
+  bool test_global_1 = +a_global; // expected-error {{overload resolution selected deleted operator '+'}}
+  bool test_global_2 = a_global + a_global; // expected-error {{overload resolution selected deleted operator '+'}}
+}
+
+namespace LateADLInNonDependentExpressions {
+  struct A {};
+  struct B : A {};
+  int &operator+(A, A);
+  int &operator!(A);
+  int &operator+=(A, A);
+  int &operator<<(A, A);
+  int &operator++(A);
+  int &operator++(A, int);
+  int &operator->*(A, A);
+
+  template<typename T> void f() {
+    // An instantiation-dependent value of type B.
+    // These are all non-dependent operator calls of type int&.
+#define idB ((void()), B())
+    int &a = idB + idB,
+        &b = !idB,
+        &c = idB += idB,
+        &d = idB << idB,
+        &e = ++idB,
+        &f = idB++,
+        &g = idB ->* idB;
+  }
+
+  // These should not be found by ADL in the template instantiation.
+  float &operator+(B, B);
+  float &operator!(B);
+  float &operator+=(B, B);
+  float &operator<<(B, B);
+  float &operator++(B);
+  float &operator++(B, int);
+  float &operator->*(B, B);
+  template void f<int>();
+}

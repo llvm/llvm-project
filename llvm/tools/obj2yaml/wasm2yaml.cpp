@@ -54,31 +54,41 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
   if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec = make_unique<WasmYAML::NameSection>();
     for (const object::SymbolRef& Sym: Obj.symbols()) {
-      uint32_t Flags = Sym.getFlags();
-      // Skip over symbols that come from imports or exports
-      if (Flags &
-          (object::SymbolRef::SF_Global | object::SymbolRef::SF_Undefined))
-        continue;
-      Expected<StringRef> NameOrError = Sym.getName();
-      if (!NameOrError)
+      const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
+      if (Symbol.Type != object::WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME)
         continue;
       WasmYAML::NameEntry NameEntry;
-      NameEntry.Name = *NameOrError;
+      NameEntry.Name = Symbol.Name;
       NameEntry.Index = Sym.getValue();
       NameSec->FunctionNames.push_back(NameEntry);
     }
     CustomSec = std::move(NameSec);
   } else if (WasmSec.Name == "linking") {
     std::unique_ptr<WasmYAML::LinkingSection> LinkingSec = make_unique<WasmYAML::LinkingSection>();
+    size_t Index = 0;
+    for (const object::WasmSegment &Segment : Obj.dataSegments()) {
+      if (!Segment.Data.Name.empty()) {
+        WasmYAML::SegmentInfo SegmentInfo;
+        SegmentInfo.Name = Segment.Data.Name;
+        SegmentInfo.Index = Index;
+        SegmentInfo.Alignment = Segment.Data.Alignment;
+        SegmentInfo.Flags = Segment.Data.Flags;
+        LinkingSec->SegmentInfos.push_back(SegmentInfo);
+      }
+      Index++;
+    }
     for (const object::SymbolRef& Sym: Obj.symbols()) {
       const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
       if (Symbol.Flags != 0) {
-        WasmYAML::SymbolInfo Info = { Symbol.Name, Symbol.Flags };
-        LinkingSec->SymbolInfos.push_back(Info);
+        WasmYAML::SymbolInfo Info{Symbol.Name, Symbol.Flags};
+        LinkingSec->SymbolInfos.emplace_back(Info);
       }
     }
     LinkingSec->DataSize = Obj.linkingData().DataSize;
-    LinkingSec->DataAlignment = Obj.linkingData().DataAlignment;
+    for (const wasm::WasmInitFunc &Func : Obj.linkingData().InitFunctions) {
+      WasmYAML::InitFunction F{Func.Priority, Func.FunctionIndex};
+      LinkingSec->InitFunctions.emplace_back(F);
+    }
     CustomSec = std::move(LinkingSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
@@ -234,7 +244,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     }
     case wasm::WASM_SEC_DATA: {
       auto DataSec = make_unique<WasmYAML::DataSection>();
-      for (auto &Segment : Obj.dataSegments()) {
+      for (const object::WasmSegment &Segment : Obj.dataSegments()) {
         WasmYAML::DataSegment Seg;
         Seg.SectionOffset = Segment.SectionOffset;
         Seg.MemoryIndex = Segment.Data.MemoryIndex;

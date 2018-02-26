@@ -13,7 +13,7 @@
 #include "ARMSubtarget.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 using namespace llvm;
 
 static bool hasRAWHazard(MachineInstr *DefMI, MachineInstr *MI,

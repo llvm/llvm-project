@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clangxx_scudo %s -o %t
 // RUN: not %run %t malloc   2>&1 | FileCheck %s
 // RUN: not %run %t new      2>&1 | FileCheck %s
 // RUN: not %run %t newarray 2>&1 | FileCheck %s

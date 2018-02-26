@@ -6,6 +6,7 @@ HELP: Section-specific Dump Options
 HELP: -debug-info            - Dump the .debug_info section
 HELP: -eh-frame
 HELP: Specific Options
+HELP: -diff
 HELP: -find
 HELP: -ignore-case
 HELP: -lookup

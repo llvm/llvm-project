@@ -15,9 +15,9 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 
@@ -182,6 +182,10 @@ public:
                                            const Function &F) const override;
 
   void InitializeWasm();
+  MCSection *getStaticCtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
+  MCSection *getStaticDtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
 
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
                                        const GlobalValue *RHS,

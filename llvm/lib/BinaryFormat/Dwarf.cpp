@@ -393,16 +393,6 @@ StringRef llvm::dwarf::ArrayOrderString(unsigned Order) {
   return StringRef();
 }
 
-StringRef llvm::dwarf::DiscriminantString(unsigned Discriminant) {
-  switch (Discriminant) {
-  case DW_DSC_label:
-    return "DW_DSC_label";
-  case DW_DSC_range:
-    return "DW_DSC_range";
-  }
-  return StringRef();
-}
-
 StringRef llvm::dwarf::LNStandardString(unsigned Standard) {
   switch (Standard) {
   default:
@@ -498,7 +488,10 @@ StringRef llvm::dwarf::AtomTypeString(unsigned AT) {
   case DW_ATOM_die_tag:
     return "DW_ATOM_die_tag";
   case DW_ATOM_type_flags:
+  case DW_ATOM_type_type_flags:
     return "DW_ATOM_type_flags";
+  case DW_ATOM_qual_name_hash:
+    return "DW_ATOM_qual_name_hash";
   }
   return StringRef();
 }
@@ -560,11 +553,20 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return InlineCodeString(Val);
   case DW_AT_ordering:
     return ArrayOrderString(Val);
-  case DW_AT_discr_value:
-    return DiscriminantString(Val);
   }
 
   return StringRef();
+}
+
+StringRef llvm::dwarf::IndexString(unsigned Idx) {
+  switch (Idx) {
+  default:
+    return StringRef();
+#define HANDLE_DW_IDX(ID, NAME)                                                \
+  case DW_IDX_##NAME:                                                          \
+    return "DW_IDX_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
 }
 
 bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
@@ -574,11 +576,4 @@ bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
     return FV > 0 && FV <= Version;
   }
   return ExtensionsOk;
-}
-
-uint32_t llvm::dwarf::djbHash(StringRef Buffer) {
-  uint32_t H = 5381;
-  for (char C : Buffer.bytes())
-    H = ((H << 5) + H) + C;
-  return H;
 }

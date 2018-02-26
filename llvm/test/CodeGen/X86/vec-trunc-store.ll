@@ -3,7 +3,7 @@
 
 define void @foo(<8 x i32>* %p) nounwind {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa (%rdi), %xmm0
 ; CHECK-NEXT:    movdqa 16(%rdi), %xmm1
 ; CHECK-NEXT:    pslld $16, %xmm1
@@ -21,7 +21,7 @@ define void @foo(<8 x i32>* %p) nounwind {
 
 define void @bar(<4 x i32>* %p) nounwind {
 ; CHECK-LABEL: bar:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

@@ -15,7 +15,7 @@ int var5 __attribute__((internal_linkage)); // expected-error{{'internal_linkage
 int var5 __attribute__((common)); // expected-note{{conflicting attribute is here}}
 
 __attribute__((internal_linkage)) int f() {}
-struct __attribute__((internal_linkage)) S { // expected-warning{{'internal_linkage' attribute only applies to variables and functions}}
+struct __attribute__((internal_linkage)) S { // expected-warning{{'internal_linkage' attribute only applies to variables, functions, and classes}}
 };
 
 __attribute__((internal_linkage("foo"))) int g() {} // expected-error{{'internal_linkage' attribute takes no arguments}}

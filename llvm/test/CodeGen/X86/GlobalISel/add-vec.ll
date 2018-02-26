@@ -6,7 +6,7 @@
 
 define <16 x i8> @test_add_v16i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; ALL-LABEL: test_add_v16i8:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %ret = add <16 x i8> %arg1, %arg2
@@ -15,7 +15,7 @@ define <16 x i8> @test_add_v16i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 
 define <8 x i16> @test_add_v8i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; ALL-LABEL: test_add_v8i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %ret = add <8 x i16> %arg1, %arg2
@@ -24,7 +24,7 @@ define <8 x i16> @test_add_v8i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 
 define <4 x i32> @test_add_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; ALL-LABEL: test_add_v4i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %ret = add <4 x i32> %arg1, %arg2
@@ -33,7 +33,7 @@ define <4 x i32> @test_add_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 
 define <2 x i64> @test_add_v2i64(<2 x i64> %arg1, <2 x i64> %arg2) {
 ; ALL-LABEL: test_add_v2i64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %ret = add <2 x i64> %arg1, %arg2
@@ -42,17 +42,17 @@ define <2 x i64> @test_add_v2i64(<2 x i64> %arg1, <2 x i64> %arg2) {
 
 define <32 x i8> @test_add_v32i8(<32 x i8> %arg1, <32 x i8> %arg2) {
 ; SKX-LABEL: test_add_v32i8:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v32i8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v32i8:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
@@ -65,17 +65,17 @@ define <32 x i8> @test_add_v32i8(<32 x i8> %arg1, <32 x i8> %arg2) {
 
 define <16 x i16> @test_add_v16i16(<16 x i16> %arg1, <16 x i16> %arg2) {
 ; SKX-LABEL: test_add_v16i16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v16i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v16i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpaddw %xmm3, %xmm2, %xmm2
@@ -88,17 +88,17 @@ define <16 x i16> @test_add_v16i16(<16 x i16> %arg1, <16 x i16> %arg2) {
 
 define <8 x i32> @test_add_v8i32(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; SKX-LABEL: test_add_v8i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v8i32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v8i32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
@@ -111,17 +111,17 @@ define <8 x i32> @test_add_v8i32(<8 x i32> %arg1, <8 x i32> %arg2) {
 
 define <4 x i64> @test_add_v4i64(<4 x i64> %arg1, <4 x i64> %arg2) {
 ; SKX-LABEL: test_add_v4i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v4i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v4i64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
@@ -134,18 +134,18 @@ define <4 x i64> @test_add_v4i64(<4 x i64> %arg1, <4 x i64> %arg2) {
 
 define <64 x i8> @test_add_v64i8(<64 x i8> %arg1, <64 x i8> %arg2) {
 ; SKX-LABEL: test_add_v64i8:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v64i8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddb %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v64i8:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
@@ -163,18 +163,18 @@ define <64 x i8> @test_add_v64i8(<64 x i8> %arg1, <64 x i8> %arg2) {
 
 define <32 x i16> @test_add_v32i16(<32 x i16> %arg1, <32 x i16> %arg2) {
 ; SKX-LABEL: test_add_v32i16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v32i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddw %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v32i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
@@ -192,18 +192,18 @@ define <32 x i16> @test_add_v32i16(<32 x i16> %arg1, <32 x i16> %arg2) {
 
 define <16 x i32> @test_add_v16i32(<16 x i32> %arg1, <16 x i32> %arg2) {
 ; SKX-LABEL: test_add_v16i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v16i32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v16i32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
@@ -221,18 +221,18 @@ define <16 x i32> @test_add_v16i32(<16 x i32> %arg1, <16 x i32> %arg2) {
 
 define <8 x i64> @test_add_v8i64(<8 x i64> %arg1, <8 x i64> %arg2) {
 ; SKX-LABEL: test_add_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_add_v8i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_add_v8i64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6

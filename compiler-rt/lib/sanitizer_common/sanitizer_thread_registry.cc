@@ -21,6 +21,7 @@ ThreadContextBase::ThreadContextBase(u32 tid)
       status(ThreadStatusInvalid),
       detached(false), workerthread(false), parent_tid(0), next(0) {
   name[0] = '\0';
+  atomic_store(&thread_destroyed, 0, memory_order_release);
 }
 
 ThreadContextBase::~ThreadContextBase() {
@@ -44,6 +45,14 @@ void ThreadContextBase::SetDead() {
   OnDead();
 }
 
+void ThreadContextBase::SetDestroyed() {
+  atomic_store(&thread_destroyed, 1, memory_order_release);
+}
+
+bool ThreadContextBase::GetDestroyed() {
+  return !!atomic_load(&thread_destroyed, memory_order_acquire);
+}
+
 void ThreadContextBase::SetJoined(void *arg) {
   // FIXME(dvyukov): print message and continue (it's user error).
   CHECK_EQ(false, detached);
@@ -54,8 +63,11 @@ void ThreadContextBase::SetJoined(void *arg) {
 }
 
 void ThreadContextBase::SetFinished() {
-  if (!detached)
-    status = ThreadStatusFinished;
+  // ThreadRegistry::FinishThread calls here in ThreadStatusCreated state
+  // for a thread that never actually started.  In that case the thread
+  // should go to ThreadStatusFinished regardless of whether it was created
+  // as detached.
+  if (!detached || status == ThreadStatusCreated) status = ThreadStatusFinished;
   OnFinished();
 }
 
@@ -82,6 +94,7 @@ void ThreadContextBase::SetCreated(uptr _user_id, u64 _unique_id,
 void ThreadContextBase::Reset() {
   status = ThreadStatusInvalid;
   SetName(0);
+  atomic_store(&thread_destroyed, 0, memory_order_release);
   OnReset();
 }
 
@@ -204,7 +217,8 @@ void ThreadRegistry::SetThreadName(u32 tid, const char *name) {
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
-  CHECK_EQ(ThreadStatusRunning, tctx->status);
+  CHECK_EQ(SANITIZER_FUCHSIA ? ThreadStatusCreated : ThreadStatusRunning,
+           tctx->status);
   tctx->SetName(name);
 }
 
@@ -239,33 +253,54 @@ void ThreadRegistry::DetachThread(u32 tid, void *arg) {
 }
 
 void ThreadRegistry::JoinThread(u32 tid, void *arg) {
-  BlockingMutexLock l(&mtx_);
-  CHECK_LT(tid, n_contexts_);
-  ThreadContextBase *tctx = threads_[tid];
-  CHECK_NE(tctx, 0);
-  if (tctx->status == ThreadStatusInvalid) {
-    Report("%s: Join of non-existent thread\n", SanitizerToolName);
-    return;
-  }
-  tctx->SetJoined(arg);
-  QuarantinePush(tctx);
+  bool destroyed = false;
+  do {
+    {
+      BlockingMutexLock l(&mtx_);
+      CHECK_LT(tid, n_contexts_);
+      ThreadContextBase *tctx = threads_[tid];
+      CHECK_NE(tctx, 0);
+      if (tctx->status == ThreadStatusInvalid) {
+        Report("%s: Join of non-existent thread\n", SanitizerToolName);
+        return;
+      }
+      if ((destroyed = tctx->GetDestroyed())) {
+        tctx->SetJoined(arg);
+        QuarantinePush(tctx);
+      }
+    }
+    if (!destroyed)
+      internal_sched_yield();
+  } while (!destroyed);
 }
 
+// Normally this is called when the thread is about to exit.  If
+// called in ThreadStatusCreated state, then this thread was never
+// really started.  We just did CreateThread for a prospective new
+// thread before trying to create it, and then failed to actually
+// create it, and so never called StartThread.
 void ThreadRegistry::FinishThread(u32 tid) {
   BlockingMutexLock l(&mtx_);
   CHECK_GT(alive_threads_, 0);
   alive_threads_--;
-  CHECK_GT(running_threads_, 0);
-  running_threads_--;
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
-  CHECK_EQ(ThreadStatusRunning, tctx->status);
+  bool dead = tctx->detached;
+  if (tctx->status == ThreadStatusRunning) {
+    CHECK_GT(running_threads_, 0);
+    running_threads_--;
+  } else {
+    // The thread never really existed.
+    CHECK_EQ(tctx->status, ThreadStatusCreated);
+    dead = true;
+  }
   tctx->SetFinished();
-  if (tctx->detached) {
+  if (dead) {
     tctx->SetDead();
     QuarantinePush(tctx);
   }
+  tctx->SetDestroyed();
 }
 
 void ThreadRegistry::StartThread(u32 tid, tid_t os_id, bool workerthread,

@@ -592,7 +592,7 @@ void ARMAttributeParser::ParseAttributeList(const uint8_t *Data,
     bool Handled = false;
     for (unsigned AHI = 0, AHE = array_lengthof(DisplayRoutines);
          AHI != AHE && !Handled; ++AHI) {
-      if (DisplayRoutines[AHI].Attribute == Tag) {
+      if (uint64_t(DisplayRoutines[AHI].Attribute) == Tag) {
         (this->*DisplayRoutines[AHI].Routine)(ARMBuildAttrs::AttrType(Tag),
                                               Data, Offset);
         Handled = true;
@@ -666,7 +666,7 @@ void ARMAttributeParser::ParseSubsection(const uint8_t *Data, uint32_t Length) {
       ParseIndexList(Data, Offset, Indicies);
       break;
     default:
-      errs() << "unrecognised tag: 0x" << utohexstr(Tag) << '\n';
+      errs() << "unrecognised tag: 0x" << Twine::utohexstr(Tag) << '\n';
       return;
     }
 

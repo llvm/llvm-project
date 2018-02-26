@@ -1,0 +1,21 @@
+; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
+; RUN: llvm-readobj -coff-exports %t.a | FileCheck %s
+; RUN: llvm-dlltool -m arm64 --input-def %s --output-lib %t.a
+; RUN: llvm-readobj -coff-exports %t.a | FileCheck %s
+
+LIBRARY test.dll
+EXPORTS
+TestFunction1
+TestFunction2;
+TestFunction3 ; This is a comment
+
+; CHECK: File: test.dll
+; CHECK: Format: COFF-import-file
+; CHECK: Type: code
+; CHECK: Name type: name
+; CHECK: Symbol: __imp_TestFunction1
+; CHECK: Symbol: TestFunction1
+; CHECK: Symbol: __imp_TestFunction2{{$}}
+; CHECK: Symbol: TestFunction2{{$}}
+; CHECK: Symbol: __imp_TestFunction3{{$}}
+; CHECK: Symbol: TestFunction3{{$}}

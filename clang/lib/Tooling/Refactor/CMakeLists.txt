@@ -37,6 +37,7 @@ add_clang_library(clangToolingRefactor
   clangASTMatchers
   clangBasic
   clangEdit
+  clangFrontend
   clangIndex
   clangLex
   clangToolingCore

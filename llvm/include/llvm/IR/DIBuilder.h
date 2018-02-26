@@ -74,6 +74,17 @@ namespace llvm {
     /// Create an \a temporary node and track it in \a UnresolvedNodes.
     void trackIfUnresolved(MDNode *N);
 
+    /// Internal helper for insertDeclare.
+    Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
+                               DIExpression *Expr, const DILocation *DL,
+                               BasicBlock *InsertBB, Instruction *InsertBefore);
+
+    /// Internal helper for insertDbgValueIntrinsic.
+    Instruction *
+    insertDbgValueIntrinsic(llvm::Value *Val, DILocalVariable *VarInfo,
+                            DIExpression *Expr, const DILocation *DL,
+                            BasicBlock *InsertBB, Instruction *InsertBefore);
+
   public:
     /// Construct a builder for a module.
     ///
@@ -244,6 +255,27 @@ namespace llvm {
                                     uint64_t OffsetInBits,
                                     DINode::DIFlags Flags, DIType *Ty);
 
+    /// Create debugging information entry for a variant.  A variant
+    /// normally should be a member of a variant part.
+    /// \param Scope        Member scope.
+    /// \param Name         Member name.
+    /// \param File         File where this member is defined.
+    /// \param LineNo       Line number.
+    /// \param SizeInBits   Member size.
+    /// \param AlignInBits  Member alignment.
+    /// \param OffsetInBits Member offset.
+    /// \param Flags        Flags to encode member attribute, e.g. private
+    /// \param Discriminant The discriminant for this branch; null for
+    ///                     the default branch
+    /// \param Ty           Parent type.
+    DIDerivedType *createVariantMemberType(DIScope *Scope, StringRef Name,
+					   DIFile *File, unsigned LineNo,
+					   uint64_t SizeInBits,
+					   uint32_t AlignInBits,
+					   uint64_t OffsetInBits,
+					   Constant *Discriminant,
+					   DINode::DIFlags Flags, DIType *Ty);
+
     /// Create debugging information entry for a bit field member.
     /// \param Scope               Member scope.
     /// \param Name                Member name.
@@ -364,6 +396,27 @@ namespace llvm {
                                      DINodeArray Elements,
                                      unsigned RunTimeLang = 0,
                                      StringRef UniqueIdentifier = "");
+
+    /// Create debugging information entry for a variant part.  A
+    /// variant part normally has a discriminator (though this is not
+    /// required) and a number of variant children.
+    /// \param Scope        Scope in which this union is defined.
+    /// \param Name         Union name.
+    /// \param File         File where this member is defined.
+    /// \param LineNumber   Line number.
+    /// \param SizeInBits   Member size.
+    /// \param AlignInBits  Member alignment.
+    /// \param Flags        Flags to encode member attribute, e.g. private
+    /// \param Discriminator Discriminant member
+    /// \param Elements     Variant elements.
+    /// \param UniqueIdentifier A unique identifier for the union.
+    DICompositeType *createVariantPart(DIScope *Scope, StringRef Name,
+				       DIFile *File, unsigned LineNumber,
+				       uint64_t SizeInBits, uint32_t AlignInBits,
+				       DINode::DIFlags Flags,
+				       DIDerivedType *Discriminator,
+				       DINodeArray Elements,
+				       StringRef UniqueIdentifier = "");
 
     /// Create debugging information for template
     /// type parameter.
@@ -489,6 +542,7 @@ namespace llvm {
     /// Create a descriptor for a value range.  This
     /// implicitly uniques the values returned.
     DISubrange *getOrCreateSubrange(int64_t Lo, int64_t Count);
+    DISubrange *getOrCreateSubrange(int64_t Lo, Metadata *CountNode);
 
     /// Create a new descriptor for the specified variable.
     /// \param Context     Variable scope.
@@ -746,12 +800,12 @@ namespace llvm {
                                          const DILocation *DL,
                                          Instruction *InsertBefore);
 
-    /// Replace the vtable holder in the given composite type.
+    /// Replace the vtable holder in the given type.
     ///
     /// If this creates a self reference, it may orphan some unresolved cycles
     /// in the operands of \c T, so \a DIBuilder needs to track that.
     void replaceVTableHolder(DICompositeType *&T,
-                             DICompositeType *VTableHolder);
+                             DIType *VTableHolder);
 
     /// Replace arrays on a composite type.
     ///

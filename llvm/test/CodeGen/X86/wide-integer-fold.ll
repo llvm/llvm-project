@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; CHECK:  movq  $-65535, %rax
 
 ; DAGCombiner should fold this to a simple constant.

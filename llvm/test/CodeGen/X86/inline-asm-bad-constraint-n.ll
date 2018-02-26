@@ -1,4 +1,4 @@
-; RUN: not llc -march=x86 -no-integrated-as < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=i686-- -no-integrated-as < %s 2>&1 | FileCheck %s
 
 @x = global i32 0, align 4
 

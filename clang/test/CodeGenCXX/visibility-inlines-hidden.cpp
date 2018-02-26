@@ -162,3 +162,16 @@ namespace test6 {
     C::g();
   }
 }
+
+namespace PR34811 {
+  template <typename T> void tf() {}
+  
+  // CHECK-LABEL: define linkonce_odr hidden i8* @_ZN7PR348111fEv(
+  inline void *f() {
+    auto l = []() {};
+    // CHECK-LABEL: define linkonce_odr hidden void @_ZN7PR348112tfIZNS_1fEvEUlvE_EEvv(
+    return (void *)&tf<decltype(l)>;
+  }
+  
+  void *p = (void *)f;
+}

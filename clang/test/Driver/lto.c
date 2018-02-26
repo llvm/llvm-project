@@ -36,19 +36,19 @@
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-LTO-ACTION < %t %s
 //
-// CHECK-LINK-LTO-ACTION: "-plugin" "{{.*}}/LLVMgold.so"
+// CHECK-LINK-LTO-ACTION: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
 // -flto=full should cause link using gold plugin
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto=full 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-FULL-ACTION < %t %s
 //
-// CHECK-LINK-FULL-ACTION: "-plugin" "{{.*}}/LLVMgold.so"
+// CHECK-LINK-FULL-ACTION: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
 // Check that subsequent -fno-lto takes precedence
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto=full -fno-lto 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-NOLTO-ACTION < %t %s
 //
-// CHECK-LINK-NOLTO-ACTION-NOT: "-plugin" "{{.*}}/LLVMgold.so"
+// CHECK-LINK-NOLTO-ACTION-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
 // -flto passes along an explicit debugger tuning argument.
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto -glldb 2> %t

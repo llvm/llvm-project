@@ -9,11 +9,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerInterface.h"
 #include "llvm-c/Target.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -24,7 +24,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.def"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
@@ -85,7 +85,7 @@ class LLVMFuzzerInputBuffer : public MemoryBuffer
 {
   public:
     LLVMFuzzerInputBuffer(const uint8_t *data_, size_t size_)
-      : Data(reinterpret_cast<const char *>(data_)), 
+      : Data(reinterpret_cast<const char *>(data_)),
         Size(size_) {
         init(Data, Data+Size, false);
       }
@@ -172,8 +172,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
 
   static const bool UsePIC = false;
-  static const CodeModel::Model CMModel = CodeModel::Default;
-  MOFI.InitMCObjectFileInfo(TheTriple, UsePIC, CMModel, Ctx);
+  MOFI.InitMCObjectFileInfo(TheTriple, UsePIC, Ctx);
 
   const unsigned OutputAsmVariant = 0;
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
@@ -211,8 +210,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
     std::error_code EC;
     const std::string OutputFilename = "-";
-    auto Out = llvm::make_unique<tool_output_file>(OutputFilename, EC,
-                                                 sys::fs::F_None);
+    auto Out =
+        llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
     if (EC) {
       errs() << EC.message() << '\n';
       abort();
@@ -232,7 +231,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU,
                                                       MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
-        TheTriple, Ctx, *MAB, *OS, CE, *STI, MCOptions.MCRelaxAll,
+        TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *OS,
+        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
         MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
   }
@@ -244,11 +244,12 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 
-int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return AssembleOneInput(Data, Size);
 }
 
-int LLVMFuzzerInitialize(int *argc, char ***argv) {
+extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
+                                                        char ***argv) {
   // The command line is unusual compared to other fuzzers due to the need to
   // specify the target. Options like -triple, -mcpu, and -mattr work like
   // their counterparts in llvm-mc, while -fuzzer-args collects options for the

@@ -1,4 +1,4 @@
-//=- llvm/CodeGen/AggressiveAntiDepBreaker.h - Anti-Dep Support -*- C++ -*-=//
+//==- llvm/CodeGen/AggressiveAntiDepBreaker.h - Anti-Dep Support -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,29 +19,35 @@
 
 #include "AntiDepBreaker.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
+#include <set>
+#include <vector>
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineFunction;
+class MachineInstr;
+class MachineOperand;
+class MachineRegisterInfo;
 class RegisterClassInfo;
+class TargetInstrInfo;
+class TargetRegisterClass;
+class TargetRegisterInfo;
 
   /// Contains all the state necessary for anti-dep breaking.
 class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
   public:
     /// Information about a register reference within a liverange
-    typedef struct {
+    struct RegisterReference {
       /// The registers operand
       MachineOperand *Operand;
+
       /// The register class
       const TargetRegisterClass *RC;
-    } RegisterReference;
+    };
 
   private:
     /// Number of non-virtual target registers (i.e. TRI->getNumRegs()).
@@ -110,7 +116,7 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
   class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepBreaker
       : public AntiDepBreaker {
-    MachineFunction& MF;
+    MachineFunction &MF;
     MachineRegisterInfo &MRI;
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
@@ -121,10 +127,10 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
     BitVector CriticalPathSet;
 
     /// The state used to identify and rename anti-dependence registers.
-    AggressiveAntiDepState *State;
+    AggressiveAntiDepState *State = nullptr;
 
   public:
-    AggressiveAntiDepBreaker(MachineFunction& MFi,
+    AggressiveAntiDepBreaker(MachineFunction &MFi,
                           const RegisterClassInfo &RCI,
                           TargetSubtargetInfo::RegClassVector& CriticalPathRCs);
     ~AggressiveAntiDepBreaker() override;
@@ -134,8 +140,7 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
     /// Identifiy anti-dependencies along the critical path
     /// of the ScheduleDAG and break them by renaming registers.
-    ///
-    unsigned BreakAntiDependencies(const std::vector<SUnit>& SUnits,
+    unsigned BreakAntiDependencies(const std::vector<SUnit> &SUnits,
                                    MachineBasicBlock::iterator Begin,
                                    MachineBasicBlock::iterator End,
                                    unsigned InsertPosIndex,
@@ -143,7 +148,6 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
     /// Update liveness information to account for the current
     /// instruction, which will not be scheduled.
-    ///
     void Observe(MachineInstr &MI, unsigned Count,
                  unsigned InsertPosIndex) override;
 
@@ -152,7 +156,7 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
   private:
     /// Keep track of a position in the allocation order for each regclass.
-    typedef std::map<const TargetRegisterClass *, unsigned> RenameOrderType;
+    using RenameOrderType = std::map<const TargetRegisterClass *, unsigned>;
 
     /// Return true if MO represents a register
     /// that is both implicitly used and defined in MI
@@ -174,6 +178,7 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
                                    RenameOrderType& RenameOrder,
                                    std::map<unsigned, unsigned> &RenameMap);
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_AGGRESSIVEANTIDEPBREAKER_H

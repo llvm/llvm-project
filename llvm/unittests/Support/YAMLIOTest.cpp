@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
@@ -860,7 +861,7 @@ namespace yaml {
           return "malformed by";
       }
     }
-    static bool mustQuote(StringRef) { return true; }
+    static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
   };
 }
 }
@@ -1064,7 +1065,7 @@ namespace yaml {
       return StringRef();
     }
 
-    static bool mustQuote(StringRef) { return false; }
+    static QuotingType mustQuote(StringRef) { return QuotingType::None; }
   };
 
   template <> struct ScalarTraits<MyString> {
@@ -1075,7 +1076,9 @@ namespace yaml {
     static StringRef input(StringRef S, void *Ctx, MyString &V) {
       return Impl::input(S, Ctx, V.value);
     }
-    static bool mustQuote(StringRef S) { return Impl::mustQuote(S); }
+    static QuotingType mustQuote(StringRef S) {
+      return Impl::mustQuote(S);
+    }
   };
 }
 }
@@ -2232,7 +2235,7 @@ struct ScalarTraits<FlowSeq> {
     return "";
   }
 
-  static bool mustQuote(StringRef S) { return false; }
+  static QuotingType mustQuote(StringRef S) { return QuotingType::None; }
 };
 }
 }
@@ -2448,10 +2451,34 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   EXPECT_EQ(4, y["bar"].bar);
 }
 
-TEST(YAMLIO, InvalidInput) {
-  // polluting 1 value in the sequence
-  Input yin("---\n- foo:  3\n  bar:  5\n1\n- foo:  3\n  bar:  5\n...\n");
-  std::vector<FooBar> Data;
-  yin >> Data;
-  EXPECT_TRUE((bool)yin.error());
+static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Input, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ(Expected, out);
+}
+
+TEST(YAMLIO, TestEscaped) {
+  // Single quote
+  TestEscaped("@abc@", "'@abc@'");
+  // No quote
+  TestEscaped("abc/", "abc/");
+  // Double quote non-printable
+  TestEscaped("\01@abc@", "\"\\x01@abc@\"");
+  // Double quote inside single quote
+  TestEscaped("abc\"fdf", "'abc\"fdf'");
+  // Double quote inside double quote
+  TestEscaped("\01bc\"fdf", "\"\\x01bc\\\"fdf\"");
+  // Single quote inside single quote
+  TestEscaped("abc'fdf", "'abc''fdf'");
+  // UTF8
+  TestEscaped("/*параметр*/", "\"/*параметр*/\"");
+  // UTF8 with single quote inside double quote
+  TestEscaped("parameter 'параметр' is unused",
+              "\"parameter 'параметр' is unused\"");
 }

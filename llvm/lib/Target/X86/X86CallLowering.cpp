@@ -1,4 +1,4 @@
-//===-- llvm/lib/Target/X86/X86CallLowering.cpp - Call lowering -----------===//
+//===- llvm/lib/Target/X86/X86CallLowering.cpp - Call lowering ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,25 +6,45 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// This file implements the lowering of LLVM calls to machine code calls for
 /// GlobalISel.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #include "X86CallLowering.h"
 #include "X86CallingConv.h"
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
-#include "X86TargetMachine.h"
-
+#include "X86RegisterInfo.h"
+#include "X86Subtarget.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -38,7 +58,6 @@ bool X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
                                         const DataLayout &DL,
                                         MachineRegisterInfo &MRI,
                                         SplitArgTy PerformArgSplit) const {
-
   const X86TargetLowering &TLI = *getTLI<X86TargetLowering>();
   LLVMContext &Context = OrigArg.Ty->getContext();
 
@@ -79,16 +98,16 @@ bool X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
 }
 
 namespace {
+
 struct OutgoingValueHandler : public CallLowering::ValueHandler {
   OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                        MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB), StackSize(0),
+      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         DL(MIRBuilder.getMF().getDataLayout()),
-        STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()), NumXMMRegs(0) {}
+        STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
-
     LLT p0 = LLT::pointer(0, DL.getPointerSizeInBits(0));
     LLT SType = LLT::scalar(DL.getPointerSizeInBits(0));
     unsigned SPReg = MRI.createGenericVirtualRegister(p0);
@@ -113,7 +132,6 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-
     unsigned ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
@@ -124,7 +142,6 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
   bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, CCState &State) override {
-
     bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
     StackSize = State.getNextStackOffset();
 
@@ -142,16 +159,16 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
 protected:
   MachineInstrBuilder &MIB;
-  uint64_t StackSize;
+  uint64_t StackSize = 0;
   const DataLayout &DL;
   const X86Subtarget &STI;
-  unsigned NumXMMRegs;
+  unsigned NumXMMRegs = 0;
 };
-} // End anonymous namespace.
+
+} // end anonymous namespace
 
 bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, unsigned VReg) const {
-
   assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
 
   auto MIB = MIRBuilder.buildInstrNoInsert(X86::RET).addImm(0);
@@ -160,7 +177,7 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineFunction &MF = MIRBuilder.getMF();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     auto &DL = MF.getDataLayout();
-    const Function &F = *MF.getFunction();
+    const Function &F = MF.getFunction();
 
     ArgInfo OrigArg{VReg, Val->getType()};
     setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
@@ -182,6 +199,7 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 }
 
 namespace {
+
 struct IncomingValueHandler : public CallLowering::ValueHandler {
   IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                        CCAssignFn *AssignFn)
@@ -190,7 +208,6 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
-
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
@@ -203,12 +220,33 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
         0);
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
+
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+                        CCValAssign &VA) override {
+    markPhysRegUsed(PhysReg);
+    switch (VA.getLocInfo()) {
+    default:
+      MIRBuilder.buildCopy(ValVReg, PhysReg);
+      break;
+    case CCValAssign::LocInfo::SExt:
+    case CCValAssign::LocInfo::ZExt:
+    case CCValAssign::LocInfo::AExt: {
+      auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
+      MIRBuilder.buildTrunc(ValVReg, Copy);
+      break;
+    }
+    }
+  }
+
+  /// How the physical register gets marked varies between formal
+  /// parameters (it's a basic-block live-in), and a call instruction
+  /// (it's an implicit-def of the BL).
+  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
 
 protected:
   const DataLayout &DL;
@@ -219,10 +257,8 @@ struct FormalArgHandler : public IncomingValueHandler {
                    CCAssignFn *AssignFn)
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
-  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
-                        CCValAssign &VA) override {
+  void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
 };
 
@@ -231,17 +267,15 @@ struct CallReturnHandler : public IncomingValueHandler {
                     CCAssignFn *AssignFn, MachineInstrBuilder &MIB)
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
-  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
-                        CCValAssign &VA) override {
+  void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
 
 protected:
   MachineInstrBuilder &MIB;
 };
 
-} // namespace
+} // end anonymous namespace
 
 bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            const Function &F,
@@ -299,9 +333,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 const MachineOperand &Callee,
                                 const ArgInfo &OrigRet,
                                 ArrayRef<ArgInfo> OrigArgs) const {
-
   MachineFunction &MF = MIRBuilder.getMF();
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();

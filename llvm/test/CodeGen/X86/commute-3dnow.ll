@@ -4,7 +4,7 @@
 
 define void @commute_m_pfadd(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfadd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -15,7 +15,7 @@ define void @commute_m_pfadd(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfadd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pfadd (%rsi), %mm0
 ; X64-NEXT:    pfadd (%rdx), %mm0
@@ -33,7 +33,7 @@ declare x86_mmx @llvm.x86.3dnow.pfadd(x86_mmx, x86_mmx)
 
 define void @commute_m_pfsub(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfsub:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -44,7 +44,7 @@ define void @commute_m_pfsub(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfsub:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pfsub (%rsi), %mm0
 ; X64-NEXT:    pfsubr (%rdx), %mm0
@@ -62,7 +62,7 @@ declare x86_mmx @llvm.x86.3dnow.pfsub(x86_mmx, x86_mmx)
 
 define void @commute_m_pfsubr(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfsubr:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -73,7 +73,7 @@ define void @commute_m_pfsubr(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfsubr:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pfsubr (%rsi), %mm0
 ; X64-NEXT:    pfsub (%rdx), %mm0
@@ -91,7 +91,7 @@ declare x86_mmx @llvm.x86.3dnow.pfsubr(x86_mmx, x86_mmx)
 
 define void @commute_m_pfmul(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfmul:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -102,7 +102,7 @@ define void @commute_m_pfmul(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfmul:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pfmul (%rsi), %mm0
 ; X64-NEXT:    pfmul (%rdx), %mm0
@@ -121,7 +121,7 @@ declare x86_mmx @llvm.x86.3dnow.pfmul(x86_mmx, x86_mmx)
 ; PFMAX can't commute without fast-math.
 define void @commute_m_pfmax(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfmax:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -133,7 +133,7 @@ define void @commute_m_pfmax(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfmax:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movq (%rdx), %mm1
 ; X64-NEXT:    pfmax (%rsi), %mm0
@@ -153,7 +153,7 @@ declare x86_mmx @llvm.x86.3dnow.pfmax(x86_mmx, x86_mmx)
 ; PFMIN can't commute without fast-math.
 define void @commute_m_pfmin(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfmin:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -165,7 +165,7 @@ define void @commute_m_pfmin(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfmin:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movq (%rdx), %mm1
 ; X64-NEXT:    pfmin (%rsi), %mm0
@@ -184,7 +184,7 @@ declare x86_mmx @llvm.x86.3dnow.pfmin(x86_mmx, x86_mmx)
 
 define void @commute_m_pfcmpeq(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pfcmpeq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -195,7 +195,7 @@ define void @commute_m_pfcmpeq(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwin
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pfcmpeq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pfcmpeq (%rsi), %mm0
 ; X64-NEXT:    pfcmpeq (%rdx), %mm0
@@ -213,7 +213,7 @@ declare x86_mmx @llvm.x86.3dnow.pfcmpeq(x86_mmx, x86_mmx)
 
 define void @commute_m_pavgusb(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pavgusb:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -224,7 +224,7 @@ define void @commute_m_pavgusb(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwin
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pavgusb:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pavgusb (%rsi), %mm0
 ; X64-NEXT:    pavgusb (%rdx), %mm0
@@ -242,7 +242,7 @@ declare x86_mmx @llvm.x86.3dnow.pavgusb(x86_mmx, x86_mmx)
 
 define void @commute_m_pmulhrw(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwind {
 ; X32-LABEL: commute_m_pmulhrw:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -253,7 +253,7 @@ define void @commute_m_pmulhrw(x86_mmx *%a0, x86_mmx *%a1, x86_mmx *%a2) nounwin
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_m_pmulhrw:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    pmulhrw (%rsi), %mm0
 ; X64-NEXT:    pmulhrw (%rdx), %mm0

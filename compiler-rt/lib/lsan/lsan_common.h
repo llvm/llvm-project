@@ -27,9 +27,9 @@
 // because of "small" (4 bytes) pointer size that leads to high false negative
 // ratio on large leaks. But we still want to have it for some 32 bit arches
 // (e.g. x86), see https://github.com/google/sanitizers/issues/403.
-// To enable LeakSanitizer on new architecture, one need to implement
-// internal_clone function as well as (probably) adjust TLS machinery for
-// new architecture inside sanitizer library.
+// To enable LeakSanitizer on a new architecture, one needs to implement the
+// internal_clone function as well as (probably) adjust the TLS machinery for
+// the new architecture inside the sanitizer library.
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC) && \
     (SANITIZER_WORDSIZE == 64) &&                               \
     (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) || \
@@ -143,8 +143,10 @@ enum IgnoreObjectResult {
 };
 
 // Functions called from the parent tool.
+const char *MaybeCallLsanDefaultOptions();
 void InitCommonLsan();
 void DoLeakCheck();
+void DoRecoverableLeakCheckVoid();
 void DisableCounterUnderflow();
 bool DisabledInThisThread();
 
@@ -249,6 +251,9 @@ class LsanMetadata {
 }  // namespace __lsan
 
 extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+const char *__lsan_default_options();
+
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 int __lsan_is_turned_off();
 

@@ -1,0 +1,4 @@
+MYNAME MYTYPE
+BEGIN
+  1, 2, InvalidToken
+END

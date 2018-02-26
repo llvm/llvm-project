@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++98 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++11 -o - %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -std=c++98 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s
+
 int foo();
 
 template <class T>
@@ -268,6 +272,14 @@ int k;
 #pragma omp ordered depend(sink : i-0, j+sizeof(int)) depend(source) // expected-error {{'depend(source)' clause cannot be mixed with 'depend(sink:vec)' clauses}}
 #pragma omp ordered depend(source) depend(sink : i-0, j+sizeof(int)) // expected-error {{'depend(sink:vec)' clauses cannot be mixed with 'depend(source)' clause}}
     }
+  }
+
+#pragma omp for ordered(2) // expected-note {{as specified in 'ordered' clause}}
+  for (int i = 0; i < 10; ++i) { // expected-error {{expected 2 for loops after '#pragma omp for', but found only 1}}
+#pragma omp ordered depend(sink : i)
+    int j;
+#pragma omp ordered depend(sink : i, j) // expected-error {{expected loop iteration variable}}
+    foo();
   }
 
   return foo<int>(); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}

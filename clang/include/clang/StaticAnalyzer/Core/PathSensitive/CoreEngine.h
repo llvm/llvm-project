@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include <memory>
 
 namespace clang {
@@ -114,9 +115,9 @@ private:
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
-  CoreEngine(SubEngine &subengine, FunctionSummariesTy *FS)
-      : SubEng(subengine), WList(WorkList::makeDFS()),
-        BCounterFactory(G.getAllocator()), FunctionSummaries(FS) {}
+  CoreEngine(SubEngine &subengine,
+             FunctionSummariesTy *FS,
+             AnalyzerOptions &Opts);
 
   /// getGraph - Returns the exploded graph.
   ExplodedGraph &getGraph() { return G; }

@@ -1,11 +1,11 @@
 ; RUN: llvm-as %s -o %t.o
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=emit-llvm \
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o -o - | FileCheck %s
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -m elf_x86_64 --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t3.o
 ; RUN: FileCheck --check-prefix=RES %s < %t3.o.resolution.txt
@@ -15,7 +15,7 @@
 ; RUN: llvm-nm %t3.o.o | FileCheck --check-prefix=NM %s
 
 ; RUN: rm -f %t4.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -m elf_x86_64 --plugin-opt=disable-output \
 ; RUN:    -shared %t.o -o %t4.o
 ; RUN: not test -a %t4.o
@@ -48,14 +48,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @g8 = external global i32
 
-; CHECK-DAG: define internal void @f1()
+; CHECK-DAG: define internal dso_local void @f1()
 ; OPT2-NOT: @f1
 define hidden void @f1() {
   ret void
 }
 
-; CHECK-DAG: define hidden void @f2()
-; OPT-DAG: define hidden void @f2()
+; CHECK-DAG: define dso_local hidden void @f2()
+; OPT-DAG: define dso_local hidden void @f2()
 define hidden void @f2() {
   ret void
 }

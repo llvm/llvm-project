@@ -1,0 +1,67 @@
+# RUN: llc -o - %s -mtriple=armv7-- -verify-machineinstrs -run-pass=peephole-opt | FileCheck %s
+#
+# Make sure we do not crash on this input.
+# Note that this input could in principle be optimized, but right now we don't
+# have this case implemented so the output should simply be unchanged.
+#
+# CHECK-LABEL: name: func
+# CHECK: body: |
+# CHECK:   bb.0:
+# CHECK:     Bcc %bb.2, 1, undef %cpsr
+#
+# CHECK:   bb.1:
+# CHECK:     %0:dpr = IMPLICIT_DEF
+# CHECK:     %1:gpr, %2:gpr = VMOVRRD %0, 14, %noreg
+# CHECK:     B %bb.3
+#
+# CHECK:   bb.2:
+# CHECK:     %3:spr = IMPLICIT_DEF
+# CHECK:     %4:gpr = VMOVRS %3, 14, %noreg
+#
+# CHECK:   bb.3:
+# CHECK:     %5:gpr = PHI %1, %bb.1, %4, %bb.2
+# CHECK:     %6:spr = VMOVSR %5, 14, %noreg
+---
+name: func0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    Bcc %bb.2, 1, undef %cpsr
+
+  bb.1:
+    %0:dpr = IMPLICIT_DEF
+    %1:gpr, %2:gpr = VMOVRRD %0:dpr, 14, %noreg
+    B %bb.3
+
+  bb.2:
+    %3:spr = IMPLICIT_DEF
+    %4:gpr = VMOVRS %3:spr, 14, %noreg
+
+  bb.3:
+    %5:gpr = PHI %1, %bb.1, %4, %bb.2
+    %6:spr = VMOVSR %5, 14, %noreg
+...
+
+# CHECK-LABEL: name: func1
+# CHECK:    %6:spr = PHI %0, %bb.1, %2, %bb.2
+# CHEKC:    %7:spr = COPY %6
+---
+name: func1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    Bcc %bb.2, 1, undef %cpsr
+
+  bb.1:
+    %1:spr = IMPLICIT_DEF
+    %0:gpr = VMOVRS %1, 14, %noreg
+    B %bb.3
+
+  bb.2:
+    %3:spr = IMPLICIT_DEF
+    %2:gpr = VMOVRS %3:spr, 14, %noreg
+
+  bb.3:
+    %4:gpr = PHI %0, %bb.1, %2, %bb.2
+    %5:spr = VMOVSR %4, 14, %noreg
+...

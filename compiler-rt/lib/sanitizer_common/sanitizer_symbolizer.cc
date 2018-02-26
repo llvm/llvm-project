@@ -71,6 +71,10 @@ Symbolizer *Symbolizer::symbolizer_;
 StaticSpinMutex Symbolizer::init_mu_;
 LowLevelAllocator Symbolizer::symbolizer_allocator_;
 
+void Symbolizer::InvalidateModuleList() {
+  modules_fresh_ = false;
+}
+
 void Symbolizer::AddHooks(Symbolizer::StartSymbolizationHook start_hook,
                           Symbolizer::EndSymbolizationHook end_hook) {
   CHECK(start_hook_ == 0 && end_hook_ == 0);

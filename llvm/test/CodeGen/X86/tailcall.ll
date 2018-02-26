@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -tailcallopt | grep TAILCALL | count 7
+; RUN: llc < %s -mtriple=i686-- -tailcallopt | grep TAILCALL | count 7
 
 ; With -tailcallopt, CodeGen guarantees a tail call optimization
 ; for all of these.

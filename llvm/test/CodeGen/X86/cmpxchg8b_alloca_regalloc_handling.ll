@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -stackrealign -O2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -stackrealign -O2 | FileCheck %s
 ; PR28755
 
 ; Check that register allocator is able to handle that

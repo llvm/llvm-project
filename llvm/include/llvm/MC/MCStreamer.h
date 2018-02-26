@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/TargetParser.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -37,6 +38,7 @@ class AssemblerConstantPools;
 class formatted_raw_ostream;
 class MCAsmBackend;
 class MCCodeEmitter;
+struct MCCodePaddingContext;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -93,6 +95,17 @@ public:
   virtual void prettyPrintAsm(MCInstPrinter &InstPrinter, raw_ostream &OS,
                               const MCInst &Inst, const MCSubtargetInfo &STI);
 
+  virtual void emitDwarfFileDirective(StringRef Directive);
+
+  /// Update streamer for a new active section.
+  ///
+  /// This is called by PopSection and SwitchSection, if the current
+  /// section changes.
+  virtual void changeSection(const MCSection *CurSection, MCSection *Section,
+                             const MCExpr *SubSection, raw_ostream &OS);
+
+  virtual void emitValue(const MCExpr *Value);
+
   virtual void finish();
 };
 
@@ -124,9 +137,9 @@ public:
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                                     StringRef StringValue = "");
   virtual void emitFPU(unsigned FPU);
-  virtual void emitArch(unsigned Arch);
+  virtual void emitArch(ARM::ArchKind Arch);
   virtual void emitArchExtension(unsigned ArchExt);
-  virtual void emitObjectArch(unsigned Arch);
+  virtual void emitObjectArch(ARM::ArchKind Arch);
   void emitTargetAttributes(const MCSubtargetInfo &STI);
   virtual void finishAttributeSection();
   virtual void emitInst(uint32_t Inst, char Suffix = '\0');
@@ -170,14 +183,16 @@ class MCStreamer {
 
   std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
   MCDwarfFrameInfo *getCurrentDwarfFrameInfo();
-  void EnsureValidDwarfFrame();
 
-  MCSymbol *EmitCFILabel();
-  MCSymbol *EmitCFICommon();
+  /// Similar to DwarfFrameInfos, but for SEH unwind info. Chained frames may
+  /// refer to each other, so use std::unique_ptr to provide pointer stability.
+  std::vector<std::unique_ptr<WinEH::FrameInfo>> WinFrameInfos;
 
-  std::vector<WinEH::FrameInfo *> WinFrameInfos;
   WinEH::FrameInfo *CurrentWinFrameInfo;
-  void EnsureValidWinFrameInfo();
+
+  /// Retreive the current frame info if one is available and it is not yet
+  /// closed. Otherwise, issue an error and return null.
+  WinEH::FrameInfo *EnsureValidWinFrameInfo(SMLoc Loc);
 
   /// \brief Tracks an index to represent the order a symbol was emitted in.
   /// Zero means we did not emit that symbol.
@@ -198,6 +213,10 @@ protected:
 
   virtual void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void EmitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
+
+  /// When emitting an object file, create and emit a real label. When emitting
+  /// textual assembly, this should do nothing to avoid polluting our output.
+  virtual MCSymbol *EmitCFILabel();
 
   WinEH::FrameInfo *getCurrentWinFrameInfo() {
     return CurrentWinFrameInfo;
@@ -237,7 +256,7 @@ public:
   bool hasUnfinishedDwarfFrameInfo();
 
   unsigned getNumWinFrameInfos() { return WinFrameInfos.size(); }
-  ArrayRef<WinEH::FrameInfo *> getWinFrameInfos() const {
+  ArrayRef<std::unique_ptr<WinEH::FrameInfo>> getWinFrameInfos() const {
     return WinFrameInfos;
   }
 
@@ -413,9 +432,16 @@ public:
   /// \brief Note in the output the specified region \p Kind.
   virtual void EmitDataRegion(MCDataRegionType Kind) {}
 
-  /// \brief Specify the MachO minimum deployment target version.
-  virtual void EmitVersionMin(MCVersionMinType, unsigned Major, unsigned Minor,
-                              unsigned Update) {}
+  /// \brief Specify the Mach-O minimum deployment target version.
+  virtual void EmitVersionMin(MCVersionMinType Type, unsigned Major,
+                              unsigned Minor, unsigned Update) {}
+
+  /// Emit/Specify Mach-O build version command.
+  /// \p Platform should be one of MachO::PlatformType.
+  virtual void EmitBuildVersion(unsigned Platform, unsigned Major,
+                                unsigned Minor, unsigned Update) {}
+
+  void EmitVersionForTarget(const Triple &Target);
 
   /// \brief Note in the output that the specified \p Func is a Thumb mode
   /// function (ARM target only).
@@ -577,7 +603,11 @@ public:
 
   /// \brief Special case of EmitULEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
-  void EmitULEB128IntValue(uint64_t Value, unsigned Padding = 0);
+  void EmitULEB128IntValue(uint64_t Value);
+
+  /// \brief Like EmitULEB128Value but pads the output to specific number of
+  /// bytes.
+  void EmitPaddedULEB128IntValue(uint64_t Value, unsigned PadTo);
 
   /// \brief Special case of EmitSLEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
@@ -632,7 +662,7 @@ public:
 
   /// \brief Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
-  virtual void emitFill(uint64_t NumBytes, uint8_t FillValue);
+  void emitFill(uint64_t NumBytes, uint8_t FillValue);
 
   /// \brief Emit \p Size bytes worth of the value specified by \p FillValue.
   ///
@@ -705,6 +735,12 @@ public:
   virtual void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                  SMLoc Loc);
 
+  virtual void
+  EmitCodePaddingBasicBlockStart(const MCCodePaddingContext &Context) {}
+
+  virtual void
+  EmitCodePaddingBasicBlockEnd(const MCCodePaddingContext &Context) {}
+
   /// @}
 
   /// \brief Switch to a new logical file.  This is used to implement the '.file
@@ -728,10 +764,12 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
-  /// \brief Associate a filename with a specified logical file number.  This
-  /// implements the '.cv_file 4 "foo.c"' assembler directive. Returns true on
-  /// success.
-  virtual bool EmitCVFileDirective(unsigned FileNo, StringRef Filename);
+  /// Associate a filename with a specified logical file number, and also
+  /// specify that file's checksum information.  This implements the '.cv_file 4
+  /// "foo.c"' assembler directive. Returns true on success.
+  virtual bool EmitCVFileDirective(unsigned FileNo, StringRef Filename,
+                                   ArrayRef<uint8_t> Checksum,
+                                   unsigned ChecksumKind);
 
   /// \brief Introduces a function id for use with .cv_loc.
   virtual bool EmitCVFuncIdDirective(unsigned FunctionId);
@@ -773,6 +811,13 @@ public:
   /// \brief This implements the CodeView '.cv_filechecksums' assembler directive.
   virtual void EmitCVFileChecksumsDirective() {}
 
+  /// This implements the CodeView '.cv_filechecksumoffset' assembler
+  /// directive.
+  virtual void EmitCVFileChecksumOffsetDirective(unsigned FileNo) {}
+
+  /// This implements the CodeView '.cv_fpo_data' assembler directive.
+  virtual void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc = {}) {}
+
   /// Emit the absolute difference between two symbols.
   ///
   /// \pre Offset of \c Hi is greater than the offset \c Lo.
@@ -796,26 +841,30 @@ public:
   virtual void EmitCFIRelOffset(int64_t Register, int64_t Offset);
   virtual void EmitCFIAdjustCfaOffset(int64_t Adjustment);
   virtual void EmitCFIEscape(StringRef Values);
+  virtual void EmitCFIReturnColumn(int64_t Register);
   virtual void EmitCFIGnuArgsSize(int64_t Size);
   virtual void EmitCFISignalFrame();
   virtual void EmitCFIUndefined(int64_t Register);
   virtual void EmitCFIRegister(int64_t Register1, int64_t Register2);
   virtual void EmitCFIWindowSave();
 
-  virtual void EmitWinCFIStartProc(const MCSymbol *Symbol);
-  virtual void EmitWinCFIEndProc();
-  virtual void EmitWinCFIStartChained();
-  virtual void EmitWinCFIEndChained();
-  virtual void EmitWinCFIPushReg(unsigned Register);
-  virtual void EmitWinCFISetFrame(unsigned Register, unsigned Offset);
-  virtual void EmitWinCFIAllocStack(unsigned Size);
-  virtual void EmitWinCFISaveReg(unsigned Register, unsigned Offset);
-  virtual void EmitWinCFISaveXMM(unsigned Register, unsigned Offset);
-  virtual void EmitWinCFIPushFrame(bool Code);
-  virtual void EmitWinCFIEndProlog();
-
-  virtual void EmitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except);
-  virtual void EmitWinEHHandlerData();
+  virtual void EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIEndProc(SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIStartChained(SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIEndChained(SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIPushReg(unsigned Register, SMLoc Loc = SMLoc());
+  virtual void EmitWinCFISetFrame(unsigned Register, unsigned Offset,
+                                  SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIAllocStack(unsigned Size, SMLoc Loc = SMLoc());
+  virtual void EmitWinCFISaveReg(unsigned Register, unsigned Offset,
+                                 SMLoc Loc = SMLoc());
+  virtual void EmitWinCFISaveXMM(unsigned Register, unsigned Offset,
+                                 SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIPushFrame(bool Code, SMLoc Loc = SMLoc());
+  virtual void EmitWinCFIEndProlog(SMLoc Loc = SMLoc());
+  virtual void EmitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
+                                SMLoc Loc = SMLoc());
+  virtual void EmitWinEHHandlerData(SMLoc Loc = SMLoc());
 
   /// Get the .pdata section used for the given section. Typically the given
   /// section is either the main .text section or some other COMDAT .text

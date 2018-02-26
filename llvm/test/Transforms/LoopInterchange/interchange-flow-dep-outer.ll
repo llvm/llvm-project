@@ -65,8 +65,8 @@ for.body9:                                        ; preds = %for.body9, %for.con
   br i1 %exitcond, label %for.body9, label %for.cond.cleanup8
 }
 
-declare double @fn1()
-declare void @fn2(double)
+declare double @fn1() readnone
+declare void @fn2(double) readnone
 
 
 ;; After interchange %indvars.iv (j) should increment as the middle loop.

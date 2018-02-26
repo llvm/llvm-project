@@ -2,11 +2,13 @@
 // using a custom logging function.
 //
 // RUN: %clangxx_xray -std=c++11 %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=arg1-logger-" %run %t 2>&1 | FileCheck %s
+// RUN: rm arg1-logger-* || true
+// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_naive_log=true \
+// RUN:    xray_logfile_base=arg1-logger-" %run %t 2>&1 | FileCheck %s
 //
 // After all that, clean up the XRay log file.
 //
-// RUN: rm arg1-logger-*
+// RUN: rm arg1-logger-* || true
 //
 // At the time of writing, the ARM trampolines weren't written yet.
 // XFAIL: arm || aarch64 || mips
@@ -29,7 +31,7 @@ int main() {
 
   __xray_set_handler_arg1(arg1logger);
   foo(nullptr);
-  // CHECK: Arg1: 0, XRayEntryType 0
+  // CHECK: Arg1: 0, XRayEntryType 3
 
   __xray_remove_handler_arg1();
   foo((void *) 0xBADC0DE);
@@ -37,7 +39,7 @@ int main() {
 
   __xray_set_handler_arg1(arg1logger);
   foo((void *) 0xDEADBEEFCAFE);
-  // CHECK-NEXT: Arg1: deadbeefcafe, XRayEntryType 0
+  // CHECK-NEXT: Arg1: deadbeefcafe, XRayEntryType 3
   foo((void *) -1);
-  // CHECK-NEXT: Arg1: ffffffffffffffff, XRayEntryType 0
+  // CHECK-NEXT: Arg1: ffffffffffffffff, XRayEntryType 3
 }

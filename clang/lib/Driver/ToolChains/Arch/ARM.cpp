@@ -29,8 +29,7 @@ int arm::getARMSubArchVersionNumber(const llvm::Triple &Triple) {
 // True if M-profile.
 bool arm::isARMMProfile(const llvm::Triple &Triple) {
   llvm::StringRef Arch = Triple.getArchName();
-  unsigned Profile = llvm::ARM::parseArchProfile(Arch);
-  return Profile == llvm::ARM::PK_M;
+  return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::M;
 }
 
 // Get Arch/CPU from args.
@@ -88,6 +87,15 @@ static bool DecodeARMFeatures(const Driver &D, StringRef text,
   return true;
 }
 
+static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
+                                     std::vector<StringRef> &Features) {
+  if (CPU != "generic") {
+    llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
+    unsigned Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
+    llvm::ARM::getExtensionFeatures(Extension, Features);
+  }
+}
+
 // Check if -march is valid by checking if it can be canonicalised and parsed.
 // getARMArch is used here instead of just checking the -march value in order
 // to handle -march=native correctly.
@@ -98,7 +106,7 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
   std::pair<StringRef, StringRef> Split = ArchName.split("+");
 
   std::string MArch = arm::getARMArch(ArchName, Triple);
-  if (llvm::ARM::parseArch(MArch) == llvm::ARM::AK_INVALID ||
+  if (llvm::ARM::parseArch(MArch) == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() && !DecodeARMFeatures(D, Split.second, Features)))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
@@ -121,6 +129,26 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
   // the frontend matches that.
   return T.getEnvironment() == llvm::Triple::EABI ||
          T.getOS() == llvm::Triple::UnknownOS || isARMMProfile(T);
+}
+
+// Select mode for reading thread pointer (-mtp=soft/cp15).
+arm::ReadTPMode arm::getReadTPMode(const ToolChain &TC, const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
+    const Driver &D = TC.getDriver();
+    arm::ReadTPMode ThreadPointer =
+        llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
+            .Case("cp15", ReadTPMode::Cp15)
+            .Case("soft", ReadTPMode::Soft)
+            .Default(ReadTPMode::Invalid);
+    if (ThreadPointer != ReadTPMode::Invalid)
+      return ThreadPointer;
+    if (StringRef(A->getValue()).empty())
+      D.Diag(diag::err_drv_missing_arg_mtp) << A->getAsString(Args);
+    else
+      D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
+    return ReadTPMode::Invalid;
+  }
+  return ReadTPMode::Soft;
 }
 
 // Select the float ABI as determined by -msoft-float, -mhard-float, and
@@ -254,6 +282,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
   arm::FloatABI ABI = arm::getARMFloatABI(TC, Args);
+  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(TC, Args);
   const Arg *WaCPU = nullptr, *WaFPU = nullptr;
   const Arg *WaHDiv = nullptr, *WaArch = nullptr;
 
@@ -295,6 +324,9 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     }
   }
 
+  if (ThreadPointer == arm::ReadTPMode::Cp15)
+    Features.push_back("+read-tp-hard");
+
   // Check -march. ClangAs gives preference to -Wa,-march=.
   const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
   StringRef ArchName;
@@ -332,6 +364,8 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
       for (auto &F : HostFeatures)
         Features.push_back(
             Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+  } else if (!CPUName.empty()) {
+    DecodeARMFeaturesFromCPU(D, CPUName, Features);
   }
 
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
@@ -393,7 +427,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
       if (A->getOption().matches(options::OPT_mexecute_only)) {
         if (getARMSubArchVersionNumber(Triple) < 7 &&
-            llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::AK_ARMV6T2)
+            llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6T2)
               D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
         else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
           D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
@@ -525,11 +559,11 @@ std::string arm::getARMTargetCPU(StringRef CPU, StringRef Arch,
 // FIXME: This is redundant with -mcpu, why does LLVM use this.
 StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
                                        const llvm::Triple &Triple) {
-  unsigned ArchKind;
+  llvm::ARM::ArchKind ArchKind;
   if (CPU == "generic") {
     std::string ARMArch = tools::arm::getARMArch(Arch, Triple);
     ArchKind = llvm::ARM::parseArch(ARMArch);
-    if (ArchKind == llvm::ARM::AK_INVALID)
+    if (ArchKind == llvm::ARM::ArchKind::INVALID)
       // In case of generic Arch, i.e. "arm",
       // extract arch from default cpu of the Triple
       ArchKind = llvm::ARM::parseCPUArch(Triple.getARMCPUForArch(ARMArch));
@@ -537,10 +571,10 @@ StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
     // FIXME: horrible hack to get around the fact that Cortex-A7 is only an
     // armv7k triple if it's actually been specified via "-arch armv7k".
     ArchKind = (Arch == "armv7k" || Arch == "thumbv7k")
-                          ? (unsigned)llvm::ARM::AK_ARMV7K
+                          ? llvm::ARM::ArchKind::ARMV7K
                           : llvm::ARM::parseCPUArch(CPU);
   }
-  if (ArchKind == llvm::ARM::AK_INVALID)
+  if (ArchKind == llvm::ARM::ArchKind::INVALID)
     return "";
   return llvm::ARM::getSubArch(ArchKind);
 }

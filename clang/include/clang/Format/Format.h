@@ -151,13 +151,20 @@ struct FormatStyle {
   /// \endcode
   bool AlignTrailingComments;
 
-  /// \brief Allow putting all parameters of a function declaration onto
+  /// \brief If the function declaration doesn't fit on a line,
+  /// allow putting all parameters of a function declaration onto
   /// the next line even if ``BinPackParameters`` is ``false``.
   /// \code
-  ///   true:                                   false:
-  ///   myFunction(foo,                 vs.     myFunction(foo, bar, plop);
-  ///              bar,
-  ///              plop);
+  ///   true:
+  ///   void myFunction(
+  ///       int a, int b, int c, int d, int e);
+  ///
+  ///   false:
+  ///   void myFunction(int a,
+  ///                   int b,
+  ///                   int c,
+  ///                   int d,
+  ///                   int e);
   /// \endcode
   bool AllowAllParametersOfDeclarationOnNextLine;
 
@@ -674,6 +681,20 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
+    /// \brief Wrap extern blocks.
+    /// \code
+    ///   true:
+    ///   extern "C"
+    ///   {
+    ///     int foo();
+    ///   }
+    ///
+    ///   false:
+    ///   extern "C" {
+    ///   int foo();
+    ///   }
+    /// \endcode
+    bool AfterExternBlock;
     /// \brief Wrap before ``catch``.
     /// \code
     ///   true:
@@ -746,6 +767,14 @@ struct FormatStyle {
   ///
   /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
   /// each individual brace case should be handled. Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   BreakBeforeBraces: Custom
+  ///   BraceWrapping:
+  ///     AfterEnum: true
+  ///     AfterStruct: false
+  ///     SplitEmptyFunction: false
+  /// \endcode
   BraceWrappingFlags BraceWrapping;
 
   /// \brief If ``true``, ternary operators will be placed after line breaks.
@@ -956,6 +985,40 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
+  /// \brief Styles for sorting multiple ``#include`` blocks.
+  enum IncludeBlocksStyle {
+    /// \brief Sort each ``#include`` block separately.
+    /// \code
+    ///    #include "b.h"               into      #include "b.h"
+    ///
+    ///    #include <lib/main.h>                  #include "a.h"
+    ///    #include "a.h"                         #include <lib/main.h>
+    /// \endcode
+    IBS_Preserve,
+    /// \brief Merge multiple ``#include`` blocks together and sort as one.
+    /// \code
+    ///    #include "b.h"               into      #include "a.h"
+    ///                                           #include "b.h"
+    ///    #include <lib/main.h>                  #include <lib/main.h>
+    ///    #include "a.h"
+    /// \endcode
+    IBS_Merge,
+    /// \brief Merge multiple ``#include`` blocks together and sort as one.
+    /// Then split into groups based on category priority. See
+    /// ``IncludeCategories``.
+    /// \code
+    ///    #include "b.h"               into      #include "a.h"
+    ///                                           #include "b.h"
+    ///    #include <lib/main.h>
+    ///    #include "a.h"                         #include <lib/main.h>
+    /// \endcode
+    IBS_Regroup,
+  };
+
+  /// \brief Dependent on the value, multiple ``#include`` blocks can be sorted
+  /// as one and divided based on category.
+  IncludeBlocksStyle IncludeBlocks;
+
   /// \brief See documentation of ``IncludeCategories``.
   struct IncludeCategory {
     /// \brief The regular expression that this category matches.
@@ -1023,6 +1086,31 @@ struct FormatStyle {
   ///    }                                      }
   /// \endcode
   bool IndentCaseLabels;
+
+  /// \brief Options for indenting preprocessor directives.
+  enum PPDirectiveIndentStyle {
+    /// Does not indent any directives.
+    /// \code
+    ///    #if FOO
+    ///    #if BAR
+    ///    #include <foo>
+    ///    #endif
+    ///    #endif
+    /// \endcode
+    PPDIS_None,
+    /// Indents directives after the hash.
+    /// \code
+    ///    #if FOO
+    ///    #  if BAR
+    ///    #    include <foo>
+    ///    #  endif
+    ///    #endif
+    /// \endcode
+    PPDIS_AfterHash
+  };
+
+  /// \brief The preprocessor directive indenting style to use.
+  PPDirectiveIndentStyle IndentPPDirectives;
 
   /// \brief The number of columns to use for indentation.
   /// \code
@@ -1273,6 +1361,41 @@ struct FormatStyle {
   /// \brief Pointer and reference alignment style.
   PointerAlignmentStyle PointerAlignment;
 
+  /// See documentation of ``RawStringFormats``.
+  struct RawStringFormat {
+    /// \brief The delimiter that this raw string format matches.
+    std::string Delimiter;
+    /// \brief The language of this raw string.
+    LanguageKind Language;
+    /// \brief The style name on which this raw string format is based on.
+    /// If not specified, the raw string format is based on the style that this
+    /// format is based on.
+    std::string BasedOnStyle;
+    bool operator==(const RawStringFormat &Other) const {
+      return Delimiter == Other.Delimiter && Language == Other.Language &&
+             BasedOnStyle == Other.BasedOnStyle;
+    }
+  };
+
+  /// \brief Raw string delimiters denoting that the raw string contents are
+  /// code in a particular language and can be reformatted.
+  ///
+  /// A raw string with a matching delimiter will be reformatted assuming the
+  /// specified language based on a predefined style given by 'BasedOnStyle'.
+  /// If 'BasedOnStyle' is not found, the formatting is based on llvm style.
+  ///
+  /// To configure this in the .clang-format file, use:
+  /// \code{.yaml}
+  ///   RawStringFormats:
+  ///     - Delimiter: 'pb'
+  ///       Language:  TextProto
+  ///       BasedOnStyle: llvm
+  ///     - Delimiter: 'proto'
+  ///       Language:  TextProto
+  ///       BasedOnStyle: google
+  /// \endcode
+  std::vector<RawStringFormat> RawStringFormats;
+
   /// \brief If ``true``, clang-format will attempt to re-flow comments.
   /// \code
   ///    false:
@@ -1296,6 +1419,14 @@ struct FormatStyle {
   bool SortIncludes;
 
   /// \brief If ``true``, clang-format will sort using declarations.
+  ///
+  /// The order of using declarations is defined as follows:
+  /// Split the strings by "::" and discard any initial empty strings. The last
+  /// element of each list is a non-namespace name; all others are namespace
+  /// names. Sort the lists of names lexicographically, where the sort order of
+  /// individual names is that all non-namespace names come before all namespace
+  /// names, and within those groups, names are in case-insensitive
+  /// lexicographic order.
   /// \code
   ///    false:                                 true:
   ///    using std::cout;               vs.     using std::cin;
@@ -1512,8 +1643,10 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
+           IncludeBlocks == R.IncludeBlocks &&
            IncludeCategories == R.IncludeCategories &&
            IndentCaseLabels == R.IndentCaseLabels &&
+           IndentPPDirectives == R.IndentPPDirectives &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
@@ -1537,6 +1670,7 @@ struct FormatStyle {
            PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
            PointerAlignment == R.PointerAlignment &&
+           RawStringFormats == R.RawStringFormats &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&

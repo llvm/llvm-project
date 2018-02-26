@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mattr=+altivec
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- -mattr=+altivec
 	%struct.inoutprops = type <{ i8, [3 x i8] }>
 
 define void @bork(float* %argA, float* %argB, float* %res, i8 %inoutspec.0) {

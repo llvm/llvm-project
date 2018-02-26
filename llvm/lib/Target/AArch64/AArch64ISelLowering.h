@@ -18,9 +18,9 @@
 #include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
 
@@ -290,7 +290,7 @@ public:
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
-  bool isShuffleMaskLegal(const SmallVectorImpl<int> &M, EVT VT) const override;
+  bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
   /// Return the ISD::SETCC ValueType.
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -306,6 +306,7 @@ public:
                               MachineBasicBlock *MBB) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+                          MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
@@ -338,7 +339,8 @@ public:
   /// Return true if the addressing mode represented by AM is legal for this
   /// target, for a load/store of the specified type.
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
 
   /// \brief Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
@@ -413,7 +415,7 @@ public:
     // Do not merge to float value size (128 bytes) if no implicit
     // float attribute is set.
 
-    bool NoFloat = DAG.getMachineFunction().getFunction()->hasFnAttribute(
+    bool NoFloat = DAG.getMachineFunction().getFunction().hasFnAttribute(
         Attribute::NoImplicitFloat);
 
     if (NoFloat)
@@ -442,8 +444,8 @@ public:
   }
 
   bool supportSplitCSR(MachineFunction *MF) const override {
-    return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
-           MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
+    return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+           MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
   }
   void initializeSplitCSR(MachineBasicBlock *Entry) const override;
   void insertCopiesSplitCSR(
@@ -537,10 +539,12 @@ private:
                         unsigned Flag) const;
   SDValue getTargetNode(BlockAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
                         unsigned Flag) const;
-  template <class NodeTy> SDValue getGOT(NodeTy *N, SelectionDAG &DAG) const;
   template <class NodeTy>
-  SDValue getAddrLarge(NodeTy *N, SelectionDAG &DAG) const;
-  template <class NodeTy> SDValue getAddr(NodeTy *N, SelectionDAG &DAG) const;
+  SDValue getGOT(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
+  template <class NodeTy>
+  SDValue getAddrLarge(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDarwinGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -643,6 +647,8 @@ private:
                           SelectionDAG &DAG) const override;
 
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
+
+  void finalizeLowering(MachineFunction &MF) const override;
 };
 
 namespace AArch64 {

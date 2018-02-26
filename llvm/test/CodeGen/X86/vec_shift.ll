@@ -4,12 +4,12 @@
 
 define <2 x i64> @t1(<2 x i64> %b1, <2 x i64> %c) nounwind  {
 ; X32-LABEL: t1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    psllw %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psllw %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:
@@ -22,13 +22,13 @@ entry:
 
 define <2 x i64> @t3(<2 x i64> %b1, i32 %c) nounwind  {
 ; X32-LABEL: t3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    psraw %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %edi, %xmm1
 ; X64-NEXT:    psraw %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -45,12 +45,12 @@ declare <8 x i16> @llvm.x86.sse2.psra.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @t2(<2 x i64> %b1, <2 x i64> %c) nounwind  {
 ; X32-LABEL: t2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    psrlq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrlq %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:

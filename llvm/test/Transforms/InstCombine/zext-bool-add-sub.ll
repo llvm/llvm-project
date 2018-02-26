@@ -18,6 +18,36 @@ define i32 @a(i1 zeroext %x, i1 zeroext %y) {
   ret i32 %add
 }
 
+define i32 @zextsub(i1 %x) {
+; CHECK-LABEL: @zextsub(
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 %x, i32 10, i32 11
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %zext = zext i1 %x to i32
+  %sub = sub i32 11, %zext
+  ret i32 %sub
+}
+
+define <2 x i32> @zextsub_splat(<2 x i1> %x) {
+; CHECK-LABEL: @zextsub_splat(
+; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> %x, <2 x i32> <i32 41, i32 41>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %sub = sub <2 x i32> <i32 42, i32 42>, %zext
+  ret <2 x i32> %sub
+}
+
+define <2 x i32> @zextsub_vec(<2 x i1> %x) {
+; CHECK-LABEL: @zextsub_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> %x, <2 x i32> <i32 10, i32 41>, <2 x i32> <i32 11, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %sub = sub <2 x i32> <i32 11, i32 42>, %zext
+  ret <2 x i32> %sub
+}
+
 define i32 @PR30273_select(i1 %a, i1 %b) {
 ; CHECK-LABEL: @PR30273_select(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 %a to i32
@@ -59,5 +89,35 @@ define i32 @PR30273_three_bools(i1 %x, i1 %y, i1 %z) {
   %add2 = add nsw i32 %sel1, 1
   %sel2 = select i1 %z, i32 %add2, i32 %sel1
   ret i32 %sel2
+}
+
+define i32 @zext_add_scalar(i1 %x) {
+; CHECK-LABEL: @zext_add_scalar(
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 %x, i32 43, i32 42
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %zext = zext i1 %x to i32
+  %add = add i32 %zext, 42
+  ret i32 %add
+}
+
+define <2 x i32> @zext_add_vec_splat(<2 x i1> %x) {
+; CHECK-LABEL: @zext_add_vec_splat(
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> %x, <2 x i32> <i32 43, i32 43>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %add = add <2 x i32> %zext, <i32 42, i32 42>
+  ret <2 x i32> %add
+}
+
+define <2 x i32> @zext_add_vec(<2 x i1> %x) {
+; CHECK-LABEL: @zext_add_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> %x, <2 x i32> <i32 43, i32 24>, <2 x i32> <i32 42, i32 23>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %add = add <2 x i32> %zext, <i32 42, i32 23>
+  ret <2 x i32> %add
 }
 

@@ -186,7 +186,8 @@ namespace ISD {
     /// BUILD_PAIR - This is the opposite of EXTRACT_ELEMENT in some ways.
     /// Given two values of the same integer value type, this produces a value
     /// twice as big.  Like EXTRACT_ELEMENT, this can only be used before
-    /// legalization.
+    /// legalization. The lower part of the composite value should be in
+    /// element 0 and the upper part should be in element 1.
     BUILD_PAIR,
 
     /// MERGE_VALUES - This node takes multiple discrete operands and returns
@@ -263,6 +264,7 @@ namespace ISD {
     /// They are used to limit optimizations while the DAG is being
     /// optimized.
     STRICT_FADD, STRICT_FSUB, STRICT_FMUL, STRICT_FDIV, STRICT_FREM,
+    STRICT_FMA,
 
     /// Constrained versions of libm-equivalent floating point intrinsics.
     /// These will be lowered to the equivalent non-constrained pseudo-op
@@ -637,6 +639,12 @@ namespace ISD {
     /// take a chain as input and return a chain.
     EH_LABEL,
 
+    /// ANNOTATION_LABEL - Represents a mid basic block label used by
+    /// annotations. This should remain within the basic block and be ordered
+    /// with respect to other call instructions, but loads and stores may float
+    /// past it.
+    ANNOTATION_LABEL,
+
     /// CATCHPAD - Represents a catchpad instruction.
     CATCHPAD,
 
@@ -831,7 +839,7 @@ namespace ISD {
   /// which do not reference a specific memory location should be less than
   /// this value. Those that do must not be less than this value, and can
   /// be used with SelectionDAG::getMemIntrinsicNode.
-  static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END+300;
+  static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END+400;
 
   //===--------------------------------------------------------------------===//
   /// MemIndexedMode enum - This enum defines the load / store indexed

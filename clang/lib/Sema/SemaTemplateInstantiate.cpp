@@ -496,8 +496,8 @@ void Sema::PrintInstantiationStack() {
       SmallVector<char, 128> TemplateArgsStr;
       llvm::raw_svector_ostream OS(TemplateArgsStr);
       Template->printName(OS);
-      TemplateSpecializationType::PrintTemplateArgumentList(
-          OS, Active->template_arguments(), getPrintingPolicy());
+      printTemplateArgumentList(OS, Active->template_arguments(),
+                                getPrintingPolicy());
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_default_arg_instantiation_here)
         << OS.str()
@@ -562,8 +562,8 @@ void Sema::PrintInstantiationStack() {
       SmallVector<char, 128> TemplateArgsStr;
       llvm::raw_svector_ostream OS(TemplateArgsStr);
       FD->printName(OS);
-      TemplateSpecializationType::PrintTemplateArgumentList(
-          OS, Active->template_arguments(), getPrintingPolicy());
+      printTemplateArgumentList(OS, Active->template_arguments(),
+                                getPrintingPolicy());
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_default_function_arg_instantiation_here)
         << OS.str()
@@ -975,7 +975,7 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
       }
 
-      TemplateName Template = Arg.getAsTemplate();
+      TemplateName Template = Arg.getAsTemplate().getNameToSubstitute();
       assert(!Template.isNull() && Template.getAsTemplateDecl() &&
              "Wrong kind of template template argument");
       return Template.getAsTemplateDecl();
@@ -1122,14 +1122,10 @@ TemplateName TemplateInstantiator::TransformTemplateName(
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
       }
       
-      TemplateName Template = Arg.getAsTemplate();
+      TemplateName Template = Arg.getAsTemplate().getNameToSubstitute();
       assert(!Template.isNull() && "Null template template argument");
-
-      // We don't ever want to substitute for a qualified template name, since
-      // the qualifier is handled separately. So, look through the qualified
-      // template name to its underlying declaration.
-      if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-        Template = TemplateName(QTN->getTemplateDecl());
+      assert(!Template.getAsQualifiedTemplateName() &&
+             "template decl to substitute is qualified?");
 
       Template = getSema().Context.getSubstTemplateTemplateParm(TTP, Template);
       return Template;
@@ -1143,7 +1139,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
     
     TemplateArgument Arg = SubstPack->getArgumentPack();
     Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
-    return Arg.getAsTemplate();
+    return Arg.getAsTemplate().getNameToSubstitute();
   }
 
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
@@ -2617,7 +2613,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             continue;
           
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
-          InstantiateStaticDataMemberDefinition(PointOfInstantiation, Var);
+          InstantiateVariableDefinition(PointOfInstantiation, Var);
         } else {
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
         }

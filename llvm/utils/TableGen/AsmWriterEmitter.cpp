@@ -820,8 +820,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       }
 
       unsigned NumMIOps = 0;
-      for (auto &Operand : CGA.ResultOperands)
-        NumMIOps += Operand.getMINumOperands();
+      for (auto &ResultInstOpnd : CGA.ResultInst->Operands)
+        NumMIOps += ResultInstOpnd.MINumOperands;
 
       std::string Cond;
       Cond = std::string("MI->getNumOperands() == ") + utostr(NumMIOps);
@@ -831,6 +831,19 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       unsigned MIOpNum = 0;
       for (unsigned i = 0, e = LastOpNo; i != e; ++i) {
+        // Skip over tied operands as they're not part of an alias declaration.
+        auto &Operands = CGA.ResultInst->Operands;
+        unsigned OpNum = Operands.getSubOperandNumber(MIOpNum).first;
+        if (Operands[OpNum].MINumOperands == 1 &&
+            Operands[OpNum].getTiedRegister() != -1) {
+          // Tied operands of different RegisterClass should be explicit within
+          // an instruction's syntax and so cannot be skipped.
+          int TiedOpNum = Operands[OpNum].getTiedRegister();
+          if (Operands[OpNum].Rec->getName() ==
+              Operands[TiedOpNum].Rec->getName())
+            ++MIOpNum;
+        }
+
         std::string Op = "MI->getOperand(" + utostr(MIOpNum) + ")";
 
         const CodeGenInstAlias::ResultOperand &RO = CGA.ResultOperands[i];
@@ -1024,8 +1037,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   O << "  OS << '\\t' << StringRef(AsmString, I);\n";
 
   O << "  if (AsmString[I] != '\\0') {\n";
-  O << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t')";
+  O << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t') {\n";
   O << "      OS << '\\t';\n";
+  O << "      ++I;\n";
+  O << "    }\n";
   O << "    do {\n";
   O << "      if (AsmString[I] == '$') {\n";
   O << "        ++I;\n";

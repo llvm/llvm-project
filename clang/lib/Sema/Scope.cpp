@@ -143,72 +143,43 @@ void Scope::dumpImpl(raw_ostream &OS) const {
   if (HasFlags)
     OS << "Flags: ";
 
-  while (Flags) {
-    if (Flags & FnScope) {
-      OS << "FnScope";
-      Flags &= ~FnScope;
-    } else if (Flags & BreakScope) {
-      OS << "BreakScope";
-      Flags &= ~BreakScope;
-    } else if (Flags & ContinueScope) {
-      OS << "ContinueScope";
-      Flags &= ~ContinueScope;
-    } else if (Flags & DeclScope) {
-      OS << "DeclScope";
-      Flags &= ~DeclScope;
-    } else if (Flags & ControlScope) {
-      OS << "ControlScope";
-      Flags &= ~ControlScope;
-    } else if (Flags & ClassScope) {
-      OS << "ClassScope";
-      Flags &= ~ClassScope;
-    } else if (Flags & BlockScope) {
-      OS << "BlockScope";
-      Flags &= ~BlockScope;
-    } else if (Flags & TemplateParamScope) {
-      OS << "TemplateParamScope";
-      Flags &= ~TemplateParamScope;
-    } else if (Flags & FunctionPrototypeScope) {
-      OS << "FunctionPrototypeScope";
-      Flags &= ~FunctionPrototypeScope;
-    } else if (Flags & FunctionDeclarationScope) {
-      OS << "FunctionDeclarationScope";
-      Flags &= ~FunctionDeclarationScope;
-    } else if (Flags & AtCatchScope) {
-      OS << "AtCatchScope";
-      Flags &= ~AtCatchScope;
-    } else if (Flags & ObjCMethodScope) {
-      OS << "ObjCMethodScope";
-      Flags &= ~ObjCMethodScope;
-    } else if (Flags & SwitchScope) {
-      OS << "SwitchScope";
-      Flags &= ~SwitchScope;
-    } else if (Flags & TryScope) {
-      OS << "TryScope";
-      Flags &= ~TryScope;
-    } else if (Flags & FnTryCatchScope) {
-      OS << "FnTryCatchScope";
-      Flags &= ~FnTryCatchScope;
-    } else if (Flags & SEHTryScope) {
-      OS << "SEHTryScope";
-      Flags &= ~SEHTryScope;
-    } else if (Flags & SEHExceptScope) {
-      OS << "SEHExceptScope";
-      Flags &= ~SEHExceptScope;
-    } else if (Flags & OpenMPDirectiveScope) {
-      OS << "OpenMPDirectiveScope";
-      Flags &= ~OpenMPDirectiveScope;
-    } else if (Flags & OpenMPLoopDirectiveScope) {
-      OS << "OpenMPLoopDirectiveScope";
-      Flags &= ~OpenMPLoopDirectiveScope;
-    } else if (Flags & OpenMPSimdDirectiveScope) {
-      OS << "OpenMPSimdDirectiveScope";
-      Flags &= ~OpenMPSimdDirectiveScope;
-    }
+  std::pair<unsigned, const char *> FlagInfo[] = {
+      {FnScope, "FnScope"},
+      {BreakScope, "BreakScope"},
+      {ContinueScope, "ContinueScope"},
+      {DeclScope, "DeclScope"},
+      {ControlScope, "ControlScope"},
+      {ClassScope, "ClassScope"},
+      {BlockScope, "BlockScope"},
+      {TemplateParamScope, "TemplateParamScope"},
+      {FunctionPrototypeScope, "FunctionPrototypeScope"},
+      {FunctionDeclarationScope, "FunctionDeclarationScope"},
+      {AtCatchScope, "AtCatchScope"},
+      {ObjCMethodScope, "ObjCMethodScope"},
+      {SwitchScope, "SwitchScope"},
+      {TryScope, "TryScope"},
+      {FnTryCatchScope, "FnTryCatchScope"},
+      {OpenMPDirectiveScope, "OpenMPDirectiveScope"},
+      {OpenMPLoopDirectiveScope, "OpenMPLoopDirectiveScope"},
+      {OpenMPSimdDirectiveScope, "OpenMPSimdDirectiveScope"},
+      {EnumScope, "EnumScope"},
+      {SEHTryScope, "SEHTryScope"},
+      {SEHExceptScope, "SEHExceptScope"},
+      {SEHFilterScope, "SEHFilterScope"},
+      {CompoundStmtScope, "CompoundStmtScope"},
+      {ClassInheritanceScope, "ClassInheritanceScope"}};
 
-    if (Flags)
-      OS << " | ";
+  for (auto Info : FlagInfo) {
+    if (Flags & Info.first) {
+      OS << Info.second;
+      Flags &= ~Info.first;
+      if (Flags)
+        OS << " | ";
+    }
   }
+
+  assert(Flags == 0 && "Unknown scope flags");
+
   if (HasFlags)
     OS << '\n';
 

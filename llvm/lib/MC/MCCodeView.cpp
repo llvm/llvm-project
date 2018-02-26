@@ -13,7 +13,7 @@
 
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -39,30 +39,49 @@ CodeViewContext::~CodeViewContext() {
 /// for it.
 bool CodeViewContext::isValidFileNumber(unsigned FileNumber) const {
   unsigned Idx = FileNumber - 1;
-  if (Idx < Filenames.size())
-    return !Filenames[Idx].empty();
+  if (Idx < Files.size())
+    return Files[Idx].Assigned;
   return false;
 }
 
-bool CodeViewContext::addFile(unsigned FileNumber, StringRef Filename) {
+bool CodeViewContext::addFile(MCStreamer &OS, unsigned FileNumber,
+                              StringRef Filename,
+                              ArrayRef<uint8_t> ChecksumBytes,
+                              uint8_t ChecksumKind) {
   assert(FileNumber > 0);
-  Filename = addToStringTable(Filename);
+  auto FilenameOffset = addToStringTable(Filename);
+  Filename = FilenameOffset.first;
   unsigned Idx = FileNumber - 1;
-  if (Idx >= Filenames.size())
-    Filenames.resize(Idx + 1);
+  if (Idx >= Files.size())
+    Files.resize(Idx + 1);
 
   if (Filename.empty())
     Filename = "<stdin>";
 
-  if (!Filenames[Idx].empty())
+  if (Files[Idx].Assigned)
     return false;
 
-  // FIXME: We should store the string table offset of the filename, rather than
-  // the filename itself for efficiency.
-  Filename = addToStringTable(Filename);
+  FilenameOffset = addToStringTable(Filename);
+  Filename = FilenameOffset.first;
+  unsigned Offset = FilenameOffset.second;
 
-  Filenames[Idx] = Filename;
+  auto ChecksumOffsetSymbol =
+      OS.getContext().createTempSymbol("checksum_offset", false);
+  Files[Idx].StringTableOffset = Offset;
+  Files[Idx].ChecksumTableOffset = ChecksumOffsetSymbol;
+  Files[Idx].Assigned = true;
+  Files[Idx].Checksum = ChecksumBytes;
+  Files[Idx].ChecksumKind = ChecksumKind;
+
   return true;
+}
+
+MCCVFunctionInfo *CodeViewContext::getCVFunctionInfo(unsigned FuncId) {
+  if (FuncId >= Functions.size())
+    return nullptr;
+  if (Functions[FuncId].isUnallocatedFunctionInfo())
+    return nullptr;
+  return &Functions[FuncId];
 }
 
 bool CodeViewContext::recordFunctionId(unsigned FuncId) {
@@ -118,17 +137,18 @@ MCDataFragment *CodeViewContext::getStringTableFragment() {
   return StrTabFragment;
 }
 
-StringRef CodeViewContext::addToStringTable(StringRef S) {
+std::pair<StringRef, unsigned> CodeViewContext::addToStringTable(StringRef S) {
   SmallVectorImpl<char> &Contents = getStringTableFragment()->getContents();
   auto Insertion =
       StringTable.insert(std::make_pair(S, unsigned(Contents.size())));
   // Return the string from the table, since it is stable.
-  S = Insertion.first->first();
+  std::pair<StringRef, unsigned> Ret =
+      std::make_pair(Insertion.first->first(), Insertion.first->second);
   if (Insertion.second) {
     // The string map key is always null terminated.
-    Contents.append(S.begin(), S.end() + 1);
+    Contents.append(Ret.first.begin(), Ret.first.end() + 1);
   }
-  return S;
+  return Ret;
 }
 
 unsigned CodeViewContext::getStringTableOffset(StringRef S) {
@@ -165,7 +185,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
 void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
   // Do nothing if there are no file checksums. Microsoft's linker rejects empty
   // CodeView substreams.
-  if (Filenames.empty())
+  if (Files.empty())
     return;
 
   MCContext &Ctx = OS.getContext();
@@ -176,17 +196,124 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
   OS.emitAbsoluteSymbolDiff(FileEnd, FileBegin, 4);
   OS.EmitLabel(FileBegin);
 
+  unsigned CurrentOffset = 0;
+
   // Emit an array of FileChecksum entries. We index into this table using the
-  // user-provided file number. Each entry is currently 8 bytes, as we don't
-  // emit checksums.
-  for (StringRef Filename : Filenames) {
-    OS.EmitIntValue(getStringTableOffset(Filename), 4);
-    // Zero the next two fields and align back to 4 bytes. This indicates that
-    // no checksum is present.
-    OS.EmitIntValue(0, 4);
+  // user-provided file number.  Each entry may be a variable number of bytes
+  // determined by the checksum kind and size.
+  for (auto File : Files) {
+    OS.EmitAssignment(File.ChecksumTableOffset,
+                      MCConstantExpr::create(CurrentOffset, Ctx));
+    CurrentOffset += 4; // String table offset.
+    if (!File.ChecksumKind) {
+      CurrentOffset +=
+          4; // One byte each for checksum size and kind, then align to 4 bytes.
+    } else {
+      CurrentOffset += 2; // One byte each for checksum size and kind.
+      CurrentOffset += File.Checksum.size();
+      CurrentOffset = alignTo(CurrentOffset, 4);
+    }
+
+    OS.EmitIntValue(File.StringTableOffset, 4);
+
+    if (!File.ChecksumKind) {
+      // There is no checksum.  Therefore zero the next two fields and align
+      // back to 4 bytes.
+      OS.EmitIntValue(0, 4);
+      continue;
+    }
+    OS.EmitIntValue(static_cast<uint8_t>(File.Checksum.size()), 1);
+    OS.EmitIntValue(File.ChecksumKind, 1);
+    OS.EmitBytes(toStringRef(File.Checksum));
+    OS.EmitValueToAlignment(4);
   }
 
   OS.EmitLabel(FileEnd);
+
+  ChecksumOffsetsAssigned = true;
+}
+
+// Output checksum table offset of the given file number.  It is possible that
+// not all files have been registered yet, and so the offset cannot be
+// calculated.  In this case a symbol representing the offset is emitted, and
+// the value of this symbol will be fixed up at a later time.
+void CodeViewContext::emitFileChecksumOffset(MCObjectStreamer &OS,
+                                             unsigned FileNo) {
+  unsigned Idx = FileNo - 1;
+
+  if (Idx >= Files.size())
+    Files.resize(Idx + 1);
+
+  if (ChecksumOffsetsAssigned) {
+    OS.EmitSymbolValue(Files[Idx].ChecksumTableOffset, 4);
+    return;
+  }
+
+  const MCSymbolRefExpr *SRE =
+      MCSymbolRefExpr::create(Files[Idx].ChecksumTableOffset, OS.getContext());
+
+  OS.EmitValueImpl(SRE, 4);
+}
+
+void CodeViewContext::addLineEntry(const MCCVLineEntry &LineEntry) {
+  size_t Offset = MCCVLines.size();
+  auto I = MCCVLineStartStop.insert(
+      {LineEntry.getFunctionId(), {Offset, Offset + 1}});
+  if (!I.second)
+    I.first->second.second = Offset + 1;
+  MCCVLines.push_back(LineEntry);
+}
+
+std::vector<MCCVLineEntry>
+CodeViewContext::getFunctionLineEntries(unsigned FuncId) {
+  std::vector<MCCVLineEntry> FilteredLines;
+  auto I = MCCVLineStartStop.find(FuncId);
+  if (I != MCCVLineStartStop.end()) {
+    MCCVFunctionInfo *SiteInfo = getCVFunctionInfo(FuncId);
+    for (size_t Idx = I->second.first, End = I->second.second; Idx != End;
+         ++Idx) {
+      unsigned LocationFuncId = MCCVLines[Idx].getFunctionId();
+      if (LocationFuncId == FuncId) {
+        // This was a .cv_loc directly for FuncId, so record it.
+        FilteredLines.push_back(MCCVLines[Idx]);
+      } else {
+        // Check if the current location is inlined in this function. If it is,
+        // synthesize a statement .cv_loc at the original inlined call site.
+        auto I = SiteInfo->InlinedAtMap.find(LocationFuncId);
+        if (I != SiteInfo->InlinedAtMap.end()) {
+          MCCVFunctionInfo::LineInfo &IA = I->second;
+          // Only add the location if it differs from the previous location.
+          // Large inlined calls will have many .cv_loc entries and we only need
+          // one line table entry in the parent function.
+          if (FilteredLines.empty() ||
+              FilteredLines.back().getFileNum() != IA.File ||
+              FilteredLines.back().getLine() != IA.Line ||
+              FilteredLines.back().getColumn() != IA.Col) {
+            FilteredLines.push_back(MCCVLineEntry(
+                MCCVLines[Idx].getLabel(),
+                MCCVLoc(FuncId, IA.File, IA.Line, IA.Col, false, false)));
+          }
+        }
+      }
+    }
+  }
+  return FilteredLines;
+}
+
+std::pair<size_t, size_t> CodeViewContext::getLineExtent(unsigned FuncId) {
+  auto I = MCCVLineStartStop.find(FuncId);
+  // Return an empty extent if there are no cv_locs for this function id.
+  if (I == MCCVLineStartStop.end())
+    return {~0ULL, 0};
+  return I->second;
+}
+
+ArrayRef<MCCVLineEntry> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
+  if (R <= L)
+    return None;
+  if (L >= MCCVLines.size())
+    return None;
+  return makeArrayRef(&MCCVLines[L], R - L);
 }
 
 void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
@@ -219,9 +346,12 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
           return Loc.getFileNum() != CurFileNum;
         });
     unsigned EntryCount = FileSegEnd - I;
-    OS.AddComment("Segment for file '" + Twine(Filenames[CurFileNum - 1]) +
-                  "' begins");
-    OS.EmitIntValue(8 * (CurFileNum - 1), 4);
+    OS.AddComment(
+        "Segment for file '" +
+        Twine(getStringTableFragment()
+                  ->getContents()[Files[CurFileNum - 1].StringTableOffset]) +
+        "' begins");
+    OS.EmitCVFileChecksumOffsetDirective(CurFileNum);
     OS.EmitIntValue(EntryCount, 4);
     uint32_t SegmentSize = 12;
     SegmentSize += 8 * EntryCount;
@@ -401,9 +531,10 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
     HaveOpenRange = true;
 
     if (CurSourceLoc.File != LastSourceLoc.File) {
-      // File ids are 1 based, and each file checksum table entry is 8 bytes
-      // long. See emitFileChecksums above.
-      unsigned FileOffset = 8 * (CurSourceLoc.File - 1);
+      unsigned FileOffset = static_cast<const MCConstantExpr *>(
+                                Files[CurSourceLoc.File - 1]
+                                    .ChecksumTableOffset->getVariableValue())
+                                ->getValue();
       compressAnnotation(BinaryAnnotationsOpCode::ChangeFile, Buffer);
       compressAnnotation(FileOffset, Buffer);
     }

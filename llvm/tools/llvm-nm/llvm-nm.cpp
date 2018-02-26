@@ -20,10 +20,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -43,13 +40,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cctype>
-#include <cerrno>
-#include <cstring>
-#include <system_error>
 #include <vector>
-#include <string.h>
 
 using namespace llvm;
 using namespace object;
@@ -85,9 +76,11 @@ cl::alias DefinedOnly2("U", cl::desc("Alias for --defined-only"),
                        cl::aliasopt(DefinedOnly), cl::Grouping);
 
 cl::opt<bool> ExternalOnly("extern-only",
-                           cl::desc("Show only external symbols"));
+                           cl::desc("Show only external symbols"),
+                           cl::ZeroOrMore);
 cl::alias ExternalOnly2("g", cl::desc("Alias for --extern-only"),
-                        cl::aliasopt(ExternalOnly), cl::Grouping);
+                        cl::aliasopt(ExternalOnly), cl::Grouping,
+                        cl::ZeroOrMore);
 
 cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"),
                         cl::Grouping);
@@ -486,6 +479,10 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
         break;
       }
       Sec = *SecOrErr;
+      if (Sec == MachO->section_end()) {
+        outs() << "(?,?) ";
+        break;
+      }
     } else {
       Sec = I->Section;
     }
@@ -709,9 +706,13 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     } else if (OutputFormat == bsd && MultipleFiles && printName) {
       outs() << "\n" << CurrentFilename << ":\n";
     } else if (OutputFormat == sysv) {
-      outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n"
-             << "Name                  Value   Class        Type"
-             << "         Size   Line  Section\n";
+      outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n";
+      if (isSymbolList64Bit(Obj))
+        outs() << "Name                  Value           Class        Type"
+               << "         Size             Line  Section\n";
+      else
+        outs() << "Name                  Value   Class        Type"
+               << "         Size     Line  Section\n";
     }
   }
 
@@ -938,6 +939,10 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
     section_iterator SecI = *SecIOrErr;
     const coff_section *Section = Obj.getCOFFSection(*SecI);
     Characteristics = Section->Characteristics;
+    StringRef SectionName;
+    Obj.getSectionName(Section, SectionName);
+    if (SectionName.startswith(".idata"))
+      return 'i';
   }
 
   switch (Symb.getSectionNumber()) {
@@ -993,6 +998,8 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
       return 's';
     }
     section_iterator Sec = *SecOrErr;
+    if (Sec == Obj.section_end())
+      return 's';
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);
@@ -1226,7 +1233,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     if (DyldInfoOnly || AddDyldInfo ||
         HFlags & MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO) {
       unsigned ExportsAdded = 0;
-      for (const llvm::object::ExportEntry &Entry : MachO->exports()) {
+      Error Err = Error::success();
+      for (const llvm::object::ExportEntry &Entry : MachO->exports(Err)) {
         bool found = false;
         bool ReExport = false;
         if (!DyldInfoOnly) {
@@ -1362,6 +1370,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           }
         }
       }
+      if (Err)
+        error(std::move(Err), MachO->getFileName());
       // Set the symbol names and indirect names for the added symbols.
       if (ExportsAdded) {
         EOS.flush();
@@ -1958,8 +1968,7 @@ int main(int argc, char **argv) {
   if (NoDyldInfo && (AddDyldInfo || DyldInfoOnly))
     error("-no-dyldinfo can't be used with -add-dyldinfo or -dyldinfo-only");
 
-  std::for_each(InputFilenames.begin(), InputFilenames.end(),
-                dumpSymbolNamesFromFile);
+  llvm::for_each(InputFilenames, dumpSymbolNamesFromFile);
 
   if (HadError)
     return 1;

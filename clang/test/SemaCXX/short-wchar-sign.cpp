@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple i386-mingw32 -fsyntax-only -pedantic -verify %s
-// RUN: %clang_cc1 -fshort-wchar -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -fwchar-type=short -fno-signed-wchar -fsyntax-only -pedantic -verify %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -pedantic -verify %s
 // expected-no-diagnostics
 

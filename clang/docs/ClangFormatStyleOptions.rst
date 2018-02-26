@@ -271,15 +271,22 @@ the configuration (without a prefix: ``Auto``).
     int b = 2; // comment  b                int b = 2; // comment about b
 
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
-  Allow putting all parameters of a function declaration onto
+  If the function declaration doesn't fit on a line,
+  allow putting all parameters of a function declaration onto
   the next line even if ``BinPackParameters`` is ``false``.
 
   .. code-block:: c++
 
-    true:                                   false:
-    myFunction(foo,                 vs.     myFunction(foo, bar, plop);
-               bar,
-               plop);
+    true:
+    void myFunction(
+        int a, int b, int c, int d, int e);
+
+    false:
+    void myFunction(int a,
+                    int b,
+                    int c,
+                    int d,
+                    int e);
 
 **AllowShortBlocksOnASingleLine** (``bool``)
   Allows contracting simple braced statements to a single line.
@@ -533,6 +540,15 @@ the configuration (without a prefix: ``Auto``).
   If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
   each individual brace case should be handled. Otherwise, this is ignored.
 
+  .. code-block:: yaml
+
+    # Example of usage:
+    BreakBeforeBraces: Custom
+    BraceWrapping:
+      AfterEnum: true
+      AfterStruct: false
+      SplitEmptyFunction: false
+
   Nested configuration flags:
 
 
@@ -645,6 +661,21 @@ the configuration (without a prefix: ``Auto``).
         int x;
       }
 
+  * ``bool AfterExternBlock`` Wrap extern blocks.
+
+    .. code-block:: c++
+
+      true:
+      extern "C"
+      {
+        int foo();
+      }
+
+      false:
+      extern "C" {
+      int foo();
+      }
+
   * ``bool BeforeCatch`` Wrap before ``catch``.
 
     .. code-block:: c++
@@ -679,7 +710,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
-  * ``bool SplitEmptyFunctionBody`` If ``false``, empty function body can be put on a single line.
+  * ``bool SplitEmptyFunction`` If ``false``, empty function body can be put on a single line.
     This option is used only if the opening brace of the function has
     already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
     set, and the function could/should not be put on a single line (as per
@@ -690,6 +721,28 @@ the configuration (without a prefix: ``Auto``).
       int f()   vs.   inf f()
       {}              {
                       }
+
+  * ``bool SplitEmptyRecord`` If ``false``, empty record (e.g. class, struct or union) body
+    can be put on a single line. This option is used only if the opening
+    brace of the record has already been wrapped, i.e. the `AfterClass`
+    (for classes) brace wrapping mode is set.
+
+    .. code-block:: c++
+
+      class Foo   vs.  class Foo
+      {}               {
+                       }
+
+  * ``bool SplitEmptyNamespace`` If ``false``, empty namespace body can be put on a single line.
+    This option is used only if the opening brace of the namespace has
+    already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
+    set.
+
+    .. code-block:: c++
+
+      namespace Foo   vs.  namespace Foo
+      {}                   {
+                           }
 
 
 **BreakAfterJavaFieldAnnotations** (``bool``)
@@ -941,9 +994,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1(),
-          initializer2()
+      Constructor()
+          : initializer1(),
+            initializer2()
 
   * ``BCIS_BeforeComma`` (in configuration: ``BeforeComma``)
     Break constructor initializers before the colon and commas, and align
@@ -951,18 +1004,18 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1()
-        , initializer2()
+      Constructor()
+          : initializer1()
+          , initializer2()
 
   * ``BCIS_AfterColon`` (in configuration: ``AfterColon``)
     Break constructor initializers after the colon and commas.
 
     .. code-block:: c++
 
-    Constructor() :
-        initializer1(),
-        initializer2()
+      Constructor() :
+          initializer1(),
+          initializer2()
 
 
 
@@ -1120,6 +1173,45 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
+**IncludeBlocks** (``IncludeBlocksStyle``)
+  Dependent on the value, multiple ``#include`` blocks can be sorted
+  as one and divided based on category.
+
+  Possible values:
+
+  * ``IBS_Preserve`` (in configuration: ``Preserve``)
+    Sort each ``#include`` block separately.
+
+    .. code-block:: c++
+
+       #include "b.h"               into      #include "b.h"
+
+       #include <lib/main.h>                  #include "a.h"
+       #include "a.h"                         #include <lib/main.h>
+
+  * ``IBS_Merge`` (in configuration: ``Merge``)
+    Merge multiple ``#include`` blocks together and sort as one.
+
+    .. code-block:: c++
+
+       #include "b.h"               into      #include "a.h"
+                                              #include "b.h"
+       #include <lib/main.h>                  #include <lib/main.h>
+       #include "a.h"
+
+  * ``IBS_Regroup`` (in configuration: ``Regroup``)
+    Merge multiple ``#include`` blocks together and sort as one.
+    Then split into groups based on category priority. See ``IncludeCategories``.
+
+    .. code-block:: c++
+
+       #include "b.h"               into      #include "a.h"
+                                              #include "b.h"
+       #include <lib/main.h>
+       #include "a.h"                         #include <lib/main.h>
+
+
+
 **IncludeCategories** (``std::vector<IncludeCategory>``)
   Regular expressions denoting the different ``#include`` categories
   used for ordering ``#includes``.
@@ -1144,7 +1236,7 @@ the configuration (without a prefix: ``Auto``).
     IncludeCategories:
       - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
         Priority:        2
-      - Regex:           '^(<|"(gtest|isl|json)/)'
+      - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
         Priority:        3
       - Regex:           '.*'
         Priority:        1
@@ -1178,6 +1270,35 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+**IndentPPDirectives** (``PPDirectiveIndentStyle``)
+  The preprocessor directive indenting style to use.
+
+  Possible values:
+
+  * ``PPDIS_None`` (in configuration: ``None``)
+    Does not indent any directives.
+
+    .. code-block:: c++
+
+       #if FOO
+       #if BAR
+       #include <foo>
+       #endif
+       #endif
+
+  * ``PPDIS_AfterHash`` (in configuration: ``AfterHash``)
+    Indents directives after the hash.
+
+    .. code-block:: c++
+
+       #if FOO
+       #  if BAR
+       #    include <foo>
+       #  endif
+       #endif
+
+
 
 **IndentWidth** (``unsigned``)
   The number of columns to use for indentation.
@@ -1290,6 +1411,10 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LK_TableGen`` (in configuration: ``TableGen``)
     Should be used for TableGen code.
+
+  * ``LK_TextProto`` (in configuration: ``TextProto``)
+    Should be used for Protocol Buffer messages in text format
+    (https://developers.google.com/protocol-buffers/).
 
 
 
@@ -1451,6 +1576,26 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**RawStringFormats** (``std::vector<RawStringFormat>``)
+  Raw string delimiters denoting that the raw string contents are
+  code in a particular language and can be reformatted.
+
+  A raw string with a matching delimiter will be reformatted assuming the
+  specified language based on a predefined style given by 'BasedOnStyle'.
+  If 'BasedOnStyle' is not found, the formatting is based on llvm style.
+
+  To configure this in the .clang-format file, use:
+
+  .. code-block:: yaml
+
+    RawStringFormats:
+      - Delimiter: 'pb'
+        Language:  TextProto
+        BasedOnStyle: llvm
+      - Delimiter: 'proto'
+        Language:  TextProto
+        BasedOnStyle: google
+
 **ReflowComments** (``bool``)
   If ``true``, clang-format will attempt to re-flow comments.
 
@@ -1477,6 +1622,14 @@ the configuration (without a prefix: ``Auto``).
 
 **SortUsingDeclarations** (``bool``)
   If ``true``, clang-format will sort using declarations.
+
+  The order of using declarations is defined as follows:
+  Split the strings by "::" and discard any initial empty strings. The last
+  element of each list is a non-namespace name; all others are namespace
+  names. Sort the lists of names lexicographically, where the sort order of
+  individual names is that all non-namespace names come before all namespace
+  names, and within those groups, names are in case-insensitive
+  lexicographic order.
 
   .. code-block:: c++
 

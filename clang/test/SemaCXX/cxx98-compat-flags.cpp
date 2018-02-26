@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat-pedantic -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat-pedantic -Wno-bind-to-temporary-copy -Wno-unnamed-type-template-args -Wno-local-type-template-args -Werror %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat-pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat-pedantic -Wno-bind-to-temporary-copy -Wno-unnamed-type-template-args -Wno-local-type-template-args -Wno-binary-literal -Werror %s
 
 template<typename T> int TemplateFn(T) { return 0; }
 void LocalTemplateArg() {
@@ -32,4 +32,6 @@ namespace CopyCtorIssues {
   const NoViable &b = NoViable(); // expected-warning {{copying variable of type 'CopyCtorIssues::NoViable' when binding a reference to a temporary would find no viable constructor in C++98}}
   const Ambiguous &c = Ambiguous(); // expected-warning {{copying variable of type 'CopyCtorIssues::Ambiguous' when binding a reference to a temporary would find ambiguous constructors in C++98}}
   const Deleted &d = Deleted(); // expected-warning {{copying variable of type 'CopyCtorIssues::Deleted' when binding a reference to a temporary would invoke a deleted constructor in C++98}}
+
+  int n = 0b00100101001; // expected-warning {{binary integer literals are incompatible with C++ standards before C++14}}
 }

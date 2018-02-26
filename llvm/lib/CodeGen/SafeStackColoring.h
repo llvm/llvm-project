@@ -1,4 +1,4 @@
-//===-- SafeStackColoring.h - SafeStack frame coloring ---------*- C++ -*--===//
+//===- SafeStackColoring.h - SafeStack frame coloring ----------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,16 +10,23 @@
 #ifndef LLVM_LIB_CODEGEN_SAFESTACKCOLORING_H
 #define LLVM_LIB_CODEGEN_SAFESTACKCOLORING_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <utility>
 
 namespace llvm {
-class AllocaInst;
+
+class BasicBlock;
+class Function;
+class Instruction;
 
 namespace safestack {
+
 /// Compute live ranges of allocas.
 /// Live ranges are represented as sets of "interesting" instructions, which are
 /// defined as instructions that may start or end an alloca's lifetime. These
@@ -35,10 +42,13 @@ class StackColoring {
   struct BlockLifetimeInfo {
     /// Which slots BEGINs in each basic block.
     BitVector Begin;
+
     /// Which slots ENDs in each basic block.
     BitVector End;
+
     /// Which slots are marked as LIVE_IN, coming into each basic block.
     BitVector LiveIn;
+
     /// Which slots are marked as LIVE_OUT, coming out of each basic block.
     BitVector LiveOut;
   };
@@ -48,11 +58,14 @@ public:
   /// live.
   struct LiveRange {
     BitVector bv;
+
     void SetMaximum(int size) { bv.resize(size); }
     void AddRange(unsigned start, unsigned end) { bv.set(start, end); }
+
     bool Overlaps(const LiveRange &Other) const {
       return bv.anyCommon(Other.bv);
     }
+
     void Join(const LiveRange &Other) { bv |= Other.bv; }
   };
 
@@ -60,13 +73,15 @@ private:
   Function &F;
 
   /// Maps active slots (per bit) for each basic block.
-  typedef DenseMap<BasicBlock *, BlockLifetimeInfo> LivenessMap;
+  using LivenessMap = DenseMap<BasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
   /// Number of interesting instructions.
-  int NumInst;
+  int NumInst = -1;
+
   /// Numeric ids for interesting instructions.
   DenseMap<Instruction *, unsigned> InstructionNumbering;
+
   /// A range [Start, End) of instruction ids for each basic block.
   /// Instructions inside each BB have monotonic and consecutive ids.
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
@@ -74,6 +89,7 @@ private:
   ArrayRef<AllocaInst *> Allocas;
   unsigned NumAllocas;
   DenseMap<AllocaInst *, unsigned> AllocaNumbering;
+
   /// LiveRange for allocas.
   SmallVector<LiveRange, 8> LiveRanges;
 
@@ -101,7 +117,7 @@ private:
 
 public:
   StackColoring(Function &F, ArrayRef<AllocaInst *> Allocas)
-      : F(F), NumInst(-1), Allocas(Allocas), NumAllocas(Allocas.size()) {}
+      : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {}
 
   void run();
   void removeAllMarkers();
@@ -143,7 +159,8 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
   return OS << R.bv;
 }
 
-} // namespace safestack
-} // namespace llvm
+} // end namespace safestack
+
+} // end namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_SAFESTACKCOLORING_H

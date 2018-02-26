@@ -173,7 +173,7 @@ protected:
 
 public:
     bool runOnMachineFunction(MachineFunction &MF) override {
-      if (skipFunction(*MF.getFunction()))
+      if (skipFunction(MF.getFunction()))
         return false;
 
       TII = MF.getSubtarget().getInstrInfo();

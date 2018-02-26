@@ -2299,7 +2299,7 @@ bool CastInst::isLosslessCast() const {
 bool CastInst::isNoopCast(Instruction::CastOps Opcode,
                           Type *SrcTy,
                           Type *DestTy,
-                          Type *IntPtrTy) {
+                          const DataLayout &DL) {
   switch (Opcode) {
     default: llvm_unreachable("Invalid CastOp");
     case Instruction::Trunc:
@@ -2317,30 +2317,16 @@ bool CastInst::isNoopCast(Instruction::CastOps Opcode,
     case Instruction::BitCast:
       return true;  // BitCast never modifies bits.
     case Instruction::PtrToInt:
-      return IntPtrTy->getScalarSizeInBits() ==
+      return DL.getIntPtrType(SrcTy)->getScalarSizeInBits() ==
              DestTy->getScalarSizeInBits();
     case Instruction::IntToPtr:
-      return IntPtrTy->getScalarSizeInBits() ==
+      return DL.getIntPtrType(DestTy)->getScalarSizeInBits() ==
              SrcTy->getScalarSizeInBits();
   }
 }
 
-/// @brief Determine if a cast is a no-op.
-bool CastInst::isNoopCast(Type *IntPtrTy) const {
-  return isNoopCast(getOpcode(), getOperand(0)->getType(), getType(), IntPtrTy);
-}
-
 bool CastInst::isNoopCast(const DataLayout &DL) const {
-  Type *PtrOpTy = nullptr;
-  if (getOpcode() == Instruction::PtrToInt)
-    PtrOpTy = getOperand(0)->getType();
-  else if (getOpcode() == Instruction::IntToPtr)
-    PtrOpTy = getType();
-
-  Type *IntPtrTy =
-      PtrOpTy ? DL.getIntPtrType(PtrOpTy) : DL.getIntPtrType(getContext(), 0);
-
-  return isNoopCast(getOpcode(), getOperand(0)->getType(), getType(), IntPtrTy);
+  return isNoopCast(getOpcode(), getOperand(0)->getType(), getType(), DL);
 }
 
 /// This function determines if a pair of casts can be eliminated and what
@@ -2891,12 +2877,15 @@ bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
 
 bool CastInst::isBitOrNoopPointerCastable(Type *SrcTy, Type *DestTy,
                                           const DataLayout &DL) {
+  // ptrtoint and inttoptr are not allowed on non-integral pointers
   if (auto *PtrTy = dyn_cast<PointerType>(SrcTy))
     if (auto *IntTy = dyn_cast<IntegerType>(DestTy))
-      return IntTy->getBitWidth() == DL.getPointerTypeSizeInBits(PtrTy);
+      return (IntTy->getBitWidth() == DL.getPointerTypeSizeInBits(PtrTy) &&
+              !DL.isNonIntegralPointerType(PtrTy));
   if (auto *PtrTy = dyn_cast<PointerType>(DestTy))
     if (auto *IntTy = dyn_cast<IntegerType>(SrcTy))
-      return IntTy->getBitWidth() == DL.getPointerTypeSizeInBits(PtrTy);
+      return (IntTy->getBitWidth() == DL.getPointerTypeSizeInBits(PtrTy) &&
+              !DL.isNonIntegralPointerType(PtrTy));
 
   return isBitCastable(SrcTy, DestTy);
 }

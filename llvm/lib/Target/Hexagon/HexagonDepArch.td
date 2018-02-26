@@ -1,4 +1,4 @@
-//===--- HexagonDepArch.td ------------------------------------------------===//
+//===- HexagonDepArch.td --------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,14 +6,19 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Automatically generated file, please consult code owner before editing.
+//===----------------------------------------------------------------------===//
 
-def ArchV62: SubtargetFeature<"v62", "HexagonArchVersion", "V62", "Enable Hexagon V62 architecture">;
+
+def ArchV65: SubtargetFeature<"v65", "HexagonArchVersion", "Hexagon::ArchEnum::V65", "Enable Hexagon V65 architecture">;
+def HasV65T : Predicate<"HST->hasV65TOps()">, AssemblerPredicate<"ArchV65">;
+def ArchV62: SubtargetFeature<"v62", "HexagonArchVersion", "Hexagon::ArchEnum::V62", "Enable Hexagon V62 architecture">;
 def HasV62T : Predicate<"HST->hasV62TOps()">, AssemblerPredicate<"ArchV62">;
-def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "V60", "Enable Hexagon V60 architecture">;
+def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "Hexagon::ArchEnum::V60", "Enable Hexagon V60 architecture">;
 def HasV60T : Predicate<"HST->hasV60TOps()">, AssemblerPredicate<"ArchV60">;
-def ArchV55: SubtargetFeature<"v55", "HexagonArchVersion", "V55", "Enable Hexagon V55 architecture">;
+def ArchV55: SubtargetFeature<"v55", "HexagonArchVersion", "Hexagon::ArchEnum::V55", "Enable Hexagon V55 architecture">;
 def HasV55T : Predicate<"HST->hasV55TOps()">, AssemblerPredicate<"ArchV55">;
-def ArchV4: SubtargetFeature<"v4", "HexagonArchVersion", "V4", "Enable Hexagon V4 architecture">;
+def ArchV4: SubtargetFeature<"v4", "HexagonArchVersion", "Hexagon::ArchEnum::V4", "Enable Hexagon V4 architecture">;
 def HasV4T : Predicate<"HST->hasV4TOps()">, AssemblerPredicate<"ArchV4">;
-def ArchV5: SubtargetFeature<"v5", "HexagonArchVersion", "V5", "Enable Hexagon V5 architecture">;
+def ArchV5: SubtargetFeature<"v5", "HexagonArchVersion", "Hexagon::ArchEnum::V5", "Enable Hexagon V5 architecture">;
 def HasV5T : Predicate<"HST->hasV5TOps()">, AssemblerPredicate<"ArchV5">;

@@ -33,6 +33,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -296,7 +297,7 @@ namespace {
 /// An instantiation set is a collection of functions that have the same source
 /// code, ie, template functions specializations.
 class FunctionInstantiationSetCollector {
-  using MapT = DenseMap<LineColPair, std::vector<const FunctionRecord *>>;
+  using MapT = std::map<LineColPair, std::vector<const FunctionRecord *>>;
   MapT InstantiatedFunctions;
 
 public:
@@ -386,6 +387,11 @@ class SegmentBuilder {
       // location as this one.
       if (CompletedSegmentLoc == CompletedRegion->endLoc())
         continue;
+
+      // Use the count from the last completed region which ends at this loc.
+      for (unsigned J = I + 1; J < E; ++J)
+        if (CompletedRegion->endLoc() == ActiveRegions[J]->endLoc())
+          CompletedRegion = ActiveRegions[J];
 
       startSegment(*CompletedRegion, CompletedSegmentLoc, false);
     }
@@ -622,7 +628,7 @@ CoverageMapping::getInstantiationGroups(StringRef Filename) const {
   }
 
   std::vector<InstantiationGroup> Result;
-  for (const auto &InstantiationSet : InstantiationSetCollector) {
+  for (auto &InstantiationSet : InstantiationSetCollector) {
     InstantiationGroup IG{InstantiationSet.first.first,
                           InstantiationSet.first.second,
                           std::move(InstantiationSet.second)};
@@ -697,12 +703,12 @@ LineCoverageStats::LineCoverageStats(
   if (!Mapped)
     return;
 
-  // Pick the max count from the non-gap, region entry segments. If there
-  // aren't any, use the wrapped count.
-  if (!MinRegionCount) {
+  // Pick the max count from the non-gap, region entry segments and the
+  // wrapped count.
+  if (WrappedSegment)
     ExecutionCount = WrappedSegment->Count;
+  if (!MinRegionCount)
     return;
-  }
   for (const auto *LS : LineSegments)
     if (isStartOfRegion(LS))
       ExecutionCount = std::max(ExecutionCount, LS->Count);

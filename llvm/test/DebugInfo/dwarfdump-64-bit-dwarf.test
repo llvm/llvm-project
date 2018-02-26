@@ -13,3 +13,33 @@ CHECK:      line_base: -5
 CHECK:     line_range: 14
 CHECK:    opcode_base: 13
 CHECK: is_stmt end_sequence
+
+CHECK:   total_length: 0x0000007c
+CHECK:        version: 2
+CHECK:prologue_length: 0x00000048
+CHECK:min_inst_length: 1
+CHECK:default_is_stmt: 1
+CHECK:      line_base: -5
+CHECK:     line_range: 14
+CHECK:    opcode_base: 13
+CHECK: is_stmt end_sequence
+
+CHECK:   total_length: 0x00000094
+CHECK:        version: 2
+CHECK:prologue_length: 0x00000044
+CHECK:min_inst_length: 1
+CHECK:default_is_stmt: 1
+CHECK:      line_base: -5
+CHECK:     line_range: 14
+CHECK:    opcode_base: 13
+CHECK: is_stmt end_sequence
+
+CHECK:   total_length: 0x0000007c
+CHECK:        version: 2
+CHECK:prologue_length: 0x00000048
+CHECK:min_inst_length: 1
+CHECK:default_is_stmt: 1
+CHECK:      line_base: -5
+CHECK:     line_range: 14
+CHECK:    opcode_base: 13
+CHECK: is_stmt end_sequence

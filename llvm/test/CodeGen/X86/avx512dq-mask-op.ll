@@ -3,11 +3,11 @@
 
 define i8 @mask8(i8 %x) {
 ; CHECK-LABEL: mask8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    knotb %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -17,7 +17,7 @@ define i8 @mask8(i8 %x) {
 
 define void @mask8_mem(i8* %ptr) {
 ; CHECK-LABEL: mask8_mem:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovb (%rdi), %k0
 ; CHECK-NEXT:    knotb %k0, %k0
 ; CHECK-NEXT:    kmovb %k0, (%rdi)
@@ -32,7 +32,7 @@ define void @mask8_mem(i8* %ptr) {
 
 define i8 @mand8(i8 %x, i8 %y) {
 ; CHECK-LABEL: mand8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    xorl %esi, %eax
 ; CHECK-NEXT:    andl %esi, %edi
@@ -50,14 +50,14 @@ define i8 @mand8(i8 %x, i8 %y) {
 
 define i8 @mand8_mem(<8 x i1>* %x, <8 x i1>* %y) {
 ; CHECK-LABEL: mand8_mem:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovb (%rdi), %k0
 ; CHECK-NEXT:    kmovb (%rsi), %k1
 ; CHECK-NEXT:    kandb %k1, %k0, %k2
 ; CHECK-NEXT:    kxorb %k1, %k0, %k0
 ; CHECK-NEXT:    korb %k0, %k2, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %ma = load <8 x i1>, <8 x i1>* %x
   %mb = load <8 x i1>, <8 x i1>* %y

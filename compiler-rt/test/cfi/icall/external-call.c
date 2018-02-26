@@ -4,7 +4,8 @@
 
 // This test uses jump tables containing PC-relative references to external
 // symbols, which the Mach-O object writer does not currently support.
-// XFAIL: darwin
+// The test passes on i386 Darwin and fails on x86_64, hence unsupported instead of xfail.
+// UNSUPPORTED: darwin
 
 #include <stdlib.h>
 #include <stdio.h>

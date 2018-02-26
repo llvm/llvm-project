@@ -15,20 +15,28 @@
 
 def isEG : Predicate<
   "Subtarget->getGeneration() >= AMDGPUSubtarget::EVERGREEN && "
-  "Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS && "
+  "Subtarget->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS && "
   "!Subtarget->hasCaymanISA()"
 >;
 
 def isEGorCayman : Predicate<
   "Subtarget->getGeneration() == AMDGPUSubtarget::EVERGREEN ||"
-  "Subtarget->getGeneration() ==AMDGPUSubtarget::NORTHERN_ISLANDS"
+  "Subtarget->getGeneration() == AMDGPUSubtarget::NORTHERN_ISLANDS"
 >;
+
+class EGPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
+  let SubtargetPredicate = isEG;
+}
+
+class EGOrCaymanPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
+  let SubtargetPredicate = isEGorCayman;
+}
 
 //===----------------------------------------------------------------------===//
 // Evergreen / Cayman store instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [isEGorCayman] in {
+let SubtargetPredicate = isEGorCayman in {
 
 class CF_MEM_RAT_CACHELESS <bits<6> rat_inst, bits<4> rat_id, bits<4> mask, dag ins,
                            string name, list<dag> pattern>
@@ -88,13 +96,13 @@ defm RAT_ATOMIC_XOR : RAT_ATOMIC<16, 48, "ATOMIC_XOR">;
 defm RAT_ATOMIC_INC_UINT : RAT_ATOMIC<18, 50, "ATOMIC_INC_UINT">;
 defm RAT_ATOMIC_DEC_UINT : RAT_ATOMIC<19, 51, "ATOMIC_DEC_UINT">;
 
-} // End let Predicates = [isEGorCayman]
+} // End SubtargetPredicate = isEGorCayman
 
 //===----------------------------------------------------------------------===//
 // Evergreen Only instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [isEG] in {
+let SubtargetPredicate = isEG in {
 
 def RECIP_IEEE_eg : RECIP_IEEE_Common<0x86>;
 defm DIV_eg : DIV_Common<RECIP_IEEE_eg>;
@@ -116,7 +124,8 @@ def SIN_eg : SIN_Common<0x8D>;
 def COS_eg : COS_Common<0x8E>;
 
 def : POW_Common <LOG_IEEE_eg, EXP_IEEE_eg, MUL>;
-def : Pat<(fsqrt f32:$src), (MUL $src, (RECIPSQRT_CLAMPED_eg $src))>;
+def : EGPat<(fsqrt f32:$src), (MUL $src, (RECIPSQRT_CLAMPED_eg $src))>;
+} // End SubtargetPredicate = isEG
 
 //===----------------------------------------------------------------------===//
 // Memory read/write instructions
@@ -128,21 +137,21 @@ let usesCustomInserter = 1 in {
 def RAT_WRITE_CACHELESS_32_eg : CF_MEM_RAT_CACHELESS <0x2, 0, 0x1,
   (ins R600_TReg32_X:$rw_gpr, R600_TReg32_X:$index_gpr, InstFlag:$eop),
   "STORE_RAW $rw_gpr, $index_gpr, $eop",
-  [(global_store i32:$rw_gpr, i32:$index_gpr)]
+  [(store_global i32:$rw_gpr, i32:$index_gpr)]
 >;
 
 // 64-bit store
 def RAT_WRITE_CACHELESS_64_eg : CF_MEM_RAT_CACHELESS <0x2, 0, 0x3,
   (ins R600_Reg64:$rw_gpr, R600_TReg32_X:$index_gpr, InstFlag:$eop),
   "STORE_RAW $rw_gpr.XY, $index_gpr, $eop",
-  [(global_store v2i32:$rw_gpr, i32:$index_gpr)]
+  [(store_global v2i32:$rw_gpr, i32:$index_gpr)]
 >;
 
 //128-bit store
 def RAT_WRITE_CACHELESS_128_eg : CF_MEM_RAT_CACHELESS <0x2, 0, 0xf,
   (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr, InstFlag:$eop),
   "STORE_RAW $rw_gpr.XYZW, $index_gpr, $eop",
-  [(global_store v4i32:$rw_gpr, i32:$index_gpr)]
+  [(store_global v4i32:$rw_gpr, i32:$index_gpr)]
 >;
 
 def RAT_STORE_TYPED_eg: CF_MEM_RAT_STORE_TYPED<1>;
@@ -203,8 +212,8 @@ def VTX_READ_32_eg
   // to be caused by ALU instructions in the next instruction group that wrote
   // to the $src_gpr registers of the VTX_READ.
   // e.g.
-  // %T3_X<def> = VTX_READ_PARAM_32_eg %T2_X<kill>, 24
-  // %T2_X<def> = MOV %ZERO
+  // %t3_x = VTX_READ_PARAM_32_eg killed %t2_x, 24
+  // %t2_x = MOV %zero
   //Adding this constraint prevents this from happening.
   let Constraints = "$src_gpr.ptr = $dst_gpr";
 }
@@ -241,58 +250,56 @@ def VTX_READ_128_eg
 //===----------------------------------------------------------------------===//
 // VTX Read from parameter memory space
 //===----------------------------------------------------------------------===//
-def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id3_az_extloadi8 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_8_eg MEMxi:$src_gpr, 3)>;
-def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id3_az_extloadi16 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_16_eg MEMxi:$src_gpr, 3)>;
-def : Pat<(i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_32_eg MEMxi:$src_gpr, 3)>;
-def : Pat<(v2i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(v2i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_64_eg MEMxi:$src_gpr, 3)>;
-def : Pat<(v4i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(v4i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_128_eg MEMxi:$src_gpr, 3)>;
 
 //===----------------------------------------------------------------------===//
 // VTX Read from constant memory space
 //===----------------------------------------------------------------------===//
-def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id2_az_extloadi8 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_8_eg MEMxi:$src_gpr, 2)>;
-def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id2_az_extloadi16 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_16_eg MEMxi:$src_gpr, 2)>;
-def : Pat<(i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_32_eg MEMxi:$src_gpr, 2)>;
-def : Pat<(v2i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(v2i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_64_eg MEMxi:$src_gpr, 2)>;
-def : Pat<(v4i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(v4i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_128_eg MEMxi:$src_gpr, 2)>;
 
 //===----------------------------------------------------------------------===//
 // VTX Read from global memory space
 //===----------------------------------------------------------------------===//
-def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id1_az_extloadi8 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_8_eg MEMxi:$src_gpr, 1)>;
-def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id1_az_extloadi16 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_16_eg MEMxi:$src_gpr, 1)>;
-def : Pat<(i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_32_eg MEMxi:$src_gpr, 1)>;
-def : Pat<(v2i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(v2i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_64_eg MEMxi:$src_gpr, 1)>;
-def : Pat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+def : EGPat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_128_eg MEMxi:$src_gpr, 1)>;
-
-} // End Predicates = [isEG]
 
 //===----------------------------------------------------------------------===//
 // Evergreen / Cayman Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [isEGorCayman] in {
+let SubtargetPredicate = isEGorCayman in {
 
 multiclass AtomicPat<Instruction inst_ret, Instruction inst_noret,
                      SDPatternOperator node_ret, SDPatternOperator node_noret> {
   // FIXME: Add _RTN version. We need per WI scratch location to store the old value
   // EXTRACT_SUBREG here is dummy, we know the node has no uses
-  def : Pat<(i32 (node_noret i32:$ptr, i32:$data)),
+  def : EGOrCaymanPat<(i32 (node_noret i32:$ptr, i32:$data)),
             (EXTRACT_SUBREG (inst_noret
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $data, sub0), $ptr), sub1)>;
 }
@@ -300,7 +307,7 @@ multiclass AtomicIncDecPat<Instruction inst_ret, Instruction inst_noret,
                      SDPatternOperator node_ret, SDPatternOperator node_noret, int C> {
   // FIXME: Add _RTN version. We need per WI scratch location to store the old value
   // EXTRACT_SUBREG here is dummy, we know the node has no uses
-  def : Pat<(i32 (node_noret i32:$ptr, C)),
+  def : EGOrCaymanPat<(i32 (node_noret i32:$ptr, C)),
             (EXTRACT_SUBREG (inst_noret
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (MOV_IMM_I32 -1), sub0), $ptr), sub1)>;
 }
@@ -308,7 +315,7 @@ multiclass AtomicIncDecPat<Instruction inst_ret, Instruction inst_noret,
 // CMPSWAP is pattern is special
 // EXTRACT_SUBREG here is dummy, we know the node has no uses
 // FIXME: Add _RTN version. We need per WI scratch location to store the old value
-def : Pat<(i32 (atomic_cmp_swap_global_noret i32:$ptr, i32:$cmp, i32:$data)),
+def : EGOrCaymanPat<(i32 (atomic_cmp_swap_global_noret i32:$ptr, i32:$cmp, i32:$data)),
           (EXTRACT_SUBREG (RAT_ATOMIC_CMPXCHG_INT_NORET
             (INSERT_SUBREG
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $cmp, sub3),
@@ -395,11 +402,11 @@ def BFI_INT_eg : R600_3OP <0x06, "BFI_INT",
   VecALU
 >;
 
-def : Pat<(i32 (sext_inreg i32:$src, i1)),
+def : EGOrCaymanPat<(i32 (sext_inreg i32:$src, i1)),
   (BFE_INT_eg i32:$src, (i32 ZERO), (i32 ONE_INT))>;
-def : Pat<(i32 (sext_inreg i32:$src, i8)),
+def : EGOrCaymanPat<(i32 (sext_inreg i32:$src, i8)),
   (BFE_INT_eg i32:$src, (i32 ZERO), (MOV_IMM_I32 8))>;
-def : Pat<(i32 (sext_inreg i32:$src, i16)),
+def : EGOrCaymanPat<(i32 (sext_inreg i32:$src, i16)),
   (BFE_INT_eg i32:$src, (i32 ZERO), (MOV_IMM_I32 16))>;
 
 defm : BFIPatterns <BFI_INT_eg, MOV_IMM_I32, R600_Reg64>;
@@ -442,7 +449,7 @@ def FLT32_TO_FLT16 : R600_1OP_Helper <0xA2, "FLT32_TO_FLT16", AMDGPUfp_to_f16, V
 def FLT16_TO_FLT32 : R600_1OP_Helper <0xA3, "FLT16_TO_FLT32", f16_to_fp, VecALU>;
 def BCNT_INT : R600_1OP_Helper <0xAA, "BCNT_INT", ctpop, VecALU>;
 def FFBH_UINT : R600_1OP_Helper <0xAB, "FFBH_UINT", AMDGPUffbh_u32, VecALU>;
-def FFBL_INT : R600_1OP_Helper <0xAC, "FFBL_INT", cttz_zero_undef, VecALU>;
+def FFBL_INT : R600_1OP_Helper <0xAC, "FFBL_INT", AMDGPUffbl_b32, VecALU>;
 
 let hasSideEffects = 1 in {
   def MOVA_INT_eg : R600_1OP <0xCC, "MOVA_INT", [], VecALU>;
@@ -614,7 +621,7 @@ def LDS_MAX_INT : R600_LDS_1A1D_NORET <0x6, "LDS_MAX_INT", [] >;
 def LDS_MIN_UINT : R600_LDS_1A1D_NORET <0x7, "LDS_MIN_UINT", [] >;
 def LDS_MAX_UINT : R600_LDS_1A1D_NORET <0x8, "LDS_MAX_UINT", [] >;
 def LDS_WRITE : R600_LDS_1A1D_NORET <0xD, "LDS_WRITE",
-  [(local_store (i32 R600_Reg32:$src1), R600_Reg32:$src0)]
+  [(store_local (i32 R600_Reg32:$src1), R600_Reg32:$src0)]
 >;
 def LDS_BYTE_WRITE : R600_LDS_1A1D_NORET<0x12, "LDS_BYTE_WRITE",
   [(truncstorei8_local i32:$src1, i32:$src0)]
@@ -653,10 +660,10 @@ def LDS_WRXCHG_RET : R600_LDS_1A1D_RET <0x2d, "LDS_WRXCHG",
   [(set i32:$dst, (atomic_swap_local i32:$src0, i32:$src1))]
 >;
 def LDS_CMPST_RET : R600_LDS_1A2D_RET <0x30, "LDS_CMPST",
-  [(set i32:$dst, (atomic_cmp_swap_32_local i32:$src0, i32:$src1, i32:$src2))]
+  [(set i32:$dst, (atomic_cmp_swap_local i32:$src0, i32:$src1, i32:$src2))]
 >;
 def LDS_READ_RET : R600_LDS_1A <0x32, "LDS_READ_RET",
-  [(set (i32 R600_Reg32:$dst), (local_load R600_Reg32:$src0))]
+  [(set (i32 R600_Reg32:$dst), (load_local R600_Reg32:$src0))]
 >;
 def LDS_BYTE_READ_RET : R600_LDS_1A <0x36, "LDS_BYTE_READ_RET",
   [(set i32:$dst, (sextloadi8_local i32:$src0))]
@@ -681,9 +688,9 @@ def LDS_USHORT_READ_RET : R600_LDS_1A <0x39, "LDS_USHORT_READ_RET",
 // XXX: Lowering SELECT_CC will sometimes generate fp_to_[su]int nodes,
 // which do not need to be truncated since the fp values are 0.0f or 1.0f.
 // We should look into handling these cases separately.
-def : Pat<(fp_to_sint f32:$src0), (FLT_TO_INT_eg (TRUNC $src0))>;
+def : EGOrCaymanPat<(fp_to_sint f32:$src0), (FLT_TO_INT_eg (TRUNC $src0))>;
 
-def : Pat<(fp_to_uint f32:$src0), (FLT_TO_UINT_eg (TRUNC $src0))>;
+def : EGOrCaymanPat<(fp_to_uint f32:$src0), (FLT_TO_UINT_eg (TRUNC $src0))>;
 
 // SHA-256 Patterns
 def : SHA256MaPattern <BFI_INT_eg, XOR_INT>;

@@ -194,7 +194,7 @@ public:
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
                          unsigned StmtIdx, NodeBuilderContext *Ctx) override;
 
-  void ProcessStmt(const CFGStmt S, ExplodedNode *Pred);
+  void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
   void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
 
@@ -299,8 +299,9 @@ public:
                        const CallEvent *Call) override;
 
   /// printState - Called by ProgramStateManager to print checker-specific data.
-  void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) override;
+  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
+                  const char *Sep,
+                  const LocationContext *LCtx = nullptr) override;
 
   ProgramStateManager& getStateManager() override { return StateMgr; }
 
@@ -332,9 +333,9 @@ public:
   void Visit(const Stmt *S, ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// VisitArraySubscriptExpr - Transfer function for array accesses.
-  void VisitLvalArraySubscriptExpr(const ArraySubscriptExpr *Ex,
-                                   ExplodedNode *Pred,
-                                   ExplodedNodeSet &Dst);
+  void VisitArraySubscriptExpr(const ArraySubscriptExpr *Ex,
+                               ExplodedNode *Pred,
+                               ExplodedNodeSet &Dst);
 
   /// VisitGCCAsmStmt - Transfer function logic for inline asm.
   void VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
@@ -567,6 +568,13 @@ public:
                                   const LocationContext *LCtx,
                                   ProgramStateRef State);
 
+  struct EvalCallOptions {
+    bool IsConstructorWithImproperlyModeledTargetRegion = false;
+    bool IsArrayConstructorOrDestructor = false;
+
+    EvalCallOptions() {}
+  };
+
   /// Evaluate a call, running pre- and post-call checks and allowing checkers
   /// to be responsible for handling the evaluation of the call itself.
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -574,7 +582,9 @@ public:
 
   /// \brief Default implementation of call evaluation.
   void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
-                       const CallEvent &Call);
+                       const CallEvent &Call,
+                       const EvalCallOptions &CallOpts = {});
+
 private:
   void evalLoadCommon(ExplodedNodeSet &Dst,
                       const Expr *NodeEx,  /* Eventually will be a CFGStmt */
@@ -598,9 +608,23 @@ private:
   void examineStackFrames(const Decl *D, const LocationContext *LCtx,
                           bool &IsRecursive, unsigned &StackDepth);
 
+  enum CallInlinePolicy {
+    CIP_Allowed,
+    CIP_DisallowedOnce,
+    CIP_DisallowedAlways
+  };
+
+  /// \brief See if a particular call should be inlined, by only looking
+  /// at the call event and the current state of analysis.
+  CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
+                                     const ExplodedNode *Pred,
+                                     AnalyzerOptions &Opts,
+                                     const EvalCallOptions &CallOpts);
+
   /// Checks our policies and decides weither the given call should be inlined.
   bool shouldInlineCall(const CallEvent &Call, const Decl *D,
-                        const ExplodedNode *Pred);
+                        const ExplodedNode *Pred,
+                        const EvalCallOptions &CallOpts = {});
 
   bool inlineCall(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
                   ExplodedNode *Pred, ProgramStateRef State);
@@ -641,20 +665,37 @@ private:
   /// constructing into an existing region.
   const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
 
-  /// For a CXXConstructExpr, walk forward in the current CFG block to find the
-  /// CFGElement for the DeclStmt or CXXInitCtorInitializer for which is
-  /// directly constructed by this constructor. Returns None if the current
-  /// constructor expression did not directly construct into an existing
-  /// region.
-  Optional<CFGElement> findElementDirectlyInitializedByCurrentConstructor();
-
   /// For a given constructor, look forward in the current CFG block to
   /// determine the region into which an object will be constructed by \p CE.
-  /// Returns either a field or local variable region if the object will be
-  /// directly constructed in an existing region or a temporary object region
-  /// if not.
+  /// When the lookahead fails, a temporary region is returned, and the
+  /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred);
+                                                 ExplodedNode *Pred,
+                                                 EvalCallOptions &CallOpts);
+
+  /// Store the region returned by operator new() so that the constructor
+  /// that follows it knew what location to initialize. The value should be
+  /// cleared once the respective CXXNewExpr CFGStmt element is processed.
+  static ProgramStateRef
+  setCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
+                          const LocationContext *CallerLC, SVal V);
+
+  /// Retrieve the location returned by the current operator new().
+  static SVal
+  getCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
+                          const LocationContext *CallerLC);
+
+  /// Clear the location returned by the respective operator new(). This needs
+  /// to be done as soon as CXXNewExpr CFG block is evaluated.
+  static ProgramStateRef
+  clearCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
+                            const LocationContext *CallerLC);
+
+  /// Check if all allocator values are clear for the given context range
+  /// (including FromLC, not including ToLC). This is useful for assertions.
+  static bool areCXXNewAllocatorValuesClear(ProgramStateRef State,
+                                            const LocationContext *FromLC,
+                                            const LocationContext *ToLC);
 };
 
 /// Traits for storing the call processing policy inside GDM.

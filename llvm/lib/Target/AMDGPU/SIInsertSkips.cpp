@@ -132,6 +132,16 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
           I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
         return true;
 
+      // V_READFIRSTLANE/V_READLANE destination register may be used as operand
+      // by some SALU instruction. If exec mask is zero vector instruction
+      // defining the register that is used by the scalar one is not executed
+      // and scalar instruction will operate on undefined data. For
+      // V_READFIRSTLANE/V_READLANE we should avoid predicated execution.
+      if ((I->getOpcode() == AMDGPU::V_READFIRSTLANE_B32) ||
+          (I->getOpcode() == AMDGPU::V_READLANE_B32)) {
+        return true;
+      }
+
       if (I->isInlineAsm()) {
         const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
         const char *AsmStr = I->getOperand(0).getSymbolName();
@@ -156,7 +166,7 @@ bool SIInsertSkips::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction *MF = MBB.getParent();
 
-  if (MF->getFunction()->getCallingConv() != CallingConv::AMDGPU_PS ||
+  if (MF->getFunction().getCallingConv() != CallingConv::AMDGPU_PS ||
       !shouldSkip(MBB, MBB.getParent()->back()))
     return false;
 
@@ -190,25 +200,109 @@ bool SIInsertSkips::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
 void SIInsertSkips::kill(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
-  const MachineOperand &Op = MI.getOperand(0);
 
-#ifndef NDEBUG
-  CallingConv::ID CallConv = MBB.getParent()->getFunction()->getCallingConv();
-  // Kill is only allowed in pixel / geometry shaders.
-  assert(CallConv == CallingConv::AMDGPU_PS ||
-         CallConv == CallingConv::AMDGPU_GS);
-#endif
-  // Clear this thread from the exec mask if the operand is negative.
-  if (Op.isImm()) {
-    // Constant operand: Set exec mask to 0 or do nothing
-    if (Op.getImm() & 0x80000000) {
-      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
-        .addImm(0);
+  switch (MI.getOpcode()) {
+  case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR: {
+    unsigned Opcode = 0;
+
+    // The opcodes are inverted because the inline immediate has to be
+    // the first operand, e.g. from "x < imm" to "imm > x"
+    switch (MI.getOperand(2).getImm()) {
+    case ISD::SETOEQ:
+    case ISD::SETEQ:
+      Opcode = AMDGPU::V_CMPX_EQ_F32_e64;
+      break;
+    case ISD::SETOGT:
+    case ISD::SETGT:
+      Opcode = AMDGPU::V_CMPX_LT_F32_e64;
+      break;
+    case ISD::SETOGE:
+    case ISD::SETGE:
+      Opcode = AMDGPU::V_CMPX_LE_F32_e64;
+      break;
+    case ISD::SETOLT:
+    case ISD::SETLT:
+      Opcode = AMDGPU::V_CMPX_GT_F32_e64;
+      break;
+    case ISD::SETOLE:
+    case ISD::SETLE:
+      Opcode = AMDGPU::V_CMPX_GE_F32_e64;
+      break;
+    case ISD::SETONE:
+    case ISD::SETNE:
+      Opcode = AMDGPU::V_CMPX_LG_F32_e64;
+      break;
+    case ISD::SETO:
+      Opcode = AMDGPU::V_CMPX_O_F32_e64;
+      break;
+    case ISD::SETUO:
+      Opcode = AMDGPU::V_CMPX_U_F32_e64;
+      break;
+    case ISD::SETUEQ:
+      Opcode = AMDGPU::V_CMPX_NLG_F32_e64;
+      break;
+    case ISD::SETUGT:
+      Opcode = AMDGPU::V_CMPX_NGE_F32_e64;
+      break;
+    case ISD::SETUGE:
+      Opcode = AMDGPU::V_CMPX_NGT_F32_e64;
+      break;
+    case ISD::SETULT:
+      Opcode = AMDGPU::V_CMPX_NLE_F32_e64;
+      break;
+    case ISD::SETULE:
+      Opcode = AMDGPU::V_CMPX_NLT_F32_e64;
+      break;
+    case ISD::SETUNE:
+      Opcode = AMDGPU::V_CMPX_NEQ_F32_e64;
+      break;
+    default:
+      llvm_unreachable("invalid ISD:SET cond code");
     }
-  } else {
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CMPX_LE_F32_e32))
-        .addImm(0)
+
+    assert(MI.getOperand(0).isReg());
+
+    if (TRI->isVGPR(MBB.getParent()->getRegInfo(),
+                    MI.getOperand(0).getReg())) {
+      Opcode = AMDGPU::getVOPe32(Opcode);
+      BuildMI(MBB, &MI, DL, TII->get(Opcode))
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(0));
+    } else {
+      BuildMI(MBB, &MI, DL, TII->get(Opcode))
+          .addReg(AMDGPU::VCC, RegState::Define)
+          .addImm(0)  // src0 modifiers
+          .add(MI.getOperand(1))
+          .addImm(0)  // src1 modifiers
+          .add(MI.getOperand(0))
+          .addImm(0);  // omod
+    }
+    break;
+  }
+  case AMDGPU::SI_KILL_I1_TERMINATOR: {
+    const MachineOperand &Op = MI.getOperand(0);
+    int64_t KillVal = MI.getOperand(1).getImm();
+    assert(KillVal == 0 || KillVal == -1);
+
+    // Kill all threads if Op0 is an immediate and equal to the Kill value.
+    if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      assert(Imm == 0 || Imm == -1);
+
+      if (Imm == KillVal)
+        BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
+          .addImm(0);
+      break;
+    }
+
+    unsigned Opcode = KillVal ? AMDGPU::S_ANDN2_B64 : AMDGPU::S_AND_B64;
+    BuildMI(MBB, &MI, DL, TII->get(Opcode), AMDGPU::EXEC)
+        .addReg(AMDGPU::EXEC)
         .add(Op);
+    break;
+  }
+  default:
+    llvm_unreachable("invalid opcode, expected SI_KILL_*_TERMINATOR");
   }
 }
 
@@ -301,7 +395,8 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
 
-      case AMDGPU::SI_KILL_TERMINATOR:
+      case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
+      case AMDGPU::SI_KILL_I1_TERMINATOR:
         MadeChange = true;
         kill(MI);
 

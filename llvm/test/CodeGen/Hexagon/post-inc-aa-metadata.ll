@@ -3,7 +3,7 @@
 
 ; Check that the generated post-increment load has TBAA information.
 ; CHECK-LABEL: Machine code for function fred:
-; CHECK: = V6_vL32b_pi %vreg{{[0-9]+}}<tied1>, 64; mem:LD64[{{.*}}](tbaa=
+; CHECK: = V6_vL32b_pi %{{[0-9]+}}, 64; mem:LD64[{{.*}}](tbaa=
 
 target triple = "hexagon"
 
@@ -29,7 +29,7 @@ while.end:                                        ; preds = %while.body, %entry
   ret void
 }
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
 
 
 !1 = !{!2, !2, i64 0}

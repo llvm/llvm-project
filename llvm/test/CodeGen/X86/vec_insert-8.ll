@@ -6,7 +6,7 @@
 
 define <4 x i32> @var_insert(<4 x i32> %x, i32 %val, i32 %idx) nounwind {
 ; X32-LABEL: var_insert:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -22,8 +22,8 @@ define <4 x i32> @var_insert(<4 x i32> %x, i32 %val, i32 %idx) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: var_insert:
-; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %esi
 ; X64-NEXT:    movl %edi, -24(%rsp,%rsi,4)
@@ -36,7 +36,7 @@ entry:
 
 define i32 @var_extract(<4 x i32> %x, i32 %idx) nounwind {
 ; X32-LABEL: var_extract:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -50,8 +50,8 @@ define i32 @var_extract(<4 x i32> %x, i32 %idx) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: var_extract:
-; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
 ; X64-NEXT:    movl -24(%rsp,%rdi,4), %eax

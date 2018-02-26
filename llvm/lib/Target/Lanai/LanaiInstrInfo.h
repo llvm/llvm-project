@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_LANAI_LANAIINSTRINFO_H
 
 #include "LanaiRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "LanaiGenInstrInfo.inc"
