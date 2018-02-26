@@ -29,6 +29,8 @@ struct External { int v; };
 // The vftable for struct W is comdat largest because we have RTTI.
 // M32-DAG: $"\01??_7W@@6B@" = comdat largest
 
+// M32-DAG: $"\01?smember@?$Base@H@PR32992@@0HA" = comdat any
+
 
 //===----------------------------------------------------------------------===//
 // Globals
@@ -94,7 +96,35 @@ inline int __declspec(dllexport) inlineStaticLocalsFunc() {
   return x++;
 }
 
+namespace PR32992 {
+// Static data members of a instantiated base class should be exported.
+template <class T>
+class Base {
+  virtual void myfunc() {}
+  static int smember;
+};
+// MSC-DAG: @"\01?smember@?$Base@H@PR32992@@0HA" = weak_odr dso_local dllexport global i32 77, comdat, align 4
+template <class T> int Base<T>::smember = 77;
+template <class T>
+class __declspec(dllexport) Derived2 : Base<T> {
+  void myfunc() {}
+};
+class Derived : public Derived2<int> {
+  void myfunc() {}
+};
+}  // namespace PR32992
 
+namespace PR32992_1 {
+namespace a { enum b { c }; }
+template <typename> class d {
+   static constexpr a::b e = a::c;
+};
+namespace f {
+  template <typename g = int> class h : d<g> {};
+}
+using f::h;
+class __declspec(dllexport) i : h<> {};
+}
 
 //===----------------------------------------------------------------------===//
 // Variable templates

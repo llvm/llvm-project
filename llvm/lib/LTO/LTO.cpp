@@ -1202,10 +1202,10 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
   return BackendProc->wait();
 }
 
-Expected<std::unique_ptr<ToolOutputFile>>
-lto::setupOptimizationRemarks(LLVMContext &Context,
-                              StringRef LTORemarksFilename,
-                              bool LTOPassRemarksWithHotness, int Count) {
+Expected<std::unique_ptr<ToolOutputFile>> lto::setupOptimizationRemarks(
+    LLVMContext &Context, StringRef LTORemarksFilename,
+    bool LTOPassRemarksWithHotness, unsigned LTOPassRemarksHotnessThreshold,
+    int Count) {
   if (LTORemarksFilename.empty())
     return nullptr;
 
@@ -1222,6 +1222,8 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
       llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
   if (LTOPassRemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
+  if (LTOPassRemarksHotnessThreshold)
+    Context.setDiagnosticsHotnessThreshold(LTOPassRemarksHotnessThreshold);
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
 }

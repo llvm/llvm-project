@@ -3,7 +3,7 @@
 
 ; Check that the generated post-increment load has TBAA information.
 ; CHECK-LABEL: Machine code for function fred:
-; CHECK: = V6_vL32b_pi %{{[0-9]+}}, 64; mem:LD64[{{.*}}](tbaa=
+; CHECK: = V6_vL32b_pi %{{[0-9]+}}{{[^,]*}}, 64; mem:LD64[{{.*}}](tbaa=
 
 target triple = "hexagon"
 

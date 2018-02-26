@@ -79,6 +79,10 @@ struct Config {
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;
 
+  /// The minimum hotness value a diagnostic needs in order to be included in
+  /// optimization diagnostics.
+  unsigned RemarksHotnessThreshold = 0;
+
   /// Whether to emit the pass manager debuggging informations.
   bool DebugPassManager = false;
 
