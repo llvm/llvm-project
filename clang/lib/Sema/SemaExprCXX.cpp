@@ -1244,11 +1244,16 @@ bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
   return Class && Class->isBeingDefined();
 }
 
+/// Parse construction of a specified type.
+/// Can be interpreted either as function-style casting ("int(x)")
+/// or class type construction ("ClassType(x,y,z)")
+/// or creation of a value-initialized type ("int()").
 ExprResult
 Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
-                                SourceLocation LParenLoc,
+                                SourceLocation LParenOrBraceLoc,
                                 MultiExprArg exprs,
-                                SourceLocation RParenLoc) {
+                                SourceLocation RParenOrBraceLoc,
+                                bool ListInitialization) {
   if (!TypeRep)
     return ExprError();
 
@@ -1257,7 +1262,8 @@ Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
   if (!TInfo)
     TInfo = Context.getTrivialTypeSourceInfo(Ty, SourceLocation());
 
-  auto Result = BuildCXXTypeConstructExpr(TInfo, LParenLoc, exprs, RParenLoc);
+  auto Result = BuildCXXTypeConstructExpr(TInfo, LParenOrBraceLoc, exprs,
+                                          RParenOrBraceLoc, ListInitialization);
   // Avoid creating a non-type-dependent expression that contains typos.
   // Non-type-dependent expressions are liable to be discarded without
   // checking for embedded typos.
@@ -1267,38 +1273,40 @@ Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
   return Result;
 }
 
-/// ActOnCXXTypeConstructExpr - Parse construction of a specified type.
-/// Can be interpreted either as function-style casting ("int(x)")
-/// or class type construction ("ClassType(x,y,z)")
-/// or creation of a value-initialized type ("int()").
 ExprResult
 Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
-                                SourceLocation LParenLoc,
+                                SourceLocation LParenOrBraceLoc,
                                 MultiExprArg Exprs,
-                                SourceLocation RParenLoc) {
+                                SourceLocation RParenOrBraceLoc,
+                                bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
 
   if (Ty->isDependentType() || CallExpr::hasAnyTypeDependentArguments(Exprs)) {
-    return CXXUnresolvedConstructExpr::Create(Context, TInfo, LParenLoc, Exprs,
-                                              RParenLoc);
+    // FIXME: CXXUnresolvedConstructExpr does not model list-initialization
+    // directly. We work around this by dropping the locations of the braces.
+    SourceRange Locs = ListInitialization
+                           ? SourceRange()
+                           : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
+    return CXXUnresolvedConstructExpr::Create(Context, TInfo, Locs.getBegin(),
+                                              Exprs, Locs.getEnd());
   }
 
-  bool ListInitialization = LParenLoc.isInvalid();
   assert((!ListInitialization ||
           (Exprs.size() == 1 && isa<InitListExpr>(Exprs[0]))) &&
          "List initialization must have initializer list as expression.");
-  SourceRange FullRange = SourceRange(TyBeginLoc,
-      ListInitialization ? Exprs[0]->getSourceRange().getEnd() : RParenLoc);
+  SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity = InitializedEntity::InitializeTemporary(TInfo);
   InitializationKind Kind =
       Exprs.size()
           ? ListInitialization
-                ? InitializationKind::CreateDirectList(TyBeginLoc)
-                : InitializationKind::CreateDirect(TyBeginLoc, LParenLoc,
-                                                   RParenLoc)
-          : InitializationKind::CreateValue(TyBeginLoc, LParenLoc, RParenLoc);
+                ? InitializationKind::CreateDirectList(
+                      TyBeginLoc, LParenOrBraceLoc, RParenOrBraceLoc)
+                : InitializationKind::CreateDirect(TyBeginLoc, LParenOrBraceLoc,
+                                                   RParenOrBraceLoc)
+          : InitializationKind::CreateValue(TyBeginLoc, LParenOrBraceLoc,
+                                            RParenOrBraceLoc);
 
   // C++1z [expr.type.conv]p1:
   //   If the type is a placeholder for a deduced class type, [...perform class
@@ -1319,7 +1327,8 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   if (Exprs.size() == 1 && !ListInitialization &&
       !isa<InitListExpr>(Exprs[0])) {
     Expr *Arg = Exprs[0];
-    return BuildCXXFunctionalCastExpr(TInfo, Ty, LParenLoc, Arg, RParenLoc);
+    return BuildCXXFunctionalCastExpr(TInfo, Ty, LParenOrBraceLoc, Arg,
+                                      RParenOrBraceLoc);
   }
 
   //   For an expression of the form T(), T shall not be an array type.
@@ -1367,9 +1376,12 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // CXXTemporaryObjectExpr. It's also weird that the functional cast
     // is sometimes handled by initialization and sometimes not.
     QualType ResultType = Result.get()->getType();
+    SourceRange Locs = ListInitialization
+                           ? SourceRange()
+                           : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
     Result = CXXFunctionalCastExpr::Create(
-        Context, ResultType, Expr::getValueKindForType(Ty), TInfo,
-        CK_NoOp, Result.get(), /*Path=*/nullptr, LParenLoc, RParenLoc);
+        Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,
+        Result.get(), /*Path=*/nullptr, Locs.getBegin(), Locs.getEnd());
   }
 
   return Result;
@@ -1728,7 +1740,9 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   //     - Otherwise, the new-initializer is interpreted according to the
   //       initialization rules of 8.5 for direct-initialization.
         : initStyle == CXXNewExpr::ListInit
-            ? InitializationKind::CreateDirectList(TypeRange.getBegin())
+            ? InitializationKind::CreateDirectList(TypeRange.getBegin(),
+                                                   Initializer->getLocStart(),
+                                                   Initializer->getLocEnd())
             : InitializationKind::CreateDirect(TypeRange.getBegin(),
                                                DirectInitRange.getBegin(),
                                                DirectInitRange.getEnd());
