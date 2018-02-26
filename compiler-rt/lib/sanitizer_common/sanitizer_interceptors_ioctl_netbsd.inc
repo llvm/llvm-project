@@ -25,7 +25,7 @@ struct ioctl_desc {
   const char *name;
 };
 
-const unsigned ioctl_table_max = 1200;
+const unsigned ioctl_table_max = 1198;
 static ioctl_desc ioctl_table[ioctl_table_max];
 static unsigned ioctl_table_size = 0;
 
@@ -82,10 +82,8 @@ static void ioctl_table_fill() {
   _(FIFOQ_CONFIG, READWRITE, struct_fifoq_conf_sz);
   _(FIFOQ_GETSTATS, READWRITE, struct_fifoq_getstats_sz);
   /* Entries from file: altq/altq_hfsc.h */
-  _(HFSC_IF_ATTACH, READ, struct_hfsc_attach_sz);
   _(HFSC_CLEAR_HIERARCHY, READ, struct_hfsc_interface_sz);
   _(HFSC_ADD_CLASS, READWRITE, struct_hfsc_add_class_sz);
-  _(HFSC_MOD_CLASS, READ, struct_hfsc_modify_class_sz);
   _(HFSC_GETSTATS, READWRITE, struct_hfsc_class_stats_sz);
   /* Entries from file: altq/altq_jobs.h */
   _(JOBS_IF_ATTACH, READ, struct_jobs_attach_sz);

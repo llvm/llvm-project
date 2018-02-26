@@ -196,6 +196,8 @@ FNR == 1 {
       $0 ~ /ALTQDELFILTER/ ||
       $0 ~ /ALTQGETSTATS/ ||
       $0 ~ /ALTQGETCNTR/ ||
+      $0 ~ /HFSC_IF_ATTACH/ ||
+      $0 ~ /HFSC_MOD_CLASS/ ||
       $0 ~ /HLCD_DISPCTL/ ||
       $0 ~ /HLCD_RESET/ ||
       $0 ~ /HLCD_CLEAR/ ||

@@ -241,12 +241,21 @@ public:
               UniqueFunction<void(Expected<std::vector<tooling::Replacement>>)>
                   Callback);
 
-  /// Inserts a new #include of \p Header into \p File, if it's not present.
-  /// \p Header is either an URI that can be resolved to an #include path that
-  /// is suitable to be inserted or a literal string quoted with <> or "" that
-  /// can be #included directly.
+  /// Inserts a new #include into \p File, if it's not present in \p Code.
+  ///
+  /// \p DeclaringHeader The original header corresponding to this insertion
+  /// e.g. the header that declared a symbol. This can be either a URI or a
+  /// literal string quoted with <> or "" that can be #included directly.
+  /// \p InsertedHeader The preferred header to be inserted. This may be
+  /// different from \p DeclaringHeader as a header file can have a different
+  /// canonical include. This can be either a URI or a literal string quoted
+  /// with <> or "" that can be #included directly.
+  ///
+  /// Both OriginalHeader and InsertedHeader will be considered to determine
+  /// whether an include needs to be added.
   Expected<tooling::Replacements> insertInclude(PathRef File, StringRef Code,
-                                                StringRef Header);
+                                                StringRef DeclaringHeader,
+                                                StringRef InsertedHeader);
 
   /// Gets current document contents for \p File. Returns None if \p File is not
   /// currently tracked.

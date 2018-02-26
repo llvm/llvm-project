@@ -313,31 +313,42 @@ void ClangdServer::rename(
       Bind(Action, File.str(), NewName.str(), std::move(Callback)));
 }
 
+/// Creates a `HeaderFile` from \p Header which can be either a URI or a literal
+/// include.
+static llvm::Expected<HeaderFile> toHeaderFile(StringRef Header,
+                                               llvm::StringRef HintPath) {
+  if (isLiteralInclude(Header))
+    return HeaderFile{Header.str(), /*Verbatim=*/true};
+  auto U = URI::parse(Header);
+  if (!U)
+    return U.takeError();
+  auto Resolved = URI::resolve(*U, HintPath);
+  if (!Resolved)
+    return Resolved.takeError();
+  return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
+};
+
 Expected<tooling::Replacements>
 ClangdServer::insertInclude(PathRef File, StringRef Code,
-                            llvm::StringRef Header) {
+                            StringRef DeclaringHeader,
+                            StringRef InsertedHeader) {
+  assert(!DeclaringHeader.empty() && !InsertedHeader.empty());
   std::string ToInclude;
-  if (Header.startswith("<") || Header.startswith("\"")) {
-    ToInclude = Header;
-  } else {
-    auto U = URI::parse(Header);
-    if (!U)
-      return U.takeError();
-    auto Resolved = URI::resolve(*U, /*HintPath=*/File);
-    if (!Resolved)
-      return Resolved.takeError();
-
-    tooling::CompileCommand CompileCommand =
-        CompileArgs.getCompileCommand(File);
-    auto Include =
-        calculateIncludePath(File, Code, *Resolved, CompileCommand,
-                             FSProvider.getTaggedFileSystem(File).Value);
-    if (!Include)
-      return Include.takeError();
-    if (Include->empty())
-      return tooling::Replacements();
-    ToInclude = std::move(*Include);
-  }
+  auto ResolvedOrginal = toHeaderFile(DeclaringHeader, File);
+  if (!ResolvedOrginal)
+    return ResolvedOrginal.takeError();
+  auto ResolvedPreferred = toHeaderFile(InsertedHeader, File);
+  if (!ResolvedPreferred)
+    return ResolvedPreferred.takeError();
+  tooling::CompileCommand CompileCommand = CompileArgs.getCompileCommand(File);
+  auto Include = calculateIncludePath(
+      File, Code, *ResolvedOrginal, *ResolvedPreferred, CompileCommand,
+      FSProvider.getTaggedFileSystem(File).Value);
+  if (!Include)
+    return Include.takeError();
+  if (Include->empty())
+    return tooling::Replacements();
+  ToInclude = std::move(*Include);
 
   auto Style = format::getStyle("file", File, "llvm");
   if (!Style) {
