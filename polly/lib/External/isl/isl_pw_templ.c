@@ -144,7 +144,7 @@ __isl_give PW *FN(PW,alloc)(__isl_take isl_set *set, __isl_take EL *el)
 {
 	PW *pw;
 
-	if (!set || !el)
+	if (FN(PW,check_compatible_domain)(el, set) < 0)
 		goto error;
 
 #ifdef HAS_TYPE
