@@ -57,7 +57,7 @@ ELF Improvements
 * lld can now identify and patch a code sequence that triggers AArch64 errata 843419.
   Add ``--fix-cortex-a53-843419`` to enable the feature.
 
-* lld can now generate thunks for out of range thunks.
+* lld can now generate thunks for out of range branches.
 
 * MIPS port now generates all output dynamic relocations using Elf_Rel format only.
 
