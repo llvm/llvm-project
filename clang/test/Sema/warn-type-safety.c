@@ -37,6 +37,10 @@ int wrong9 __attribute__(( pointer_with_type_tag(mpi,1,2) )); // expected-error 
 int wrong10(double buf, MPI_Datatype type)
     __attribute__(( pointer_with_type_tag(mpi,1,2) )); // expected-error {{'pointer_with_type_tag' attribute only applies to pointer arguments}}
 
+int ok11(void *, ...)
+    __attribute__(( pointer_with_type_tag(mpi,1,2) ));
+int wrong11(void *, ...)
+    __attribute__(( pointer_with_type_tag(mpi,2,3) )); // expected-error {{'pointer_with_type_tag' attribute only applies to pointer arguments}}
 
 extern struct A datatype_wrong1
     __attribute__(( type_tag_for_datatype )); // expected-error {{'type_tag_for_datatype' attribute requires parameter 1 to be an identifier}}
