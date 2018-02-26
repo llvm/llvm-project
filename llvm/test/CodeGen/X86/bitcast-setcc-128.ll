@@ -641,3 +641,179 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b) {
   %res = bitcast <8 x i1> %x to i8
   ret i8 %res
 }
+
+define i64 @v16i8_widened_with_zeroes(<16 x i8> %a, <16 x i8> %b) {
+; SSE2-SSSE3-LABEL: v16i8_widened_with_zeroes:
+; SSE2-SSSE3:       # %bb.0: # %entry
+; SSE2-SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-SSSE3-NEXT:    andl $1, %eax
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    leal (%rcx,%rax,2), %eax
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    leal (%rax,%rcx,8), %eax
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    shll $4, %ecx
+; SSE2-SSSE3-NEXT:    orl %eax, %ecx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-SSSE3-NEXT:    andl $1, %eax
+; SSE2-SSSE3-NEXT:    shll $5, %eax
+; SSE2-SSSE3-NEXT:    orl %ecx, %eax
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    shll $6, %ecx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    andl $1, %edx
+; SSE2-SSSE3-NEXT:    shll $7, %edx
+; SSE2-SSSE3-NEXT:    orl %ecx, %edx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    shll $8, %ecx
+; SSE2-SSSE3-NEXT:    orl %edx, %ecx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    andl $1, %edx
+; SSE2-SSSE3-NEXT:    shll $9, %edx
+; SSE2-SSSE3-NEXT:    orl %ecx, %edx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    shll $10, %ecx
+; SSE2-SSSE3-NEXT:    orl %edx, %ecx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    andl $1, %edx
+; SSE2-SSSE3-NEXT:    shll $11, %edx
+; SSE2-SSSE3-NEXT:    orl %ecx, %edx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    shll $12, %ecx
+; SSE2-SSSE3-NEXT:    orl %edx, %ecx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    andl $1, %edx
+; SSE2-SSSE3-NEXT:    shll $13, %edx
+; SSE2-SSSE3-NEXT:    orl %ecx, %edx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    andl $1, %ecx
+; SSE2-SSSE3-NEXT:    shll $14, %ecx
+; SSE2-SSSE3-NEXT:    orl %edx, %ecx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    shll $15, %edx
+; SSE2-SSSE3-NEXT:    orl %ecx, %edx
+; SSE2-SSSE3-NEXT:    orl %eax, %edx
+; SSE2-SSSE3-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-SSSE3-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-SSSE3-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
+; SSE2-SSSE3-NEXT:    movzwl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    movl %edx, %eax
+; SSE2-SSSE3-NEXT:    shll $16, %eax
+; SSE2-SSSE3-NEXT:    orl %eax, %edx
+; SSE2-SSSE3-NEXT:    shlq $32, %rdx
+; SSE2-SSSE3-NEXT:    orl %ecx, %eax
+; SSE2-SSSE3-NEXT:    orq %rdx, %rax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: v16i8_widened_with_zeroes:
+; AVX12:       # %bb.0: # %entry
+; AVX12-NEXT:    pushq %rbp
+; AVX12-NEXT:    .cfi_def_cfa_offset 16
+; AVX12-NEXT:    .cfi_offset %rbp, -16
+; AVX12-NEXT:    movq %rsp, %rbp
+; AVX12-NEXT:    .cfi_def_cfa_register %rbp
+; AVX12-NEXT:    andq $-32, %rsp
+; AVX12-NEXT:    subq $64, %rsp
+; AVX12-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX12-NEXT:    vpextrb $1, %xmm0, %eax
+; AVX12-NEXT:    andl $1, %eax
+; AVX12-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX12-NEXT:    vpextrb $2, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    leal (%rax,%rcx,4), %eax
+; AVX12-NEXT:    vpextrb $3, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    leal (%rax,%rcx,8), %eax
+; AVX12-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    shll $4, %ecx
+; AVX12-NEXT:    orl %eax, %ecx
+; AVX12-NEXT:    vpextrb $5, %xmm0, %eax
+; AVX12-NEXT:    andl $1, %eax
+; AVX12-NEXT:    shll $5, %eax
+; AVX12-NEXT:    orl %ecx, %eax
+; AVX12-NEXT:    vpextrb $6, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    shll $6, %ecx
+; AVX12-NEXT:    vpextrb $7, %xmm0, %edx
+; AVX12-NEXT:    andl $1, %edx
+; AVX12-NEXT:    shll $7, %edx
+; AVX12-NEXT:    orl %ecx, %edx
+; AVX12-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    shll $8, %ecx
+; AVX12-NEXT:    orl %edx, %ecx
+; AVX12-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX12-NEXT:    andl $1, %edx
+; AVX12-NEXT:    shll $9, %edx
+; AVX12-NEXT:    orl %ecx, %edx
+; AVX12-NEXT:    vpextrb $10, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    shll $10, %ecx
+; AVX12-NEXT:    orl %edx, %ecx
+; AVX12-NEXT:    vpextrb $11, %xmm0, %edx
+; AVX12-NEXT:    andl $1, %edx
+; AVX12-NEXT:    shll $11, %edx
+; AVX12-NEXT:    orl %ecx, %edx
+; AVX12-NEXT:    vpextrb $12, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    shll $12, %ecx
+; AVX12-NEXT:    orl %edx, %ecx
+; AVX12-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX12-NEXT:    andl $1, %edx
+; AVX12-NEXT:    shll $13, %edx
+; AVX12-NEXT:    orl %ecx, %edx
+; AVX12-NEXT:    vpextrb $14, %xmm0, %ecx
+; AVX12-NEXT:    andl $1, %ecx
+; AVX12-NEXT:    shll $14, %ecx
+; AVX12-NEXT:    orl %edx, %ecx
+; AVX12-NEXT:    vpextrb $15, %xmm0, %edx
+; AVX12-NEXT:    andl $1, %edx
+; AVX12-NEXT:    shll $15, %edx
+; AVX12-NEXT:    orl %ecx, %edx
+; AVX12-NEXT:    orl %eax, %edx
+; AVX12-NEXT:    movl %edx, (%rsp)
+; AVX12-NEXT:    movl $0, {{[0-9]+}}(%rsp)
+; AVX12-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; AVX12-NEXT:    shlq $32, %rcx
+; AVX12-NEXT:    movl (%rsp), %eax
+; AVX12-NEXT:    orq %rcx, %rax
+; AVX12-NEXT:    movq %rbp, %rsp
+; AVX12-NEXT:    popq %rbp
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: v16i8_widened_with_zeroes:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    movzwl %ax, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v16i8_widened_with_zeroes:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX512BW-NEXT:    kmovq %k0, %rax
+; AVX512BW-NEXT:    retq
+entry:
+  %c = icmp eq <16 x i8> %a, %b
+  %d = shufflevector <16 x i1> %c, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %e = bitcast <64 x i1> %d to i64
+  ret i64 %e
+}
