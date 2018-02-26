@@ -1277,10 +1277,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     return error;
   }
 
-  // Make a quick class that will cleanup the posix spawn attributes in case
-  // we return in the middle of this function.
-  lldb_utility::CleanUp<posix_spawnattr_t *, int> posix_spawnattr_cleanup(
-      &attr, posix_spawnattr_destroy);
+  // Make sure we clean up the posix spawn attributes before exiting this scope.
+  CleanUp cleanup_attr(posix_spawnattr_destroy, &attr);
 
   sigset_t no_signals;
   sigset_t all_signals;
@@ -1382,11 +1380,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
       return error;
     }
 
-    // Make a quick class that will cleanup the posix spawn attributes in case
-    // we return in the middle of this function.
-    lldb_utility::CleanUp<posix_spawn_file_actions_t *, int>
-        posix_spawn_file_actions_cleanup(&file_actions,
-                                         posix_spawn_file_actions_destroy);
+    // Make sure we clean up the posix file actions before exiting this scope.
+    CleanUp cleanup_fileact(posix_spawn_file_actions_destroy, &file_actions);
 
     for (size_t i = 0; i < num_file_actions; ++i) {
       const FileAction *launch_file_action =

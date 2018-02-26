@@ -105,7 +105,6 @@ private:
   void createImportSection();
   void createMemorySection();
   void createElemSection();
-  void createStartSection();
   void createCodeSection();
   void createDataSection();
 
@@ -309,8 +308,6 @@ void Writer::createExportSection() {
     writeExport(OS, Export);
   }
 }
-
-void Writer::createStartSection() {}
 
 void Writer::createElemSection() {
   if (IndirectFunctions.empty())
@@ -622,7 +619,6 @@ void Writer::createSections() {
   createMemorySection();
   createGlobalSection();
   createExportSection();
-  createStartSection();
   createElemSection();
   createCodeSection();
   createDataSection();

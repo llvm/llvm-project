@@ -240,52 +240,53 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                          const lldb_private::UUID *uuid,
                                          const ArchSpec *arch) {
   char path[PATH_MAX];
+  if (dsym_bundle_fspec.GetPath(path, sizeof(path)) == 0)
+    return {};
+
+  ::strncat(path, "/Contents/Resources/DWARF", sizeof(path) - strlen(path) - 1);
+
+  DIR *dirp = opendir(path);
+  if (!dirp)
+    return {};
+
+  // Make sure we close the directory before exiting this scope.
+  CleanUp cleanup_dir(closedir, dirp);
 
   FileSpec dsym_fspec;
+  dsym_fspec.GetDirectory().SetCString(path);
+  struct dirent *dp;
+  while ((dp = readdir(dirp)) != NULL) {
+    // Only search directories
+    if (dp->d_type == DT_DIR || dp->d_type == DT_UNKNOWN) {
+      if (dp->d_namlen == 1 && dp->d_name[0] == '.')
+        continue;
 
-  if (dsym_bundle_fspec.GetPath(path, sizeof(path))) {
-    ::strncat(path, "/Contents/Resources/DWARF",
-              sizeof(path) - strlen(path) - 1);
+      if (dp->d_namlen == 2 && dp->d_name[0] == '.' && dp->d_name[1] == '.')
+        continue;
+    }
 
-    lldb_utility::CleanUp<DIR *, int> dirp(opendir(path), NULL, closedir);
-    if (dirp.is_valid()) {
-      dsym_fspec.GetDirectory().SetCString(path);
-      struct dirent *dp;
-      while ((dp = readdir(dirp.get())) != NULL) {
-        // Only search directories
-        if (dp->d_type == DT_DIR || dp->d_type == DT_UNKNOWN) {
-          if (dp->d_namlen == 1 && dp->d_name[0] == '.')
-            continue;
-
-          if (dp->d_namlen == 2 && dp->d_name[0] == '.' && dp->d_name[1] == '.')
-            continue;
-        }
-
-        if (dp->d_type == DT_REG || dp->d_type == DT_UNKNOWN) {
-          dsym_fspec.GetFilename().SetCString(dp->d_name);
-          ModuleSpecList module_specs;
-          if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0,
-                                                  module_specs)) {
-            ModuleSpec spec;
-            for (size_t i = 0; i < module_specs.GetSize(); ++i) {
-              bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
-              UNUSED_IF_ASSERT_DISABLED(got_spec);
-              assert(got_spec);
-              if ((uuid == NULL ||
-                   (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
-                  (arch == NULL ||
-                   (spec.GetArchitecturePtr() &&
-                    spec.GetArchitecture().IsCompatibleMatch(*arch)))) {
-                return dsym_fspec;
-              }
-            }
+    if (dp->d_type == DT_REG || dp->d_type == DT_UNKNOWN) {
+      dsym_fspec.GetFilename().SetCString(dp->d_name);
+      ModuleSpecList module_specs;
+      if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0, module_specs)) {
+        ModuleSpec spec;
+        for (size_t i = 0; i < module_specs.GetSize(); ++i) {
+          bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
+          UNUSED_IF_ASSERT_DISABLED(got_spec);
+          assert(got_spec);
+          if ((uuid == NULL ||
+               (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
+              (arch == NULL ||
+               (spec.GetArchitecturePtr() &&
+                spec.GetArchitecture().IsCompatibleMatch(*arch)))) {
+            return dsym_fspec;
           }
         }
       }
     }
   }
-  dsym_fspec.Clear();
-  return dsym_fspec;
+
+  return {};
 }
 
 static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
