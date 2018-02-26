@@ -20,7 +20,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/ADT/PriorityQueue.h"
 
 using namespace clang;
 using namespace ento;
@@ -192,6 +194,66 @@ std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
   return llvm::make_unique<UnexploredFirstStack>();
 }
 
+class UnexploredFirstPriorityQueue : public WorkList {
+  typedef unsigned BlockID;
+  typedef std::pair<BlockID, const StackFrameContext *> LocIdentifier;
+
+  // How many times each location was visited.
+  // Is signed because we negate it later in order to have a reversed
+  // comparison.
+  typedef llvm::DenseMap<LocIdentifier, int> VisitedTimesMap;
+
+  // Compare by number of times the location was visited first (negated
+  // to prefer less often visited locations), then by insertion time (prefer
+  // expanding nodes inserted sooner first).
+  typedef std::pair<int, unsigned long> QueuePriority;
+  typedef std::pair<WorkListUnit, QueuePriority> QueueItem;
+
+  struct ExplorationComparator {
+    bool operator() (const QueueItem &LHS, const QueueItem &RHS) {
+      return LHS.second < RHS.second;
+    }
+  };
+
+  // Number of inserted nodes, used to emulate DFS ordering in the priority
+  // queue when insertions are equal.
+  unsigned long Counter = 0;
+
+  // Number of times a current location was reached.
+  VisitedTimesMap NumReached;
+
+  // The top item is the largest one.
+  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>, ExplorationComparator>
+      queue;
+
+public:
+  bool hasWork() const override {
+    return !queue.empty();
+  }
+
+  void enqueue(const WorkListUnit &U) override {
+    const ExplodedNode *N = U.getNode();
+    unsigned NumVisited = 0;
+    if (auto BE = N->getLocation().getAs<BlockEntrance>()) {
+      LocIdentifier LocId = std::make_pair(
+          BE->getBlock()->getBlockID(), N->getStackFrame());
+      NumVisited = NumReached[LocId]++;
+    }
+
+    queue.push(std::make_pair(U, std::make_pair(-NumVisited, ++Counter)));
+  }
+
+  WorkListUnit dequeue() override {
+    QueueItem U = queue.top();
+    queue.pop();
+    return U.first;
+  }
+};
+
+std::unique_ptr<WorkList> WorkList::makeUnexploredFirstPriorityQueue() {
+  return llvm::make_unique<UnexploredFirstPriorityQueue>();
+}
+
 //===----------------------------------------------------------------------===//
 // Core analysis engine.
 //===----------------------------------------------------------------------===//
@@ -206,6 +268,8 @@ static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
       return WorkList::makeBFSBlockDFSContents();
     case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirst:
       return WorkList::makeUnexploredFirst();
+    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirstQueue:
+      return WorkList::makeUnexploredFirstPriorityQueue();
     default:
       llvm_unreachable("Unexpected case");
   }
