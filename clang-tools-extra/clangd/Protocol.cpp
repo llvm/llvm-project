@@ -371,10 +371,13 @@ json::Expr toJSON(const WorkspaceEdit &WE) {
 bool fromJSON(const json::Expr &II, IncludeInsertion &R) {
   json::ObjectMapper O(II);
   return O && O.map("textDocument", R.textDocument) &&
-         O.map("header", R.header);
+         O.map("declaringHeader", R.declaringHeader) &&
+         O.map("preferredHeader", R.preferredHeader);
 }
 json::Expr toJSON(const IncludeInsertion &II) {
-  return json::obj{{"textDocument", II.textDocument}, {"header", II.header}};
+  return json::obj{{"textDocument", II.textDocument},
+                   {"declaringHeader", II.declaringHeader},
+                   {"preferredHeader", II.preferredHeader}};
 }
 
 json::Expr toJSON(const ApplyWorkspaceEditParams &Params) {

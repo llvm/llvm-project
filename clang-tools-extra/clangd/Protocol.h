@@ -453,11 +453,20 @@ json::Expr toJSON(const WorkspaceEdit &WE);
 
 struct IncludeInsertion {
   /// The document in which the command was invoked.
+  /// If either originalHeader or preferredHeader has been (directly) included
+  /// in the current file, no new include will be inserted.
   TextDocumentIdentifier textDocument;
 
-  /// The header to be inserted. This could be either a URI ir a literal string
-  /// quoted with <> or "" that can be #included directly.
-  std::string header;
+  /// The declaring header corresponding to this insertion e.g. the header that
+  /// declares a symbol. This could be either a URI or a literal string quoted
+  /// with <> or "" that can be #included directly.
+  std::string declaringHeader;
+  /// The preferred header to be inserted. This may be different from
+  /// originalHeader as a header file can have a different canonical include.
+  /// This could be either a URI or a literal string quoted with <> or "" that
+  /// can be #included directly. If empty, declaringHeader is used to calculate
+  /// the #include path.
+  std::string preferredHeader;
 };
 bool fromJSON(const json::Expr &, IncludeInsertion &);
 json::Expr toJSON(const IncludeInsertion &II);
