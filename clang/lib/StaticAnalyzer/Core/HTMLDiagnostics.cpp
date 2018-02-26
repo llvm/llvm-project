@@ -38,7 +38,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
 #include <map>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string>
@@ -114,12 +117,6 @@ public:
 
   /// \return Javascript for navigating the HTML report using j/k keys.
   std::string generateKeyboardNavigationJavascript();
-
-private:
-
-  /// \return Javascript for displaying shortcuts help;
-  std::string showHelpJavascript();
-};
 
 private:
   /// \return Javascript for displaying shortcuts help;
@@ -340,7 +337,6 @@ static void serializeExecutedLines(
     const PathDiagnostic &D,
     const PathPieces &path,
     llvm::raw_string_ostream &os) {
-
   // Copy executed lines from path diagnostics.
   std::map<unsigned, std::set<unsigned>> ExecutedLines;
   for (auto I = D.executedLines_begin(),
@@ -617,9 +613,6 @@ window.addEventListener("keydown", function (event) {
 </script>
 )<<<";
 }
-
-
-
 
 void HTMLDiagnostics::RewriteFile(Rewriter &R, const SourceManager& SMgr,
     const PathPieces& path, FileID FID) {
