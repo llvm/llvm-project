@@ -4,10 +4,10 @@
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"void f() {}"}}}
 ---
-{"jsonrpc":"2.0","id":3,"method":"workspace/executeCommand","params":{"arguments":[{"header":"<vector>","textDocument":{"uri":"test:///main.cpp"}}],"command":"clangd.insertInclude"}}
+{"jsonrpc":"2.0","id":3,"method":"workspace/executeCommand","params":{"arguments":[{"declaringHeader":"\"/usr/include/bits/vector\"", "preferredHeader":"<vector>","textDocument":{"uri":"test:///main.cpp"}}],"command":"clangd.insertInclude"}}
 #      CHECK:    "id": 3,
 # CHECK-NEXT:    "jsonrpc": "2.0",
-# CHECK-NEXT:    "result": "Inserted header <vector>"
+# CHECK-NEXT:    "result": "Inserted header \"/usr/include/bits/vector\" (<vector>)"
 # CHECK-NEXT:  }
 #      CHECK:    "method": "workspace/applyEdit",
 # CHECK-NEXT:    "params": {

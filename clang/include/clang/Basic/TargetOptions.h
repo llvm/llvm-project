@@ -62,7 +62,7 @@ public:
   std::vector<std::string> OpenCLExtensionsAsWritten;
 
   /// \brief If given, enables support for __int128_t and __uint128_t types.
-  bool ForceEnableInt128;
+  bool ForceEnableInt128 = false;
 };
 
 }  // end namespace clang

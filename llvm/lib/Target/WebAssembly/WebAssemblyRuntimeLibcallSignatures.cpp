@@ -465,7 +465,7 @@ ManagedStatic<RuntimeLibcallSignatureTable> RuntimeLibcallSignatures;
 struct StaticLibcallNameMap {
   StringMap<RTLIB::Libcall> Map;
   StaticLibcallNameMap() {
-    static constexpr std::pair<const char *, RTLIB::Libcall> NameLibcalls[] = {
+    static const std::pair<const char *, RTLIB::Libcall> NameLibcalls[] = {
 #define HANDLE_LIBCALL(code, name) {(const char *)name, RTLIB::code},
 #include "llvm/CodeGen/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
