@@ -765,19 +765,19 @@ static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
       AL.getAttributeSpellingListIndex()));
 }
 
-/// \brief Checks to be sure that the given parameter number is in bounds, and is
-/// an integral type. Will emit appropriate diagnostics if this returns
+/// \brief Checks to be sure that the given parameter number is in bounds, and
+/// is an integral type. Will emit appropriate diagnostics if this returns
 /// false.
 ///
-/// FuncParamNo is expected to be from the user, so is base-1. AttrArgNo is used
-/// to actually retrieve the argument, so it's base-0.
+/// AttrArgNo is used to actually retrieve the argument, so it's base-0.
 template <typename AttrInfo>
 static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
-                                    const AttrInfo &AI, Expr *AttrArg,
-                                    unsigned FuncParamNo, unsigned AttrArgNo,
+                                    const AttrInfo &AI, unsigned AttrArgNo,
                                     bool AllowDependentType = false) {
+  assert(AI.isArgExpr(AttrArgNo) && "Expected expression argument");
+  Expr *AttrArg = AI.getArgAsExpr(AttrArgNo);
   uint64_t Idx;
-  if (!checkFunctionOrMethodParameterIndex(S, FD, AI, FuncParamNo, AttrArg,
+  if (!checkFunctionOrMethodParameterIndex(S, FD, AI, AttrArgNo + 1, AttrArg,
                                            Idx))
     return false;
 
@@ -791,20 +791,6 @@ static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
     return false;
   }
   return true;
-}
-
-/// \brief Checks to be sure that the given parameter number is in bounds, and is
-/// an integral type. Will emit appropriate diagnostics if this returns false.
-///
-/// FuncParamNo is expected to be from the user, so is base-1. AttrArgNo is used
-/// to actually retrieve the argument, so it's base-0.
-static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
-                                    const AttributeList &AL,
-                                    unsigned FuncParamNo, unsigned AttrArgNo,
-                                    bool AllowDependentType = false) {
-  assert(AL.isArgExpr(AttrArgNo) && "Expected expression argument");
-  return checkParamIsIntegerType(S, FD, AL, AL.getArgAsExpr(AttrArgNo),
-                                 FuncParamNo, AttrArgNo, AllowDependentType);
 }
 
 static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &AL) {
@@ -825,7 +811,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &AL) {
   if (!checkPositiveIntArgument(S, AL, SizeExpr, SizeArgNo, /*Index=*/1))
     return;
 
-  if (!checkParamIsIntegerType(S, FD, AL, SizeArgNo, /*AttrArgNo=*/0))
+  if (!checkParamIsIntegerType(S, FD, AL, /*AttrArgNo=*/0))
     return;
 
   // Args are 1-indexed, so 0 implies that the arg was not present
@@ -837,7 +823,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &AL) {
                                   /*Index=*/2))
       return;
 
-    if (!checkParamIsIntegerType(S, FD, AL, NumberArgNo, /*AttrArgNo=*/1))
+    if (!checkParamIsIntegerType(S, FD, AL, /*AttrArgNo=*/1))
       return;
   }
 
@@ -4554,17 +4540,6 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
     return;
   }
   
-  if (!checkAttributeNumArgs(S, AL, 3))
-    return;
-
-  IdentifierInfo *ArgumentKind = AL.getArgAsIdent(0)->Ident;
-
-  if (!isFunctionOrMethod(D) || !hasFunctionProto(D)) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type)
-      << AL.getName() << ExpectedFunctionOrMethod;
-    return;
-  }
-
   uint64_t ArgumentIdx;
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 2, AL.getArgAsExpr(1),
                                            ArgumentIdx))
@@ -4575,20 +4550,18 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
                                            TypeTagIdx))
     return;
 
-  bool IsPointer = (AL.getName()->getName() == "pointer_with_type_tag");
+  bool IsPointer = AL.getName()->getName() == "pointer_with_type_tag";
   if (IsPointer) {
     // Ensure that buffer has a pointer type.
-    QualType BufferTy = getFunctionOrMethodParamType(D, ArgumentIdx);
-    if (!BufferTy->isPointerType()) {
+    if (ArgumentIdx >= getFunctionOrMethodNumParams(D) ||
+        !getFunctionOrMethodParamType(D, ArgumentIdx)->isPointerType())
       S.Diag(AL.getLoc(), diag::err_attribute_pointers_only)
-        << AL.getName() << 0;
-    }
+          << AL.getName() << 0;
   }
 
-  D->addAttr(::new (S.Context)
-             ArgumentWithTypeTagAttr(AL.getRange(), S.Context, ArgumentKind,
-                                     ArgumentIdx, TypeTagIdx, IsPointer,
-                                     AL.getAttributeSpellingListIndex()));
+  D->addAttr(::new (S.Context) ArgumentWithTypeTagAttr(
+      AL.getRange(), S.Context, AL.getArgAsIdent(0)->Ident, ArgumentIdx,
+      TypeTagIdx, IsPointer, AL.getAttributeSpellingListIndex()));
 }
 
 static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
