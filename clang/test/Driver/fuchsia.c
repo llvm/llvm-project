@@ -1,11 +1,16 @@
 // RUN: %clang %s -### -no-canonical-prefixes --target=x86_64-unknown-fuchsia \
-// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 | FileCheck %s
+// RUN:     --sysroot=%S/platform 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang %s -### -no-canonical-prefixes --target=aarch64-unknown-fuchsia \
+// RUN:     --sysroot=%S/platform 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
+// CHECK: "--mrelax-relocations"
+// CHECK: "-munwind-tables"
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
-// CHECK: {{.*}}lld{{.*}}" "-flavor" "gnu"
-// CHECK: "-z" "rodynamic"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
@@ -15,7 +20,8 @@
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
 // CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
-// CHECK: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
+// CHECK-X86_64: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
+// CHECK-AARCH64: "{{.*[/\\]}}libclang_rt.builtins-aarch64.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
@@ -45,6 +51,8 @@
 // RUN:     -fsanitize=safe-stack 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
+// CHECK-SAFESTACK-NOT: "{{.*[/\\]}}libclang_rt.safestack-x86_64.a"
+// CHECK-SAFESTACK-NOT: "__safestack_init"
 
 // RUN: %clang %s -### --target=x86_64-unknown-fuchsia \
 // RUN:     -fsanitize=address 2>&1 \
@@ -71,3 +79,20 @@
 // CHECK-ASAN-SHARED: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-SHARED: "{{.*[/\\]}}libclang_rt.asan-x86_64.so"
 // CHECK-ASAN-SHARED-NOT: "{{.*[/\\]}}libclang_rt.asan-preinit-x86_64.a"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fsanitize=scudo 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-X86
+// CHECK-SCUDO-X86: "-fsanitize=scudo"
+// CHECK-SCUDO-X86: "-pie"
+
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -fsanitize=scudo 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-AARCH64
+// CHECK-SCUDO-AARCH64: "-fsanitize=scudo"
+// CHECK-SCUDO-AARCH64: "-pie"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
+// CHECK-SCUDO-SHARED: "-fsanitize=scudo"

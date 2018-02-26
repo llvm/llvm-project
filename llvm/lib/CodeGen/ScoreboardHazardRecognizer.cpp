@@ -15,12 +15,12 @@
 
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include <cassert>
 
 using namespace llvm;
@@ -32,6 +32,7 @@ ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
     const char *ParentDebugType)
     : ScheduleHazardRecognizer(), DebugType(ParentDebugType), ItinData(II),
       DAG(SchedDAG) {
+  (void)DebugType;
   // Determine the maximum depth of any itinerary. This determines the depth of
   // the scoreboard. We always make the scoreboard at least 1 cycle deep to
   // avoid dealing with the boundary condition.

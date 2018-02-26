@@ -32,7 +32,7 @@ extern "C" {
   size_t __sanitizer_get_allocated_size(const volatile void *p);
 
   /* Number of bytes, allocated and not yet freed by the application. */
-  size_t __sanitizer_get_current_allocated_bytes();
+  size_t __sanitizer_get_current_allocated_bytes(void);
 
   /* Number of bytes, mmaped by the allocator to fulfill allocation requests.
      Generally, for request of X bytes, allocator can reserve and add to free
@@ -40,17 +40,17 @@ extern "C" {
      All these chunks count toward the heap size. Currently, allocator never
      releases memory to OS (instead, it just puts freed chunks to free
      lists). */
-  size_t __sanitizer_get_heap_size();
+  size_t __sanitizer_get_heap_size(void);
 
   /* Number of bytes, mmaped by the allocator, which can be used to fulfill
      allocation requests. When a user program frees memory chunk, it can first
      fall into quarantine and will count toward __sanitizer_get_free_bytes()
      later. */
-  size_t __sanitizer_get_free_bytes();
+  size_t __sanitizer_get_free_bytes(void);
 
   /* Number of bytes in unmapped pages, that are released to OS. Currently,
      always returns 0. */
-  size_t __sanitizer_get_unmapped_bytes();
+  size_t __sanitizer_get_unmapped_bytes(void);
 
   /* Malloc hooks that may be optionally provided by user.
      __sanitizer_malloc_hook(ptr, size) is called immediately after
@@ -75,6 +75,13 @@ extern "C" {
   int __sanitizer_install_malloc_and_free_hooks(
       void (*malloc_hook)(const volatile void *, size_t),
       void (*free_hook)(const volatile void *));
+
+  /* Drains allocator quarantines (calling thread's and global ones), returns
+     freed memory back to OS and releases other non-essential internal allocator
+     resources in attempt to reduce process RSS.
+     Currently available with ASan only.
+  */
+  void __sanitizer_purge_allocator(void);
 
 #ifdef __cplusplus
 }  // extern "C"

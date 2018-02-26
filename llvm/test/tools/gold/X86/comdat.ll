@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: llvm-as %p/Inputs/comdat.ll -o %t2.o
-; RUN: %gold -shared -o %t3.o -plugin %llvmshlibdir/LLVMgold.so %t1.o %t2.o \
+; RUN: %gold -shared -o %t3.o -plugin %llvmshlibdir/LLVMgold%shlibext %t1.o %t2.o \
 ; RUN:  -m elf_x86_64 \
 ; RUN:  -plugin-opt=save-temps
 ; RUN: FileCheck --check-prefix=RES %s < %t3.o.resolution.txt

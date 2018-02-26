@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -Wc++11-compat -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++11-compat -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -Wc++11-compat-pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++11-compat-pedantic -verify %s
 
 #if __cplusplus < 201103L
 
@@ -51,5 +51,8 @@ auto init_capture = [a(0)] {}; // expected-warning {{initialized lambda captures
 static_assert(true); // expected-warning {{incompatible with C++ standards before C++17}}
 
 template<int ...N> int f() { return (N + ...); } // expected-warning {{incompatible with C++ standards before C++17}}
+
+namespace [[]] NS_with_attr {} // expected-warning {{incompatible with C++ standards before C++17}}
+enum { e [[]] }; // expected-warning {{incompatible with C++ standards before C++17}}
 
 #endif

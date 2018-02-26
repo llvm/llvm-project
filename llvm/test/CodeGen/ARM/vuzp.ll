@@ -3,7 +3,7 @@
 
 define <8 x i8> @vuzpi8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vuzpi8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vuzp.8 d17, d16
@@ -20,7 +20,7 @@ define <8 x i8> @vuzpi8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <16 x i8> @vuzpi8_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vuzpi8_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vuzp.8 d16, d17
@@ -35,7 +35,7 @@ define <16 x i8> @vuzpi8_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <4 x i16> @vuzpi16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: vuzpi16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vuzp.16 d17, d16
@@ -52,7 +52,7 @@ define <4 x i16> @vuzpi16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 
 define <8 x i16> @vuzpi16_Qres(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: vuzpi16_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vuzp.16 d16, d17
@@ -69,7 +69,7 @@ define <8 x i16> @vuzpi16_Qres(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 
 define <16 x i8> @vuzpQi8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vuzp.8 q9, q8
@@ -87,7 +87,7 @@ define <16 x i8> @vuzpQi8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <32 x i8> @vuzpQi8_QQres(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi8_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vuzp.8 q9, q8
@@ -102,7 +102,7 @@ define <32 x i8> @vuzpQi8_QQres(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <8 x i16> @vuzpQi16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vuzp.16 q9, q8
@@ -120,7 +120,7 @@ define <8 x i16> @vuzpQi16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <16 x i16> @vuzpQi16_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi16_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vuzp.16 q9, q8
@@ -135,7 +135,7 @@ define <16 x i16> @vuzpQi16_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <4 x i32> @vuzpQi32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vuzp.32 q9, q8
@@ -153,7 +153,7 @@ define <4 x i32> @vuzpQi32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 
 define <8 x i32> @vuzpQi32_QQres(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi32_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vuzp.32 q9, q8
@@ -168,7 +168,7 @@ define <8 x i32> @vuzpQi32_QQres(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 
 define <4 x float> @vuzpQf(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; CHECK-LABEL: vuzpQf:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vuzp.32 q9, q8
@@ -186,7 +186,7 @@ define <4 x float> @vuzpQf(<4 x float>* %A, <4 x float>* %B) nounwind {
 
 define <8 x float> @vuzpQf_QQres(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; CHECK-LABEL: vuzpQf_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vuzp.32 q9, q8
@@ -203,7 +203,7 @@ define <8 x float> @vuzpQf_QQres(<4 x float>* %A, <4 x float>* %B) nounwind {
 
 define <8 x i8> @vuzpi8_undef(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vuzpi8_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vuzp.8 d17, d16
@@ -220,7 +220,7 @@ define <8 x i8> @vuzpi8_undef(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <16 x i8> @vuzpi8_undef_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: vuzpi8_undef_Qres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vuzp.8 d16, d17
@@ -235,7 +235,7 @@ define <16 x i8> @vuzpi8_undef_Qres(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <8 x i16> @vuzpQi16_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi16_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vuzp.16 q9, q8
@@ -253,7 +253,7 @@ define <8 x i16> @vuzpQi16_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <16 x i16> @vuzpQi16_undef_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: vuzpQi16_undef_QQres:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vuzp.16 q9, q8
@@ -268,7 +268,7 @@ define <16 x i16> @vuzpQi16_undef_QQres(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <8 x i16> @vuzp_lower_shufflemask_undef(<4 x i16>* %A, <4 x i16>* %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_undef:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vorr q9, q8, q8
@@ -285,7 +285,7 @@ entry:
 
 define <4 x i32> @vuzp_lower_shufflemask_zeroed(<2 x i32>* %A, <2 x i32>* %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_zeroed:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vdup.32 q9, d16[0]
@@ -303,7 +303,7 @@ entry:
 
 define void @vuzp_rev_shufflemask_vtrn(<2 x i32>* %A, <2 x i32>* %B, <4 x i32>* %C) {
 ; CHECK-LABEL: vuzp_rev_shufflemask_vtrn:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vrev64.32 q9, q8
@@ -323,7 +323,7 @@ define <8 x i8> @cmpsel_trunc(<8 x i8> %in0, <8 x i8> %in1, <8 x i32> %cmp0, <8 
 ; This results in a build_vector with mismatched types. We will generate two vmovn.i32 instructions to
 ; truncate from i32 to i16 and one vmovn.i16 to perform the final truncation for i8.
 ; CHECK-LABEL: cmpsel_trunc:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:	add	r12, sp, #16
 ; CHECK-NEXT: 	vld1.64	{d16, d17}, [r12]
 ; CHECK-NEXT:	mov	r12, sp
@@ -352,7 +352,7 @@ define <8 x i8> @cmpsel_trunc(<8 x i8> %in0, <8 x i8> %in1, <8 x i32> %cmp0, <8 
 ; to perform the vuzp and get the vbsl mask.
 define <8 x i8> @vuzp_trunc_and_shuffle(<8 x i8> %tr0, <8 x i8> %tr1,
 ; CHECK-LABEL: vuzp_trunc_and_shuffle:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:	.save	{r11, lr}
 ; CHECK-NEXT:	push	{r11, lr}
 ; CHECK-NEXT:	add	r12, sp, #8
@@ -388,7 +388,7 @@ define <8 x i8> @vuzp_trunc_and_shuffle(<8 x i8> %tr0, <8 x i8> %tr1,
 ; This produces a build_vector with some of the operands undefs.
 define <8 x i8> @vuzp_trunc_and_shuffle_undef_right(<8 x i8> %tr0, <8 x i8> %tr1,
 ; CHECK-LABEL: vuzp_trunc_and_shuffle_undef_right:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:	mov	r12, sp
 ; CHECK-NEXT:	vld1.64	{d16, d17}, [r12]
 ; CHECK-NEXT:	add	r12, sp, #16
@@ -416,7 +416,7 @@ define <8 x i8> @vuzp_trunc_and_shuffle_undef_right(<8 x i8> %tr0, <8 x i8> %tr1
 
 define <8 x i8> @vuzp_trunc_and_shuffle_undef_left(<8 x i8> %tr0, <8 x i8> %tr1,
 ; CHECK-LABEL: vuzp_trunc_and_shuffle_undef_left:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:	mov	r12, sp
 ; CHECK-NEXT:	vld1.64	{d16, d17}, [r12]
 ; CHECK-NEXT:	add	r12, sp, #16
@@ -435,7 +435,7 @@ define <8 x i8> @vuzp_trunc_and_shuffle_undef_left(<8 x i8> %tr0, <8 x i8> %tr1,
 ; CHECK-NEXT:	vmov	r0, r1, d16
 ; CHECK-NEXT:	mov	pc, lr
 ; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ BB#1:
+; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI22_0:
 ; CHECK-NEXT:    .byte 255 @ 0xff
 ; CHECK-NEXT:    .byte 255 @ 0xff
@@ -458,7 +458,7 @@ define <8 x i8> @vuzp_trunc_and_shuffle_undef_left(<8 x i8> %tr0, <8 x i8> %tr1,
 ; get some vector size that we can represent.
 define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-LABEL: vuzp_wide_type:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:	.save	{r4, r10, r11, lr}
 ; CHECK-NEXT:	push	{r4, r10, r11, lr}
 ; CHECK-NEXT:	.setfp	r11, sp, #8
@@ -517,7 +517,7 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-NEXT:	pop	{r4, r10, r11, lr}
 ; CHECK-NEXT:	mov	pc, lr
 ; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ BB#1:
+; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI23_0:
 ; CHECK-NEXT:    .byte 0 @ 0x0
 ; CHECK-NEXT:    .byte 1 @ 0x1
@@ -539,7 +539,7 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 %struct.uint8x8x2_t = type { [2 x <8 x i8>] }
 define %struct.uint8x8x2_t @vuzp_extract_subvector(<16 x i8> %t) #0 {
 ; CHECK-LABEL: vuzp_extract_subvector:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vorr d18, d17, d17

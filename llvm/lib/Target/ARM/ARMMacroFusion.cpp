@@ -15,7 +15,7 @@
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
 #include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 namespace llvm {
 
@@ -31,7 +31,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   // Assume wildcards for unspecified instrs.
   unsigned FirstOpcode =
     FirstMI ? FirstMI->getOpcode()
-	    : static_cast<unsigned>(ARM::INSTRUCTION_LIST_END);
+            : static_cast<unsigned>(ARM::INSTRUCTION_LIST_END);
   unsigned SecondOpcode = SecondMI.getOpcode();
 
   if (ST.hasFuseAES())

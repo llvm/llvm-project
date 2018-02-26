@@ -1,5 +1,6 @@
 ;RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=SI --check-prefix=GCN --check-prefix=FUNC %s
 ;RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefix=VI --check-prefix=GCN --check-prefix=FUNC %s
+;RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefix=VI --check-prefix=GCN --check-prefix=FUNC %s
 ;RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefix=EG --check-prefix=FUNC %s
 
 ;FUNC-LABEL: {{^}}test_udiv:
@@ -36,39 +37,12 @@
 ;EG: BFE_UINT
 ;EG: BFE_UINT
 
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN-NOT: v_mad_f32
-;SI-NOT: v_lshr_b64
-;VI-NOT: v_lshrrev_b64
+;GCN: v_mac_f32_e32 v{{[0-9]+}}, 0x4f800000,
+;GCN: v_rcp_f32_e32
+;GCN: v_mul_f32_e32 v{{[0-9]+}}, 0x5f7ffffc
+;GCN: v_mul_f32_e32 v{{[0-9]+}}, 0x2f800000
+;GCN: v_trunc_f32_e32
+;GCN: v_mac_f32_e32 v{{[0-9]+}}, 0xcf800000
 ;GCN: s_endpgm
 define amdgpu_kernel void @test_udiv(i64 addrspace(1)* %out, i64 %x, i64 %y) {
   %result = udiv i64 %x, %y
@@ -110,39 +84,12 @@ define amdgpu_kernel void @test_udiv(i64 addrspace(1)* %out, i64 %x, i64 %y) {
 ;EG: BFE_UINT
 ;EG: AND_INT {{.*}}, 1,
 
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN: s_bfe_u32
-;GCN-NOT: v_mad_f32
-;SI-NOT: v_lshr_b64
-;VI-NOT: v_lshrrev_b64
+;GCN: v_mac_f32_e32 v{{[0-9]+}}, 0x4f800000,
+;GCN: v_rcp_f32_e32
+;GCN: v_mul_f32_e32 v{{[0-9]+}}, 0x5f7ffffc
+;GCN: v_mul_f32_e32 v{{[0-9]+}}, 0x2f800000
+;GCN: v_trunc_f32_e32
+;GCN: v_mac_f32_e32 v{{[0-9]+}}, 0xcf800000
 ;GCN: s_endpgm
 define amdgpu_kernel void @test_urem(i64 addrspace(1)* %out, i64 %x, i64 %y) {
   %result = urem i64 %x, %y

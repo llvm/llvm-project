@@ -27,8 +27,6 @@ namespace {
 constexpr char XRayInstrumentOption[] = "-fxray-instrument";
 constexpr char XRayInstructionThresholdOption[] =
     "-fxray-instruction-threshold=";
-constexpr char XRayAlwaysInstrumentOption[] = "-fxray-always-instrument=";
-constexpr char XRayNeverInstrumentOption[] = "-fxray-never-instrument=";
 } // namespace
 
 XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
@@ -63,6 +61,14 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         D.Diag(clang::diag::err_drv_invalid_value) << A->getAsString(Args) << S;
     }
 
+    // By default, the back-end will not emit the lowering for XRay customevent
+    // calls if the function is not instrumented. In the future we will change
+    // this default to be the reverse, but in the meantime we're going to
+    // introduce the new functionality behind a flag.
+    if (Args.hasFlag(options::OPT_fxray_always_emit_customevents,
+                     options::OPT_fnoxray_always_emit_customevents, false))
+      XRayAlwaysEmitCustomEvents = true;
+
     // Validate the always/never attribute files. We also make sure that they
     // are treated as actual dependencies.
     for (const auto &Filename :
@@ -91,17 +97,21 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     return;
 
   CmdArgs.push_back(XRayInstrumentOption);
+
+  if (XRayAlwaysEmitCustomEvents)
+    CmdArgs.push_back("-fxray-always-emit-customevents");
+
   CmdArgs.push_back(Args.MakeArgString(Twine(XRayInstructionThresholdOption) +
                                        Twine(InstructionThreshold)));
 
   for (const auto &Always : AlwaysInstrumentFiles) {
-    SmallString<64> AlwaysInstrumentOpt(XRayAlwaysInstrumentOption);
+    SmallString<64> AlwaysInstrumentOpt("-fxray-always-instrument=");
     AlwaysInstrumentOpt += Always;
     CmdArgs.push_back(Args.MakeArgString(AlwaysInstrumentOpt));
   }
 
   for (const auto &Never : NeverInstrumentFiles) {
-    SmallString<64> NeverInstrumentOpt(XRayNeverInstrumentOption);
+    SmallString<64> NeverInstrumentOpt("-fxray-never-instrument=");
     NeverInstrumentOpt += Never;
     CmdArgs.push_back(Args.MakeArgString(NeverInstrumentOpt));
   }

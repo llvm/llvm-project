@@ -14,11 +14,14 @@
 #define SANITIZER_LINUX_H
 
 #include "sanitizer_platform.h"
-#if SANITIZER_FREEBSD || SANITIZER_LINUX
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
-#include "sanitizer_posix.h"
+#include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_posix.h"
+#include "sanitizer_platform_limits_solaris.h"
+#include "sanitizer_posix.h"
 
 struct link_map;  // Opaque type returned by dlopen().
 
@@ -27,11 +30,25 @@ namespace __sanitizer {
 // the one in <dirent.h>, which is used by readdir().
 struct linux_dirent;
 
+struct ProcSelfMapsBuff {
+  char *data;
+  uptr mmaped_size;
+  uptr len;
+};
+
+struct MemoryMappingLayoutData {
+  ProcSelfMapsBuff proc_self_maps;
+  const char *current;
+};
+
+void ReadProcMaps(ProcSelfMapsBuff *proc_maps);
+
 // Syscall wrappers.
 uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count);
 uptr internal_sigaltstack(const void* ss, void* oss);
 uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
     __sanitizer_sigset_t *oldset);
+uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp);
 
 // Linux-only syscalls.
 #if SANITIZER_LINUX
@@ -128,5 +145,6 @@ ALWAYS_INLINE uptr *get_android_tls_ptr() {
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX
+#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
+        // SANITIZER_SOLARIS
 #endif  // SANITIZER_LINUX_H

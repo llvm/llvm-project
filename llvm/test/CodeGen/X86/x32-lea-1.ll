@@ -3,7 +3,7 @@
 
 define void @foo(i32** %p) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addl $16, %eax
 ; CHECK-NEXT:    movl %eax, (%edi)

@@ -11,13 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/GCs.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Mangler.h"
@@ -26,7 +27,6 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cctype>
 #include <cstddef>
 #include <cstdint>

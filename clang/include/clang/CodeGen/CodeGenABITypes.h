@@ -72,11 +72,18 @@ const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
                                               FunctionType::ExtInfo info,
                                               RequiredArgs args);
 
-// Returns null if the function type is incomplete and can't be lowered.
+/// Returns null if the function type is incomplete and can't be lowered.
 llvm::FunctionType *convertFreeFunctionType(CodeGenModule &CGM,
                                             const FunctionDecl *FD);
 
 llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
+
+/// Given a non-bitfield struct field, return its index within the elements of
+/// the struct's converted type.  The returned index refers to a field number in
+/// the complete object type which is returned by convertTypeForMemory.  FD must
+/// be a field in RD directly (i.e. not an inherited field).
+unsigned getLLVMFieldNumber(CodeGenModule &CGM,
+                            const RecordDecl *RD, const FieldDecl *FD);
 
 }  // end namespace CodeGen
 }  // end namespace clang

@@ -1,4 +1,4 @@
-//===- MILexer.cpp - Machine instructions lexer implementation ----------===//
+//===- MILexer.cpp - Machine instructions lexer implementation ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,27 +12,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "MILexer.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include <algorithm>
+#include <cassert>
 #include <cctype>
+#include <string>
 
 using namespace llvm;
 
 namespace {
 
-typedef function_ref<void(StringRef::iterator Loc, const Twine &)>
-    ErrorCallbackType;
+using ErrorCallbackType =
+    function_ref<void(StringRef::iterator Loc, const Twine &)>;
 
 /// This class provides a way to iterate and get characters from the source
 /// string.
 class Cursor {
-  const char *Ptr;
-  const char *End;
+  const char *Ptr = nullptr;
+  const char *End = nullptr;
 
 public:
-  Cursor(NoneType) : Ptr(nullptr), End(nullptr) {}
+  Cursor(NoneType) {}
 
   explicit Cursor(StringRef Str) {
     Ptr = Str.data();
@@ -202,14 +208,24 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("internal", MIToken::kw_internal)
       .Case("early-clobber", MIToken::kw_early_clobber)
       .Case("debug-use", MIToken::kw_debug_use)
+      .Case("renamable", MIToken::kw_renamable)
       .Case("tied-def", MIToken::kw_tied_def)
       .Case("frame-setup", MIToken::kw_frame_setup)
       .Case("debug-location", MIToken::kw_debug_location)
       .Case("same_value", MIToken::kw_cfi_same_value)
       .Case("offset", MIToken::kw_cfi_offset)
+      .Case("rel_offset", MIToken::kw_cfi_rel_offset)
       .Case("def_cfa_register", MIToken::kw_cfi_def_cfa_register)
       .Case("def_cfa_offset", MIToken::kw_cfi_def_cfa_offset)
+      .Case("adjust_cfa_offset", MIToken::kw_cfi_adjust_cfa_offset)
+      .Case("escape", MIToken::kw_cfi_escape)
       .Case("def_cfa", MIToken::kw_cfi_def_cfa)
+      .Case("remember_state", MIToken::kw_cfi_remember_state)
+      .Case("restore", MIToken::kw_cfi_restore)
+      .Case("restore_state", MIToken::kw_cfi_restore_state)
+      .Case("undefined", MIToken::kw_cfi_undefined)
+      .Case("register", MIToken::kw_cfi_register)
+      .Case("window_save", MIToken::kw_cfi_window_save)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
@@ -225,6 +241,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("dereferenceable", MIToken::kw_dereferenceable)
       .Case("invariant", MIToken::kw_invariant)
       .Case("align", MIToken::kw_align)
+      .Case("addrspace", MIToken::kw_addrspace)
       .Case("stack", MIToken::kw_stack)
       .Case("got", MIToken::kw_got)
       .Case("jump-table", MIToken::kw_jump_table)
@@ -270,6 +287,9 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
     C.advance();
   StringRef Number = NumberRange.upto(C);
   unsigned StringOffset = PrefixLength + Number.size(); // Drop '%bb.<id>'
+  // TODO: The format bb.<id>.<irname> is supported only when it's not a
+  // reference. Once we deprecate the format where the irname shows up, we
+  // should only lex forward if it is a reference.
   if (C.peek() == '.') {
     C.advance(); // Skip '.'
     ++StringOffset;

@@ -25,7 +25,7 @@ define i8 @optimizable1() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-    %ptr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
     %a = load i8, i8* %ptr, !invariant.group !0
     
     call void @foo(i8* %ptr2); call to use %ptr2
@@ -242,7 +242,7 @@ define i8 @optimizable4() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-    %ptr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
 ; CHECK-NOT: load
     %a = load i8, i8* %ptr2, !invariant.group !0
     
@@ -314,7 +314,7 @@ entry:
 ; CHECK: store i8 %unknownValue, i8* %ptr, !invariant.group !0
     store i8 %unknownValue, i8* %ptr, !invariant.group !0 
 
-    %newPtr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+    %newPtr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
 ; CHECK-NOT: load
     %d = load i8, i8* %newPtr2, !invariant.group !0
 ; CHECK: ret i8 %unknownValue
@@ -441,7 +441,7 @@ declare void @_ZN1A3fooEv(%struct.A*)
 declare void @_ZN1AC1Ev(%struct.A*)
 declare void @fooBit(i1*, i1)
 
-declare i8* @llvm.invariant.group.barrier(i8*)
+declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
 
 ; Function Attrs: nounwind
 declare void @llvm.assume(i1 %cmp.vtables) #0

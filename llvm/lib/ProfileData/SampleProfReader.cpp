@@ -749,7 +749,7 @@ setupMemoryBuffer(const Twine &Filename) {
   auto Buffer = std::move(BufferOrErr.get());
 
   // Sanity check the file.
-  if (Buffer->getBufferSize() > std::numeric_limits<uint32_t>::max())
+  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint32_t>::max())
     return sampleprof_error::too_large;
 
   return std::move(Buffer);
@@ -758,8 +758,6 @@ setupMemoryBuffer(const Twine &Filename) {
 /// \brief Create a sample profile reader based on the format of the input file.
 ///
 /// \param Filename The file to open.
-///
-/// \param Reader The reader to instantiate according to \p Filename's format.
 ///
 /// \param C The LLVM context to use to emit diagnostics.
 ///
@@ -775,8 +773,6 @@ SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
 /// \brief Create a sample profile reader based on the format of the input data.
 ///
 /// \param B The memory buffer to create the reader from (assumes ownership).
-///
-/// \param Reader The reader to instantiate according to \p Filename's format.
 ///
 /// \param C The LLVM context to use to emit diagnostics.
 ///

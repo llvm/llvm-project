@@ -126,6 +126,7 @@ int main(int argc_, const char *argv_[]) {
     std::string MachineString = InputArgs.getLastArgValue(OPT_MACHINE).upper();
     MachineType = StringSwitch<COFF::MachineTypes>(MachineString)
                       .Case("ARM", COFF::IMAGE_FILE_MACHINE_ARMNT)
+                      .Case("ARM64", COFF::IMAGE_FILE_MACHINE_ARM64)
                       .Case("X64", COFF::IMAGE_FILE_MACHINE_AMD64)
                       .Case("X86", COFF::IMAGE_FILE_MACHINE_I386)
                       .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
@@ -155,6 +156,9 @@ int main(int argc_, const char *argv_[]) {
   if (Verbose) {
     outs() << "Machine: ";
     switch (MachineType) {
+    case COFF::IMAGE_FILE_MACHINE_ARM64:
+      outs() << "ARM64\n";
+      break;
     case COFF::IMAGE_FILE_MACHINE_ARMNT:
       outs() << "ARM\n";
       break;
@@ -202,7 +206,7 @@ int main(int argc_, const char *argv_[]) {
   auto FileOrErr =
       FileOutputBuffer::create(OutputFile, OutputBuffer->getBufferSize());
   if (!FileOrErr)
-    reportError(OutputFile, FileOrErr.getError());
+    reportError(OutputFile, errorToErrorCode(FileOrErr.takeError()));
   std::unique_ptr<FileOutputBuffer> FileBuffer = std::move(*FileOrErr);
   std::copy(OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
             FileBuffer->getBufferStart());

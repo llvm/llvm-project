@@ -1,5 +1,5 @@
 ; RUN: opt -basicaa -loop-idiom -S < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
-; RUN: opt -basicaa -loop-idiom -S < %s -march=amdgcn -mcpu=SI -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: opt -basicaa -loop-idiom -S < %s -march=amdgcn -mcpu=tahiti -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
 ; RUN: opt -basicaa -loop-idiom -S < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 

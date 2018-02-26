@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -verify-machineinstrs -march=x86 -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=i686-- -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ;
 ; Test scheduling of copy instructions.
 ;
@@ -8,11 +8,11 @@
 ; MUL_HiLo PhysReg use copies should be just above the mul.
 ; MUL_HiLo PhysReg def copies should be just below the mul.
 ;
-; CHECK: *** Final schedule for BB#1 ***
-; CHECK:      %EAX<def> = COPY
-; CHECK-NEXT: MUL32r %vreg{{[0-9]+}}, %EAX<imp-def>, %EDX<imp-def>, %EFLAGS<imp-def,dead>, %EAX<imp-use>;
-; CHECK-NEXT: COPY %E{{[AD]}}X
-; CHECK-NEXT: COPY %E{{[AD]}}X
+; CHECK: *** Final schedule for %bb.1 ***
+; CHECK:      %eax = COPY
+; CHECK-NEXT: MUL32r %{{[0-9]+}}, implicit-def %eax, implicit-def %edx, implicit-def dead %eflags, implicit %eax;
+; CHECK-NEXT: COPY %e{{[ad]}}x
+; CHECK-NEXT: COPY %e{{[ad]}}x
 ; CHECK:      DIVSSrm
 define i64 @mulhoist(i32 %a, i32 %b) #0 {
 entry:

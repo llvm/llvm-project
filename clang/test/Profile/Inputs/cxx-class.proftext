@@ -1,52 +1,52 @@
 _Z14simple_wrapperv
-4
+18129
 2
 1
 100
 
 main
-0
+24
 1
 1
 
 _ZN6SimpleD1Ev
-10
+42129
 2
 0
 0
 
 _ZN6SimpleD2Ev
-10
+42129
 2
 100
 99
 
 _ZN6Simple6methodEv
-10
+42129
 2
 100
 99
 
 _ZN6SimpleC1Ei
-10
+42129
 2
 0
 0
 
 _ZN6SimpleC2Ei
-10
+42129
 2
 100
 99
 
 _ZN7DerivedC1Ev
-10
+42129
 2
 100
 99
 
 _ZN7DerivedD2Ev
-10
+42129
 2
 100
 99

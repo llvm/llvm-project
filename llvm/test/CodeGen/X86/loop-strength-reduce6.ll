@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | not grep inc
+; RUN: llc < %s -mtriple=x86_64-- | not grep inc
 
 define fastcc i32 @decodeMP3(i32 %isize, i32* %done) nounwind {
 entry:

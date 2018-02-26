@@ -1,4 +1,4 @@
-//===--------- MipsOptimizePICCall.cpp - Optimize PIC Calls ---------------===//
+//===- MipsOptimizePICCall.cpp - Optimize PIC Calls -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,12 +14,31 @@
 
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
-#include "MipsMachineFunction.h"
-#include "MipsTargetMachine.h"
+#include "MipsRegisterInfo.h"
+#include "MipsSubtarget.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/RecyclingAllocator.h"
+#include <cassert>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -35,18 +54,18 @@ static cl::opt<bool> EraseGPOpnd("mips-erase-gp-opnd",
                                  cl::Hidden);
 
 namespace {
-typedef PointerUnion<const Value *, const PseudoSourceValue *> ValueType;
 
-typedef std::pair<unsigned, unsigned> CntRegP;
-typedef RecyclingAllocator<BumpPtrAllocator,
-                           ScopedHashTableVal<ValueType, CntRegP> >
-AllocatorTy;
-typedef ScopedHashTable<ValueType, CntRegP, DenseMapInfo<ValueType>,
-                        AllocatorTy> ScopedHTType;
+using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
+using CntRegP = std::pair<unsigned, unsigned>;
+using AllocatorTy = RecyclingAllocator<BumpPtrAllocator,
+                                       ScopedHashTableVal<ValueType, CntRegP>>;
+using ScopedHTType = ScopedHashTable<ValueType, CntRegP,
+                                     DenseMapInfo<ValueType>, AllocatorTy>;
 
 class MBBInfo {
 public:
   MBBInfo(MachineDomTreeNode *N);
+
   const MachineDomTreeNode *getNode() const;
   bool isVisited() const;
   void preVisit(ScopedHTType &ScopedHT);
@@ -94,11 +113,13 @@ private:
   void incCntAndSetReg(ValueType Entry, unsigned Reg);
 
   ScopedHTType ScopedHT;
+
   static char ID;
 };
 
-char OptimizePICCall::ID = 0;
 } // end of anonymous namespace
+
+char OptimizePICCall::ID = 0;
 
 /// Return the first MachineOperand of MI if it is a used virtual register.
 static MachineOperand *getCallTargetRegOpnd(MachineInstr &MI) {

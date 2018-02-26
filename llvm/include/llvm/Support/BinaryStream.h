@@ -11,12 +11,20 @@
 #define LLVM_SUPPORT_BINARYSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
+
+enum BinaryStreamFlags {
+  BSF_None = 0,
+  BSF_Write = 1,  // Stream supports writing.
+  BSF_Append = 2, // Writing can occur at offset == length.
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ BSF_Append)
+};
 
 /// \brief An interface for accessing data in a stream-like format, but which
 /// discourages copying.  Instead of specifying a buffer in which to copy
@@ -45,8 +53,11 @@ public:
   /// \brief Return the number of bytes of data in this stream.
   virtual uint32_t getLength() = 0;
 
+  /// \brief Return the properties of this stream.
+  virtual BinaryStreamFlags getFlags() const { return BSF_None; }
+
 protected:
-  Error checkOffset(uint32_t Offset, uint32_t DataSize) {
+  Error checkOffsetForRead(uint32_t Offset, uint32_t DataSize) {
     if (Offset > getLength())
       return make_error<BinaryStreamError>(stream_error_code::invalid_offset);
     if (getLength() < DataSize + Offset)
@@ -71,6 +82,19 @@ public:
 
   /// \brief For buffered streams, commits changes to the backing store.
   virtual Error commit() = 0;
+
+  /// \brief Return the properties of this stream.
+  BinaryStreamFlags getFlags() const override { return BSF_Write; }
+
+protected:
+  Error checkOffsetForWrite(uint32_t Offset, uint32_t DataSize) {
+    if (!(getFlags() & BSF_Append))
+      return checkOffsetForRead(Offset, DataSize);
+
+    if (Offset > getLength())
+      return make_error<BinaryStreamError>(stream_error_code::invalid_offset);
+    return Error::success();
+  }
 };
 
 } // end namespace llvm

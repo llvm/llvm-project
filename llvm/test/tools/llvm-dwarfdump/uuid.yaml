@@ -1,11 +1,11 @@
 # RUN: yaml2obj %s | llvm-dwarfdump -u - | FileCheck %s
 # RUN: yaml2obj %s | llvm-dwarfdump --uuid - | FileCheck %s
-# CHECK: UUID: E5874E6F-946F-317B-B348-56FAEE59D8D1 Mach-O 64-bit x86-64 <stdin>
+# CHECK: UUID: E5874E6F-946F-317B-B348-56FAEE59D8D1 (x86_64h) <stdin>
 --- !mach-o
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007
-  cpusubtype:      0x80000003
+  cpusubtype:      0x80000008
   filetype:        0x00000002
   ncmds:           14
   sizeofcmds:      728

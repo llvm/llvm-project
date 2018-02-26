@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX8 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX8 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
 
 declare half @llvm.copysign.f16(half, half)
 declare float @llvm.copysign.f32(float, float)
@@ -12,15 +12,15 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 ; GCN-LABEL: {{^}}test_copysign_f16:
-; SI: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
 ; SI: {{buffer|flat}}_load_ushort v[[MAG:[0-9]+]]
+; SI: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
 ; SI: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_F32]]
 ; SI: v_cvt_f16_f32_e32 v[[OUT:[0-9]+]], v[[OUT_F32]]
-; GFX89: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
 ; GFX89: {{buffer|flat}}_load_ushort v[[MAG:[0-9]+]]
+; GFX89: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
 ; GFX89: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
 ; GFX89: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN]]
 ; GCN: buffer_store_short v[[OUT]]
@@ -38,8 +38,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f32_mag_f16_sign_f32:
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_dword v[[SIGN:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[MAG:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[MAG_EXT:[0-9]+]], v[[MAG]]
 ; GCN: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG_EXT]], v[[SIGN]]
@@ -62,8 +62,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f64_mag_f16_sign_f64:
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[MAG:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[MAG_EXT:[0-9]+]], v[[MAG]]
 ; GCN-DAG: v_cvt_f64_f32_e32 v{{\[}}[[MAG_EXT_LO:[0-9]+]]:[[MAG_EXT_HI:[0-9]+]]{{\]}}, v[[MAG_EXT]]
@@ -87,8 +87,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f32_mag_f32_sign_f16:
-; GCN-DAG: {{buffer|flat}}_load_dword v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword v[[MAG:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_F32]]
@@ -113,8 +113,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f64_mag_f64_sign_f16:
-; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[MAG_LO:[0-9]+]]:[[MAG_HI:[0-9]+]]{{\]}}
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[MAG_LO:[0-9]+]]:[[MAG_HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_F32]]
@@ -139,8 +139,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f32:
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_dword v[[SIGN:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[MAG:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword v[[SIGN:[0-9]+]]
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN]]
@@ -167,8 +167,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f64:
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[MAG:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_HI]]
@@ -195,8 +195,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f32_sign_f16:
-; GCN-DAG: {{buffer|flat}}_load_dword v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_ushort v[[SIGN:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword v[[MAG:[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[SIGN:[0-9]+]]
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f16_f32_e32 v[[MAG_TRUNC:[0-9]+]], v[[MAG]]
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]

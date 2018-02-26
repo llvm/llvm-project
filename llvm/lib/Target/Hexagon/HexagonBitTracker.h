@@ -1,4 +1,4 @@
-//===--- HexagonBitTracker.h ------------------------------------*- C++ -*-===//
+//===- HexagonBitTracker.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,12 +18,16 @@ namespace llvm {
 
 class HexagonInstrInfo;
 class HexagonRegisterInfo;
+class MachineFrameInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineRegisterInfo;
 
 struct HexagonEvaluator : public BitTracker::MachineEvaluator {
-  typedef BitTracker::CellMapType CellMapType;
-  typedef BitTracker::RegisterRef RegisterRef;
-  typedef BitTracker::RegisterCell RegisterCell;
-  typedef BitTracker::BranchTargetList BranchTargetList;
+  using CellMapType = BitTracker::CellMapType;
+  using RegisterRef = BitTracker::RegisterRef;
+  using RegisterCell = BitTracker::RegisterCell;
+  using BranchTargetList = BitTracker::BranchTargetList;
 
   HexagonEvaluator(const HexagonRegisterInfo &tri, MachineRegisterInfo &mri,
                    const HexagonInstrInfo &tii, MachineFunction &mf);
@@ -34,6 +38,11 @@ struct HexagonEvaluator : public BitTracker::MachineEvaluator {
                 BranchTargetList &Targets, bool &FallsThru) const override;
 
   BitTracker::BitMask mask(unsigned Reg, unsigned Sub) const override;
+
+  uint16_t getPhysRegBitWidth(unsigned Reg) const override;
+
+  const TargetRegisterClass &composeWithSubRegIndex(
+        const TargetRegisterClass &RC, unsigned Idx) const override;
 
   MachineFunction &MF;
   MachineFrameInfo &MFI;
@@ -59,7 +68,7 @@ private:
     uint16_t Width = 0;
   };
   // Map VR -> extension type.
-  typedef DenseMap<unsigned, ExtType> RegExtMap;
+  using RegExtMap = DenseMap<unsigned, ExtType>;
   RegExtMap VRX;
 };
 

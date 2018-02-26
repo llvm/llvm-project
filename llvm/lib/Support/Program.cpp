@@ -23,20 +23,21 @@ using namespace sys;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-static bool Execute(ProcessInfo &PI, StringRef Program, const char **args,
-                    const char **env, const StringRef **Redirects,
-                    unsigned memoryLimit, std::string *ErrMsg);
+static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
+                    const char **Env, ArrayRef<Optional<StringRef>> Redirects,
+                    unsigned MemoryLimit, std::string *ErrMsg);
 
-int sys::ExecuteAndWait(StringRef Program, const char **args, const char **envp,
-                        const StringRef **redirects, unsigned secondsToWait,
-                        unsigned memoryLimit, std::string *ErrMsg,
-                        bool *ExecutionFailed) {
+int sys::ExecuteAndWait(StringRef Program, const char **Args, const char **Envp,
+                        ArrayRef<Optional<StringRef>> Redirects,
+                        unsigned SecondsToWait, unsigned MemoryLimit,
+                        std::string *ErrMsg, bool *ExecutionFailed) {
+  assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
-  if (Execute(PI, Program, args, envp, redirects, memoryLimit, ErrMsg)) {
+  if (Execute(PI, Program, Args, Envp, Redirects, MemoryLimit, ErrMsg)) {
     if (ExecutionFailed)
       *ExecutionFailed = false;
     ProcessInfo Result = Wait(
-        PI, secondsToWait, /*WaitUntilTerminates=*/secondsToWait == 0, ErrMsg);
+        PI, SecondsToWait, /*WaitUntilTerminates=*/SecondsToWait == 0, ErrMsg);
     return Result.ReturnCode;
   }
 
@@ -46,14 +47,16 @@ int sys::ExecuteAndWait(StringRef Program, const char **args, const char **envp,
   return -1;
 }
 
-ProcessInfo sys::ExecuteNoWait(StringRef Program, const char **args,
-                               const char **envp, const StringRef **redirects,
-                               unsigned memoryLimit, std::string *ErrMsg,
+ProcessInfo sys::ExecuteNoWait(StringRef Program, const char **Args,
+                               const char **Envp,
+                               ArrayRef<Optional<StringRef>> Redirects,
+                               unsigned MemoryLimit, std::string *ErrMsg,
                                bool *ExecutionFailed) {
+  assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
   if (ExecutionFailed)
     *ExecutionFailed = false;
-  if (!Execute(PI, Program, args, envp, redirects, memoryLimit, ErrMsg))
+  if (!Execute(PI, Program, Args, Envp, Redirects, MemoryLimit, ErrMsg))
     if (ExecutionFailed)
       *ExecutionFailed = true;
 

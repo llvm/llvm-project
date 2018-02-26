@@ -40,8 +40,10 @@ Kaleidoscope ASTS. To build this example, use:
 .. code-block:: bash
 
     # Compile
-    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orc native` -O3 -o toy
+    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
+    clang++ -g Server/server.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy-server
     # Run
+    ./toy-server &
     ./toy
 
 Here is the code for the modified KaleidoscopeJIT:

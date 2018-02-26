@@ -79,6 +79,16 @@ define double @ldp_double(double* %p) nounwind {
   ret double %add
 }
 
+; CHECK-LABEL: ldp_doublex2
+; CHECK: ldp
+define <2 x double> @ldp_doublex2(<2 x double>* %p) nounwind {
+  %tmp = load <2 x double>, <2 x double>* %p, align 16
+  %add.ptr = getelementptr inbounds <2 x double>, <2 x double>* %p, i64 1
+  %tmp1 = load <2 x double>, <2 x double>* %add.ptr, align 16
+  %add = fadd <2 x double> %tmp, %tmp1
+  ret <2 x double> %add
+}
+
 ; Test the load/store optimizer---combine ldurs into a ldp, if appropriate
 define i32 @ldur_int(i32* %a) nounwind {
 ; CHECK-LABEL: ldur_int
@@ -157,7 +167,7 @@ define i64 @ldur_long(i64* %a) nounwind ssp {
 define float @ldur_float(float* %a) {
 ; CHECK-LABEL: ldur_float
 ; CHECK: ldp     [[DST1:s[0-9]+]], [[DST2:s[0-9]+]], [x0, #-8]
-; CHECK-NEXT: add     s{{[0-9]+}}, [[DST2]], [[DST1]]
+; CHECK-NEXT: fadd    s{{[0-9]+}}, [[DST2]], [[DST1]]
 ; CHECK-NEXT: ret
   %p1 = getelementptr inbounds float, float* %a, i64 -1
   %tmp1 = load float, float* %p1, align 2
@@ -170,7 +180,7 @@ define float @ldur_float(float* %a) {
 define double @ldur_double(double* %a) {
 ; CHECK-LABEL: ldur_double
 ; CHECK: ldp     [[DST1:d[0-9]+]], [[DST2:d[0-9]+]], [x0, #-16]
-; CHECK-NEXT: add     d{{[0-9]+}}, [[DST2]], [[DST1]]
+; CHECK-NEXT: fadd    d{{[0-9]+}}, [[DST2]], [[DST1]]
 ; CHECK-NEXT: ret
   %p1 = getelementptr inbounds double, double* %a, i64 -1
   %tmp1 = load double, double* %p1, align 2
@@ -178,6 +188,19 @@ define double @ldur_double(double* %a) {
   %tmp2 = load double, double* %p2, align 2
   %tmp3 = fadd double %tmp1, %tmp2
   ret double %tmp3
+}
+
+define <2 x double> @ldur_doublex2(<2 x double>* %a) {
+; CHECK-LABEL: ldur_doublex2
+; CHECK: ldp     q[[DST1:[0-9]+]], q[[DST2:[0-9]+]], [x0, #-32]
+; CHECK-NEXT: fadd    v{{[0-9]+}}.2d, v[[DST2]].2d, v[[DST1]].2d
+; CHECK-NEXT: ret
+  %p1 = getelementptr inbounds <2 x double>, <2 x double>* %a, i64 -1
+  %tmp1 = load <2 x double>, <2 x double>* %p1, align 2
+  %p2 = getelementptr inbounds <2 x double>, <2 x double>* %a, i64 -2
+  %tmp2 = load <2 x double>, <2 x double>* %p2, align 2
+  %tmp3 = fadd <2 x double> %tmp1, %tmp2
+  ret <2 x double> %tmp3
 }
 
 ; Now check some boundary conditions

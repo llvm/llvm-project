@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 void foo() {
 }
 
@@ -42,7 +44,7 @@ public:
 };
 class S5 {
   int a;
-  S5(const S5 &s5) : a(s5.a) {} // expected-note 4 {{implicitly declared private here}}
+  S5(const S5 &s5) : a(s5.a) {} // expected-note 2 {{implicitly declared private here}}
 
 public:
   S5() : a(0) {}
@@ -50,7 +52,7 @@ public:
 };
 class S6 {
   int a;
-  S6() : a(0) {}
+  S6() : a(0) {} // expected-note {{implicitly declared private here}}
 
 public:
   S6(const S6 &s6) : a(s6.a) {}
@@ -150,9 +152,10 @@ int foomain(int argc, char **argv) {
 #pragma omp distribute simd firstprivate(i)
   for (int k = 0; k < argc; ++k)
     ++k;
+// expected-error@+3 {{lastprivate variable cannot be firstprivate}} expected-note@+3 {{defined as lastprivate}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd lastprivate(g) firstprivate(g) // expected-error {{calling a private constructor of class 'S5'}}
+#pragma omp distribute simd lastprivate(g) firstprivate(g)
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel private(i)
@@ -314,14 +317,16 @@ int main(int argc, char **argv) {
 #pragma omp distribute simd firstprivate(j)
   for (i = 0; i < argc; ++i)
     foo();
+// expected-error@+3 {{lastprivate variable cannot be firstprivate}} expected-note@+3 {{defined as lastprivate}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd lastprivate(g) firstprivate(g) // expected-error {{calling a private constructor of class 'S5'}}
+#pragma omp distribute simd lastprivate(g) firstprivate(g)
   for (i = 0; i < argc; ++i)
     foo();
+// expected-error@+3 {{lastprivate variable cannot be firstprivate}} expected-note@+3 {{defined as lastprivate}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd lastprivate(n) firstprivate(n) // OK
+#pragma omp distribute simd lastprivate(n) firstprivate(n) // expected-error {{calling a private constructor of class 'S6'}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel

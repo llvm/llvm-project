@@ -43,7 +43,10 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TailDuplicator.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
@@ -55,10 +58,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -108,6 +108,11 @@ static cl::opt<unsigned> LoopToColdBlockRatio(
              "(frequency of block) is greater than this ratio"),
     cl::init(5), cl::Hidden);
 
+static cl::opt<bool> ForceLoopColdBlock(
+    "force-loop-cold-block",
+    cl::desc("Force outlining cold blocks from loops."),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool>
     PreciseRotationCost("precise-rotation-cost",
                         cl::desc("Model the cost of loop rotation more "
@@ -156,7 +161,7 @@ static cl::opt<unsigned> TailDupPlacementAggressiveThreshold(
     "tail-dup-placement-aggressive-threshold",
     cl::desc("Instruction cutoff for aggressive tail duplication during "
              "layout. Used at -O3. Tail merging during layout is forced to "
-             "have a threshold that won't conflict."), cl::init(3),
+             "have a threshold that won't conflict."), cl::init(4),
     cl::Hidden);
 
 // Heuristic for tail duplication.
@@ -541,7 +546,7 @@ INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
 static std::string getBlockName(const MachineBasicBlock *BB) {
   std::string Result;
   raw_string_ostream OS(Result);
-  OS << "BB#" << BB->getNumber();
+  OS << printMBBReference(*BB);
   OS << " ('" << BB->getName() << "')";
   OS.flush();
   return Result;
@@ -1230,7 +1235,7 @@ void MachineBlockPlacement::precomputeTriangleChains() {
 // When profile is available, we need to handle the triangle-shape CFG.
 static BranchProbability getLayoutSuccessorProbThreshold(
       const MachineBasicBlock *BB) {
-  if (!BB->getParent()->getFunction()->getEntryCount())
+  if (!BB->getParent()->getFunction().hasProfileData())
     return BranchProbability(StaticLikelyProb, 100);
   if (BB->succ_size() == 2) {
     const MachineBasicBlock *Succ1 = *BB->succ_begin();
@@ -1764,7 +1769,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  if (F->getFunction()->optForSize())
+  if (F->getFunction().optForSize())
     return L.getHeader();
 
   // Check that the header hasn't been fused with a preheader block due to
@@ -2173,7 +2178,7 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   // will be merged into the first outer loop chain for which this block is not
   // cold anymore. This needs precise profile data and we only do this when
   // profile data is available.
-  if (F->getFunction()->getEntryCount()) {
+  if (F->getFunction().hasProfileData() || ForceLoopColdBlock) {
     BlockFrequency LoopFreq(0);
     for (auto LoopPred : L.getHeader()->predecessors())
       if (!L.contains(LoopPred))
@@ -2215,7 +2220,7 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // for better layout.
   bool RotateLoopWithProfile =
       ForcePreciseRotationCost ||
-      (PreciseRotationCost && F->getFunction()->getEntryCount());
+      (PreciseRotationCost && F->getFunction().hasProfileData());
 
   // First check to see if there is an obviously preferable top block for the
   // loop. This will default to the header, but may end up as one of the
@@ -2228,6 +2233,10 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // If we selected just the header for the loop top, look for a potentially
   // profitable exit block in the event that rotating the loop can eliminate
   // branches by placing an exit edge at the bottom.
+  //
+  // Loops are processed innermost to uttermost, make sure we clear
+  // PreferredLoopExit before processing a new loop.
+  PreferredLoopExit = nullptr;
   if (!RotateLoopWithProfile && LoopTop == L.getHeader())
     PreferredLoopExit = findBestLoopExit(L, LoopBlockSet);
 
@@ -2476,7 +2485,7 @@ void MachineBlockPlacement::alignBlocks() {
   // exclusively on the loop info here so that we can align backedges in
   // unnatural CFGs and backedges that were introduced purely because of the
   // loop rotations done during this layout pass.
-  if (F->getFunction()->optForSize())
+  if (F->getFunction().optForSize())
     return;
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
   if (FunctionChain.begin() == FunctionChain.end())
@@ -2706,7 +2715,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
 }
 
 bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   // Check for single-block functions and skip them.
@@ -2751,9 +2760,10 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   if (TailDupPlacement) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
-    if (MF.getFunction()->optForSize())
+    if (MF.getFunction().optForSize())
       TailDupSize = 1;
-    TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
+    bool PreRegAlloc = false;
+    TailDup.initMF(MF, PreRegAlloc, MBPI, /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
   }
 
@@ -2807,7 +2817,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   }
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
-       F->getFunction()->getName().equals(ViewBlockFreqFuncName))) {
+       F->getFunction().getName().equals(ViewBlockFreqFuncName))) {
     MBFI->view("MBP." + MF.getName(), false);
   }
 

@@ -19,7 +19,17 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class FunctionPass;
+class formatted_raw_ostream;
 class Nios2TargetMachine;
+class AsmPrinter;
+class MachineInstr;
+class MCInst;
+
+FunctionPass *createNios2ISelDag(Nios2TargetMachine &TM,
+                                 CodeGenOpt::Level OptLevel);
+void LowerNios2MachineInstToMCInst(const MachineInstr *MI, MCInst &OutMI,
+                                   AsmPrinter &AP);
 } // namespace llvm
 
 #endif

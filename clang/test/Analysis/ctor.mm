@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify -DTEST_INLINABLE_ALLOCATORS %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -572,10 +573,9 @@ namespace ZeroInitialization {
   }
 
   void testNew() {
-    // FIXME: Pending proper implementation of constructors for 'new'.
     raw_pair *pp = new raw_pair();
-    clang_analyzer_eval(pp->p1 == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(pp->p2 == 0); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(pp->p1 == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(pp->p2 == 0); // expected-warning{{TRUE}}
   }
 
   void testArrayNew() {
@@ -679,8 +679,7 @@ namespace InitializerList {
 
   void testDynamic() {
     List *list = new List{1, 2};
-    // FIXME: When we handle constructors with 'new', this will be TRUE.
-    clang_analyzer_eval(list->usedInitializerList); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(list->usedInitializerList); // expected-warning{{TRUE}}
   }
 }
 

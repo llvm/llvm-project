@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah | FileCheck %s
 
 	%struct.S = type { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>,
                            <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>,

@@ -560,6 +560,7 @@ public:
     void markUsed(bool IsODRUse) { (IsODRUse ? ODRUsed : NonODRUsed) = true; }
 
     VarDecl *getVariable() const {
+      assert(isVariableCapture());
       return VarAndNestedAndThis.getPointer();
     }
     
@@ -831,6 +832,12 @@ public:
 
   static bool classof(const FunctionScopeInfo *FSI) {
     return FSI->Kind == SK_Lambda;
+  }
+
+  /// Is this scope known to be for a generic lambda? (This will be false until
+  /// we parse the first 'auto'-typed parameter.
+  bool isGenericLambda() const {
+    return !AutoTemplateParams.empty() || GLTemplateParameterList;
   }
 
   ///

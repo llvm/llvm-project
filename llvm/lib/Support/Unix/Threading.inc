@@ -108,14 +108,14 @@ uint64_t llvm::get_threadid() {
 
 static constexpr uint32_t get_max_thread_name_length_impl() {
 #if defined(__NetBSD__)
-	return PTHREAD_MAX_NAMELEN_NP;
+  return PTHREAD_MAX_NAMELEN_NP;
 #elif defined(__APPLE__)
-	return 64;
+  return 64;
 #elif defined(__linux__)
 #if HAVE_PTHREAD_SETNAME_NP
-	return 16;
+  return 16;
 #else
-	return 0;
+  return 0;
 #endif
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
   return 16;
@@ -206,7 +206,7 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 #if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
 #if HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
-  char Buffer[len];
+  char Buffer[len] = {'\0'};  // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
 #endif

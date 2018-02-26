@@ -104,16 +104,12 @@ public:
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
 
-  /// Extracts a value in \p Data at offset \p *OffsetPtr.
-  ///
-  /// The passed DWARFUnit is allowed to be nullptr, in which case some
-  /// kind of forms that depend on Unit information are disallowed.
-  /// \param Data The DWARFDataExtractor to use.
-  /// \param OffsetPtr The offset within \p Data where the data starts.
-  /// \param U The optional DWARFUnit supplying information for some forms.
-  /// \returns whether the extraction succeeded.
+  /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
+  /// in \p FormParams is needed to interpret some forms. The optional
+  /// \p Unit allows extracting information if the form refers to other
+  /// sections (e.g., .debug_str).
   bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
-                    const DWARFUnit *U);
+                    DWARFFormParams FormParams, const DWARFUnit *U = nullptr);
 
   bool isInlinedCStr() const {
     return Value.data != nullptr && Value.data == (const uint8_t *)Value.cstr;

@@ -63,7 +63,7 @@ ThinLTO is currently supported for the following linkers:
 - **ld64**:
   Starting with `Xcode 8 <https://developer.apple.com/xcode/>`_.
 - **lld**:
-  Starting with r284050 (ELF only).
+  Starting with r284050 for ELF, r298942 for COFF.
 
 Usage
 =====
@@ -77,6 +77,13 @@ To utilize ThinLTO, simply add the -flto=thin option to compile and link. E.g.
 
   % clang -flto=thin -O2 file1.c file2.c -c
   % clang -flto=thin -O2 file1.o file2.o -o a.out
+
+When using lld-link, the -flto option need only be added to the compile step:
+
+.. code-block:: console
+
+  % clang-cl -flto=thin -O2 -c file1.c file2.c
+  % lld-link /out:a.exe file1.obj file2.obj
 
 As mentioned earlier, by default the linkers will launch the ThinLTO backend
 threads in parallel, passing the resulting native object files back to the
@@ -111,6 +118,8 @@ be reduced to ``N`` via:
   ``-Wl,-mllvm,-threads=N``
 - lld:
   ``-Wl,--thinlto-jobs=N``
+- lld-link:
+  ``/opt:lldltojobs=N``
 
 Incremental
 -----------
@@ -119,23 +128,29 @@ Incremental
 ThinLTO supports fast incremental builds through the use of a cache,
 which currently must be enabled through a linker option.
 
-- gold (as of LLVM r279883):
+- gold (as of LLVM 4.0):
   ``-Wl,-plugin-opt,cache-dir=/path/to/cache``
 - ld64 (support in clang 3.9 and Xcode 8):
   ``-Wl,-cache_path_lto,/path/to/cache``
-- lld (as of LLVM r296702):
+- ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-dir=/path/to/cache``
+- COFF lld-link (as of LLVM 6.0):
+  ``/lldltocache:/path/to/cache``
 
 Cache Pruning
 -------------
 
 To help keep the size of the cache under control, ThinLTO supports cache
-pruning. Cache pruning is supported with ld64 and ELF lld, but currently only
-ELF lld allows you to control the policy with a policy string.  The cache
-policy must be specified with a linker option.
+pruning. Cache pruning is supported with gold, ld64 and ELF and COFF lld, but
+currently only gold, ELF and COFF lld allow you to control the policy with a
+policy string. The cache policy must be specified with a linker option.
 
-- ELF lld (as of LLVM r298036):
+- gold (as of LLVM 6.0):
+  ``-Wl,-plugin-opt,cache-policy=POLICY``
+- ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-policy,POLICY``
+- COFF lld-link (as of LLVM 6.0):
+  ``/lldltocachepolicy:POLICY``
 
 A policy string is a series of key-value pairs separated by ``:`` characters.
 Possible key-value pairs are:
@@ -157,6 +172,10 @@ Possible key-value pairs are:
   and changing one does not affect the other. For example, a policy of
   ``cache_size_bytes=1g`` on its own will cause both the 1GB and default 75%
   policies to be applied unless the default ``cache_size`` is overridden.
+
+- ``cache_size_files=X``:
+  Set the maximum number of files in the cache directory. Set to 0 to indicate
+  no limit. The default is 1000000 files.
 
 - ``prune_after=Xs``, ``prune_after=Xm``, ``prune_after=Xh``: Sets the
   expiration time for cache files to ``X`` seconds (or minutes, hours
@@ -183,12 +202,19 @@ To bootstrap clang/LLVM with ThinLTO, follow these steps:
    when configuring the bootstrap compiler build:
 
   * ``-DLLVM_ENABLE_LTO=Thin``
-  * ``-DLLVM_PARALLEL_LINK_JOBS=1``
-    (since the ThinLTO link invokes parallel backend jobs)
   * ``-DCMAKE_C_COMPILER=/path/to/host/clang``
   * ``-DCMAKE_CXX_COMPILER=/path/to/host/clang++``
   * ``-DCMAKE_RANLIB=/path/to/host/llvm-ranlib``
   * ``-DCMAKE_AR=/path/to/host/llvm-ar``
+
+  Or, on Windows:
+
+  * ``-DLLVM_ENABLE_LTO=Thin``
+  * ``-DCMAKE_C_COMPILER=/path/to/host/clang-cl.exe``
+  * ``-DCMAKE_CXX_COMPILER=/path/to/host/clang-cl.exe``
+  * ``-DCMAKE_LINKER=/path/to/host/lld-link.exe``
+  * ``-DCMAKE_RANLIB=/path/to/host/llvm-ranlib.exe``
+  * ``-DCMAKE_AR=/path/to/host/llvm-ar.exe``
 
 #. To use additional linker arguments for controlling the backend
    parallelism_ or enabling incremental_ builds of the bootstrap compiler,

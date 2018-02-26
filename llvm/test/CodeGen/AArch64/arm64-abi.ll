@@ -1,5 +1,5 @@
 ; RUN: llc     -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=arm64-apple-darwin                                     < %s | FileCheck --check-prefix=FAST %s
+; RUN: llc -O0 -fast-isel -mtriple=arm64-apple-darwin                          < %s | FileCheck --check-prefix=FAST %s
 
 ; rdar://9932559
 define i64 @i8i16callee(i64 %a1, i64 %a2, i64 %a3, i8 signext %a4, i16 signext %a5, i64 %a6, i64 %a7, i64 %a8, i8 signext %b1, i16 signext %b2, i8 signext %b3, i8 signext %b4) nounwind readnone noinline {

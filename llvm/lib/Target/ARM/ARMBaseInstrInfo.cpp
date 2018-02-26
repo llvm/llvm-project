@@ -37,6 +37,8 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -53,9 +55,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1357,25 +1357,34 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
 
   MachineInstrBuilder LDM, STM;
   if (isThumb1 || !MI->getOperand(1).isDead()) {
+    MachineOperand LDWb(MI->getOperand(1));
+    LDWb.setIsRenamable(false);
     LDM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2LDMIA_UPD
                                                  : isThumb1 ? ARM::tLDMIA_UPD
                                                             : ARM::LDMIA_UPD))
-              .add(MI->getOperand(1));
+              .add(LDWb);
   } else {
     LDM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2LDMIA : ARM::LDMIA));
   }
 
   if (isThumb1 || !MI->getOperand(0).isDead()) {
+    MachineOperand STWb(MI->getOperand(0));
+    STWb.setIsRenamable(false);
     STM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2STMIA_UPD
                                                  : isThumb1 ? ARM::tSTMIA_UPD
                                                             : ARM::STMIA_UPD))
-              .add(MI->getOperand(0));
+              .add(STWb);
   } else {
     STM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2STMIA : ARM::STMIA));
   }
 
-  LDM.add(MI->getOperand(3)).add(predOps(ARMCC::AL));
-  STM.add(MI->getOperand(2)).add(predOps(ARMCC::AL));
+  MachineOperand LDBase(MI->getOperand(3));
+  LDBase.setIsRenamable(false);
+  LDM.add(LDBase).add(predOps(ARMCC::AL));
+
+  MachineOperand STBase(MI->getOperand(2));
+  STBase.setIsRenamable(false);
+  STM.add(STBase).add(predOps(ARMCC::AL));
 
   // Sort the scratch registers into ascending order.
   const TargetRegisterInfo &TRI = getRegisterInfo();
@@ -1447,7 +1456,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   DEBUG(dbgs() << "widening:    " << MI);
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
 
-  // Get rid of the old <imp-def> of DstRegD.  Leave it if it defines a Q-reg
+  // Get rid of the old implicit-def of DstRegD.  Leave it if it defines a Q-reg
   // or some other super-register.
   int ImpDefIdx = MI.findRegisterDefOperandIdx(DstRegD);
   if (ImpDefIdx != -1)
@@ -1503,18 +1512,18 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
         4, ACPV->getModifier(), ACPV->mustAddCurrentAddress());
   else if (ACPV->isExtSymbol())
     NewCPV = ARMConstantPoolSymbol::
-      Create(MF.getFunction()->getContext(),
+      Create(MF.getFunction().getContext(),
              cast<ARMConstantPoolSymbol>(ACPV)->getSymbol(), PCLabelId, 4);
   else if (ACPV->isBlockAddress())
     NewCPV = ARMConstantPoolConstant::
       Create(cast<ARMConstantPoolConstant>(ACPV)->getBlockAddress(), PCLabelId,
              ARMCP::CPBlockAddress, 4);
   else if (ACPV->isLSDA())
-    NewCPV = ARMConstantPoolConstant::Create(MF.getFunction(), PCLabelId,
+    NewCPV = ARMConstantPoolConstant::Create(&MF.getFunction(), PCLabelId,
                                              ARMCP::CPLSDA, 4);
   else if (ACPV->isMachineBasicBlock())
     NewCPV = ARMConstantPoolMBB::
-      Create(MF.getFunction()->getContext(),
+      Create(MF.getFunction().getContext(),
              cast<ARMConstantPoolMBB>(ACPV)->getMBB(), PCLabelId, 4);
   else
     llvm_unreachable("Unexpected ARM constantpool value type!!");
@@ -1550,20 +1559,29 @@ void ARMBaseInstrInfo::reMaterialize(MachineBasicBlock &MBB,
   }
 }
 
-MachineInstr *ARMBaseInstrInfo::duplicate(MachineInstr &Orig,
-                                          MachineFunction &MF) const {
-  MachineInstr *MI = TargetInstrInfo::duplicate(Orig, MF);
-  switch (Orig.getOpcode()) {
-  case ARM::tLDRpci_pic:
-  case ARM::t2LDRpci_pic: {
-    unsigned CPI = Orig.getOperand(1).getIndex();
-    unsigned PCLabelId = duplicateCPV(MF, CPI);
-    Orig.getOperand(1).setIndex(CPI);
-    Orig.getOperand(2).setImm(PCLabelId);
-    break;
+MachineInstr &
+ARMBaseInstrInfo::duplicate(MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator InsertBefore,
+    const MachineInstr &Orig) const {
+  MachineInstr &Cloned = TargetInstrInfo::duplicate(MBB, InsertBefore, Orig);
+  MachineBasicBlock::instr_iterator I = Cloned.getIterator();
+  for (;;) {
+    switch (I->getOpcode()) {
+    case ARM::tLDRpci_pic:
+    case ARM::t2LDRpci_pic: {
+      MachineFunction &MF = *MBB.getParent();
+      unsigned CPI = I->getOperand(1).getIndex();
+      unsigned PCLabelId = duplicateCPV(MF, CPI);
+      I->getOperand(1).setIndex(CPI);
+      I->getOperand(2).setImm(PCLabelId);
+      break;
+    }
+    }
+    if (!I->isBundledWithSucc())
+      break;
+    ++I;
   }
-  }
-  return MI;
+  return Cloned;
 }
 
 bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
@@ -1641,7 +1659,7 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
     }
 
     for (unsigned i = 3, e = MI0.getNumOperands(); i != e; ++i) {
-      // %vreg12<def> = PICLDR %vreg11, 0, pred:14, pred:%noreg
+      // %12 = PICLDR %11, 0, pred:14, pred:%noreg
       const MachineOperand &MO0 = MI0.getOperand(i);
       const MachineOperand &MO1 = MI1.getOperand(i);
       if (!MO0.isIdenticalTo(MO1))
@@ -1825,7 +1843,7 @@ isProfitableToIfCvt(MachineBasicBlock &MBB,
   // If we are optimizing for size, see if the branch in the predecessor can be
   // lowered to cbn?z by the constant island lowering pass, and return false if
   // so. This results in a shorter instruction sequence.
-  if (MBB.getParent()->getFunction()->optForSize()) {
+  if (MBB.getParent()->getFunction().optForSize()) {
     MachineBasicBlock *Pred = *MBB.pred_begin();
     if (!Pred->empty()) {
       MachineInstr *LastMI = &*Pred->rbegin();
@@ -2192,7 +2210,7 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
                                       unsigned NumBytes) {
   // This optimisation potentially adds lots of load and store
   // micro-operations, it's only really a great benefit to code-size.
-  if (!MF.getFunction()->optForMinSize())
+  if (!MF.getFunction().optForMinSize())
     return false;
 
   // If only one register is pushed/popped, LLVM can use an LDR/STR
@@ -2864,7 +2882,7 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (DefOpc != ARM::t2MOVi32imm && DefOpc != ARM::MOVi32imm)
     return false;
   if (!DefMI.getOperand(1).isImm())
-    // Could be t2MOVi32imm <ga:xx>
+    // Could be t2MOVi32imm @xx
     return false;
 
   if (!MRI->hasOneNonDBGUse(Reg))
@@ -3964,7 +3982,7 @@ int ARMBaseInstrInfo::getOperandLatencyImpl(
     if (Latency > 0 && Subtarget.isThumb2()) {
       const MachineFunction *MF = DefMI.getParent()->getParent();
       // FIXME: Use Function::optForSize().
-      if (MF->getFunction()->hasFnAttribute(Attribute::OptimizeForSize))
+      if (MF->getFunction().hasFnAttribute(Attribute::OptimizeForSize))
         --Latency;
     }
     return Latency;
@@ -4659,7 +4677,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       NewMIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(ARM::VEXTd32),
                        DDst);
 
-      // On the first instruction, both DSrc and DDst may be <undef> if present.
+      // On the first instruction, both DSrc and DDst may be undef if present.
       // Specifically when the original instruction didn't have them as an
       // <imp-use>.
       unsigned CurReg = SrcLane == 1 && DstLane == 1 ? DSrc : DDst;
@@ -4679,7 +4697,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       MIB.addReg(DDst, RegState::Define);
 
       // On the second instruction, DDst has definitely been defined above, so
-      // it is not <undef>. DSrc, if present, can be <undef> as above.
+      // it is not undef. DSrc, if present, can be undef as above.
       CurReg = SrcLane == 1 && DstLane == 0 ? DSrc : DDst;
       CurUndef = CurReg == DSrc && !MI.readsRegister(CurReg, TRI);
       MIB.addReg(CurReg, getUndefRegState(CurUndef));
@@ -4762,7 +4780,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
 
   // We must be able to clobber the whole D-reg.
   if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-    // Virtual register must be a foo:ssub_0<def,undef> operand.
+    // Virtual register must be a def undef foo:ssub_0 operand.
     if (!MO.getSubReg() || MI.readsVirtualRegister(Reg))
       return 0;
   } else if (ARM::SPRRegClass.contains(Reg)) {

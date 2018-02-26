@@ -15,36 +15,29 @@
 #include "DWPStringPool.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.def"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Options.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include <deque>
-#include <iostream>
-#include <memory>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -680,19 +673,19 @@ int main(int argc, char **argv) {
   MCContext MC(MAI.get(), MRI.get(), &MOFI);
   MOFI.InitMCObjectFileInfo(TheTriple, /*PIC*/ false, MC);
 
+  std::unique_ptr<MCSubtargetInfo> MSTI(
+      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  if (!MSTI)
+    return error("no subtarget info for target " + TripleName, Context);
+
   MCTargetOptions Options;
-  auto MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", Options);
+  auto MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, Options);
   if (!MAB)
     return error("no asm backend for target " + TripleName, Context);
 
   std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   if (!MII)
     return error("no instr info info for target " + TripleName, Context);
-
-  std::unique_ptr<MCSubtargetInfo> MSTI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-  if (!MSTI)
-    return error("no subtarget info for target " + TripleName, Context);
 
   MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, MC);
   if (!MCE)
@@ -706,7 +699,8 @@ int main(int argc, char **argv) {
 
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
-      TheTriple, MC, *MAB, OutFile, MCE, *MSTI, MCOptions.MCRelaxAll,
+      TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB), OutFile,
+      std::unique_ptr<MCCodeEmitter>(MCE), *MSTI, MCOptions.MCRelaxAll,
       MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
   if (!MS)

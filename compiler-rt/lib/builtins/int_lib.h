@@ -22,9 +22,11 @@
 
 #if defined(__ELF__)
 #define FNALIAS(alias_name, original_name) \
-  void alias_name() __attribute__((alias(#original_name)))
+  void alias_name() __attribute__((__alias__(#original_name)))
+#define COMPILER_RT_ALIAS(aliasee) __attribute__((__alias__(#aliasee)))
 #else
 #define FNALIAS(alias, name) _Pragma("GCC error(\"alias unsupported on this file format\")")
+#define COMPILER_RT_ALIAS(aliasee) _Pragma("GCC error(\"alias unsupported on this file format\")")
 #endif
 
 /* ABI macro definitions */

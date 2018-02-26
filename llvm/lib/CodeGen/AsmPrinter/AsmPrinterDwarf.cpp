@@ -12,14 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteStreamer.h"
-#include "DwarfDebug.h"
-#include "DwarfExpression.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -28,9 +26,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -48,12 +44,19 @@ void AsmPrinter::EmitSLEB128(int64_t Value, const char *Desc) const {
 }
 
 /// EmitULEB128 - emit the specified unsigned leb128 value.
-void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc,
-                             unsigned PadTo) const {
+void AsmPrinter::EmitPaddedULEB128(uint64_t Value, unsigned PadTo,
+                                   const char *Desc) const {
   if (isVerbose() && Desc)
     OutStreamer->AddComment(Desc);
 
-  OutStreamer->EmitULEB128IntValue(Value, PadTo);
+  OutStreamer->EmitPaddedULEB128IntValue(Value, PadTo);
+}
+
+void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->EmitULEB128IntValue(Value);
 }
 
 static const char *DecodeDWARFEncoding(unsigned Encoding) {
@@ -164,14 +167,15 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
   EmitLabelDifference(Label, Label->getSection().getBeginSymbol(), 4);
 }
 
-void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
+void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   if (MAI->doesDwarfUseRelocationsAcrossSections()) {
-    emitDwarfSymbolReference(S.getSymbol());
+    assert(S.Symbol && "No symbol available");
+    emitDwarfSymbolReference(S.Symbol);
     return;
   }
 
   // Just emit the offset directly; no need for symbol math.
-  EmitInt32(S.getOffset());
+  EmitInt32(S.Offset);
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +215,9 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
     break;
   case MCCFIInstruction::OpEscape:
     OutStreamer->EmitCFIEscape(Inst.getValues());
+    break;
+  case MCCFIInstruction::OpRestore:
+    OutStreamer->EmitCFIRestore(Inst.getRegister());
     break;
   }
 }

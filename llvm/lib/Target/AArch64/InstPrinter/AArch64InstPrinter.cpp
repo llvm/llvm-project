@@ -689,7 +689,7 @@ void AArch64AppleInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
                                         StringRef Annot,
                                         const MCSubtargetInfo &STI) {
   unsigned Opcode = MI->getOpcode();
-  StringRef Layout, Mnemonic;
+  StringRef Layout;
 
   bool IsTbx;
   if (isTblTbxInstruction(MI->getOpcode(), Layout, IsTbx)) {
@@ -1330,4 +1330,33 @@ void AArch64InstPrinter::printSIMDType10Operand(const MCInst *MI, unsigned OpNo,
   unsigned RawVal = MI->getOperand(OpNo).getImm();
   uint64_t Val = AArch64_AM::decodeAdvSIMDModImmType10(RawVal);
   O << format("#%#016llx", Val);
+}
+
+template<int64_t Angle, int64_t Remainder>
+void AArch64InstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNo).getImm();
+  O << "#" << (Val * Angle) + Remainder;
+}
+
+template <char suffix>
+void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  switch (suffix) {
+  case 0:
+  case 'b':
+  case 'h':
+  case 's':
+  case 'd':
+  case 'q':
+    break;
+  default: llvm_unreachable("Invalid kind specifier.");
+  }
+
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  O << getRegisterName(Reg);
+  if (suffix != 0)
+    O << '.' << suffix;
 }

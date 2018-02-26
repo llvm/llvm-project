@@ -231,6 +231,9 @@ public:
                                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printVectorListFourSpaced(const MCInst *MI, unsigned OpNum,
                                  const MCSubtargetInfo &STI, raw_ostream &O);
+  template<int64_t Angle, int64_t Remainder>
+  void printComplexRotationOp(const MCInst *MI, unsigned OpNum,
+                              const MCSubtargetInfo &STI, raw_ostream &O);
 };
 
 } // end namespace llvm

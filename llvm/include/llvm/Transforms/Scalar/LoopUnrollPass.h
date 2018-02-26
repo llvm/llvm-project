@@ -10,40 +10,40 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H
 
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
 
-class LoopUnrollPass : public PassInfoMixin<LoopUnrollPass> {
-  const bool AllowPartialUnrolling;
+class Function;
+class Loop;
+class LPMUpdater;
+
+/// Loop unroll pass that only does full loop unrolling.
+class LoopFullUnrollPass : public PassInfoMixin<LoopFullUnrollPass> {
   const int OptLevel;
 
-  explicit LoopUnrollPass(bool AllowPartialUnrolling, int OptLevel)
-      : AllowPartialUnrolling(AllowPartialUnrolling), OptLevel(OptLevel) {}
-
 public:
-  /// Create an instance of the loop unroll pass that will support both full
-  /// and partial unrolling.
-  ///
-  /// This uses the target information (or flags) to control the thresholds for
-  /// different unrolling stategies but supports all of them.
-  static LoopUnrollPass create(int OptLevel = 2) {
-    return LoopUnrollPass(/*AllowPartialUnrolling*/ true, OptLevel);
-  }
-
-  /// Create an instance of the loop unroll pass that only does full loop
-  /// unrolling.
-  ///
-  /// This will disable any runtime or partial unrolling.
-  static LoopUnrollPass createFull(int OptLevel = 2) {
-    return LoopUnrollPass(/*AllowPartialUnrolling*/ false, OptLevel);
-  }
+  explicit LoopFullUnrollPass(int OptLevel = 2) : OptLevel(OptLevel) {}
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
+
+/// Loop unroll pass that will support both full and partial unrolling.
+/// It is a function pass to have access to function and module analyses.
+/// It will also put loops into canonical form (simplified and LCSSA).
+class LoopUnrollPass : public PassInfoMixin<LoopUnrollPass> {
+  const int OptLevel;
+
+public:
+  /// This uses the target information (or flags) to control the thresholds for
+  /// different unrolling stategies but supports all of them.
+  explicit LoopUnrollPass(int OptLevel = 2) : OptLevel(OptLevel) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H

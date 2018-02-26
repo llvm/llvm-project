@@ -1,4 +1,5 @@
 set(LIBFUZZER_SOURCES
+  FuzzerClangCounters.cpp
   FuzzerCrossOver.cpp
   FuzzerDriver.cpp
   FuzzerExtFunctionsDlsym.cpp
@@ -17,6 +18,7 @@ set(LIBFUZZER_SOURCES
   FuzzerTracePC.cpp
   FuzzerUtil.cpp
   FuzzerUtilDarwin.cpp
+  FuzzerUtilFuchsia.cpp
   FuzzerUtilLinux.cpp
   FuzzerUtilPosix.cpp
   FuzzerUtilWindows.cpp
@@ -30,6 +32,8 @@ CHECK_CXX_SOURCE_COMPILES("
   " HAS_THREAD_LOCAL)
 
 set(LIBFUZZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
+append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer LIBFUZZER_CFLAGS)
 
 if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
   list(APPEND LIBFUZZER_CFLAGS -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters)

@@ -7,7 +7,7 @@
 
 ; Ensure gold generates imports files if requested for distributed backends.
 ; RUN: rm -f %t3.o.imports %t3.o.thinlto.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
 ; RUN:    --plugin-opt=thinlto-emit-imports-files \

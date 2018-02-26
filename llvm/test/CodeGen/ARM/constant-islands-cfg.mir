@@ -1,0 +1,64 @@
+# RUN: llc -mtriple=thumbv6m-apple-ios -run-pass=arm-cp-islands %s -o - | FileCheck %s
+--- |
+  ; Function Attrs: minsize nounwind optsize uwtable
+  define arm_aapcscc double @test_split_cfg(double %a, double %b) local_unnamed_addr #0 {
+    ret double undef
+  }
+...
+---
+name:            test_split_cfg
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '%r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+# CHECK-LABEL: name: test_split_cfg
+# CHECK: bb.0:
+# CHECK:     successors: %[[LONG_BR_BB:bb.[0-9]+]](0x{{[0-9a-f]+}}), %[[DEST1:bb.[0-9]+]](0x{{[0-9a-f]+}}){{$}}
+# CHECK:     tBcc %[[LONG_BR_BB]], 0, %cpsr
+# CHECK:     tB %[[DEST1]]
+# CHECK: [[LONG_BR_BB]]:
+# CHECK:     successors: %[[DEST2:bb.[0-9]+]](0x{{[0-9a-f]+}}){{$}}
+# CHECK:     tB %[[DEST2]]
+# CHECK: [[DEST1]]:
+# CHECK: [[DEST2]]:
+
+body:             |
+  bb.0:
+    liveins: %r0
+    tCMPi8 killed %r0, 0, 14, %noreg, implicit-def %cpsr
+    tBcc %bb.2, 1, killed %cpsr
+    tB %bb.3, 14, %noreg
+
+  bb.1:
+    dead %r0 = SPACE 256, undef %r0
+
+  bb.2:
+    tPOP_RET 14, %noreg, def %pc
+
+  bb.3:
+    tPOP_RET 14, %noreg, def %pc
+
+...

@@ -8,7 +8,7 @@ class X0 {
     (void)[this, this] () {}; // expected-error {{'this' can appear only once}}
     (void)[=, foo] () {}; // expected-error {{'&' must precede a capture when}}
     (void)[=, &foo] () {};
-    (void)[=, this] () {}; // expected-error {{'this' cannot be explicitly captured}}
+    (void)[=, this] () {}; // expected-warning {{C++2a extension}}
     (void)[&, foo] () {};
     (void)[&, &foo] () {}; // expected-error {{'&' cannot precede a capture when}} 
     (void)[&, this] () {};
@@ -23,7 +23,7 @@ struct S2 {
 void S2::f(int i) {
   (void)[&, i]{ };
   (void)[&, &i]{ }; // expected-error{{'&' cannot precede a capture when the capture default is '&'}}
-  (void)[=, this]{ }; // expected-error{{'this' cannot be explicitly captured}}
+  (void)[=, this]{ }; // expected-warning{{C++2a extension}}
   (void)[=]{ this->g(i); };
   (void)[i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[i(0), i(1)]{ }; // expected-error{{'i' can appear only once in a capture list}}

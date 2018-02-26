@@ -45,21 +45,21 @@ declare void @llvm.r600.group.barrier() nounwind convergent
 ;  %2 = load i32, i32 addrspace(1)* %in
 ;
 ; The instruction selection phase will generate ISA that looks like this:
-; %OQAP = LDS_READ_RET
-; %vreg0 = MOV %OQAP
-; %vreg1 = VTX_READ_32
-; %vreg2 = ADD_INT %vreg1, %vreg0
+; %oqap = LDS_READ_RET
+; %0 = MOV %oqap
+; %1 = VTX_READ_32
+; %2 = ADD_INT %1, %0
 ;
 ; The bottom scheduler will schedule the two ALU instructions first:
 ;
 ; UNSCHEDULED:
-; %OQAP = LDS_READ_RET
-; %vreg1 = VTX_READ_32
+; %oqap = LDS_READ_RET
+; %1 = VTX_READ_32
 ;
 ; SCHEDULED:
 ;
-; vreg0 = MOV %OQAP
-; vreg2 = ADD_INT %vreg1, %vreg2
+; %0 = MOV %oqap
+; %2 = ADD_INT %1, %2
 ;
 ; The lack of proper aliasing results in the local memory read (LDS_READ_RET)
 ; to consider the global memory read (VTX_READ_32) has a chain dependency, so
@@ -67,14 +67,14 @@ declare void @llvm.r600.group.barrier() nounwind convergent
 ; final program which looks like this:
 ;
 ; Alu clause:
-; %OQAP = LDS_READ_RET
+; %oqap = LDS_READ_RET
 ; VTX clause:
-; %vreg1 = VTX_READ_32
+; %1 = VTX_READ_32
 ; Alu clause:
-; vreg0 = MOV %OQAP
-; vreg2 = ADD_INT %vreg1, %vreg2
+; %0 = MOV %oqap
+; %2 = ADD_INT %1, %2
 ;
-; This is an illegal program because the OQAP def and use know occur in
+; This is an illegal program because the oqap def and use know occur in
 ; different ALU clauses.
 ;
 ; This test checks this scenario and makes sure it doesn't result in an

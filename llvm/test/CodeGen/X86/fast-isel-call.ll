@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -fast-isel-abort=1 -march=x86 -mtriple=i686-apple-darwin8 2>/dev/null | FileCheck %s
-; RUN: llc < %s -O0 -fast-isel-abort=1 -march=x86 -mtriple=i686-apple-darwin8 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
+; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>/dev/null | FileCheck %s
+; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
 
 %struct.s = type {i32, i32, i32}
 

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc -march=x86-64 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck -check-prefix=X86 %s
-; RUN: llc -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -debug-only=isel < %s 2>&1 | FileCheck -check-prefix=DBGDAG %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck -check-prefix=X86 %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -debug-only=isel < %s -o /dev/null 2>&1 | FileCheck -check-prefix=DBGDAG %s
 
 ; It's OK to merge the load / store of the first 2 components, but
 ; they must not be placed on the same chain after merging.
@@ -13,10 +13,10 @@
 ; X86-NEXT: movb [[HI1]], 3([[BASEREG]])
 ; X86-NEXT: retq
 
-; DBGDAG-LABEL: Optimized lowered selection DAG: BB#0 'merge_store_partial_overlap_load:'
+; DBGDAG-LABEL: Optimized legalized selection DAG: %bb.0 'merge_store_partial_overlap_load:'
 ; DBGDAG: [[ENTRYTOKEN:t[0-9]+]]: ch = EntryToken
 ; DBGDAG-DAG: [[BASEPTR:t[0-9]+]]: i64,ch = CopyFromReg [[ENTRYTOKEN]],
-; DBGDAG-DAG: [[ADDPTR:t[0-9]+]]: i64 = add [[BASEPTR]], Constant:i64<2>
+; DBGDAG-DAG: [[ADDPTR:t[0-9]+]]: i64 = add {{(nuw )?}}[[BASEPTR]], Constant:i64<2>
 
 ; DBGDAG-DAG: [[LD2:t[0-9]+]]: i16,ch = load<LD2[%tmp81](align=1)> [[ENTRYTOKEN]], [[BASEPTR]], undef:i64
 ; DBGDAG-DAG: [[LD1:t[0-9]+]]: i8,ch = load<LD1[%tmp12]> [[ENTRYTOKEN]], [[ADDPTR]], undef:i64
@@ -27,7 +27,7 @@
 
 ; DBGDAG: X86ISD::RET_FLAG t{{[0-9]+}},
 
-; DBGDAG: Type-legalized selection DAG: BB#0 'merge_store_partial_overlap_load:'
+; DBGDAG-LABEL: Instruction selection begins
 define void @merge_store_partial_overlap_load([4 x i8]* %tmp) {
   %tmp8 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 0
   %tmp10 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 1

@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"

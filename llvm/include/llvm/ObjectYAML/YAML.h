@@ -107,7 +107,7 @@ inline bool operator==(const BinaryRef &LHS, const BinaryRef &RHS) {
 template <> struct ScalarTraits<BinaryRef> {
   static void output(const BinaryRef &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, BinaryRef &);
-  static bool mustQuote(StringRef S) { return needsQuotes(S); }
+  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 } // end namespace yaml

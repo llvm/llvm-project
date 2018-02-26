@@ -1,4 +1,4 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=aarch64-apple-ios < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -verify-machineinstrs -mtriple=aarch64-apple-ios < %s | FileCheck %s
 
 ; Fast-isel can't do vector conversions yet, but it was emitting some highly
 ; suspect UCVTFUWDri MachineInstrs.

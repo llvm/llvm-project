@@ -1,4 +1,4 @@
-//===--- PTHManager.h - Manager object for PTH processing -------*- C++ -*-===//
+//===- PTHManager.h - Manager object for PTH processing ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,30 +17,33 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/OnDiskHashTable.h"
+#include <memory>
 
 namespace llvm {
-  class MemoryBuffer;
-}
+
+class MemoryBuffer;
+
+} // namespace llvm
 
 namespace clang {
 
-class FileEntry;
-class Preprocessor;
-class PTHLexer;
 class DiagnosticsEngine;
 class FileSystemStatCache;
+class Preprocessor;
+class PTHLexer;
 
 class PTHManager : public IdentifierInfoLookup {
   friend class PTHLexer;
-
   friend class PTHStatCache;
 
-  class PTHStringLookupTrait;
   class PTHFileLookupTrait;
-  typedef llvm::OnDiskChainedHashTable<PTHStringLookupTrait> PTHStringIdLookup;
-  typedef llvm::OnDiskChainedHashTable<PTHFileLookupTrait> PTHFileLookup;
+  class PTHStringLookupTrait;
+
+  using PTHStringIdLookup = llvm::OnDiskChainedHashTable<PTHStringLookupTrait>;
+  using PTHFileLookup = llvm::OnDiskChainedHashTable<PTHFileLookupTrait>;
 
   /// The memory mapped PTH file.
   std::unique_ptr<const llvm::MemoryBuffer> Buf;
@@ -70,7 +73,7 @@ class PTHManager : public IdentifierInfoLookup {
 
   /// PP - The Preprocessor object that will use this PTHManager to create
   ///  PTHLexer objects.
-  Preprocessor* PP;
+  Preprocessor* PP = nullptr;
 
   /// SpellingBase - The base offset within the PTH memory buffer that
   ///  contains the cached spellings for literals.
@@ -89,16 +92,13 @@ class PTHManager : public IdentifierInfoLookup {
              std::unique_ptr<PTHStringIdLookup> stringIdLookup, unsigned numIds,
              const unsigned char *spellingBase, const char *originalSourceFile);
 
-  PTHManager(const PTHManager &) = delete;
-  void operator=(const PTHManager &) = delete;
-
   /// getSpellingAtPTHOffset - Used by PTHLexer classes to get the cached
   ///  spelling for a token.
   unsigned getSpellingAtPTHOffset(unsigned PTHOffset, const char*& Buffer);
 
   /// GetIdentifierInfo - Used to reconstruct IdentifierInfo objects from the
   ///  PTH file.
-  inline IdentifierInfo* GetIdentifierInfo(unsigned PersistentID) {
+  IdentifierInfo *GetIdentifierInfo(unsigned PersistentID) {
     // Check if the IdentifierInfo has already been resolved.
     if (IdentifierInfo* II = PerIDCache[PersistentID])
       return II;
@@ -110,6 +110,8 @@ public:
   // The current PTH version.
   enum { Version = 10 };
 
+  PTHManager(const PTHManager &) = delete;
+  PTHManager &operator=(const PTHManager &) = delete;
   ~PTHManager() override;
 
   /// getOriginalSourceFile - Return the full path to the original header
@@ -120,18 +122,18 @@ public:
 
   /// get - Return the identifier token info for the specified named identifier.
   ///  Unlike the version in IdentifierTable, this returns a pointer instead
-  ///  of a reference.  If the pointer is NULL then the IdentifierInfo cannot
+  ///  of a reference.  If the pointer is nullptr then the IdentifierInfo cannot
   ///  be found.
   IdentifierInfo *get(StringRef Name) override;
 
   /// Create - This method creates PTHManager objects.  The 'file' argument
-  ///  is the name of the PTH file.  This method returns NULL upon failure.
+  ///  is the name of the PTH file.  This method returns nullptr upon failure.
   static PTHManager *Create(StringRef file, DiagnosticsEngine &Diags);
 
   void setPreprocessor(Preprocessor *pp) { PP = pp; }
 
   /// CreateLexer - Return a PTHLexer that "lexes" the cached tokens for the
-  ///  specified file.  This method returns NULL if no cached tokens exist.
+  ///  specified file.  This method returns nullptr if no cached tokens exist.
   ///  It is the responsibility of the caller to 'delete' the returned object.
   PTHLexer *CreateLexer(FileID FID);
 
@@ -142,6 +144,6 @@ public:
   std::unique_ptr<FileSystemStatCache> createStatCache();
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_PTHMANAGER_H

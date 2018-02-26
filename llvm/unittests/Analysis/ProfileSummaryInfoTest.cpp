@@ -9,7 +9,6 @@
 
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -196,14 +195,18 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
 
   CallSite CS1(BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
+  // Manually attach branch weights metadata to the call instruction.
+  SmallVector<uint32_t, 1> Weights;
+  Weights.push_back(1000);
+  MDBuilder MDB(M->getContext());
+  CI2->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
   CallSite CS2(CI2);
 
-  EXPECT_TRUE(PSI.isHotCallSite(CS1, &BFI));
-  EXPECT_FALSE(PSI.isHotCallSite(CS2, &BFI));
+  EXPECT_FALSE(PSI.isHotCallSite(CS1, &BFI));
+  EXPECT_TRUE(PSI.isHotCallSite(CS2, &BFI));
 
   // Test that CS2 is considered hot when it gets an MD_prof metadata with
   // weights that exceed the hot count threshold.
-  MDBuilder MDB(M->getContext());
   CI2->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights({400}));
   EXPECT_TRUE(PSI.isHotCallSite(CS2, &BFI));
 }

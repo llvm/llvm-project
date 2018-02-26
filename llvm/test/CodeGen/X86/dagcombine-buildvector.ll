@@ -6,10 +6,10 @@
 
 define void @test(<2 x double>* %dst, <4 x double> %src) nounwind {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    movapd %xmm0, (%eax)
+; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    movaps %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 entry:
         %tmp7.i = shufflevector <4 x double> %src, <4 x double> undef, <2 x i32> <i32 0, i32 2>
@@ -19,7 +19,7 @@ entry:
 
 define void @test2(<4 x i16>* %src, <4 x i32>* %dest) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero

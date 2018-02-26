@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s 
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g3
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5
+; RUN: llc -verify-machineinstrs < %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g3
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5
 ; PR1811
 ; REQUIRES: default_triple
 

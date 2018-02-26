@@ -35,6 +35,7 @@ namespace llvm {
   template<typename T, unsigned N> class SmallVector;
   template<typename T> class SmallVectorImpl;
   template<typename T> class Optional;
+  template <class T> class Expected;
 
   template<typename T>
   struct SaveAndRestore;
@@ -70,6 +71,9 @@ namespace clang {
   using llvm::SmallVector;
   using llvm::SmallVectorImpl;
   using llvm::SaveAndRestore;
+
+  // Error handling.
+  using llvm::Expected;
 
   // Reference counting.
   using llvm::IntrusiveRefCntPtr;

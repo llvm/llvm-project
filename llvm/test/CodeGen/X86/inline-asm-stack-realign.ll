@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=i686-pc-win32 < %s 2>&1 | FileCheck %s
 
-; FIXME: This is miscompiled due to our unconditional use of ESI as the base
+; FIXME: This is miscompiled due to our unconditional use of esi as the base
 ; pointer.
 ; XFAIL: *
 

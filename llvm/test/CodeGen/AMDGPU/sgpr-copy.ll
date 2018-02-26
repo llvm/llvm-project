@@ -321,7 +321,7 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK: s_cmp_eq_u32
 ; CHECK: s_cbranch_scc0 [[END:BB[0-9]+_[0-9]+]]
 
-; CHECK: v_add_i32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
 
 ; [[END]]:
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]{{\]}}

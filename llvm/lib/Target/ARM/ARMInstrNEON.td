@@ -108,6 +108,7 @@ def nImmSplatI64 : Operand<i32> {
 def VectorIndex8Operand  : AsmOperandClass { let Name = "VectorIndex8"; }
 def VectorIndex16Operand : AsmOperandClass { let Name = "VectorIndex16"; }
 def VectorIndex32Operand : AsmOperandClass { let Name = "VectorIndex32"; }
+def VectorIndex64Operand : AsmOperandClass { let Name = "VectorIndex64"; }
 def VectorIndex8 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 8;
 }]> {
@@ -126,6 +127,13 @@ def VectorIndex32 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 2;
 }]> {
   let ParserMatchClass = VectorIndex32Operand;
+  let PrintMethod = "printVectorIndex";
+  let MIOperandInfo = (ops i32imm);
+}
+def VectorIndex64 : Operand<i32>, ImmLeaf<i32, [{
+  return ((uint64_t)Imm) < 1;
+}]> {
+  let ParserMatchClass = VectorIndex64Operand;
   let PrintMethod = "printVectorIndex";
   let MIOperandInfo = (ops i32imm);
 }
@@ -1110,6 +1118,22 @@ def : Pat<(vector_insert (v2f32 DPR:$src),
 def : Pat<(vector_insert (v4f32 QPR:$src),
                          (f32 (load addrmode6:$addr)), imm:$lane),
           (VLD1LNq32Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
+
+// A 64-bit subvector insert to the first 128-bit vector position
+// is a subregister copy that needs no instruction.
+def : Pat<(insert_subvector undef, (v1i64 DPR:$src), (i32 0)),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
+def : Pat<(insert_subvector undef, (v2i32 DPR:$src), (i32 0)),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
+def : Pat<(insert_subvector undef, (v2f32 DPR:$src), (i32 0)),
+          (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
+def : Pat<(insert_subvector undef, (v4i16 DPR:$src), (i32 0)),
+          (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
+def : Pat<(insert_subvector undef, (v4f16 DPR:$src), (i32 0)),
+          (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
+def : Pat<(insert_subvector (v16i8 undef), (v8i8 DPR:$src), (i32 0)),
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
+
 
 let mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1 in {
 
@@ -4672,6 +4696,167 @@ def : Pat<(v4f32 (fma (fneg QPR:$Vn), QPR:$Vm, QPR:$src1)),
           (VFMSfq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
       Requires<[HasVFP4]>;
 
+// ARMv8.2a dot product instructions.
+// We put them in the VFPV8 decoder namespace because the ARM and Thumb
+// encodings are the same and thus no further bit twiddling is necessary
+// in the disassembler.
+let Predicates = [HasDotProd], DecoderNamespace = "VFPV8" in {
+
+def VUDOTD : N3Vnp<0b11000, 0b10, 0b1101, 0b0, 0b1,
+                  (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vudot", "u8", []>;
+def VSDOTD : N3Vnp<0b11000, 0b10, 0b1101, 0b0, 0b0,
+                  (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vsdot", "s8", []>;
+def VUDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b1,
+                  (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vudot", "u8", []>;
+def VSDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b0,
+                  (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vsdot", "s8", []>;
+
+// Indexed dot product instructions:
+class DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty> :
+  N3Vnp<0b11100, 0b10, 0b1101, Q, U,
+       (outs Ty:$Vd), (ins Ty:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
+       N3RegFrm, IIC_VDOTPROD, opc, dt, []> {
+  bit lane;
+  let Inst{5} = lane;
+  let AsmString = !strconcat(opc, ".", dt, "\t$Vd, $Vn, $Vm$lane");
+}
+
+def VUDOTDI : DOTI<"vudot", "u8", 0b0, 0b1, DPR>;
+def VSDOTDI : DOTI<"vsdot", "s8", 0b0, 0b0, DPR>;
+def VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR>;
+def VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR>;
+
+}  // HasDotProd
+
+// ARMv8.3 complex operations
+class BaseN3VCP8ComplexTied<bit op21, bit op4, bit s, bit q,
+                            InstrItinClass itin, dag oops, dag iops,
+                            string opc, string dt, list<dag> pattern>
+  : N3VCP8<{?,?}, {op21,s}, q, op4, oops,
+           iops, itin, opc, dt, "$Vd, $Vn, $Vm, $rot", "$src1 = $Vd", pattern>{
+  bits<2> rot;
+  let Inst{24-23} = rot;
+}
+
+class BaseN3VCP8ComplexOdd<bit op23, bit op21, bit op4, bit s, bit q,
+                           InstrItinClass itin, dag oops, dag iops, string opc,
+                            string dt, list<dag> pattern>
+  : N3VCP8<{?,op23}, {op21,s}, q, op4, oops,
+           iops, itin, opc, dt, "$Vd, $Vn, $Vm, $rot", "", pattern> {
+  bits<1> rot;
+  let Inst{24} = rot;
+}
+
+class BaseN3VCP8ComplexTiedLane32<bit op4, bit s, bit q, InstrItinClass itin,
+                                  dag oops, dag iops, string opc, string dt,
+                                  list<dag> pattern>
+  : N3VLaneCP8<s, {?,?}, q, op4, oops, iops, itin, opc, dt,
+               "$Vd, $Vn, $Vm$lane, $rot", "$src1 = $Vd", pattern> {
+  bits<2> rot;
+  bit lane;
+
+  let Inst{21-20} = rot;
+  let Inst{5} = lane;
+}
+
+class BaseN3VCP8ComplexTiedLane64<bit op4, bit s, bit q, InstrItinClass itin,
+                            dag oops, dag iops, string opc, string dt,
+                            list<dag> pattern>
+  : N3VLaneCP8<s, {?,?}, q, op4, oops, iops, itin, opc, dt,
+               "$Vd, $Vn, $Vm$lane, $rot", "$src1 = $Vd", pattern> {
+  bits<2> rot;
+  bit lane;
+
+  let Inst{21-20} = rot;
+  let Inst{5} = Vm{4};
+  // This is needed because the lane operand does not have any bits in the
+  // encoding (it only has one possible value), so we need to manually set it
+  // to it's default value.
+  let DecoderMethod = "DecodeNEONComplexLane64Instruction";
+}
+
+multiclass N3VCP8ComplexTied<bit op21, bit op4,
+                       string OpcodeStr, SDPatternOperator Op> {
+  let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
+  def v4f16 : BaseN3VCP8ComplexTied<op21, op4, 0, 0, IIC_VMACD, (outs DPR:$Vd),
+              (ins DPR:$src1, DPR:$Vn, DPR:$Vm, complexrotateop:$rot),
+              OpcodeStr, "f16", []>;
+  def v8f16 : BaseN3VCP8ComplexTied<op21, op4, 0, 1, IIC_VMACQ, (outs QPR:$Vd),
+              (ins QPR:$src1, QPR:$Vn, QPR:$Vm, complexrotateop:$rot),
+              OpcodeStr, "f16", []>;
+  }
+  let Predicates = [HasNEON,HasV8_3a] in {
+  def v2f32 : BaseN3VCP8ComplexTied<op21, op4, 1, 0, IIC_VMACD, (outs DPR:$Vd),
+              (ins DPR:$src1, DPR:$Vn, DPR:$Vm, complexrotateop:$rot),
+              OpcodeStr, "f32", []>;
+  def v4f32 : BaseN3VCP8ComplexTied<op21, op4, 1, 1, IIC_VMACQ, (outs QPR:$Vd),
+              (ins QPR:$src1, QPR:$Vn, QPR:$Vm, complexrotateop:$rot),
+              OpcodeStr, "f32", []>;
+  }
+}
+
+multiclass N3VCP8ComplexOdd<bit op23, bit op21, bit op4,
+                       string OpcodeStr, SDPatternOperator Op> {
+  let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
+  def v4f16 : BaseN3VCP8ComplexOdd<op23, op21, op4, 0, 0, IIC_VMACD,
+              (outs DPR:$Vd),
+              (ins DPR:$Vn, DPR:$Vm, complexrotateopodd:$rot),
+              OpcodeStr, "f16", []>;
+  def v8f16 : BaseN3VCP8ComplexOdd<op23, op21, op4, 0, 1, IIC_VMACQ,
+              (outs QPR:$Vd),
+              (ins QPR:$Vn, QPR:$Vm, complexrotateopodd:$rot),
+              OpcodeStr, "f16", []>;
+  }
+  let Predicates = [HasNEON,HasV8_3a] in {
+  def v2f32 : BaseN3VCP8ComplexOdd<op23, op21, op4, 1, 0, IIC_VMACD,
+              (outs DPR:$Vd),
+              (ins DPR:$Vn, DPR:$Vm, complexrotateopodd:$rot),
+              OpcodeStr, "f32", []>;
+  def v4f32 : BaseN3VCP8ComplexOdd<op23, op21, op4, 1, 1, IIC_VMACQ,
+              (outs QPR:$Vd),
+              (ins QPR:$Vn, QPR:$Vm, complexrotateopodd:$rot),
+              OpcodeStr, "f32", []>;
+  }
+}
+
+// These instructions index by pairs of lanes, so the VectorIndexes are twice
+// as wide as the data types.
+multiclass N3VCP8ComplexTiedLane<bit op4, string OpcodeStr,
+                                 SDPatternOperator Op> {
+  let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
+  def v4f16_indexed : BaseN3VCP8ComplexTiedLane32<op4, 0, 0, IIC_VMACD,
+                      (outs DPR:$Vd),
+                      (ins DPR:$src1, DPR:$Vn, DPR_VFP2:$Vm,
+                      VectorIndex32:$lane, complexrotateop:$rot),
+                      OpcodeStr, "f16", []>;
+  def v8f16_indexed : BaseN3VCP8ComplexTiedLane32<op4, 0, 1, IIC_VMACQ,
+                      (outs QPR:$Vd),
+                      (ins QPR:$src1, QPR:$Vn, DPR_VFP2:$Vm,
+                      VectorIndex32:$lane, complexrotateop:$rot),
+                      OpcodeStr, "f16", []>;
+  }
+  let Predicates = [HasNEON,HasV8_3a] in {
+  def v2f32_indexed : BaseN3VCP8ComplexTiedLane64<op4, 1, 0, IIC_VMACD,
+                      (outs DPR:$Vd),
+                      (ins DPR:$src1, DPR:$Vn, DPR:$Vm, VectorIndex64:$lane,
+                      complexrotateop:$rot),
+                      OpcodeStr, "f32", []>;
+  def v4f32_indexed : BaseN3VCP8ComplexTiedLane64<op4, 1, 1, IIC_VMACQ,
+                      (outs QPR:$Vd),
+                      (ins QPR:$src1, QPR:$Vn, DPR:$Vm, VectorIndex64:$lane,
+                      complexrotateop:$rot),
+                      OpcodeStr, "f32", []>;
+  }
+}
+
+defm VCMLA : N3VCP8ComplexTied<1, 0, "vcmla", null_frag>;
+defm VCADD : N3VCP8ComplexOdd<1, 0, 0, "vcadd", null_frag>;
+defm VCMLA : N3VCP8ComplexTiedLane<0, "vcmla", null_frag>;
+
 // Vector Subtract Operations.
 
 //   VSUB     : Vector Subtract (integer and floating-point)
@@ -5476,6 +5661,12 @@ def : Pat<(v8i16 (NEONvshl (sext (v8i8 DPR:$Rn)), (i32 8))),
 def : Pat<(v4i32 (NEONvshl (sext (v4i16 DPR:$Rn)), (i32 16))),
           (VSHLLi16 DPR:$Rn, 16)>;
 def : Pat<(v2i64 (NEONvshl (sext (v2i32 DPR:$Rn)), (i32 32))),
+          (VSHLLi32 DPR:$Rn, 32)>;
+def : Pat<(v8i16 (NEONvshl (anyext (v8i8 DPR:$Rn)), (i32 8))),
+          (VSHLLi8 DPR:$Rn, 8)>;
+def : Pat<(v4i32 (NEONvshl (anyext (v4i16 DPR:$Rn)), (i32 16))),
+          (VSHLLi16 DPR:$Rn, 16)>;
+def : Pat<(v2i64 (NEONvshl (anyext (v2i32 DPR:$Rn)), (i32 32))),
           (VSHLLi32 DPR:$Rn, 32)>;
 
 //   VSHRN    : Vector Shift Right and Narrow

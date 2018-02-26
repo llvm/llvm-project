@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_MSP430_MSP430INSTRINFO_H
 
 #include "MSP430RegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "MSP430GenInstrInfo.inc"

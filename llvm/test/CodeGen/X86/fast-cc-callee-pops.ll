@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -x86-asm-syntax=intel -mcpu=yonah | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -x86-asm-syntax=intel -mcpu=yonah | FileCheck %s
 
 ; Check that a fastcc function pops its stack variables before returning.
 

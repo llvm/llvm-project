@@ -215,6 +215,23 @@ shared library boundaries are handled as if the callee was not compiled with
 
 This scheme is currently only supported on the x86 and x86_64 architectures.
 
+``-fsanitize-cfi-icall-generalize-pointers``
+--------------------------------------------
+
+Mismatched pointer types are a common cause of cfi-icall check failures.
+Translation units compiled with the ``-fsanitize-cfi-icall-generalize-pointers``
+flag relax pointer type checking for call sites in that translation unit,
+applied across all functions compiled with ``-fsanitize=cfi-icall``.
+
+Specifically, pointers in return and argument types are treated as equivalent as
+long as the qualifiers for the type they point to match. For example, ``char*``
+``char**`, and ``int*`` are considered equivalent types. However, ``char*`` and
+``const char*`` are considered separate types.
+
+``-fsanitize-cfi-icall-generalize-pointers`` is not compatible with
+``-fsanitize-cfi-cross-dso``.
+
+
 ``-fsanitize=cfi-icall`` and ``-fsanitize=function``
 ----------------------------------------------------
 

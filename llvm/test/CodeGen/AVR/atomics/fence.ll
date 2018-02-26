@@ -4,7 +4,7 @@
 ; AVR is always singlethreaded so fences do nothing.
 
 ; CHECK_LABEL: atomic_fence8
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:   ret
 define void @atomic_fence8() {
   fence acquire

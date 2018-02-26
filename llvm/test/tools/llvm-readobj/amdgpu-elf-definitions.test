@@ -1,7 +1,7 @@
 RUN: llvm-readobj -file-headers -program-headers -sections -symbols %p/Inputs/trivial.obj.elf-amdhsa-gfx803 | FileCheck %s
 
-CHECK: Format: ELF64-amdgpu-hsacobj
-CHECK: Arch: amdgcn
+CHECK: Format: ELF64-amdgpu
+CHECK: Arch: unknown
 CHECK: ElfHeader {
 CHECK:   Ident {
 CHECK:     OS/ABI: AMDGPU_HSA (0x40)

@@ -4,12 +4,12 @@
 
 define float @extractFloat1() nounwind {
 ; X32-LABEL: extractFloat1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    fld1
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: extractFloat1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
 entry:
@@ -20,12 +20,12 @@ entry:
 
 define float @extractFloat2() nounwind {
 ; X32-LABEL: extractFloat2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    fldz
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: extractFloat2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:
@@ -36,12 +36,12 @@ entry:
 
 define i32 @extractInt2() nounwind {
 ; X32-LABEL: extractInt2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: extractInt2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:

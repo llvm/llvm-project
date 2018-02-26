@@ -1,4 +1,4 @@
-//===--------- GCNIterativeScheduler.h - GCN Scheduler -*- C++ -*----------===//
+//===- GCNIterativeScheduler.h - GCN Scheduler ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,27 +6,34 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-/// \file
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_GCNITERATIVESCHEDULER_H
 #define LLVM_LIB_TARGET_AMDGPU_GCNITERATIVESCHEDULER_H
 
 #include "GCNRegPressure.h"
-
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/Support/Allocator.h"
+#include <limits>
+#include <memory>
+#include <vector>
 
 namespace llvm {
 
+class MachineInstr;
+class SUnit;
+class raw_ostream;
+
 class GCNIterativeScheduler : public ScheduleDAGMILive {
-  typedef ScheduleDAGMILive BaseClass;
+  using BaseClass = ScheduleDAGMILive;
+
 public:
   enum StrategyKind {
     SCHEDULE_MINREGONLY,
     SCHEDULE_MINREGFORCED,
-    SCHEDULE_LEGACYMAXOCCUPANCY
+    SCHEDULE_LEGACYMAXOCCUPANCY,
+    SCHEDULE_ILP
   };
 
   GCNIterativeScheduler(MachineSchedContext *C,
@@ -42,11 +49,10 @@ public:
   void finalizeSchedule() override;
 
 protected:
-
-  typedef ArrayRef<const SUnit*> ScheduleRef;
+  using ScheduleRef = ArrayRef<const SUnit *>;
 
   struct TentativeSchedule {
-    std::vector<MachineInstr*> Schedule;
+    std::vector<MachineInstr *> Schedule;
     GCNRegPressure MaxPressure;
   };
 
@@ -103,6 +109,7 @@ protected:
 
   void scheduleLegacyMaxOccupancy(bool TryMaximizeOccupancy = true);
   void scheduleMinReg(bool force = false);
+  void scheduleILP(bool TryMaximizeOccupancy = true);
 
   void printRegions(raw_ostream &OS) const;
   void printSchedResult(raw_ostream &OS,
@@ -113,6 +120,6 @@ protected:
                     const GCNRegPressure &After) const;
 };
 
-} // End namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_GCNITERATIVESCHEDULER_H

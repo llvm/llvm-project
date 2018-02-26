@@ -1,10 +1,10 @@
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r6 -mattr=micromips | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mcpu=mips32r6 -mattr=micromips | FileCheck %s
 
   .set noat
   add $3, $4, $5           # CHECK: add $3, $4, $5      # encoding: [0x00,0xa4,0x19,0x10]
   addiu $3, $4, 1234       # CHECK: addiu $3, $4, 1234  # encoding: [0x30,0x64,0x04,0xd2]
   addu $3, $4, $5          # CHECK: addu $3, $4, $5     # encoding: [0x00,0xa4,0x19,0x50]
-  addiupc $4, 100          # CHECK: addiupc $4, 100     # encoding: [0x78,0x80,0x00,0x19]
+  addiupc $4, 100          # CHECK: lapc $4, 100        # encoding: [0x78,0x80,0x00,0x19]
   addiur1sp $7, 4          # CHECK: addiur1sp $7, 4     # encoding: [0x6f,0x83]
   addiur2 $6, $7, -1       # CHECK: addiur2 $6, $7, -1  # encoding: [0x6f,0x7e]
   addiur2 $6, $7, 12       # CHECK: addiur2 $6, $7, 12  # encoding: [0x6f,0x76]
@@ -37,6 +37,7 @@
   balc 7286128             # CHECK: balc 7286128        # encoding: [0xb4,0x37,0x96,0xb8]
   b 132                    # CHECK: bc16 132            # encoding: [0xcc,0x42]
   bc 7286128               # CHECK: bc 7286128          # encoding: [0x94,0x37,0x96,0xb8]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} BC_MMR6
   bc16 132                 # CHECK: bc16 132            # encoding: [0xcc,0x42]
   beqzc16 $6, 20           # CHECK: beqzc16 $6, 20      # encoding: [0x8f,0x0a]
   bnezc16 $6, 20           # CHECK: bnezc16 $6, 20      # encoding: [0xaf,0x0a]
@@ -63,6 +64,9 @@
   jic   $5, 256            # CHECK: jic $5, 256         # encoding: [0xa0,0x05,0x01,0x00]
   jrc16 $9                 # CHECK: jrc16 $9            # encoding: [0x45,0x23]
   jrcaddiusp 20            # CHECK: jrcaddiusp 20       # encoding: [0x44,0xb3]
+  lapc $4, 100             # CHECK: lapc $4, 100        # encoding: [0x78,0x80,0x00,0x19]
+  lapc $7, 1048572         # CHECK: lapc $7, 1048572    # encoding: [0x78,0xe3,0xff,0xff]
+  lapc $7, -1048576        # CHECK: lapc $7, -1048576   # encoding: [0x78,0xe4,0x00,0x00]
   lh $2, 8($4)             # CHECK: lh $2, 8($4)        # encoding: [0x3c,0x44,0x00,0x08]
   lhe $4, 8($2)            # CHECK: lhe $4, 8($2)       # encoding: [0x60,0x82,0x6a,0x08]
   lhu $4, 8($2)            # CHECK: lhu $4, 8($2)       # encoding: [0x34,0x82,0x00,0x08]
@@ -81,7 +85,7 @@
   lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, 8($4)      # CHECK: lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, 8($4)      # encoding: [0x21,0x24,0x50,0x08]
   lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # CHECK: lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x23,0x24,0x50,0x08]
   lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # CHECK: lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x23,0x24,0x50,0x08]
-  movep $5, $6, $2, $3            # CHECK: movep $5, $6, $2, $3            # encoding: [0x84,0x34]
+  movep $5, $6, $2, $3            # CHECK: movep $5, $6, $2, $3            # encoding: [0x44,0x36]
   rotr $2, 7                      # CHECK: rotr $2, $2, 7                  # encoding: [0x00,0x42,0x38,0xc0]
   rotr $9, $6, 7                  # CHECK: rotr $9, $6, 7                  # encoding: [0x01,0x26,0x38,0xc0]
   rotrv $9, $6, $7                # CHECK: rotrv $9, $6, $7                # encoding: [0x00,0xc7,0x48,0xd0]

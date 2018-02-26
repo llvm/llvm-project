@@ -1,8 +1,8 @@
 # RUN: llc -march=amdgcn -run-pass peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 ...
 # GCN-LABEL: name: no_fold_imm_madak_mac_clamp_f32
-# GCN: %23 = V_MOV_B32_e32 1090519040, implicit %exec
-# GCN-NEXT: %24 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit %exec
+# GCN-NEXT: %24:vgpr_32 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit %exec
 
 name:            no_fold_imm_madak_mac_clamp_f32
 tracksRegLiveness: true
@@ -72,8 +72,8 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: no_fold_imm_madak_mac_omod_f32
-# GCN: %23 = V_MOV_B32_e32 1090519040, implicit %exec
-# GCN: %24 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit %exec
+# GCN: %24:vgpr_32 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit %exec
 
 name:            no_fold_imm_madak_mac_omod_f32
 tracksRegLiveness: true
@@ -143,8 +143,8 @@ body:             |
 ...
 ---
 # GCN: name: no_fold_imm_madak_mad_clamp_f32
-# GCN: %23 = V_MOV_B32_e32 1090519040, implicit %exec
-# GCN: %24 = V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit %exec
+# GCN: %24:vgpr_32 = V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit %exec
 
 name:            no_fold_imm_madak_mad_clamp_f32
 tracksRegLiveness: true
@@ -214,8 +214,8 @@ body:             |
 ...
 ---
 # GCN: name: no_fold_imm_madak_mad_omod_f32
-# GCN: %23 = V_MOV_B32_e32 1090519040, implicit %exec
-# GCN: %24 = V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit %exec
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit %exec
+# GCN: %24:vgpr_32 = V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit %exec
 
 name:            no_fold_imm_madak_mad_omod_f32
 tracksRegLiveness: true

@@ -11,7 +11,7 @@
 	.align	4, 0x90
 _f:                                     ## @f
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	pushq	%rax
 Ltmp0:
 	.cfi_def_cfa_offset 16

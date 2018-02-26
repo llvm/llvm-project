@@ -35,9 +35,9 @@ int main(void) {
   return no_instrument();
 }
 
-// CHECK: attributes #0 = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK: attributes #0 = { {{.*}}"instrument-function-entry-inlined"="mcount"{{.*}} }
 // CHECK: attributes #1 = { {{.*}} }
-// CHECK-PREFIXED: attributes #0 = { {{.*}}"counting-function"="_mcount"{{.*}} }
+// CHECK-PREFIXED: attributes #0 = { {{.*}}"instrument-function-entry-inlined"="_mcount"{{.*}} }
 // CHECK-PREFIXED: attributes #1 = { {{.*}} }
-// NO-MCOUNT-NOT: attributes #{{[0-9]}} = { {{.*}}"counting-function"={{.*}} }
-// NO-MCOUNT1-NOT: attributes #1 = { {{.*}}"counting-function"={{.*}} }
+// NO-MCOUNT-NOT: attributes #{{[0-9]}} = { {{.*}}"instrument-function-entry-inlined"={{.*}} }
+// NO-MCOUNT1-NOT: attributes #1 = { {{.*}}"instrument-function-entry-inlined"={{.*}} }

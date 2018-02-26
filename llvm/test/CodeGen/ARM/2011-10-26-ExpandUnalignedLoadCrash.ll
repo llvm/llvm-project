@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mcpu=cortex-a9 -mattr=+neon,+neonfp -relocation-model=pic
+; RUN: llc < %s -mcpu=cortex-a9 -mattr=+neon,+neonfp -relocation-model=pic
 
 target triple = "armv6-none-linux-gnueabi"
 

@@ -7,9 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <string>

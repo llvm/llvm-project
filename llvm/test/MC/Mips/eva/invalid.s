@@ -1,7 +1,7 @@
 # Instructions that are invalid
 #
 # RUN: not llvm-mc %s -triple=mips64-unknown-linux -show-encoding -mcpu=mips32r2 \
-# RUN:     -mattr==eva 2>%t1
+# RUN:     -mattr=+eva 2>%t1
 # RUN: FileCheck %s < %t1
 
     .set noat
@@ -33,3 +33,4 @@
     swe $5, 8($34)     # CHECK: :[[@LINE]]:13: error: expected memory with 9-bit signed offset
     swe $5, 512($4)    # CHECK: :[[@LINE]]:13: error: expected memory with 9-bit signed offset
     swe $5, -513($4)   # CHECK: :[[@LINE]]:13: error: expected memory with 9-bit signed offset
+

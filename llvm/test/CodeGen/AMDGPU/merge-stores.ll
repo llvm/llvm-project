@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=bonaire -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=bonaire -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
 
 ; This test is mostly to test DAG store merging, so disable the vectorizer.
 ; Run with devices with different unaligned load restrictions.
@@ -10,8 +10,7 @@
 
 
 ; GCN-LABEL: {{^}}merge_global_store_2_constants_i8:
-; GCN: buffer_store_byte
-; GCN: buffer_store_byte
+; GCN: buffer_store_short
 ; GCN: s_endpgm
 define amdgpu_kernel void @merge_global_store_2_constants_i8(i8 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i32 1
@@ -237,10 +236,8 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32_nonzero_base(
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_2_adjacent_loads_shuffle_i32:
-; GCN: buffer_load_dword v
-; GCN: buffer_load_dword v
-; GCN: buffer_store_dword v
-; GCN: buffer_store_dword v
+; GCN: buffer_load_dwordx2 v
+; GCN: buffer_store_dwordx2 v
 define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -379,15 +376,9 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(i32 a
 ; should catch this?
 
 ; GCN-LABEL: {{^}}merge_global_store_4_adjacent_loads_shuffle_i32:
-; GCN: buffer_load_dword v
-; GCN: buffer_load_dword v
-; GCN: buffer_load_dword v
-; GCN: buffer_load_dword v
+; GCN: buffer_load_dwordx4 v
 ; GCN: s_barrier
-; GCN: buffer_store_dword v
-; GCN: buffer_store_dword v
-; GCN: buffer_store_dword v
-; GCN: buffer_store_dword v
+; GCN: buffer_store_dwordx4 v
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
@@ -489,8 +480,7 @@ define amdgpu_kernel void @merge_global_store_4_vector_elts_loads_v4i32(i32 addr
 }
 
 ; GCN-LABEL: {{^}}merge_local_store_2_constants_i8:
-; GCN: ds_write_b8
-; GCN: ds_write_b8
+; GCN: ds_write_b16
 ; GCN: s_endpgm
 define amdgpu_kernel void @merge_local_store_2_constants_i8(i8 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(3)* %out, i32 1

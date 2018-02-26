@@ -4,7 +4,7 @@
 
 define zeroext i32 @ReverseBits(i32 zeroext %n) {
 ; CHECK-LABEL: ReverseBits:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    slwi 6, 3, 1
@@ -68,7 +68,7 @@ entry:
 
 define i64 @ReverseBits64(i64 %n) {
 ; CHECK-LABEL: ReverseBits64:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    lis 6, -13108
@@ -91,38 +91,38 @@ define i64 @ReverseBits64(i64 %n) {
 ; CHECK-NEXT:    and 4, 8, 4
 ; CHECK-NEXT:    lis 7, 3855
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    oris 12, 5, 52428
-; CHECK-NEXT:    oris 9, 6, 13107
+; CHECK-NEXT:    oris 9, 5, 52428
+; CHECK-NEXT:    oris 10, 6, 13107
 ; CHECK-NEXT:    lis 6, -3856
 ; CHECK-NEXT:    ori 7, 7, 3855
 ; CHECK-NEXT:    sldi 8, 3, 2
-; CHECK-NEXT:    ori 4, 12, 52428
+; CHECK-NEXT:    ori 4, 9, 52428
 ; CHECK-NEXT:    rldicl 3, 3, 62, 2
-; CHECK-NEXT:    ori 5, 9, 13107
+; CHECK-NEXT:    ori 5, 10, 13107
 ; CHECK-NEXT:    ori 6, 6, 61680
 ; CHECK-NEXT:    and 3, 3, 5
 ; CHECK-NEXT:    sldi 5, 6, 32
 ; CHECK-NEXT:    and 4, 8, 4
 ; CHECK-NEXT:    sldi 6, 7, 32
 ; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    oris 10, 5, 61680
-; CHECK-NEXT:    oris 11, 6, 3855
+; CHECK-NEXT:    oris 11, 5, 61680
+; CHECK-NEXT:    oris 12, 6, 3855
 ; CHECK-NEXT:    sldi 6, 3, 4
-; CHECK-NEXT:    ori 4, 10, 61680
+; CHECK-NEXT:    ori 4, 11, 61680
 ; CHECK-NEXT:    rldicl 3, 3, 60, 4
-; CHECK-NEXT:    ori 5, 11, 3855
+; CHECK-NEXT:    ori 5, 12, 3855
 ; CHECK-NEXT:    and 4, 6, 4
 ; CHECK-NEXT:    and 3, 3, 5
 ; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    rlwinm 5, 3, 24, 0, 31
 ; CHECK-NEXT:    rldicl 4, 3, 32, 32
-; CHECK-NEXT:    rlwinm 6, 3, 24, 0, 31
-; CHECK-NEXT:    rlwinm 5, 4, 24, 0, 31
-; CHECK-NEXT:    rlwimi 6, 3, 8, 8, 15
-; CHECK-NEXT:    rlwimi 5, 4, 8, 8, 15
-; CHECK-NEXT:    rlwimi 6, 3, 8, 24, 31
-; CHECK-NEXT:    rlwimi 5, 4, 8, 24, 31
-; CHECK-NEXT:    sldi 12, 5, 32
-; CHECK-NEXT:    or 3, 12, 6
+; CHECK-NEXT:    rlwinm 6, 4, 24, 0, 31
+; CHECK-NEXT:    rlwimi 5, 3, 8, 8, 15
+; CHECK-NEXT:    rlwimi 6, 4, 8, 8, 15
+; CHECK-NEXT:    rlwimi 5, 3, 8, 24, 31
+; CHECK-NEXT:    rlwimi 6, 4, 8, 24, 31
+; CHECK-NEXT:    sldi 3, 5, 32
+; CHECK-NEXT:    or 3, 3, 6
 ; CHECK-NEXT:    blr
 entry:
   %shr = lshr i64 %n, 1

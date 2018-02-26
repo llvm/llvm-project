@@ -18,6 +18,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include "CodeGenHwModes.h"
 #include "CodeGenRegisters.h"
 
 #define DEBUG_TYPE "register-bank-emitter"
@@ -84,7 +85,8 @@ public:
     //        the VT's reliably due to Untyped.
     if (RCWithLargestRegsSize == nullptr)
       RCWithLargestRegsSize = RC;
-    else if (RCWithLargestRegsSize->SpillSize < RC->SpillSize)
+    else if (RCWithLargestRegsSize->RSI.get(DefaultMode).SpillSize <
+             RC->RSI.get(DefaultMode).SpillSize)
       RCWithLargestRegsSize = RC;
     assert(RCWithLargestRegsSize && "RC was nullptr?");
 
@@ -115,7 +117,7 @@ private:
 
 public:
   RegisterBankEmitter(RecordKeeper &R)
-      : Records(R), RegisterClassHierarchy(Records) {}
+      : Records(R), RegisterClassHierarchy(Records, CodeGenHwModes(R)) {}
 
   void run(raw_ostream &OS);
 };
@@ -241,7 +243,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   for (const auto &Bank : Banks) {
     std::string QualifiedBankID =
         (TargetName + "::" + Bank.getEnumeratorName()).str();
-    unsigned Size = Bank.getRCWithLargestRegsSize()->SpillSize;
+    const CodeGenRegisterClass &RC = *Bank.getRCWithLargestRegsSize();
+    unsigned Size = RC.RSI.get(DefaultMode).SpillSize;
     OS << "RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
        << QualifiedBankID << ", /* Name */ \"" << Bank.getName()
        << "\", /* Size */ " << Size << ", "
@@ -294,6 +297,19 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
     }
 
     Banks.push_back(Bank);
+  }
+
+  // Warn about ambiguous MIR caused by register bank/class name clashes.
+  for (const auto &Class : Records.getAllDerivedDefinitions("RegisterClass")) {
+    for (const auto &Bank : Banks) {
+      if (Bank.getName().lower() == Class->getName().lower()) {
+        PrintWarning(Bank.getDef().getLoc(), "Register bank names should be "
+                                             "distinct from register classes "
+                                             "to avoid ambiguous MIR");
+        PrintNote(Bank.getDef().getLoc(), "RegisterBank was declared here");
+        PrintNote(Class->getLoc(), "RegisterClass was declared here");
+      }
+    }
   }
 
   emitSourceFileHeader("Register Bank Source Fragments", OS);

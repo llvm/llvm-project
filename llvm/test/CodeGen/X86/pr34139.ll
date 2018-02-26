@@ -3,17 +3,9 @@
 
 define void @f_f(<16 x double>* %ptr) {
 ; CHECK-LABEL: f_f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa %xmm0, (%rax)
-; CHECK-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovapd (%rdi), %zmm1
-; CHECK-NEXT:    vmovapd 64(%rdi), %zmm2
-; CHECK-NEXT:    vptestmq %zmm0, %zmm0, %k1
-; CHECK-NEXT:    vmovapd %zmm0, %zmm1 {%k1}
-; CHECK-NEXT:    vmovapd %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, 64(%rdi)
-; CHECK-NEXT:    vmovapd %zmm1, (%rdi)
   store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* undef
   %load_mask8.i.i.i = load <16 x i8>, <16 x i8>* undef
   %v.i.i.i.i = load <16 x double>, <16 x double>* %ptr

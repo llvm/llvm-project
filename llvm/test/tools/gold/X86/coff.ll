@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=emit-llvm \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=emit-llvm \
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o -o - | FileCheck %s
 
@@ -11,7 +11,7 @@ define void @f() {
   ret void
 }
 
-; CHECK: define internal void @g() {
+; CHECK: define internal dso_local void @g() {
 define hidden void @g() {
   ret void
 }

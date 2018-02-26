@@ -23,18 +23,17 @@ module LLVM_Backend {
     exclude header "CodeGen/CommandFlags.h"
     exclude header "CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "CodeGen/LinkAllCodegenComponents.h"
-    exclude header "CodeGen/GlobalISel/InstructionSelectorImpl.h"
 
     // These are intended for (repeated) textual inclusion.
+    textual header "CodeGen/CommandFlags.def"
     textual header "CodeGen/DIEValue.def"
+    textual header "CodeGen/RuntimeLibcalls.def"
+    textual header "CodeGen/TargetOpcodes.def"
   }
 
   module Target {
     umbrella "Target"
     module * { export * }
-
-    // This is intended for (repeated) textual inclusion.
-    textual header "Target/TargetOpcodes.def"
   }
 }
 
@@ -48,6 +47,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/AArch64.def"
     textual header "BinaryFormat/ELFRelocs/AMDGPU.def"
     textual header "BinaryFormat/ELFRelocs/ARM.def"
+    textual header "BinaryFormat/ELFRelocs/ARC.def"
     textual header "BinaryFormat/ELFRelocs/AVR.def"
     textual header "BinaryFormat/ELFRelocs/BPF.def"
     textual header "BinaryFormat/ELFRelocs/Hexagon.def"
@@ -61,7 +61,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
     textual header "BinaryFormat/ELFRelocs/WebAssembly.def"
-    textual header "BinaryFormat/WasmRelocs/WebAssembly.def"
+    textual header "BinaryFormat/WasmRelocs.def"
 }
 
 module LLVM_Config { requires cplusplus umbrella "Config" module * { export * } }
@@ -93,11 +93,13 @@ module LLVM_DebugInfo_PDB {
   exclude header "DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumSourceFiles.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumSymbols.h"
+  exclude header "DebugInfo/PDB/DIA/DIAEnumTables.h"
   exclude header "DebugInfo/PDB/DIA/DIALineNumber.h"
   exclude header "DebugInfo/PDB/DIA/DIARawSymbol.h"
   exclude header "DebugInfo/PDB/DIA/DIASession.h"
   exclude header "DebugInfo/PDB/DIA/DIASourceFile.h"
   exclude header "DebugInfo/PDB/DIA/DIASupport.h"
+  exclude header "DebugInfo/PDB/DIA/DIATable.h"
 }
 
 module LLVM_DebugInfo_PDB_DIA {
@@ -121,6 +123,7 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "DebugInfo/CodeView/CodeViewRegisters.def"
   textual header "DebugInfo/CodeView/CodeViewTypes.def"
   textual header "DebugInfo/CodeView/CodeViewSymbols.def"
 }
@@ -147,6 +150,7 @@ module LLVM_ExecutionEngine {
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
+  exclude header "ExecutionEngine/Orc/RemoteObjectLayer.h"
 }
 
 module LLVM_Pass {
@@ -222,17 +226,20 @@ module LLVM_LTO { requires cplusplus umbrella "LTO" module * { export * } }
 module LLVM_MC {
   requires cplusplus
 
-  // FIXME: Mislayered?
-  module Support_TargetRegistry {
-    header "Support/TargetRegistry.h"
-    export *
-  }
-
   umbrella "MC"
   module * { export * }
 
-  // Exclude this; it's fundamentally non-modular.
-  exclude header "MC/MCTargetOptionsCommandFlags.h"
+  textual header "MC/MCTargetOptionsCommandFlags.def"
+}
+
+// Used by llvm-tblgen
+module LLVM_MC_TableGen {
+  requires cplusplus
+  module MC_LaneBitmask { header "MC/LaneBitmask.h" export * }
+  module MC_FixedLenDisassembler { header "MC/MCFixedLenDisassembler.h" export * }
+  module MC_InstrItineraries { header "MC/MCInstrItineraries.h" export * }
+  module MC_Schedule { header "MC/MCSchedule.h" export * }
+  module MC_SubtargetFeature { header "MC/SubtargetFeature.h" export * }
 }
 
 module LLVM_Object {
@@ -250,6 +257,13 @@ module LLVM_ProfileData {
   module * { export * }
 
   textual header "ProfileData/InstrProfData.inc"
+}
+
+// FIXME: Mislayered?
+module LLVM_Support_TargetRegistry {
+  requires cplusplus
+  header "Support/TargetRegistry.h"
+  export *
 }
 
 module LLVM_TableGen { requires cplusplus umbrella "TableGen" module * { export * } }
@@ -283,6 +297,7 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"
     textual header "Support/AArch64TargetParser.def"
+    textual header "Support/X86TargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.
@@ -304,4 +319,10 @@ module LLVM_Utils {
 module LLVM_Support_DataTypes_Src {
   header "llvm/Support/DataTypes.h"
   export *
+}
+
+module LLVM_WindowsManifest {
+  requires cplusplus
+  umbrella "WindowsManifest"
+  module * { export * }
 }

@@ -1,4 +1,4 @@
-// RUN: c-index-test -write-pch %t.pch -fshort-wchar %s
+// RUN: c-index-test -write-pch %t.pch -fwchar-type=short -fno-signed-wchar %s
 // RUN: env LIBCLANG_NOTHREADS=1 c-index-test -index-tu %t.pch | FileCheck %s
 
 // CHECK: [indexDeclaration]: kind: variable | name: wideStr

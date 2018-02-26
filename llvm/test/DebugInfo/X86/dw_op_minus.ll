@@ -76,5 +76,5 @@ declare void @Capture(i32*)
 ; CHECK-NEXT: .byte	6                       # DW_OP_deref
 ; CHECK-NEXT: .byte	16                      # DW_OP_constu
 ; CHECK-NEXT: .byte	144                     # 400
-; CHECK-NEXT: .byte	3                       # DW_OP_minus
-; CHECK-NEXT: .byte	28
+; CHECK-NEXT: .byte	3                       #
+; CHECK-NEXT: .byte	28                      # DW_OP_minus

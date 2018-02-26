@@ -1,7 +1,7 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=MOVREL %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=MOVREL %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-vgpr-index-mode -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=IDXMODE %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=IDXMODE %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MOVREL,PREGFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MOVREL,PREGFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-vgpr-index-mode -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,IDXMODE,PREGFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,IDXMODE,GFX9 %s
 
 ; Tests for indirect addressing on SI, which is implemented using dynamic
 ; indexing of vectors.
@@ -146,6 +146,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}extract_undef_offset_sgpr:
+; undefined behavior, but shouldn't crash compiler
 define amdgpu_kernel void @extract_undef_offset_sgpr(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
 entry:
   %ld = load volatile <4 x i32>, <4  x i32> addrspace(1)* %in
@@ -155,9 +156,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}insert_undef_offset_sgpr_vector_src:
-; GCN-DAG: buffer_load_dwordx4
-; MOVREL-DAG: s_mov_b32 m0,
-; MOVREL: v_movreld_b32
+; undefined behavior, but shouldn't crash compiler
 define amdgpu_kernel void @insert_undef_offset_sgpr_vector_src(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
 entry:
   %ld = load <4 x i32>, <4  x i32> addrspace(1)* %in
@@ -317,7 +316,7 @@ entry:
 
 ; FIXME: Why is vector copied in between?
 
-; GCN-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword [[IDX0:v[0-9]+]]
 ; GCN-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
 ; GCN-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
@@ -396,7 +395,7 @@ bb2:
 
 ; GCN-LABEL: {{^}}insert_vgpr_offset_multiple_in_block:
 ; GCN-DAG: s_load_dwordx4 s{{\[}}[[S_ELT0:[0-9]+]]:[[S_ELT3:[0-9]+]]{{\]}}
-; GCN-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword [[IDX0:v[0-9]+]]
 ; GCN-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
 
 ; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT3:[0-9]+]], s[[S_ELT3]]
@@ -469,83 +468,8 @@ bb2:
   ret void
 }
 
-; GCN-LABEL: {{^}}extract_adjacent_blocks:
-; GCN: s_load_dword [[ARG:s[0-9]+]]
-; GCN: s_cmp_lg_u32
-; GCN: s_cbranch_scc0 [[BB4:BB[0-9]+_[0-9]+]]
-
-; GCN: buffer_load_dwordx4
-; MOVREL: s_mov_b32 m0,
-; MOVREL: v_movrels_b32_e32
-
-; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, src0
-; IDXMODE: v_mov_b32_e32
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
-
-; GCN: [[BB4]]:
-; GCN: buffer_load_dwordx4
-; MOVREL: s_mov_b32 m0,
-; MOVREL: v_movrels_b32_e32
-
-; IDXMODE: s_set_gpr_idx_on
-; IDXMODE: v_mov_b32_e32
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: [[ENDBB]]:
-; GCN: buffer_store_dword
-; GCN: s_endpgm
-define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) #0 {
-bb:
-  %tmp = icmp eq i32 %arg, 0
-  br i1 %tmp, label %bb1, label %bb4
-
-bb1:
-  %tmp2 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
-  %tmp3 = extractelement <4 x float> %tmp2, i32 undef
-  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp2) #0 ; Prevent block optimize out
-  br label %bb7
-
-bb4:
-  %tmp5 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
-  %tmp6 = extractelement <4 x float> %tmp5, i32 undef
-  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp5) #0 ; Prevent block optimize out
-  br label %bb7
-
-bb7:
-  %tmp8 = phi float [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
-  store volatile float %tmp8, float addrspace(1)* undef
-  ret void
-}
 
 ; GCN-LABEL: {{^}}insert_adjacent_blocks:
-; GCN: s_load_dword [[ARG:s[0-9]+]]
-; GCN: s_cmp_lg_u32
-; GCN: s_cbranch_scc0 [[BB4:BB[0-9]+_[0-9]+]]
-
-; GCN: buffer_load_dwordx4
-; MOVREL: s_mov_b32 m0,
-; MOVREL: v_movreld_b32_e32
-
-; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, dst
-; IDXMODE: v_mov_b32_e32
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
-
-; GCN: [[BB4]]:
-; GCN: buffer_load_dwordx4
-; MOVREL: s_mov_b32 m0,
-; MOVREL: v_movreld_b32_e32
-
-; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, dst
-; IDXMODE: v_mov_b32_e32
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: [[ENDBB]]:
-; GCN: buffer_store_dword
-; GCN: s_endpgm
 define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) #0 {
 bb:
   %tmp = icmp eq i32 %arg, 0
@@ -603,7 +527,8 @@ bb7:                                              ; preds = %bb4, %bb1
 ; IDXMODE: v_mov_b32_e32 v[[VEC0_ELT2]], -4.0
 ; IDXMODE: s_set_gpr_idx_off
 
-; GCN: s_mov_b32 m0, -1
+; PREGFX9: s_mov_b32 m0, -1
+; GFX9-NOT: s_mov_b32 m0
 ; GCN: ds_write_b32
 ; GCN: ds_write_b32
 ; GCN: s_endpgm

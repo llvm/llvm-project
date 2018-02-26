@@ -108,11 +108,7 @@ public:
   ///
   /// \returns a valid DWARFDie instance if this object has children or an
   /// invalid DWARFDie instance if it doesn't.
-  DWARFDie getFirstChild() const {
-    if (isValid() && Die->hasChildren())
-      return DWARFDie(U, Die + 1);
-    return DWARFDie();
-  }
+  DWARFDie getFirstChild() const;
 
   /// Dump the DIE and all of its attributes to the supplied stream.
   ///
@@ -120,6 +116,10 @@ public:
   /// \param indent the number of characters to indent each line that is output.
   void dump(raw_ostream &OS, unsigned indent = 0,
             DIDumpOptions DumpOpts = DIDumpOptions()) const;
+
+
+  /// Convenience zero-argument overload for debugging.
+  LLVM_DUMP_METHOD void dump() const;
 
   /// Extract the specified attribute from this DIE.
   ///

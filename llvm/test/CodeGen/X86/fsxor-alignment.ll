@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 -enable-unsafe-fp-math | \
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -enable-unsafe-fp-math | \
 ; RUN:  grep -v sp | grep xorps | count 2
 
 ; Don't fold the incoming stack arguments into the xorps instructions used

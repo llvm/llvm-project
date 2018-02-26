@@ -4,7 +4,7 @@
 
 define <4 x double> @pcmov_4f64(<4 x double> %a, <4 x double> %b, <4 x double> %m) {
 ; CHECK-LABEL: pcmov_4f64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = bitcast <4 x double> %m to <4 x i64>
@@ -20,7 +20,7 @@ define <4 x double> @pcmov_4f64(<4 x double> %a, <4 x double> %b, <4 x double> %
 
 define <2 x double> @pcmov_2f64(<2 x double> %a, <2 x double> %b, <2 x double> %m) {
 ; CHECK-LABEL: pcmov_2f64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast <2 x double> %m to <2 x i64>
@@ -36,7 +36,7 @@ define <2 x double> @pcmov_2f64(<2 x double> %a, <2 x double> %b, <2 x double> %
 
 define <8 x float> @pcmov_8f32(<8 x float> %a, <8 x float> %b, <8 x float> %m) {
 ; CHECK-LABEL: pcmov_8f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = bitcast <8 x float> %m to <8 x i32>
@@ -52,7 +52,7 @@ define <8 x float> @pcmov_8f32(<8 x float> %a, <8 x float> %b, <8 x float> %m) {
 
 define <4 x float> @pcmov_4f32(<4 x float> %a, <4 x float> %b, <4 x float> %m) {
 ; CHECK-LABEL: pcmov_4f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = bitcast <4 x float> %m to <4 x i32>
@@ -68,7 +68,7 @@ define <4 x float> @pcmov_4f32(<4 x float> %a, <4 x float> %b, <4 x float> %m) {
 
 define <4 x i64> @pcmov_4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %m) {
 ; CHECK-LABEL: pcmov_4i64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = and <4 x i64> %a, %m
@@ -80,7 +80,7 @@ define <4 x i64> @pcmov_4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %m) {
 
 define <2 x i64> @pcmov_2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %m) {
 ; CHECK-LABEL: pcmov_2i64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <2 x i64> %a, %m
@@ -92,7 +92,7 @@ define <2 x i64> @pcmov_2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %m) {
 
 define <8 x i32> @pcmov_8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %m) {
 ; CHECK-LABEL: pcmov_8i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = and <8 x i32> %a, %m
@@ -104,7 +104,7 @@ define <8 x i32> @pcmov_8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %m) {
 
 define <4 x i32> @pcmov_4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %m) {
 ; CHECK-LABEL: pcmov_4i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %a, %m
@@ -116,7 +116,7 @@ define <4 x i32> @pcmov_4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %m) {
 
 define <16 x i16> @pcmov_16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %m) {
 ; CHECK-LABEL: pcmov_16i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = and <16 x i16> %a, %m
@@ -128,7 +128,7 @@ define <16 x i16> @pcmov_16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %m) {
 
 define <8 x i16> @pcmov_8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %m) {
 ; CHECK-LABEL: pcmov_8i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <8 x i16> %a, %m
@@ -140,7 +140,7 @@ define <8 x i16> @pcmov_8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %m) {
 
 define <32 x i8> @pcmov_32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %m) {
 ; CHECK-LABEL: pcmov_32i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = and <32 x i8> %a, %m
@@ -152,7 +152,7 @@ define <32 x i8> @pcmov_32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %m) {
 
 define <16 x i8> @pcmov_16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %m) {
 ; CHECK-LABEL: pcmov_16i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <16 x i8> %a, %m

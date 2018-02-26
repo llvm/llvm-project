@@ -1,4 +1,4 @@
-//===-- ARMTargetTransformInfo.h - ARM specific TTI -------------*- C++ -*-===//
+//===- ARMTargetTransformInfo.h - ARM specific TTI --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,28 +6,43 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file a TargetTransformInfo::Concept conforming object specific to the
 /// ARM target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_ARM_ARMTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_ARM_ARMTARGETTRANSFORMINFO_H
 
 #include "ARM.h"
+#include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Function.h"
+#include "llvm/MC/SubtargetFeature.h"
 
 namespace llvm {
 
+class APInt;
+class ARMTargetLowering;
+class Instruction;
+class Loop;
+class SCEV;
+class ScalarEvolution;
+class Type;
+class Value;
+
 class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
-  typedef BasicTTIImplBase<ARMTTIImpl> BaseT;
-  typedef TargetTransformInfo TTI;
+  using BaseT = BasicTTIImplBase<ARMTTIImpl>;
+  using TTI = TargetTransformInfo;
+
   friend BaseT;
 
   const ARMSubtarget *ST;
@@ -141,8 +156,6 @@ public:
   int getAddressComputationCost(Type *Val, ScalarEvolution *SE, 
                                 const SCEV *Ptr);
 
-  int getFPOpCost(Type *Ty);
-
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::OperandValueKind Op1Info = TTI::OK_AnyValue,
@@ -158,6 +171,9 @@ public:
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
                                  unsigned AddressSpace);
 
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
+
   bool shouldBuildLookupTablesForConstant(Constant *C) const {
     // In the ROPI and RWPI relocation models we can't have pointers to global
     // variables or functions in constant data, so don't convert switches to
@@ -172,4 +188,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_ARMTARGETTRANSFORMINFO_H

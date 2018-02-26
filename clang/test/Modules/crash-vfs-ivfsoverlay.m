@@ -7,6 +7,7 @@
 // RUN:   %S/../VFS/Inputs/vfsoverlay2.yaml > %t/srcvfs.yaml
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
+// RUN:         ASAN_OPTIONS=detect_leaks=0 \
 // RUN: %clang -fsyntax-only -nostdinc %s \
 // RUN:     -I %S/Inputs/crash-recovery/usr/include \
 // RUN:     -ivfsoverlay %t/srcvfs.yaml \

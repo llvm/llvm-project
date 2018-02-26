@@ -64,19 +64,19 @@ extern "C" {
 
   // Useful for calling from a debugger to get information about an ASan error.
   // Returns 1 if an error has been (or is being) reported, otherwise returns 0.
-  int __asan_report_present();
+  int __asan_report_present(void);
 
   // Useful for calling from a debugger to get information about an ASan error.
   // If an error has been (or is being) reported, the following functions return
   // the pc, bp, sp, address, access type (0 = read, 1 = write), access size and
   // bug description (e.g. "heap-use-after-free"). Otherwise they return 0.
-  void *__asan_get_report_pc();
-  void *__asan_get_report_bp();
-  void *__asan_get_report_sp();
-  void *__asan_get_report_address();
-  int __asan_get_report_access_type();
-  size_t __asan_get_report_access_size();
-  const char *__asan_get_report_description();
+  void *__asan_get_report_pc(void);
+  void *__asan_get_report_bp(void);
+  void *__asan_get_report_sp(void);
+  void *__asan_get_report_address(void);
+  int __asan_get_report_access_type(void);
+  size_t __asan_get_report_access_size(void);
+  const char *__asan_get_report_description(void);
 
   // Useful for calling from the debugger to get information about a pointer.
   // Returns the category of the given pointer as a constant string.
@@ -118,21 +118,21 @@ extern "C" {
   // User may provide function that would be called right when ASan detects
   // an error. This can be used to notice cases when ASan detects an error, but
   // the program crashes before ASan report is printed.
-  void __asan_on_error();
+  void __asan_on_error(void);
 
   // Prints accumulated stats to stderr. Used for debugging.
-  void __asan_print_accumulated_stats();
+  void __asan_print_accumulated_stats(void);
 
   // This function may be optionally provided by user and should return
   // a string containing ASan runtime options. See asan_flags.h for details.
-  const char* __asan_default_options();
+  const char* __asan_default_options(void);
 
   // The following 2 functions facilitate garbage collection in presence of
   // asan's fake stack.
 
   // Returns an opaque handler to be used later in __asan_addr_is_in_fake_stack.
   // Returns NULL if the current thread does not have a fake stack.
-  void *__asan_get_current_fake_stack();
+  void *__asan_get_current_fake_stack(void);
 
   // If fake_stack is non-NULL and addr belongs to a fake frame in
   // fake_stack, returns the address on real stack that corresponds to
@@ -143,6 +143,10 @@ extern "C" {
   // fake_stack, but the owner thread need to be alive.
   void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
                                      void **end);
+
+  // Performs cleanup before a [[noreturn]] function.  Must be called
+  // before things like _exit and execl to avoid false positives on stack.
+  void __asan_handle_no_return(void);
 
 #ifdef __cplusplus
 }  // extern "C"

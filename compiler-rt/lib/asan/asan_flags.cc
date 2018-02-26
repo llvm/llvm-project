@@ -118,6 +118,10 @@ void InitializeFlags() {
   const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
+#if CAN_SANITIZE_LEAKS
+  const char *lsan_default_options = __lsan::MaybeCallLsanDefaultOptions();
+  lsan_parser.ParseString(lsan_default_options);
+#endif
 
   // Override from command line.
   asan_parser.ParseString(GetEnv("ASAN_OPTIONS"));
@@ -144,6 +148,9 @@ void InitializeFlags() {
            SanitizerToolName);
     Die();
   }
+  // Ensure that redzone is at least SHADOW_GRANULARITY.
+  if (f->redzone < (int)SHADOW_GRANULARITY)
+    f->redzone = SHADOW_GRANULARITY;
   // Make "strict_init_order" imply "check_initialization_order".
   // TODO(samsonov): Use a single runtime flag for an init-order checker.
   if (f->strict_init_order) {

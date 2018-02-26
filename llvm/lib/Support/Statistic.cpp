@@ -39,12 +39,14 @@ using namespace llvm;
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
 ///
-static cl::opt<bool> Stats("stats",
-    cl::desc("Enable statistics output from program (available with Asserts)"));
-
+static cl::opt<bool> Stats(
+    "stats",
+    cl::desc("Enable statistics output from program (available with Asserts)"),
+    cl::Hidden);
 
 static cl::opt<bool> StatsAsJSON("stats-json",
-                                 cl::desc("Display statistics as json data"));
+                                 cl::desc("Display statistics as json data"),
+                                 cl::Hidden);
 
 static bool Enabled;
 static bool PrintOnExit;
@@ -166,9 +168,10 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   const char *delim = "";
   for (const Statistic *Stat : Stats.Stats) {
     OS << delim;
-    assert(!yaml::needsQuotes(Stat->getDebugType()) &&
+    assert(yaml::needsQuotes(Stat->getDebugType()) == yaml::QuotingType::None &&
            "Statistic group/type name is simple.");
-    assert(!yaml::needsQuotes(Stat->getName()) && "Statistic name is simple");
+    assert(yaml::needsQuotes(Stat->getName()) == yaml::QuotingType::None &&
+           "Statistic name is simple");
     OS << "\t\"" << Stat->getDebugType() << '.' << Stat->getName() << "\": "
        << Stat->getValue();
     delim = ",\n";

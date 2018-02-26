@@ -14,11 +14,11 @@ Sections:
           Value:           4
         Content:         '10001000'
     Relocations:
-      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+      - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
         Index:           0
         Offset:          0x00000006
         Addend:          8
-      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+      - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
         Index:           0
         Offset:          0x00000006
         Addend:          -6
@@ -29,11 +29,11 @@ Sections:
 # CHECK: Sections:
 # CHECK:   - Type:            DATA
 # CHECK-NEXT:     Relocations:
-# CHECK-NEXT:      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+# CHECK-NEXT:      - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
 # CHECK-NEXT:        Index:           0
 # CHECK-NEXT:        Offset:          0x00000006
 # CHECK-NEXT:        Addend:          8
-# CHECK-NEXT:      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+# CHECK-NEXT:      - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
 # CHECK-NEXT:        Index:           0
 # CHECK-NEXT:        Offset:          0x00000006
 # CHECK-NEXT:        Addend:          -6

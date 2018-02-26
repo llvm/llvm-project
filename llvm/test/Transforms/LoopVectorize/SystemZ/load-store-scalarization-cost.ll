@@ -24,10 +24,10 @@ for.body:
 for.end:
   ret void
 
-; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   %tmp1 = load i32, i32* %tmp0, align 4
-; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i32 %tmp2, i32* %tmp0, align 4
-
 ; CHECK: LV: Scalarizing:  %tmp1 = load i32, i32* %tmp0, align 4
 ; CHECK: LV: Scalarizing:  store i32 %tmp2, i32* %tmp0, align 4
+
+; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   %tmp1 = load i32, i32* %tmp0, align 4
+; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i32 %tmp2, i32* %tmp0, align 4
 }
 

@@ -22,8 +22,7 @@ entry:
   %vtable = load %struct.Base* (%struct.B*)**, %struct.Base* (%struct.B*)*** %tmp2, align 8
   %vfn = getelementptr inbounds %struct.Base* (%struct.B*)*, %struct.Base* (%struct.B*)** %vtable, i64 0
   %tmp3 = load %struct.Base* (%struct.B*)*, %struct.Base* (%struct.B*)** %vfn, align 8
-; ICALL-PROM:  [[BITCAST:%[0-9]+]] = bitcast %struct.Base* (%struct.B*)* %tmp3 to i8*
-; ICALL-PROM:  [[CMP:%[0-9]+]] = icmp eq i8* [[BITCAST]], bitcast (%struct.Derived* (%struct.D*)* @_ZN1D4funcEv to i8*)
+; ICALL-PROM:  [[CMP:%[0-9]+]] = icmp eq %struct.Base* (%struct.B*)* %tmp3, bitcast (%struct.Derived* (%struct.D*)* @_ZN1D4funcEv to %struct.Base* (%struct.B*)*)
 ; ICALL-PROM:  br i1 [[CMP]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICALL-PROM:if.true.direct_targ:
 ; ICALL-PROM:  [[ARG_BITCAST:%[0-9]+]] = bitcast %struct.B* %tmp1 to %struct.D*

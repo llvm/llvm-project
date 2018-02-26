@@ -27,8 +27,8 @@ class raw_pwrite_stream;
 
 class MCWinCOFFStreamer : public MCObjectStreamer {
 public:
-  MCWinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB, MCCodeEmitter &CE,
-                    raw_pwrite_stream &OS);
+  MCWinCOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
+                    std::unique_ptr<MCCodeEmitter> CE, raw_pwrite_stream &OS);
 
   /// state management
   void reset() override {
@@ -61,7 +61,7 @@ public:
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment) override;
   void EmitIdent(StringRef IdentString) override;
-  void EmitWinEHHandlerData() override;
+  void EmitWinEHHandlerData(SMLoc Loc) override;
   void FinishImpl() override;
 
   /// \}

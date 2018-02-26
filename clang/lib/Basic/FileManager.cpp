@@ -408,7 +408,7 @@ bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path) const {
   bool Changed = FixupRelativePath(Path);
 
   if (!llvm::sys::path::is_absolute(StringRef(Path.data(), Path.size()))) {
-    llvm::sys::fs::make_absolute(Path);
+    FS->makeAbsolute(Path);
     Changed = true;
   }
 

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 void foo() {
 }
 
@@ -295,9 +297,9 @@ int main(int argc, char **argv) {
 #pragma omp taskloop firstprivate(i) // expected-note {{defined as firstprivate}}
   for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp taskloop' directive may not be firstprivate, predetermined as private}}
     foo();
-#pragma omp parallel reduction(+ : i) // expected-note 4 {{defined as reduction}}
+#pragma omp parallel reduction(+ : i) // expected-note 2 {{defined as reduction}}
 #pragma omp taskloop firstprivate(i) //expected-error {{argument of a reduction clause of a parallel construct must not appear in a firstprivate clause on a task construct}}
-  for (i = 0; i < argc; ++i) // expected-error 3 {{reduction variables may not be accessed in an explicit task}}
+  for (i = 0; i < argc; ++i) // expected-error {{reduction variables may not be accessed in an explicit task}}
     foo();
 #pragma omp parallel
 #pragma omp taskloop firstprivate(B::x) // expected-error {{threadprivate or thread local variable cannot be firstprivate}}

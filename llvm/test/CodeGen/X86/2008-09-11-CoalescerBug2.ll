@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; RUN: llc -pre-RA-sched=source < %s -mtriple=i686-unknown-linux -mcpu=corei7 | FileCheck %s --check-prefix=SOURCE-SCHED
 ; PR2748
 

@@ -36,7 +36,6 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64RegisterInfo.h"
-#include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -394,7 +393,7 @@ bool AArch64AdvSIMDScalar::runOnMachineFunction(MachineFunction &mf) {
   bool Changed = false;
   DEBUG(dbgs() << "***** AArch64AdvSIMDScalar *****\n");
 
-  if (skipFunction(*mf.getFunction()))
+  if (skipFunction(mf.getFunction()))
     return false;
 
   MRI = &mf.getRegInfo();

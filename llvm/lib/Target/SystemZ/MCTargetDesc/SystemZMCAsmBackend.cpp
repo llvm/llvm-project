@@ -14,6 +14,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -66,7 +67,8 @@ public:
     llvm_unreachable("SystemZ does do not have assembler relaxation");
   }
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createSystemZObjectWriter(OS, OSABI);
   }
 };
@@ -121,9 +123,10 @@ bool SystemZMCAsmBackend::writeNopData(uint64_t Count,
 }
 
 MCAsmBackend *llvm::createSystemZMCAsmBackend(const Target &T,
+                                              const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
-                                              const Triple &TT, StringRef CPU,
                                               const MCTargetOptions &Options) {
-  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  uint8_t OSABI =
+      MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
   return new SystemZMCAsmBackend(OSABI);
 }

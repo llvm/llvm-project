@@ -1,7 +1,7 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/visibility.ll -o %t2.o
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o %t2.o -o %t.so
@@ -17,7 +17,7 @@
 ; CHECK-NEXT:   STV_PROTECTED
 ; CHECK-NEXT: ]
 
-; IR: define void @foo
+; IR: define dso_local void @foo
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

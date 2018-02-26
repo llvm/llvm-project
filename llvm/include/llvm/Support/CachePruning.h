@@ -27,8 +27,9 @@ template <typename T> class Expected;
 struct CachePruningPolicy {
   /// The pruning interval. This is intended to be used to avoid scanning the
   /// directory too often. It does not impact the decision of which file to
-  /// prune. A value of 0 forces the scan to occur.
-  std::chrono::seconds Interval = std::chrono::seconds(1200);
+  /// prune. A value of 0 forces the scan to occur. A value of None disables
+  /// pruning.
+  llvm::Optional<std::chrono::seconds> Interval = std::chrono::seconds(1200);
 
   /// The expiration for a file. When a file hasn't been accessed for Expiration
   /// seconds, it is removed from the cache. A value of 0 disables the
@@ -46,6 +47,15 @@ struct CachePruningPolicy {
   /// of available space on the disk will be reduced to the amount of available
   /// space. A value of 0 disables the absolute size-based pruning.
   uint64_t MaxSizeBytes = 0;
+
+  /// The maximum number of files in the cache directory. A value of 0 disables
+  /// the number of files based pruning.
+  ///
+  /// This defaults to 1000000 because with that many files there are
+  /// diminishing returns on the effectiveness of the cache, and some file
+  /// systems have a limit on how many files can be contained in a directory
+  /// (notably ext4, which is limited to around 6000000 files).
+  uint64_t MaxSizeFiles = 1000000;
 };
 
 /// Parse the given string as a cache pruning policy. Defaults are taken from a

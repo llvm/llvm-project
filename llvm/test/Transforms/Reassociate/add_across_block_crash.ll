@@ -1,8 +1,17 @@
 ; RUN: opt < %s -reassociate -S | FileCheck %s
-; CHECK-LABEL: main
+
 ; This test is to make sure while processing a block, uses of instructions
 ; from a different basic block don't get added to be re-optimized
+
 define  void @main() {
+; CHECK-LABEL: @main(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 undef, label %bb1, label %bb2
+; CHECK:       bb1:
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = fadd fast float undef, undef
   br i1 undef, label %bb1, label %bb2
@@ -18,3 +27,4 @@ bb1:
 bb2:
   ret void
 }
+

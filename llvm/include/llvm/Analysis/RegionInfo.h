@@ -254,7 +254,7 @@ public:
 template <class Tr>
 class RegionBase : public RegionNodeBase<Tr> {
   friend class RegionInfoBase<Tr>;
- 
+
   using FuncT = typename Tr::FuncT;
   using BlockT = typename Tr::BlockT;
   using RegionInfoT = typename Tr::RegionInfoT;
@@ -406,6 +406,11 @@ public:
   /// @return The BasicBlock starting this region's single exit edge,
   ///         else NULL.
   BlockT *getExitingBlock() const;
+
+  /// @brief Collect all blocks of this region's single exit edge, if existing.
+  ///
+  /// @return True if this region contains all the predecessors of the exit.
+  bool getExitingBlocks(SmallVectorImpl<BlockT *> &Exitings) const;
 
   /// @brief Is this a simple region?
   ///

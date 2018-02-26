@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+
 void foo() {
 }
 
@@ -9,6 +11,9 @@ static int pvt;
 #pragma omp teams distribute simd // expected-error {{unexpected OpenMP directive '#pragma omp teams distribute simd'}}
 
 int main(int argc, char **argv) {
+  #pragma omp target
+  #pragma omp teams distribute simd
+  f; // expected-error {{use of undeclared identifier 'f'}}
 #pragma omp target
 #pragma omp teams distribute simd { // expected-warning {{extra tokens at the end of '#pragma omp teams distribute simd' are ignored}}
   for (int i = 0; i < argc; ++i)

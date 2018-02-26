@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep "shrl.*31"
+; RUN: llc < %s -mtriple=i686-- | grep "shrl.*31"
 
 define i32 @test1(i32 %X) {
 entry:

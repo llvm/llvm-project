@@ -1,5 +1,5 @@
-; RUN: llc -march=arm -mcpu=cortex-a9 < %s | FileCheck -check-prefix=SAFE %s
-; RUN: llc -march=arm -mcpu=cortex-a9 -enable-unsafe-fp-math < %s | FileCheck -check-prefix=FAST %s
+; RUN: llc -mcpu=cortex-a9 < %s | FileCheck -check-prefix=SAFE %s
+; RUN: llc -mcpu=cortex-a9 -enable-unsafe-fp-math < %s | FileCheck -check-prefix=FAST %s
 
 target triple = "armv7-apple-ios"
 

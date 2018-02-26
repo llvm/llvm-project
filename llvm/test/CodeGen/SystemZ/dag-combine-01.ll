@@ -40,7 +40,7 @@ for.body.3.lr.ph.i:                               ; preds = %for.body.3.lr.ph.i.
 for.body.3.i:                                     ; preds = %for.body.3.i, %for.body.3.lr.ph.i
 ; CHECK-LABEL: .LBB0_5:
 ; CHECK-NOT:    stfh    %r{{.*}}, 0(%r{{.*}})
-; CHECK:        lg      %r{{.*}}, -4(%r{{.*}})
+; CHECK:        lg      %r{{.*}}, 8(%r{{.*}})
 ; Overlapping load should go before the store
   %indvars.iv.i = phi i64 [ 0, %for.body.3.lr.ph.i ], [ %indvars.iv.next.i, %for.body.3.i ]
   %3 = shl nsw i64 %indvars.iv.i, 6

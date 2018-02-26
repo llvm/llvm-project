@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_test_imin_sle_i32:
 ; GCN: v_min_i32_e32
@@ -348,8 +348,8 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 ; SI: buffer_load_ubyte
 ; SI: v_min_u32_e32
 
-; GFX89: flat_load_ubyte
-; GFX89: flat_load_ubyte
+; GFX89: {{flat|global}}_load_ubyte
+; GFX89: {{flat|global}}_load_ubyte
 ; GFX89: v_min_u16_e32
 
 ; EG: MIN_UINT

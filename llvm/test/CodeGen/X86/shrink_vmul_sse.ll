@@ -9,7 +9,7 @@
 
 define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
 ; CHECK-LABEL: mul_2xi8:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi

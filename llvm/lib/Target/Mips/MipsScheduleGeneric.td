@@ -268,9 +268,11 @@ def : ItinRW<[GenericWriteLoad], [II_LWLE, II_LWRE]>;
 // MIPS MT instructions
 // ====================
 
-def : ItinRW<[GenericWriteMove], [II_DMT, II_DVPE, II_EMT, II_EVPE]>;
+def : ItinRW<[GenericWriteMove], [II_DMT, II_DVPE, II_EMT, II_EVPE, II_MFTR,
+                                  II_MTTR]>;
 
 def : ItinRW<[GenericReadWriteCOP0Long], [II_YIELD]>;
+
 def : ItinRW<[GenericWriteCOP0Short], [II_FORK]>;
 
 // MIPS32R6 and MIPS16e
@@ -736,6 +738,7 @@ def : InstRW<[GenericDSPShort], (instregex "^MFHI_DSP_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MFLO_DSP_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MODSUB_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MOVEP_MM$")>;
+def : InstRW<[GenericDSPShort], (instregex "^MOVEP_MMR6$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MOVN_I_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MOVZ_I_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MSUBU_DSP_MM$")>;

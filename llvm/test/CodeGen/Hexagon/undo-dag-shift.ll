@@ -54,6 +54,6 @@ entry:
   ret void
 }
 
-attributes #0 = { norecurse nounwind readonly "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
-attributes #1 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { norecurse nounwind readonly "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
+attributes #1 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
 

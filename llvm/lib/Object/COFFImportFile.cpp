@@ -20,8 +20,6 @@
 #include "llvm/Support/Path.h"
 
 #include <cstdint>
-#include <map>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -36,6 +34,7 @@ static bool is32bit(MachineTypes Machine) {
   switch (Machine) {
   default:
     llvm_unreachable("unsupported machine");
+  case IMAGE_FILE_MACHINE_ARM64:
   case IMAGE_FILE_MACHINE_AMD64:
     return false;
   case IMAGE_FILE_MACHINE_ARMNT:
@@ -52,6 +51,8 @@ static uint16_t getImgRelRelocation(MachineTypes Machine) {
     return IMAGE_REL_AMD64_ADDR32NB;
   case IMAGE_FILE_MACHINE_ARMNT:
     return IMAGE_REL_ARM_ADDR32NB;
+  case IMAGE_FILE_MACHINE_ARM64:
+    return IMAGE_REL_ARM64_ADDR32NB;
   case IMAGE_FILE_MACHINE_I386:
     return IMAGE_REL_I386_DIR32NB;
   }
@@ -187,7 +188,7 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
           (ImportName.size() + 1)),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : C_Invalid),
   };
   append(Buffer, Header);
 
@@ -323,7 +324,7 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
           sizeof(coff_import_directory_table_entry)),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : C_Invalid),
   };
   append(Buffer, Header);
 
@@ -386,7 +387,7 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
           VASize),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : C_Invalid),
   };
   append(Buffer, Header);
 
@@ -555,9 +556,9 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
   return {MemoryBufferRef(StringRef(Buf, Buffer.size()), ImportName)};
 }
 
-std::error_code writeImportLibrary(StringRef ImportName, StringRef Path,
-                                   ArrayRef<COFFShortExport> Exports,
-                                   MachineTypes Machine, bool MakeWeakAliases) {
+Error writeImportLibrary(StringRef ImportName, StringRef Path,
+                         ArrayRef<COFFShortExport> Exports,
+                         MachineTypes Machine, bool MakeWeakAliases) {
 
   std::vector<NewArchiveMember> Members;
   ObjectFactory OF(llvm::sys::path::filename(ImportName), Machine);
@@ -593,19 +594,16 @@ std::error_code writeImportLibrary(StringRef ImportName, StringRef Path,
                                      ? SymbolName
                                      : replace(SymbolName, E.Name, E.ExtName);
 
-    if (!Name) {
-      return errorToErrorCode(Name.takeError());
-    }
+    if (!Name)
+      return Name.takeError();
 
     Members.push_back(
         OF.createShortImport(*Name, E.Ordinal, ImportType, NameType));
   }
 
-  std::pair<StringRef, std::error_code> Result =
-      writeArchive(Path, Members, /*WriteSymtab*/ true, object::Archive::K_GNU,
-                   /*Deterministic*/ true, /*Thin*/ false);
-
-  return Result.second;
+  return writeArchive(Path, Members, /*WriteSymtab*/ true,
+                      object::Archive::K_GNU,
+                      /*Deterministic*/ true, /*Thin*/ false);
 }
 
 } // namespace object

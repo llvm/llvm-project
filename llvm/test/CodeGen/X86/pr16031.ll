@@ -3,7 +3,7 @@
 
 define i64 @main(i1 %tobool1) nounwind {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $-12, %eax

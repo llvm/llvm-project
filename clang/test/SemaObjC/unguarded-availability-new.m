@@ -96,16 +96,16 @@ typedef int AVAILABLE_NEXT new_int;
 FUNC_AVAILABLE new_int x;
 #ifndef NO_WARNING
 #ifdef MAC
-  // expected-warning@-3 {{'new_int' is partial: introduced in macOS 10.14}} expected-note@-3 {{annotate 'x' with an availability attribute to silence}}
+  // expected-warning@-3 {{'new_int' is only available on macOS 10.14 or newer}} expected-note@-3 {{annotate 'x' with an availability attribute to silence this warning}}
 #endif
 #ifdef IOS
-  // expected-warning@-6 {{'new_int' is partial: introduced in iOS 12}} expected-note@-6 {{annotate 'x' with an availability attribute to silence}}
+  // expected-warning@-6 {{'new_int' is only available on iOS 12 or newer}} expected-note@-6 {{annotate 'x' with an availability attribute to silence this warning}}
 #endif
 #ifdef TVOS
-  // expected-warning@-9 {{'new_int' is partial: introduced in tvOS 13}} expected-note@-9 {{annotate 'x' with an availability attribute to silence}}
+  // expected-warning@-9 {{'new_int' is only available on tvOS 13 or newer}} expected-note@-9 {{annotate 'x' with an availability attribute to silence this warning}}
 #endif
 #ifdef WATCHOS
-  // expected-warning@-12 {{'new_int' is partial: introduced in watchOS 5}} expected-note@-12 {{annotate 'x' with an availability attribute to silence}}
+  // expected-warning@-12 {{'new_int' is only available on watchOS 5}} expected-note@-12 {{annotate 'x' with an availability attribute to silence this warning}}
 #endif
 #endif
 

@@ -43,7 +43,7 @@ void LLT::print(raw_ostream &OS) const {
     assert(isScalar() && "unexpected type");
     OS << "s" << getScalarSizeInBits();
   } else
-    llvm_unreachable("trying to print an invalid type");
+    OS << "LLT_invalid";
 }
 
 const constexpr LLT::BitFieldInfo LLT::ScalarSizeFieldInfo;

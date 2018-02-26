@@ -7,6 +7,8 @@
 @vec    = external global <3 x float>
 @arr    = external global [3 x float]
 
+declare float @foo(float)
+
 define float @none(float %x, float %y) {
 entry:
 ; CHECK:  %vec = load  <3 x float>,  <3 x float>* @vec
@@ -86,6 +88,28 @@ entry:
   ret float %c
 }
 
+; CHECK: @reassoc(
+define float @reassoc(float %x, float %y) {
+; CHECK: %a = fsub reassoc float %x, %y
+  %a = fsub reassoc float %x, %y
+; CHECK: %b = fmul reassoc float %x, %y
+  %b = fmul reassoc float %x, %y
+; CHECK: %c = call reassoc float @foo(float %b)
+  %c = call reassoc float @foo(float %b)
+  ret float %c
+}
+
+; CHECK: @afn(
+define float @afn(float %x, float %y) {
+; CHECK: %a = fdiv afn float %x, %y
+  %a = fdiv afn float %x, %y
+; CHECK: %b = frem afn float %x, %y
+  %b = frem afn float %x, %y
+; CHECK: %c = call afn float @foo(float %b)
+  %c = call afn float @foo(float %b)
+  ret float %c
+}
+
 ; CHECK: no_nan_inf
 define float @no_nan_inf(float %x, float %y) {
 entry:
@@ -130,10 +154,10 @@ entry:
 ; CHECK:  %arr    = load [3 x float], [3 x float]* @arr
   %arr    = load [3 x float], [3 x float]* @arr
 
-; CHECK:  %a = fadd nnan ninf float %x, %y
-  %a = fadd ninf nnan float %x, %y
-; CHECK:  %a_vec = fadd nnan <3 x float> %vec, %vec
-  %a_vec = fadd nnan <3 x float> %vec, %vec
+; CHECK:  %a = fadd nnan ninf afn float %x, %y
+  %a = fadd ninf nnan afn float %x, %y
+; CHECK:  %a_vec = fadd reassoc nnan <3 x float> %vec, %vec
+  %a_vec = fadd reassoc nnan <3 x float> %vec, %vec
 ; CHECK:  %b = fsub fast float %x, %y
   %b = fsub nnan nsz fast float %x, %y
 ; CHECK:  %b_vec = fsub nnan <3 x float> %vec, %vec

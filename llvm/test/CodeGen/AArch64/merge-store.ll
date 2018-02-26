@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mcpu=cyclone | FileCheck %s --check-prefix=CYCLONE --check-prefix=CHECK
+; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mcpu=cyclone -mattr=+slow-misaligned-128store | FileCheck %s --check-prefix=SPLITTING --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=aarch64-eabi -mattr=-slow-misaligned-128store | FileCheck %s --check-prefix=MISALIGNED --check-prefix=CHECK
 
 @g0 = external global <3 x float>, align 16
@@ -44,9 +44,9 @@ define void @merge_vec_extract_stores(<4 x float> %v1, <2 x float>* %ptr) {
 ; FIXME: Ideally we would like to use a generic target for this test, but this relies
 ; on suppressing store pairs.
 
-; CYCLONE-LABEL:    merge_vec_extract_stores
-; CYCLONE:          ext   v1.16b, v0.16b, v0.16b, #8
-; CYCLONE-NEXT:     str   d0, [x0, #24]
-; CYCLONE-NEXT:     str   d1, [x0, #32]
-; CYCLONE-NEXT:     ret
+; SPLITTING-LABEL:    merge_vec_extract_stores
+; SPLITTING:          ext   v1.16b, v0.16b, v0.16b, #8
+; SPLITTING-NEXT:     str   d0, [x0, #24]
+; SPLITTING-NEXT:     str   d1, [x0, #32]
+; SPLITTING-NEXT:     ret
 }

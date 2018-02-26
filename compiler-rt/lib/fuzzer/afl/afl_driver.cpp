@@ -68,9 +68,15 @@ statistics from the file. If that fails then the process will quit.
 #ifdef __linux__
 #define LIBFUZZER_LINUX 1
 #define LIBFUZZER_APPLE 0
+#define LIBFUZZER_NETBSD 0
 #elif __APPLE__
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 1
+#define LIBFUZZER_NETBSD 0
+#elif __NetBSD__
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_NETBSD 1
 #else
 #error "Support for your platform has not been implemented"
 #endif
@@ -82,7 +88,7 @@ statistics from the file. If that fails then the process will quit.
 // to the file as well, if the error occurs after the duplication is performed.
 #define CHECK_ERROR(cond, error_message)                                       \
   if (!(cond)) {                                                               \
-    fprintf(stderr, (error_message));                                          \
+    fprintf(stderr, "%s\n", (error_message));                                  \
     abort();                                                                   \
   }
 
@@ -119,7 +125,7 @@ size_t GetPeakRSSMb() {
   struct rusage usage;
   if (getrusage(RUSAGE_SELF, &usage))
     return 0;
-  if (LIBFUZZER_LINUX) {
+  if (LIBFUZZER_LINUX || LIBFUZZER_NETBSD) {
     // ru_maxrss is in KiB
     return usage.ru_maxrss >> 10;
   } else if (LIBFUZZER_APPLE) {
@@ -302,6 +308,12 @@ int main(int argc, char **argv) {
     return ExecuteFilesOnyByOne(argc, argv);
 
   assert(N > 0);
+
+  // Call LLVMFuzzerTestOneInput here so that coverage caused by initialization
+  // on the first execution of LLVMFuzzerTestOneInput is ignored.
+  uint8_t dummy_input[1] = {0};
+  LLVMFuzzerTestOneInput(dummy_input, 1);
+
   time_t unit_time_secs;
   int num_runs = 0;
   while (__afl_persistent_loop(N)) {

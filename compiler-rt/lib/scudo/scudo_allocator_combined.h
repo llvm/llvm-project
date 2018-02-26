@@ -31,8 +31,8 @@ class ScudoCombinedAllocator {
 
   // Primary allocations are always MinAlignment aligned, and as such do not
   // require an Alignment parameter.
-  void *allocatePrimary(AllocatorCache *Cache, uptr Size) {
-    return Cache->Allocate(&Primary, Primary.ClassID(Size));
+  void *allocatePrimary(AllocatorCache *Cache, uptr ClassId) {
+    return Cache->Allocate(&Primary, ClassId);
   }
 
   // Secondary allocations do not require a Cache, but do require an Alignment
@@ -41,17 +41,17 @@ class ScudoCombinedAllocator {
     return Secondary.Allocate(&Stats, Size, Alignment);
   }
 
-  void deallocatePrimary(AllocatorCache *Cache, void *Ptr) {
-    Cache->Deallocate(&Primary, Primary.GetSizeClass(Ptr), Ptr);
+  void deallocatePrimary(AllocatorCache *Cache, void *Ptr, uptr ClassId) {
+    Cache->Deallocate(&Primary, ClassId, Ptr);
   }
 
   void deallocateSecondary(void *Ptr) {
     Secondary.Deallocate(&Stats, Ptr);
   }
 
-  uptr getActuallyAllocatedSize(void *Ptr, bool FromPrimary) {
-    if (FromPrimary)
-      return PrimaryAllocator::ClassIdToSize(Primary.GetSizeClass(Ptr));
+  uptr getActuallyAllocatedSize(void *Ptr, uptr ClassId) {
+    if (ClassId)
+      return PrimaryAllocator::ClassIdToSize(ClassId);
     return Secondary.GetActuallyAllocatedSize(Ptr);
   }
 

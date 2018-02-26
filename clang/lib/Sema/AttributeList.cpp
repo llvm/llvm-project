@@ -114,7 +114,8 @@ static StringRef normalizeAttrName(StringRef AttrName, StringRef ScopeName,
   // Normalize the attribute name, __foo__ becomes foo. This is only allowable
   // for GNU attributes.
   bool IsGNU = SyntaxUsed == AttributeList::AS_GNU ||
-               (SyntaxUsed == AttributeList::AS_CXX11 && ScopeName == "gnu");
+               ((SyntaxUsed == AttributeList::AS_CXX11 ||
+                SyntaxUsed == AttributeList::AS_C2x) && ScopeName == "gnu");
   if (IsGNU && AttrName.size() >= 4 && AttrName.startswith("__") &&
       AttrName.endswith("__"))
     AttrName = AttrName.slice(2, AttrName.size() - 2);
@@ -135,7 +136,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo *Name,
 
   // Ensure that in the case of C++11 attributes, we look for '::foo' if it is
   // unscoped.
-  if (ScopeName || SyntaxUsed == AS_CXX11)
+  if (ScopeName || SyntaxUsed == AS_CXX11 || SyntaxUsed == AS_C2x)
     FullName += "::";
   FullName += AttrName;
 

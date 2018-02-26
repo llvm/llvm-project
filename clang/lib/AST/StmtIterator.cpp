@@ -1,4 +1,4 @@
-//===--- StmtIterator.cpp - Iterators for Statements ------------------------===//
+//===- StmtIterator.cpp - Iterators for Statements ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,6 +13,11 @@
 
 #include "clang/AST/StmtIterator.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace clang;
 
@@ -31,7 +36,7 @@ static inline const VariableArrayType *FindVA(const Type* t) {
 }
 
 void StmtIteratorBase::NextVA() {
-  assert (getVAPtr());
+  assert(getVAPtr());
 
   const VariableArrayType *p = getVAPtr();
   p = FindVA(p->getElementType().getTypePtr());
@@ -93,22 +98,22 @@ bool StmtIteratorBase::HandleDecl(Decl* D) {
 }
 
 StmtIteratorBase::StmtIteratorBase(Decl** dgi, Decl** dge)
-  : DGI(dgi), RawVAPtr(DeclGroupMode), DGE(dge) {
+    : DGI(dgi), RawVAPtr(DeclGroupMode), DGE(dge) {
   NextDecl(false);
 }
 
 StmtIteratorBase::StmtIteratorBase(const VariableArrayType* t)
-  : DGI(nullptr), RawVAPtr(SizeOfTypeVAMode) {
+    : DGI(nullptr), RawVAPtr(SizeOfTypeVAMode) {
   RawVAPtr |= reinterpret_cast<uintptr_t>(t);
 }
 
 Stmt*& StmtIteratorBase::GetDeclExpr() const {
   if (const VariableArrayType* VAPtr = getVAPtr()) {
-    assert (VAPtr->SizeExpr);
+    assert(VAPtr->SizeExpr);
     return const_cast<Stmt*&>(VAPtr->SizeExpr);
   }
 
-  assert (inDeclGroup());
+  assert(inDeclGroup());
   VarDecl* VD = cast<VarDecl>(*DGI);
   return *VD->getInitAddress();
 }

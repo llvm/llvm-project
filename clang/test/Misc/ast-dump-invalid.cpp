@@ -35,7 +35,7 @@ int g(int i) {
 // CHECK-NEXT:     `-IfStmt {{.*}} <line:25:3, line:28:12>
 // CHECK-NEXT:       |-<<<NULL>>>
 // CHECK-NEXT:       |-<<<NULL>>>
-// CHECK-NEXT:       |-OpaqueValueExpr {{.*}} <<invalid sloc>> '_Bool'
+// CHECK-NEXT:       |-OpaqueValueExpr {{.*}} <<invalid sloc>> 'bool'
 // CHECK-NEXT:       |-ReturnStmt {{.*}} <line:26:5, col:12>
 // CHECK-NEXT:       | `-IntegerLiteral {{.*}} <col:12> 'int' 4
 // CHECK-NEXT:       `-ReturnStmt {{.*}} <line:28:5, col:12>
@@ -51,7 +51,7 @@ double Str::foo1(double, invalid_type)
 }
 // CHECK: NamespaceDecl {{.*}} <{{.*}}> {{.*}} TestInvalidFunctionDecl
 // CHECK-NEXT: |-CXXRecordDecl {{.*}} <line:46:1, line:48:1> line:46:8 struct Str definition
-// CHECK-NEXT: | |-CXXRecordDecl {{.*}} <col:1, col:8> col:8 implicit struct Str
+// CHECK:      | |-CXXRecordDecl {{.*}} <col:1, col:8> col:8 implicit struct Str
 // CHECK-NEXT: | `-CXXMethodDecl {{.*}} <line:47:4, col:36> col:11 invalid foo1 'double (double, int)'
 // CHECK-NEXT: |   |-ParmVarDecl {{.*}} <col:16> col:22 'double'
 // CHECK-NEXT: |   `-ParmVarDecl {{.*}} <col:24, <invalid sloc>> col:36 invalid 'int'

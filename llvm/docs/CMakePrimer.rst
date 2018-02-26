@@ -167,10 +167,9 @@ Other Types
 
 Variables that are cached or specified on the command line can have types
 associated with them. The variable's type is used by CMake's UI tool to display
-the right input field. The variable's type generally doesn't impact evaluation.
-One of the few examples is PATH variables, which CMake does have some special
-handling for. You can read more about the special handling in `CMake's set
-documentation
+the right input field. A variable's type generally doesn't impact evaluation,
+however CMake does have special handling for some variables such as PATH.
+You can read more about the special handling in `CMake's set documentation
 <https://cmake.org/cmake/help/v3.5/command/set.html#set-cache-entry>`_.
 
 Scope
@@ -203,7 +202,7 @@ Control Flow
 ============
 
 CMake features the same basic control flow constructs you would expect in any
-scripting language, but there are a few quarks because, as with everything in
+scripting language, but there are a few quirks because, as with everything in
 CMake, control flow constructs are commands.
 
 If, ElseIf, Else
@@ -334,21 +333,23 @@ When defining a CMake command handling arguments is very useful. The examples
 in this section will all use the CMake ``function`` block, but this all applies
 to the ``macro`` block as well.
 
-CMake commands can have named arguments, but all commands are implicitly
-variable argument. If the command has named arguments they are required and must
-be specified at every call site. Below is a trivial example of providing a
-wrapper function for CMake's built in function ``add_dependencies``.
+CMake commands can have named arguments that are requried at every call site. In
+addition, all commands will implicitly accept a variable number of extra
+arguments (In C parlance, all commands are varargs functions). When a command is
+invoked with extra arguments (beyond the named ones) CMake will store the full
+list of arguments (both named and unnamed) in a list named ``ARGV``, and the
+sublist of unnamed arguments in ``ARGN``. Below is a trivial example of
+providing a wrapper function for CMake's built in function ``add_dependencies``.
 
 .. code-block:: cmake
 
    function(add_deps target)
-     add_dependencies(${target} ${ARGV})
+     add_dependencies(${target} ${ARGN})
    endfunction()
 
 This example defines a new macro named ``add_deps`` which takes a required first
 argument, and just calls another function passing through the first argument and
-all trailing arguments. When variable arguments are present CMake defines them
-in a list named ``ARGV``, and the count of the arguments is defined in ``ARGN``.
+all trailing arguments.
 
 CMake provides a module ``CMakeParseArguments`` which provides an implementation
 of advanced argument parsing. We use this all over LLVM, and it is recommended

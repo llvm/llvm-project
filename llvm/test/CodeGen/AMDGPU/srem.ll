@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=redwood < %s
 
 define amdgpu_kernel void @srem_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -22,7 +22,7 @@ define amdgpu_kernel void @srem_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* 
 ; SI: v_mov_b32_e32 [[MAGIC:v[0-9]+]], 0x92492493
 ; SI: v_mul_hi_i32 {{v[0-9]+}}, {{v[0-9]+}}, [[MAGIC]]
 ; SI: v_mul_lo_i32
-; SI: v_sub_i32
+; SI: v_sub_{{[iu]}}32
 ; SI: s_endpgm
 define amdgpu_kernel void @srem_i32_7(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %num = load i32, i32 addrspace(1) * %in

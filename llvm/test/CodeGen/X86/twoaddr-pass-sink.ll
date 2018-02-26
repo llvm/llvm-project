@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mattr=+sse2 -stats 2>&1 | grep "Number of 3-address instructions sunk"
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -stats 2>&1 | grep "Number of 3-address instructions sunk"
 
 define void @t2(<2 x i64>* %vDct, <2 x i64>* %vYp, i8* %skiplist, <2 x i64> %a1) nounwind  {
 entry:

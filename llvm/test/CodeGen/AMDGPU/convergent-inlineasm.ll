@@ -2,7 +2,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; GCN-LABEL: {{^}}convergent_inlineasm:
-; GCN: BB#0:
+; GCN: %bb.0:
 ; GCN: v_cmp_ne_u32_e64
 ; GCN: ; mask branch
 ; GCN: BB{{[0-9]+_[0-9]+}}:

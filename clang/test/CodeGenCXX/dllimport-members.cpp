@@ -836,7 +836,7 @@ USEMV(MemVarTmpl, ImportedStaticVar<ImplicitInst_Imported>)
 
 // Import explicit instantiation declaration of an imported member variable
 // template.
-// MSC-DAG: @"\01??$ImportedStaticVar@UExplicitDecl_Imported@@@MemVarTmpl@@2HB" = external dllimport constant i32
+// MSC-DAG: @"\01??$ImportedStaticVar@UExplicitDecl_Imported@@@MemVarTmpl@@2HB" = available_externally dllimport constant i32 1
 // GNU-DAG: @_ZN10MemVarTmpl17ImportedStaticVarI21ExplicitDecl_ImportedEE       = external dllimport constant i32
 extern template const int MemVarTmpl::ImportedStaticVar<ExplicitDecl_Imported>;
 USEMV(MemVarTmpl, ImportedStaticVar<ExplicitDecl_Imported>)
@@ -861,7 +861,7 @@ USEMV(MemVarTmpl, ImportedStaticVar<ExplicitSpec_NotImported>)
 
 // Import explicit instantiation declaration of a non-imported member variable
 // template.
-// MSC-DAG: @"\01??$StaticVar@UExplicitDecl_Imported@@@MemVarTmpl@@2HB" = external dllimport constant i32
+// MSC-DAG: @"\01??$StaticVar@UExplicitDecl_Imported@@@MemVarTmpl@@2HB" = available_externally dllimport constant i32 1
 // GNU-DAG: @_ZN10MemVarTmpl9StaticVarI21ExplicitDecl_ImportedEE        = external dllimport constant i32
 extern template __declspec(dllimport) const int MemVarTmpl::StaticVar<ExplicitDecl_Imported>;
 USEMV(MemVarTmpl, StaticVar<ExplicitDecl_Imported>)

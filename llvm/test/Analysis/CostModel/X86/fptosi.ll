@@ -224,7 +224,7 @@ define i32 @fptosi_float_i16(i32 %arg) {
   ; SSE42: cost of 7 {{.*}} %V16I16 = fptosi
   ; AVX1: cost of 3 {{.*}} %V16I16 = fptosi
   ; AVX2: cost of 3 {{.*}} %V16I16 = fptosi
-  ; AVX512: cost of 48 {{.*}} %V16I16 = fptosi
+  ; AVX512: cost of 1 {{.*}} %V16I16 = fptosi
   %V16I16 = fptosi <16 x float> undef to <16 x i16>
 
   ret i32 undef
@@ -254,7 +254,7 @@ define i32 @fptosi_float_i8(i32 %arg) {
   ; SSE42: cost of 7 {{.*}} %V16I8 = fptosi
   ; AVX1: cost of 15 {{.*}} %V16I8 = fptosi
   ; AVX2: cost of 15 {{.*}} %V16I8 = fptosi
-  ; AVX512: cost of 48 {{.*}} %V16I8 = fptosi
+  ; AVX512: cost of 1 {{.*}} %V16I8 = fptosi
   %V16I8 = fptosi <16 x float> undef to <16 x i8>
 
   ret i32 undef

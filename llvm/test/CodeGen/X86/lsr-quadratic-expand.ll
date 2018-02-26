@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s
+; RUN: llc -mtriple=x86_64-- < %s
 
 define void @dw2102_i2c_transfer() nounwind {
 entry:

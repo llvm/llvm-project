@@ -26,9 +26,10 @@ void __sanitizer_print_stack_trace() {
   if (request_fast_unwind)
     __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
 
-  GET_REPORT_OPTIONS(false);
+  GET_CURRENT_PC_BP_SP;
+  (void)sp;
   BufferedStackTrace stack;
-  stack.Unwind(kStackTraceMax, Opts.pc, Opts.bp, nullptr, top, bottom,
+  stack.Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom,
                request_fast_unwind);
   stack.Print();
 }

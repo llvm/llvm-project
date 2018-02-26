@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 @temp1 = global i64 -77129852189294865, align 8
 

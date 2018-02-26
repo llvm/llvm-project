@@ -40,10 +40,9 @@ bool Preprocessor::isInPrimaryFile() const {
   // If there are any stacked lexers, we're in a #include.
   assert(IsFileLexer(IncludeMacroStack[0]) &&
          "Top level include stack isn't our primary lexer?");
-  return std::none_of(IncludeMacroStack.begin() + 1, IncludeMacroStack.end(),
-                      [this](const IncludeStackInfo &ISI) -> bool {
-    return IsFileLexer(ISI);
-  });
+  return std::none_of(
+      IncludeMacroStack.begin() + 1, IncludeMacroStack.end(),
+      [&](const IncludeStackInfo &ISI) -> bool { return IsFileLexer(ISI); });
 }
 
 /// getCurrentLexer - Return the current file lexer being lexed from.  Note
@@ -445,6 +444,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       }
 
       CurPPLexer = nullptr;
+      recomputeCurLexerKind();
       return true;
     }
 

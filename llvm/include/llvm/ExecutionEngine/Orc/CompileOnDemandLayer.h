@@ -140,12 +140,6 @@ private:
   struct LogicalDylib {
     using SymbolResolverFtor = std::function<JITSymbol(const std::string&)>;
 
-    using ModuleAdderFtor =
-      std::function<typename BaseLayerT::ModuleHandleT(
-                    BaseLayerT&,
-                    std::unique_ptr<Module>,
-                    std::unique_ptr<JITSymbolResolver>)>;
-
     struct SourceModuleEntry {
       std::shared_ptr<Module> SourceMod;
       std::set<Function*> StubsToClone;
@@ -349,19 +343,22 @@ private:
         // Create a callback, associate it with the stub for the function,
         // and set the compile action to compile the partition containing the
         // function.
-        auto CCInfo = CompileCallbackMgr.getCompileCallback();
-        StubInits[MangledName] =
-          std::make_pair(CCInfo.getAddress(),
-                         JITSymbolFlags::fromGlobalValue(F));
-        CCInfo.setCompileAction([this, &LD, LMId, &F]() -> JITTargetAddress {
-            if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
-              return *FnImplAddrOrErr;
-            else {
-              // FIXME: Report error, return to 'abort' or something similar.
-              consumeError(FnImplAddrOrErr.takeError());
-              return 0;
-            }
-          });
+        if (auto CCInfoOrErr = CompileCallbackMgr.getCompileCallback()) {
+          auto &CCInfo = *CCInfoOrErr;
+          StubInits[MangledName] =
+            std::make_pair(CCInfo.getAddress(),
+                           JITSymbolFlags::fromGlobalValue(F));
+          CCInfo.setCompileAction([this, &LD, LMId, &F]() -> JITTargetAddress {
+              if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
+                return *FnImplAddrOrErr;
+              else {
+                // FIXME: Report error, return to 'abort' or something similar.
+                consumeError(FnImplAddrOrErr.takeError());
+                return 0;
+              }
+            });
+        } else
+          return CCInfoOrErr.takeError();
       }
 
       if (auto Err = LD.StubsMgr->createStubs(StubInits))

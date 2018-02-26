@@ -4,13 +4,13 @@
 
 define <2 x i64> @test(<2 x i64>* %p) nounwind {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %tmp = bitcast <2 x i64>* %p to double*

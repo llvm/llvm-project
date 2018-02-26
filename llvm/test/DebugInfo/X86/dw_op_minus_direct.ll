@@ -17,7 +17,7 @@
 
 ; CHECK: .debug_loc contents:
 ; CHECK: 0x00000000:
-; CHECK-NEXT:   0x0000000000000000 - 0x0000000000000004: DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_constu 0x1, DW_OP_minus, DW_OP_stack_value
+; CHECK-NEXT:   [0x0000000000000000, 0x0000000000000004): DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_constu 0x1, DW_OP_minus, DW_OP_stack_value
 ;        rax+0, constu 0xffffffff, and, constu 0x00000001, minus, stack-value
 
 source_filename = "minus.c"

@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -analyzer-config c++-allocator-inlining=true -verify %s
 
 class A0 {};
 

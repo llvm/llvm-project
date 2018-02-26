@@ -15,8 +15,8 @@
 #ifndef LLVM_ADT_SMALLPTRSET_H
 #define LLVM_ADT_SMALLPTRSET_H
 
+#include "llvm/ADT/EpochTracker.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -47,7 +47,7 @@ namespace llvm {
 /// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
 /// more.  When this happens, the table is doubled in size.
 ///
-class SmallPtrSetImplBase {
+class SmallPtrSetImplBase : public DebugEpochBase {
   friend class SmallPtrSetIteratorImpl;
 
 protected:
@@ -93,6 +93,7 @@ public:
   size_type size() const { return NumNonEmpty - NumTombstones; }
 
   void clear() {
+    incrementEpoch();
     // If the capacity of the array is huge, and the # elements used is small,
     // shrink the array.
     if (!isSmall()) {
@@ -139,12 +140,14 @@ protected:
       if (LastTombstone != nullptr) {
         *LastTombstone = Ptr;
         --NumTombstones;
+        incrementEpoch();
         return std::make_pair(LastTombstone, true);
       }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
       if (NumNonEmpty < CurArraySize) {
         SmallArray[NumNonEmpty++] = Ptr;
+        incrementEpoch();
         return std::make_pair(SmallArray + (NumNonEmpty - 1), true);
       }
       // Otherwise, hit the big set case, which will call grow.
@@ -224,12 +227,10 @@ protected:
 public:
   explicit SmallPtrSetIteratorImpl(const void *const *BP, const void*const *E)
     : Bucket(BP), End(E) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (ReverseIterate<bool>::value) {
+    if (shouldReverseIterate()) {
       RetreatIfNotValid();
       return;
     }
-#endif
     AdvanceIfNotValid();
   }
 
@@ -251,7 +252,6 @@ protected:
             *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
       ++Bucket;
   }
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   void RetreatIfNotValid() {
     assert(Bucket >= End);
     while (Bucket != End &&
@@ -260,12 +260,12 @@ protected:
       --Bucket;
     }
   }
-#endif
 };
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
-template<typename PtrTy>
-class SmallPtrSetIterator : public SmallPtrSetIteratorImpl {
+template <typename PtrTy>
+class SmallPtrSetIterator : public SmallPtrSetIteratorImpl,
+                            DebugEpochBase::HandleBase {
   using PtrTraits = PointerLikeTypeTraits<PtrTy>;
 
 public:
@@ -275,30 +275,29 @@ public:
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
 
-  explicit SmallPtrSetIterator(const void *const *BP, const void *const *E)
-    : SmallPtrSetIteratorImpl(BP, E) {}
+  explicit SmallPtrSetIterator(const void *const *BP, const void *const *E,
+                               const DebugEpochBase &Epoch)
+      : SmallPtrSetIteratorImpl(BP, E), DebugEpochBase::HandleBase(&Epoch) {}
 
   // Most methods provided by baseclass.
 
   const PtrTy operator*() const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (ReverseIterate<bool>::value) {
+    assert(isHandleInSync() && "invalid iterator access!");
+    if (shouldReverseIterate()) {
       assert(Bucket > End);
       return PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket[-1]));
     }
-#endif
     assert(Bucket < End);
     return PtrTraits::getFromVoidPointer(const_cast<void*>(*Bucket));
   }
 
   inline SmallPtrSetIterator& operator++() {          // Preincrement
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (ReverseIterate<bool>::value) {
+    assert(isHandleInSync() && "invalid iterator access!");
+    if (shouldReverseIterate()) {
       --Bucket;
       RetreatIfNotValid();
       return *this;
     }
-#endif
     ++Bucket;
     AdvanceIfNotValid();
     return *this;
@@ -396,10 +395,8 @@ public:
   }
 
   iterator begin() const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (ReverseIterate<bool>::value)
+    if (shouldReverseIterate())
       return makeIterator(EndPointer() - 1);
-#endif
     return makeIterator(CurArray);
   }
   iterator end() const { return makeIterator(EndPointer()); }
@@ -407,11 +404,9 @@ public:
 private:
   /// Create an iterator that dereferences to same place as the given pointer.
   iterator makeIterator(const void *const *P) const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (ReverseIterate<bool>::value)
-      return iterator(P == EndPointer() ? CurArray : P + 1, CurArray);
-#endif
-    return iterator(P, EndPointer());
+    if (shouldReverseIterate())
+      return iterator(P == EndPointer() ? CurArray : P + 1, CurArray, *this);
+    return iterator(P, EndPointer(), *this);
   }
 };
 

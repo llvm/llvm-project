@@ -123,7 +123,7 @@ int __attribute__((cdecl)) TestOne(void), TestTwo(void);
 
 void func() {
   auto Test = []() __attribute__((no_thread_safety_analysis)) {};
-  // CHECK: CXXMethodDecl{{.*}}operator() 'void (void) const'
+  // CHECK: CXXMethodDecl{{.*}}operator() 'void () const'
   // CHECK: NoThreadSafetyAnalysisAttr
 
   // Because GNU's noreturn applies to the function type, and this lambda does
@@ -131,7 +131,7 @@ void func() {
   // conversion should both be noreturn, but the method should not contain a
   // NoReturnAttr because the attribute applied to the type.
   auto Test2 = []() __attribute__((noreturn)) { while(1); };
-  // CHECK: CXXMethodDecl{{.*}}operator() 'void (void) __attribute__((noreturn)) const'
+  // CHECK: CXXMethodDecl{{.*}}operator() 'void () __attribute__((noreturn)) const'
   // CHECK-NOT: NoReturnAttr
   // CHECK: CXXConversionDecl{{.*}}operator void (*)() __attribute__((noreturn))
 }
@@ -179,6 +179,14 @@ void TestExternalSourceSymbolAttr5()
 __attribute__((external_source_symbol(generated_declaration, defined_in="module", language="Swift")));
 // CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr5
 // CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration
+
+namespace TestNoEscape {
+  void noescapeFunc(int *p0, __attribute__((noescape)) int *p1) {}
+  // CHECK: `-FunctionDecl{{.*}} noescapeFunc 'void (int *, __attribute__((noescape)) int *)'
+  // CHECK-NEXT: ParmVarDecl
+  // CHECK-NEXT: ParmVarDecl
+  // CHECK-NEXT: NoEscapeAttr
+}
 
 namespace TestSuppress {
   [[gsl::suppress("at-namespace")]];

@@ -48,9 +48,8 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    ForCodeSize =
-        MF.getFunction()->hasFnAttribute(Attribute::OptimizeForSize) ||
-        MF.getFunction()->hasFnAttribute(Attribute::MinSize);
+    ForCodeSize = MF.getFunction().hasFnAttribute(Attribute::OptimizeForSize) ||
+                  MF.getFunction().hasFnAttribute(Attribute::MinSize);
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }

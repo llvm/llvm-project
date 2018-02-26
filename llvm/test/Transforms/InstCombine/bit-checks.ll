@@ -517,3 +517,131 @@ define i32 @main7g(i32 %argc, i32 %argc2, i32 %argc3, i32 %argc4, i32 %argc5) {
   %storemerge = select i1 %and.cond, i32 0, i32 1
   ret i32 %storemerge
 }
+
+define i32 @main8(i32 %argc) {
+; CHECK-LABEL: @main8(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %and = and i32 %argc, 64
+  %tobool = icmp ne i32 %and, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp slt i8 %trunc2, 0
+  %or.cond = or i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main9(i32 %argc) {
+; CHECK-LABEL: @main9(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 192
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %and = and i32 %argc, 64
+  %tobool = icmp ne i32 %and, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp slt i8 %trunc2, 0
+  %or.cond = and i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main10(i32 %argc) {
+; CHECK-LABEL: @main10(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %and = and i32 %argc, 64
+  %tobool = icmp eq i32 %and, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp sge i8 %trunc2, 0
+  %or.cond = and i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main11(i32 %argc) {
+; CHECK-LABEL: @main11(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 192
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %and = and i32 %argc, 64
+  %tobool = icmp eq i32 %and, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp sge i8 %trunc2, 0
+  %or.cond = or i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main12(i32 %argc) {
+; CHECK-LABEL: @main12(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %trunc = trunc i32 %argc to i16
+  %tobool = icmp slt i16 %trunc, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp slt i8 %trunc2, 0
+  %or.cond = or i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main13(i32 %argc) {
+; CHECK-LABEL: @main13(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 32896
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %trunc = trunc i32 %argc to i16
+  %tobool = icmp slt i16 %trunc, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp slt i8 %trunc2, 0
+  %or.cond = and i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main14(i32 %argc) {
+; CHECK-LABEL: @main14(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %trunc = trunc i32 %argc to i16
+  %tobool = icmp sge i16 %trunc, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp sge i8 %trunc2, 0
+  %or.cond = and i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @main15(i32 %argc) {
+; CHECK-LABEL: @main15(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 32896
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %trunc = trunc i32 %argc to i16
+  %tobool = icmp sge i16 %trunc, 0
+  %trunc2 = trunc i32 %argc to i8
+  %tobool3 = icmp sge i8 %trunc2, 0
+  %or.cond = or i1 %tobool, %tobool3
+  %retval.0 = select i1 %or.cond, i32 2, i32 1
+  ret i32 %retval.0
+}

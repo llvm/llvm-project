@@ -1,4 +1,4 @@
-//===-- HexagonVectorPrint.cpp - Generate vector printing instructions -===//
+//===- HexagonVectorPrint.cpp - Generate vector printing instructions -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-vector-print"
-
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +22,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Pass.h"
@@ -36,29 +35,30 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "hexagon-vector-print"
+
 static cl::opt<bool> TraceHexVectorStoresOnly("trace-hex-vector-stores-only",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Enables tracing of vector stores"));
 
 namespace llvm {
 
-  FunctionPass *createHexagonVectorPrint();
-  void initializeHexagonVectorPrintPass(PassRegistry&);
+FunctionPass *createHexagonVectorPrint();
+void initializeHexagonVectorPrintPass(PassRegistry&);
 
 } // end namespace llvm
 
 namespace {
 
 class HexagonVectorPrint : public MachineFunctionPass {
-  const HexagonSubtarget *QST;
-  const HexagonInstrInfo *QII;
-  const HexagonRegisterInfo *QRI;
+  const HexagonSubtarget *QST = nullptr;
+  const HexagonInstrInfo *QII = nullptr;
+  const HexagonRegisterInfo *QRI = nullptr;
 
 public:
   static char ID;
 
-  HexagonVectorPrint()
-      : MachineFunctionPass(ID), QST(nullptr), QII(nullptr), QRI(nullptr) {
+  HexagonVectorPrint() : MachineFunctionPass(ID) {
     initializeHexagonVectorPrintPass(*PassRegistry::getPassRegistry());
   }
 
@@ -67,9 +67,9 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };
 
-char HexagonVectorPrint::ID = 0;
-
 } // end anonymous namespace
+
+char HexagonVectorPrint::ID = 0;
 
 static bool isVecReg(unsigned Reg) {
   return (Reg >= Hexagon::V0 && Reg <= Hexagon::V31)
@@ -97,7 +97,6 @@ static void addAsmInstr(MachineBasicBlock *MBB, unsigned Reg,
                         MachineBasicBlock::instr_iterator I,
                         const DebugLoc &DL, const HexagonInstrInfo *QII,
                         MachineFunction &Fn) {
-
   std::string VDescStr = ".long 0x1dffe0" + getStringReg(Reg);
   const char *cstr = Fn.createExternalSymbolName(VDescStr);
   unsigned ExtraInfo = InlineAsm::Extra_HasSideEffects;

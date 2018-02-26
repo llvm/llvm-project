@@ -94,7 +94,8 @@ let Constraints = "$src1 = $dst" in {
   // MMXI_binop_rm_int - Simple MMX binary operator based on intrinsic.
   // When this is cleaned up, remove the FIXME from X86RecognizableInstr.cpp.
   multiclass MMXI_binop_rm_int<bits<8> opc, string OpcodeStr, Intrinsic IntId,
-                               OpndItins itins, bit Commutable = 0> {
+                               OpndItins itins, bit Commutable = 0,
+                               X86MemOperand OType = i64mem> {
     def irr : MMXI<opc, MRMSrcReg, (outs VR64:$dst),
                  (ins VR64:$src1, VR64:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
@@ -103,7 +104,7 @@ let Constraints = "$src1 = $dst" in {
       let isCommutable = Commutable;
     }
     def irm : MMXI<opc, MRMSrcMem, (outs VR64:$dst),
-                 (ins VR64:$src1, i64mem:$src2),
+                 (ins VR64:$src1, OType:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
                  [(set VR64:$dst, (IntId VR64:$src1,
                                    (bitconvert (load_mmx addr:$src2))))],
@@ -143,7 +144,7 @@ multiclass SS3I_unop_rm_int_mm<bits<8> opc, string OpcodeStr,
   def rm64 : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                    [(set VR64:$dst,
-                     (IntId64 (bitconvert (memopmmx addr:$src))))],
+                     (IntId64 (bitconvert (load_mmx addr:$src))))],
                    itins.rm>, Sched<[itins.Sched.Folded]>;
 }
 
@@ -163,7 +164,7 @@ multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst,
          (IntId64 VR64:$src1,
-          (bitconvert (memopmmx addr:$src2))))], itins.rm>,
+          (bitconvert (load_mmx addr:$src2))))], itins.rm>,
       Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 }
@@ -524,13 +525,16 @@ defm MMX_PUNPCKHDQ : MMXI_binop_rm_int<0x6A, "punpckhdq",
                                        MMX_UNPCK_H_ITINS>;
 defm MMX_PUNPCKLBW : MMXI_binop_rm_int<0x60, "punpcklbw",
                                        int_x86_mmx_punpcklbw,
-                                       MMX_UNPCK_L_ITINS>;
+                                       MMX_UNPCK_L_ITINS,
+                                       0, i32mem>;
 defm MMX_PUNPCKLWD : MMXI_binop_rm_int<0x61, "punpcklwd",
                                        int_x86_mmx_punpcklwd,
-                                       MMX_UNPCK_L_ITINS>;
+                                       MMX_UNPCK_L_ITINS,
+                                       0, i32mem>;
 defm MMX_PUNPCKLDQ : MMXI_binop_rm_int<0x62, "punpckldq",
                                        int_x86_mmx_punpckldq,
-                                       MMX_UNPCK_L_ITINS>;
+                                       MMX_UNPCK_L_ITINS,
+                                       0, i32mem>;
 
 // -- Pack Instructions
 defm MMX_PACKSSWB : MMXI_binop_rm_int<0x63, "packsswb", int_x86_mmx_packsswb,
@@ -616,7 +620,8 @@ def MMX_PMOVMSKBrr : MMXI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
                           (ins VR64:$src),
                           "pmovmskb\t{$src, $dst|$dst, $src}",
                           [(set GR32orGR64:$dst,
-                                (int_x86_mmx_pmovmskb VR64:$src))]>;
+                                (int_x86_mmx_pmovmskb VR64:$src))],
+                          IIC_MMX_MOVMSK>, Sched<[WriteVecLogic]>;
 
 // Low word of XMM to MMX.
 def MMX_X86movdq2q : SDNode<"X86ISD::MOVDQ2Q", SDTypeProfile<1, 1,

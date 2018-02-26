@@ -3,6 +3,13 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLAMBDA -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -fblocks -DBLOCKS -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=BLOCKS %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -DLAMBDA -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -fblocks -DBLOCKS -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -81,8 +88,10 @@ int main() {
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: [[G_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: [[G1_PRIVATE_REF:%.+]] = alloca i{{[0-9]+}}*,
     // LAMBDA: [[SIVAR2_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
 
     // LAMBDA:  store i{{[0-9]+}}* [[SIVAR_REF]], i{{[0-9]+}}** %{{.+}},
@@ -91,20 +100,26 @@ int main() {
 
     // LAMBDA: [[G_VAL:%.+]] = load volatile i{{[0-9]+}}, i{{[0-9]+}}* [[G]]
     // LAMBDA: store i{{[0-9]+}} [[G_VAL]], i{{[0-9]+}}* [[G_PRIVATE_ADDR]]
+    // LAMBDA: store i{{[0-9]+}}* [[G1_PRIVATE_ADDR]], i{{[0-9]+}}** [[G1_PRIVATE_REF]],
     // LAMBDA: [[SIVAR2_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR_REF]]
     // LAMBDA: store i{{[0-9]+}} [[SIVAR2_VAL]], i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]]
 
     // LAMBDA-NOT: call void @__kmpc_barrier(
     g = 1;
-    g1 = 1;
-    sivar = 2;
+    g1 = 2;
+    sivar = 3;
     // LAMBDA: call void @__kmpc_for_static_init_4(
 
     // LAMBDA: store i{{[0-9]+}} 1, i{{[0-9]+}}* [[G_PRIVATE_ADDR]],
-    // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]],
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PRIVATE_REF]],
+    // LAMBDA: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}* [[G1_PRIVATE_ADDR]],
+    // LAMBDA: store i{{[0-9]+}} 3, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]],
     // LAMBDA: [[G_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
     // LAMBDA: store i{{[0-9]+}}* [[G_PRIVATE_ADDR]], i{{[0-9]+}}** [[G_PRIVATE_ADDR_REF]]
-    // LAMBDA: [[SIVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+    // LAMBDA: [[G1_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PRIVATE_REF]],
+    // LAMBDA: store i{{[0-9]+}}* [[G1_PRIVATE_ADDR]], i{{[0-9]+}}** [[G1_PRIVATE_ADDR_REF]]
+    // LAMBDA: [[SIVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
     // LAMBDA: store i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]], i{{[0-9]+}}** [[SIVAR_PRIVATE_ADDR_REF]]
     // LAMBDA: call void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
     // LAMBDA: call void @__kmpc_for_static_fini(
@@ -112,17 +127,20 @@ int main() {
     [&]() {
       // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
-      g = 2;
-      g1 = 2;
-      sivar = 4;
+      g = 4;
+      g1 = 5;
+      sivar = 6;
       // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
 
       // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
       // LAMBDA: [[G_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_PTR_REF]]
-      // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_REF]]
-      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[G_REF]]
+      // LAMBDA: [[G1_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PTR_REF]]
+      // LAMBDA: store i{{[0-9]+}} 5, i{{[0-9]+}}* [[G1_REF]]
+      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
       // LAMBDA: [[SIVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SIVAR_PTR_REF]]
-      // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIVAR_REF]]
+      // LAMBDA: store i{{[0-9]+}} 6, i{{[0-9]+}}* [[SIVAR_REF]]
     }();
   }
   }();
@@ -139,6 +157,7 @@ int main() {
   for (int i = 0; i < 2; ++i) {
     // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[SIVAR_REF:%.+]])
     // Skip temp vars for loop
+    // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
@@ -208,6 +227,7 @@ int main() {
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
@@ -262,37 +282,29 @@ int main() {
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
 // CHECK: [[TVAR:%.+]] = alloca i32,
-// CHECK: [[TVAR_CAST:%.+]] = alloca i64,
 // CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
-// CHECK: [[TVAR_VAL:%.+]] = load i32, i32* [[TVAR]],
-// CHECK: [[TVAR_CONV:%.+]] = bitcast i64* [[TVAR_CAST]] to i32*
-// CHECK: store i32 [[TVAR_VAL]], i32* [[TVAR_CONV]],
-// CHECK: [[PVT_CASTVAL:%[^,]+]] = load i64, i64* [[TVAR_CAST]],
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, [2 x i32]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[TMAIN_MICROTASK:@.+]] to void  (i32*, i32*, ...)*), i64 [[PVT_CASTVAL]],
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[TMAIN_MICROTASK:@.+]] to void  (i32*, i32*, ...)*), i32* [[TVAR]],
 // CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
 //
-// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 {{.*}}%{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}})
 // Skip temp vars for loop
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_INT_TY]]],
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_INT_TY]],
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
-// CHECK: %{{.+}} = bitcast i64* [[T_VAR_PRIV]] to i32*
 
-// CHECK-NOT: load i{{[0-9]+}}*, i{{[0-9]+}}** %
+// CHECK: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** %
 // CHECK: [[VEC_REF:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** %
 // CHECK: [[S_ARR:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** %
 // CHECK: [[VAR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
-
-// firstprivate t_var(t_var)
-// CHECK-NOT: load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_REF]],
 
 // firstprivate vec(vec)
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*

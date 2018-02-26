@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=-sse -O0
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-sse -O0
 ; PR9675
 
 define i32 @t() {

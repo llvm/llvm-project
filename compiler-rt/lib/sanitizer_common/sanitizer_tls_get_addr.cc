@@ -45,7 +45,7 @@ static const uptr kDestroyedThread = -1;
 
 static inline void DTLS_Deallocate(DTLS::DTV *dtv, uptr size) {
   if (!size) return;
-  VPrintf(2, "__tls_get_addr: DTLS_Deallocate %p %zd\n", dtv, size);
+  VReport(2, "__tls_get_addr: DTLS_Deallocate %p %zd\n", dtv, size);
   UnmapOrDie(dtv, size * sizeof(DTLS::DTV));
   atomic_fetch_sub(&number_of_live_dtls, 1, memory_order_relaxed);
 }
@@ -58,7 +58,7 @@ static inline void DTLS_Resize(uptr new_size) {
       (DTLS::DTV *)MmapOrDie(new_size * sizeof(DTLS::DTV), "DTLS_Resize");
   uptr num_live_dtls =
       atomic_fetch_add(&number_of_live_dtls, 1, memory_order_relaxed);
-  VPrintf(2, "__tls_get_addr: DTLS_Resize %p %zd\n", &dtls, num_live_dtls);
+  VReport(2, "__tls_get_addr: DTLS_Resize %p %zd\n", &dtls, num_live_dtls);
   CHECK_LT(num_live_dtls, 1 << 20);
   uptr old_dtv_size = dtls.dtv_size;
   DTLS::DTV *old_dtv = dtls.dtv;
@@ -72,7 +72,7 @@ static inline void DTLS_Resize(uptr new_size) {
 
 void DTLS_Destroy() {
   if (!common_flags()->intercept_tls_get_addr) return;
-  VPrintf(2, "__tls_get_addr: DTLS_Destroy %p %zd\n", &dtls, dtls.dtv_size);
+  VReport(2, "__tls_get_addr: DTLS_Destroy %p %zd\n", &dtls, dtls.dtv_size);
   uptr s = dtls.dtv_size;
   dtls.dtv_size = kDestroyedThread;  // Do this before unmap for AS-safety.
   DTLS_Deallocate(dtls.dtv, s);
@@ -97,28 +97,28 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   if (dtls.dtv[dso_id].beg) return 0;
   uptr tls_size = 0;
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
-  VPrintf(2, "__tls_get_addr: %p {%p,%p} => %p; tls_beg: %p; sp: %p "
+  VReport(2, "__tls_get_addr: %p {%p,%p} => %p; tls_beg: %p; sp: %p "
              "num_live_dtls %zd\n",
           arg, arg->dso_id, arg->offset, res, tls_beg, &tls_beg,
           atomic_load(&number_of_live_dtls, memory_order_relaxed));
   if (dtls.last_memalign_ptr == tls_beg) {
     tls_size = dtls.last_memalign_size;
-    VPrintf(2, "__tls_get_addr: glibc <=2.18 suspected; tls={%p,%p}\n",
+    VReport(2, "__tls_get_addr: glibc <=2.18 suspected; tls={%p,%p}\n",
         tls_beg, tls_size);
   } else if (tls_beg >= static_tls_begin && tls_beg < static_tls_end) {
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
-    VPrintf(2, "__tls_get_addr: static tls: %p\n", tls_beg);
+    VReport(2, "__tls_get_addr: static tls: %p\n", tls_beg);
     tls_size = 0;
   } else if ((tls_beg % 4096) == sizeof(Glibc_2_19_tls_header)) {
     // We may want to check gnu_get_libc_version().
     Glibc_2_19_tls_header *header = (Glibc_2_19_tls_header *)tls_beg - 1;
     tls_size = header->size;
     tls_beg = header->start;
-    VPrintf(2, "__tls_get_addr: glibc >=2.19 suspected; tls={%p %p}\n",
+    VReport(2, "__tls_get_addr: glibc >=2.19 suspected; tls={%p %p}\n",
         tls_beg, tls_size);
   } else {
-    VPrintf(2, "__tls_get_addr: Can't guess glibc version\n");
+    VReport(2, "__tls_get_addr: Can't guess glibc version\n");
     // This may happen inside the DTOR of main thread, so just ignore it.
     tls_size = 0;
   }
@@ -129,7 +129,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
 
 void DTLS_on_libc_memalign(void *ptr, uptr size) {
   if (!common_flags()->intercept_tls_get_addr) return;
-  VPrintf(2, "DTLS_on_libc_memalign: %p %p\n", ptr, size);
+  VReport(2, "DTLS_on_libc_memalign: %p %p\n", ptr, size);
   dtls.last_memalign_ptr = reinterpret_cast<uptr>(ptr);
   dtls.last_memalign_size = size;
 }

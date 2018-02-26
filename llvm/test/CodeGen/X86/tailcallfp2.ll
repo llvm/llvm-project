@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -tailcallopt | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -tailcallopt | FileCheck %s
 
 declare i32 @putchar(i32)
 

@@ -125,9 +125,9 @@
 //                                      addr2:  .bytes <body>
 //===----------------------------------------------------------------------===//
 
-#ifdef _WIN32
-
 #include "interception.h"
+
+#if SANITIZER_WINDOWS
 #include "sanitizer_common/sanitizer_platform.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -223,9 +223,8 @@ static bool IsMemoryPadding(uptr address, uptr size) {
   return true;
 }
 
-static const u8 kHintNop10Bytes[] = {
-  0x66, 0x66, 0x0F, 0x1F, 0x84,
-  0x00, 0x00, 0x00, 0x00, 0x00
+static const u8 kHintNop9Bytes[] = {
+  0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 template<class T>
@@ -240,8 +239,8 @@ static bool FunctionHasPrefix(uptr address, const T &pattern) {
 static bool FunctionHasPadding(uptr address, uptr size) {
   if (IsMemoryPadding(address - size, size))
     return true;
-  if (size <= sizeof(kHintNop10Bytes) &&
-      FunctionHasPrefix(address, kHintNop10Bytes))
+  if (size <= sizeof(kHintNop9Bytes) &&
+      FunctionHasPrefix(address, kHintNop9Bytes))
     return true;
   return false;
 }
@@ -554,7 +553,10 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x246c8948:  // 48 89 6C 24 XX : mov QWORD ptr [rsp + XX], rbp
     case 0x245c8948:  // 48 89 5c 24 XX : mov QWORD PTR [rsp + XX], rbx
     case 0x24748948:  // 48 89 74 24 XX : mov QWORD PTR [rsp + XX], rsi
+    case 0x244C8948:  // 48 89 4C 24 XX : mov QWORD PTR [rsp + XX], rcx
       return 5;
+    case 0x24648348:  // 48 83 64 24 XX : and QWORD PTR [rsp + XX], YY
+      return 6;
   }
 
 #else
@@ -833,6 +835,7 @@ bool OverrideFunction(
 static void **InterestingDLLsAvailable() {
   static const char *InterestingDLLs[] = {
       "kernel32.dll",
+      "msvcr100.dll",      // VS2010
       "msvcr110.dll",      // VS2012
       "msvcr120.dll",      // VS2013
       "vcruntime140.dll",  // VS2015
@@ -1010,4 +1013,4 @@ bool OverrideImportedFunction(const char *module_to_patch,
 
 }  // namespace __interception
 
-#endif  // _WIN32
+#endif  // SANITIZER_MAC

@@ -1,4 +1,4 @@
-//===-- StatepointLowering.cpp - SDAGBuilder's statepoint code -----------===//
+//===- StatepointLowering.cpp - SDAGBuilder's statepoint code -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,21 +14,44 @@
 
 #include "StatepointLowering.h"
 #include "SelectionDAGBuilder.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Statepoint.h"
-#include "llvm/Target/TargetLowering.h"
-#include <algorithm>
+#include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "statepoint-lowering"
@@ -73,7 +96,7 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
   NumSlotsAllocatedForStatepoints++;
   MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
 
-  unsigned SpillSize = ValueType.getSizeInBits() / 8;
+  unsigned SpillSize = ValueType.getStoreSize();
   assert((SpillSize * 8) == ValueType.getSizeInBits() && "Size not in bytes?");
 
   // First look for a previously created stack slot which is not in
@@ -200,7 +223,6 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
 /// values on the stack between calls.
 static void reservePreviousStackSlotForValue(const Value *IncomingValue,
                                              SelectionDAGBuilder &Builder) {
-
   SDValue Incoming = Builder.getValue(IncomingValue);
 
   if (isa<ConstantSDNode>(Incoming) || isa<FrameIndexSDNode>(Incoming)) {
@@ -292,7 +314,6 @@ removeDuplicateGCPtrs(SmallVectorImpl<const Value *> &Bases,
 static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
     SelectionDAGBuilder::StatepointLoweringInfo &SI,
     SelectionDAGBuilder &Builder, SmallVectorImpl<SDValue> &PendingExports) {
-
   SDValue ReturnValue, CallEndVal;
   std::tie(ReturnValue, CallEndVal) =
       Builder.lowerInvokable(SI.CLI, SI.EHPadBB);

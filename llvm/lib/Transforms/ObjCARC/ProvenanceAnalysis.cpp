@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 ///
 /// This file defines a special form of Alias Analysis called ``Provenance
@@ -19,13 +20,21 @@
 /// WARNING: This file knows about how certain Objective-C library functions are
 /// used. Naive LLVM IR transformations which would otherwise be
 /// behavior-preserving may break these assumptions.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #include "ProvenanceAnalysis.h"
-#include "ObjCARC.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::objcarc;

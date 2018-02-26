@@ -1,0 +1,130 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -R .test2 -R .test3 -R .test5 %t %t2
+# RUN: llvm-readobj -sections %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test1
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test2
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test3
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test4
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test5
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test6
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+
+# CHECK: Sections [
+# CHECK:   Section {
+# CHECK:     Index: 0
+# CHECK:     Name:  (0)
+# CHECK:     Type: SHT_NULL (0x0)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 0
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 1
+# CHECK:     Name: .test1
+# CHECK:     Type: SHT_PROGBITS (0x1)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 0
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 2
+# CHECK:     Name: .test4
+# CHECK:     Type: SHT_PROGBITS (0x1)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 0
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 3
+# CHECK:     Name: .test6
+# CHECK:     Type: SHT_PROGBITS (0x1)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 0
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 4
+# CHECK:     Name: .symtab
+# CHECK:     Type: SHT_SYMTAB (0x2)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 5
+# CHECK:     Info: 1
+# CHECK:     AddressAlignment: 8
+# CHECK:     EntrySize: 24
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 5
+# CHECK:     Name: .strtab
+# CHECK:     Type: SHT_STRTAB (0x3)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 1
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 6
+# CHECK:     Name: .shstrtab
+# CHECK:     Type: SHT_STRTAB (0x3)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 1
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK: ]

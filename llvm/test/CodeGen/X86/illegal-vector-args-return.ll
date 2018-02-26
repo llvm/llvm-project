@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 -mcpu=nehalem | grep "mulpd	%xmm3, %xmm1"
-; RUN: llc < %s -march=x86 -mattr=+sse2 -mcpu=nehalem | grep "mulpd	%xmm2, %xmm0"
-; RUN: llc < %s -march=x86 -mattr=+sse2 -mcpu=nehalem | grep "addps	%xmm3, %xmm1"
-; RUN: llc < %s -march=x86 -mattr=+sse2 -mcpu=nehalem | grep "addps	%xmm2, %xmm0"
+; RUN: llc < %s -mattr=+sse2 -mcpu=nehalem | grep "mulpd	%xmm3, %xmm1"
+; RUN: llc < %s -mattr=+sse2 -mcpu=nehalem | grep "mulpd	%xmm2, %xmm0"
+; RUN: llc < %s -mattr=+sse2 -mcpu=nehalem | grep "addps	%xmm3, %xmm1"
+; RUN: llc < %s -mattr=+sse2 -mcpu=nehalem | grep "addps	%xmm2, %xmm0"
 
 target triple = "i686-apple-darwin8"
 

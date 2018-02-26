@@ -70,6 +70,22 @@ namespace PPC {
   /// Assume the condition register is set by MI(a,b), return the predicate if
   /// we modify the instructions such that condition register is set by MI(b,a).
   Predicate getSwappedPredicate(Predicate Opcode);
+
+  /// Return the condition without hint bits.
+  inline unsigned getPredicateCondition(Predicate Opcode) {
+    return (unsigned)(Opcode & ~BR_HINT_MASK);
+  }
+
+  /// Return the hint bits of the predicate.
+  inline unsigned getPredicateHint(Predicate Opcode) {
+    return (unsigned)(Opcode & BR_HINT_MASK);
+  }
+
+  /// Return predicate consisting of specified condition and hint bits.
+  inline Predicate getPredicate(unsigned Condition, unsigned Hint) {
+    return (Predicate)((Condition & ~BR_HINT_MASK) |
+                       (Hint & BR_HINT_MASK));
+  }
 }
 }
 

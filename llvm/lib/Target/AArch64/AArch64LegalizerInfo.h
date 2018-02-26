@@ -20,11 +20,12 @@
 namespace llvm {
 
 class LLVMContext;
+class AArch64Subtarget;
 
 /// This class provides the information for the target register banks.
 class AArch64LegalizerInfo : public LegalizerInfo {
 public:
-  AArch64LegalizerInfo();
+  AArch64LegalizerInfo(const AArch64Subtarget &ST);
 
   bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &MIRBuilder) const override;

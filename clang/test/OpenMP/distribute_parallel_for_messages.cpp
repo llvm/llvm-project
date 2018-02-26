@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++11 -o - %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s
+
 void foo() {
 }
 
@@ -38,7 +40,7 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for
+#pragma omp distribute parallel for linear(argc) // expected-error {{unexpected OpenMP clause 'linear' in directive '#pragma omp distribute parallel for'}}
   for (int i = 0; i < argc; ++i)
     foo();
 #pragma omp target
@@ -114,5 +116,16 @@ void test_ordered() {
   for (int i = 0; i < 16; ++i)
     for (int j = 0; j < 16; ++j)
     ;
+}
+
+void test_cancel() {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute parallel for
+  for (int i = 0; i < 16; ++i)
+    for (int j = 0; j < 16; ++j) {
+#pragma omp cancel for
+    ;
+    }
 }
 

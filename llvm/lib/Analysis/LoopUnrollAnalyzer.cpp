@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
-#include "llvm/IR/Dominators.h"
 
 using namespace llvm;
 

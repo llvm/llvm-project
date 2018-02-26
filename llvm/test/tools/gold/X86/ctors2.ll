@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/ctors2.ll -o %t2.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=emit-llvm \
 ; RUN:    -shared %t.o %t2.o -o %t3.o
 ; RUN: llvm-dis %t3.o -o - | FileCheck %s

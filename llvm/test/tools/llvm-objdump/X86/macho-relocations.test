@@ -1,7 +1,9 @@
 RUN: llvm-objdump -macho -r %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
-CHECK: RELOCATION RECORDS FOR [__text]:
-CHECK: 0000000000000027 X86_64_RELOC_BRANCH _printf
-CHECK: 000000000000000b X86_64_RELOC_SIGNED L_.str
-CHECK: RELOCATION RECORDS FOR [__compact_unwind]:
-CHECK: 0000000000000000 X86_64_RELOC_UNSIGNED __text
+CHECK: Relocation information (__TEXT,__text) 2 entries
+CHECK: address  pcrel length extern type    scattered symbolnum/value
+CHECK: 00000027 True  long   True   BRANCH  False     _printf
+CHECK: 0000000b True  long   True   SIGNED  False     L_.str
+CHECK: Relocation information (__LD,__compact_unwind) 1 entries
+CHECK: address  pcrel length extern type    scattered symbolnum/value
+CHECK: 00000000 False quad   False  UNSIGND False     1 (__TEXT,__text)

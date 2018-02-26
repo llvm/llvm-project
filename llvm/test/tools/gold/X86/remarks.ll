@@ -1,9 +1,9 @@
 ; RUN: llvm-as %s -o %t.o
 
-; RUN: not %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: not %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -plugin-opt=-pass-remarks=inline %t.o -o %t2.o 2>&1 | FileCheck %s
 
-; RUN: not %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: not %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   %t.o -o %t2.o 2>&1 | FileCheck -allow-empty --check-prefix=NO-REMARK %s
 
 

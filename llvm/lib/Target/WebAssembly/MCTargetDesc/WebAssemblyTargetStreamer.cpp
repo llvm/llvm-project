@@ -108,10 +108,6 @@ void WebAssemblyTargetAsmStreamer::emitGlobal(
   }
 }
 
-void WebAssemblyTargetAsmStreamer::emitStackPointer(uint32_t Index) {
-  OS << "\t.stack_pointer\t" << Index << '\n';
-}
-
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
 void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
@@ -155,11 +151,6 @@ void WebAssemblyTargetELFStreamer::emitLocal(ArrayRef<MVT> Types) {
 void WebAssemblyTargetELFStreamer::emitGlobal(
     ArrayRef<wasm::Global> Globals) {
   llvm_unreachable(".globalvar encoding not yet implemented");
-}
-
-void WebAssemblyTargetELFStreamer::emitStackPointer(
-    uint32_t Index) {
-  llvm_unreachable(".stack_pointer encoding not yet implemented");
 }
 
 void WebAssemblyTargetELFStreamer::emitEndFunc() {
@@ -219,8 +210,8 @@ void WebAssemblyTargetWasmStreamer::emitGlobal(
   // section. This will later be decoded and turned into contents for the
   // Globals Section.
   Streamer.PushSection();
-  Streamer.SwitchSection(Streamer.getContext()
-                                 .getWasmSection(".global_variables", 0, 0));
+  Streamer.SwitchSection(Streamer.getContext().getWasmSection(
+      ".global_variables", SectionKind::getMetadata()));
   for (const wasm::Global &G : Globals) {
     Streamer.EmitIntValue(int32_t(G.Type), 1);
     Streamer.EmitIntValue(G.Mutable, 1);
@@ -235,14 +226,6 @@ void WebAssemblyTargetWasmStreamer::emitGlobal(
       Streamer.EmitIntValue(0, 1); // nul-terminate
     }
   }
-  Streamer.PopSection();
-}
-
-void WebAssemblyTargetWasmStreamer::emitStackPointer(uint32_t Index) {
-  Streamer.PushSection();
-  Streamer.SwitchSection(Streamer.getContext()
-                                 .getWasmSection(".stack_pointer", 0, 0));
-  Streamer.EmitIntValue(Index, 4);
   Streamer.PopSection();
 }
 
@@ -277,4 +260,5 @@ void WebAssemblyTargetWasmStreamer::emitIndirectFunctionType(
 }
 
 void WebAssemblyTargetWasmStreamer::emitGlobalImport(StringRef name) {
+  llvm_unreachable(".global_import is not needed for direct wasm output");
 }

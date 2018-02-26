@@ -8,147 +8,123 @@
 //===----------------------------------------------------------------------===//
 
 multiclass T_VR_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, IntRegs:$src2),
-           (MI VectorRegs:$src1, IntRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, IntRegs:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, IntRegs:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, IntRegs:$src2),
+           (MI HvxVR:$src1, IntRegs:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, IntRegs:$src2),
+           (MI HvxVR:$src1, IntRegs:$src2)>;
 }
 
 multiclass T_VVL_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, VectorRegs:$src2, IntRegsLow8:$src3),
-           (MI VectorRegs:$src1, VectorRegs:$src2, IntRegsLow8:$src3)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, IntRegsLow8:$src3),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, IntRegsLow8:$src3)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
+           (MI HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, HvxVR:$src2,
+                                            IntRegsLow8:$src3),
+           (MI HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>;
 }
 
 multiclass T_VV_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, VectorRegs:$src2),
-           (MI VectorRegs:$src1, VectorRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, HvxVR:$src2),
+           (MI HvxVR:$src1, HvxVR:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, HvxVR:$src2),
+           (MI HvxVR:$src1, HvxVR:$src2)>;
 }
 
 multiclass T_WW_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecDblRegs:$src1, VecDblRegs:$src2),
-           (MI VecDblRegs:$src1, VecDblRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecDblRegs128B:$src1, VecDblRegs128B:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VecDblRegs128B:$src1, VecDblRegs128B:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxWR:$src1, HvxWR:$src2),
+           (MI HvxWR:$src1, HvxWR:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxWR:$src1, HvxWR:$src2),
+           (MI HvxWR:$src1, HvxWR:$src2)>;
 }
 
 multiclass T_WVV_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecDblRegs:$src1, VectorRegs:$src2, VectorRegs:$src3),
-           (MI VecDblRegs:$src1, VectorRegs:$src2, VectorRegs:$src3)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecDblRegs128B:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3),
-           (!cast<InstHexagon>(MI#"_128B") VecDblRegs128B:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+           (MI HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxWR:$src1, HvxVR:$src2,
+                                            HvxVR:$src3),
+           (MI HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>;
 }
 
 multiclass T_WR_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecDblRegs:$src1, IntRegs:$src2),
-           (MI VecDblRegs:$src1, IntRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecDblRegs128B:$src1, IntRegs:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VecDblRegs128B:$src1, IntRegs:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxWR:$src1, IntRegs:$src2),
+           (MI HvxWR:$src1, IntRegs:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxWR:$src1, IntRegs:$src2),
+           (MI HvxWR:$src1, IntRegs:$src2)>;
 }
 
 multiclass T_WWR_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecDblRegs:$src1, VecDblRegs:$src2, IntRegs:$src3),
-           (MI VecDblRegs:$src1, VecDblRegs:$src2, IntRegs:$src3)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecDblRegs128B:$src1, VecDblRegs128B:$src2, IntRegs:$src3),
-           (!cast<InstHexagon>(MI#"_128B") VecDblRegs128B:$src1, VecDblRegs128B:$src2, IntRegs:$src3)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
+           (MI HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxWR:$src1, HvxWR:$src2,
+                                            IntRegs:$src3),
+           (MI HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>;
 }
 
 multiclass T_VVR_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, VectorRegs:$src2, IntRegs:$src3),
-           (MI VectorRegs:$src1, VectorRegs:$src2, IntRegs:$src3)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, IntRegs:$src3),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, IntRegs:$src3)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
+           (MI HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, HvxVR:$src2,
+                                            IntRegs:$src3),
+           (MI HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>;
 }
 
 multiclass T_ZR_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecPredRegs:$src1, IntRegs:$src2),
-           (MI VecPredRegs:$src1, IntRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecPredRegs128B:$src1, IntRegs:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VecPredRegs128B:$src1, IntRegs:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxQR:$src1, IntRegs:$src2),
+           (MI HvxQR:$src1, IntRegs:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, IntRegs:$src2),
+           (MI HvxQR:$src1, IntRegs:$src2)>;
 }
 
 multiclass T_VZR_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, VecPredRegs:$src2, IntRegs:$src3),
-           (MI VectorRegs:$src1, VecPredRegs:$src2, IntRegs:$src3)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, VecPredRegs128B:$src2, IntRegs:$src3),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, VecPredRegs128B:$src2, IntRegs:$src3)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, HvxQR:$src2, IntRegs:$src3),
+           (MI HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, HvxQR:$src2,
+                                            IntRegs:$src3),
+           (MI HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>;
 }
 
 multiclass T_ZV_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecPredRegs:$src1, VectorRegs:$src2),
-           (MI VecPredRegs:$src1, VectorRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecPredRegs128B:$src1, VectorRegs128B:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VecPredRegs128B:$src1, VectorRegs128B:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxQR:$src1, HvxVR:$src2),
+           (MI HvxQR:$src1, HvxVR:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, HvxVR:$src2),
+           (MI HvxQR:$src1, HvxVR:$src2)>;
 }
 
 multiclass T_R_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
   def: Pat<(IntID IntRegs:$src1),
-           (MI IntRegs:$src1)>,
-       Requires<[UseHVXSgl]>;
+           (MI IntRegs:$src1)>;
   def: Pat<(!cast<Intrinsic>(IntID#"_128B") IntRegs:$src1),
-           (!cast<InstHexagon>(MI#"_128B") IntRegs:$src1)>,
-       Requires<[UseHVXDbl]>;
+           (MI IntRegs:$src1)>;
 }
 
 multiclass T_ZZ_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecPredRegs:$src1, VecPredRegs:$src2),
-           (MI VecPredRegs:$src1, VecPredRegs:$src2)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecPredRegs128B:$src1, VecPredRegs128B:$src2),
-           (!cast<InstHexagon>(MI#"_128B") VecPredRegs128B:$src1, VecPredRegs128B:$src2)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxQR:$src1, HvxQR:$src2),
+           (MI HvxQR:$src1, HvxQR:$src2)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, HvxQR:$src2),
+           (MI HvxQR:$src1, HvxQR:$src2)>;
 }
 
 multiclass T_VVI_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, VectorRegs:$src2, imm:$src3),
-           (MI VectorRegs:$src1, VectorRegs:$src2, imm:$src3)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, imm:$src3),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, imm:$src3)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, HvxVR:$src2, imm:$src3),
+           (MI HvxVR:$src1, HvxVR:$src2, imm:$src3)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, HvxVR:$src2,
+                                            imm:$src3),
+           (MI HvxVR:$src1, HvxVR:$src2, imm:$src3)>;
 }
 
 multiclass T_VVVI_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VectorRegs:$src1, VectorRegs:$src2, VectorRegs:$src3, imm:$src4),
-           (MI VectorRegs:$src1, VectorRegs:$src2, VectorRegs:$src3, imm:$src4)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3, imm:$src4),
-           (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3, imm:$src4)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, imm:$src4),
+           (MI HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, imm:$src4)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxVR:$src1, HvxVR:$src2,
+                                            HvxVR:$src3, imm:$src4),
+           (MI HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, imm:$src4)>;
 }
 
 multiclass T_WVVI_HVX_gen_pat <InstHexagon MI, Intrinsic IntID> {
-  def: Pat<(IntID VecDblRegs:$src1, VectorRegs:$src2, VectorRegs:$src3, imm:$src4),
-           (MI VecDblRegs:$src1, VectorRegs:$src2, VectorRegs:$src3, imm:$src4)>,
-       Requires<[UseHVXSgl]>;
-  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecDblRegs128B:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3, imm:$src4),
-           (!cast<InstHexagon>(MI#"_128B") VecDblRegs128B:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3, imm:$src4)>,
-       Requires<[UseHVXDbl]>;
+  def: Pat<(IntID HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, imm:$src4),
+           (MI HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, imm:$src4)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") HvxWR:$src1, HvxVR:$src2,
+                                            HvxVR:$src3, imm:$src4),
+           (MI HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, imm:$src4)>;
 }
 
 def : T_R_pat <S6_vsplatrbp, int_hexagon_S6_vsplatrbp>;

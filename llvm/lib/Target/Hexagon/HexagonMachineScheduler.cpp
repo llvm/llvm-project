@@ -13,19 +13,39 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMachineScheduler.h"
+#include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleHazardRecognizer.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
 #include <iomanip>
+#include <limits>
+#include <memory>
 #include <sstream>
+
+using namespace llvm;
+
+#define DEBUG_TYPE "machine-scheduler"
 
 static cl::opt<bool> IgnoreBBRegPressure("ignore-bb-reg-pressure",
     cl::Hidden, cl::ZeroOrMore, cl::init(false));
-
-static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
-    cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
 static cl::opt<unsigned> SchedDebugVerboseLevel("misched-verbose-level",
     cl::Hidden, cl::ZeroOrMore, cl::init(1));
@@ -39,98 +59,10 @@ static cl::opt<bool> BotUseShorterTie("bot-use-shorter-tie",
 static cl::opt<bool> DisableTCTie("disable-tc-tie",
     cl::Hidden, cl::ZeroOrMore, cl::init(false));
 
-static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
-    cl::Hidden, cl::ZeroOrMore, cl::init(true));
-
 // Check if the scheduler should penalize instructions that are available to
 // early due to a zero-latency dependence.
 static cl::opt<bool> CheckEarlyAvail("check-early-avail", cl::Hidden,
     cl::ZeroOrMore, cl::init(true));
-
-using namespace llvm;
-
-#define DEBUG_TYPE "machine-scheduler"
-
-namespace {
-class HexagonCallMutation : public ScheduleDAGMutation {
-public:
-  void apply(ScheduleDAGInstrs *DAG) override;
-private:
-  bool shouldTFRICallBind(const HexagonInstrInfo &HII,
-                          const SUnit &Inst1, const SUnit &Inst2) const;
-};
-} // end anonymous namespace
-
-// Check if a call and subsequent A2_tfrpi instructions should maintain
-// scheduling affinity. We are looking for the TFRI to be consumed in
-// the next instruction. This should help reduce the instances of
-// double register pairs being allocated and scheduled before a call
-// when not used until after the call. This situation is exacerbated
-// by the fact that we allocate the pair from the callee saves list,
-// leading to excess spills and restores.
-bool HexagonCallMutation::shouldTFRICallBind(const HexagonInstrInfo &HII,
-      const SUnit &Inst1, const SUnit &Inst2) const {
-  if (Inst1.getInstr()->getOpcode() != Hexagon::A2_tfrpi)
-    return false;
-
-  // TypeXTYPE are 64 bit operations.
-  unsigned Type = HII.getType(*Inst2.getInstr());
-  if (Type == HexagonII::TypeS_2op || Type == HexagonII::TypeS_3op ||
-    Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM)
-    return true;
-  return false;
-}
-
-void HexagonCallMutation::apply(ScheduleDAGInstrs *DAG) {
-  SUnit* LastSequentialCall = nullptr;
-  unsigned VRegHoldingRet = 0;
-  unsigned RetRegister;
-  SUnit* LastUseOfRet = nullptr;
-  auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
-  auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
-
-  // Currently we only catch the situation when compare gets scheduled
-  // before preceding call.
-  for (unsigned su = 0, e = DAG->SUnits.size(); su != e; ++su) {
-    // Remember the call.
-    if (DAG->SUnits[su].getInstr()->isCall())
-      LastSequentialCall = &DAG->SUnits[su];
-    // Look for a compare that defines a predicate.
-    else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
-      DAG->SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
-    // Look for call and tfri* instructions.
-    else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
-             shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
-      DAG->SUnits[su].addPred(SDep(&DAG->SUnits[su-1], SDep::Barrier));
-    // Prevent redundant register copies between two calls, which are caused by
-    // both the return value and the argument for the next call being in %R0.
-    // Example:
-    //   1: <call1>
-    //   2: %VregX = COPY %R0
-    //   3: <use of %VregX>
-    //   4: %R0 = ...
-    //   5: <call2>
-    // The scheduler would often swap 3 and 4, so an additional register is
-    // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
-    // this. The same applies for %D0 and %V0/%W0, which are also handled.
-    else if (SchedRetvalOptimization) {
-      const MachineInstr *MI = DAG->SUnits[su].getInstr();
-      if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
-                           MI->readsRegister(Hexagon::V0, &TRI)))  {
-        // %vregX = COPY %R0
-        VRegHoldingRet = MI->getOperand(0).getReg();
-        RetRegister = MI->getOperand(1).getReg();
-        LastUseOfRet = nullptr;
-      } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
-        // <use of %vregX>
-        LastUseOfRet = &DAG->SUnits[su];
-      else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
-        // %R0 = ...
-        DAG->SUnits[su].addPred(SDep(LastUseOfRet, SDep::Barrier));
-    }
-  }
-}
-
 
 /// Save the last formed packet
 void VLIWResourceModel::savePacket() {
@@ -254,12 +186,10 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
 /// after setting up the current scheduling region. [RegionBegin, RegionEnd)
 /// only includes instructions that have DAG nodes, not scheduling boundaries.
 void VLIWMachineScheduler::schedule() {
-  DEBUG(dbgs()
-        << "********** MI Converging Scheduling VLIW BB#" << BB->getNumber()
-        << " " << BB->getName()
-        << " in_func " << BB->getParent()->getFunction()->getName()
-        << " at loop depth "  << MLI->getLoopDepth(BB)
-        << " \n");
+  DEBUG(dbgs() << "********** MI Converging Scheduling VLIW "
+               << printMBBReference(*BB) << " " << BB->getName() << " in_func "
+               << BB->getParent()->getName() << " at loop depth "
+               << MLI->getLoopDepth(BB) << " \n");
 
   buildDAGWithRegPressure();
 
@@ -305,8 +235,8 @@ void VLIWMachineScheduler::schedule() {
   placeDebugValues();
 
   DEBUG({
-    unsigned BBNum = begin()->getParent()->getNumber();
-    dbgs() << "*** Final schedule for BB#" << BBNum << " ***\n";
+    dbgs() << "*** Final schedule for "
+           << printMBBReference(*begin()->getParent()) << " ***\n";
     dumpSchedule();
     dbgs() << '\n';
   });
@@ -334,11 +264,8 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
   Top.ResourceModel = new VLIWResourceModel(STI, DAG->getSchedModel());
   Bot.ResourceModel = new VLIWResourceModel(STI, DAG->getSchedModel());
 
-  assert((!llvm::ForceTopDown || !llvm::ForceBottomUp) &&
+  assert((!ForceTopDown || !ForceBottomUp) &&
          "-misched-topdown incompatible with -misched-bottomup");
-
-  DAG->addMutation(make_unique<HexagonSubtarget::HexagonDAGMutation>());
-  DAG->addMutation(make_unique<HexagonCallMutation>());
 }
 
 void ConvergingVLIWScheduler::releaseTopNode(SUnit *SU) {
@@ -419,7 +346,8 @@ void ConvergingVLIWScheduler::VLIWSchedBoundary::bumpCycle() {
   unsigned Width = SchedModel->getIssueWidth();
   IssueCount = (IssueCount <= Width) ? 0 : IssueCount - Width;
 
-  assert(MinReadyCycle < UINT_MAX && "MinReadyCycle uninitialized");
+  assert(MinReadyCycle < std::numeric_limits<unsigned>::max() &&
+         "MinReadyCycle uninitialized");
   unsigned NextCycle = std::max(CurrCycle + 1, MinReadyCycle);
 
   if (!HazardRec->isEnabled()) {
@@ -474,7 +402,7 @@ void ConvergingVLIWScheduler::VLIWSchedBoundary::bumpNode(SUnit *SU) {
 void ConvergingVLIWScheduler::VLIWSchedBoundary::releasePending() {
   // If the available queue is empty, it is safe to reset MinReadyCycle.
   if (Available.empty())
-    MinReadyCycle = UINT_MAX;
+    MinReadyCycle = std::numeric_limits<unsigned>::max();
 
   // Check to see if any of the pending instructions are ready to issue.  If
   // so, add them to the available queue.
@@ -974,7 +902,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  if (llvm::ForceTopDown) {
+  if (ForceTopDown) {
     SU = Top.pickOnlyChoice();
     if (!SU) {
       SchedCandidate TopCand;
@@ -985,7 +913,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
       SU = TopCand.SU;
     }
     IsTopNode = true;
-  } else if (llvm::ForceBottomUp) {
+  } else if (ForceBottomUp) {
     SU = Bot.pickOnlyChoice();
     if (!SU) {
       SchedCandidate BotCand;

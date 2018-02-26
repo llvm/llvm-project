@@ -1,0 +1,30 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel -global-isel-abort=0 -pass-remarks-missed='gisel*' %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_merge_s4() {
+    ret void
+  }
+...
+
+---
+name:            test_merge_s4
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body: |
+  bb.0:
+    %0(s64) = G_CONSTANT i64 0
+    %1(s4) = G_TRUNC %0(s64)
+    ; Previously, LegalizerInfo was assuming all G_MERGE_VALUES and G_UNMERGE_VALUES
+    ; instructions are legal. Make sure that is no longer happening.
+    ; CHECK: unable to legalize instruction: {{.*}} G_MERGE_VALUES
+    %2(s8) = G_MERGE_VALUES %1(s4), %1(s4)
+    %3(s8) = COPY %2(s8)
+    %4(s64) = G_ANYEXT %3(s8)
+    %x0 = COPY %4(s64)
+...

@@ -16,7 +16,6 @@
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"

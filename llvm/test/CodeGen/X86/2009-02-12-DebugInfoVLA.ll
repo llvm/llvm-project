@@ -1,8 +1,7 @@
-; RUN: llc < %s
-; RUN: llc < %s -stack-symbol-ordering=0 -march=x86-64 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=i386-apple-darwin9
+; RUN: llc < %s -mtriple=x86_64-apple-darwin9 -stack-symbol-ordering=0 -verify-machineinstrs | FileCheck %s
 ; PR3538
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
-target triple = "i386-apple-darwin9"
 define signext i8 @foo(i8* %s1) nounwind ssp {
 
 ; Make sure we generate:

@@ -16,6 +16,7 @@
 #if SANITIZER_POSIX
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_common.h"
+#include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_linux.h"
@@ -76,6 +77,7 @@ static swift_demangle_ft swift_demangle_f;
 // symbolication.
 static void InitializeSwiftDemangler() {
   swift_demangle_f = (swift_demangle_ft)dlsym(RTLD_DEFAULT, "swift_demangle");
+  (void)dlerror(); // Cleanup error message in case of failure
 }
 
 // Attempts to demangle a Swift name. The demangler will return nullptr if a
@@ -271,6 +273,10 @@ class Addr2LineProcess : public SymbolizerProcess {
   bool ReadFromSymbolizer(char *buffer, uptr max_length) override {
     if (!SymbolizerProcess::ReadFromSymbolizer(buffer, max_length))
       return false;
+    // The returned buffer is empty when output is valid, but exceeds
+    // max_length.
+    if (*buffer == '\0')
+      return true;
     // We should cut out output_terminator_ at the end of given buffer,
     // appended by addr2line to mark the end of its meaningful output.
     // We cannot scan buffer from it's beginning, because it is legal for it

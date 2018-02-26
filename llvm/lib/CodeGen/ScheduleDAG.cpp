@@ -19,13 +19,13 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -80,7 +80,7 @@ raw_ostream &SDep::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
   case Data:
     OS << " Latency=" << getLatency();
     if (TRI && isAssignedRegDep())
-      OS << " Reg=" << PrintReg(getReg(), TRI);
+      OS << " Reg=" << printReg(getReg(), TRI);
     break;
   case Anti:
   case Output:

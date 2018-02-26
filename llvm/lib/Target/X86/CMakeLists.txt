@@ -14,6 +14,10 @@ tablegen(LLVM X86GenEVEX2VEXTables.inc -gen-x86-EVEX2VEX-tables)
 tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
 
+if (X86_GEN_FOLD_TABLES)
+  tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables)
+endif()
+
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
@@ -21,6 +25,7 @@ set(sources
   X86CallFrameOptimization.cpp
   X86CallLowering.cpp
   X86CmovConversion.cpp
+  X86DomainReassignment.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
   X86FixupBWInsts.cpp
@@ -43,6 +48,7 @@ set(sources
   X86PadShortFunction.cpp
   X86RegisterBankInfo.cpp
   X86RegisterInfo.cpp
+  X86RetpolineThunks.cpp
   X86SelectionDAGInfo.cpp
   X86ShuffleDecodeConstantPool.cpp
   X86Subtarget.cpp

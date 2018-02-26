@@ -7,9 +7,6 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
-#include "InstrProfilingUtil.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +28,10 @@
 #include <sys/types.h>
 #endif
 #endif
+
+#include "InstrProfiling.h"
+#include "InstrProfilingInternal.h"
+#include "InstrProfilingUtil.h"
 
 /* From where is profile name specified.
  * The order the enumerators define their
@@ -89,7 +90,6 @@ typedef struct lprofFilename {
 COMPILER_RT_WEAK lprofFilename lprofCurFilename = {
     0, 0, 0, {0}, {0}, 0, 0, 0, {0}, 0, PNS_unknown};
 
-int getpid(void);
 static int getCurFilenameLength();
 static const char *getCurFilename(char *FilenameBuf);
 static unsigned doMerging() { return lprofCurFilename.MergePoolSize; }
@@ -354,7 +354,7 @@ static int parseFilenamePattern(const char *FilenamePat,
     if (FilenamePat[I] == '%') {
       if (FilenamePat[++I] == 'p') {
         if (!NumPids++) {
-          if (snprintf(PidChars, MAX_PID_SIZE, "%d", getpid()) <= 0) {
+          if (snprintf(PidChars, MAX_PID_SIZE, "%ld", (long)getpid()) <= 0) {
             PROF_WARN("Unable to get pid for filename pattern %s. Using the "
                       "default name.",
                       FilenamePat);

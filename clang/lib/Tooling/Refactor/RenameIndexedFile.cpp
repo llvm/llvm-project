@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Refactor/RefactoringOptions.h"
 #include "llvm/ADT/STLExtras.h"
@@ -137,7 +138,7 @@ class SelectorParser {
     Success
   };
   ParseState State = None;
-  const SymbolName &Name;
+  const OldSymbolName &Name;
 
   ParseState stateForToken(const Token &RawTok);
 
@@ -145,7 +146,7 @@ public:
   unsigned SymbolIndex;
   llvm::SmallVector<SourceLocation, 8> SelectorLocations;
 
-  SelectorParser(const SymbolName &Name, unsigned SymbolIndex)
+  SelectorParser(const OldSymbolName &Name, unsigned SymbolIndex)
       : Name(Name), SymbolIndex(SymbolIndex) {}
 
   /// Returns true if the parses has found a '@selector' expression.
@@ -159,6 +160,23 @@ public:
       : Lexer(FileLoc, LangOpts, BufStart, BufStart, BufEnd) {}
 
   void IndirectLex(Token &Result) override { LexFromRawLexer(Result); }
+};
+
+/// Finds matching textual occurrences in string literals.
+class StringLiteralTextualParser {
+  const OldSymbolName &Name;
+
+public:
+  unsigned SymbolIndex;
+
+  StringLiteralTextualParser(const OldSymbolName &Name, unsigned SymbolIndex)
+      : Name(Name), SymbolIndex(SymbolIndex) {
+    assert(Name.size() == 1 && "can't search for multi-piece names in strings");
+  }
+
+  /// Returns the name's location if the parses has found a matching textual
+  /// name in a string literal.
+  SourceLocation handleToken(const Token &RawTok, Preprocessor &PP);
 };
 
 } // end anonymous namespace
@@ -232,11 +250,24 @@ bool SelectorParser::handleToken(const Token &RawTok) {
   return true;
 }
 
+SourceLocation StringLiteralTextualParser::handleToken(const Token &RawTok,
+                                                       Preprocessor &PP) {
+  if (!tok::isStringLiteral(RawTok.getKind()))
+    return SourceLocation();
+  StringLiteralParser Literal(RawTok, PP);
+  if (Literal.hadError)
+    return SourceLocation();
+  return Literal.GetString() == Name[0]
+             ? RawTok.getLocation().getLocWithOffset(
+                   Literal.getOffsetOfStringByte(RawTok, 0))
+             : SourceLocation();
+}
+
 static void collectTextualMatchesInComment(
     ArrayRef<IndexedSymbol> Symbols, SourceLocation CommentLoc,
     StringRef Comment, llvm::SmallVectorImpl<TextualMatchOccurrence> &Result) {
   for (const auto &Symbol : llvm::enumerate(Symbols)) {
-    const SymbolName &Name = Symbol.value().Name;
+    const OldSymbolName &Name = Symbol.value().Name;
     if (Name.containsEmptyPiece()) // Ignore Objective-C selectors with empty
                                    // pieces.
       continue;
@@ -258,7 +289,7 @@ static void findTextualMatchesInComment(
     const SourceManager &SM, const LangOptions &LangOpts,
     ArrayRef<IndexedSymbol> Symbols,
     ArrayRef<TextualMatchOccurrence> TextualMatches, SourceRange CommentRange,
-    llvm::function_ref<void(SymbolOccurrence::OccurrenceKind,
+    llvm::function_ref<void(OldSymbolOccurrence::OccurrenceKind,
                             ArrayRef<SourceLocation> Locations,
                             unsigned SymbolIndex)>
         MatchHandler) {
@@ -266,11 +297,11 @@ static void findTextualMatchesInComment(
       Lexer::getSourceText(CharSourceRange::getCharRange(CommentRange), SM,
                            LangOpts)
           .str();
-  SymbolOccurrence::OccurrenceKind Kind =
+  OldSymbolOccurrence::OccurrenceKind Kind =
       RawComment(SM, CommentRange, /*Merged=*/false, /*ParseAllComments=*/false)
               .isDocumentation()
-          ? SymbolOccurrence::MatchingDocComment
-          : SymbolOccurrence::MatchingComment;
+          ? OldSymbolOccurrence::MatchingDocComment
+          : OldSymbolOccurrence::MatchingComment;
   // Replace some special characters  with ' ' to avoid comments and literals.
   std::replace_if(
       Source.begin(), Source.end(),
@@ -301,9 +332,9 @@ static void findTextualMatchesInComment(
 }
 
 static void findMatchingTextualOccurrences(
-    const SourceManager &SM, const LangOptions &LangOpts,
+    Preprocessor &PP, const SourceManager &SM, const LangOptions &LangOpts,
     ArrayRef<IndexedSymbol> Symbols,
-    llvm::function_ref<void(SymbolOccurrence::OccurrenceKind,
+    llvm::function_ref<void(OldSymbolOccurrence::OccurrenceKind,
                             ArrayRef<SourceLocation> Locations,
                             unsigned SymbolIndex)>
         MatchHandler) {
@@ -318,9 +349,17 @@ static void findMatchingTextualOccurrences(
       SelectorParsers.push_back(
           SelectorParser(Symbol.value().Name, Symbol.index()));
   }
+  llvm::SmallVector<StringLiteralTextualParser, 1> StringParsers;
+  for (const auto &Symbol : llvm::enumerate(Symbols)) {
+    if (Symbol.value().SearchForStringLiteralOccurrences)
+      StringParsers.push_back(
+          StringLiteralTextualParser(Symbol.value().Name, Symbol.index()));
+  }
 
   Token RawTok;
   RawLex.LexFromRawLexer(RawTok);
+  bool ScanNonCommentTokens =
+      !SelectorParsers.empty() || !StringParsers.empty();
   while (RawTok.isNot(tok::eof)) {
     if (RawTok.is(tok::comment)) {
       SourceRange Range(RawTok.getLocation(), RawTok.getEndLoc());
@@ -333,11 +372,17 @@ static void findMatchingTextualOccurrences(
                                     Range, MatchHandler);
         CommentMatches.clear();
       }
-    } else if (!SelectorParsers.empty()) {
+    } else if (ScanNonCommentTokens) {
       for (auto &Parser : SelectorParsers) {
         if (Parser.handleToken(RawTok))
-          MatchHandler(SymbolOccurrence::MatchingSelector,
+          MatchHandler(OldSymbolOccurrence::MatchingSelector,
                        Parser.SelectorLocations, Parser.SymbolIndex);
+      }
+      for (auto &Parser : StringParsers) {
+        SourceLocation Loc = Parser.handleToken(RawTok, PP);
+        if (Loc.isValid())
+          MatchHandler(OldSymbolOccurrence::MatchingStringLiteral, Loc,
+                       Parser.SymbolIndex);
       }
     }
     RawLex.LexFromRawLexer(RawTok);
@@ -381,8 +426,8 @@ static void findInclusionDirectiveOccurrence(
   size_t NameOffset = Filename.rfind_lower(Symbol.Name[0]);
   if (NameOffset == StringRef::npos)
     return;
-  SymbolOccurrence Result(
-      SymbolOccurrence::MatchingFilename,
+  OldSymbolOccurrence Result(
+      OldSymbolOccurrence::MatchingFilename,
       /*IsMacroExpansion=*/false, SymbolIndex,
       RawTok.getLocation().getLocWithOffset(
           NameOffset + (Filename.data() - RawTok.getLiteralData())));
@@ -419,9 +464,9 @@ void IndexedFileOccurrenceProducer::ExecuteAction() {
         bool IsImpProp = Match == MatchKind::SourcePropSetterMatch;
         if (IsImpProp)
           Locs.push_back(SymbolRange.getEnd());
-        SymbolOccurrence Result(
-            IsImpProp ? SymbolOccurrence::MatchingImplicitProperty
-                      : SymbolOccurrence::MatchingSymbol,
+        OldSymbolOccurrence Result(
+            IsImpProp ? OldSymbolOccurrence::MatchingImplicitProperty
+                      : OldSymbolOccurrence::MatchingSymbol,
             /*IsMacroExpansion=*/Match == MatchKind::MacroExpansion,
             Symbol.index(), Locs);
         Consumer.handleOccurrence(Result, SM, LangOpts);
@@ -432,11 +477,11 @@ void IndexedFileOccurrenceProducer::ExecuteAction() {
   if (Options && Options->get(option::AvoidTextualMatches()))
     return;
   findMatchingTextualOccurrences(
-      SM, LangOpts, Symbols,
-      [&](SymbolOccurrence::OccurrenceKind Kind,
+      PP, SM, LangOpts, Symbols,
+      [&](OldSymbolOccurrence::OccurrenceKind Kind,
           ArrayRef<SourceLocation> Locations, unsigned SymbolIndex) {
-        SymbolOccurrence Result(Kind, /*IsMacroExpansion=*/false, SymbolIndex,
-                                Locations);
+        OldSymbolOccurrence Result(Kind, /*IsMacroExpansion=*/false,
+                                   SymbolIndex, Locations);
         Consumer.handleOccurrence(Result, SM, LangOpts);
       });
 }
@@ -460,7 +505,7 @@ static bool isMatchingSelectorName(const Token &Tok, const Token &Next,
 }
 
 static bool
-findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const SymbolName &Name,
+findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const OldSymbolName &Name,
                              SmallVectorImpl<SourceLocation> &Pieces,
                              ObjCSymbolSelectorKind Kind) {
   assert(!Tokens.empty() && "no tokens");
@@ -559,8 +604,9 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
         continue;
       SourceLocation Loc = SymbolRange.getBegin();
       if (Match == MatchKind::MacroExpansion) {
-        SymbolOccurrence Result(SymbolOccurrence::MatchingSymbol,
-                                /*IsMacroExpansion=*/true, Symbol.index(), Loc);
+        OldSymbolOccurrence Result(OldSymbolOccurrence::MatchingSymbol,
+                                   /*IsMacroExpansion=*/true, Symbol.index(),
+                                   Loc);
         Consumer.handleOccurrence(Result, SM, LangOpts);
         continue;
       }
@@ -611,9 +657,9 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
     if (findObjCSymbolSelectorPieces(
             llvm::makeArrayRef(Tokens).drop_front(I.index()),
             Symbols[SymbolIndex].Name, SelectorPieces, Kind)) {
-      SymbolOccurrence Result(SymbolOccurrence::MatchingSymbol,
-                              /*IsMacroExpansion=*/false, SymbolIndex,
-                              std::move(SelectorPieces));
+      OldSymbolOccurrence Result(OldSymbolOccurrence::MatchingSymbol,
+                                 /*IsMacroExpansion=*/false, SymbolIndex,
+                                 std::move(SelectorPieces));
       Consumer.handleOccurrence(Result, SM, LangOpts);
     }
   }

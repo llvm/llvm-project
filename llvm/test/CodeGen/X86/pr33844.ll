@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @patatino() {
 ; CHECK-LABEL: patatino:
-; CHECK:       # BB#0: # %bb
+; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $31, %ecx

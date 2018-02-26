@@ -1887,7 +1887,7 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_STORE(SDNode *N, unsigned OpNo) {
   SDLoc DL(N);
 
   SDValue Promoted = GetPromotedFloat(Val);
-  EVT VT = ST->getOperand(1)->getValueType(0);
+  EVT VT = ST->getOperand(1).getValueType();
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
 
   SDValue NewVal;

@@ -7,12 +7,12 @@
 
 define <4 x i32> @load_zmov_4i32_to_0zzz(<4 x i32> *%ptr) {
 ; SSE-LABEL: load_zmov_4i32_to_0zzz:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_zmov_4i32_to_0zzz:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
 entry:
@@ -23,12 +23,12 @@ entry:
 
 define <2 x i64> @load_zmov_2i64_to_0z(<2 x i64> *%ptr) {
 ; SSE-LABEL: load_zmov_2i64_to_0z:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_zmov_2i64_to_0z:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
 entry:

@@ -16,8 +16,9 @@
 #include "SystemZ.h"
 #include "SystemZInstrBuilder.h"
 #include "SystemZSubtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -27,14 +28,14 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -44,6 +45,9 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #define GET_INSTRMAP_INFO
 #include "SystemZGenInstrInfo.inc"
+
+#define DEBUG_TYPE "systemz-II"
+STATISTIC(LOCRMuxJumps, "Number of LOCRMux jump-sequences (lower is better)");
 
 // Return a mask with Count low bits set.
 static uint64_t allOnes(unsigned int Count) {
@@ -209,6 +213,8 @@ void SystemZInstrInfo::expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
     MI.setDesc(get(LowOpcode));
   else if (DestIsHigh && SrcIsHigh)
     MI.setDesc(get(HighOpcode));
+  else
+    LOCRMuxJumps++;
 
   // If we were unable to implement the pseudo with a single instruction, we
   // need to convert it back into a branch sequence.  This cannot be done here

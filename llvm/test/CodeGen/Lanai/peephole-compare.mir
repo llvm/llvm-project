@@ -11,23 +11,23 @@
 # been sub.f %r3, 0, %r0 then it would have matched.
 
 # CHECK-LABEL: name: test1a
-# CHECK: [[IN1:%.*]] = COPY %r7
-# CHECK: [[IN2:%.*]] = COPY %r6
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
 # CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test1b
-# CHECK: [[IN1:%.*]] = COPY %r7
-# CHECK: [[IN2:%.*]] = COPY %r6
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
 # CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test2a
-# CHECK: [[IN1:%.*]] = COPY %r7
-# CHECK: [[IN2:%.*]] = COPY %r6
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
 # CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test2b
-# CHECK: [[IN1:%.*]] = COPY %r7
-# CHECK: [[IN2:%.*]] = COPY %r6
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
 # CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test3
@@ -38,10 +38,10 @@
 --- |
   target datalayout = "E-m:e-p:32:32-i64:64-a:0:32-n32-S64"
   target triple = "lanai-unknown-unknown"
-  
+
   @a = global i32 -1, align 4
   @b = global i32 0, align 4
-  
+
   define i32 @test0a(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %sub = sub i32 %b, %a
@@ -49,14 +49,14 @@
     %cond = select i1 %cmp, i32 %c, i32 %sub
     ret i32 %cond
   }
-  
+
   define i32 @test0b(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %cmp = icmp eq i32 %b, %a
     %cond = select i1 %cmp, i32 %c, i32 %b
     ret i32 %cond
   }
-  
+
   define i32 @test1a(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %sub = sub i32 %b, %a
@@ -64,7 +64,7 @@
     %cond = select i1 %cmp, i32 %c, i32 %d
     ret i32 %cond
   }
-  
+
   define i32 @test1b(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %sub = sub i32 %b, %a
@@ -72,7 +72,7 @@
     %cond = select i1 %cmp, i32 %c, i32 %d
     ret i32 %cond
   }
-  
+
   define i32 @test2a(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %sub = sub i32 %b, %a
@@ -80,7 +80,7 @@
     %cond = select i1 %cmp, i32 %c, i32 %d
     ret i32 %cond
   }
-  
+
   define i32 @test2b(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %sub = sub i32 %b, %a
@@ -88,7 +88,7 @@
     %cond = select i1 %cmp, i32 %c, i32 %d
     ret i32 %cond
   }
-  
+
   define i32 @test3(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %sub = sub i32 %b, %a
@@ -96,38 +96,38 @@
     %cond = select i1 %cmp, i32 %c, i32 %d
     ret i32 %cond
   }
-  
+
   define i32 @test4(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
   entry:
     %cmp = icmp ne i32 %a, 0
     %cmp1 = icmp ult i32 %a, %b
     %or.cond = and i1 %cmp, %cmp1
     br i1 %or.cond, label %return, label %if.end
-  
+
   if.end:                                           ; preds = %entry
     %cmp2 = icmp ne i32 %b, 0
     %cmp4 = icmp ult i32 %b, %c
     %or.cond29 = and i1 %cmp2, %cmp4
     br i1 %or.cond29, label %return, label %if.end6
-  
+
   if.end6:                                          ; preds = %if.end
     %cmp7 = icmp ne i32 %c, 0
     %cmp9 = icmp ult i32 %c, %d
     %or.cond30 = and i1 %cmp7, %cmp9
     br i1 %or.cond30, label %return, label %if.end11
-  
+
   if.end11:                                         ; preds = %if.end6
     %cmp12 = icmp ne i32 %d, 0
     %cmp14 = icmp ult i32 %d, %a
     %or.cond31 = and i1 %cmp12, %cmp14
     %b. = select i1 %or.cond31, i32 %b, i32 21
     ret i32 %b.
-  
+
   return:                                           ; preds = %if.end6, %if.end, %entry
     %retval.0 = phi i32 [ %c, %entry ], [ %d, %if.end ], [ %a, %if.end6 ]
     ret i32 %retval.0
   }
-  
+
   define void @testBB() {
   entry:
     %0 = load i32, i32* @a, align 4, !tbaa !0
@@ -135,36 +135,36 @@
     %sub.i = sub i32 %1, %0
     %tobool = icmp sgt i32 %sub.i, -1
     br i1 %tobool, label %if.end, label %if.then
-  
+
   if.then:                                          ; preds = %entry
     %call1 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
     br label %while.body
-  
+
   while.body:                                       ; preds = %while.body, %if.then
     br label %while.body
-  
+
   if.end:                                           ; preds = %entry
     %cmp.i = icmp slt i32 %sub.i, 1
     br i1 %cmp.i, label %if.then4, label %if.end7
-  
+
   if.then4:                                         ; preds = %if.end
     %call5 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
     br label %while.body6
-  
+
   while.body6:                                      ; preds = %while.body6, %if.then4
     br label %while.body6
-  
+
   if.end7:                                          ; preds = %if.end
     ret void
   }
-  
+
   declare i32 @g(...)
-  
+
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #0
-  
+
   attributes #0 = { nounwind }
-  
+
   !0 = !{!1, !1, i64 0}
   !1 = !{!"int", !2, i64 0}
   !2 = !{!"omnipotent char", !3, i64 0}
@@ -176,18 +176,18 @@ name:            test0a
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -204,7 +204,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18
-  
+
     %2 = COPY %r18
     %1 = COPY %r7
     %0 = COPY %r6
@@ -220,17 +220,17 @@ name:            test0b
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -247,7 +247,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18
-  
+
     %2 = COPY %r18
     %1 = COPY %r7
     %0 = COPY %r6
@@ -262,19 +262,19 @@ name:            test1a
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
   - { reg: '%r19', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -291,7 +291,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18, %r19
-  
+
     %3 = COPY %r19
     %2 = COPY %r18
     %1 = COPY %r7
@@ -308,19 +308,19 @@ name:            test1b
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
   - { reg: '%r19', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -337,7 +337,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18, %r19
-  
+
     %3 = COPY %r19
     %2 = COPY %r18
     %1 = COPY %r7
@@ -354,19 +354,19 @@ name:            test2a
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
   - { reg: '%r19', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -383,7 +383,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18, %r19
-  
+
     %3 = COPY %r19
     %2 = COPY %r18
     %1 = COPY %r7
@@ -400,19 +400,19 @@ name:            test2b
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
   - { reg: '%r19', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -429,7 +429,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18, %r19
-  
+
     %3 = COPY %r19
     %2 = COPY %r18
     %1 = COPY %r7
@@ -446,19 +446,19 @@ name:            test3
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%0' }
   - { reg: '%r7', virtual-reg: '%1' }
   - { reg: '%r18', virtual-reg: '%2' }
   - { reg: '%r19', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -475,7 +475,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     liveins: %r6, %r7, %r18, %r19
-  
+
     %3 = COPY %r19
     %2 = COPY %r18
     %1 = COPY %r7
@@ -492,7 +492,7 @@ name:            test4
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
@@ -516,12 +516,12 @@ registers:
   - { id: 20, class: gpr }
   - { id: 21, class: gpr }
   - { id: 22, class: gpr }
-liveins:         
+liveins:
   - { reg: '%r6', virtual-reg: '%1' }
   - { reg: '%r7', virtual-reg: '%2' }
   - { reg: '%r18', virtual-reg: '%3' }
   - { reg: '%r19', virtual-reg: '%4' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -539,7 +539,7 @@ body:             |
   bb.0.entry:
     successors: %bb.4.return, %bb.1.if.end
     liveins: %r6, %r7, %r18, %r19
-  
+
     %4 = COPY %r19
     %3 = COPY %r18
     %2 = COPY %r7
@@ -554,10 +554,10 @@ body:             |
     SFSUB_F_RI_LO killed %9, 0, implicit-def %sr
     BRCC %bb.4.return, 6, implicit %sr
     BT %bb.1.if.end
-  
+
   bb.1.if.end:
     successors: %bb.4.return, %bb.2.if.end6
-  
+
     SFSUB_F_RI_LO %2, 0, implicit-def %sr
     %10 = SCC 6, implicit %sr
     SFSUB_F_RR %2, %3, implicit-def %sr
@@ -567,10 +567,10 @@ body:             |
     SFSUB_F_RI_LO killed %14, 0, implicit-def %sr
     BRCC %bb.4.return, 6, implicit %sr
     BT %bb.2.if.end6
-  
+
   bb.2.if.end6:
     successors: %bb.4.return, %bb.3.if.end11
-  
+
     SFSUB_F_RI_LO %3, 0, implicit-def %sr
     %15 = SCC 6, implicit %sr
     SFSUB_F_RR %3, %4, implicit-def %sr
@@ -581,7 +581,7 @@ body:             |
     SFSUB_F_RI_LO killed %19, 0, implicit-def %sr
     BRCC %bb.4.return, 6, implicit %sr
     BT %bb.3.if.end11
-  
+
   bb.3.if.end11:
     %20 = SLI 21
     SFSUB_F_RR %4, %1, implicit-def %sr
@@ -590,7 +590,7 @@ body:             |
     %22 = SELECT killed %21, %20, 6, implicit %sr
     %rv = COPY %22
     RET implicit %rca, implicit %rv
-  
+
   bb.4.return:
     %0 = PHI %3, %bb.0.entry, %4, %bb.1.if.end, %1, %bb.2.if.end6
     %rv = COPY %0
@@ -602,7 +602,7 @@ name:            testBB
 alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
@@ -612,7 +612,7 @@ registers:
   - { id: 6, class: gpr }
   - { id: 7, class: gpr }
   - { id: 8, class: gpr }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -629,7 +629,7 @@ frameInfo:
 body:             |
   bb.0.entry:
     successors: %bb.3.if.end, %bb.1.if.then
-  
+
     %1 = MOVHI target-flags(lanai-hi) @a
     %2 = OR_I_LO killed %1, target-flags(lanai-lo) @a
     %3 = LDW_RI killed %2, 0, 0 :: (load 4 from @a, !tbaa !0)
@@ -640,38 +640,38 @@ body:             |
     SFSUB_F_RI_LO %0, 0, implicit-def %sr
     BRCC %bb.3.if.end, 10, implicit %sr
     BT %bb.1.if.then
-  
+
   bb.1.if.then:
     successors: %bb.2.while.body
-  
+
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
     CALL @g, csr, implicit-def dead %rca, implicit %sp, implicit-def %sp, implicit-def %rv
     ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
-  
+
   bb.2.while.body:
     successors: %bb.2.while.body
-  
+
     BT %bb.2.while.body
-  
+
   bb.3.if.end:
     successors: %bb.4.if.then4, %bb.6.if.end7
     liveins: %sr
-  
+
     BRCC %bb.6.if.end7, 14, implicit %sr
     BT %bb.4.if.then4
-  
+
   bb.4.if.then4:
     successors: %bb.5.while.body6
-  
+
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
     CALL @g, csr, implicit-def dead %rca, implicit %sp, implicit-def %sp, implicit-def %rv
     ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
-  
+
   bb.5.while.body6:
     successors: %bb.5.while.body6
-  
+
     BT %bb.5.while.body6
-  
+
   bb.6.if.end7:
     RET implicit %rca
 

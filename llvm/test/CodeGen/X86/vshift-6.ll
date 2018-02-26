@@ -26,7 +26,7 @@
 
 define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X32-LABEL: do_not_crash:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movb %al, (%ecx)
@@ -63,7 +63,7 @@ define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: do_not_crash:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movb %r9b, (%rdi)
 ; X64-NEXT:    movd %r9d, %xmm0
 ; X64-NEXT:    psllq $56, %xmm0

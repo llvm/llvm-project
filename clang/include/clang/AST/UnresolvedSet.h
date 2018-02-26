@@ -1,4 +1,4 @@
-//===-- UnresolvedSet.h - Unresolved sets of declarations  ------*- C++ -*-===//
+//===- UnresolvedSet.h - Unresolved sets of declarations --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,10 +17,15 @@
 
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
+#include <cstddef>
+#include <iterator>
 
 namespace clang {
+
+class NamedDecl;
 
 /// The iterator over UnresolvedSets.  Serves as both the const and
 /// non-const iterator.
@@ -28,9 +33,9 @@ class UnresolvedSetIterator : public llvm::iterator_adaptor_base<
                                   UnresolvedSetIterator, DeclAccessPair *,
                                   std::random_access_iterator_tag, NamedDecl *,
                                   std::ptrdiff_t, NamedDecl *, NamedDecl *> {
-  friend class UnresolvedSetImpl;
   friend class ASTUnresolvedSet;
   friend class OverloadExpr;
+  friend class UnresolvedSetImpl;
 
   explicit UnresolvedSetIterator(DeclAccessPair *Iter)
       : iterator_adaptor_base(Iter) {}
@@ -54,12 +59,13 @@ public:
 
 /// \brief A set of unresolved declarations.
 class UnresolvedSetImpl {
-  typedef SmallVectorImpl<DeclAccessPair> DeclsTy;
+  using DeclsTy = SmallVectorImpl<DeclAccessPair>;
 
   // Don't allow direct construction, and only permit subclassing by
   // UnresolvedSet.
 private:
   template <unsigned N> friend class UnresolvedSet;
+
   UnresolvedSetImpl() = default;
   UnresolvedSetImpl(const UnresolvedSetImpl &) = default;
   UnresolvedSetImpl &operator=(const UnresolvedSetImpl &) = default;
@@ -71,8 +77,8 @@ private:
 public:
   // We don't currently support assignment through this iterator, so we might
   // as well use the same implementation twice.
-  typedef UnresolvedSetIterator iterator;
-  typedef UnresolvedSetIterator const_iterator;
+  using iterator = UnresolvedSetIterator;
+  using const_iterator = UnresolvedSetIterator;
 
   iterator begin() { return iterator(decls().begin()); }
   iterator end() { return iterator(decls().end()); }
@@ -140,7 +146,7 @@ template <unsigned InlineCapacity> class UnresolvedSet :
   SmallVector<DeclAccessPair, InlineCapacity> Decls;
 };
 
-  
+ 
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_UNRESOLVEDSET_H

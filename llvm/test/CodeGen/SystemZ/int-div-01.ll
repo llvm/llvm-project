@@ -1,6 +1,6 @@
 ; Test 32-bit signed division and remainder.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -asm-verbose=0 | FileCheck %s
 
 declare i32 @foo()
 

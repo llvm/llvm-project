@@ -213,3 +213,10 @@ define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
 ; CHECK-NEXT: .size       pointer_to_array, 4
 @array = internal constant [8 x i8] zeroinitializer, align 1
 @pointer_to_array = constant i8* getelementptr inbounds ([8 x i8], [8 x i8]* @array, i32 0, i32 4), align 4
+
+; Handle external objects with opaque type.
+%struct.ASTRUCT = type opaque
+@g_struct = external global %struct.ASTRUCT, align 1
+define i32 @address_of_opaque()  {
+  ret i32 ptrtoint (%struct.ASTRUCT* @g_struct to i32)
+}

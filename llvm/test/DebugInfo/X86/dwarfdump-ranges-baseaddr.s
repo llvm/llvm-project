@@ -5,14 +5,14 @@
 # CHECK: 0x0000000b: DW_TAG_compile_unit [1]
 # CHECK:             DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000)
 # CHECK-NEXT:        DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
-# CHECK-NEXT:    [0x0000000000000000 - 0x0000000000000001) ".text"
-# CHECK-NEXT:    [0x0000000000000003 - 0x0000000000000006) ".text"
-# CHECK-NEXT:    [0x0000000000000001 - 0x0000000000000002) ".text.foo1")
+# CHECK-NEXT:    [0x0000000000000000, 0x0000000000000001) ".text"
+# CHECK-NEXT:    [0x0000000000000003, 0x0000000000000006) ".text"
+# CHECK-NEXT:    [0x0000000000000001, 0x0000000000000002) ".text.foo1")
 
 .text
 .globl foo
 .type foo,@function
-foo: 
+foo:
 .Lfunc_begin0:
   nop
 .Ltmp0:
@@ -27,7 +27,7 @@ foo:
 .section .text.foo1,"ax",@progbits
 .Ltmp3:
  nop
-.Ltmp4: 
+.Ltmp4:
  nop
 .Ltmp5:
 

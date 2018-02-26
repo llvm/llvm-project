@@ -2,9 +2,19 @@
 // RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -DBODY -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=CHECK-DEBUG %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -fnoopenmp-use-tls -DBODY -triple x86_64-unknown-unknown -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fnoopenmp-use-tls -DBODY -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 // RUN: %clang_cc1 -verify -fopenmp -DBODY -triple x86_64-unknown-unknown -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix=CHECK-TLS
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -DBODY -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=CHECK-TLS %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -DBODY -triple x86_64-unknown-unknown -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -DBODY -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 
 // expected-no-diagnostics
 //
@@ -144,26 +154,26 @@ struct S5 {
 // CHECK-DEBUG-DAG: [[ST_INT_ST:@.+]] = linkonce_odr global i32 23
 // CHECK-DEBUG-DAG: [[ST_FLOAT_ST:@.+]] = linkonce_odr global float 2.300000e+01
 // CHECK-DEBUG-DAG: [[ST_S4_ST:@.+]] = linkonce_odr global %struct.S4 zeroinitializer
-// CHECK-DEBUG-DAG: [[LOC1:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;192;9;;\00"
-// CHECK-DEBUG-DAG: [[LOC2:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;247;9;;\00"
-// CHECK-DEBUG-DAG: [[LOC3:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;334;19;;\00"
-// CHECK-DEBUG-DAG: [[LOC4:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;371;9;;\00"
-// CHECK-DEBUG-DAG: [[LOC5:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;388;9;;\00"
-// CHECK-DEBUG-DAG: [[LOC6:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;410;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC7:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;433;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC8:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;469;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC9:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;498;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC10:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;518;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC11:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;541;27;;\00"
-// CHECK-DEBUG-DAG: [[LOC12:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;564;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC13:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;684;9;;\00"
-// CHECK-DEBUG-DAG: [[LOC14:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;707;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC15:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;743;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC16:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;772;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC17:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;792;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC18:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;815;27;;\00"
-// CHECK-DEBUG-DAG: [[LOC19:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;838;10;;\00"
-// CHECK-DEBUG-DAG: [[LOC20:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;306;9;;\00"
+// CHECK-DEBUG-DAG: [[LOC1:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;201;9;;\00"
+// CHECK-DEBUG-DAG: [[LOC2:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;256;9;;\00"
+// CHECK-DEBUG-DAG: [[LOC3:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;343;19;;\00"
+// CHECK-DEBUG-DAG: [[LOC4:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;380;9;;\00"
+// CHECK-DEBUG-DAG: [[LOC5:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;397;9;;\00"
+// CHECK-DEBUG-DAG: [[LOC6:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;419;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC7:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;442;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC8:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;478;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC9:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;507;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC10:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;527;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC11:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;550;27;;\00"
+// CHECK-DEBUG-DAG: [[LOC12:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;573;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC13:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;693;9;;\00"
+// CHECK-DEBUG-DAG: [[LOC14:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;716;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC15:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;752;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC16:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;781;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC17:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;801;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC18:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;824;27;;\00"
+// CHECK-DEBUG-DAG: [[LOC19:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;foobar;847;10;;\00"
+// CHECK-DEBUG-DAG: [[LOC20:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;315;9;;\00"
 // CHECK-TLS-DAG:  [[GS1:@.+]] = internal thread_local global [[S1]] zeroinitializer
 // CHECK-TLS-DAG:  [[GS2:@.+]] = internal global [[S2]] zeroinitializer
 // CHECK-TLS-DAG:  [[ARR_X:@.+]] = thread_local global [2 x [3 x [[S1]]]] zeroinitializer
@@ -179,7 +189,6 @@ struct S5 {
 // CHECK-TLS-DAG:  @__dso_handle = external hidden global i8
 // CHECK-TLS-DAG:  [[GS1_TLS_INIT:@_ZTHL3gs1]] = internal alias void (), void ()* @__tls_init
 // CHECK-TLS-DAG:  [[ARR_X_TLS_INIT:@_ZTH5arr_x]] = alias void (), void ()* @__tls_init
-
 
 // CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* [[ST_S4_ST_CXX_INIT:@[^, ]*]]
 

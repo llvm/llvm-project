@@ -9,9 +9,9 @@
 ;                = 0.2 * 0.4 + 0.8 * 0.7 = 0.64
 
 ; CHECK: # Machine code for function test0:
-; CHECK: Successors according to CFG: BB#{{[0-9]+}}({{[0-9a-fx/= ]+}}20.00%) BB#{{[0-9]+}}({{[0-9a-fx/= ]+}}80.00%)
-; CHECK: BB#{{[0-9]+}}:
-; CHECK: BB#{{[0-9]+}}:
+; CHECK: Successors according to CFG: %bb.{{[0-9]+}}({{[0-9a-fx/= ]+}}20.00%) %bb.{{[0-9]+}}({{[0-9a-fx/= ]+}}80.00%)
+; CHECK: %bb.{{[0-9]+}}:
+; CHECK: %bb.{{[0-9]+}}:
 ; CHECK: # End machine code for function test0.
 
 define i32 @test0(i32 %n, i32 %m, i32* nocapture %a, i32* nocapture %b) {

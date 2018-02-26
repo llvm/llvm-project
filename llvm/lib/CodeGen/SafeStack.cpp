@@ -1,4 +1,4 @@
-//===-- SafeStack.cpp - Safe Stack Insertion ------------------------------===//
+//===- SafeStack.cpp - Safe Stack Insertion -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,37 +17,56 @@
 
 #include "SafeStackColoring.h"
 #include "SafeStackLayout.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::safestack;
@@ -255,16 +274,16 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
       assert(V == UI.get());
 
       switch (I->getOpcode()) {
-      case Instruction::Load: {
+      case Instruction::Load:
         if (!IsAccessSafe(UI, DL.getTypeStoreSize(I->getType()), AllocaPtr,
                           AllocaSize))
           return false;
         break;
-      }
+
       case Instruction::VAArg:
         // "va-arg" from a pointer is safe.
         break;
-      case Instruction::Store: {
+      case Instruction::Store:
         if (V == I->getOperand(0)) {
           // Stored the pointer - conservatively assume it may be unsafe.
           DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AllocaPtr
@@ -276,11 +295,10 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
                           AllocaPtr, AllocaSize))
           return false;
         break;
-      }
-      case Instruction::Ret: {
+
+      case Instruction::Ret:
         // Information leak.
         return false;
-      }
 
       case Instruction::Call:
       case Instruction::Invoke: {
@@ -372,7 +390,7 @@ void SafeStack::findInsts(Function &F,
       StackRestorePoints.push_back(LP);
     } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
       if (II->getIntrinsicID() == Intrinsic::gcroot)
-        llvm::report_fatal_error(
+        report_fatal_error(
             "gcroot intrinsic not compatible with safestack attribute");
     }
   }
@@ -540,7 +558,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
     // Replace alloc with the new location.
     replaceDbgDeclare(Arg, BasePointer, BasePointer->getNextNode(), DIB,
-                      /*Deref=*/false, -Offset);
+                      DIExpression::NoDeref, -Offset, DIExpression::NoDeref);
     Arg->replaceAllUsesWith(NewArg);
     IRB.SetInsertPoint(cast<Instruction>(NewArg)->getNextNode());
     IRB.CreateMemCpy(Off, Arg, Size, Arg->getParamAlignment());
@@ -555,7 +573,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
 
-    replaceDbgDeclareForAlloca(AI, BasePointer, DIB, /*Deref=*/false, -Offset);
+    replaceDbgDeclareForAlloca(AI, BasePointer, DIB, DIExpression::NoDeref,
+                               -Offset, DIExpression::NoDeref);
     replaceDbgValueForAlloca(AI, BasePointer, DIB, -Offset);
 
     // Replace uses of the alloca with the new location.
@@ -645,7 +664,8 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     if (AI->hasName() && isa<Instruction>(NewAI))
       NewAI->takeName(AI);
 
-    replaceDbgDeclareForAlloca(AI, NewAI, DIB, /*Deref=*/false);
+    replaceDbgDeclareForAlloca(AI, NewAI, DIB, DIExpression::NoDeref, 0,
+                               DIExpression::NoDeref);
     AI->replaceAllUsesWith(NewAI);
     AI->eraseFromParent();
   }
@@ -764,11 +784,12 @@ bool SafeStack::run() {
 }
 
 class SafeStackLegacyPass : public FunctionPass {
-  const TargetMachine *TM;
+  const TargetMachine *TM = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid..
-  SafeStackLegacyPass() : FunctionPass(ID), TM(nullptr) {
+
+  SafeStackLegacyPass() : FunctionPass(ID) {
     initializeSafeStackLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -817,9 +838,10 @@ public:
   }
 };
 
-} // anonymous namespace
+} // end anonymous namespace
 
 char SafeStackLegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(SafeStackLegacyPass, DEBUG_TYPE,
                       "Safe Stack instrumentation pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)

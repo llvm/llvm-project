@@ -37,12 +37,14 @@ return:
 ; BRANCHPROB: Printing analysis 'Branch Probability Analysis' for function 'foo':
 ; BRANCHPROB:---- Branch Probabilities ----
 ; BRANCHPROB:  edge entry -> if.then probability is 0x37c32b17 / 0x80000000 = 43.56%
-; BRANCHPROB:  edge entry -> return probability is 0x483cd4e9 / 0x80000000 = 56.44%
+; BRANCHPROB:  edge entry -> return.clone probability is 0x483cd4e9 / 0x80000000 = 56.44%
 ; BRANCHPROB:  edge if.then -> return probability is 0x5ba2e8ba / 0x80000000 = 71.59%
 ; BRANCHPROB:  edge if.then -> label2 probability is 0x1d1745d1 / 0x80000000 = 22.73%
 ; BRANCHPROB:  edge if.then -> label3 probability is 0x0745d174 / 0x80000000 = 5.68%
-; BRANCHPROB:  edge label2 -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; BRANCHPROB:  edge label3 -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; BRANCHPROB:  edge label2 -> return.clone probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; BRANCHPROB:  edge label3 -> return.clone probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; BRANCHPROB:  edge return -> .split probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; BRANCHPROB:  edge return.clone -> .split probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 
 

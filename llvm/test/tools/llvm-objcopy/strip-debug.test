@@ -1,0 +1,54 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -strip-debug %t %t2
+# RUN: llvm-readobj -file-headers -sections -symbols %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .debugfoo
+    Type:            SHT_PROGBITS
+    Content:         "00000000"
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         "00000000"
+Symbols:
+  Global:
+    - Name: foo
+      Section: .text
+    - Name: debugfoo
+      Section: .debugfoo
+
+# CHECK: SectionHeaderCount: 5
+
+# CHECK: Name: .text
+# CHECK: Name: .symtab
+# CHECK: Name: .strtab
+# CHECK: Name: .shstrtab
+
+# Check that *only* foo is copied and not debugfoo
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding:
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

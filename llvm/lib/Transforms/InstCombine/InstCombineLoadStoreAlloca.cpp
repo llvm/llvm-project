@@ -18,13 +18,14 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
@@ -561,6 +562,28 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
   return NewStore;
 }
 
+/// Returns true if instruction represent minmax pattern like:
+///   select ((cmp load V1, load V2), V1, V2).
+static bool isMinMaxWithLoads(Value *V) {
+  assert(V->getType()->isPointerTy() && "Expected pointer type.");
+  // Ignore possible ty* to ixx* bitcast.
+  V = peekThroughBitcast(V);
+  // Check that select is select ((cmp load V1, load V2), V1, V2) - minmax
+  // pattern.
+  CmpInst::Predicate Pred;
+  Instruction *L1;
+  Instruction *L2;
+  Value *LHS;
+  Value *RHS;
+  if (!match(V, m_Select(m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2)),
+                         m_Value(LHS), m_Value(RHS))))
+    return false;
+  return (match(L1, m_Load(m_Specific(LHS))) &&
+          match(L2, m_Load(m_Specific(RHS)))) ||
+         (match(L1, m_Load(m_Specific(RHS))) &&
+          match(L2, m_Load(m_Specific(LHS))));
+}
+
 /// \brief Combine loads to match the type of their uses' value after looking
 /// through intervening bitcasts.
 ///
@@ -598,10 +621,14 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   // integers instead of any other type. We only do this when the loaded type
   // is sized and has a size exactly the same as its store size and the store
   // size is a legal integer type.
+  // Do not perform canonicalization if minmax pattern is found (to avoid
+  // infinite loop).
   if (!Ty->isIntegerTy() && Ty->isSized() &&
       DL.isLegalInteger(DL.getTypeStoreSizeInBits(Ty)) &&
       DL.getTypeStoreSizeInBits(Ty) == DL.getTypeSizeInBits(Ty) &&
-      !DL.isNonIntegralPointerType(Ty)) {
+      !DL.isNonIntegralPointerType(Ty) &&
+      !isMinMaxWithLoads(
+          peekThroughBitcast(LI.getPointerOperand(), /*OneUseOnly=*/true))) {
     if (all_of(LI.users(), [&LI](User *U) {
           auto *SI = dyn_cast<StoreInst>(U);
           return SI && SI->getPointerOperand() != &LI &&
@@ -929,6 +956,16 @@ static Instruction *replaceGEPIdxWithZero(InstCombiner &IC, Value *Ptr,
   }
 
   return nullptr;
+}
+
+static bool canSimplifyNullStoreOrGEP(StoreInst &SI) {
+  if (SI.getPointerAddressSpace() != 0)
+    return false;
+
+  auto *Ptr = SI.getPointerOperand();
+  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEPI->getOperand(0);
+  return isa<ConstantPointerNull>(Ptr);
 }
 
 static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
@@ -1298,6 +1335,46 @@ static bool equivalentAddressValues(Value *A, Value *B) {
   return false;
 }
 
+/// Converts store (bitcast (load (bitcast (select ...)))) to
+/// store (load (select ...)), where select is minmax:
+/// select ((cmp load V1, load V2), V1, V2).
+static bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC,
+                                                StoreInst &SI) {
+  // bitcast?
+  if (!match(SI.getPointerOperand(), m_BitCast(m_Value())))
+    return false;
+  // load? integer?
+  Value *LoadAddr;
+  if (!match(SI.getValueOperand(), m_Load(m_BitCast(m_Value(LoadAddr)))))
+    return false;
+  auto *LI = cast<LoadInst>(SI.getValueOperand());
+  if (!LI->getType()->isIntegerTy())
+    return false;
+  if (!isMinMaxWithLoads(LoadAddr))
+    return false;
+
+  if (!all_of(LI->users(), [LI, LoadAddr](User *U) {
+        auto *SI = dyn_cast<StoreInst>(U);
+        return SI && SI->getPointerOperand() != LI &&
+               peekThroughBitcast(SI->getPointerOperand()) != LoadAddr &&
+               !SI->getPointerOperand()->isSwiftError();
+      }))
+    return false;
+
+  IC.Builder.SetInsertPoint(LI);
+  LoadInst *NewLI = combineLoadToNewType(
+      IC, *LI, LoadAddr->getType()->getPointerElementType());
+  // Replace all the stores with stores of the newly loaded value.
+  for (auto *UI : LI->users()) {
+    auto *USI = cast<StoreInst>(UI);
+    IC.Builder.SetInsertPoint(USI);
+    combineStoreToNewValue(IC, *USI, NewLI);
+  }
+  IC.replaceInstUsesWith(*LI, UndefValue::get(LI->getType()));
+  IC.eraseInstFromFunction(*LI);
+  return true;
+}
+
 Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   Value *Val = SI.getOperand(0);
   Value *Ptr = SI.getOperand(1);
@@ -1320,6 +1397,9 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
 
   // Try to canonicalize the stored type.
   if (unpackStoreToAggregate(*this, SI))
+    return eraseInstFromFunction(SI);
+
+  if (removeBitcastsFromLoadStoreOnMinMax(*this, SI))
     return eraseInstFromFunction(SI);
 
   // Replace GEP indices if possible.
@@ -1392,7 +1472,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   }
 
   // store X, null    -> turns into 'unreachable' in SimplifyCFG
-  if (isa<ConstantPointerNull>(Ptr) && SI.getPointerAddressSpace() == 0) {
+  // store X, GEP(null, Y) -> turns into 'unreachable' in SimplifyCFG
+  if (canSimplifyNullStoreOrGEP(SI)) {
     if (!isa<UndefValue>(Val)) {
       SI.setOperand(0, UndefValue::get(Val->getType()));
       if (Instruction *U = dyn_cast<Instruction>(Val))
@@ -1544,8 +1625,7 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
                                    SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   // The debug locations of the original instructions might differ; merge them.
-  NewSI->setDebugLoc(DILocation::getMergedLocation(SI.getDebugLoc(),
-                                                   OtherStore->getDebugLoc()));
+  NewSI->applyMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
 
   // If the two stores had AA tags, merge them.
   AAMDNodes AATags;

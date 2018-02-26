@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 void foo() {
 }
 
@@ -125,11 +127,11 @@ int foomain(int argc, char **argv) {
     foo();
 #pragma omp parallel private(i)
 #pragma omp target parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as private}}
+  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
 #pragma omp parallel reduction(+ : i)
 #pragma omp target parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as private}}
+  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
   return 0;
 }
@@ -219,7 +221,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i)    // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as private}}
+  for (i = 0; i < argc; ++i)    // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
 #pragma omp parallel shared(xa)
 #pragma omp target parallel for simd firstprivate(xa) // OK: may be firstprivate
@@ -246,11 +248,11 @@ int main(int argc, char **argv) {
   }
 #pragma omp parallel private(i)
 #pragma omp target parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as private}}
+  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
 #pragma omp parallel reduction(+ : i)
 #pragma omp target parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as private}}
+  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
   static int si;
 #pragma omp target parallel for simd firstprivate(si) // OK

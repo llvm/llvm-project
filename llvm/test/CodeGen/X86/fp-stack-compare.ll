@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=i386 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=i386 | FileCheck %s
 ; PR6679
 
 define float @foo(float* %col.2.0) {

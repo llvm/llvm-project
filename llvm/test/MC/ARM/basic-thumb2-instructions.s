@@ -3113,12 +3113,18 @@ _func:
         svceq #255
         it ne
         swine #33
+        itt eq
+        svceq #0
+        svceq #1
 
 @ CHECK: svc	#0                      @ encoding: [0x00,0xdf]
 @ CHECK: it	eq                      @ encoding: [0x08,0xbf]
 @ CHECK: svceq	#255                    @ encoding: [0xff,0xdf]
 @ CHECK: it	ne                      @ encoding: [0x18,0xbf]
 @ CHECK: svcne	#33                     @ encoding: [0x21,0xdf]
+@ CHECK: itt    eq                      @ encoding: [0x04,0xbf]
+@ CHECK: svceq  #0                      @ encoding: [0x00,0xdf]
+@ CHECK: svceq  #1                      @ encoding: [0x01,0xdf]
 
 
 @------------------------------------------------------------------------------

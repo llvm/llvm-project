@@ -1,8 +1,8 @@
-; RUN: llc -march=x86-64 < %s -pre-RA-sched=list-ilp    | FileCheck %s
-; RUN: llc -march=x86-64 < %s -pre-RA-sched=list-hybrid | FileCheck %s
-; RUN: llc -march=x86-64 < %s -pre-RA-sched=source      | FileCheck %s
-; RUN: llc -march=x86-64 < %s -pre-RA-sched=list-burr   | FileCheck %s
-; RUN: llc -march=x86-64 < %s -pre-RA-sched=linearize   | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=list-ilp    | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=list-hybrid | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=source      | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=list-burr   | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=linearize   | FileCheck %s
 
 ; PR22304 https://llvm.org/bugs/show_bug.cgi?id=22304
 ; Tests checking backtracking in source scheduler. llc used to crash on them.

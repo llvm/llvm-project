@@ -1,4 +1,4 @@
-//===-- ARMTargetTransformInfo.cpp - ARM specific TTI ---------------------===//
+//===- ARMTargetTransformInfo.cpp - ARM specific TTI ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,9 +8,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMTargetTransformInfo.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Target/CostTable.h"
-#include "llvm/Target/TargetLowering.h"
+#include "ARMSubtarget.h"
+#include "MCTargetDesc/ARMAddressingModes.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/CostTable.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "armtti"
@@ -65,7 +86,6 @@ int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   return 3;
 }
 
-
 // Constants smaller than 256 fit in the immediate field of
 // Thumb1 instructions so we return a zero cost and 1 otherwise.
 int ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
@@ -108,7 +128,6 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
 
   return getIntImmCost(Imm, Ty);
 }
-
 
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                  const Instruction *I) {
@@ -331,7 +350,6 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 
 int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                    const Instruction *I) {
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // On NEON a a vector select gets lowered to vbsl.
   if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
@@ -374,25 +392,6 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   // In many cases the address computation is not merged into the instruction
   // addressing mode.
   return 1;
-}
-
-int ARMTTIImpl::getFPOpCost(Type *Ty) {
-  // Use similar logic that's in ARMISelLowering:
-  // Any ARM CPU with VFP2 has floating point, but Thumb1 didn't have access
-  // to VFP.
-
-  if (ST->hasVFP2() && !ST->isThumb1Only()) {
-    if (Ty->isFloatTy()) {
-      return TargetTransformInfo::TCC_Basic;
-    }
-
-    if (Ty->isDoubleTy()) {
-      return ST->isFPOnlySP() ? TargetTransformInfo::TCC_Expensive :
-        TargetTransformInfo::TCC_Basic;
-    }
-  }
-
-  return TargetTransformInfo::TCC_Expensive;
 }
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
@@ -455,7 +454,6 @@ int ARMTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo,
     ArrayRef<const Value *> Args) {
-
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -561,4 +559,68 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace);
+}
+
+void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                                         TTI::UnrollingPreferences &UP) {
+  // Only currently enable these preferences for M-Class cores.
+  if (!ST->isMClass())
+    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP);
+
+  // Disable loop unrolling for Oz and Os.
+  UP.OptSizeThreshold = 0;
+  UP.PartialOptSizeThreshold = 0;
+  if (L->getHeader()->getParent()->optForSize())
+    return;
+
+  // Only enable on Thumb-2 targets.
+  if (!ST->isThumb2())
+    return;
+
+  SmallVector<BasicBlock*, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  DEBUG(dbgs() << "Loop has:\n"
+      << "Blocks: " << L->getNumBlocks() << "\n"
+      << "Exit blocks: " << ExitingBlocks.size() << "\n");
+
+  // Only allow another exit other than the latch. This acts as an early exit
+  // as it mirrors the profitability calculation of the runtime unroller.
+  if (ExitingBlocks.size() > 2)
+    return;
+
+  // Limit the CFG of the loop body for targets with a branch predictor.
+  // Allowing 4 blocks permits if-then-else diamonds in the body.
+  if (ST->hasBranchPredictor() && L->getNumBlocks() > 4)
+    return;
+
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining.
+  unsigned Cost = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+        ImmutableCallSite CS(&I);
+        if (const Function *F = CS.getCalledFunction()) {
+          if (!isLoweredToCall(F))
+            continue;
+        }
+        return;
+      }
+      SmallVector<const Value*, 4> Operands(I.value_op_begin(),
+                                            I.value_op_end());
+      Cost += getUserCost(&I, Operands);
+    }
+  }
+
+  DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
+
+  UP.Partial = true;
+  UP.Runtime = true;
+  UP.UnrollRemainder = true;
+  UP.DefaultUnrollRuntimeCount = 4;
+
+  // Force unrolling small loops can be very useful because of the branch
+  // taken cost of the backedge.
+  if (Cost < 12)
+    UP.Force = true;
 }

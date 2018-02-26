@@ -3,7 +3,7 @@
 
 define <4 x i32> @test1(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s32 q8, q8
@@ -18,7 +18,7 @@ define <4 x i32> @test1(<4 x i32> %a) nounwind {
 
 define <4 x i32> @test2(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s32 q8, q8
@@ -33,7 +33,7 @@ define <4 x i32> @test2(<4 x i32> %a) nounwind {
 
 define <8 x i16> @test3(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s16 q8, q8
@@ -48,7 +48,7 @@ define <8 x i16> @test3(<8 x i16> %a) nounwind {
 
 define <16 x i8> @test4(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s8 q8, q8
@@ -63,7 +63,7 @@ define <16 x i8> @test4(<16 x i8> %a) nounwind {
 
 define <4 x i32> @test5(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: test5:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s32 q8, q8
@@ -78,7 +78,7 @@ define <4 x i32> @test5(<4 x i32> %a) nounwind {
 
 define <2 x i32> @test6(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: test6:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -91,7 +91,7 @@ define <2 x i32> @test6(<2 x i32> %a) nounwind {
 
 define <2 x i32> @test7(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: test7:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -104,7 +104,7 @@ define <2 x i32> @test7(<2 x i32> %a) nounwind {
 
 define <4 x i16> @test8(<4 x i16> %a) nounwind {
 ; CHECK-LABEL: test8:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -117,7 +117,7 @@ define <4 x i16> @test8(<4 x i16> %a) nounwind {
 
 define <8 x i8> @test9(<8 x i8> %a) nounwind {
 ; CHECK-LABEL: test9:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -130,7 +130,7 @@ define <8 x i8> @test9(<8 x i8> %a) nounwind {
 
 define <2 x i32> @test10(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: test10:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vabs.s32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -146,7 +146,7 @@ define <2 x i32> @test10(<2 x i32> %a) nounwind {
 
 define <4 x i32> @test11(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; CHECK-LABEL: test11:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r2, r3
 ; CHECK-NEXT:    vmov d17, r0, r1
 ; CHECK-NEXT:    vabdl.u16 q8, d17, d16
@@ -163,7 +163,7 @@ define <4 x i32> @test11(<4 x i16> %a, <4 x i16> %b) nounwind {
 }
 define <8 x i16> @test12(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; CHECK-LABEL: test12:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r2, r3
 ; CHECK-NEXT:    vmov d17, r0, r1
 ; CHECK-NEXT:    vabdl.u8 q8, d17, d16
@@ -181,7 +181,7 @@ define <8 x i16> @test12(<8 x i8> %a, <8 x i8> %b) nounwind {
 
 define <2 x i64> @test13(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-LABEL: test13:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r2, r3
 ; CHECK-NEXT:    vmov d17, r0, r1
 ; CHECK-NEXT:    vabdl.u32 q8, d17, d16

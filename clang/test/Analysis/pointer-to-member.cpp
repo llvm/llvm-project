@@ -230,3 +230,42 @@ void double_diamond() {
   clang_analyzer_eval(d2.*(static_cast<int D2::*>(static_cast<int R2::*>(static_cast<int R1::*>(&B::f)))) == 4); // expected-warning {{TRUE}}
 }
 } // end of testPointerToMemberDiamond namespace
+
+namespace testAnonymousMember {
+struct A {
+  struct {
+    int x;
+  };
+  struct {
+    struct {
+      int y;
+    };
+  };
+  struct {
+    union {
+      int z;
+    };
+  };
+};
+
+void test() {
+  clang_analyzer_eval(&A::x); // expected-warning{{TRUE}}
+  clang_analyzer_eval(&A::y); // expected-warning{{TRUE}}
+  clang_analyzer_eval(&A::z); // expected-warning{{TRUE}}
+
+  // FIXME: These should be true.
+  int A::*l = &A::x, A::*m = &A::y, A::*n = &A::z;
+  clang_analyzer_eval(l); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(m); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(n); // expected-warning{{UNKNOWN}}
+
+  // FIXME: These should be true as well.
+  A a;
+  a.x = 1;
+  clang_analyzer_eval(a.*l == 1); // expected-warning{{UNKNOWN}}
+  a.y = 2;
+  clang_analyzer_eval(a.*m == 2); // expected-warning{{UNKNOWN}}
+  a.z = 3;
+  clang_analyzer_eval(a.*n == 3); // expected-warning{{UNKNOWN}}
+}
+} // end of testAnonymousMember namespace

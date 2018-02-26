@@ -2,6 +2,7 @@ clang_CXCursorSet_contains
 clang_CXCursorSet_insert
 clang_CXIndex_getGlobalOptions
 clang_CXIndex_setGlobalOptions
+clang_CXIndex_setInvocationEmissionPathOption
 clang_CXXConstructor_isConvertingConstructor
 clang_CXXConstructor_isCopyConstructor
 clang_CXXConstructor_isDefaultConstructor
@@ -12,6 +13,7 @@ clang_CXXMethod_isConst
 clang_CXXMethod_isPureVirtual
 clang_CXXMethod_isStatic
 clang_CXXMethod_isVirtual
+clang_CXXRecord_isAbstract
 clang_EnumDecl_isScoped
 clang_Cursor_getArgument
 clang_Cursor_getNumTemplateArguments
@@ -23,6 +25,7 @@ clang_Cursor_getBriefCommentText
 clang_Cursor_getCommentRange
 clang_Cursor_getCXXManglings
 clang_Cursor_getMangling
+clang_Cursor_getObjCManglings
 clang_Cursor_getParsedComment
 clang_Cursor_getRawCommentText
 clang_Cursor_getNumArguments
@@ -189,6 +192,7 @@ clang_getCursorReferenced
 clang_getCursorResultType
 clang_getCursorSemanticParent
 clang_getCursorSpelling
+clang_getCursorTLSKind
 clang_getCursorType
 clang_getCursorUSR
 clang_getCursorVisibility
@@ -216,6 +220,7 @@ clang_getExceptionSpecificationType
 clang_getFieldDeclBitWidth
 clang_getExpansionLocation
 clang_getFile
+clang_getFileContents
 clang_getFileLocation
 clang_getFileName
 clang_getFileTime

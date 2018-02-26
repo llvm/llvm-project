@@ -17,7 +17,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitor.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
@@ -469,8 +469,6 @@ public:
                                       ArrayRef<BugReport *> &bugReports) {
     return true;
   }
-
-  bool RemoveUnneededCalls(PathPieces &pieces, BugReport *R);
 
   void Register(BugType *BT);
 

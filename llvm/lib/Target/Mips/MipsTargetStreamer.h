@@ -77,6 +77,7 @@ public:
   virtual void emitDirectiveSetMips64R5();
   virtual void emitDirectiveSetMips64R6();
   virtual void emitDirectiveSetDsp();
+  virtual void emitDirectiveSetDspr2();
   virtual void emitDirectiveSetNoDsp();
   virtual void emitDirectiveSetPop();
   virtual void emitDirectiveSetPush();
@@ -119,6 +120,9 @@ public:
                SMLoc IDLoc, const MCSubtargetInfo *STI);
   void emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm,
                SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitRRIII(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm0,
+                 int16_t Imm1, int16_t Imm2, SMLoc IDLoc,
+                 const MCSubtargetInfo *STI);
   void emitAddu(unsigned DstReg, unsigned SrcReg, unsigned TrgReg, bool Is64Bit,
                 const MCSubtargetInfo *STI);
   void emitDSLL(unsigned DstReg, unsigned SrcReg, int16_t ShiftAmount,
@@ -244,6 +248,7 @@ public:
   void emitDirectiveSetMips64R5() override;
   void emitDirectiveSetMips64R6() override;
   void emitDirectiveSetDsp() override;
+  void emitDirectiveSetDspr2() override;
   void emitDirectiveSetNoDsp() override;
   void emitDirectiveSetPop() override;
   void emitDirectiveSetPush() override;

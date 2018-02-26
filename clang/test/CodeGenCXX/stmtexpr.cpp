@@ -173,7 +173,7 @@ extern "C" int cleanup_exit_lvalue_local(bool cond) {
 _Complex float bar_complex(A, int);
 extern "C" int cleanup_exit_complex(bool b) {
   _Complex float v = bar_complex(A(1), ({ if (b) return 42; 13; }));
-  return v;
+  return (float)v;
 }
 
 // CHECK-LABEL: define{{.*}} i32 @cleanup_exit_complex({{.*}})

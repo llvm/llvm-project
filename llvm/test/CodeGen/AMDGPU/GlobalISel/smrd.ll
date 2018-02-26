@@ -1,5 +1,5 @@
 ; FIXME: Need to add support for mubuf stores to enable this on SI.
-; XUN: llc < %s -march=amdgcn -mcpu=SI -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=SI --check-prefix=GCN --check-prefix=SIVI %s
+; XUN: llc < %s -march=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=SI --check-prefix=GCN --check-prefix=SIVI %s
 ; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=CI --check-prefix=GCN %s
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=VI --check-prefix=GCN --check-prefix=SIVI %s
 

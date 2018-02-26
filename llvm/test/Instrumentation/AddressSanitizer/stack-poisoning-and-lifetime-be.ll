@@ -20,7 +20,7 @@ entry:
   %z = alloca [40 x i8], align 1
   %zz = getelementptr inbounds [40 x i8], [40 x i8]* %z, i64 0, i64 0
 
-  ; CHECK: [[SHADOW_BASE:%[0-9]+]] = add i64 %{{[0-9]+}}, 2199023255552
+  ; CHECK: [[SHADOW_BASE:%[0-9]+]] = add i64 %{{[0-9]+}}, 17592186044416
 
   ; F1F1F1F1
   ; ENTRY-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0

@@ -159,7 +159,7 @@ private:
 
 #define DEBUG_COUNTER(VARNAME, COUNTERNAME, DESC)                              \
   static const unsigned VARNAME =                                              \
-      DebugCounter::registerCounter(COUNTERNAME, DESC);
+      DebugCounter::registerCounter(COUNTERNAME, DESC)
 
 } // namespace llvm
 #endif

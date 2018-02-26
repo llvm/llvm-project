@@ -1,6 +1,6 @@
-; RUN: llc < %s -mcpu=generic -march=x86 -mattr=+sse2 -mtriple=i686-apple-darwin8 | \
+; RUN: llc < %s -mcpu=generic -mattr=+sse2 -mtriple=i686-apple-darwin8 | \
 ; RUN:   grep "subl.*60"
-; RUN: llc < %s -mcpu=generic -march=x86 -mattr=+sse2 -mtriple=i686-apple-darwin8 | \
+; RUN: llc < %s -mcpu=generic -mattr=+sse2 -mtriple=i686-apple-darwin8 | \
 ; RUN:   grep "movaps.*32"
 
 

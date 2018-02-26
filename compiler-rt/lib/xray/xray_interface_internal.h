@@ -28,13 +28,15 @@ struct XRaySledEntry {
   uint64_t Function;
   unsigned char Kind;
   unsigned char AlwaysInstrument;
-  unsigned char Padding[14]; // Need 32 bytes
+  unsigned char Version;
+  unsigned char Padding[13]; // Need 32 bytes
 #elif SANITIZER_WORDSIZE == 32
   uint32_t Address;
   uint32_t Function;
   unsigned char Kind;
   unsigned char AlwaysInstrument;
-  unsigned char Padding[6]; // Need 16 bytes
+  unsigned char Version;
+  unsigned char Padding[5]; // Need 16 bytes
 #else
 #error "Unsupported word size."
 #endif

@@ -62,7 +62,7 @@ public:
     uint64_t getStackSize() const {
       return read<uint64_t>(P + sizeof(uint64_t));
     }
-    
+
     /// Get the number of callsite records.
     uint64_t getRecordCount() const {
       return read<uint64_t>(P + (2 * sizeof(uint64_t)));

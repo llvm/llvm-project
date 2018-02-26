@@ -1,6 +1,7 @@
 ; A collection of liveness test cases to ensure we're reporting the
 ; correct live values at statepoints
 ; RUN: opt -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S < %s | FileCheck %s
+; RUN: opt -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S < %s | FileCheck %s
 
 ; Tests to make sure we consider %obj live in both the taken and untaken 
 ; predeccessor of merge.

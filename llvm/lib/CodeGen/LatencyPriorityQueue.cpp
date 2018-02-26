@@ -134,6 +134,7 @@ SUnit *LatencyPriorityQueue::pop() {
 void LatencyPriorityQueue::remove(SUnit *SU) {
   assert(!Queue.empty() && "Queue is empty!");
   std::vector<SUnit *>::iterator I = find(Queue, SU);
+  assert(I != Queue.end() && "Queue doesn't contain the SU being removed!");
   if (I != std::prev(Queue.end()))
     std::swap(*I, Queue.back());
   Queue.pop_back();

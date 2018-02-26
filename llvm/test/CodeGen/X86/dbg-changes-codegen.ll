@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
 
 ; The Peephole optimizer should fold the load into the cmp even with debug info.
 ; CHECK-LABEL: _ZN3Foo3batEv

@@ -37,14 +37,19 @@ using namespace llvm;
 
 enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
-static void exitWithError(const Twine &Message, StringRef Whence = "",
-                          StringRef Hint = "") {
-  errs() << "error: ";
+static void warn(StringRef Prefix, Twine Message, std::string Whence = "",
+                 std::string Hint = "") {
+  errs() << Prefix;
   if (!Whence.empty())
     errs() << Whence << ": ";
   errs() << Message << "\n";
   if (!Hint.empty())
     errs() << Hint << "\n";
+}
+
+static void exitWithError(Twine Message, std::string Whence = "",
+                          std::string Hint = "") {
+  warn("error: ", Message, Whence, Hint);
   ::exit(1);
 }
 
@@ -119,7 +124,7 @@ struct WriterContext {
   std::mutex Lock;
   InstrProfWriter Writer;
   Error Err;
-  StringRef ErrWhence;
+  std::string ErrWhence;
   std::mutex &ErrLock;
   SmallSet<instrprof_error, 4> &WriterErrorCodes;
 
@@ -129,6 +134,22 @@ struct WriterContext {
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
+/// Determine whether an error is fatal for profile merging.
+static bool isFatalError(instrprof_error IPE) {
+  switch (IPE) {
+  default:
+    return true;
+  case instrprof_error::success:
+  case instrprof_error::eof:
+  case instrprof_error::unknown_function:
+  case instrprof_error::hash_mismatch:
+  case instrprof_error::count_mismatch:
+  case instrprof_error::counter_overflow:
+  case instrprof_error::value_site_count_mismatch:
+    return false;
+  }
+}
+
 /// Load an input into a writer context.
 static void loadInput(const WeightedFile &Input, WriterContext *WC) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
@@ -137,6 +158,9 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
   if (WC->Err)
     return;
 
+  // Copy the filename, because llvm::ThreadPool copied the input "const
+  // WeightedFile &" by value, making a reference to the filename within it
+  // invalid outside of this packaged task.
   WC->ErrWhence = Input.Filename;
 
   auto ReaderOrErr = InstrProfReader::create(Input.Filename);
@@ -174,12 +198,22 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
                              FuncName, firstTime);
     });
   }
-  if (Reader->hasError())
-    WC->Err = Reader->getError();
+  if (Reader->hasError()) {
+    if (Error E = Reader->getError()) {
+      instrprof_error IPE = InstrProfError::take(std::move(E));
+      if (isFatalError(IPE))
+        WC->Err = make_error<InstrProfError>(IPE);
+    }
+  }
 }
 
 /// Merge the \p Src writer context into \p Dst.
 static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
+  // If we've already seen a hard error, continuing with the merge would
+  // clobber it.
+  if (Dst->Err || Src->Err)
+    return;
+
   bool Reported = false;
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     if (Reported) {
@@ -211,8 +245,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)
-    NumThreads = std::max(1U, std::min(std::thread::hardware_concurrency(),
-                                       unsigned(Inputs.size() / 2)));
+    NumThreads =
+        std::min(hardware_concurrency(), unsigned((Inputs.size() + 1) / 2));
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;
@@ -254,9 +288,19 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   }
 
   // Handle deferred hard errors encountered during merging.
-  for (std::unique_ptr<WriterContext> &WC : Contexts)
-    if (WC->Err)
+  for (std::unique_ptr<WriterContext> &WC : Contexts) {
+    if (!WC->Err)
+      continue;
+    if (!WC->Err.isA<InstrProfError>())
       exitWithError(std::move(WC->Err), WC->ErrWhence);
+
+    instrprof_error IPE = InstrProfError::take(std::move(WC->Err));
+    if (isFatalError(IPE))
+      exitWithError(make_error<InstrProfError>(IPE), WC->ErrWhence);
+    else
+      warn("warning: ", toString(make_error<InstrProfError>(IPE)),
+           WC->ErrWhence);
+  }
 
   InstrProfWriter &Writer = Contexts[0]->Writer;
   if (OutputFormat == PF_Text) {
@@ -625,6 +669,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (ShowCounts && TextFormat)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
+  OS << "Instrumentation level: "
+     << (Reader->isIRLevelProfile() ? "IR" : "Front-end") << "\n";
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS->getNumFunctions() << "\n";

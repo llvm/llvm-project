@@ -101,23 +101,19 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
-#include "AArch64Subtarget.h"
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-collect-loh"
@@ -486,7 +482,7 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
 }
 
 bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"

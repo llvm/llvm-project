@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 
@@ -50,7 +50,7 @@ public:
 
   bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI,
-                                  const std::vector<CalleeSavedInfo> &CSI,
+                                  std::vector<CalleeSavedInfo> &CSI,
                                   const TargetRegisterInfo *TRI) const override;
 
   /// \brief Can this function use the red zone for local allocations.

@@ -1,6 +1,6 @@
 ; RUN: opt -module-summary -o %t.bc %s
 ; RUN: llvm-lto2 run %t.bc -r %t.bc,foo,pl -o %t2
-; RUN: llvm-nm %t2.0 | FileCheck %s
+; RUN: llvm-nm %t2.1 | FileCheck %s
 ; CHECK: T foo
 ; CHECK: t foo_ifunc
 

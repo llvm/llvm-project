@@ -191,6 +191,8 @@ private:
   bool HasEVEX_KZ;
   /// The hasEVEX_B field from the record
   bool HasEVEX_B;
+  /// Indicates that the instruction uses the L and L' fields for RC.
+  bool EncodeRC;
   /// The isCodeGenOnly field from the record
   bool IsCodeGenOnly;
   /// The ForceDisassemble field from the record

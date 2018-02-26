@@ -30,7 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
-#ifdef CLANG_ENABLE_OBJC_REWRITER
+#if CLANG_ENABLE_OBJC_REWRITER
 
 using namespace clang;
 using llvm::utostr;

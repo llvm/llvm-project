@@ -9,8 +9,8 @@ entry:
   ret void, !dbg !9
 }
 
-; This function does not have profile, check if function_entry_count is 0
-; CHECK: {{.*}} = !{!"function_entry_count", i64 0}
+; This function does not have profile, check if function_entry_count is -1
+; CHECK: {{.*}} = !{!"function_entry_count", i64 -1}
 define void @no_profile() {
 entry:
   ret void

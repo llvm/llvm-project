@@ -1,8 +1,9 @@
 ; RUN: opt %s -safepoint-ir-verifier-print-only -verify-safepoint-ir -S 2>&1 | FileCheck %s
 
 ; CHECK:      Illegal use of unrelocated value found!
-; CHECK-NEXT: Def:   %base_phi3 = phi %jObject addrspace(1)* [ %obj609.relocated, %not_zero146 ], [ %base_phi2, %bci_37-aload ], !is_base_value !0
-; CHECK-NEXT: Use:   %base_phi2 = phi %jObject addrspace(1)* [ %base_phi3, %not_zero179 ], [ %cast5, %bci_0 ], !is_base_value !0
+; CHECK-NEXT: Def:   %base_phi4 = phi %jObject addrspace(1)* addrspace(1)* [ %addr98.relocated, %not_zero146 ], [ %cast6, %bci_37-aload ], !is_base_value !0
+; CHECK-NEXT: Use:   %safepoint_token = tail call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, %jObject addrspace(1)* %base_phi1, %jObject addrspace(1)* addrspace(1)* %base_phi4, %jObject addrspace(1)* addrspace(1)* %relocated4, %jObject addrspace(1)* %relocated7)
+
 
 %jObject = type { [8 x i8] }
 

@@ -8,9 +8,8 @@ declare void @baz()
 
 define void @test1(i32 %a) gc "statepoint-example" {
 ; CHECK-LABEL: test1:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp0:
@@ -24,19 +23,14 @@ entry:
 
 define void @test2(i32 %a, i32 %b) gc "statepoint-example" {
 ; CHECK-LABEL: test2:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:  Lcfi1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi3:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  Lcfi4:
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:  Lcfi5:
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
@@ -58,9 +52,8 @@ entry:
 
 define void @test3(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i) gc "statepoint-example" {
 ; CHECK-LABEL: test3:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi6:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp3:
@@ -78,9 +71,8 @@ entry:
 ; stack slots into the statepoint.
 define void @test4(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z) gc "statepoint-example" {
 ; CHECK-LABEL: test4:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi7:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp4:
@@ -97,9 +89,8 @@ entry:
 ; as to put less stress on the register allocator for no benefit.
 define  i32 addrspace(1)* @test5(i32 %a, i32 addrspace(1)* %p) gc "statepoint-example" {
 ; CHECK-LABEL: test5:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi8:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rsi, (%rsp)
 ; CHECK-NEXT:    callq _bar
@@ -116,14 +107,11 @@ entry:
 ; Show the interaction of live-through spilling followed by live-in.
 define void @test6(i32 %a) gc "statepoint-example" {
 ; CHECK-LABEL: test6:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi9:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:  Lcfi10:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  Lcfi11:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    movl %ebx, {{[0-9]+}}(%rsp)

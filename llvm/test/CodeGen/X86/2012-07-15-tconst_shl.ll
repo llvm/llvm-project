@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 -mattr=+avx2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 -mattr=+avx2
 ; make sure that we are not crashing.
 
 define <16 x i32> @autogen_SD34717() {

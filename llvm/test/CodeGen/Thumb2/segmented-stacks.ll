@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=thumb-linux-androideabi -march=thumb -mcpu=arm1156t2-s -mattr=+thumb2 -verify-machineinstrs | FileCheck %s -check-prefix=Thumb-android
-; RUN: llc < %s -mtriple=thumb-linux-androideabi -march=thumb -mcpu=arm1156t2-s -mattr=+thumb2 -filetype=obj
+; RUN: llc < %s -mtriple=thumb-linux-androideabi -mcpu=arm1156t2-s -mattr=+thumb2 -verify-machineinstrs | FileCheck %s -check-prefix=Thumb-android
+; RUN: llc < %s -mtriple=thumb-linux-androideabi -mcpu=arm1156t2-s -mattr=+thumb2 -filetype=obj
 
 
 ; Just to prevent the alloca from being optimized away

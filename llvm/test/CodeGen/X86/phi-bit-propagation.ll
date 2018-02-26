@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 %"class.std::bitset" = type { [8 x i8] }
 

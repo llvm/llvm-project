@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=i386 -mattr=+sse
+; RUN: llc < %s -mtriple=i686-- -mcpu=i386 -mattr=+sse
 ; PR1371
 
 @str = external global [18 x i8]		; <[18 x i8]*> [#uses=1]

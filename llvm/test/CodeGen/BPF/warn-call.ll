@@ -2,9 +2,6 @@
 
 ; CHECK: error: warn_call.c
 ; CHECK: built-in function 'memcpy'
-; CHECK: error: warn_call.c
-; CHECK: global function 'foo'
-; CHECK: global function 'bar'
 define i8* @warn(i8* returned, i8*, i64) local_unnamed_addr #0 !dbg !6 {
   tail call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !14, metadata !17), !dbg !18
   tail call void @llvm.dbg.value(metadata i8* %1, i64 0, metadata !15, metadata !17), !dbg !19

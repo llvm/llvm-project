@@ -1,5 +1,5 @@
 # REQUIRES: xar
-# RUN: llvm-objdump -macho -archive-headers -section __LLVM,__bundle %p/Inputs/LLVM-bundle.macho-x86_64 | FileCheck %s
+# RUN: env ASAN_OPTIONS=detect_leaks=0 llvm-objdump -macho -archive-headers -section __LLVM,__bundle %p/Inputs/LLVM-bundle.macho-x86_64 | FileCheck %s
 
 # CHECK: For (__LLVM,__bundle) section: xar header
 # CHECK:                   magic XAR_HEADER_MAGIC

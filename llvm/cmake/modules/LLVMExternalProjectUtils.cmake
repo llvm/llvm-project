@@ -95,7 +95,7 @@ function(llvm_ExternalProject_Add name source_dir)
   foreach(prefix ${ARG_PASSTHROUGH_PREFIXES})
     foreach(variableName ${variableNames})
       if(variableName MATCHES "^${prefix}")
-        string(REPLACE ";" "\;" value "${${variableName}}")
+        string(REPLACE ";" "|" value "${${variableName}}")
         list(APPEND PASSTHROUGH_VARIABLES
           -D${variableName}=${value})
       endif()
@@ -132,6 +132,10 @@ function(llvm_ExternalProject_Add name source_dir)
     set(exclude EXCLUDE_FROM_ALL 1)
   endif()
 
+  if(CMAKE_SYSROOT)
+    set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${ARG_DEPENDS} llvm-config
     ${name}-clobber
@@ -143,12 +147,16 @@ function(llvm_ExternalProject_Add name source_dir)
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
                ${compiler_args}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+               ${sysroot_arg}
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
                -DLLVM_CONFIG_PATH=$<TARGET_FILE:llvm-config>
                -DLLVM_ENABLE_WERROR=${LLVM_ENABLE_WERROR}
+               -DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}
+               -DLLVM_HAVE_LINK_VERSION_SCRIPT=${LLVM_HAVE_LINK_VERSION_SCRIPT}
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+               -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${ARG_CMAKE_ARGS}
                ${PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
@@ -157,6 +165,7 @@ function(llvm_ExternalProject_Add name source_dir)
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
+    LIST_SEPARATOR |
     )
 
   if(ARG_USE_TOOLCHAIN)
@@ -185,12 +194,9 @@ function(llvm_ExternalProject_Add name source_dir)
     install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${BINARY_DIR}/cmake_install.cmake \)"
       COMPONENT ${name})
 
-    add_custom_target(install-${name}
-                      DEPENDS ${name}
-                      COMMAND "${CMAKE_COMMAND}"
-                               -DCMAKE_INSTALL_COMPONENT=${name}
-                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      USES_TERMINAL)
+    add_llvm_install_targets(install-${name}
+                             DEPENDS ${name}
+                             COMPONENT ${name})
   endif()
 
   # Add top-level targets

@@ -1,0 +1,29 @@
+REQUIRES: libxml2
+UNSUPPORTED: windows
+
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t
+RUN: FileCheck %s --input-file=%t
+
+CHECK:      <?xml version="1.0" encoding="UTF-8"?>
+CHECK-NEXT: <assembly xmlns="urn:schemas-microsoft-com:asm.v1">
+CHECK-NEXT:   <trustInfo>
+CHECK-NEXT:     <security>
+CHECK-NEXT:       <requestedPrivileges>
+CHECK-NEXT:         <requestedExecutionLevel level="3" uiAccess="1"/>
+CHECK-NEXT:       </requestedPrivileges>
+CHECK-NEXT:     </security>
+CHECK-NEXT:   </trustInfo>
+CHECK-NEXT:   <dependency>
+CHECK-NEXT:     <dependentAssembly>
+CHECK-NEXT:       <assemblyIdentity program="displayDriver"/>
+CHECK-NEXT:     </dependentAssembly>
+CHECK-NEXT:   </dependency>
+CHECK-NEXT:   <compatibility>
+CHECK-NEXT:     <dependency>
+CHECK-NEXT:       <assemblyIdentity program="compatibilityCheck1"/>
+CHECK-NEXT:     </dependency>
+CHECK-NEXT:     <application>
+CHECK-NEXT:       <supportedOS Id="FooOS"/>
+CHECK-NEXT:     </application>
+CHECK-NEXT:   </compatibility>
+CHECK-NEXT: </assembly>

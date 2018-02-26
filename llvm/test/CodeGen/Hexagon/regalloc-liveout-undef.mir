@@ -6,7 +6,7 @@
 # cover live intervals as well.
 #
 # Make sure that this compiles successfully.
-# CHECK: undef %1.isub_lo = A2_addi %1.isub_lo, 1
+# CHECK: undef %1.isub_lo:doubleregs = A2_addi %1.isub_lo, 1
 
 ---
 name: fred
@@ -32,4 +32,3 @@ body: |
         undef %1.isub_lo = A2_addi %1.isub_lo, 1
         J2_jump %bb.1, implicit-def %pc
 ...
-

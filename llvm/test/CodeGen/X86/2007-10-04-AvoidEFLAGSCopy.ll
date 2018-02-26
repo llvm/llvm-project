@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep pushf
+; RUN: llc < %s -mtriple=i686-- | not grep pushf
 
 	%struct.gl_texture_image = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i8*, i8* }
 	%struct.gl_texture_object = type { i32, i32, i32, float, [4 x i32], i32, i32, i32, i32, i32, float, [11 x %struct.gl_texture_image*], [1024 x i8], i32, i32, i32, i8, i8*, i8, void (%struct.gl_texture_object*, i32, float*, float*, float*, float*, i8*, i8*, i8*, i8*)*, %struct.gl_texture_object* }

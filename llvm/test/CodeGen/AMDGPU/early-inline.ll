@@ -1,6 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 -amdgpu-early-inline-all %s | FileCheck %s
 
-; CHECK: @c_alias
 @c_alias = alias i32 (i32), i32 (i32)* @callee
 
 define i32 @callee(i32 %x) {
@@ -17,6 +16,7 @@ entry:
 ; CHECK: mul i32
 ; CHECK-NOT: call i32
 
+; CHECK: define i32 @c_alias
 define amdgpu_kernel void @caller(i32 %x) {
 entry:
   %res = call i32 @callee(i32 %x)

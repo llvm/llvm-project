@@ -382,6 +382,7 @@ enum ModRMDecisionType {
                                                                                \
   ENUM_ENTRY(ENCODING_Iv,     "Immediate of operand size")                     \
   ENUM_ENTRY(ENCODING_Ia,     "Immediate of address size")                     \
+  ENUM_ENTRY(ENCODING_IRC,    "Immediate for static rounding control")         \
   ENUM_ENTRY(ENCODING_Rv,     "Register code of operand size added to the "    \
                               "opcode byte")                                   \
   ENUM_ENTRY(ENCODING_DUP,    "Duplicate of another operand; ID is encoded "   \
@@ -410,6 +411,9 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_AVX512ICC,  "1-byte immediate operand for AVX512 icmp")      \
   ENUM_ENTRY(TYPE_UIMM8,      "1-byte unsigned immediate operand")             \
   ENUM_ENTRY(TYPE_M,          "Memory operand")                                \
+  ENUM_ENTRY(TYPE_MVSIBX,     "Memory operand using XMM index")                \
+  ENUM_ENTRY(TYPE_MVSIBY,     "Memory operand using YMM index")                \
+  ENUM_ENTRY(TYPE_MVSIBZ,     "Memory operand using ZMM index")                \
   ENUM_ENTRY(TYPE_SRCIDX,     "memory at source index")                        \
   ENUM_ENTRY(TYPE_DSTIDX,     "memory at destination index")                   \
   ENUM_ENTRY(TYPE_MOFFS,      "memory offset (relative to segment base)")      \

@@ -1,4 +1,4 @@
-//===--- PTHLexer.h - Lexer based on Pre-tokenized input --------*- C++ -*-===//
+//===- PTHLexer.h - Lexer based on Pre-tokenized input ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,12 +14,15 @@
 #ifndef LLVM_CLANG_LEX_PTHLEXER_H
 #define LLVM_CLANG_LEX_PTHLEXER_H
 
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/PreprocessorLexer.h"
+#include "clang/Lex/Token.h"
 
 namespace clang {
 
+class Preprocessor;
 class PTHManager;
-class PTHSpellingSearch;
 
 class PTHLexer : public PreprocessorLexer {
   SourceLocation FileStartLoc;
@@ -33,7 +36,7 @@ class PTHLexer : public PreprocessorLexer {
 
   /// LastHashTokPtr - Pointer into TokBuf of the last processed '#'
   ///  token that appears at the start of a line.
-  const unsigned char* LastHashTokPtr;
+  const unsigned char* LastHashTokPtr = nullptr;
 
   /// PPCond - Pointer to a side table in the PTH file that provides a
   ///  a concise summary of the preprocessor conditional block structure.
@@ -44,11 +47,8 @@ class PTHLexer : public PreprocessorLexer {
   ///  to process when doing quick skipping of preprocessor blocks.
   const unsigned char* CurPPCondPtr;
 
-  PTHLexer(const PTHLexer &) = delete;
-  void operator=(const PTHLexer &) = delete;
-
   /// ReadToken - Used by PTHLexer to read tokens TokBuf.
-  void ReadToken(Token& T);
+  void ReadToken(Token &T);
   
   bool LexEndOfFile(Token &Result);
 
@@ -61,10 +61,13 @@ protected:
   friend class PTHManager;
 
   /// Create a PTHLexer for the specified token stream.
-  PTHLexer(Preprocessor& pp, FileID FID, const unsigned char *D,
+  PTHLexer(Preprocessor &pp, FileID FID, const unsigned char *D,
            const unsigned char* ppcond, PTHManager &PM);
+
 public:
-  ~PTHLexer() override {}
+  PTHLexer(const PTHLexer &) = delete;
+  PTHLexer &operator=(const PTHLexer &) = delete;
+  ~PTHLexer() override = default;
 
   /// Lex - Return the next token.
   bool Lex(Token &Tok);
@@ -99,6 +102,6 @@ public:
   bool SkipBlock();
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_PTHLEXER_H

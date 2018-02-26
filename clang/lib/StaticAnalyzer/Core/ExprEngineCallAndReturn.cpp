@@ -276,6 +276,21 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
       state = state->BindExpr(CCE, callerCtx, ThisV);
     }
+
+    if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
+      // We are currently evaluating a CXXNewAllocator CFGElement. It takes a
+      // while to reach the actual CXXNewExpr element from here, so keep the
+      // region for later use.
+      // Additionally cast the return value of the inlined operator new
+      // (which is of type 'void *') to the correct object type.
+      SVal AllocV = state->getSVal(CNE, callerCtx);
+      AllocV = svalBuilder.evalCast(
+          AllocV, CNE->getType(),
+          getContext().getPointerType(getContext().VoidTy));
+
+      state =
+          setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(), AllocV);
+    }
   }
 
   // Step 3: BindedRetNode -> CleanedNodes
@@ -315,6 +330,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallExitEnd Loc(calleeCtx, callerCtx);
     bool isNew;
     ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
+
+    // See if we have any stale C++ allocator values.
+    assert(areCXXNewAllocatorValuesClear(CEEState, calleeCtx, callerCtx));
+
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
     CEENode->addPredecessor(*I, G);
     if (!isNew)
@@ -331,16 +350,31 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallEventRef<> UpdatedCall = Call.cloneWithState(CEEState);
 
     ExplodedNodeSet DstPostCall;
-    getCheckerManager().runCheckersForPostCall(DstPostCall, CEENode,
-                                               *UpdatedCall, *this,
-                                               /*WasInlined=*/true);
-
+    if (const CXXNewExpr *CNE = dyn_cast_or_null<CXXNewExpr>(CE)) {
+      ExplodedNodeSet DstPostPostCallCallback;
+      getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
+                                                 CEENode, *UpdatedCall, *this,
+                                                 /*WasInlined=*/true);
+      for (auto I : DstPostPostCallCallback) {
+        getCheckerManager().runCheckersForNewAllocator(
+            CNE, getCXXNewAllocatorValue(I->getState(), CNE,
+                                         calleeCtx->getParent()),
+            DstPostCall, I, *this,
+            /*WasInlined=*/true);
+      }
+    } else {
+      getCheckerManager().runCheckersForPostCall(DstPostCall, CEENode,
+                                                 *UpdatedCall, *this,
+                                                 /*WasInlined=*/true);
+    }
     ExplodedNodeSet Dst;
     if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(Call)) {
       getCheckerManager().runCheckersForPostObjCMessage(Dst, DstPostCall, *Msg,
                                                         *this,
                                                         /*WasInlined=*/true);
-    } else if (CE) {
+    } else if (CE &&
+               !(isa<CXXNewExpr>(CE) && // Called when visiting CXXNewExpr.
+                 AMgr.getAnalyzerOptions().mayInlineCXXAllocator())) {
       getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, CE,
                                                  *this, /*WasInlined=*/true);
     } else {
@@ -554,7 +588,19 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
   QualType ResultTy = Call.getResultType();
   SValBuilder &SVB = getSValBuilder();
   unsigned Count = currBldrCtx->blockCount();
-  SVal R = SVB.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
+
+  // See if we need to conjure a heap pointer instead of
+  // a regular unknown pointer.
+  bool IsHeapPointer = false;
+  if (const auto *CNE = dyn_cast<CXXNewExpr>(E))
+    if (CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
+      // FIXME: Delegate this to evalCall in MallocChecker?
+      IsHeapPointer = true;
+    }
+
+  SVal R = IsHeapPointer
+               ? SVB.getConjuredHeapSymbolVal(E, LCtx, Count)
+               : SVB.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
   return State->BindExpr(E, LCtx, R);
 }
 
@@ -570,15 +616,10 @@ void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
   Bldr.generateNode(Call.getProgramPoint(), State, Pred);
 }
 
-enum CallInlinePolicy {
-  CIP_Allowed,
-  CIP_DisallowedOnce,
-  CIP_DisallowedAlways
-};
-
-static CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
-                                          const ExplodedNode *Pred,
-                                          AnalyzerOptions &Opts) {
+ExprEngine::CallInlinePolicy
+ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
+                              AnalyzerOptions &Opts,
+                              const ExprEngine::EvalCallOptions &CallOpts) {
   const LocationContext *CurLC = Pred->getLocationContext();
   const StackFrameContext *CallerSFC = CurLC->getCurrentStackFrame();
   switch (Call.getKind()) {
@@ -596,21 +637,24 @@ static CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
 
     const CXXConstructorCall &Ctor = cast<CXXConstructorCall>(Call);
 
+    const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
+
+    // FIXME: ParentMap is slow and ugly. The callee should provide the
+    // necessary context. Ideally as part of the call event, or maybe as part of
+    // location context.
+    const Stmt *ParentExpr = CurLC->getParentMap().getParent(CtorExpr);
+
+    if (ParentExpr && isa<CXXNewExpr>(ParentExpr) &&
+        !Opts.mayInlineCXXAllocator())
+      return CIP_DisallowedOnce;
+
     // FIXME: We don't handle constructors or destructors for arrays properly.
     // Even once we do, we still need to be careful about implicitly-generated
     // initializers for array fields in default move/copy constructors.
-    const MemRegion *Target = Ctor.getCXXThisVal().getAsRegion();
-    if (Target && isa<ElementRegion>(Target))
+    // We still allow construction into ElementRegion targets when they don't
+    // represent array elements.
+    if (CallOpts.IsArrayConstructorOrDestructor)
       return CIP_DisallowedOnce;
-
-    // FIXME: This is a hack. We don't use the correct region for a new
-    // expression, so if we inline the constructor its result will just be
-    // thrown away. This short-term hack is tracked in <rdar://problem/12180598>
-    // and the longer-term possible fix is discussed in PR12014.
-    const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
-    if (const Stmt *Parent = CurLC->getParentMap().getParent(CtorExpr))
-      if (isa<CXXNewExpr>(Parent))
-        return CIP_DisallowedOnce;
 
     // Inlining constructors requires including initializers in the CFG.
     const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
@@ -629,7 +673,7 @@ static CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
     // FIXME: This is a hack. We don't handle temporary destructors
     // right now, so we shouldn't inline their constructors.
     if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete)
-      if (!Target || !isa<DeclRegion>(Target))
+      if (CallOpts.IsConstructorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
 
     break;
@@ -643,11 +687,8 @@ static CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
     assert(ADC->getCFGBuildOptions().AddImplicitDtors && "No CFG destructors");
     (void)ADC;
 
-    const CXXDestructorCall &Dtor = cast<CXXDestructorCall>(Call);
-
     // FIXME: We don't handle constructors or destructors for arrays properly.
-    const MemRegion *Target = Dtor.getCXXThisVal().getAsRegion();
-    if (Target && isa<ElementRegion>(Target))
+    if (CallOpts.IsArrayConstructorOrDestructor)
       return CIP_DisallowedOnce;
 
     break;
@@ -788,7 +829,8 @@ static bool mayInlineDecl(AnalysisDeclContext *CalleeADC,
 }
 
 bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
-                                  const ExplodedNode *Pred) {
+                                  const ExplodedNode *Pred,
+                                  const EvalCallOptions &CallOpts) {
   if (!D)
     return false;
 
@@ -835,7 +877,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   // FIXME: this checks both static and dynamic properties of the call, which
   // means we're redoing a bit of work that could be cached in the function
   // summary.
-  CallInlinePolicy CIP = mayInlineCallKind(Call, Pred, Opts);
+  CallInlinePolicy CIP = mayInlineCallKind(Call, Pred, Opts, CallOpts);
   if (CIP != CIP_Allowed) {
     if (CIP == CIP_DisallowedAlways) {
       assert(!MayInline.hasValue() || MayInline.getValue());
@@ -887,7 +929,8 @@ static bool isTrivialObjectAssignment(const CallEvent &Call) {
 }
 
 void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
-                                 const CallEvent &CallTemplate) {
+                                 const CallEvent &CallTemplate,
+                                 const EvalCallOptions &CallOpts) {
   // Make sure we have the most recent state attached to the call.
   ProgramStateRef State = Pred->getState();
   CallEventRef<> Call = CallTemplate.cloneWithState(State);
@@ -910,7 +953,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
   } else {
     RuntimeDefinition RD = Call->getRuntimeDefinition();
     const Decl *D = RD.getDecl();
-    if (shouldInlineCall(*Call, D, Pred)) {
+    if (shouldInlineCall(*Call, D, Pred, CallOpts)) {
       if (RD.mayHaveOtherDefinitions()) {
         AnalyzerOptions &Options = getAnalysisManager().options;
 

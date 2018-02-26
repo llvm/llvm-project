@@ -103,6 +103,7 @@ public:
   const MemRegion *getBaseRegion() const;
 
   /// Check if the region is a subregion of the given region.
+  /// Each region is a subregion of itself.
   virtual bool isSubRegionOf(const MemRegion *R) const;
 
   const MemRegion *StripCasts(bool StripBaseCasts = true) const;
@@ -961,7 +962,10 @@ class CXXThisRegion : public TypedValueRegion {
   CXXThisRegion(const PointerType *thisPointerTy,
                 const StackArgumentsSpaceRegion *sReg)
       : TypedValueRegion(sReg, CXXThisRegionKind),
-        ThisPointerTy(thisPointerTy) {}
+        ThisPointerTy(thisPointerTy) {
+    assert(ThisPointerTy->getPointeeType()->getAsCXXRecordDecl() &&
+           "Invalid region type!");
+  }
 
   static void ProfileRegion(llvm::FoldingSetNodeID &ID,
                             const PointerType *PT,
@@ -1075,6 +1079,8 @@ class ElementRegion : public TypedValueRegion {
     assert((!Idx.getAs<nonloc::ConcreteInt>() ||
             Idx.castAs<nonloc::ConcreteInt>().getValue().isSigned()) &&
            "The index must be signed");
+    assert(!elementType.isNull() && !elementType->isVoidType() &&
+           "Invalid region type!");
   }
 
   static void ProfileRegion(llvm::FoldingSetNodeID& ID, QualType elementType,
@@ -1412,21 +1418,18 @@ public:
   bool hasTrait(SymbolRef Sym, InvalidationKinds IK) const;
   bool hasTrait(const MemRegion *MR, InvalidationKinds IK) const;
 };
-  
-} // end GR namespace
-
-} // end clang namespace
 
 //===----------------------------------------------------------------------===//
 // Pretty-printing regions.
 //===----------------------------------------------------------------------===//
-
-namespace llvm {
-static inline raw_ostream &operator<<(raw_ostream &os,
-                                      const clang::ento::MemRegion* R) {
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const clang::ento::MemRegion *R) {
   R->dumpToStream(os);
   return os;
 }
-} // end llvm namespace
+
+} // namespace ento
+
+} // namespace clang
 
 #endif

@@ -2,7 +2,7 @@
 ; RUN: opt %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/mixed_lto.ll -o %t2.o
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -shared \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=-import-instr-limit=0 \

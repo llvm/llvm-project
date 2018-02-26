@@ -5,7 +5,7 @@ declare {i64, i32} @llvm.x86.rdseed.64()
 
 define i32 @_rdseed64_step(i64* %random_val) {
 ; CHECK-LABEL: _rdseed64_step:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rdseedq %rcx
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmovael %ecx, %eax

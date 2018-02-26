@@ -22,8 +22,7 @@ define i32 @foo() {
   ret i32 %4
 }
 
-; Ensuring that we don't automatically hoist nonvolatile loads around volatile
-; loads
+; Ensuring we allow hoisting nonvolatile loads around volatile loads.
 ; CHECK-LABEL define void @volatile_only
 define void @volatile_only(i32* %arg1, i32* %arg2) {
   ; Trivially NoAlias/MustAlias
@@ -36,7 +35,7 @@ define void @volatile_only(i32* %arg1, i32* %arg2) {
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: load i32, i32* %b
   load i32, i32* %b
-; CHECK: MemoryUse(1)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: load i32, i32* %a
   load i32, i32* %a
 
@@ -44,7 +43,7 @@ define void @volatile_only(i32* %arg1, i32* %arg2) {
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: load volatile i32, i32* %arg1
   load volatile i32, i32* %arg1
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: load i32, i32* %arg2
   load i32, i32* %arg2
 
@@ -75,10 +74,10 @@ define void @volatile_atomics(i32* %arg1, i32* %arg2) {
 ; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load atomic i32, i32* %b unordered, align 4
   load atomic i32, i32* %b unordered, align 4
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load atomic i32, i32* %a unordered, align 4
   load atomic i32, i32* %a unordered, align 4
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i32, i32* %a
   load i32, i32* %a
 
@@ -86,7 +85,7 @@ define void @volatile_atomics(i32* %arg1, i32* %arg2) {
 ; CHECK: 3 = MemoryDef(2)
 ; CHECK-NEXT: load atomic volatile i32, i32* %arg1 monotonic, align 4
   load atomic volatile i32, i32* %arg1 monotonic, align 4
-; CHECK: MemoryUse(3)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i32, i32* %arg2
   load i32, i32* %arg2
 

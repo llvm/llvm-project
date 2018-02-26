@@ -236,3 +236,25 @@ typedef A *MyObjectRef;
 // RUN: c-index-test -code-completion-at=%s:107:2 %s -target x86_64-apple-macosx10.7 | FileCheck -check-prefix=CHECK-NULLABILITY2 %s
 // CHECK-NULLABILITY2: ObjCInstanceMethodDecl:{LeftParen (}{Text instancetype}{RightParen )}{TypedText getI3} (40)
 // CHECK-NULLABILITY2: ObjCInstanceMethodDecl:{LeftParen (}{Text I3 *}{RightParen )}{TypedText produceI3}{TypedText :}{LeftParen (}{Text I3 *}{RightParen )}{Text i3} (40)
+
+@interface CompleteWithoutLeadingPrefix
+
+- (void)aMethod;
++ (int)aClassMethod:(int)x;
+@property int p;
+
+@end
+
+@implementation CompleteWithoutLeadingPrefix
+
+
+
+@end
+
+// RUN: c-index-test -code-completion-at=%s:250:1 %s | FileCheck -check-prefix=CHECK-COMP-NO-PREFIX %s
+// CHECK-COMP-NO-PREFIX: NotImplemented:{TypedText @end} (40)
+// CHECK-COMP-NO-PREFIX: ObjCClassMethodDecl:{Text +}{HorizontalSpace  }{LeftParen (}{Text int}{RightParen )}{TypedText aClassMethod}{TypedText :}{LeftParen (}{Text int}{RightParen )}{Text x} (40)
+// CHECK-COMP-NO-PREFIX: ObjCInstanceMethodDecl:{Text -}{HorizontalSpace  }{LeftParen (}{Text void}{RightParen )}{TypedText aMethod} (40)
+// CHECK-COMP-NO-PREFIX: ObjCInterfaceDecl:{TypedText I1}
+// CHECK-COMP-NO-PREFIX: ObjCInstanceMethodDecl:{Text -}{HorizontalSpace  }{LeftParen (}{Text int}{RightParen )}{TypedText p} (40)
+// CHECK-COMP-NO-PREFIX: ObjCInstanceMethodDecl:{Text -}{HorizontalSpace  }{LeftParen (}{Text void}{RightParen )}{TypedText setP}{TypedText :}{LeftParen (}{Text int}{RightParen )}{Text p} (40)

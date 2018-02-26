@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -O binary -j .text %t %t2
+# RUN: llvm-objcopy -O binary -only-keep .text %t %t3
+# RUN: od -t x1 %t2 | FileCheck %s
+# RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
+# RUN: diff %t2 %t3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000001000
+    Content:         "DEADBEEF"
+ProgramHeaders:
+- Type: PT_LOAD
+  Flags: [ PF_X, PF_R ]
+  Sections:
+    - Section: .text
+
+#CHECK: 0000000 de ad be ef
+
+#SIZE: 4

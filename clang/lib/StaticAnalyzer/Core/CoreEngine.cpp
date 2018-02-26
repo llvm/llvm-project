@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;
@@ -33,11 +34,12 @@ STATISTIC(NumReachedMaxSteps,
 STATISTIC(NumPathsExplored,
             "The # of paths explored by the analyzer.");
 
+STATISTIC(MaxQueueSize, "Maximum size of the worklist");
+STATISTIC(MaxReachableSize, "Maximum size of auxiliary worklist set");
+
 //===----------------------------------------------------------------------===//
 // Worklist classes for exploration of reachable states.
 //===----------------------------------------------------------------------===//
-
-WorkList::Visitor::~Visitor() {}
 
 namespace {
 class DFS : public WorkList {
@@ -56,15 +58,6 @@ public:
     const WorkListUnit& U = Stack.back();
     Stack.pop_back(); // This technically "invalidates" U, but we are fine.
     return U;
-  }
-
-  bool visitItemsInWorkList(Visitor &V) override {
-    for (SmallVectorImpl<WorkListUnit>::iterator
-         I = Stack.begin(), E = Stack.end(); I != E; ++I) {
-      if (V.visit(*I))
-        return true;
-    }
-    return false;
   }
 };
 
@@ -85,14 +78,6 @@ public:
     return U;
   }
 
-  bool visitItemsInWorkList(Visitor &V) override {
-    for (std::deque<WorkListUnit>::iterator
-         I = Queue.begin(), E = Queue.end(); I != E; ++I) {
-      if (V.visit(*I))
-        return true;
-    }
-    return false;
-  }
 };
 
 } // end anonymous namespace
@@ -101,8 +86,13 @@ public:
 // functions, and we the code for the dstor generated in one compilation unit.
 WorkList::~WorkList() {}
 
-WorkList *WorkList::makeDFS() { return new DFS(); }
-WorkList *WorkList::makeBFS() { return new BFS(); }
+std::unique_ptr<WorkList> WorkList::makeDFS() {
+  return llvm::make_unique<DFS>();
+}
+
+std::unique_ptr<WorkList> WorkList::makeBFS() {
+  return llvm::make_unique<BFS>();
+}
 
 namespace {
   class BFSBlockDFSContents : public WorkList {
@@ -135,30 +125,96 @@ namespace {
       Queue.pop_front();
       return U;
     }
-    bool visitItemsInWorkList(Visitor &V) override {
-      for (SmallVectorImpl<WorkListUnit>::iterator
-           I = Stack.begin(), E = Stack.end(); I != E; ++I) {
-        if (V.visit(*I))
-          return true;
-      }
-      for (std::deque<WorkListUnit>::iterator
-           I = Queue.begin(), E = Queue.end(); I != E; ++I) {
-        if (V.visit(*I))
-          return true;
-      }
-      return false;
-    }
-
   };
 } // end anonymous namespace
 
-WorkList* WorkList::makeBFSBlockDFSContents() {
-  return new BFSBlockDFSContents();
+std::unique_ptr<WorkList> WorkList::makeBFSBlockDFSContents() {
+  return llvm::make_unique<BFSBlockDFSContents>();
+}
+
+class UnexploredFirstStack : public WorkList {
+
+  /// Stack of nodes known to have statements we have not traversed yet.
+  SmallVector<WorkListUnit, 20> StackUnexplored;
+
+  /// Stack of all other nodes.
+  SmallVector<WorkListUnit, 20> StackOthers;
+
+  typedef unsigned BlockID;
+  typedef std::pair<BlockID, const StackFrameContext *> LocIdentifier;
+  llvm::DenseSet<LocIdentifier> Reachable;
+
+public:
+  bool hasWork() const override {
+    return !(StackUnexplored.empty() && StackOthers.empty());
+  }
+
+  void enqueue(const WorkListUnit &U) override {
+    const ExplodedNode *N = U.getNode();
+    auto BE = N->getLocation().getAs<BlockEntrance>();
+
+    if (!BE) {
+
+      // Assume the choice of the order of the preceeding block entrance was
+      // correct.
+      StackUnexplored.push_back(U);
+    } else {
+      LocIdentifier LocId = std::make_pair(
+          BE->getBlock()->getBlockID(), N->getStackFrame());
+      auto InsertInfo = Reachable.insert(LocId);
+
+      if (InsertInfo.second) {
+        StackUnexplored.push_back(U);
+      } else {
+        StackOthers.push_back(U);
+      }
+    }
+    MaxReachableSize.updateMax(Reachable.size());
+    MaxQueueSize.updateMax(StackUnexplored.size() + StackOthers.size());
+  }
+
+  WorkListUnit dequeue() override {
+    if (!StackUnexplored.empty()) {
+      WorkListUnit &U = StackUnexplored.back();
+      StackUnexplored.pop_back();
+      return U;
+    } else {
+      WorkListUnit &U = StackOthers.back();
+      StackOthers.pop_back();
+      return U;
+    }
+  }
+};
+
+std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
+  return llvm::make_unique<UnexploredFirstStack>();
 }
 
 //===----------------------------------------------------------------------===//
 // Core analysis engine.
 //===----------------------------------------------------------------------===//
+
+static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
+  switch (Opts.getExplorationStrategy()) {
+    case AnalyzerOptions::ExplorationStrategyKind::DFS:
+      return WorkList::makeDFS();
+    case AnalyzerOptions::ExplorationStrategyKind::BFS:
+      return WorkList::makeBFS();
+    case AnalyzerOptions::ExplorationStrategyKind::BFSBlockDFSContents:
+      return WorkList::makeBFSBlockDFSContents();
+    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirst:
+      return WorkList::makeUnexploredFirst();
+    default:
+      llvm_unreachable("Unexpected case");
+  }
+}
+
+CoreEngine::CoreEngine(SubEngine &subengine,
+    FunctionSummariesTy *FS,
+    AnalyzerOptions &Opts) : SubEng(subengine),
+                             WList(generateWorkList(Opts)),
+                             BCounterFactory(G.getAllocator()),
+                             FunctionSummaries(FS) {}
 
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
 bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
@@ -275,7 +331,8 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
              Loc.getAs<PostInitializer>() ||
              Loc.getAs<PostImplicitCall>() ||
              Loc.getAs<CallExitEnd>() ||
-             Loc.getAs<LoopExit>());
+             Loc.getAs<LoopExit>() ||
+             Loc.getAs<PostAllocatorCall>());
       HandlePostStmt(WU.getBlock(), WU.getIndex(), Pred);
       break;
   }
@@ -314,10 +371,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     const ReturnStmt *RS = nullptr;
     if (!L.getSrc()->empty()) {
       if (Optional<CFGStmt> LastStmt = L.getSrc()->back().getAs<CFGStmt>()) {
-        if ((RS = dyn_cast<ReturnStmt>(LastStmt->getStmt()))) {
-          if (!RS->getRetValue())
-            RS = nullptr;
-        }
+        RS = dyn_cast<ReturnStmt>(LastStmt->getStmt());
       }
     }
 

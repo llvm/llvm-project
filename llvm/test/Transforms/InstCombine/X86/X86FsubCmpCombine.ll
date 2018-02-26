@@ -122,6 +122,19 @@ entry:
 }
 
 
+define i8 @sub_compare_folding_swapPD256_undef(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: @sub_compare_folding_swapPD256_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.pd.256(<4 x double> fsub (<4 x double> undef, <4 x double> undef), <4 x double> zeroinitializer, i32 5, i8 -1)
+; CHECK-NEXT:    ret i8 [[TMP]]
+;
+entry:
+  %sub.i1 = fsub ninf <4 x double> undef, undef
+  %tmp = tail call i8 @llvm.x86.avx512.mask.cmp.pd.256(<4 x double> %sub.i1, <4 x double> zeroinitializer, i32 5, i8 -1)
+  ret i8 %tmp
+}
+
+
 define i8 @sub_compare_folding_swapPD512(<8 x double> %a, <8 x double> %b){
 ; CHECK-LABEL: @sub_compare_folding_swapPD512(
 ; CHECK-NEXT:  entry:

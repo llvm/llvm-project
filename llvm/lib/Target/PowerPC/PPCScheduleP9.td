@@ -22,7 +22,9 @@ def P9Model : SchedMachineModel {
   // Try to make sure we have at least 10 dispatch groups in a loop.
   let LoopMicroOpBufferSize = 60;
 
-  let CompleteModel = 0;
+  let CompleteModel = 1;
+
+  let UnsupportedFeatures = [HasQPX];
 
 }
 
@@ -68,6 +70,10 @@ let SchedModel = P9Model in {
   def LS : ProcResource<4>;
   def PM : ProcResource<2>;
   def DFU : ProcResource<1>;
+  def BR : ProcResource<1> {
+    let BufferSize = 16;
+  }
+  def CY : ProcResource<1>;
 
   def TestGroup : ProcResGroup<[ALU, DP]>;
 
@@ -145,6 +151,10 @@ let SchedModel = P9Model in {
     let Latency = 6;
   }
 
+  def P9_DIV_12C : SchedWriteRes<[DIV]> {
+    let Latency = 12;
+  }
+
   def P9_DIV_16C_8 : SchedWriteRes<[DIV]> {
     let ResourceCycles = [8];
     let Latency = 16;
@@ -190,6 +200,16 @@ let SchedModel = P9Model in {
     let Latency = 24;
   }
 
+  def P9_DPO_24C_8 : SchedWriteRes<[DPO]> {
+    let ResourceCycles = [8];
+    let Latency = 24;
+  }
+
+  def P9_DPE_24C_8 : SchedWriteRes<[DPE]> {
+    let ResourceCycles = [8];
+    let Latency = 24;
+  }
+
   def P9_DP_26C_5 : SchedWriteRes<[DP]> {
     let ResourceCycles = [5];
     let Latency = 22;
@@ -201,6 +221,16 @@ let SchedModel = P9Model in {
   }
 
   def P9_DP_33C_8 : SchedWriteRes<[DP]> {
+    let ResourceCycles = [8];
+    let Latency = 33;
+  }
+
+  def P9_DPE_33C_8 : SchedWriteRes<[DPE]> {
+    let ResourceCycles = [8];
+    let Latency = 33;
+  }
+
+  def P9_DPO_33C_8 : SchedWriteRes<[DPO]> {
     let ResourceCycles = [8];
     let Latency = 33;
   }
@@ -248,31 +278,61 @@ let SchedModel = P9Model in {
     let Latency = 76;
     let ResourceCycles = [62];
   }
+
+  def P9_BR_2C : SchedWriteRes<[BR]> {
+    let Latency = 2;
+  }
+
+  def P9_BR_5C : SchedWriteRes<[BR]> {
+    let Latency = 5;
+  }
+
+  def P9_CY_6C : SchedWriteRes<[CY]> {
+    let Latency = 6;
+  }
+
   // ***************** WriteSeq Definitions *****************
 
   def P9_LoadAndALUOp_6C : WriteSequence<[P9_LS_4C, P9_ALU_2C]>;
   def P9_LoadAndALUOp_7C : WriteSequence<[P9_LS_5C, P9_ALU_2C]>;
   def P9_LoadAndPMOp_8C : WriteSequence<[P9_LS_5C, P9_PM_3C]>;
+  def P9_LoadAndLoadOp_8C : WriteSequence<[P9_LS_4C, P9_LS_4C]>;
   def P9_IntDivAndALUOp_26C_8 : WriteSequence<[P9_DIV_24C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;
   def P9_StoreAndALUOp_4C : WriteSequence<[P9_LS_1C, P9_ALU_3C]>;
   def P9_ALUOpAndALUOp_4C : WriteSequence<[P9_ALU_2C, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_9C : WriteSequence<[P9_DP_7C, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_24C_5 : WriteSequence<[P9_DP_22C_5, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_35C_8 : WriteSequence<[P9_DP_33C_8, P9_ALU_2C]>;
 
   // ***************** Defining Itinerary Class Resources *****************
 
+  // The following itineraries are fully covered by the InstRW definitions in
+  // P9InstrResources.td so aren't listed here.
+  // IIC_FPDivD, IIC_FPDivS, IIC_FPFused, IIC_IntDivD, IIC_LdStLFDU,
+  // IIC_LdStLFDUX
+
   def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_IntSimple, IIC_IntGeneral]>;
+               [IIC_IntSimple, IIC_IntGeneral, IIC_IntRFID,
+                IIC_IntRotateD, IIC_IntRotateDI, IIC_IntTrapD,
+                IIC_SprRFI]>;
+
+  def : ItinRW<[P9_ALU_3C, IP_EXEC_1C, DISP_1C, DISP_1C],
+               [IIC_IntTrapW]>;
 
   def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
                [IIC_IntISEL, IIC_IntRotate, IIC_IntShift]>;
 
   def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C], [IIC_IntCompare]>;
 
+  def : ItinRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
+                DISP_1C, DISP_1C], [IIC_VecGeneral, IIC_FPCompare]>;
+
   def : ItinRW<[P9_DP_5C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_IntMulHW, IIC_IntMulHWU, IIC_IntMulLI]>;
+               [IIC_IntMulHW, IIC_IntMulHWU, IIC_IntMulLI, IIC_IntMulHD]>;
 
   def : ItinRW<[P9_LS_5C, IP_EXEC_1C, DISP_1C, DISP_1C],
-               [IIC_LdStLoad, IIC_LdStLD]>;
+               [IIC_LdStLoad, IIC_LdStLD, IIC_LdStLFD]>;
 
   def : ItinRW<[P9_LS_4C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
                 DISP_1C, DISP_1C, DISP_1C, DISP_1C],
@@ -300,12 +360,18 @@ let SchedModel = P9Model in {
   def : ItinRW<[P9_LS_4C, IP_EXEC_1C, DISP_1C, DISP_1C],
                [IIC_LdStLWARX, IIC_LdStLDARX, IIC_LdStLMW]>;
 
+  def : ItinRW<[P9_LS_4C, IP_EXEC_1C, DISP_1C, DISP_1C],
+               [IIC_LdStCOPY, IIC_SprABORT, IIC_LdStPASTE, IIC_LdStDCBF,
+                IIC_LdStICBI, IIC_LdStSync, IIC_SprISYNC, IIC_SprMSGSYNC,
+                IIC_SprSLBIA, IIC_SprSLBSYNC, IIC_SprTLBSYNC]>;
+
   def : ItinRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C],
                [IIC_LdStSTFD, IIC_LdStSTD, IIC_LdStStore]>;
 
   def : ItinRW<[P9_LS_1C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
                 DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
-               [IIC_LdStSTDU, IIC_LdStSTDUX]>;
+               [IIC_LdStSTDU, IIC_LdStSTDUX, IIC_LdStStoreUpd, IIC_SprSLBIEG,
+                IIC_SprTLBIA, IIC_SprTLBIE]>;
 
   def : ItinRW<[P9_StoreAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C, IP_AGEN_1C,
                 DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
@@ -315,19 +381,43 @@ let SchedModel = P9Model in {
                [IIC_BrCR, IIC_IntMTFSB0]>;
 
   def : ItinRW<[P9_ALUOpAndALUOp_4C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
-                IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C,
-                DISP_1C, DISP_1C, DISP_1C], [IIC_SprMFCR, IIC_SprMFCRF]>;
+                IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C,
+                DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+               [IIC_SprMFCR, IIC_SprMFCRF, IIC_BrMCR, IIC_BrMCRX, IIC_IntMFFS]>;
+
+  def : ItinRW<[P9_BR_2C, DISP_1C], [IIC_BrB]>;
+  def : ItinRW<[P9_BR_5C, DISP_1C], [IIC_SprMFSPR]>;
 
   // This class should be broken down to instruction level, once some missing
   // info is obtained.
   def : ItinRW<[P9_LoadAndALUOp_6C, IP_EXEC_1C, IP_AGEN_1C,
                 DISP_1C, DISP_1C, DISP_1C], [IIC_SprMTSPR]>;
 
-  def : ItinRW<[P9_DP_7C, IP_EXEC_1C,
-                DISP_1C, DISP_1C, DISP_1C], [IIC_FPGeneral, IIC_FPAddSub]>;
+  def : ItinRW<[P9_LoadAndLoadOp_8C, IP_EXEC_1C, DISP_1C, DISP_1C],
+               [IIC_SprSLBIE, IIC_SprSLBMFEE, IIC_SprSLBMFEV, IIC_SprSLBMTE,
+                IIC_SprTLBIEL]>;
+
+  // IIC_VecFP is added here although many instructions with that itinerary
+  // use very different resources. It would appear that instructions were
+  // given that itinerary rather carelessly over time. Specific instructions
+  // that use different resources are listed in various InstrRW classes.
+  def : ItinRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
+               [IIC_FPGeneral, IIC_FPAddSub, IIC_VecFP]>;
+
+  def : ItinRW<[P9_ALUE_3C, P9_ALUO_3C, IP_EXECE_1C, IP_EXECO_1C,
+                DISP_1C, DISP_1C], [IIC_VecFPCompare]>;
+
+  def : ItinRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C, DISP_1C],
+               [IIC_VecPerm]>;
 
   def : ItinRW<[P9_DP_36C_10, IP_EXEC_1C], [IIC_FPSqrtD]>;
   def : ItinRW<[P9_DP_26C_5, P9_DP_26C_5, IP_EXEC_1C, IP_EXEC_1C], [IIC_FPSqrtS]>;
+
+  def : ItinRW<[P9_DIV_12C, IP_EXECE_1C, DISP_1C, DISP_1C],
+               [IIC_SprMFMSR, IIC_SprMFPMR, IIC_SprMFSR, IIC_SprMFTB,
+                IIC_SprMTMSR, IIC_SprMTMSRD, IIC_SprMTPMR, IIC_SprMTSR]>;
+
+  def : ItinRW<[], [IIC_SprSTOP]>;
 
   include "P9InstrResources.td"
 

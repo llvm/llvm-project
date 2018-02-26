@@ -43,7 +43,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   if (const auto *FuncTy = dyn_cast<FunctionType>(Global->getValueType())) {
     const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
     const TargetMachine &TM = MF.getTarget();
-    const Function &CurrentFunc = *MF.getFunction();
+    const Function &CurrentFunc = MF.getFunction();
 
     SmallVector<wasm::ValType, 4> Returns;
     SmallVector<wasm::ValType, 4> Params;

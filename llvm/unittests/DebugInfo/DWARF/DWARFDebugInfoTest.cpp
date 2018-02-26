@@ -26,16 +26,12 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
-#include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <climits>
-#include <cstdint>
-#include <cstring>
 #include <string>
 
 using namespace llvm;
@@ -86,6 +82,8 @@ void TestAllForms() {
   const uint32_t Data4 = 0x6789abcdU;
   const uint64_t Data8 = 0x0011223344556677ULL;
   const uint64_t Data8_2 = 0xAABBCCDDEEFF0011ULL;
+  const uint8_t Data16[16] = {1, 2,  3,  4,  5,  6,  7,  8,
+                              9, 10, 11, 12, 13, 14, 15, 16};
   const int64_t SData = INT64_MIN;
   const int64_t ICSData = INT64_MAX; // DW_FORM_implicit_const SData
   const uint64_t UData[] = {UINT64_MAX - 1, UINT64_MAX - 2, UINT64_MAX - 3,
@@ -123,6 +121,11 @@ void TestAllForms() {
 
   const auto Attr_DW_FORM_block4 = static_cast<dwarf::Attribute>(Attr++);
   CUDie.addAttribute(Attr_DW_FORM_block4, DW_FORM_block4, BlockData, BlockSize);
+
+  // We handle data16 as a block form.
+  const auto Attr_DW_FORM_data16 = static_cast<dwarf::Attribute>(Attr++);
+  if (Version >= 5)
+    CUDie.addAttribute(Attr_DW_FORM_data16, DW_FORM_data16, Data16, 16);
 
   //----------------------------------------------------------------------
   // Test data forms
@@ -279,6 +282,17 @@ void TestAllForms() {
   ExtractedBlockData = BlockDataOpt.getValue();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
+
+  // Data16 is handled like a block.
+  if (Version >= 5) {
+    FormValue = DieDG.find(Attr_DW_FORM_data16);
+    EXPECT_TRUE((bool)FormValue);
+    BlockDataOpt = FormValue->getAsBlock();
+    EXPECT_TRUE(BlockDataOpt.hasValue());
+    ExtractedBlockData = BlockDataOpt.getValue();
+    EXPECT_EQ(ExtractedBlockData.size(), 16u);
+    EXPECT_TRUE(memcmp(ExtractedBlockData.data(), Data16, 16) == 0);
+  }
 
   //----------------------------------------------------------------------
   // Test data forms
@@ -1287,12 +1301,16 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
     auto CUDie = CU.getUnitDIE();
     auto FuncSpecDie = CUDie.addChild(DW_TAG_subprogram);
     auto FuncAbsDie = CUDie.addChild(DW_TAG_subprogram);
+    // Put the linkage name in a second abstract origin DIE to ensure we
+    // recurse through more than just one DIE when looking for attributes.
+    auto FuncAbsDie2 = CUDie.addChild(DW_TAG_subprogram);
     auto FuncDie = CUDie.addChild(DW_TAG_subprogram);
     auto VarAbsDie = CUDie.addChild(DW_TAG_variable);
     auto VarDie = CUDie.addChild(DW_TAG_variable);
     FuncSpecDie.addAttribute(DW_AT_name, DW_FORM_strp, SpecDieName);
-    FuncAbsDie.addAttribute(DW_AT_linkage_name, DW_FORM_strp, SpecLinkageName);
+    FuncAbsDie2.addAttribute(DW_AT_linkage_name, DW_FORM_strp, SpecLinkageName);
     FuncAbsDie.addAttribute(DW_AT_specification, DW_FORM_ref4, FuncSpecDie);
+    FuncAbsDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, FuncAbsDie2);
     FuncDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, FuncAbsDie);
     VarAbsDie.addAttribute(DW_AT_name, DW_FORM_strp, AbsDieName);
     VarDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, VarAbsDie);
@@ -1314,7 +1332,8 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
 
   auto FuncSpecDie = CUDie.getFirstChild();
   auto FuncAbsDie = FuncSpecDie.getSibling();
-  auto FuncDie = FuncAbsDie.getSibling();
+  auto FuncAbsDie2 = FuncAbsDie.getSibling();
+  auto FuncDie = FuncAbsDie2.getSibling();
   auto VarAbsDie = FuncDie.getSibling();
   auto VarDie = VarAbsDie.getSibling();
 

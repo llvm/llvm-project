@@ -1170,6 +1170,11 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       if (cocoa::isRefType(RetTy, "CF", FName)) {
         if (isRetain(FD, FName)) {
           S = getUnarySummary(FT, cfretain);
+          // CFRetain isn't supposed to be annotated. However, this may as well
+          // be a user-made "safe" CFRetain function that is incorrectly
+          // annotated as cf_returns_retained due to lack of better options.
+          // We want to ignore such annotation.
+          AllowAnnotations = false;
         } else if (isAutorelease(FD, FName)) {
           S = getUnarySummary(FT, cfautorelease);
           // The headers use cf_consumed, but we can fully model CFAutorelease
@@ -1196,10 +1201,10 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
         break;
       }
 
-      // For the Disk Arbitration API (DiskArbitration/DADisk.h)
-      if (cocoa::isRefType(RetTy, "DADisk") ||
-          cocoa::isRefType(RetTy, "DADissenter") ||
-          cocoa::isRefType(RetTy, "DASessionRef")) {
+      // For all other CF-style types, use the Create/Get
+      // rule for summaries but don't support Retain functions
+      // with framework-specific prefixes.
+      if (coreFoundation::isCFObjectRef(RetTy)) {
         S = getCFCreateGetRuleSummary(FD);
         break;
       }
@@ -1924,6 +1929,12 @@ static bool isNumericLiteralExpression(const Expr *E) {
          isa<CXXBoolLiteralExpr>(E);
 }
 
+static std::string describeRegion(const MemRegion *MR) {
+  // Once we support more storage locations for bindings,
+  // this would need to be improved.
+  return cast<VarRegion>(MR)->getDecl()->getName();
+}
+
 /// Returns true if this stack frame is for an Objective-C method that is a
 /// property getter or setter whose body has been synthesized by the analyzer.
 static bool isSynthesizedAccessor(const StackFrameContext *SFC) {
@@ -2390,7 +2401,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   if (FirstBinding) {
     os << "object allocated and stored into '"
-       << FirstBinding->getString() << '\'';
+       << describeRegion(FirstBinding) << '\'';
   }
   else
     os << "allocated object";
@@ -2518,7 +2529,7 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled, boo
   os << "of an object";
 
   if (AllocBinding) {
-    os << " stored into '" << AllocBinding->getString() << '\'';
+    os << " stored into '" << describeRegion(AllocBinding) << '\'';
     if (IncludeAllocationLine) {
       FullSourceLoc SL(AllocStmt->getLocStart(), Ctx.getSourceManager());
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";
@@ -2794,9 +2805,7 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
     return;
 
   ProgramStateRef state = C.getState();
-  const BlockDataRegion *R =
-    cast<BlockDataRegion>(state->getSVal(BE,
-                                         C.getLocationContext()).getAsRegion());
+  auto *R = cast<BlockDataRegion>(C.getSVal(BE).getAsRegion());
 
   BlockDataRegion::referenced_vars_iterator I = R->referenced_vars_begin(),
                                             E = R->referenced_vars_end();
@@ -2846,7 +2855,7 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
   }
 
   ProgramStateRef state = C.getState();
-  SymbolRef Sym = state->getSVal(CE, C.getLocationContext()).getAsLocSymbol();
+  SymbolRef Sym = C.getSVal(CE).getAsLocSymbol();
   if (!Sym)
     return;
   const RefVal* T = getRefBinding(state, Sym);
@@ -2869,7 +2878,7 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   ProgramStateRef state = C.getState();
   const ExplodedNode *pred = C.getPredecessor();
   for (const Stmt *Child : Ex->children()) {
-    SVal V = state->getSVal(Child, pred->getLocationContext());
+    SVal V = pred->getSVal(Child);
     if (SymbolRef sym = V.getAsSymbol())
       if (const RefVal* T = getRefBinding(state, sym)) {
         RefVal::Kind hasErr = (RefVal::Kind) 0;
@@ -2908,10 +2917,9 @@ void RetainCountChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 void RetainCountChecker::checkPostStmt(const ObjCBoxedExpr *Ex,
                                        CheckerContext &C) const {
   const ExplodedNode *Pred = C.getPredecessor();
-  const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
-  if (SymbolRef Sym = State->getSVal(Ex, LCtx).getAsSymbol()) {
+  if (SymbolRef Sym = Pred->getSVal(Ex).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     State = setRefBinding(State, Sym,
                           RefVal::makeNotOwned(RetEffect::ObjC, ResultTy));

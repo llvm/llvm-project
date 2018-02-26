@@ -278,8 +278,8 @@ class CGDebugInfo {
                                 llvm::DIFile *F,
                                 SmallVectorImpl<llvm::Metadata *> &E,
                                 llvm::DIType *RecordTy, const RecordDecl *RD);
-  void CollectRecordNestedRecord(const RecordDecl *RD,
-                                 SmallVectorImpl<llvm::Metadata *> &E);
+  void CollectRecordNestedType(const TypeDecl *RD,
+                               SmallVectorImpl<llvm::Metadata *> &E);
   void CollectRecordFields(const RecordDecl *Decl, llvm::DIFile *F,
                            SmallVectorImpl<llvm::Metadata *> &E,
                            llvm::DICompositeType *RecordTy);
@@ -398,8 +398,8 @@ public:
   /// Emit call to \c llvm.dbg.declare for the block-literal argument
   /// to a block invocation function.
   void EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
-                                            llvm::Value *Arg, unsigned ArgNo,
-                                            llvm::Value *LocalAddr,
+                                            StringRef Name, unsigned ArgNo,
+                                            llvm::AllocaInst *LocalAddr,
                                             CGBuilderTy &Builder);
 
   /// Emit information about a global variable.
@@ -557,6 +557,9 @@ private:
   CollectAnonRecordDecls(const RecordDecl *RD, llvm::DIFile *Unit,
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
+
+  /// Get the printing policy for producing names for debug info.
+  PrintingPolicy getPrintingPolicy() const;
 
   /// Get function name for the given FunctionDecl. If the name is
   /// constructed on demand (e.g., C++ destructor) then the name is

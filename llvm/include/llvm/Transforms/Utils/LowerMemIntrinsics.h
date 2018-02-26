@@ -25,12 +25,6 @@ class MemSetInst;
 class TargetTransformInfo;
 class Value;
 
-/// Emit a loop implementing the semantics of llvm.memcpy with the equivalent
-/// arguments at \p InsertBefore.
-void createMemCpyLoop(Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr,
-                      Value *CopyLen, unsigned SrcAlign, unsigned DestAlign,
-                      bool SrcIsVolatile, bool DstIsVolatile);
-
 /// Emit a loop implementing the semantics of llvm.memcpy where the size is not
 /// a compile-time constant. Loop will be insterted at \p InsertBefore.
 void createMemCpyLoopUnknownSize(Instruction *InsertBefore, Value *SrcAddr,

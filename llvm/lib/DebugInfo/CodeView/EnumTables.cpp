@@ -33,55 +33,9 @@ static const EnumEntry<TypeLeafKind> TypeLeafNames[] = {
 };
 
 static const EnumEntry<uint16_t> RegisterNames[] = {
-    CV_ENUM_CLASS_ENT(RegisterId, Unknown),
-    CV_ENUM_CLASS_ENT(RegisterId, VFrame),
-    CV_ENUM_CLASS_ENT(RegisterId, AL),
-    CV_ENUM_CLASS_ENT(RegisterId, CL),
-    CV_ENUM_CLASS_ENT(RegisterId, DL),
-    CV_ENUM_CLASS_ENT(RegisterId, BL),
-    CV_ENUM_CLASS_ENT(RegisterId, AH),
-    CV_ENUM_CLASS_ENT(RegisterId, CH),
-    CV_ENUM_CLASS_ENT(RegisterId, DH),
-    CV_ENUM_CLASS_ENT(RegisterId, BH),
-    CV_ENUM_CLASS_ENT(RegisterId, AX),
-    CV_ENUM_CLASS_ENT(RegisterId, CX),
-    CV_ENUM_CLASS_ENT(RegisterId, DX),
-    CV_ENUM_CLASS_ENT(RegisterId, BX),
-    CV_ENUM_CLASS_ENT(RegisterId, SP),
-    CV_ENUM_CLASS_ENT(RegisterId, BP),
-    CV_ENUM_CLASS_ENT(RegisterId, SI),
-    CV_ENUM_CLASS_ENT(RegisterId, DI),
-    CV_ENUM_CLASS_ENT(RegisterId, EAX),
-    CV_ENUM_CLASS_ENT(RegisterId, ECX),
-    CV_ENUM_CLASS_ENT(RegisterId, EDX),
-    CV_ENUM_CLASS_ENT(RegisterId, EBX),
-    CV_ENUM_CLASS_ENT(RegisterId, ESP),
-    CV_ENUM_CLASS_ENT(RegisterId, EBP),
-    CV_ENUM_CLASS_ENT(RegisterId, ESI),
-    CV_ENUM_CLASS_ENT(RegisterId, EDI),
-    CV_ENUM_CLASS_ENT(RegisterId, ES),
-    CV_ENUM_CLASS_ENT(RegisterId, CS),
-    CV_ENUM_CLASS_ENT(RegisterId, SS),
-    CV_ENUM_CLASS_ENT(RegisterId, DS),
-    CV_ENUM_CLASS_ENT(RegisterId, FS),
-    CV_ENUM_CLASS_ENT(RegisterId, GS),
-    CV_ENUM_CLASS_ENT(RegisterId, IP),
-    CV_ENUM_CLASS_ENT(RegisterId, RAX),
-    CV_ENUM_CLASS_ENT(RegisterId, RBX),
-    CV_ENUM_CLASS_ENT(RegisterId, RCX),
-    CV_ENUM_CLASS_ENT(RegisterId, RDX),
-    CV_ENUM_CLASS_ENT(RegisterId, RSI),
-    CV_ENUM_CLASS_ENT(RegisterId, RDI),
-    CV_ENUM_CLASS_ENT(RegisterId, RBP),
-    CV_ENUM_CLASS_ENT(RegisterId, RSP),
-    CV_ENUM_CLASS_ENT(RegisterId, R8),
-    CV_ENUM_CLASS_ENT(RegisterId, R9),
-    CV_ENUM_CLASS_ENT(RegisterId, R10),
-    CV_ENUM_CLASS_ENT(RegisterId, R11),
-    CV_ENUM_CLASS_ENT(RegisterId, R12),
-    CV_ENUM_CLASS_ENT(RegisterId, R13),
-    CV_ENUM_CLASS_ENT(RegisterId, R14),
-    CV_ENUM_CLASS_ENT(RegisterId, R15),
+#define CV_REGISTER(name, val) CV_ENUM_CLASS_ENT(RegisterId, name),
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
 };
 
 static const EnumEntry<uint32_t> PublicSymFlagNames[] = {
@@ -132,7 +86,7 @@ static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
     CV_ENUM_ENT(SourceLanguage, CSharp),  CV_ENUM_ENT(SourceLanguage, VB),
     CV_ENUM_ENT(SourceLanguage, ILAsm),   CV_ENUM_ENT(SourceLanguage, Java),
     CV_ENUM_ENT(SourceLanguage, JScript), CV_ENUM_ENT(SourceLanguage, MSIL),
-    CV_ENUM_ENT(SourceLanguage, HLSL),
+    CV_ENUM_ENT(SourceLanguage, HLSL),    CV_ENUM_ENT(SourceLanguage, D),
 };
 
 static const EnumEntry<uint32_t> CompileSym2FlagNames[] = {

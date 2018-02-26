@@ -57,7 +57,9 @@ static void ioctl_table_fill() {
   _(SIOCGIFCONF, CUSTOM, 0);
   _(SIOCGPGRP, WRITE, sizeof(int));
   _(SIOCSPGRP, READ, sizeof(int));
+#if !SANITIZER_SOLARIS
   _(TIOCCONS, NONE, 0);
+#endif
   _(TIOCEXCL, NONE, 0);
   _(TIOCGETD, WRITE, sizeof(int));
   _(TIOCGPGRP, WRITE, pid_t_sz);

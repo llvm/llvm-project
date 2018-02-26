@@ -1,7 +1,7 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
-; Function Attrs: norecurse nounwind readnone
+; RUN: llc -ppc-gpr-icmps=all -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
+
 define signext i32 @testExpandISELToIfElse(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -12,7 +12,7 @@ entry:
 ; CHECK-LABEL: @testExpandISELToIfElse
 ; CHECK: addi r5, r3, 1
 ; CHECK-NEXT: cmpwi cr0, r3, 0
-; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT:  [[TRUE]]
@@ -23,7 +23,6 @@ entry:
 }
 
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELToIf(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -32,14 +31,13 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELToIf
 ; CHECK: cmpwi	 r3, 0
-; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NEXT: blr
 ; CHECK-NEXT:  [[TRUE]]
 ; CHECK-NEXT: addi r3, r4, 0
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELToElse(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -48,27 +46,12 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELToElse
 ; CHECK: cmpwi	 r3, 0
-; CHECK-NEXT: bclr 12, 1, 0
+; CHECK-NEXT: bclr 12, gt, 0
 ; CHECK: ori r3, r4, 0
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
-define signext i32 @testReplaceISELWithCopy(i32 signext %i, i32 signext %j) {
-entry:
-  %cmp = icmp sgt i32 %i, 0
-  %cond = select i1 %cmp, i32 %j, i32 %j
-  ret i32 %cond
 
-; CHECK-LABEL: @testReplaceISELWithCopy
-
-; Fix me should really check: addi r3, r4, 0
-; but for some reason it's optimized to mr r3, r4
-; CHECK: mr r3, r4
-; CHECK-NEXT: blr
-}
-
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELToNull(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -81,7 +64,6 @@ entry:
 ; CHECK: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo2ORIs2ADDIs
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -95,7 +77,7 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELsTo2ORIs2ADDIs
 ; CHECK: cmpwi r7, 0
-; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
 ; CHECK-NEXT: ori r12, r6, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
@@ -108,7 +90,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo2ORIs1ADDI
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -121,7 +102,7 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELsTo2ORIs1ADDI
 ; CHECK: cmpwi cr0, r7, 0
-; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
 ; CHECK-NEXT: ori r12, r6, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
@@ -133,7 +114,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo1ORI1ADDI
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -148,7 +128,7 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELsTo1ORI1ADDI
 ; CHECK: cmpwi cr0, r7, 0
-; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r5, r6, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT: [[TRUE]]
@@ -160,7 +140,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo0ORI2ADDIs
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -176,7 +155,7 @@ entry:
 
 ; CHECK-LABEL: @testExpandISELsTo0ORI2ADDIs
 ; CHECK: cmpwi cr0, r7, 0
-; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT:  [[TRUE]]
 ; CHECK-NEXT: addi r4, r3, 0
@@ -212,11 +191,12 @@ cleanup:
   ret i32 %retval.0
 
 ; CHECK-LABEL: @testComplexISEL
-; CHECK-DAG: [[LI:r[0-9]+]], 1
-; CHECK-DAG: cmplwi [[LD:r[0-9]+]], 0
-; CHECK: beq cr0, [[EQ:.LBB[0-9_]+]]
+; CHECK: cmplwi r3, 0
+; CHECK: li r3, 1
+; CHECK: beq cr0, [[TGT:.LBB[0-9_]+]]
+; CHECK: clrldi r3, r3, 32
 ; CHECK: blr
-; CHECK: [[EQ]]
+; CHECK: [[TGT]]
 ; CHECK: xor [[XOR:r[0-9]+]]
 ; CHECK: cntlzd [[CZ:r[0-9]+]], [[XOR]]
 ; CHECK: rldicl [[SH:r[0-9]+]], [[CZ]], 58, 63

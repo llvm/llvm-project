@@ -407,6 +407,15 @@ public:
   /// \brief Map a dwarf register back to a target register.
   int getLLVMRegNum(unsigned RegNum, bool isEH) const;
 
+  /// \brief Map a DWARF EH register back to a target register (same as
+  /// getLLVMRegNum(RegNum, true)) but return -1 if there is no mapping,
+  /// rather than asserting that there must be one.
+  int getLLVMRegNumFromEH(unsigned RegNum) const;
+
+  /// \brief Map a target EH register number to an equivalent DWARF register
+  /// number.
+  int getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const;
+
   /// \brief Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
   int getSEHRegNum(unsigned RegNum) const;

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse,+sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse,+sse2 | FileCheck %s
 
 define float @min1(float %x, float %y) {
 ; CHECK-LABEL: min1

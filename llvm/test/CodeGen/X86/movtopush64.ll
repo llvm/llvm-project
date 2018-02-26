@@ -4,6 +4,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -no-x86-call-frame-opt | FileCheck %s -check-prefix=NOPUSH
 
 declare void @seven_params(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g)
+declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
+declare void @eightparams16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h)
+declare void @eightparams64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h)
 declare void @ten_params(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g, i64 %h, i32 %i, i64 %j)
 declare void @ten_params_ptr(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g, i8* %h, i32 %i, i64 %j)
 declare void @cannot_push(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i)
@@ -189,5 +192,35 @@ define void @test10(float %p1) {
   call void @ten_params(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, i64 8, i32 9, i64 10)
   call void @cannot_push(float 1.0e0, float 2.0e0, float 3.0e0, float 4.0e0, float 5.0e0, float 6.0e0, float 7.0e0, float 8.0e0, float %p1)
   call void @ten_params(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, i64 8, i32 9, i64 10)
+  ret void
+}
+
+; NORMAL-LABEL: pr34863_16
+; NORMAL:  pushq  ${{-1|65535}}
+; NORMAL-NEXT:  pushq  $0
+; NORMAL-NEXT:  call
+define void @pr34863_16(i16 %x) minsize nounwind {
+entry:
+  tail call void @eightparams16(i16 %x, i16 %x, i16 %x, i16 %x, i16 %x, i16 %x, i16 0, i16 -1)
+  ret void
+}
+
+; NORMAL-LABEL: pr34863_32
+; NORMAL:  pushq  ${{-1|65535}}
+; NORMAL-NEXT:  pushq  $0
+; NORMAL-NEXT:  call
+define void @pr34863_32(i32 %x) minsize nounwind {
+entry:
+  tail call void @eightparams(i32 %x, i32 %x, i32 %x, i32 %x, i32 %x, i32 %x, i32 0, i32 -1)
+  ret void
+}
+
+; NORMAL-LABEL: pr34863_64
+; NORMAL:  pushq  ${{-1|65535}}
+; NORMAL-NEXT:  pushq  $0
+; NORMAL-NEXT:  call
+define void @pr34863_64(i64 %x) minsize nounwind {
+entry:
+  tail call void @eightparams64(i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 0, i64 -1)
   ret void
 }

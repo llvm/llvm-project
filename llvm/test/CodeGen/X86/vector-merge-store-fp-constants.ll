@@ -4,7 +4,7 @@
 
 define void @merge_8_float_zero_stores(float* %ptr) {
 ; DEFAULTCPU-LABEL: merge_8_float_zero_stores:
-; DEFAULTCPU:       # BB#0:
+; DEFAULTCPU:       # %bb.0:
 ; DEFAULTCPU-NEXT:    movq $0, (%rdi)
 ; DEFAULTCPU-NEXT:    movq $0, 8(%rdi)
 ; DEFAULTCPU-NEXT:    movq $0, 16(%rdi)
@@ -12,7 +12,7 @@ define void @merge_8_float_zero_stores(float* %ptr) {
 ; DEFAULTCPU-NEXT:    retq
 ;
 ; X64CPU-LABEL: merge_8_float_zero_stores:
-; X64CPU:       # BB#0:
+; X64CPU:       # %bb.0:
 ; X64CPU-NEXT:    xorps %xmm0, %xmm0
 ; X64CPU-NEXT:    movups %xmm0, (%rdi)
 ; X64CPU-NEXT:    movups %xmm0, 16(%rdi)

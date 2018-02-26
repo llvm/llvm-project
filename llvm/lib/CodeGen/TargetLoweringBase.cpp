@@ -1,4 +1,4 @@
-//===-- TargetLoweringBase.cpp - Implement the TargetLoweringBase class ---===//
+//===- TargetLoweringBase.cpp - Implement the TargetLoweringBase class ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,32 +13,55 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCExpr.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
-#include <cctype>
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <string>
+#include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 static cl::opt<bool> JumpIsExpensiveOverride(
@@ -66,6 +89,21 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
     cl::desc("Minimum density for building a jump table in "
              "an optsize function"));
 
+static bool darwinHasSinCos(const Triple &TT) {
+  assert(TT.isOSDarwin() && "should be called with darwin triple");
+  // Don't bother with 32 bit x86.
+  if (TT.getArch() == Triple::x86)
+    return false;
+  // Macos < 10.9 has no sincos_stret.
+  if (TT.isMacOSX())
+    return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
+  // iOS < 7.0 has no sincos_stret.
+  if (TT.isiOS())
+    return !TT.isOSVersionLT(7, 0);
+  // Any other darwin such as WatchOS/TvOS is new enough.
+  return true;
+}
+
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
 // is best represented as control flow. Therefore, the default value N should be
@@ -77,473 +115,63 @@ static cl::opt<int> MinPercentageForPredictableBranch(
              "or false to assume that the condition is predictable"),
     cl::Hidden);
 
-/// InitLibcallNames - Set default libcall names.
-///
-static void InitLibcallNames(const char **Names, const Triple &TT) {
-  Names[RTLIB::SHL_I16] = "__ashlhi3";
-  Names[RTLIB::SHL_I32] = "__ashlsi3";
-  Names[RTLIB::SHL_I64] = "__ashldi3";
-  Names[RTLIB::SHL_I128] = "__ashlti3";
-  Names[RTLIB::SRL_I16] = "__lshrhi3";
-  Names[RTLIB::SRL_I32] = "__lshrsi3";
-  Names[RTLIB::SRL_I64] = "__lshrdi3";
-  Names[RTLIB::SRL_I128] = "__lshrti3";
-  Names[RTLIB::SRA_I16] = "__ashrhi3";
-  Names[RTLIB::SRA_I32] = "__ashrsi3";
-  Names[RTLIB::SRA_I64] = "__ashrdi3";
-  Names[RTLIB::SRA_I128] = "__ashrti3";
-  Names[RTLIB::MUL_I8] = "__mulqi3";
-  Names[RTLIB::MUL_I16] = "__mulhi3";
-  Names[RTLIB::MUL_I32] = "__mulsi3";
-  Names[RTLIB::MUL_I64] = "__muldi3";
-  Names[RTLIB::MUL_I128] = "__multi3";
-  Names[RTLIB::MULO_I32] = "__mulosi4";
-  Names[RTLIB::MULO_I64] = "__mulodi4";
-  Names[RTLIB::MULO_I128] = "__muloti4";
-  Names[RTLIB::SDIV_I8] = "__divqi3";
-  Names[RTLIB::SDIV_I16] = "__divhi3";
-  Names[RTLIB::SDIV_I32] = "__divsi3";
-  Names[RTLIB::SDIV_I64] = "__divdi3";
-  Names[RTLIB::SDIV_I128] = "__divti3";
-  Names[RTLIB::UDIV_I8] = "__udivqi3";
-  Names[RTLIB::UDIV_I16] = "__udivhi3";
-  Names[RTLIB::UDIV_I32] = "__udivsi3";
-  Names[RTLIB::UDIV_I64] = "__udivdi3";
-  Names[RTLIB::UDIV_I128] = "__udivti3";
-  Names[RTLIB::SREM_I8] = "__modqi3";
-  Names[RTLIB::SREM_I16] = "__modhi3";
-  Names[RTLIB::SREM_I32] = "__modsi3";
-  Names[RTLIB::SREM_I64] = "__moddi3";
-  Names[RTLIB::SREM_I128] = "__modti3";
-  Names[RTLIB::UREM_I8] = "__umodqi3";
-  Names[RTLIB::UREM_I16] = "__umodhi3";
-  Names[RTLIB::UREM_I32] = "__umodsi3";
-  Names[RTLIB::UREM_I64] = "__umoddi3";
-  Names[RTLIB::UREM_I128] = "__umodti3";
+void TargetLoweringBase::InitLibcalls(const Triple &TT) {
+#define HANDLE_LIBCALL(code, name) \
+  setLibcallName(RTLIB::code, name);
+#include "llvm/CodeGen/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
+  // Initialize calling conventions to their default.
+  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
+    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
-  Names[RTLIB::NEG_I32] = "__negsi2";
-  Names[RTLIB::NEG_I64] = "__negdi2";
-  Names[RTLIB::ADD_F32] = "__addsf3";
-  Names[RTLIB::ADD_F64] = "__adddf3";
-  Names[RTLIB::ADD_F80] = "__addxf3";
-  Names[RTLIB::ADD_F128] = "__addtf3";
-  Names[RTLIB::ADD_PPCF128] = "__gcc_qadd";
-  Names[RTLIB::SUB_F32] = "__subsf3";
-  Names[RTLIB::SUB_F64] = "__subdf3";
-  Names[RTLIB::SUB_F80] = "__subxf3";
-  Names[RTLIB::SUB_F128] = "__subtf3";
-  Names[RTLIB::SUB_PPCF128] = "__gcc_qsub";
-  Names[RTLIB::MUL_F32] = "__mulsf3";
-  Names[RTLIB::MUL_F64] = "__muldf3";
-  Names[RTLIB::MUL_F80] = "__mulxf3";
-  Names[RTLIB::MUL_F128] = "__multf3";
-  Names[RTLIB::MUL_PPCF128] = "__gcc_qmul";
-  Names[RTLIB::DIV_F32] = "__divsf3";
-  Names[RTLIB::DIV_F64] = "__divdf3";
-  Names[RTLIB::DIV_F80] = "__divxf3";
-  Names[RTLIB::DIV_F128] = "__divtf3";
-  Names[RTLIB::DIV_PPCF128] = "__gcc_qdiv";
-  Names[RTLIB::REM_F32] = "fmodf";
-  Names[RTLIB::REM_F64] = "fmod";
-  Names[RTLIB::REM_F80] = "fmodl";
-  Names[RTLIB::REM_F128] = "fmodl";
-  Names[RTLIB::REM_PPCF128] = "fmodl";
-  Names[RTLIB::FMA_F32] = "fmaf";
-  Names[RTLIB::FMA_F64] = "fma";
-  Names[RTLIB::FMA_F80] = "fmal";
-  Names[RTLIB::FMA_F128] = "fmal";
-  Names[RTLIB::FMA_PPCF128] = "fmal";
-  Names[RTLIB::POWI_F32] = "__powisf2";
-  Names[RTLIB::POWI_F64] = "__powidf2";
-  Names[RTLIB::POWI_F80] = "__powixf2";
-  Names[RTLIB::POWI_F128] = "__powitf2";
-  Names[RTLIB::POWI_PPCF128] = "__powitf2";
-  Names[RTLIB::SQRT_F32] = "sqrtf";
-  Names[RTLIB::SQRT_F64] = "sqrt";
-  Names[RTLIB::SQRT_F80] = "sqrtl";
-  Names[RTLIB::SQRT_F128] = "sqrtl";
-  Names[RTLIB::SQRT_PPCF128] = "sqrtl";
-  Names[RTLIB::LOG_F32] = "logf";
-  Names[RTLIB::LOG_F64] = "log";
-  Names[RTLIB::LOG_F80] = "logl";
-  Names[RTLIB::LOG_F128] = "logl";
-  Names[RTLIB::LOG_PPCF128] = "logl";
-  Names[RTLIB::LOG2_F32] = "log2f";
-  Names[RTLIB::LOG2_F64] = "log2";
-  Names[RTLIB::LOG2_F80] = "log2l";
-  Names[RTLIB::LOG2_F128] = "log2l";
-  Names[RTLIB::LOG2_PPCF128] = "log2l";
-  Names[RTLIB::LOG10_F32] = "log10f";
-  Names[RTLIB::LOG10_F64] = "log10";
-  Names[RTLIB::LOG10_F80] = "log10l";
-  Names[RTLIB::LOG10_F128] = "log10l";
-  Names[RTLIB::LOG10_PPCF128] = "log10l";
-  Names[RTLIB::EXP_F32] = "expf";
-  Names[RTLIB::EXP_F64] = "exp";
-  Names[RTLIB::EXP_F80] = "expl";
-  Names[RTLIB::EXP_F128] = "expl";
-  Names[RTLIB::EXP_PPCF128] = "expl";
-  Names[RTLIB::EXP2_F32] = "exp2f";
-  Names[RTLIB::EXP2_F64] = "exp2";
-  Names[RTLIB::EXP2_F80] = "exp2l";
-  Names[RTLIB::EXP2_F128] = "exp2l";
-  Names[RTLIB::EXP2_PPCF128] = "exp2l";
-  Names[RTLIB::SIN_F32] = "sinf";
-  Names[RTLIB::SIN_F64] = "sin";
-  Names[RTLIB::SIN_F80] = "sinl";
-  Names[RTLIB::SIN_F128] = "sinl";
-  Names[RTLIB::SIN_PPCF128] = "sinl";
-  Names[RTLIB::COS_F32] = "cosf";
-  Names[RTLIB::COS_F64] = "cos";
-  Names[RTLIB::COS_F80] = "cosl";
-  Names[RTLIB::COS_F128] = "cosl";
-  Names[RTLIB::COS_PPCF128] = "cosl";
-  Names[RTLIB::POW_F32] = "powf";
-  Names[RTLIB::POW_F64] = "pow";
-  Names[RTLIB::POW_F80] = "powl";
-  Names[RTLIB::POW_F128] = "powl";
-  Names[RTLIB::POW_PPCF128] = "powl";
-  Names[RTLIB::CEIL_F32] = "ceilf";
-  Names[RTLIB::CEIL_F64] = "ceil";
-  Names[RTLIB::CEIL_F80] = "ceill";
-  Names[RTLIB::CEIL_F128] = "ceill";
-  Names[RTLIB::CEIL_PPCF128] = "ceill";
-  Names[RTLIB::TRUNC_F32] = "truncf";
-  Names[RTLIB::TRUNC_F64] = "trunc";
-  Names[RTLIB::TRUNC_F80] = "truncl";
-  Names[RTLIB::TRUNC_F128] = "truncl";
-  Names[RTLIB::TRUNC_PPCF128] = "truncl";
-  Names[RTLIB::RINT_F32] = "rintf";
-  Names[RTLIB::RINT_F64] = "rint";
-  Names[RTLIB::RINT_F80] = "rintl";
-  Names[RTLIB::RINT_F128] = "rintl";
-  Names[RTLIB::RINT_PPCF128] = "rintl";
-  Names[RTLIB::NEARBYINT_F32] = "nearbyintf";
-  Names[RTLIB::NEARBYINT_F64] = "nearbyint";
-  Names[RTLIB::NEARBYINT_F80] = "nearbyintl";
-  Names[RTLIB::NEARBYINT_F128] = "nearbyintl";
-  Names[RTLIB::NEARBYINT_PPCF128] = "nearbyintl";
-  Names[RTLIB::ROUND_F32] = "roundf";
-  Names[RTLIB::ROUND_F64] = "round";
-  Names[RTLIB::ROUND_F80] = "roundl";
-  Names[RTLIB::ROUND_F128] = "roundl";
-  Names[RTLIB::ROUND_PPCF128] = "roundl";
-  Names[RTLIB::FLOOR_F32] = "floorf";
-  Names[RTLIB::FLOOR_F64] = "floor";
-  Names[RTLIB::FLOOR_F80] = "floorl";
-  Names[RTLIB::FLOOR_F128] = "floorl";
-  Names[RTLIB::FLOOR_PPCF128] = "floorl";
-  Names[RTLIB::FMIN_F32] = "fminf";
-  Names[RTLIB::FMIN_F64] = "fmin";
-  Names[RTLIB::FMIN_F80] = "fminl";
-  Names[RTLIB::FMIN_F128] = "fminl";
-  Names[RTLIB::FMIN_PPCF128] = "fminl";
-  Names[RTLIB::FMAX_F32] = "fmaxf";
-  Names[RTLIB::FMAX_F64] = "fmax";
-  Names[RTLIB::FMAX_F80] = "fmaxl";
-  Names[RTLIB::FMAX_F128] = "fmaxl";
-  Names[RTLIB::FMAX_PPCF128] = "fmaxl";
-  Names[RTLIB::ROUND_F32] = "roundf";
-  Names[RTLIB::ROUND_F64] = "round";
-  Names[RTLIB::ROUND_F80] = "roundl";
-  Names[RTLIB::ROUND_F128] = "roundl";
-  Names[RTLIB::ROUND_PPCF128] = "roundl";
-  Names[RTLIB::COPYSIGN_F32] = "copysignf";
-  Names[RTLIB::COPYSIGN_F64] = "copysign";
-  Names[RTLIB::COPYSIGN_F80] = "copysignl";
-  Names[RTLIB::COPYSIGN_F128] = "copysignl";
-  Names[RTLIB::COPYSIGN_PPCF128] = "copysignl";
-  Names[RTLIB::FPEXT_F32_PPCF128] = "__gcc_stoq";
-  Names[RTLIB::FPEXT_F64_PPCF128] = "__gcc_dtoq";
-  Names[RTLIB::FPEXT_F64_F128] = "__extenddftf2";
-  Names[RTLIB::FPEXT_F32_F128] = "__extendsftf2";
-  Names[RTLIB::FPEXT_F32_F64] = "__extendsfdf2";
+  // A few names are different on particular architectures or environments.
   if (TT.isOSDarwin()) {
     // For f16/f32 conversions, Darwin uses the standard naming scheme, instead
     // of the gnueabi-style __gnu_*_ieee.
     // FIXME: What about other targets?
-    Names[RTLIB::FPEXT_F16_F32] = "__extendhfsf2";
-    Names[RTLIB::FPROUND_F32_F16] = "__truncsfhf2";
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+
+    // Some darwins have an optimized __bzero/bzero function.
+    switch (TT.getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+      if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
+        setLibcallName(RTLIB::BZERO, "__bzero");
+      break;
+    case Triple::aarch64:
+      setLibcallName(RTLIB::BZERO, "bzero");
+      break;
+    default:
+      break;
+    }
+
+    if (darwinHasSinCos(TT)) {
+      setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
+      setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
+      if (TT.isWatchABI()) {
+        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
+                              CallingConv::ARM_AAPCS_VFP);
+        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
+                              CallingConv::ARM_AAPCS_VFP);
+      }
+    }
   } else {
-    Names[RTLIB::FPEXT_F16_F32] = "__gnu_h2f_ieee";
-    Names[RTLIB::FPROUND_F32_F16] = "__gnu_f2h_ieee";
-  }
-  Names[RTLIB::FPROUND_F64_F16] = "__truncdfhf2";
-  Names[RTLIB::FPROUND_F80_F16] = "__truncxfhf2";
-  Names[RTLIB::FPROUND_F128_F16] = "__trunctfhf2";
-  Names[RTLIB::FPROUND_PPCF128_F16] = "__trunctfhf2";
-  Names[RTLIB::FPROUND_F64_F32] = "__truncdfsf2";
-  Names[RTLIB::FPROUND_F80_F32] = "__truncxfsf2";
-  Names[RTLIB::FPROUND_F128_F32] = "__trunctfsf2";
-  Names[RTLIB::FPROUND_PPCF128_F32] = "__gcc_qtos";
-  Names[RTLIB::FPROUND_F80_F64] = "__truncxfdf2";
-  Names[RTLIB::FPROUND_F128_F64] = "__trunctfdf2";
-  Names[RTLIB::FPROUND_PPCF128_F64] = "__gcc_qtod";
-  Names[RTLIB::FPTOSINT_F32_I32] = "__fixsfsi";
-  Names[RTLIB::FPTOSINT_F32_I64] = "__fixsfdi";
-  Names[RTLIB::FPTOSINT_F32_I128] = "__fixsfti";
-  Names[RTLIB::FPTOSINT_F64_I32] = "__fixdfsi";
-  Names[RTLIB::FPTOSINT_F64_I64] = "__fixdfdi";
-  Names[RTLIB::FPTOSINT_F64_I128] = "__fixdfti";
-  Names[RTLIB::FPTOSINT_F80_I32] = "__fixxfsi";
-  Names[RTLIB::FPTOSINT_F80_I64] = "__fixxfdi";
-  Names[RTLIB::FPTOSINT_F80_I128] = "__fixxfti";
-  Names[RTLIB::FPTOSINT_F128_I32] = "__fixtfsi";
-  Names[RTLIB::FPTOSINT_F128_I64] = "__fixtfdi";
-  Names[RTLIB::FPTOSINT_F128_I128] = "__fixtfti";
-  Names[RTLIB::FPTOSINT_PPCF128_I32] = "__gcc_qtou";
-  Names[RTLIB::FPTOSINT_PPCF128_I64] = "__fixtfdi";
-  Names[RTLIB::FPTOSINT_PPCF128_I128] = "__fixtfti";
-  Names[RTLIB::FPTOUINT_F32_I32] = "__fixunssfsi";
-  Names[RTLIB::FPTOUINT_F32_I64] = "__fixunssfdi";
-  Names[RTLIB::FPTOUINT_F32_I128] = "__fixunssfti";
-  Names[RTLIB::FPTOUINT_F64_I32] = "__fixunsdfsi";
-  Names[RTLIB::FPTOUINT_F64_I64] = "__fixunsdfdi";
-  Names[RTLIB::FPTOUINT_F64_I128] = "__fixunsdfti";
-  Names[RTLIB::FPTOUINT_F80_I32] = "__fixunsxfsi";
-  Names[RTLIB::FPTOUINT_F80_I64] = "__fixunsxfdi";
-  Names[RTLIB::FPTOUINT_F80_I128] = "__fixunsxfti";
-  Names[RTLIB::FPTOUINT_F128_I32] = "__fixunstfsi";
-  Names[RTLIB::FPTOUINT_F128_I64] = "__fixunstfdi";
-  Names[RTLIB::FPTOUINT_F128_I128] = "__fixunstfti";
-  Names[RTLIB::FPTOUINT_PPCF128_I32] = "__fixunstfsi";
-  Names[RTLIB::FPTOUINT_PPCF128_I64] = "__fixunstfdi";
-  Names[RTLIB::FPTOUINT_PPCF128_I128] = "__fixunstfti";
-  Names[RTLIB::SINTTOFP_I32_F32] = "__floatsisf";
-  Names[RTLIB::SINTTOFP_I32_F64] = "__floatsidf";
-  Names[RTLIB::SINTTOFP_I32_F80] = "__floatsixf";
-  Names[RTLIB::SINTTOFP_I32_F128] = "__floatsitf";
-  Names[RTLIB::SINTTOFP_I32_PPCF128] = "__gcc_itoq";
-  Names[RTLIB::SINTTOFP_I64_F32] = "__floatdisf";
-  Names[RTLIB::SINTTOFP_I64_F64] = "__floatdidf";
-  Names[RTLIB::SINTTOFP_I64_F80] = "__floatdixf";
-  Names[RTLIB::SINTTOFP_I64_F128] = "__floatditf";
-  Names[RTLIB::SINTTOFP_I64_PPCF128] = "__floatditf";
-  Names[RTLIB::SINTTOFP_I128_F32] = "__floattisf";
-  Names[RTLIB::SINTTOFP_I128_F64] = "__floattidf";
-  Names[RTLIB::SINTTOFP_I128_F80] = "__floattixf";
-  Names[RTLIB::SINTTOFP_I128_F128] = "__floattitf";
-  Names[RTLIB::SINTTOFP_I128_PPCF128] = "__floattitf";
-  Names[RTLIB::UINTTOFP_I32_F32] = "__floatunsisf";
-  Names[RTLIB::UINTTOFP_I32_F64] = "__floatunsidf";
-  Names[RTLIB::UINTTOFP_I32_F80] = "__floatunsixf";
-  Names[RTLIB::UINTTOFP_I32_F128] = "__floatunsitf";
-  Names[RTLIB::UINTTOFP_I32_PPCF128] = "__gcc_utoq";
-  Names[RTLIB::UINTTOFP_I64_F32] = "__floatundisf";
-  Names[RTLIB::UINTTOFP_I64_F64] = "__floatundidf";
-  Names[RTLIB::UINTTOFP_I64_F80] = "__floatundixf";
-  Names[RTLIB::UINTTOFP_I64_F128] = "__floatunditf";
-  Names[RTLIB::UINTTOFP_I64_PPCF128] = "__floatunditf";
-  Names[RTLIB::UINTTOFP_I128_F32] = "__floatuntisf";
-  Names[RTLIB::UINTTOFP_I128_F64] = "__floatuntidf";
-  Names[RTLIB::UINTTOFP_I128_F80] = "__floatuntixf";
-  Names[RTLIB::UINTTOFP_I128_F128] = "__floatuntitf";
-  Names[RTLIB::UINTTOFP_I128_PPCF128] = "__floatuntitf";
-  Names[RTLIB::OEQ_F32] = "__eqsf2";
-  Names[RTLIB::OEQ_F64] = "__eqdf2";
-  Names[RTLIB::OEQ_F128] = "__eqtf2";
-  Names[RTLIB::OEQ_PPCF128] = "__gcc_qeq";
-  Names[RTLIB::UNE_F32] = "__nesf2";
-  Names[RTLIB::UNE_F64] = "__nedf2";
-  Names[RTLIB::UNE_F128] = "__netf2";
-  Names[RTLIB::UNE_PPCF128] = "__gcc_qne";
-  Names[RTLIB::OGE_F32] = "__gesf2";
-  Names[RTLIB::OGE_F64] = "__gedf2";
-  Names[RTLIB::OGE_F128] = "__getf2";
-  Names[RTLIB::OGE_PPCF128] = "__gcc_qge";
-  Names[RTLIB::OLT_F32] = "__ltsf2";
-  Names[RTLIB::OLT_F64] = "__ltdf2";
-  Names[RTLIB::OLT_F128] = "__lttf2";
-  Names[RTLIB::OLT_PPCF128] = "__gcc_qlt";
-  Names[RTLIB::OLE_F32] = "__lesf2";
-  Names[RTLIB::OLE_F64] = "__ledf2";
-  Names[RTLIB::OLE_F128] = "__letf2";
-  Names[RTLIB::OLE_PPCF128] = "__gcc_qle";
-  Names[RTLIB::OGT_F32] = "__gtsf2";
-  Names[RTLIB::OGT_F64] = "__gtdf2";
-  Names[RTLIB::OGT_F128] = "__gttf2";
-  Names[RTLIB::OGT_PPCF128] = "__gcc_qgt";
-  Names[RTLIB::UO_F32] = "__unordsf2";
-  Names[RTLIB::UO_F64] = "__unorddf2";
-  Names[RTLIB::UO_F128] = "__unordtf2";
-  Names[RTLIB::UO_PPCF128] = "__gcc_qunord";
-  Names[RTLIB::O_F32] = "__unordsf2";
-  Names[RTLIB::O_F64] = "__unorddf2";
-  Names[RTLIB::O_F128] = "__unordtf2";
-  Names[RTLIB::O_PPCF128] = "__gcc_qunord";
-  Names[RTLIB::MEMCPY] = "memcpy";
-  Names[RTLIB::MEMMOVE] = "memmove";
-  Names[RTLIB::MEMSET] = "memset";
-  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_1] =
-      "__llvm_memcpy_element_unordered_atomic_1";
-  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_2] =
-      "__llvm_memcpy_element_unordered_atomic_2";
-  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_4] =
-      "__llvm_memcpy_element_unordered_atomic_4";
-  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_8] =
-      "__llvm_memcpy_element_unordered_atomic_8";
-  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_16] =
-      "__llvm_memcpy_element_unordered_atomic_16";
-  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_1] =
-      "__llvm_memmove_element_unordered_atomic_1";
-  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_2] =
-      "__llvm_memmove_element_unordered_atomic_2";
-  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_4] =
-      "__llvm_memmove_element_unordered_atomic_4";
-  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_8] =
-      "__llvm_memmove_element_unordered_atomic_8";
-  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_16] =
-      "__llvm_memmove_element_unordered_atomic_16";
-  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_1] =
-      "__llvm_memset_element_unordered_atomic_1";
-  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_2] =
-      "__llvm_memset_element_unordered_atomic_2";
-  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_4] =
-      "__llvm_memset_element_unordered_atomic_4";
-  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_8] =
-      "__llvm_memset_element_unordered_atomic_8";
-  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_16] =
-      "__llvm_memset_element_unordered_atomic_16";
-  Names[RTLIB::UNWIND_RESUME] = "_Unwind_Resume";
-  Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_1] = "__sync_val_compare_and_swap_1";
-  Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_2] = "__sync_val_compare_and_swap_2";
-  Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_4] = "__sync_val_compare_and_swap_4";
-  Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_8] = "__sync_val_compare_and_swap_8";
-  Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_16] = "__sync_val_compare_and_swap_16";
-  Names[RTLIB::SYNC_LOCK_TEST_AND_SET_1] = "__sync_lock_test_and_set_1";
-  Names[RTLIB::SYNC_LOCK_TEST_AND_SET_2] = "__sync_lock_test_and_set_2";
-  Names[RTLIB::SYNC_LOCK_TEST_AND_SET_4] = "__sync_lock_test_and_set_4";
-  Names[RTLIB::SYNC_LOCK_TEST_AND_SET_8] = "__sync_lock_test_and_set_8";
-  Names[RTLIB::SYNC_LOCK_TEST_AND_SET_16] = "__sync_lock_test_and_set_16";
-  Names[RTLIB::SYNC_FETCH_AND_ADD_1] = "__sync_fetch_and_add_1";
-  Names[RTLIB::SYNC_FETCH_AND_ADD_2] = "__sync_fetch_and_add_2";
-  Names[RTLIB::SYNC_FETCH_AND_ADD_4] = "__sync_fetch_and_add_4";
-  Names[RTLIB::SYNC_FETCH_AND_ADD_8] = "__sync_fetch_and_add_8";
-  Names[RTLIB::SYNC_FETCH_AND_ADD_16] = "__sync_fetch_and_add_16";
-  Names[RTLIB::SYNC_FETCH_AND_SUB_1] = "__sync_fetch_and_sub_1";
-  Names[RTLIB::SYNC_FETCH_AND_SUB_2] = "__sync_fetch_and_sub_2";
-  Names[RTLIB::SYNC_FETCH_AND_SUB_4] = "__sync_fetch_and_sub_4";
-  Names[RTLIB::SYNC_FETCH_AND_SUB_8] = "__sync_fetch_and_sub_8";
-  Names[RTLIB::SYNC_FETCH_AND_SUB_16] = "__sync_fetch_and_sub_16";
-  Names[RTLIB::SYNC_FETCH_AND_AND_1] = "__sync_fetch_and_and_1";
-  Names[RTLIB::SYNC_FETCH_AND_AND_2] = "__sync_fetch_and_and_2";
-  Names[RTLIB::SYNC_FETCH_AND_AND_4] = "__sync_fetch_and_and_4";
-  Names[RTLIB::SYNC_FETCH_AND_AND_8] = "__sync_fetch_and_and_8";
-  Names[RTLIB::SYNC_FETCH_AND_AND_16] = "__sync_fetch_and_and_16";
-  Names[RTLIB::SYNC_FETCH_AND_OR_1] = "__sync_fetch_and_or_1";
-  Names[RTLIB::SYNC_FETCH_AND_OR_2] = "__sync_fetch_and_or_2";
-  Names[RTLIB::SYNC_FETCH_AND_OR_4] = "__sync_fetch_and_or_4";
-  Names[RTLIB::SYNC_FETCH_AND_OR_8] = "__sync_fetch_and_or_8";
-  Names[RTLIB::SYNC_FETCH_AND_OR_16] = "__sync_fetch_and_or_16";
-  Names[RTLIB::SYNC_FETCH_AND_XOR_1] = "__sync_fetch_and_xor_1";
-  Names[RTLIB::SYNC_FETCH_AND_XOR_2] = "__sync_fetch_and_xor_2";
-  Names[RTLIB::SYNC_FETCH_AND_XOR_4] = "__sync_fetch_and_xor_4";
-  Names[RTLIB::SYNC_FETCH_AND_XOR_8] = "__sync_fetch_and_xor_8";
-  Names[RTLIB::SYNC_FETCH_AND_XOR_16] = "__sync_fetch_and_xor_16";
-  Names[RTLIB::SYNC_FETCH_AND_NAND_1] = "__sync_fetch_and_nand_1";
-  Names[RTLIB::SYNC_FETCH_AND_NAND_2] = "__sync_fetch_and_nand_2";
-  Names[RTLIB::SYNC_FETCH_AND_NAND_4] = "__sync_fetch_and_nand_4";
-  Names[RTLIB::SYNC_FETCH_AND_NAND_8] = "__sync_fetch_and_nand_8";
-  Names[RTLIB::SYNC_FETCH_AND_NAND_16] = "__sync_fetch_and_nand_16";
-  Names[RTLIB::SYNC_FETCH_AND_MAX_1] = "__sync_fetch_and_max_1";
-  Names[RTLIB::SYNC_FETCH_AND_MAX_2] = "__sync_fetch_and_max_2";
-  Names[RTLIB::SYNC_FETCH_AND_MAX_4] = "__sync_fetch_and_max_4";
-  Names[RTLIB::SYNC_FETCH_AND_MAX_8] = "__sync_fetch_and_max_8";
-  Names[RTLIB::SYNC_FETCH_AND_MAX_16] = "__sync_fetch_and_max_16";
-  Names[RTLIB::SYNC_FETCH_AND_UMAX_1] = "__sync_fetch_and_umax_1";
-  Names[RTLIB::SYNC_FETCH_AND_UMAX_2] = "__sync_fetch_and_umax_2";
-  Names[RTLIB::SYNC_FETCH_AND_UMAX_4] = "__sync_fetch_and_umax_4";
-  Names[RTLIB::SYNC_FETCH_AND_UMAX_8] = "__sync_fetch_and_umax_8";
-  Names[RTLIB::SYNC_FETCH_AND_UMAX_16] = "__sync_fetch_and_umax_16";
-  Names[RTLIB::SYNC_FETCH_AND_MIN_1] = "__sync_fetch_and_min_1";
-  Names[RTLIB::SYNC_FETCH_AND_MIN_2] = "__sync_fetch_and_min_2";
-  Names[RTLIB::SYNC_FETCH_AND_MIN_4] = "__sync_fetch_and_min_4";
-  Names[RTLIB::SYNC_FETCH_AND_MIN_8] = "__sync_fetch_and_min_8";
-  Names[RTLIB::SYNC_FETCH_AND_MIN_16] = "__sync_fetch_and_min_16";
-  Names[RTLIB::SYNC_FETCH_AND_UMIN_1] = "__sync_fetch_and_umin_1";
-  Names[RTLIB::SYNC_FETCH_AND_UMIN_2] = "__sync_fetch_and_umin_2";
-  Names[RTLIB::SYNC_FETCH_AND_UMIN_4] = "__sync_fetch_and_umin_4";
-  Names[RTLIB::SYNC_FETCH_AND_UMIN_8] = "__sync_fetch_and_umin_8";
-  Names[RTLIB::SYNC_FETCH_AND_UMIN_16] = "__sync_fetch_and_umin_16";
-
-  Names[RTLIB::ATOMIC_LOAD] = "__atomic_load";
-  Names[RTLIB::ATOMIC_LOAD_1] = "__atomic_load_1";
-  Names[RTLIB::ATOMIC_LOAD_2] = "__atomic_load_2";
-  Names[RTLIB::ATOMIC_LOAD_4] = "__atomic_load_4";
-  Names[RTLIB::ATOMIC_LOAD_8] = "__atomic_load_8";
-  Names[RTLIB::ATOMIC_LOAD_16] = "__atomic_load_16";
-
-  Names[RTLIB::ATOMIC_STORE] = "__atomic_store";
-  Names[RTLIB::ATOMIC_STORE_1] = "__atomic_store_1";
-  Names[RTLIB::ATOMIC_STORE_2] = "__atomic_store_2";
-  Names[RTLIB::ATOMIC_STORE_4] = "__atomic_store_4";
-  Names[RTLIB::ATOMIC_STORE_8] = "__atomic_store_8";
-  Names[RTLIB::ATOMIC_STORE_16] = "__atomic_store_16";
-
-  Names[RTLIB::ATOMIC_EXCHANGE] = "__atomic_exchange";
-  Names[RTLIB::ATOMIC_EXCHANGE_1] = "__atomic_exchange_1";
-  Names[RTLIB::ATOMIC_EXCHANGE_2] = "__atomic_exchange_2";
-  Names[RTLIB::ATOMIC_EXCHANGE_4] = "__atomic_exchange_4";
-  Names[RTLIB::ATOMIC_EXCHANGE_8] = "__atomic_exchange_8";
-  Names[RTLIB::ATOMIC_EXCHANGE_16] = "__atomic_exchange_16";
-
-  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE] = "__atomic_compare_exchange";
-  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_1] = "__atomic_compare_exchange_1";
-  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_2] = "__atomic_compare_exchange_2";
-  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_4] = "__atomic_compare_exchange_4";
-  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_8] = "__atomic_compare_exchange_8";
-  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_16] = "__atomic_compare_exchange_16";
-
-  Names[RTLIB::ATOMIC_FETCH_ADD_1] = "__atomic_fetch_add_1";
-  Names[RTLIB::ATOMIC_FETCH_ADD_2] = "__atomic_fetch_add_2";
-  Names[RTLIB::ATOMIC_FETCH_ADD_4] = "__atomic_fetch_add_4";
-  Names[RTLIB::ATOMIC_FETCH_ADD_8] = "__atomic_fetch_add_8";
-  Names[RTLIB::ATOMIC_FETCH_ADD_16] = "__atomic_fetch_add_16";
-  Names[RTLIB::ATOMIC_FETCH_SUB_1] = "__atomic_fetch_sub_1";
-  Names[RTLIB::ATOMIC_FETCH_SUB_2] = "__atomic_fetch_sub_2";
-  Names[RTLIB::ATOMIC_FETCH_SUB_4] = "__atomic_fetch_sub_4";
-  Names[RTLIB::ATOMIC_FETCH_SUB_8] = "__atomic_fetch_sub_8";
-  Names[RTLIB::ATOMIC_FETCH_SUB_16] = "__atomic_fetch_sub_16";
-  Names[RTLIB::ATOMIC_FETCH_AND_1] = "__atomic_fetch_and_1";
-  Names[RTLIB::ATOMIC_FETCH_AND_2] = "__atomic_fetch_and_2";
-  Names[RTLIB::ATOMIC_FETCH_AND_4] = "__atomic_fetch_and_4";
-  Names[RTLIB::ATOMIC_FETCH_AND_8] = "__atomic_fetch_and_8";
-  Names[RTLIB::ATOMIC_FETCH_AND_16] = "__atomic_fetch_and_16";
-  Names[RTLIB::ATOMIC_FETCH_OR_1] = "__atomic_fetch_or_1";
-  Names[RTLIB::ATOMIC_FETCH_OR_2] = "__atomic_fetch_or_2";
-  Names[RTLIB::ATOMIC_FETCH_OR_4] = "__atomic_fetch_or_4";
-  Names[RTLIB::ATOMIC_FETCH_OR_8] = "__atomic_fetch_or_8";
-  Names[RTLIB::ATOMIC_FETCH_OR_16] = "__atomic_fetch_or_16";
-  Names[RTLIB::ATOMIC_FETCH_XOR_1] = "__atomic_fetch_xor_1";
-  Names[RTLIB::ATOMIC_FETCH_XOR_2] = "__atomic_fetch_xor_2";
-  Names[RTLIB::ATOMIC_FETCH_XOR_4] = "__atomic_fetch_xor_4";
-  Names[RTLIB::ATOMIC_FETCH_XOR_8] = "__atomic_fetch_xor_8";
-  Names[RTLIB::ATOMIC_FETCH_XOR_16] = "__atomic_fetch_xor_16";
-  Names[RTLIB::ATOMIC_FETCH_NAND_1] = "__atomic_fetch_nand_1";
-  Names[RTLIB::ATOMIC_FETCH_NAND_2] = "__atomic_fetch_nand_2";
-  Names[RTLIB::ATOMIC_FETCH_NAND_4] = "__atomic_fetch_nand_4";
-  Names[RTLIB::ATOMIC_FETCH_NAND_8] = "__atomic_fetch_nand_8";
-  Names[RTLIB::ATOMIC_FETCH_NAND_16] = "__atomic_fetch_nand_16";
-
-  if (TT.isGNUEnvironment()) {
-    Names[RTLIB::SINCOS_F32] = "sincosf";
-    Names[RTLIB::SINCOS_F64] = "sincos";
-    Names[RTLIB::SINCOS_F80] = "sincosl";
-    Names[RTLIB::SINCOS_F128] = "sincosl";
-    Names[RTLIB::SINCOS_PPCF128] = "sincosl";
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
   }
 
-  if (!TT.isOSOpenBSD()) {
-    Names[RTLIB::STACKPROTECTOR_CHECK_FAIL] = "__stack_chk_fail";
+  if (TT.isGNUEnvironment() || TT.isOSFuchsia()) {
+    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
+    setLibcallName(RTLIB::SINCOS_F64, "sincos");
+    setLibcallName(RTLIB::SINCOS_F80, "sincosl");
+    setLibcallName(RTLIB::SINCOS_F128, "sincosl");
+    setLibcallName(RTLIB::SINCOS_PPCF128, "sincosl");
   }
 
-  Names[RTLIB::DEOPTIMIZE] = "__llvm_deoptimize";
-}
-
-/// Set default libcall CallingConvs.
-static void InitLibcallCallingConvs(CallingConv::ID *CCs) {
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    CCs[LC] = CallingConv::C;
+  if (TT.isOSOpenBSD()) {
+    setLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL, nullptr);
+  }
 }
 
 /// getFPEXT - Return the FPEXT_*_* value for the given types, or
@@ -858,7 +486,6 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 }
 
 /// InitCmpLibcallCCs - Set default comparison libcall CC.
-///
 static void InitCmpLibcallCCs(ISD::CondCode *CCs) {
   memset(CCs, ISD::SETCC_INVALID, sizeof(ISD::CondCode)*RTLIB::UNKNOWN_LIBCALL);
   CCs[RTLIB::OEQ_F32] = ISD::SETEQ;
@@ -929,12 +556,12 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   MaxAtomicSizeInBitsSupported = 1024;
 
   MinCmpXchgSizeInBits = 0;
+  SupportsUnalignedAtomics = false;
 
   std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
 
-  InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
+  InitLibcalls(TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
-  InitLibcallCallingConvs(LibcallCallingConvs);
 }
 
 void TargetLoweringBase::initActions() {
@@ -1044,7 +671,6 @@ void TargetLoweringBase::initActions() {
 
   // On most systems, DEBUGTRAP and TRAP have no difference. The "Expand"
   // here is to inform DAG Legalizer to replace DEBUGTRAP with TRAP.
-  //
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Expand);
 }
 
@@ -1156,7 +782,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     // found, fallback to the usual mechanism of widening/splitting the
     // vector.
     EVT OldEltVT = EltVT;
-    while (1) {
+    while (true) {
       // Increase the bitwidth of the element to the next pow-of-two
       // (which is greater than 8 bits).
       EltVT = EVT::getIntegerVT(Context, 1 + EltVT.getSizeInBits())
@@ -1184,7 +810,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
 
   // Try to widen the vector until a legal type is found.
   // If there is no wider legal type, split the vector.
-  while (1) {
+  while (true) {
     // Round up to the next power of 2.
     NumElts = (unsigned)NextPowerOf2(NumElts);
 
@@ -1276,7 +902,7 @@ MachineBasicBlock *
 TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
                                    MachineBasicBlock *MBB) const {
   MachineInstr *MI = &InitialMI;
-  MachineFunction &MF = *MI->getParent()->getParent();
+  MachineFunction &MF = *MI->getMF();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // We're handling multiple types of operands here:
@@ -1495,7 +1121,7 @@ void TargetLoweringBase::computeRegisterProperties(
     bool IsLegalWiderType = false;
     LegalizeTypeAction PreferredAction = getPreferredVectorAction(VT);
     switch (PreferredAction) {
-    case TypePromoteInteger: {
+    case TypePromoteInteger:
       // Try to promote the elements of integer vectors. If no legal
       // promotion was found, fall through to the widen-vector method.
       for (unsigned nVT = i + 1; nVT <= MVT::LAST_INTEGER_VECTOR_VALUETYPE; ++nVT) {
@@ -1515,8 +1141,8 @@ void TargetLoweringBase::computeRegisterProperties(
       if (IsLegalWiderType)
         break;
       LLVM_FALLTHROUGH;
-    }
-    case TypeWidenVector: {
+
+    case TypeWidenVector:
       // Try to widen the vector.
       for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
         MVT SVT = (MVT::SimpleValueType) nVT;
@@ -1533,7 +1159,7 @@ void TargetLoweringBase::computeRegisterProperties(
       if (IsLegalWiderType)
         break;
       LLVM_FALLTHROUGH;
-    }
+
     case TypeSplitVector:
     case TypeScalarizeVector: {
       MVT IntermediateVT;
@@ -1598,7 +1224,6 @@ MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-///
 unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
                                                 EVT &IntermediateVT,
                                                 unsigned &NumIntermediates,
@@ -1911,7 +1536,7 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
 /// by AM is legal for this target, for a load/store of the specified type.
 bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
                                                const AddrMode &AM, Type *Ty,
-                                               unsigned AS) const {
+                                               unsigned AS, Instruction *I) const {
   // The default implementation of this implements a conservative RISCy, r+r and
   // r+i addr mode.
 
@@ -2002,8 +1627,8 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 /// Get the reciprocal estimate attribute string for a function that will
 /// override the target defaults.
 static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
-  const Function *F = MF.getFunction();
-  return F->getFnAttribute("reciprocal-estimates").getValueAsString();
+  const Function &F = MF.getFunction();
+  return F.getFnAttribute("reciprocal-estimates").getValueAsString();
 }
 
 /// Construct a string for the given reciprocal operation of the given type.

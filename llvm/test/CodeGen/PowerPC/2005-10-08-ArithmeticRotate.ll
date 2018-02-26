@@ -1,7 +1,7 @@
 ; This was erroneously being turned into an rlwinm instruction.
 ; The sign bit does matter in this case.
 
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep srawi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep srawi
 
 define i32 @test(i32 %X) {
         %Y = and i32 %X, -2             ; <i32> [#uses=1]

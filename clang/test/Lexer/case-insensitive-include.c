@@ -1,12 +1,12 @@
 // REQUIRES: case-insensitive-filesystem
 
-// RUN: mkdir -p %T/apath
-// RUN: mkdir -p %T/asystempath
-// RUN: cp %S/Inputs/case-insensitive-include.h %T
-// RUN: cp %S/Inputs/case-insensitive-include.h %T/asystempath/case-insensitive-include2.h
-// RUN: cd %T
-// RUN: %clang_cc1 -fsyntax-only %s -include %s -I %T -isystem %T/asystempath -verify
-// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s -include %s -I %T -isystem %T/asystempath 2>&1 | FileCheck %s
+// RUN: mkdir -p %t/Output/apath
+// RUN: mkdir -p %t/Output/asystempath
+// RUN: cp %S/Inputs/case-insensitive-include.h %t/Output
+// RUN: cp %S/Inputs/case-insensitive-include.h %t/Output/asystempath/case-insensitive-include2.h
+// RUN: cd %t/Output
+// RUN: %clang_cc1 -fsyntax-only %s -include %s -I %t/Output -isystem %t/Output/asystempath -verify
+// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s -include %s -I %t/Output -isystem %t/Output/asystempath 2>&1 | FileCheck %s
 
 // Known standard header, so warn:
 #include <StdDef.h> // expected-warning {{non-portable path}}

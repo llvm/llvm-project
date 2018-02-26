@@ -1,8 +1,8 @@
-// RUN: llvm-cov show %S/Inputs/deferred-regions.covmapping -instr-profile %S/Inputs/deferred-regions.profdata -show-line-counts-or-regions -dump -path-equivalence=/Users/vk/src/llvm.org-coverage-braces/llvm/test/tools,%S/.. %s 2>&1 > %t.out && FileCheck %s -input-file %t.out && FileCheck %s -input-file %t.out -check-prefix=MARKER
+// RUN: llvm-cov show %S/Inputs/deferred-regions.covmapping -instr-profile %S/Inputs/deferred-regions.profdata -show-line-counts-or-regions -dump -path-equivalence=/tmp,%S %s 2>%t.markers > %t.out && FileCheck %s -input-file %t.out && FileCheck %s -input-file %t.markers -check-prefix=MARKER
 
 void foo(int x) {
   if (x == 0) { // CHECK: [[@LINE]]|{{ +}}2|
-    return; // CHECK: [[@LINE]]|{{ +}}1|
+    return; // CHECK-NEXT: [[@LINE]]|{{ +}}1|
   }
 
 } // CHECK: [[@LINE]]|{{ +}}1|
@@ -45,7 +45,7 @@ void while_loop() {
         break; // CHECK: [[@LINE]]|{{ +}}1|
                // CHECK: [[@LINE]]|{{ +}}0|
       while (++x < 5) {} // CHECK: [[@LINE]]|{{ +}}0|
-    } // CHECK: [[@LINE]]|{{ +}}1|
+    } // CHECK: [[@LINE]]|{{ +}}0|
 
     if (x == 0) // CHECK: [[@LINE]]|{{ +}}1|
       throw Error(); // CHECK: [[@LINE]]|{{ +}}0|
@@ -93,18 +93,15 @@ int main() {
 // MARKER-NEXT: Marker at 19:27 = 1
 // MARKER-NEXT: Highlighted line 24, 7 -> 12
 // MARKER-NEXT: Highlighted line 36, 5 -> 11
-// MARKER-NEXT: Highlighted line 46, 1 -> ?
-// MARKER-NEXT: Highlighted line 47, 1 -> 7
 // MARKER-NEXT: Highlighted line 47, 7 -> 14
 // MARKER-NEXT: Highlighted line 47, 14 -> 21
 // MARKER-NEXT: Highlighted line 47, 21 -> 23
 // MARKER-NEXT: Highlighted line 47, 23 -> 25
+// MARKER-NEXT: Highlighted line 47, 25 -> ?
+// MARKER-NEXT: Highlighted line 48, 1 -> 6
 // MARKER-NEXT: Highlighted line 51, 7 -> 20
 // MARKER-NEXT: Marker at 53:5 = 1
 // MARKER-NEXT: Highlighted line 55, 9 -> 14
 // MARKER-NEXT: Highlighted line 63, 5 -> 13
 // MARKER-NEXT: Highlighted line 67, 1 -> ?
 // MARKER-NEXT: Highlighted line 68, 1 -> 8
-// MARKER-NEXT: Highlighted line 68, 8 -> ?
-// MARKER-NEXT: Highlighted line 69, 1 -> 2
-// MARKER-NEXT: Highlighted line 77, 1 -> 2

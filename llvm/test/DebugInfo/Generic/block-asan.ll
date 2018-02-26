@@ -13,7 +13,7 @@
 
 ; Check that the location of the ASAN instrumented __block variable is
 ; correct.
-; CHECK: !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_plus_uconst, 24)
+; CHECK: !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32, DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_plus_uconst, 24)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

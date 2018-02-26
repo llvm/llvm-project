@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=-bmi | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-bmi | FileCheck %s
 
 ; Use h-register extract and zero-extend.
 

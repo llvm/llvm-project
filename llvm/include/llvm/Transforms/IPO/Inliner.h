@@ -14,15 +14,15 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
+#include <utility>
 
 namespace llvm {
+
 class AssumptionCacheTracker;
-class CallSite;
-class DataLayout;
-class InlineCost;
-class OptimizationRemarkEmitter;
+class CallGraph;
 class ProfileSummaryInfo;
 
 /// This class contains all of the helper code which is used to perform the
@@ -44,6 +44,7 @@ struct LegacyInlinerBase : public CallGraphSCCPass {
   bool runOnSCC(CallGraphSCC &SCC) override;
 
   using llvm::Pass::doFinalization;
+
   /// Remove now-dead linkonce functions at the end of processing to avoid
   /// breaking the SCC traversal.
   bool doFinalization(CallGraph &CG) override;
@@ -69,7 +70,7 @@ struct LegacyInlinerBase : public CallGraphSCCPass {
 
 private:
   // Insert @llvm.lifetime intrinsics.
-  bool InsertLifetime;
+  bool InsertLifetime = true;
 
 protected:
   AssumptionCacheTracker *ACT;
@@ -103,6 +104,6 @@ private:
   InlineParams Params;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_IPO_INLINER_H

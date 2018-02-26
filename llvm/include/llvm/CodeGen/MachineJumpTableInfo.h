@@ -20,6 +20,7 @@
 #ifndef LLVM_CODEGEN_MACHINEJUMPTABLEINFO_H
 #define LLVM_CODEGEN_MACHINEJUMPTABLEINFO_H
 
+#include "llvm/Support/Printable.h"
 #include <cassert>
 #include <vector>
 
@@ -124,6 +125,15 @@ public:
   ///
   void dump() const;
 };
+
+
+/// Prints a jump table entry reference.
+///
+/// The format is:
+///   %jump-table.5       - a jump table entry with index == 5.
+///
+/// Usage: OS << printJumpTableEntryReference(Idx) << '\n';
+Printable printJumpTableEntryReference(unsigned Idx);
 
 } // End llvm namespace
 

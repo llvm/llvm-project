@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -o - | FileCheck %s
 
 declare void @llvm.va_start(i8*) nounwind
 

@@ -57,6 +57,8 @@ STATISTIC(NumFunctionsAnalyzed,
                       "with inlining turned on).");
 STATISTIC(NumBlocksInAnalyzedFunctions,
                       "The # of basic blocks in the analyzed functions.");
+STATISTIC(NumVisitedBlocksInAnalyzedFunctions,
+          "The # of visited basic blocks in the analyzed functions.");
 STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
 STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 
@@ -186,7 +188,8 @@ public:
   std::unique_ptr<AnalysisManager> Mgr;
 
   /// Time the analyzes time of each translation unit.
-  static llvm::Timer* TUTotalTimer;
+  std::unique_ptr<llvm::TimerGroup> AnalyzerTimers;
+  std::unique_ptr<llvm::Timer> TUTotalTimer;
 
   /// The information about analyzed functions shared throughout the
   /// translation unit.
@@ -199,15 +202,17 @@ public:
         OutDir(outdir), Opts(std::move(opts)), Plugins(plugins),
         Injector(injector) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats) {
-      llvm::EnableStatistics(false);
-      TUTotalTimer = new llvm::Timer("time", "Analyzer Total Time");
+    if (Opts->PrintStats || Opts->shouldSerializeStats()) {
+      AnalyzerTimers = llvm::make_unique<llvm::TimerGroup>(
+          "analyzer", "Analyzer timers");
+      TUTotalTimer = llvm::make_unique<llvm::Timer>(
+          "time", "Analyzer total time", *AnalyzerTimers);
+      llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
   }
 
   ~AnalysisConsumer() override {
     if (Opts->PrintStats) {
-      delete TUTotalTimer;
       llvm::PrintStatistics();
     }
   }
@@ -392,8 +397,6 @@ private:
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer implementation.
 //===----------------------------------------------------------------------===//
-llvm::Timer* AnalysisConsumer::TUTotalTimer = nullptr;
-
 bool AnalysisConsumer::HandleTopLevelDecl(DeclGroupRef DG) {
   storeTopLevelDecls(DG);
   return true;
@@ -555,21 +558,22 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
     RecVisitorBR = nullptr;
   }
 
-  // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
-  // FIXME: This should be replaced with something that doesn't rely on
-  // side-effects in PathDiagnosticConsumer's destructor. This is required when
-  // used with option -disable-free.
-  Mgr.reset();
-
   if (TUTotalTimer) TUTotalTimer->stopTimer();
 
   // Count how many basic blocks we have not covered.
   NumBlocksInAnalyzedFunctions = FunctionSummaries.getTotalNumBasicBlocks();
+  NumVisitedBlocksInAnalyzedFunctions =
+      FunctionSummaries.getTotalNumVisitedBasicBlocks();
   if (NumBlocksInAnalyzedFunctions > 0)
     PercentReachableBlocks =
       (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
         NumBlocksInAnalyzedFunctions;
 
+  // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
+  // FIXME: This should be replaced with something that doesn't rely on
+  // side-effects in PathDiagnosticConsumer's destructor. This is required when
+  // used with option -disable-free.
+  Mgr.reset();
 }
 
 std::string AnalysisConsumer::getFunctionName(const Decl *D) {
@@ -854,8 +858,7 @@ UbigraphViz::~UbigraphViz() {
     Ubiviz = *Path;
   const char *args[] = {Ubiviz.c_str(), Filename.c_str(), nullptr};
 
-  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, nullptr, 0, 0,
-                                &ErrMsg)) {
+  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, {}, 0, 0, &ErrMsg)) {
     llvm::errs() << "Error viewing graph: " << ErrMsg << "\n";
   }
 

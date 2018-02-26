@@ -1,4 +1,4 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=arm64-eabi < %s | FileCheck --enable-var-scope %s
+; RUN: llc -O0 -fast-isel -verify-machineinstrs -mtriple=arm64-eabi < %s | FileCheck --enable-var-scope %s
 
 ; Test fptosi
 define i32 @fptosi_wh(half %a) nounwind ssp {

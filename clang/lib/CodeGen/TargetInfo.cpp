@@ -14,6 +14,7 @@
 
 #include "TargetInfo.h"
 #include "ABIInfo.h"
+#include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGValue.h"
 #include "CodeGenFunction.h"
@@ -22,7 +23,9 @@
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
@@ -183,7 +186,11 @@ const TargetInfo &ABIInfo::getTarget() const {
   return CGT.getTarget();
 }
 
-bool ABIInfo:: isAndroid() const { return getTarget().getTriple().isAndroid(); }
+const CodeGenOptions &ABIInfo::getCodeGenOpts() const {
+  return CGT.getCodeGenOpts();
+}
+
+bool ABIInfo::isAndroid() const { return getTarget().getTriple().isAndroid(); }
 
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   return false;
@@ -416,18 +423,17 @@ llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &
   return llvm::ConstantPointerNull::get(T);
 }
 
-unsigned TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                                     const VarDecl *D) const {
+LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
          !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
          "Address space agnostic languages only");
-  return D ? D->getType().getAddressSpace()
-           : static_cast<unsigned>(LangAS::Default);
+  return D ? D->getType().getAddressSpace() : LangAS::Default;
 }
 
 llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
-    CodeGen::CodeGenFunction &CGF, llvm::Value *Src, unsigned SrcAddr,
-    unsigned DestAddr, llvm::Type *DestTy, bool isNonNull) const {
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Src, LangAS SrcAddr,
+    LangAS DestAddr, llvm::Type *DestTy, bool isNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   if (auto *C = dyn_cast<llvm::Constant>(Src))
@@ -437,11 +443,16 @@ llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
 
 llvm::Constant *
 TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
-                                        unsigned SrcAddr, unsigned DestAddr,
+                                        LangAS SrcAddr, LangAS DestAddr,
                                         llvm::Type *DestTy) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+}
+
+llvm::SyncScope::ID
+TargetCodeGenInfo::getLLVMSyncScopeID(SyncScope S, llvm::LLVMContext &C) const {
+  return C.getOrInsertSyncScopeID(""); /* default sync scope */
 }
 
 static bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays);
@@ -865,7 +876,10 @@ bool IsX86_MMXType(llvm::Type *IRType) {
 static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
                                           llvm::Type* Ty) {
-  if ((Constraint == "y" || Constraint == "&y") && Ty->isVectorTy()) {
+  bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
+                     .Cases("y", "&y", "^Ym", true)
+                     .Default(false);
+  if (IsMMXCons && Ty->isVectorTy()) {
     if (cast<llvm::VectorType>(Ty)->getBitWidth() != 64) {
       // Invalid MMX constraint
       return nullptr;
@@ -882,8 +896,14 @@ static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
 /// X86_VectorCall calling convention. Shared between x86_32 and x86_64.
 static bool isX86VectorTypeForVectorCall(ASTContext &Context, QualType Ty) {
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    if (BT->isFloatingPoint() && BT->getKind() != BuiltinType::Half)
+    if (BT->isFloatingPoint() && BT->getKind() != BuiltinType::Half) {
+      if (BT->getKind() == BuiltinType::LongDouble) {
+        if (&Context.getTargetInfo().getLongDoubleFormat() ==
+            &llvm::APFloat::x87DoubleExtended())
+          return false;
+      }
       return true;
+    }
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
     // vectorcall can pass XMM, YMM, and ZMM vectors. We don't pass SSE1 MMX
     // registers specially.
@@ -1008,8 +1028,7 @@ public:
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
       DefaultNumRegisterParameters(NumRegisterParameters) {}
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     // LLVM's x86-32 lowering currently only assigns up to three
     // integer registers and three fp registers.  Oddly, it'll use up to
@@ -1037,7 +1056,8 @@ public:
       const llvm::Triple &Triple, const CodeGenOptions &Opts);
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override;
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override;
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     // Darwin uses different dwarf register numbers for EH.
@@ -1073,7 +1093,7 @@ public:
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
     return "movl\t%ebp, %ebp"
-           "\t\t## marker for objc_retainAutoreleaseReturnValue";
+           "\t\t// marker for objc_retainAutoreleaseReturnValue";
   }
 };
 
@@ -1896,7 +1916,6 @@ bool X86_32TargetCodeGenInfo::isStructReturnInRegABI(
   case llvm::Triple::DragonFly:
   case llvm::Triple::FreeBSD:
   case llvm::Triple::OpenBSD:
-  case llvm::Triple::Bitrig:
   case llvm::Triple::Win32:
     return true;
   default:
@@ -1904,9 +1923,11 @@ bool X86_32TargetCodeGenInfo::isStructReturnInRegABI(
   }
 }
 
-void X86_32TargetCodeGenInfo::setTargetAttributes(const Decl *D,
-                                                  llvm::GlobalValue *GV,
-                                            CodeGen::CodeGenModule &CGM) const {
+void X86_32TargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
+    ForDefinition_t IsForDefinition) const {
+  if (!IsForDefinition)
+    return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (FD->hasAttr<X86ForceAlignArgPointerAttr>()) {
       // Get the LLVM function.
@@ -2095,9 +2116,14 @@ class X86_64ABIInfo : public SwiftABIInfo {
     return !getTarget().getTriple().isOSDarwin();
   }
 
-  /// GCC classifies <1 x long long> as SSE but compatibility with older clang
-  // compilers require us to classify it as INTEGER.
+  /// GCC classifies <1 x long long> as SSE but some platform ABIs choose to
+  /// classify it as INTEGER (for compatibility with older clang compilers).
   bool classifyIntegerMMXAsSSE() const {
+    // Clang <= 3.8 did not do this.
+    if (getCodeGenOpts().getClangABICompat() <=
+        CodeGenOptions::ClangABI::Ver3_8)
+      return false;
+
     const llvm::Triple &Triple = getTarget().getTriple();
     if (Triple.isOSDarwin() || Triple.getOS() == llvm::Triple::PS4)
       return false;
@@ -2141,8 +2167,7 @@ public:
     return Has64BitPointers;
   }
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }  
@@ -2174,8 +2199,7 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type *> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type *> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
@@ -2259,8 +2283,20 @@ public:
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override {
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override {
+    if (!IsForDefinition)
+      return;
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      if (FD->hasAttr<X86ForceAlignArgPointerAttr>()) {
+        // Get the LLVM function.
+        auto *Fn = cast<llvm::Function>(GV);
+
+        // Now add the 'alignstack' attribute with a value of 16.
+        llvm::AttrBuilder B;
+        B.addStackAlignmentAttr(16);
+        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+      }
       if (FD->hasAttr<AnyX86InterruptAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
         Fn->setCallingConv(llvm::CallingConv::X86_INTR);
@@ -2307,7 +2343,8 @@ public:
         Win32StructABI, NumRegisterParameters, false) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override;
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override;
 
   void getDependentLibraryOption(llvm::StringRef Lib,
                                  llvm::SmallString<24> &Opt) const override {
@@ -2335,11 +2372,12 @@ static void addStackProbeSizeTargetAttribute(const Decl *D,
   }
 }
 
-void WinX86_32TargetCodeGenInfo::setTargetAttributes(const Decl *D,
-                                                     llvm::GlobalValue *GV,
-                                            CodeGen::CodeGenModule &CGM) const {
-  X86_32TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
-
+void WinX86_32TargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
+    ForDefinition_t IsForDefinition) const {
+  X86_32TargetCodeGenInfo::setTargetAttributes(D, GV, CGM, IsForDefinition);
+  if (!IsForDefinition)
+    return;
   addStackProbeSizeTargetAttribute(D, GV, CGM);
 }
 
@@ -2350,7 +2388,8 @@ public:
       : TargetCodeGenInfo(new WinX86_64ABIInfo(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override;
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override;
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 7;
@@ -2379,12 +2418,22 @@ public:
   }
 };
 
-void WinX86_64TargetCodeGenInfo::setTargetAttributes(const Decl *D,
-                                                     llvm::GlobalValue *GV,
-                                            CodeGen::CodeGenModule &CGM) const {
-  TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
-
+void WinX86_64TargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
+    ForDefinition_t IsForDefinition) const {
+  TargetCodeGenInfo::setTargetAttributes(D, GV, CGM, IsForDefinition);
+  if (!IsForDefinition)
+    return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+    if (FD->hasAttr<X86ForceAlignArgPointerAttr>()) {
+      // Get the LLVM function.
+      auto *Fn = cast<llvm::Function>(GV);
+
+      // Now add the 'alignstack' attribute with a value of 16.
+      llvm::AttrBuilder B;
+      B.addStackAlignmentAttr(16);
+      Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    }
     if (FD->hasAttr<AnyX86InterruptAttr>()) {
       llvm::Function *Fn = cast<llvm::Function>(GV);
       Fn->setCallingConv(llvm::CallingConv::X86_INTR);
@@ -3491,25 +3540,44 @@ ABIArgInfo X86_64ABIInfo::classifyRegCallStructType(QualType Ty,
 
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
-  bool IsRegCall = FI.getCallingConvention() == llvm::CallingConv::X86_RegCall;
+  const unsigned CallingConv = FI.getCallingConvention();
+  // It is possible to force Win64 calling convention on any x86_64 target by
+  // using __attribute__((ms_abi)). In such case to correctly emit Win64
+  // compatible code delegate this call to WinX86_64ABIInfo::computeInfo.
+  if (CallingConv == llvm::CallingConv::Win64) {
+    WinX86_64ABIInfo Win64ABIInfo(CGT);
+    Win64ABIInfo.computeInfo(FI);
+    return;
+  }
+
+  bool IsRegCall = CallingConv == llvm::CallingConv::X86_RegCall;
 
   // Keep track of the number of assigned registers.
   unsigned FreeIntRegs = IsRegCall ? 11 : 6;
   unsigned FreeSSERegs = IsRegCall ? 16 : 8;
   unsigned NeededInt, NeededSSE;
 
-  if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
-      !FI.getReturnType()->getTypePtr()->isUnionType()) {
-    FI.getReturnInfo() =
-        classifyRegCallStructType(FI.getReturnType(), NeededInt, NeededSSE);
-    if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
-      FreeIntRegs -= NeededInt;
-      FreeSSERegs -= NeededSSE;
-    } else {
-      FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
-    }
-  } else if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+  if (!getCXXABI().classifyReturnType(FI)) {
+    if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
+        !FI.getReturnType()->getTypePtr()->isUnionType()) {
+      FI.getReturnInfo() =
+          classifyRegCallStructType(FI.getReturnType(), NeededInt, NeededSSE);
+      if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
+        FreeIntRegs -= NeededInt;
+        FreeSSERegs -= NeededSSE;
+      } else {
+        FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
+      }
+    } else if (IsRegCall && FI.getReturnType()->getAs<ComplexType>()) {
+      // Complex Long Double Type is passed in Memory when Regcall
+      // calling convention is used.
+      const ComplexType *CT = FI.getReturnType()->getAs<ComplexType>();
+      if (getContext().getCanonicalType(CT->getElementType()) ==
+          getContext().LongDoubleTy)
+        FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
+    } else
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+  }
 
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -3975,7 +4043,10 @@ Address WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 namespace {
 /// PPC32_SVR4_ABIInfo - The 32-bit PowerPC ELF (SVR4) ABI information.
 class PPC32_SVR4_ABIInfo : public DefaultABIInfo {
-bool IsSoftFloatABI;
+  bool IsSoftFloatABI;
+
+  CharUnits getParamTypeAlignment(QualType Ty) const;
+
 public:
   PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, bool SoftFloatABI)
       : DefaultABIInfo(CGT), IsSoftFloatABI(SoftFloatABI) {}
@@ -3997,13 +4068,46 @@ public:
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
 };
+}
 
+CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
+  // Complex types are passed just like their elements
+  if (const ComplexType *CTy = Ty->getAs<ComplexType>())
+    Ty = CTy->getElementType();
+
+  if (Ty->isVectorType())
+    return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16
+                                                                       : 4);
+
+  // For single-element float/vector structs, we consider the whole type
+  // to have the same alignment requirements as its single element.
+  const Type *AlignTy = nullptr;
+  if (const Type *EltType = isSingleElementStruct(Ty, getContext())) {
+    const BuiltinType *BT = EltType->getAs<BuiltinType>();
+    if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
+        (BT && BT->isFloatingPoint()))
+      AlignTy = EltType;
+  }
+
+  if (AlignTy)
+    return CharUnits::fromQuantity(AlignTy->isVectorType() ? 16 : 4);
+  return CharUnits::fromQuantity(4);
 }
 
 // TODO: this implementation is now likely redundant with
 // DefaultABIInfo::EmitVAArg.
 Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                                       QualType Ty) const {
+  if (getTarget().getTriple().isOSDarwin()) {
+    auto TI = getContext().getTypeInfoInChars(Ty);
+    TI.second = getParamTypeAlignment(Ty);
+
+    CharUnits SlotSize = CharUnits::fromQuantity(4);
+    return emitVoidPtrVAArg(CGF, VAList, Ty,
+                            classifyArgumentType(Ty).isIndirect(), TI, SlotSize,
+                            /*AllowHigherAlign=*/true);
+  }
+
   const unsigned OverflowLimit = 8;
   if (const ComplexType *CTy = Ty->getAs<ComplexType>()) {
     // TODO: Implement this. For now ignore.
@@ -4825,8 +4929,7 @@ private:
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                       QualType Ty) const override;
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
@@ -4844,7 +4947,7 @@ public:
       : TargetCodeGenInfo(new AArch64ABIInfo(CGT, Kind)) {}
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
-    return "mov\tfp, fp\t\t# marker for objc_retainAutoreleaseReturnValue";
+    return "mov\tfp, fp\t\t// marker for objc_retainAutoreleaseReturnValue";
   }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
@@ -4852,6 +4955,22 @@ public:
   }
 
   bool doesReturnSlotInterfereWithArgs() const override { return false; }
+};
+
+class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
+public:
+  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIInfo::ABIKind K)
+      : AArch64TargetCodeGenInfo(CGT, K) {}
+
+  void getDependentLibraryOption(llvm::StringRef Lib,
+                                 llvm::SmallString<24> &Opt) const override {
+    Opt = "/DEFAULTLIB:" + qualifyWindowsLibrary(Lib);
+  }
+
+  void getDetectMismatchOption(llvm::StringRef Name, llvm::StringRef Value,
+                               llvm::SmallString<32> &Opt) const override {
+    Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
+  }
 };
 }
 
@@ -5408,8 +5527,7 @@ private:
   llvm::CallingConv::ID getABIDefaultCC() const;
   void setCCs();
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
@@ -5434,7 +5552,7 @@ public:
   }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
-    return "mov\tr7, r7\t\t@ marker for objc_retainAutoreleaseReturnValue";
+    return "mov\tr7, r7\t\t// marker for objc_retainAutoreleaseReturnValue";
   }
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
@@ -5452,7 +5570,10 @@ public:
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override {
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override {
+    if (!IsForDefinition)
+      return;
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD)
       return;
@@ -5494,7 +5615,8 @@ public:
       : ARMTargetCodeGenInfo(CGT, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override;
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override;
 
   void getDependentLibraryOption(llvm::StringRef Lib,
                                  llvm::SmallString<24> &Opt) const override {
@@ -5508,8 +5630,11 @@ public:
 };
 
 void WindowsARMTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
-  ARMTargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM,
+    ForDefinition_t IsForDefinition) const {
+  ARMTargetCodeGenInfo::setTargetAttributes(D, GV, CGM, IsForDefinition);
+  if (!IsForDefinition)
+    return;
   addStackProbeSizeTargetAttribute(D, GV, CGM);
 }
 }
@@ -6035,7 +6160,9 @@ public:
     : TargetCodeGenInfo(new NVPTXABIInfo(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
+                           CodeGen::CodeGenModule &M,
+                           ForDefinition_t IsForDefinition) const override;
+
 private:
   // Adds a NamedMDNode with F, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
@@ -6089,9 +6216,11 @@ Address NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm_unreachable("NVPTX does not support varargs");
 }
 
-void NVPTXTargetCodeGenInfo::
-setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                    CodeGen::CodeGenModule &M) const{
+void NVPTXTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
+    ForDefinition_t IsForDefinition) const {
+  if (!IsForDefinition)
+    return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) return;
 
@@ -6189,13 +6318,12 @@ public:
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
   bool isSwiftErrorInRegister() const override {
-    return true;
+    return false;
   }
 };
 
@@ -6527,14 +6655,17 @@ public:
   MSP430TargetCodeGenInfo(CodeGenTypes &CGT)
     : TargetCodeGenInfo(new DefaultABIInfo(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
+                           CodeGen::CodeGenModule &M,
+                           ForDefinition_t IsForDefinition) const override;
 };
 
 }
 
-void MSP430TargetCodeGenInfo::setTargetAttributes(const Decl *D,
-                                                  llvm::GlobalValue *GV,
-                                             CodeGen::CodeGenModule &M) const {
+void MSP430TargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
+    ForDefinition_t IsForDefinition) const {
+  if (!IsForDefinition)
+    return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (const MSP430InterruptAttr *attr = FD->getAttr<MSP430InterruptAttr>()) {
       // Handle 'interrupt' attribute:
@@ -6593,10 +6724,21 @@ public:
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override {
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override {
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
     llvm::Function *Fn = cast<llvm::Function>(GV);
+
+    if (FD->hasAttr<MipsLongCallAttr>())
+      Fn->addFnAttr("long-call");
+    else if (FD->hasAttr<MipsShortCallAttr>())
+      Fn->addFnAttr("short-call");
+
+    // Other attributes do not have a meaning for declarations.
+    if (!IsForDefinition)
+      return;
+
     if (FD->hasAttr<Mips16Attr>()) {
       Fn->addFnAttr("mips16");
     }
@@ -6958,7 +7100,10 @@ public:
     : TargetCodeGenInfo(new DefaultABIInfo(CGT)) { }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &CGM) const override {
+                           CodeGen::CodeGenModule &CGM,
+                           ForDefinition_t IsForDefinition) const override {
+    if (!IsForDefinition)
+      return;
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
     auto *Fn = cast<llvm::Function>(GV);
@@ -6986,11 +7131,15 @@ public:
     : DefaultTargetCodeGenInfo(CGT) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
+                           CodeGen::CodeGenModule &M,
+                           ForDefinition_t IsForDefinition) const override;
 };
 
 void TCETargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
+    ForDefinition_t IsForDefinition) const {
+  if (!IsForDefinition)
+    return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) return;
 
@@ -7286,38 +7435,138 @@ public:
 namespace {
 
 class AMDGPUABIInfo final : public DefaultABIInfo {
-public:
-  explicit AMDGPUABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
-
 private:
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  static const unsigned MaxNumRegsForArgsRet = 16;
+
+  unsigned numRegsForType(QualType Ty) const;
+
+  bool isHomogeneousAggregateBaseType(QualType Ty) const override;
+  bool isHomogeneousAggregateSmallEnough(const Type *Base,
+                                         uint64_t Members) const override;
+
+public:
+  explicit AMDGPUABIInfo(CodeGen::CodeGenTypes &CGT) :
+    DefaultABIInfo(CGT) {}
+
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, unsigned &NumRegsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 
+bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
+  return true;
+}
+
+bool AMDGPUABIInfo::isHomogeneousAggregateSmallEnough(
+  const Type *Base, uint64_t Members) const {
+  uint32_t NumRegs = (getContext().getTypeSize(Base) + 31) / 32;
+
+  // Homogeneous Aggregates may occupy at most 16 registers.
+  return Members * NumRegs <= MaxNumRegsForArgsRet;
+}
+
+/// Estimate number of registers the type will use when passed in registers.
+unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
+  unsigned NumRegs = 0;
+
+  if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    // Compute from the number of elements. The reported size is based on the
+    // in-memory size, which includes the padding 4th element for 3-vectors.
+    QualType EltTy = VT->getElementType();
+    unsigned EltSize = getContext().getTypeSize(EltTy);
+
+    // 16-bit element vectors should be passed as packed.
+    if (EltSize == 16)
+      return (VT->getNumElements() + 1) / 2;
+
+    unsigned EltNumRegs = (EltSize + 31) / 32;
+    return EltNumRegs * VT->getNumElements();
+  }
+
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    assert(!RD->hasFlexibleArrayMember());
+
+    for (const FieldDecl *Field : RD->fields()) {
+      QualType FieldTy = Field->getType();
+      NumRegs += numRegsForType(FieldTy);
+    }
+
+    return NumRegs;
+  }
+
+  return (getContext().getTypeSize(Ty) + 31) / 32;
+}
+
 void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
+  llvm::CallingConv::ID CC = FI.getCallingConvention();
+
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
-  unsigned CC = FI.getCallingConvention();
-  for (auto &Arg : FI.arguments())
-    if (CC == llvm::CallingConv::AMDGPU_KERNEL)
-      Arg.info = classifyArgumentType(Arg.type);
-    else
-      Arg.info = DefaultABIInfo::classifyArgumentType(Arg.type);
+  unsigned NumRegsLeft = MaxNumRegsForArgsRet;
+  for (auto &Arg : FI.arguments()) {
+    if (CC == llvm::CallingConv::AMDGPU_KERNEL) {
+      Arg.info = classifyKernelArgumentType(Arg.type);
+    } else {
+      Arg.info = classifyArgumentType(Arg.type, NumRegsLeft);
+    }
+  }
 }
 
-/// \brief Classify argument of given type \p Ty.
-ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty) const {
-  llvm::StructType *StrTy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty));
-  if (!StrTy) {
-    return DefaultABIInfo::classifyArgumentType(Ty);
+ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
+  if (isAggregateTypeForABI(RetTy)) {
+    // Records with non-trivial destructors/copy-constructors should not be
+    // returned by value.
+    if (!getRecordArgABI(RetTy, getCXXABI())) {
+      // Ignore empty structs/unions.
+      if (isEmptyRecord(getContext(), RetTy, true))
+        return ABIArgInfo::getIgnore();
+
+      // Lower single-element structs to just return a regular value.
+      if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+        return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+
+      if (const RecordType *RT = RetTy->getAs<RecordType>()) {
+        const RecordDecl *RD = RT->getDecl();
+        if (RD->hasFlexibleArrayMember())
+          return DefaultABIInfo::classifyReturnType(RetTy);
+      }
+
+      // Pack aggregates <= 4 bytes into single VGPR or pair.
+      uint64_t Size = getContext().getTypeSize(RetTy);
+      if (Size <= 16)
+        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+
+      if (Size <= 32)
+        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
+      if (Size <= 64) {
+        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+      }
+
+      if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
+        return ABIArgInfo::getDirect();
+    }
   }
 
+  // Otherwise just do the default thing.
+  return DefaultABIInfo::classifyReturnType(RetTy);
+}
+
+/// For kernels all parameters are really passed in a special buffer. It doesn't
+/// make sense to pass anything byval, so everything must be direct.
+ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // TODO: Can we omit empty structs?
+
   // Coerce single element structs to its element.
-  if (StrTy->getNumElements() == 1) {
-    return ABIArgInfo::getDirect();
-  }
+  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+    return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
   // If we set CanBeFlattened to true, CodeGen will expand the struct to its
   // individual elements, which confuses the Clover OpenCL backend; therefore we
@@ -7325,30 +7574,102 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty) const {
   return ABIArgInfo::getDirect(nullptr, 0, nullptr, false);
 }
 
+ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty,
+                                               unsigned &NumRegsLeft) const {
+  assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
+
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  if (isAggregateTypeForABI(Ty)) {
+    // Records with non-trivial destructors/copy-constructors should not be
+    // passed by value.
+    if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
+      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+
+    // Ignore empty structs/unions.
+    if (isEmptyRecord(getContext(), Ty, true))
+      return ABIArgInfo::getIgnore();
+
+    // Lower single-element structs to just pass a regular value. TODO: We
+    // could do reasonable-size multiple-element structs too, using getExpand(),
+    // though watch out for things like bitfields.
+    if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+      return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+
+    if (const RecordType *RT = Ty->getAs<RecordType>()) {
+      const RecordDecl *RD = RT->getDecl();
+      if (RD->hasFlexibleArrayMember())
+        return DefaultABIInfo::classifyArgumentType(Ty);
+    }
+
+    // Pack aggregates <= 8 bytes into single VGPR or pair.
+    uint64_t Size = getContext().getTypeSize(Ty);
+    if (Size <= 64) {
+      unsigned NumRegs = (Size + 31) / 32;
+      NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
+
+      if (Size <= 16)
+        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+
+      if (Size <= 32)
+        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
+      // XXX: Should this be i64 instead, and should the limit increase?
+      llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+      return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+    }
+
+    if (NumRegsLeft > 0) {
+      unsigned NumRegs = numRegsForType(Ty);
+      if (NumRegsLeft >= NumRegs) {
+        NumRegsLeft -= NumRegs;
+        return ABIArgInfo::getDirect();
+      }
+    }
+  }
+
+  // Otherwise just do the default thing.
+  ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
+  if (!ArgInfo.isIndirect()) {
+    unsigned NumRegs = numRegsForType(Ty);
+    NumRegsLeft -= std::min(NumRegs, NumRegsLeft);
+  }
+
+  return ArgInfo;
+}
+
 class AMDGPUTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
     : TargetCodeGenInfo(new AMDGPUABIInfo(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
+                           CodeGen::CodeGenModule &M,
+                           ForDefinition_t IsForDefinition) const override;
   unsigned getOpenCLKernelCallingConv() const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  unsigned getASTAllocaAddressSpace() const override {
-    return LangAS::FirstTargetAddressSpace +
-           getABIInfo().getDataLayout().getAllocaAddrSpace();
+  LangAS getASTAllocaAddressSpace() const override {
+    return getLangASFromTargetAS(
+        getABIInfo().getDataLayout().getAllocaAddrSpace());
   }
-  unsigned getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                    const VarDecl *D) const override;
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override;
+  llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
+                                         llvm::LLVMContext &C) const override;
+  llvm::Function *
+  createEnqueuedBlockKernel(CodeGenFunction &CGF,
+                            llvm::Function *BlockInvokeFunc,
+                            llvm::Value *BlockLiteral) const override;
 };
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D,
-    llvm::GlobalValue *GV,
-    CodeGen::CodeGenModule &M) const {
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M,
+    ForDefinition_t IsForDefinition) const {
+  if (!IsForDefinition)
+    return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)
     return;
@@ -7425,21 +7746,19 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       llvm::ConstantPointerNull::get(NPT), PT);
 }
 
-unsigned
+LangAS
 AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
          !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
          "Address space agnostic languages only");
-  unsigned DefaultGlobalAS =
-      LangAS::FirstTargetAddressSpace +
-      CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+  LangAS DefaultGlobalAS = getLangASFromTargetAS(
+      CGM.getContext().getTargetAddressSpace(LangAS::opencl_global));
   if (!D)
     return DefaultGlobalAS;
 
-  unsigned AddrSpace = D->getType().getAddressSpace();
-  assert(AddrSpace == LangAS::Default ||
-         AddrSpace >= LangAS::FirstTargetAddressSpace);
+  LangAS AddrSpace = D->getType().getAddressSpace();
+  assert(AddrSpace == LangAS::Default || isTargetAddressSpace(AddrSpace));
   if (AddrSpace != LangAS::Default)
     return AddrSpace;
 
@@ -7448,6 +7767,26 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
       return ConstAS.getValue();
   }
   return DefaultGlobalAS;
+}
+
+llvm::SyncScope::ID
+AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(SyncScope S,
+                                            llvm::LLVMContext &C) const {
+  StringRef Name;
+  switch (S) {
+  case SyncScope::OpenCLWorkGroup:
+    Name = "workgroup";
+    break;
+  case SyncScope::OpenCLDevice:
+    Name = "agent";
+    break;
+  case SyncScope::OpenCLAllSVMDevices:
+    Name = "";
+    break;
+  case SyncScope::OpenCLSubGroup:
+    Name = "subgroup";
+  }
+  return C.getOrInsertSyncScopeID(Name);
 }
 
 //===----------------------------------------------------------------------===//
@@ -8490,7 +8829,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     if (getTarget().getABI() == "darwinpcs")
       Kind = AArch64ABIInfo::DarwinPCS;
     else if (Triple.isOSWindows())
-      Kind = AArch64ABIInfo::Win64;
+      return SetCGInfo(
+          new WindowsAArch64TargetCodeGenInfo(Types, AArch64ABIInfo::Win64));
 
     return SetCGInfo(new AArch64TargetCodeGenInfo(Types, Kind));
   }
@@ -8619,4 +8959,109 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::spir64:
     return SetCGInfo(new SPIRTargetCodeGenInfo(Types));
   }
+}
+
+/// Create an OpenCL kernel for an enqueued block.
+///
+/// The kernel has the same function type as the block invoke function. Its
+/// name is the name of the block invoke function postfixed with "_kernel".
+/// It simply calls the block invoke function then returns.
+llvm::Function *
+TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
+                                             llvm::Function *Invoke,
+                                             llvm::Value *BlockLiteral) const {
+  auto *InvokeFT = Invoke->getFunctionType();
+  llvm::SmallVector<llvm::Type *, 2> ArgTys;
+  for (auto &P : InvokeFT->params())
+    ArgTys.push_back(P);
+  auto &C = CGF.getLLVMContext();
+  std::string Name = Invoke->getName().str() + "_kernel";
+  auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
+  auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
+                                   &CGF.CGM.getModule());
+  auto IP = CGF.Builder.saveIP();
+  auto *BB = llvm::BasicBlock::Create(C, "entry", F);
+  auto &Builder = CGF.Builder;
+  Builder.SetInsertPoint(BB);
+  llvm::SmallVector<llvm::Value *, 2> Args;
+  for (auto &A : F->args())
+    Args.push_back(&A);
+  Builder.CreateCall(Invoke, Args);
+  Builder.CreateRetVoid();
+  Builder.restoreIP(IP);
+  return F;
+}
+
+/// Create an OpenCL kernel for an enqueued block.
+///
+/// The type of the first argument (the block literal) is the struct type
+/// of the block literal instead of a pointer type. The first argument
+/// (block literal) is passed directly by value to the kernel. The kernel
+/// allocates the same type of struct on stack and stores the block literal
+/// to it and passes its pointer to the block invoke function. The kernel
+/// has "enqueued-block" function attribute and kernel argument metadata.
+llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
+    CodeGenFunction &CGF, llvm::Function *Invoke,
+    llvm::Value *BlockLiteral) const {
+  auto &Builder = CGF.Builder;
+  auto &C = CGF.getLLVMContext();
+
+  auto *BlockTy = BlockLiteral->getType()->getPointerElementType();
+  auto *InvokeFT = Invoke->getFunctionType();
+  llvm::SmallVector<llvm::Type *, 2> ArgTys;
+  llvm::SmallVector<llvm::Metadata *, 8> AddressQuals;
+  llvm::SmallVector<llvm::Metadata *, 8> AccessQuals;
+  llvm::SmallVector<llvm::Metadata *, 8> ArgTypeNames;
+  llvm::SmallVector<llvm::Metadata *, 8> ArgBaseTypeNames;
+  llvm::SmallVector<llvm::Metadata *, 8> ArgTypeQuals;
+  llvm::SmallVector<llvm::Metadata *, 8> ArgNames;
+
+  ArgTys.push_back(BlockTy);
+  ArgTypeNames.push_back(llvm::MDString::get(C, "__block_literal"));
+  AddressQuals.push_back(llvm::ConstantAsMetadata::get(Builder.getInt32(0)));
+  ArgBaseTypeNames.push_back(llvm::MDString::get(C, "__block_literal"));
+  ArgTypeQuals.push_back(llvm::MDString::get(C, ""));
+  AccessQuals.push_back(llvm::MDString::get(C, "none"));
+  ArgNames.push_back(llvm::MDString::get(C, "block_literal"));
+  for (unsigned I = 1, E = InvokeFT->getNumParams(); I < E; ++I) {
+    ArgTys.push_back(InvokeFT->getParamType(I));
+    ArgTypeNames.push_back(llvm::MDString::get(C, "void*"));
+    AddressQuals.push_back(llvm::ConstantAsMetadata::get(Builder.getInt32(3)));
+    AccessQuals.push_back(llvm::MDString::get(C, "none"));
+    ArgBaseTypeNames.push_back(llvm::MDString::get(C, "void*"));
+    ArgTypeQuals.push_back(llvm::MDString::get(C, ""));
+    ArgNames.push_back(
+        llvm::MDString::get(C, (Twine("local_arg") + Twine(I)).str()));
+  }
+  std::string Name = Invoke->getName().str() + "_kernel";
+  auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
+  auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
+                                   &CGF.CGM.getModule());
+  F->addFnAttr("enqueued-block");
+  auto IP = CGF.Builder.saveIP();
+  auto *BB = llvm::BasicBlock::Create(C, "entry", F);
+  Builder.SetInsertPoint(BB);
+  unsigned BlockAlign = CGF.CGM.getDataLayout().getPrefTypeAlignment(BlockTy);
+  auto *BlockPtr = Builder.CreateAlloca(BlockTy, nullptr);
+  BlockPtr->setAlignment(BlockAlign);
+  Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, BlockAlign);
+  auto *Cast = Builder.CreatePointerCast(BlockPtr, InvokeFT->getParamType(0));
+  llvm::SmallVector<llvm::Value *, 2> Args;
+  Args.push_back(Cast);
+  for (auto I = F->arg_begin() + 1, E = F->arg_end(); I != E; ++I)
+    Args.push_back(I);
+  Builder.CreateCall(Invoke, Args);
+  Builder.CreateRetVoid();
+  Builder.restoreIP(IP);
+
+  F->setMetadata("kernel_arg_addr_space", llvm::MDNode::get(C, AddressQuals));
+  F->setMetadata("kernel_arg_access_qual", llvm::MDNode::get(C, AccessQuals));
+  F->setMetadata("kernel_arg_type", llvm::MDNode::get(C, ArgTypeNames));
+  F->setMetadata("kernel_arg_base_type",
+                 llvm::MDNode::get(C, ArgBaseTypeNames));
+  F->setMetadata("kernel_arg_type_qual", llvm::MDNode::get(C, ArgTypeQuals));
+  if (CGF.CGM.getCodeGenOpts().EmitOpenCLArgMetadata)
+    F->setMetadata("kernel_arg_name", llvm::MDNode::get(C, ArgNames));
+
+  return F;
 }

@@ -1,4 +1,4 @@
-//===--- HexagonGenInsert.cpp ---------------------------------------------===//
+//===- HexagonGenInsert.cpp -----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,6 +14,7 @@
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -27,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,7 +36,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -179,7 +180,7 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegSet &P) {
     OS << '{';
     for (unsigned R = P.RS.find_first(); R; R = P.RS.find_next(R))
-      OS << ' ' << PrintReg(R, P.TRI);
+      OS << ' ' << printReg(R, P.TRI);
     OS << " }";
     return OS;
   }
@@ -190,7 +191,7 @@ namespace {
     UnsignedMap() = default;
 
   private:
-    typedef DenseMap<unsigned,unsigned> BaseType;
+    using BaseType = DenseMap<unsigned, unsigned>;
   };
 
   // A utility to establish an ordering between virtual registers:
@@ -273,7 +274,8 @@ namespace {
     const BitTracker &BT;
 
   private:
-    typedef std::vector<const BitTracker::RegisterCell*> CellVectType;
+    using CellVectType = std::vector<const BitTracker::RegisterCell *>;
+
     CellVectType CVect;
   };
 
@@ -367,7 +369,7 @@ bool RegisterCellBitCompareSel::operator() (unsigned VR1, unsigned VR2) const {
 namespace {
 
   class OrderedRegisterList {
-    typedef std::vector<unsigned> ListType;
+    using ListType = std::vector<unsigned>;
 
   public:
     OrderedRegisterList(const RegisterOrdering &RO) : Ord(RO) {}
@@ -384,8 +386,9 @@ namespace {
       return Seq.size();
     }
 
-    typedef ListType::iterator iterator;
-    typedef ListType::const_iterator const_iterator;
+    using iterator = ListType::iterator;
+    using const_iterator = ListType::const_iterator;
+
     iterator begin() { return Seq.begin(); }
     iterator end() { return Seq.end(); }
     const_iterator begin() const { return Seq.begin(); }
@@ -416,7 +419,7 @@ namespace {
     for (OrderedRegisterList::const_iterator I = B; I != E; ++I) {
       if (I != B)
         OS << ", ";
-      OS << PrintReg(*I, P.TRI);
+      OS << printReg(*I, P.TRI);
     }
     OS << ')';
     return OS;
@@ -464,12 +467,12 @@ namespace {
 
   raw_ostream &operator<< (raw_ostream &OS, const PrintIFR &P) {
     unsigned SrcR = P.IFR.SrcR, InsR = P.IFR.InsR;
-    OS << '(' << PrintReg(SrcR, P.TRI) << ',' << PrintReg(InsR, P.TRI)
+    OS << '(' << printReg(SrcR, P.TRI) << ',' << printReg(InsR, P.TRI)
        << ",#" << P.IFR.Wdh << ",#" << P.IFR.Off << ')';
     return OS;
   }
 
-  typedef std::pair<IFRecord,RegisterSet> IFRecordWithRegSet;
+  using IFRecordWithRegSet = std::pair<IFRecord, RegisterSet>;
 
 } // end anonymous namespace
 
@@ -486,7 +489,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonGenInsert() : MachineFunctionPass(ID), HII(nullptr), HRI(nullptr) {
+    HexagonGenInsert() : MachineFunctionPass(ID) {
       initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
     }
 
@@ -503,7 +506,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
-    typedef DenseMap<std::pair<unsigned,unsigned>,unsigned> PairMapType;
+    using PairMapType = DenseMap<std::pair<unsigned, unsigned>, unsigned>;
 
     void buildOrderingMF(RegisterOrdering &RO) const;
     void buildOrderingBT(RegisterOrdering &RB, RegisterOrdering &RO) const;
@@ -539,13 +542,13 @@ namespace {
     bool removeDeadCode(MachineDomTreeNode *N);
 
     // IFRecord coupled with a set of potentially removable registers:
-    typedef std::vector<IFRecordWithRegSet> IFListType;
-    typedef DenseMap<unsigned,IFListType> IFMapType;  // vreg -> IFListType
+    using IFListType = std::vector<IFRecordWithRegSet>;
+    using IFMapType = DenseMap<unsigned, IFListType>; // vreg -> IFListType
 
     void dump_map() const;
 
-    const HexagonInstrInfo *HII;
-    const HexagonRegisterInfo *HRI;
+    const HexagonInstrInfo *HII = nullptr;
+    const HexagonRegisterInfo *HRI = nullptr;
 
     MachineFunction *MFN;
     MachineRegisterInfo *MRI;
@@ -557,14 +560,15 @@ namespace {
     IFMapType IFMap;
   };
 
-  char HexagonGenInsert::ID = 0;
-
 } // end anonymous namespace
 
+char HexagonGenInsert::ID = 0;
+
 void HexagonGenInsert::dump_map() const {
-  typedef IFMapType::const_iterator iterator;
+  using iterator = IFMapType::const_iterator;
+
   for (iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-    dbgs() << "  " << PrintReg(I->first, HRI) << ":\n";
+    dbgs() << "  " << printReg(I->first, HRI) << ":\n";
     const IFListType &LL = I->second;
     for (unsigned i = 0, n = LL.size(); i < n; ++i)
       dbgs() << "    " << PrintIFR(LL[i].first, HRI) << ", "
@@ -574,12 +578,16 @@ void HexagonGenInsert::dump_map() const {
 
 void HexagonGenInsert::buildOrderingMF(RegisterOrdering &RO) const {
   unsigned Index = 0;
-  typedef MachineFunction::const_iterator mf_iterator;
+
+  using mf_iterator = MachineFunction::const_iterator;
+
   for (mf_iterator A = MFN->begin(), Z = MFN->end(); A != Z; ++A) {
     const MachineBasicBlock &B = *A;
     if (!CMS->BT.reached(&B))
       continue;
-    typedef MachineBasicBlock::const_iterator mb_iterator;
+
+    using mb_iterator = MachineBasicBlock::const_iterator;
+
     for (mb_iterator I = B.begin(), E = B.end(); I != E; ++I) {
       const MachineInstr *MI = &*I;
       for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
@@ -604,7 +612,9 @@ void HexagonGenInsert::buildOrderingBT(RegisterOrdering &RB,
   // ordering RB), and then sort it using the RegisterCell comparator.
   BitValueOrdering BVO(RB);
   RegisterCellLexCompare LexCmp(BVO, *CMS);
-  typedef std::vector<unsigned> SortableVectorType;
+
+  using SortableVectorType = std::vector<unsigned>;
+
   SortableVectorType VRs;
   for (RegisterOrdering::iterator I = RB.begin(), E = RB.end(); I != E; ++I)
     VRs.push_back(I->first);
@@ -736,7 +746,9 @@ unsigned HexagonGenInsert::distance(const MachineBasicBlock *FromB,
   unsigned ToRPO = RPO.lookup(ToN);
 
   unsigned MaxD = 0;
-  typedef MachineBasicBlock::const_pred_iterator pred_iterator;
+
+  using pred_iterator = MachineBasicBlock::const_pred_iterator;
+
   for (pred_iterator I = ToB->pred_begin(), E = ToB->pred_end(); I != E; ++I) {
     const MachineBasicBlock *PB = *I;
     // Skip back edges. Also, if FromB is a predecessor of ToB, the distance
@@ -769,23 +781,24 @@ unsigned HexagonGenInsert::distance(MachineBasicBlock::const_iterator FromI,
 bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
       OrderedRegisterList &AVs) {
   if (isDebug()) {
-    dbgs() << __func__ << ": " << PrintReg(VR, HRI)
+    dbgs() << __func__ << ": " << printReg(VR, HRI)
            << "  AVs: " << PrintORL(AVs, HRI) << "\n";
   }
   if (AVs.size() == 0)
     return false;
 
-  typedef OrderedRegisterList::iterator iterator;
+  using iterator = OrderedRegisterList::iterator;
+
   BitValueOrdering BVO(BaseOrd);
   const BitTracker::RegisterCell &RC = CMS->lookup(VR);
   uint16_t W = RC.width();
 
-  typedef std::pair<unsigned,uint16_t> RSRecord;  // (reg,shift)
-  typedef std::vector<RSRecord> RSListType;
+  using RSRecord = std::pair<unsigned, uint16_t>; // (reg,shift)
+  using RSListType = std::vector<RSRecord>;
   // Have a map, with key being the matching prefix length, and the value
   // being the list of pairs (R,S), where R's prefix matches VR at S.
   // (DenseMap<uint16_t,RSListType> fails to instantiate.)
-  typedef DenseMap<unsigned,RSListType> LRSMapType;
+  using LRSMapType = DenseMap<unsigned, RSListType>;
   LRSMapType LM;
 
   // Conceptually, rotate the cell RC right (i.e. towards the LSB) by S,
@@ -833,12 +846,12 @@ bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
   }
 
   if (isDebug()) {
-    dbgs() << "Prefixes matching register " << PrintReg(VR, HRI) << "\n";
+    dbgs() << "Prefixes matching register " << printReg(VR, HRI) << "\n";
     for (LRSMapType::iterator I = LM.begin(), E = LM.end(); I != E; ++I) {
       dbgs() << "  L=" << I->first << ':';
       const RSListType &LL = I->second;
       for (unsigned i = 0, n = LL.size(); i < n; ++i)
-        dbgs() << " (" << PrintReg(LL[i].first, HRI) << ",@"
+        dbgs() << " (" << printReg(LL[i].first, HRI) << ",@"
                << LL[i].second << ')';
       dbgs() << '\n';
     }
@@ -885,8 +898,8 @@ bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
         if (!isValidInsertForm(VR, SrcR, InsR, L, S))
           continue;
         if (isDebug()) {
-          dbgs() << PrintReg(VR, HRI) << " = insert(" << PrintReg(SrcR, HRI)
-                 << ',' << PrintReg(InsR, HRI) << ",#" << L << ",#"
+          dbgs() << printReg(VR, HRI) << " = insert(" << printReg(SrcR, HRI)
+                 << ',' << printReg(InsR, HRI) << ",#" << L << ",#"
                  << S << ")\n";
         }
         IFRecordWithRegSet RR(IFRecord(SrcR, InsR, L, S), RegisterSet());
@@ -902,7 +915,7 @@ bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
 void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
       OrderedRegisterList &AVs) {
   if (isDebug())
-    dbgs() << "visiting block BB#" << B->getNumber() << "\n";
+    dbgs() << "visiting block " << printMBBReference(*B) << "\n";
 
   // First, check if this block is reachable at all. If not, the bit tracker
   // will not have any information about registers in it.
@@ -1018,7 +1031,7 @@ void HexagonGenInsert::computeRemovableRegisters() {
 void HexagonGenInsert::pruneEmptyLists() {
   // Remove all entries from the map, where the register has no insert forms
   // associated with it.
-  typedef SmallVector<IFMapType::iterator,16> IterListType;
+  using IterListType = SmallVector<IFMapType::iterator, 16>;
   IterListType Prune;
   for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
     if (I->second.empty())
@@ -1093,10 +1106,10 @@ void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
 
   // Now, remove those whose sets of potentially removable registers are
   // contained in another IF candidate for VR. For example, given these
-  // candidates for vreg45,
-  //   %vreg45:
-  //     (%vreg44,%vreg41,#9,#8), { %vreg42 }
-  //     (%vreg43,%vreg41,#9,#8), { %vreg42 %vreg44 }
+  // candidates for %45,
+  //   %45:
+  //     (%44,%41,#9,#8), { %42 }
+  //     (%43,%41,#9,#8), { %42 %44 }
   // remove the first one, since it is contained in the second one.
   for (unsigned i = 0, n = LL.size(); i < n; ) {
     const RegisterSet &RMi = LL[i].second;
@@ -1159,7 +1172,9 @@ void HexagonGenInsert::pruneCandidates() {
     pruneCoveredSets(I->first);
 
   UnsignedMap RPO;
-  typedef ReversePostOrderTraversal<const MachineFunction*> RPOTType;
+
+  using RPOTType = ReversePostOrderTraversal<const MachineFunction *>;
+
   RPOTType RPOT(MFN);
   unsigned RPON = 0;
   for (RPOTType::rpo_iterator I = RPOT.begin(), E = RPOT.end(); I != E; ++I)
@@ -1191,7 +1206,7 @@ namespace {
       : UseC(UC), BaseOrd(BO) {}
 
     bool operator() (const IFRecordWithRegSet &A,
-          const IFRecordWithRegSet &B) const;
+                     const IFRecordWithRegSet &B) const;
 
   private:
     void stats(const RegisterSet &Rs, unsigned &Size, unsigned &Zero,
@@ -1266,8 +1281,9 @@ void HexagonGenInsert::selectCandidates() {
   }
 
   for (unsigned R = AllRMs.find_first(); R; R = AllRMs.find_next(R)) {
-    typedef MachineRegisterInfo::use_nodbg_iterator use_iterator;
-    typedef SmallSet<const MachineInstr*,16> InstrSet;
+    using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
+    using InstrSet = SmallSet<const MachineInstr *, 16>;
+
     InstrSet UIs;
     // Count as the number of instructions in which R is used, not the
     // number of operands.
@@ -1466,7 +1482,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
 }
 
 bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   bool Timing = OptTiming, TimingDetail = Timing && OptTimingDetail;
@@ -1508,7 +1524,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
     for (RegisterOrdering::iterator I = CellOrd.begin(), E = CellOrd.end();
         I != E; ++I) {
       unsigned VR = I->first, Pos = I->second;
-      dbgs() << PrintReg(VR, HRI) << " -> " << Pos << "\n";
+      dbgs() << printReg(VR, HRI) << " -> " << Pos << "\n";
     }
   }
 
@@ -1561,7 +1577,9 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   // Filter out vregs beyond the cutoff.
   if (VRegIndexCutoff.getPosition()) {
     unsigned Cutoff = VRegIndexCutoff;
-    typedef SmallVector<IFMapType::iterator,16> IterListType;
+
+    using IterListType = SmallVector<IFMapType::iterator, 16>;
+
     IterListType Out;
     for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
       unsigned Idx = TargetRegisterInfo::virtReg2Index(I->first);

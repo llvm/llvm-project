@@ -1,4 +1,4 @@
-//===-- llvm/lib/Target/X86/X86CallLowering.h - Call lowering -----===//
+//===- llvm/lib/Target/X86/X86CallLowering.h - Call lowering ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,24 +6,24 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// This file describes how to lower LLVM calls to machine code calls.
-///
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_X86_X86CALLLOWERING
-#define LLVM_LIB_TARGET_X86_X86CALLLOWERING
+#ifndef LLVM_LIB_TARGET_X86_X86CALLLOWERING_H
+#define LLVM_LIB_TARGET_X86_X86CALLLOWERING_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include <functional>
 
 namespace llvm {
 
-class Function;
-class MachineIRBuilder;
+class DataLayout;
+class MachineRegisterInfo;
 class X86TargetLowering;
-class Value;
 
 class X86CallLowering : public CallLowering {
 public:
@@ -41,12 +41,14 @@ public:
 
 private:
   /// A function of this type is used to perform value split action.
-  typedef std::function<void(ArrayRef<unsigned>)> SplitArgTy;
+  using SplitArgTy = std::function<void(ArrayRef<unsigned>)>;
 
   bool splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
                          SplitArgTy SplitArg) const;
 };
-} // namespace llvm
-#endif
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_X86_X86CALLLOWERING_H

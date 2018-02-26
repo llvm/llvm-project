@@ -949,19 +949,21 @@ __mmask8 test_mm512_movepi64_mask(__m512i __A) {
 
 __m512 test_mm512_broadcast_f32x2(__m128 __A) {
   // CHECK-LABEL: @test_mm512_broadcast_f32x2
-  // CHECK: @llvm.x86.avx512.mask.broadcastf32x2
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   return _mm512_broadcast_f32x2(__A); 
 }
 
 __m512 test_mm512_mask_broadcast_f32x2(__m512 __O, __mmask16 __M, __m128 __A) {
   // CHECK-LABEL: @test_mm512_mask_broadcast_f32x2
-  // CHECK: @llvm.x86.avx512.mask.broadcastf32x2
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_broadcast_f32x2(__O, __M, __A); 
 }
 
 __m512 test_mm512_maskz_broadcast_f32x2(__mmask16 __M, __m128 __A) {
   // CHECK-LABEL: @test_mm512_maskz_broadcast_f32x2
-  // CHECK: @llvm.x86.avx512.mask.broadcastf32x2
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_broadcast_f32x2(__M, __A); 
 }
 
@@ -1007,19 +1009,21 @@ __m512d test_mm512_maskz_broadcast_f64x2(__mmask8 __M, double const* __A) {
 
 __m512i test_mm512_broadcast_i32x2(__m128i __A) {
   // CHECK-LABEL: @test_mm512_broadcast_i32x2
-  // CHECK: @llvm.x86.avx512.mask.broadcasti32x2
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   return _mm512_broadcast_i32x2(__A); 
 }
 
 __m512i test_mm512_mask_broadcast_i32x2(__m512i __O, __mmask16 __M, __m128i __A) {
   // CHECK-LABEL: @test_mm512_mask_broadcast_i32x2
-  // CHECK: @llvm.x86.avx512.mask.broadcasti32x2
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_broadcast_i32x2(__O, __M, __A); 
 }
 
 __m512i test_mm512_maskz_broadcast_i32x2(__mmask16 __M, __m128i __A) {
   // CHECK-LABEL: @test_mm512_maskz_broadcast_i32x2
-  // CHECK: @llvm.x86.avx512.mask.broadcasti32x2
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_broadcast_i32x2(__M, __A); 
 }
 

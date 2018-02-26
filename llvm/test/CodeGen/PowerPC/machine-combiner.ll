@@ -8,7 +8,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define float @reassociate_adds1(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-LABEL: reassociate_adds1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
 ; CHECK:       fadds 1, [[REG0]], [[REG1]]
@@ -22,7 +22,7 @@ define float @reassociate_adds1(float %x0, float %x1, float %x2, float %x3) {
 
 define float @reassociate_adds2(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-LABEL: reassociate_adds2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
 ; CHECK:       fadds 1, [[REG0]], [[REG1]]
@@ -36,7 +36,7 @@ define float @reassociate_adds2(float %x0, float %x1, float %x2, float %x3) {
 
 define float @reassociate_adds3(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-LABEL: reassociate_adds3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
 ; CHECK:       fadds 1, [[REG0]], [[REG1]]
@@ -50,7 +50,7 @@ define float @reassociate_adds3(float %x0, float %x1, float %x2, float %x3) {
 
 define float @reassociate_adds4(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-LABEL: reassociate_adds4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
 ; CHECK:       fadds 1, [[REG0]], [[REG1]]
@@ -67,7 +67,7 @@ define float @reassociate_adds4(float %x0, float %x1, float %x2, float %x3) {
 
 define float @reassociate_adds5(float %x0, float %x1, float %x2, float %x3, float %x4, float %x5, float %x6, float %x7) {
 ; CHECK-LABEL: reassociate_adds5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG12:[0-9]+]], 5, 6
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK:       fadds [[REG11:[0-9]+]], 3, 4
@@ -91,7 +91,7 @@ define float @reassociate_adds5(float %x0, float %x1, float %x2, float %x3, floa
 
 define <4 x float> @vector_reassociate_adds1(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
 ; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
 ; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
@@ -108,7 +108,7 @@ define <4 x float> @vector_reassociate_adds1(<4 x float> %x0, <4 x float> %x1, <
 
 define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
 ; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
 ; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
@@ -125,7 +125,7 @@ define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <
 
 define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
 ; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
 ; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
@@ -142,7 +142,7 @@ define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <
 
 define <4 x float> @vector_reassociate_adds4(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
 ; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
 ; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]

@@ -62,7 +62,8 @@ struct MsanMapUnmapCallback {
   };
   typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #elif defined(__x86_64__)
-#if SANITIZER_LINUX && !defined(MSAN_LINUX_X86_64_OLD_MAPPING)
+#if SANITIZER_NETBSD || \
+    (SANITIZER_LINUX && !defined(MSAN_LINUX_X86_64_OLD_MAPPING))
   static const uptr kAllocatorSpace = 0x700000000000ULL;
 #else
   static const uptr kAllocatorSpace = 0x600000000000ULL;
@@ -255,8 +256,12 @@ void *msan_valloc(uptr size, StackTrace *stack) {
 
 void *msan_pvalloc(uptr size, StackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
+    errno = errno_ENOMEM;
+    return Allocator::FailureHandler::OnBadRequest();
+  }
   // pvalloc(0) should allocate one page.
-  size = size == 0 ? PageSize : RoundUpTo(size, PageSize);
+  size = size ? RoundUpTo(size, PageSize) : PageSize;
   return SetErrnoOnNull(MsanAllocate(stack, size, PageSize, false));
 }
 

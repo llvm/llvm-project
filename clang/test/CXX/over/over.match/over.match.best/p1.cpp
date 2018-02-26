@@ -25,13 +25,13 @@ namespace deduction_guide_example {
 
   // FIXME: The standard's example is wrong; we add a remove_ref<...> here to
   // fix it.
-  template<typename T, int N = remove_ref<T>::value> A(T&&, int*) -> A<T>;
+  template<typename T, int N = remove_ref<T>::value> A(T&&, int*) -> A<T**>;
   A a{1, 0};
   extern A<int> a;
-  A b{a, 0};
+  A b{a, 0}; // uses the implicit ctor that is more specialized
 
   A<int> *pa = &a;
-  A<A<int>&> *pb = &b;
+  A<int> *pb = &b;
 }
 
 // Partial ordering of function template specializations will be tested 

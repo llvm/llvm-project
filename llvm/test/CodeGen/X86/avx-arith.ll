@@ -3,7 +3,7 @@
 
 define <4 x double> @addpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addpd256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -13,7 +13,7 @@ entry:
 
 define <4 x double> @addpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addpd256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -23,7 +23,7 @@ entry:
 
 define <8 x float> @addps256(<8 x float> %y, <8 x float> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addps256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -33,7 +33,7 @@ entry:
 
 define <8 x float> @addps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addps256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -43,7 +43,7 @@ entry:
 
 define <4 x double> @subpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: subpd256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsubpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -53,7 +53,7 @@ entry:
 
 define <4 x double> @subpd256fold(<4 x double> %y, <4 x double>* nocapture %x) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: subpd256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsubpd (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -64,7 +64,7 @@ entry:
 
 define <8 x float> @subps256(<8 x float> %y, <8 x float> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: subps256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsubps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -74,7 +74,7 @@ entry:
 
 define <8 x float> @subps256fold(<8 x float> %y, <8 x float>* nocapture %x) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: subps256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsubps (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -85,7 +85,7 @@ entry:
 
 define <4 x double> @mulpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulpd256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmulpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -95,7 +95,7 @@ entry:
 
 define <4 x double> @mulpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulpd256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -105,7 +105,7 @@ entry:
 
 define <8 x float> @mulps256(<8 x float> %y, <8 x float> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulps256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -115,7 +115,7 @@ entry:
 
 define <8 x float> @mulps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulps256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -125,7 +125,7 @@ entry:
 
 define <4 x double> @divpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divpd256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vdivpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -135,7 +135,7 @@ entry:
 
 define <4 x double> @divpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divpd256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vdivpd {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -145,7 +145,7 @@ entry:
 
 define <8 x float> @divps256(<8 x float> %y, <8 x float> %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divps256:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -155,7 +155,7 @@ entry:
 
 define <8 x float> @divps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divps256fold:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vdivps {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -165,7 +165,7 @@ entry:
 
 define float @sqrtA(float %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: sqrtA:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -177,7 +177,7 @@ declare double @sqrt(double) readnone
 
 define double @sqrtB(double %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: sqrtB:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -190,7 +190,7 @@ declare float @sqrtf(float) readnone
 
 define <4 x i64> @vpaddq(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 ; CHECK-LABEL: vpaddq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
@@ -203,7 +203,7 @@ define <4 x i64> @vpaddq(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 
 define <8 x i32> @vpaddd(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 ; CHECK-LABEL: vpaddd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
@@ -216,7 +216,7 @@ define <8 x i32> @vpaddd(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 
 define <16 x i16> @vpaddw(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 ; CHECK-LABEL: vpaddw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpaddw %xmm2, %xmm3, %xmm2
@@ -229,7 +229,7 @@ define <16 x i16> @vpaddw(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 
 define <32 x i8> @vpaddb(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: vpaddb:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
@@ -242,7 +242,7 @@ define <32 x i8> @vpaddb(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 
 define <4 x i64> @vpsubq(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 ; CHECK-LABEL: vpsubq:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpsubq %xmm2, %xmm3, %xmm2
@@ -255,7 +255,7 @@ define <4 x i64> @vpsubq(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 
 define <8 x i32> @vpsubd(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 ; CHECK-LABEL: vpsubd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpsubd %xmm2, %xmm3, %xmm2
@@ -268,7 +268,7 @@ define <8 x i32> @vpsubd(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 
 define <16 x i16> @vpsubw(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 ; CHECK-LABEL: vpsubw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
@@ -281,7 +281,7 @@ define <16 x i16> @vpsubw(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 
 define <32 x i8> @vpsubb(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: vpsubb:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
@@ -294,7 +294,7 @@ define <32 x i8> @vpsubb(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 
 define <8 x i32> @vpmulld(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 ; CHECK-LABEL: vpmulld:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
@@ -307,7 +307,7 @@ define <8 x i32> @vpmulld(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
 
 define <16 x i16> @vpmullw(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 ; CHECK-LABEL: vpmullw:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpmullw %xmm2, %xmm3, %xmm2
@@ -320,7 +320,7 @@ define <16 x i16> @vpmullw(<16 x i16> %i, <16 x i16> %j) nounwind readnone {
 
 define <4 x i64> @mul_v4i64(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v4i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpsrlq $32, %xmm3, %xmm4
@@ -349,7 +349,7 @@ declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
 define <4 x float> @int_sqrt_ss() {
 ; CHECK-LABEL: int_sqrt_ss:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -361,7 +361,7 @@ define <4 x float> @int_sqrt_ss() {
 
 define <2 x double> @vector_sqrt_scalar_load(double* %a0) optsize {
 ; CHECK-LABEL: vector_sqrt_scalar_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vsqrtpd %xmm0, %xmm0
 ; CHECK-NEXT:    retq

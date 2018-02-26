@@ -4,7 +4,7 @@
 
 define <4 x i32> @test_load_v4i32_noalign(<4 x i32> * %p1) {
 ; SKX-LABEL: test_load_v4i32_noalign:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups (%rdi), %xmm0
 ; SKX-NEXT:    retq
   %r = load <4 x i32>, <4 x i32>* %p1, align 1
@@ -13,7 +13,7 @@ define <4 x i32> @test_load_v4i32_noalign(<4 x i32> * %p1) {
 
 define <4 x i32> @test_load_v4i32_align(<4 x i32> * %p1) {
 ; SKX-LABEL: test_load_v4i32_align:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps (%rdi), %xmm0
 ; SKX-NEXT:    retq
   %r = load <4 x i32>, <4 x i32>* %p1, align 16
@@ -22,7 +22,7 @@ define <4 x i32> @test_load_v4i32_align(<4 x i32> * %p1) {
 
 define <8 x i32> @test_load_v8i32_noalign(<8 x i32> * %p1) {
 ; SKX-LABEL: test_load_v8i32_noalign:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups (%rdi), %ymm0
 ; SKX-NEXT:    retq
   %r = load <8 x i32>, <8 x i32>* %p1, align 1
@@ -31,7 +31,7 @@ define <8 x i32> @test_load_v8i32_noalign(<8 x i32> * %p1) {
 
 define <8 x i32> @test_load_v8i32_align(<8 x i32> * %p1) {
 ; SKX-LABEL: test_load_v8i32_align:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps (%rdi), %ymm0
 ; SKX-NEXT:    retq
   %r = load <8 x i32>, <8 x i32>* %p1, align 32
@@ -40,7 +40,7 @@ define <8 x i32> @test_load_v8i32_align(<8 x i32> * %p1) {
 
 define <16 x i32> @test_load_v16i32_noalign(<16 x i32> * %p1) {
 ; SKX-LABEL: test_load_v16i32_noalign:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups (%rdi), %zmm0
 ; SKX-NEXT:    retq
   %r = load <16 x i32>, <16 x i32>* %p1, align 1
@@ -49,7 +49,7 @@ define <16 x i32> @test_load_v16i32_noalign(<16 x i32> * %p1) {
 
 define <16 x i32> @test_load_v16i32_align(<16 x i32> * %p1) {
 ; SKX-LABEL: test_load_v16i32_align:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups (%rdi), %zmm0
 ; SKX-NEXT:    retq
   %r = load <16 x i32>, <16 x i32>* %p1, align 32
@@ -58,7 +58,7 @@ define <16 x i32> @test_load_v16i32_align(<16 x i32> * %p1) {
 
 define void @test_store_v4i32_noalign(<4 x i32> %val, <4 x i32>* %p1) {
 ; SKX-LABEL: test_store_v4i32_noalign:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %xmm0, (%rdi)
 ; SKX-NEXT:    retq
   store <4 x i32> %val, <4 x i32>* %p1, align 1
@@ -67,7 +67,7 @@ define void @test_store_v4i32_noalign(<4 x i32> %val, <4 x i32>* %p1) {
 
 define void @test_store_v4i32_align(<4 x i32> %val, <4 x i32>* %p1) {
 ; SKX-LABEL: test_store_v4i32_align:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %xmm0, (%rdi)
 ; SKX-NEXT:    retq
   store <4 x i32> %val, <4 x i32>* %p1, align 16
@@ -76,7 +76,7 @@ define void @test_store_v4i32_align(<4 x i32> %val, <4 x i32>* %p1) {
 
 define void @test_store_v8i32_noalign(<8 x i32> %val, <8 x i32>* %p1) {
 ; SKX-LABEL: test_store_v8i32_noalign:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %ymm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -86,7 +86,7 @@ define void @test_store_v8i32_noalign(<8 x i32> %val, <8 x i32>* %p1) {
 
 define void @test_store_v8i32_align(<8 x i32> %val, <8 x i32>* %p1) {
 ; SKX-LABEL: test_store_v8i32_align:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %ymm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -96,7 +96,7 @@ define void @test_store_v8i32_align(<8 x i32> %val, <8 x i32>* %p1) {
 
 define void @test_store_v16i32_noalign(<16 x i32> %val, <16 x i32>* %p1) {
 ; SKX-LABEL: test_store_v16i32_noalign:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %zmm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -106,7 +106,7 @@ define void @test_store_v16i32_noalign(<16 x i32> %val, <16 x i32>* %p1) {
 
 define void @test_store_v16i32_align(<16 x i32> %val, <16 x i32>* %p1) {
 ; SKX-LABEL: test_store_v16i32_align:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

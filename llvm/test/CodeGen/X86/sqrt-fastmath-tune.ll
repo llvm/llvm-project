@@ -12,12 +12,12 @@ declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #0
 
 define float @foo_x1(float %f) #0 {
 ; SCALAR-EST-LABEL: foo_x1:
-; SCALAR-EST:       # BB#0:
+; SCALAR-EST:       # %bb.0:
 ; SCALAR-EST-NEXT:    rsqrtss %xmm0
 ; SCALAR-EST:         retq
 ;
 ; SCALAR-ACC-LABEL: foo_x1:
-; SCALAR-ACC:       # BB#0:
+; SCALAR-ACC:       # %bb.0:
 ; SCALAR-ACC-NEXT:    {{^ *v?sqrtss %xmm0}}
 ; SCALAR-ACC-NEXT:    retq
   %call = tail call float @llvm.sqrt.f32(float %f) #1
@@ -26,12 +26,12 @@ define float @foo_x1(float %f) #0 {
 
 define <4 x float> @foo_x4(<4 x float> %f) #0 {
 ; VECTOR-EST-LABEL: foo_x4:
-; VECTOR-EST:       # BB#0:
+; VECTOR-EST:       # %bb.0:
 ; VECTOR-EST-NEXT:    rsqrtps %xmm0
 ; VECTOR-EST:         retq
 ;
 ; VECTOR-ACC-LABEL: foo_x4:
-; VECTOR-ACC:       # BB#0:
+; VECTOR-ACC:       # %bb.0:
 ; VECTOR-ACC-NEXT:    {{^ *v?sqrtps %xmm0}}
 ; VECTOR-ACC-NEXT:    retq
   %call = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #1
@@ -40,12 +40,12 @@ define <4 x float> @foo_x4(<4 x float> %f) #0 {
 
 define <8 x float> @foo_x8(<8 x float> %f) #0 {
 ; VECTOR-EST-LABEL: foo_x8:
-; VECTOR-EST:       # BB#0:
+; VECTOR-EST:       # %bb.0:
 ; VECTOR-EST-NEXT:    rsqrtps
 ; VECTOR-EST:         retq
 ;
 ; VECTOR-ACC-LABEL: foo_x8:
-; VECTOR-ACC:       # BB#0:
+; VECTOR-ACC:       # %bb.0:
 ; VECTOR-ACC-NEXT:    {{^ *v?sqrtps %[xy]mm0}}
 ; VECTOR-ACC-NOT:     rsqrt
 ; VECTOR-ACC:         retq

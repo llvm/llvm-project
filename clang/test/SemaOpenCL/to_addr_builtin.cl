@@ -10,7 +10,7 @@ void test(void) {
 
   glob = to_global(glob, loc);
 #if __OPENCL_C_VERSION__ < CL_VERSION_2_0
-  // expected-error@-2{{implicit declaration of function 'to_global' is invalid in OpenCL}}
+  // expected-warning@-2{{implicit declaration of function 'to_global' is invalid in OpenCL}}
   // expected-warning@-3{{incompatible integer to pointer conversion assigning to '__global int *' from 'int'}}
 #else
   // expected-error@-5{{invalid number of arguments to function: 'to_global'}}

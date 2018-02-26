@@ -13,7 +13,7 @@
 	.globl	_test0
 _test0:                                  ## @test0
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	pushq	%rbp
 Ltmp0:
 	.cfi_def_cfa_offset 16
@@ -43,7 +43,7 @@ Ltmp4:
 	.globl	_test1
 _test1:                                  ## @test1
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	pushq	%rbp
 Ltmp10:
 	.cfi_def_cfa_offset 16

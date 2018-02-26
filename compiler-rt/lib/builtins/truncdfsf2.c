@@ -16,8 +16,11 @@ COMPILER_RT_ABI float __truncdfsf2(double a) {
 }
 
 #if defined(__ARM_EABI__)
+#if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI float __aeabi_d2f(double a) {
   return __truncdfsf2(a);
 }
+#else
+AEABI_RTABI float __aeabi_d2f(double a) COMPILER_RT_ALIAS(__truncdfsf2);
 #endif
-
+#endif

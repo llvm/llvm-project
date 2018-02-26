@@ -2,7 +2,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 //
-// # Check that we properly detect CUDA installation.
+// Check that we properly detect CUDA installation.
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/no-cuda-there 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=i386-apple-macosx \
@@ -17,6 +17,19 @@
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 | FileCheck %s
 // RUN: %clang -v --target=i386-apple-macosx \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 | FileCheck %s
+
+// Check that we don't find a CUDA installation without libdevice ...
+// RUN: %clang -v --target=i386-unknown-linux \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN: %clang -v --target=i386-apple-macosx \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NOCUDA
+
+// ... unless the user doesn't need libdevice
+// RUN: %clang -v --target=i386-unknown-linux -nocudalib \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
+// RUN: %clang -v --target=i386-apple-macosx -nocudalib \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
+
 
 // Make sure we map libdevice bitcode files to proper GPUs. These
 // tests use Inputs/CUDA_80 which has full set of libdevice files.
@@ -112,6 +125,7 @@
 // RUN: | FileCheck %s --check-prefix CHECK-CXXINCLUDE
 
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA/usr/local/cuda
+// NO-LIBDEVICE: Found CUDA installation: {{.*}}/Inputs/CUDA-nolibdevice/usr/local/cuda
 // NOCUDA-NOT: Found CUDA installation:
 
 // MISSINGLIBDEVICE: error: cannot find libdevice for sm_20.

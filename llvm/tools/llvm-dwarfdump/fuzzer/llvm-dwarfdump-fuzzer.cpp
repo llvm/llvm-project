@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace object;
 
-extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
+extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(
       StringRef((const char *)data, size), "", false);
 
@@ -28,9 +28,14 @@ extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
       ObjectFile::createObjectFile(Buff->getMemBufferRef());
   if (auto E = ObjOrErr.takeError()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
   ObjectFile &Obj = *ObjOrErr.get();
   std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
-  DICtx->dump(nulls(), DIDT_All);
+
+
+  DIDumpOptions opts;
+  opts.DumpType = DIDT_All;
+  DICtx->dump(nulls(), opts);
+  return 0;
 }

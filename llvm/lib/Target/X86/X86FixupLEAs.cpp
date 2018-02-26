@@ -17,14 +17,12 @@
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
 namespace llvm {
@@ -193,12 +191,12 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
 
 bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
-  if (skipFunction(*Func.getFunction()))
+  if (skipFunction(Func.getFunction()))
     return false;
 
   MF = &Func;
   const X86Subtarget &ST = Func.getSubtarget<X86Subtarget>();
-  OptIncDec = !ST.slowIncDec() || Func.getFunction()->optForMinSize();
+  OptIncDec = !ST.slowIncDec() || Func.getFunction().optForMinSize();
   OptLEA = ST.LEAusesAG() || ST.slowLEA() || ST.slow3OpsLEA();
 
   if (!OptLEA && !OptIncDec)

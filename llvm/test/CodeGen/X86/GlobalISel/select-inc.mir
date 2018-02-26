@@ -21,9 +21,9 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# ALL:      %0 = COPY %al
-# INC-NEXT: %2 = INC8r %0
-# ADD-NEXT: %2 = ADD8ri %0, 1
+# ALL:      %0:gr8 = COPY %al
+# INC-NEXT: %2:gr8 = INC8r %0
+# ADD-NEXT: %2:gr8 = ADD8ri %0, 1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %al

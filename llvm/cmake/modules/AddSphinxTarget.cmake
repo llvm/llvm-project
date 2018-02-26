@@ -19,7 +19,7 @@ endif()
 # ``project`` should be the project name
 function (add_sphinx_target builder project)
   set(SPHINX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/${builder}")
-  set(SPHINX_DOC_TREE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_doctrees-${builder}")
+  set(SPHINX_DOC_TREE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_doctrees-${project}-${builder}")
   set(SPHINX_TARGET_NAME docs-${project}-${builder})
 
   if (SPHINX_WARNINGS_AS_ERRORS)

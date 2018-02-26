@@ -28,6 +28,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
+#include <set>
 #include <sstream>
 
 using namespace clang;
@@ -91,6 +93,14 @@ public:
   // Rewrite the file specified by FID with HTML formatting.
   void RewriteFile(Rewriter &R, const SourceManager& SMgr,
                    const PathPieces& path, FileID FID);
+
+  /// \return Javascript for navigating the HTML report using j/k keys.
+  std::string generateKeyboardNavigationJavascript();
+
+private:
+
+  /// \return Javascript for displaying shortcuts help;
+  std::string showHelpJavascript();
 };
 
 } // end anonymous namespace
@@ -320,6 +330,115 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   return os.str();
 }
 
+/// Write executed lines from \p D in JSON format into \p os.
+static void serializeExecutedLines(
+    const PathDiagnostic &D,
+    const PathPieces &path,
+    llvm::raw_string_ostream &os) {
+
+  // Copy executed lines from path diagnostics.
+  std::map<unsigned, std::set<unsigned>> ExecutedLines;
+  for (auto I = D.executedLines_begin(),
+            E = D.executedLines_end(); I != E; ++I) {
+    std::set<unsigned> &LinesInFile = ExecutedLines[I->first];
+    for (unsigned LineNo : I->second) {
+      LinesInFile.insert(LineNo);
+    }
+  }
+
+  // We need to include all lines for which any kind of diagnostics appears.
+  for (const auto &P : path) {
+    FullSourceLoc Loc = P->getLocation().asLocation().getExpansionLoc();
+    FileID FID = Loc.getFileID();
+    unsigned LineNo = Loc.getLineNumber();
+    ExecutedLines[FID.getHashValue()].insert(LineNo);
+  }
+
+  os << "var relevant_lines = {";
+  for (auto I = ExecutedLines.begin(),
+            E = ExecutedLines.end(); I != E; ++I) {
+    if (I != ExecutedLines.begin())
+      os << ", ";
+
+    os << "\"" << I->first << "\": {";
+    for (unsigned LineNo : I->second) {
+      if (LineNo != *(I->second.begin()))
+        os << ", ";
+
+      os << "\"" << LineNo << "\": 1";
+    }
+    os << "}";
+  }
+
+  os << "};";
+}
+
+/// \return JavaScript for an option to only show relevant lines.
+static std::string showRelevantLinesJavascript(
+      const PathDiagnostic &D, const PathPieces &path) {
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  os << "<script type='text/javascript'>\n";
+  serializeExecutedLines(D, path, os);
+  os << R"<<<(
+
+var filterCounterexample = function (hide) {
+  var tables = document.getElementsByClassName("code");
+  for (var t=0; t<tables.length; t++) {
+    var table = tables[t];
+    var file_id = table.getAttribute("data-fileid");
+    var lines_in_fid = relevant_lines[file_id];
+    if (!lines_in_fid) {
+      lines_in_fid = {};
+    }
+    var lines = table.getElementsByClassName("codeline");
+    for (var i=0; i<lines.length; i++) {
+        var el = lines[i];
+        var lineNo = el.getAttribute("data-linenumber");
+        if (!lines_in_fid[lineNo]) {
+          if (hide) {
+            el.setAttribute("hidden", "");
+          } else {
+            el.removeAttribute("hidden");
+          }
+        }
+    }
+  }
+}
+
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "S") {
+    var checked = document.getElementsByName("showCounterexample")[0].checked;
+    filterCounterexample(!checked);
+    document.getElementsByName("showCounterexample")[0].checked = !checked;
+  } else {
+    return;
+  }
+  event.preventDefault();
+}, true);
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelector('input[name="showCounterexample"]').onchange=
+        function (event) {
+      filterCounterexample(this.checked);
+    };
+});
+</script>
+
+<form>
+    <input type="checkbox" name="showCounterexample" id="showCounterexample" />
+    <label for="showCounterexample">
+       Show only relevant lines
+    </label>
+</form>
+)<<<";
+
+  return os.str();
+}
+
 void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     const SourceManager& SMgr, const PathPieces& path, FileID FID,
     const FileEntry *Entry, const char *declName) {
@@ -336,6 +455,15 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 
   int LineNumber = path.back()->getLocation().asLocation().getExpansionLineNumber();
   int ColumnNumber = path.back()->getLocation().asLocation().getExpansionColumnNumber();
+
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), showHelpJavascript());
+
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
+                     generateKeyboardNavigationJavascript());
+
+  // Checkbox and javascript for filtering the output to the counterexample.
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
+                     showRelevantLinesJavascript(D, path));
 
   // Add the name of the file as an <h1> tag.
   {
@@ -378,9 +506,28 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
       os << "<tr><td></td><td>" << html::EscapeText(*I) << "</td></tr>\n";
     }
 
-    os << "</table>\n<!-- REPORTSUMMARYEXTRA -->\n"
-          "<h3>Annotated Source Code</h3>\n";
-
+    os << R"<<<(
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<p>Press <a href="#" onclick="toggleHelp(); return false;">'?'</a>
+   to see keyboard shortcuts</p>
+<input type="checkbox" class="spoilerhider" id="showinvocation" />
+<label for="showinvocation" >Show analyzer invocation</label>
+<div class="spoiler">clang -cc1 )<<<";
+    os << html::EscapeText(AnalyzerOpts.FullCompilerInvocation);
+    os << R"<<<(
+</div>
+<div id='tooltiphint' hidden="true">
+  <p>Keyboard shortcuts: </p>
+  <ul>
+    <li>Use 'j/k' keys for keyboard navigation</li>
+    <li>Use 'Shift+S' to show/hide relevant lines</li>
+    <li>Use '?' to toggle this window</li>
+  </ul>
+  <a href="#" onclick="toggleHelp(); return false;">Close</a>
+</div>
+)<<<";
     R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), os.str());
   }
 
@@ -437,6 +584,37 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
 }
+
+std::string HTMLDiagnostics::showHelpJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+
+var toggleHelp = function() {
+    var hint = document.querySelector("#tooltiphint");
+    var attributeName = "hidden";
+    if (hint.hasAttribute(attributeName)) {
+      hint.removeAttribute(attributeName);
+    } else {
+      hint.setAttribute("hidden", "true");
+    }
+};
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "?") {
+    toggleHelp();
+  } else {
+    return;
+  }
+  event.preventDefault();
+});
+</script>
+)<<<";
+}
+
+
+
 
 void HTMLDiagnostics::RewriteFile(Rewriter &R, const SourceManager& SMgr,
     const PathPieces& path, FileID FID) {
@@ -776,4 +954,83 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
     InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
 
   html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
+}
+
+std::string HTMLDiagnostics::generateKeyboardNavigationJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+var digitMatcher = new RegExp("[0-9]+");
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".PathNav > a").forEach(
+        function(currentValue, currentIndex) {
+            var hrefValue = currentValue.getAttribute("href");
+            currentValue.onclick = function() {
+                scrollTo(document.querySelector(hrefValue));
+                return false;
+            };
+        });
+});
+
+var findNum = function() {
+    var s = document.querySelector(".selected");
+    if (!s || s.id == "EndPath") {
+        return 0;
+    }
+    var out = parseInt(digitMatcher.exec(s.id)[0]);
+    return out;
+};
+
+var scrollTo = function(el) {
+    document.querySelectorAll(".selected").forEach(function(s) {
+        s.classList.remove("selected");
+    });
+    el.classList.add("selected");
+    window.scrollBy(0, el.getBoundingClientRect().top -
+        (window.innerHeight / 2));
+}
+
+var move = function(num, up, numItems) {
+  if (num == 1 && up || num == numItems - 1 && !up) {
+    return 0;
+  } else if (num == 0 && up) {
+    return numItems - 1;
+  } else if (num == 0 && !up) {
+    return 1 % numItems;
+  }
+  return up ? num - 1 : num + 1;
+}
+
+var numToId = function(num) {
+  if (num == 0) {
+    return document.getElementById("EndPath")
+  }
+  return document.getElementById("Path" + num);
+};
+
+var navigateTo = function(up) {
+  var numItems = document.querySelectorAll(".line > .msg").length;
+  var currentSelected = findNum();
+  var newSelected = move(currentSelected, up, numItems);
+  var newEl = numToId(newSelected, numItems);
+
+  // Scroll element into center.
+  scrollTo(newEl);
+};
+
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "j") {
+    navigateTo(/*up=*/false);
+  } else if (event.key == "k") {
+    navigateTo(/*up=*/true);
+  } else {
+    return;
+  }
+  event.preventDefault();
+}, true);
+</script>
+  )<<<";
 }

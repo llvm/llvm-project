@@ -72,4 +72,9 @@
     mov eax, ~(5 mod 3)
 // CHECK: movl  $-2, %eax
     mov eax, (-5 mod 3)
-
+// CHECK: movl  $-3, %eax
+    mov eax, ~(5 % 3)
+// CHECK: movl  $-2, %eax
+    mov eax, (-5 % 3)
+// CHECK: movl  $-2, %eax
+    mov eax, -5 % 3

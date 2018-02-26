@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep mul
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep mul
 
 define i32 @test1(i32 %a) {
         %tmp.1 = mul i32 %a, -2         ; <i32> [#uses=1]

@@ -54,7 +54,6 @@ struct S2 {
 
 void S2::f(int i) {
   (void)[&, &i, &i]{}; // expected-error 2{{'&' cannot precede a capture when the capture default is '&'}}
-  (void)[=, this]{ this->g(5); }; // expected-error{{'this' cannot be explicitly captured}}
   (void)[i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[&, i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[] mutable { }; // expected-error{{lambda requires '()' before 'mutable'}}

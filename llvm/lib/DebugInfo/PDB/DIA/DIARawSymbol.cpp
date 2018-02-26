@@ -439,6 +439,20 @@ void DIARawSymbol::getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes) const {
   Symbol->get_dataBytes(DataSize, &DataSize, bytes.data());
 }
 
+std::string
+DIARawSymbol::getUndecoratedNameEx(PDB_UndnameFlags Flags) const {
+  CComBSTR Result16;
+  if (S_OK != Symbol->get_undecoratedNameEx((DWORD)Flags, &Result16))
+    return std::string();
+
+  const char *SrcBytes = reinterpret_cast<const char *>(Result16.m_str);
+  llvm::ArrayRef<char> SrcByteArray(SrcBytes, Result16.ByteLength());
+  std::string Result8;
+  if (!llvm::convertUTF16ToUTF8String(SrcByteArray, Result8))
+    return std::string();
+  return Result8;
+}
+
 PDB_MemberAccess DIARawSymbol::getAccess() const {
   return PrivateGetDIAValue<DWORD, PDB_MemberAccess>(Symbol,
                                                      &IDiaSymbol::get_access);

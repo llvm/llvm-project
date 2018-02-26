@@ -10,7 +10,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Operator.h"
 
 namespace llvm {
 class BasicBlock;

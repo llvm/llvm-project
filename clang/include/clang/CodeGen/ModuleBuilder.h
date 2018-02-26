@@ -84,6 +84,10 @@ public:
   ///   code generator will schedule the entity for emission if a
   ///   definition has been registered with this code generator.
   llvm::Constant *GetAddrOfGlobal(GlobalDecl decl, bool isForDefinition);
+
+  /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
+  /// enable codegen in interactive processing environments.
+  llvm::Module* StartModule(llvm::StringRef ModuleName, llvm::LLVMContext &C);
 };
 
 /// CreateLLVMCodeGen - Create a CodeGenerator instance.

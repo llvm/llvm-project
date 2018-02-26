@@ -177,7 +177,8 @@ def read_options(header):
   for option in options:
     if not option.type in ['bool', 'unsigned', 'int', 'std::string',
                            'std::vector<std::string>',
-                           'std::vector<IncludeCategory>']:
+                           'std::vector<IncludeCategory>',
+                           'std::vector<RawStringFormat>']:
       if enums.has_key(option.type):
         option.enum = enums[option.type]
       elif nested_structs.has_key(option.type):

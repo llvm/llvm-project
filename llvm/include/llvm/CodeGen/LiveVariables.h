@@ -36,7 +36,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 namespace llvm {
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -relocation-model=pic | FileCheck %s
 ; This test is to ensure the TwoAddrInstruction pass chooses the proper operands to
 ; merge and generates fewer mov insns.
 

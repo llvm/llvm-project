@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+
 void foo() {
 }
 
@@ -135,11 +137,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo(); // expected-error {{loop iteration variable in the associated loop of 'omp distribute' directive may not be firstprivate, predetermined as private}}
   #pragma omp target
   #pragma omp teams private(argc) // expected-note {{defined as private}}
-  #pragma omp distribute firstprivate(argc) // expected-error {{private variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'}}
+  #pragma omp distribute firstprivate(argc) // expected-error {{firstprivate variable must be shared}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams reduction(+:argc) // expected-note {{defined as reduction}}
-  #pragma omp distribute firstprivate(argc) // expected-error {{reduction variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'}}
+  #pragma omp distribute firstprivate(argc) // expected-error {{firstprivate variable must be shared}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
@@ -147,11 +149,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
-  #pragma omp distribute lastprivate(argc), firstprivate(argc) // expected-error {{lastprivate variable cannot be firstprivate in '#pragma omp distribute'}} expected-note{{defined as lastprivate}}
+  #pragma omp distribute lastprivate(argc), firstprivate(argc) // expected-error {{lastprivate variable cannot be firstprivate}} expected-note{{defined as lastprivate}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
-#pragma omp distribute firstprivate(argc), lastprivate(argc)  // expected-error {{lastprivate variable cannot be firstprivate in '#pragma omp distribute'}} expected-note{{defined as firstprivate}}
+#pragma omp distribute firstprivate(argc), lastprivate(argc)  // expected-error {{firstprivate variable cannot be lastprivate}} expected-note{{defined as firstprivate}}
   for (i = 0; i < argc; ++i) foo();
   return 0;
 }

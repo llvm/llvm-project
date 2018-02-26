@@ -59,11 +59,11 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
+  void setGlobalsStreamIndex(uint32_t Index);
   void setPublicsStreamIndex(uint32_t Index);
   void setSymbolRecordStreamIndex(uint32_t Index);
 
   Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
-  Error addModuleSourceFile(StringRef Module, StringRef File);
   Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
   Expected<uint32_t> getSourceFileNameIndex(StringRef FileName);
 
@@ -106,13 +106,13 @@ private:
   uint16_t PdbDllRbld;
   uint16_t Flags;
   PDB_Machine MachineType;
+  uint32_t GlobalsStreamIndex = kInvalidStreamIndex;
   uint32_t PublicsStreamIndex = kInvalidStreamIndex;
   uint32_t SymRecordStreamIndex = kInvalidStreamIndex;
 
   const DbiStreamHeader *Header;
 
-  StringMap<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiMap;
-  std::vector<DbiModuleDescriptorBuilder *> ModiList;
+  std::vector<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiList;
 
   StringMap<uint32_t> SourceFileNames;
 

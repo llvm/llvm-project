@@ -1,11 +1,10 @@
 ; RUN: llc -march=hexagon < %s
-; Used to fail with "Cannot select: v2i32,ch = load 0x16c5890, 0x16f76e0, 0x16f76e0<LD2[undef](align=8), sext from v2i8>", 0x16c5890, 0x16f76e0, 0x16f76e0<LD2[undef](align=8), sext from v2i8>"
+;
+; Used to fail with "Cannot select: v2i32,ch = load 0x16c5890, 0x16f76e0, 0x16f76e0<LD2[undef](align=8), sext from v2i8>"
 
-; ModuleID = 'bugpoint-reduced-simplified.bc'
-target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-a0:0-n32"
 target triple = "hexagon-unknown-linux-gnu"
 
-define void @foo() nounwind {
+define void @foo(<2 x i8>* %p) nounwind {
 entry:
   br label %polly.loop_header
 
@@ -17,7 +16,7 @@ polly.loop_header:                                ; preds = %polly.loop_body, %e
   br i1 %0, label %polly.loop_body, label %polly.loop_after
 
 polly.loop_body:                                  ; preds = %polly.loop_header
-  %_p_vec_full = load <2 x i8>, <2 x i8>* undef, align 8
+  %_p_vec_full = load <2 x i8>, <2 x i8>* %p, align 8
   %1 = sext <2 x i8> %_p_vec_full to <2 x i32>
   %p_vec = mul <2 x i32> %1, <i32 3, i32 3>
   %mulp_vec = add <2 x i32> %p_vec, <i32 21, i32 21>

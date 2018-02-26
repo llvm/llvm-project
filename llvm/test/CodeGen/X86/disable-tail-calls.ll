@@ -1,6 +1,6 @@
-; RUN: llc < %s -march x86-64 | FileCheck %s --check-prefix=NO-OPTION
-; RUN: llc < %s -march x86-64 -disable-tail-calls | FileCheck %s --check-prefix=DISABLE-TRUE
-; RUN: llc < %s -march x86-64 -disable-tail-calls=false | FileCheck %s --check-prefix=DISABLE-FALSE
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=NO-OPTION
+; RUN: llc < %s -mtriple=x86_64-- -disable-tail-calls | FileCheck %s --check-prefix=DISABLE-TRUE
+; RUN: llc < %s -mtriple=x86_64-- -disable-tail-calls=false | FileCheck %s --check-prefix=DISABLE-FALSE
 
 ; Check that command line option "-disable-tail-calls" overrides function
 ; attribute "disable-tail-calls".

@@ -14,15 +14,14 @@
 #ifndef LLVM_ADT_POINTERINTPAIR_H
 #define LLVM_ADT_POINTERINTPAIR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
+#include <cstdint>
 #include <limits>
 
 namespace llvm {
 
 template <typename T> struct DenseMapInfo;
-
 template <typename PointerT, unsigned IntBits, typename PtrTraits>
 struct PointerIntPairInfo;
 
@@ -39,25 +38,24 @@ struct PointerIntPairInfo;
 /// for something else.  For example, this allows:
 ///   PointerIntPair<PointerIntPair<void*, 1, bool>, 1, bool>
 /// ... and the two bools will land in different bits.
-///
 template <typename PointerTy, unsigned IntBits, typename IntType = unsigned,
           typename PtrTraits = PointerLikeTypeTraits<PointerTy>,
           typename Info = PointerIntPairInfo<PointerTy, IntBits, PtrTraits>>
 class PointerIntPair {
-  intptr_t Value;
+  intptr_t Value = 0;
 
 public:
-  PointerIntPair() : Value(0) {}
+  constexpr PointerIntPair() = default;
+
   PointerIntPair(PointerTy PtrVal, IntType IntVal) {
     setPointerAndInt(PtrVal, IntVal);
   }
+
   explicit PointerIntPair(PointerTy PtrVal) { initWithPointer(PtrVal); }
 
   PointerTy getPointer() const { return Info::getPointer(Value); }
 
-  IntType getInt() const {
-    return (IntType)Info::getInt(Value);
-  }
+  IntType getInt() const { return (IntType)Info::getInt(Value); }
 
   void setPointer(PointerTy PtrVal) {
     Value = Info::updatePointer(Value, PtrVal);
@@ -88,6 +86,7 @@ public:
   }
 
   void *getOpaqueValue() const { return reinterpret_cast<void *>(Value); }
+
   void setFromOpaqueValue(void *Val) {
     Value = reinterpret_cast<intptr_t>(Val);
   }
@@ -108,14 +107,18 @@ public:
   bool operator==(const PointerIntPair &RHS) const {
     return Value == RHS.Value;
   }
+
   bool operator!=(const PointerIntPair &RHS) const {
     return Value != RHS.Value;
   }
+
   bool operator<(const PointerIntPair &RHS) const { return Value < RHS.Value; }
   bool operator>(const PointerIntPair &RHS) const { return Value > RHS.Value; }
+
   bool operator<=(const PointerIntPair &RHS) const {
     return Value <= RHS.Value;
   }
+
   bool operator>=(const PointerIntPair &RHS) const {
     return Value >= RHS.Value;
   }
@@ -180,44 +183,51 @@ struct isPodLike<PointerIntPair<PointerTy, IntBits, IntType>> {
 // Provide specialization of DenseMapInfo for PointerIntPair.
 template <typename PointerTy, unsigned IntBits, typename IntType>
 struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>> {
-  typedef PointerIntPair<PointerTy, IntBits, IntType> Ty;
+  using Ty = PointerIntPair<PointerTy, IntBits, IntType>;
+
   static Ty getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<Ty>::NumLowBitsAvailable;
     return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
   }
+
   static Ty getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= PointerLikeTypeTraits<PointerTy>::NumLowBitsAvailable;
     return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
   }
+
   static unsigned getHashValue(Ty V) {
     uintptr_t IV = reinterpret_cast<uintptr_t>(V.getOpaqueValue());
     return unsigned(IV) ^ unsigned(IV >> 9);
   }
+
   static bool isEqual(const Ty &LHS, const Ty &RHS) { return LHS == RHS; }
 };
 
 // Teach SmallPtrSet that PointerIntPair is "basically a pointer".
 template <typename PointerTy, unsigned IntBits, typename IntType,
           typename PtrTraits>
-class PointerLikeTypeTraits<
+struct PointerLikeTypeTraits<
     PointerIntPair<PointerTy, IntBits, IntType, PtrTraits>> {
-public:
   static inline void *
   getAsVoidPointer(const PointerIntPair<PointerTy, IntBits, IntType> &P) {
     return P.getOpaqueValue();
   }
+
   static inline PointerIntPair<PointerTy, IntBits, IntType>
   getFromVoidPointer(void *P) {
     return PointerIntPair<PointerTy, IntBits, IntType>::getFromOpaqueValue(P);
   }
+
   static inline PointerIntPair<PointerTy, IntBits, IntType>
   getFromVoidPointer(const void *P) {
     return PointerIntPair<PointerTy, IntBits, IntType>::getFromOpaqueValue(P);
   }
+
   enum { NumLowBitsAvailable = PtrTraits::NumLowBitsAvailable - IntBits };
 };
 
 } // end namespace llvm
-#endif
+
+#endif // LLVM_ADT_POINTERINTPAIR_H

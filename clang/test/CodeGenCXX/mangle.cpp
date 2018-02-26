@@ -893,7 +893,8 @@ namespace test39 {
     struct {} a;
   } *foo;
   template<typename T> void func(T) {}
-  void test(foo x) {
+  void test() {
+    foo x;
     func(x->a);
   }
 }

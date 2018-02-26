@@ -413,10 +413,19 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                      type);
 }
 
+ConditionTruthVal SValBuilder::areEqual(ProgramStateRef state, SVal lhs,
+                                        SVal rhs) {
+  return state->isNonNull(evalEQ(state, lhs, rhs));
+}
+
+SVal SValBuilder::evalEQ(ProgramStateRef state, SVal lhs, SVal rhs) {
+  return evalBinOp(state, BO_EQ, lhs, rhs, getConditionType());
+}
+
 DefinedOrUnknownSVal SValBuilder::evalEQ(ProgramStateRef state,
                                          DefinedOrUnknownSVal lhs,
                                          DefinedOrUnknownSVal rhs) {
-  return evalBinOp(state, BO_EQ, lhs, rhs, getConditionType())
+  return evalEQ(state, static_cast<SVal>(lhs), static_cast<SVal>(rhs))
       .castAs<DefinedOrUnknownSVal>();
 }
 

@@ -23,6 +23,9 @@ namespace Array {
   A<const char*, &(&x)[1]> h; // expected-error {{refers to subobject '&x + 1'}}
   A<const char*, 0> i; // expected-error {{not allowed in a converted constant}}
   A<const char*, nullptr> j;
+
+  extern char aub[];
+  A<char[], aub> k;
 }
 
 namespace Function {
@@ -235,6 +238,10 @@ namespace Auto {
     constexpr char s[] = "test";
     template<const auto* p> struct S { };
     S<s> p;
+
+    template<typename R, typename P, R F(P)> struct A {};
+    template<typename R, typename P, R F(P)> void x(A<R, P, F> a);
+    void g(int) { x(A<void, int, &g>()); }
   }
 
   namespace DecltypeAuto {

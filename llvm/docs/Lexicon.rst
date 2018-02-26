@@ -109,6 +109,11 @@ G
     Garbage Collection. The practice of using reachability analysis instead of
     explicit memory management to reclaim unused memory.
 
+**GEP**
+    ``GetElementPtr``. An LLVM IR instruction that is used to get the address
+    of a subelement of an aggregate data structure. It is documented in detail
+    `here <http://llvm.org/docs/GetElementPtr.html>`_.
+
 **GVN**
     Global Value Numbering. GVN is a pass that partitions values computed by a
     function into congruence classes. Values ending up in the same congruence

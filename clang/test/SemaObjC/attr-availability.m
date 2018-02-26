@@ -196,7 +196,7 @@ __attribute__((availability(macosx, introduced = 10.8))) @interface PartialI2
 @end
 
 #if defined(WARN_PARTIAL)
-// expected-warning@+2 {{'PartialI2' is partial: introduced in macOS 10.8}} expected-note@+2 {{annotate 'partialinter1' with an availability attribute to silence}}
+// expected-warning@+2 {{'PartialI2' is only available on macOS 10.8 or newer}} expected-note@+2 {{annotate 'partialinter1' with an availability attribute to silence}}
 #endif
 void partialinter1(PartialI2* p) {
 }
@@ -204,7 +204,7 @@ void partialinter1(PartialI2* p) {
 @class PartialI2;
 
 #ifdef WARN_PARTIAL
-// expected-warning@+2 {{'PartialI2' is partial: introduced in macOS 10.8}} expected-note@+2 {{annotate 'partialinter2' with an availability attribute to silence}}
+// expected-warning@+2 {{'PartialI2' is only available on macOS 10.8 or newer}} expected-note@+2 {{annotate 'partialinter2' with an availability attribute to silence}}
 #endif
 void partialinter2(PartialI2* p) {
 }

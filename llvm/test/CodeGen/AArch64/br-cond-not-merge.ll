@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
-; RUN: llc -mtriple=aarch64 -verify-machineinstrs -O0 -fast-isel=0 < %s | FileCheck --check-prefix=CHECK --check-prefix=NOOPT %s
+; RUN: llc -mtriple=aarch64 -verify-machineinstrs -O0 -fast-isel=0 -global-isel=false < %s | FileCheck --check-prefix=CHECK --check-prefix=NOOPT %s
 
 declare void @foo()
 

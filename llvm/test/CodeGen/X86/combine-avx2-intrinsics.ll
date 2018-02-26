@@ -6,7 +6,7 @@
 
 define <16 x i16> @test_x86_avx2_pblendw(<16 x i16> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pblendw:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %res = call <16 x i16> @llvm.x86.avx2.pblendw(<16 x i16> %a0, <16 x i16> %a0, i32 7)
   ret <16 x i16> %res
@@ -14,7 +14,7 @@ define <16 x i16> @test_x86_avx2_pblendw(<16 x i16> %a0) {
 
 define <4 x i32> @test_x86_avx2_pblendd_128(<4 x i32> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pblendd_128:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %res = call <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32> %a0, <4 x i32> %a0, i32 7)
   ret <4 x i32> %res
@@ -22,7 +22,7 @@ define <4 x i32> @test_x86_avx2_pblendd_128(<4 x i32> %a0) {
 
 define <8 x i32> @test_x86_avx2_pblendd_256(<8 x i32> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pblendd_256:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %res = call <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32> %a0, <8 x i32> %a0, i32 7)
   ret <8 x i32> %res
@@ -30,7 +30,7 @@ define <8 x i32> @test_x86_avx2_pblendd_256(<8 x i32> %a0) {
 
 define <16 x i16> @test2_x86_avx2_pblendw(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: test2_x86_avx2_pblendw:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %res = call <16 x i16> @llvm.x86.avx2.pblendw(<16 x i16> %a0, <16 x i16> %a1, i32 0)
   ret <16 x i16> %res
@@ -38,7 +38,7 @@ define <16 x i16> @test2_x86_avx2_pblendw(<16 x i16> %a0, <16 x i16> %a1) {
 
 define <4 x i32> @test2_x86_avx2_pblendd_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: test2_x86_avx2_pblendd_128:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %res = call <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32> %a0, <4 x i32> %a1, i32 0)
   ret <4 x i32> %res
@@ -46,7 +46,7 @@ define <4 x i32> @test2_x86_avx2_pblendd_128(<4 x i32> %a0, <4 x i32> %a1) {
 
 define <8 x i32> @test2_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: test2_x86_avx2_pblendd_256:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %res = call <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32> %a0, <8 x i32> %a1, i32 0)
   ret <8 x i32> %res
@@ -54,7 +54,7 @@ define <8 x i32> @test2_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 
 define <16 x i16> @test3_x86_avx2_pblendw(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: test3_x86_avx2_pblendw:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <16 x i16> @llvm.x86.avx2.pblendw(<16 x i16> %a0, <16 x i16> %a1, i32 -1)
@@ -63,7 +63,7 @@ define <16 x i16> @test3_x86_avx2_pblendw(<16 x i16> %a0, <16 x i16> %a1) {
 
 define <4 x i32> @test3_x86_avx2_pblendd_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: test3_x86_avx2_pblendd_128:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32> %a0, <4 x i32> %a1, i32 -1)
@@ -72,7 +72,7 @@ define <4 x i32> @test3_x86_avx2_pblendd_128(<4 x i32> %a0, <4 x i32> %a1) {
 
 define <8 x i32> @test3_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: test3_x86_avx2_pblendd_256:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32> %a0, <8 x i32> %a1, i32 -1)

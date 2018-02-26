@@ -77,6 +77,8 @@ def err_imported_module_not_found : Error<
     "module '%0' in AST file '%1' (imported by AST file '%2') "
     "is not defined in any loaded module map file; "
     "maybe you need to load '%3'?">, DefaultFatal;
+def note_imported_by_pch_module_not_found : Note<
+    "consider adding '%0' to the header search path">;
 def err_imported_module_modmap_changed : Error<
     "module '%0' imported by AST file '%1' found in a different module map file"
     " (%2) than when the importing AST file was built (%3)">, DefaultFatal;
@@ -121,6 +123,45 @@ def note_second_module_difference : Note<
 
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
+
+def err_module_odr_violation_definition_data : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%4 base %plural{1:class|:classes}4|"
+  "%4 virtual base %plural{1:class|:classes}4|"
+  "%ordinal4 base class with type %5|"
+  "%ordinal4 %select{non-virtual|virtual}5 base class %6|"
+  "%ordinal4 base class %5 with "
+  "%select{public|protected|private|no}6 access specifier}3">;
+
+def note_module_odr_violation_definition_data : Note <
+  "but in '%0' found "
+  "%select{"
+  "%2 base %plural{1:class|:classes}2|"
+  "%2 virtual base %plural{1:class|:classes}2|"
+  "%ordinal2 base class with different type %3|"
+  "%ordinal2 %select{non-virtual|virtual}3 base class %4|"
+  "%ordinal2 base class %3 with "
+  "%select{public|protected|private|no}4 access specifier}1">;
+
+def err_module_odr_violation_template_parameter : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "unnamed template parameter|"
+  "template parameter %4|"
+  "template parameter with %select{no |}4default argument|"
+  "template parameter with default argument}3">;
+
+
+def note_module_odr_violation_template_parameter : Note <
+  "but in '%0' found "
+  "%select{"
+  "unnamed template parameter %2|"
+  "template parameter %2|"
+  "template parameter with %select{no |}2default argument|"
+  "template parameter with different default argument}1">;
 
 def err_module_odr_violation_mismatch_decl : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -227,6 +268,29 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "friend %select{class|function}2|"
   "friend %2|"
   "friend function %2|"
+  "}1">;
+
+def err_module_odr_violation_function : Error<
+  "%q0 has different definitions in different modules; "
+  "%select{definition in module '%2'|defined here}1 "
+  "first difference is "
+  "%select{"
+  "return type is %4|"
+  "%ordinal4 parameter with name %5|"
+  "%ordinal4 parameter with type %5%select{| decayed from %7}6|"
+  "%ordinal4 parameter with%select{out|}5 a default argument|"
+  "%ordinal4 parameter with a default argument|"
+  "function body"
+  "}3">;
+
+def note_module_odr_violation_function : Note<"but in '%0' found "
+  "%select{"
+  "different return type %2|"
+  "%ordinal2 parameter with name %3|"
+  "%ordinal2 parameter with type %3%select{| decayed from %5}4|"
+  "%ordinal2 parameter with%select{out|}3 a default argument|"
+  "%ordinal2 parameter with a different default argument|"
+  "a different body"
   "}1">;
 
 def err_module_odr_violation_mismatch_decl_unknown : Error<

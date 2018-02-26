@@ -29,6 +29,8 @@ class CXXBoolLiteralExpr;
 
 namespace ento {
 
+class ConditionTruthVal;
+
 class SValBuilder {
   virtual void anchor();
 protected:
@@ -124,7 +126,12 @@ public:
 
   SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                  SVal lhs, SVal rhs, QualType type);
-  
+
+  /// \return Whether values in \p lhs and \p rhs are equal at \p state.
+  ConditionTruthVal areEqual(ProgramStateRef state, SVal lhs, SVal rhs);
+
+  SVal evalEQ(ProgramStateRef state, SVal lhs, SVal rhs);
+
   DefinedOrUnknownSVal evalEQ(ProgramStateRef state, DefinedOrUnknownSVal lhs,
                               DefinedOrUnknownSVal rhs);
 

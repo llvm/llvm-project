@@ -18,7 +18,6 @@
 //
 #include "xray-registry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -46,4 +45,5 @@ int main(int argc, char *argv[]) {
 
   // If all else fails, we still print the usage message.
   cl::PrintHelpMessage(false, true);
+  return 0;
 }

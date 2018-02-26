@@ -36,7 +36,7 @@ enum LexerState {
 
 class FormatTokenLexer {
 public:
-  FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
+  FormatTokenLexer(const SourceManager &SourceMgr, FileID ID, unsigned Column,
                    const FormatStyle &Style, encoding::Encoding Encoding);
 
   ArrayRef<FormatToken *> lex();
@@ -72,6 +72,8 @@ private:
   // an opening ${. It also maintains a stack of lexing contexts to handle
   // nested template parts by balancing curly braces.
   void handleTemplateStrings();
+
+  void tryParsePythonComment();
 
   bool tryMerge_TMacro();
 

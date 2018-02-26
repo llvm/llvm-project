@@ -14,14 +14,15 @@
 #include "llvm/Support/ThreadPool.h"
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #if LLVM_ENABLE_THREADS
 
-// Default to std::thread::hardware_concurrency
-ThreadPool::ThreadPool() : ThreadPool(std::thread::hardware_concurrency()) {}
+// Default to hardware_concurrency
+ThreadPool::ThreadPool() : ThreadPool(hardware_concurrency()) {}
 
 ThreadPool::ThreadPool(unsigned ThreadCount)
     : ActiveThreads(0), EnableFlag(true) {
@@ -46,8 +47,8 @@ ThreadPool::ThreadPool(unsigned ThreadCount)
           // in order for wait() to properly detect that even if the queue is
           // empty, there is still a task in flight.
           {
-            ++ActiveThreads;
             std::unique_lock<std::mutex> LockGuard(CompletionLock);
+            ++ActiveThreads;
           }
           Task = std::move(Tasks.front());
           Tasks.pop();

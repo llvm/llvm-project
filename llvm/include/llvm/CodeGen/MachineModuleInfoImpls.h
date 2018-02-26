@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/MachineModuleInfoImpls.h -------------------*- C++ -*-===//
+//===- llvm/CodeGen/MachineModuleInfoImpls.h --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,11 +15,12 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 #define LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 
-#include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/ValueTypes.h"
+#include <cassert>
 
 namespace llvm {
+
 class MCSymbol;
 
 /// MachineModuleInfoMachO - This is a MachineModuleInfoImpl implementation
@@ -36,6 +37,7 @@ class MachineModuleInfoMachO : public MachineModuleInfoImpl {
   DenseMap<MCSymbol *, StubValueTy> ThreadLocalGVStubs;
 
   virtual void anchor(); // Out of line virtual method.
+
 public:
   MachineModuleInfoMachO(const MachineModuleInfo &) {}
 
@@ -64,6 +66,7 @@ class MachineModuleInfoELF : public MachineModuleInfoImpl {
   DenseMap<MCSymbol *, StubValueTy> GVStubs;
 
   virtual void anchor(); // Out of line virtual method.
+
 public:
   MachineModuleInfoELF(const MachineModuleInfo &) {}
 
@@ -79,4 +82,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H

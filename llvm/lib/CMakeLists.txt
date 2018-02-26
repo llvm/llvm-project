@@ -2,6 +2,7 @@
 # CMakeLists.txt
 
 add_subdirectory(IR)
+add_subdirectory(FuzzMutate)
 add_subdirectory(IRReader)
 add_subdirectory(CodeGen)
 add_subdirectory(BinaryFormat)
@@ -24,3 +25,4 @@ add_subdirectory(Passes)
 add_subdirectory(ToolDrivers)
 add_subdirectory(XRay)
 add_subdirectory(Testing)
+add_subdirectory(WindowsManifest)

@@ -45,3 +45,19 @@
 
 
 // RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:11:12 %s | FileCheck -check-prefix=CHECK-CC2 %s
+
+
+void useClasses() {
+  int i = 0;
+  [Int3 message:1];
+}
+
+// RUN: c-index-test -code-completion-at=%s:51:11 %s | FileCheck -check-prefix=CHECK-USE %s
+// RUN: c-index-test -code-completion-at=%s:52:17 %s | FileCheck -check-prefix=CHECK-USE %s
+// CHECK-USE: ObjCInterfaceDecl:{TypedText Int2} (50)
+// CHECK-USE: ObjCInterfaceDecl:{TypedText Int3} (50)
+// CHECK-USE-NOT: Int1
+// CHECK-USE-NOT: Int4
+
+// Caching should work too:
+// RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:51:11 %s | FileCheck -check-prefix=CHECK-USE %s

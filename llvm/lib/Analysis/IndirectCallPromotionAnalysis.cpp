@@ -17,7 +17,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
@@ -32,25 +31,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pgo-icall-prom-analysis"
 
-// The minimum call count for the direct-call target to be considered as the
-// promotion candidate.
-static cl::opt<unsigned>
-    ICPCountThreshold("icp-count-threshold", cl::Hidden, cl::ZeroOrMore,
-                      cl::init(1000),
-                      cl::desc("The minimum count to the direct call target "
-                               "for the promotion"));
+// The percent threshold for the direct-call target (this call site vs the
+// remaining call count) for it to be considered as the promotion target.
+static cl::opt<unsigned> ICPRemainingPercentThreshold(
+    "icp-remaining-percent-threshold", cl::init(30), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("The percentage threshold against remaining unpromoted indirect "
+             "call count for the promotion"));
 
 // The percent threshold for the direct-call target (this call site vs the
 // total call count) for it to be considered as the promotion target.
 static cl::opt<unsigned>
-    ICPPercentThreshold("icp-percent-threshold", cl::init(30), cl::Hidden,
-                        cl::ZeroOrMore,
-                        cl::desc("The percentage threshold for the promotion"));
+    ICPTotalPercentThreshold("icp-total-percent-threshold", cl::init(5),
+                             cl::Hidden, cl::ZeroOrMore,
+                             cl::desc("The percentage threshold against total "
+                                      "count for the promotion"));
 
 // Set the maximum number of targets to promote for a single indirect-call
 // callsite.
 static cl::opt<unsigned>
-    MaxNumPromotions("icp-max-prom", cl::init(2), cl::Hidden, cl::ZeroOrMore,
+    MaxNumPromotions("icp-max-prom", cl::init(3), cl::Hidden, cl::ZeroOrMore,
                      cl::desc("Max number of promotions for a single indirect "
                               "call callsite"));
 
@@ -59,12 +58,10 @@ ICallPromotionAnalysis::ICallPromotionAnalysis() {
 }
 
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
-                                                   uint64_t TotalCount) {
-  if (Count < ICPCountThreshold)
-    return false;
-
-  unsigned Percentage = (Count * 100) / TotalCount;
-  return (Percentage >= ICPPercentThreshold);
+                                                   uint64_t TotalCount,
+                                                   uint64_t RemainingCount) {
+  return Count * 100 >= ICPRemainingPercentThreshold * RemainingCount &&
+         Count * 100 >= ICPTotalPercentThreshold * TotalCount;
 }
 
 // Indirect-call promotion heuristic. The direct targets are sorted based on
@@ -78,17 +75,18 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
                << "\n");
 
   uint32_t I = 0;
+  uint64_t RemainingCount = TotalCount;
   for (; I < MaxNumPromotions && I < NumVals; I++) {
     uint64_t Count = ValueDataRef[I].Count;
-    assert(Count <= TotalCount);
+    assert(Count <= RemainingCount);
     DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
                  << "  Target_func: " << ValueDataRef[I].Value << "\n");
 
-    if (!isPromotionProfitable(Count, TotalCount)) {
+    if (!isPromotionProfitable(Count, TotalCount, RemainingCount)) {
       DEBUG(dbgs() << " Not promote: Cold target.\n");
       return I;
     }
-    TotalCount -= Count;
+    RemainingCount -= Count;
   }
   return I;
 }

@@ -95,8 +95,8 @@ void __ubsan::__ubsan_handle_dynamic_type_cache_miss_abort(
 }
 
 namespace __ubsan {
-void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
-                      bool ValidVtable, ReportOptions Opts) {
+void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
+                                 bool ValidVtable, ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET = ErrorType::CFIBadType;
 

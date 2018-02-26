@@ -3,8 +3,7 @@
 target triple = "hexagon"
 
 ; CHECK-LABEL: test1:
-; CHECK: [[REG1:(r[0-9]+)]] = ##875770417
-; CHECK-DAG: memw(r29+#4) = [[REG1]]
+; CHECK-DAG: memw(r29+#4) = ##875770417
 ; CHECK-DAG: memw(r29+#8) = #51
 ; CHECK-DAG: memh(r29+#12) = #50
 ; CHECK-DAG: memb(r29+#15) = #49

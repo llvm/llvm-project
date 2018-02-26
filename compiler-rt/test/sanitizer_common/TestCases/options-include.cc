@@ -34,6 +34,8 @@
 // RUN: %env_tool_opts=include_if_exists='"%t.options-not-found.%b"' %run %t 2>&1 | tee %t.out
 // RUN: FileCheck %s --check-prefix=CHECK-WITHOUT-HELP --check-prefix=CHECK-FOUND < %t.out
 
+// Android tests run on remote device so includes will not work.
+// UNSUPPORTED: android
 
 #include <stdio.h>
 

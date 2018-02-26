@@ -1,8 +1,10 @@
 // RUN: %clangxx -DSHARED %s -shared -o %T/get_module_and_offset_for_pc.so -fPIC
 // RUN: %clangxx -DSO_DIR=\"%T\" -O0 %s -ldl -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
+
 // UNSUPPORTED: i386-darwin
-//
+// XFAIL: android
+
 // Tests __sanitizer_get_module_and_offset_for_pc.
 
 #include <assert.h>

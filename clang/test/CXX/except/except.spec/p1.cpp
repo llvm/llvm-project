@@ -86,3 +86,12 @@ namespace PR11084 {
     f<0>(); // expected-note{{in instantiation of function template specialization}}
   }
 }
+
+namespace FuncTmplNoexceptError {
+  int a = 0;
+  // expected-error@+1{{argument to noexcept specifier must be a constant expression}}
+  template <class T> T f() noexcept(a++){ return {};}
+  void g(){
+    f<int>();
+  }
+};

@@ -79,5 +79,11 @@ Optional<int64_t> getConstantVRegVal(unsigned VReg,
 const ConstantFP* getConstantFPVRegVal(unsigned VReg,
                                        const MachineRegisterInfo &MRI);
 
+/// See if Reg is defined by an single def instruction that is
+/// Opcode. Also try to do trivial folding if it's a COPY with
+/// same types. Returns null otherwise.
+MachineInstr *getOpcodeDef(unsigned Opcode, unsigned Reg,
+                           const MachineRegisterInfo &MRI);
+
 } // End namespace llvm.
 #endif

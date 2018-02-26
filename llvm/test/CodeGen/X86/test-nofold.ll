@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah | FileCheck %s
 ; rdar://5752025
 
 ; We want:

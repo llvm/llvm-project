@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
 #if LIBFUZZER_APPLE
-
+#include "FuzzerCommand.h"
 #include "FuzzerIO.h"
 #include <mutex>
 #include <signal.h>
@@ -38,7 +38,8 @@ static sigset_t OldBlockedSignalsSet;
 // signal handlers when the first thread enters and restores them when the last
 // thread finishes execution of the function and ensures this is not racey by
 // using a mutex.
-int ExecuteCommand(const std::string &Command) {
+int ExecuteCommand(const Command &Cmd) {
+  std::string CmdLine = Cmd.toString();
   posix_spawnattr_t SpawnAttributes;
   if (posix_spawnattr_init(&SpawnAttributes))
     return -1;
@@ -98,7 +99,7 @@ int ExecuteCommand(const std::string &Command) {
 
   pid_t Pid;
   char **Environ = environ; // Read from global
-  const char *CommandCStr = Command.c_str();
+  const char *CommandCStr = CmdLine.c_str();
   char *const Argv[] = {
     strdup("sh"),
     strdup("-c"),

@@ -58,7 +58,7 @@ GNU AR is able to parse the unaligned member and warns about the member with
 the unknown format. We should probably simply warn on both. For now we just
 produce an error for the unknown format.
 RUN: not llvm-nm %p/Inputs/corrupt-archive.a 2>&1 | FileCheck %s -check-prefix CORRUPT
-CORRUPT: corrupt-archive.a(trivial-object-test2.elf-x86-64) Invalid data was encountered while parsing the file
+CORRUPT: corrupt-archive.a(trivial-object-test2.elf-x86-64) Insufficient alignment
 
 
 RUN: llvm-nm %p/Inputs/thin.a | FileCheck %s -check-prefix THIN

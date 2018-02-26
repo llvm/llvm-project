@@ -9,8 +9,8 @@
 ; CHECK: DW_TAG_inlined_subroutine
 ; CHECK: DW_TAG_variable
 ; CHECK:   DW_AT_location [DW_FORM_sec_offset] ({{.*}}
-; CHECK:      0x0000000000000004 - 0x0000000000000004: DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x8
-; CHECK:      0x0000000000000004 - 0x0000000000000014: DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK:      [0x00000004, 0x00000004): DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x8
+; CHECK:      [0x00000004, 0x00000014): DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
 
 ; Created form the following test case (PR26163) with
 ; clang -cc1 -triple armv4t--freebsd11.0-gnueabi -emit-obj -debug-info-kind=standalone -O2 -x c test.c
@@ -20,26 +20,26 @@
 ; 	long long tv_sec;
 ; 	int tv_usec;
 ; };
-; 
+;
 ; void *memset(void *, int, size_t);
 ; void foo(void);
-; 
+;
 ; static void
 ; bar(int value)
 ; {
 ; 	struct timeval lifetime;
-; 
+;
 ; 	memset(&lifetime, 0, sizeof(struct timeval));
 ; 	lifetime.tv_sec = value;
-; 
+;
 ; 	foo();
 ; }
-; 
+;
 ; int
 ; parse_config_file(void)
 ; {
 ; 	int value;
-; 
+;
 ; 	bar(value);
 ; 	return (0);
 ; }

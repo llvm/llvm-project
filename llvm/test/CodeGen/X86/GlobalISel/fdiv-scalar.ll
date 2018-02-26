@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 define float @test_fdiv_float(float %arg1, float %arg2) {
 ; ALL-LABEL: test_fdiv_float:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    divss %xmm1, %xmm0
 ; ALL-NEXT:    retq
   %ret = fdiv float %arg1, %arg2
@@ -11,7 +11,7 @@ define float @test_fdiv_float(float %arg1, float %arg2) {
 
 define double @test_fdiv_double(double %arg1, double %arg2) {
 ; ALL-LABEL: test_fdiv_double:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    divsd %xmm1, %xmm0
 ; ALL-NEXT:    retq
   %ret = fdiv double %arg1, %arg2

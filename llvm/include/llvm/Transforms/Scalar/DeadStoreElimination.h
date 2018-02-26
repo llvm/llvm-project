@@ -1,4 +1,4 @@
-//===- DeadStoreElimination.h - Fast Dead Store Elimination -------------===//
+//===- DeadStoreElimination.h - Fast Dead Store Elimination -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,13 +15,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_DSE_H
-#define LLVM_TRANSFORMS_SCALAR_DSE_H
+#ifndef LLVM_TRANSFORMS_SCALAR_DEADSTOREELIMINATION_H
+#define LLVM_TRANSFORMS_SCALAR_DEADSTOREELIMINATION_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class Function;
 
 /// This class implements a trivial dead store elimination. We consider
 /// only the redundant stores that are local to a single Basic Block.
@@ -29,6 +30,7 @@ class DSEPass : public PassInfoMixin<DSEPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
-}
 
-#endif // LLVM_TRANSFORMS_SCALAR_DSE_H
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_SCALAR_DEADSTOREELIMINATION_H

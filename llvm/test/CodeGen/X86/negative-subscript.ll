@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; rdar://6559995
 
 @a = external global [255 x i8*], align 32

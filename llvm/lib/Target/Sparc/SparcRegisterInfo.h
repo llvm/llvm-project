@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_SPARC_SPARCREGISTERINFO_H
 #define LLVM_LIB_TARGET_SPARC_SPARCREGISTERINFO_H
 
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "SparcGenRegisterInfo.inc"

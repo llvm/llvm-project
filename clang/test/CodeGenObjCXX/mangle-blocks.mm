@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -emit-llvm -fblocks -o - -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 %s | FileCheck %s
 
-// CHECK: @_ZZZN26externally_visible_statics1S3fooEiEd_Ub0_E1k = linkonce_odr global i32 0
-// CHECK: @_ZZZN26externally_visible_statics10inlinefuncEvEUb0_E1i = linkonce_odr global i32 0
-// CHECK: @_ZZ26externally_visible_statics1S1xMUb0_E1j = linkonce_odr global i32 0
+// CHECK-DAG: @_ZZZN26externally_visible_statics1S3fooEiEd_Ub_E1k = linkonce_odr global i32 0
+// CHECK-DAG: @_ZZZN26externally_visible_statics10inlinefuncEvEUb_E1i = linkonce_odr global i32 0
+// CHECK-DAG: @_ZZZN26externally_visible_statics10inlinefuncEvEUb0_E1j = linkonce_odr global i32 0
+// CHECK-DAG: @_ZZ26externally_visible_statics1S1xMUb_E1j = linkonce_odr global i32 0
 
 int f();
 
@@ -67,6 +68,9 @@ namespace externally_visible_statics {
   inline void inlinefunc() {
     ^{
       static int i = f();
+    }();
+    ^{
+      static int j = f();
     }();
   }
   struct S {

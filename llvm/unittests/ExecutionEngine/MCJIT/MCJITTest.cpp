@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/MCJIT.h"
 #include "MCJITTestBase.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "gtest/gtest.h"

@@ -1,0 +1,57 @@
+RUN: mkdir -p %t
+RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t/T
+
+RUN: rm -rf %t/T0 %t/T1 %t/T2
+RUN: mkdir -p %t/T0 %t/T1 %t/T2
+RUN: echo F..... > %t/T0/1
+RUN: echo .U.... > %t/T0/2
+RUN: echo ..Z... > %t/T0/3
+
+# Test what happens if the control file is junk.
+
+RUN: echo JUNK > %t/MCF
+RUN: not %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=JUNK
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF
+RUN: not %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=JUNK
+JUNK: MERGE-OUTER: non-empty control file provided: {{.*}}MCF
+JUNK: MERGE-OUTER: bad control file, will overwrite it
+
+
+# Check valid control files
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=OK_0
+OK_0: MERGE-OUTER: control file ok, 3 files total, first not processed file 0
+OK_0: MERGE-OUTER: 3 new files with {{.*}} new features added
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF -save_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=SAVE_SUMMARY
+SAVE_SUMMARY: MERGE-OUTER: writing coverage summary for 3 files to {{.*}}/SUMMARY
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF -load_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=LOAD_SUMMARY
+LOAD_SUMMARY: MERGE-OUTER: coverage summary loaded from
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: echo STARTED 0 1 >> %t/MCF
+RUN: echo DONE 0 11 >> %t/MCF
+RUN: echo STARTED 1 2 >> %t/MCF
+RUN: echo DONE 1 12 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=OK_2
+OK_2: MERGE-OUTER: control file ok, 3 files total, first not processed file 2
+OK_2: MERGE-OUTER: 3 new files with {{.*}} new features added
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: echo STARTED 0 1 >> %t/MCF
+RUN: echo DONE 0 11 >> %t/MCF
+RUN: echo STARTED 1 2 >> %t/MCF
+RUN: echo DONE 1 12 >> %t/MCF
+RUN: echo STARTED 2 2 >> %t/MCF
+RUN: echo DONE 2 13 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=OK_3
+OK_3: MERGE-OUTER: nothing to do, merge has been completed before

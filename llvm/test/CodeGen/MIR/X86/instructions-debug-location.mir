@@ -59,7 +59,7 @@ stack:
 body: |
   bb.0.entry:
     liveins: %edi
-    ; CHECK: DBG_VALUE debug-use _, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK: DBG_VALUE debug-use %noreg, 0, !11, !DIExpression(), debug-location !12
     ; CHECK: %eax = COPY %0, debug-location !13
     ; CHECK: RETQ %eax, debug-location !13
     %0 = COPY %edi
@@ -82,9 +82,9 @@ body: |
     liveins: %edi
 
     %0 = COPY %edi
-  ; CHECK:      DBG_VALUE _, i32 0, !DIExpression(), !12
-  ; CHECK-NEXT: DBG_VALUE _, i64 -22, !DIExpression(), !12
-  ; CHECK-NEXT: DBG_VALUE _, i128 123492148938512984928424384934328985928, !DIExpression(), !12
+  ; CHECK:      DBG_VALUE %noreg, i32 0, !DIExpression(), !12
+  ; CHECK-NEXT: DBG_VALUE %noreg, i64 -22, !DIExpression(), !12
+  ; CHECK-NEXT: DBG_VALUE %noreg, i128 123492148938512984928424384934328985928, !DIExpression(), !12
     DBG_VALUE _, i32 0, !DIExpression(), !13
     DBG_VALUE _, i64 -22, !DIExpression(), !13
     DBG_VALUE _, i128 123492148938512984928424384934328985928, !DIExpression(), !13

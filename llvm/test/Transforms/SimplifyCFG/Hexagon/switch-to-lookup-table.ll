@@ -3,7 +3,7 @@
 ; RUN: opt -S -hexagon-emit-lookup-tables=false -O2 < %s | FileCheck %s -check-prefix=DISABLE
 
 
-; ENABLE: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5] 
+; ENABLE: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5]
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5]
 ; DISABLE : = phi i32 [ 19, %{{.*}} ], [ 5, %{{.*}} ], [ 12, %{{.*}} ], [ 22, %{{.*}} ], [ 14, %{{.*}} ], [ 20, %{{.*}} ], [ 9, %{{.*}} ]
 
@@ -59,4 +59,4 @@ return:                                           ; preds = %sw.default, %sw.bb5
   ret i32 %1
 }
 
-attributes #0 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="-hvx-double,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }

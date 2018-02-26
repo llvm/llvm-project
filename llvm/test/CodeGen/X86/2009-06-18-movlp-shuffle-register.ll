@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse,-sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse,-sse2 | FileCheck %s
 ; PR2484
 
 define <4 x float> @f4523(<4 x float> %a,<4 x float> %b) nounwind {

@@ -1,12 +1,11 @@
-; RUN: llc < %s -march=x86 -mtriple=i686-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-32
-; RUN: llc < %s -march=x86 -mtriple=i686-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-32
-; RUN: llc < %s -march=x86-64 -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-64
-; RUN: llc < %s -march=x86-64 -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-64
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-32
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-32
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-64
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-64
 ; PR3379
 ; XFAIL: *
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
-target triple = "x86_64-unknown-linux-gnu"
 @G = external global i32              ; <i32*> [#uses=1]
 
 declare void @bar(...)

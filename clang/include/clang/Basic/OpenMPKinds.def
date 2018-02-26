@@ -274,6 +274,7 @@ OPENMP_CLAUSE(from, OMPFromClause)
 OPENMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
 OPENMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
 OPENMP_CLAUSE(task_reduction,  OMPTaskReductionClause)
+OPENMP_CLAUSE(in_reduction,  OMPInReductionClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -434,6 +435,7 @@ OPENMP_TASK_CLAUSE(untied)
 OPENMP_TASK_CLAUSE(mergeable)
 OPENMP_TASK_CLAUSE(depend)
 OPENMP_TASK_CLAUSE(priority)
+OPENMP_TASK_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'atomic'.
 OPENMP_ATOMIC_CLAUSE(read)
@@ -452,6 +454,7 @@ OPENMP_TARGET_CLAUSE(depend)
 OPENMP_TARGET_CLAUSE(defaultmap)
 OPENMP_TARGET_CLAUSE(firstprivate)
 OPENMP_TARGET_CLAUSE(is_device_ptr)
+OPENMP_TARGET_CLAUSE(reduction)
 
 // Clauses allowed for OpenMP directive 'target data'.
 OPENMP_TARGET_DATA_CLAUSE(if)
@@ -557,6 +560,7 @@ OPENMP_TASKLOOP_CLAUSE(grainsize)
 OPENMP_TASKLOOP_CLAUSE(nogroup)
 OPENMP_TASKLOOP_CLAUSE(num_tasks)
 OPENMP_TASKLOOP_CLAUSE(reduction)
+OPENMP_TASKLOOP_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'taskloop simd'.
 OPENMP_TASKLOOP_SIMD_CLAUSE(if)
@@ -578,6 +582,7 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(grainsize)
 OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
 OPENMP_TASKLOOP_SIMD_CLAUSE(num_tasks)
 OPENMP_TASKLOOP_SIMD_CLAUSE(reduction)
+OPENMP_TASKLOOP_SIMD_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'critical'.
 OPENMP_CRITICAL_CLAUSE(hint)
@@ -741,9 +746,9 @@ OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(private)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(shared)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(reduction)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(schedule)
-OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(linear)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(num_teams)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(thread_limit)
+OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(copyin)
 
 // Clauses allowed for OpenMP directive 'target teams'.
 OPENMP_TARGET_TEAMS_CLAUSE(if)
@@ -801,7 +806,6 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(dist_schedule)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(num_threads)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(proc_bind)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(schedule)
-OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(linear)
 
 // Clauses allowed for OpenMP directive
 // 'target teams distribute parallel for simd'.

@@ -8,7 +8,7 @@
 
 define i32 @test1(i32 %sum, i32 %x) nounwind readnone ssp {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, %edx
@@ -26,7 +26,7 @@ define i32 @test1(i32 %sum, i32 %x) nounwind readnone ssp {
 
 define i32 @test2(i32 %x, i32 %y, i32 %res) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx

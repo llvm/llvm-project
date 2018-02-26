@@ -24,12 +24,12 @@
 ; CHECK-LABEL: f: # @f
 ; CHECK: callq   g
 ; CHECK: movl    %eax, [[X_OFFS:[0-9]+]](%rsp)          # 4-byte Spill
-; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]]] [%RSP+0]
+; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]]] [%rsp+0]
 ; CHECK: #APP
 ; CHECK: #NO_APP
 ; CHECK: callq   g
 ; CHECK: movl    %eax, %[[CSR:[^ ]*]]
-; CHECK: #DEBUG_VALUE: f:y <- %ESI
+; CHECK: #DEBUG_VALUE: f:y <- %esi
 ; CHECK: movl    %[[CSR]], %ecx
 ; CHECK: callq   g
 ; CHECK: movl    %[[CSR]], %ecx
@@ -37,18 +37,18 @@
 ; CHECK: movl    %[[CSR]], %ecx
 ; CHECK: callq   g
 ; CHECK: movl    [[X_OFFS]](%rsp), %eax          # 4-byte Reload
-; CHECK: #DEBUG_VALUE: f:x <- %EAX
+; CHECK: #DEBUG_VALUE: f:x <- %eax
 ; CHECK: addl    %[[CSR]], %eax
 
 ; DWARF:      DW_TAG_variable
 ; DWARF-NEXT:   DW_AT_location        (
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg7 RSP+36
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_reg0 RAX)
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+36
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_reg0 RAX)
 ; DWARF-NEXT:   DW_AT_name    ("x")
 
 ; DWARF:      DW_TAG_variable
 ; DWARF-NEXT:   DW_AT_location        (
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_reg4 RSI)
+; DWARF-NEXT:      [{{.*}},  {{.*}}): DW_OP_reg4 RSI)
 ; DWARF-NEXT:   DW_AT_name    ("y")
 
 ; ModuleID = 'spill-nospill.c'

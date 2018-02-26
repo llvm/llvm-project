@@ -1,4 +1,4 @@
-//===--- PtrState.cpp -----------------------------------------------------===//
+//===- PtrState.cpp -------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,8 +10,20 @@
 #include "PtrState.h"
 #include "DependencyAnalysis.h"
 #include "ObjCARC.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
+#include "llvm/Analysis/ObjCARCInstKind.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::objcarc;
@@ -250,10 +262,14 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     // If this is an invoke instruction, we're scanning it as part of
     // one of its successor blocks, since we can't insert code after it
     // in its own block, and we don't want to split critical edges.
-    if (isa<InvokeInst>(Inst))
-      InsertReverseInsertPt(&*BB->getFirstInsertionPt());
-    else
-      InsertReverseInsertPt(&*++Inst->getIterator());
+    BasicBlock::iterator InsertAfter;
+    if (isa<InvokeInst>(Inst)) {
+      const auto IP = BB->getFirstInsertionPt();
+      InsertAfter = IP == BB->end() ? std::prev(BB->end()) : IP;
+    } else {
+      InsertAfter = std::next(Inst->getIterator());
+    }
+    InsertReverseInsertPt(&*InsertAfter);
   };
 
   // Check for possible direct uses.

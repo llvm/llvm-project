@@ -1,4 +1,4 @@
-//===----------- LoopVersioningLICM.cpp - LICM Loop Versioning ------------===//
+//===- LoopVersioningLICM.cpp - LICM Loop Versioning ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -60,41 +60,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/PredIteratorCache.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
-
-#define DEBUG_TYPE "loop-versioning-licm"
-static const char *LICMVersioningMetaData = "llvm.loop.licm_versioning.disable";
+#include <cassert>
+#include <memory>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "loop-versioning-licm"
+
+static const char *LICMVersioningMetaData = "llvm.loop.licm_versioning.disable";
 
 /// Threshold minimum allowed percentage for possible
 /// invariant instructions in a loop.
@@ -143,8 +143,15 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 }
 
 namespace {
+
 struct LoopVersioningLICM : public LoopPass {
   static char ID;
+
+  LoopVersioningLICM()
+      : LoopPass(ID), LoopDepthThreshold(LVLoopDepthThreshold),
+        InvariantThreshold(LVInvarThreshold) {
+    initializeLoopVersioningLICMPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnLoop(Loop *L, LPPassManager &LPM) override;
 
@@ -161,13 +168,6 @@ struct LoopVersioningLICM : public LoopPass {
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 
-  LoopVersioningLICM()
-      : LoopPass(ID), AA(nullptr), SE(nullptr), LAA(nullptr), LAI(nullptr),
-        CurLoop(nullptr), LoopDepthThreshold(LVLoopDepthThreshold),
-        InvariantThreshold(LVInvarThreshold), LoadAndStoreCounter(0),
-        InvariantCounter(0), IsReadOnlyLoop(true) {
-    initializeLoopVersioningLICMPass(*PassRegistry::getPassRegistry());
-  }
   StringRef getPassName() const override { return "Loop Versioning for LICM"; }
 
   void reset() {
@@ -191,30 +191,49 @@ struct LoopVersioningLICM : public LoopPass {
   };
 
 private:
-  AliasAnalysis *AA;             // Current AliasAnalysis information
-  ScalarEvolution *SE;           // Current ScalarEvolution
-  LoopAccessLegacyAnalysis *LAA; // Current LoopAccessAnalysis
-  const LoopAccessInfo *LAI;     // Current Loop's LoopAccessInfo
+  // Current AliasAnalysis information
+  AliasAnalysis *AA = nullptr;
 
-  Loop *CurLoop; // The current loop we are working on.
-  std::unique_ptr<AliasSetTracker>
-      CurAST; // AliasSet information for the current loop.
+  // Current ScalarEvolution
+  ScalarEvolution *SE = nullptr;
 
-  unsigned LoopDepthThreshold;  // Maximum loop nest threshold
-  float InvariantThreshold;     // Minimum invariant threshold
-  unsigned LoadAndStoreCounter; // Counter to track num of load & store
-  unsigned InvariantCounter;    // Counter to track num of invariant
-  bool IsReadOnlyLoop;          // Read only loop marker.
+  // Current LoopAccessAnalysis
+  LoopAccessLegacyAnalysis *LAA = nullptr;
+
+  // Current Loop's LoopAccessInfo
+  const LoopAccessInfo *LAI = nullptr;
+
+  // The current loop we are working on.
+  Loop *CurLoop = nullptr;
+
+  // AliasSet information for the current loop.
+  std::unique_ptr<AliasSetTracker> CurAST; 
+
+  // Maximum loop nest threshold
+  unsigned LoopDepthThreshold;
+
+  // Minimum invariant threshold
+  float InvariantThreshold;
+
+  // Counter to track num of load & store
+  unsigned LoadAndStoreCounter = 0;
+
+  // Counter to track num of invariant
+  unsigned InvariantCounter = 0;
+
+  // Read only loop marker.
+  bool IsReadOnlyLoop = true;
 
   bool isLegalForVersioning();
   bool legalLoopStructure();
   bool legalLoopInstructions();
   bool legalLoopMemoryAccesses();
   bool isLoopAlreadyVisited();
-  void setNoAliasToLoop(Loop *);
-  bool instructionSafeForVersioning(Instruction *);
+  void setNoAliasToLoop(Loop *VerLoop);
+  bool instructionSafeForVersioning(Instruction *I);
 };
-}
+
+} // end anonymous namespace
 
 /// \brief Check loop structure and confirms it's good for LoopVersioningLICM.
 bool LoopVersioningLICM::legalLoopStructure() {
@@ -225,7 +244,7 @@ bool LoopVersioningLICM::legalLoopStructure() {
     return false;
   }
   // Loop should be innermost loop, if not return false.
-  if (CurLoop->getSubLoops().size()) {
+  if (!CurLoop->getSubLoops().empty()) {
     DEBUG(dbgs() << "    loop is not innermost\n");
     return false;
   }
@@ -562,6 +581,7 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
 }
 
 char LoopVersioningLICM::ID = 0;
+
 INITIALIZE_PASS_BEGIN(LoopVersioningLICM, "loop-versioning-licm",
                       "Loop Versioning For LICM", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)

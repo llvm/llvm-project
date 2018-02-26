@@ -3,7 +3,7 @@
 target triple = "hexagon"
 
 ; CHECK-LABEL: danny:
-; CHECK: r{{[0-9]+}} = mpy(r0,r1)  
+; CHECK: r{{[0-9]+}} = mpy(r0,r1)
 define i32 @danny(i32 %a0, i32 %a1) {
 b2:
   %v3 = sext i32 %a0 to i64

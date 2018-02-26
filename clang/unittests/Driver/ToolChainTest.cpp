@@ -18,6 +18,8 @@
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 using namespace clang;
@@ -164,4 +166,98 @@ TEST(ToolChainTest, InvalidArgument) {
   EXPECT_TRUE(C->containsError());
 }
 
+TEST(ToolChainTest, ParsedClangName) {
+  ParsedClangName Empty;
+  EXPECT_TRUE(Empty.TargetPrefix.empty());
+  EXPECT_TRUE(Empty.ModeSuffix.empty());
+  EXPECT_TRUE(Empty.DriverMode == nullptr);
+  EXPECT_FALSE(Empty.TargetIsValid);
+
+  ParsedClangName DriverOnly("clang", nullptr);
+  EXPECT_TRUE(DriverOnly.TargetPrefix.empty());
+  EXPECT_TRUE(DriverOnly.ModeSuffix == "clang");
+  EXPECT_TRUE(DriverOnly.DriverMode == nullptr);
+  EXPECT_FALSE(DriverOnly.TargetIsValid);
+
+  ParsedClangName DriverOnly2("clang++", "--driver-mode=g++");
+  EXPECT_TRUE(DriverOnly2.TargetPrefix.empty());
+  EXPECT_TRUE(DriverOnly2.ModeSuffix == "clang++");
+  EXPECT_STREQ(DriverOnly2.DriverMode, "--driver-mode=g++");
+  EXPECT_FALSE(DriverOnly2.TargetIsValid);
+
+  ParsedClangName TargetAndMode("i386", "clang-g++", "--driver-mode=g++", true);
+  EXPECT_TRUE(TargetAndMode.TargetPrefix == "i386");
+  EXPECT_TRUE(TargetAndMode.ModeSuffix == "clang-g++");
+  EXPECT_STREQ(TargetAndMode.DriverMode, "--driver-mode=g++");
+  EXPECT_TRUE(TargetAndMode.TargetIsValid);
+}
+
+TEST(ToolChainTest, GetTargetAndMode) {
+  llvm::InitializeAllTargets();
+  std::string IgnoredError;
+  if (!llvm::TargetRegistry::lookupTarget("x86_64", IgnoredError))
+    return;
+
+  ParsedClangName Res = ToolChain::getTargetAndModeFromProgramName("clang");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "clang");
+  EXPECT_TRUE(Res.DriverMode == nullptr);
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("clang++");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "clang++");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=g++");
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("clang++6.0");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "clang++");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=g++");
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("clang++-release");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "clang++");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=g++");
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("x86_64-clang++");
+  EXPECT_TRUE(Res.TargetPrefix == "x86_64");
+  EXPECT_TRUE(Res.ModeSuffix == "clang++");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=g++");
+  EXPECT_TRUE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName(
+      "x86_64-linux-gnu-clang-c++");
+  EXPECT_TRUE(Res.TargetPrefix == "x86_64-linux-gnu");
+  EXPECT_TRUE(Res.ModeSuffix == "clang-c++");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=g++");
+  EXPECT_TRUE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName(
+      "x86_64-linux-gnu-clang-c++-tot");
+  EXPECT_TRUE(Res.TargetPrefix == "x86_64-linux-gnu");
+  EXPECT_TRUE(Res.ModeSuffix == "clang-c++");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=g++");
+  EXPECT_TRUE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("qqq");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix.empty());
+  EXPECT_TRUE(Res.DriverMode == nullptr);
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("x86_64-qqq");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix.empty());
+  EXPECT_TRUE(Res.DriverMode == nullptr);
+  EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("qqq-clang-cl");
+  EXPECT_TRUE(Res.TargetPrefix == "qqq");
+  EXPECT_TRUE(Res.ModeSuffix == "clang-cl");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=cl");
+  EXPECT_FALSE(Res.TargetIsValid);
+}
 } // end anonymous namespace.

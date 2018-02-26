@@ -91,8 +91,6 @@ formatv_object_base::parseReplacementItem(StringRef Spec) {
 
 std::pair<ReplacementItem, StringRef>
 formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
-  StringRef Rep;
-  StringRef Remainder;
   std::size_t From = 0;
   while (From < Fmt.size() && From != StringRef::npos) {
     std::size_t BO = Fmt.find_first_of('{', From);

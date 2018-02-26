@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | not grep movw
+; RUN: llc < %s -mtriple=x86_64-- | not grep movw
 
 define i16 @test5(i16 %f12) nounwind {
 	%f11 = shl i16 %f12, 2		; <i16> [#uses=1]

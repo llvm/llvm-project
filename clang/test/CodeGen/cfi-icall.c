@@ -3,22 +3,26 @@
 
 // Tests that we assign appropriate identifiers to unprototyped functions.
 
-// CHECK: define void @f({{.*}} !type [[TVOID:![0-9]+]]
+// CHECK: define void @f({{.*}} !type [[TVOID:![0-9]+]] !type [[TVOID_GENERALIZED:![0-9]+]]
 void f() {
 }
 
 void xf();
 
-// CHECK: define void @g({{.*}} !type [[TINT:![0-9]+]]
+// CHECK: define void @g({{.*}} !type [[TINT:![0-9]+]] !type [[TINT_GENERALIZED:![0-9]+]]
 void g(int b) {
   void (*fp)() = b ? f : xf;
   // ITANIUM: call i1 @llvm.type.test(i8* {{.*}}, metadata !"_ZTSFvE")
   fp();
 }
 
-// CHECK: declare !type [[TVOID:![0-9]+]] void @xf({{.*}}
+// CHECK: declare !type [[TVOID]] !type [[TVOID_GENERALIZED]] void @xf({{.*}}
 
 // ITANIUM-DAG: [[TVOID]] = !{i64 0, !"_ZTSFvE"}
+// ITANIUM-DAG: [[TVOID_GENERALIZED]] = !{i64 0, !"_ZTSFvE.generalized"}
 // ITANIUM-DAG: [[TINT]] = !{i64 0, !"_ZTSFviE"}
+// ITANIUM-DAG: [[TINT_GENERALIZED]] = !{i64 0, !"_ZTSFviE.generalized"}
 // MS-DAG: [[TVOID]] = !{i64 0, !"?6AX@Z"}
+// MS-DAG: [[TVOID_GENERALIZED]] = !{i64 0, !"?6AX@Z.generalized"}
 // MS-DAG: [[TINT]] = !{i64 0, !"?6AXH@Z"}
+// MS-DAG: [[TINT_GENERALIZED]] = !{i64 0, !"?6AXH@Z.generalized"}

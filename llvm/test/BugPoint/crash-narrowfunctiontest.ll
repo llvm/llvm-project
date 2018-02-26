@@ -1,6 +1,6 @@
 ; Test that bugpoint can narrow down the testcase to the important function
 ;
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -silence-passes > /dev/null
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls --opt-command opt -silence-passes > /dev/null
 ; REQUIRES: loadable_module
 
 define i32 @foo() { ret i32 1 }

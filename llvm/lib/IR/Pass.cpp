@@ -14,14 +14,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Pass.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
+#include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/PassSupport.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "ir"
@@ -36,11 +44,11 @@ Pass::~Pass() {
 }
 
 // Force out-of-line virtual method.
-ModulePass::~ModulePass() { }
+ModulePass::~ModulePass() = default;
 
-Pass *ModulePass::createPrinterPass(raw_ostream &O,
+Pass *ModulePass::createPrinterPass(raw_ostream &OS,
                                     const std::string &Banner) const {
-  return createPrintModulePass(O, Banner);
+  return createPrintModulePass(OS, Banner);
 }
 
 PassManagerType ModulePass::getPotentialPassManagerType() const {
@@ -63,7 +71,6 @@ void Pass::dumpPassStructure(unsigned Offset) {
 /// getPassName - Return a nice clean name for a pass.  This usually
 /// implemented in terms of the name that is registered by one of the
 /// Registration templates, but can be overloaded directly.
-///
 StringRef Pass::getPassName() const {
   AnalysisID AID =  getPassID();
   const PassInfo *PI = PassRegistry::getPassRegistry()->getPassInfo(AID);
@@ -113,9 +120,8 @@ void Pass::setResolver(AnalysisResolver *AR) {
 // print - Print out the internal state of the pass.  This is called by Analyze
 // to print out the contents of an analysis.  Otherwise it is not necessary to
 // implement this method.
-//
-void Pass::print(raw_ostream &O,const Module*) const {
-  O << "Pass::print not implemented for pass: '" << getPassName() << "'!\n";
+void Pass::print(raw_ostream &OS, const Module *) const {
+  OS << "Pass::print not implemented for pass: '" << getPassName() << "'!\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -129,7 +135,7 @@ LLVM_DUMP_METHOD void Pass::dump() const {
 // ImmutablePass Implementation
 //
 // Force out-of-line virtual method.
-ImmutablePass::~ImmutablePass() { }
+ImmutablePass::~ImmutablePass() = default;
 
 void ImmutablePass::initializePass() {
   // By default, don't do anything.
@@ -139,9 +145,9 @@ void ImmutablePass::initializePass() {
 // FunctionPass Implementation
 //
 
-Pass *FunctionPass::createPrinterPass(raw_ostream &O,
+Pass *FunctionPass::createPrinterPass(raw_ostream &OS,
                                       const std::string &Banner) const {
-  return createPrintFunctionPass(O, Banner);
+  return createPrintFunctionPass(OS, Banner);
 }
 
 PassManagerType FunctionPass::getPotentialPassManagerType() const {
@@ -164,9 +170,9 @@ bool FunctionPass::skipFunction(const Function &F) const {
 // BasicBlockPass Implementation
 //
 
-Pass *BasicBlockPass::createPrinterPass(raw_ostream &O,
+Pass *BasicBlockPass::createPrinterPass(raw_ostream &OS,
                                         const std::string &Banner) const {
-  return createPrintBasicBlockPass(O, Banner);
+  return createPrintBasicBlockPass(OS, Banner);
 }
 
 bool BasicBlockPass::doInitialization(Function &) {
@@ -219,7 +225,7 @@ Pass *Pass::createPass(AnalysisID ID) {
 //===----------------------------------------------------------------------===//
 
 // RegisterAGBase implementation
-//
+
 RegisterAGBase::RegisterAGBase(StringRef Name, const void *InterfaceID,
                                const void *PassID, bool isDefault)
     : PassInfo(Name, InterfaceID) {
@@ -233,7 +239,6 @@ RegisterAGBase::RegisterAGBase(StringRef Name, const void *InterfaceID,
 
 // enumeratePasses - Iterate over the registered passes, calling the
 // passEnumerate callback on each PassInfo object.
-//
 void PassRegistrationListener::enumeratePasses() {
   PassRegistry::getPassRegistry()->enumerateWith(this);
 }
@@ -243,28 +248,31 @@ PassNameParser::PassNameParser(cl::Option &O)
   PassRegistry::getPassRegistry()->addRegistrationListener(this);
 }
 
-PassNameParser::~PassNameParser() {
-  // This only gets called during static destruction, in which case the
-  // PassRegistry will have already been destroyed by llvm_shutdown().  So
-  // attempting to remove the registration listener is an error.
-}
+// This only gets called during static destruction, in which case the
+// PassRegistry will have already been destroyed by llvm_shutdown().  So
+// attempting to remove the registration listener is an error.
+PassNameParser::~PassNameParser() = default;
 
 //===----------------------------------------------------------------------===//
 //   AnalysisUsage Class Implementation
 //
 
 namespace {
-  struct GetCFGOnlyPasses : public PassRegistrationListener {
-    typedef AnalysisUsage::VectorType VectorType;
-    VectorType &CFGOnlyList;
-    GetCFGOnlyPasses(VectorType &L) : CFGOnlyList(L) {}
 
-    void passEnumerate(const PassInfo *P) override {
-      if (P->isCFGOnlyPass())
-        CFGOnlyList.push_back(P->getTypeInfo());
-    }
-  };
-}
+struct GetCFGOnlyPasses : public PassRegistrationListener {
+  using VectorType = AnalysisUsage::VectorType;
+
+  VectorType &CFGOnlyList;
+
+  GetCFGOnlyPasses(VectorType &L) : CFGOnlyList(L) {}
+
+  void passEnumerate(const PassInfo *P) override {
+    if (P->isCFGOnlyPass())
+      CFGOnlyList.push_back(P->getTypeInfo());
+  }
+};
+
+} // end anonymous namespace
 
 // setPreservesCFG - This function should be called to by the pass, iff they do
 // not:
@@ -274,7 +282,6 @@ namespace {
 //
 // This function annotates the AnalysisUsage info object to say that analyses
 // that only depend on the CFG are preserved by this pass.
-//
 void AnalysisUsage::setPreservesCFG() {
   // Since this transformation doesn't modify the CFG, it preserves all analyses
   // that only depend on the CFG (like dominators, loop info, etc...)

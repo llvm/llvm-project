@@ -415,6 +415,13 @@ class BITREV_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"bitrev", int_mips_bitrev,
 class BPOSGE32_MM_DESC : BPOSGE32_DESC_BASE<"bposge32", brtarget_mm,
                                             NoItinerary>;
 
+let DecoderNamespace = "MicroMipsDSP", Arch = "mmdsp",
+    AdditionalPredicates = [HasDSP, InMicroMips] in {
+    def LWDSP_MM : Load<"lw", DSPROpnd, null_frag, II_LW>, DspMMRel,
+                   LW_FM_MM<0x3f>;
+    def SWDSP_MM : Store<"sw", DSPROpnd, null_frag, II_SW>, DspMMRel,
+                   LW_FM_MM<0x3e>;
+}
 // Instruction defs.
 // microMIPS DSP Rev 1
 def ADDQ_PH_MM : DspMMRel, ADDQ_PH_MM_ENC, ADDQ_PH_DESC;

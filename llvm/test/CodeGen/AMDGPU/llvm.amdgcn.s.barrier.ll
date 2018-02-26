@@ -5,7 +5,7 @@
 
 ; GCN-LABEL: {{^}}test_barrier:
 ; GFX8: buffer_store_dword
-; GFX9: flat_store_dword
+; GFX9: global_store_dword
 ; NOAUTO: s_waitcnt
 ; AUTO-NOT: s_waitcnt
 ; GCN: s_barrier

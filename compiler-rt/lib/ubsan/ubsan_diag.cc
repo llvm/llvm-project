@@ -26,21 +26,24 @@
 
 using namespace __ubsan;
 
+void __ubsan::GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc,
+                            uptr bp, void *context, bool fast) {
+  uptr top = 0;
+  uptr bottom = 0;
+  if (fast)
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+  stack->Unwind(max_depth, pc, bp, context, top, bottom, fast);
+}
+
 static void MaybePrintStackTrace(uptr pc, uptr bp) {
   // We assume that flags are already parsed, as UBSan runtime
   // will definitely be called when we print the first diagnostics message.
   if (!flags()->print_stacktrace)
     return;
 
-  uptr top = 0;
-  uptr bottom = 0;
-  bool request_fast_unwind = common_flags()->fast_unwind_on_fatal;
-  if (request_fast_unwind)
-    __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
-
   BufferedStackTrace stack;
-  stack.Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom,
-               request_fast_unwind);
+  GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
+                common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }
 
@@ -97,9 +100,7 @@ class Decorator : public SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *Highlight() const { return Green(); }
-  const char *EndHighlight() const { return Default(); }
   const char *Note() const { return Black(); }
-  const char *EndNote() const { return Default(); }
 };
 }
 
@@ -295,7 +296,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
     Buffer.append("%c", P == Loc ? '^' : Byte);
     Buffer.append("%c", Byte);
   }
-  Buffer.append("%s\n", Decor.EndHighlight());
+  Buffer.append("%s\n", Decor.Default());
 
   // Go over the line again, and print names for the ranges.
   InRange = 0;
@@ -335,7 +336,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
 
 Diag::~Diag() {
   // All diagnostics should be printed under report mutex.
-  CommonSanitizerReportMutex.CheckLocked();
+  ScopedReport::CheckLocked();
   Decorator Decor;
   InternalScopedString Buffer(1024);
 
@@ -345,12 +346,12 @@ Diag::~Diag() {
 
   switch (Level) {
   case DL_Error:
-    Buffer.append("%s runtime error: %s%s", Decor.Warning(), Decor.EndWarning(),
+    Buffer.append("%s runtime error: %s%s", Decor.Warning(), Decor.Default(),
                   Decor.Bold());
     break;
 
   case DL_Note:
-    Buffer.append("%s note: %s", Decor.Note(), Decor.EndNote());
+    Buffer.append("%s note: %s", Decor.Note(), Decor.Default());
     break;
   }
 
@@ -363,17 +364,15 @@ Diag::~Diag() {
     PrintMemorySnippet(Decor, Loc.getMemoryLocation(), Ranges, NumRanges, Args);
 }
 
+ScopedReport::Initializer::Initializer() { InitAsStandaloneIfNecessary(); }
+
 ScopedReport::ScopedReport(ReportOptions Opts, Location SummaryLoc,
                            ErrorType Type)
-    : Opts(Opts), SummaryLoc(SummaryLoc), Type(Type) {
-  InitAsStandaloneIfNecessary();
-  CommonSanitizerReportMutex.Lock();
-}
+    : Opts(Opts), SummaryLoc(SummaryLoc), Type(Type) {}
 
 ScopedReport::~ScopedReport() {
   MaybePrintStackTrace(Opts.pc, Opts.bp);
   MaybeReportErrorSummary(SummaryLoc, Type);
-  CommonSanitizerReportMutex.Unlock();
   if (flags()->halt_on_error)
     Die();
 }

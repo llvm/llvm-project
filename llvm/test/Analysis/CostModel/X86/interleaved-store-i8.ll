@@ -10,8 +10,8 @@ define void @doit_stride3(i8* nocapture %Ptr, i32 %Nels) local_unnamed_addr {
 ;CHECK: LV: Found an estimated cost of 8 for VF 2 For instruction:   store i8 %conv4
 ;CHECK: LV: Found an estimated cost of 9 for VF 4 For instruction:   store i8 %conv4
 ;CHECK: LV: Found an estimated cost of 12 for VF 8 For instruction:   store i8 %conv4
-;CHECK: LV: Found an estimated cost of 19 for VF 16 For instruction:   store i8 %conv4
-;CHECK: LV: Found an estimated cost of 35 for VF 32 For instruction:   store i8 %conv4
+;CHECK: LV: Found an estimated cost of 13 for VF 16 For instruction:   store i8 %conv4
+;CHECK: LV: Found an estimated cost of 16 for VF 32 For instruction:   store i8 %conv4
 entry:
   %cmp14 = icmp sgt i32 %Nels, 0
   br i1 %cmp14, label %for.body.lr.ph, label %for.end
@@ -47,9 +47,9 @@ define void @doit_stride4(i8* nocapture %Ptr, i32 %Nels) local_unnamed_addr {
 ;CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i8 %conv7
 ;CHECK: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i8 %conv7
 ;CHECK: LV: Found an estimated cost of 10 for VF 4 For instruction:   store i8 %conv7
-;CHECK: LV: Found an estimated cost of 17 for VF 8 For instruction:   store i8 %conv7
-;CHECK: LV: Found an estimated cost of 22 for VF 16 For instruction:   store i8 %conv7
-;CHECK: LV: Found an estimated cost of 44 for VF 32 For instruction:   store i8 %conv7
+;CHECK: LV: Found an estimated cost of 11 for VF 8 For instruction:   store i8 %conv7
+;CHECK: LV: Found an estimated cost of 12 for VF 16 For instruction:   store i8 %conv7
+;CHECK: LV: Found an estimated cost of 16 for VF 32 For instruction:   store i8 %conv7
 entry:
   %cmp19 = icmp sgt i32 %Nels, 0
   br i1 %cmp19, label %for.body.lr.ph, label %for.end

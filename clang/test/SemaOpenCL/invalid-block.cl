@@ -81,3 +81,14 @@ kernel void f7() {
   };
   return;
 }
+
+// Taking address of a capture is not allowed
+int g;
+kernel void f8(int a1) {
+  int a2;
+  void (^bl)(void) = ^(void) {
+    &g; //expected-warning{{expression result unused}}
+    &a1; //expected-error{{taking address of a capture is not allowed}}
+    &a2; //expected-error{{taking address of a capture is not allowed}}
+  };
+}

@@ -6,12 +6,12 @@
 
 define <2 x double> @peephole_cvtps2pd(<4 x float>* %a0) {
 ; X86-64-LABEL: peephole_cvtps2pd:
-; X86-64:       # BB#0:
+; X86-64:       # %bb.0:
 ; X86-64-NEXT:    cvtps2pd (%rdi), %xmm0
 ; X86-64-NEXT:    retq
 ;
 ; I386-LABEL: peephole_cvtps2pd:
-; I386:       # BB#0:
+; I386:       # %bb.0:
 ; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    cvtps2pd (%eax), %xmm0
 ; I386-NEXT:    retl
@@ -23,12 +23,12 @@ define <2 x double> @peephole_cvtps2pd(<4 x float>* %a0) {
 
 define <2 x double> @peephole_cvtdq2pd(<4 x i32>* %a0) {
 ; X86-64-LABEL: peephole_cvtdq2pd:
-; X86-64:       # BB#0:
+; X86-64:       # %bb.0:
 ; X86-64-NEXT:    cvtdq2pd (%rdi), %xmm0
 ; X86-64-NEXT:    retq
 ;
 ; I386-LABEL: peephole_cvtdq2pd:
-; I386:       # BB#0:
+; I386:       # %bb.0:
 ; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    cvtdq2pd (%eax), %xmm0
 ; I386-NEXT:    retl

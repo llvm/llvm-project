@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 > %t
+; RUN: llc < %s > %t
 ; RUN: grep foos+5 %t
 ; RUN: grep foos+1 %t
 ; RUN: grep foos+9 %t

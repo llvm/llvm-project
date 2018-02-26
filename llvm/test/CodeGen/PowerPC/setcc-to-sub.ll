@@ -8,7 +8,7 @@
 ; Function Attrs: norecurse nounwind readonly
 define zeroext i1 @test1(%class.PB2* %s_a, %class.PB2* %s_b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
@@ -30,7 +30,7 @@ entry:
 ; Function Attrs: norecurse nounwind readonly
 define zeroext i1 @test2(%class.PB2* %s_a, %class.PB2* %s_b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
@@ -53,7 +53,7 @@ entry:
 ; Function Attrs: norecurse nounwind readonly
 define zeroext i1 @test3(%class.PB2* %s_a, %class.PB2* %s_b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
@@ -75,7 +75,7 @@ entry:
 ; Function Attrs: norecurse nounwind readonly
 define zeroext i1 @test4(%class.PB2* %s_a, %class.PB2* %s_b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28

@@ -43,7 +43,8 @@ public:
         InPPDirective(Line.InPPDirective),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
-        LeadingEmptyLinesAffected(false), ChildrenAffected(false) {
+        LeadingEmptyLinesAffected(false), ChildrenAffected(false),
+        FirstStartColumn(Line.FirstStartColumn) {
     assert(!Line.Tokens.empty());
 
     // Calculate Next and Previous for all tokens. Note that we must overwrite
@@ -126,6 +127,8 @@ public:
 
   /// \c True if one of this line's children intersects with an input range.
   bool ChildrenAffected;
+
+  unsigned FirstStartColumn;
 
 private:
   // Disallow copying.

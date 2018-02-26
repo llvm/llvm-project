@@ -35,52 +35,56 @@
 @ V8: error: invalid instruction
 
 vseleq.f32 s0, d2, d1
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vselgt.f64 s3, s2, s1
 @ V8: error: invalid operand for instruction
 vselgt.f32 s0, q3, q1
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vselgt.f64 q0, s3, q1
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 
 vmaxnm.f32 s0, d2, d1
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vminnm.f64 s3, s2, s1
 @ V8: error: invalid operand for instruction
 vmaxnm.f32 s0, q3, q1
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vmaxnm.f64 q0, s3, q1
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vmaxnmgt.f64 q0, s3, q1
 @ CHECK: error: instruction 'vmaxnm' is not predicable, but condition code specified
 
 vcvta.s32.f64 d3, s2
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vcvtp.s32.f32 d3, s2
-@ V8: error: invalid operand for instruction
+@ V8: error: operand must be a register in range [s0, s31]
 vcvtn.u32.f64 d3, s2
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vcvtm.u32.f32 d3, s2
-@ V8: error: invalid operand for instruction
+@ V8: error: operand must be a register in range [s0, s31]
 vcvtnge.u32.f64 d3, s2
 @ V8: error: instruction 'vcvtn' is not predicable, but condition code specified
 
 vcvtbgt.f64.f16 q0, d3
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vcvttlt.f64.f16 s0, s3
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction, any one of the following would fix this:
+@ V8: note: operand must be a register in range [d0, d31]
+@ V8: note: invalid operand for instruction
 vcvttvs.f16.f64 s0, s3
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction, any one of the following would fix this:
+@ V8: note: operand must be a register in range [d0, d31]
+@ V8: note: invalid operand for instruction
 vcvtthi.f16.f64 q0, d3
-@ V8: error: invalid operand for instruction
+@ V8: error: operand must be a register in range [s0, s31]
 
 vrintrlo.f32.f32 d3, q0
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vrintxcs.f32.f32 d3, d0
-@ V8: error: instruction requires: NEON
+@ V8: error: invalid instruction
 
 vrinta.f64.f64 s3, q0
-@ V8: error: invalid operand for instruction
+@ V8: error: invalid instruction
 vrintn.f32.f32 d3, d0
 @ V8: error: instruction requires: NEON
 vrintp.f32 q3, q0

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s | llvm-dwarfdump --uuid - | FileCheck %s
-# CHECK: UUID: 229E6146-A7AB-3BA0-8B17-DD5125D3AFEF Mach-O 32-bit i386 <stdin>
+# CHECK: UUID: 229E6146-A7AB-3BA0-8B17-DD5125D3AFEF (i386) <stdin>
 --- !mach-o
 FileHeader:      
   magic:           0xFEEDFACE

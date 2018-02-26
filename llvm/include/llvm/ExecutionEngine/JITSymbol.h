@@ -67,21 +67,22 @@ public:
     return (Flags & HasError) == HasError;
   }
 
-  /// @brief Returns true is the Weak flag is set.
+  /// @brief Returns true if the Weak flag is set.
   bool isWeak() const {
     return (Flags & Weak) == Weak;
   }
 
-  /// @brief Returns true is the Weak flag is set.
+  /// @brief Returns true if the Common flag is set.
   bool isCommon() const {
     return (Flags & Common) == Common;
   }
 
+  /// @brief Returns true if the symbol isn't weak or common.
   bool isStrongDefinition() const {
     return !isWeak() && !isCommon();
   }
 
-  /// @brief Returns true is the Weak flag is set.
+  /// @brief Returns true if the Exported flag is set.
   bool isExported() const {
     return (Flags & Exported) == Exported;
   }
@@ -89,8 +90,14 @@ public:
   /// @brief Implicitly convert to the underlying flags type.
   operator UnderlyingType&() { return Flags; }
 
+  /// @brief Implicitly convert to the underlying flags type.
+  operator const UnderlyingType&() const { return Flags; }
+
   /// @brief Return a reference to the target-specific flags.
   TargetFlagsType& getTargetFlags() { return TargetFlags; }
+
+  /// @brief Return a reference to the target-specific flags.
+  const TargetFlagsType& getTargetFlags() const { return TargetFlags; }
 
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.

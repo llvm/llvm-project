@@ -17,6 +17,7 @@
 #include "BytesOutputStyle.h"
 #include "Diff.h"
 #include "DumpOutputStyle.h"
+#include "InputFile.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
 #include "PrettyCompilandDumper.h"
@@ -31,23 +32,23 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -70,6 +71,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -79,6 +81,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -293,6 +296,13 @@ cl::opt<bool>
                       cl::desc("Print a column with the result status"),
                       cl::Optional, cl::sub(DiffSubcommand));
 
+cl::list<std::string>
+    RawModiEquivalences("modi-equivalence", cl::ZeroOrMore,
+                        cl::value_desc("left,right"),
+                        cl::desc("Modules with the specified indices will be "
+                                 "treated as referring to the same module"),
+                        cl::sub(DiffSubcommand));
+
 cl::opt<std::string> LeftRoot(
     "left-bin-root", cl::Optional,
     cl::desc("Treats the specified path as the root of the tree containing "
@@ -310,6 +320,8 @@ cl::opt<std::string> Left(cl::Positional, cl::desc("<left>"),
                           cl::sub(DiffSubcommand));
 cl::opt<std::string> Right(cl::Positional, cl::desc("<right>"),
                            cl::sub(DiffSubcommand));
+
+llvm::DenseMap<uint32_t, uint32_t> Equivalences;
 }
 
 cl::OptionCategory FileOptions("Module & File Options");
@@ -342,6 +354,8 @@ cl::list<std::string>
 
 cl::opt<bool> NameMap("name-map", cl::desc("Dump bytes of PDB Name Map"),
                       cl::sub(BytesSubcommand), cl::cat(PdbBytes));
+cl::opt<bool> Fpm("fpm", cl::desc("Dump free page map"),
+                  cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::opt<bool> SectionContributions("sc", cl::desc("Dump section contributions"),
                                    cl::sub(BytesSubcommand), cl::cat(DbiBytes));
@@ -407,6 +421,15 @@ cl::opt<bool> DumpStreamBlocks(
     "stream-blocks",
     cl::desc("Add block information to the output of -streams"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpSymbolStats(
+    "sym-stats",
+    cl::desc("Dump a detailed breakdown of symbol usage/size for each module"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+
+cl::opt<bool> DumpUdtStats(
+    "udt-stats",
+    cl::desc("Dump a detailed breakdown of S_UDT record usage / stats"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool> DumpTypes("types",
@@ -450,8 +473,15 @@ cl::opt<bool> DumpTypeDependents(
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 // SYMBOL OPTIONS
+cl::opt<bool> DumpGlobals("globals", cl::desc("dump Globals symbol records"),
+                          cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpGlobalExtras("global-extras", cl::desc("dump Globals hashes"),
+                               cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpPublicExtras("public-extras",
+                               cl::desc("dump Publics hashes and address maps"),
+                               cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSymbols("symbols", cl::desc("dump module symbols"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
@@ -485,6 +515,14 @@ cl::opt<bool> DumpXme(
     cl::desc(
         "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
     cl::cat(FileOptions), cl::sub(DumpSubcommand));
+cl::opt<uint32_t> DumpModi("modi", cl::Optional,
+                           cl::desc("For all options that iterate over "
+                                    "modules, limit to the specified module"),
+                           cl::cat(FileOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> JustMyCode("jmc", cl::Optional,
+                         cl::desc("For all options that iterate over modules, "
+                                  "ignore modules from system libraries"),
+                         cl::cat(FileOptions), cl::sub(DumpSubcommand));
 
 // MISCELLANEOUS OPTIONS
 cl::opt<bool> DumpStringTable("string-table", cl::desc("dump PDB String Table"),
@@ -496,6 +534,9 @@ cl::opt<bool> DumpSectionContribs("section-contribs",
                                   cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpSectionHeaders("section-headers",
+                                 cl::desc("Dump image section headers"),
+                                 cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
@@ -660,7 +701,7 @@ static void yamlToPdb(StringRef Path) {
     ModiBuilder.setObjFileName(MI.Obj);
 
     for (auto S : MI.SourceFiles)
-      ExitOnErr(DbiBuilder.addModuleSourceFile(MI.Mod, S));
+      ExitOnErr(DbiBuilder.addModuleSourceFile(ModiBuilder, S));
     if (MI.Modi.hasValue()) {
       const auto &ModiStream = *MI.Modi;
       for (auto Symbol : ModiStream.Symbols) {
@@ -683,8 +724,9 @@ static void yamlToPdb(StringRef Path) {
   auto &TpiBuilder = Builder.getTpiBuilder();
   const auto &Tpi = YamlObj.TpiStream.getValueOr(DefaultTpiStream);
   TpiBuilder.setVersionHeader(Tpi.Version);
+  AppendingTypeTableBuilder TS(Allocator);
   for (const auto &R : Tpi.Records) {
-    CVType Type = R.toCodeViewRecord(Allocator);
+    CVType Type = R.toCodeViewRecord(TS);
     TpiBuilder.addTypeRecord(Type.RecordData, None);
   }
 
@@ -692,7 +734,7 @@ static void yamlToPdb(StringRef Path) {
   auto &IpiBuilder = Builder.getIpiBuilder();
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records) {
-    CVType Type = R.toCodeViewRecord(Allocator);
+    CVType Type = R.toCodeViewRecord(TS);
     IpiBuilder.addTypeRecord(Type.RecordData, None);
   }
 
@@ -719,11 +761,10 @@ static void pdb2Yaml(StringRef Path) {
 }
 
 static void dumpRaw(StringRef Path) {
-  std::unique_ptr<IPDBSession> Session;
-  auto &File = loadPDB(Path, Session);
 
-  auto O = llvm::make_unique<DumpOutputStyle>(File);
+  InputFile IF = ExitOnErr(InputFile::open(Path));
 
+  auto O = llvm::make_unique<DumpOutputStyle>(IF);
   ExitOnErr(O->dump());
 }
 
@@ -945,8 +986,8 @@ static void dumpPretty(StringRef Path) {
 
 static void mergePdbs() {
   BumpPtrAllocator Allocator;
-  TypeTableBuilder MergedTpi(Allocator);
-  TypeTableBuilder MergedIpi(Allocator);
+  MergingTypeTableBuilder MergedTpi(Allocator);
+  MergingTypeTableBuilder MergedIpi(Allocator);
 
   // Create a Tpi and Ipi type table with all types from all input files.
   for (const auto &Path : opts::merge::InputFilenames) {
@@ -976,11 +1017,11 @@ static void mergePdbs() {
 
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
-  MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
-    DestTpi.addTypeRecord(Data, None);
+  MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, const CVType &Type) {
+    DestTpi.addTypeRecord(Type.RecordData, None);
   });
-  MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
-    DestIpi.addTypeRecord(Data, None);
+  MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, const CVType &Type) {
+    DestIpi.addTypeRecord(Type.RecordData, None);
   });
   Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 
@@ -1058,25 +1099,28 @@ int main(int argc_, const char *argv_[]) {
 
   if (opts::DumpSubcommand) {
     if (opts::dump::RawAll) {
-      opts::dump::DumpLines = true;
+      opts::dump::DumpGlobals = true;
       opts::dump::DumpInlineeLines = true;
-      opts::dump::DumpXme = true;
-      opts::dump::DumpXmi = true;
       opts::dump::DumpIds = true;
+      opts::dump::DumpIdExtras = true;
+      opts::dump::DumpLines = true;
+      opts::dump::DumpModules = true;
+      opts::dump::DumpModuleFiles = true;
       opts::dump::DumpPublics = true;
       opts::dump::DumpSectionContribs = true;
+      opts::dump::DumpSectionHeaders = true;
       opts::dump::DumpSectionMap = true;
       opts::dump::DumpStreams = true;
       opts::dump::DumpStreamBlocks = true;
       opts::dump::DumpStringTable = true;
       opts::dump::DumpSummary = true;
       opts::dump::DumpSymbols = true;
-      opts::dump::DumpIds = true;
-      opts::dump::DumpIdExtras = true;
+      opts::dump::DumpSymbolStats = true;
       opts::dump::DumpTypes = true;
       opts::dump::DumpTypeExtras = true;
-      opts::dump::DumpModules = true;
-      opts::dump::DumpModuleFiles = true;
+      opts::dump::DumpUdtStats = true;
+      opts::dump::DumpXme = true;
+      opts::dump::DumpXmi = true;
     }
   }
   if (opts::PdbToYamlSubcommand) {
@@ -1156,15 +1200,25 @@ int main(int argc_, const char *argv_[]) {
       opts::pretty::ExcludeCompilands.push_back(
           "d:\\\\th.obj.x86fre\\\\minkernel");
     }
-    std::for_each(opts::pretty::InputFilenames.begin(),
-                  opts::pretty::InputFilenames.end(), dumpPretty);
+    llvm::for_each(opts::pretty::InputFilenames, dumpPretty);
   } else if (opts::DumpSubcommand) {
-    std::for_each(opts::dump::InputFilenames.begin(),
-                  opts::dump::InputFilenames.end(), dumpRaw);
+    llvm::for_each(opts::dump::InputFilenames, dumpRaw);
   } else if (opts::BytesSubcommand) {
-    std::for_each(opts::bytes::InputFilenames.begin(),
-                  opts::bytes::InputFilenames.end(), dumpBytes);
+    llvm::for_each(opts::bytes::InputFilenames, dumpBytes);
   } else if (opts::DiffSubcommand) {
+    for (StringRef S : opts::diff::RawModiEquivalences) {
+      StringRef Left;
+      StringRef Right;
+      std::tie(Left, Right) = S.split(',');
+      uint32_t X, Y;
+      if (!to_integer(Left, X) || !to_integer(Right, Y)) {
+        errs() << formatv("invalid value {0} specified for modi equivalence\n",
+                          S);
+        exit(1);
+      }
+      opts::diff::Equivalences[X] = Y;
+    }
+
     diff(opts::diff::Left, opts::diff::Right);
   } else if (opts::MergeSubcommand) {
     if (opts::merge::InputFilenames.size() < 2) {

@@ -116,34 +116,37 @@ static void writePaxHeader(raw_fd_ostream &OS, StringRef Path) {
   pad(OS);
 }
 
-// In the Ustar header, a path can be split at any '/' to store
-// a path into UstarHeader::Name and UstarHeader::Prefix. This
-// function splits a given path for that purpose.
-static std::pair<StringRef, StringRef> splitPath(StringRef Path) {
-  if (Path.size() <= sizeof(UstarHeader::Name))
-    return {"", Path};
+// Path fits in a Ustar header if
+//
+// - Path is less than 100 characters long, or
+// - Path is in the form of "<prefix>/<name>" where <prefix> is less
+//   than or equal to 155 characters long and <name> is less than 100
+//   characters long. Both <prefix> and <name> can contain extra '/'.
+//
+// If Path fits in a Ustar header, updates Prefix and Name and returns true.
+// Otherwise, returns false.
+static bool splitUstar(StringRef Path, StringRef &Prefix, StringRef &Name) {
+  if (Path.size() < sizeof(UstarHeader::Name)) {
+    Prefix = "";
+    Name = Path;
+    return true;
+  }
+
   size_t Sep = Path.rfind('/', sizeof(UstarHeader::Prefix) + 1);
   if (Sep == StringRef::npos)
-    return {"", Path};
-  return {Path.substr(0, Sep), Path.substr(Sep + 1)};
-}
+    return false;
+  if (Path.size() - Sep - 1 >= sizeof(UstarHeader::Name))
+    return false;
 
-// Returns true if a given path can be stored to a Ustar header
-// without the PAX extension.
-static bool fitsInUstar(StringRef Path) {
-  StringRef Prefix;
-  StringRef Name;
-  std::tie(Prefix, Name) = splitPath(Path);
-  return Name.size() <= sizeof(UstarHeader::Name);
+  Prefix = Path.substr(0, Sep);
+  Name = Path.substr(Sep + 1);
+  return true;
 }
 
 // The PAX header is an extended format, so a PAX header needs
 // to be followed by a "real" header.
-static void writeUstarHeader(raw_fd_ostream &OS, StringRef Path, size_t Size) {
-  StringRef Prefix;
-  StringRef Name;
-  std::tie(Prefix, Name) = splitPath(Path);
-
+static void writeUstarHeader(raw_fd_ostream &OS, StringRef Prefix,
+                             StringRef Name, size_t Size) {
   UstarHeader Hdr = makeUstarHeader();
   memcpy(Hdr.Name, Name.data(), Name.size());
   memcpy(Hdr.Mode, "0000664", 8);
@@ -168,12 +171,19 @@ TarWriter::TarWriter(int FD, StringRef BaseDir)
 // Append a given file to an archive.
 void TarWriter::append(StringRef Path, StringRef Data) {
   // Write Path and Data.
-  std::string S = BaseDir + "/" + sys::path::convert_to_slash(Path) + "\0";
-  if (fitsInUstar(S)) {
-    writeUstarHeader(OS, S, Data.size());
+  std::string Fullpath = BaseDir + "/" + sys::path::convert_to_slash(Path);
+
+  // We do not want to include the same file more than once.
+  if (!Files.insert(Fullpath).second)
+    return;
+
+  StringRef Prefix;
+  StringRef Name;
+  if (splitUstar(Fullpath, Prefix, Name)) {
+    writeUstarHeader(OS, Prefix, Name, Data.size());
   } else {
-    writePaxHeader(OS, S);
-    writeUstarHeader(OS, "", Data.size());
+    writePaxHeader(OS, Fullpath);
+    writeUstarHeader(OS, "", "", Data.size());
   }
 
   OS << Data;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fexceptions -fcxx-exceptions -emit-llvm-only -triple %itanium_abi_triple -main-file-name deferred-region.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fexceptions -fcxx-exceptions -emit-llvm-only -triple %itanium_abi_triple -main-file-name deferred-region.cpp -I %S/Inputs %s | FileCheck %s
 
 #define IF if
 #define STMT(S) S
@@ -170,6 +170,16 @@ out:
 	return; // CHECK: Gap,File 0, [[@LINE]]:8 -> [[@LINE+1]]:2 = 0
 }
 
+#include "deferred-region-helper.h"
+// CHECK-LABEL: _Z13included_funcv:
+// CHECK:  Gap,File 0, 2:13 -> 3:5 = #1
+// CHECK:  Gap,File 0, 3:11 -> 4:3 = (#0 - #1)
+
+// CHECK-LABEL: _Z7includev:
+void include() {
+  included_func();
+}
+
 int main() {
   foo(0);
   foo(1);
@@ -189,5 +199,6 @@ int main() {
   for_loop();
   while_loop();
   gotos();
+  include();
   return 0;
 }

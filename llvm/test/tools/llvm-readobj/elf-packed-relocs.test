@@ -1,0 +1,94 @@
+# The binary blobs in this file were created like this:
+# llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu Inputs/elf-packed-relocs1.s -o - | obj2yaml | grep Content:
+
+# RUN: yaml2obj -docnum 1 %s | llvm-readobj -elf-output-style=LLVM -relocations - | FileCheck --check-prefix=LLVM1 %s
+# LLVM1:      Section (1) .rela.dyn {
+# LLVM1-NEXT:   0x1100 R_X86_64_RELATIVE - 0x0
+# LLVM1-NEXT:   0x1180 R_X86_64_RELATIVE - 0x0
+# LLVM1-NEXT:   0x1188 R_X86_64_64 sym1 0x0
+# LLVM1-NEXT:   0x1190 R_X86_64_64 sym2 0x0
+# LLVM1-NEXT:   0x1191 R_X86_64_64 sym1 0x8
+# LLVM1-NEXT:   0x1193 R_X86_64_64 sym2 0xC
+# LLVM1-NEXT:   0x1197 R_X86_64_64 sym1 0xA
+# LLVM1-NEXT:   0x119F R_X86_64_64 sym2 0xA
+# LLVM1-NEXT: }
+
+# RUN: yaml2obj -docnum 1 %s | llvm-readobj -elf-output-style=GNU -relocations - | FileCheck --check-prefix=GNU1 %s
+# GNU1:      0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
+# GNU1-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 0
+# GNU1-NEXT: 0000000000001188  0000000100000001 R_X86_64_64            0000000000000000 sym1 + 0
+# GNU1-NEXT: 0000000000001190  0000000200000001 R_X86_64_64            0000000000000000 sym2 + 0
+# GNU1-NEXT: 0000000000001191  0000000100000001 R_X86_64_64            0000000000000000 sym1 + 8
+# GNU1-NEXT: 0000000000001193  0000000200000001 R_X86_64_64            0000000000000000 sym2 + c
+# GNU1-NEXT: 0000000000001197  0000000100000001 R_X86_64_64            0000000000000000 sym1 + a
+# GNU1-NEXT: 000000000000119f  0000000200000001 R_X86_64_64            0000000000000000 sym2 + a
+
+# elf-packed-relocs1.s
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x0000000000001000
+Sections:
+  - Name:            .rela.dyn
+    Type:            SHT_ANDROID_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x00000000000001C8
+    Link:            .symtab
+    AddressAlign:    0x0000000000000001
+    Content:         41505332088020020108800280010202088180808010818080802002080181808080100802818080802004020C7E048180808010088180808020
+Symbols:
+  Global:
+    - Name:            sym1
+    - Name:            sym2
+...
+
+# RUN: yaml2obj -docnum 2 %s | llvm-readobj -elf-output-style=LLVM -relocations - | FileCheck --check-prefix=LLVM2 %s
+# LLVM2:      Section (1) .rel.dyn {
+# LLVM2-NEXT:   0x1008 R_386_32 sym1 0x0
+# LLVM2-NEXT:   0x1010 R_386_GOT32 sym2 0x0
+# LLVM2-NEXT:   0x100C R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0x1008 R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0x1004 R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0x1000 R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0xFFC R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0xFF8 R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0xFF4 R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0xFF0 R_386_RELATIVE - 0x0
+# LLVM2-NEXT: }
+
+# RUN: yaml2obj -docnum 2 %s | llvm-readobj -elf-output-style=GNU -relocations - | FileCheck --check-prefix=GNU2 %s
+# GNU2:      00001008  00000101 R_386_32               00000000   sym1
+# GNU2-NEXT: 00001010  00000203 R_386_GOT32            00000000   sym2
+# GNU2-NEXT: 0000100c  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00001008  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00001004  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00001000  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00000ffc  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00000ff8  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00000ff4  00000008 R_386_RELATIVE
+# GNU2-NEXT: 00000ff0  00000008 R_386_RELATIVE
+
+# elf-packed-relocs2.s
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_386
+  Entry:           0x0000000000001000
+Sections:
+  - Name:            .rel.dyn
+    Type:            SHT_ANDROID_REL
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x00000000000001C8
+    Link:            .symtab
+    AddressAlign:    0x0000000000000001
+    Content:         415053320A80200202088102830408037C08
+Symbols:
+  Global:
+    - Name:            sym1
+    - Name:            sym2
+...

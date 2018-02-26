@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | grep li.*16
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | not grep addi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 | grep li.*16
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 | not grep addi
 
 ; Codegen lvx (R+16) as t = li 16,  lvx t,R
 ; This shares the 16 between the two loads.

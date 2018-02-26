@@ -16,6 +16,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
+#include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include <assert.h>
@@ -35,8 +36,8 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
          "Not an OpenCL specific type!");
 
   llvm::LLVMContext& Ctx = CGM.getLLVMContext();
-  uint32_t ImgAddrSpc = CGM.getContext().getTargetAddressSpace(
-    CGM.getTarget().getOpenCLImageAddrSpace());
+  uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
+      CGM.getContext().getOpenCLTypeAddrSpace(T));
   switch (cast<BuiltinType>(T)->getKind()) {
   default:
     llvm_unreachable("Unexpected opencl builtin type!");
@@ -45,29 +46,29 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   case BuiltinType::Id: \
     return llvm::PointerType::get( \
         llvm::StructType::create(Ctx, "opencl." #ImgType "_" #Suffix "_t"), \
-        ImgAddrSpc);
+        AddrSpc);
 #include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
-    return getSamplerType();
+    return getSamplerType(T);
   case BuiltinType::OCLEvent:
-    return llvm::PointerType::get(llvm::StructType::create(
-                           Ctx, "opencl.event_t"), 0);
+    return llvm::PointerType::get(
+        llvm::StructType::create(Ctx, "opencl.event_t"), AddrSpc);
   case BuiltinType::OCLClkEvent:
     return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.clk_event_t"), 0);
+        llvm::StructType::create(Ctx, "opencl.clk_event_t"), AddrSpc);
   case BuiltinType::OCLQueue:
     return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.queue_t"), 0);
+        llvm::StructType::create(Ctx, "opencl.queue_t"), AddrSpc);
   case BuiltinType::OCLReserveID:
     return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.reserve_id_t"), 0);
+        llvm::StructType::create(Ctx, "opencl.reserve_id_t"), AddrSpc);
   }
 }
 
-llvm::Type *CGOpenCLRuntime::getPipeType() {
+llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
   if (!PipeTy){
-    uint32_t PipeAddrSpc =
-      CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+    uint32_t PipeAddrSpc = CGM.getContext().getTargetAddressSpace(
+        CGM.getContext().getOpenCLTypeAddrSpace(T));
     PipeTy = llvm::PointerType::get(llvm::StructType::create(
       CGM.getLLVMContext(), "opencl.pipe_t"), PipeAddrSpc);
   }
@@ -75,12 +76,12 @@ llvm::Type *CGOpenCLRuntime::getPipeType() {
   return PipeTy;
 }
 
-llvm::PointerType *CGOpenCLRuntime::getSamplerType() {
+llvm::PointerType *CGOpenCLRuntime::getSamplerType(const Type *T) {
   if (!SamplerTy)
     SamplerTy = llvm::PointerType::get(llvm::StructType::create(
       CGM.getLLVMContext(), "opencl.sampler_t"),
       CGM.getContext().getTargetAddressSpace(
-      LangAS::opencl_constant));
+          CGM.getContext().getOpenCLTypeAddrSpace(T)));
   return SamplerTy;
 }
 
@@ -102,4 +103,46 @@ llvm::Value *CGOpenCLRuntime::getPipeElemAlign(const Expr *PipeArg) {
                           .getTypeAlignInChars(PipeTy->getElementType())
                           .getQuantity();
   return llvm::ConstantInt::get(Int32Ty, TypeSize, false);
+}
+
+llvm::PointerType *CGOpenCLRuntime::getGenericVoidPointerType() {
+  assert(CGM.getLangOpts().OpenCL);
+  return llvm::IntegerType::getInt8PtrTy(
+      CGM.getLLVMContext(),
+      CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic));
+}
+
+CGOpenCLRuntime::EnqueuedBlockInfo
+CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
+  // The block literal may be assigned to a const variable. Chasing down
+  // to get the block literal.
+  if (auto DR = dyn_cast<DeclRefExpr>(E)) {
+    E = cast<VarDecl>(DR->getDecl())->getInit();
+  }
+  if (auto Cast = dyn_cast<CastExpr>(E)) {
+    E = Cast->getSubExpr();
+  }
+  auto *Block = cast<BlockExpr>(E);
+
+  // The same block literal may be enqueued multiple times. Cache it if
+  // possible.
+  auto Loc = EnqueuedBlockMap.find(Block);
+  if (Loc != EnqueuedBlockMap.end()) {
+    return Loc->second;
+  }
+
+  // Emit block literal as a common block expression and get the block invoke
+  // function.
+  llvm::Function *Invoke;
+  auto *V = CGF.EmitBlockLiteral(cast<BlockExpr>(Block), &Invoke);
+  auto *F = CGF.getTargetHooks().createEnqueuedBlockKernel(
+      CGF, Invoke, V->stripPointerCasts());
+
+  // The common part of the post-processing of the kernel goes here.
+  F->addFnAttr(llvm::Attribute::NoUnwind);
+  F->setCallingConv(
+      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel));
+  EnqueuedBlockInfo Info{F, V};
+  EnqueuedBlockMap[Block] = Info;
+  return Info;
 }

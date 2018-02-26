@@ -27,7 +27,7 @@
 .watchos_version_min 70000,1
 
 
-// CHECK: error: invalid OS update number
+// CHECK: error: invalid OS update version number
 // CHECK: .ios_version_min 5,2,257
 // CHECK:                      ^
 // CHECK: error: invalid OS minor version number
@@ -42,7 +42,7 @@
 // CHECK: error: invalid OS major version number
 // CHECK: .ios_version_min 70000,1
 // CHECK:                  ^
-// CHECK: error: invalid OS update number
+// CHECK: error: invalid OS update version number
 // CHECK: .macosx_version_min 99,2,257
 // CHECK:                          ^
 // CHECK: error: invalid OS minor version number
@@ -57,7 +57,7 @@
 // CHECK: error: invalid OS major version number
 // CHECK: .macosx_version_min 70000,1
 // CHECK:                     ^
-// CHECK: error: invalid OS update number
+// CHECK: error: invalid OS update version number
 // CHECK: .tvos_version_min 99,2,257
 // CHECK:                          ^
 // CHECK: error: invalid OS minor version number
@@ -72,7 +72,7 @@
 // CHECK: error: invalid OS major version number
 // CHECK: .tvos_version_min 70000,1
 // CHECK:                     ^
-// CHECK: error: invalid OS update number
+// CHECK: error: invalid OS update version number
 // CHECK: .watchos_version_min 99,2,257
 // CHECK:                          ^
 // CHECK: error: invalid OS minor version number

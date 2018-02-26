@@ -26,14 +26,11 @@ using namespace llvm;
 
 
 static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
-                         BasicBlock &CurrBB, Function::iterator &BB) {
+                         BasicBlock &CurrBB, Function::iterator &BB,
+                         const TargetTransformInfo *TTI) {
   // There is no need to change the IR, since backend will emit sqrt
   // instruction if the call has already been marked read-only.
   if (Call->onlyReadsMemory())
-    return false;
-
-  // The call must have the expected result type.
-  if (!Call->getType()->isFloatingPointTy())
     return false;
 
   // Do the following transformation:
@@ -43,7 +40,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   //
   // (after)
   // v0 = sqrt_noreadmem(src) # native sqrt instruction.
-  // if (v0 is a NaN)
+  // [if (v0 is a NaN) || if (src < 0)]
   //   v1 = sqrt(src)         # library call.
   // dst = phi(v0, v1)
   //
@@ -52,7 +49,8 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // Create phi and replace all uses.
   BasicBlock *JoinBB = llvm::SplitBlock(&CurrBB, Call->getNextNode());
   IRBuilder<> Builder(JoinBB, JoinBB->begin());
-  PHINode *Phi = Builder.CreatePHI(Call->getType(), 2);
+  Type *Ty = Call->getType();
+  PHINode *Phi = Builder.CreatePHI(Ty, 2);
   Call->replaceAllUsesWith(Phi);
 
   // Create basic block LibCallBB and insert a call to library function sqrt.
@@ -69,7 +67,10 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   Call->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
   CurrBB.getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(&CurrBB);
-  Value *FCmp = Builder.CreateFCmpOEQ(Call, Call);
+  Value *FCmp = TTI->isFCmpOrdCheaperThanFCmpZero(Ty)
+                    ? Builder.CreateFCmpORD(Call, Call)
+                    : Builder.CreateFCmpOGE(Call->getOperand(0),
+                                            ConstantFP::get(Ty, 0.0));
   Builder.CreateCondBr(FCmp, JoinBB, LibCallBB);
 
   // Add phi operands.
@@ -96,18 +97,21 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       if (!Call || !(CalledFunc = Call->getCalledFunction()))
         continue;
 
+      if (Call->isNoBuiltin())
+        continue;
+
       // Skip if function either has local linkage or is not a known library
       // function.
       LibFunc LF;
-      if (CalledFunc->hasLocalLinkage() || !CalledFunc->hasName() ||
-          !TLI->getLibFunc(CalledFunc->getName(), LF))
+      if (CalledFunc->hasLocalLinkage() ||
+          !TLI->getLibFunc(*CalledFunc, LF) || !TLI->has(LF))
         continue;
 
       switch (LF) {
       case LibFunc_sqrtf:
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
-            optimizeSQRT(Call, CalledFunc, *CurrBB, BB))
+            optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI))
           break;
         continue;
       default:

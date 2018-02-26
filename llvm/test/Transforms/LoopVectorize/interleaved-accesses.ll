@@ -866,4 +866,56 @@ for.end:
   ret void
 }
 
+; PR34743: Ensure that a cast which needs to sink after a load that belongs to
+; an interleaved group, indeeded gets sunk.
+
+; void PR34743(short *a, int *b, int n) {
+;   for (int i = 0, iv = 0; iv < n; i++, iv += 2) {
+;     b[i] = a[iv] * a[iv+1] * a[iv+2];
+;   }
+; }
+
+; CHECK-LABEL: @PR34743(
+; CHECK: vector.body:
+; CHECK:   %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[VSHUF1:.+]], %vector.body ]
+; CHECK:   %wide.vec = load <8 x i16>
+; CHECK:   %[[VSHUF0:.+]] = shufflevector <8 x i16> %wide.vec, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   %[[VSHUF1:.+]] = shufflevector <8 x i16> %wide.vec, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK:   %[[VSHUF:.+]] = shufflevector <4 x i16> %vector.recur, <4 x i16> %[[VSHUF1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK:   sext <4 x i16> %[[VSHUF0]] to <4 x i32>
+; CHECK:   sext <4 x i16> %[[VSHUF]] to <4 x i32>
+; CHECK:   sext <4 x i16> %[[VSHUF1]] to <4 x i32>
+; CHECK:   mul nsw <4 x i32>
+; CHECK:   mul nsw <4 x i32>
+
+define void @PR34743(i16* %a, i32* %b, i64 %n) {
+entry:
+  %.pre = load i16, i16* %a
+  br label %loop
+
+loop:
+  %0 = phi i16 [ %.pre, %entry ], [ %load2, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv2, %loop ]
+  %i = phi i64 [ 0, %entry ], [ %i1, %loop ]
+  %conv = sext i16 %0 to i32
+  %i1 = add nuw nsw i64 %i, 1
+  %iv1 = add nuw nsw i64 %iv, 1
+  %iv2 = add nuw nsw i64 %iv, 2
+  %gep1 = getelementptr inbounds i16, i16* %a, i64 %iv1
+  %load1 = load i16, i16* %gep1, align 4
+  %conv1 = sext i16 %load1 to i32
+  %gep2 = getelementptr inbounds i16, i16* %a, i64 %iv2
+  %load2 = load i16, i16* %gep2, align 4
+  %conv2 = sext i16 %load2 to i32
+  %mul01 = mul nsw i32 %conv, %conv1
+  %mul012 = mul nsw i32 %mul01, %conv2
+  %arrayidx5 = getelementptr inbounds i32, i32* %b, i64 %i
+  store i32 %mul012, i32* %arrayidx5
+  %exitcond = icmp eq i64 %iv, %n
+  br i1 %exitcond, label %end, label %loop
+
+end:
+  ret void
+}
+
 attributes #0 = { "unsafe-fp-math"="true" }

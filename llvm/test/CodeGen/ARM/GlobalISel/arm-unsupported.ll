@@ -113,18 +113,19 @@ define i32 @test_thread_local_global() {
   ret i32 %v
 }
 
-@a_global = external global i32
+%byval.class = type { i32 }
 
-define i32 @test_global_reloc_models() {
-; This is only unsupported for the PIC, ROPI, RWPI relocation modes.
-; ROPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
-; ROPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
-; RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
-; RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
-; ROPI-RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
-; ROPI-RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
-  %v = load i32, i32* @a_global
-  ret i32 %v
+define void @test_byval_arg(%byval.class* byval %x) {
+; CHECK: remark: {{.*}} unable to lower arguments: void (%byval.class*)*
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_byval
+  ret void
+}
+
+define void @test_byval_param(%byval.class* %x) {
+; CHECK: remark: {{.*}} unable to translate instruction: call
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_byval_param
+  call void @test_byval_arg(%byval.class* byval %x)
+  ret void
 }
 
 attributes #0 = { "target-features"="+thumb-mode" }

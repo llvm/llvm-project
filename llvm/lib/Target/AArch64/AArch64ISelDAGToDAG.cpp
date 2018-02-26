@@ -53,7 +53,7 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    ForCodeSize = MF.getFunction()->optForSize();
+    ForCodeSize = MF.getFunction().optForSize();
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
@@ -1681,7 +1681,7 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
     // later find more redundancy.
     Opd0 = N->getOperand(0).getOperand(0);
     TruncBits = Opd0->getValueType(0).getSizeInBits() - VT.getSizeInBits();
-    VT = Opd0->getValueType(0);
+    VT = Opd0.getValueType();
     assert(VT == MVT::i64 && "the promoted type should be i64");
   } else if (BiggerPattern) {
     // Let's pretend a 0 shift left has been performed.
@@ -2301,7 +2301,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
       continue;
 
     // Check the second part of the pattern
-    EVT VT = OrOpd1->getValueType(0);
+    EVT VT = OrOpd1Val.getValueType();
     assert((VT == MVT::i32 || VT == MVT::i64) && "unexpected OR operand");
 
     // Compute the Known Zero for the candidate of the first operand.

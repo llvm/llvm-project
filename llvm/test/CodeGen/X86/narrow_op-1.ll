@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 	%struct.bf = type { i64, i16, i16, i32 }
 @bfi = common global %struct.bf zeroinitializer, align 16

@@ -21,7 +21,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -36,6 +36,8 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDFS.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -52,8 +54,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -114,16 +114,18 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
       RemoveKillFlags(RemoveKillFlags),
       UnknownValue(UndefValue::get(
-                             Type::getVoidTy(mf.getFunction()->getContext()))) {
+                             Type::getVoidTy(mf.getFunction().getContext()))) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
   SchedModel.init(ST.getSchedModel(), &ST, TII);
 }
 
-/// If this machine instr has memory reference information and it can be tracked
-/// to a normal reference to a known object, return the Value for that object.
-static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
+/// If this machine instr has memory reference information and it can be
+/// tracked to a normal reference to a known object, return the Value
+/// for that object. This function returns false the memory location is
+/// unknown or may alias anything.
+static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
@@ -151,7 +153,8 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
         Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
-        getUnderlyingObjectsForCodeGen(V, Objs, DL);
+        if (!getUnderlyingObjectsForCodeGen(V, Objs, DL))
+          return false;
 
         for (Value *V : Objs) {
           assert(isIdentifiedObject(V));
@@ -163,8 +166,12 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
     return true;
   };
 
-  if (!allMMOsOkay())
+  if (!allMMOsOkay()) {
     Objects.clear();
+    return false;
+  }
+
+  return true;
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -769,7 +776,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       if (PDiffs != nullptr)
         PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
 
-      RPTracker->recedeSkipDebugValues();
+      if (RPTracker->getPos() == RegionEnd || &*RPTracker->getPos() != &MI)
+        RPTracker->recedeSkipDebugValues();
       assert(&*RPTracker->getPos() == &MI && "RPTracker in sync");
       RPTracker->recede(RegOpers);
     }
@@ -860,13 +868,13 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
 
     // Find the underlying objects for MI. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
-    // SU depends on. An empty vector means the memory location is
-    // unknown, and may alias anything.
+    // SU depends on.
     UnderlyingObjectsVector Objs;
-    getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
+    bool ObjsFound = getUnderlyingObjectsForInstr(&MI, MFI, Objs,
+                                                  MF.getDataLayout());
 
     if (MI.mayStore()) {
-      if (Objs.empty()) {
+      if (!ObjsFound) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, NonAliasStores);
@@ -901,7 +909,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
         addChainDependencies(SU, Stores, UnknownValue);
       }
     } else { // SU is a load.
-      if (Objs.empty()) {
+      if (!ObjsFound) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, NonAliasStores);
@@ -1036,7 +1044,7 @@ static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
 }
 
 void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
-  DEBUG(dbgs() << "Fixup kills for BB#" << MBB.getNumber() << '\n');
+  DEBUG(dbgs() << "Fixup kills for " << printMBBReference(MBB) << '\n');
 
   LiveRegs.init(*TRI);
   LiveRegs.addLiveOuts(MBB);
@@ -1348,7 +1356,7 @@ static bool hasDataSucc(const SUnit *SU) {
 /// search from this root.
 void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
   if (!IsBottomUp)
-    llvm_unreachable("Top-down ILP metric is unimplemnted");
+    llvm_unreachable("Top-down ILP metric is unimplemented");
 
   SchedDFSImpl Impl(*this);
   for (const SUnit &SU : SUnits) {

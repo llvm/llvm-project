@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -std=c++11 -ast-dump %s | FileCheck %s
 // CHECK: CXXCtorInitializer Field {{.*}} 'ptr' 'void *'
-// CHECK: CXXCtorInitializer Field {{.*}} 'q' 'struct Q'
+// CHECK: CXXCtorInitializer Field {{.*}} 'q' 'Q'
 
 @interface NSObject
 @end

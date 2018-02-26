@@ -1252,6 +1252,14 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
   // b denotes the base of the number system. In our case b is 2^32.
   const uint64_t b = uint64_t(1) << 32;
 
+// The DEBUG macros here tend to be spam in the debug output if you're not
+// debugging this code. Disable them unless KNUTH_DEBUG is defined.
+#pragma push_macro("DEBUG")
+#ifndef KNUTH_DEBUG
+#undef DEBUG
+#define DEBUG(X) do {} while (false)
+#endif
+
   DEBUG(dbgs() << "KnuthDiv: m=" << m << " n=" << n << '\n');
   DEBUG(dbgs() << "KnuthDiv: original:");
   DEBUG(for (int i = m+n; i >=0; i--) dbgs() << " " << u[i]);
@@ -1391,6 +1399,8 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
     DEBUG(dbgs() << '\n');
   }
   DEBUG(dbgs() << '\n');
+
+#pragma pop_macro("DEBUG")
 }
 
 void APInt::divide(const WordType *LHS, unsigned lhsWords, const WordType *RHS,

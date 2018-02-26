@@ -68,6 +68,14 @@ extern cl::opt<std::string> ViewBlockFreqFuncName;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-hot-freq-perc=
 extern cl::opt<unsigned> ViewHotFreqPercent;
 
+static cl::opt<bool> PrintMachineBlockFreq(
+    "print-machine-bfi", cl::init(false), cl::Hidden,
+    cl::desc("Print the machine block frequency info."));
+
+// Command line option to specify the name of the function for block frequency
+// dump. Defined in Analysis/BlockFrequencyInfo.cpp.
+extern cl::opt<std::string> PrintBlockFreqFuncName;
+
 static GVDAGType getGVDT() {
   if (ViewBlockLayoutWithBFI != GVDT_None)
     return ViewBlockLayoutWithBFI;
@@ -185,6 +193,11 @@ void MachineBlockFrequencyInfo::calculate(
        F.getName().equals(ViewBlockFreqFuncName))) {
     view("MachineBlockFrequencyDAGS." + F.getName());
   }
+  if (PrintMachineBlockFreq &&
+      (PrintBlockFreqFuncName.empty() ||
+       F.getName().equals(PrintBlockFreqFuncName))) {
+    MBFI->print(dbgs());
+  }
 }
 
 bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
@@ -211,14 +224,20 @@ MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
 
 Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
     const MachineBasicBlock *MBB) const {
-  const Function *F = MBFI->getFunction()->getFunction();
-  return MBFI ? MBFI->getBlockProfileCount(*F, MBB) : None;
+  const Function &F = MBFI->getFunction()->getFunction();
+  return MBFI ? MBFI->getBlockProfileCount(F, MBB) : None;
 }
 
 Optional<uint64_t>
 MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
-  const Function *F = MBFI->getFunction()->getFunction();
-  return MBFI ? MBFI->getProfileCountFromFreq(*F, Freq) : None;
+  const Function &F = MBFI->getFunction()->getFunction();
+  return MBFI ? MBFI->getProfileCountFromFreq(F, Freq) : None;
+}
+
+bool
+MachineBlockFrequencyInfo::isIrrLoopHeader(const MachineBasicBlock *MBB) {
+  assert(MBFI && "Expected analysis to be available");
+  return MBFI->isIrrLoopHeader(MBB);
 }
 
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {

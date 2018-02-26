@@ -151,6 +151,14 @@ if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR WIN32 OR CYGWIN OR
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
 endif()
 
+# Pass -Wl,-z,nodelete. This makes sure our shared libraries are not unloaded
+# by dlclose(). We need that since the CLI API relies on cross-references
+# between global objects which became horribly broken when one of the libraries
+# is unloaded.
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nodelete")
+endif()
+
 
 function(append value)
   foreach(variable ${ARGN})
@@ -194,10 +202,13 @@ if( LLVM_ENABLE_LLD )
 endif()
 
 if( LLVM_USE_LINKER )
-  check_cxx_compiler_flag("-fuse-ld=${LLVM_USE_LINKER}" CXX_SUPPORTS_CUSTOM_LINKER)
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fuse-ld=${LLVM_USE_LINKER}")
+  check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
   if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
 	  message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'")
   endif()
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
   append("-fuse-ld=${LLVM_USE_LINKER}"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
@@ -229,12 +240,21 @@ if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -m32")
     set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -m32")
+
+    # FIXME: CMAKE_SIZEOF_VOID_P is still 8
+    add_definitions(-D_LARGEFILE_SOURCE)
+    add_definitions(-D_FILE_OFFSET_BITS=64)
   endif( LLVM_BUILD_32_BITS )
 endif( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
 
 # If building on a GNU specific 32-bit system, make sure off_t is 64 bits
-# so that off_t can stored offset > 2GB
-if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
+# so that off_t can stored offset > 2GB.
+# Android until version N (API 24) doesn't support it.
+if (ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 24))
+  set(LLVM_FORCE_SMALLFILE_FOR_ANDROID TRUE)
+endif()
+if( CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT LLVM_FORCE_SMALLFILE_FOR_ANDROID)
+  # FIXME: It isn't handled in LLVM_BUILD_32_BITS.
   add_definitions( -D_LARGEFILE_SOURCE )
   add_definitions( -D_FILE_OFFSET_BITS=64 )
 endif()
@@ -303,13 +323,13 @@ if( MSVC )
     # especially so std::equal(nullptr, nullptr, nullptr) will not assert.
     add_definitions("-D_DEBUG_POINTER_IMPL=")
   endif()
-  
+
   include(ChooseMSVCCRT)
 
   if( MSVC11 )
     add_definitions(-D_VARIADIC_MAX=10)
   endif()
-  
+
   # Add definitions that make MSVC much less annoying.
   add_definitions(
     # For some reason MS wants to deprecate a bunch of standard functions...
@@ -370,7 +390,7 @@ if( MSVC )
 
       string(FIND "${upper_exe_flags} ${upper_module_flags} ${upper_shared_flags}"
         "/INCREMENTAL" linker_flag_idx)
-      
+
       if (${linker_flag_idx} GREATER -1)
         message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
       else()
@@ -381,6 +401,7 @@ if( MSVC )
 
 elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  append_if(LLVM_ENABLE_WERROR "-Wno-error" CMAKE_REQUIRED_FLAGS)
   add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
   add_flag_if_supported("-Werror=unguarded-availability-new" WERROR_UNGUARDED_AVAILABILITY_NEW)
   if (LLVM_ENABLE_CXX1Y)
@@ -437,64 +458,66 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   endif(LLVM_ENABLE_MODULES)
 endif( MSVC )
 
-if (MSVC AND NOT CLANG_CL)
-  set(msvc_warning_flags
-    # Disabled warnings.
-    -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
-    -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
-    -wd4180 # Suppress 'qualifier applied to function type has no meaning; ignored'
-    -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
-    -wd4258 # Suppress ''var' : definition from the for loop is ignored; the definition from the enclosing scope is used'
-    -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
-    -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-    -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
-    -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
-    -wd4355 # Suppress ''this' : used in base member initializer list'
-    -wd4456 # Suppress 'declaration of 'var' hides local variable'
-    -wd4457 # Suppress 'declaration of 'var' hides function parameter'
-    -wd4458 # Suppress 'declaration of 'var' hides class member'
-    -wd4459 # Suppress 'declaration of 'var' hides global declaration'
-    -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
-    -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
-    -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
-    -wd4800 # Suppress ''type' : forcing value to bool 'true' or 'false' (performance warning)'
-    -wd4100 # Suppress 'unreferenced formal parameter'
-    -wd4127 # Suppress 'conditional expression is constant'
-    -wd4512 # Suppress 'assignment operator could not be generated'
-    -wd4505 # Suppress 'unreferenced local function has been removed'
-    -wd4610 # Suppress '<class> can never be instantiated'
-    -wd4510 # Suppress 'default constructor could not be generated'
-    -wd4702 # Suppress 'unreachable code'
-    -wd4245 # Suppress 'signed/unsigned mismatch'
-    -wd4706 # Suppress 'assignment within conditional expression'
-    -wd4310 # Suppress 'cast truncates constant value'
-    -wd4701 # Suppress 'potentially uninitialized local variable'
-    -wd4703 # Suppress 'potentially uninitialized local pointer variable'
-    -wd4389 # Suppress 'signed/unsigned mismatch'
-    -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
-    -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
-    -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
-    -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-    -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
-        # C4592 is disabled because of false positives in Visual Studio 2015
-        # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-    -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
-    -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
+if (MSVC)
+  if (NOT CLANG_CL)
+    set(msvc_warning_flags
+      # Disabled warnings.
+      -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
+      -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
+      -wd4180 # Suppress 'qualifier applied to function type has no meaning; ignored'
+      -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
+      -wd4258 # Suppress ''var' : definition from the for loop is ignored; the definition from the enclosing scope is used'
+      -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
+      -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
+      -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
+      -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
+      -wd4355 # Suppress ''this' : used in base member initializer list'
+      -wd4456 # Suppress 'declaration of 'var' hides local variable'
+      -wd4457 # Suppress 'declaration of 'var' hides function parameter'
+      -wd4458 # Suppress 'declaration of 'var' hides class member'
+      -wd4459 # Suppress 'declaration of 'var' hides global declaration'
+      -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
+      -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
+      -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
+      -wd4800 # Suppress ''type' : forcing value to bool 'true' or 'false' (performance warning)'
+      -wd4100 # Suppress 'unreferenced formal parameter'
+      -wd4127 # Suppress 'conditional expression is constant'
+      -wd4512 # Suppress 'assignment operator could not be generated'
+      -wd4505 # Suppress 'unreferenced local function has been removed'
+      -wd4610 # Suppress '<class> can never be instantiated'
+      -wd4510 # Suppress 'default constructor could not be generated'
+      -wd4702 # Suppress 'unreachable code'
+      -wd4245 # Suppress 'signed/unsigned mismatch'
+      -wd4706 # Suppress 'assignment within conditional expression'
+      -wd4310 # Suppress 'cast truncates constant value'
+      -wd4701 # Suppress 'potentially uninitialized local variable'
+      -wd4703 # Suppress 'potentially uninitialized local pointer variable'
+      -wd4389 # Suppress 'signed/unsigned mismatch'
+      -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
+      -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
+      -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
+      -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
+      -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
+          # C4592 is disabled because of false positives in Visual Studio 2015
+          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
+      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
+      -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
 
-    # Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
-    # support the 'aligned' attribute in the way that clang sources requires (for
-    # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
-    # avoid unwanted alignment warnings.
-    # When we switch to requiring a version of MSVC that supports the 'alignas'
-    # specifier (MSVC 2015?) this warning can be re-enabled.
-    -wd4324 # Suppress 'structure was padded due to __declspec(align())'
+      # Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
+      # support the 'aligned' attribute in the way that clang sources requires (for
+      # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
+      # avoid unwanted alignment warnings.
+      # When we switch to requiring a version of MSVC that supports the 'alignas'
+      # specifier (MSVC 2015?) this warning can be re-enabled.
+      -wd4324 # Suppress 'structure was padded due to __declspec(align())'
 
-    # Promoted warnings.
-    -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
+      # Promoted warnings.
+      -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
 
-    # Promoted warnings to errors.
-    -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
-    )
+      # Promoted warnings to errors.
+      -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
+      )
+  endif(NOT CLANG_CL)
 
   # Enable warnings
   if (LLVM_ENABLE_WARNINGS)
@@ -517,10 +540,17 @@ if (MSVC AND NOT CLANG_CL)
   foreach(flag ${msvc_warning_flags})
     append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endforeach(flag)
-endif (MSVC AND NOT CLANG_CL)
+endif (MSVC)
 
 if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
-  append("-Wall -W -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+  # Don't add -Wall for clang-cl, because it maps -Wall to -Weverything for
+  # MSVC compatibility.  /W4 is added above instead.
+  if (NOT CLANG_CL)
+    append("-Wall" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
+
+  append("-W -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append("-Wcast-qual" CMAKE_CXX_FLAGS)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
@@ -664,7 +694,7 @@ if(LLVM_USE_SANITIZER)
                           FSANITIZE_USE_AFTER_SCOPE_FLAG)
   endif()
   if (LLVM_USE_SANITIZE_COVERAGE)
-    append("-fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 endif()
 
@@ -725,14 +755,15 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
-option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (experimental)" Off)
+option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (deprecated)" Off)
 mark_as_advanced(LLVM_ENABLE_IR_PGO)
 
-option(LLVM_BUILD_INSTRUMENTED "Build LLVM and tools with PGO instrumentation" Off)
+set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR or Frontend")
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED)
+string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" uppercase_LLVM_BUILD_INSTRUMENTED)
 
 if (LLVM_BUILD_INSTRUMENTED)
-  if (LLVM_ENABLE_IR_PGO)
+  if (LLVM_ENABLE_IR_PGO OR uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "IR")
     append("-fprofile-generate='${LLVM_PROFILE_DATA_DIR}'"
       CMAKE_CXX_FLAGS
       CMAKE_C_FLAGS
@@ -754,6 +785,10 @@ append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate='${LLVM_PRO
   CMAKE_C_FLAGS
   CMAKE_EXE_LINKER_FLAGS
   CMAKE_SHARED_LINKER_FLAGS)
+
+if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
+  message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
+endif()
 
 if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
@@ -805,7 +840,7 @@ endif()
 # Plugin support
 # FIXME: Make this configurable.
 if(WIN32 OR CYGWIN)
-  if(BUILD_SHARED_LIBS)
+  if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
     set(LLVM_ENABLE_PLUGINS ON)
   else()
     set(LLVM_ENABLE_PLUGINS OFF)

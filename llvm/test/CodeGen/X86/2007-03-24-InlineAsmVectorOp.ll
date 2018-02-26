@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=yonah -march=x86 -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mcpu=yonah -no-integrated-as | FileCheck %s
 
 target datalayout = "e-p:32:32"
 target triple = "i686-apple-darwin9"

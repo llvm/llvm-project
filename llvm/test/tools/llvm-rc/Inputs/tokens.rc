@@ -1,0 +1,16 @@
+﻿1 + 2 - 3214L & 0x120894 032173 2|&~+(-7){0xabcdef 0xABCDEFl} Begin End
+He11o LLVM
+
+"RC string test.",L"Another RC string test.'&{",42,100
+
+Block Comment Ident /*block /* // comment */ ifier
+
+Line Comment // Identifier /*
+
+/* Multi line
+   block
+   comment */
+
+Multiple /* comments */ on /* a */ single // line
+
+         ":))"

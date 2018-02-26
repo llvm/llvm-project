@@ -131,18 +131,23 @@ createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
       Conf.CodeModel, Conf.CGOptLevel));
 }
 
-static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel,
-                           bool IsThinLTO) {
-  PassBuilder PB(TM);
+static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
+                           unsigned OptLevel, bool IsThinLTO) {
+  Optional<PGOOptions> PGOOpt;
+  if (!Conf.SampleProfile.empty())
+    PGOOpt = PGOOptions("", "", Conf.SampleProfile, false, true);
+
+  PassBuilder PB(TM, PGOOpt);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.
-  assert(PB.parseAAPipeline(AA, "default"));
+  if (!PB.parseAAPipeline(AA, "default"))
+    report_fatal_error("Error parsing default AA pipeline");
 
-  LoopAnalysisManager LAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-  ModuleAnalysisManager MAM;
+  LoopAnalysisManager LAM(Conf.DebugPassManager);
+  FunctionAnalysisManager FAM(Conf.DebugPassManager);
+  CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
+  ModuleAnalysisManager MAM(Conf.DebugPassManager);
 
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return std::move(AA); });
@@ -154,7 +159,7 @@ static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM;
+  ModulePassManager MPM(Conf.DebugPassManager);
   // FIXME (davide): verify the input.
 
   PassBuilder::OptimizationLevel OL;
@@ -177,9 +182,9 @@ static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel,
   }
 
   if (IsThinLTO)
-    MPM = PB.buildThinLTODefaultPipeline(OL, false /* DebugLogging */);
+    MPM = PB.buildThinLTODefaultPipeline(OL, Conf.DebugPassManager);
   else
-    MPM = PB.buildLTODefaultPipeline(OL, false /* DebugLogging */);
+    MPM = PB.buildLTODefaultPipeline(OL, Conf.DebugPassManager);
   MPM.run(Mod, MAM);
 
   // FIXME (davide): verify the output.
@@ -262,7 +267,7 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
     runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
   else if (Conf.UseNewPM)
-    runNewPMPasses(Mod, TM, Conf.OptLevel, IsThinLTO);
+    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO);
   else
     runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
@@ -344,7 +349,7 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
 }
 
 static void
-finalizeOptimizationRemarks(std::unique_ptr<tool_output_file> DiagOutputFile) {
+finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)

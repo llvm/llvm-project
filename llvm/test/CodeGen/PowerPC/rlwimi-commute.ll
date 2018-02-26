@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rlwimi
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep "or "
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rlwimi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep "or "
 
 ; Make sure there is no register-register copies here.
 

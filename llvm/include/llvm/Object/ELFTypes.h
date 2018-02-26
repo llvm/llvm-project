@@ -406,10 +406,10 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
     return (unsigned char)(this->getRInfo(isMips64EL) & 0x0ff);
   }
   void setSymbol(uint32_t s, bool IsMips64EL) {
-    setSymbolAndType(s, getType(), IsMips64EL);
+    setSymbolAndType(s, getType(IsMips64EL), IsMips64EL);
   }
   void setType(unsigned char t, bool IsMips64EL) {
-    setSymbolAndType(getSymbol(), t, IsMips64EL);
+    setSymbolAndType(getSymbol(IsMips64EL), t, IsMips64EL);
   }
   void setSymbolAndType(uint32_t s, unsigned char t, bool IsMips64EL) {
     this->setRInfo((s << 8) + t, IsMips64EL);
@@ -459,10 +459,10 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
     return (uint32_t)(this->getRInfo(isMips64EL) & 0xffffffffL);
   }
   void setSymbol(uint32_t s, bool IsMips64EL) {
-    setSymbolAndType(s, getType(), IsMips64EL);
+    setSymbolAndType(s, getType(IsMips64EL), IsMips64EL);
   }
   void setType(uint32_t t, bool IsMips64EL) {
-    setSymbolAndType(getSymbol(), t, IsMips64EL);
+    setSymbolAndType(getSymbol(IsMips64EL), t, IsMips64EL);
   }
   void setSymbolAndType(uint32_t s, uint32_t t, bool IsMips64EL) {
     this->setRInfo(((uint64_t)s << 32) + (t & 0xffffffffL), IsMips64EL);

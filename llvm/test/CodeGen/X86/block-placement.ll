@@ -474,11 +474,11 @@ define void @fpcmp_unanalyzable_branch(i1 %cond) {
 ; edge in 'entry' -> 'entry.if.then_crit_edge' -> 'if.then' -> 'if.end' is
 ; fall-through.
 ; CHECK-LABEL: fpcmp_unanalyzable_branch:
-; CHECK:       # BB#0: # %entry
-; CHECK:       # BB#1: # %entry.if.then_crit_edge
+; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.1: # %entry.if.then_crit_edge
 ; CHECK:       .LBB10_5: # %if.then
 ; CHECK:       .LBB10_6: # %if.end
-; CHECK:       # BB#3: # %exit
+; CHECK:       # %bb.3: # %exit
 ; CHECK:       jne .LBB10_4
 ; CHECK-NEXT:  jnp .LBB10_6
 ; CHECK:       jmp .LBB10_5
@@ -943,7 +943,7 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ; 2) The exiting edge from the loop which is rotated to be laid out at the
 ;    bottom of the loop needs to be exiting into the nearest enclosing loop (to
 ;    which there is an exit). Otherwise, we force that enclosing loop into
-;    strange layouts that are siginificantly less efficient, often times maing
+;    strange layouts that are siginificantly less efficient, often times making
 ;    it discontiguous.
 ;
 ; CHECK-LABEL: @benchmark_heapsort

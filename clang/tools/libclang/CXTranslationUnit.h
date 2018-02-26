@@ -33,6 +33,8 @@ struct CXTranslationUnitImpl {
   void *Diagnostics;
   void *OverridenCursorsPool;
   clang::index::CommentToXMLConverter *CommentToXML;
+  unsigned ParsingOptions;
+  std::vector<std::string> Arguments;
 };
 
 struct CXTargetInfoImpl {

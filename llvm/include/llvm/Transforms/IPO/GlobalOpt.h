@@ -16,10 +16,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_GLOBALOPT_H
 #define LLVM_TRANSFORMS_IPO_GLOBALOPT_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class Module;
 
 /// Optimize globals that never have their address taken.
 class GlobalOptPass : public PassInfoMixin<GlobalOptPass> {
@@ -27,6 +28,6 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-}
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_GLOBALOPT_H

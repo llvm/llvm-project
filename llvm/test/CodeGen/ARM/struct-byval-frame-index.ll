@@ -4,12 +4,11 @@
 ; generated.
 ; PR16393
 
+; We expect 4-byte spill and reload to be generated.
+
 ; CHECK: set_stored_macroblock_parameters
-; CHECK: str r{{.*}}, [sp, [[SLOT:#[0-9]+]]] @ 4-byte Spill
-; CHECK: bl RestoreMVBlock8x8
-; CHECK: bl RestoreMVBlock8x8
-; CHECK: bl RestoreMVBlock8x8
-; CHECK: ldr r{{.*}}, [sp, [[SLOT]]] @ 4-byte Reload
+; CHECK: str r{{.*}}, [sp, {{#[0-9]+}}] @ 4-byte Spill
+; CHECK: ldr r{{.*}}, [lr, {{#[0-9]+}}] @ 4-byte Reload
 
 target triple = "armv7l-unknown-linux-gnueabihf"
 

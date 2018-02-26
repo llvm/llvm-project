@@ -242,3 +242,18 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   ret i64 0
 }
+
+; CHECK-LABEL: @test17
+; CHECK: %[[A:.*]] = mul i32 %X4, %X3
+; CHECK-NEXT:  %[[C:.*]] = mul i32 %[[A]], %X1
+; CHECK-NEXT: %[[D:.*]] = mul i32 %[[A]], %X2
+; CHECK-NEXT: %[[E:.*]] = xor i32 %[[C]], %[[D]]
+; CHECK-NEXT: ret i32 %[[E]]
+define i32 @test17(i32 %X1, i32 %X2, i32 %X3, i32 %X4) {
+  %A = mul i32 %X3, %X1
+  %B = mul i32 %X3, %X2
+  %C = mul i32 %A, %X4
+  %D = mul i32 %B, %X4
+  %E = xor i32 %C, %D
+  ret i32 %E
+}

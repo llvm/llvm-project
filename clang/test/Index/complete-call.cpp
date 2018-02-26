@@ -94,6 +94,24 @@ int main() {
   s.foo_7(42,);
 }
 
+struct Bar {
+  static void foo_1();
+  void foo_1(float);
+  static void foo_1(int);
+};
+
+void test() {
+  Bar::foo_1();
+  Bar b;
+  b.foo_1();
+}
+
+struct Bar2 : public Bar {
+  Bar2() {
+    Bar::foo_1();
+  }
+};
+
 // RUN: c-index-test -code-completion-at=%s:47:9 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
 // CHECK-CC1: Completion contexts:
@@ -803,3 +821,46 @@ int main() {
 // CHECK-CC59-NEXT: Class name
 // CHECK-CC59-NEXT: Nested name specifier
 // CHECK-CC59-NEXT: Objective-C interface
+
+// RUN: c-index-test -code-completion-at=%s:104:14 %s | FileCheck -check-prefix=CHECK-CC60 %s
+// CHECK-CC60: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
+// CHECK-CC60: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter float}{RightParen )} (1)
+// CHECK-CC60: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter int}{RightParen )} (1)
+// CHECK-CC60: Completion contexts:
+// CHECK-CC60-NEXT: Any type
+// CHECK-CC60-NEXT: Any value
+// CHECK-CC60-NEXT: Enum tag
+// CHECK-CC60-NEXT: Union tag
+// CHECK-CC60-NEXT: Struct tag
+// CHECK-CC60-NEXT: Class name
+// CHECK-CC60-NEXT: Nested name specifier
+// CHECK-CC60-NEXT: Objective-C interface
+
+// RUN: c-index-test -code-completion-at=%s:106:11 %s | FileCheck -check-prefix=CHECK-CC61 %s
+// CHECK-CC61: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
+// CHECK-CC61: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter float}{RightParen )} (1)
+// CHECK-CC61: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter int}{RightParen )} (1)
+// CHECK-CC61: Completion contexts:
+// CHECK-CC61-NEXT: Any type
+// CHECK-CC61-NEXT: Any value
+// CHECK-CC61-NEXT: Enum tag
+// CHECK-CC61-NEXT: Union tag
+// CHECK-CC61-NEXT: Struct tag
+// CHECK-CC61-NEXT: Class name
+// CHECK-CC61-NEXT: Nested name specifier
+// CHECK-CC61-NEXT: Objective-C interface
+
+// RUN: c-index-test -code-completion-at=%s:111:16 %s | FileCheck -check-prefix=CHECK-CC62 %s
+// CHECK-CC62: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
+// CHECK-CC62: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter float}{RightParen )} (1)
+// CHECK-CC62: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter int}{RightParen )} (1)
+// CHECK-CC62: Completion contexts:
+// CHECK-CC62-NEXT: Any type
+// CHECK-CC62-NEXT: Any value
+// CHECK-CC62-NEXT: Enum tag
+// CHECK-CC62-NEXT: Union tag
+// CHECK-CC62-NEXT: Struct tag
+// CHECK-CC62-NEXT: Class name
+// CHECK-CC62-NEXT: Nested name specifier
+// CHECK-CC62-NEXT: Objective-C interface
+

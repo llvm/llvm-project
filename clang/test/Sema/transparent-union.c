@@ -43,6 +43,35 @@ void fi(int i) {} // expected-error{{conflicting types}}
 void fvpp(TU); // expected-note{{previous declaration is here}}
 void fvpp(void **v) {} // expected-error{{conflicting types}}
 
+/* Test redeclaring a function taking a transparent_union arg more than twice.
+   Merging different declarations depends on their order, vary order too. */
+
+void f_triple0(TU tu) {}
+void f_triple0(int *); // expected-note{{previous declaration is here}}
+void f_triple0(float *f); // expected-error{{conflicting types}}
+
+void f_triple1(int *);
+void f_triple1(TU tu) {} // expected-note{{previous definition is here}}
+void f_triple1(float *f); // expected-error{{conflicting types}}
+
+void f_triple2(int *); // expected-note{{previous declaration is here}}
+void f_triple2(float *f); // expected-error{{conflicting types}}
+void f_triple2(TU tu) {}
+
+/* Test calling redeclared function taking a transparent_union arg. */
+
+void f_callee(TU);
+void f_callee(int *i) {} // expected-note{{passing argument to parameter 'i' here}}
+
+void caller(void) {
+  TU tu;
+  f_callee(tu); // expected-error{{passing 'TU' to parameter of incompatible type 'int *'}}
+
+  int *i;
+  f_callee(i);
+}
+
+
 /* FIXME: we'd like to just use an "int" here and align it differently
    from the normal "int", but if we do so we lose the alignment
    information from the typedef within the compiler. */
@@ -102,7 +131,7 @@ union pr15134v2 {
 
 union pr30520v { void b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'void'}}
 
-union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'int []'}}
+union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{flexible array member 'b' in a union is not allowed}}
 
 // expected-note@+1 2 {{forward declaration of 'struct stb'}}
 union pr30520s { struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}

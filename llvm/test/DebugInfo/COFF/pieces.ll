@@ -37,25 +37,25 @@
 ; ASM-LABEL: loop_csr: # @loop_csr
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] 0
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] 0
-; ASM: # BB#2:                                 # %for.body.preheader
+; ASM: # %bb.2:                                 # %for.body.preheader
 ; ASM:         xorl    %edi, %edi
 ; ASM:         xorl    %esi, %esi
 ; ASM:         .p2align        4, 0x90
 ; ASM: .LBB0_3:                                # %for.body
 ; ASM: [[ox_start:\.Ltmp[0-9]+]]:
-; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %EDI
+; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %edi
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
 ; ASM:        movl    %edi, %ecx
 ; ASM:        callq   g
 ; ASM:        movl    %eax, %edi
 ; ASM: [[oy_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %EDI
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %ESI
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %edi
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %esi
 ; ASM:         .cv_loc 0 1 14 11               # t.c:14:11
 ; ASM:         movl    %esi, %ecx
 ; ASM:         callq   g
 ; ASM:         movl    %eax, %esi
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %ESI
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %esi
 ; ASM:         cmpl    n(%rip), %eax
 ; ASM:         jl      .LBB0_3
 ; ASM: [[oy_end:\.Ltmp[0-9]+]]:
@@ -64,23 +64,23 @@
 
 
 ; ASM-LABEL: pad_right: # @pad_right
-; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] %ECX
+; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] %ecx
 ; ASM:         movl    %ecx, %eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: pad_left: # @pad_left
-; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] %ECX
+; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] %ecx
 ; ASM:         .cv_loc 2 1 24 3                # t.c:24:3
 ; ASM:         movl    %ecx, %eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: nested: # @nested
-; ASM:         #DEBUG_VALUE: nested:o <- [DW_OP_deref] [%RCX+0]
+; ASM:         #DEBUG_VALUE: nested:o <- [DW_OP_deref] [%rcx+0]
 ; ASM:         movl    12(%rcx), %eax
 ; ASM: [[p_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: nested:p <- [DW_OP_LLVM_fragment 32 32] %EAX
+; ASM:         #DEBUG_VALUE: nested:p <- [DW_OP_LLVM_fragment 32 32] %eax
 ; ASM:         retq
 
 ; ASM-LABEL: bitpiece_spill: # @bitpiece_spill
@@ -89,7 +89,7 @@
 ; ASM:         callq   g
 ; ASM:         movl    %eax, [[offset_o_x:[0-9]+]](%rsp)          # 4-byte Spill
 ; ASM: [[spill_o_x_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offset_o_x]], DW_OP_LLVM_fragment 32 32] [%RSP+0]
+; ASM:         #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offset_o_x]], DW_OP_LLVM_fragment 32 32] [%rsp+0]
 ; ASM:         #APP
 ; ASM:         #NO_APP
 ; ASM:         movl    [[offset_o_x]](%rsp), %eax          # 4-byte Reload
@@ -113,14 +113,14 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 24
+; OBJ:         Register: EDI (0x18)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
 ; OBJ:         }
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 23
+; OBJ:         Register: ESI (0x17)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -143,7 +143,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 18
+; OBJ:         Register: ECX (0x12)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -166,7 +166,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 18
+; OBJ:         Register: ECX (0x12)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
@@ -179,8 +179,7 @@
 ; ASM:        .asciz  "nested"                # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; FIXME: We should have a .cv_def_range for 'o', but we don't yet.
-; ASM-NOT:    .cv_def_range
+; ASM:        .cv_def_range    .Lfunc_begin3 .Lfunc_end3, "E\021J\001\000\000\000\000\000\000"
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "p"
 ; ASM:        .cv_def_range    [[p_start]] .Lfunc_end3, "C\021\021\000\000\000\004\000\000\000"
@@ -190,13 +189,22 @@
 ; OBJ:         DisplayName: nested
 ; OBJ:       }
 ; OBJ:       LocalSym {
+; OBJ:         Type: Nested&
 ; OBJ:         VarName: o
+; OBJ:       }
+; OBJ:       DefRangeRegisterRelSym {
+; OBJ:         BaseRegister: RCX (0x14A)
+; OBJ:         HasSpilledUDTMember: No
+; OBJ:         OffsetInParent: 0
+; OBJ:         BasePointerOffset: 0
+; OBJ:         LocalVariableAddrRange {
+; OBJ:         }
 ; OBJ:       }
 ; OBJ:       LocalSym {
 ; OBJ:         VarName: p
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 17
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -220,7 +228,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: 335
+; OBJ:         BaseRegister: RSP (0x14F)
 ; OBJ:         HasSpilledUDTMember: Yes
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         BasePointerOffset: 36

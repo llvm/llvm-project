@@ -4,13 +4,13 @@
 
 define <16 x i8> @commute_fold_vpcomb(<16 x i8>* %a0, <16 x i8> %a1) {
 ; X32-LABEL: commute_fold_vpcomb:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomgtb (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomb:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomgtb (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a0
@@ -21,13 +21,13 @@ declare <16 x i8> @llvm.x86.xop.vpcomb(<16 x i8>, <16 x i8>, i8) nounwind readno
 
 define <4 x i32> @commute_fold_vpcomd(<4 x i32>* %a0, <4 x i32> %a1) {
 ; X32-LABEL: commute_fold_vpcomd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomged (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomged (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -38,13 +38,13 @@ declare <4 x i32> @llvm.x86.xop.vpcomd(<4 x i32>, <4 x i32>, i8) nounwind readno
 
 define <2 x i64> @commute_fold_vpcomq(<2 x i64>* %a0, <2 x i64> %a1) {
 ; X32-LABEL: commute_fold_vpcomq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomltq (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomltq (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0
@@ -55,13 +55,13 @@ declare <2 x i64> @llvm.x86.xop.vpcomq(<2 x i64>, <2 x i64>, i8) nounwind readno
 
 define <16 x i8> @commute_fold_vpcomub(<16 x i8>* %a0, <16 x i8> %a1) {
 ; X32-LABEL: commute_fold_vpcomub:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomleub (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomub:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomleub (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <16 x i8>, <16 x i8>* %a0
@@ -72,13 +72,13 @@ declare <16 x i8> @llvm.x86.xop.vpcomub(<16 x i8>, <16 x i8>, i8) nounwind readn
 
 define <4 x i32> @commute_fold_vpcomud(<4 x i32>* %a0, <4 x i32> %a1) {
 ; X32-LABEL: commute_fold_vpcomud:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomequd (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomud:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomequd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -89,13 +89,13 @@ declare <4 x i32> @llvm.x86.xop.vpcomud(<4 x i32>, <4 x i32>, i8) nounwind readn
 
 define <2 x i64> @commute_fold_vpcomuq(<2 x i64>* %a0, <2 x i64> %a1) {
 ; X32-LABEL: commute_fold_vpcomuq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomnequq (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomuq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomnequq (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0
@@ -106,13 +106,13 @@ declare <2 x i64> @llvm.x86.xop.vpcomuq(<2 x i64>, <2 x i64>, i8) nounwind readn
 
 define <8 x i16> @commute_fold_vpcomuw(<8 x i16>* %a0, <8 x i16> %a1) {
 ; X32-LABEL: commute_fold_vpcomuw:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomfalseuw (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomuw:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomfalseuw (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -123,13 +123,13 @@ declare <8 x i16> @llvm.x86.xop.vpcomuw(<8 x i16>, <8 x i16>, i8) nounwind readn
 
 define <8 x i16> @commute_fold_vpcomw(<8 x i16>* %a0, <8 x i16> %a1) {
 ; X32-LABEL: commute_fold_vpcomw:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpcomtruew (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpcomw:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcomtruew (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -140,13 +140,13 @@ declare <8 x i16> @llvm.x86.xop.vpcomw(<8 x i16>, <8 x i16>, i8) nounwind readno
 
 define <4 x i32> @commute_fold_vpmacsdd(<4 x i32>* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ; X32-LABEL: commute_fold_vpmacsdd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacsdd %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacsdd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacsdd %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -157,13 +157,13 @@ declare <4 x i32> @llvm.x86.xop.vpmacsdd(<4 x i32>, <4 x i32>, <4 x i32>) nounwi
 
 define <2 x i64> @commute_fold_vpmacsdqh(<4 x i32>* %a0, <4 x i32> %a1, <2 x i64> %a2) {
 ; X32-LABEL: commute_fold_vpmacsdqh:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacsdqh %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacsdqh:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacsdqh %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -174,13 +174,13 @@ declare <2 x i64> @llvm.x86.xop.vpmacsdqh(<4 x i32>, <4 x i32>, <2 x i64>) nounw
 
 define <2 x i64> @commute_fold_vpmacsdql(<4 x i32>* %a0, <4 x i32> %a1, <2 x i64> %a2) {
 ; X32-LABEL: commute_fold_vpmacsdql:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacsdql %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacsdql:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacsdql %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -191,13 +191,13 @@ declare <2 x i64> @llvm.x86.xop.vpmacsdql(<4 x i32>, <4 x i32>, <2 x i64>) nounw
 
 define <4 x i32> @commute_fold_vpmacssdd(<4 x i32>* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ; X32-LABEL: commute_fold_vpmacssdd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacssdd %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacssdd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacssdd %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -208,13 +208,13 @@ declare <4 x i32> @llvm.x86.xop.vpmacssdd(<4 x i32>, <4 x i32>, <4 x i32>) nounw
 
 define <2 x i64> @commute_fold_vpmacssdqh(<4 x i32>* %a0, <4 x i32> %a1, <2 x i64> %a2) {
 ; X32-LABEL: commute_fold_vpmacssdqh:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacssdqh %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacssdqh:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacssdqh %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -225,13 +225,13 @@ declare <2 x i64> @llvm.x86.xop.vpmacssdqh(<4 x i32>, <4 x i32>, <2 x i64>) noun
 
 define <2 x i64> @commute_fold_vpmacssdql(<4 x i32>* %a0, <4 x i32> %a1, <2 x i64> %a2) {
 ; X32-LABEL: commute_fold_vpmacssdql:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacssdql %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacssdql:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacssdql %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %a0
@@ -242,13 +242,13 @@ declare <2 x i64> @llvm.x86.xop.vpmacssdql(<4 x i32>, <4 x i32>, <2 x i64>) noun
 
 define <4 x i32> @commute_fold_vpmacsswd(<8 x i16>* %a0, <8 x i16> %a1, <4 x i32> %a2) {
 ; X32-LABEL: commute_fold_vpmacsswd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacsswd %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacsswd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacsswd %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -259,13 +259,13 @@ declare <4 x i32> @llvm.x86.xop.vpmacsswd(<8 x i16>, <8 x i16>, <4 x i32>) nounw
 
 define <8 x i16> @commute_fold_vpmacssww(<8 x i16>* %a0, <8 x i16> %a1, <8 x i16> %a2) {
 ; X32-LABEL: commute_fold_vpmacssww:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacssww %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacssww:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacssww %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -276,13 +276,13 @@ declare <8 x i16> @llvm.x86.xop.vpmacssww(<8 x i16>, <8 x i16>, <8 x i16>) nounw
 
 define <4 x i32> @commute_fold_vpmacswd(<8 x i16>* %a0, <8 x i16> %a1, <4 x i32> %a2) {
 ; X32-LABEL: commute_fold_vpmacswd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacswd %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacswd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacswd %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -293,13 +293,13 @@ declare <4 x i32> @llvm.x86.xop.vpmacswd(<8 x i16>, <8 x i16>, <4 x i32>) nounwi
 
 define <8 x i16> @commute_fold_vpmacsww(<8 x i16>* %a0, <8 x i16> %a1, <8 x i16> %a2) {
 ; X32-LABEL: commute_fold_vpmacsww:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmacsww %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmacsww:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmacsww %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -310,13 +310,13 @@ declare <8 x i16> @llvm.x86.xop.vpmacsww(<8 x i16>, <8 x i16>, <8 x i16>) nounwi
 
 define <4 x i32> @commute_fold_vpmadcsswd(<8 x i16>* %a0, <8 x i16> %a1, <4 x i32> %a2) {
 ; X32-LABEL: commute_fold_vpmadcsswd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmadcsswd %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmadcsswd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmadcsswd %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
@@ -327,13 +327,13 @@ declare <4 x i32> @llvm.x86.xop.vpmadcsswd(<8 x i16>, <8 x i16>, <4 x i32>) noun
 
 define <4 x i32> @commute_fold_vpmadcswd(<8 x i16>* %a0, <8 x i16> %a1, <4 x i32> %a2) {
 ; X32-LABEL: commute_fold_vpmadcswd:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vpmadcswd %xmm1, (%eax), %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: commute_fold_vpmadcswd:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmadcswd %xmm1, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0

@@ -5,10 +5,7 @@
 // RUN: not %run %t %t-out && FileCheck < %t-out %s
 
 // REQUIRES: stable-runtime
-// FIXME: implement SEGV handler in other sanitizers, not just asan.
-// XFAIL: msan
-// XFAIL: lsan
-// XFAIL: tsan
+// XFAIL: android && asan
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

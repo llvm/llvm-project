@@ -124,8 +124,8 @@ Available checks are:
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow,
      including all the checks added by ``-ftrapv``, and checking for
      overflow in signed division (``INT_MIN / -1``).
-  -  ``-fsanitize=unreachable``: If control flow reaches
-     ``__builtin_unreachable``.
+  -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
+     program point.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer
      overflows. Note that unlike signed integer overflow, unsigned integer
      is not undefined behavior. However, while it has well-defined semantics,
@@ -133,10 +133,10 @@ Available checks are:
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
-    the wrong dynamic type, or that its lifetime has not begun or has ended.
-    Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
-    ``clang``, to make sure C++-specific parts of the runtime library and C++
-    standard libraries are present.
+     the wrong dynamic type, or that its lifetime has not begun or has ended.
+     Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
+     ``clang``, to make sure C++-specific parts of the runtime library and C++
+     standard libraries are present.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than

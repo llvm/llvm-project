@@ -1,9 +1,12 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 # Tool-specific config options.
+config.name_suffix = "@CONFIG_NAME@"
 config.ubsan_lit_test_mode = "@UBSAN_LIT_TEST_MODE@"
 config.target_cflags = "@UBSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@UBSAN_TEST_TARGET_ARCH@"
+config.use_lld = @UBSAN_TEST_USE_LLD@
+config.use_thinlto = @UBSAN_TEST_USE_THINLTO@
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

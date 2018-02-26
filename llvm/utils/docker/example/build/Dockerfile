@@ -18,9 +18,11 @@ LABEL maintainer "Maintainer <maintainer@email>"
 # FIXME: Install llvm/clang build dependencies. Including compiler to
 # build stage1, cmake, subversion, ninja, etc.
 
-# Arguments to pass to build_install_clang.sh.
+ADD checksums /tmp/checksums
+ADD scripts /tmp/scripts
+
+# Arguments passed to build_install_clang.sh.
 ARG buildscript_args
 
 # Run the build. Results of the build will be available as /tmp/clang.tar.gz.
-ADD scripts/build_install_llvm.sh /tmp
-RUN /tmp/build_install_llvm.sh ${buildscript_args}
+RUN /tmp/scripts/build_install_llvm.sh ${buildscript_args}

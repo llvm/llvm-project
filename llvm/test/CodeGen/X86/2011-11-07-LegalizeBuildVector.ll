@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+avx | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+avx | FileCheck %s
 
 ; We don't really care what this outputs; just make sure it's somewhat sane.
 ; CHECK: legalize_test

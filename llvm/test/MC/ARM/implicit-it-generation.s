@@ -394,12 +394,12 @@ label:
   .endr
 @ CHECK: itete eq
 @ CHECK:  addeq r0, r1
-@ CHECK:  subne.w r0, r0, r1
+@ CHECK:  subne r0, r0, r1
 @ CHECK:  addeq r0, r1
-@ CHECK:  subne.w r0, r0, r1
+@ CHECK:  subne r0, r0, r1
 @ CHECK: ite eq
 @ CHECK:  addeq r0, r1
-@ CHECK:  subne.w r0, r0, r1
+@ CHECK:  subne r0, r0, r1
 
 @ Flush at end of file
   .section test99

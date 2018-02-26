@@ -5,7 +5,7 @@
 
 define void @return_void() {
 ; CHECK: return_void:{{[a-zA-Z0-9 #@]*}}
-; CHECK-NEXT: #{{[a-zA-Z0-9 #@]*}}
+; CHECK-NEXT: {{.*}}:
 ; CHECK-NEXT: ret
     ret void
 }
@@ -18,7 +18,7 @@ define i8 @return8_imm() {
 
 define i8 @return8_arg(i8 %x) {
 ; CHECK: return8_arg:{{[a-zA-Z0-9 #@]*}}
-; CHECK-NEXT: #{{[a-zA-Z0-9 #@]*}}
+; CHECK-NEXT: {{.*}}:
 ; CHECK-NEXT: ret
     ret i8 %x
 }
@@ -38,7 +38,7 @@ define i16 @return16_imm() {
 
 define i16 @return16_arg(i16 %x) {
 ; CHECK: return16_arg:{{[a-zA-Z0-9 #@]*}}
-; CHECK-NEXT: #{{[a-zA-Z0-9 #@]*}}
+; CHECK-NEXT: {{.*}}:
 ; CHECK-NEXT: ret
     ret i16 %x
 }
@@ -60,7 +60,7 @@ define i32 @return32_imm() {
 
 define i32 @return32_arg(i32 %x) {
 ; CHECK: return32_arg:{{[a-zA-Z0-9 #@]*}}
-; CHECK-NEXT: #{{[a-zA-Z0-9 #@]*}}
+; CHECK-NEXT: {{.*}}:
 ; CHECK-NEXT: ret
     ret i32 %x
 }
@@ -87,7 +87,7 @@ define i64 @return64_imm() {
 
 define i64 @return64_arg(i64 %x) {
 ; CHECK: return64_arg:{{[a-zA-Z0-9 #@]*}}
-; CHECK-NEXT: #{{[a-zA-Z0-9 #@]*}}
+; CHECK-NEXT: {{.*}}:
 ; CHECK-NEXT: ret
     ret i64 %x
 }

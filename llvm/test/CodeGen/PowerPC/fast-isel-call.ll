@@ -2,7 +2,7 @@
 ; registers and with -fast-isel-abort=1 turned on the test case will then fail.
 ; When fastisel better supports VSX fix up this test case.
 ;
-; RUN: llc < %s -O0 -verify-machineinstrs -mattr=-vsx -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64
+; RUN: llc < %s -O0 -verify-machineinstrs -mattr=-vsx -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -ppc-late-peephole=true | FileCheck %s --check-prefix=ELF64
 
 define i32 @t1(i8 signext %a) nounwind {
   %1 = sext i8 %a to i32
@@ -29,17 +29,21 @@ define void @foo(i8 %a, i16 %b) nounwind {
   %1 = call i32 @t1(i8 signext %a)
 ; ELF64: extsb
   %2 = call i32 @t2(i8 zeroext %a)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
   %3 = call i32 @t3(i16 signext %b)
 ; ELF64: extsh
   %4 = call i32 @t4(i16 zeroext %b)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 
 ;; A few test to check materialization
   %5 = call i32 @t2(i8 zeroext 255)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: li 3, 255
+; ELF64-NOT: clrldi
   %6 = call i32 @t4(i16 zeroext 65535)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: lis 3, 0
+; ELF64: ori 3, 3, 65535
+; ELF64: clrldi 3, 3, 48
+; ELF64: bl t4
   ret void
 }
 
@@ -66,12 +70,8 @@ entry:
 ; ELF64: li 6, 28
 ; ELF64: li 7, 40
 ; ELF64: li 8, 186
-; ELF64: rldicl 3, 3, 0, 56
-; ELF64: rldicl 4, 4, 0, 56
-; ELF64: rldicl 5, 5, 0, 56
-; ELF64: rldicl 6, 6, 0, 56
-; ELF64: rldicl 7, 7, 0, 56
-; ELF64: rldicl 8, 8, 0, 56
+; ELF64-NOT: clrldi
+; ELF64: bl bar
   ret i32 0
 }
 

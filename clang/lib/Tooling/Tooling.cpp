@@ -29,6 +29,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -190,11 +191,12 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
     }
     auto TargetMode =
         clang::driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
-    if (!AlreadyHasMode && !TargetMode.second.empty()) {
-      CommandLine.insert(++CommandLine.begin(), TargetMode.second);
+    if (!AlreadyHasMode && TargetMode.DriverMode) {
+      CommandLine.insert(++CommandLine.begin(), TargetMode.DriverMode);
     }
-    if (!AlreadyHasTarget && !TargetMode.first.empty()) {
-      CommandLine.insert(++CommandLine.begin(), {"-target", TargetMode.first});
+    if (!AlreadyHasTarget && TargetMode.TargetIsValid) {
+      CommandLine.insert(++CommandLine.begin(), {"-target",
+                                                 TargetMode.TargetPrefix});
     }
   }
 }
@@ -346,11 +348,7 @@ void ClangTool::mapVirtualFile(StringRef FilePath, StringRef Content) {
 }
 
 void ClangTool::appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
-  if (ArgsAdjuster)
-    ArgsAdjuster =
-        combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
-  else
-    ArgsAdjuster = std::move(Adjuster);
+  ArgsAdjuster = combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
 }
 
 void ClangTool::clearArgumentsAdjusters() {

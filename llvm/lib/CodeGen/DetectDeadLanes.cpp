@@ -17,12 +17,12 @@
 /// when subregisters are involved.
 ///
 /// Example:
-///    %vreg0 = some definition
-///    %vreg1 = IMPLICIT_DEF
-///    %vreg2 = REG_SEQUENCE %vreg0, sub0, %vreg1, sub1
-///    %vreg3 = EXTRACT_SUBREG %vreg2, sub1
-///           = use %vreg3
-/// The %vreg0 definition is dead and %vreg3 contains an undefined value.
+///    %0 = some definition
+///    %1 = IMPLICIT_DEF
+///    %2 = REG_SEQUENCE %0, sub0, %1, sub1
+///    %3 = EXTRACT_SUBREG %2, sub1
+///       = use %3
+/// The %0 definition is dead and %3 contains an undefined value.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,14 +34,13 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -526,7 +525,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
     for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
       unsigned Reg = TargetRegisterInfo::index2VirtReg(RegIdx);
       const VRegInfo &Info = VRegInfos[RegIdx];
-      dbgs() << PrintReg(Reg, nullptr)
+      dbgs() << printReg(Reg, nullptr)
              << " Used: " << PrintLaneMask(Info.UsedLanes)
              << " Def: " << PrintLaneMask(Info.DefinedLanes) << '\n';
     }

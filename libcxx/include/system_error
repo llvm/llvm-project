@@ -47,10 +47,10 @@ template <class T> struct is_error_condition_enum
     : public false_type {};
 
 template <class _Tp>
-constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value; // C++17
+inline constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value; // C++17
 
 template <class _Tp>
-constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value; // C++17
+inline constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value; // C++17
 
 class error_code
 {
@@ -246,7 +246,7 @@ struct _LIBCPP_TEMPLATE_VIS is_error_code_enum
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value;
+_LIBCPP_INLINE_VAR constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value;
 #endif
 
 // is_error_condition_enum
@@ -257,7 +257,7 @@ struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
+_LIBCPP_INLINE_VAR constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
 #endif
 
 // Some error codes are not present on all platforms, so we provide equivalents

@@ -22,9 +22,11 @@ def ThunderX2T99Model : SchedMachineModel {
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  12; // Extra cycles for mispredicted branch.
   // Determined via a mix of micro-arch details and experimentation.
-  let LoopMicroOpBufferSize =  32;
+  let LoopMicroOpBufferSize = 128;
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
+
+  list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
 // Define the issue ports.
@@ -315,6 +317,36 @@ def THX2T99Write_8Cyc_LS01_F01 : SchedWriteRes<[THX2T99LS01, THX2T99F01]> {
   let NumMicroOps = 3;
 }
 
+// 8 cycles on LS0 or LS1 and I0, I1, or I2.
+def THX2T99Write_8Cyc_I012 : SchedWriteRes<[THX2T99LS01, THX2T99I012]> {
+  let Latency = 8;
+  let NumMicroOps = 4;
+}
+
+// 12 cycles on LS0 or LS1 and I0, I1, or I2.
+def THX2T99Write_12Cyc_I012 : SchedWriteRes<[THX2T99LS01, THX2T99I012]> {
+  let Latency = 12;
+  let NumMicroOps = 6;
+}
+
+// 16 cycles on LS0 or LS1 and I0, I1, or I2.
+def THX2T99Write_16Cyc_I012 : SchedWriteRes<[THX2T99LS01, THX2T99I012]> {
+  let Latency = 16;
+  let NumMicroOps = 8;
+}
+
+// 24 cycles on LS0 or LS1 and I0, I1, or I2.
+def THX2T99Write_24Cyc_I012 : SchedWriteRes<[THX2T99LS01, THX2T99I012]> {
+  let Latency = 24;
+  let NumMicroOps = 12;
+}
+
+// 32 cycles on LS0 or LS1 and I0, I1, or I2.
+def THX2T99Write_32Cyc_I012 : SchedWriteRes<[THX2T99LS01, THX2T99I012]> {
+  let Latency = 32;
+  let NumMicroOps = 16;
+}
+
 // Define commonly used read types.
 
 // No forwarding is provided for these types.
@@ -368,7 +400,7 @@ def : WriteRes<WriteAtomic,  []> {
 //---
 def : InstRW<[THX2T99Write_1Cyc_I2], (instrs B, BL, BR, BLR)>;
 def : InstRW<[THX2T99Write_1Cyc_I2], (instrs RET)>;
-def : InstRW<[THX2T99Write_1Cyc_I2], (instregex "^B.*")>;
+def : InstRW<[THX2T99Write_1Cyc_I2], (instregex "^B..$")>;
 def : InstRW<[THX2T99Write_1Cyc_I2],
             (instregex "^CBZ", "^CBNZ", "^TBZ", "^TBNZ")>;
 
@@ -1740,6 +1772,109 @@ def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr],
 def : InstRW<[THX2T99Write_1Cyc_LS01_F01], (instregex "^ST4i(8|16|32|64)$")>;
 def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr],
             (instregex "^ST4i(8|16|32|64)_POST$")>;
+
+// V8.1a Atomics (LSE)
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs CASB, CASH, CASW, CASX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs CASAB, CASAH, CASAW, CASAX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs CASLB, CASLH, CASLW, CASLX)>;
+
+def : InstRW<[THX2T99Write_16Cyc_I012, WriteAtomic],
+            (instrs CASALB, CASALH, CASALW, CASALX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDLARB, LDLARH, LDLARW, LDLARX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDADDB, LDADDH, LDADDW, LDADDX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDADDAB, LDADDAH, LDADDAW, LDADDAX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDADDLB, LDADDLH, LDADDLW, LDADDLX)>;
+
+def : InstRW<[THX2T99Write_16Cyc_I012, WriteAtomic],
+            (instrs LDADDALB, LDADDALH, LDADDALW, LDADDALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDCLRB, LDCLRH, LDCLRW, LDCLRX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDCLRAB, LDCLRAH, LDCLRAW, LDCLRAX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDCLRLB, LDCLRLH, LDCLRLW, LDCLRLX)>;
+
+def : InstRW<[THX2T99Write_16Cyc_I012, WriteAtomic],
+            (instrs LDCLRALB, LDCLRALH, LDCLRALW, LDCLRALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDEORB, LDEORH, LDEORW, LDEORX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDEORAB, LDEORAH, LDEORAW, LDEORAX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDEORLB, LDEORLH, LDEORLW, LDEORLX)>;
+
+def : InstRW<[THX2T99Write_16Cyc_I012, WriteAtomic],
+            (instrs LDEORALB, LDEORALH, LDEORALW, LDEORALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDSETB, LDSETH, LDSETW, LDSETX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDSETAB, LDSETAH, LDSETAW, LDSETAX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs LDSETLB, LDSETLH, LDSETLW, LDSETLX)>;
+
+def : InstRW<[THX2T99Write_16Cyc_I012, WriteAtomic],
+            (instrs LDSETALB, LDSETALH, LDSETALW, LDSETALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDSMAXB, LDSMAXH, LDSMAXW, LDSMAXX,
+             LDSMAXAB, LDSMAXAH, LDSMAXAW, LDSMAXAX,
+             LDSMAXLB, LDSMAXLH, LDSMAXLW, LDSMAXLX,
+             LDSMAXALB, LDSMAXALH, LDSMAXALW, LDSMAXALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDSMINB, LDSMINH, LDSMINW, LDSMINX,
+             LDSMINAB, LDSMINAH, LDSMINAW, LDSMINAX,
+             LDSMINLB, LDSMINLH, LDSMINLW, LDSMINLX,
+             LDSMINALB, LDSMINALH, LDSMINALW, LDSMINALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDUMAXB, LDUMAXH, LDUMAXW, LDUMAXX,
+             LDUMAXAB, LDUMAXAH, LDUMAXAW, LDUMAXAX,
+             LDUMAXLB, LDUMAXLH, LDUMAXLW, LDUMAXLX,
+             LDUMAXALB, LDUMAXALH, LDUMAXALW, LDUMAXALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs LDUMINB, LDUMINH, LDUMINW, LDUMINX,
+             LDUMINAB, LDUMINAH, LDUMINAW, LDUMINAX,
+             LDUMINLB, LDUMINLH, LDUMINLW, LDUMINLX,
+             LDUMINALB, LDUMINALH, LDUMINALW, LDUMINALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs SWPB, SWPH, SWPW, SWPX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs SWPAB, SWPAH, SWPAW, SWPAX)>;
+
+def : InstRW<[THX2T99Write_12Cyc_I012, WriteAtomic],
+            (instrs SWPLB, SWPLH, SWPLW, SWPLX)>;
+
+def : InstRW<[THX2T99Write_16Cyc_I012, WriteAtomic],
+            (instrs SWPALB, SWPALH, SWPALW, SWPALX)>;
+
+def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
+            (instrs STLLRB, STLLRH, STLLRW, STLLRX)>;
 
 } // SchedModel = ThunderX2T99Model
 

@@ -522,11 +522,13 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
     ShouldClose = false;
     return;
   }
-  // We do not want to close STDOUT as there may have been several uses of it
-  // such as the case: llc %s -o=- -pass-remarks-output=- -filetype=asm
-  // which cause multiple closes of STDOUT_FILENO and/or use-after-close of it.
-  // Using dup() in getFD doesn't work as we end up with original STDOUT_FILENO
-  // open anyhow.
+
+  // Do not attempt to close stdout or stderr. We used to try to maintain the
+  // property that tools that support writing file to stdout should not also
+  // write informational output to stdout, but in practice we were never able to
+  // maintain this invariant. Many features have been added to LLVM and clang
+  // (-fdump-record-layouts, optimization remarks, etc) that print to stdout, so
+  // users must simply be aware that mixed output and remarks is a possibility.
   if (FD <= STDERR_FILENO)
     ShouldClose = false;
 
@@ -576,24 +578,25 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
-#ifndef LLVM_ON_WIN32
+  // The maximum write size is limited to SSIZE_MAX because a write
+  // greater than SSIZE_MAX is implementation-defined in POSIX.
+  // Since SSIZE_MAX is not portable, we use SIZE_MAX >> 1 instead.
+  size_t MaxWriteSize = SIZE_MAX >> 1;
+
 #if defined(__linux__)
-  bool ShouldWriteInChunks = true;
-#else
-  bool ShouldWriteInChunks = false;
-#endif
-#else
+  // It is observed that Linux returns EINVAL for a very large write (>2G).
+  // Make it a reasonably small value.
+  MaxWriteSize = 1024 * 1024 * 1024;
+#elif defined(LLVM_ON_WIN32)
   // Writing a large size of output to Windows console returns ENOMEM. It seems
   // that, prior to Windows 8, WriteFile() is redirecting to WriteConsole(), and
   // the latter has a size limit (66000 bytes or less, depending on heap usage).
-  bool ShouldWriteInChunks = !!::_isatty(FD) && !RunningWindows8OrGreater();
+  if (::_isatty(FD) && !RunningWindows8OrGreater())
+    MaxWriteSize = 32767;
 #endif
 
   do {
-    size_t ChunkSize = Size;
-    if (ChunkSize > 32767 && ShouldWriteInChunks)
-        ChunkSize = 32767;
-
+    size_t ChunkSize = std::min(Size, MaxWriteSize);
     ssize_t ret = ::write(FD, Ptr, ChunkSize);
 
     if (ret < 0) {
@@ -734,10 +737,7 @@ bool raw_fd_ostream::has_colors() const {
 /// outs() - This returns a reference to a raw_ostream for standard output.
 /// Use it like: outs() << "foo" << "bar";
 raw_ostream &llvm::outs() {
-  // Set buffer settings to model stdout behavior.  Delete the file descriptor
-  // when the program exits, forcing error detection.  This means that if you
-  // ever call outs(), you can't open another raw_fd_ostream on stdout, as we'll
-  // close stdout twice and print an error the second time.
+  // Set buffer settings to model stdout behavior.
   std::error_code EC;
   static raw_fd_ostream S("-", EC, sys::fs::F_None);
   assert(!EC);

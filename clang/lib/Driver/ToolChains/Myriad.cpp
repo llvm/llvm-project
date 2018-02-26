@@ -199,7 +199,7 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   std::string Exec =
-      Args.MakeArgString(TC.GetProgramPath("sparc-myriad-elf-ld"));
+      Args.MakeArgString(TC.GetProgramPath("sparc-myriad-rtems-ld"));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Exec),
                                           CmdArgs, Inputs));
 }
@@ -218,10 +218,11 @@ MyriadToolChain::MyriadToolChain(const Driver &D, const llvm::Triple &Triple,
     D.Diag(clang::diag::err_target_unsupported_arch)
         << Triple.getArchName() << "myriad";
     LLVM_FALLTHROUGH;
+  case llvm::Triple::shave:
+    return;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
-  case llvm::Triple::shave:
-    GCCInstallation.init(Triple, Args, {"sparc-myriad-elf"});
+    GCCInstallation.init(Triple, Args, {"sparc-myriad-rtems"});
   }
 
   if (GCCInstallation.isValid()) {
@@ -231,7 +232,7 @@ MyriadToolChain::MyriadToolChain(const Driver &D, const llvm::Triple &Triple,
     addPathIfExists(D, CompilerSupportDir, getFilePaths());
   }
   // libstd++ and libc++ must both be found in this one place.
-  addPathIfExists(D, D.Dir + "/../sparc-myriad-elf/lib", getFilePaths());
+  addPathIfExists(D, D.Dir + "/../sparc-myriad-rtems/lib", getFilePaths());
 }
 
 MyriadToolChain::~MyriadToolChain() {}

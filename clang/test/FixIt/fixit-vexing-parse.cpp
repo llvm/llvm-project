@@ -106,3 +106,24 @@ namespace N {
     wchar_t wc(); // expected-warning {{function declaration}} expected-note {{replace parentheses with an initializer}}
   }
 }
+
+namespace RedundantParens {
+struct Y {
+  Y();
+  Y(int);
+  ~Y();
+};
+int n;
+
+void test() {
+  // CHECK: add a variable name
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+7]]:4-[[@LINE+7]]:4}:" varname"
+  // CHECK: add enclosing parentheses
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+5]]:3-[[@LINE+5]]:3}:"("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+4]]:7-[[@LINE+4]]:7}:")"
+  // CHECK: remove parentheses
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+2]]:4-[[@LINE+2]]:5}:" "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:6-[[@LINE+1]]:7}:""
+  Y(n); // expected-warning {{declaration of variable named 'n'}} expected-note 3{{}}
+}
+}

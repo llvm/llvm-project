@@ -30,16 +30,16 @@
 @ CHECK: msr	basepri_max, r0         @ encoding: [0x80,0xf3,0x12,0x88]
 @ CHECK: msr	faultmask, r0           @ encoding: [0x80,0xf3,0x13,0x88]
 
-@ CHECK-V6M: error: invalid operand for instruction
+@ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: mrs r0, basepri
-@ CHECK-V6M: error: invalid operand for instruction
+@ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: mrs r0, basepri_max
-@ CHECK-V6M: error: invalid operand for instruction
+@ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: mrs r0, faultmask
-@ CHECK-V6M: error: invalid operand for instruction
+@ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: msr basepri, r0
-@ CHECK-V6M: error: invalid operand for instruction
+@ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: msr basepri_max, r0
-@ CHECK-V6M: error: invalid operand for instruction
+@ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: msr faultmask, r0
 

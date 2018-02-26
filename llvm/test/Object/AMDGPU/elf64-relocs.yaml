@@ -15,6 +15,7 @@
 # CHECK:     0x18 R_AMDGPU_GOTPCREL32_HI  - 0x0
 # CHECK:     0x20 R_AMDGPU_REL32_LO       - 0x0
 # CHECK:     0x22 R_AMDGPU_REL32_HI       - 0x0
+# CHECK:     0x24 R_AMDGPU_RELATIVE64     - 0x0
 # CHECK:   }
 # CHECK: ]
 
@@ -72,6 +73,9 @@ Sections:
       - Offset:          0x22
         Symbol:          s11
         Type:            R_AMDGPU_REL32_HI
+      - Offset:          0x24
+        Symbol:          s12
+        Type:            R_AMDGPU_RELATIVE64
 
 Symbols:
   Local:

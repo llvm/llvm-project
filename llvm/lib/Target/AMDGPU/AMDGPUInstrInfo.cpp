@@ -23,14 +23,15 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
-#define GET_INSTRMAP_INFO
 #include "AMDGPUGenInstrInfo.inc"
 
 // Pin the vtable to this file.
 void AMDGPUInstrInfo::anchor() {}
 
 AMDGPUInstrInfo::AMDGPUInstrInfo(const AMDGPUSubtarget &ST)
-  : AMDGPUGenInstrInfo(-1, -1), ST(ST), AMDGPUASI(ST.getAMDGPUAS()) {}
+  : AMDGPUGenInstrInfo(AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
+    ST(ST),
+    AMDGPUASI(ST.getAMDGPUAS()) {}
 
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
 // the first 16 loads will be interleaved with the stores, and the next 16 will
@@ -54,33 +55,14 @@ bool AMDGPUInstrInfo::shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1,
   return (NumLoads <= 16 && (Offset1 - Offset0) < 64);
 }
 
-int AMDGPUInstrInfo::getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const {
-  switch (Channels) {
-  default: return Opcode;
-  case 1: return AMDGPU::getMaskedMIMGOp(Opcode, AMDGPU::Channels_1);
-  case 2: return AMDGPU::getMaskedMIMGOp(Opcode, AMDGPU::Channels_2);
-  case 3: return AMDGPU::getMaskedMIMGOp(Opcode, AMDGPU::Channels_3);
-  }
-}
-
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
 enum SIEncodingFamily {
   SI = 0,
   VI = 1,
   SDWA = 2,
-  SDWA9 = 3
+  SDWA9 = 3,
+  GFX9 = 4
 };
-
-// Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
-// header files, so we need to wrap it in a function that takes unsigned
-// instead.
-namespace llvm {
-namespace AMDGPU {
-static int getMCOpcode(uint16_t Opcode, unsigned Gen) {
-  return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
-}
-}
-}
 
 static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
   switch (ST.getGeneration()) {
@@ -104,6 +86,11 @@ static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
 
 int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
   SIEncodingFamily Gen = subtargetEncodingFamily(ST);
+
+  if ((get(Opcode).TSFlags & SIInstrFlags::renamedInGFX9) != 0 &&
+    ST.getGeneration() >= AMDGPUSubtarget::GFX9)
+    Gen = SIEncodingFamily::GFX9;
+
   if (get(Opcode).TSFlags & SIInstrFlags::SDWA)
     Gen = ST.getGeneration() == AMDGPUSubtarget::GFX9 ? SIEncodingFamily::SDWA9
                                                       : SIEncodingFamily::SDWA;
@@ -120,4 +107,22 @@ int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
     return -1;
 
   return MCOp;
+}
+
+// TODO: Should largely merge with AMDGPUTTIImpl::isSourceOfDivergence.
+bool AMDGPUInstrInfo::isUniformMMO(const MachineMemOperand *MMO) {
+  const Value *Ptr = MMO->getValue();
+  // UndefValue means this is a load of a kernel input.  These are uniform.
+  // Sometimes LDS instructions have constant pointers.
+  // If Ptr is null, then that means this mem operand contains a
+  // PseudoSourceValue like GOT.
+  if (!Ptr || isa<UndefValue>(Ptr) ||
+      isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
+    return true;
+
+  if (const Argument *Arg = dyn_cast<Argument>(Ptr))
+    return AMDGPU::isArgPassedInSGPR(Arg);
+
+  const Instruction *I = dyn_cast<Instruction>(Ptr);
+  return I && I->getMetadata("amdgpu.uniform");
 }

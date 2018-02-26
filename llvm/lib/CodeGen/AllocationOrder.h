@@ -32,7 +32,11 @@ class LLVM_LIBRARY_VISIBILITY AllocationOrder {
   ArrayRef<MCPhysReg> Order;
   int Pos;
 
+  // If HardHints is true, *only* Hints will be returned.
+  bool HardHints;
+
 public:
+
   /// Create a new AllocationOrder for VirtReg.
   /// @param VirtReg      Virtual register to allocate for.
   /// @param VRM          Virtual register map for function.
@@ -51,6 +55,8 @@ public:
   unsigned next(unsigned Limit = 0) {
     if (Pos < 0)
       return Hints.end()[Pos++];
+    if (HardHints)
+      return 0;
     if (!Limit)
       Limit = Order.size();
     while (Pos < int(Limit)) {
@@ -68,6 +74,8 @@ public:
   unsigned nextWithDups(unsigned Limit) {
     if (Pos < 0)
       return Hints.end()[Pos++];
+    if (HardHints)
+      return 0;
     if (Pos < int(Limit))
       return Order[Pos++];
     return 0;

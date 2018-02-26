@@ -10,7 +10,8 @@ set(DD_SOURCES
   dd_interceptors.cc
 )
 
-set(DD_LINKLIBS)
+set(DD_LINKLIBS ${SANITIZER_CXX_ABI_LIBRARY} ${SANITIZER_COMMON_LINK_LIBS})
+
 append_list_if(COMPILER_RT_HAS_LIBDL dl DD_LINKLIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt DD_LINKLIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread DD_LINKLIBS)
@@ -40,6 +41,7 @@ if(CAN_TARGET_x86_64 AND UNIX AND NOT APPLE AND NOT ANDROID)
             $<TARGET_OBJECTS:RTInterception.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
     LINK_LIBS ${DD_LINKLIBS}
     PARENT_TARGET dd)
 endif()

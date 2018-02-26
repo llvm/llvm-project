@@ -1,6 +1,7 @@
 ; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-SCO
 ; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO-HASQPX
 ; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO-HASQPX
+; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -code-model=small | FileCheck %s -check-prefix=SCM
 
 ; No combination of "powerpc64le-unknown-linux-gnu" + "CHECK-SCO", because
 ; only Power8 (and later) fully support LE.
@@ -38,6 +39,15 @@ define void @caller_64_64_copy([8 x i64] %a, [8 x i64] %b) #1 {
 
 ; CHECK-SCO-LABEL: caller_64_64_copy:
 ; CHECK-SCO: b callee_64_64_copy
+}
+
+define internal fastcc void @callee_64_64_copy_fastcc([8 x i64] %a, [8 x i64] %b) #0 { ret void }
+define void @caller_64_64_copy_ccc([8 x i64] %a, [8 x i64] %b) #1 {
+  tail call fastcc void @callee_64_64_copy_fastcc([8 x i64] %a, [8 x i64] %b)
+  ret void
+; If caller and callee use different calling convensions, we cannot apply TCO.
+; CHECK-SCO-LABEL: caller_64_64_copy_ccc:
+; CHECK-SCO: bl callee_64_64_copy_fastcc
 }
 
 define void @caller_64_64_reorder_copy([8 x i64] %a, [8 x i64] %b) #1 {
@@ -142,7 +152,10 @@ define void @wo_hcaller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_hcaller:
-; CHECK-SCO: bl wo_hcallee
+; CHECK-SCO: b wo_hcallee
+
+; SCM-LABEL: wo_hcaller:
+; SCM:       bl wo_hcallee
 }
 
 define weak_odr protected void @wo_pcallee(%class.T* %this, i8* %c) { ret void }
@@ -151,7 +164,10 @@ define void @wo_pcaller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_pcaller:
-; CHECK-SCO: bl wo_pcallee
+; CHECK-SCO: b wo_pcallee
+
+; SCM-LABEL: wo_pcaller:
+; SCM:       bl wo_pcallee
 }
 
 define weak_odr void @wo_callee(%class.T* %this, i8* %c) { ret void }
@@ -160,7 +176,10 @@ define void @wo_caller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_caller:
-; CHECK-SCO: bl wo_callee
+; CHECK-SCO: b wo_callee
+
+; SCM-LABEL: wo_caller:
+; SCM:       bl wo_callee
 }
 
 define weak protected void @w_pcallee(i8* %ptr) { ret void }
@@ -169,7 +188,10 @@ define void @w_pcaller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_pcaller:
-; CHECK-SCO: bl w_pcallee
+; CHECK-SCO: b w_pcallee
+
+; SCM-LABEL: w_pcaller:
+; SCM:       bl w_pcallee
 }
 
 define weak hidden void @w_hcallee(i8* %ptr) { ret void }
@@ -178,7 +200,10 @@ define void @w_hcaller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_hcaller:
-; CHECK-SCO: bl w_hcallee
+; CHECK-SCO: b w_hcallee
+
+; SCM-LABEL: w_hcaller:
+; SCM:       bl w_hcallee
 }
 
 define weak void @w_callee(i8* %ptr) { ret void }
@@ -187,7 +212,10 @@ define void @w_caller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_caller:
-; CHECK-SCO: bl w_callee
+; CHECK-SCO: b w_callee
+
+; SCM-LABEL: w_caller:
+; SCM:       bl w_callee
 }
 
 %struct.byvalTest = type { [8 x i8] }

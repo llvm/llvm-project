@@ -108,6 +108,7 @@ public:
   virtual uint32_t getTypeId() const = 0;
   virtual uint32_t getUavSlot() const = 0;
   virtual std::string getUndecoratedName() const = 0;
+  virtual std::string getUndecoratedNameEx(PDB_UndnameFlags Flags) const = 0;
   virtual uint32_t getUnmodifiedTypeId() const = 0;
   virtual uint32_t getUpperBoundId() const = 0;
   virtual Variant getValue() const = 0;

@@ -250,7 +250,8 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
   do {
     ColonProtectionRAIIObject ColonRAII(*this);
     SourceRange Range;
-    TypeResult TR = ParseTypeName(&Range, Declarator::PrototypeContext, AS);
+    TypeResult TR =
+        ParseTypeName(&Range, DeclaratorContext::PrototypeContext, AS);
     if (TR.isUsable()) {
       auto ReductionType =
           Actions.ActOnOpenMPDeclareReductionType(Range.getBegin(), TR);
@@ -302,6 +303,7 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
   for (auto *D : DRD.get()) {
     TentativeParsingAction TPA(*this);
     ParseScope OMPDRScope(this, Scope::FnScope | Scope::DeclScope |
+                                    Scope::CompoundStmtScope |
                                     Scope::OpenMPDirectiveScope);
     // Parse <combiner> expression.
     Actions.ActOnOpenMPDeclareReductionCombinerStart(getCurScope(), D);
@@ -337,14 +339,24 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
           IsCorrect;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
         ParseScope OMPDRScope(this, Scope::FnScope | Scope::DeclScope |
+                                        Scope::CompoundStmtScope |
                                         Scope::OpenMPDirectiveScope);
         // Parse expression.
-        Actions.ActOnOpenMPDeclareReductionInitializerStart(getCurScope(), D);
-        InitializerResult = Actions.ActOnFinishFullExpr(
-            ParseAssignmentExpression().get(), D->getLocation(),
-            /*DiscardedValue=*/true);
+        VarDecl *OmpPrivParm =
+            Actions.ActOnOpenMPDeclareReductionInitializerStart(getCurScope(),
+                                                                D);
+        // Check if initializer is omp_priv <init_expr> or something else.
+        if (Tok.is(tok::identifier) &&
+            Tok.getIdentifierInfo()->isStr("omp_priv")) {
+          ConsumeToken();
+          ParseOpenMPReductionInitializerForDecl(OmpPrivParm);
+        } else {
+          InitializerResult = Actions.ActOnFinishFullExpr(
+              ParseAssignmentExpression().get(), D->getLocation(),
+              /*DiscardedValue=*/true);
+        }
         Actions.ActOnOpenMPDeclareReductionInitializerEnd(
-            D, InitializerResult.get());
+            D, InitializerResult.get(), OmpPrivParm);
         if (InitializerResult.isInvalid() && Tok.isNot(tok::r_paren) &&
             Tok.isNot(tok::annot_pragma_openmp_end)) {
           TPA.Commit();
@@ -366,6 +378,72 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
   }
   return Actions.ActOnOpenMPDeclareReductionDirectiveEnd(getCurScope(), DRD,
                                                          IsCorrect);
+}
+
+void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
+  // Parse declarator '=' initializer.
+  // If a '==' or '+=' is found, suggest a fixit to '='.
+  if (isTokenEqualOrEqualTypo()) {
+    ConsumeToken();
+
+    if (Tok.is(tok::code_completion)) {
+      Actions.CodeCompleteInitializer(getCurScope(), OmpPrivParm);
+      Actions.FinalizeDeclaration(OmpPrivParm);
+      cutOffParsing();
+      return;
+    }
+
+    ExprResult Init(ParseInitializer());
+
+    if (Init.isInvalid()) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+      Actions.ActOnInitializerError(OmpPrivParm);
+    } else {
+      Actions.AddInitializerToDecl(OmpPrivParm, Init.get(),
+                                   /*DirectInit=*/false);
+    }
+  } else if (Tok.is(tok::l_paren)) {
+    // Parse C++ direct initializer: '(' expression-list ')'
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    T.consumeOpen();
+
+    ExprVector Exprs;
+    CommaLocsTy CommaLocs;
+
+    if (ParseExpressionList(Exprs, CommaLocs, [this, OmpPrivParm, &Exprs] {
+          Actions.CodeCompleteConstructor(
+              getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
+              OmpPrivParm->getLocation(), Exprs);
+        })) {
+      Actions.ActOnInitializerError(OmpPrivParm);
+      SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+    } else {
+      // Match the ')'.
+      T.consumeClose();
+
+      assert(!Exprs.empty() && Exprs.size() - 1 == CommaLocs.size() &&
+             "Unexpected number of commas!");
+
+      ExprResult Initializer = Actions.ActOnParenListExpr(
+          T.getOpenLocation(), T.getCloseLocation(), Exprs);
+      Actions.AddInitializerToDecl(OmpPrivParm, Initializer.get(),
+                                   /*DirectInit=*/true);
+    }
+  } else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
+    // Parse C++0x braced-init-list.
+    Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+
+    ExprResult Init(ParseBraceInitializer());
+
+    if (Init.isInvalid()) {
+      Actions.ActOnInitializerError(OmpPrivParm);
+    } else {
+      Actions.AddInitializerToDecl(OmpPrivParm, Init.get(),
+                                   /*DirectInit=*/true);
+    }
+  } else {
+    Actions.ActOnUninitializedDecl(OmpPrivParm);
+  }
 }
 
 namespace {
@@ -405,8 +483,9 @@ public:
 
     // If the Decl is on a function, add function parameters to the scope.
     HasFunScope = D->isFunctionOrFunctionTemplate();
-    FnScope = new Parser::ParseScope(&P, Scope::FnScope | Scope::DeclScope,
-                                     HasFunScope);
+    FnScope = new Parser::ParseScope(
+        &P, Scope::FnScope | Scope::DeclScope | Scope::CompoundStmtScope,
+        HasFunScope);
     if (HasFunScope)
       Actions.ActOnReenterFunctionContext(Actions.getCurScope(), D);
   }
@@ -682,9 +761,17 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     DKind = ParseOpenMPDirectiveKind(*this);
     while (DKind != OMPD_end_declare_target && DKind != OMPD_declare_target &&
            Tok.isNot(tok::eof) && Tok.isNot(tok::r_brace)) {
-      ParsedAttributesWithRange attrs(AttrFactory);
-      MaybeParseCXX11Attributes(attrs);
-      ParseExternalDeclaration(attrs);
+      DeclGroupPtrTy Ptr;
+      // Here we expect to see some function declaration.
+      if (AS == AS_none) {
+        assert(TagType == DeclSpec::TST_unspecified);
+        MaybeParseCXX11Attributes(Attrs);
+        ParsingDeclSpec PDS(*this);
+        Ptr = ParseExternalDeclaration(Attrs, &PDS);
+      } else {
+        Ptr =
+            ParseCXXClassMemberDeclarationWithPragmas(AS, Attrs, TagType, Tag);
+      }
       if (Tok.isAnnotation() && Tok.is(tok::annot_pragma_openmp)) {
         TentativeParsingAction TPA(*this);
         ConsumeAnnotationToken();
@@ -813,8 +900,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   SmallVector<OMPClause *, 5> Clauses;
   SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>, OMPC_unknown + 1>
   FirstClauses(OMPC_unknown + 1);
-  unsigned ScopeFlags =
-      Scope::FnScope | Scope::DeclScope | Scope::OpenMPDirectiveScope;
+  unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
+                        Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
   SourceLocation Loc = ConsumeAnnotationToken(), EndLoc;
   auto DKind = ParseOpenMPDirectiveKind(*this);
   OpenMPDirectiveKind CancelRegion = OMPD_unknown;
@@ -1000,6 +1087,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       AssociatedStmt = ParseStatement();
       Actions.ActOnFinishOfCompoundStmt();
       AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
+    } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
+               DKind == OMPD_target_exit_data) {
+      Sema::CompoundScopeRAII CompoundScope(Actions);
+      Actions.ActOnOpenMPRegionStart(DKind, getCurScope());
+      Actions.ActOnStartOfCompoundStmt();
+      AssociatedStmt =
+          Actions.ActOnCompoundStmt(Loc, Loc, llvm::None, /*isStmtExpr=*/false);
+      Actions.ActOnFinishOfCompoundStmt();
+      AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
     }
     Directive = Actions.ActOnOpenMPExecutableDirective(
         DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc,
@@ -1102,7 +1198,8 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       simdlen-clause | threads-clause | simd-clause | num_teams-clause |
 ///       thread_limit-clause | priority-clause | grainsize-clause |
 ///       nogroup-clause | num_tasks-clause | hint-clause | to-clause |
-///       from-clause | is_device_ptr-clause | task_reduction-clause
+///       from-clause | is_device_ptr-clause | task_reduction-clause |
+///       in_reduction-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -1221,6 +1318,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_shared:
   case OMPC_reduction:
   case OMPC_task_reduction:
+  case OMPC_in_reduction:
   case OMPC_linear:
   case OMPC_aligned:
   case OMPC_copyin:
@@ -1586,7 +1684,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);
   // Handle reduction-identifier for reduction clause.
-  if (Kind == OMPC_reduction || Kind == OMPC_task_reduction) {
+  if (Kind == OMPC_reduction || Kind == OMPC_task_reduction ||
+      Kind == OMPC_in_reduction) {
     ColonProtectionRAIIObject ColonRAII(*this);
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionIdScopeSpec,
@@ -1734,13 +1833,14 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Diag(Tok, diag::warn_pragma_expected_colon) << "map type";
   }
 
-  bool IsComma = (Kind != OMPC_reduction && Kind != OMPC_task_reduction &&
-                  Kind != OMPC_depend && Kind != OMPC_map) ||
-                 (Kind == OMPC_reduction && !InvalidReductionId) ||
-                 (Kind == OMPC_map && Data.MapType != OMPC_MAP_unknown &&
-                  (!MapTypeModifierSpecified ||
-                   Data.MapTypeModifier == OMPC_MAP_always)) ||
-                 (Kind == OMPC_depend && Data.DepKind != OMPC_DEPEND_unknown);
+  bool IsComma =
+      (Kind != OMPC_reduction && Kind != OMPC_task_reduction &&
+       Kind != OMPC_in_reduction && Kind != OMPC_depend && Kind != OMPC_map) ||
+      (Kind == OMPC_reduction && !InvalidReductionId) ||
+      (Kind == OMPC_map && Data.MapType != OMPC_MAP_unknown &&
+       (!MapTypeModifierSpecified ||
+        Data.MapTypeModifier == OMPC_MAP_always)) ||
+      (Kind == OMPC_depend && Data.DepKind != OMPC_DEPEND_unknown);
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
                      Tok.isNot(tok::annot_pragma_openmp_end))) {
@@ -1796,7 +1896,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 }
 
 /// \brief Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',
-/// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction' or 'task_reduction'.
+/// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction', 'task_reduction' or
+/// 'in_reduction'.
 ///
 ///    private-clause:
 ///       'private' '(' list ')'
@@ -1814,6 +1915,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'reduction' '(' reduction-identifier ':' list ')'
 ///    task_reduction-clause:
 ///       'task_reduction' '(' reduction-identifier ':' list ')'
+///    in_reduction-clause:
+///       'in_reduction' '(' reduction-identifier ':' list ')'
 ///    copyprivate-clause:
 ///       'copyprivate' '(' list ')'
 ///    flush-clause:

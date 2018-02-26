@@ -54,8 +54,8 @@
         floor.l.s $f12,$f5          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         floor.w.d $f14,$f11         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         floor.w.s $f8,$f9           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        lld       $zero,-14736($ra) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lwu       $s3,-24086($v1)   # CHECK: :[[@LINE]]:23: error: expected memory with 12-bit signed offset
+        lld       $zero,-14736($ra) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwu       $s3,-24086($v1)   # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
         round.l.d $f12,$f1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         round.l.s $f25,$f5          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         round.w.d $f6,$f4           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

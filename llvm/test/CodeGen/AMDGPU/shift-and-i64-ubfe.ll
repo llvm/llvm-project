@@ -1,4 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; FIXME: Fails with -enable-var-scope
 
 ; Make sure 64-bit BFE pattern does a 32-bit BFE on the relevant half.
 
@@ -91,7 +92,7 @@ define amdgpu_kernel void @v_uextract_bit_32_i64(i64 addrspace(1)* %out, i64 add
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; GCN-DAG: v_bfe_u32 v[[BFE:[0-9]+]], [[VAL]], 1, 1{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO1]]{{\]}}
+; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO1]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_33_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
@@ -210,7 +211,7 @@ define amdgpu_kernel void @v_uextract_bit_30_60_i64(i64 addrspace(1)* %out, i64 
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; GCN-DAG: v_bfe_u32 v[[BFE:[0-9]+]], [[VAL]], 1, 30
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO1]]{{\]}}
+; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO1]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_33_63_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x

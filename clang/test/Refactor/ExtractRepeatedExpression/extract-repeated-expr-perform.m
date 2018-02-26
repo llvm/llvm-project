@@ -96,3 +96,24 @@ void macroArgument(Wrapper *ref) {
 
 // RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=macro-arg1 %s | FileCheck --check-prefix=MACRO-ARG1 %s
 // RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=macro-arg2 %s | FileCheck --check-prefix=MACRO-ARG2 %s
+
+@interface IVarSelf {
+  Wrapper *ref;
+}
+
+@end
+
+@implementation IVarSelf
+
+- (void)foo {
+  // ivar-self: +1:3         // IVAR-SELF: "Object *object = self->ref.object;\nobject" [[@LINE+1]]:3 -> [[@LINE+1]]:13
+  ref.object.prop = 0;       // IVAR-NO-SELF: "Object *object = ref.object;\nobject" [[@LINE]]:3 -> [[@LINE]]:13
+  ref.object->ivar = 1;      // IVAR: "object" [[@LINE]]:3 -> [[@LINE]]:13
+  // ivar-self2: +1:3
+  self->ref.object.prop = 2; // IVAR-NEXT: "object" [[@LINE]]:3 -> [[@LINE]]:19
+}
+
+@end
+
+// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=ivar-self %s | FileCheck --check-prefixes=IVAR-NO-SELF,IVAR %s
+// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=ivar-self2 %s | FileCheck --check-prefixes=IVAR-SELF,IVAR %s

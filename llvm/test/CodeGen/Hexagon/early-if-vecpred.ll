@@ -31,7 +31,7 @@ b5:                                               ; preds = %b3, %b1
 declare <1024 x i1> @llvm.hexagon.V6.pred.scalar2.128B(i32) #1
 declare <1024 x i1> @llvm.hexagon.V6.pred.not.128B(<1024 x i1>) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

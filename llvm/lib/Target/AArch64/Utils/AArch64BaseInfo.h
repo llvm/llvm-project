@@ -517,7 +517,12 @@ namespace AArch64II {
     /// thread-local symbol. On Darwin, only one type of thread-local access
     /// exists (pre linker-relaxation), but on ELF the TLSModel used for the
     /// referee will affect interpretation.
-    MO_TLS = 0x40
+    MO_TLS = 0x40,
+
+    /// MO_DLLIMPORT - On a symbol operand, this represents that the reference
+    /// to the symbol is for an import stub.  This is used for DLL import
+    /// storage class indication on Windows.
+    MO_DLLIMPORT = 0x80,
   };
 } // end namespace AArch64II
 

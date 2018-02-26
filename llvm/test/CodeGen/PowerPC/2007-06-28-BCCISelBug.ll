@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mattr=+altivec
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=+altivec
 
 	%struct.XATest = type { float, i16, i8, i8 }
 	%struct.XArrayRange = type { i8, i8, i8, i8 }

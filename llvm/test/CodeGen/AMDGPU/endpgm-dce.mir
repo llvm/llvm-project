@@ -1,0 +1,297 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: kill_all
+# GCN:      bb.0:
+# GCN-NEXT: S_ENDPGM
+name: kill_all
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sgpr_32 }
+  - { id: 4, class: sgpr_32 }
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %0 = IMPLICIT_DEF
+    %3 = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4)
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit %exec
+    %4 = S_ADD_U32 %3, 1, implicit-def %scc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: load_without_memoperand
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr
+# GCN-NEXT: S_ENDPGM
+name: load_without_memoperand
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sgpr_32 }
+  - { id: 4, class: sgpr_32 }
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %0 = IMPLICIT_DEF
+    %3 = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit %exec
+    %4 = S_ADD_U32 %3, 1, implicit-def %scc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: load_volatile
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile load 4)
+# GCN-NEXT: S_ENDPGM
+name: load_volatile
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sgpr_32 }
+  - { id: 4, class: sgpr_32 }
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %0 = IMPLICIT_DEF
+    %3 = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile load 4)
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit %exec
+    %4 = S_ADD_U32 %3, 1, implicit-def %scc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: store
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: FLAT_STORE_DWORD %0, %1, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4)
+# GCN-NEXT: S_ENDPGM
+name: store
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    FLAT_STORE_DWORD %0, %1, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4)
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: barrier
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: S_BARRIER
+# GCN-NEXT: S_ENDPGM
+name: barrier
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    S_BARRIER
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: call
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: %sgpr4_sgpr5 = S_SWAPPC_B64 %sgpr2_sgpr3
+# GCN-NEXT: S_ENDPGM
+name: call
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    %sgpr4_sgpr5 = S_SWAPPC_B64 %sgpr2_sgpr3
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: exp
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: EXP 32, undef %0:vgpr_32, undef %1:vgpr_32, %2, undef %3:vgpr_32, 0, 0, 15, implicit %exec
+# GCN-NEXT: S_ENDPGM
+name: exp
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    EXP 32, undef %0, undef %1, killed %2, undef %3, 0, 0, 15, implicit %exec
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: return_to_epilog
+# GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT: SI_RETURN_TO_EPILOG killed %vgpr0
+name: return_to_epilog
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %vgpr0 = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    SI_RETURN_TO_EPILOG killed %vgpr0
+...
+---
+# GCN-LABEL: name: split_block
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.1
+# GCN-NOT:  S_OR_B64
+# GCN:      bb.1:
+# GCN-NEXT:   S_ENDPGM
+name: split_block
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: sgpr_32 }
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+
+  bb.1:
+    %0 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    %1 = V_ADD_F32_e64 0, killed %0, 0, 1, 0, 0, implicit %exec
+    %3 = S_ADD_U32 %2, 1, implicit-def %scc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: split_block_empty_block
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.1
+# GCN-NOT:  S_OR_B64
+# GCN:      bb.1:
+# GCN:      bb.2:
+# GCN-NEXT:   S_ENDPGM
+name: split_block_empty_block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+
+  bb.1:
+
+  bb.2:
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: split_block_uncond_branch
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.1
+# GCN:        S_BRANCH %bb.1
+# GCN-NOT:  S_OR_B64
+# GCN:      bb.1:
+# GCN-NEXT:   S_ENDPGM
+name: split_block_uncond_branch
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: split_block_cond_branch
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+# GCN:        %sgpr0_sgpr1 = S_OR_B64 %exec, %vcc, implicit-def %scc
+# GCN:        S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
+# GCN:      bb.1:
+# GCN:      bb.2:
+# GCN-NEXT:   S_ENDPGM
+name: split_block_cond_branch
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, %vcc, implicit-def %scc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
+
+  bb.1:
+
+  bb.2:
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: two_preds_both_dead
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.2
+# GCN-NOT:    S_OR
+# GCN:        S_BRANCH %bb.2
+# GCN:      bb.1:
+# GCN-NEXT:   successors: %bb.2
+# GCN-NOT:    S_AND
+# GCN:        S_BRANCH %bb.2
+# GCN:      bb.2:
+# GCN-NEXT:   S_ENDPGM
+name: two_preds_both_dead
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    S_BRANCH %bb.2
+
+  bb.1:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_AND_B64 %exec, killed %vcc, implicit-def %scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: two_preds_one_dead
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.2
+# GCN:        %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+# GCN-NEXT:   S_BARRIER
+# GCN-NEXT:   S_BRANCH %bb.2
+# GCN:      bb.1:
+# GCN-NEXT:   successors: %bb.2
+# GCN-NOT:    S_AND
+# GCN:        S_BRANCH %bb.2
+# GCN:      bb.2:
+# GCN-NEXT:   S_ENDPGM
+name: two_preds_one_dead
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
+    S_BARRIER
+    S_BRANCH %bb.2
+
+  bb.1:
+    %vcc = IMPLICIT_DEF
+    %sgpr0_sgpr1 = S_AND_B64 %exec, killed %vcc, implicit-def %scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM
+...

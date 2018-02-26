@@ -52,6 +52,12 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``cd llvm/tools``
    * ``svn co http://llvm.org/svn/llvm-project/cfe/trunk clang``
 
+#. Checkout Extra Clang Tools **[Optional]**:
+
+   * ``cd where-you-want-llvm-to-live``
+   * ``cd llvm/tools/clang/tools``
+   * ``svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra``
+
 #. Checkout LLD linker **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``
@@ -91,9 +97,9 @@ Here's the short story for getting up and running quickly with LLVM:
 
 #. Configure and build LLVM and Clang:
 
-   *Warning:* Make sure you've checked out *all of* the source code 
+   *Warning:* Make sure you've checked out *all of* the source code
    before trying to configure with cmake.  cmake does not pickup newly
-   added source directories in incremental builds. 
+   added source directories in incremental builds.
 
    The build uses `CMake <CMake.html>`_. LLVM requires CMake 3.4.3 to build. It
    is generally recommended to use a recent CMake, especially if you're
@@ -137,8 +143,8 @@ Here's the short story for getting up and running quickly with LLVM:
      * CMake will generate build targets for each tool and library, and most
        LLVM sub-projects generate their own ``check-<project>`` target.
 
-     * Running a serial build will be *slow*.  Make sure you run a 
-       parallel build; for ``make``, use ``make -j``.  
+     * Running a serial build will be *slow*.  Make sure you run a
+       parallel build; for ``make``, use ``make -j``.
 
    * For more information see `CMake <CMake.html>`_
 
@@ -146,7 +152,7 @@ Here's the short story for getting up and running quickly with LLVM:
      `below`_.
 
 Consult the `Getting Started with LLVM`_ section for detailed information on
-configuring and compiling LLVM.  Go to `Directory Layout`_ to learn about the 
+configuring and compiling LLVM.  Go to `Directory Layout`_ to learn about the
 layout of the source code tree.
 
 Requirements
@@ -191,10 +197,10 @@ Windows x64        x86-64                Visual Studio
 Note that Debug builds require a lot of time and disk space.  An LLVM-only build
 will need about 1-3 GB of space.  A full build of LLVM and Clang will need around
 15-20 GB of disk space.  The exact space requirements will vary by system.  (It
-is so large because of all the debugging information and the fact that the 
-libraries are statically linked into multiple tools).  
+is so large because of all the debugging information and the fact that the
+libraries are statically linked into multiple tools).
 
-If you you are space-constrained, you can build only selected tools or only 
+If you you are space-constrained, you can build only selected tools or only
 selected targets.  The Release build requires considerably less space.
 
 The LLVM suite *may* compile on other platforms, but it is not guaranteed to do
@@ -460,34 +466,13 @@ populate it with the LLVM source code, Makefiles, test directories, and local
 copies of documentation files.
 
 If you want to get a specific release (as opposed to the most recent revision),
-you can checkout it from the '``tags``' directory (instead of '``trunk``'). The
+you can check it out from the '``tags``' directory (instead of '``trunk``'). The
 following releases are located in the following subdirectories of the '``tags``'
 directory:
 
-* Release 3.4: **RELEASE_34/final**
-* Release 3.3: **RELEASE_33/final**
-* Release 3.2: **RELEASE_32/final**
-* Release 3.1: **RELEASE_31/final**
-* Release 3.0: **RELEASE_30/final**
-* Release 2.9: **RELEASE_29/final**
-* Release 2.8: **RELEASE_28**
-* Release 2.7: **RELEASE_27**
-* Release 2.6: **RELEASE_26**
-* Release 2.5: **RELEASE_25**
-* Release 2.4: **RELEASE_24**
-* Release 2.3: **RELEASE_23**
-* Release 2.2: **RELEASE_22**
-* Release 2.1: **RELEASE_21**
-* Release 2.0: **RELEASE_20**
-* Release 1.9: **RELEASE_19**
-* Release 1.8: **RELEASE_18**
-* Release 1.7: **RELEASE_17**
-* Release 1.6: **RELEASE_16**
-* Release 1.5: **RELEASE_15**
-* Release 1.4: **RELEASE_14**
-* Release 1.3: **RELEASE_13**
-* Release 1.2: **RELEASE_12**
-* Release 1.1: **RELEASE_11**
+* Release 3.5.0 and later: **RELEASE_350/final** and so on
+* Release 2.9 through 3.4: **RELEASE_29/final** and so on
+* Release 1.1 through 2.8: **RELEASE_11** and so on
 * Release 1.0: **RELEASE_1**
 
 If you would like to get the LLVM test suite (a separate package as of 1.4), you
@@ -512,43 +497,43 @@ clone of LLVM via:
 
 .. code-block:: console
 
-  % git clone http://llvm.org/git/llvm.git
+  % git clone https://git.llvm.org/git/llvm.git/
 
 If you want to check out clang too, run:
 
 .. code-block:: console
 
   % cd llvm/tools
-  % git clone http://llvm.org/git/clang.git
+  % git clone https://git.llvm.org/git/clang.git/
 
 If you want to check out compiler-rt (required to build the sanitizers), run:
 
 .. code-block:: console
 
   % cd llvm/projects
-  % git clone http://llvm.org/git/compiler-rt.git
+  % git clone https://git.llvm.org/git/compiler-rt.git/
 
 If you want to check out libomp (required for OpenMP support), run:
 
 .. code-block:: console
 
   % cd llvm/projects
-  % git clone http://llvm.org/git/openmp.git
+  % git clone https://git.llvm.org/git/openmp.git/
 
 If you want to check out libcxx and libcxxabi (optional), run:
 
 .. code-block:: console
 
   % cd llvm/projects
-  % git clone http://llvm.org/git/libcxx.git
-  % git clone http://llvm.org/git/libcxxabi.git
+  % git clone https://git.llvm.org/git/libcxx.git/
+  % git clone https://git.llvm.org/git/libcxxabi.git/
 
 If you want to check out the Test Suite Source Code (optional), run:
 
 .. code-block:: console
 
   % cd llvm/projects
-  % git clone http://llvm.org/git/test-suite.git
+  % git clone https://git.llvm.org/git/test-suite.git/
 
 Since the upstream repository is in Subversion, you should use ``git
 pull --rebase`` instead of ``git pull`` to avoid generating a non-linear history
@@ -622,7 +607,7 @@ To set up clone from which you can submit code using ``git-svn``, run:
 
 .. code-block:: console
 
-  % git clone http://llvm.org/git/llvm.git
+  % git clone https://git.llvm.org/git/llvm.git/
   % cd llvm
   % git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
   % git config svn-remote.svn.fetch :refs/remotes/origin/master
@@ -630,7 +615,7 @@ To set up clone from which you can submit code using ``git-svn``, run:
 
   # If you have clang too:
   % cd tools
-  % git clone http://llvm.org/git/clang.git
+  % git clone https://git.llvm.org/git/clang.git/
   % cd clang
   % git svn init https://llvm.org/svn/llvm-project/cfe/trunk --username=<username>
   % git config svn-remote.svn.fetch :refs/remotes/origin/master
@@ -1010,7 +995,7 @@ Directory Layout
 ================
 
 One useful source of information about the LLVM source base is the LLVM `doxygen
-<http://www.doxygen.org/>`_ documentation available at 
+<http://www.doxygen.org/>`_ documentation available at
 `<http://llvm.org/doxygen/>`_.  The following is a brief introduction to code
 layout:
 
@@ -1026,13 +1011,13 @@ Public header files exported from the LLVM library. The three main subdirectorie
 
 ``llvm/include/llvm``
 
-  All LLVM-specific header files, and  subdirectories for different portions of 
+  All LLVM-specific header files, and  subdirectories for different portions of
   LLVM: ``Analysis``, ``CodeGen``, ``Target``, ``Transforms``, etc...
 
 ``llvm/include/llvm/Support``
 
-  Generic support libraries provided with LLVM but not necessarily specific to 
-  LLVM. For example, some C++ STL utilities and a Command Line option processing 
+  Generic support libraries provided with LLVM but not necessarily specific to
+  LLVM. For example, some C++ STL utilities and a Command Line option processing
   library store header files here.
 
 ``llvm/include/llvm/Config``
@@ -1045,12 +1030,12 @@ Public header files exported from the LLVM library. The three main subdirectorie
 ``llvm/lib``
 ------------
 
-Most source files are here. By putting code in libraries, LLVM makes it easy to 
+Most source files are here. By putting code in libraries, LLVM makes it easy to
 share code among the `tools`_.
 
 ``llvm/lib/IR/``
 
-  Core LLVM source files that implement core classes like Instruction and 
+  Core LLVM source files that implement core classes like Instruction and
   BasicBlock.
 
 ``llvm/lib/AsmParser/``
@@ -1063,23 +1048,23 @@ share code among the `tools`_.
 
 ``llvm/lib/Analysis/``
 
-  A variety of program analyses, such as Call Graphs, Induction Variables, 
+  A variety of program analyses, such as Call Graphs, Induction Variables,
   Natural Loop Identification, etc.
 
 ``llvm/lib/Transforms/``
 
-  IR-to-IR program transformations, such as Aggressive Dead Code Elimination, 
-  Sparse Conditional Constant Propagation, Inlining, Loop Invariant Code Motion, 
+  IR-to-IR program transformations, such as Aggressive Dead Code Elimination,
+  Sparse Conditional Constant Propagation, Inlining, Loop Invariant Code Motion,
   Dead Global Elimination, and many others.
 
 ``llvm/lib/Target/``
 
-  Files describing target architectures for code generation.  For example, 
+  Files describing target architectures for code generation.  For example,
   ``llvm/lib/Target/X86`` holds the X86 machine description.
 
 ``llvm/lib/CodeGen/``
 
-  The major parts of the code generator: Instruction Selector, Instruction 
+  The major parts of the code generator: Instruction Selector, Instruction
   Scheduling, and Register Allocation.
 
 ``llvm/lib/MC/``
@@ -1088,7 +1073,7 @@ share code among the `tools`_.
 
 ``llvm/lib/ExecutionEngine/``
 
-  Libraries for directly executing bitcode at runtime in interpreted and 
+  Libraries for directly executing bitcode at runtime in interpreted and
   JIT-compiled scenarios.
 
 ``llvm/lib/Support/``
@@ -1099,7 +1084,7 @@ share code among the `tools`_.
 ``llvm/projects``
 -----------------
 
-Projects not strictly part of LLVM but shipped with LLVM. This is also the 
+Projects not strictly part of LLVM but shipped with LLVM. This is also the
 directory for creating your own LLVM-based projects which leverage the LLVM
 build system.
 
@@ -1112,8 +1097,8 @@ are intended to run quickly and cover a lot of territory without being exhaustiv
 ``test-suite``
 --------------
 
-A comprehensive correctness, performance, and benchmarking test suite for LLVM. 
-Comes in a separate Subversion module because not every LLVM user is interested 
+A comprehensive correctness, performance, and benchmarking test suite for LLVM.
+Comes in a separate Subversion module because not every LLVM user is interested
 in such a comprehensive suite. For details see the :doc:`Testing Guide
 <TestingGuide>` document.
 
@@ -1194,7 +1179,7 @@ because they are code generators for parts of the infrastructure.
 
 ``emacs/``
 
-   Emacs and XEmacs syntax highlighting  for LLVM   assembly files and TableGen 
+   Emacs and XEmacs syntax highlighting  for LLVM   assembly files and TableGen
    description files.  See the ``README`` for information on using them.
 
 ``getsrcs.sh``

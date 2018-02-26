@@ -107,6 +107,9 @@ static void MemoryProfileCB(const SuspendedThreadsList &suspended_threads_list,
   __lsan::ForEachChunk(ChunkCallback, &hp);
   uptr *Arg = reinterpret_cast<uptr*>(argument);
   hp.Print(Arg[0], Arg[1]);
+
+  if (Verbosity())
+    __asan_print_accumulated_stats();
 }
 
 }  // namespace __asan

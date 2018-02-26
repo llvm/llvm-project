@@ -6,6 +6,7 @@ struct Foo {
   virtual void f();
   virtual void g();
   virtual void h();
+  static void i(int, int);
   struct Nested {};
 };
 Foo f;
@@ -18,7 +19,7 @@ Foo::Nested n;
 // CHECK-SAME: elements: ![[elements:[0-9]+]]
 // CHECK-SAME: identifier: ".?AUFoo@@"
 
-// CHECK: ![[elements]] = !{![[vshape:[0-9]+]], ![[vptr:[0-9]+]], ![[Nested]], ![[f:[0-9]+]], ![[g:[0-9]+]], ![[h:[0-9]+]]}
+// CHECK: ![[elements]] = !{![[vshape:[0-9]+]], ![[vptr:[0-9]+]], ![[Nested]], ![[f:[0-9]+]], ![[g:[0-9]+]], ![[h:[0-9]+]], ![[i:[0-9]+]]}
 
 // CHECK: ![[vshape]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__vtbl_ptr_type", baseType: null, size: 96)
 
@@ -38,3 +39,9 @@ Foo::Nested n;
 // CHECK: ![[h]] = !DISubprogram(name: "h",
 // CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 2,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+
+// CHECK: ![[i]] = !DISubprogram(name: "i",
+// CHECK-SAME: flags: DIFlagPrototyped | DIFlagStaticMember
+// CHECK-NEXT: ![[dummy:[0-9]+]] = !DISubroutineType(types: ![[Signature:[0-9]+]])
+// CHECK: ![[Signature]] = !{null, ![[BasicInt:[0-9]+]], ![[BasicInt]]}
+// CHECK: ![[BasicInt]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

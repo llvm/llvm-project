@@ -35,6 +35,8 @@ class FIELD5<bits<5> Val> {
 def FIELD5_1_DMT_EMT  : FIELD5<0b00001>;
 def FIELD5_2_DMT_EMT  : FIELD5<0b01111>;
 def FIELD5_1_2_DVPE_EVPE : FIELD5<0b00000>;
+def FIELD5_MFTR : FIELD5<0b01000>;
+def FIELD5_MTTR : FIELD5<0b01100>;
 
 class COP0_MFMC0_MT<FIELD5 Op1, FIELD5 Op2, OPCODE1 sc> : MipsMTInst {
   bits<32> Inst;
@@ -48,6 +50,25 @@ class COP0_MFMC0_MT<FIELD5 Op1, FIELD5 Op2, OPCODE1 sc> : MipsMTInst {
   let Inst{5}     = sc.Value;
   let Inst{4-3}   = 0b00;
   let Inst{2-0}   = 0b001;
+}
+
+class COP0_MFTTR_MT<FIELD5 Op> : MipsMTInst {
+  bits<32> Inst;
+
+  bits<5> rt;
+  bits<5> rd;
+  bits<1> u;
+  bits<1> h;
+  bits<3> sel;
+  let Inst{31-26} = 0b010000; // COP0
+  let Inst{25-21} = Op.Value; // MFMC0
+  let Inst{20-16} = rt;
+  let Inst{15-11} = rd;
+  let Inst{10-6}  = 0b00000;  // rx - currently unsupported.
+  let Inst{5}     = u;
+  let Inst{4}     = h;
+  let Inst{3}     = 0b0;
+  let Inst{2-0}   = sel;
 }
 
 class SPECIAL3_MT_FORK : MipsMTInst {

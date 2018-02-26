@@ -13,7 +13,7 @@
 define i64 @test47(i64 %arg)  {
 ;
 ; X64-LABEL: test47:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    movl $7, %ecx
@@ -24,14 +24,11 @@ define i64 @test47(i64 %arg)  {
 ; X64-NEXT:    retq
 ;
 ; I32-LABEL: test47:
-; I32:       # BB#0:
+; I32:       # %bb.0:
 ; I32-NEXT:    pushl %ebp
-; I32-NEXT:  .Lcfi0:
 ; I32-NEXT:    .cfi_def_cfa_offset 8
-; I32-NEXT:  .Lcfi1:
 ; I32-NEXT:    .cfi_offset %ebp, -8
 ; I32-NEXT:    movl %esp, %ebp
-; I32-NEXT:  .Lcfi2:
 ; I32-NEXT:    .cfi_def_cfa_register %ebp
 ; I32-NEXT:    andl $-8, %esp
 ; I32-NEXT:    subl $16, %esp
@@ -39,7 +36,7 @@ define i64 @test47(i64 %arg)  {
 ; I32-NEXT:    orl 12(%ebp), %eax
 ; I32-NEXT:    movl $7, %eax
 ; I32-NEXT:    je .LBB0_2
-; I32-NEXT:  # BB#1:
+; I32-NEXT:  # %bb.1:
 ; I32-NEXT:    xorl %eax, %eax
 ; I32-NEXT:  .LBB0_2:
 ; I32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
@@ -70,7 +67,7 @@ define i64 @test47(i64 %arg)  {
 define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ;
 ; X64-LABEL: test49:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    cmovneq %rdx, %rsi
 ; X64-NEXT:    movd %rsi, %mm0
@@ -79,21 +76,18 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; X64-NEXT:    retq
 ;
 ; I32-LABEL: test49:
-; I32:       # BB#0:
+; I32:       # %bb.0:
 ; I32-NEXT:    pushl %ebp
-; I32-NEXT:  .Lcfi3:
 ; I32-NEXT:    .cfi_def_cfa_offset 8
-; I32-NEXT:  .Lcfi4:
 ; I32-NEXT:    .cfi_offset %ebp, -8
 ; I32-NEXT:    movl %esp, %ebp
-; I32-NEXT:  .Lcfi5:
 ; I32-NEXT:    .cfi_def_cfa_register %ebp
 ; I32-NEXT:    andl $-8, %esp
 ; I32-NEXT:    subl $8, %esp
 ; I32-NEXT:    movl 8(%ebp), %eax
 ; I32-NEXT:    orl 12(%ebp), %eax
 ; I32-NEXT:    je .LBB1_1
-; I32-NEXT:  # BB#2:
+; I32-NEXT:  # %bb.2:
 ; I32-NEXT:    leal 24(%ebp), %eax
 ; I32-NEXT:    jmp .LBB1_3
 ; I32-NEXT:  .LBB1_1:

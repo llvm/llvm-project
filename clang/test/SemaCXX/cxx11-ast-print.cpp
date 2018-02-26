@@ -55,4 +55,8 @@ struct B : A {
 ;
 // CHECK-NOT: ;
 
+void g(int n) {
+  int buffer[n];     // CHECK: int buffer[n];
+  [&buffer]() {}();  // CHECK: [&buffer]
+}
 

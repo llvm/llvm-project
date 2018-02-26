@@ -6,6 +6,14 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
@@ -15,6 +23,16 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -130,8 +148,6 @@ int bar(int n){
   return a;
 }
 
-
-
 //
 // CHECK: define {{.*}}[[FS1]]([[S1]]* {{%.+}}, i32 {{[^%]*}}[[PARM:%.+]])
 //
@@ -147,10 +163,8 @@ int bar(int n){
 // CHECK:       store i8 [[FB]], i8* [[CONV]], align
 // CHECK:       [[ARG:%.+]] = load i[[SZ]], i[[SZ]]* [[CAPEC_ADDR]], align
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 3, {{.*}}, i32 1, i32 0)
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, {{.*}}, i32 1, i32 0)
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK:       br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 //
 // CHECK:       [[FAIL]]
@@ -175,28 +189,18 @@ int bar(int n){
 // CHECK:       br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i32 1, i32 0)
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
-// CHECK:       br label {{%?}}[[END:.+]]
-//
-// CHECK:       [[IF_ELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align
-// CHECK:       br label {{%?}}[[END]]
-//
-// CHECK:       [[END]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
-// CHECK:       br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
-//
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i32 1, i32 0)
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT2:@.+]]([[S1]]* {{%.+}}, i[[SZ]] [[ARG]])
-// CHECK:       br label {{%?}}[[END]]
+// CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
-
-
-
-
-
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IF_ELSE]]
+// CHECK:       call void [[HVT2]]([[S1]]* {{%.+}}, i[[SZ]] [[ARG]])
+// CHECK-NEXT:  br label %[[IFEND]]
+// CHECK:       [[IFEND]]
 
 //
 // CHECK: define {{.*}}[[FSTATIC]](i32 {{[^%]*}}[[PARM:%.+]])
@@ -217,23 +221,18 @@ int bar(int n){
 // CHECK:       br i1 [[TB]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i32 1, i32 0)
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
-// CHECK:       br label {{%?}}[[END:.+]]
-//
-// CHECK:       [[IF_ELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align
-// CHECK:       br label {{%?}}[[END]]
-//
-// CHECK:       [[END]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
-// CHECK:       br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
-//
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i32 1, i32 0)
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT3:@.+]](i[[SZ]] [[ARG]])
-// CHECK:       br label {{%?}}[[END]]
+// CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IF_ELSE]]
+// CHECK:       call void [[HVT3]](i[[SZ]] [[ARG]])
+// CHECK-NEXT:  br label %[[IFEND]]
+// CHECK:       [[IFEND]]
 //
 //
 //
@@ -243,23 +242,18 @@ int bar(int n){
 // CHECK:       br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 0, {{.*}}, i32 1, i32 0)
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
-// CHECK:       br label {{%?}}[[END:.+]]
-//
-// CHECK:       [[IF_ELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align
-// CHECK:       br label {{%?}}[[END]]
-//
-// CHECK:       [[END]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
-// CHECK:       br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
-//
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 0, {{.*}}, i32 1, i32 0)
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT4:@.+]]()
-// CHECK:       br label {{%?}}[[END]]
+// CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IF_ELSE]]
+// CHECK:       call void [[HVT4]]()
+// CHECK-NEXT:  br label %[[IFEND]]
+// CHECK:       [[IFEND]]
 
 
 
@@ -269,10 +263,8 @@ int bar(int n){
 //
 // CHECK: define {{.*}}[[FTEMPLATE]]
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i32 1, i32 0)
-// CHECK-NEXT:  store i32 [[RET]], i32* [[RHV:%.+]], align
-// CHECK-NEXT:  [[RET2:%.+]] = load i32, i32* [[RHV]], align
-// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i32 1, i32 0)
+// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 //
 // CHECK:       [[FAIL]]
@@ -283,10 +275,8 @@ int bar(int n){
 //
 //
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i32 1, i32 0)
-// CHECK-NEXT:  store i32 [[RET]], i32* [[RHV:%.+]], align
-// CHECK-NEXT:  [[RET2:%.+]] = load i32, i32* [[RHV]], align
-// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i32 1, i32 0)
+// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 //
 // CHECK:       [[FAIL]]

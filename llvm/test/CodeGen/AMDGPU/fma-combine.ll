@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -enable-var-scope -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 
 ; Note: The SI-FMA conversions of type x * (y + 1) --> x * y + x would be
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math
@@ -237,6 +237,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalia
 ; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -271,6 +272,7 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(
 ; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -625,5 +627,51 @@ define amdgpu_kernel void @test_f64_interp(double addrspace(1)* %out,
   ret void
 }
 
+; Make sure negative constant cancels out fneg
+; GCN-LABEL: {{^}}fma_neg_2.0_neg_a_b_f32:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+; GCN-NOT: [[A]]
+; GCN-NOT: [[B]]
+; GCN: v_fma_f32 v{{[0-9]+}}, [[A]], 2.0, [[B]]
+define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+
+  %r1 = load volatile float, float addrspace(1)* %gep.0
+  %r2 = load volatile float, float addrspace(1)* %gep.1
+
+  %r1.fneg = fsub float -0.000000e+00, %r1
+
+  %r3 = tail call float @llvm.fma.f32(float -2.0, float %r1.fneg, float %r2)
+  store float %r3, float addrspace(1)* %gep.out
+  ret void
+}
+
+; GCN-LABEL: {{^}}fma_2.0_neg_a_b_f32:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+; GCN-NOT: [[A]]
+; GCN-NOT: [[B]]
+; GCN: v_fma_f32 v{{[0-9]+}}, [[A]], -2.0, [[B]]
+define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+
+  %r1 = load volatile float, float addrspace(1)* %gep.0
+  %r2 = load volatile float, float addrspace(1)* %gep.1
+
+  %r1.fneg = fsub float -0.000000e+00, %r1
+
+  %r3 = tail call float @llvm.fma.f32(float 2.0, float %r1.fneg, float %r2)
+  store float %r3, float addrspace(1)* %gep.out
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
+

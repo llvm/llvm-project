@@ -27,8 +27,7 @@
 
 namespace llvm {
 
-template<typename T>
-class Optional {
+template <typename T> class Optional {
   AlignedCharArrayUnion<T> storage;
   bool hasVal = false;
 
@@ -38,18 +37,14 @@ public:
   Optional(NoneType) {}
   explicit Optional() {}
 
-  Optional(const T &y) : hasVal(true) {
-    new (storage.buffer) T(y);
-  }
+  Optional(const T &y) : hasVal(true) { new (storage.buffer) T(y); }
 
   Optional(const Optional &O) : hasVal(O.hasVal) {
     if (hasVal)
       new (storage.buffer) T(*O);
   }
 
-  Optional(T &&y) : hasVal(true) {
-    new (storage.buffer) T(std::forward<T>(y));
-  }
+  Optional(T &&y) : hasVal(true) { new (storage.buffer) T(std::forward<T>(y)); }
 
   Optional(Optional<T> &&O) : hasVal(O) {
     if (O) {
@@ -58,9 +53,7 @@ public:
     }
   }
 
-  ~Optional() {
-    reset();
-  }
+  ~Optional() { reset(); }
 
   Optional &operator=(T &&y) {
     if (hasVal)
@@ -83,14 +76,13 @@ public:
   }
 
   /// Create a new object by constructing it in place with the given arguments.
-  template<typename ...ArgTypes>
-  void emplace(ArgTypes &&...Args) {
+  template <typename... ArgTypes> void emplace(ArgTypes &&... Args) {
     reset();
     hasVal = true;
     new (storage.buffer) T(std::forward<ArgTypes>(Args)...);
   }
 
-  static inline Optional create(const T* y) {
+  static inline Optional create(const T *y) {
     return y ? Optional(*y) : Optional();
   }
 
@@ -124,17 +116,35 @@ public:
     }
   }
 
-  const T* getPointer() const { assert(hasVal); return reinterpret_cast<const T*>(storage.buffer); }
-  T* getPointer() { assert(hasVal); return reinterpret_cast<T*>(storage.buffer); }
-  const T& getValue() const LLVM_LVALUE_FUNCTION { assert(hasVal); return *getPointer(); }
-  T& getValue() LLVM_LVALUE_FUNCTION { assert(hasVal); return *getPointer(); }
+  const T *getPointer() const {
+    assert(hasVal);
+    return reinterpret_cast<const T *>(storage.buffer);
+  }
+  T *getPointer() {
+    assert(hasVal);
+    return reinterpret_cast<T *>(storage.buffer);
+  }
+  const T &getValue() const LLVM_LVALUE_FUNCTION {
+    assert(hasVal);
+    return *getPointer();
+  }
+  T &getValue() LLVM_LVALUE_FUNCTION {
+    assert(hasVal);
+    return *getPointer();
+  }
 
   explicit operator bool() const { return hasVal; }
   bool hasValue() const { return hasVal; }
-  const T* operator->() const { return getPointer(); }
-  T* operator->() { return getPointer(); }
-  const T& operator*() const LLVM_LVALUE_FUNCTION { assert(hasVal); return *getPointer(); }
-  T& operator*() LLVM_LVALUE_FUNCTION { assert(hasVal); return *getPointer(); }
+  const T *operator->() const { return getPointer(); }
+  T *operator->() { return getPointer(); }
+  const T &operator*() const LLVM_LVALUE_FUNCTION {
+    assert(hasVal);
+    return *getPointer();
+  }
+  T &operator*() LLVM_LVALUE_FUNCTION {
+    assert(hasVal);
+    return *getPointer();
+  }
 
   template <typename U>
   constexpr T getValueOr(U &&value) const LLVM_LVALUE_FUNCTION {
@@ -142,8 +152,14 @@ public:
   }
 
 #if LLVM_HAS_RVALUE_REFERENCE_THIS
-  T&& getValue() && { assert(hasVal); return std::move(*getPointer()); }
-  T&& operator*() && { assert(hasVal); return std::move(*getPointer()); }
+  T &&getValue() && {
+    assert(hasVal);
+    return std::move(*getPointer());
+  }
+  T &&operator*() && {
+    assert(hasVal);
+    return std::move(*getPointer());
+  }
 
   template <typename U>
   T getValueOr(U &&value) && {

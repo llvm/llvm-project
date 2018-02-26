@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 -mattr=-avx | grep movq | count 2
-; RUN: llc < %s -march=x86-64 -mattr=-avx | not grep rsp
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-avx | grep movq | count 2
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-avx | not grep rsp
 
 define i64 @test1(double %A) {
    %B = bitcast double %A to i64

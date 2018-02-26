@@ -12,24 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lsan_thread.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
-#define GET_STACK_TRACE(max_size, fast)                                        \
-  BufferedStackTrace stack;                                                    \
-  {                                                                            \
-    uptr stack_top = 0, stack_bottom = 0;                                      \
-    ThreadContext *t;                                                          \
-    if (fast && (t = CurrentThreadContext())) {                                \
-      stack_top = t->stack_end();                                              \
-      stack_bottom = t->stack_begin();                                         \
-    }                                                                          \
-    if (!SANITIZER_MIPS ||                                                     \
-        IsValidFrame(GET_CURRENT_FRAME(), stack_top, stack_bottom)) {          \
-      stack.Unwind(max_size, StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),  \
-                   /* context */ 0, stack_top, stack_bottom, fast);            \
-    }                                                                          \
-  }
+#define GET_STACK_TRACE(max_size, fast)                       \
+  __sanitizer::BufferedStackTrace stack;                      \
+  GetStackTrace(&stack, max_size, StackTrace::GetCurrentPc(), \
+                GET_CURRENT_FRAME(), nullptr, fast);
 
 #define GET_STACK_TRACE_FATAL \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)
@@ -51,9 +41,27 @@ void ReplaceSystemMalloc();
     __lsan_init();                \
 } while (0)
 
+// Get the stack trace with the given pc and bp.
+// The pc will be in the position 0 of the resulting stack trace.
+// The bp may refer to the current frame or to the caller's frame.
+ALWAYS_INLINE
+void GetStackTrace(__sanitizer::BufferedStackTrace *stack,
+                   __sanitizer::uptr max_depth, __sanitizer::uptr pc,
+                   __sanitizer::uptr bp, void *context, bool fast) {
+  uptr stack_top = 0, stack_bottom = 0;
+  ThreadContext *t;
+  if (fast && (t = CurrentThreadContext())) {
+    stack_top = t->stack_end();
+    stack_bottom = t->stack_begin();
+  }
+  if (!SANITIZER_MIPS || IsValidFrame(bp, stack_top, stack_bottom)) {
+    stack->Unwind(max_depth, pc, bp, context, stack_top, stack_bottom, fast);
+  }
+}
+
 }  // namespace __lsan
 
 extern bool lsan_inited;
 extern bool lsan_init_is_running;
 
-extern "C" void __lsan_init();
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __lsan_init();

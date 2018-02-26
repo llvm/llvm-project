@@ -24,6 +24,12 @@ set(CLANG_BOOTSTRAP_PASSTHROUGH
   CMAKE_OSX_ARCHITECTURES
   CACHE STRING "")
 
+# Disabling embedded darwin compiler-rt on stage1 builds is required because we
+# don't build stage1 to support arm code generation.
+set(COMPILER_RT_ENABLE_IOS OFF CACHE BOOL "")
+set(COMPILER_RT_ENABLE_WATCHOS OFF CACHE BOOL "")
+set(COMPILER_RT_ENABLE_TVOS OFF CACHE BOOL "")
+
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
 
@@ -39,6 +45,8 @@ set(CLANG_BOOTSTRAP_TARGETS
   clang-test-depends
   distribution
   install-distribution
+  install-xcode-toolchain
+  install-distribution-toolchain
   clang CACHE STRING "")
 
 #bootstrap

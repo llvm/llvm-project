@@ -1,4 +1,4 @@
-// RUN: rm -rf %t/cache %T/rel
+// RUN: rm -rf %t/cache %t/rel
 
 // This testcase reproduces a use-after-free after looking up a PCM in
 // a non-canonical modules-cache-path.
@@ -22,7 +22,7 @@
 
 // Unrelated to the above: Check that a relative path is resolved correctly.
 //
-// RUN: %clang_cc1 -working-directory %T/rel -fmodules-cache-path=./cache \
+// RUN: %clang_cc1 -working-directory %t/rel -fmodules-cache-path=./cache \
 // RUN:   -fmodules -fimplicit-module-maps -I %S/Inputs/outofdate-rebuild \
 // RUN:   -fdisable-module-hash %t.m -fsyntax-only -Rmodule-build 2>&1 \
 // RUN:   | FileCheck %s

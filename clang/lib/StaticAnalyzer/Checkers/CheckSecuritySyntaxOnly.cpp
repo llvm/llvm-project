@@ -32,7 +32,6 @@ static bool isArc4RandomAvailable(const ASTContext &Ctx) {
          T.getOS() == llvm::Triple::FreeBSD ||
          T.getOS() == llvm::Triple::NetBSD ||
          T.getOS() == llvm::Triple::OpenBSD ||
-         T.getOS() == llvm::Triple::Bitrig ||
          T.getOS() == llvm::Triple::DragonFly;
 }
 
@@ -510,6 +509,17 @@ void WalkAST::checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD) {
 
   if (!checkCall_strCommon(CE, FD))
     return;
+
+  const auto *Target = CE->getArg(0)->IgnoreImpCasts(),
+             *Source = CE->getArg(1)->IgnoreImpCasts();
+  if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Target))
+    if (const auto *Array = dyn_cast<ConstantArrayType>(DeclRef->getType())) {
+      uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
+      if (const auto *String = dyn_cast<StringLiteral>(Source)) {
+        if (ArraySize >= String->getLength() + 1)
+          return;
+      }
+    }
 
   // Issue a warning.
   PathDiagnosticLocation CELoc =

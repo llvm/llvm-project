@@ -56,9 +56,10 @@ static bool VerifyLoopLCSSA = true;
 #else
 static bool VerifyLoopLCSSA = false;
 #endif
-static cl::opt<bool,true>
-VerifyLoopLCSSAFlag("verify-loop-lcssa", cl::location(VerifyLoopLCSSA),
-                    cl::desc("Verify loop lcssa form (time consuming)"));
+static cl::opt<bool, true>
+    VerifyLoopLCSSAFlag("verify-loop-lcssa", cl::location(VerifyLoopLCSSA),
+                        cl::Hidden,
+                        cl::desc("Verify loop lcssa form (time consuming)"));
 
 /// Return true if the specified block is in the list.
 static bool isExitBlock(BasicBlock *BB,

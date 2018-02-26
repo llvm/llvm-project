@@ -248,7 +248,7 @@ static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
 
     // Ok, now we know we have not seen a store yet. See if Inst can write to
     // our load location, if it can not, just ignore the instruction.
-    if (!(AA->getModRefInfo(Inst, Loc) & MRI_Mod))
+    if (!isModSet(AA->getModRefInfo(Inst, Loc)))
       continue;
 
     Store = dyn_cast<StoreInst>(Inst);

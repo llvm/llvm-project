@@ -15,13 +15,14 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/CommandFlags.def"
 #include "llvm/Config/config.h" // plugin-api.h requires HAVE_STDINT_H
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -174,12 +175,16 @@ namespace options {
   static std::string thinlto_object_suffix_replace;
   // Optional path to a directory for caching ThinLTO objects.
   static std::string cache_dir;
+  // Optional pruning policy for ThinLTO caches.
+  static std::string cache_policy;
   // Additional options to pass into the code generator.
   // Note: This array will contain all plugin options which are not claimed
   // as plugin exclusive to pass to the code generator.
   static std::vector<const char *> extra;
   // Sample profile file path
   static std::string sample_profile;
+  // New pass manager
+  static bool new_pass_manager = false;
 
   static void process_plugin_option(const char *opt_)
   {
@@ -222,6 +227,8 @@ namespace options {
                 "thinlto-object-suffix-replace expects 'old;new' format");
     } else if (opt.startswith("cache-dir=")) {
       cache_dir = opt.substr(strlen("cache-dir="));
+    } else if (opt.startswith("cache-policy=")) {
+      cache_policy = opt.substr(strlen("cache-policy="));
     } else if (opt.size() == 2 && opt[0] == 'O') {
       if (opt[1] < '0' || opt[1] > '3')
         message(LDPL_FATAL, "Optimization level must be between 0 and 3");
@@ -237,6 +244,8 @@ namespace options {
       DisableVerify = true;
     } else if (opt.startswith("sample-profile=")) {
       sample_profile= opt.substr(strlen("sample-profile="));
+    } else if (opt == "new-pass-manager") {
+      new_pass_manager = true;
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -587,22 +596,31 @@ static void getThinLTOOldAndNewSuffix(std::string &OldSuffix,
   assert(options::thinlto_object_suffix_replace.empty() ||
          options::thinlto_object_suffix_replace.find(";") != StringRef::npos);
   StringRef SuffixReplace = options::thinlto_object_suffix_replace;
-  std::pair<StringRef, StringRef> Split = SuffixReplace.split(";");
-  OldSuffix = Split.first.str();
-  NewSuffix = Split.second.str();
+  std::tie(OldSuffix, NewSuffix) = SuffixReplace.split(';');
 }
 
 /// Given the original \p Path to an output file, replace any filename
 /// suffix matching \p OldSuffix with \p NewSuffix.
-static std::string getThinLTOObjectFileName(const std::string Path,
-                                            const std::string &OldSuffix,
-                                            const std::string &NewSuffix) {
+static std::string getThinLTOObjectFileName(StringRef Path, StringRef OldSuffix,
+                                            StringRef NewSuffix) {
   if (OldSuffix.empty() && NewSuffix.empty())
     return Path;
   StringRef NewPath = Path;
   NewPath.consume_back(OldSuffix);
-  std::string NewNewPath = NewPath.str() + NewSuffix;
-  return NewPath.str() + NewSuffix;
+  std::string NewNewPath = NewPath;
+  NewNewPath += NewSuffix;
+  return NewNewPath;
+}
+
+// Returns true if S is valid as a C language identifier.
+static bool isValidCIdentifier(StringRef S) {
+  return !S.empty() && (isAlpha(S[0]) || S[0] == '_') &&
+         std::all_of(S.begin() + 1, S.end(),
+                     [](char C) { return C == '_' || isAlnum(C); });
+}
+
+static bool isUndefined(ld_plugin_symbol &Sym) {
+  return Sym.def == LDPK_UNDEF || Sym.def == LDPK_WEAKUNDEF;
 }
 
 static void addModule(LTO &Lto, claimed_file &F, const void *View,
@@ -616,8 +634,12 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
             toString(ObjOrErr.takeError()).c_str());
 
   unsigned SymNum = 0;
+  std::unique_ptr<InputFile> Input = std::move(ObjOrErr.get());
+  auto InputFileSyms = Input->symbols();
+  assert(InputFileSyms.size() == F.syms.size());
   std::vector<SymbolResolution> Resols(F.syms.size());
   for (ld_plugin_symbol &Sym : F.syms) {
+    const InputFile::Symbol &InpSym = InputFileSyms[SymNum];
     SymbolResolution &R = Resols[SymNum++];
 
     ld_plugin_symbol_resolution Resolution =
@@ -638,20 +660,27 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY:
-      R.Prevailing = true;
+      R.Prevailing = !isUndefined(Sym);
       break;
 
     case LDPR_PREVAILING_DEF:
-      R.Prevailing = true;
+      R.Prevailing = !isUndefined(Sym);
       R.VisibleToRegularObj = true;
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY_EXP:
-      R.Prevailing = true;
+      R.Prevailing = !isUndefined(Sym);
       if (!Res.CanOmitFromDynSym)
         R.VisibleToRegularObj = true;
       break;
     }
+
+    // If the symbol has a C identifier section name, we need to mark
+    // it as visible to a regular object so that LTO will keep it around
+    // to ensure the linker generates special __start_<secname> and
+    // __stop_<secname> symbols which may be used elsewhere.
+    if (isValidCIdentifier(InpSym.getSectionName()))
+      R.VisibleToRegularObj = true;
 
     if (Resolution != LDPR_RESOLVED_DYN && Resolution != LDPR_UNDEF &&
         (IsExecutable || !Res.DefaultVisibility))
@@ -660,27 +689,28 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
     freeSymName(Sym);
   }
 
-  check(Lto.add(std::move(*ObjOrErr), Resols),
+  check(Lto.add(std::move(Input), Resols),
         std::string("Failed to link module ") + F.name);
 }
 
-static void recordFile(std::string Filename, bool TempOutFile) {
+static void recordFile(const std::string &Filename, bool TempOutFile) {
   if (add_input_file(Filename.c_str()) != LDPS_OK)
     message(LDPL_FATAL,
             "Unable to add .o file to the link. File left behind in: %s",
             Filename.c_str());
   if (TempOutFile)
-    Cleanup.push_back(Filename.c_str());
+    Cleanup.push_back(Filename);
 }
 
 /// Return the desired output filename given a base input name, a flag
 /// indicating whether a temp file should be generated, and an optional task id.
 /// The new filename generated is returned in \p NewFilename.
-static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
-                              SmallString<128> &NewFilename, int TaskID) {
+static int getOutputFileName(StringRef InFilename, bool TempOutFile,
+                             SmallString<128> &NewFilename, int TaskID) {
+  int FD = -1;
   if (TempOutFile) {
     std::error_code EC =
-        sys::fs::createTemporaryFile("lto-llvm", "o", NewFilename);
+        sys::fs::createTemporaryFile("lto-llvm", "o", FD, NewFilename);
     if (EC)
       message(LDPL_FATAL, "Could not create temporary file: %s",
               EC.message().c_str());
@@ -688,7 +718,13 @@ static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
     NewFilename = InFilename;
     if (TaskID > 0)
       NewFilename += utostr(TaskID);
+    std::error_code EC =
+        sys::fs::openFileForWrite(NewFilename, FD, sys::fs::F_None);
+    if (EC)
+      message(LDPL_FATAL, "Could not open file %s: %s", NewFilename.c_str(),
+              EC.message().c_str());
   }
+  return FD;
 }
 
 static CodeGenOpt::Level getCGOptLevel() {
@@ -711,9 +747,7 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
                                       std::string &NewPrefix) {
   StringRef PrefixReplace = options::thinlto_prefix_replace;
   assert(PrefixReplace.empty() || PrefixReplace.find(";") != StringRef::npos);
-  std::pair<StringRef, StringRef> Split = PrefixReplace.split(";");
-  OldPrefix = Split.first.str();
-  NewPrefix = Split.second.str();
+  std::tie(OldPrefix, NewPrefix) = PrefixReplace.split(';');
 }
 
 static std::unique_ptr<LTO> createLTO() {
@@ -726,6 +760,10 @@ static std::unique_ptr<LTO> createLTO() {
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
   Conf.Options.RelaxELFRelocations = false;
+
+  // Enable function/data sections by default.
+  Conf.Options.FunctionSections = true;
+  Conf.Options.DataSections = true;
 
   Conf.MAttrs = MAttrs;
   Conf.RelocModel = RelocationModel;
@@ -774,6 +812,9 @@ static std::unique_ptr<LTO> createLTO() {
 
   if (!options::sample_profile.empty())
     Conf.SampleProfile = options::sample_profile;
+
+  // Use new pass manager if set in driver
+  Conf.UseNewPM = options::new_pass_manager;
 
   return llvm::make_unique<LTO>(std::move(Conf), Backend,
                                 options::ParallelCodeGenParallelismLevel);
@@ -872,22 +913,17 @@ static ld_plugin_status allSymbolsReadHook() {
   auto AddStream =
       [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
     IsTemporary[Task] = !SaveTemps;
-    getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps, Filenames[Task],
-                      Task);
-    int FD;
-    std::error_code EC =
-        sys::fs::openFileForWrite(Filenames[Task], FD, sys::fs::F_None);
-    if (EC)
-      message(LDPL_FATAL, "Could not open file %s: %s", Filenames[Task].c_str(),
-              EC.message().c_str());
+    int FD = getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps,
+                               Filenames[Task], Task);
     return llvm::make_unique<lto::NativeObjectStream>(
         llvm::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
-  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB,
+                       StringRef Path) {
     // Note that this requires that the memory buffers provided to AddBuffer are
     // backed by a file.
-    Filenames[Task] = MB->getBufferIdentifier();
+    Filenames[Task] = Path;
   };
 
   NativeObjectCache Cache;
@@ -944,6 +980,12 @@ static ld_plugin_status cleanup_hook(void) {
     if (EC)
       message(LDPL_ERROR, "Failed to delete '%s': %s", Name.c_str(),
               EC.message().c_str());
+  }
+
+  // Prune cache
+  if (!options::cache_policy.empty()) {
+    CachePruningPolicy policy = check(parseCachePruningPolicy(options::cache_policy));
+    pruneCache(options::cache_dir, policy);
   }
 
   return LDPS_OK;

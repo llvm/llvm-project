@@ -15,6 +15,7 @@
 #include "Disassembler.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -22,10 +23,9 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.def"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -197,13 +197,13 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<tool_output_file> GetOutputStream() {
+static std::unique_ptr<ToolOutputFile> GetOutputStream() {
   if (OutputFilename == "")
     OutputFilename = "-";
 
   std::error_code EC;
-  auto Out = llvm::make_unique<tool_output_file>(OutputFilename, EC,
-                                                 sys::fs::F_None);
+  auto Out =
+      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
   if (EC) {
     errs() << EC.message() << '\n';
     return nullptr;
@@ -534,7 +534,7 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
-  std::unique_ptr<tool_output_file> Out = GetOutputStream();
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream();
   if (!Out)
     return 1;
 
@@ -567,7 +567,7 @@ int main(int argc, char **argv) {
     MCAsmBackend *MAB = nullptr;
     if (ShowEncoding) {
       CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-      MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU, MCOptions);
+      MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     }
     auto FOut = llvm::make_unique<formatted_raw_ostream>(*OS);
     Str.reset(TheTarget->createAsmStreamer(
@@ -588,10 +588,10 @@ int main(int argc, char **argv) {
     }
 
     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU,
-                                                      MCOptions);
+    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
-        TheTriple, Ctx, *MAB, *OS, CE, *STI, MCOptions.MCRelaxAll,
+        TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *OS,
+        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
         MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
     if (NoExecStack)

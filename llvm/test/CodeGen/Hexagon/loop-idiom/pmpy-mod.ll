@@ -81,4 +81,4 @@ b46:                                              ; preds = %b3
   ret i16 %v5
 }
 
-attributes #0 = { noinline nounwind "target-cpu"="hexagonv5" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { noinline nounwind "target-cpu"="hexagonv5" "target-features"="-hvx,-long-calls" }

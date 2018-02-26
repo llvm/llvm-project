@@ -48,7 +48,7 @@ body:             |
   ; CHECK-NEXT: %rdi = COPY %rsi
   ; CHECK-NEXT: %rsi = COPY %rax
   ; CHECK-NEXT: CMP64ri8 %rax, 9, implicit-def %eflags
-  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit %rsp, implicit %eflags, implicit %rsp, implicit %rdi, implicit %rsi, implicit %rax, implicit-def %rax, implicit %sil, implicit-def %sil, implicit %si, implicit-def %si, implicit %esi, implicit-def %esi, implicit %rsi, implicit-def %rsi, implicit %dil, implicit-def %dil, implicit %di, implicit-def %di, implicit %edi, implicit-def %edi, implicit %rdi, implicit-def %rdi, implicit %ah, implicit-def %ah, implicit %al, implicit-def %al, implicit %ax, implicit-def %ax, implicit %eax, implicit-def %eax
+  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit %rsp, implicit %eflags, implicit %ssp, implicit %rsp, implicit %rdi, implicit %rsi, implicit %rax, implicit-def %rax, implicit %sil, implicit-def %sil, implicit %si, implicit-def %si, implicit %esi, implicit-def %esi, implicit %rsi, implicit-def %rsi, implicit %dil, implicit-def %dil, implicit %di, implicit-def %di, implicit %edi, implicit-def %edi, implicit %rdi, implicit-def %rdi, implicit %ah, implicit-def %ah, implicit %al, implicit-def %al, implicit %ax, implicit-def %ax, implicit %eax, implicit-def %eax
 
   bb.1:
     successors: %bb.2, %bb.3

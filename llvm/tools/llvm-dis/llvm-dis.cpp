@@ -51,8 +51,13 @@ static cl::opt<bool>
 DontPrint("disable-output", cl::desc("Don't output the .ll file"), cl::Hidden);
 
 static cl::opt<bool>
-ShowAnnotations("show-annotations",
-                cl::desc("Add informational comments to the .ll file"));
+    SetImporting("set-importing",
+                 cl::desc("Set lazy loading to pretend to import a module"),
+                 cl::Hidden);
+
+static cl::opt<bool>
+    ShowAnnotations("show-annotations",
+                    cl::desc("Add informational comments to the .ll file"));
 
 static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder",
@@ -117,34 +122,38 @@ public:
   }
 };
 
-} // end anon namespace
+struct LLVMDisDiagnosticHandler : public DiagnosticHandler {
+  char *Prefix;
+  LLVMDisDiagnosticHandler(char *PrefixPtr) : Prefix(PrefixPtr) {}
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    raw_ostream &OS = errs();
+    OS << Prefix << ": ";
+    switch (DI.getSeverity()) {
+      case DS_Error: OS << "error: "; break;
+      case DS_Warning: OS << "warning: "; break;
+      case DS_Remark: OS << "remark: "; break;
+      case DS_Note: OS << "note: "; break;
+    }
 
-static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
-  raw_ostream &OS = errs();
-  OS << (char *)Context << ": ";
-  switch (DI.getSeverity()) {
-  case DS_Error: OS << "error: "; break;
-  case DS_Warning: OS << "warning: "; break;
-  case DS_Remark: OS << "remark: "; break;
-  case DS_Note: OS << "note: "; break;
+    DiagnosticPrinterRawOStream DP(OS);
+    DI.print(DP);
+    OS << '\n';
+
+    if (DI.getSeverity() == DS_Error)
+      exit(1);
+    return true;
   }
-
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-  OS << '\n';
-
-  if (DI.getSeverity() == DS_Error)
-    exit(1);
-}
+};
+} // end anon namespace
 
 static ExitOnError ExitOnErr;
 
 static std::unique_ptr<Module> openInputFile(LLVMContext &Context) {
   std::unique_ptr<MemoryBuffer> MB =
       ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
-  std::unique_ptr<Module> M =
-      ExitOnErr(getOwningLazyBitcodeModule(std::move(MB), Context,
-                                           /*ShouldLazyLoadMetadata=*/true));
+  std::unique_ptr<Module> M = ExitOnErr(getOwningLazyBitcodeModule(
+      std::move(MB), Context,
+      /*ShouldLazyLoadMetadata=*/true, SetImporting));
   if (MaterializeMetadata)
     ExitOnErr(M->materializeMetadata());
   else
@@ -161,9 +170,8 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
-
-  Context.setDiagnosticHandler(diagnosticHandler, argv[0]);
-
+  Context.setDiagnosticHandler(
+      llvm::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
   std::unique_ptr<Module> M = openInputFile(Context);
@@ -183,8 +191,8 @@ int main(int argc, char **argv) {
   }
 
   std::error_code EC;
-  std::unique_ptr<tool_output_file> Out(
-      new tool_output_file(OutputFilename, EC, sys::fs::F_None));
+  std::unique_ptr<ToolOutputFile> Out(
+      new ToolOutputFile(OutputFilename, EC, sys::fs::F_None));
   if (EC) {
     errs() << EC.message() << '\n';
     return 1;

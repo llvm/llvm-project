@@ -2,7 +2,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX9 --check-prefix=GFX89
 
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX89
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --check-prefix=NOGFX89
@@ -497,28 +497,64 @@ v_min_i16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_se
 v_ldexp_f16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
-// GFX89: v_add_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x32,0x02,0x06,0x05,0x02]
-v_add_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+// NOGFX9: error:
+// VI: v_add_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x32,0x02,0x06,0x05,0x02]
+v_add_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
-// GFX89: v_sub_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x34,0x02,0x06,0x05,0x02]
-v_sub_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+// NOGFX9: error:
+// VI: v_sub_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x34,0x02,0x06,0x05,0x02]
+v_sub_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
-// GFX89: v_subrev_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x36,0x02,0x06,0x05,0x02]
-v_subrev_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+// NOGFX9: error:
+// VI: v_subrev_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x36,0x02,0x06,0x05,0x02]
+v_subrev_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
-// GFX89: v_addc_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x38,0x02,0x06,0x05,0x02]
+// NOGFX9: error:
+// VI: v_addc_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x38,0x02,0x06,0x05,0x02]
 v_addc_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
-// GFX89: v_subb_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3a,0x02,0x06,0x05,0x02]
+// NOGFX9: error:
+// VI: v_subb_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3a,0x02,0x06,0x05,0x02]
 v_subb_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
-// GFX89: v_subbrev_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3c,0x02,0x06,0x05,0x02]
+// NOGFX9: error:
+// VI: v_subbrev_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3c,0x02,0x06,0x05,0x02]
 v_subbrev_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_add_co_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x32,0x02,0x06,0x05,0x02]
+v_add_co_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_sub_co_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x34,0x02,0x06,0x05,0x02]
+v_sub_co_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_subrev_co_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x36,0x02,0x06,0x05,0x02]
+v_subrev_co_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_addc_co_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x38,0x02,0x06,0x05,0x02]
+v_addc_co_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_subb_co_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3a,0x02,0x06,0x05,0x02]
+v_subb_co_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_subbrev_co_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3c,0x02,0x06,0x05,0x02]
+v_subbrev_co_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 //===----------------------------------------------------------------------===//
 // Check VOPC opcodes
@@ -658,6 +694,11 @@ v_mov_b32 v1, exec dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: error:
 // NOVI: error:
+// GFX9: v_mov_b32_sdwa v1, ttmp12 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x02,0x02,0x7e,0x78,0x10,0x86,0x06]
+v_mov_b32_sdwa v1, ttmp12 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+
+// NOSICI: error:
+// NOVI: error:
 // GFX9: v_add_f32_sdwa v0, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x00,0x00,0x02,0x00,0x06,0x85,0x02]
 v_add_f32 v0, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -673,6 +714,16 @@ v_add_f32 v0, exec, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1
 
 // NOSICI: error:
 // NOVI: error:
+// NO: error: not a valid operand
+v_add_f32 v0, v1, tba_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// NO: error: not a valid operand
+v_add_f32 v0, v1, tma_hi dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
 // GFX9: v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0x00,0x85,0x02]
 v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -680,6 +731,26 @@ v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 // NOVI: error:
 // GFX9: v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x2c,0x84,0x7c,0x01,0x00,0x05,0x82]
 v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0xf8,0x05,0x02]
+v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// NO: error: not a valid operand
+v_cmp_eq_f32_sdwa tba, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// NO: error: not a valid operand
+v_cmp_eq_f32_sdwa tma, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0xf6,0x84,0x7c,0x01,0x00,0x05,0x82]
+v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
 // NOVI: error:

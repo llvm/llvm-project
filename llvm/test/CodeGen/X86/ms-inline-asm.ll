@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=core2 -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=core2 -no-integrated-as | FileCheck %s
 
 define i32 @t1() nounwind {
 entry:

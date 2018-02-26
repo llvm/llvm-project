@@ -68,10 +68,42 @@
 #endif
 
 #if defined(__arm__)
+
+/*
+ * Determine actual [ARM][THUMB[1][2]] ISA using compiler predefined macros:
+ * - for '-mthumb -march=armv6' compiler defines '__thumb__'
+ * - for '-mthumb -march=armv7' compiler defines '__thumb__' and '__thumb2__'
+ */
+#if defined(__thumb2__) || defined(__thumb__)
+#define DEFINE_CODE_STATE .thumb SEPARATOR
+#define DECLARE_FUNC_ENCODING    .thumb_func SEPARATOR
+#if defined(__thumb2__)
+#define USE_THUMB_2
+#define IT(cond)  it cond
+#define ITT(cond) itt cond
+#define ITE(cond) ite cond
+#else
+#define USE_THUMB_1
+#define IT(cond)
+#define ITT(cond)
+#define ITE(cond)
+#endif // defined(__thumb__2)
+#else // !defined(__thumb2__) && !defined(__thumb__)
+#define DEFINE_CODE_STATE .arm SEPARATOR
+#define DECLARE_FUNC_ENCODING
+#define IT(cond)
+#define ITT(cond)
+#define ITE(cond)
+#endif
+
+#if defined(USE_THUMB_1) && defined(USE_THUMB_2)
+#error "USE_THUMB_1 and USE_THUMB_2 can't be defined together."
+#endif
+
 #if defined(__ARM_ARCH_4T__) || __ARM_ARCH >= 5
 #define ARM_HAS_BX
 #endif
-#if !defined(__ARM_FEATURE_CLZ) && __ARM_ARCH_ISA_THUMB != 1 &&                \
+#if !defined(__ARM_FEATURE_CLZ) && !defined(USE_THUMB_1) &&  \
     (__ARM_ARCH >= 6 || (__ARM_ARCH == 5 && !defined(__ARM_ARCH_5__)))
 #define __ARM_FEATURE_CLZ
 #endif
@@ -93,21 +125,14 @@
   JMP(ip)
 #endif
 
-#if __ARM_ARCH_ISA_THUMB == 2
-#define IT(cond)  it cond
-#define ITT(cond) itt cond
-#define ITE(cond) ite cond
-#else
-#define IT(cond)
-#define ITT(cond)
-#define ITE(cond)
-#endif
-
-#if __ARM_ARCH_ISA_THUMB == 2
+#if defined(USE_THUMB_2)
 #define WIDE(op) op.w
 #else
 #define WIDE(op) op
 #endif
+#else // !defined(__arm)
+#define DECLARE_FUNC_ENCODING
+#define DEFINE_CODE_STATE
 #endif
 
 #define GLUE2(a, b) a##b
@@ -122,13 +147,16 @@
 #endif
 
 #define DEFINE_COMPILERRT_FUNCTION(name)                                       \
+  DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
   DECLARE_SYMBOL_VISIBILITY(name)                                              \
+  DECLARE_FUNC_ENCODING                                                        \
   SYMBOL_NAME(name):
 
 #define DEFINE_COMPILERRT_THUMB_FUNCTION(name)                                 \
+  DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
@@ -137,16 +165,20 @@
   SYMBOL_NAME(name):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION(name)                               \
+  DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
   HIDDEN(SYMBOL_NAME(name)) SEPARATOR                                          \
+  DECLARE_FUNC_ENCODING                                                        \
   SYMBOL_NAME(name):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(name)                     \
+  DEFINE_CODE_STATE                                                            \
   .globl name SEPARATOR                                                        \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
   HIDDEN(name) SEPARATOR                                                       \
+  DECLARE_FUNC_ENCODING                                                        \
   name:
 
 #define DEFINE_COMPILERRT_FUNCTION_ALIAS(name, target)                         \

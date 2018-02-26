@@ -31,33 +31,35 @@ TEST(Chrono, TimeTConversion) {
   EXPECT_EQ(TP, toTimePoint(toTimeT(TP)));
 }
 
-TEST(Chrono, StringConversion) {
+TEST(Chrono, TimePointFormat) {
+  using namespace std::chrono;
+  struct tm TM {};
+  TM.tm_year = 106;
+  TM.tm_mon = 0;
+  TM.tm_mday = 2;
+  TM.tm_hour = 15;
+  TM.tm_min = 4;
+  TM.tm_sec = 5;
+  TM.tm_isdst = -1;
+  TimePoint<> T =
+      system_clock::from_time_t(mktime(&TM)) + nanoseconds(123456789);
+
+  // operator<< uses the format YYYY-MM-DD HH:MM:SS.NNNNNNNNN
   std::string S;
   raw_string_ostream OS(S);
-  OS << system_clock::now();
+  OS << T;
+  EXPECT_EQ("2006-01-02 15:04:05.123456789", OS.str());
 
-  // Do a basic sanity check on the output.
-  // The format we expect is YYYY-MM-DD HH:MM:SS.MMMUUUNNN
-  StringRef Date, Time;
-  std::tie(Date, Time) = StringRef(OS.str()).split(' ');
-
-  SmallVector<StringRef, 3> Components;
-  Date.split(Components, '-');
-  ASSERT_EQ(3u, Components.size());
-  EXPECT_EQ(4u, Components[0].size());
-  EXPECT_EQ(2u, Components[1].size());
-  EXPECT_EQ(2u, Components[2].size());
-
-  StringRef Sec, Nano;
-  std::tie(Sec, Nano) = Time.split('.');
-
-  Components.clear();
-  Sec.split(Components, ':');
-  ASSERT_EQ(3u, Components.size());
-  EXPECT_EQ(2u, Components[0].size());
-  EXPECT_EQ(2u, Components[1].size());
-  EXPECT_EQ(2u, Components[2].size());
-  EXPECT_EQ(9u, Nano.size());
+  // formatv default style matches operator<<.
+  EXPECT_EQ("2006-01-02 15:04:05.123456789", formatv("{0}", T).str());
+  // formatv supports strftime-style format strings.
+  EXPECT_EQ("15:04:05", formatv("{0:%H:%M:%S}", T).str());
+  // formatv supports our strftime extensions for sub-second precision.
+  EXPECT_EQ("123", formatv("{0:%L}", T).str());
+  EXPECT_EQ("123456", formatv("{0:%f}", T).str());
+  EXPECT_EQ("123456789", formatv("{0:%N}", T).str());
+  // our extensions don't interfere with %% escaping.
+  EXPECT_EQ("%foo", formatv("{0:%%foo}", T).str());
 }
 
 // Test that toTimePoint and toTimeT can be called with a arguments with varying

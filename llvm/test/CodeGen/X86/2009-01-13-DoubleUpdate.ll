@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 -enable-legalize-types-checking
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -enable-legalize-types-checking
 
 declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
 

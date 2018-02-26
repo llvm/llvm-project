@@ -26,78 +26,79 @@
 namespace clang {
 namespace format {
 
-#define LIST_TOKEN_TYPES \
-  TYPE(ArrayInitializerLSquare) \
-  TYPE(ArraySubscriptLSquare) \
-  TYPE(AttributeParen) \
-  TYPE(BinaryOperator) \
-  TYPE(BitFieldColon) \
-  TYPE(BlockComment) \
-  TYPE(CastRParen) \
-  TYPE(ConditionalExpr) \
-  TYPE(ConflictAlternative) \
-  TYPE(ConflictEnd) \
-  TYPE(ConflictStart) \
-  TYPE(CtorInitializerColon) \
-  TYPE(CtorInitializerComma) \
-  TYPE(DesignatedInitializerLSquare) \
-  TYPE(DesignatedInitializerPeriod) \
-  TYPE(DictLiteral) \
-  TYPE(ForEachMacro) \
-  TYPE(FunctionAnnotationRParen) \
-  TYPE(FunctionDeclarationName) \
-  TYPE(FunctionLBrace) \
-  TYPE(FunctionTypeLParen) \
-  TYPE(ImplicitStringLiteral) \
-  TYPE(InheritanceColon) \
-  TYPE(InheritanceComma) \
-  TYPE(InlineASMBrace) \
-  TYPE(InlineASMColon) \
-  TYPE(JavaAnnotation) \
-  TYPE(JsComputedPropertyName) \
-  TYPE(JsExponentiation) \
-  TYPE(JsExponentiationEqual) \
-  TYPE(JsFatArrow) \
-  TYPE(JsNonNullAssertion) \
-  TYPE(JsTypeColon) \
-  TYPE(JsTypeOperator) \
-  TYPE(JsTypeOptionalQuestion) \
-  TYPE(LambdaArrow) \
-  TYPE(LambdaLSquare) \
-  TYPE(LeadingJavaAnnotation) \
-  TYPE(LineComment) \
-  TYPE(MacroBlockBegin) \
-  TYPE(MacroBlockEnd) \
-  TYPE(ObjCBlockLBrace) \
-  TYPE(ObjCBlockLParen) \
-  TYPE(ObjCDecl) \
-  TYPE(ObjCForIn) \
-  TYPE(ObjCMethodExpr) \
-  TYPE(ObjCMethodSpecifier) \
-  TYPE(ObjCProperty) \
-  TYPE(ObjCStringLiteral) \
-  TYPE(OverloadedOperator) \
-  TYPE(OverloadedOperatorLParen) \
-  TYPE(PointerOrReference) \
-  TYPE(PureVirtualSpecifier) \
-  TYPE(RangeBasedForLoopColon) \
-  TYPE(RegexLiteral) \
-  TYPE(SelectorName) \
-  TYPE(StartOfName) \
-  TYPE(TemplateCloser) \
-  TYPE(TemplateOpener) \
-  TYPE(TemplateString) \
-  TYPE(TrailingAnnotation) \
-  TYPE(TrailingReturnArrow) \
-  TYPE(TrailingUnaryOperator) \
-  TYPE(UnaryOperator) \
+#define LIST_TOKEN_TYPES                                                       \
+  TYPE(ArrayInitializerLSquare)                                                \
+  TYPE(ArraySubscriptLSquare)                                                  \
+  TYPE(AttributeParen)                                                         \
+  TYPE(BinaryOperator)                                                         \
+  TYPE(BitFieldColon)                                                          \
+  TYPE(BlockComment)                                                           \
+  TYPE(CastRParen)                                                             \
+  TYPE(ConditionalExpr)                                                        \
+  TYPE(ConflictAlternative)                                                    \
+  TYPE(ConflictEnd)                                                            \
+  TYPE(ConflictStart)                                                          \
+  TYPE(CtorInitializerColon)                                                   \
+  TYPE(CtorInitializerComma)                                                   \
+  TYPE(DesignatedInitializerLSquare)                                           \
+  TYPE(DesignatedInitializerPeriod)                                            \
+  TYPE(DictLiteral)                                                            \
+  TYPE(ForEachMacro)                                                           \
+  TYPE(FunctionAnnotationRParen)                                               \
+  TYPE(FunctionDeclarationName)                                                \
+  TYPE(FunctionLBrace)                                                         \
+  TYPE(FunctionTypeLParen)                                                     \
+  TYPE(ImplicitStringLiteral)                                                  \
+  TYPE(InheritanceColon)                                                       \
+  TYPE(InheritanceComma)                                                       \
+  TYPE(InlineASMBrace)                                                         \
+  TYPE(InlineASMColon)                                                         \
+  TYPE(JavaAnnotation)                                                         \
+  TYPE(JsComputedPropertyName)                                                 \
+  TYPE(JsExponentiation)                                                       \
+  TYPE(JsExponentiationEqual)                                                  \
+  TYPE(JsFatArrow)                                                             \
+  TYPE(JsNonNullAssertion)                                                     \
+  TYPE(JsTypeColon)                                                            \
+  TYPE(JsTypeOperator)                                                         \
+  TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaArrow)                                                            \
+  TYPE(LambdaLSquare)                                                          \
+  TYPE(LeadingJavaAnnotation)                                                  \
+  TYPE(LineComment)                                                            \
+  TYPE(MacroBlockBegin)                                                        \
+  TYPE(MacroBlockEnd)                                                          \
+  TYPE(ObjCBlockLBrace)                                                        \
+  TYPE(ObjCBlockLParen)                                                        \
+  TYPE(ObjCDecl)                                                               \
+  TYPE(ObjCForIn)                                                              \
+  TYPE(ObjCMethodExpr)                                                         \
+  TYPE(ObjCMethodSpecifier)                                                    \
+  TYPE(ObjCProperty)                                                           \
+  TYPE(ObjCStringLiteral)                                                      \
+  TYPE(OverloadedOperator)                                                     \
+  TYPE(OverloadedOperatorLParen)                                               \
+  TYPE(PointerOrReference)                                                     \
+  TYPE(PureVirtualSpecifier)                                                   \
+  TYPE(RangeBasedForLoopColon)                                                 \
+  TYPE(RegexLiteral)                                                           \
+  TYPE(SelectorName)                                                           \
+  TYPE(StartOfName)                                                            \
+  TYPE(StructuredBindingLSquare)                                               \
+  TYPE(TemplateCloser)                                                         \
+  TYPE(TemplateOpener)                                                         \
+  TYPE(TemplateString)                                                         \
+  TYPE(TrailingAnnotation)                                                     \
+  TYPE(TrailingReturnArrow)                                                    \
+  TYPE(TrailingUnaryOperator)                                                  \
+  TYPE(UnaryOperator)                                                          \
   TYPE(Unknown)
 
 enum TokenType {
 #define TYPE(X) TT_##X,
-LIST_TOKEN_TYPES
+  LIST_TOKEN_TYPES
 #undef TYPE
-  NUM_TOKEN_TYPES
+      NUM_TOKEN_TYPES
 };
 
 /// \brief Determines the name of a token type.
@@ -340,10 +341,11 @@ struct FormatToken {
   bool isSimpleTypeSpecifier() const;
 
   bool isObjCAccessSpecifier() const {
-    return is(tok::at) && Next && (Next->isObjCAtKeyword(tok::objc_public) ||
-                                   Next->isObjCAtKeyword(tok::objc_protected) ||
-                                   Next->isObjCAtKeyword(tok::objc_package) ||
-                                   Next->isObjCAtKeyword(tok::objc_private));
+    return is(tok::at) && Next &&
+           (Next->isObjCAtKeyword(tok::objc_public) ||
+            Next->isObjCAtKeyword(tok::objc_protected) ||
+            Next->isObjCAtKeyword(tok::objc_package) ||
+            Next->isObjCAtKeyword(tok::objc_private));
   }
 
   /// \brief Returns whether \p Tok is ([{ or a template opening <.
@@ -471,6 +473,19 @@ struct FormatToken {
                               Style.Language == FormatStyle::LK_TextProto));
   }
 
+  /// \brief Returns whether the token is the left square bracket of a C++
+  /// structured binding declaration.
+  bool isCppStructuredBinding(const FormatStyle &Style) const {
+    if (!Style.isCpp() || isNot(tok::l_square))
+      return false;
+    const FormatToken *T = this;
+    do {
+      T = T->getPreviousNonComment();
+    } while (T && T->isOneOf(tok::kw_const, tok::kw_volatile, tok::amp,
+                             tok::ampamp));
+    return T && T->is(tok::kw_auto);
+  }
+
   /// \brief Same as opensBlockOrBlockTypeList, but for the closing token.
   bool closesBlockOrBlockTypeList(const FormatStyle &Style) const {
     if (is(TT_TemplateString) && closesScope())
@@ -503,15 +518,13 @@ private:
     return is(K1) && Next && Next->startsSequenceInternal(Tokens...);
   }
 
-  template <typename A>
-  bool startsSequenceInternal(A K1) const {
+  template <typename A> bool startsSequenceInternal(A K1) const {
     if (is(tok::comment) && Next)
       return Next->startsSequenceInternal(K1);
     return is(K1);
   }
 
-  template <typename A, typename... Ts>
-  bool endsSequenceInternal(A K1) const {
+  template <typename A, typename... Ts> bool endsSequenceInternal(A K1) const {
     if (is(tok::comment) && Previous)
       return Previous->endsSequenceInternal(K1);
     return is(K1);
@@ -644,6 +657,7 @@ struct AdditionalKeywords {
     kw_readonly = &IdentTable.get("readonly");
     kw_set = &IdentTable.get("set");
     kw_type = &IdentTable.get("type");
+    kw_typeof = &IdentTable.get("typeof");
     kw_var = &IdentTable.get("var");
     kw_yield = &IdentTable.get("yield");
 
@@ -680,7 +694,7 @@ struct AdditionalKeywords {
     JsExtraKeywords = std::unordered_set<IdentifierInfo *>(
         {kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
          kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
-         kw_set, kw_type, kw_var, kw_yield,
+         kw_set, kw_type, kw_typeof, kw_var, kw_yield,
          // Keywords from the Java section.
          kw_abstract, kw_extends, kw_implements, kw_instanceof, kw_interface});
   }
@@ -714,6 +728,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_readonly;
   IdentifierInfo *kw_set;
   IdentifierInfo *kw_type;
+  IdentifierInfo *kw_typeof;
   IdentifierInfo *kw_var;
   IdentifierInfo *kw_yield;
 

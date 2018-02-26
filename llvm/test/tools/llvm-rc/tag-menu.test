@@ -1,0 +1,75 @@
+; RUN: llvm-rc /FO %t %p/Inputs/tag-menu.rc
+; RUN: llvm-readobj %t | FileCheck %s --check-prefix=MENU
+
+; MENU: Resource type (int): 4
+; MENU-NEXT: Resource name (string): CHECKRECURSION
+; MENU-NEXT: Data version: 0
+; MENU-NEXT: Memory flags: 0x1030
+; MENU-NEXT: Language ID: 1033
+; MENU-NEXT: Version (major): 0
+; MENU-NEXT: Version (minor): 0
+; MENU-NEXT: Characteristics: 0
+; MENU-NEXT: Data size: 102
+; MENU-NEXT: Data: (
+; MENU-NEXT:   0000: 00000000 90004100 00001000 42000000  |......A.....B...|
+; MENU-NEXT:   0010: 00000100 61000000 00000200 62000000  |....a.......b...|
+; MENU-NEXT:   0020: 00000300 63000000 90004300 00009000  |....c.....C.....|
+; MENU-NEXT:   0030: 44000000 90004500 00009000 46000000  |D.....E.....F...|
+; MENU-NEXT:   0040: 90004700 00009000 48000000 90004900  |..G.....H.....I.|
+; MENU-NEXT:   0050: 00008000 2EDF6400 00008000 255B6500  |......d.....%[e.|
+; MENU-NEXT:   0060: 66006700 0000                        |f.g...|
+; MENU-NEXT: )
+
+; MENU-DAG: Resource type (int): 4
+; MENU-NEXT: Resource name (string): CHECKFLAGS
+; MENU-NEXT: Data version: 0
+; MENU-NEXT: Memory flags: 0x1030
+; MENU-NEXT: Language ID: 1033
+; MENU-NEXT: Version (major): 0
+; MENU-NEXT: Version (minor): 0
+; MENU-NEXT: Characteristics: 0
+; MENU-NEXT: Data size: 202
+; MENU-NEXT: Data: (
+; MENU-NEXT:   0000: 00000000 08000100 61000000 01000200  |........a.......|
+; MENU-NEXT:   0010: 62000000 00400300 63000000 02000400  |b....@..c.......|
+; MENU-NEXT:   0020: 64000000 20000500 65000000 40000600  |d... ...e...@...|
+; MENU-NEXT:   0030: 66000000 0A000700 61006400 00000000  |f.......a.d.....|
+; MENU-NEXT:   0040: 00000000 18004100 00008000 64007800  |......A.....d.x.|
+; MENU-NEXT:   0050: 00001100 42000000 80006500 78000000  |....B.....e.x...|
+; MENU-NEXT:   0060: 10404300 00008000 66007800 00001200  |.@C.....f.x.....|
+; MENU-NEXT:   0070: 44000000 80006700 78000000 30004500  |D.....g.x...0.E.|
+; MENU-NEXT:   0080: 00008000 68007800 00005000 46000000  |....h.x...P.F...|
+; MENU-NEXT:   0090: 80006900 78000000 31404700 0000DA40  |..i.x...1@G....@|
+; MENU-NEXT:   00A0: 48000000 00000000 00002200 6A007800  |H.........".j.x.|
+; MENU-NEXT:   00B0: 00008000 00000000 EB400800 61006200  |.........@..a.b.|
+; MENU-NEXT:   00C0: 63006400 65006600 0000               |c.d.e.f...|
+; MENU-NEXT: )
+
+; MENU-DAG: Resource type (int): 4
+; MENU-NEXT: Resource name (string): CHECKOPTS
+; MENU-NEXT: Data version: 0
+; MENU-NEXT: Memory flags: 0x1030
+; MENU-NEXT: Language ID: 1025
+; MENU-NEXT: Version (major): 0
+; MENU-NEXT: Version (minor): 128
+; MENU-NEXT: Characteristics: 500
+; MENU-NEXT: Data size: 164
+; MENU-NEXT: Data: (
+; MENU-NEXT:   0000: 00000000 10002600 4F006E00 6C007900  |......&.O.n.l.y.|
+; MENU-NEXT:   0010: 20007300 65007000 61007200 61007400  | .s.e.p.a.r.a.t.|
+; MENU-NEXT:   0020: 6F007200 00008000 00000000 90004F00  |o.r...........O.|
+; MENU-NEXT:   0030: 26007400 68006500 72002000 74006800  |&.t.h.e.r. .t.h.|
+; MENU-NEXT:   0040: 69006E00 67007300 00000000 01002600  |i.n.g.s.......&.|
+; MENU-NEXT:   0050: 61006200 63006400 65000000 00000200  |a.b.c.d.e.......|
+; MENU-NEXT:   0060: 61002600 62006300 64006500 00000000  |a.&.b.c.d.e.....|
+; MENU-NEXT:   0070: 03006100 62002600 63006400 65000000  |..a.b.&.c.d.e...|
+; MENU-NEXT:   0080: 00000400 61006200 63002600 64006500  |....a.b.c.&.d.e.|
+; MENU-NEXT:   0090: 00008000 05006100 62006300 64002600  |......a.b.c.d.&.|
+; MENU-NEXT:   00A0: 65000000                             |e...|
+; MENU-NEXT: )
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-menu-bad-menuitem-id.rc 2>&1 | FileCheck %s --check-prefix BADID
+
+; BADID: llvm-rc: Error in MENU statement (ID 1):
+; BADID-NEXT: MENUITEM action ID (100000) does not fit in 16 bits.

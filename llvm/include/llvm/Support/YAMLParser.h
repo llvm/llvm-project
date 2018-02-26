@@ -291,9 +291,11 @@ public:
   Node *getValue();
 
   void skip() override {
-    getKey()->skip();
-    if (Node *Val = getValue())
-      Val->skip();
+    if (Node *Key = getKey()) {
+      Key->skip();
+      if (Node *Val = getValue())
+        Val->skip();
+    }
   }
 
   static bool classof(const Node *N) {
@@ -572,13 +574,15 @@ public:
   document_iterator() = default;
   document_iterator(std::unique_ptr<Document> &D) : Doc(&D) {}
 
-  bool operator==(const document_iterator &Other) {
+  bool operator==(const document_iterator &Other) const {
     if (isAtEnd() || Other.isAtEnd())
       return isAtEnd() && Other.isAtEnd();
 
     return Doc == Other.Doc;
   }
-  bool operator!=(const document_iterator &Other) { return !(*this == Other); }
+  bool operator!=(const document_iterator &Other) const {
+    return !(*this == Other);
+  }
 
   document_iterator operator++() {
     assert(Doc && "incrementing iterator past the end.");

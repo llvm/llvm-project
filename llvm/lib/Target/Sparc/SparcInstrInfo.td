@@ -61,8 +61,8 @@ def HasLeonCASA : Predicate<"Subtarget->hasLeonCasa()">;
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
 
 def HasNoFdivSqrtFix : Predicate<"!Subtarget->fixAllFDIVSQRT()">;
-def HasNoFmulsFix : Predicate<"!Subtarget->replaceFMULS()">;
-def HasNoFsmuldFix : Predicate<"!Subtarget->fixFSMULD()">;
+def HasFMULS : Predicate<"!Subtarget->hasNoFMULS()">;
+def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 
 // UseDeprecatedInsts - This predicate is true when the target processor is a
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
@@ -1236,14 +1236,12 @@ def FSUBQ  : F3_3<2, 0b110100, 0b001000111,
 
 
 // Floating-point Multiply and Divide Instructions, p. 147
-// FMULS generates an erratum on LEON processors, so by disabling this instruction
-// this will be promoted to use FMULD with doubles instead.
-let Predicates = [HasNoFmulsFix] in 
 def FMULS  : F3_3<2, 0b110100, 0b001001001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fmuls $rs1, $rs2, $rd",
                   [(set f32:$rd, (fmul f32:$rs1, f32:$rs2))],
-                  IIC_fpu_muls>;
+                  IIC_fpu_muls>,
+		  Requires<[HasFMULS]>;
 def FMULD  : F3_3<2, 0b110100, 0b001001010,
                   (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                   "fmuld $rs1, $rs2, $rd",
@@ -1255,13 +1253,13 @@ def FMULQ  : F3_3<2, 0b110100, 0b001001011,
                   [(set f128:$rd, (fmul f128:$rs1, f128:$rs2))]>,
                   Requires<[HasHardQuad]>;
 
-let Predicates = [HasNoFsmuldFix] in
 def FSMULD : F3_3<2, 0b110100, 0b001101001,
                   (outs DFPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fsmuld $rs1, $rs2, $rd",
                   [(set f64:$rd, (fmul (fpextend f32:$rs1),
                                         (fpextend f32:$rs2)))],
-                  IIC_fpu_muld>;
+                  IIC_fpu_muld>,
+		  Requires<[HasFSMULD]>;
 def FDMULQ : F3_3<2, 0b110100, 0b001101110,
                   (outs QFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                   "fdmulq $rs1, $rs2, $rd",

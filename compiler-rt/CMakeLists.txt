@@ -1,9 +1,5 @@
 # CMake build for CompilerRT.
 #
-# This build assumes that CompilerRT is checked out into the
-# 'projects/compiler-rt' or 'runtimes/compiler-rt' inside of an LLVM tree.
-# Standalone build system for CompilerRT is not yet ready.
-#
 # An important constraint of the build is that it only produces libraries
 # based on the ability of the host toolchain to target various platforms.
 
@@ -38,6 +34,29 @@ option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY)
 option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
 mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
+option(COMPILER_RT_BUILD_PROFILE "Build profile runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_PROFILE)
+option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
+mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
+
+set(COMPILER_RT_ASAN_SHADOW_SCALE ""
+    CACHE STRING "Override the shadow scale to be used in ASan runtime")
+
+if (NOT COMPILER_RT_ASAN_SHADOW_SCALE STREQUAL "")
+  # Check that the shadow scale value is valid.
+  if (NOT (COMPILER_RT_ASAN_SHADOW_SCALE GREATER -1 AND
+           COMPILER_RT_ASAN_SHADOW_SCALE LESS 8))
+    message(FATAL_ERROR "
+      Invalid ASan Shadow Scale '${COMPILER_RT_ASAN_SHADOW_SCALE}'.")
+  endif()
+
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_LLVM_FLAG
+      -mllvm -asan-mapping-scale=${COMPILER_RT_ASAN_SHADOW_SCALE})
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION
+      ASAN_SHADOW_SCALE=${COMPILER_RT_ASAN_SHADOW_SCALE})
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_FLAG
+      -D${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
+endif()
 
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")
@@ -60,12 +79,19 @@ if (COMPILER_RT_STANDALONE_BUILD)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
   endif()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+  set(LLVM_LIT_OUTPUT_DIR "${COMPILER_RT_EXEC_OUTPUT_DIR}")
 endif()
 
 construct_compiler_rt_default_triple()
-if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" STREQUAL "androideabi")
+if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" MATCHES "hf$")
+  if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^arm")
+    set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")
+  endif()
+endif()
+if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" MATCHES "^android")
   set(ANDROID 1)
 endif()
+pythonize_bool(ANDROID)
 
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -86,20 +112,62 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
+include(HandleCompilerRT)
 include(config-ix)
 
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
-  set(use_cxxabi_default OFF)
-elseif(MSVC)
-  set(use_cxxabi_default OFF)
+  set(cxxabi_supported OFF)
 else()
-  set(use_cxxabi_default ON)
+  set(cxxabi_supported ON)
 endif()
 
-option(SANITIZER_CAN_USE_CXXABI "Sanitizers can use cxxabi" ${use_cxxabi_default})
+option(SANITIZER_ALLOW_CXXABI "Allow use of C++ ABI details in ubsan" ON)
+
+set(SANITIZE_CAN_USE_CXXABI OFF)
+if (cxxabi_supported AND SANITIZER_ALLOW_CXXABI)
+  set(SANITIZER_CAN_USE_CXXABI ON)
+endif()
 pythonize_bool(SANITIZER_CAN_USE_CXXABI)
+
+set(SANITIZER_CXX_ABI "default" CACHE STRING
+    "Specify C++ ABI library to use.")
+set(CXXABIS none default libcxxabi libstdc++ libc++)
+set_property(CACHE SANITIZER_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
+
+if (SANITIZER_CXX_ABI STREQUAL "default")
+  if (HAVE_LIBCXXABI AND COMPILER_RT_DEFAULT_TARGET_ONLY)
+    set(SANITIZER_CXX_ABI_LIBNAME "libcxxabi")
+    set(SANITIZER_CXX_ABI_INTREE 1)
+  elseif (APPLE)
+    set(SANITIZER_CXX_ABI_LIBNAME "libcxxabi")
+    set(SANITIZER_CXX_ABI_SYSTEM 1)
+  else()
+    set(SANITIZER_CXX_ABI_LIBNAME "libstdc++")
+  endif()
+else()
+  set(SANITIZER_CXX_ABI_LIBNAME "${SANITIZER_CXX_ABI}")
+endif()
+
+if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libcxxabi")
+  if (SANITIZER_CXX_ABI_INTREE)
+    if (TARGET unwind_shared OR HAVE_LIBUNWIND)
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_shared)
+    endif()
+    if (TARGET cxxabi_shared OR HAVE_LIBCXXABI)
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_shared)
+    endif()
+  else()
+    list(APPEND SANITIZER_CXX_ABI_LIBRARY "c++abi")
+  endif()
+elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
+  list(APPEND SANITIZER_CXX_ABI_LIBRARY "c++")
+elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
+  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_CXX_ABI_LIBRARY)
+endif()
+
+option(SANITIZER_USE_COMPILER_RT "Use compiler-rt builtins instead of libgcc" OFF)
 
 #================================
 # Setup Compiler Flags
@@ -142,7 +210,9 @@ append_list_if(COMPILER_RT_HAS_FUNWIND_TABLES_FLAG -funwind-tables SANITIZER_COM
 append_list_if(COMPILER_RT_HAS_FNO_STACK_PROTECTOR_FLAG -fno-stack-protector SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_SANITIZE_SAFE_STACK_FLAG -fno-sanitize=safe-stack SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANITIZER_COMMON_CFLAGS)
-append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
+if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
+  append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
+endif()
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 
 # The following is a workaround for powerpc64le. This is the only architecture
@@ -184,7 +254,7 @@ append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.
 if (NOT MSVC)
 
-  # Build with optimization, unless we're in debug mode. 
+  # Build with optimization, unless we're in debug mode.
   if(COMPILER_RT_DEBUG)
     list(APPEND SANITIZER_COMMON_CFLAGS -O0)
   else()
@@ -236,6 +306,28 @@ append_list_if(COMPILER_RT_HAS_WD4391_FLAG /wd4391 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4722_FLAG /wd4722 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 
+# Set common link flags.
+append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMON_LINK_FLAGS)
+
+if (SANITIZER_USE_COMPILER_RT)
+  list(APPEND SANITIZER_COMMON_LINK_FLAGS -rtlib=compiler-rt)
+  find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
+  list(APPEND SANITIZER_COMMON_LINK_LIBS ${COMPILER_RT_BUILTINS_LIBRARY})
+else()
+  if (ANDROID)
+    append_list_if(COMPILER_RT_HAS_GCC_LIB gcc SANITIZER_COMMON_LINK_LIBS)
+  else()
+    append_list_if(COMPILER_RT_HAS_GCC_S_LIB gcc_s SANITIZER_COMMON_LINK_LIBS)
+  endif()
+endif()
+
+append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
+
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
+  list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
+  list(APPEND SANITIZER_COMMON_LINK_LIBS zircon)
+endif()
+
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
@@ -252,17 +344,15 @@ endif()
 
 add_subdirectory(include)
 
-set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/projects/libcxx)
-if(EXISTS ${COMPILER_RT_LIBCXX_PATH}/)
-  set(COMPILER_RT_HAS_LIBCXX_SOURCES TRUE)
-else()
-  set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/../libcxx)
-  if(EXISTS ${COMPILER_RT_LIBCXX_PATH}/)
-    set(COMPILER_RT_HAS_LIBCXX_SOURCES TRUE)
-  else()
-    set(COMPILER_RT_HAS_LIBCXX_SOURCES FALSE)
+foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
+                      ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
+                      ${LLVM_MAIN_SRC_DIR}/../libcxx
+                      ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
+  if(IS_DIRECTORY ${path})
+    set(COMPILER_RT_LIBCXX_PATH ${path})
+    break()
   endif()
-endif()
+endforeach()
 
 set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
 if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
@@ -282,4 +372,15 @@ add_subdirectory(lib)
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
+  if (COMPILER_RT_STANDALONE_BUILD)
+    # If we have a valid source tree, generate llvm-lit into the bin directory.
+    # The user can still choose to have the check targets *use* a different lit
+    # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.
+    if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+      add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+    elseif(NOT EXISTS ${LLVM_EXTERNAL_LIT})
+      message(WARNING "Could not find LLVM source directory and LLVM_EXTERNAL_LIT does not"
+                       "point to a valid file.  You will not be able to run tests.")
+    endif()
+  endif()
 endif()

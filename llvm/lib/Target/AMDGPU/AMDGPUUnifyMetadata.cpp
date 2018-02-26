@@ -1,4 +1,4 @@
-//===-- AMDGPUUnifyMetadata.cpp - Unify OpenCL metadata -------------------===//
+//===- AMDGPUUnifyMetadata.cpp - Unify OpenCL metadata --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,7 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include <algorithm>
@@ -41,10 +41,11 @@ namespace {
   class AMDGPUUnifyMetadata : public ModulePass {
   public:
     static char ID;
-    explicit AMDGPUUnifyMetadata() : ModulePass(ID) {};
+
+    explicit AMDGPUUnifyMetadata() : ModulePass(ID) {}
 
   private:
-    virtual bool runOnModule(Module &M);
+    bool runOnModule(Module &M) override;
 
     /// \brief Unify version metadata.
     /// \return true if changes are made.

@@ -66,6 +66,7 @@ define i32 @vf4i32(i8* %this) readnone {
 define i1 @call1(i8* %obj) {
   %vtableptr = bitcast i8* %obj to [3 x i8*]**
   %vtable = load [3 x i8*]*, [3 x i8*]** %vtableptr
+  ; CHECK: {{.*}} = bitcast [3 x i8*]* {{.*}} to i8*
   ; CHECK: [[VT1:%[^ ]*]] = bitcast [3 x i8*]* {{.*}} to i8*
   %vtablei8 = bitcast [3 x i8*]* %vtable to i8*
   %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")
@@ -86,6 +87,7 @@ define i1 @call1(i8* %obj) {
 define i1 @call2(i8* %obj) {
   %vtableptr = bitcast i8* %obj to [3 x i8*]**
   %vtable = load [3 x i8*]*, [3 x i8*]** %vtableptr
+  ; CHECK: {{.*}} = bitcast [3 x i8*]* {{.*}} to i8*
   ; CHECK: [[VT2:%[^ ]*]] = bitcast [3 x i8*]* {{.*}} to i8*
   %vtablei8 = bitcast [3 x i8*]* %vtable to i8*
   %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")
@@ -106,6 +108,7 @@ define i1 @call2(i8* %obj) {
 define i32 @call3(i8* %obj) {
   %vtableptr = bitcast i8* %obj to [3 x i8*]**
   %vtable = load [3 x i8*]*, [3 x i8*]** %vtableptr
+  ; CHECK: {{.*}} = bitcast [3 x i8*]* {{.*}} to i8*
   ; CHECK: [[VT3:%[^ ]*]] = bitcast [3 x i8*]* {{.*}} to i8*
   %vtablei8 = bitcast [3 x i8*]* %vtable to i8*
   %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")

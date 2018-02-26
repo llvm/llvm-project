@@ -210,6 +210,7 @@ namespace __sanitizer {
   unsigned struct_sigaction_sz = sizeof(struct sigaction);
   unsigned struct_itimerval_sz = sizeof(struct itimerval);
   unsigned pthread_t_sz = sizeof(pthread_t);
+  unsigned pthread_mutex_t_sz = sizeof(pthread_mutex_t);
   unsigned pthread_cond_t_sz = sizeof(pthread_cond_t);
   unsigned pid_t_sz = sizeof(pid_t);
   unsigned timeval_sz = sizeof(timeval);
@@ -264,9 +265,10 @@ namespace __sanitizer {
   unsigned struct_statvfs_sz = sizeof(struct statvfs);
 #endif // (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
 
-  uptr sig_ign = (uptr)SIG_IGN;
-  uptr sig_dfl = (uptr)SIG_DFL;
-  uptr sa_siginfo = (uptr)SA_SIGINFO;
+  const uptr sig_ign = (uptr)SIG_IGN;
+  const uptr sig_dfl = (uptr)SIG_DFL;
+  const uptr sig_err = (uptr)SIG_ERR;
+  const uptr sa_siginfo = (uptr)SA_SIGINFO;
 
 #if SANITIZER_LINUX
   int e_tabsz = (int)E_TABSZ;

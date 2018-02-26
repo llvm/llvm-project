@@ -4,12 +4,12 @@
 
 define <4 x float> @test(float %a) {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    insertps {{.*#+}} xmm0 = zero,mem[0],zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[0],zero,zero
 ; X64-NEXT:    retq
   %tmp = insertelement <4 x float> zeroinitializer, float %a, i32 1
@@ -20,13 +20,13 @@ define <4 x float> @test(float %a) {
 
 define <2 x i64> @test2(i32 %a) {
 ; X86-LABEL: test2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; X64-NEXT:    retq
@@ -38,12 +38,12 @@ define <2 x i64> @test2(i32 %a) {
 
 define <4 x float> @test3(<4 x float> %A) {
 ; X86-LABEL: test3:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[0],zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[0],zero,zero
 ; X64-NEXT:    retq
   %tmp0 = extractelement <4 x float> %A, i32 0

@@ -1,4 +1,4 @@
-# RUN: llc -march=x86 -run-pass machine-cp -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=i686-- -run-pass machine-cp -verify-machineinstrs -o - %s | FileCheck %s
 
 --- |
   declare void @foo()

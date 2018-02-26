@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_MSP430_MSP430REGISTERINFO_H
 #define LLVM_LIB_TARGET_MSP430_MSP430REGISTERINFO_H
 
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "MSP430GenRegisterInfo.inc"

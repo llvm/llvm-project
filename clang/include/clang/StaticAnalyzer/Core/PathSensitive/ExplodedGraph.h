@@ -156,6 +156,11 @@ public:
     return Location.getAs<T>();
   }
 
+  /// Get the value of an arbitrary expression at this node.
+  SVal getSVal(const Stmt *S) const {
+    return getState()->getSVal(S, getLocationContext());
+  }
+
   static void Profile(llvm::FoldingSetNodeID &ID,
                       const ProgramPoint &Loc,
                       const ProgramStateRef &state,

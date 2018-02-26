@@ -1,4 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r5 | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r5 -mattr=+fp64 | FileCheck %s
 0x00 0x00 0x00 0x00 # CHECK: nop
 0x00 0x00 0x00 0x09 # CHECK: jr $zero
 0x00 0x00 0x00 0x0c # CHECK: syscall                         

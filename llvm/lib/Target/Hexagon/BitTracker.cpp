@@ -1,4 +1,4 @@
-//===--- BitTracker.cpp ---------------------------------------------------===//
+//===- BitTracker.cpp -----------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,16 +18,16 @@
 // A "ref" value is associated with a BitRef structure, which indicates
 // which virtual register, and which bit in that register is the origin
 // of the value. For example, given an instruction
-//   vreg2 = ASL vreg1, 1
-// assuming that nothing is known about bits of vreg1, bit 1 of vreg2
-// will be a "ref" to (vreg1, 0). If there is a subsequent instruction
-//   vreg3 = ASL vreg2, 2
-// then bit 3 of vreg3 will be a "ref" to (vreg1, 0) as well.
+//   %2 = ASL %1, 1
+// assuming that nothing is known about bits of %1, bit 1 of %2
+// will be a "ref" to (%1, 0). If there is a subsequent instruction
+//   %3 = ASL %2, 2
+// then bit 3 of %3 will be a "ref" to (%1, 0) as well.
 // The "bottom" case means that the bit's value cannot be determined,
 // and that this virtual register actually defines it. The "bottom" case
 // is discussed in detail in BitTracker.h. In fact, "bottom" is a "ref
-// to self", so for the vreg1 above, the bit 0 of it will be a "ref" to
-// (vreg1, 0), bit 1 will be a "ref" to (vreg1, 1), etc.
+// to self", so for the %1 above, the bit 0 of it will be a "ref" to
+// (%1, 0), bit 1 will be a "ref" to (%1, 1), etc.
 //
 // The tracker implements the Wegman-Zadeck algorithm, originally developed
 // for SSA-based constant propagation. Each register is represented as
@@ -61,21 +61,21 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
 
 using namespace llvm;
 
-typedef BitTracker BT;
+using BT = BitTracker;
 
 namespace {
 
-  // Local trickery to pretty print a register (without the whole "%vreg"
+  // Local trickery to pretty print a register (without the whole "%number"
   // business).
   struct printv {
     printv(unsigned r) : R(r) {}
@@ -181,12 +181,13 @@ namespace llvm {
 } // end namespace llvm
 
 void BitTracker::print_cells(raw_ostream &OS) const {
-  for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I)
-    dbgs() << PrintReg(I->first, &ME.TRI) << " -> " << I->second << "\n";
+  for (const std::pair<unsigned, RegisterCell> P : Map)
+    dbgs() << printReg(P.first, &ME.TRI) << " -> " << P.second << "\n";
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
-    : Trace(false), ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType) {}
+    : ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType), Trace(false) {
+}
 
 BitTracker::~BitTracker() {
   delete &Map;
@@ -335,20 +336,13 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   // 1. find a physical register PhysR from the same class as RR.Reg,
   // 2. find a physical register PhysS that corresponds to PhysR:RR.Sub,
   // 3. find a register class that contains PhysS.
-  unsigned PhysR;
   if (TargetRegisterInfo::isVirtualRegister(RR.Reg)) {
-    const TargetRegisterClass *VC = MRI.getRegClass(RR.Reg);
-    assert(VC->begin() != VC->end() && "Empty register class");
-    PhysR = *VC->begin();
-  } else {
-    assert(TargetRegisterInfo::isPhysicalRegister(RR.Reg));
-    PhysR = RR.Reg;
+    const auto &VC = composeWithSubRegIndex(*MRI.getRegClass(RR.Reg), RR.Sub);
+    return TRI.getRegSizeInBits(VC);
   }
-
-  unsigned PhysS = (RR.Sub == 0) ? PhysR : TRI.getSubReg(PhysR, RR.Sub);
-  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PhysS);
-  uint16_t BW = TRI.getRegSizeInBits(*RC);
-  return BW;
+  assert(TargetRegisterInfo::isPhysicalRegister(RR.Reg));
+  unsigned PhysR = (RR.Sub == 0) ? RR.Reg : TRI.getSubReg(RR.Reg, RR.Sub);
+  return getPhysRegBitWidth(PhysR);
 }
 
 BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
@@ -717,6 +711,12 @@ BT::BitMask BT::MachineEvaluator::mask(unsigned Reg, unsigned Sub) const {
   return BitMask(0, W-1);
 }
 
+uint16_t BT::MachineEvaluator::getPhysRegBitWidth(unsigned Reg) const {
+  assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+  const TargetRegisterClass &PC = *TRI.getMinimalPhysRegClass(Reg);
+  return TRI.getRegSizeInBits(PC);
+}
+
 bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
                                     const CellMapType &Inputs,
                                     CellMapType &Outputs) const {
@@ -763,12 +763,39 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
   return true;
 }
 
+bool BT::UseQueueType::Cmp::operator()(const MachineInstr *InstA,
+                                       const MachineInstr *InstB) const {
+  // This is a comparison function for a priority queue: give higher priority
+  // to earlier instructions.
+  // This operator is used as "less", so returning "true" gives InstB higher
+  // priority (because then InstA < InstB).
+  if (InstA == InstB)
+    return false;
+  const MachineBasicBlock *BA = InstA->getParent();
+  const MachineBasicBlock *BB = InstB->getParent();
+  if (BA != BB) {
+    // If the blocks are different, ideally the dominating block would
+    // have a higher priority, but it may be too expensive to check.
+    return BA->getNumber() > BB->getNumber();
+  }
+
+  MachineBasicBlock::const_iterator ItA = InstA->getIterator();
+  MachineBasicBlock::const_iterator ItB = InstB->getIterator();
+  MachineBasicBlock::const_iterator End = BA->end();
+  while (ItA != End) {
+    if (ItA == ItB)
+      return false;   // ItA was before ItB.
+    ++ItA;
+  }
+  return true;
+}
+
 // Main W-Z implementation.
 
 void BT::visitPHI(const MachineInstr &PI) {
   int ThisN = PI.getParent()->getNumber();
   if (Trace)
-    dbgs() << "Visit FI(BB#" << ThisN << "): " << PI;
+    dbgs() << "Visit FI(" << printMBBReference(*PI.getParent()) << "): " << PI;
 
   const MachineOperand &MD = PI.getOperand(0);
   assert(MD.getSubReg() == 0 && "Unexpected sub-register in definition");
@@ -785,7 +812,8 @@ void BT::visitPHI(const MachineInstr &PI) {
     const MachineBasicBlock *PB = PI.getOperand(i + 1).getMBB();
     int PredN = PB->getNumber();
     if (Trace)
-      dbgs() << "  edge BB#" << PredN << "->BB#" << ThisN;
+      dbgs() << "  edge " << printMBBReference(*PB) << "->"
+             << printMBBReference(*PI.getParent());
     if (!EdgeExec.count(CFGEdge(PredN, ThisN))) {
       if (Trace)
         dbgs() << " not executable\n";
@@ -795,14 +823,14 @@ void BT::visitPHI(const MachineInstr &PI) {
     RegisterRef RU = PI.getOperand(i);
     RegisterCell ResC = ME.getCell(RU, Map);
     if (Trace)
-      dbgs() << " input reg: " << PrintReg(RU.Reg, &ME.TRI, RU.Sub)
+      dbgs() << " input reg: " << printReg(RU.Reg, &ME.TRI, RU.Sub)
              << " cell: " << ResC << "\n";
     Changed |= DefC.meet(ResC, DefRR.Reg);
   }
 
   if (Changed) {
     if (Trace)
-      dbgs() << "Output: " << PrintReg(DefRR.Reg, &ME.TRI, DefRR.Sub)
+      dbgs() << "Output: " << printReg(DefRR.Reg, &ME.TRI, DefRR.Sub)
              << " cell: " << DefC << "\n";
     ME.putCell(DefRR, DefC, Map);
     visitUsesOf(DefRR.Reg);
@@ -810,10 +838,8 @@ void BT::visitPHI(const MachineInstr &PI) {
 }
 
 void BT::visitNonBranch(const MachineInstr &MI) {
-  if (Trace) {
-    int ThisN = MI.getParent()->getNumber();
-    dbgs() << "Visit MI(BB#" << ThisN << "): " << MI;
-  }
+  if (Trace)
+    dbgs() << "Visit MI(" << printMBBReference(*MI.getParent()) << "): " << MI;
   if (MI.isDebugValue())
     return;
   assert(!MI.isBranch() && "Unexpected branch instruction");
@@ -827,22 +853,20 @@ void BT::visitNonBranch(const MachineInstr &MI) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       RegisterRef RU(MO);
-      dbgs() << "  input reg: " << PrintReg(RU.Reg, &ME.TRI, RU.Sub)
+      dbgs() << "  input reg: " << printReg(RU.Reg, &ME.TRI, RU.Sub)
              << " cell: " << ME.getCell(RU, Map) << "\n";
     }
     dbgs() << "Outputs:\n";
-    for (CellMapType::iterator I = ResMap.begin(), E = ResMap.end();
-         I != E; ++I) {
-      RegisterRef RD(I->first);
-      dbgs() << "  " << PrintReg(I->first, &ME.TRI) << " cell: "
+    for (const std::pair<unsigned, RegisterCell> &P : ResMap) {
+      RegisterRef RD(P.first);
+      dbgs() << "  " << printReg(P.first, &ME.TRI) << " cell: "
              << ME.getCell(RD, ResMap) << "\n";
     }
   }
 
   // Iterate over all definitions of the instruction, and update the
   // cells accordingly.
-  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     // Visit register defs only.
     if (!MO.isReg() || !MO.isDef())
       continue;
@@ -900,7 +924,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
     BTs.clear();
     const MachineInstr &MI = *It;
     if (Trace)
-      dbgs() << "Visit BR(BB#" << ThisN << "): " << MI;
+      dbgs() << "Visit BR(" << printMBBReference(B) << "): " << MI;
     assert(MI.isBranch() && "Expecting branch instruction");
     InstrExec.insert(&MI);
     bool Eval = ME.evaluate(MI, Map, BTs, FallsThrough);
@@ -916,7 +940,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
       if (Trace) {
         dbgs() << "  adding targets:";
         for (unsigned i = 0, n = BTs.size(); i < n; ++i)
-          dbgs() << " BB#" << BTs[i]->getNumber();
+          dbgs() << " " << printMBBReference(*BTs[i]);
         if (FallsThrough)
           dbgs() << "\n  falls through\n";
         else
@@ -927,13 +951,11 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
     ++It;
   } while (FallsThrough && It != End);
 
-  typedef MachineBasicBlock::const_succ_iterator succ_iterator;
   if (!DefaultToAll) {
     // Need to add all CFG successors that lead to EH landing pads.
     // There won't be explicit branches to these blocks, but they must
     // be processed.
-    for (succ_iterator I = B.succ_begin(), E = B.succ_end(); I != E; ++I) {
-      const MachineBasicBlock *SB = *I;
+    for (const MachineBasicBlock *SB : B.successors()) {
       if (SB->isEHPad())
         Targets.insert(SB);
     }
@@ -944,33 +966,21 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         Targets.insert(&*Next);
     }
   } else {
-    for (succ_iterator I = B.succ_begin(), E = B.succ_end(); I != E; ++I)
-      Targets.insert(*I);
+    for (const MachineBasicBlock *SB : B.successors())
+      Targets.insert(SB);
   }
 
-  for (unsigned i = 0, n = Targets.size(); i < n; ++i) {
-    int TargetN = Targets[i]->getNumber();
-    FlowQ.push(CFGEdge(ThisN, TargetN));
-  }
+  for (const MachineBasicBlock *TB : Targets)
+    FlowQ.push(CFGEdge(ThisN, TB->getNumber()));
 }
 
 void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
-    dbgs() << "visiting uses of " << PrintReg(Reg, &ME.TRI) << "\n";
+    dbgs() << "queuing uses of modified reg " << printReg(Reg, &ME.TRI)
+           << " cell: " << ME.getCell(Reg, Map) << '\n';
 
-  typedef MachineRegisterInfo::use_nodbg_iterator use_iterator;
-  use_iterator End = MRI.use_nodbg_end();
-  for (use_iterator I = MRI.use_nodbg_begin(Reg); I != End; ++I) {
-    MachineInstr *UseI = I->getParent();
-    if (!InstrExec.count(UseI))
-      continue;
-    if (UseI->isPHI())
-      visitPHI(*UseI);
-    else if (!UseI->isBranch())
-      visitNonBranch(*UseI);
-    else
-      visitBranchesFrom(*UseI);
-  }
+  for (MachineInstr &UseI : MRI.use_nodbg_instructions(Reg))
+    UseQ.push(&UseI);
 }
 
 BT::RegisterCell BT::get(RegisterRef RR) const {
@@ -992,8 +1002,8 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
   (void)NME;
   assert((OME-OMB == NME-NMB) &&
          "Substituting registers of different lengths");
-  for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I) {
-    RegisterCell &RC = I->second;
+  for (std::pair<const unsigned, RegisterCell> &P : Map) {
+    RegisterCell &RC = P.second;
     for (uint16_t i = 0, w = RC.width(); i < w; ++i) {
       BitValue &V = RC[i];
       if (V.Type != BitValue::Ref || V.RefI.Reg != OldRR.Reg)
@@ -1020,6 +1030,8 @@ void BT::visit(const MachineInstr &MI) {
   assert(!MI.isBranch() && "Only non-branches are allowed");
   InstrExec.insert(&MI);
   visitNonBranch(MI);
+  // Make sure to flush all the pending use updates.
+  runUseQueue();
   // The call to visitNonBranch could propagate the changes until a branch
   // is actually visited. This could result in adding CFG edges to the flow
   // queue. Since the queue won't be processed, clear it.
@@ -1035,35 +1047,13 @@ void BT::reset() {
   ReachedBB.reserve(MF.size());
 }
 
-void BT::run() {
-  reset();
-  assert(FlowQ.empty());
-
-  typedef GraphTraits<const MachineFunction*> MachineFlowGraphTraits;
-  const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
-
-  unsigned MaxBN = 0;
-  for (MachineFunction::const_iterator I = MF.begin(), E = MF.end();
-       I != E; ++I) {
-    assert(I->getNumber() >= 0 && "Disconnected block");
-    unsigned BN = I->getNumber();
-    if (BN > MaxBN)
-      MaxBN = BN;
-  }
-
-  // Keep track of visited blocks.
-  BitVector BlockScanned(MaxBN+1);
-
-  int EntryN = Entry->getNumber();
-  // Generate a fake edge to get something to start with.
-  FlowQ.push(CFGEdge(-1, EntryN));
-
+void BT::runEdgeQueue(BitVector &BlockScanned) {
   while (!FlowQ.empty()) {
     CFGEdge Edge = FlowQ.front();
     FlowQ.pop();
 
     if (EdgeExec.count(Edge))
-      continue;
+      return;
     EdgeExec.insert(Edge);
     ReachedBB.insert(Edge.second);
 
@@ -1080,7 +1070,7 @@ void BT::run() {
     // then the instructions have already been processed. Any updates to
     // the cells would now only happen through visitUsesOf...
     if (BlockScanned[Edge.second])
-      continue;
+      return;
     BlockScanned[Edge.second] = true;
 
     // Visit non-branch instructions.
@@ -1104,6 +1094,50 @@ void BT::run() {
       visitBranchesFrom(*It);
     }
   } // while (!FlowQ->empty())
+}
+
+void BT::runUseQueue() {
+  while (!UseQ.empty()) {
+    MachineInstr &UseI = *UseQ.front();
+    UseQ.pop();
+
+    if (!InstrExec.count(&UseI))
+      continue;
+    if (UseI.isPHI())
+      visitPHI(UseI);
+    else if (!UseI.isBranch())
+      visitNonBranch(UseI);
+    else
+      visitBranchesFrom(UseI);
+  }
+}
+
+void BT::run() {
+  reset();
+  assert(FlowQ.empty());
+
+  using MachineFlowGraphTraits = GraphTraits<const MachineFunction*>;
+  const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
+
+  unsigned MaxBN = 0;
+  for (const MachineBasicBlock &B : MF) {
+    assert(B.getNumber() >= 0 && "Disconnected block");
+    unsigned BN = B.getNumber();
+    if (BN > MaxBN)
+      MaxBN = BN;
+  }
+
+  // Keep track of visited blocks.
+  BitVector BlockScanned(MaxBN+1);
+
+  int EntryN = Entry->getNumber();
+  // Generate a fake edge to get something to start with.
+  FlowQ.push(CFGEdge(-1, EntryN));
+
+  while (!FlowQ.empty() || !UseQ.empty()) {
+    runEdgeQueue(BlockScanned);
+    runUseQueue();
+  }
 
   if (Trace)
     print_cells(dbgs() << "Cells after propagation:\n");

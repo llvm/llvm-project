@@ -19,6 +19,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -115,8 +116,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
-  for (auto T : {MVT::i1, MVT::i8, MVT::i16, MVT::i32})
-    setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+  if (!Subtarget->hasAtomics()) {
+    // The Atomics feature includes signext intructions.
+    for (auto T : {MVT::i8, MVT::i16, MVT::i32})
+      setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
+  }
 
   // Dynamic stack allocation: use the default expansion.
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
@@ -146,6 +151,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(
@@ -176,6 +183,160 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
   assert(Result != MVT::INVALID_SIMPLE_VALUE_TYPE &&
          "Unable to represent scalar shift amount type");
   return Result;
+}
+
+// Lower an fp-to-int conversion operator from the LLVM opcode, which has an
+// undefined result on invalid/overflow, to the WebAssembly opcode, which
+// traps on invalid/overflow.
+static MachineBasicBlock *
+LowerFPToInt(
+    MachineInstr &MI,
+    DebugLoc DL,
+    MachineBasicBlock *BB,
+    const TargetInstrInfo &TII,
+    bool IsUnsigned,
+    bool Int64,
+    bool Float64,
+    unsigned LoweredOpcode
+) {
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  unsigned OutReg = MI.getOperand(0).getReg();
+  unsigned InReg = MI.getOperand(1).getReg();
+
+  unsigned Abs = Float64 ? WebAssembly::ABS_F64 : WebAssembly::ABS_F32;
+  unsigned FConst = Float64 ? WebAssembly::CONST_F64 : WebAssembly::CONST_F32;
+  unsigned LT = Float64 ? WebAssembly::LT_F64 : WebAssembly::LT_F32;
+  unsigned GE = Float64 ? WebAssembly::GE_F64 : WebAssembly::GE_F32;
+  unsigned IConst = Int64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
+  unsigned Eqz = WebAssembly::EQZ_I32;
+  unsigned And = WebAssembly::AND_I32;
+  int64_t Limit = Int64 ? INT64_MIN : INT32_MIN;
+  int64_t Substitute = IsUnsigned ? 0 : Limit;
+  double CmpVal = IsUnsigned ? -(double)Limit * 2.0 : -(double)Limit;
+  auto &Context = BB->getParent()->getFunction().getContext();
+  Type *Ty = Float64 ? Type::getDoubleTy(Context) : Type::getFloatTy(Context);
+
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *FalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVM_BB);
+
+  MachineFunction::iterator It = ++BB->getIterator();
+  F->insert(It, FalseMBB);
+  F->insert(It, TrueMBB);
+  F->insert(It, DoneMBB);
+
+  // Transfer the remainder of BB and its successor edges to DoneMBB.
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)),
+                  BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  BB->addSuccessor(TrueMBB);
+  BB->addSuccessor(FalseMBB);
+  TrueMBB->addSuccessor(DoneMBB);
+  FalseMBB->addSuccessor(DoneMBB);
+
+  unsigned Tmp0, Tmp1, CmpReg, EqzReg, FalseReg, TrueReg;
+  Tmp0 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
+  Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
+  CmpReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+  EqzReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+  FalseReg = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
+  TrueReg = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
+
+  MI.eraseFromParent();
+  // For signed numbers, we can do a single comparison to determine whether
+  // fabs(x) is within range.
+  if (IsUnsigned) {
+    Tmp0 = InReg;
+  } else {
+    BuildMI(BB, DL, TII.get(Abs), Tmp0)
+        .addReg(InReg);
+  }
+  BuildMI(BB, DL, TII.get(FConst), Tmp1)
+      .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, CmpVal)));
+  BuildMI(BB, DL, TII.get(LT), CmpReg)
+      .addReg(Tmp0)
+      .addReg(Tmp1);
+
+  // For unsigned numbers, we have to do a separate comparison with zero.
+  if (IsUnsigned) {
+    Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
+    unsigned SecondCmpReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    unsigned AndReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    BuildMI(BB, DL, TII.get(FConst), Tmp1)
+        .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, 0.0)));
+    BuildMI(BB, DL, TII.get(GE), SecondCmpReg)
+        .addReg(Tmp0)
+        .addReg(Tmp1);
+    BuildMI(BB, DL, TII.get(And), AndReg)
+        .addReg(CmpReg)
+        .addReg(SecondCmpReg);
+    CmpReg = AndReg;
+  }
+
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg)
+      .addReg(CmpReg);
+
+  // Create the CFG diamond to select between doing the conversion or using
+  // the substitute value.
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF))
+      .addMBB(TrueMBB)
+      .addReg(EqzReg);
+  BuildMI(FalseMBB, DL, TII.get(LoweredOpcode), FalseReg)
+      .addReg(InReg);
+  BuildMI(FalseMBB, DL, TII.get(WebAssembly::BR))
+      .addMBB(DoneMBB);
+  BuildMI(TrueMBB, DL, TII.get(IConst), TrueReg)
+      .addImm(Substitute);
+  BuildMI(*DoneMBB, DoneMBB->begin(), DL, TII.get(TargetOpcode::PHI), OutReg)
+      .addReg(FalseReg)
+      .addMBB(FalseMBB)
+      .addReg(TrueReg)
+      .addMBB(TrueMBB);
+
+  return DoneMBB;
+}
+
+MachineBasicBlock *
+WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI,
+    MachineBasicBlock *BB
+) const {
+  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  switch (MI.getOpcode()) {
+  default: llvm_unreachable("Unexpected instr type to insert");
+  case WebAssembly::FP_TO_SINT_I32_F32:
+    return LowerFPToInt(MI, DL, BB, TII, false, false, false,
+                        WebAssembly::I32_TRUNC_S_F32);
+  case WebAssembly::FP_TO_UINT_I32_F32:
+    return LowerFPToInt(MI, DL, BB, TII, true, false, false,
+                        WebAssembly::I32_TRUNC_U_F32);
+  case WebAssembly::FP_TO_SINT_I64_F32:
+    return LowerFPToInt(MI, DL, BB, TII, false, true, false,
+                        WebAssembly::I64_TRUNC_S_F32);
+  case WebAssembly::FP_TO_UINT_I64_F32:
+    return LowerFPToInt(MI, DL, BB, TII, true, true, false,
+                        WebAssembly::I64_TRUNC_U_F32);
+  case WebAssembly::FP_TO_SINT_I32_F64:
+    return LowerFPToInt(MI, DL, BB, TII, false, false, true,
+                        WebAssembly::I32_TRUNC_S_F64);
+  case WebAssembly::FP_TO_UINT_I32_F64:
+    return LowerFPToInt(MI, DL, BB, TII, true, false, true,
+                        WebAssembly::I32_TRUNC_U_F64);
+  case WebAssembly::FP_TO_SINT_I64_F64:
+    return LowerFPToInt(MI, DL, BB, TII, false, true, true,
+                        WebAssembly::I64_TRUNC_S_F64);
+  case WebAssembly::FP_TO_UINT_I64_F64:
+    return LowerFPToInt(MI, DL, BB, TII, true, true, true,
+                        WebAssembly::I64_TRUNC_U_F64);
+  llvm_unreachable("Unexpected instruction to emit with custom inserter");
+  }
 }
 
 const char *WebAssemblyTargetLowering::getTargetNodeName(
@@ -233,7 +394,8 @@ bool WebAssemblyTargetLowering::isCheapToSpeculateCtlz() const {
 bool WebAssemblyTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                       const AddrMode &AM,
                                                       Type *Ty,
-                                                      unsigned AS) const {
+                                                      unsigned AS,
+                                                      Instruction *I) const {
   // WebAssembly offsets are added as unsigned without wrapping. The
   // isLegalAddressingMode gives us no way to determine if wrapping could be
   // happening, so we approximate this by accepting only non-negative offsets.
@@ -276,7 +438,7 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
-      DiagnosticInfoUnsupported(*MF.getFunction(), msg, DL.getDebugLoc()));
+      DiagnosticInfoUnsupported(MF.getFunction(), msg, DL.getDebugLoc()));
 }
 
 // Test whether the given calling convention is supported.
@@ -313,7 +475,7 @@ SDValue WebAssemblyTargetLowering::LowerCall(
   // required, fail. Otherwise, just disable them.
   if ((CallConv == CallingConv::Fast && CLI.IsTailCall &&
        MF.getTarget().Options.GuaranteedTailCallOpt) ||
-      (CLI.CS && CLI.CS->isMustTailCall()))
+      (CLI.CS && CLI.CS.isMustTailCall()))
     fail(DL, DAG, "WebAssembly doesn't support tail call yet");
   CLI.IsTailCall = false;
 
@@ -535,7 +697,7 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
   // Record the number and types of results.
   SmallVector<MVT, 4> Params;
   SmallVector<MVT, 4> Results;
-  ComputeSignatureVTs(*MF.getFunction(), DAG.getTarget(), Params, Results);
+  ComputeSignatureVTs(MF.getFunction(), DAG.getTarget(), Params, Results);
   for (MVT VT : Results)
     MFI->addResult(VT);
 

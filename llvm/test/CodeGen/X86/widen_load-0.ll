@@ -8,7 +8,7 @@
 
 define void @short2_int_swap(<2 x i16>* nocapture %b, i32* nocapture %c) nounwind {
 ; X86-LABEL: short2_int_swap:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -20,7 +20,7 @@ define void @short2_int_swap(<2 x i16>* nocapture %b, i32* nocapture %c) nounwin
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: short2_int_swap:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl (%rsi), %eax
 ; X64-NEXT:    movl (%rdi), %ecx
 ; X64-NEXT:    movl %eax, (%rdi)

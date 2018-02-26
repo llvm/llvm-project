@@ -1,4 +1,4 @@
-//===-- LoopUnswitch.cpp - Hoist loop-invariant conditionals in loop ------===//
+//===- LoopUnswitch.cpp - Hoist loop-invariant conditionals in loop -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,32 +26,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/BranchProbability.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,9 +68,15 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <cassert>
 #include <map>
 #include <set>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-unswitch"
@@ -84,11 +98,9 @@ Threshold("loop-unswitch-threshold", cl::desc("Max loop size to unswitch"),
 namespace {
 
   class LUAnalysisCache {
-
-    typedef DenseMap<const SwitchInst*, SmallPtrSet<const Value *, 8> >
-      UnswitchedValsMap;
-
-    typedef UnswitchedValsMap::iterator UnswitchedValsIt;
+    using UnswitchedValsMap =
+        DenseMap<const SwitchInst *, SmallPtrSet<const Value *, 8>>;
+    using UnswitchedValsIt = UnswitchedValsMap::iterator;
 
     struct LoopProperties {
       unsigned CanBeUnswitchedCount;
@@ -99,12 +111,12 @@ namespace {
 
     // Here we use std::map instead of DenseMap, since we need to keep valid
     // LoopProperties pointer for current loop for better performance.
-    typedef std::map<const Loop*, LoopProperties> LoopPropsMap;
-    typedef LoopPropsMap::iterator LoopPropsMapIt;
+    using LoopPropsMap = std::map<const Loop *, LoopProperties>;
+    using LoopPropsMapIt = LoopPropsMap::iterator;
 
     LoopPropsMap LoopsProperties;
-    UnswitchedValsMap *CurLoopInstructions;
-    LoopProperties *CurrentLoopProperties;
+    UnswitchedValsMap *CurLoopInstructions = nullptr;
+    LoopProperties *CurrentLoopProperties = nullptr;
 
     // A loop unswitching with an estimated cost above this threshold
     // is not performed. MaxSize is turned into unswitching quota for
@@ -123,9 +135,7 @@ namespace {
     unsigned MaxSize;
 
   public:
-    LUAnalysisCache()
-        : CurLoopInstructions(nullptr), CurrentLoopProperties(nullptr),
-          MaxSize(Threshold) {}
+    LUAnalysisCache() : MaxSize(Threshold) {}
 
     // Analyze loop. Check its size, calculate is it possible to unswitch
     // it. Returns true if we can unswitch this loop.
@@ -166,12 +176,12 @@ namespace {
     LUAnalysisCache BranchesInfo;
 
     bool OptimizeForSize;
-    bool redoLoop;
+    bool redoLoop = false;
 
-    Loop *currentLoop;
-    DominatorTree *DT;
-    BasicBlock *loopHeader;
-    BasicBlock *loopPreheader;
+    Loop *currentLoop = nullptr;
+    DominatorTree *DT = nullptr;
+    BasicBlock *loopHeader = nullptr;
+    BasicBlock *loopPreheader = nullptr;
 
     bool SanitizeMemory;
     LoopSafetyInfo SafetyInfo;
@@ -187,16 +197,17 @@ namespace {
 
   public:
     static char ID; // Pass ID, replacement for typeid
-    explicit LoopUnswitch(bool Os = false, bool hasBranchDivergence = false) :
-      LoopPass(ID), OptimizeForSize(Os), redoLoop(false),
-      currentLoop(nullptr), DT(nullptr), loopHeader(nullptr),
-      loopPreheader(nullptr), hasBranchDivergence(hasBranchDivergence) {
+
+    explicit LoopUnswitch(bool Os = false, bool hasBranchDivergence = false)
+        : LoopPass(ID), OptimizeForSize(Os),
+          hasBranchDivergence(hasBranchDivergence) {
         initializeLoopUnswitchPass(*PassRegistry::getPassRegistry());
-      }
+    }
 
     bool runOnLoop(Loop *L, LPPassManager &LPM) override;
     bool processCurrentLoop();
     bool isUnreachableDueToPreviousUnswitching(BasicBlock *);
+
     /// This transformation requires natural loop information & requires that
     /// loop preheaders be inserted into the CFG.
     ///
@@ -209,7 +220,6 @@ namespace {
     }
 
   private:
-
     void releaseMemory() override {
       BranchesInfo.forgetLoop(currentLoop);
     }
@@ -239,7 +249,7 @@ namespace {
     void EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
                                         BasicBlock *TrueDest,
                                         BasicBlock *FalseDest,
-                                        Instruction *InsertPt,
+                                        BranchInst *OldBranch,
                                         TerminatorInst *TI);
 
     void SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L);
@@ -249,13 +259,13 @@ namespace {
     Value *SimplifyInstructionWithNotEqual(Instruction *Inst, Value *Invariant,
                                            Constant *Val);
   };
-}
+
+} // end anonymous namespace
 
 // Analyze loop. Check its size, calculate is it possible to unswitch
 // it. Returns true if we can unswitch this loop.
 bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI,
                                 AssumptionCache *AC) {
-
   LoopPropsMapIt PropsIt;
   bool Inserted;
   std::tie(PropsIt, Inserted) =
@@ -304,7 +314,6 @@ bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI,
 
 // Clean all data related to given loop.
 void LUAnalysisCache::forgetLoop(const Loop *L) {
-
   LoopPropsMapIt LIt = LoopsProperties.find(L);
 
   if (LIt != LoopsProperties.end()) {
@@ -339,7 +348,6 @@ bool LUAnalysisCache::CostAllowsUnswitching() {
 // Note, that new loop data is stored inside the VMap.
 void LUAnalysisCache::cloneData(const Loop *NewLoop, const Loop *OldLoop,
                                 const ValueToValueMapTy &VMap) {
-
   LoopProperties &NewLoopProps = LoopsProperties[NewLoop];
   LoopProperties &OldLoopProps = *CurrentLoopProperties;
   UnswitchedValsMap &Insts = OldLoopProps.UnswitchedVals;
@@ -369,6 +377,7 @@ void LUAnalysisCache::cloneData(const Loop *NewLoop, const Loop *OldLoop,
 }
 
 char LoopUnswitch::ID = 0;
+
 INITIALIZE_PASS_BEGIN(LoopUnswitch, "loop-unswitch", "Unswitch loops",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
@@ -520,9 +529,6 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
     Changed |= processCurrentLoop();
   } while(redoLoop);
 
-  // FIXME: Reconstruct dom info, because it is not preserved properly.
-  if (Changed)
-    DT->recalculate(*F);
   return Changed;
 }
 
@@ -875,7 +881,7 @@ bool LoopUnswitch::UnswitchIfProfitable(Value *LoopCond, Constant *Val,
 /// mapping the blocks with the specified map.
 static Loop *CloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
                        LoopInfo *LI, LPPassManager *LPM) {
-  Loop &New = *new Loop();
+  Loop &New = *LI->AllocateLoop();
   if (PL)
     PL->addChildLoop(&New);
   else
@@ -896,30 +902,58 @@ static Loop *CloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
 }
 
 /// Emit a conditional branch on two values if LIC == Val, branch to TrueDst,
-/// otherwise branch to FalseDest. Insert the code immediately before InsertPt.
+/// otherwise branch to FalseDest. Insert the code immediately before OldBranch
+/// and remove (but not erase!) it from the function.
 void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
                                                   BasicBlock *TrueDest,
                                                   BasicBlock *FalseDest,
-                                                  Instruction *InsertPt,
+                                                  BranchInst *OldBranch,
                                                   TerminatorInst *TI) {
+  assert(OldBranch->isUnconditional() && "Preheader is not split correctly");
   // Insert a conditional branch on LIC to the two preheaders.  The original
   // code is the true version and the new code is the false version.
   Value *BranchVal = LIC;
   bool Swapped = false;
   if (!isa<ConstantInt>(Val) ||
       Val->getType() != Type::getInt1Ty(LIC->getContext()))
-    BranchVal = new ICmpInst(InsertPt, ICmpInst::ICMP_EQ, LIC, Val);
+    BranchVal = new ICmpInst(OldBranch, ICmpInst::ICMP_EQ, LIC, Val);
   else if (Val != ConstantInt::getTrue(Val->getContext())) {
     // We want to enter the new loop when the condition is true.
     std::swap(TrueDest, FalseDest);
     Swapped = true;
   }
 
+  // Old branch will be removed, so save its parent and successor to update the
+  // DomTree.
+  auto *OldBranchSucc = OldBranch->getSuccessor(0);
+  auto *OldBranchParent = OldBranch->getParent();
+
   // Insert the new branch.
   BranchInst *BI =
-      IRBuilder<>(InsertPt).CreateCondBr(BranchVal, TrueDest, FalseDest, TI);
+      IRBuilder<>(OldBranch).CreateCondBr(BranchVal, TrueDest, FalseDest, TI);
   if (Swapped)
     BI->swapProfMetadata();
+
+  // Remove the old branch so there is only one branch at the end. This is
+  // needed to perform DomTree's internal DFS walk on the function's CFG.
+  OldBranch->removeFromParent();
+
+  // Inform the DT about the new branch.
+  if (DT) {
+    // First, add both successors.
+    SmallVector<DominatorTree::UpdateType, 3> Updates;
+    if (TrueDest != OldBranchParent)
+      Updates.push_back({DominatorTree::Insert, OldBranchParent, TrueDest});
+    if (FalseDest != OldBranchParent)
+      Updates.push_back({DominatorTree::Insert, OldBranchParent, FalseDest});
+    // If both of the new successors are different from the old one, inform the
+    // DT that the edge was deleted.
+    if (OldBranchSucc != TrueDest && OldBranchSucc != FalseDest) {
+      Updates.push_back({DominatorTree::Delete, OldBranchParent, OldBranchSucc});
+    }
+
+    DT->applyUpdates(Updates);
+  }
 
   // If either edge is critical, split it. This helps preserve LoopSimplify
   // form for enclosing loops.
@@ -960,10 +994,14 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond, Constant *Val,
 
   // Okay, now we have a position to branch from and a position to branch to,
   // insert the new conditional branch.
-  EmitPreheaderBranchOnCondition(Cond, Val, NewExit, NewPH,
-                                 loopPreheader->getTerminator(), TI);
-  LPM->deleteSimpleAnalysisValue(loopPreheader->getTerminator(), L);
-  loopPreheader->getTerminator()->eraseFromParent();
+  auto *OldBranch = dyn_cast<BranchInst>(loopPreheader->getTerminator());
+  assert(OldBranch && "Failed to split the preheader");
+  EmitPreheaderBranchOnCondition(Cond, Val, NewExit, NewPH, OldBranch, TI);
+  LPM->deleteSimpleAnalysisValue(OldBranch, L);
+
+  // EmitPreheaderBranchOnCondition removed the OldBranch from the function.
+  // Delete it, as it is no longer needed.
+  delete OldBranch;
 
   // We need to reprocess this loop, it could be unswitched again.
   redoLoop = true;
@@ -1236,12 +1274,11 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
     // If the successor of the exit block had PHI nodes, add an entry for
     // NewExit.
-    for (BasicBlock::iterator I = ExitSucc->begin();
-         PHINode *PN = dyn_cast<PHINode>(I); ++I) {
-      Value *V = PN->getIncomingValueForBlock(ExitBlocks[i]);
+    for (PHINode &PN : ExitSucc->phis()) {
+      Value *V = PN.getIncomingValueForBlock(ExitBlocks[i]);
       ValueToValueMapTy::iterator It = VMap.find(V);
       if (It != VMap.end()) V = It->second;
-      PN->addIncoming(V, NewExit);
+      PN.addIncoming(V, NewExit);
     }
 
     if (LandingPadInst *LPad = NewExit->getLandingPadInst()) {
@@ -1278,7 +1315,10 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   EmitPreheaderBranchOnCondition(LIC, Val, NewBlocks[0], LoopBlocks[0], OldBR,
                                  TI);
   LPM->deleteSimpleAnalysisValue(OldBR, L);
-  OldBR->eraseFromParent();
+
+  // The OldBr was replaced by a new one and removed (but not erased) by
+  // EmitPreheaderBranchOnCondition. It is no longer needed, so delete it.
+  delete OldBR;
 
   LoopProcessWorklist.push_back(NewLoop);
   redoLoop = true;
@@ -1455,10 +1495,9 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
     BranchInst::Create(Abort, OldSISucc,
                        ConstantInt::getTrue(Context), NewSISucc);
     // Release the PHI operands for this edge.
-    for (BasicBlock::iterator II = NewSISucc->begin();
-         PHINode *PN = dyn_cast<PHINode>(II); ++II)
-      PN->setIncomingValue(PN->getBasicBlockIndex(Switch),
-                           UndefValue::get(PN->getType()));
+    for (PHINode &PN : NewSISucc->phis())
+      PN.setIncomingValue(PN.getBasicBlockIndex(Switch),
+                          UndefValue::get(PN.getType()));
     // Tell the domtree about the new block. We don't fully update the
     // domtree here -- instead we force it to do a full recomputation
     // after the pass is complete -- but we do need to inform it of

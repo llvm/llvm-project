@@ -96,7 +96,7 @@ int t6() {
   return 0;
 }
 
-int t7 __attribute__ ((warn_unused_result)); // expected-warning {{'warn_unused_result' attribute only applies to functions}}
+int t7 __attribute__ ((warn_unused_result)); // expected-warning {{'warn_unused_result' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, and function pointers}}
 
 // PR4010
 int (*fn4)(void) __attribute__ ((warn_unused_result));

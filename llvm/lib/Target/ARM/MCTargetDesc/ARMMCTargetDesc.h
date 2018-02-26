@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMMCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
+#include <memory>
 #include <string>
 
 namespace llvm {
@@ -67,48 +68,52 @@ MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createARMAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                  const MCRegisterInfo &MRI,
                                   const MCTargetOptions &Options,
                                   bool IsLittleEndian);
 
-MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
-MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
 MCAsmBackend *createThumbLEAsmBackend(const Target &T,
+                                      const MCSubtargetInfo &STI,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 
 MCAsmBackend *createThumbBEAsmBackend(const Target &T,
+                                      const MCSubtargetInfo &STI,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF
 // object file.
-MCStreamer *createARMWinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB,
+MCStreamer *createARMWinCOFFStreamer(MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                      raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter, bool RelaxAll,
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                     bool RelaxAll,
                                      bool IncrementalLinkerCompatible);
 
 /// Construct an ELF Mach-O object writer.
-MCObjectWriter *createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                                         bool IsLittleEndian);
+std::unique_ptr<MCObjectWriter> createARMELFObjectWriter(raw_pwrite_stream &OS,
+                                                         uint8_t OSABI,
+                                                         bool IsLittleEndian);
 
 /// Construct an ARM Mach-O object writer.
-MCObjectWriter *createARMMachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                          uint32_t CPUType,
-                                          uint32_t CPUSubtype);
+std::unique_ptr<MCObjectWriter> createARMMachObjectWriter(raw_pwrite_stream &OS,
+                                                          bool Is64Bit,
+                                                          uint32_t CPUType,
+                                                          uint32_t CPUSubtype);
 
 /// Construct an ARM PE/COFF object writer.
-MCObjectWriter *createARMWinCOFFObjectWriter(raw_pwrite_stream &OS,
-                                             bool Is64Bit);
+std::unique_ptr<MCObjectWriter>
+createARMWinCOFFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit);
 
 /// Construct ARM Mach-O relocation info.
 MCRelocationInfo *createARMMachORelocationInfo(MCContext &Ctx);

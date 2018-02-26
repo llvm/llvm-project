@@ -6,7 +6,7 @@
 
 define void @t1() nounwind {
 ; CHECK-LABEL: t1:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq _return_v1di
 ; CHECK-NEXT:    movq _g_v1di@{{.*}}(%rip), %rcx
@@ -23,7 +23,7 @@ declare <1 x i64> @return_v1di()
 
 define <1 x i64> @t2() nounwind {
 ; CHECK-LABEL: t2:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retq
   ret <1 x i64> <i64 1>
@@ -31,7 +31,7 @@ define <1 x i64> @t2() nounwind {
 
 define <2 x i32> @t3() nounwind {
 ; CHECK-LABEL: t3:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    retq
@@ -40,7 +40,7 @@ define <2 x i32> @t3() nounwind {
 
 define double @t4() nounwind {
 ; CHECK-LABEL: t4:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retq

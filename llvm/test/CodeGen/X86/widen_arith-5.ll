@@ -5,7 +5,7 @@
 
 define void @update(<3 x i32>* %dst, <3 x i32>* %src, i32 %n) nounwind {
 ; CHECK-LABEL: update:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
@@ -33,7 +33,7 @@ define void @update(<3 x i32>* %dst, <3 x i32>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    cmpl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    jl .LBB0_2
-; CHECK-NEXT:  # BB#3: # %afterfor
+; CHECK-NEXT:  # %bb.3: # %afterfor
 ; CHECK-NEXT:    retq
 entry:
 	%dst.addr = alloca <3 x i32>*

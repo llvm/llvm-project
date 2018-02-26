@@ -14,8 +14,8 @@
 #define TSAN_REPORT_H
 
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_defs.h"
-#include "tsan_vector.h"
 
 namespace __tsan {
 

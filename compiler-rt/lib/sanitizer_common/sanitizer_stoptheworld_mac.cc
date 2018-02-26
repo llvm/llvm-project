@@ -55,17 +55,9 @@ void RunThread(void *arg) {
   struct RunThreadArgs *run_args = (struct RunThreadArgs *)arg;
   SuspendedThreadsListMac suspended_threads_list;
 
-  mach_port_t task;
-  kern_return_t err = task_for_pid(mach_task_self(), internal_getpid(), &task);
-  if (err != KERN_SUCCESS) {
-    VReport(1, "Getting task from pid failed (errno %d).\n", err);
-    return;
-  }
-
   thread_array_t threads;
   mach_msg_type_number_t num_threads;
-
-  err = task_threads(task, &threads, &num_threads);
+  kern_return_t err = task_threads(mach_task_self(), &threads, &num_threads);
   if (err != KERN_SUCCESS) {
     VReport(1, "Failed to get threads for task (errno %d).\n", err);
     return;

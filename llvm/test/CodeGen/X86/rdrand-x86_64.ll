@@ -5,7 +5,7 @@ declare {i64, i32} @llvm.x86.rdrand.64()
 
 define i32 @_rdrand64_step(i64* %random_val) {
 ; CHECK-LABEL: _rdrand64_step:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rdrandq %rcx
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmovael %ecx, %eax

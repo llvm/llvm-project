@@ -16,3 +16,6 @@ public:
 
 A operator-(const A &A1, const A &A2);
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: cannot overload 'operator-' [fuchsia-overloaded-operator]
+
+void operator delete(void*, void*) throw();
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: cannot overload 'operator delete' [fuchsia-overloaded-operator]

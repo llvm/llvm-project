@@ -32,18 +32,19 @@ invoke.cont:
   %vtable = load %struct.Base* (%struct.B*)**, %struct.Base* (%struct.B*)*** %tmp2, align 8
   %vfn = getelementptr inbounds %struct.Base* (%struct.B*)*, %struct.Base* (%struct.B*)** %vtable, i64 0
   %tmp3 = load %struct.Base* (%struct.B*)*, %struct.Base* (%struct.B*)** %vfn, align 8
-; ICALL-PROM:  [[BITCAST:%[0-9]+]] = bitcast %struct.Base* (%struct.B*)* %tmp3 to i8*
-; ICALL-PROM:  [[CMP:%[0-9]+]] = icmp eq i8* [[BITCAST]], bitcast (%struct.Derived* (%struct.D*)* @_ZN1D4funcEv to i8*)
+; ICALL-PROM:  [[CMP:%[0-9]+]] = icmp eq %struct.Base* (%struct.B*)* %tmp3, bitcast (%struct.Derived* (%struct.D*)* @_ZN1D4funcEv to %struct.Base* (%struct.B*)*)
 ; ICALL-PROM:  br i1 [[CMP]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICALL-PROM:if.true.direct_targ:
 ; ICALL-PROM:  [[ARG_BITCAST:%[0-9]+]] = bitcast %struct.B* %tmp1 to %struct.D*
 ; ICALL-PROM:  [[DIRCALL_RET:%[0-9]+]] = invoke %struct.Derived* @_ZN1D4funcEv(%struct.D* [[ARG_BITCAST]])
-; ICALL-PROM:          to label %if.end.icp unwind label %lpad
+; ICALL-PROM:          to label %if.true.direct_targ.if.end.icp_crit_edge unwind label %lpad
+; ICALL-PROM:if.true.direct_targ.if.end.icp_crit_edge:
+; ICALL-PROM:  [[DIRCALL_RET_CAST:%[0-9]+]] = bitcast %struct.Derived* [[DIRCALL_RET]] to %struct.Base*
+; ICALL-PROM:  br label %if.end.icp
 ; ICALL-PROM:if.false.orig_indirect:
 ; ICAll-PROM:  %call2 = invoke %struct.Base* %tmp3(%struct.B* %tmp1)
 ; ICAll-PROM:          to label %invoke.cont1 unwind label %lpad
 ; ICALL-PROM:if.end.icp:
-; ICALL-PROM:  [[DIRCALL_RET_CAST:%[0-9]+]] = bitcast %struct.Derived* [[DIRCALL_RET]] to %struct.Base*
 ; ICALL-PROM:  br label %invoke.cont1
   %call2 = invoke %struct.Base* %tmp3(%struct.B* %tmp1)
           to label %invoke.cont1 unwind label %lpad, !prof !1

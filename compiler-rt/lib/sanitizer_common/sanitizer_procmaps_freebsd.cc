@@ -7,18 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Information about the process mappings (FreeBSD-specific parts).
+// Information about the process mappings (FreeBSD and NetBSD-specific parts).
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
-#if SANITIZER_FREEBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
 #include "sanitizer_common.h"
+#if SANITIZER_FREEBSD
 #include "sanitizer_freebsd.h"
+#endif
 #include "sanitizer_procmaps.h"
 
 #include <unistd.h>
 #include <sys/sysctl.h>
+#if SANITIZER_FREEBSD
 #include <sys/user.h>
+#endif
 
 // Fix 'kinfo_vmentry' definition on FreeBSD prior v9.2 in 32-bit mode.
 #if SANITIZER_FREEBSD && (SANITIZER_WORDSIZE == 32)
@@ -31,16 +35,30 @@
 namespace __sanitizer {
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
-  const int Mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_VMMAP, getpid() };
+  const int Mib[] = {
+#if SANITIZER_FREEBSD
+    CTL_KERN,
+    KERN_PROC,
+    KERN_PROC_VMMAP,
+    getpid()
+#else
+    CTL_VM,
+    VM_PROC,
+    VM_PROC_MAP,
+    getpid(),
+    sizeof(struct kinfo_vmentry)
+#endif
+  };
+
   size_t Size = 0;
-  int Err = sysctl(Mib, 4, NULL, &Size, NULL, 0);
+  int Err = sysctl(Mib, ARRAY_SIZE(Mib), NULL, &Size, NULL, 0);
   CHECK_EQ(Err, 0);
   CHECK_GT(Size, 0);
 
   size_t MmapedSize = Size * 4 / 3;
   void *VmMap = MmapOrDie(MmapedSize, "ReadProcMaps()");
   Size = MmapedSize;
-  Err = sysctl(Mib, 4, VmMap, &Size, NULL, 0);
+  Err = sysctl(Mib, ARRAY_SIZE(Mib), VmMap, &Size, NULL, 0);
   CHECK_EQ(Err, 0);
 
   proc_maps->data = (char*)VmMap;
@@ -49,9 +67,9 @@ void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
 }
 
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
-  char *last = proc_self_maps_.data + proc_self_maps_.len;
-  if (current_ >= last) return false;
-  struct kinfo_vmentry *VmEntry = (struct kinfo_vmentry*)current_;
+  char *last = data_.proc_self_maps.data + data_.proc_self_maps.len;
+  if (data_.current >= last) return false;
+  struct kinfo_vmentry *VmEntry = (struct kinfo_vmentry *)data_.current;
 
   segment->start = (uptr)VmEntry->kve_start;
   segment->end = (uptr)VmEntry->kve_end;
@@ -71,11 +89,15 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
                       VmEntry->kve_path);
   }
 
-  current_ += VmEntry->kve_structsize;
+#if SANITIZER_FREEBSD
+  data_.current += VmEntry->kve_structsize;
+#else
+  data_.current += sizeof(*VmEntry);
+#endif
 
   return true;
 }
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_FREEBSD
+#endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD

@@ -1,4 +1,4 @@
-//===--- Module.cpp - Describe a module -----------------------------------===//
+//===- Module.cpp - Describe a module -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,22 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 
@@ -69,6 +79,11 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("coroutines", LangOpts.CoroutinesTS)
                         .Case("cplusplus", LangOpts.CPlusPlus)
                         .Case("cplusplus11", LangOpts.CPlusPlus11)
+                        .Case("cplusplus14", LangOpts.CPlusPlus14)
+                        .Case("cplusplus17", LangOpts.CPlusPlus17)
+                        .Case("c99", LangOpts.C99)
+                        .Case("c11", LangOpts.C11)
+                        .Case("c17", LangOpts.C17)
                         .Case("freestanding", LangOpts.Freestanding)
                         .Case("gnuinlineasm", LangOpts.GNUAsm)
                         .Case("objc", LangOpts.ObjC1)
@@ -136,6 +151,7 @@ static StringRef getModuleNameFromComponent(
     const std::pair<std::string, SourceLocation> &IdComponent) {
   return IdComponent.first;
 }
+
 static StringRef getModuleNameFromComponent(StringRef R) { return R; }
 
 template<typename InputIter>

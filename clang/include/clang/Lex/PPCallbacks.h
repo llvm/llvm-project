@@ -392,6 +392,12 @@ public:
     Second->Ident(Loc, str);
   }
 
+  void PragmaDirective(SourceLocation Loc,
+                       PragmaIntroducerKind Introducer) override {
+    First->PragmaDirective(Loc, Introducer);
+    Second->PragmaDirective(Loc, Introducer);
+  }
+
   void PragmaComment(SourceLocation Loc, const IdentifierInfo *Kind,
                      StringRef Str) override {
     First->PragmaComment(Loc, Kind, Str);
@@ -402,6 +408,11 @@ public:
                             StringRef Value) override {
     First->PragmaDetectMismatch(Loc, Name, Value);
     Second->PragmaDetectMismatch(Loc, Name, Value);
+  }
+
+  void PragmaDebug(SourceLocation Loc, StringRef DebugType) override {
+    First->PragmaDebug(Loc, DebugType);
+    Second->PragmaDebug(Loc, DebugType);
   }
 
   void PragmaMessage(SourceLocation Loc, StringRef Namespace,

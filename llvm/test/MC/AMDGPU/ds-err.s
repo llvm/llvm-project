@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=SI %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s
 
 // offset too big
 // CHECK: error: invalid operand for instruction

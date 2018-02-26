@@ -23,22 +23,33 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_REASSOCIATE_H
 #define LLVM_TRANSFORMS_SCALAR_REASSOCIATE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
+
+class APInt;
+class BasicBlock;
+class BinaryOperator;
+class Function;
+class Instruction;
+class Value;
 
 /// A private "module" namespace for types and utilities used by Reassociate.
 /// These are implementation details and should not be used by clients.
 namespace reassociate {
+
 struct ValueEntry {
   unsigned Rank;
   Value *Op;
+
   ValueEntry(unsigned R, Value *O) : Rank(R), Op(O) {}
 };
+
 inline bool operator<(const ValueEntry &LHS, const ValueEntry &RHS) {
   return LHS.Rank > RHS.Rank; // Sort so that highest rank goes to start.
 }
@@ -48,17 +59,26 @@ inline bool operator<(const ValueEntry &LHS, const ValueEntry &RHS) {
 struct Factor {
   Value *Base;
   unsigned Power;
+
   Factor(Value *Base, unsigned Power) : Base(Base), Power(Power) {}
 };
 
 class XorOpnd;
-}
+
+} // end namespace reassociate
 
 /// Reassociate commutative expressions.
 class ReassociatePass : public PassInfoMixin<ReassociatePass> {
   DenseMap<BasicBlock *, unsigned> RankMap;
   DenseMap<AssertingVH<Value>, unsigned> ValueRankMap;
   SetVector<AssertingVH<Instruction>> RedoInsts;
+
+  // Arbitrary, but prevents quadratic behavior.
+  static const unsigned GlobalReassociateLimit = 10;
+  static const unsigned NumBinaryOps =
+      Instruction::BinaryOpsEnd - Instruction::BinaryOpsBegin;
+  DenseMap<std::pair<Value *, Value *>, unsigned> PairMap[NumBinaryOps];
+
   bool MadeChange;
 
 public:
@@ -92,7 +112,9 @@ private:
                                  SetVector<AssertingVH<Instruction>> &Insts);
   void OptimizeInst(Instruction *I);
   Instruction *canonicalizeNegConstExpr(Instruction *I);
+  void BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_REASSOCIATE_H

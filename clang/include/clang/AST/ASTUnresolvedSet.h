@@ -1,4 +1,4 @@
-//===-- ASTUnresolvedSet.h - Unresolved sets of declarations  ---*- C++ -*-===//
+//===- ASTUnresolvedSet.h - Unresolved sets of declarations -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,14 +16,22 @@
 #define LLVM_CLANG_AST_ASTUNRESOLVEDSET_H
 
 #include "clang/AST/ASTVector.h"
+#include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/Specifiers.h"
+#include <cassert>
+#include <cstdint>
 
 namespace clang {
 
+class NamedDecl;
+
 /// \brief An UnresolvedSet-like class which uses the ASTContext's allocator.
 class ASTUnresolvedSet {
+  friend class LazyASTUnresolvedSet;
+
   struct DeclsTy : ASTVector<DeclAccessPair> {
-    DeclsTy() {}
+    DeclsTy() = default;
     DeclsTy(ASTContext &C, unsigned N) : ASTVector<DeclAccessPair>(C, N) {}
 
     bool isLazy() const { return getTag(); }
@@ -32,14 +40,12 @@ class ASTUnresolvedSet {
 
   DeclsTy Decls;
 
-  friend class LazyASTUnresolvedSet;
-
 public:
-  ASTUnresolvedSet() {}
+  ASTUnresolvedSet() = default;
   ASTUnresolvedSet(ASTContext &C, unsigned N) : Decls(C, N) {}
 
-  typedef UnresolvedSetIterator iterator;
-  typedef UnresolvedSetIterator const_iterator;
+  using iterator = UnresolvedSetIterator;
+  using const_iterator = UnresolvedSetIterator;
 
   iterator begin() { return iterator(Decls.begin()); }
   iterator end() { return iterator(Decls.end()); }
@@ -98,13 +104,14 @@ public:
   }
 
   void reserve(ASTContext &C, unsigned N) { Impl.reserve(C, N); }
+
   void addLazyDecl(ASTContext &C, uintptr_t ID, AccessSpecifier AS) {
     assert(Impl.empty() || Impl.Decls.isLazy());
     Impl.Decls.setLazy(true);
-    Impl.addDecl(C, reinterpret_cast<NamedDecl*>(ID << 2), AS);
+    Impl.addDecl(C, reinterpret_cast<NamedDecl *>(ID << 2), AS);
   }
 };
 
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_ASTUNRESOLVEDSET_H

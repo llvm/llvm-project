@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -regalloc=fast -O0 -relocation-model=pic -o -
+; RUN: llc < %s -mtriple=ppc32-- -regalloc=fast -O0 -relocation-model=pic -o -
 ; PR1638
 
 @.str242 = external constant [3 x i8]		; <[3 x i8]*> [#uses=1]

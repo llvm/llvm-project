@@ -15,10 +15,10 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -263,7 +263,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
 
   const ConstantInt *NewVal = &Val;
   if (Ty.getSizeInBits() != Val.getBitWidth())
-    NewVal = ConstantInt::get(MF->getFunction()->getContext(),
+    NewVal = ConstantInt::get(MF->getFunction().getContext(),
                               Val.getValue().sextOrTrunc(Ty.getSizeInBits()));
 
   return buildInstr(TargetOpcode::G_CONSTANT).addDef(Res).addCImm(NewVal);
@@ -271,7 +271,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
                                                     int64_t Val) {
-  auto IntN = IntegerType::get(MF->getFunction()->getContext(),
+  auto IntN = IntegerType::get(MF->getFunction().getContext(),
                                MRI->getType(Res).getSizeInBits());
   ConstantInt *CI = ConstantInt::get(IntN, Val, true);
   return buildConstant(Res, *CI);
@@ -656,6 +656,31 @@ MachineInstrBuilder MachineIRBuilder::buildExtractVectorElement(unsigned Res,
       .addDef(Res)
       .addUse(Val)
       .addUse(Idx);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
+                                     unsigned CmpVal, unsigned NewVal,
+                                     MachineMemOperand &MMO) {
+#ifndef NDEBUG
+  LLT OldValResTy = MRI->getType(OldValRes);
+  LLT AddrTy = MRI->getType(Addr);
+  LLT CmpValTy = MRI->getType(CmpVal);
+  LLT NewValTy = MRI->getType(NewVal);
+  assert(OldValResTy.isScalar() && "invalid operand type");
+  assert(AddrTy.isPointer() && "invalid operand type");
+  assert(CmpValTy.isValid() && "invalid operand type");
+  assert(NewValTy.isValid() && "invalid operand type");
+  assert(OldValResTy == CmpValTy && "type mismatch");
+  assert(OldValResTy == NewValTy && "type mismatch");
+#endif
+
+  return buildInstr(TargetOpcode::G_ATOMIC_CMPXCHG)
+      .addDef(OldValRes)
+      .addUse(Addr)
+      .addUse(CmpVal)
+      .addUse(NewVal)
+      .addMemOperand(&MMO);
 }
 
 void MachineIRBuilder::validateTruncExt(unsigned Dst, unsigned Src,

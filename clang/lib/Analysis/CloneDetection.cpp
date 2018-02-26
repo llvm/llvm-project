@@ -205,7 +205,7 @@ public:
     ConstStmtVisitor<CloneTypeIIStmtDataCollector<T>>::Visit##CLASS(S);        \
   }
 
-#include "../AST/StmtDataCollectors.inc"
+#include "clang/AST/StmtDataCollectors.inc"
 
 // Type II clones ignore variable names and literals, so let's skip them.
 #define SKIP(CLASS)                                                            \
@@ -479,7 +479,8 @@ void MatchingVariablePatternConstraint::constrain(
 
 void CloneConstraint::splitCloneGroups(
     std::vector<CloneDetector::CloneGroup> &CloneGroups,
-    std::function<bool(const StmtSequence &, const StmtSequence &)> Compare) {
+    llvm::function_ref<bool(const StmtSequence &, const StmtSequence &)>
+        Compare) {
   std::vector<CloneDetector::CloneGroup> Result;
   for (auto &HashGroup : CloneGroups) {
     // Contains all indexes in HashGroup that were already added to a

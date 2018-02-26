@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=arm -mtriple=arm-linux-gnueabi | FileCheck %s
-; RUN: llc < %s -march=arm -mtriple=arm-linux-gnueabi -relocation-model=pic | \
+; RUN: llc < %s -mtriple=arm-linux-gnueabi | FileCheck %s
+; RUN: llc < %s -mtriple=arm-linux-gnueabi -relocation-model=pic | \
 ; RUN:   FileCheck %s --check-prefix=PIC
 
 

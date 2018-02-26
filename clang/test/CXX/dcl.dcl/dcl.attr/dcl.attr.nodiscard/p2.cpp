@@ -9,21 +9,33 @@ enum [[nodiscard]] E {};
 E get_e();
 
 [[nodiscard]] int get_i();
+[[nodiscard]] volatile int &get_vi();
 
 void f() {
   get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   get_i(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  get_vi(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   get_e(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   // Okay, warnings are not encouraged
   get_s_ref();
   (void)get_s();
   (void)get_i();
+  (void)get_vi();
   (void)get_e();
 }
 
+[[nodiscard]] volatile char &(*fp)();
+void g() {
+  fp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  // OK, warning suppressed.
+  (void)fp();
+}
 #ifdef EXT
 // expected-warning@4 {{use of the 'nodiscard' attribute is a C++17 extension}}
 // expected-warning@8 {{use of the 'nodiscard' attribute is a C++17 extension}}
 // expected-warning@11 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-warning@12 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-warning@28 {{use of the 'nodiscard' attribute is a C++17 extension}}
 #endif

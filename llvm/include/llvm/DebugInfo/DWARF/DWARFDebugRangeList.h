@@ -50,6 +50,8 @@ struct DWARFAddressRange {
       return LowPC <= RHS.HighPC && RHS.HighPC <= HighPC;
     return false;
   }
+
+  void dump(raw_ostream &OS, uint32_t AddressSize) const;
 };
 
 static inline bool operator<(const DWARFAddressRange &LHS,

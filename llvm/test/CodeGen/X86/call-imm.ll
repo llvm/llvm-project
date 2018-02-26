@@ -6,7 +6,7 @@
 ; Call to immediate is not safe on x86-64 unless we *know* that the
 ; call will be within 32-bits pcrel from the dest immediate.
 
-; RUN: llc < %s -march=x86-64 | FileCheck -check-prefix X64 %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck -check-prefix X64 %s
 
 ; PR3666
 ; PR3773

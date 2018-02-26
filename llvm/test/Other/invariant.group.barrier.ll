@@ -12,10 +12,10 @@ define i8 @optimizable() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-; CHECK: call i8* @llvm.invariant.group.barrier
-    %ptr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
-; CHECK-NOT: call i8* @llvm.invariant.group.barrier
-    %ptr3 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
+    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK-NOT: call i8* @llvm.invariant.group.barrier.p0i8
+    %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
 ; CHECK: call void @clobber(i8* {{.*}}%ptr)
     call void @clobber(i8* %ptr)
 
@@ -34,11 +34,11 @@ define i8 @unoptimizable() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-; CHECK: call i8* @llvm.invariant.group.barrier
-    %ptr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
+    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
     call void @clobber(i8* %ptr)
-; CHECK: call i8* @llvm.invariant.group.barrier
-    %ptr3 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
+    %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
 ; CHECK: call void @clobber(i8* {{.*}}%ptr)
     call void @clobber(i8* %ptr)
 ; CHECK: call void @use(i8* {{.*}}%ptr2)
@@ -55,8 +55,8 @@ declare void @use(i8* readonly)
 
 declare void @clobber(i8*)
 ; CHECK: Function Attrs: argmemonly nounwind readonly
-; CHECK-NEXT: declare i8* @llvm.invariant.group.barrier(i8*)
-declare i8* @llvm.invariant.group.barrier(i8*)
+; CHECK-NEXT: declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
+declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
 
 !0 = !{}
 

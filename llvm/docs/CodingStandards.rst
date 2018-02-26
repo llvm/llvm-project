@@ -203,7 +203,7 @@ this means are `Effective Go`_ and `Go Code Review Comments`_.
   https://golang.org/doc/effective_go.html
 
 .. _Go Code Review Comments:
-  https://code.google.com/p/go-wiki/wiki/CodeReviewComments
+  https://github.com/golang/go/wiki/CodeReviewComments
 
 Mechanical Source Issues
 ========================
@@ -811,6 +811,21 @@ As a rule of thumb, use ``auto &`` unless you need to copy the result, and use
   for (const auto *Ptr : Container) { observe(*Ptr); }
   for (auto *Ptr : Container) { Ptr->change(); }
 
+Beware of non-determinism due to ordering of pointers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In general, there is no relative ordering among pointers. As a result,
+when unordered containers like sets and maps are used with pointer keys
+the iteration order is undefined. Hence, iterating such containers may
+result in non-deterministic code generation. While the generated code
+might not necessarily be "wrong code", this non-determinism might result
+in unexpected runtime crashes or simply hard to reproduce bugs on the
+customer side making it harder to debug and fix.
+
+As a rule of thumb, in case an ordered result is expected, remember to
+sort an unordered container before iteration. Or use ordered containers
+like vector/MapVector/SetVector if you want to iterate pointer keys.
+
 Style Issues
 ============
 
@@ -941,8 +956,8 @@ loops.  A silly example is something like this:
 
 .. code-block:: c++
 
-  for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E; ++II) {
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(II)) {
+  for (Instruction &I : BB) {
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       Value *LHS = BO->getOperand(0);
       Value *RHS = BO->getOperand(1);
       if (LHS != RHS) {
@@ -961,8 +976,8 @@ It is strongly preferred to structure the loop like this:
 
 .. code-block:: c++
 
-  for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E; ++II) {
-    BinaryOperator *BO = dyn_cast<BinaryOperator>(II);
+  for (Instruction &I : BB) {
+    auto *BO = dyn_cast<BinaryOperator>(&I);
     if (!BO) continue;
 
     Value *LHS = BO->getOperand(0);
@@ -1232,6 +1247,12 @@ builds), ``llvm_unreachable`` becomes a hint to compilers to skip generating
 code for this branch. If the compiler does not support this, it will fall back
 to the "abort" implementation.
 
+Neither assertions or ``llvm_unreachable`` will abort the program on a release
+build. If the error condition can be triggered by user input then the
+recoverable error mechanism described in :doc:`ProgrammersManual` should be
+used instead. In cases where this is not practical, ``report_fatal_error`` may
+be used.
+
 Another issue is that values used only by assertions will produce an "unused
 value" warning when assertions are disabled.  For example, this code will warn:
 
@@ -1316,19 +1337,31 @@ that the enum expression may take any representable value, not just those of
 individual enumerators. To suppress this warning, use ``llvm_unreachable`` after
 the switch.
 
-Don't evaluate ``end()`` every time through a loop
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use range-based ``for`` loops wherever possible
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Because C++ doesn't have a standard "``foreach``" loop (though it can be
-emulated with macros and may be coming in C++'0x) we end up writing a lot of
-loops that manually iterate from begin to end on a variety of containers or
-through other data structures.  One common mistake is to write a loop in this
-style:
+The introduction of range-based ``for`` loops in C++11 means that explicit
+manipulation of iterators is rarely necessary. We use range-based ``for``
+loops wherever possible for all newly added code. For example:
 
 .. code-block:: c++
 
   BasicBlock *BB = ...
-  for (BasicBlock::iterator I = BB->begin(); I != BB->end(); ++I)
+  for (Instruction &I : *BB)
+    ... use I ...
+
+Don't evaluate ``end()`` every time through a loop
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In cases where range-based ``for`` loops can't be used and it is necessary
+to write an explicit iterator-based loop, pay close attention to whether
+``end()`` is re-evaluted on each loop iteration. One common mistake is to
+write a loop in this style:
+
+.. code-block:: c++
+
+  BasicBlock *BB = ...
+  for (auto I = BB->begin(); I != BB->end(); ++I)
     ... use I ...
 
 The problem with this construct is that it evaluates "``BB->end()``" every time
@@ -1339,7 +1372,7 @@ convenient way to do this is like so:
 .. code-block:: c++
 
   BasicBlock *BB = ...
-  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
+  for (auto I = BB->begin(), E = BB->end(); I != E; ++I)
     ... use I ...
 
 The observant may quickly point out that these two loops may have different

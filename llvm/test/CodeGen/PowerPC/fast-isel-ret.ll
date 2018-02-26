@@ -47,7 +47,7 @@ entry:
 define zeroext i8 @ret3(i8 signext %a) nounwind {
 entry:
 ; ELF64-LABEL: ret3
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
 ; ELF64: blr
   ret i8 %a
 }
@@ -63,7 +63,7 @@ entry:
 define zeroext i16 @ret5(i16 signext %a) nounwind {
 entry:
 ; ELF64-LABEL: ret5
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 ; ELF64: blr
   ret i16 %a
 }
@@ -71,7 +71,7 @@ entry:
 define i16 @ret6(i16 %a) nounwind {
 entry:
 ; ELF64-LABEL: ret6
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 ; ELF64: blr
   ret i16 %a
 }
@@ -87,7 +87,7 @@ entry:
 define zeroext i32 @ret8(i32 signext %a) nounwind {
 entry:
 ; ELF64-LABEL: ret8
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 32
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 32
 ; ELF64: blr
   ret i32 %a
 }
@@ -95,7 +95,7 @@ entry:
 define i32 @ret9(i32 %a) nounwind {
 entry:
 ; ELF64-LABEL: ret9
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 32
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 32
 ; ELF64: blr
   ret i32 %a
 }
@@ -104,6 +104,7 @@ define i64 @ret10(i64 %a) nounwind {
 entry:
 ; ELF64-LABEL: ret10
 ; ELF64-NOT: exts
+; ELF64-NOT: clrldi
 ; ELF64-NOT: rldicl
 ; ELF64: blr
   ret i64 %a

@@ -27,10 +27,10 @@ TEST(CachePruningPolicyParser, Interval) {
   EXPECT_EQ(std::chrono::seconds(1), P->Interval);
   P = parseCachePruningPolicy("prune_interval=2m");
   ASSERT_TRUE(bool(P));
-  EXPECT_EQ(std::chrono::minutes(2), P->Interval);
+  EXPECT_EQ(std::chrono::minutes(2), *P->Interval);
   P = parseCachePruningPolicy("prune_interval=3h");
   ASSERT_TRUE(bool(P));
-  EXPECT_EQ(std::chrono::hours(3), P->Interval);
+  EXPECT_EQ(std::chrono::hours(3), *P->Interval);
 }
 
 TEST(CachePruningPolicyParser, Expiration) {

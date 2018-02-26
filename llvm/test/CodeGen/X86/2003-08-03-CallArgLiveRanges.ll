@@ -4,7 +4,7 @@
 ; it makes a ton of annoying overlapping live ranges.  This code should not
 ; cause spills!
 ;
-; RUN: llc < %s -march=x86 -stats 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -stats 2>&1 | FileCheck %s
 
 ; CHECK-NOT: spilled
 

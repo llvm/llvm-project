@@ -162,9 +162,10 @@ class ELFObjectWriter : public MCObjectWriter {
                              bool ZLibStyle, unsigned Alignment);
 
 public:
-  ELFObjectWriter(MCELFObjectTargetWriter *MOTW, raw_pwrite_stream &OS,
-                  bool IsLittleEndian)
-      : MCObjectWriter(OS, IsLittleEndian), TargetObjectWriter(MOTW) {}
+  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                  raw_pwrite_stream &OS, bool IsLittleEndian)
+      : MCObjectWriter(OS, IsLittleEndian),
+        TargetObjectWriter(std::move(MOTW)) {}
 
   ~ELFObjectWriter() override = default;
 
@@ -1108,7 +1109,7 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
 
     if (is64Bit()) {
       write(Entry.Offset);
-      if (TargetObjectWriter->isN64()) {
+      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
         write(uint32_t(Index));
 
         write(TargetObjectWriter->getRSsym(Entry.Type));
@@ -1131,6 +1132,23 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
 
       if (hasRelocationAddend())
         write(uint32_t(Entry.Addend));
+
+      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
+        if (uint32_t RType = TargetObjectWriter->getRType2(Entry.Type)) {
+          write(uint32_t(Entry.Offset));
+
+          ERE32.setSymbolAndType(0, RType);
+          write(ERE32.r_info);
+          write(uint32_t(0));
+        }
+        if (uint32_t RType = TargetObjectWriter->getRType3(Entry.Type)) {
+          write(uint32_t(Entry.Offset));
+
+          ERE32.setSymbolAndType(0, RType);
+          write(ERE32.r_info);
+          write(uint32_t(0));
+        }
+      }
     }
   }
 }
@@ -1369,8 +1387,9 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
                                                                 InSet, IsPCRel);
 }
 
-MCObjectWriter *llvm::createELFObjectWriter(MCELFObjectTargetWriter *MOTW,
-                                            raw_pwrite_stream &OS,
-                                            bool IsLittleEndian) {
-  return new ELFObjectWriter(MOTW, OS, IsLittleEndian);
+std::unique_ptr<MCObjectWriter>
+llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                            raw_pwrite_stream &OS, bool IsLittleEndian) {
+  return llvm::make_unique<ELFObjectWriter>(std::move(MOTW), OS,
+                                            IsLittleEndian);
 }

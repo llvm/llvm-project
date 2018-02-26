@@ -29,10 +29,13 @@ namespace clang {
   /// This operation inserts the parsed decls into the translation
   /// unit held by Ctx.
   ///
+  /// \param PrintStats Whether to print LLVM statistics related to parsing.
   /// \param TUKind The kind of translation unit being parsed.
-  ///
   /// \param CompletionConsumer If given, an object to consume code completion
   /// results.
+  /// \param SkipFunctionBodies Whether to skip parsing of function bodies.
+  /// This option can be used, for example, to speed up searches for
+  /// declarations/definitions when indexing.
   void ParseAST(Preprocessor &pp, ASTConsumer *C,
                 ASTContext &Ctx, bool PrintStats = false,
                 TranslationUnitKind TUKind = TU_Complete,
@@ -43,7 +46,7 @@ namespace clang {
   /// abstract syntax tree.
   void ParseAST(Sema &S, bool PrintStats = false,
                 bool SkipFunctionBodies = false);
-  
+
 }  // end namespace clang
 
 #endif

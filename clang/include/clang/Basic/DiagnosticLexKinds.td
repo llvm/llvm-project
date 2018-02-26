@@ -31,6 +31,14 @@ def warn_cxx98_compat_less_colon_colon : Warning<
   "'<::' is treated as digraph '<:' (aka '[') followed by ':' in C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
+def warn_cxx17_compat_spaceship : Warning<
+  "'<=>' operator is incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+def warn_cxx2a_compat_spaceship : Warning<
+  "'<=>' is a single token in C++2a; "
+  "add a space to avoid a change in behavior">,
+  InGroup<CXX2aCompat>;
+
 // Trigraphs.
 def trigraph_ignored : Warning<"trigraph ignored">, InGroup<Trigraphs>;
 def trigraph_ignored_block_comment : Warning<
@@ -71,6 +79,8 @@ def ext_token_used : Extension<"extension used">,
 
 def warn_cxx11_keyword : Warning<"'%0' is a keyword in C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
+def warn_cxx2a_keyword : Warning<"'%0' is a keyword in C++2a">,
+  InGroup<CXX2aCompat>, DefaultIgnore;
 
 def ext_unterminated_char_or_string : ExtWarn<
   "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
@@ -109,6 +119,9 @@ def err_non_ascii : Error<
 def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
+def warn_utf8_symbol_homoglyph : Warning<
+  "treating Unicode character <U+%0> as identifier character rather than "
+  "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
@@ -173,8 +186,6 @@ def warn_char_constant_too_large : Warning<
 def err_multichar_utf_character_literal : Error<
   "Unicode character literals may not contain multiple characters">;
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
-def ext_imaginary_constant : Extension<
-  "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def err_hex_constant_requires : Error<
   "hexadecimal floating %select{constant|literal}0 requires "
   "%select{an exponent|a significand}1">;
@@ -182,17 +193,17 @@ def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
 def ext_hex_literal_invalid : Extension<
   "hexadecimal floating literals are a C++17 feature">, InGroup<CXX17>;
-def warn_cxx1z_hex_literal : Warning<
+def warn_cxx17_hex_literal : Warning<
   "hexadecimal floating literals are incompatible with "
   "C++ standards before C++17">,
-  InGroup<CXXPre1zCompatPedantic>, DefaultIgnore;
+  InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
   "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
 def ext_binary_literal_cxx14 : Extension<
   "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
 def warn_cxx11_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14CompatPedantic>, DefaultIgnore;
+  InGroup<CXXPre14CompatBinaryLiteral>, DefaultIgnore;
 def err_pascal_string_too_long : Error<"Pascal string is too long">;
 def err_escape_too_large : Error<
   "%select{hex|octal}0 escape sequence out of range">;
@@ -209,7 +220,7 @@ def warn_cxx98_compat_unicode_literal : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx14_compat_u8_character_literal : Warning<
   "unicode literals are incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def warn_cxx11_compat_user_defined_literal : Warning<
   "identifier after literal will be treated as a user-defined literal suffix "
   "in C++11">, InGroup<CXX11Compat>, DefaultIgnore;
@@ -346,6 +357,23 @@ def ext_pp_extra_tokens_at_eol : ExtWarn<
 def ext_pp_comma_expr : Extension<"comma operator in operand of #if">;
 def ext_pp_bad_vaargs_use : Extension<
   "__VA_ARGS__ can only appear in the expansion of a C99 variadic macro">;
+
+def ext_pp_bad_vaopt_use
+    : ExtWarn<
+          "__VA_OPT__ can only appear in the expansion of a variadic macro">,
+      InGroup<VariadicMacros>;
+
+def err_pp_missing_lparen_in_vaopt_use : Error<
+  "missing '(' following __VA_OPT__">;
+def err_pp_vaopt_nested_use : Error<
+  "__VA_OPT__ cannot be nested within its own replacement tokens">;
+
+def err_vaopt_paste_at_start : Error<
+  "'##' cannot appear at start of __VA_OPT__ argument">;
+
+def err_vaopt_paste_at_end
+    : Error<"'##' cannot appear at end of __VA_OPT__ argument">;
+
 def ext_pp_macro_redef : ExtWarn<"%0 macro redefined">, InGroup<MacroRedefined>;
 def ext_variadic_macro : Extension<"variadic macros are a C99 feature">,
   InGroup<VariadicMacros>;
@@ -477,16 +505,11 @@ def warn_pragma_message : Warning<"%0">,
 def err_pragma_message : Error<"%0">;
 def warn_pragma_ignored : Warning<"unknown pragma ignored">,
    InGroup<UnknownPragmas>, DefaultIgnore;
-def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
-   InGroup<UnknownPragmas>;
 def ext_on_off_switch_syntax :
    ExtWarn<"expected 'ON' or 'OFF' or 'DEFAULT' in pragma">,
    InGroup<UnknownPragmas>;
 def ext_pragma_syntax_eod :
    ExtWarn<"expected end of directive in pragma">,
-   InGroup<UnknownPragmas>;
-def warn_stdc_fenv_access_not_supported :
-   Warning<"pragma STDC FENV_ACCESS ON is not supported, ignoring pragma">,
    InGroup<UnknownPragmas>;
 def warn_pragma_diagnostic_invalid :
    ExtWarn<"pragma diagnostic expected 'error', 'warning', 'ignored', 'fatal',"
@@ -663,11 +686,15 @@ def err_mmap_expected_feature : Error<"expected a feature name">;
 def err_mmap_expected_attribute : Error<"expected an attribute name">;
 def warn_mmap_unknown_attribute : Warning<"unknown attribute '%0'">,
   InGroup<IgnoredAttributes>;
-def warn_mmap_mismatched_top_level_private : Warning<
-  "top-level module '%0' in private module map, expected a submodule of '%1'">,
+def warn_mmap_mismatched_private_submodule : Warning<
+  "private submodule '%0' in private module map, expected top-level module">,
   InGroup<PrivateModule>;
-def note_mmap_rename_top_level_private_as_submodule : Note<
-  "make '%0' a submodule of '%1' to ensure it can be found by name">;
+def warn_mmap_mismatched_private_module_name : Warning<
+  "expected canonical name for private module '%0'">,
+  InGroup<PrivateModule>;
+def note_mmap_rename_top_level_private_module : Note<
+  "rename '%0' to ensure it can be found by name">;
+
 def err_mmap_duplicate_header_attribute : Error<
   "header attribute '%0' specified multiple times">;
 def err_mmap_invalid_header_attribute_value : Error<

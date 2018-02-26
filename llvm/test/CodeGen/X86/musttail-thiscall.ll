@@ -1,5 +1,5 @@
-; RUN: llc -march=x86 < %s | FileCheck %s
-; RUN: llc -march=x86 -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -O0 < %s | FileCheck %s
 
 ; CHECK-LABEL: t1:
 ; CHECK: jmp {{_?}}t1_callee

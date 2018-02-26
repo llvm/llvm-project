@@ -1,7 +1,7 @@
 ; Test 64-bit signed division and remainder when the divisor is
 ; a signed-extended i32.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -asm-verbose=0 | FileCheck %s
 
 declare i64 @foo()
 

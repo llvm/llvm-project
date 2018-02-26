@@ -33,9 +33,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(<8 x s16>) = COPY %xmm0
-# ALL-NEXT:     %1(<8 x s16>) = COPY %xmm1
-# ALL-NEXT:     %2(<8 x s16>) = G_MUL %0, %1
+# ALL:          %0:_(<8 x s16>) = COPY %xmm0
+# ALL-NEXT:     %1:_(<8 x s16>) = COPY %xmm1
+# ALL-NEXT:     %2:_(<8 x s16>) = G_MUL %0, %1
 # ALL-NEXT:     %xmm0 = COPY %2(<8 x s16>)
 # ALL-NEXT:     RET 0, implicit %xmm0
 body:             |
@@ -63,9 +63,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(<4 x s32>) = COPY %xmm0
-# ALL-NEXT:     %1(<4 x s32>) = COPY %xmm1
-# ALL-NEXT:     %2(<4 x s32>) = G_MUL %0, %1
+# ALL:          %0:_(<4 x s32>) = COPY %xmm0
+# ALL-NEXT:     %1:_(<4 x s32>) = COPY %xmm1
+# ALL-NEXT:     %2:_(<4 x s32>) = G_MUL %0, %1
 # ALL-NEXT:     %xmm0 = COPY %2(<4 x s32>)
 # ALL-NEXT:     RET 0, implicit %xmm0
 body:             |
@@ -93,9 +93,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(<2 x s64>) = COPY %xmm0
-# ALL-NEXT:     %1(<2 x s64>) = COPY %xmm1
-# ALL-NEXT:     %2(<2 x s64>) = G_MUL %0, %1
+# ALL:          %0:_(<2 x s64>) = COPY %xmm0
+# ALL-NEXT:     %1:_(<2 x s64>) = COPY %xmm1
+# ALL-NEXT:     %2:_(<2 x s64>) = G_MUL %0, %1
 # ALL-NEXT:     %xmm0 = COPY %2(<2 x s64>)
 # ALL-NEXT:     RET 0, implicit %xmm0
 body:             |

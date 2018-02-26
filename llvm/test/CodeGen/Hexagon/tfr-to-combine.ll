@@ -6,30 +6,33 @@
 @b = external global i16
 @c = external global i16
 
-; Function Attrs: nounwind
-define i64 @test1() #0 {
+declare void @test0a(i32, i32) #0
+declare void @test0b(i32, i32, i32, i32) #0
+
+; CHECK-LABEL: test1:
 ; CHECK: combine(#10,#0)
+define i32 @test1() #0 {
 entry:
-  store i16 0, i16* @a, align 2
-  store i16 10, i16* @b, align 2
-  ret i64 10
+  call void @test0a(i32 0, i32 10) #0
+  ret i32 10
 }
 
-; Function Attrs: nounwind
-define i64 @test2() #0 {
+; CHECK-LABEL: test2:
 ; CHECK: combine(#0,r{{[0-9]+}})
+define i32 @test2() #0 {
 entry:
-  store i16 0, i16* @a, align 2
-  %0 = load i16, i16* @c, align 2
-  %conv2 = zext i16 %0 to i64
-  ret i64 %conv2
+  %t0 = load i16, i16* @c, align 2
+  %t1 = zext i16 %t0 to i32
+  call void @test0b(i32 %t1, i32 0, i32 %t1, i32 0)
+  ret i32 0
 }
 
-; Function Attrs: nounwind
-define i64 @test4() #0 {
+; CHECK-LABEL: test3:
 ; CHECK: combine(#0,#100)
+define i32 @test3() #0 {
 entry:
-  store i16 100, i16* @b, align 2
-  store i16 0, i16* @a, align 2
-  ret i64 0
+  call void @test0a(i32 100, i32 0)
+  ret i32 0
 }
+
+attributes #0 = { nounwind }

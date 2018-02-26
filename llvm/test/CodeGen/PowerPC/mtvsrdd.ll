@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr9 -ppc-vsr-nums-as-vr -mtriple=powerpc64le-unknown-unknown \
-; RUN:   < %s | FileCheck %s
+; RUN: llc -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
+; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
 
 ; This test case checks r0 is used as constant 0 in instruction mtvsrdd.
 

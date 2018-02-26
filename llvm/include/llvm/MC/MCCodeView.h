@@ -161,8 +161,8 @@ public:
   ~CodeViewContext();
 
   bool isValidFileNumber(unsigned FileNumber) const;
-  bool addFile(unsigned FileNumber, StringRef Filename);
-  ArrayRef<StringRef> getFilenames() { return Filenames; }
+  bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
+               ArrayRef<uint8_t> ChecksumBytes, uint8_t ChecksumKind);
 
   /// Records the function id of a normal function. Returns false if the
   /// function id has already been used, and true otherwise.
@@ -177,13 +177,7 @@ public:
                                unsigned IACol);
 
   /// Retreive the function info if this is a valid function id, or nullptr.
-  MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId) {
-    if (FuncId >= Functions.size())
-      return nullptr;
-    if (Functions[FuncId].isUnallocatedFunctionInfo())
-      return nullptr;
-    return &Functions[FuncId];
-  }
+  MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId);
 
   /// Saves the information from the currently parsed .cv_loc directive
   /// and sets CVLocSeen.  When the next instruction is assembled an entry
@@ -199,50 +193,22 @@ public:
     CurrentCVLoc.setIsStmt(IsStmt);
     CVLocSeen = true;
   }
-  void clearCVLocSeen() { CVLocSeen = false; }
 
   bool getCVLocSeen() { return CVLocSeen; }
+  void clearCVLocSeen() { CVLocSeen = false; }
+
   const MCCVLoc &getCurrentCVLoc() { return CurrentCVLoc; }
 
   bool isValidCVFileNumber(unsigned FileNumber);
 
   /// \brief Add a line entry.
-  void addLineEntry(const MCCVLineEntry &LineEntry) {
-    size_t Offset = MCCVLines.size();
-    auto I = MCCVLineStartStop.insert(
-        {LineEntry.getFunctionId(), {Offset, Offset + 1}});
-    if (!I.second)
-      I.first->second.second = Offset + 1;
-    MCCVLines.push_back(LineEntry);
-  }
+  void addLineEntry(const MCCVLineEntry &LineEntry);
 
-  std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId) {
-    std::vector<MCCVLineEntry> FilteredLines;
+  std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId);
 
-    auto I = MCCVLineStartStop.find(FuncId);
-    if (I != MCCVLineStartStop.end())
-      for (size_t Idx = I->second.first, End = I->second.second; Idx != End;
-           ++Idx)
-        if (MCCVLines[Idx].getFunctionId() == FuncId)
-          FilteredLines.push_back(MCCVLines[Idx]);
-    return FilteredLines;
-  }
+  std::pair<size_t, size_t> getLineExtent(unsigned FuncId);
 
-  std::pair<size_t, size_t> getLineExtent(unsigned FuncId) {
-    auto I = MCCVLineStartStop.find(FuncId);
-    // Return an empty extent if there are no cv_locs for this function id.
-    if (I == MCCVLineStartStop.end())
-      return {~0ULL, 0};
-    return I->second;
-  }
-
-  ArrayRef<MCCVLineEntry> getLinesForExtent(size_t L, size_t R) {
-    if (R <= L)
-      return None;
-    if (L >= MCCVLines.size())
-      return None;
-    return makeArrayRef(&MCCVLines[L], R - L);
-  }
+  ArrayRef<MCCVLineEntry> getLinesForExtent(size_t L, size_t R);
 
   /// Emits a line table substream.
   void emitLineTableForFunction(MCObjectStreamer &OS, unsigned FuncId,
@@ -273,6 +239,13 @@ public:
   /// Emits the file checksum substream.
   void emitFileChecksums(MCObjectStreamer &OS);
 
+  /// Emits the offset into the checksum table of the given file number.
+  void emitFileChecksumOffset(MCObjectStreamer &OS, unsigned FileNo);
+
+  /// Add something to the string table.  Returns the final string as well as
+  /// offset into the string table.
+  std::pair<StringRef, unsigned> addToStringTable(StringRef S);
+
 private:
   /// The current CodeView line information from the last .cv_loc directive.
   MCCVLoc CurrentCVLoc = MCCVLoc(0, 0, 0, 0, false, true);
@@ -287,14 +260,27 @@ private:
 
   MCDataFragment *getStringTableFragment();
 
-  /// Add something to the string table.
-  StringRef addToStringTable(StringRef S);
-
   /// Get a string table offset.
   unsigned getStringTableOffset(StringRef S);
 
-  /// An array of absolute paths. Eventually this may include the file checksum.
-  SmallVector<StringRef, 4> Filenames;
+  struct FileInfo {
+    unsigned StringTableOffset;
+
+    // Indicates if this FileInfo corresponds to an actual file, or hasn't been
+    // set yet.
+    bool Assigned = false;
+
+    uint8_t ChecksumKind;
+
+    ArrayRef<uint8_t> Checksum;
+
+    // Checksum offset stored as a symbol because it might be requested
+    // before it has been calculated, so a fixup may be needed.
+    MCSymbol *ChecksumTableOffset;
+  };
+
+  /// Array storing added file information.
+  SmallVector<FileInfo, 4> Files;
 
   /// The offset of the first and last .cv_loc directive for a given function
   /// id.
@@ -305,6 +291,10 @@ private:
 
   /// All known functions and inlined call sites, indexed by function id.
   std::vector<MCCVFunctionInfo> Functions;
+
+  /// Indicate whether we have already laid out the checksum table addresses or
+  /// not.
+  bool ChecksumOffsetsAssigned = false;
 };
 
 } // end namespace llvm

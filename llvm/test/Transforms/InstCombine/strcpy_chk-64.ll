@@ -4,7 +4,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 define void @func(i8* %i) nounwind ssp {
 ; CHECK-LABEL: @func(
-; CHECK: @__strcpy_chk(i8* %arraydecay, i8* %i, i64 32)
+; CHECK: @__strcpy_chk(i8* nonnull %arraydecay, i8* %i, i64 32)
 entry:
   %s = alloca [32 x i8], align 16
   %arraydecay = getelementptr inbounds [32 x i8], [32 x i8]* %s, i32 0, i32 0

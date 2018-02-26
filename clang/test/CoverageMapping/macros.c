@@ -40,7 +40,7 @@ void func3() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+3]]:2 = #0
 void func4() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+6]]:2 = #0
   int i = 0;
   while (i++ < 10) // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:18 = (#0 + #1)
-    if (i < 5) // CHECK-NEXT: File 0, [[@LINE]]:5 -> [[@LINE+2]]:14 = #1
+    if (i < 5) // CHECK: File 0, [[@LINE]]:5 -> [[@LINE+2]]:14 = #1
                // CHECK-NEXT: File 0, [[@LINE-1]]:9 -> [[@LINE-1]]:14 = #1
       MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:7 -> [[@LINE]]:14 = #2
 }

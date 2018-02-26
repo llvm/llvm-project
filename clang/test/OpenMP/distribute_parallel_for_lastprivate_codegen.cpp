@@ -5,12 +5,28 @@
 // RUN: %clang_cc1 -DLAMBDA -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DLAMBDA -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix LAMBDA --check-prefix LAMBDA-32
 
+// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 // RUN: %clang_cc1  -verify -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
 // RUN: %clang_cc1  -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1  -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
 // RUN: %clang_cc1  -verify -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // RUN: %clang_cc1  -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1  -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+
+// RUN: %clang_cc1  -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1  -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1  -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1  -verify -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1  -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1  -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -70,6 +86,7 @@ int main() {
       // LAMBDA: [[SFVAR_PRIVATE_ADDR:%.+]] = alloca float*,
       // LAMBDA: [[TMP_G1:%.+]] = alloca double*,
       // loop variables
+      // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -141,6 +158,7 @@ int main() {
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
+      // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
 
       // private alloca's
       // LAMBDA: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
@@ -162,7 +180,7 @@ int main() {
       // LAMBDA: [[SFVAR_IN_REF:%.+]] = load float*, float** [[SFVAR_PRIVATE_ADDR]],
 
       // LAMBDA: [[G1_IN_REF:%.+]] = load double*, double** [[G1_PRIVATE_ADDR]],
-      // LAMBDA: store double* [[G1_PRIVATE]], double** [[TMP_G1]],
+      // LAMBDA: store double* [[G1_PRIVATE]], double** [[TMP_G1_PRIVATE]],
 
       // LAMBDA: call {{.*}}void @__kmpc_for_static_init_4(
 
@@ -273,6 +291,7 @@ int main() {
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -367,6 +386,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // skip loop variables
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -486,6 +506,7 @@ int main() {
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -562,6 +583,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},

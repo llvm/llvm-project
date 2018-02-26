@@ -4,16 +4,16 @@
 
 define i8 @test_zext_i1toi8(i32 %a) {
 ; X64-LABEL: test_zext_i1toi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i1toi8:
-; X32:       # BB#0:
-; X32-NEXT:    movl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
-; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    # kill: def %al killed %al killed %eax
 ; X32-NEXT:    retl
   %val = trunc i32 %a to i1
   %r = zext i1 %val to i8
@@ -22,16 +22,16 @@ define i8 @test_zext_i1toi8(i32 %a) {
 
 define i16 @test_zext_i1toi16(i32 %a) {
 ; X64-LABEL: test_zext_i1toi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andw $1, %di
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i1toi16:
-; X32:       # BB#0:
-; X32-NEXT:    movl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andw $1, %ax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X32-NEXT:    retl
   %val = trunc i32 %a to i1
   %r = zext i1 %val to i16
@@ -40,14 +40,14 @@ define i16 @test_zext_i1toi16(i32 %a) {
 
 define i32 @test_zext_i1(i32 %a) {
 ; X64-LABEL: test_zext_i1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i1:
-; X32:       # BB#0:
-; X32-NEXT:    movl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    retl
   %val = trunc i32 %a to i1
@@ -57,13 +57,13 @@ define i32 @test_zext_i1(i32 %a) {
 
 define i32 @test_zext_i8(i8 %val) {
 ; X64-LABEL: test_zext_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i8:
-; X32:       # BB#0:
-; X32-NEXT:    movzbl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
   %r = zext i8 %val to i32
   ret i32 %r
@@ -71,13 +71,13 @@ define i32 @test_zext_i8(i8 %val) {
 
 define i32 @test_zext_i16(i16 %val) {
 ; X64-LABEL: test_zext_i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i16:
-; X32:       # BB#0:
-; X32-NEXT:    movzwl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
   %r = zext i16 %val to i32
   ret i32 %r
@@ -85,13 +85,13 @@ define i32 @test_zext_i16(i16 %val) {
 
 define i32 @test_sext_i8(i8 %val) {
 ; X64-LABEL: test_sext_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movsbl %dil, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_sext_i8:
-; X32:       # BB#0:
-; X32-NEXT:    movsbl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
   %r = sext i8 %val to i32
   ret i32 %r
@@ -99,13 +99,13 @@ define i32 @test_sext_i8(i8 %val) {
 
 define i32 @test_sext_i16(i16 %val) {
 ; X64-LABEL: test_sext_i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movswl %di, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_sext_i16:
-; X32:       # BB#0:
-; X32-NEXT:    movswl 4(%esp), %eax
+; X32:       # %bb.0:
+; X32-NEXT:    movswl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
   %r = sext i16 %val to i32
   ret i32 %r

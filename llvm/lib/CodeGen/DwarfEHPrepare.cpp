@@ -1,4 +1,4 @@
-//===-- DwarfEHPrepare - Prepare exception handling for code generation ---===//
+//===- DwarfEHPrepare - Prepare exception handling for code generation ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,20 +13,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <cstddef>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dwarfehprepare"
@@ -34,12 +43,13 @@ using namespace llvm;
 STATISTIC(NumResumesLowered, "Number of resume calls lowered");
 
 namespace {
+
   class DwarfEHPrepare : public FunctionPass {
     // RewindFunction - _Unwind_Resume or the target equivalent.
-    Constant *RewindFunction;
+    Constant *RewindFunction = nullptr;
 
-    DominatorTree *DT;
-    const TargetLowering *TLI;
+    DominatorTree *DT = nullptr;
+    const TargetLowering *TLI = nullptr;
 
     bool InsertUnwindResumeCalls(Function &Fn);
     Value *GetExceptionObject(ResumeInst *RI);
@@ -51,9 +61,7 @@ namespace {
   public:
     static char ID; // Pass identification, replacement for typeid.
 
-    DwarfEHPrepare()
-        : FunctionPass(ID), RewindFunction(nullptr), DT(nullptr), TLI(nullptr) {
-    }
+    DwarfEHPrepare() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &Fn) override;
 
@@ -68,9 +76,11 @@ namespace {
       return "Exception handling preparation";
     }
   };
+
 } // end anonymous namespace
 
 char DwarfEHPrepare::ID = 0;
+
 INITIALIZE_PASS_BEGIN(DwarfEHPrepare, DEBUG_TYPE,
                       "Prepare DWARF exceptions", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
@@ -162,7 +172,7 @@ size_t DwarfEHPrepare::pruneUnreachableResumes(
       BasicBlock *BB = RI->getParent();
       new UnreachableInst(Ctx, RI);
       RI->eraseFromParent();
-      SimplifyCFG(BB, TTI, 1);
+      simplifyCFG(BB, TTI);
     }
   }
   Resumes.resize(ResumesLeft);

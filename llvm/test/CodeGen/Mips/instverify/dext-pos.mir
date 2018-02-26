@@ -1,0 +1,49 @@
+# RUN: not llc -march=mips64 -mcpu=mips64r2 -start-after=expand-isel-pseudos -stop-after=expand-isel-pseudos \
+# RUN:         -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+
+# CHECK: Position operand is out of range!
+
+# Check that the machine verifier checks the position operand is in the range 0..31
+---
+name:            dext
+alignment:       3
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64, preferred-register: '' }
+  - { id: 1, class: gpr64, preferred-register: '' }
+liveins:
+  - { reg: '%a0_64', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    liveins: %a0_64
+
+    %0 = COPY %a0_64
+    %1 = DEXT %0, 55, 10
+    %v0_64 = COPY %1
+    RetRA implicit %v0_64
+
+...

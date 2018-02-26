@@ -212,9 +212,16 @@ public:
   assumeInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
                        const llvm::APSInt &To) const;
 
+  /// \brief Check if the given SVal is not constrained to zero and is not
+  ///        a zero constant.
+  ConditionTruthVal isNonNull(SVal V) const;
+
   /// \brief Check if the given SVal is constrained to zero or is a zero
   ///        constant.
   ConditionTruthVal isNull(SVal V) const;
+
+  /// \return Whether values \p Lhs and \p Rhs are equal.
+  ConditionTruthVal areEqual(SVal Lhs, SVal Rhs) const;
 
   /// Utility method for getting regions.
   const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
@@ -308,8 +315,12 @@ public:
 
   /// \brief Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
-  SVal getSVal(const MemRegion* R) const;
+  SVal getSVal(const MemRegion* R, QualType T = QualType()) const;
 
+  /// \brief Return the value bound to the specified location, assuming
+  /// that the value is a scalar integer or an enumeration or a pointer.
+  /// Returns UnknownVal() if none found or the region is not known to hold
+  /// a value of such type.
   SVal getSValAsScalarOrLoc(const MemRegion *R) const;
 
   /// \brief Visits the symbols reachable from the given SVal using the provided
@@ -424,9 +435,10 @@ public:
   }
 
   // Pretty-printing.
-  void print(raw_ostream &Out, const char *nl = "\n",
-             const char *sep = "") const;
-  void printDOT(raw_ostream &Out) const;
+  void print(raw_ostream &Out, const char *nl = "\n", const char *sep = "",
+             const LocationContext *CurrentLC = nullptr) const;
+  void printDOT(raw_ostream &Out,
+                const LocationContext *CurrentLC = nullptr) const;
   void printTaint(raw_ostream &Out, const char *nl = "\n",
                   const char *sep = "") const;
 
@@ -758,9 +770,10 @@ inline SVal ProgramState::getRawSVal(Loc LV, QualType T) const {
   return getStateManager().StoreMgr->getBinding(getStore(), LV, T);
 }
 
-inline SVal ProgramState::getSVal(const MemRegion* R) const {
+inline SVal ProgramState::getSVal(const MemRegion* R, QualType T) const {
   return getStateManager().StoreMgr->getBinding(getStore(),
-                                                loc::MemRegionVal(R));
+                                                loc::MemRegionVal(R),
+                                                T);
 }
 
 inline BasicValueFactory &ProgramState::getBasicVals() const {

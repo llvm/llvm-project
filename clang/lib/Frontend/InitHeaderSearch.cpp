@@ -213,7 +213,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     case llvm::Triple::FreeBSD:
     case llvm::Triple::NetBSD:
     case llvm::Triple::OpenBSD:
-    case llvm::Triple::Bitrig:
     case llvm::Triple::NaCl:
     case llvm::Triple::PS4:
     case llvm::Triple::ELFIAMCU:
@@ -485,7 +484,6 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
     if (triple.isOSDarwin()) {
       AddPath("/System/Library/Frameworks", System, true);
       AddPath("/Library/Frameworks", System, true);
-      AddPath("/System/Library/PrivateFrameworks", System, true);
     }
   }
 }

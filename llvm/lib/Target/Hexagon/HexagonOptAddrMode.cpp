@@ -1,4 +1,4 @@
-//===--- HexagonOptAddrMode.cpp -------------------------------------------===//
+//===- HexagonOptAddrMode.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,8 @@
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "RDFGraph.h"
 #include "RDFLiveness.h"
+#include "RDFRegisters.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -25,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -36,16 +39,18 @@
 
 #define DEBUG_TYPE "opt-addr-mode"
 
+using namespace llvm;
+using namespace rdf;
+
 static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   cl::Hidden, cl::init(0), cl::desc("Code growth limit for address mode "
   "optimization"));
 
-using namespace llvm;
-using namespace rdf;
-
 namespace llvm {
+
   FunctionPass *createHexagonOptAddrMode();
   void initializeHexagonOptAddrModePass(PassRegistry&);
+
 } // end namespace llvm
 
 namespace {
@@ -54,9 +59,7 @@ class HexagonOptAddrMode : public MachineFunctionPass {
 public:
   static char ID;
 
-  HexagonOptAddrMode()
-      : MachineFunctionPass(ID), HII(nullptr), MDT(nullptr), DFG(nullptr),
-        LV(nullptr) {}
+  HexagonOptAddrMode() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Optimize addressing mode of load/store";
@@ -72,13 +75,14 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  typedef DenseSet<MachineInstr *> MISetType;
-  typedef DenseMap<MachineInstr *, bool> InstrEvalMap;
-  const HexagonInstrInfo *HII;
-  MachineDominatorTree *MDT;
-  DataFlowGraph *DFG;
+  using MISetType = DenseSet<MachineInstr *>;
+  using InstrEvalMap = DenseMap<MachineInstr *, bool>;
+
+  const HexagonInstrInfo *HII = nullptr;
+  MachineDominatorTree *MDT = nullptr;
+  DataFlowGraph *DFG = nullptr;
   DataFlowGraph::DefStackMap DefM;
-  Liveness *LV;
+  Liveness *LV = nullptr;
   MISetType Deleted;
 
   bool processBlock(NodeAddr<BlockNode *> BA);
@@ -124,10 +128,10 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr &MI, unsigned TfrDefR) {
 
   if (HII->getAddrMode(MI) == HexagonII::BaseRegOffset)
     // Tranform to Absolute plus register offset.
-    return (HII->getBaseWithLongOffset(MI) >= 0);
+    return (HII->changeAddrMode_rr_ur(MI) >= 0);
   else if (HII->getAddrMode(MI) == HexagonII::BaseImmOffset)
     // Tranform to absolute addressing mode.
-    return (HII->getAbsoluteForm(MI) >= 0);
+    return (HII->changeAddrMode_io_abs(MI) >= 0);
 
   return false;
 }
@@ -333,7 +337,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
 
   if (ImmOpNum == 1) {
     if (HII->getAddrMode(*OldMI) == HexagonII::BaseRegOffset) {
-      short NewOpCode = HII->getBaseWithLongOffset(*OldMI);
+      short NewOpCode = HII->changeAddrMode_rr_ur(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
       MIB.add(OldMI->getOperand(0));
@@ -343,7 +347,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
       OpStart = 4;
       Changed = true;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
-      short NewOpCode = HII->getAbsoluteForm(*OldMI);
+      short NewOpCode = HII->changeAddrMode_io_abs(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode))
                 .add(OldMI->getOperand(0));
@@ -357,9 +361,9 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
       Changed = false;
 
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
-    DEBUG(dbgs() << "[TO]: " << MIB << "\n");
+    DEBUG(dbgs() << "[TO]: " << *MIB << "\n");
   } else if (ImmOpNum == 2 && OldMI->getOperand(3).getImm() == 0) {
-    short NewOpCode = HII->xformRegToImmOffset(*OldMI);
+    short NewOpCode = HII->changeAddrMode_rr_io(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
     MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
     MIB.add(OldMI->getOperand(0));
@@ -368,7 +372,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
     OpStart = 4;
     Changed = true;
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
-    DEBUG(dbgs() << "[TO]: " << MIB << "\n");
+    DEBUG(dbgs() << "[TO]: " << *MIB << "\n");
   }
 
   if (Changed)
@@ -390,7 +394,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
   MachineInstrBuilder MIB;
   if (ImmOpNum == 0) {
     if (HII->getAddrMode(*OldMI) == HexagonII::BaseRegOffset) {
-      short NewOpCode = HII->getBaseWithLongOffset(*OldMI);
+      short NewOpCode = HII->changeAddrMode_rr_ur(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
       MIB.add(OldMI->getOperand(1));
@@ -399,7 +403,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
       MIB.add(OldMI->getOperand(3));
       OpStart = 4;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
-      short NewOpCode = HII->getAbsoluteForm(*OldMI);
+      short NewOpCode = HII->changeAddrMode_io_abs(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
       const GlobalValue *GV = ImmOp.getGlobal();
@@ -410,18 +414,17 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
     }
     Changed = true;
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
-    DEBUG(dbgs() << "[TO]: " << MIB << "\n");
+    DEBUG(dbgs() << "[TO]: " << *MIB << "\n");
   } else if (ImmOpNum == 1 && OldMI->getOperand(2).getImm() == 0) {
-    short NewOpCode = HII->xformRegToImmOffset(*OldMI);
+    short NewOpCode = HII->changeAddrMode_rr_io(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
     MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
     MIB.add(OldMI->getOperand(0));
     MIB.add(ImmOp);
-    MIB.add(OldMI->getOperand(1));
-    OpStart = 2;
+    OpStart = 3;
     Changed = true;
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
-    DEBUG(dbgs() << "[TO]: " << MIB << "\n");
+    DEBUG(dbgs() << "[TO]: " << *MIB << "\n");
   }
   if (Changed)
     for (unsigned i = OpStart; i < OpEnd; ++i)
@@ -432,10 +435,10 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
 
 short HexagonOptAddrMode::getBaseWithLongOffset(const MachineInstr &MI) const {
   if (HII->getAddrMode(MI) == HexagonII::BaseImmOffset) {
-    short TempOpCode = HII->getBaseWithRegOffset(MI);
-    return HII->getBaseWithLongOffset(TempOpCode);
-  } else
-    return HII->getBaseWithLongOffset(MI);
+    short TempOpCode = HII->changeAddrMode_io_rr(MI);
+    return HII->changeAddrMode_rr_ur(TempOpCode);
+  }
+  return HII->changeAddrMode_rr_ur(MI);
 }
 
 bool HexagonOptAddrMode::changeAddAsl(NodeAddr<UseNode *> AddAslUN,
@@ -458,7 +461,7 @@ bool HexagonOptAddrMode::changeAddAsl(NodeAddr<UseNode *> AddAslUN,
     DEBUG(dbgs() << "[InstrNode]: " << Print<NodeAddr<InstrNode *>>(UseIA, *DFG)
                  << "\n");
     MachineInstr *UseMI = UseIA.Addr->getCode();
-    DEBUG(dbgs() << "[MI <BB#" << UseMI->getParent()->getNumber()
+    DEBUG(dbgs() << "[MI <" << printMBBReference(*UseMI->getParent())
                  << ">]: " << *UseMI << "\n");
     const MCInstrDesc &UseMID = UseMI->getDesc();
     assert(HII->getAddrMode(*UseMI) == HexagonII::BaseImmOffset);
@@ -567,7 +570,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 
       NodeAddr<StmtNode *> OwnerN = UseN.Addr->getOwner(*DFG);
       MachineInstr *UseMI = OwnerN.Addr->getCode();
-      DEBUG(dbgs() << "\t\t[MI <BB#" << UseMI->getParent()->getNumber()
+      DEBUG(dbgs() << "\t\t[MI <" << printMBBReference(*UseMI->getParent())
                    << ">]: " << *UseMI << "\n");
 
       int UseMOnum = -1;
@@ -592,7 +595,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 }
 
 bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   bool Changed = false;

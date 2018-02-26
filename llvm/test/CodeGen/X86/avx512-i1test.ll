@@ -7,11 +7,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @func() {
 ; CHECK-LABEL: func:
-; CHECK:       # BB#0: # %L_10
+; CHECK:       # %bb.0: # %L_10
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # BB#4: # %L_30
+; CHECK-NEXT:  # %bb.4: # %L_30
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %bb56
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -65,10 +65,10 @@ L_30:                                             ; preds = %bb51, %L_10
 ; PR 28175
 define i64 @func2(i1 zeroext %i, i32 %j) {
 ; CHECK-LABEL: func2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # BB#2: # %if.then
+; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    jmp bar # TAILCALL
 ; CHECK-NEXT:  .LBB1_1: # %return
 ; CHECK-NEXT:    movzbl %dil, %eax

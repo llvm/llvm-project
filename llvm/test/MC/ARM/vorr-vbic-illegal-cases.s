@@ -8,17 +8,29 @@
         vorr.i16        q2, #0xabab
         vorr.i16        q2, #0xabab
 
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: operand must be a register in range [d0, d31]
+@ CHECK: note: invalid operand for instruction
 @ CHECK: vorr.i32        d2, #0xffffffff
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: operand must be a register in range [q0, q15]
+@ CHECK: note: invalid operand for instruction
 @ CHECK: vorr.i32        q2, #0xffffffff
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: operand must be a register in range [d0, d31]
+@ CHECK: note: invalid operand for instruction
 @ CHECK: vorr.i32        d2, #0xabababab
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: operand must be a register in range [q0, q15]
+@ CHECK: note: invalid operand for instruction
 @ CHECK: vorr.i32        q2, #0xabababab
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: operand must be a register in range [q0, q15]
+@ CHECK: note: invalid operand for instruction
 @ CHECK: vorr.i16        q2, #0xabab
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: operand must be a register in range [q0, q15]
+@ CHECK: note: invalid operand for instruction
 @ CHECK: vorr.i16        q2, #0xabab
 
         vbic.i32        d2, #0xffffffff

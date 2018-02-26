@@ -21,8 +21,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
-#include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
@@ -68,9 +67,23 @@ static inline void remapInstruction(Instruction *I,
                                     ValueToValueMapTy &VMap) {
   for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
     Value *Op = I->getOperand(op);
+
+    // Unwrap arguments of dbg.value intrinsics.
+    bool Wrapped = false;
+    if (auto *V = dyn_cast<MetadataAsValue>(Op))
+      if (auto *Unwrapped = dyn_cast<ValueAsMetadata>(V->getMetadata())) {
+        Op = Unwrapped->getValue();
+        Wrapped = true;
+      }
+
+    auto wrap = [&](Value *V) {
+      auto &C = I->getContext();
+      return Wrapped ? MetadataAsValue::get(C, ValueAsMetadata::get(V)) : V;
+    };
+
     ValueToValueMapTy::iterator It = VMap.find(Op);
     if (It != VMap.end())
-      I->setOperand(op, It->second);
+      I->setOperand(op, wrap(It->second));
   }
 
   if (PHINode *PN = dyn_cast<PHINode>(I)) {
@@ -200,7 +213,7 @@ const Loop* llvm::addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
     assert(OriginalBB == OldLoop->getHeader() &&
            "Header should be first in RPO");
 
-    NewLoop = new Loop();
+    NewLoop = LI->AllocateLoop();
     Loop *NewLoopParent = NewLoops.lookup(OldLoop->getParentLoop());
 
     if (NewLoopParent)
@@ -245,18 +258,14 @@ static bool isEpilogProfitable(Loop *L) {
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   assert(PreHeader && Header);
-  for (Instruction &BBI : *Header) {
-    PHINode *PN = dyn_cast<PHINode>(&BBI);
-    if (!PN)
-      break;
-    if (isa<ConstantInt>(PN->getIncomingValueForBlock(PreHeader)))
+  for (const PHINode &PN : Header->phis()) {
+    if (isa<ConstantInt>(PN.getIncomingValueForBlock(PreHeader)))
       return true;
   }
   return false;
 }
 
-/// Unroll the given loop by Count. The loop must be in LCSSA form. Returns true
-/// if unrolling was successful, or false if the loop was unmodified. Unrolling
+/// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
 /// branch instruction. However, if the trip count (and multiple) are not known,
 /// loop unrolling will mostly produce more code that is no faster.
@@ -285,37 +294,36 @@ static bool isEpilogProfitable(Loop *L) {
 /// runtime-unroll the loop if computing RuntimeTripCount will be expensive and
 /// AllowExpensiveTripCount is false.
 ///
-/// If we want to perform PGO-based loop peeling, PeelCount is set to the 
+/// If we want to perform PGO-based loop peeling, PeelCount is set to the
 /// number of iterations we want to peel off.
 ///
 /// The LoopInfo Analysis that is passed will be kept consistent.
 ///
 /// This utility preserves LoopInfo. It will also preserve ScalarEvolution and
 /// DominatorTree if they are non-null.
-bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
-                      bool AllowRuntime, bool AllowExpensiveTripCount,
-                      bool PreserveCondBr, bool PreserveOnlyFirst,
-                      unsigned TripMultiple, unsigned PeelCount, LoopInfo *LI,
-                      ScalarEvolution *SE, DominatorTree *DT,
-                      AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
-                      bool PreserveLCSSA) {
+LoopUnrollResult llvm::UnrollLoop(
+    Loop *L, unsigned Count, unsigned TripCount, bool Force, bool AllowRuntime,
+    bool AllowExpensiveTripCount, bool PreserveCondBr, bool PreserveOnlyFirst,
+    unsigned TripMultiple, unsigned PeelCount, bool UnrollRemainder,
+    LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    OptimizationRemarkEmitter *ORE, bool PreserveLCSSA) {
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
     DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   BasicBlock *LatchBlock = L->getLoopLatch();
   if (!LatchBlock) {
     DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   // Loops with indirectbr cannot be cloned.
   if (!L->isSafeToClone()) {
     DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   // The current loop unroll pass can only unroll loops with a single latch
@@ -329,7 +337,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     // The loop-rotate pass can be helpful to avoid this in many cases.
     DEBUG(dbgs() <<
              "  Can't unroll; loop not terminated by a conditional branch.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   auto CheckSuccessors = [&](unsigned S1, unsigned S2) {
@@ -339,14 +347,14 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   if (!CheckSuccessors(0, 1) && !CheckSuccessors(1, 0)) {
     DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
                     " exiting the loop can be unrolled\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   if (Header->hasAddressTaken()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
     DEBUG(dbgs() <<
           "  Won't unroll loop: address of header block is taken.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   if (TripCount != 0)
@@ -362,7 +370,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   // Don't enter the unroll code if there is nothing to do.
   if (TripCount == 0 && Count < 2 && PeelCount == 0) {
     DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   assert(Count > 0);
@@ -395,8 +403,19 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
          "Did not expect runtime trip-count unrolling "
          "and peeling for the same loop");
 
-  if (PeelCount)
-    peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
+  if (PeelCount) {
+    bool Peeled = peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
+
+    // Successful peeling may result in a change in the loop preheader/trip
+    // counts. If we later unroll the loop, we want these to be updated.
+    if (Peeled) {
+      BasicBlock *ExitingBlock = L->getExitingBlock();
+      assert(ExitingBlock && "Loop without exiting block?");
+      Preheader = L->getLoopPreheader();
+      TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
+      TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
+    }
+  }
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
@@ -418,15 +437,15 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
 
   if (RuntimeTripCount && TripMultiple % Count != 0 &&
       !UnrollRuntimeLoopRemainder(L, Count, AllowExpensiveTripCount,
-                                  EpilogProfitability, LI, SE, DT,
-                                  PreserveLCSSA)) {
+                                  EpilogProfitability, UnrollRemainder, LI, SE,
+                                  DT, AC, PreserveLCSSA)) {
     if (Force)
       RuntimeTripCount = false;
     else {
       DEBUG(
           dbgs() << "Wont unroll; remainder loop could not be generated"
                     "when assuming runtime trip count\n");
-      return false;
+      return LoopUnrollResult::Unmodified;
     }
   }
 
@@ -450,36 +469,53 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   // Report the unrolling decision.
   if (CompletelyUnroll) {
     DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
-          << " with trip count " << TripCount << "!\n");
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
-                                 L->getHeader())
-              << "completely unrolled loop with "
-              << NV("UnrollCount", TripCount) << " iterations");
+                 << " with trip count " << TripCount << "!\n");
+    if (ORE)
+      ORE->emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
+                                  L->getHeader())
+               << "completely unrolled loop with "
+               << NV("UnrollCount", TripCount) << " iterations";
+      });
   } else if (PeelCount) {
     DEBUG(dbgs() << "PEELING loop %" << Header->getName()
                  << " with iteration count " << PeelCount << "!\n");
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
-                                 L->getHeader())
-              << " peeled loop by " << NV("PeelCount", PeelCount)
-              << " iterations");
+    if (ORE)
+      ORE->emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
+                                  L->getHeader())
+               << " peeled loop by " << NV("PeelCount", PeelCount)
+               << " iterations";
+      });
   } else {
-    OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
-                            L->getHeader());
-    Diag << "unrolled loop by a factor of " << NV("UnrollCount", Count);
+    auto DiagBuilder = [&]() {
+      OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
+                              L->getHeader());
+      return Diag << "unrolled loop by a factor of "
+                  << NV("UnrollCount", Count);
+    };
 
     DEBUG(dbgs() << "UNROLLING loop %" << Header->getName()
           << " by " << Count);
     if (TripMultiple == 0 || BreakoutTrip != TripMultiple) {
       DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
-      ORE->emit(Diag << " with a breakout at trip "
-                     << NV("BreakoutTrip", BreakoutTrip));
+      if (ORE)
+        ORE->emit([&]() {
+          return DiagBuilder() << " with a breakout at trip "
+                               << NV("BreakoutTrip", BreakoutTrip);
+        });
     } else if (TripMultiple != 1) {
       DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
-      ORE->emit(Diag << " with " << NV("TripMultiple", TripMultiple)
-                     << " trips per branch");
+      if (ORE)
+        ORE->emit([&]() {
+          return DiagBuilder() << " with " << NV("TripMultiple", TripMultiple)
+                               << " trips per branch";
+        });
     } else if (RuntimeTripCount) {
       DEBUG(dbgs() << " with run-time trip count");
-      ORE->emit(Diag << " with run-time trip count");
+      if (ORE)
+        ORE->emit(
+            [&]() { return DiagBuilder() << " with run-time trip count"; });
     }
     DEBUG(dbgs() << "!\n");
   }
@@ -523,8 +559,9 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   if (Header->getParent()->isDebugInfoForProfiling())
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (const DILocation *DIL = I.getDebugLoc())
-          I.setDebugLoc(DIL->cloneWithDuplicationFactor(Count));
+        if (!isa<DbgInfoIntrinsic>(&I))
+          if (const DILocation *DIL = I.getDebugLoc())
+            I.setDebugLoc(DIL->cloneWithDuplicationFactor(Count));
 
   for (unsigned It = 1; It != Count; ++It) {
     std::vector<BasicBlock*> NewBlocks;
@@ -571,13 +608,12 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       for (BasicBlock *Succ : successors(*BB)) {
         if (L->contains(Succ))
           continue;
-        for (BasicBlock::iterator BBI = Succ->begin();
-             PHINode *phi = dyn_cast<PHINode>(BBI); ++BBI) {
-          Value *Incoming = phi->getIncomingValueForBlock(*BB);
+        for (PHINode &PHI : Succ->phis()) {
+          Value *Incoming = PHI.getIncomingValueForBlock(*BB);
           ValueToValueMapTy::iterator It = LastValueMap.find(Incoming);
           if (It != LastValueMap.end())
             Incoming = It->second;
-          phi->addIncoming(Incoming, New);
+          PHI.addIncoming(Incoming, New);
         }
       }
       // Keep track of new headers and latches as we create them, so that
@@ -681,10 +717,8 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
         for (BasicBlock *Succ: successors(BB)) {
           if (Succ == Headers[i])
             continue;
-          for (BasicBlock::iterator BBI = Succ->begin();
-               PHINode *Phi = dyn_cast<PHINode>(BBI); ++BBI) {
-            Phi->removeIncomingValue(BB, false);
-          }
+          for (PHINode &Phi : Succ->phis())
+            Phi.removeIncomingValue(BB, false);
         }
       }
       // Replace the conditional branch with an unconditional one.
@@ -796,7 +830,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   Loop *OuterL = L->getParentLoop();
   // Update LoopInfo if the loop is completely removed.
   if (CompletelyUnroll)
-    LI->markAsRemoved(L);
+    LI->erase(L);
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
@@ -821,7 +855,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       if (NeedToFixLCSSA) {
         // LCSSA must be performed on the outermost affected loop. The unrolled
         // loop's last loop latch is guaranteed to be in the outermost loop
-        // after LoopInfo's been updated by markAsRemoved.
+        // after LoopInfo's been updated by LoopInfo::erase.
         Loop *LatchLoop = LI->getLoopFor(Latches.back());
         Loop *FixLCSSALoop = OuterL;
         if (!FixLCSSALoop->contains(LatchLoop))
@@ -844,7 +878,8 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     }
   }
 
-  return true;
+  return CompletelyUnroll ? LoopUnrollResult::FullyUnrolled
+                          : LoopUnrollResult::PartiallyUnrolled;
 }
 
 /// Given an llvm.loop loop id metadata node, returns the loop hint metadata

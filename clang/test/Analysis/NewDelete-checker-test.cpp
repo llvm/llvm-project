@@ -1,5 +1,12 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -DTEST_INLINABLE_ALLOCATORS -verify %s
+
 #include "Inputs/system-header-simulator-cxx.h"
 
 typedef __typeof__(sizeof(int)) size_t;
@@ -45,14 +52,18 @@ void testGlobalNoThrowPlacementOpNewBeforeOverload() {
   void *p = operator new(0, std::nothrow);
 }
 #ifdef LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
+#ifndef TEST_INLINABLE_ALLOCATORS
+// expected-warning@-3{{Potential leak of memory pointed to by 'p'}}
+#endif
 #endif
 
 void testGlobalNoThrowPlacementExprNewBeforeOverload() {
   int *p = new(std::nothrow) int;
 }
 #ifdef LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
+#ifndef TEST_INLINABLE_ALLOCATORS
+// expected-warning@-3{{Potential leak of memory pointed to by 'p'}}
+#endif
 #endif
 
 //----- Standard pointer placement operators
@@ -186,7 +197,10 @@ void testExprDeleteArrArg() {
 
 void testAllocDeallocNames() {
   int *p = new(std::nothrow) int[1];
-  delete[] (++p); // expected-warning{{Argument to 'delete[]' is offset by 4 bytes from the start of memory allocated by 'new[]'}}
+  delete[] (++p);
+#ifndef TEST_INLINABLE_ALLOCATORS
+  // expected-warning@-2{{Argument to 'delete[]' is offset by 4 bytes from the start of memory allocated by 'new[]'}}
+#endif
 }
 
 //--------------------------------

@@ -24,3 +24,6 @@
 
 // RUN: %clang -target armv7-apple-darwin10 -### -S -mno-implicit-float -mimplicit-float %s 2>&1 | FileCheck -check-prefix=TEST8 %s
 // TEST8-NOT: "-no-implicit-float"
+
+// RUN: %clang -target x86_64-linux-gnu -### -c -fclang-abi-compat=3.2 %s 2>&1 | FileCheck -check-prefix=TEST9 %s
+// TEST9: "-fclang-abi-compat=3.2"

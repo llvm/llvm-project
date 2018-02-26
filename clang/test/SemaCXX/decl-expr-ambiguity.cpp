@@ -48,13 +48,20 @@ void f() {
 
 struct RAII {
   RAII();
+  RAII(int);
   ~RAII();
+};
+
+struct NotRAII {
+  NotRAII();
+  NotRAII(int);
 };
 
 void func();
 void func2(short);
 namespace N {
   struct S;
+  int n;
 
   void emptyParens() {
     RAII raii(); // expected-warning {{function declaration}} expected-note {{remove parentheses to declare a variable}}
@@ -69,6 +76,23 @@ namespace N {
   void nonEmptyParens() {
     int f = 0, // g = 0; expected-note {{change this ',' to a ';' to call 'func2'}}
     func2(short(f)); // expected-warning {{function declaration}} expected-note {{add a pair of parentheses}}
+
+    RAII(n); // expected-warning {{parentheses were disambiguated as redundant parentheses around declaration of variable named 'n'}}
+    // expected-note@-1 {{add a variable name to declare a 'RAII' initialized with 'n'}}
+    // expected-note@-2 {{add enclosing parentheses to perform a function-style cast}}
+    // expected-note@-3 {{remove parentheses to silence this warning}}
+
+    RAII(undeclared1);
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wredundant-parens"
+    RAII(undeclared2); // expected-warning {{redundant parentheses surrounding declarator}}
+#pragma clang diagnostic pop
+
+    {
+      NotRAII(n); // expected-warning {{parentheses were disambiguated as redundant parentheses around declaration of variable named 'n'}}
+      // expected-note@-1 {{add enclosing parentheses to perform a function-style cast}}
+      // expected-note@-2 {{remove parentheses to silence this warning}}
+    }
   }
 }
 
@@ -100,4 +124,21 @@ void fizbin() {
   baz* b2; // expected-error {{use of undeclared identifier 'b2'}}
   baz b3; // expected-error {{must use 'class' tag to refer to type 'baz' in this scope}}
 }
+}
+
+namespace TemporaryFromFunctionCall {
+  struct A {
+    A(int);
+  };
+  int f();
+  int g(int);
+  namespace N {
+    void x() {
+      // FIXME: For the first and second of these (but not the third), we
+      // should produce a vexing-parse warning.
+      A(f());
+      A(g(int()));
+      A(g(int));
+    }
+  }
 }

@@ -80,6 +80,7 @@ const char windows_resource[] =
     "\x00\x00\x00\x00\x020\x00\x00\x00\xff\xff\x00\x00\xff\xff\x00\x00";
 const char macho_dynamically_linked_shared_lib_stub[] =
     "\xfe\xed\xfa\xce........\x00\x00\x00\x09............";
+const char ms_dos_stub_broken[] = "\x4d\x5a\x20\x20";
 
 TEST_F(MagicTest, Magic) {
   struct type {
@@ -108,7 +109,9 @@ TEST_F(MagicTest, Magic) {
       DEFINE(macho_dynamically_linked_shared_lib_stub),
       DEFINE(macho_dsym_companion),
       DEFINE(macho_kext_bundle),
-      DEFINE(windows_resource)
+      DEFINE(windows_resource),
+      {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),
+       file_magic::unknown},
 #undef DEFINE
   };
 

@@ -1,4 +1,4 @@
-//===-- CodeGen/AsmPrinter/EHStreamer.cpp - Exception Directive Streamer --===//
+//===- CodeGen/AsmPrinter/EHStreamer.cpp - Exception Directive Streamer ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "EHStreamer.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <vector>
 
 using namespace llvm;
 
 EHStreamer::EHStreamer(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}
 
-EHStreamer::~EHStreamer() {}
+EHStreamer::~EHStreamer() = default;
 
 /// How many leading type ids two landing pads have in common.
 unsigned EHStreamer::sharedTypeIDs(const LandingPadInfo *L,
@@ -50,7 +62,6 @@ unsigned EHStreamer::
 computeActionsTable(const SmallVectorImpl<const LandingPadInfo*> &LandingPads,
                     SmallVectorImpl<ActionEntry> &Actions,
                     SmallVectorImpl<unsigned> &FirstActions) {
-
   // The action table follows the call-site table in the LSDA. The individual
   // records are of two types:
   //
@@ -478,13 +489,14 @@ void EHStreamer::emitExceptionTable() {
     sizeof(int8_t) +                            // TType format
     (HaveTTData ? TTypeBaseOffsetSize : 0) +    // TType base offset size
     TTypeBaseOffset;                            // TType base offset
-  unsigned SizeAlign = (4 - TotalSize) & 3;
+  unsigned PadBytes = (4 - TotalSize) & 3;
 
   if (HaveTTData) {
     // Account for any extra padding that will be added to the call site table
     // length.
-    Asm->EmitULEB128(TTypeBaseOffset, "@TType base offset", SizeAlign);
-    SizeAlign = 0;
+    Asm->EmitPaddedULEB128(TTypeBaseOffset, TTypeBaseOffsetSize + PadBytes,
+                           "@TType base offset");
+    PadBytes = 0;
   }
 
   bool VerboseAsm = Asm->OutStreamer->isVerboseAsm();
@@ -494,7 +506,9 @@ void EHStreamer::emitExceptionTable() {
     Asm->EmitEncodingByte(dwarf::DW_EH_PE_udata4, "Call site");
 
     // Add extra padding if it wasn't added to the TType base offset.
-    Asm->EmitULEB128(CallSiteTableLength, "Call site table length", SizeAlign);
+    Asm->EmitPaddedULEB128(CallSiteTableLength,
+                           CallSiteTableLengthSize + PadBytes,
+                           "Call site table length");
 
     // Emit the landing pad site information.
     unsigned idx = 0;
@@ -547,7 +561,9 @@ void EHStreamer::emitExceptionTable() {
     Asm->EmitEncodingByte(dwarf::DW_EH_PE_udata4, "Call site");
 
     // Add extra padding if it wasn't added to the TType base offset.
-    Asm->EmitULEB128(CallSiteTableLength, "Call site table length", SizeAlign);
+    Asm->EmitPaddedULEB128(CallSiteTableLength,
+                           CallSiteTableLengthSize + PadBytes,
+                           "Call site table length");
 
     unsigned Entry = 0;
     for (SmallVectorImpl<CallSiteEntry>::const_iterator

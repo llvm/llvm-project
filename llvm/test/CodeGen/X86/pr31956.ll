@@ -8,7 +8,7 @@ target triple = "x86_64-scei-ps4"
 
 define <4 x float> @foo() {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2,3]
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1

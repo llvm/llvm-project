@@ -144,3 +144,20 @@ namespace var_template_partial_spec_incomplete {
   template<typename T, typename U = void> int n<T *>; // expected-error +{{}} expected-note {{}}
   int k = n<void *>;
 }
+
+namespace deduceFunctionSpecializationForInvalidOutOfLineFunction {
+
+template <typename InputT, typename OutputT>
+struct SourceSelectionRequirement {
+  template<typename T>
+  OutputT evaluateSelectionRequirement(InputT &&Value) {
+  }
+};
+
+template <typename InputT, typename OutputT>
+OutputT SourceSelectionRequirement<InputT, OutputT>::
+evaluateSelectionRequirement<void>(InputT &&Value) { // expected-error {{cannot specialize a member of an unspecialized template}}
+  return Value;
+}
+
+}

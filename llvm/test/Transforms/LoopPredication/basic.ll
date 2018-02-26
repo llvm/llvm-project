@@ -11,8 +11,9 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp ult i32 [[max_index]], %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -38,6 +39,42 @@ exit:
   ret i32 %result
 }
 
+define i32 @unsigned_loop_0_to_n_ule_latch_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @unsigned_loop_0_to_n_ule_latch_ult_check
+entry:
+  %tmp5 = icmp eq i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp ult i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ule i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
 define i32 @unsigned_loop_0_to_n_ugt_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_ugt_check
 entry:
@@ -46,8 +83,9 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp ult i32 [[max_index]], %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -73,6 +111,524 @@ exit:
   ret i32 %result
 }
 
+define i32 @signed_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_ult_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %length.ptr, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_ult_check_length_range_known
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  %length = load i32, i32* %length.ptr, !range !{i32 1, i32 2147483648}
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 true, [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_inverse_latch_predicate(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_inverse_latch_predicate
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp sgt i32 %i.next, %n
+  br i1 %continue, label %exit, label %loop
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_sle_latch_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_sle_latch_ult_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp sle i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_preincrement_latch_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_preincrement_latch_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[length_minus_1:[^ ]+]] = add i32 %length, -1
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %n, [[length_minus_1]]
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add i32 %i, 1
+  %continue = icmp slt i32 %i, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_preincrement_latch_check_postincrement_guard_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_preincrement_latch_check_postincrement_guard_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[length_minus_2:[^ ]+]] = add i32 %length, -2
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %n, [[length_minus_2]]
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 1, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+
+  %i.next = add i32 %i, 1
+  %within.bounds = icmp ult i32 %i.next, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %continue = icmp slt i32 %i, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_sle_latch_offset_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_sle_latch_offset_ult_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[length_minus_1:[^ ]+]] = add i32 %length, -1
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp slt i32 %n, [[length_minus_1]]
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 1, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %i.offset = add i32 %i, 1
+  %within.bounds = icmp ult i32 %i.offset, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add i32 %i, 1
+  %continue = icmp sle i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_offset_sle_latch_offset_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_offset_sle_latch_offset_ult_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 1, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %i.offset = add i32 %i, 1
+  %within.bounds = icmp ult i32 %i.offset, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add i32 %i, 1
+  %i.next.offset = add i32 %i.next, 1
+  %continue = icmp sle i32 %i.next.offset, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @unsupported_latch_pred_loop_0_to_n(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @unsupported_latch_pred_loop_0_to_n
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: %within.bounds = icmp ult i32 %i, %length
+; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nsw i32 %i, 1
+  %continue = icmp ne i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_unsupported_iv_step(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_unsupported_iv_step
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: %within.bounds = icmp ult i32 %i, %length
+; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nsw i32 %i, 2
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_equal_iv_range_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_equal_iv_range_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %j = phi i32 [ %j.next, %loop ], [ 0, %loop.preheader ]
+
+  %within.bounds = icmp ult i32 %j, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %j.next = add nsw i32 %j, 1
+  %i.next = add nsw i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_start_to_n_offset_iv_range_check(i32* %array, i32 %start.i,
+                                                         i32 %start.j, i32 %length,
+                                                         i32 %n) {
+; CHECK-LABEL: @signed_loop_start_to_n_offset_iv_range_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[length_plus_start_i:[^ ]+]] = add i32 %length, %start.i
+; CHECK-NEXT: [[limit:[^ ]+]] = sub i32 [[length_plus_start_i]], %start.j
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %n, [[limit]]
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 %start.j, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ %start.i, %loop.preheader ]
+  %j = phi i32 [ %j.next, %loop ], [ %start.j, %loop.preheader ]
+
+  %within.bounds = icmp ult i32 %j, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %j.next = add i32 %j, 1
+  %i.next = add i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_different_iv_types(i32* %array, i16 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_different_iv_types
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: %within.bounds = icmp ult i16 %j, %length
+; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %j = phi i16 [ %j.next, %loop ], [ 0, %loop.preheader ]
+
+  %within.bounds = icmp ult i16 %j, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %j.next = add i16 %j, 1
+  %i.next = add i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_different_iv_strides(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_different_iv_strides
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: %within.bounds = icmp ult i32 %j, %length
+; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %j = phi i32 [ %j.next, %loop ], [ 0, %loop.preheader ]
+
+  %within.bounds = icmp ult i32 %j, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %j.next = add nsw i32 %j, 2
+  %i.next = add nsw i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
 
 define i32 @two_range_checks(i32* %array.1, i32 %length.1,
                              i32* %array.2, i32 %length.2, i32 %n) {
@@ -83,9 +639,12 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = icmp ult i32 [[max_index]], %length.{{1|2}}
-; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = icmp ult i32 [[max_index]], %length.{{1|2}}
+; CHECK: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2}}
+; CHECK-NEXT: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2}}
+; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = and i1 [[first_iteration_check_1]], [[limit_check_1]]
+; CHECK-NEXT: [[limit_check_2:[^ ]+]] = icmp ule i32 %n, %length.{{1|2}}
+; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2}}
+; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = and i1 [[first_iteration_check_2]], [[limit_check_2]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -128,10 +687,15 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = icmp ult i32 [[max_index]], %length.{{1|2|3}}
-; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = icmp ult i32 [[max_index]], %length.{{1|2|3}}
-; CHECK-NEXT: [[wide_cond_3:[^ ]+]] = icmp ult i32 [[max_index]], %length.{{1|2|3}}
+; CHECK: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
+; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = and i1 [[first_iteration_check_1]], [[limit_check_1]]
+; CHECK-NEXT: [[limit_check_2:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
+; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = and i1 [[first_iteration_check_2]], [[limit_check_2]]
+; CHECK-NEXT: [[limit_check_3:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_3:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
+; CHECK-NEXT: [[wide_cond_3:[^ ]+]] = and i1 [[first_iteration_check_3]], [[limit_check_3]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -181,10 +745,15 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = icmp ult i32 [[max_index]], %length.1
-; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = icmp ult i32 [[max_index]], %length.2
-; CHECK-NEXT: [[wide_cond_3:[^ ]+]] = icmp ult i32 [[max_index]], %length.3
+; CHECK: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
+; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = and i1 [[first_iteration_check_1]], [[limit_check_1]]
+; CHECK-NEXT: [[limit_check_2:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
+; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = and i1 [[first_iteration_check_2]], [[limit_check_2]]
+; CHECK-NEXT: [[limit_check_3:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_3:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
+; CHECK-NEXT: [[wide_cond_3:[^ ]+]] = and i1 [[first_iteration_check_3]], [[limit_check_3]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -228,120 +797,6 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_start_to_n_sge_0_check(i32* %array, i32 %length, i32 %start, i32 %n) {
-; CHECK-LABEL: @signed_loop_start_to_n_sge_0_check
-entry:
-  %tmp5 = icmp eq i32 %n, 0
-  br i1 %tmp5, label %exit, label %loop.preheader
-
-loop.preheader:
-; CHECK: loop.preheader:
-; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp sge i32 %start, 0
-; CHECK-NEXT: br label %loop
-  br label %loop
-
-loop:
-; CHECK: loop:
-; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
-  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
-  %i = phi i32 [ %i.next, %loop ], [ %start, %loop.preheader ]
-  %within.bounds = icmp sge i32 %i, 0
-  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
-
-  %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
-  %loop.acc.next = add i32 %loop.acc, %array.i
-
-  %i.next = add nsw i32 %i, 1
-  %continue = icmp slt i32 %i.next, %n
-  br i1 %continue, label %loop, label %exit
-
-exit:
-  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
-  ret i32 %result
-}
-
-define i32 @signed_loop_start_to_n_upper_slt_length_check(i32* %array, i32 %length, i32 %start, i32 %n) {
-; CHECK-LABEL: @signed_loop_start_to_n_upper_slt_length_check
-entry:
-  %tmp5 = icmp sle i32 %n, 0
-  br i1 %tmp5, label %exit, label %loop.preheader
-
-loop.preheader:
-; CHECK: loop.preheader:
-; CHECK: [[start_1:[^ ]+]] = add i32 %start, 1
-; CHECK-NEXT: [[n_sgt_start_1:[^ ]+]] = icmp sgt i32 %n, [[start_1]]
-; CHECK-NEXT: [[smax:[^ ]+]] = select i1 [[n_sgt_start_1]], i32 %n, i32 [[start_1]]
-; CHECK-NEXT: [[max_index:[^ ]+]] = add i32 [[smax]], -1
-; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp slt i32 [[max_index]], %length
-; CHECK-NEXT: br label %loop
-  br label %loop
-
-loop:
-; CHECK: loop:
-; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
-  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
-  %i = phi i32 [ %i.next, %loop ], [ %start, %loop.preheader ]
-  %within.bounds = icmp slt i32 %i, %length
-  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
-
-  %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
-  %loop.acc.next = add i32 %loop.acc, %array.i
-
-  %i.next = add nsw i32 %i, 1
-  %continue = icmp slt i32 %i.next, %n
-  br i1 %continue, label %loop, label %exit
-
-exit:
-  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
-  ret i32 %result
-}
-
-define i32 @signed_loop_start_to_n_both_checks(i32* %array, i32 %length, i32 %start, i32 %n) {
-; CHECK-LABEL: @signed_loop_start_to_n_both_checks
-entry:
-  %tmp5 = icmp sle i32 %n, 0
-  br i1 %tmp5, label %exit, label %loop.preheader
-
-loop.preheader:
-; CHECK: loop.preheader:
-; CHECK: [[lower_check:[^ ]+]] = icmp sge i32 %start, 0
-; CHECK-NEXT: [[start_1:[^ ]+]] = add i32 %start, 1
-; CHECK-NEXT: [[n_sgt_start_1:[^ ]+]] = icmp sgt i32 %n, [[start_1]]
-; CHECK-NEXT: [[smax:[^ ]+]] = select i1 [[n_sgt_start_1]], i32 %n, i32 [[start_1]]
-; CHECK-NEXT: [[max_index:[^ ]+]] = add i32 [[smax]], -1
-; CHECK-NEXT: [[upper_check:[^ ]+]] = icmp slt i32 [[max_index]], %length
-; CHECK-NEXT: br label %loop
-  br label %loop
-
-loop:
-; CHECK: loop:
-; CHECK: [[wide_cond:[^ ]+]] = and i1 [[lower_check]], [[upper_check]]
-; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
-  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
-  %i = phi i32 [ %i.next, %loop ], [ %start, %loop.preheader ]
-  %within.bounds.1 = icmp slt i32 %i, %length
-  %within.bounds.2 = icmp sge i32 %i, 0
-  %within.bounds = and i1 %within.bounds.1, %within.bounds.2
-  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
-
-  %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
-  %loop.acc.next = add i32 %loop.acc, %array.i
-
-  %i.next = add nsw i32 %i, 1
-  %continue = icmp slt i32 %i.next, %n
-  br i1 %continue, label %loop, label %exit
-
-exit:
-  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
-  ret i32 %result
-}
-
 define i32 @unsigned_loop_0_to_n_unrelated_condition(i32* %array, i32 %length, i32 %n, i32 %x) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_unrelated_condition
 entry:
@@ -350,8 +805,9 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp ult i32 [[max_index]], %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -439,12 +895,12 @@ loop.preheader:
 loop:
 ; CHECK: loop:
 ; CHECK: %bound = add i32 %i, %x
-; CHECK-NEXT: %within.bounds = icmp slt i32 %i, %bound
+; CHECK-NEXT: %within.bounds = icmp ult i32 %i, %bound
 ; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
   %i = phi i32 [ %i.next, %loop ], [ %start, %loop.preheader ]
   %bound = add i32 %i, %x
-  %within.bounds = icmp slt i32 %i, %bound
+  %within.bounds = icmp ult i32 %i, %bound
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
@@ -503,9 +959,10 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
-; CHECK-NEXT: [[length:[^ ]+]] = zext i16 %length.i16 to i32
-; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp ult i32 [[max_index]], [[length]]
+; CHECK: [[length:[^ ]+]] = zext i16 %length.i16 to i32
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ule i32 %n, [[length]]
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, [[length]]
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 

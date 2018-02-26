@@ -1,4 +1,4 @@
-//===------ CXXInheritance.h - C++ Inheritance ------------------*- C++ -*-===//
+//===- CXXInheritance.h - C++ Inheritance -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,19 +16,23 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include <cassert>
+#include "llvm/ADT/iterator_range.h"
 #include <list>
+#include <memory>
+#include <utility>
 
 namespace clang {
-  
-class CXXBaseSpecifier;
-class CXXMethodDecl;
-class CXXRecordDecl;
+
+class ASTContext;
 class NamedDecl;
   
 /// \brief Represents an element in a path from a derived class to a
@@ -66,12 +70,12 @@ struct CXXBasePathElement {
 /// subobject is being used.
 class CXXBasePath : public SmallVector<CXXBasePathElement, 4> {
 public:
-  CXXBasePath() : Access(AS_public) {}
-
   /// \brief The access along this inheritance path.  This is only
   /// calculated when recording paths.  AS_none is a special value
   /// used to indicate a path which permits no legal access.
-  AccessSpecifier Access;
+  AccessSpecifier Access = AS_public;
+
+  CXXBasePath() = default;
 
   /// \brief The set of declarations found inside this base class
   /// subobject.
@@ -113,8 +117,10 @@ public:
 /// refer to the same base class subobject of type A (the virtual
 /// one), there is no ambiguity.
 class CXXBasePaths {
+  friend class CXXRecordDecl;
+
   /// \brief The type from which this search originated.
-  CXXRecordDecl *Origin;
+  CXXRecordDecl *Origin = nullptr;
   
   /// Paths - The actual set of paths that can be taken from the
   /// derived class to the same base class.
@@ -152,15 +158,13 @@ class CXXBasePaths {
   CXXBasePath ScratchPath;
 
   /// DetectedVirtual - The base class that is virtual.
-  const RecordType *DetectedVirtual;
+  const RecordType *DetectedVirtual = nullptr;
   
   /// \brief Array of the declarations that have been found. This
   /// array is constructed only if needed, e.g., to iterate over the
   /// results within LookupResult.
   std::unique_ptr<NamedDecl *[]> DeclsFound;
-  unsigned NumDeclsFound;
-  
-  friend class CXXRecordDecl;
+  unsigned NumDeclsFound = 0;
   
   void ComputeDeclsFound();
 
@@ -169,17 +173,16 @@ class CXXBasePaths {
                      bool LookupInDependent = false);
 
 public:
-  typedef std::list<CXXBasePath>::iterator paths_iterator;
-  typedef std::list<CXXBasePath>::const_iterator const_paths_iterator;
-  typedef NamedDecl **decl_iterator;
+  using paths_iterator = std::list<CXXBasePath>::iterator;
+  using const_paths_iterator = std::list<CXXBasePath>::const_iterator;
+  using decl_iterator = NamedDecl **;
   
   /// BasePaths - Construct a new BasePaths structure to record the
   /// paths for a derived-to-base search.
   explicit CXXBasePaths(bool FindAmbiguities = true, bool RecordPaths = true,
                         bool DetectVirtual = true)
-      : Origin(), FindAmbiguities(FindAmbiguities), RecordPaths(RecordPaths),
-        DetectVirtual(DetectVirtual), DetectedVirtual(nullptr),
-        NumDeclsFound(0) {}
+      : FindAmbiguities(FindAmbiguities), RecordPaths(RecordPaths),
+        DetectVirtual(DetectVirtual) {}
 
   paths_iterator begin() { return Paths.begin(); }
   paths_iterator end()   { return Paths.end(); }
@@ -189,7 +192,8 @@ public:
   CXXBasePath&       front()       { return Paths.front(); }
   const CXXBasePath& front() const { return Paths.front(); }
   
-  typedef llvm::iterator_range<decl_iterator> decl_range;
+  using decl_range = llvm::iterator_range<decl_iterator>;
+
   decl_range found_decls();
   
   /// \brief Determine whether the path from the most-derived type to the
@@ -231,25 +235,24 @@ public:
 /// \brief Uniquely identifies a virtual method within a class
 /// hierarchy by the method itself and a class subobject number.
 struct UniqueVirtualMethod {
-  UniqueVirtualMethod()
-    : Method(nullptr), Subobject(0), InVirtualSubobject(nullptr) { }
-
-  UniqueVirtualMethod(CXXMethodDecl *Method, unsigned Subobject,
-                      const CXXRecordDecl *InVirtualSubobject)
-    : Method(Method), Subobject(Subobject), 
-      InVirtualSubobject(InVirtualSubobject) { }
-
   /// \brief The overriding virtual method.
-  CXXMethodDecl *Method;
+  CXXMethodDecl *Method = nullptr;
 
   /// \brief The subobject in which the overriding virtual method
   /// resides.
-  unsigned Subobject;
+  unsigned Subobject = 0;
 
   /// \brief The virtual base class subobject of which this overridden
   /// virtual method is a part. Note that this records the closest
   /// derived virtual base class subobject.
-  const CXXRecordDecl *InVirtualSubobject;
+  const CXXRecordDecl *InVirtualSubobject = nullptr;
+
+  UniqueVirtualMethod() = default;
+
+  UniqueVirtualMethod(CXXMethodDecl *Method, unsigned Subobject,
+                      const CXXRecordDecl *InVirtualSubobject)
+      : Method(Method), Subobject(Subobject),
+        InVirtualSubobject(InVirtualSubobject) {}
 
   friend bool operator==(const UniqueVirtualMethod &X,
                          const UniqueVirtualMethod &Y) {
@@ -271,14 +274,16 @@ struct UniqueVirtualMethod {
 /// pair is the virtual method that overrides it (including the
 /// subobject in which that virtual function occurs).
 class OverridingMethods {
-  typedef SmallVector<UniqueVirtualMethod, 4> ValuesT;
-  typedef llvm::MapVector<unsigned, ValuesT> MapType;
+  using ValuesT = SmallVector<UniqueVirtualMethod, 4>;
+  using MapType = llvm::MapVector<unsigned, ValuesT>;
+
   MapType Overrides;
 
 public:
   // Iterate over the set of subobjects that have overriding methods.
-  typedef MapType::iterator iterator;
-  typedef MapType::const_iterator const_iterator;
+  using iterator = MapType::iterator;
+  using const_iterator = MapType::const_iterator;
+
   iterator begin() { return Overrides.begin(); }
   const_iterator begin() const { return Overrides.begin(); }
   iterator end() { return Overrides.end(); }
@@ -287,10 +292,10 @@ public:
 
   // Iterate over the set of overriding virtual methods in a given
   // subobject.
-  typedef SmallVectorImpl<UniqueVirtualMethod>::iterator
-    overriding_iterator;
-  typedef SmallVectorImpl<UniqueVirtualMethod>::const_iterator
-    overriding_const_iterator;
+  using overriding_iterator =
+      SmallVectorImpl<UniqueVirtualMethod>::iterator;
+  using overriding_const_iterator =
+      SmallVectorImpl<UniqueVirtualMethod>::const_iterator;
 
   // Add a new overriding method for a particular subobject.
   void add(unsigned OverriddenSubobject, UniqueVirtualMethod Overriding);
@@ -357,12 +362,12 @@ public:
 /// subobject numbers greater than 0 refer to non-virtual base class
 /// subobjects of that type.
 class CXXFinalOverriderMap
-  : public llvm::MapVector<const CXXMethodDecl *, OverridingMethods> { };
+  : public llvm::MapVector<const CXXMethodDecl *, OverridingMethods> {};
 
 /// \brief A set of all the primary bases for a class.
 class CXXIndirectPrimaryBaseSet
-  : public llvm::SmallSet<const CXXRecordDecl*, 32> { };
+  : public llvm::SmallSet<const CXXRecordDecl*, 32> {};
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_CXXINHERITANCE_H

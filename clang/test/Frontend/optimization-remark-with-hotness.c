@@ -11,18 +11,22 @@
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -verify
+// The clang version of the previous test.
+// RUN: %clang -target x86_64-apple-macosx10.9 %s -c -emit-llvm -o /dev/null \
+// RUN:     -fprofile-instr-use=%t.profdata -Rpass=inline \
+// RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
+// RUN:     -fdiagnostics-show-hotness -Xclang -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-sample-use=%t-sample.profdata -Rpass=inline \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
 // RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 \
 // RUN:     -verify
-// The clang version of the previous test.
-// RUN: %clang -target x86_64-apple-macosx10.9 %s -c -emit-llvm -o /dev/null \
-// RUN:     -fprofile-instr-use=%t.profdata -Rpass=inline \
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
+// RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
+// RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
 // RUN:     -Rpass-analysis=inline -Rpass-missed=inline \
-// RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 \
-// RUN:     -Xclang -verify
+// RUN:     -fdiagnostics-show-hotness -fdiagnostics-hotness-threshold=10 -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name \
 // RUN:     optimization-remark-with-hotness.c %s -emit-llvm-only \
 // RUN:     -fprofile-instrument-use-path=%t.profdata -Rpass=inline \
@@ -56,14 +60,13 @@ void bar(int x) {
   // THRESHOLD-NOT: hotness
   // NO_PGO: '-fdiagnostics-show-hotness' requires profile-guided optimization information
   // NO_PGO: '-fdiagnostics-hotness-threshold=' requires profile-guided optimization information
-  // expected-remark@+2 {{foo should always be inlined (cost=always) (hotness: 30)}}
-  // expected-remark@+1 {{foo inlined into bar (hotness: 30)}}
+  // expected-remark@+1 {{foo inlined into bar with cost=always (hotness:}}
   sum += foo(x, x - 2);
 }
 
 int main(int argc, const char *argv[]) {
   for (int i = 0; i < 30; i++)
-    // expected-remark@+1 {{bar not inlined into main because it should never be inlined}}
+    // expected-remark@+1 {{bar not inlined into main because it should never be inlined (cost=never) (hotness:}}
     bar(argc);
   return sum;
 }

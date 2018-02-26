@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=penryn | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=penryn | FileCheck %s
 
 define <4 x float> @foo(<4 x float>* %p, <4 x float> %x) nounwind {
   %t = load <4 x float>, <4 x float>* %p, align 4

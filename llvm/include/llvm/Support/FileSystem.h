@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MD5.h"
@@ -141,65 +142,48 @@ public:
   uint64_t getFile() const { return File; }
 };
 
-/// file_status - Represents the result of a call to stat and friends. It has
-///               a platform-specific member to store the result.
-class file_status
-{
-  friend bool equivalent(file_status A, file_status B);
-
+/// Represents the result of a call to directory_iterator::status(). This is a
+/// subset of the information returned by a regular sys::fs::status() call, and
+/// represents the information provided by Windows FileFirstFile/FindNextFile.
+class basic_file_status {
+protected:
   #if defined(LLVM_ON_UNIX)
-  dev_t fs_st_dev = 0;
-  nlink_t fs_st_nlinks = 0;
-  ino_t fs_st_ino = 0;
   time_t fs_st_atime = 0;
   time_t fs_st_mtime = 0;
   uid_t fs_st_uid = 0;
   gid_t fs_st_gid = 0;
   off_t fs_st_size = 0;
   #elif defined (LLVM_ON_WIN32)
-  uint32_t NumLinks = 0;
   uint32_t LastAccessedTimeHigh = 0;
   uint32_t LastAccessedTimeLow = 0;
   uint32_t LastWriteTimeHigh = 0;
   uint32_t LastWriteTimeLow = 0;
-  uint32_t VolumeSerialNumber = 0;
   uint32_t FileSizeHigh = 0;
   uint32_t FileSizeLow = 0;
-  uint32_t FileIndexHigh = 0;
-  uint32_t FileIndexLow = 0;
   #endif
   file_type Type = file_type::status_error;
   perms Perms = perms_not_known;
 
 public:
+  basic_file_status() = default;
+
+  explicit basic_file_status(file_type Type) : Type(Type) {}
+
   #if defined(LLVM_ON_UNIX)
-  file_status() = default;
-
-  file_status(file_type Type) : Type(Type) {}
-
-  file_status(file_type Type, perms Perms, dev_t Dev, nlink_t Links, ino_t Ino,
-              time_t ATime, time_t MTime, uid_t UID, gid_t GID, off_t Size)
-      : fs_st_dev(Dev), fs_st_nlinks(Links), fs_st_ino(Ino), fs_st_atime(ATime),
-        fs_st_mtime(MTime), fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size),
-        Type(Type), Perms(Perms) {}
-  #elif defined(LLVM_ON_WIN32)
-  file_status() = default;
-
-  file_status(file_type Type) : Type(Type) {}
-
-  file_status(file_type Type, perms Perms, uint32_t LinkCount,
-              uint32_t LastAccessTimeHigh, uint32_t LastAccessTimeLow,
-              uint32_t LastWriteTimeHigh, uint32_t LastWriteTimeLow,
-              uint32_t VolumeSerialNumber, uint32_t FileSizeHigh,
-              uint32_t FileSizeLow, uint32_t FileIndexHigh,
-              uint32_t FileIndexLow)
-      : NumLinks(LinkCount), LastAccessedTimeHigh(LastAccessTimeHigh),
+  basic_file_status(file_type Type, perms Perms, time_t ATime, time_t MTime,
+                    uid_t UID, gid_t GID, off_t Size)
+      : fs_st_atime(ATime), fs_st_mtime(MTime), fs_st_uid(UID), fs_st_gid(GID),
+        fs_st_size(Size), Type(Type), Perms(Perms) {}
+#elif defined(LLVM_ON_WIN32)
+  basic_file_status(file_type Type, perms Perms, uint32_t LastAccessTimeHigh,
+                    uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
+                    uint32_t LastWriteTimeLow, uint32_t FileSizeHigh,
+                    uint32_t FileSizeLow)
+      : LastAccessedTimeHigh(LastAccessTimeHigh),
         LastAccessedTimeLow(LastAccessTimeLow),
         LastWriteTimeHigh(LastWriteTimeHigh),
-        LastWriteTimeLow(LastWriteTimeLow),
-        VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
-        FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-        FileIndexLow(FileIndexLow), Type(Type), Perms(Perms) {}
+        LastWriteTimeLow(LastWriteTimeLow), FileSizeHigh(FileSizeHigh),
+        FileSizeLow(FileSizeLow), Type(Type), Perms(Perms) {}
   #endif
 
   // getters
@@ -207,8 +191,6 @@ public:
   perms permissions() const { return Perms; }
   TimePoint<> getLastAccessedTime() const;
   TimePoint<> getLastModificationTime() const;
-  UniqueID getUniqueID() const;
-  uint32_t getLinkCount() const;
 
   #if defined(LLVM_ON_UNIX)
   uint32_t getUser() const { return fs_st_uid; }
@@ -231,6 +213,49 @@ public:
   // setters
   void type(file_type v) { Type = v; }
   void permissions(perms p) { Perms = p; }
+};
+
+/// Represents the result of a call to sys::fs::status().
+class file_status : public basic_file_status {
+  friend bool equivalent(file_status A, file_status B);
+
+  #if defined(LLVM_ON_UNIX)
+  dev_t fs_st_dev = 0;
+  nlink_t fs_st_nlinks = 0;
+  ino_t fs_st_ino = 0;
+  #elif defined (LLVM_ON_WIN32)
+  uint32_t NumLinks = 0;
+  uint32_t VolumeSerialNumber = 0;
+  uint32_t FileIndexHigh = 0;
+  uint32_t FileIndexLow = 0;
+  #endif
+
+public:
+  file_status() = default;
+
+  explicit file_status(file_type Type) : basic_file_status(Type) {}
+
+  #if defined(LLVM_ON_UNIX)
+  file_status(file_type Type, perms Perms, dev_t Dev, nlink_t Links, ino_t Ino,
+              time_t ATime, time_t MTime, uid_t UID, gid_t GID, off_t Size)
+      : basic_file_status(Type, Perms, ATime, MTime, UID, GID, Size),
+        fs_st_dev(Dev), fs_st_nlinks(Links), fs_st_ino(Ino) {}
+  #elif defined(LLVM_ON_WIN32)
+  file_status(file_type Type, perms Perms, uint32_t LinkCount,
+              uint32_t LastAccessTimeHigh, uint32_t LastAccessTimeLow,
+              uint32_t LastWriteTimeHigh, uint32_t LastWriteTimeLow,
+              uint32_t VolumeSerialNumber, uint32_t FileSizeHigh,
+              uint32_t FileSizeLow, uint32_t FileIndexHigh,
+              uint32_t FileIndexLow)
+      : basic_file_status(Type, Perms, LastAccessTimeHigh, LastAccessTimeLow,
+                          LastWriteTimeHigh, LastWriteTimeLow, FileSizeHigh,
+                          FileSizeLow),
+        NumLinks(LinkCount), VolumeSerialNumber(VolumeSerialNumber),
+        FileIndexHigh(FileIndexHigh), FileIndexLow(FileIndexLow) {}
+  #endif
+
+  UniqueID getUniqueID() const;
+  uint32_t getLinkCount() const;
 };
 
 /// @}
@@ -343,7 +368,11 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting = true);
 ///          platform-specific error code.
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors = true);
 
-/// @brief Rename \a from to \a to. Files are renamed as if by POSIX rename().
+/// @brief Rename \a from to \a to.
+///
+/// Files are renamed as if by POSIX rename(), except that on Windows there may
+/// be a short interval of time during which the destination file does not
+/// exist.
 ///
 /// @param from The path to rename from.
 /// @param to The path to rename to. This is created.
@@ -379,10 +408,10 @@ ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path);
 
 /// @brief Does file exist?
 ///
-/// @param status A file_status previously returned from stat.
+/// @param status A basic_file_status previously returned from stat.
 /// @returns True if the file represented by status exists, false if it does
 ///          not.
-bool exists(file_status status);
+bool exists(const basic_file_status &status);
 
 enum class AccessMode { Exist, Write, Execute };
 
@@ -481,9 +510,9 @@ file_type get_file_type(const Twine &Path, bool Follow = true);
 
 /// @brief Does status represent a directory?
 ///
-/// @param status A file_status previously returned from status.
+/// @param status A basic_file_status previously returned from status.
 /// @returns status.type() == file_type::directory_file.
-bool is_directory(file_status status);
+bool is_directory(const basic_file_status &status);
 
 /// @brief Is path a directory?
 ///
@@ -503,9 +532,9 @@ inline bool is_directory(const Twine &Path) {
 
 /// @brief Does status represent a regular file?
 ///
-/// @param status A file_status previously returned from status.
+/// @param status A basic_file_status previously returned from status.
 /// @returns status_known(status) && status.type() == file_type::regular_file.
-bool is_regular_file(file_status status);
+bool is_regular_file(const basic_file_status &status);
 
 /// @brief Is path a regular file?
 ///
@@ -527,9 +556,9 @@ inline bool is_regular_file(const Twine &Path) {
 
 /// @brief Does status represent a symlink file?
 ///
-/// @param status A file_status previously returned from status.
+/// @param status A basic_file_status previously returned from status.
 /// @returns status_known(status) && status.type() == file_type::symlink_file.
-bool is_symlink_file(file_status status);
+bool is_symlink_file(const basic_file_status &status);
 
 /// @brief Is path a symlink file?
 ///
@@ -552,9 +581,9 @@ inline bool is_symlink_file(const Twine &Path) {
 /// @brief Does this status represent something that exists but is not a
 ///        directory or regular file?
 ///
-/// @param status A file_status previously returned from status.
+/// @param status A basic_file_status previously returned from status.
 /// @returns exists(s) && !is_regular_file(s) && !is_directory(s)
-bool is_other(file_status status);
+bool is_other(const basic_file_status &status);
 
 /// @brief Is path something that exists but is not a directory,
 ///        regular file, or symlink?
@@ -627,7 +656,7 @@ std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time);
 ///
 /// @param s Input file status.
 /// @returns True if status() != status_error.
-bool status_known(file_status s);
+bool status_known(const basic_file_status &s);
 
 /// @brief Is status available?
 ///
@@ -636,6 +665,29 @@ bool status_known(file_status s);
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code status_known(const Twine &path, bool &result);
+
+enum OpenFlags : unsigned {
+  F_None = 0,
+
+  /// F_Excl - When opening a file, this flag makes raw_fd_ostream
+  /// report an error if the file already exists.
+  F_Excl = 1,
+
+  /// F_Append - When opening a file, if it already exists append to the
+  /// existing file instead of returning an error.  This may not be specified
+  /// with F_Excl.
+  F_Append = 2,
+
+  /// The file should be opened in text mode on platforms that make this
+  /// distinction.
+  F_Text = 4,
+
+  /// Open the file for read and write.
+  F_RW = 8,
+
+  /// Delete the file on close. Only makes a difference on windows.
+  F_Delete = 16
+};
 
 /// @brief Create a uniquely named file.
 ///
@@ -660,11 +712,50 @@ std::error_code status_known(const Twine &path, bool &result);
 ///          otherwise a platform-specific error_code.
 std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
                                  SmallVectorImpl<char> &ResultPath,
-                                 unsigned Mode = all_read | all_write);
+                                 unsigned Mode = all_read | all_write,
+                                 sys::fs::OpenFlags Flags = sys::fs::F_RW);
 
 /// @brief Simpler version for clients that don't want an open file.
 std::error_code createUniqueFile(const Twine &Model,
                                  SmallVectorImpl<char> &ResultPath);
+
+/// Represents a temporary file.
+///
+/// The temporary file must be eventually discarded or given a final name and
+/// kept.
+///
+/// The destructor doesn't implicitly discard because there is no way to
+/// properly handle errors in a destructor.
+class TempFile {
+  bool Done = false;
+  TempFile(StringRef Name, int FD);
+
+public:
+  /// This creates a temporary file with createUniqueFile and schedules it for
+  /// deletion with sys::RemoveFileOnSignal.
+  static Expected<TempFile> create(const Twine &Model,
+                                   unsigned Mode = all_read | all_write);
+  TempFile(TempFile &&Other);
+  TempFile &operator=(TempFile &&Other);
+
+  // Name of the temporary file.
+  std::string TmpName;
+
+  // The open file descriptor.
+  int FD = -1;
+
+  // Keep this with the given name.
+  Error keep(const Twine &Name);
+
+  // Keep this with the temporary name.
+  Error keep();
+
+  // Delete the file.
+  Error discard();
+
+  // This checks that keep or delete was called.
+  ~TempFile();
+};
 
 /// @brief Create a file in the system temporary directory.
 ///
@@ -676,7 +767,8 @@ std::error_code createUniqueFile(const Twine &Model,
 /// running the assembler.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath);
+                                    SmallVectorImpl<char> &ResultPath,
+                                    sys::fs::OpenFlags Flags = sys::fs::F_RW);
 
 /// @brief Simpler version for clients that don't want an open file.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
@@ -684,32 +776,6 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
-
-/// @brief Fetch a path to an open file, as specified by a file descriptor
-///
-/// @param FD File descriptor to a currently open file
-/// @param ResultPath The buffer into which to write the path
-std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath);
-
-enum OpenFlags : unsigned {
-  F_None = 0,
-
-  /// F_Excl - When opening a file, this flag makes raw_fd_ostream
-  /// report an error if the file already exists.
-  F_Excl = 1,
-
-  /// F_Append - When opening a file, if it already exists append to the
-  /// existing file instead of returning an error.  This may not be specified
-  /// with F_Excl.
-  F_Append = 2,
-
-  /// The file should be opened in text mode on platforms that make this
-  /// distinction.
-  F_Text = 4,
-
-  /// Open the file for read and write.
-  F_RW = 8
-};
 
 inline OpenFlags operator|(OpenFlags A, OpenFlags B) {
   return OpenFlags(unsigned(A) | unsigned(B));
@@ -751,7 +817,7 @@ public:
 
 private:
   /// Platform-specific mapping state.
-  uint64_t Size;
+  size_t Size;
   void *Mapping;
 
   std::error_code init(int FD, uint64_t Offset, mapmode Mode);
@@ -764,12 +830,12 @@ public:
   /// \param fd An open file descriptor to map. mapped_file_region takes
   ///   ownership if closefd is true. It must have been opended in the correct
   ///   mode.
-  mapped_file_region(int fd, mapmode mode, uint64_t length, uint64_t offset,
+  mapped_file_region(int fd, mapmode mode, size_t length, uint64_t offset,
                      std::error_code &ec);
 
   ~mapped_file_region();
 
-  uint64_t size() const;
+  size_t size() const;
   char *data() const;
 
   /// Get a const view of the data. Modifying this memory has undefined
@@ -795,24 +861,25 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr);
 class directory_entry {
   std::string Path;
   bool FollowSymlinks;
-  mutable file_status Status;
+  basic_file_status Status;
 
 public:
   explicit directory_entry(const Twine &path, bool follow_symlinks = true,
-                           file_status st = file_status())
+                           basic_file_status st = basic_file_status())
       : Path(path.str()), FollowSymlinks(follow_symlinks), Status(st) {}
 
   directory_entry() = default;
 
-  void assign(const Twine &path, file_status st = file_status()) {
+  void assign(const Twine &path, basic_file_status st = basic_file_status()) {
     Path = path.str();
     Status = st;
   }
 
-  void replace_filename(const Twine &filename, file_status st = file_status());
+  void replace_filename(const Twine &filename,
+                        basic_file_status st = basic_file_status());
 
   const std::string &path() const { return Path; }
-  std::error_code status(file_status &result) const;
+  ErrorOr<basic_file_status> status() const;
 
   bool operator==(const directory_entry& rhs) const { return Path == rhs.Path; }
   bool operator!=(const directory_entry& rhs) const { return !(*this == rhs); }
@@ -931,9 +998,9 @@ public:
     if (State->HasNoPushRequest)
       State->HasNoPushRequest = false;
     else {
-      file_status st;
-      if ((ec = State->Stack.top()->status(st))) return *this;
-      if (is_directory(st)) {
+      ErrorOr<basic_file_status> st = State->Stack.top()->status();
+      if (!st) return *this;
+      if (is_directory(*st)) {
         State->Stack.push(directory_iterator(*State->Stack.top(), ec, Follow));
         if (ec) return *this;
         if (State->Stack.top() != end_itr) {

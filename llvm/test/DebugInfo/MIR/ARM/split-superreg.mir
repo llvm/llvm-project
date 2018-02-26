@@ -3,7 +3,7 @@
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_variable
 # CHECK-NEXT: DW_AT_location
-# CHECK-NEXT: 0x0000000000000010 - 0x0000000000000018: DW_OP_regx D0, DW_OP_piece 0x8, DW_OP_regx D1, DW_OP_piece 0x8)
+# CHECK-NEXT: [0x00000010, 0x00000018): DW_OP_regx D0, DW_OP_piece 0x8, DW_OP_regx D1, DW_OP_piece 0x8)
 # CHECK-NEXT: DW_AT_name {{.*}}"vec"
 
 --- |
@@ -17,7 +17,7 @@
 
   target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
   target triple = "thumbv7s-apple-ios5.0.0"
-  
+
   define float @f() local_unnamed_addr #0 !dbg !9 {
   entry:
     %call = tail call <4 x float> bitcast (<4 x float> (...)* @v to <4 x float> ()*)() #0, !dbg !19
@@ -27,17 +27,17 @@
     %add = fadd float %vecext, %vecext1, !dbg !24
     ret float %add, !dbg !25
   }
-  
+
   declare arm_aapcs_vfpcc <4 x float> @v(...) local_unnamed_addr #0
-  
+
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
-  
+
   attributes #0 = { nounwind readnone }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5, !6, !7}
   !llvm.ident = !{!8}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0 (trunk 286322) (llvm/trunk 286305)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
   !1 = !DIFile(filename: "v.c", directory: "/")
   !2 = !{}
@@ -74,20 +74,20 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13', 
-                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4', 
-                        '%r5', '%r6', '%r7', '%r8', '%r10', '%r11', '%s16', 
-                        '%s17', '%s18', '%s19', '%s20', '%s21', '%s22', 
-                        '%s23', '%s24', '%s25', '%s26', '%s27', '%s28', 
-                        '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11', '%d10_d12', 
-                        '%d11_d13', '%d12_d14', '%d13_d15', '%q4_q5', '%q5_q6', 
-                        '%q6_q7', '%q4_q5_q6_q7', '%r4_r5', '%r6_r7', '%r10_r11', 
-                        '%d8_d9_d10', '%d9_d10_d11', '%d10_d11_d12', '%d11_d12_d13', 
-                        '%d12_d13_d14', '%d13_d14_d15', '%d8_d10_d12', 
-                        '%d9_d11_d13', '%d10_d12_d14', '%d11_d13_d15', 
-                        '%d8_d10_d12_d14', '%d9_d11_d13_d15', '%d9_d10', 
+calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13',
+                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4',
+                        '%r5', '%r6', '%r7', '%r8', '%r10', '%r11', '%s16',
+                        '%s17', '%s18', '%s19', '%s20', '%s21', '%s22',
+                        '%s23', '%s24', '%s25', '%s26', '%s27', '%s28',
+                        '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11', '%d10_d12',
+                        '%d11_d13', '%d12_d14', '%d13_d15', '%q4_q5', '%q5_q6',
+                        '%q6_q7', '%q4_q5_q6_q7', '%r4_r5', '%r6_r7', '%r10_r11',
+                        '%d8_d9_d10', '%d9_d10_d11', '%d10_d11_d12', '%d11_d12_d13',
+                        '%d12_d13_d14', '%d13_d14_d15', '%d8_d10_d12',
+                        '%d9_d11_d13', '%d10_d12_d14', '%d11_d13_d15',
+                        '%d8_d10_d12_d14', '%d9_d11_d13_d15', '%d9_d10',
                         '%d11_d12', '%d13_d14', '%d9_d10_d11_d12', '%d11_d12_d13_d14' ]
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -101,12 +101,12 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-stack:           
+stack:
   - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '%lr' }
 body:             |
   bb.0.entry:
     liveins: %lr
-  
+
     early-clobber %sp = frame-setup t2STR_PRE killed undef %lr, %sp, -4, 14, _
     frame-setup CFI_INSTRUCTION def_cfa_offset 4
     frame-setup CFI_INSTRUCTION offset %lr, -4

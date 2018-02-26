@@ -354,7 +354,8 @@ private:
   RangeSet getSymLERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
                          const llvm::APSInt &Adjustment);
-  RangeSet getSymLERange(const RangeSet &RS, const llvm::APSInt &Int,
+  RangeSet getSymLERange(llvm::function_ref<RangeSet()> RS,
+                         const llvm::APSInt &Int,
                          const llvm::APSInt &Adjustment);
   RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
@@ -395,7 +396,9 @@ bool RangeConstraintManager::canReasonAbout(SVal X) const {
     }
 
     if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(SE)) {
-      if (BinaryOperator::isComparisonOp(SSE->getOpcode())) {
+      // FIXME: Handle <=> here.
+      if (BinaryOperator::isEqualityOp(SSE->getOpcode()) ||
+          BinaryOperator::isRelationalOp(SSE->getOpcode())) {
         // We handle Loc <> Loc comparisons, but not (yet) NonLoc <> NonLoc.
         if (Loc::isLocType(SSE->getLHS()->getType())) {
           assert(Loc::isLocType(SSE->getRHS()->getType()));
@@ -460,6 +463,53 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   return Changed ? State->set<ConstraintRange>(CR) : State;
 }
 
+/// Return a range set subtracting zero from \p Domain.
+static RangeSet assumeNonZero(
+    BasicValueFactory &BV,
+    RangeSet::Factory &F,
+    SymbolRef Sym,
+    RangeSet Domain) {
+  APSIntType IntType = BV.getAPSIntType(Sym->getType());
+  return Domain.Intersect(BV, F, ++IntType.getZeroValue(),
+      --IntType.getZeroValue());
+}
+
+/// \brief Apply implicit constraints for bitwise OR- and AND-.
+/// For unsigned types, bitwise OR with a constant always returns
+/// a value greater-or-equal than the constant, and bitwise AND
+/// returns a value less-or-equal then the constant.
+///
+/// Pattern matches the expression \p Sym against those rule,
+/// and applies the required constraints.
+/// \p Input Previously established expression range set
+static RangeSet applyBitwiseConstraints(
+    BasicValueFactory &BV,
+    RangeSet::Factory &F,
+    RangeSet Input,
+    const SymIntExpr* SIE) {
+  QualType T = SIE->getType();
+  bool IsUnsigned = T->isUnsignedIntegerType();
+  const llvm::APSInt &RHS = SIE->getRHS();
+  const llvm::APSInt &Zero = BV.getAPSIntType(T).getZeroValue();
+  BinaryOperator::Opcode Operator = SIE->getOpcode();
+
+  // For unsigned types, the output of bitwise-or is bigger-or-equal than RHS.
+  if (Operator == BO_Or && IsUnsigned)
+    return Input.Intersect(BV, F, RHS, BV.getMaxValue(T));
+
+  // Bitwise-or with a non-zero constant is always non-zero.
+  if (Operator == BO_Or && RHS != Zero)
+    return assumeNonZero(BV, F, SIE, Input);
+
+  // For unsigned types, or positive RHS,
+  // bitwise-and output is always smaller-or-equal than RHS (assuming two's
+  // complement representation of signed types).
+  if (Operator == BO_And && (IsUnsigned || RHS >= Zero))
+    return Input.Intersect(BV, F, BV.getMinValue(T), RHS);
+
+  return Input;
+}
+
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
                                           SymbolRef Sym) {
   if (ConstraintRangeTy::data_type *V = State->get<ConstraintRange>(Sym))
@@ -472,12 +522,13 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
 
   RangeSet Result(F, BV.getMinValue(T), BV.getMaxValue(T));
 
-  // Special case: references are known to be non-zero.
-  if (T->isReferenceType()) {
-    APSIntType IntType = BV.getAPSIntType(T);
-    Result = Result.Intersect(BV, F, ++IntType.getZeroValue(),
-                              --IntType.getZeroValue());
-  }
+  // References are known to be non-zero.
+  if (T->isReferenceType())
+    return assumeNonZero(BV, F, Sym, Result);
+
+  // Known constraints on ranges of bitwise expressions.
+  if (const SymIntExpr* SIE = dyn_cast<SymIntExpr>(Sym))
+    return applyBitwiseConstraints(BV, F, Result, SIE);
 
   return Result;
 }
@@ -637,9 +688,10 @@ RangeConstraintManager::assumeSymGE(ProgramStateRef St, SymbolRef Sym,
   return New.isEmpty() ? nullptr : St->set<ConstraintRange>(Sym, New);
 }
 
-RangeSet RangeConstraintManager::getSymLERange(const RangeSet &RS,
-                                               const llvm::APSInt &Int,
-                                               const llvm::APSInt &Adjustment) {
+RangeSet RangeConstraintManager::getSymLERange(
+      llvm::function_ref<RangeSet()> RS,
+      const llvm::APSInt &Int,
+      const llvm::APSInt &Adjustment) {
   // Before we do any real work, see if the value can even show up.
   APSIntType AdjustmentType(Adjustment);
   switch (AdjustmentType.testInRange(Int, true)) {
@@ -648,48 +700,27 @@ RangeSet RangeConstraintManager::getSymLERange(const RangeSet &RS,
   case APSIntType::RTR_Within:
     break;
   case APSIntType::RTR_Above:
-    return RS;
+    return RS();
   }
 
   // Special case for Int == Max. This is always feasible.
   llvm::APSInt ComparisonVal = AdjustmentType.convert(Int);
   llvm::APSInt Max = AdjustmentType.getMaxValue();
   if (ComparisonVal == Max)
-    return RS;
+    return RS();
 
   llvm::APSInt Min = AdjustmentType.getMinValue();
   llvm::APSInt Lower = Min - Adjustment;
   llvm::APSInt Upper = ComparisonVal - Adjustment;
 
-  return RS.Intersect(getBasicVals(), F, Lower, Upper);
+  return RS().Intersect(getBasicVals(), F, Lower, Upper);
 }
 
 RangeSet RangeConstraintManager::getSymLERange(ProgramStateRef St,
                                                SymbolRef Sym,
                                                const llvm::APSInt &Int,
                                                const llvm::APSInt &Adjustment) {
-  // Before we do any real work, see if the value can even show up.
-  APSIntType AdjustmentType(Adjustment);
-  switch (AdjustmentType.testInRange(Int, true)) {
-  case APSIntType::RTR_Below:
-    return F.getEmptySet();
-  case APSIntType::RTR_Within:
-    break;
-  case APSIntType::RTR_Above:
-    return getRange(St, Sym);
-  }
-
-  // Special case for Int == Max. This is always feasible.
-  llvm::APSInt ComparisonVal = AdjustmentType.convert(Int);
-  llvm::APSInt Max = AdjustmentType.getMaxValue();
-  if (ComparisonVal == Max)
-    return getRange(St, Sym);
-
-  llvm::APSInt Min = AdjustmentType.getMinValue();
-  llvm::APSInt Lower = Min - Adjustment;
-  llvm::APSInt Upper = ComparisonVal - Adjustment;
-
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  return getSymLERange([&] { return getRange(St, Sym); }, Int, Adjustment);
 }
 
 ProgramStateRef
@@ -706,8 +737,8 @@ ProgramStateRef RangeConstraintManager::assumeSymWithinInclusiveRange(
   RangeSet New = getSymGERange(State, Sym, From, Adjustment);
   if (New.isEmpty())
     return nullptr;
-  New = getSymLERange(New, To, Adjustment);
-  return New.isEmpty() ? nullptr : State->set<ConstraintRange>(Sym, New);
+  RangeSet Out = getSymLERange([&] { return New; }, To, Adjustment);
+  return Out.isEmpty() ? nullptr : State->set<ConstraintRange>(Sym, Out);
 }
 
 ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(

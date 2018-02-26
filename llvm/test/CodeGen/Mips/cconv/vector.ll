@@ -821,8 +821,10 @@ entry:
 ; MIPS32R5: jal
 ; MIPS32R5: sw $2, {{[0-9]+}}($sp)
 
-; MIPS32R5-DAG: sb ${{[0-9]+}}, 1(${{[0-9]+}})
-; MIPS32R5-DAG; sb ${{[0-9]+}}, %lo(gv2i8)(${{[0-9]+}})
+; MIPS32R5-DAG; sh ${{[0-9]+}}, %lo(gv2i8)(${{[0-9]+}})
+
+; MIPS32R5-NOT: sb ${{[0-9]+}}, 1(${{[0-9]+}})
+; MIPS32R5-NOT; sb ${{[0-9]+}}, %lo(gv2i8)(${{[0-9]+}})
 
 ; MIPS64EB: daddiu $4, $zero, 1543
 ; MIPS64EB: daddiu $5, $zero, 3080
@@ -870,14 +872,14 @@ entry:
 ; MIPS32-NOT: ori $6
 ; MIPS32-NOT: ori $7
 
-; MIPS32R5-DAG: lw $4, {{[0-9]+}}($sp)
-; MIPS32R5-DAG: lw $5, {{[0-9]+}}($sp)
+; MIPS32R5-NOT: lw $4, {{[0-9]+}}($sp)
+; MIPS32R5-NOT: lw $5, {{[0-9]+}}($sp)
 
 ; MIPS64: ori $4
 ; MIPS64: ori $5
 
-; MIPS64R5: lw $4
-; MIPS64R5: lw $5
+; MIPS64R5-NOT: lw $4
+; MIPS64R5-NOT: lw $5
 
 ; MIPS32: jal i8_4
 ; MIPS64: jalr $25
@@ -996,14 +998,14 @@ entry:
 ; MIPS32-DAG: ori $4
 ; MIPS32-DAG: ori $5
 
-; MIPS32R5-DAG: lw $4
-; MIPS32R5-DAG: lw $5
+; MIPS32R5-NOT: lw $4
+; MIPS32R5-NOT: lw $5
 
 ; MIPS64: ori $4
 ; MIPS64: ori $5
 
-; MIPS64R5-DAG: lw $4
-; MIPS64R5-DAG: lw $5
+; MIPS64R5-NOT: lw $4
+; MIPS64R5-NOT: lw $5
 
 ; MIPS32: jal i16_2
 ; MIPS64: jalr $25
@@ -1037,8 +1039,8 @@ entry:
 ; MIPS64-DAG: daddiu $4
 ; MIPS64-DAG: daddiu $5
 
-; MIPS64R5-DAG: ld $4
-; MIPS64R5-DAG: ld $5
+; MIPS64R5-NOT: ld $4
+; MIPS64R5-NOT: ld $5
 
 ; MIPS32: jal i16_4
 ; MIPS64: jalr $25
@@ -1133,8 +1135,8 @@ entry:
 ; MIPS64: daddiu $4
 ; MIPS64: daddiu $5
 
-; MIPS64R5-DAG: ld $4
-; MIPS64R5-DAG: ld $5
+; MIPS64R5-NOT ld $4
+; MIPS64R5-NOT: ld $5
 
 ; MIPS32: jal i32_2
 ; MIPS64: jalr $25

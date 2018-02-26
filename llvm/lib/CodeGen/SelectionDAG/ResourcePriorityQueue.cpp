@@ -22,12 +22,12 @@
 #include "llvm/CodeGen/ResourcePriorityQueue.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -252,6 +252,7 @@ bool ResourcePriorityQueue::isResourceAvailable(SUnit *SU) {
       if (!ResourcesModel->canReserveResources(&TII->get(
           SU->getNode()->getMachineOpcode())))
            return false;
+      break;
     case TargetOpcode::EXTRACT_SUBREG:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:

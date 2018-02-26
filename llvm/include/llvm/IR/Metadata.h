@@ -958,6 +958,9 @@ public:
   /// \pre No operands (or operands' operands, etc.) have \a isTemporary().
   void resolveCycles();
 
+  /// Resolve a unique, unresolved node.
+  void resolve();
+
   /// \brief Replace a temporary node with a permanent one.
   ///
   /// Try to create a uniqued version of \c N -- in place, if possible -- and
@@ -1008,9 +1011,6 @@ protected:
 
 private:
   void handleChangedOperand(void *Ref, Metadata *New);
-
-  /// Resolve a unique, unresolved node.
-  void resolve();
 
   /// Drop RAUW support, if any.
   void dropReplaceableUses();
@@ -1303,7 +1303,13 @@ public:
     if (!Use)
       return;
     *Use = MD;
-    Use = nullptr;
+
+    if (*Use)
+      MetadataTracking::track(*Use);
+
+    Metadata *T = cast<Metadata>(this);
+    MetadataTracking::untrack(T);
+    assert(!Use && "Use is still being tracked despite being untracked!");
   }
 };
 

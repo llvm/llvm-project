@@ -5,7 +5,7 @@
 #if defined(_WIN32)
 void foo() {}
 void bar() __attribute__((ifunc("foo")));
-//expected-warning@-1 {{'ifunc' attribute ignored}}
+//expected-warning@-1 {{unknown attribute 'ifunc' ignored}}
 
 #else
 #if defined(CHECK_ALIASES)

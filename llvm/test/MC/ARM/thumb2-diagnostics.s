@@ -39,13 +39,15 @@
         mrc2  p14, #0, r1, c1, c2, #9
         mrrc  p7, #16, r5, r4, c1
         mrrc2  p7, #17, r5, r4, c1
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: too many operands for instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: invalid instruction
 
         isb  #-1
         isb  #16
@@ -78,15 +80,19 @@
 foo2:
         movw r0, foo2
         movt r0, foo2
+        movt r0, #0x10000
+        movt r0, #0x10000
 @ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
 @ CHECK-ERRORS:                  ^
-@ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
+@ CHECK-ERRORS: immediate expression for mov requires :lower16: or :upper16
 @ CHECK-ERRORS:                  ^
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
 
         and sp, r1, #80008000
         and pc, r1, #80008000
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid instruction
+@ CHECK-ERRORS: error: invalid instruction
 
         ssat r0, #1, r0, asr #32
         usat r0, #1, r0, asr #32
@@ -96,8 +102,14 @@ foo2:
         @ PC is not valid as shifted-rGPR
         sbc.w r2, r7, pc, lsr #16
         and.w r2, r7, pc, lsr #16
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V8: note: operand must be a register in range [r0, r14]
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V8: note: operand must be a register in range [r0, r14]
 
 
         @ PC is not valid as base of load
@@ -108,16 +120,34 @@ foo2:
         str r6, [pc, r7]
         strb r7 [pc, r8]
         strh r9, [pc, r10]
-@ CHECK-ERRORS: error: instruction requires: arm-mode
-@ CHECK-ERRORS: error: instruction requires: arm-mode
-@ CHECK-ERRORS: error: instruction requires: arm-mode
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: instruction requires: arm-mode
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: instruction requires: arm-mode
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: instruction requires: arm-mode
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid instruction
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: instruction requires: arm-mode
 @ CHECK-ERRORS: error: immediate value expected for vector index
-@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: instruction requires: arm-mode
+@ CHECK-ERRORS: note: invalid operand for instruction
 
         @ SWP(B) is an ARM-only instruction
         swp  r0, r1, [r2]
         swpb r3, r4, [r5]
-@ CHECK-ERRORS: error: instruction requires: arm-mode
-@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS-V7: error: instruction requires: arm-mode
+@ CHECK-ERRORS-V7: error: instruction requires: arm-mode
+@ CHECK-ERRORS-V8: error: invalid instruction
+@ CHECK-ERRORS-V8: error: invalid instruction
+
+        @ Generic error for too few operands
+        adds
+        adds r0
+@ CHECK-ERRORS: error: too few operands for instruction
+@ CHECK-ERRORS: error: too few operands for instruction

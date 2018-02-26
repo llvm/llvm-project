@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
-; RUN: llc -no-phi-elim-live-out-early-exit -terminal-rule < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc -no-phi-elim-live-out-early-exit -terminal-rule < %s -mtriple=i686-- | FileCheck %s
 ; PR2659
 
 define i32 @binomial(i32 %n, i32 %k) nounwind {

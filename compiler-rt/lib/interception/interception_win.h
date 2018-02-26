@@ -12,7 +12,7 @@
 // Windows-specific interception methods.
 //===----------------------------------------------------------------------===//
 
-#ifdef _WIN32
+#if SANITIZER_WINDOWS
 
 #if !defined(INCLUDED_FROM_INTERCEPTION_LIB)
 # error "interception_win.h should be included from interception library only"
@@ -81,4 +81,4 @@ void TestOnlyReleaseTrampolineRegions();
       (::__interception::uptr *)&REAL(func))
 
 #endif  // INTERCEPTION_WIN_H
-#endif  // _WIN32
+#endif  // SANITIZER_WINDOWS

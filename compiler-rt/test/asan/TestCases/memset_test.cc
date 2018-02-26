@@ -41,7 +41,7 @@ typedef void *(*memcpy_t)(void *, const void *, size_t);
 
 int main(int argc, char **argv) {
   char * volatile p = (char *)malloc(3000);
-  __asan_poison_memory_region(p + 512, 16);
+  __asan_poison_memory_region(p + 512, 32);
 #if defined(TEST_MEMSET)
   memset(p, 0, 3000);
   assert(p[1] == 0);

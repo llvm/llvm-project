@@ -3,14 +3,14 @@
 
 define i8 @test() {
 ; ALL-LABEL: test:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    retq
   ret i8 undef
 }
 
 define i8 @test2(i8 %a) {
 ; ALL-LABEL: test2:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    addb %al, %dil
 ; ALL-NEXT:    movl %edi, %eax
 ; ALL-NEXT:    retq
@@ -21,14 +21,14 @@ define i8 @test2(i8 %a) {
 
 define float @test3() {
 ; ALL-LABEL: test3:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    retq
   ret float undef
 }
 
 define float @test4(float %a) {
 ; ALL-LABEL: test4:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    addss %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %r = fadd float %a, undef

@@ -10,7 +10,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -o /dev/null -stats -info-output-file - | FileCheck %s -check-prefix=X64stat
 ; X64stat: 6 asm-printer
 
-; RUN: llc < %s -march=x86 -mattr=+sse2 -o /dev/null -stats -info-output-file - | FileCheck %s -check-prefix=X32stat
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -o /dev/null -stats -info-output-file - | FileCheck %s -check-prefix=X32stat
 ; X32stat: 12 asm-printer
 
 declare float @qux(float %y)

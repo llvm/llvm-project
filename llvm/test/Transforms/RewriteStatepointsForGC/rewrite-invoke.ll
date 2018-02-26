@@ -1,4 +1,5 @@
 ; RUN: opt -rewrite-statepoints-for-gc -verify -S < %s | FileCheck %s
+; RUN: opt -passes=rewrite-statepoints-for-gc -verify -S < %s | FileCheck %s
 
 declare i8 addrspace(1)* @gc_call()
 

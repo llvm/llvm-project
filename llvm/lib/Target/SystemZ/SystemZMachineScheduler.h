@@ -11,7 +11,8 @@
 // SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
 // the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
 // implementation that looks to optimize decoder grouping and balance the
-// usage of processor resources.
+// usage of processor resources. Scheduler states are saved for the end
+// region of each MBB, so that a successor block can learn from it.
 //===----------------------------------------------------------------------===//
 
 #include "SystemZHazardRecognizer.h"
@@ -28,7 +29,14 @@ namespace llvm {
   
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {
-  ScheduleDAGMI *DAG;
+
+  const MachineLoopInfo *MLI;
+  const SystemZInstrInfo *TII;
+
+  // A SchedModel is needed before any DAG is built while advancing past
+  // non-scheduled instructions, so it would not always be possible to call
+  // DAG->getSchedClass(SU).
+  TargetSchedModel SchedModel;
   
   /// A candidate during instruction evaluation.
   struct Candidate {
@@ -79,18 +87,45 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
   /// The set of available SUs to schedule next.
   SUSet Available;
 
-  // HazardRecognizer that tracks the scheduler state for the current
-  // region.
-  SystemZHazardRecognizer HazardRec;
-  
+  /// Current MBB
+  MachineBasicBlock *MBB;
+
+  /// Maintain hazard recognizers for all blocks, so that the scheduler state
+  /// can be maintained past BB boundaries when appropariate.
+  typedef std::map<MachineBasicBlock*, SystemZHazardRecognizer*> MBB2HazRec;
+  MBB2HazRec SchedStates;
+
+  /// Pointer to the HazardRecognizer that tracks the scheduler state for
+  /// the current region.
+  SystemZHazardRecognizer *HazardRec;
+
+  /// Update the scheduler state by emitting (non-scheduled) instructions
+  /// up to, but not including, NextBegin.
+  void advanceTo(MachineBasicBlock::iterator NextBegin);
+
 public:
   SystemZPostRASchedStrategy(const MachineSchedContext *C);
+  virtual ~SystemZPostRASchedStrategy();
+
+  /// Called for a region before scheduling.
+  void initPolicy(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End,
+                  unsigned NumRegionInstrs) override;
 
   /// PostRA scheduling does not track pressure.
   bool shouldTrackPressure() const override { return false; }
 
-  /// Initialize the strategy after building the DAG for a new region.
-  void initialize(ScheduleDAGMI *dag) override;
+  // Process scheduling regions top-down so that scheduler states can be
+  // transferrred over scheduling boundaries.
+  bool doMBBSchedRegionsTopDown() const override { return true; }
+
+  void initialize(ScheduleDAGMI *dag) override {}
+
+  /// Tell the strategy that MBB is about to be processed.
+  void enterMBB(MachineBasicBlock *NextMBB) override;
+
+  /// Tell the strategy that current MBB is done.
+  void leaveMBB() override;
 
   /// Pick the next node to schedule, or return NULL.
   SUnit *pickNode(bool &IsTopNode) override;

@@ -8,7 +8,7 @@
 ; Clobbered SSE must not be saved when the target doesn't support SSE
 define x86_intrcc void @test_isr_sse_clobbers(%struct.interrupt_frame* %frame, i64 %ecode) {
   ; CHECK-LABEL: test_isr_sse_clobbers:
-  ; CHECK:       # BB#0:
+  ; CHECK:       # %bb.0:
   ; CHECK-NEXT:    pushq %rax
   ; CHECK-NEXT:    cld
   ; CHECK-NEXT:    #APP

@@ -1,15 +1,19 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
 
 
-; SI-LABEL: @simple_read2st64_f32_0_1
-; SI: ds_read2st64_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
-; SI: buffer_store_dword [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f32_0_1
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2st64_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
+; CI: buffer_store_dword [[RESULT]]
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2st64_f32_0_1(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -23,12 +27,15 @@ define amdgpu_kernel void @simple_read2st64_f32_0_1(float addrspace(1)* %out) #0
   ret void
 }
 
-; SI-LABEL: @simple_read2st64_f32_1_2
-; SI: ds_read2st64_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:2
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
-; SI: buffer_store_dword [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f32_1_2
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2st64_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:2
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
+; CI: buffer_store_dword [[RESULT]]
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2st64_f32_1_2(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -43,12 +50,15 @@ define amdgpu_kernel void @simple_read2st64_f32_1_2(float addrspace(1)* %out, fl
   ret void
 }
 
-; SI-LABEL: @simple_read2st64_f32_max_offset
-; SI: ds_read2st64_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:255
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
-; SI: buffer_store_dword [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f32_max_offset
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2st64_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:255
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
+; CI: buffer_store_dword [[RESULT]]
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2st64_f32_max_offset(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -63,12 +73,15 @@ define amdgpu_kernel void @simple_read2st64_f32_max_offset(float addrspace(1)* %
   ret void
 }
 
-; SI-LABEL: @simple_read2st64_f32_over_max_offset
-; SI-NOT: ds_read2st64_b32
-; SI-DAG: v_add_i32_e32 [[BIGADD:v[0-9]+]], vcc, 0x10000, {{v[0-9]+}}
-; SI-DAG: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:256
-; SI-DAG: ds_read_b32 {{v[0-9]+}}, [[BIGADD]]{{$}}
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f32_over_max_offset
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2st64_b32
+; GCN-DAG: v_add_{{i|u}}32_e32 [[BIGADD:v[0-9]+]], {{(vcc, )?}}0x10000, {{v[0-9]+}}
+; GCN-DAG: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:256
+; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[BIGADD]]{{$}}
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2st64_f32_over_max_offset(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -83,9 +96,12 @@ define amdgpu_kernel void @simple_read2st64_f32_over_max_offset(float addrspace(
   ret void
 }
 
-; SI-LABEL: @odd_invalid_read2st64_f32_0
-; SI-NOT: ds_read2st64_b32
-; SI: s_endpgm
+; GCN-LABEL: @odd_invalid_read2st64_f32_0
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2st64_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @odd_invalid_read2st64_f32_0(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -99,9 +115,12 @@ define amdgpu_kernel void @odd_invalid_read2st64_f32_0(float addrspace(1)* %out)
   ret void
 }
 
-; SI-LABEL: @odd_invalid_read2st64_f32_1
-; SI-NOT: ds_read2st64_b32
-; SI: s_endpgm
+; GCN-LABEL: @odd_invalid_read2st64_f32_1
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2st64_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @odd_invalid_read2st64_f32_1(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -116,12 +135,15 @@ define amdgpu_kernel void @odd_invalid_read2st64_f32_1(float addrspace(1)* %out)
   ret void
 }
 
-; SI-LABEL: @simple_read2st64_f64_0_1
-; SI: ds_read2st64_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
-; SI: buffer_store_dwordx2 [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f64_0_1
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2st64_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
+; CI: buffer_store_dwordx2 [[RESULT]]
+; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2st64_f64_0_1(double addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
@@ -135,12 +157,16 @@ define amdgpu_kernel void @simple_read2st64_f64_0_1(double addrspace(1)* %out) #
   ret void
 }
 
-; SI-LABEL: @simple_read2st64_f64_1_2
-; SI: ds_read2st64_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:2
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
-; SI: buffer_store_dwordx2 [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f64_1_2
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2st64_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:2
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
+
+; CI: buffer_store_dwordx2 [[RESULT]]
+; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2st64_f64_1_2(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -157,10 +183,13 @@ define amdgpu_kernel void @simple_read2st64_f64_1_2(double addrspace(1)* %out, d
 
 ; Alignment only
 
-; SI-LABEL: @misaligned_read2st64_f64
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:1
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:128 offset1:129
-; SI: s_endpgm
+; GCN-LABEL: @misaligned_read2st64_f64
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:1
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:128 offset1:129
+; GCN: s_endpgm
 define amdgpu_kernel void @misaligned_read2st64_f64(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
@@ -175,12 +204,16 @@ define amdgpu_kernel void @misaligned_read2st64_f64(double addrspace(1)* %out, d
 }
 
 ; The maximum is not the usual 0xff because 0xff * 8 * 64 > 0xffff
-; SI-LABEL: @simple_read2st64_f64_max_offset
-; SI: ds_read2st64_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:4 offset1:127
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
-; SI: buffer_store_dwordx2 [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f64_max_offset
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2st64_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:4 offset1:127
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
+
+; CI: buffer_store_dwordx2 [[RESULT]]
+; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2st64_f64_max_offset(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 256
@@ -195,12 +228,15 @@ define amdgpu_kernel void @simple_read2st64_f64_max_offset(double addrspace(1)* 
   ret void
 }
 
-; SI-LABEL: @simple_read2st64_f64_over_max_offset
-; SI-NOT: ds_read2st64_b64
-; SI-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset:512
-; SI-DAG: v_add_i32_e32 [[BIGADD:v[0-9]+]], vcc, 0x10000, {{v[0-9]+}}
-; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, [[BIGADD]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2st64_f64_over_max_offset
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2st64_b64
+; GCN-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset:512
+; GCN-DAG: v_add_{{i|u}}32_e32 [[BIGADD:v[0-9]+]], {{(vcc, )?}}0x10000, {{v[0-9]+}}
+; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, [[BIGADD]]
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2st64_f64_over_max_offset(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -215,9 +251,12 @@ define amdgpu_kernel void @simple_read2st64_f64_over_max_offset(double addrspace
   ret void
 }
 
-; SI-LABEL: @invalid_read2st64_f64_odd_offset
-; SI-NOT: ds_read2st64_b64
-; SI: s_endpgm
+; GCN-LABEL: @invalid_read2st64_f64_odd_offset
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2st64_b64
+; GCN: s_endpgm
 define amdgpu_kernel void @invalid_read2st64_f64_odd_offset(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -235,10 +274,13 @@ define amdgpu_kernel void @invalid_read2st64_f64_odd_offset(double addrspace(1)*
 ; The stride of 8 elements is 8 * 8 bytes. We need to make sure the
 ; stride in elements, not bytes, is a multiple of 64.
 
-; SI-LABEL: @byte_size_only_divisible_64_read2_f64
-; SI-NOT: ds_read2st_b64
-; SI: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:8
-; SI: s_endpgm
+; GCN-LABEL: @byte_size_only_divisible_64_read2_f64
+; CI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2st_b64
+; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:8
+; GCN: s_endpgm
 define amdgpu_kernel void @byte_size_only_divisible_64_read2_f64(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
@@ -252,10 +294,7 @@ define amdgpu_kernel void @byte_size_only_divisible_64_read2_f64(double addrspac
   ret void
 }
 
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() #1
 
 attributes #0 = { nounwind }

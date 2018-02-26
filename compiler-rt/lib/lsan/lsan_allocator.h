@@ -68,9 +68,16 @@ struct AP32 {
 };
 typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #elif defined(__x86_64__) || defined(__powerpc64__)
+# if defined(__powerpc64__)
+const uptr kAllocatorSpace = 0xa0000000000ULL;
+const uptr kAllocatorSize  = 0x20000000000ULL;  // 2T.
+# else
+const uptr kAllocatorSpace = 0x600000000000ULL;
+const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
+# endif
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
-  static const uptr kSpaceBeg = 0x600000000000ULL;
-  static const uptr kSpaceSize =  0x40000000000ULL; // 4T.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
   static const uptr kMetadataSize = sizeof(ChunkMetadata);
   typedef DefaultSizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;

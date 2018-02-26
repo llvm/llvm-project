@@ -253,18 +253,18 @@
 // SCHAR-NOT:#define __UNSIGNED_CHAR__
 // SCHAR:#define __clang__ 1
 //
-// RUN: %clang_cc1 -E -dM -fshort-wchar < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=short -fno-signed-wchar < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
 // wchar_t is u16 for targeting Win32.
-// FIXME: Implement and check x86_64-cygwin.
-// RUN: %clang_cc1 -E -dM -fno-short-wchar -triple=x86_64-w64-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=short -fno-signed-wchar -triple=x86_64-w64-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
+// RUN: %clang_cc1 -dM -fwchar-type=short -fno-signed-wchar -triple=x86_64-unknown-windows-cygnus -E /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
 //
 // SHORTWCHAR: #define __SIZEOF_WCHAR_T__ 2
 // SHORTWCHAR: #define __WCHAR_MAX__ 65535
 // SHORTWCHAR: #define __WCHAR_TYPE__ unsigned short
 // SHORTWCHAR: #define __WCHAR_WIDTH__ 16
 //
-// RUN: %clang_cc1 -E -dM -fno-short-wchar -triple=i686-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
-// RUN: %clang_cc1 -E -dM -fno-short-wchar -triple=x86_64-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=int -triple=i686-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=int -triple=x86_64-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
 //
 // SHORTWCHAR2: #define __SIZEOF_WCHAR_T__ 4
 // SHORTWCHAR2: #define __WCHAR_WIDTH__ 32
@@ -301,6 +301,20 @@
 // AARCH64:#define __DBL_MIN_EXP__ (-1021)
 // AARCH64:#define __DBL_MIN__ 2.2250738585072014e-308
 // AARCH64:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
+// AARCH64:#define __FLT16_DECIMAL_DIG__ 5
+// AARCH64:#define __FLT16_DENORM_MIN__ 5.9604644775390625e-8F16
+// AARCH64:#define __FLT16_DIG__ 3
+// AARCH64:#define __FLT16_EPSILON__ 9.765625e-4F16
+// AARCH64:#define __FLT16_HAS_DENORM__ 1
+// AARCH64:#define __FLT16_HAS_INFINITY__ 1
+// AARCH64:#define __FLT16_HAS_QUIET_NAN__ 1
+// AARCH64:#define __FLT16_MANT_DIG__ 11
+// AARCH64:#define __FLT16_MAX_10_EXP__ 4
+// AARCH64:#define __FLT16_MAX_EXP__ 15
+// AARCH64:#define __FLT16_MAX__ 6.5504e+4F16
+// AARCH64:#define __FLT16_MIN_10_EXP__ (-13)
+// AARCH64:#define __FLT16_MIN_EXP__ (-14)
+// AARCH64:#define __FLT16_MIN__ 6.103515625e-5F16
 // AARCH64:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // AARCH64:#define __FLT_DIG__ 6
 // AARCH64:#define __FLT_EPSILON__ 1.19209290e-7F
@@ -946,7 +960,7 @@
 // AARCH64-OPENBSD:#define __INT_LEAST32_FMTd__ "d"
 // AARCH64-OPENBSD:#define __INT_LEAST32_FMTi__ "i"
 // AARCH64-OPENBSD:#define __INT_LEAST32_MAX__ 2147483647
-// AARCH64-OPENSD:#define __INT_LEAST32_TYPE__ int
+// AARCH64-OPENBSD:#define __INT_LEAST32_TYPE__ int
 // AARCH64-OPENBSD:#define __INT_LEAST64_FMTd__ "ld"
 // AARCH64-OPENBSD:#define __INT_LEAST64_FMTi__ "li"
 // AARCH64-OPENBSD:#define __INT_LEAST64_MAX__ 9223372036854775807L
@@ -1229,6 +1243,7 @@
 // AARCH64-FREEBSD:#define __WCHAR_TYPE__ unsigned int
 // AARCH64-FREEBSD:#define __WCHAR_UNSIGNED__ 1
 // AARCH64-FREEBSD:#define __WCHAR_WIDTH__ 32
+// AARCH64-FREEBSD:#define __WINT_MAX__ 2147483647
 // AARCH64-FREEBSD:#define __WINT_TYPE__ int
 // AARCH64-FREEBSD:#define __WINT_WIDTH__ 32
 // AARCH64-FREEBSD:#define __aarch64__ 1
@@ -1236,13 +1251,13 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-apple-ios7.0 < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-DARWIN %s
 //
 // AARCH64-DARWIN: #define _LP64 1
-// AARCH64-NOT: #define __AARCH64EB__ 1
+// AARCH64-DARWIN-NOT: #define __AARCH64EB__ 1
 // AARCH64-DARWIN: #define __AARCH64EL__ 1
-// AARCH64-NOT: #define __AARCH_BIG_ENDIAN 1
+// AARCH64-DARWIN-NOT: #define __AARCH_BIG_ENDIAN 1
 // AARCH64-DARWIN: #define __ARM_64BIT_STATE 1
 // AARCH64-DARWIN: #define __ARM_ARCH 8
 // AARCH64-DARWIN: #define __ARM_ARCH_ISA_A64 1
-// AARCH64-NOT: #define __ARM_BIG_ENDIAN 1
+// AARCH64-DARWIN-NOT: #define __ARM_BIG_ENDIAN 1
 // AARCH64-DARWIN: #define __BIGGEST_ALIGNMENT__ 8
 // AARCH64-DARWIN: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // AARCH64-DARWIN: #define __CHAR16_TYPE__ unsigned short
@@ -1424,6 +1439,173 @@
 // AARCH64-DARWIN: #define __WINT_WIDTH__ 32
 // AARCH64-DARWIN: #define __aarch64__ 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=thumbv7-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM-MSVC %s
+//
+// ARM-MSVC: #define _M_ARM_NT 1
+// ARM-MSVC: #define _WIN32 1
+// ARM-MSVC-NOT:#define __ARM_DWARF_EH__ 1
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-MSVC %s
+//
+// AARCH64-MSVC: #define _INTEGRAL_MAX_BITS 64
+// AARCH64-MSVC-NOT: #define _LP64 1
+// AARCH64-MSVC: #define _M_ARM64 1
+// AARCH64-MSVC: #define _WIN32 1
+// AARCH64-MSVC: #define _WIN64 1
+// AARCH64-MSVC: #define __AARCH64EL__ 1
+// AARCH64-MSVC: #define __ARM_64BIT_STATE 1
+// AARCH64-MSVC: #define __ARM_ACLE 200
+// AARCH64-MSVC: #define __ARM_ALIGN_MAX_STACK_PWR 4
+// AARCH64-MSVC: #define __ARM_ARCH 8
+// AARCH64-MSVC: #define __ARM_ARCH_ISA_A64 1
+// AARCH64-MSVC: #define __ARM_ARCH_PROFILE 'A'
+// AARCH64-MSVC: #define __ARM_FEATURE_CLZ 1
+// AARCH64-MSVC: #define __ARM_FEATURE_DIRECTED_ROUNDING 1
+// AARCH64-MSVC: #define __ARM_FEATURE_DIV 1
+// AARCH64-MSVC: #define __ARM_FEATURE_FMA 1
+// AARCH64-MSVC: #define __ARM_FEATURE_IDIV 1
+// AARCH64-MSVC: #define __ARM_FEATURE_LDREX 0xF
+// AARCH64-MSVC: #define __ARM_FEATURE_NUMERIC_MAXMIN 1
+// AARCH64-MSVC: #define __ARM_FEATURE_UNALIGNED 1
+// AARCH64-MSVC: #define __ARM_FP 0xE
+// AARCH64-MSVC: #define __ARM_FP16_ARGS 1
+// AARCH64-MSVC: #define __ARM_FP16_FORMAT_IEEE 1
+// AARCH64-MSVC: #define __ARM_PCS_AAPCS64 1
+// AARCH64-MSVC: #define __ARM_SIZEOF_MINIMAL_ENUM 4
+// AARCH64-MSVC: #define __ARM_SIZEOF_WCHAR_T 4
+// AARCH64-MSVC: #define __BIGGEST_ALIGNMENT__ 16
+// AARCH64-MSVC: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+// AARCH64-MSVC: #define __CHAR16_TYPE__ unsigned short
+// AARCH64-MSVC: #define __CHAR32_TYPE__ unsigned int
+// AARCH64-MSVC: #define __CHAR_BIT__ 8
+// AARCH64-MSVC: #define __CONSTANT_CFSTRINGS__ 1
+// AARCH64-MSVC: #define __DBL_DECIMAL_DIG__ 17
+// AARCH64-MSVC: #define __DBL_DENORM_MIN__ 4.9406564584124654e-324
+// AARCH64-MSVC: #define __DBL_DIG__ 15
+// AARCH64-MSVC: #define __DBL_EPSILON__ 2.2204460492503131e-16
+// AARCH64-MSVC: #define __DBL_HAS_DENORM__ 1
+// AARCH64-MSVC: #define __DBL_HAS_INFINITY__ 1
+// AARCH64-MSVC: #define __DBL_HAS_QUIET_NAN__ 1
+// AARCH64-MSVC: #define __DBL_MANT_DIG__ 53
+// AARCH64-MSVC: #define __DBL_MAX_10_EXP__ 308
+// AARCH64-MSVC: #define __DBL_MAX_EXP__ 1024
+// AARCH64-MSVC: #define __DBL_MAX__ 1.7976931348623157e+308
+// AARCH64-MSVC: #define __DBL_MIN_10_EXP__ (-307)
+// AARCH64-MSVC: #define __DBL_MIN_EXP__ (-1021)
+// AARCH64-MSVC: #define __DBL_MIN__ 2.2250738585072014e-308
+// AARCH64-MSVC: #define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
+// AARCH64-MSVC: #define __FINITE_MATH_ONLY__ 0
+// AARCH64-MSVC: #define __FLT_DECIMAL_DIG__ 9
+// AARCH64-MSVC: #define __FLT_DENORM_MIN__ 1.40129846e-45F
+// AARCH64-MSVC: #define __FLT_DIG__ 6
+// AARCH64-MSVC: #define __FLT_EPSILON__ 1.19209290e-7F
+// AARCH64-MSVC: #define __FLT_EVAL_METHOD__ 0
+// AARCH64-MSVC: #define __FLT_HAS_DENORM__ 1
+// AARCH64-MSVC: #define __FLT_HAS_INFINITY__ 1
+// AARCH64-MSVC: #define __FLT_HAS_QUIET_NAN__ 1
+// AARCH64-MSVC: #define __FLT_MANT_DIG__ 24
+// AARCH64-MSVC: #define __FLT_MAX_10_EXP__ 38
+// AARCH64-MSVC: #define __FLT_MAX_EXP__ 128
+// AARCH64-MSVC: #define __FLT_MAX__ 3.40282347e+38F
+// AARCH64-MSVC: #define __FLT_MIN_10_EXP__ (-37)
+// AARCH64-MSVC: #define __FLT_MIN_EXP__ (-125)
+// AARCH64-MSVC: #define __FLT_MIN__ 1.17549435e-38F
+// AARCH64-MSVC: #define __FLT_RADIX__ 2
+// AARCH64-MSVC: #define __INT_MAX__ 2147483647
+// AARCH64-MSVC: #define __LDBL_DECIMAL_DIG__ 17
+// AARCH64-MSVC: #define __LDBL_DENORM_MIN__ 4.9406564584124654e-324L
+// AARCH64-MSVC: #define __LDBL_DIG__ 15
+// AARCH64-MSVC: #define __LDBL_EPSILON__ 2.2204460492503131e-16L
+// AARCH64-MSVC: #define __LDBL_HAS_DENORM__ 1
+// AARCH64-MSVC: #define __LDBL_HAS_INFINITY__ 1
+// AARCH64-MSVC: #define __LDBL_HAS_QUIET_NAN__ 1
+// AARCH64-MSVC: #define __LDBL_MANT_DIG__ 53
+// AARCH64-MSVC: #define __LDBL_MAX_10_EXP__ 308
+// AARCH64-MSVC: #define __LDBL_MAX_EXP__ 1024
+// AARCH64-MSVC: #define __LDBL_MAX__ 1.7976931348623157e+308L
+// AARCH64-MSVC: #define __LDBL_MIN_10_EXP__ (-307)
+// AARCH64-MSVC: #define __LDBL_MIN_EXP__ (-1021)
+// AARCH64-MSVC: #define __LDBL_MIN__ 2.2250738585072014e-308L
+// AARCH64-MSVC: #define __LITTLE_ENDIAN__ 1
+// AARCH64-MSVC: #define __LONG_LONG_MAX__ 9223372036854775807LL
+// AARCH64-MSVC: #define __LONG_MAX__ 2147483647L
+// AARCH64-MSVC-NOT: #define __LP64__ 1
+// AARCH64-MSVC: #define __NO_INLINE__ 1
+// AARCH64-MSVC: #define __OBJC_BOOL_IS_BOOL 0
+// AARCH64-MSVC: #define __ORDER_BIG_ENDIAN__ 4321
+// AARCH64-MSVC: #define __ORDER_LITTLE_ENDIAN__ 1234
+// AARCH64-MSVC: #define __ORDER_PDP_ENDIAN__ 3412
+// AARCH64-MSVC: #define __POINTER_WIDTH__ 64
+// AARCH64-MSVC: #define __PRAGMA_REDEFINE_EXTNAME 1
+// AARCH64-MSVC: #define __SCHAR_MAX__ 127
+// AARCH64-MSVC: #define __SHRT_MAX__ 32767
+// AARCH64-MSVC: #define __SIG_ATOMIC_MAX__ 2147483647
+// AARCH64-MSVC: #define __SIG_ATOMIC_WIDTH__ 32
+// AARCH64-MSVC: #define __SIZEOF_DOUBLE__ 8
+// AARCH64-MSVC: #define __SIZEOF_FLOAT__ 4
+// AARCH64-MSVC: #define __SIZEOF_INT128__ 16
+// AARCH64-MSVC: #define __SIZEOF_INT__ 4
+// AARCH64-MSVC: #define __SIZEOF_LONG_DOUBLE__ 8
+// AARCH64-MSVC: #define __SIZEOF_LONG_LONG__ 8
+// AARCH64-MSVC: #define __SIZEOF_LONG__ 4
+// AARCH64-MSVC: #define __SIZEOF_POINTER__ 8
+// AARCH64-MSVC: #define __SIZEOF_PTRDIFF_T__ 8
+// AARCH64-MSVC: #define __SIZEOF_SHORT__ 2
+// AARCH64-MSVC: #define __SIZEOF_SIZE_T__ 8
+// AARCH64-MSVC: #define __SIZEOF_WCHAR_T__ 2
+// AARCH64-MSVC: #define __SIZEOF_WINT_T__ 4
+// AARCH64-MSVC: #define __SIZE_MAX__ 18446744073709551615ULL
+// AARCH64-MSVC: #define __SIZE_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __SIZE_WIDTH__ 64
+// AARCH64-MSVC: #define __STDC_HOSTED__ 0
+// AARCH64-MSVC: #define __STDC_UTF_16__ 1
+// AARCH64-MSVC: #define __STDC_UTF_32__ 1
+// AARCH64-MSVC: #define __STDC_VERSION__ 201112L
+// AARCH64-MSVC: #define __STDC__ 1
+// AARCH64-MSVC: #define __UINT16_C_SUFFIX__
+// AARCH64-MSVC: #define __UINT16_MAX__ 65535
+// AARCH64-MSVC: #define __UINT16_TYPE__ unsigned short
+// AARCH64-MSVC: #define __UINT32_C_SUFFIX__ U
+// AARCH64-MSVC: #define __UINT32_MAX__ 4294967295U
+// AARCH64-MSVC: #define __UINT32_TYPE__ unsigned int
+// AARCH64-MSVC: #define __UINT64_C_SUFFIX__ ULL
+// AARCH64-MSVC: #define __UINT64_MAX__ 18446744073709551615ULL
+// AARCH64-MSVC: #define __UINT64_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __UINT8_C_SUFFIX__
+// AARCH64-MSVC: #define __UINT8_MAX__ 255
+// AARCH64-MSVC: #define __UINT8_TYPE__ unsigned char
+// AARCH64-MSVC: #define __UINTMAX_C_SUFFIX__ ULL
+// AARCH64-MSVC: #define __UINTMAX_MAX__ 18446744073709551615ULL
+// AARCH64-MSVC: #define __UINTMAX_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __UINTMAX_WIDTH__ 64
+// AARCH64-MSVC: #define __UINTPTR_MAX__ 18446744073709551615ULL
+// AARCH64-MSVC: #define __UINTPTR_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __UINTPTR_WIDTH__ 64
+// AARCH64-MSVC: #define __UINT_FAST16_MAX__ 65535
+// AARCH64-MSVC: #define __UINT_FAST16_TYPE__ unsigned short
+// AARCH64-MSVC: #define __UINT_FAST32_MAX__ 4294967295U
+// AARCH64-MSVC: #define __UINT_FAST32_TYPE__ unsigned int
+// AARCH64-MSVC: #define __UINT_FAST64_MAX__ 18446744073709551615ULL
+// AARCH64-MSVC: #define __UINT_FAST64_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __UINT_FAST8_MAX__ 255
+// AARCH64-MSVC: #define __UINT_FAST8_TYPE__ unsigned char
+// AARCH64-MSVC: #define __UINT_LEAST16_MAX__ 65535
+// AARCH64-MSVC: #define __UINT_LEAST16_TYPE__ unsigned short
+// AARCH64-MSVC: #define __UINT_LEAST32_MAX__ 4294967295U
+// AARCH64-MSVC: #define __UINT_LEAST32_TYPE__ unsigned int
+// AARCH64-MSVC: #define __UINT_LEAST64_MAX__ 18446744073709551615ULL
+// AARCH64-MSVC: #define __UINT_LEAST64_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __UINT_LEAST8_MAX__ 255
+// AARCH64-MSVC: #define __UINT_LEAST8_TYPE__ unsigned char
+// AARCH64-MSVC: #define __USER_LABEL_PREFIX__
+// AARCH64-MSVC: #define __WCHAR_MAX__ 65535
+// AARCH64-MSVC: #define __WCHAR_TYPE__ unsigned short
+// AARCH64-MSVC: #define __WCHAR_UNSIGNED__ 1
+// AARCH64-MSVC: #define __WCHAR_WIDTH__ 16
+// AARCH64-MSVC: #define __WINT_TYPE__ int
+// AARCH64-MSVC: #define __WINT_WIDTH__ 32
+// AARCH64-MSVC: #define __aarch64__ 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM -check-prefix ARM-CXX %s
 //
@@ -1493,10 +1675,10 @@
 // ARM:#define __INTMAX_MAX__ 9223372036854775807LL
 // ARM:#define __INTMAX_TYPE__ long long int
 // ARM:#define __INTMAX_WIDTH__ 64
-// ARM:#define __INTPTR_FMTd__ "ld"
-// ARM:#define __INTPTR_FMTi__ "li"
-// ARM:#define __INTPTR_MAX__ 2147483647L
-// ARM:#define __INTPTR_TYPE__ long int
+// ARM:#define __INTPTR_FMTd__ "d"
+// ARM:#define __INTPTR_FMTi__ "i"
+// ARM:#define __INTPTR_MAX__ 2147483647
+// ARM:#define __INTPTR_TYPE__ int
 // ARM:#define __INTPTR_WIDTH__ 32
 // ARM:#define __INT_FAST16_FMTd__ "hd"
 // ARM:#define __INT_FAST16_FMTi__ "hi"
@@ -1588,8 +1770,8 @@
 // ARM:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARM:#define __UINTMAX_TYPE__ long long unsigned int
 // ARM:#define __UINTMAX_WIDTH__ 64
-// ARM:#define __UINTPTR_MAX__ 4294967295UL
-// ARM:#define __UINTPTR_TYPE__ long unsigned int
+// ARM:#define __UINTPTR_MAX__ 4294967295U
+// ARM:#define __UINTPTR_TYPE__ unsigned int
 // ARM:#define __UINTPTR_WIDTH__ 32
 // ARM:#define __UINT_FAST16_MAX__ 65535
 // ARM:#define __UINT_FAST16_TYPE__ unsigned short
@@ -1615,6 +1797,11 @@
 // ARM:#define __WINT_WIDTH__ 32
 // ARM:#define __arm 1
 // ARM:#define __arm__ 1
+
+// RUN: %clang_cc1 -dM -ffreestanding -triple arm-none-none -target-abi apcs-gnu -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-APCS-GNU %s
+// ARM-APCS-GNU: #define __INTPTR_TYPE__ int
+// ARM-APCS-GNU: #define __PTRDIFF_TYPE__ int
+// ARM-APCS-GNU: #define __SIZE_TYPE__ unsigned int
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=armeb-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM-BE %s
 //
@@ -1685,10 +1872,10 @@
 // ARM-BE:#define __INTMAX_MAX__ 9223372036854775807LL
 // ARM-BE:#define __INTMAX_TYPE__ long long int
 // ARM-BE:#define __INTMAX_WIDTH__ 64
-// ARM-BE:#define __INTPTR_FMTd__ "ld"
-// ARM-BE:#define __INTPTR_FMTi__ "li"
-// ARM-BE:#define __INTPTR_MAX__ 2147483647L
-// ARM-BE:#define __INTPTR_TYPE__ long int
+// ARM-BE:#define __INTPTR_FMTd__ "d"
+// ARM-BE:#define __INTPTR_FMTi__ "i"
+// ARM-BE:#define __INTPTR_MAX__ 2147483647
+// ARM-BE:#define __INTPTR_TYPE__ int
 // ARM-BE:#define __INTPTR_WIDTH__ 32
 // ARM-BE:#define __INT_FAST16_FMTd__ "hd"
 // ARM-BE:#define __INT_FAST16_FMTi__ "hi"
@@ -1778,8 +1965,8 @@
 // ARM-BE:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARM-BE:#define __UINTMAX_TYPE__ long long unsigned int
 // ARM-BE:#define __UINTMAX_WIDTH__ 64
-// ARM-BE:#define __UINTPTR_MAX__ 4294967295UL
-// ARM-BE:#define __UINTPTR_TYPE__ long unsigned int
+// ARM-BE:#define __UINTPTR_MAX__ 4294967295U
+// ARM-BE:#define __UINTPTR_TYPE__ unsigned int
 // ARM-BE:#define __UINTPTR_WIDTH__ 32
 // ARM-BE:#define __UINT_FAST16_MAX__ 65535
 // ARM-BE:#define __UINT_FAST16_TYPE__ unsigned short
@@ -1878,10 +2065,10 @@
 // ARMEABISOFTFP:#define __INTMAX_MAX__ 9223372036854775807LL
 // ARMEABISOFTFP:#define __INTMAX_TYPE__ long long int
 // ARMEABISOFTFP:#define __INTMAX_WIDTH__ 64
-// ARMEABISOFTFP:#define __INTPTR_FMTd__ "ld"
-// ARMEABISOFTFP:#define __INTPTR_FMTi__ "li"
-// ARMEABISOFTFP:#define __INTPTR_MAX__ 2147483647L
-// ARMEABISOFTFP:#define __INTPTR_TYPE__ long int
+// ARMEABISOFTFP:#define __INTPTR_FMTd__ "d"
+// ARMEABISOFTFP:#define __INTPTR_FMTi__ "i"
+// ARMEABISOFTFP:#define __INTPTR_MAX__ 2147483647
+// ARMEABISOFTFP:#define __INTPTR_TYPE__ int
 // ARMEABISOFTFP:#define __INTPTR_WIDTH__ 32
 // ARMEABISOFTFP:#define __INT_FAST16_FMTd__ "hd"
 // ARMEABISOFTFP:#define __INT_FAST16_FMTi__ "hi"
@@ -1973,8 +2160,8 @@
 // ARMEABISOFTFP:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARMEABISOFTFP:#define __UINTMAX_TYPE__ long long unsigned int
 // ARMEABISOFTFP:#define __UINTMAX_WIDTH__ 64
-// ARMEABISOFTFP:#define __UINTPTR_MAX__ 4294967295UL
-// ARMEABISOFTFP:#define __UINTPTR_TYPE__ long unsigned int
+// ARMEABISOFTFP:#define __UINTPTR_MAX__ 4294967295U
+// ARMEABISOFTFP:#define __UINTPTR_TYPE__ unsigned int
 // ARMEABISOFTFP:#define __UINTPTR_WIDTH__ 32
 // ARMEABISOFTFP:#define __UINT_FAST16_MAX__ 65535
 // ARMEABISOFTFP:#define __UINT_FAST16_TYPE__ unsigned short
@@ -2073,10 +2260,10 @@
 // ARMEABIHARDFP:#define __INTMAX_MAX__ 9223372036854775807LL
 // ARMEABIHARDFP:#define __INTMAX_TYPE__ long long int
 // ARMEABIHARDFP:#define __INTMAX_WIDTH__ 64
-// ARMEABIHARDFP:#define __INTPTR_FMTd__ "ld"
-// ARMEABIHARDFP:#define __INTPTR_FMTi__ "li"
-// ARMEABIHARDFP:#define __INTPTR_MAX__ 2147483647L
-// ARMEABIHARDFP:#define __INTPTR_TYPE__ long int
+// ARMEABIHARDFP:#define __INTPTR_FMTd__ "d"
+// ARMEABIHARDFP:#define __INTPTR_FMTi__ "i"
+// ARMEABIHARDFP:#define __INTPTR_MAX__ 2147483647
+// ARMEABIHARDFP:#define __INTPTR_TYPE__ int
 // ARMEABIHARDFP:#define __INTPTR_WIDTH__ 32
 // ARMEABIHARDFP:#define __INT_FAST16_FMTd__ "hd"
 // ARMEABIHARDFP:#define __INT_FAST16_FMTi__ "hi"
@@ -2168,8 +2355,8 @@
 // ARMEABIHARDFP:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARMEABIHARDFP:#define __UINTMAX_TYPE__ long long unsigned int
 // ARMEABIHARDFP:#define __UINTMAX_WIDTH__ 64
-// ARMEABIHARDFP:#define __UINTPTR_MAX__ 4294967295UL
-// ARMEABIHARDFP:#define __UINTPTR_TYPE__ long unsigned int
+// ARMEABIHARDFP:#define __UINTPTR_MAX__ 4294967295U
+// ARMEABIHARDFP:#define __UINTPTR_TYPE__ unsigned int
 // ARMEABIHARDFP:#define __UINTPTR_WIDTH__ 32
 // ARMEABIHARDFP:#define __UINT_FAST16_MAX__ 65535
 // ARMEABIHARDFP:#define __UINT_FAST16_TYPE__ unsigned short
@@ -2413,13 +2600,6 @@
 // RUN: %clang -target x86_64-apple-darwin -arch armv7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-MACHO-NO-EABI %s
 // ARM-MACHO-NO-EABI-NOT: #define __ARM_EABI__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=armv7-bitrig-gnueabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-BITRIG %s
-// ARM-BITRIG:#define __ARM_DWARF_EH__ 1
-// ARM-BITRIG:#define __SIZEOF_SIZE_T__ 4
-// ARM-BITRIG:#define __SIZE_MAX__ 4294967295UL
-// ARM-BITRIG:#define __SIZE_TYPE__ long unsigned int
-// ARM-BITRIG:#define __SIZE_WIDTH__ 32
-
 // Check that -mhwdiv works properly for targets which don't have the hwdiv feature enabled by default.
 
 // RUN: %clang -target arm -mhwdiv=arm -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMHWDIV-ARM %s
@@ -2471,6 +2651,10 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=thumbebv7 < /dev/null | FileCheck -match-full-lines -check-prefix Thumbebv7 %s
 // Thumbebv7: #define __THUMB_INTERWORK__ 1
 // Thumbebv7: #define __thumb2__ 1
+
+// RUN: %clang -E -dM -ffreestanding -target thumbv7-pc-mingw32 %s -o - | FileCheck -match-full-lines -check-prefix THUMB-MINGW %s
+
+// THUMB-MINGW:#define __ARM_DWARF_EH__ 1
 
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-none-none < /dev/null | FileCheck -match-full-lines -check-prefix I386 %s
@@ -4705,6 +4889,16 @@
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix NOMIPS-NAN2008 %s
 // NOMIPS-NAN2008-NOT:#define __mips_nan2008 1
+//
+// RUN: %clang_cc1 -target-cpu mips32r3 -target-feature +abs2008 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABS2008 %s
+// MIPS-ABS2008:#define __mips_abs2008 1
+//
+// RUN: %clang_cc1 -target-cpu mips32r3 -target-feature -abs2008 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix NOMIPS-ABS2008 %s
+// NOMIPS-ABS2008-NOT:#define __mips_abs2008 1
 //
 // RUN: %clang_cc1 -target-feature -fp64 \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
@@ -8247,6 +8441,7 @@
 // X86_64-CLOUDABI:#define __WCHAR_MAX__ 2147483647
 // X86_64-CLOUDABI:#define __WCHAR_TYPE__ int
 // X86_64-CLOUDABI:#define __WCHAR_WIDTH__ 32
+// X86_64-CLOUDABI:#define __WINT_MAX__ 2147483647
 // X86_64-CLOUDABI:#define __WINT_TYPE__ int
 // X86_64-CLOUDABI:#define __WINT_WIDTH__ 32
 // X86_64-CLOUDABI:#define __amd64 1
@@ -8801,6 +8996,7 @@
 // KFREEBSDI686-DEFINE:#define __GLIBC__ 1
 //
 // RUN: %clang_cc1 -x c++ -triple i686-pc-linux-gnu -fobjc-runtime=gcc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GNUSOURCE %s
+// RUN: %clang_cc1 -x c++ -triple sparc-rtems-elf -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GNUSOURCE %s
 // GNUSOURCE:#define _GNU_SOURCE 1
 //
 // RUN: %clang_cc1 -x c++ -std=c++98 -fno-rtti -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NORTTI %s
@@ -8906,7 +9102,7 @@
 // WEBASSEMBLY32-NEXT:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 // WEBASSEMBLY32-NOT:#define __ELF__
 // WEBASSEMBLY32-NEXT:#define __FINITE_MATH_ONLY__ 0
-// WEBASSEMBLY32-NEXT:#define __FLT_DECIMAL_DIG__ 9
+// WEBASSEMBLY32:#define __FLT_DECIMAL_DIG__ 9
 // WEBASSEMBLY32-NEXT:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // WEBASSEMBLY32-NEXT:#define __FLT_DIG__ 6
 // WEBASSEMBLY32-NEXT:#define __FLT_EPSILON__ 1.19209290e-7F
@@ -9023,6 +9219,11 @@
 // WEBASSEMBLY32-NOT:#define __LP64__
 // WEBASSEMBLY32-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY32-NEXT:#define __OBJC_BOOL_IS_BOOL 0
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_DEVICE 2
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
 // WEBASSEMBLY32-NEXT:#define __ORDER_BIG_ENDIAN__ 4321
 // WEBASSEMBLY32-NEXT:#define __ORDER_LITTLE_ENDIAN__ 1234
 // WEBASSEMBLY32-NEXT:#define __ORDER_PDP_ENDIAN__ 3412
@@ -9165,6 +9366,7 @@
 // WEBASSEMBLY32-NEXT:#define __WCHAR_TYPE__ int
 // WEBASSEMBLY32-NOT:#define __WCHAR_UNSIGNED__
 // WEBASSEMBLY32-NEXT:#define __WCHAR_WIDTH__ 32
+// WEBASSEMBLY32-NEXT:#define __WINT_MAX__ 2147483647
 // WEBASSEMBLY32-NEXT:#define __WINT_TYPE__ int
 // WEBASSEMBLY32-NOT:#define __WINT_UNSIGNED__
 // WEBASSEMBLY32-NEXT:#define __WINT_WIDTH__ 32
@@ -9232,7 +9434,7 @@
 // WEBASSEMBLY64-NEXT:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 // WEBASSEMBLY64-NOT:#define __ELF__
 // WEBASSEMBLY64-NEXT:#define __FINITE_MATH_ONLY__ 0
-// WEBASSEMBLY64-NEXT:#define __FLT_DECIMAL_DIG__ 9
+// WEBASSEMBLY64:#define __FLT_DECIMAL_DIG__ 9
 // WEBASSEMBLY64-NEXT:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // WEBASSEMBLY64-NEXT:#define __FLT_DIG__ 6
 // WEBASSEMBLY64-NEXT:#define __FLT_EPSILON__ 1.19209290e-7F
@@ -9349,6 +9551,11 @@
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
 // WEBASSEMBLY64-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY64-NEXT:#define __OBJC_BOOL_IS_BOOL 0
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_DEVICE 2
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
 // WEBASSEMBLY64-NEXT:#define __ORDER_BIG_ENDIAN__ 4321
 // WEBASSEMBLY64-NEXT:#define __ORDER_LITTLE_ENDIAN__ 1234
 // WEBASSEMBLY64-NEXT:#define __ORDER_PDP_ENDIAN__ 3412
@@ -9491,6 +9698,7 @@
 // WEBASSEMBLY64-NEXT:#define __WCHAR_TYPE__ int
 // WEBASSEMBLY64-NOT:#define __WCHAR_UNSIGNED__
 // WEBASSEMBLY64-NEXT:#define __WCHAR_WIDTH__ 32
+// WEBASSEMBLY64-NEXT:#define __WINT_MAX__ 2147483647
 // WEBASSEMBLY64-NEXT:#define __WINT_TYPE__ int
 // WEBASSEMBLY64-NOT:#define __WINT_UNSIGNED__
 // WEBASSEMBLY64-NEXT:#define __WINT_WIDTH__ 32
@@ -9692,11 +9900,11 @@
 
 
 // RUN: %clang_cc1 -E -dM -ffreestanding \
-// RUN:    -triple i686-windows-msvc -fms-compatibility < /dev/null \
+// RUN:    -triple i686-windows-msvc -fms-compatibility -x c++ < /dev/null \
 // RUN:  | FileCheck -match-full-lines -check-prefix MSVC-X32 %s
 
 // RUN: %clang_cc1 -E -dM -ffreestanding \
-// RUN:    -triple x86_64-windows-msvc -fms-compatibility < /dev/null \
+// RUN:    -triple x86_64-windows-msvc -fms-compatibility -x c++ < /dev/null \
 // RUN:  | FileCheck -match-full-lines -check-prefix MSVC-X64 %s
 
 // MSVC-X32:#define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
@@ -9710,6 +9918,7 @@
 // MSVC-X32-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
 // MSVC-X32-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
 // MSVC-X32-NOT:#define __GCC_ATOMIC{{.*}}
+// MSVC-X32:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 
 // MSVC-X64:#define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
 // MSVC-X64-NEXT:#define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
@@ -9721,7 +9930,8 @@
 // MSVC-X64-NEXT:#define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
 // MSVC-X64-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
 // MSVC-X64-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
-// MSVC-X86-NOT:#define __GCC_ATOMIC{{.*}}
+// MSVC-X64-NOT:#define __GCC_ATOMIC{{.*}}
+// MSVC-X64:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16ULL
 
 // RUN: %clang_cc1 -E -dM -ffreestanding                \
 // RUN:   -triple=aarch64-apple-ios9 < /dev/null        \
@@ -9731,3 +9941,65 @@
 // RUN: | FileCheck -check-prefix=DARWIN %s
 
 // DARWIN:#define __STDC_NO_THREADS__ 1
+
+// RUN: %clang_cc1 -triple i386-apple-macosx -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix MACOS-32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix MACOS-64 %s
+
+// MACOS-32: #define __INTPTR_TYPE__ long int
+// MACOS-32: #define __PTRDIFF_TYPE__ int
+// MACOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// MACOS-64: #define __INTPTR_TYPE__ long int
+// MACOS-64: #define __PTRDIFF_TYPE__ long int
+// MACOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple i386-apple-ios-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-32 %s
+// RUN: %clang_cc1 -triple armv7-apple-ios -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-ios-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-64 %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-64 %s
+
+// IOS-32: #define __INTPTR_TYPE__ long int
+// IOS-32: #define __PTRDIFF_TYPE__ int
+// IOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// IOS-64: #define __INTPTR_TYPE__ long int
+// IOS-64: #define __PTRDIFF_TYPE__ long int
+// IOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple i386-apple-tvos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-32 %s
+// RUN: %clang_cc1 -triple armv7-apple-tvos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-tvos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-64 %s
+// RUN: %clang_cc1 -triple arm64-apple-tvos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-64 %s
+
+// TVOS-32: #define __INTPTR_TYPE__ long int
+// TVOS-32: #define __PTRDIFF_TYPE__ int
+// TVOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// TVOS-64: #define __INTPTR_TYPE__ long int
+// TVOS-64: #define __PTRDIFF_TYPE__ long int
+// TVOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple i386-apple-watchos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-32 %s
+// RUN: %clang_cc1 -triple armv7k-apple-watchos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
+// RUN: %clang_cc1 -triple x86_64-apple-watchos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
+// RUN: %clang_cc1 -triple arm64-apple-watchos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
+
+// WATCHOS-32: #define __INTPTR_TYPE__ long int
+// WATCHOS-32: #define __PTRDIFF_TYPE__ int
+// WATCHOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// WATCHOS-64: #define __INTPTR_TYPE__ long int
+// WATCHOS-64: #define __PTRDIFF_TYPE__ long int
+// WATCHOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple armv7-apple-none-macho -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-DARWIN-BAREMETAL-32 %s
+// RUN: %clang_cc1 -triple arm64-apple-none-macho -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-DARWIN-BAREMETAL-64 %s
+
+// ARM-DARWIN-BAREMETAL-32: #define __INTPTR_TYPE__ long int
+// ARM-DARWIN-BAREMETAL-32: #define __PTRDIFF_TYPE__ int
+// ARM-DARWIN-BAREMETAL-32: #define __SIZE_TYPE__ long unsigned int
+
+// ARM-DARWIN-BAREMETAL-64: #define __INTPTR_TYPE__ long int
+// ARM-DARWIN-BAREMETAL-64: #define __PTRDIFF_TYPE__ long int
+// ARM-DARWIN-BAREMETAL-64: #define __SIZE_TYPE__ long unsigned int
+

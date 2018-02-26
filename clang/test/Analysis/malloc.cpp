@@ -1,5 +1,7 @@
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -verify %s
 // RUN: %clang_analyze_cc1 -triple i386-unknown-linux-gnu -w -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-unknown-linux-gnu -w -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -DTEST_INLINABLE_ALLOCATORS -verify %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 

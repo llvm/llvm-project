@@ -15,20 +15,21 @@
 
 #include "OrcLazyJIT.h"
 #include "RemoteJITUtils.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/CodeGen/CommandFlags.def"
 #include "llvm/CodeGen/LinkAllCodegenComponents.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/Interpreter.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeBuilder.h"
@@ -124,22 +125,6 @@ namespace {
   TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
   cl::opt<std::string>
-  MArch("march",
-        cl::desc("Architecture to generate assembly for (see --version)"));
-
-  cl::opt<std::string>
-  MCPU("mcpu",
-       cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-       cl::value_desc("cpu-name"),
-       cl::init(""));
-
-  cl::list<std::string>
-  MAttrs("mattr",
-         cl::CommaSeparated,
-         cl::desc("Target specific attributes (-mattr=help for details)"),
-         cl::value_desc("a1,+a2,-a3,..."));
-
-  cl::opt<std::string>
   EntryFunc("entry-function",
             cl::desc("Specify the entry function (default = 'main') "
                      "of the executable"),
@@ -186,46 +171,10 @@ namespace {
                   cl::desc("Disable JIT lazy compilation"),
                   cl::init(false));
 
-  cl::opt<Reloc::Model> RelocModel(
-      "relocation-model", cl::desc("Choose relocation model"),
-      cl::values(
-          clEnumValN(Reloc::Static, "static", "Non-relocatable code"),
-          clEnumValN(Reloc::PIC_, "pic",
-                     "Fully relocatable, position independent code"),
-          clEnumValN(Reloc::DynamicNoPIC, "dynamic-no-pic",
-                     "Relocatable external references, non-relocatable code")));
-
-  cl::opt<llvm::CodeModel::Model>
-  CMModel("code-model",
-          cl::desc("Choose code model"),
-          cl::init(CodeModel::JITDefault),
-          cl::values(clEnumValN(CodeModel::JITDefault, "default",
-                                "Target default JIT code model"),
-                     clEnumValN(CodeModel::Small, "small",
-                                "Small code model"),
-                     clEnumValN(CodeModel::Kernel, "kernel",
-                                "Kernel code model"),
-                     clEnumValN(CodeModel::Medium, "medium",
-                                "Medium code model"),
-                     clEnumValN(CodeModel::Large, "large",
-                                "Large code model")));
-
   cl::opt<bool>
   GenerateSoftFloatCalls("soft-float",
     cl::desc("Generate software floating point library calls"),
     cl::init(false));
-
-  cl::opt<llvm::FloatABI::ABIType>
-  FloatABIForCalls("float-abi",
-                   cl::desc("Choose float ABI type"),
-                   cl::init(FloatABI::Default),
-                   cl::values(
-                     clEnumValN(FloatABI::Default, "default",
-                                "Target default float ABI type"),
-                     clEnumValN(FloatABI::Soft, "soft",
-                                "Soft float ABI (implied by -soft-float)"),
-                     clEnumValN(FloatABI::Hard, "hard",
-                                "Hard float ABI (uses FP registers)")));
 
   ExitOnError ExitOnErr;
 }
@@ -433,7 +382,8 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setMAttrs(MAttrs);
   if (RelocModel.getNumOccurrences())
     builder.setRelocationModel(RelocModel);
-  builder.setCodeModel(CMModel);
+  if (CMModel.getNumOccurrences())
+    builder.setCodeModel(CMModel);
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(ForceInterpreter
                         ? EngineKind::Interpreter
@@ -464,7 +414,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   builder.setOptLevel(getOptLevel());
 
-  TargetOptions Options;
+  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   if (FloatABIForCalls != FloatABI::Default)
     Options.FloatABIType = FloatABIForCalls;
 
@@ -657,28 +607,25 @@ int main(int argc, char **argv, char * const *envp) {
     }
 
     // Create a remote target client running over the channel.
-    typedef orc::remote::OrcRemoteTargetClient<orc::rpc::RawByteChannel>
-      MyRemote;
-    auto R = ExitOnErr(MyRemote::Create(*C));
+    typedef orc::remote::OrcRemoteTargetClient MyRemote;
+    auto R = ExitOnErr(MyRemote::Create(*C, ExitOnErr));
 
     // Create a remote memory manager.
-    std::unique_ptr<MyRemote::RCMemoryManager> RemoteMM;
-    ExitOnErr(R->createRemoteMemoryManager(RemoteMM));
+    auto RemoteMM = ExitOnErr(R->createRemoteMemoryManager());
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(
       std::move(RemoteMM));
 
     // Forward MCJIT's symbol resolution calls to the remote.
-    static_cast<ForwardingMemoryManager*>(RTDyldMM)->setResolver(
-      orc::createLambdaResolver(
-        [](const std::string &Name) { return nullptr; },
-        [&](const std::string &Name) {
-          if (auto Addr = ExitOnErr(R->getSymbolAddress(Name)))
-	    return JITSymbol(Addr, JITSymbolFlags::Exported);
-          return JITSymbol(nullptr);
-        }
-      ));
+    static_cast<ForwardingMemoryManager *>(RTDyldMM)->setResolver(
+        orc::createLambdaResolver(
+            [](const std::string &Name) { return nullptr; },
+            [&](const std::string &Name) {
+              if (auto Addr = ExitOnErr(R->getSymbolAddress(Name)))
+                return JITSymbol(Addr, JITSymbolFlags::Exported);
+              return JITSymbol(nullptr);
+            }));
 
     // Grab the target address of the JIT'd main function on the remote and call
     // it.

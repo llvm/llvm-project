@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "asan_test_utils.h"
 
-#if defined(__linux__)
+#if defined(__linux__) &&                                                      \
+    (!defined(ASAN_SHADOW_SCALE) || ASAN_SHADOW_SCALE == 3)
 
 // Assembly instrumentation is broken on x86 Android (x86 + PIC + shared runtime
 // library). See https://github.com/google/sanitizers/issues/353

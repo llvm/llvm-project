@@ -36,6 +36,15 @@ define void @stp_double(double %a, double %b, double* nocapture %p) nounwind {
   ret void
 }
 
+; CHECK-LABEL: stp_doublex2
+; CHECK: stp q0, q1, [x0]
+define void @stp_doublex2(<2 x double> %a, <2 x double> %b, <2 x double>* nocapture %p) nounwind {
+  store <2 x double> %a, <2 x double>* %p, align 16
+  %add.ptr = getelementptr inbounds <2 x double>, <2 x double>* %p, i64 1
+  store <2 x double> %b, <2 x double>* %add.ptr, align 16
+  ret void
+}
+
 ; Test the load/store optimizer---combine ldurs into a ldp, if appropriate
 define void @stur_int(i32 %a, i32 %b, i32* nocapture %p) nounwind {
 ; CHECK-LABEL: stur_int
@@ -81,12 +90,23 @@ define void @stur_double(double %a, double %b, double* nocapture %p) nounwind {
   ret void
 }
 
+define void @stur_doublex2(<2 x double> %a, <2 x double> %b, <2 x double>* nocapture %p) nounwind {
+; CHECK-LABEL: stur_doublex2
+; CHECK: stp q{{[0-9]+}}, q{{[0-9]+}}, [x{{[0-9]+}}, #-32]
+; CHECK-NEXT: ret
+  %p1 = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -1
+  store <2 x double> %a, <2 x double>* %p1, align 2
+  %p2 = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -2
+  store <2 x double> %b, <2 x double>* %p2, align 2
+  ret void
+}
+
 define void @splat_v4i32(i32 %v, i32 *%p) {
 entry:
 
 ; CHECK-LABEL: splat_v4i32
-; CHECK-DAG: stp w0, w0, [x1]
-; CHECK-DAG: stp w0, w0, [x1, #8]
+; CHECK-DAG: dup v0.4s, w0
+; CHECK-DAG: str q0, [x1]
 ; CHECK: ret
 
   %p17 = insertelement <4 x i32> undef, i32 %v, i32 0
@@ -106,11 +126,10 @@ entry:
 ; CHECK-LABEL: nosplat_v4i32:
 ; CHECK: str w0,
 ; CHECK: ldr q[[REG1:[0-9]+]],
-; CHECK-DAG: ins v[[REG1]].s[1], w0
-; CHECK-DAG: ins v[[REG1]].s[2], w0
-; CHECK-DAG: ins v[[REG1]].s[3], w0
-; CHECK: ext v[[REG2:[0-9]+]].16b, v[[REG1]].16b, v[[REG1]].16b, #8
-; CHECK: stp d[[REG1]], d[[REG2]], [x1]
+; CHECK-DAG: mov v[[REG1]].s[1], w0
+; CHECK-DAG: mov v[[REG1]].s[2], w0
+; CHECK-DAG: mov v[[REG1]].s[3], w0
+; CHECK: str q[[REG1]], [x1]
 ; CHECK: ret
 
   %p17 = insertelement <4 x i32> undef, i32 %v, i32 %v
@@ -128,11 +147,10 @@ define void @nosplat2_v4i32(i32 %v, i32 *%p, <4 x i32> %vin) {
 entry:
 
 ; CHECK-LABEL: nosplat2_v4i32:
-; CHECK: ins v[[REG1]].s[1], w0
-; CHECK-DAG: ins v[[REG1]].s[2], w0
-; CHECK-DAG: ins v[[REG1]].s[3], w0
-; CHECK: ext v[[REG2:[0-9]+]].16b, v[[REG1]].16b, v[[REG1]].16b, #8
-; CHECK: stp d[[REG1]], d[[REG2]], [x1]
+; CHECK: mov v[[REG1]].s[1], w0
+; CHECK-DAG: mov v[[REG1]].s[2], w0
+; CHECK-DAG: mov v[[REG1]].s[3], w0
+; CHECK: str q[[REG1]], [x1]
 ; CHECK: ret
 
   %p18 = insertelement <4 x i32> %vin, i32 %v, i32 1

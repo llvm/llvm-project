@@ -142,7 +142,7 @@ func TestSubtypes(t *testing.T) {
 	int_pointer := PointerType(cont.Int32Type(), 0)
 	int_inner := int_pointer.Subtypes()
 	if len(int_inner) != 1 {
-		t.Errorf("Got size %d, though wanted 1")
+		t.Errorf("Got size %d, though wanted 1", len(int_inner))
 	}
 	if int_inner[0] != cont.Int32Type() {
 		t.Errorf("Expected int32 type")
@@ -151,7 +151,7 @@ func TestSubtypes(t *testing.T) {
 	st_pointer := cont.StructType([]Type{cont.Int32Type(), cont.Int8Type()}, false)
 	st_inner := st_pointer.Subtypes()
 	if len(st_inner) != 2 {
-		t.Errorf("Got size %d, though wanted 2")
+		t.Errorf("Got size %d, though wanted 2", len(int_inner))
 	}
 	if st_inner[0] != cont.Int32Type() {
 		t.Errorf("Expected first struct field to be int32")

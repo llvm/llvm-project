@@ -1,4 +1,4 @@
-//===-- MipsSEISelLowering.h - MipsSE DAG Lowering Interface ----*- C++ -*-===//
+//===- MipsSEISelLowering.h - MipsSE DAG Lowering Interface -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,9 +15,18 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSEISELLOWERING_H
 
 #include "MipsISelLowering.h"
-#include "MipsRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineInstr;
+class MipsSubtarget;
+class MipsTargetMachine;
+class SelectionDAG;
+class TargetRegisterClass;
+
   class MipsSETargetLowering : public MipsTargetLowering  {
   public:
     explicit MipsSETargetLowering(const MipsTargetMachine &TM,
@@ -26,6 +35,7 @@ namespace llvm {
     /// \brief Enable MSA support for the given integer type and Register
     /// class.
     void addMSAIntType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC);
+
     /// \brief Enable MSA support for the given floating-point type and
     /// Register class.
     void addMSAFloatType(MVT::SimpleValueType Ty,
@@ -43,8 +53,7 @@ namespace llvm {
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
 
-    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask,
-                            EVT VT) const override {
+    bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
       return false;
     }
 
@@ -57,7 +66,7 @@ namespace llvm {
 
     void
     getOpndList(SmallVectorImpl<SDValue> &Ops,
-                std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+                std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
                 bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const override;
@@ -76,6 +85,7 @@ namespace llvm {
     /// \brief Lower VECTOR_SHUFFLE into one of a number of instructions
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
 
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
@@ -126,6 +136,7 @@ namespace llvm {
                                           MachineBasicBlock *BBi,
                                           bool IsFGR64) const;
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_MIPS_MIPSSEISELLOWERING_H

@@ -18,6 +18,7 @@ add_llvm_library(LLVMAnalysis
   CallGraphSCCPass.cpp
   CallPrinter.cpp
   CaptureTracking.cpp
+  CmpInstAnalysis.cpp
   CostModel.cpp
   CodeMetrics.cpp
   ConstantFolding.cpp
@@ -60,7 +61,7 @@ add_llvm_library(LLVMAnalysis
   ObjCARCAliasAnalysis.cpp
   ObjCARCAnalysisUtils.cpp
   ObjCARCInstKind.cpp
-  OptimizationDiagnosticInfo.cpp
+  OptimizationRemarkEmitter.cpp
   OrderedBasicBlock.cpp
   PHITransAddr.cpp
   PostDominators.cpp
@@ -73,13 +74,14 @@ add_llvm_library(LLVMAnalysis
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionExpander.cpp
   ScalarEvolutionNormalization.cpp
-  SparsePropagation.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
   Trace.cpp
   TypeBasedAliasAnalysis.cpp
   TypeMetadataUtils.cpp
   ScopedNoAliasAA.cpp
+  ValueLattice.cpp
+  ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
 

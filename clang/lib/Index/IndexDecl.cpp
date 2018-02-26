@@ -233,9 +233,8 @@ public:
     if (auto *CXXMD = dyn_cast<CXXMethodDecl>(D)) {
       if (CXXMD->isVirtual())
         Roles |= (unsigned)SymbolRole::Dynamic;
-      for (auto I = CXXMD->begin_overridden_methods(),
-           E = CXXMD->end_overridden_methods(); I != E; ++I) {
-        Relations.emplace_back((unsigned)SymbolRole::RelationOverrideOf, *I);
+      for (const CXXMethodDecl *O : CXXMD->overridden_methods()) {
+        Relations.emplace_back((unsigned)SymbolRole::RelationOverrideOf, O);
       }
     }
     gatherTemplatePseudoOverrides(D, Relations);
@@ -354,12 +353,10 @@ public:
         gatherTemplatePseudoOverrides(D, Relations);
         IndexCtx.indexTagDecl(D, Relations);
       } else {
-        auto *Parent = dyn_cast<NamedDecl>(D->getDeclContext());
         SmallVector<SymbolRelation, 1> Relations;
         gatherTemplatePseudoOverrides(D, Relations);
-        return IndexCtx.handleReference(D, D->getLocation(), Parent,
-                                        D->getLexicalDeclContext(),
-                                        SymbolRoleSet(), Relations);
+        return IndexCtx.handleDecl(D, D->getLocation(), SymbolRoleSet(),
+                                   Relations, D->getLexicalDeclContext());
       }
     }
     return true;
@@ -667,8 +664,11 @@ public:
 
   bool VisitTemplateDecl(const TemplateDecl *D) {
 
-    // Index the default values for the template parameters.
     const NamedDecl *Parent = D->getTemplatedDecl();
+    if (!Parent)
+      return true;
+
+    // Index the default values for the template parameters.
     if (D->getTemplateParameters() &&
         shouldIndexTemplateParameterDefaultValue(Parent)) {
       const TemplateParameterList *Params = D->getTemplateParameters();
@@ -687,7 +687,7 @@ public:
       }
     }
 
-    return Visit(D->getTemplatedDecl());
+    return Visit(Parent);
   }
 
   bool VisitFriendDecl(const FriendDecl *D) {

@@ -21,10 +21,13 @@
 
 namespace llvm {
 
+class Function;
+
 class LoopDistributePass : public PassInfoMixin<LoopDistributePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPDISTRIBUTE_H

@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Dominators.h"
@@ -37,7 +38,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
 static bool eliminateUnreachableBlock(Function &F) {
@@ -207,11 +207,12 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
           MachineRegisterInfo &MRI = F.getRegInfo();
           unsigned InputSub = Input.getSubReg();
           if (InputSub == 0 &&
-              MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg))) {
+              MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg)) &&
+              !Input.isUndef()) {
             MRI.replaceRegWith(OutputReg, InputReg);
           } else {
             // The input register to the PHI has a subregister or it can't be
-            // constrained to the proper register class:
+            // constrained to the proper register class or it is undef:
             // insert a COPY instead of simply replacing the output
             // with the input.
             const TargetInstrInfo *TII = F.getSubtarget().getInstrInfo();

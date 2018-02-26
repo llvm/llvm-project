@@ -1,6 +1,6 @@
-; RUN: llc < %s -relocation-model=pic -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s -check-prefix=PIC
-; RUN: llc < %s -relocation-model=static -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s -check-prefix=STATIC
-; RUN: llc < %s -relocation-model=pic -march=ppc64 -mtriple=powerpc64-apple-darwin | FileCheck %s -check-prefix=PPC64
+; RUN: llc < %s -relocation-model=pic -mtriple=powerpc-apple-darwin | FileCheck %s -check-prefix=PIC
+; RUN: llc < %s -relocation-model=static -mtriple=powerpc-apple-darwin | FileCheck %s -check-prefix=STATIC
+; RUN: llc < %s -relocation-model=pic -mtriple=powerpc64-apple-darwin | FileCheck %s -check-prefix=PPC64
 
 @nextaddr = global i8* null                       ; <i8**> [#uses=2]
 @C.0.2070 = private constant [5 x i8*] [i8* blockaddress(@foo, %L1), i8* blockaddress(@foo, %L2), i8* blockaddress(@foo, %L3), i8* blockaddress(@foo, %L4), i8* blockaddress(@foo, %L5)] ; <[5 x i8*]*> [#uses=1]

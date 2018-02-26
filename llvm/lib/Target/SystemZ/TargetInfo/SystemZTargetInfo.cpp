@@ -18,6 +18,6 @@ Target &llvm::getTheSystemZTarget() {
 }
 
 extern "C" void LLVMInitializeSystemZTargetInfo() {
-  RegisterTarget<Triple::systemz, /*HasJIT=*/true> X(getTheSystemZTarget(),
-                                                     "systemz", "SystemZ");
+  RegisterTarget<Triple::systemz, /*HasJIT=*/true> X(
+      getTheSystemZTarget(), "systemz", "SystemZ", "SystemZ");
 }

@@ -1,11 +1,17 @@
-; RUN: opt < %s -gvn -o /dev/null  -pass-remarks-output=%t -S -pass-remarks=gvn \
+; RUN: opt < %s -gvn -o /dev/null  -S -pass-remarks=gvn -pass-remarks-missed=gvn  \
 ; RUN:     2>&1 | FileCheck %s
+; RUN: opt < %s -gvn -o /dev/null  -pass-remarks-output=%t -S
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
+
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=gvn -o /dev/null -S -pass-remarks=gvn -pass-remarks-missed=gvn \
+; RUN:     2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=gvn -o /dev/null -pass-remarks-output=%t -S
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
 ; CHECK:      remark: <unknown>:0:0: load of type i32 eliminated{{$}}
 ; CHECK-NEXT: remark: <unknown>:0:0: load of type i32 eliminated{{$}}
 ; CHECK-NEXT: remark: <unknown>:0:0: load of type i32 eliminated{{$}}
-; CHECK-NOT:  remark:
+; CHECK-NEXT: remark: /tmp/s.c:3:3: load of type i32 not eliminated
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            gvn

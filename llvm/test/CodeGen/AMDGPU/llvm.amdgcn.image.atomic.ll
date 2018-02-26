@@ -2,6 +2,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=VI
 
 ;CHECK-LABEL: {{^}}image_atomic_swap:
+;CHECK-NOT: s_waitcnt
 ;SI: image_atomic_swap v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x3c,0xf0,0x00,0x04,0x00,0x00]
 ;VI: image_atomic_swap v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x40,0xf0,0x00,0x04,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
@@ -13,6 +14,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_atomic_swap_v2i32:
+;CHECK-NOT: s_waitcnt
 ;SI: image_atomic_swap v2, v[0:1], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x3c,0xf0,0x00,0x02,0x00,0x00]
 ;VI: image_atomic_swap v2, v[0:1], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x40,0xf0,0x00,0x02,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
@@ -24,6 +26,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_atomic_swap_i32:
+;CHECK-NOT: s_waitcnt
 ;SI: image_atomic_swap v1, v0, s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x3c,0xf0,0x00,0x01,0x00,0x00]
 ;VI: image_atomic_swap v1, v0, s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x40,0xf0,0x00,0x01,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
@@ -35,6 +38,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_atomic_cmpswap:
+;CHECK-NOT: s_waitcnt
 ;SI: image_atomic_cmpswap v[4:5], v[0:3], s[0:7] dmask:0x3 unorm glc ; encoding: [0x00,0x33,0x40,0xf0,0x00,0x04,0x00,0x00]
 ;VI: image_atomic_cmpswap v[4:5], v[0:3], s[0:7] dmask:0x3 unorm glc ; encoding: [0x00,0x33,0x44,0xf0,0x00,0x04,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
@@ -47,6 +51,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_atomic_add:
+;CHECK-NOT: s_waitcnt
 ;SI: image_atomic_add v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x44,0xf0,0x00,0x04,0x00,0x00]
 ;VI: image_atomic_add v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x48,0xf0,0x00,0x04,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
@@ -58,6 +63,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_atomic_sub:
+;CHECK-NOT: s_waitcnt
 ;SI: image_atomic_sub v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x48,0xf0,0x00,0x04,0x00,0x00]
 ;VI: image_atomic_sub v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x4c,0xf0,0x00,0x04,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
@@ -69,6 +75,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_atomic_unchanged:
+;CHECK-NOT: s_waitcnt
 ;CHECK: image_atomic_smin v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x50,0xf0,0x00,0x04,0x00,0x00]
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: image_atomic_umin v4, v[0:3], s[0:7] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x54,0xf0,0x00,0x04,0x00,0x00]

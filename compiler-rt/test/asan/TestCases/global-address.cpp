@@ -5,8 +5,8 @@
 int g_i = 42;
 int main() {
   // CHECK: AddressSanitizer: attempting to call __sanitizer_get_allocated_size() for pointer which is not owned
-  // CHECK-NOT: ASAN:DEADLYSIGNAL
+  // CHECK-NOT: AddressSanitizer:DEADLYSIGNAL
   // CHECK: SUMMARY: AddressSanitizer: bad-__sanitizer_get_allocated_size
-  // CHECK-NOT: ASAN:DEADLYSIGNAL
+  // CHECK-NOT: AddressSanitizer:DEADLYSIGNAL
   return (int)__sanitizer_get_allocated_size(&g_i);
 }

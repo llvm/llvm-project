@@ -19,6 +19,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -160,7 +161,8 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
 
   MapHNode *MN = dyn_cast<MapHNode>(CurrentNode);
   if (!MN) {
-    setError(CurrentNode, "not a mapping");
+    if (Required || !isa<EmptyHNode>(CurrentNode))
+      setError(CurrentNode, "not a mapping");
     return false;
   }
   MN->ValidKeys.push_back(Key);
@@ -329,7 +331,7 @@ void Input::endBitSetScalar() {
   }
 }
 
-void Input::scalarString(StringRef &S, bool) {
+void Input::scalarString(StringRef &S, QuotingType) {
   if (ScalarHNode *SN = dyn_cast<ScalarHNode>(CurrentNode)) {
     S = SN->value();
   } else {
@@ -337,7 +339,7 @@ void Input::scalarString(StringRef &S, bool) {
   }
 }
 
-void Input::blockScalarString(StringRef &S) { scalarString(S, false); }
+void Input::blockScalarString(StringRef &S) { scalarString(S, QuotingType::None); }
 
 void Input::setError(HNode *hnode, const Twine &message) {
   assert(hnode && "HNode must not be NULL");
@@ -374,18 +376,22 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
     auto mapHNode = llvm::make_unique<MapHNode>(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
-      ScalarNode *KeyScalar = dyn_cast<ScalarNode>(KeyNode);
-      if (!KeyScalar) {
-        setError(KeyNode, "Map key must be a scalar");
+      ScalarNode *Key = dyn_cast<ScalarNode>(KeyNode);
+      Node *Value = KVN.getValue();
+      if (!Key || !Value) {
+        if (!Key)
+          setError(KeyNode, "Map key must be a scalar");
+        if (!Value)
+          setError(KeyNode, "Map value must not be empty");
         break;
       }
       StringStorage.clear();
-      StringRef KeyStr = KeyScalar->getValue(StringStorage);
+      StringRef KeyStr = Key->getValue(StringStorage);
       if (!StringStorage.empty()) {
         // Copy string to permanent storage
         KeyStr = StringStorage.str().copy(StringAllocator);
       }
-      auto ValueHNode = this->createHNodes(KVN.getValue());
+      auto ValueHNode = this->createHNodes(Value);
       if (EC)
         break;
       mapHNode->Mapping[KeyStr] = std::move(ValueHNode);
@@ -612,7 +618,7 @@ void Output::endBitSetScalar() {
   this->outputUpToEndOfLine(" ]");
 }
 
-void Output::scalarString(StringRef &S, bool MustQuote) {
+void Output::scalarString(StringRef &S, QuotingType MustQuote) {
   this->newLineCheck();
   if (S.empty()) {
     // Print '' for the empty string because leaving the field empty is not
@@ -620,27 +626,57 @@ void Output::scalarString(StringRef &S, bool MustQuote) {
     this->outputUpToEndOfLine("''");
     return;
   }
-  if (!MustQuote) {
+  if (MustQuote == QuotingType::None) {
     // Only quote if we must.
     this->outputUpToEndOfLine(S);
     return;
   }
+
   unsigned i = 0;
   unsigned j = 0;
   unsigned End = S.size();
-  output("'"); // Starting single quote.
   const char *Base = S.data();
+
+  const char *const Quote = MustQuote == QuotingType::Single ? "'" : "\"";
+  const char QuoteChar = MustQuote == QuotingType::Single ? '\'' : '"';
+
+  output(Quote); // Starting quote.
+
+  // When using single-quoted strings, any single quote ' must be doubled to be
+  // escaped.
+  // When using double-quoted strings, print \x + hex for non-printable ASCII
+  // characters, and escape double quotes.
   while (j < End) {
-    // Escape a single quote by doubling it.
-    if (S[j] == '\'') {
-      output(StringRef(&Base[i], j - i + 1));
-      output("'");
+    if (S[j] == QuoteChar) {                  // Escape quotes.
+      output(StringRef(&Base[i], j - i));     // "flush".
+      if (MustQuote == QuotingType::Double) { // Print it as \"
+        output(StringLiteral("\\"));
+        output(StringRef(Quote, 1));
+      } else {                       // Single
+        output(StringLiteral("''")); // Print it as ''
+      }
+      i = j + 1;
+    } else if (MustQuote == QuotingType::Double &&
+               !sys::unicode::isPrintable(S[j]) && (S[j] & 0x80) == 0) {
+      // If we're double quoting non-printable characters, we prefer printing
+      // them as "\x" + their hex representation. Note that special casing is
+      // needed for UTF-8, where a byte may be part of a UTF-8 sequence and
+      // appear as non-printable, in which case we want to print the correct
+      // unicode character and not its hex representation.
+      output(StringRef(&Base[i], j - i)); // "flush"
+      output(StringLiteral("\\x"));
+
+      // Output the byte 0x0F as \x0f.
+      auto FormattedHex = format_hex_no_prefix(S[j], 2);
+      Out << FormattedHex;
+      Column += 4; // one for the '\', one for the 'x', and two for the hex
+
       i = j + 1;
     }
     ++j;
   }
   output(StringRef(&Base[i], j - i));
-  this->outputUpToEndOfLine("'"); // Ending single quote.
+  this->outputUpToEndOfLine(Quote); // Ending quote.
 }
 
 void Output::blockScalarString(StringRef &S) {

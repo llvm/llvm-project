@@ -83,3 +83,10 @@ $BB0_4:
    .set dsp
    lbux    $7, $10($11)
    lhx     $5, $6($7)
+
+# CHECK:   .set dspr2
+# CHECK:   append   $7, $10, 2          # encoding: [0x7d,0x47,0x10,0x31]
+# CHECK:   balign   $5, $6, 3           # encoding: [0x7c,0xc5,0x1c,0x31]
+   .set dspr2
+   append   $7, $10, 2
+   balign   $5, $6, 3

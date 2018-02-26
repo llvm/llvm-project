@@ -19,8 +19,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/PassSupport.h"
-#include "llvm/Target/TargetInstrInfo.h"
 
 using namespace llvm;
 
@@ -89,7 +89,7 @@ static bool isHardwareLoop(const MachineInstr &MI) {
 }
 
 bool HexagonFixupHwLoops::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
   return fixupLoopInstrs(MF);
 }
@@ -138,7 +138,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
     MachineBasicBlock::iterator MIE = MBB.end();
     while (MII != MIE) {
       InstOffset += HII->getSize(*MII);
-      if (MII->isDebugValue()) {
+      if (MII->isMetaInstruction()) {
         ++MII;
         continue;
       }

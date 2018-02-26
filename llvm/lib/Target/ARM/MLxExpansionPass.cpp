@@ -21,10 +21,10 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "mlx-expansion"
@@ -371,7 +371,7 @@ bool MLxExpansion::ExpandFPMLxInstructions(MachineBasicBlock &MBB) {
 }
 
 bool MLxExpansion::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(*Fn.getFunction()))
+  if (skipFunction(Fn.getFunction()))
     return false;
 
   TII = static_cast<const ARMBaseInstrInfo *>(Fn.getSubtarget().getInstrInfo());

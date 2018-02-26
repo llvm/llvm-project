@@ -17,7 +17,7 @@ declare void @foo()
 
 define void @trivial_func() nounwind {
 ; CHECK-LABEL: trivial_func: // @trivial_func
-; CHECK-NEXT: // BB#0
+; CHECK-NEXT: // %bb.0
 ; CHECK-NEXT: ret
 
   ret void

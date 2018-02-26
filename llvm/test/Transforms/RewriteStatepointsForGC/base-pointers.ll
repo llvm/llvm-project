@@ -1,4 +1,5 @@
 ; RUN: opt < %s -rewrite-statepoints-for-gc -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=rewrite-statepoints-for-gc -S 2>&1 | FileCheck %s
 
 ; The rewriting needs to make %obj loop variant by inserting a phi 
 ; of the original value and it's relocation.

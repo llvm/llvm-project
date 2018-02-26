@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin -march=ppc32 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc-apple-darwin -march=ppc64 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc-apple-darwin -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-apple-darwin -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc-apple-darwin -mcpu=440 | FileCheck %s --check-prefix=PPC440
 
 ; Fences

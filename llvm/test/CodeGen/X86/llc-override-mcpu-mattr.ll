@@ -1,5 +1,5 @@
-; RUN: llc < %s -march x86-64 -mcpu=broadwell | FileCheck %s
-; RUN: llc < %s -march x86-64 -mattr=+avx2 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=broadwell | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s
 
 ; Check that llc can overide function attributes target-cpu and target-features
 ; using command line options -mcpu and -mattr.

@@ -321,19 +321,34 @@ template <> struct MDNodeKeyImpl<GenericDINode> : MDNodeOpsKey {
 };
 
 template <> struct MDNodeKeyImpl<DISubrange> {
-  int64_t Count;
+  Metadata *CountNode;
   int64_t LowerBound;
 
-  MDNodeKeyImpl(int64_t Count, int64_t LowerBound)
-      : Count(Count), LowerBound(LowerBound) {}
+  MDNodeKeyImpl(Metadata *CountNode, int64_t LowerBound)
+      : CountNode(CountNode), LowerBound(LowerBound) {}
   MDNodeKeyImpl(const DISubrange *N)
-      : Count(N->getCount()), LowerBound(N->getLowerBound()) {}
+      : CountNode(N->getRawCountNode()),
+        LowerBound(N->getLowerBound()) {}
 
   bool isKeyOf(const DISubrange *RHS) const {
-    return Count == RHS->getCount() && LowerBound == RHS->getLowerBound();
+    if (LowerBound != RHS->getLowerBound())
+      return false;
+
+    if (auto *RHSCount = RHS->getCount().dyn_cast<ConstantInt*>())
+      if (auto *MD = dyn_cast<ConstantAsMetadata>(CountNode))
+        if (RHSCount->getSExtValue() ==
+            cast<ConstantInt>(MD->getValue())->getSExtValue())
+          return true;
+
+    return CountNode == RHS->getRawCountNode();
   }
 
-  unsigned getHashValue() const { return hash_combine(Count, LowerBound); }
+  unsigned getHashValue() const {
+    if (auto *MD = dyn_cast<ConstantAsMetadata>(CountNode))
+      return hash_combine(cast<ConstantInt>(MD->getValue())->getSExtValue(),
+                          LowerBound);
+    return hash_combine(CountNode, LowerBound);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIEnumerator> {
@@ -484,18 +499,20 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *VTableHolder;
   Metadata *TemplateParams;
   MDString *Identifier;
+  Metadata *Discriminator;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
                 Metadata *Elements, unsigned RuntimeLang,
                 Metadata *VTableHolder, Metadata *TemplateParams,
-                MDString *Identifier)
+                MDString *Identifier, Metadata *Discriminator)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
         RuntimeLang(RuntimeLang), VTableHolder(VTableHolder),
-        TemplateParams(TemplateParams), Identifier(Identifier) {}
+        TemplateParams(TemplateParams), Identifier(Identifier),
+        Discriminator(Discriminator) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -504,7 +521,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         Flags(N->getFlags()), Elements(N->getRawElements()),
         RuntimeLang(N->getRuntimeLang()), VTableHolder(N->getRawVTableHolder()),
         TemplateParams(N->getRawTemplateParams()),
-        Identifier(N->getRawIdentifier()) {}
+        Identifier(N->getRawIdentifier()),
+        Discriminator(N->getRawDiscriminator()) {}
 
   bool isKeyOf(const DICompositeType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -517,7 +535,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            RuntimeLang == RHS->getRuntimeLang() &&
            VTableHolder == RHS->getRawVTableHolder() &&
            TemplateParams == RHS->getRawTemplateParams() &&
-           Identifier == RHS->getRawIdentifier();
+           Identifier == RHS->getRawIdentifier() &&
+           Discriminator == RHS->getRawDiscriminator();
   }
 
   unsigned getHashValue() const {
@@ -1168,8 +1187,7 @@ public:
   LLVMContext::InlineAsmDiagHandlerTy InlineAsmDiagHandler = nullptr;
   void *InlineAsmDiagContext = nullptr;
 
-  LLVMContext::DiagnosticHandlerTy DiagnosticHandler = nullptr;
-  void *DiagnosticContext = nullptr;
+  std::unique_ptr<DiagnosticHandler> DiagHandler;
   bool RespectDiagnosticFilters = false;
   bool DiagnosticsHotnessRequested = false;
   uint64_t DiagnosticsHotnessThreshold = 0;

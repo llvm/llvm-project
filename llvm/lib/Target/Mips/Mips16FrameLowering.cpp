@@ -30,7 +30,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -38,7 +38,7 @@
 using namespace llvm;
 
 Mips16FrameLowering::Mips16FrameLowering(const MipsSubtarget &STI)
-    : MipsFrameLowering(STI, STI.stackAlignment()) {}
+    : MipsFrameLowering(STI, STI.getStackAlignment()) {}
 
 void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
@@ -59,7 +59,6 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-  MachineLocation DstML, SrcML;
 
   // Adjust stack.
   TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);
@@ -143,7 +142,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
 bool Mips16FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MI,
-                                       const std::vector<CalleeSavedInfo> &CSI,
+                                       std::vector<CalleeSavedInfo> &CSI,
                                        const TargetRegisterInfo *TRI) const {
   //
   // Registers RA,S0,S1 are the callee saved registers and they will be restored

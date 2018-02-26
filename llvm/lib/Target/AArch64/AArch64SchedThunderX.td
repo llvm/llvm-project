@@ -25,6 +25,8 @@ def ThunderXT8XModel : SchedMachineModel {
   let MispredictPenalty = 8;  // Branch mispredict penalty.
   let PostRAScheduler = 1;    // Use PostRA scheduler.
   let CompleteModel = 1;
+
+  list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
 // Modeling each pipeline with BufferSize == 0 since T8X is in-order.
@@ -239,20 +241,20 @@ def : ReadAdvance<ReadID, 1, [WriteImm, WriteI,
 //---
 // Branch
 //---
-def : InstRW<[THXT8XWriteBR], (instregex "^B")>;
-def : InstRW<[THXT8XWriteBR], (instregex "^BL")>;
-def : InstRW<[THXT8XWriteBR], (instregex "^B.*")>;
+def : InstRW<[THXT8XWriteBR], (instregex "^B$")>;
+def : InstRW<[THXT8XWriteBR], (instregex "^BL$")>;
+def : InstRW<[THXT8XWriteBR], (instregex "^B..$")>;
 def : InstRW<[THXT8XWriteBR], (instregex "^CBNZ")>;
 def : InstRW<[THXT8XWriteBR], (instregex "^CBZ")>;
 def : InstRW<[THXT8XWriteBR], (instregex "^TBNZ")>;
 def : InstRW<[THXT8XWriteBR], (instregex "^TBZ")>;
-def : InstRW<[THXT8XWriteBRR], (instregex "^BR")>;
-def : InstRW<[THXT8XWriteBRR], (instregex "^BLR")>;
+def : InstRW<[THXT8XWriteBRR], (instregex "^BR$")>;
+def : InstRW<[THXT8XWriteBRR], (instregex "^BLR$")>;
 
 //---
 // Ret
 //---
-def : InstRW<[THXT8XWriteRET], (instregex "^RET")>;
+def : InstRW<[THXT8XWriteRET], (instregex "^RET$")>;
 
 //---
 // Miscellaneous

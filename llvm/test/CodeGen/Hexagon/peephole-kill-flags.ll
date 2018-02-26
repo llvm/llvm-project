@@ -23,5 +23,5 @@ for.end13:                                        ; preds = %for.cond
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
 

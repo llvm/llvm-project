@@ -6,8 +6,8 @@
 // * otherwise, the callee decides between trap/recover/norecover.
 
 // Full-recover.
-// RUN: %clangxx_cfi_dso_diag -g -DSHARED_LIB %s -fPIC -shared -o %t-so.so
-// RUN: %clangxx_cfi_dso_diag -g %s -o %t %t-so.so
+// RUN: %clangxx_cfi_dso_diag -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_dso_diag -g %s -o %t %ld_flags_rpath_exe
 
 // RUN: %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-DIAG \
 // RUN:                            --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
@@ -23,9 +23,9 @@
 
 // Trap on icall, no-recover on cast.
 // RUN: %clangxx_cfi_dso_diag -fsanitize-trap=cfi-icall -fno-sanitize-recover=cfi-unrelated-cast \
-// RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %t-so.so
+// RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso_diag -fsanitize-trap=cfi-icall -fno-sanitize-recover=cfi-unrelated-cast \
-// RUN:     -g %s -o %t %t-so.so
+// RUN:     -g %s -o %t %ld_flags_rpath_exe
 
 // RUN: %expect_crash %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
 // RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
@@ -40,9 +40,9 @@
 // Caller: recover on everything.
 // The same as in the previous case, behaviour is decided by the callee.
 // RUN: %clangxx_cfi_dso_diag -fsanitize-trap=cfi-icall -fno-sanitize-recover=cfi-unrelated-cast \
-// RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %t-so.so
+// RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso_diag \
-// RUN:     -g %s -o %t %t-so.so
+// RUN:     -g %s -o %t %ld_flags_rpath_exe
 
 // RUN: %expect_crash %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
 // RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
@@ -57,9 +57,9 @@
 // Caller wins.
 // cfi-nvcall is non-trapping in the main executable to link the diagnostic runtime library.
 // RUN: %clangxx_cfi_dso_diag \
-// RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %t-so.so
+// RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso -fno-sanitize-trap=cfi-nvcall \
-// RUN:     -g %s -o %t %t-so.so
+// RUN:     -g %s -o %t %ld_flags_rpath_exe
 
 // RUN: %expect_crash %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
 // RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL

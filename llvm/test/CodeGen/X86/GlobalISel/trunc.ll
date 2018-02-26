@@ -3,7 +3,7 @@
 
 define i1 @trunc_i32toi1(i32 %a) {
 ; CHECK-LABEL: trunc_i32toi1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = trunc i32 %a to i1
@@ -12,7 +12,7 @@ define i1 @trunc_i32toi1(i32 %a) {
 
 define i8 @trunc_i32toi8(i32 %a) {
 ; CHECK-LABEL: trunc_i32toi8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = trunc i32 %a to i8
@@ -21,7 +21,7 @@ define i8 @trunc_i32toi8(i32 %a) {
 
 define i16 @trunc_i32toi16(i32 %a) {
 ; CHECK-LABEL: trunc_i32toi16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = trunc i32 %a to i16
@@ -30,7 +30,7 @@ define i16 @trunc_i32toi16(i32 %a) {
 
 define i8 @trunc_i64toi8(i64 %a) {
 ; CHECK-LABEL: trunc_i64toi8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = trunc i64 %a to i8
@@ -39,7 +39,7 @@ define i8 @trunc_i64toi8(i64 %a) {
 
 define i16 @trunc_i64toi16(i64 %a) {
 ; CHECK-LABEL: trunc_i64toi16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = trunc i64 %a to i16
@@ -48,7 +48,7 @@ define i16 @trunc_i64toi16(i64 %a) {
 
 define i32 @trunc_i64toi32(i64 %a) {
 ; CHECK-LABEL: trunc_i64toi32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = trunc i64 %a to i32

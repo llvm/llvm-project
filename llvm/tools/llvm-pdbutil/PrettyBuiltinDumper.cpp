@@ -9,7 +9,6 @@
 
 #include "PrettyBuiltinDumper.h"
 #include "LinePrinter.h"
-#include "llvm-pdbutil.h"
 
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 

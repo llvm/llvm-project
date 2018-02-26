@@ -96,8 +96,8 @@ namespace extended_examples {
 //expected-error@81 {{statement requires expression of integer type ('extended_examples::A1' invalid)}}
 //expected-error@85 {{statement requires expression of integer type ('extended_examples::B2' invalid)}}
 #else
-//expected-error@81 {{cannot initialize object parameter of type 'extended_examples::A1' with an expression of type 'extended_examples::A1'}}
-//expected-error@85 {{cannot initialize object parameter of type 'extended_examples::B2' with an expression of type 'extended_examples::B2'}}
+//expected-error@81 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@54 {{'operator int' declared here}}
+//expected-error@85 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@75 {{'operator int' declared here}}
 #endif
 
 namespace extended_examples_cxx1y {
@@ -149,9 +149,9 @@ namespace extended_examples_cxx1y {
 #ifdef CXX1Y
 //expected-error@139 {{statement requires expression of integer type ('extended_examples_cxx1y::A2' invalid)}}
 #else
-//expected-error@138 {{cannot initialize object parameter of type 'extended_examples_cxx1y::A1' with an expression of type 'extended_examples_cxx1y::A1'}}
-//expected-error@139 {{cannot initialize object parameter of type 'extended_examples_cxx1y::A2' with an expression of type 'extended_examples_cxx1y::A2'}}
-//expected-error@143 {{cannot initialize object parameter of type 'extended_examples_cxx1y::D' with an expression of type 'extended_examples_cxx1y::D'}}
+//expected-error@138 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@106 {{'operator int' declared here}}
+//expected-error@139 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@111 {{'operator int' declared here}}
+//expected-error@143 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@131 {{'operator int' declared here}}
 #endif
 
 namespace extended_examples_array_bounds {

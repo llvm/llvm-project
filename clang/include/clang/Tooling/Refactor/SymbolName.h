@@ -26,21 +26,21 @@ namespace tooling {
 ///
 /// Names can be composed of multiple string, to account for things like
 /// Objective-C selectors.
-class SymbolName {
+class OldSymbolName {
 public:
-  SymbolName() {}
+  OldSymbolName() {}
 
   /// \brief Creates a \c SymbolName by decomposing the given \p Name using
   /// language specific logic.
-  SymbolName(StringRef Name, const LangOptions &LangOpts);
-  SymbolName(StringRef Name, bool IsObjectiveCSelector);
-  explicit SymbolName(ArrayRef<StringRef> Name);
+  OldSymbolName(StringRef Name, const LangOptions &LangOpts);
+  OldSymbolName(StringRef Name, bool IsObjectiveCSelector);
+  explicit OldSymbolName(ArrayRef<StringRef> Name);
 
-  SymbolName(SymbolName &&) = default;
-  SymbolName &operator=(SymbolName &&) = default;
+  OldSymbolName(OldSymbolName &&) = default;
+  OldSymbolName &operator=(OldSymbolName &&) = default;
 
-  SymbolName(const SymbolName &) = default;
-  SymbolName &operator=(const SymbolName &) = default;
+  OldSymbolName(const OldSymbolName &) = default;
+  OldSymbolName &operator=(const OldSymbolName &) = default;
 
   bool empty() const { return Strings.empty(); }
 
@@ -66,7 +66,7 @@ private:
   std::vector<std::string> Strings;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolName &N);
+raw_ostream &operator<<(raw_ostream &OS, const OldSymbolName &N);
 
 } // end namespace tooling
 } // end namespace clang

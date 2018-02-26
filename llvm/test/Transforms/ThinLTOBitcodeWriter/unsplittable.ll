@@ -21,4 +21,10 @@ define internal void @f() {
   ret void
 }
 
+$h = comdat any
+; CHECK: define void @h() comdat
+define void @h() comdat {
+  ret void
+}
+
 !0 = !{i32 0, !"typeid"}

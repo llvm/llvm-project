@@ -1,5 +1,5 @@
 // RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
-// RUN: llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
+// RUN: llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
 // RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=CIVI
 // RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=VI
 
@@ -24,11 +24,3 @@ v_mov_b32_e32 v0, 0.5
 
 v_mov_b32_e32 v0, 3.125
 // GCN: v_mov_b32_e32 v0, 0x40480000 ; encoding: [0xff,0x02,0x00,0x7e,0x00,0x00,0x48,0x40]
-
-v_add_i32 v0, vcc, 0.5, v0
-// SICI: v_add_i32_e32 v0, vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x00,0x4a]
-// VI: v_add_i32_e32 v0, vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x00,0x32]
-
-v_add_i32 v0, vcc, 3.125, v0
-// SICI: v_add_i32_e32 v0, vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x00,0x4a,0x00,0x00,0x48,0x40]
-// VI: v_add_i32_e32 v0, vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x00,0x32,0x00,0x00,0x48,0x40]

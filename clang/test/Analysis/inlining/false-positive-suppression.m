@@ -5,7 +5,7 @@
 
 #define ARC __has_feature(objc_arc)
 
-#if defined(SUPPRESSED) && !ARC
+#ifdef SUPPRESSED
 // expected-no-diagnostics
 #endif
 
@@ -27,9 +27,8 @@ void testNilReceiverHelperA(int *x) {
 
 void testNilReceiverHelperB(int *x) {
   *x = 1;
-// FIXME: Suppression for this case isn't working under ARC. It should.
-#if !defined(SUPPRESSED) || (defined(SUPPRESSED) && ARC)
-  // expected-warning@-3 {{Dereference of null pointer}}
+#if !defined(SUPPRESSED)
+  // expected-warning@-2 {{Dereference of null pointer}}
 #endif
 }
 

@@ -28,8 +28,8 @@
 // ARM:typedef int8_t int_fast8_t;
 // ARM:typedef uint8_t uint_fast8_t;
 //
-// ARM:typedef long int intptr_t;
-// ARM:typedef long unsigned int uintptr_t;
+// ARM:typedef int intptr_t;
+// ARM:typedef unsigned int uintptr_t;
 // 
 // ARM:typedef long long int intmax_t;
 // ARM:typedef long long unsigned int uintmax_t;
@@ -74,9 +74,9 @@
 // ARM:INT_FAST64_MAX_ 9223372036854775807LL
 // ARM:UINT_FAST64_MAX_ 18446744073709551615ULL
 //
-// ARM:INTPTR_MIN_ (-2147483647L -1)
-// ARM:INTPTR_MAX_ 2147483647L
-// ARM:UINTPTR_MAX_ 4294967295UL
+// ARM:INTPTR_MIN_ (-2147483647 -1)
+// ARM:INTPTR_MAX_ 2147483647
+// ARM:UINTPTR_MAX_ 4294967295U
 // ARM:PTRDIFF_MIN_ (-2147483647 -1)
 // ARM:PTRDIFF_MAX_ 2147483647
 // ARM:SIZE_MAX_ 4294967295U

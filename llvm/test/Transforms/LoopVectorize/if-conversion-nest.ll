@@ -42,9 +42,9 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD6]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP13]], <4 x i32> <i32 4, i32 4, i32 4, i32 4>, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <4 x i1> [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32> <i32 9, i32 9, i32 9, i32 9>
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP12]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP17:%.*]] = and <4 x i1> [[TMP11]], [[TMP16]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32> <i32 9, i32 9, i32 9, i32 9>
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP17]], <4 x i32> [[TMP14]], <4 x i32> [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[TMP7]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI7]], <4 x i32>* [[TMP18]], align 4, !alias.scope !0, !noalias !3
@@ -78,7 +78,7 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop !8
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop !7
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:

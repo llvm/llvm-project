@@ -1,0 +1,46 @@
+; RUN: not llvm-rc /V %p/Inputs/tokens.rc | FileCheck %s
+; llvm-rc fails now on this sample because it is an invalid resource file
+; script. We silence the error message and just analyze the output.
+
+; CHECK:  Int: 1; int value = 1
+; CHECK-NEXT:  Plus: +
+; CHECK-NEXT:  Int: 2; int value = 2
+; CHECK-NEXT:  Minus: -
+; CHECK-NEXT:  Int: 3214L; int value = 3214
+; CHECK-NEXT:  Amp: &
+; CHECK-NEXT:  Int: 0x120894; int value = 1181844
+; CHECK-NEXT:  Int: 032173; int value = 13435
+; CHECK-NEXT:  Int: 2; int value = 2
+; CHECK-NEXT:  Pipe: |
+; CHECK-NEXT:  Amp: &
+; CHECK-NEXT:  Tilde: ~
+; CHECK-NEXT:  Plus: +
+; CHECK-NEXT:  LeftParen: (
+; CHECK-NEXT:  Minus: -
+; CHECK-NEXT:  Int: 7; int value = 7
+; CHECK-NEXT:  RightParen: )
+; CHECK-NEXT:  BlockBegin: {
+; CHECK-NEXT:  Int: 0xabcdef; int value = 11259375
+; CHECK-NEXT:  Int: 0xABCDEFl; int value = 11259375
+; CHECK-NEXT:  BlockEnd: }
+; CHECK-NEXT:  BlockBegin: Begin
+; CHECK-NEXT:  BlockEnd: End
+; CHECK-NEXT:  Identifier: He11o
+; CHECK-NEXT:  Identifier: LLVM
+; CHECK-NEXT:  String: "RC string test."
+; CHECK-NEXT:  Comma: ,
+; CHECK-NEXT:  String: L"Another RC string test.'&{"
+; CHECK-NEXT:  Comma: ,
+; CHECK-NEXT:  Int: 42; int value = 42
+; CHECK-NEXT:  Comma: ,
+; CHECK-NEXT:  Int: 100; int value = 100
+; CHECK-NEXT:  Identifier: Block
+; CHECK-NEXT:  Identifier: Comment
+; CHECK-NEXT:  Identifier: Ident
+; CHECK-NEXT:  Identifier: ifier
+; CHECK-NEXT:  Identifier: Line
+; CHECK-NEXT:  Identifier: Comment
+; CHECK-NEXT:  Identifier: Multiple
+; CHECK-NEXT:  Identifier: on
+; CHECK-NEXT:  Identifier: single
+; CHECK-NEXT:  String: ":))"

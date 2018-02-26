@@ -22,6 +22,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
@@ -33,9 +36,6 @@
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -239,9 +239,22 @@ void DwarfUnit::addSInt(DIELoc &Die, Optional<dwarf::Form> Form,
 
 void DwarfUnit::addString(DIE &Die, dwarf::Attribute Attribute,
                           StringRef String) {
-  Die.addValue(DIEValueAllocator, Attribute,
-               isDwoUnit() ? dwarf::DW_FORM_GNU_str_index : dwarf::DW_FORM_strp,
-               DIEString(DU->getStringPool().getEntry(*Asm, String)));
+  auto StringPoolEntry = DU->getStringPool().getEntry(*Asm, String);
+  dwarf::Form IxForm =
+      isDwoUnit() ? dwarf::DW_FORM_GNU_str_index : dwarf::DW_FORM_strp;
+  // For DWARF v5 and beyond, use the smallest strx? form possible.
+  if (useSegmentedStringOffsetsTable()) {
+    IxForm = dwarf::DW_FORM_strx1;
+    unsigned Index = StringPoolEntry.getIndex();
+    if (Index > 0xffffff)
+      IxForm = dwarf::DW_FORM_strx4;
+    else if (Index > 0xffff)
+      IxForm = dwarf::DW_FORM_strx3;
+    else if (Index > 0xff)
+      IxForm = dwarf::DW_FORM_strx2;
+  }
+  Die.addValue(DIEValueAllocator, Attribute, IxForm,
+               DIEString(StringPoolEntry));
 }
 
 DIEValueList::value_iterator DwarfUnit::addLabel(DIEValueList &Die,
@@ -919,9 +932,24 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   case dwarf::DW_TAG_enumeration_type:
     constructEnumTypeDIE(Buffer, CTy);
     break;
+  case dwarf::DW_TAG_variant_part:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_class_type: {
+    // Emit the discriminator for a variant part.
+    DIDerivedType *Discriminator = nullptr;
+    if (Tag == dwarf::DW_TAG_variant_part) {
+      Discriminator = CTy->getDiscriminator();
+      if (Discriminator) {
+        // DWARF says:
+        //    If the variant part has a discriminant, the discriminant is
+        //    represented by a separate debugging information entry which is
+        //    a child of the variant part entry.
+        DIE &DiscMember = constructMemberDIE(Buffer, Discriminator);
+        addDIEEntry(Buffer, dwarf::DW_AT_discr, DiscMember);
+      }
+    }
+
     // Add elements to structure type.
     DINodeArray Elements = CTy->getElements();
     for (const auto *Element : Elements) {
@@ -935,6 +963,18 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           addType(ElemDie, resolve(DDTy->getBaseType()), dwarf::DW_AT_friend);
         } else if (DDTy->isStaticMember()) {
           getOrCreateStaticMemberDIE(DDTy);
+        } else if (Tag == dwarf::DW_TAG_variant_part) {
+          // When emitting a variant part, wrap each member in
+          // DW_TAG_variant.
+          DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
+          if (const ConstantInt *CI =
+              dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
+            if (isUnsignedDIType(DD, resolve(Discriminator->getBaseType())))
+              addUInt(Variant, dwarf::DW_AT_discr_value, None, CI->getZExtValue());
+            else
+              addSInt(Variant, dwarf::DW_AT_discr_value, None, CI->getSExtValue());
+          }
+          constructMemberDIE(Variant, DDTy);
         } else {
           constructMemberDIE(Buffer, DDTy);
         }
@@ -954,6 +994,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         if (unsigned PropertyAttributes = Property->getAttributes())
           addUInt(ElemDie, dwarf::DW_AT_APPLE_property_attribute, None,
                   PropertyAttributes);
+      } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
+        if (Composite->getTag() == dwarf::DW_TAG_variant_part) {
+          DIE &VariantPart = createAndAddDIE(Composite->getTag(), Buffer);
+          constructTypeDIE(VariantPart, Composite);
+        }
       }
     }
 
@@ -962,8 +1007,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
     // This is outside the DWARF spec, but GDB expects a DW_AT_containing_type
     // inside C++ composite types to point to the base class with the vtable.
-    if (auto *ContainingType =
-            dyn_cast_or_null<DICompositeType>(resolve(CTy->getVTableHolder())))
+    // Rust uses DW_AT_containing_type to link a vtable to the type
+    // for which it was created.
+    if (auto *ContainingType = resolve(CTy->getVTableHolder()))
       addDIEEntry(Buffer, dwarf::DW_AT_containing_type,
                   *getOrCreateTypeDIE(ContainingType));
 
@@ -976,6 +1022,15 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type)
       addTemplateParams(Buffer, CTy->getTemplateParams());
 
+    // Add the type's non-standard calling convention.
+    uint8_t CC = 0;
+    if (CTy->isTypePassByValue())
+      CC = dwarf::DW_CC_pass_by_value;
+    else if (CTy->isTypePassByReference())
+      CC = dwarf::DW_CC_pass_by_reference;
+    if (CC)
+      addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
+              CC);
     break;
   }
   default:
@@ -1311,12 +1366,20 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
   // DW_AT_lower_bound and DW_AT_count attributes.
   int64_t LowerBound = SR->getLowerBound();
   int64_t DefaultLowerBound = getDefaultLowerBound();
-  int64_t Count = SR->getCount();
+  int64_t Count = -1;
+  if (auto *CI = SR->getCount().dyn_cast<ConstantInt*>())
+    Count = CI->getSExtValue();
 
   if (DefaultLowerBound == -1 || LowerBound != DefaultLowerBound)
     addUInt(DW_Subrange, dwarf::DW_AT_lower_bound, None, LowerBound);
 
-  if (Count != -1)
+  if (auto *CV = SR->getCount().dyn_cast<DIVariable*>()) {
+    // 'finishVariableDefinition' that creates the types for a variable is
+    // always called _after_ the DIEs for variables are created.
+    auto *CountVarDIE = getDIE(CV);
+    assert(CountVarDIE && "DIE for count is not yet instantiated");
+    addDIEEntry(DW_Subrange, dwarf::DW_AT_count, *CountVarDIE);
+  } else if (Count != -1)
     // FIXME: An unbounded array should reference the expression that defines
     // the array.
     addUInt(DW_Subrange, dwarf::DW_AT_count, None, Count);
@@ -1392,13 +1455,14 @@ void DwarfUnit::constructContainingTypeDIEs() {
   }
 }
 
-void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
+DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   DIE &MemberDie = createAndAddDIE(DT->getTag(), Buffer);
   StringRef Name = DT->getName();
   if (!Name.empty())
     addString(MemberDie, dwarf::DW_AT_name, Name);
 
-  addType(MemberDie, resolve(DT->getBaseType()));
+  if (DIType *Resolved = resolve(DT->getBaseType()))
+    addType(MemberDie, Resolved);
 
   addSourceLine(MemberDie, DT);
 
@@ -1496,6 +1560,8 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
 
   if (DT->isArtificial())
     addFlag(MemberDie, dwarf::DW_AT_artificial);
+
+  return MemberDie;
 }
 
 DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
@@ -1633,4 +1699,11 @@ const MCSymbol *DwarfUnit::getCrossSectionRelativeBaseAddress() const {
   if (isDwoUnit())
     return nullptr;
   return getSection()->getBeginSymbol();
+}
+
+void DwarfUnit::addStringOffsetsStart() {
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
+  addSectionLabel(getUnitDie(), dwarf::DW_AT_str_offsets_base,
+                  DU->getStringOffsetsStartSym(),
+                  TLOF.getDwarfStrOffSection()->getBeginSymbol());
 }

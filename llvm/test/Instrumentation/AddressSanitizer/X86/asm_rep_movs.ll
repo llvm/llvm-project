@@ -39,8 +39,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: [[B]]:
 ; CHECK-NEXT: popfq
 
-; CHECK: rep
-; CHECK-NEXT: movsb (%rsi), %es:(%rdi)
+; CHECK: rep movsb (%rsi), %es:(%rdi)
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define void @rep_movs_1b(i8* %dst, i8* %src, i64 %n) #0 {
@@ -73,8 +72,7 @@ entry:
 ; CHECK: [[Q]]:
 ; CHECK-NEXT: popfq
 
-; CHECK: rep
-; CHECK-NEXT: movsq (%rsi), %es:(%rdi)
+; CHECK: rep movsq (%rsi), %es:(%rdi)
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define void @rep_movs_8b(i64* %dst, i64* %src, i64 %n) #0 {

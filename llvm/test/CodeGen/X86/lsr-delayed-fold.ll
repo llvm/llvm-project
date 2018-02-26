@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s > /dev/null
+; RUN: llc < %s > /dev/null
 
 ; ScalarEvolution misses an opportunity to fold ((trunc x) + (trunc -x) + y),
 ; but LSR should tolerate this.

@@ -64,6 +64,13 @@ struct MemberFnOrder {
 struct [[]] struct_attr;
 class [[]] class_attr {};
 union [[]] union_attr;
+enum [[]] E { };
+namespace test_misplacement {
+[[]] struct struct_attr2;  //expected-error{{misplaced attributes}}
+[[]] class class_attr2; //expected-error{{misplaced attributes}}
+[[]] union union_attr2; //expected-error{{misplaced attributes}}
+[[]] enum  E2 { }; //expected-error{{misplaced attributes}}
+}
 
 // Checks attributes placed at wrong syntactic locations of class specifiers.
 class [[]] [[]]
@@ -91,7 +98,7 @@ class C final [[deprecated(l]] {}); // expected-error {{use of undeclared identi
 class D final alignas ([l) {}]{}); // expected-error {{expected ',' or ']' in lambda capture list}} expected-error {{an attribute list cannot appear here}}
 
 [[]] struct with_init_declarators {} init_declarator;
-[[]] struct no_init_declarators; // expected-error {{an attribute list cannot appear here}}
+[[]] struct no_init_declarators; // expected-error {{misplaced attributes}}
 template<typename> [[]] struct no_init_declarators_template; // expected-error {{an attribute list cannot appear here}}
 void fn_with_structs() {
   [[]] struct with_init_declarators {} init_declarator;
@@ -127,7 +134,7 @@ extern "C++" [[]] { } // expected-error {{an attribute list cannot appear here}}
 [[]] using ns::i; // expected-error {{an attribute list cannot appear here}}
 [[unknown]] using namespace ns; // expected-warning {{unknown attribute 'unknown' ignored}}
 [[noreturn]] using namespace ns; // expected-error {{'noreturn' attribute only applies to functions}}
-namespace [[]] ns2 {} // expected-warning {{attributes on a namespace declaration are incompatible with C++ standards before C++17}}
+namespace [[]] ns2 {} // expected-warning {{attributes on a namespace declaration are a C++17 extension}}
 
 using [[]] alignas(4) [[]] ns::i; // expected-error {{an attribute list cannot appear here}}
 using [[]] alignas(4) [[]] foobar = int; // expected-error {{an attribute list cannot appear here}} expected-error {{'alignas' attribute only applies to}}
@@ -179,7 +186,7 @@ enum [[]] E2; // expected-error {{forbids forward references}}
 enum [[]] E1;
 enum [[]] E3 : int;
 enum [[]] {
-  k_123 [[]] = 123 // expected-warning {{attributes on an enumerator declaration are incompatible with C++ standards before C++17}}
+  k_123 [[]] = 123 // expected-warning {{attributes on an enumerator declaration are a C++17 extension}}
 };
 enum [[]] E1 e; // expected-error {{an attribute list cannot appear here}}
 enum [[]] class E4 { }; // expected-error {{an attribute list cannot appear here}}
@@ -307,7 +314,7 @@ int v5()[[gnu::unused]]; // expected-warning {{attribute 'unused' ignored}}
 
 [[attribute_declaration]]; // expected-warning {{unknown attribute 'attribute_declaration' ignored}}
 [[noreturn]]; // expected-error {{'noreturn' attribute only applies to functions}}
-[[carries_dependency]]; // expected-error {{'carries_dependency' attribute only applies to functions, methods, and parameters}}
+[[carries_dependency]]; // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
 
 class A {
   A([[gnu::unused]] int a);

@@ -53,14 +53,6 @@ static cl::opt<bool> EnableIEEERndNear("enable-hexagon-ieee-rnd-near",
 static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
-static cl::opt<bool> EnableHexagonHVXDouble("enable-hexagon-hvx-double",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable Hexagon Double Vector eXtensions"));
-
-static cl::opt<bool> EnableHexagonHVX("enable-hexagon-hvx",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable Hexagon Vector eXtensions"));
-
 static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(false));
 
@@ -87,68 +79,233 @@ static cl::opt<bool> EnablePredicatedCalls("hexagon-pred-calls",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Consider calls to be predicable"));
 
-void HexagonSubtarget::initializeEnvironment() {
-  UseMemOps = false;
-  ModeIEEERndNear = false;
-  UseBSBScheduling = false;
+static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
+  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+
+static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
+  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+
+static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
+  cl::Hidden, cl::ZeroOrMore, cl::init(true),
+  cl::desc("Enable checking for cache bank conflicts"));
+
+
+HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
+                                   StringRef FS, const TargetMachine &TM)
+    : HexagonGenSubtargetInfo(TT, CPU, FS), OptLevel(TM.getOptLevel()),
+      CPUString(Hexagon_MC::selectHexagonCPU(CPU)),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+      RegInfo(getHwMode()), TLInfo(TM, *this),
+      InstrItins(getInstrItineraryForCPU(CPUString)) {
+  // Beware of the default constructor of InstrItineraryData: it will
+  // reset all members to 0.
+  assert(InstrItins.Itineraries != nullptr && "InstrItins not initialized");
 }
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  CPUString = Hexagon_MC::selectHexagonCPU(getTargetTriple(), CPU);
-
-  static std::map<StringRef, HexagonArchEnum> CpuTable {
-    { "hexagonv4", V4 },
-    { "hexagonv5", V5 },
-    { "hexagonv55", V55 },
-    { "hexagonv60", V60 },
-    { "hexagonv62", V62 },
+  static std::map<StringRef, Hexagon::ArchEnum> CpuTable{
+      {"hexagonv4", Hexagon::ArchEnum::V4},
+      {"hexagonv5", Hexagon::ArchEnum::V5},
+      {"hexagonv55", Hexagon::ArchEnum::V55},
+      {"hexagonv60", Hexagon::ArchEnum::V60},
+      {"hexagonv62", Hexagon::ArchEnum::V62},
+      {"hexagonv65", Hexagon::ArchEnum::V65},
   };
 
-  auto foundIt = CpuTable.find(CPUString);
-  if (foundIt != CpuTable.end())
-    HexagonArchVersion = foundIt->second;
+  auto FoundIt = CpuTable.find(CPUString);
+  if (FoundIt != CpuTable.end())
+    HexagonArchVersion = FoundIt->second;
   else
     llvm_unreachable("Unrecognized Hexagon processor version");
 
-  UseHVXOps = false;
-  UseHVXDblOps = false;
+  UseHVX128BOps = false;
+  UseHVX64BOps = false;
   UseLongCalls = false;
+
+  UseMemOps = DisableMemOps ? false : EnableMemOps;
+  ModeIEEERndNear = EnableIEEERndNear;
+  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
+
   ParseSubtargetFeatures(CPUString, FS);
 
-  if (EnableHexagonHVX.getPosition())
-    UseHVXOps = EnableHexagonHVX;
-  if (EnableHexagonHVXDouble.getPosition())
-    UseHVXDblOps = EnableHexagonHVXDouble;
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
+
+  FeatureBitset Features = getFeatureBits();
+  if (HexagonDisableDuplex)
+    setFeatureBits(Features.set(Hexagon::FeatureDuplex, false));
+  setFeatureBits(Hexagon_MC::completeHVXFeatures(Features));
 
   return *this;
 }
 
-HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
-                                   StringRef FS, const TargetMachine &TM)
-    : HexagonGenSubtargetInfo(TT, CPU, FS), CPUString(CPU),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
-  initializeEnvironment();
+void HexagonSubtarget::UsrOverflowMutation::apply(ScheduleDAGInstrs *DAG) {
+  for (SUnit &SU : DAG->SUnits) {
+    if (!SU.isInstr())
+      continue;
+    SmallVector<SDep, 4> Erase;
+    for (auto &D : SU.Preds)
+      if (D.getKind() == SDep::Output && D.getReg() == Hexagon::USR_OVF)
+        Erase.push_back(D);
+    for (auto &E : Erase)
+      SU.removePred(E);
+  }
+}
 
-  // Initialize scheduling itinerary for the specified CPU.
-  InstrItins = getInstrItineraryForCPU(CPUString);
+void HexagonSubtarget::HVXMemLatencyMutation::apply(ScheduleDAGInstrs *DAG) {
+  for (SUnit &SU : DAG->SUnits) {
+    // Update the latency of chain edges between v60 vector load or store
+    // instructions to be 1. These instruction cannot be scheduled in the
+    // same packet.
+    MachineInstr &MI1 = *SU.getInstr();
+    auto *QII = static_cast<const HexagonInstrInfo*>(DAG->TII);
+    bool IsStoreMI1 = MI1.mayStore();
+    bool IsLoadMI1 = MI1.mayLoad();
+    if (!QII->isHVXVec(MI1) || !(IsStoreMI1 || IsLoadMI1))
+      continue;
+    for (SDep &SI : SU.Succs) {
+      if (SI.getKind() != SDep::Order || SI.getLatency() != 0)
+        continue;
+      MachineInstr &MI2 = *SI.getSUnit()->getInstr();
+      if (!QII->isHVXVec(MI2))
+        continue;
+      if ((IsStoreMI1 && MI2.mayStore()) || (IsLoadMI1 && MI2.mayLoad())) {
+        SI.setLatency(1);
+        SU.setHeightDirty();
+        // Change the dependence in the opposite direction too.
+        for (SDep &PI : SI.getSUnit()->Preds) {
+          if (PI.getSUnit() != &SU || PI.getKind() != SDep::Order)
+            continue;
+          PI.setLatency(1);
+          SI.getSUnit()->setDepthDirty();
+        }
+      }
+    }
+  }
+}
 
-  // UseMemOps on by default unless disabled explicitly
-  if (DisableMemOps)
-    UseMemOps = false;
-  else if (EnableMemOps)
-    UseMemOps = true;
-  else
-    UseMemOps = false;
+// Check if a call and subsequent A2_tfrpi instructions should maintain
+// scheduling affinity. We are looking for the TFRI to be consumed in
+// the next instruction. This should help reduce the instances of
+// double register pairs being allocated and scheduled before a call
+// when not used until after the call. This situation is exacerbated
+// by the fact that we allocate the pair from the callee saves list,
+// leading to excess spills and restores.
+bool HexagonSubtarget::CallMutation::shouldTFRICallBind(
+      const HexagonInstrInfo &HII, const SUnit &Inst1,
+      const SUnit &Inst2) const {
+  if (Inst1.getInstr()->getOpcode() != Hexagon::A2_tfrpi)
+    return false;
 
-  if (EnableIEEERndNear)
-    ModeIEEERndNear = true;
-  else
-    ModeIEEERndNear = false;
+  // TypeXTYPE are 64 bit operations.
+  unsigned Type = HII.getType(*Inst2.getInstr());
+  return Type == HexagonII::TypeS_2op || Type == HexagonII::TypeS_3op ||
+         Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM;
+}
 
-  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
+void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
+  SUnit* LastSequentialCall = nullptr;
+  unsigned VRegHoldingRet = 0;
+  unsigned RetRegister;
+  SUnit* LastUseOfRet = nullptr;
+  auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
+  auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+
+  // Currently we only catch the situation when compare gets scheduled
+  // before preceding call.
+  for (unsigned su = 0, e = DAG->SUnits.size(); su != e; ++su) {
+    // Remember the call.
+    if (DAG->SUnits[su].getInstr()->isCall())
+      LastSequentialCall = &DAG->SUnits[su];
+    // Look for a compare that defines a predicate.
+    else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
+      DAG->SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
+    // Look for call and tfri* instructions.
+    else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
+             shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
+      DAG->SUnits[su].addPred(SDep(&DAG->SUnits[su-1], SDep::Barrier));
+    // Prevent redundant register copies between two calls, which are caused by
+    // both the return value and the argument for the next call being in %r0.
+    // Example:
+    //   1: <call1>
+    //   2: %vreg = COPY %r0
+    //   3: <use of %vreg>
+    //   4: %r0 = ...
+    //   5: <call2>
+    // The scheduler would often swap 3 and 4, so an additional register is
+    // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
+    // this. The same applies for %d0 and %v0/%w0, which are also handled.
+    else if (SchedRetvalOptimization) {
+      const MachineInstr *MI = DAG->SUnits[su].getInstr();
+      if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
+                           MI->readsRegister(Hexagon::V0, &TRI)))  {
+        // %vreg = COPY %r0
+        VRegHoldingRet = MI->getOperand(0).getReg();
+        RetRegister = MI->getOperand(1).getReg();
+        LastUseOfRet = nullptr;
+      } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
+        // <use of %X>
+        LastUseOfRet = &DAG->SUnits[su];
+      else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
+        // %r0 = ...
+        DAG->SUnits[su].addPred(SDep(LastUseOfRet, SDep::Barrier));
+    }
+  }
+}
+
+void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
+  if (!EnableCheckBankConflict)
+    return;
+
+  const auto &HII = static_cast<const HexagonInstrInfo&>(*DAG->TII);
+
+  // Create artificial edges between loads that could likely cause a bank
+  // conflict. Since such loads would normally not have any dependency
+  // between them, we cannot rely on existing edges.
+  for (unsigned i = 0, e = DAG->SUnits.size(); i != e; ++i) {
+    SUnit &S0 = DAG->SUnits[i];
+    MachineInstr &L0 = *S0.getInstr();
+    if (!L0.mayLoad() || L0.mayStore() ||
+        HII.getAddrMode(L0) != HexagonII::BaseImmOffset)
+      continue;
+    int Offset0;
+    unsigned Size0;
+    unsigned Base0 = HII.getBaseAndOffset(L0, Offset0, Size0);
+    // Is the access size is longer than the L1 cache line, skip the check.
+    if (Base0 == 0 || Size0 >= 32)
+      continue;
+    // Scan only up to 32 instructions ahead (to avoid n^2 complexity).
+    for (unsigned j = i+1, m = std::min(i+32, e); j != m; ++j) {
+      SUnit &S1 = DAG->SUnits[j];
+      MachineInstr &L1 = *S1.getInstr();
+      if (!L1.mayLoad() || L1.mayStore() ||
+          HII.getAddrMode(L1) != HexagonII::BaseImmOffset)
+        continue;
+      int Offset1;
+      unsigned Size1;
+      unsigned Base1 = HII.getBaseAndOffset(L1, Offset1, Size1);
+      if (Base1 == 0 || Size1 >= 32 || Base0 != Base1)
+        continue;
+      // Check bits 3 and 4 of the offset: if they differ, a bank conflict
+      // is unlikely.
+      if (((Offset0 ^ Offset1) & 0x18) != 0)
+        continue;
+      // Bits 3 and 4 are the same, add an artificial edge and set extra
+      // latency.
+      SDep A(&S0, SDep::Artificial);
+      A.setLatency(1);
+      S1.addPred(A, true);
+    }
+  }
+}
+
+/// \brief Enable use of alias analysis during code generation (during MI
+/// scheduling, DAGCombine, etc.).
+bool HexagonSubtarget::useAA() const {
+  if (OptLevel != CodeGenOpt::None)
+    return true;
+  return false;
 }
 
 /// \brief Perform target specific adjustments to the latency of a schedule
@@ -204,59 +361,17 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
   updateLatency(*SrcInst, *DstInst, Dep);
 }
 
-void HexagonSubtarget::HexagonDAGMutation::apply(ScheduleDAGInstrs *DAG) {
-  for (auto &SU : DAG->SUnits) {
-    if (!SU.isInstr())
-      continue;
-    SmallVector<SDep, 4> Erase;
-    for (auto &D : SU.Preds)
-      if (D.getKind() == SDep::Output && D.getReg() == Hexagon::USR_OVF)
-        Erase.push_back(D);
-    for (auto &E : Erase)
-      SU.removePred(E);
-  }
-
-  for (auto &SU : DAG->SUnits) {
-    // Update the latency of chain edges between v60 vector load or store
-    // instructions to be 1. These instruction cannot be scheduled in the
-    // same packet.
-    MachineInstr &MI1 = *SU.getInstr();
-    auto *QII = static_cast<const HexagonInstrInfo*>(DAG->TII);
-    bool IsStoreMI1 = MI1.mayStore();
-    bool IsLoadMI1 = MI1.mayLoad();
-    if (!QII->isHVXVec(MI1) || !(IsStoreMI1 || IsLoadMI1))
-      continue;
-    for (auto &SI : SU.Succs) {
-      if (SI.getKind() != SDep::Order || SI.getLatency() != 0)
-        continue;
-      MachineInstr &MI2 = *SI.getSUnit()->getInstr();
-      if (!QII->isHVXVec(MI2))
-        continue;
-      if ((IsStoreMI1 && MI2.mayStore()) || (IsLoadMI1 && MI2.mayLoad())) {
-        SI.setLatency(1);
-        SU.setHeightDirty();
-        // Change the dependence in the opposite direction too.
-        for (auto &PI : SI.getSUnit()->Preds) {
-          if (PI.getSUnit() != &SU || PI.getKind() != SDep::Order)
-            continue;
-          PI.setLatency(1);
-          SI.getSUnit()->setDepthDirty();
-        }
-      }
-    }
-  }
-}
-
 void HexagonSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(
-      llvm::make_unique<HexagonSubtarget::HexagonDAGMutation>());
+  Mutations.push_back(llvm::make_unique<UsrOverflowMutation>());
+  Mutations.push_back(llvm::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(llvm::make_unique<BankConflictMutation>());
 }
 
 void HexagonSubtarget::getSMSMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(
-      llvm::make_unique<HexagonSubtarget::HexagonDAGMutation>());
+  Mutations.push_back(llvm::make_unique<UsrOverflowMutation>());
+  Mutations.push_back(llvm::make_unique<HVXMemLatencyMutation>());
 }
 
 // Pin the vtable to this file.

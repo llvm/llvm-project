@@ -16,7 +16,7 @@
 #ifndef LLVM_CODEGEN_MACHINEOPTIMIZATIONREMARKEMITTER_H
 #define LLVM_CODEGEN_MACHINEOPTIMIZATIONREMARKEMITTER_H
 
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
@@ -33,7 +33,7 @@ public:
                                 const DiagnosticLocation &Loc,
                                 const MachineBasicBlock *MBB)
       : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, RemarkName,
-                                       *MBB->getParent()->getFunction(), Loc),
+                                       MBB->getParent()->getFunction(), Loc),
         MBB(MBB) {}
 
   /// MI-specific kinds of diagnostic Arguments.
@@ -73,7 +73,9 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override {
-    return OptimizationRemark::isEnabled(getPassName());
+    const Function &Fn = getFunction();
+    LLVMContext &Ctx = Fn.getContext();
+    return Ctx.getDiagHandlerPtr()->isPassedOptRemarkEnabled(getPassName());
   }
 };
 
@@ -97,7 +99,9 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override {
-    return OptimizationRemarkMissed::isEnabled(getPassName());
+    const Function &Fn = getFunction();
+    LLVMContext &Ctx = Fn.getContext();
+    return Ctx.getDiagHandlerPtr()->isMissedOptRemarkEnabled(getPassName());
   }
 };
 
@@ -121,7 +125,9 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override {
-    return OptimizationRemarkAnalysis::isEnabled(getPassName());
+    const Function &Fn = getFunction();
+    LLVMContext &Ctx = Fn.getContext();
+    return Ctx.getDiagHandlerPtr()->isAnalysisRemarkEnabled(getPassName());
   }
 };
 
@@ -152,10 +158,25 @@ public:
   /// that are normally too noisy.  In this mode, we can use the extra analysis
   /// (1) to filter trivial false positives or (2) to provide more context so
   /// that non-trivial false positives can be quickly detected by the user.
-  bool allowExtraAnalysis() const {
-    // For now, only allow this with -fsave-optimization-record since the -Rpass
-    // options are handled in the front-end.
-    return MF.getFunction()->getContext().getDiagnosticsOutputFile();
+  bool allowExtraAnalysis(StringRef PassName) const {
+    return (MF.getFunction().getContext().getDiagnosticsOutputFile() ||
+            MF.getFunction().getContext()
+            .getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
+  }
+
+  /// \brief Take a lambda that returns a remark which will be emitted.  Second
+  /// argument is only used to restrict this to functions.
+  template <typename T>
+  void emit(T RemarkBuilder, decltype(RemarkBuilder()) * = nullptr) {
+    // Avoid building the remark unless we know there are at least *some*
+    // remarks enabled. We can't currently check whether remarks are requested
+    // for the calling pass since that requires actually building the remark.
+
+    if (MF.getFunction().getContext().getDiagnosticsOutputFile() ||
+        MF.getFunction().getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
+      auto R = RemarkBuilder();
+      emit((DiagnosticInfoOptimizationBase &)R);
+    }
   }
 
 private:

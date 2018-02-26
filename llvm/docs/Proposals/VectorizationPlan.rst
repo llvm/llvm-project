@@ -82,8 +82,14 @@ The design of VPlan follows several high-level guidelines:
    replicated VF*UF times to handle scalarized and predicated instructions.
    Innerloops are also modelled as SESE regions.
 
-Low-level Design
-================
+7. Support instruction-level analysis and transformation, as part of Planning
+   Step 2.b: During vectorization instructions may need to be traversed, moved,
+   replaced by other instructions or be created. For example, vector idiom
+   detection and formation involves searching for and optimizing instruction
+   patterns.
+
+Definitions
+===========
 The low-level design of VPlan comprises of the following classes.
 
 :LoopVectorizationPlanner:
@@ -139,10 +145,63 @@ The low-level design of VPlan comprises of the following classes.
   instructions; e.g., cloned once, replicated multiple times or widened
   according to selected VF.
 
+:VPValue:
+  The base of VPlan's def-use relations class hierarchy. When instantiated, it
+  models a constant or a live-in Value in VPlan. It has users, which are of type
+  VPUser, but no operands.
+
+:VPUser:
+  A VPValue representing a general vertex in the def-use graph of VPlan. It has
+  operands which are of type VPValue. When instantiated, it represents a
+  live-out Instruction that exists outside VPlan. VPUser is similar in some
+  aspects to LLVM's User class.
+
+:VPInstruction:
+  A VPInstruction is both a VPRecipe and a VPUser. It models a single
+  VPlan-level instruction to be generated if the VPlan is executed, including
+  its opcode and possibly additional characteristics. It is the basis for
+  writing instruction-level analyses and optimizations in VPlan as creating,
+  replacing or moving VPInstructions record both def-use and scheduling
+  decisions. VPInstructions also extend LLVM IR's opcodes with idiomatic
+  operations that enrich the Vectorizer's semantics.
+
 :VPTransformState:
   Stores information used for generating output IR, passed from
   LoopVectorizationPlanner to its selected VPlan for execution, and used to pass
   additional information down to VPBlocks and VPRecipes.
+
+The Planning Process and VPlan Roadmap
+======================================
+
+Transforming the Loop Vectorizer to use VPlan follows a staged approach. First,
+VPlan is used to record the final vectorization decisions, and to execute them:
+the Hierarchical CFG models the planned control-flow, and Recipes capture
+decisions taken inside basic-blocks. Next, VPlan will be used also as the basis
+for taking these decisions, effectively turning them into a series of
+VPlan-to-VPlan algorithms. Finally, VPlan will support the planning process
+itself including cost-based analyses for making these decisions, to fully
+support compositional and iterative decision making.
+
+Some decisions are local to an instruction in the loop, such as whether to widen
+it into a vector instruction or replicate it, keeping the generated instructions
+in place. Other decisions, however, involve moving instructions, replacing them
+with other instructions, and/or introducing new instructions. For example, a
+cast may sink past a later instruction and be widened to handle first-order
+recurrence; an interleave group of strided gathers or scatters may effectively
+move to one place where they are replaced with shuffles and a common wide vector
+load or store; new instructions may be introduced to compute masks, shuffle the
+elements of vectors, and pack scalar values into vectors or vice-versa.
+
+In order for VPlan to support making instruction-level decisions and analyses,
+it needs to model the relevant instructions along with their def/use relations.
+This too follows a staged approach: first, the new instructions that compute
+masks are modeled as VPInstructions, along with their induced def/use subgraph.
+This effectively models masks in VPlan, facilitating VPlan-based predication.
+Next, the logic embedded within each Recipe for generating its instructions at
+VPlan execution time, will instead take part in the planning process by modeling
+them as VPInstructions. Finally, only logic that applies to instructions as a
+group will remain in Recipes, such as interleave groups and potentially other
+idiom groups having synergistic cost.
 
 Related LLVM components
 -----------------------
@@ -151,6 +210,9 @@ Related LLVM components
 
 2. RegionInfo: one can compare VPlan's H-CFG with the Region Analysis as used by
    Polly [7]_.
+
+3. Loop Vectorizer: the Vectorization Plan aims to upgrade the infrastructure of
+   the Loop Vectorizer and extend it to handle outer loops [8,9]_.
 
 References
 ----------
@@ -180,3 +242,6 @@ References
 
 .. [8] "Introducing VPlan to the Loop Vectorizer", Gil Rapaport and Ayal Zaks,
     European LLVM Developers' Meeting 2017.
+
+.. [9] "Extending LoopVectorizer: OpenMP4.5 SIMD and Outer Loop
+    Auto-Vectorization", Intel Vectorizer Team, LLVM Developers' Meeting 2016.

@@ -18,10 +18,10 @@ if (SHADOW_MAPPING_UNRELIABLE)
 endif()
 
 macro(get_bits_for_arch arch bits)
-  if (${arch} MATCHES "i386|i686|arm|mips|mipsel")
-    set(${bits} 32)
-  elseif (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|mips64|mips64el|s390x")
+  if (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|arm64|mips64|mips64el|s390x")
     set(${bits} 64)
+  elseif (${arch} MATCHES "i386|arm|mips|mipsel")
+    set(${bits} 32)
   else()
     message(FATAL_ERROR "Unknown target architecture: ${arch}")
   endif()
@@ -31,9 +31,7 @@ set(ASAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 if(NOT COMPILER_RT_STANDALONE_BUILD)
   list(APPEND ASAN_TEST_DEPS asan)
   if(NOT APPLE AND COMPILER_RT_HAS_LLD)
-    list(APPEND ASAN_TEST_DEPS
-      lld
-    )
+    list(APPEND ASAN_TEST_DEPS lld)
   endif()
 endif()
 set(ASAN_DYNAMIC_TEST_DEPS ${ASAN_TEST_DEPS})
@@ -164,21 +162,12 @@ add_lit_testsuite(check-asan "Running the AddressSanitizer tests"
 set_target_properties(check-asan PROPERTIES FOLDER "Compiler-RT Misc")
 
 if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-  # Add check-dynamic-asan target. It is a part of check-all only on Windows,
-  # where we want to always test both dynamic and static runtime.
-
-  if(NOT OS_NAME MATCHES "Windows")
-    set(EXCLUDE_FROM_ALL TRUE)
-  endif()
   add_lit_testsuite(check-asan-dynamic
                     "Running the AddressSanitizer tests with dynamic runtime"
                     ${ASAN_DYNAMIC_TESTSUITES}
                     DEPENDS ${ASAN_DYNAMIC_TEST_DEPS})
   set_target_properties(check-asan-dynamic
                         PROPERTIES FOLDER "Compiler-RT Misc")
-  if(NOT OS_NAME MATCHES "Windows")
-    set(EXCLUDE_FROM_ALL FALSE)
-  endif()
 endif()
 
 # Reset EXCLUDE_FROM_ALL to its initial value.

@@ -138,7 +138,7 @@ int main(int argc, const char **argv) {
   // Check if NewNames is a valid identifier in C++17.
   LangOptions Options;
   Options.CPlusPlus = true;
-  Options.CPlusPlus1z = true;
+  Options.CPlusPlus17 = true;
   IdentifierTable Table(Options);
   for (const auto &NewName : NewNames) {
     auto NewNameTokKind = Table.get(NewName).getTokenID();
@@ -173,12 +173,6 @@ int main(int argc, const char **argv) {
   if (FindingAction.errorOccurred()) {
     // Diagnostics are already issued at this point.
     return 1;
-  }
-
-  if (Force && PrevNames.size() < NewNames.size()) {
-    // No matching PrevName for all NewNames. Without Force this is an error
-    // above already.
-    return 0;
   }
 
   // Perform the renaming.

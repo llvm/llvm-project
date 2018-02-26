@@ -57,10 +57,10 @@
 ; correctly referenced in the accelerator table. Before r221837, the one
 ; in the second compilation unit had a wrong offset
 ; CHECK-ACCEL: .apple_names contents:
-; CHECK-ACCEL: Name{{.*}}"func"
-; CHECK-ACCEL-NOT: Name
+; CHECK-ACCEL: String{{.*}}"func"
+; CHECK-ACCEL-NOT: String
 ; CHECK-ACCEL: Atom[0]{{.*}}[[INLINED]]
-; CHECK-ACCEL-NOT: Name
+; CHECK-ACCEL-NOT: String
 ; CHECK-ACCEL: Atom[0]{{.*}}[[FUNC]]
 
 @i = external global i32

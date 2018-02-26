@@ -3,7 +3,7 @@
 
 define <2 x i64> @t1(<2 x i64>* %ptr) nounwind  {
 ; CHECK-LABEL: t1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl
@@ -16,7 +16,7 @@ define <2 x i64> @t1(<2 x i64>* %ptr) nounwind  {
 
 define <2 x i64> @t2(i64 %x) nounwind  {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl
   %tmp717 = bitcast i64 %x to double

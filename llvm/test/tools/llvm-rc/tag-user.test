@@ -1,0 +1,53 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: cp %p/Inputs/bitmap.bmp .
+; RUN: llvm-rc /FO %t/tag-user.res %p/Inputs/tag-user.rc
+; RUN: llvm-readobj %t/tag-user.res | FileCheck %s
+
+; CHECK:      Resource type (int): 500
+; CHECK-NEXT: Resource name (int): 500
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 38
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 01000200 03000400 05006461 74617700  |..........dataw.|
+; CHECK-NEXT:   0010: 69006400 65002000 64006100 74006100  |i.d.e. .d.a.t.a.|
+; CHECK-NEXT:   0020: CDAB01EF CDAB                        |......|
+; CHECK-NEXT: )
+
+; CHECK-DAG:  Resource type (string): NAME2
+; CHECK-NEXT: Resource name (string): NAME1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 0
+; CHECK-NEXT: Data:: ()
+
+; CHECK-DAG:  Resource type (int): 600
+; CHECK-NEXT: Resource name (int): 600
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 110
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 424D6E00 00000000 00003600 00002800  |BMn.......6...(.|
+; CHECK-NEXT:   0010: 00000200 00000700 00000100 18000000  |................|
+; CHECK-NEXT:   0020: 00003800 00000000 00000000 00000000  |..8.............|
+; CHECK-NEXT:   0030: 00000000 00005BB3 855BB385 0000FFFF  |......[..[......|
+; CHECK-NEXT:   0040: FFFFFFFF 0000FFFF FFFFFFFF 0000FFFF  |................|
+; CHECK-NEXT:   0050: FFFFFFFF 00005BB3 85FFFFFF 0000FFFF  |......[.........|
+; CHECK-NEXT:   0060: FF0EC9FF 0000241C EDFFFFFF 0000      |......$.......|
+; CHECK-NEXT: )
+
+

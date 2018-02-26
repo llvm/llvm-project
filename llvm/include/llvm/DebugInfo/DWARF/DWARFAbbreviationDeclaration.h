@@ -28,29 +28,52 @@ class raw_ostream;
 class DWARFAbbreviationDeclaration {
 public:
   struct AttributeSpec {
-    AttributeSpec(dwarf::Attribute A, dwarf::Form F, Optional<int64_t> V)
-        : Attr(A), Form(F), ByteSizeOrValue(V) {}
+    AttributeSpec(dwarf::Attribute A, dwarf::Form F, int64_t Value)
+        : Attr(A), Form(F), Value(Value) {
+      assert(isImplicitConst());
+    }
+    AttributeSpec(dwarf::Attribute A, dwarf::Form F, Optional<uint8_t> ByteSize)
+        : Attr(A), Form(F) {
+      assert(!isImplicitConst());
+      this->ByteSize.HasByteSize = ByteSize.hasValue();
+      if (this->ByteSize.HasByteSize)
+        this->ByteSize.ByteSize = *ByteSize;
+    }
 
     dwarf::Attribute Attr;
     dwarf::Form Form;
 
+  private:
     /// The following field is used for ByteSize for non-implicit_const
     /// attributes and as value for implicit_const ones, indicated by
     /// Form == DW_FORM_implicit_const.
     /// The following cases are distinguished:
-    /// * Form != DW_FORM_implicit_const and ByteSizeOrValue has a value:
-    ///     ByteSizeOrValue contains the fixed size in bytes
-    ///     for the Form in this object.
-    /// * Form != DW_FORM_implicit_const and ByteSizeOrValue is None:
+    /// * Form != DW_FORM_implicit_const and HasByteSize is true:
+    ///     ByteSize contains the fixed size in bytes for the Form in this
+    ///     object.
+    /// * Form != DW_FORM_implicit_const and HasByteSize is false:
     ///     byte size of Form either varies according to the DWARFUnit
     ///     that it is contained in or the value size varies and must be
     ///     decoded from the debug information in order to determine its size.
     /// * Form == DW_FORM_implicit_const:
-    ///     ByteSizeOrValue contains value for the implicit_const attribute.
-    Optional<int64_t> ByteSizeOrValue;
+    ///     Value contains value for the implicit_const attribute.
+    struct ByteSizeStorage {
+      bool HasByteSize;
+      uint8_t ByteSize;
+    };
+    union {
+      ByteSizeStorage ByteSize;
+      int64_t Value;
+    };
 
+  public:
     bool isImplicitConst() const {
       return Form == dwarf::DW_FORM_implicit_const;
+    }
+
+    int64_t getImplicitConstValue() const {
+      assert(isImplicitConst());
+      return Value;
     }
 
     /// Get the fixed byte size of this Form if possible. This function might

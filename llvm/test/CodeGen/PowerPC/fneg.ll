@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep fneg
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep fneg
 
 define double @test1(double %a, double %b, double %c, double %d) {
 entry:

@@ -838,9 +838,16 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   case ISD::SIGN_EXTEND: {
     // Check that the extension bits are don't-care (i.e. are masked out
     // by the final mask).
+    unsigned BitSize = N.getValueSizeInBits();
     unsigned InnerBitSize = N.getOperand(0).getValueSizeInBits();
-    if (maskMatters(RxSBG, allOnes(RxSBG.BitSize) - allOnes(InnerBitSize)))
-      return false;
+    if (maskMatters(RxSBG, allOnes(BitSize) - allOnes(InnerBitSize))) {
+      // In the case where only the sign bit is active, increase Rotate with
+      // the extension width.
+      if (RxSBG.Mask == 1 && RxSBG.Rotate == 1)
+        RxSBG.Rotate += (BitSize - InnerBitSize);
+      else
+        return false;
+    }
 
     RxSBG.Input = N.getOperand(0);
     return true;
@@ -992,7 +999,15 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
   if (Subtarget->hasMiscellaneousExtensions())
     Opcode = SystemZ::RISBGN;
   EVT OpcodeVT = MVT::i64;
-  if (VT == MVT::i32 && Subtarget->hasHighWord()) {
+  if (VT == MVT::i32 && Subtarget->hasHighWord() &&
+      // We can only use the 32-bit instructions if all source bits are
+      // in the low 32 bits without wrapping, both after rotation (because
+      // of the smaller range for Start and End) and before rotation
+      // (because the input value is truncated).
+      RISBG.Start >= 32 && RISBG.End >= RISBG.Start &&
+      ((RISBG.Start + RISBG.Rotate) & 63) >= 32 &&
+      ((RISBG.End + RISBG.Rotate) & 63) >=
+      ((RISBG.Start + RISBG.Rotate) & 63)) {
     Opcode = SystemZ::RISBMux;
     OpcodeVT = MVT::i32;
     RISBG.Start &= 31;
@@ -1255,8 +1270,10 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     // Fall through.
   or_xor:
     // If this is a 64-bit operation in which both 32-bit halves are nonzero,
-    // split the operation into two.
-    if (Node->getValueType(0) == MVT::i64)
+    // split the operation into two.  If both operands here happen to be
+    // constant, leave this to common code to optimize.
+    if (Node->getValueType(0) == MVT::i64 &&
+        Node->getOperand(0).getOpcode() != ISD::Constant)
       if (auto *Op1 = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
         uint64_t Val = Op1->getZExtValue();
         if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val)) {
@@ -1379,8 +1396,11 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
     break;
   case InlineAsm::Constraint_T:
   case InlineAsm::Constraint_m:
+  case InlineAsm::Constraint_o:
     // Accept an address with a long displacement and an index.
     // m works the same as T, as this is the most general case.
+    // We don't really have any special handling of "offsettable"
+    // memory addresses, so just treat o the same as m.
     Form = SystemZAddressingMode::FormBDXNormal;
     DispRange = SystemZAddressingMode::Disp20Only;
     break;

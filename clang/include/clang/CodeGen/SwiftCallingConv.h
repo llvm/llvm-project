@@ -116,6 +116,12 @@ private:
   void splitVectorEntry(unsigned index);
 };
 
+/// Should an aggregate which expands to the given type sequence
+/// be passed/returned indirectly under swiftcall?
+bool shouldPassIndirectly(CodeGenModule &CGM,
+                          ArrayRef<llvm::Type*> types,
+                          bool asReturnValue);
+
 /// Return the maximum voluntary integer size for the current target.
 CharUnits getMaximumVoluntaryIntegerSize(CodeGenModule &CGM);
 

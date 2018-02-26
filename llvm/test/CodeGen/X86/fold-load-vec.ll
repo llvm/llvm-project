@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 -mattr=+sse4.1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 -mattr=+sse4.1 | FileCheck %s
 
 ; rdar://12721174
 ; We should not fold movss into pshufd since pshufd expects m128 while movss

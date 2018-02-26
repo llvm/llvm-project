@@ -160,6 +160,8 @@ struct { } a;
 decltype(a) fun(decltype(a) x, decltype(a)) { return x; }
 // CHECK-DAG: @"\01?fun@PR18022@@YA?AU<unnamed-type-a>@1@U21@0@Z"
 
+void use_fun() { fun(a, a); }
+
 }
 
 inline int define_lambda() {
@@ -280,7 +282,7 @@ void g() {
 
 namespace PR18204 {
 template <typename T>
-int f(T *);
+int f(T *) { return 0; }
 static union {
   int n = f(this);
 };
@@ -346,4 +348,5 @@ int call_it = (A::default_args(), 1);
 
 enum { enumerator };
 void f(decltype(enumerator)) {}
-// CHECK-DAG: define void @"\01?f@@YAXW4<unnamed-enum-enumerator>@@@Z"(
+// CHECK-DAG: define internal void @"\01?f@@YAXW4<unnamed-enum-enumerator>@@@Z"(
+void use_f() { f(enumerator); }

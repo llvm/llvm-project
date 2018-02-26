@@ -1,4 +1,4 @@
-//===-- StatepointLowering.h - SDAGBuilder's statepoint code -*- C++ -*---===//
+//===- StatepointLowering.h - SDAGBuilder's statepoint code ---*- C++ -*---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,11 +16,16 @@
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_STATEPOINTLOWERING_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include <cassert>
 
 namespace llvm {
+
+class CallInst;
 class SelectionDAGBuilder;
 
 /// This class tracks both per-statepoint and per-selectiondag information.
@@ -30,7 +35,7 @@ class SelectionDAGBuilder;
 /// works in concert with information in FunctionLoweringInfo.
 class StatepointLoweringState {
 public:
-  StatepointLoweringState() : NextSlotToAllocate(0) {}
+  StatepointLoweringState() = default;
 
   /// Reset all state tracking for a newly encountered safepoint.  Also
   /// performs some consistency checking.
@@ -69,7 +74,7 @@ public:
   /// before the next statepoint.  If we weren't expecting to see
   /// it, we'll report an assertion.
   void relocCallVisited(const CallInst &RelocCall) {
-    auto I = find(PendingGCRelocateCalls, &RelocCall);
+    auto I = llvm::find(PendingGCRelocateCalls, &RelocCall);
     assert(I != PendingGCRelocateCalls.end() &&
            "Visited unexpected gcrelocate call");
     PendingGCRelocateCalls.erase(I);
@@ -108,11 +113,12 @@ private:
   SmallBitVector AllocatedStackSlots;
 
   /// Points just beyond the last slot known to have been allocated
-  unsigned NextSlotToAllocate;
+  unsigned NextSlotToAllocate = 0;
 
   /// Keep track of pending gcrelocate calls for consistency check
   SmallVector<const CallInst *, 10> PendingGCRelocateCalls;
 };
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_SELECTIONDAG_STATEPOINTLOWERING_H

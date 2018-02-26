@@ -171,7 +171,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                      "ljmp{w}\t{*}$dst", [], IIC_JMP_FAR_MEM>, OpSize16,
                    Sched<[WriteJumpLd]>;
   def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaque48mem:$dst),
-                     "ljmp{l}\t{*}$dst", [], IIC_JMP_FAR_MEM>, OpSize32,
+                     "{l}jmp{l}\t{*}$dst", [], IIC_JMP_FAR_MEM>, OpSize32,
                    Sched<[WriteJumpLd]>;
 }
 
@@ -191,7 +191,7 @@ let isCall = 1 in
   // a use to prevent stack-pointer assignments that appear immediately
   // before calls from potentially appearing dead. Uses for argument
   // registers are added manually.
-  let Uses = [ESP] in {
+  let Uses = [ESP, SSP] in {
     def CALLpcrel32 : Ii32PCRel<0xE8, RawFrm,
                            (outs), (ins i32imm_pcrel:$dst),
                            "call{l}\t$dst", [], IIC_CALL_RI>, OpSize32,
@@ -211,11 +211,12 @@ let isCall = 1 in
                       Sched<[WriteJumpLd]>;
     def CALL32r     : I<0xFF, MRM2r, (outs), (ins GR32:$dst),
                         "call{l}\t{*}$dst", [(X86call GR32:$dst)], IIC_CALL_RI>,
-                      OpSize32, Requires<[Not64BitMode]>, Sched<[WriteJump]>;
+                      OpSize32, Requires<[Not64BitMode,NotUseRetpoline]>,
+                      Sched<[WriteJump]>;
     def CALL32m     : I<0xFF, MRM2m, (outs), (ins i32mem:$dst),
                         "call{l}\t{*}$dst", [(X86call (loadi32 addr:$dst))],
                         IIC_CALL_MEM>, OpSize32,
-                      Requires<[Not64BitMode,FavorMemIndirectCall]>,
+                      Requires<[Not64BitMode,FavorMemIndirectCall,NotUseRetpoline]>,
                       Sched<[WriteJumpLd]>;
 
     let Predicates = [Not64BitMode] in {
@@ -233,7 +234,7 @@ let isCall = 1 in
                         "lcall{w}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize16,
                       Sched<[WriteJumpLd]>;
     def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaque48mem:$dst),
-                        "lcall{l}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize32,
+                        "{l}call{l}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize32,
                       Sched<[WriteJumpLd]>;
   }
 
@@ -241,11 +242,11 @@ let isCall = 1 in
 // Tail call stuff.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
-  let Uses = [ESP] in {
+  let Uses = [ESP, SSP] in {
   def TCRETURNdi : PseudoI<(outs),
-                     (ins i32imm_pcrel:$dst, i32imm:$offset), []>;
+                     (ins i32imm_pcrel:$dst, i32imm:$offset), []>, NotMemoryFoldable;
   def TCRETURNri : PseudoI<(outs),
-                     (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
+                     (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>, NotMemoryFoldable;
   let mayLoad = 1 in
   def TCRETURNmi : PseudoI<(outs),
                      (ins i32mem_TC:$dst, i32imm:$offset), []>;
@@ -268,7 +269,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 // rather than barriers, and they use EFLAGS.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
-  let Uses = [ESP, EFLAGS] in {
+  let Uses = [ESP, EFLAGS, SSP] in {
   def TCRETURNdicc : PseudoI<(outs),
                      (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
 
@@ -287,7 +288,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
 // RSP is marked as a use to prevent stack-pointer assignments that appear
 // immediately before calls from potentially appearing dead. Uses for argument
 // registers are added manually.
-let isCall = 1, Uses = [RSP], SchedRW = [WriteJump] in {
+let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
   // NOTE: this pattern doesn't match "X86call imm", because we do not know
   // that the offset between an arbitrary immediate and the call will fit in
   // the 32-bit pcrel field that we have.
@@ -298,27 +299,28 @@ let isCall = 1, Uses = [RSP], SchedRW = [WriteJump] in {
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
                         "call{q}\t{*}$dst", [(X86call GR64:$dst)],
                         IIC_CALL_RI>,
-                      Requires<[In64BitMode]>;
+                      Requires<[In64BitMode,NotUseRetpoline]>;
   def CALL64m       : I<0xFF, MRM2m, (outs), (ins i64mem:$dst),
                         "call{q}\t{*}$dst", [(X86call (loadi64 addr:$dst))],
                         IIC_CALL_MEM>,
-                      Requires<[In64BitMode,FavorMemIndirectCall]>;
+                      Requires<[In64BitMode,FavorMemIndirectCall,
+                                NotUseRetpoline]>;
 
   def FARCALL64   : RI<0xFF, MRM3m, (outs), (ins opaque80mem:$dst),
                        "lcall{q}\t{*}$dst", [], IIC_CALL_FAR_MEM>;
 }
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    isCodeGenOnly = 1, Uses = [RSP], usesCustomInserter = 1,
+    isCodeGenOnly = 1, Uses = [RSP, SSP], usesCustomInserter = 1,
     SchedRW = [WriteJump] in {
   def TCRETURNdi64   : PseudoI<(outs),
                         (ins i64i32imm_pcrel:$dst, i32imm:$offset),
                         []>;
   def TCRETURNri64   : PseudoI<(outs),
-                        (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
+                        (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>, NotMemoryFoldable;
   let mayLoad = 1 in
   def TCRETURNmi64   : PseudoI<(outs),
-                        (ins i64mem_TC:$dst, i32imm:$offset), []>;
+                        (ins i64mem_TC:$dst, i32imm:$offset), []>, NotMemoryFoldable;
 
   def TAILJMPd64 : Ii32PCRel<0xE9, RawFrm, (outs), (ins i64i32imm_pcrel:$dst),
                    "jmp\t$dst", [], IIC_JMP_REL>;
@@ -341,11 +343,32 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   }
 }
 
+let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
+    Uses = [RSP, SSP],
+    usesCustomInserter = 1,
+    SchedRW = [WriteJump] in {
+  def RETPOLINE_CALL32 :
+    PseudoI<(outs), (ins GR32:$dst), [(X86call GR32:$dst)]>,
+            Requires<[Not64BitMode,UseRetpoline]>;
+
+  def RETPOLINE_CALL64 :
+    PseudoI<(outs), (ins GR64:$dst), [(X86call GR64:$dst)]>,
+            Requires<[In64BitMode,UseRetpoline]>;
+
+  // Retpoline variant of indirect tail calls.
+  let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
+    def RETPOLINE_TCRETURN64 :
+      PseudoI<(outs), (ins GR64:$dst, i32imm:$offset), []>;
+    def RETPOLINE_TCRETURN32 :
+      PseudoI<(outs), (ins GR32:$dst, i32imm:$offset), []>;
+  }
+}
+
 // Conditional tail calls are similar to the above, but they are branches
 // rather than barriers, and they use EFLAGS.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
-  let Uses = [RSP, EFLAGS] in {
+  let Uses = [RSP, EFLAGS, SSP] in {
   def TCRETURNdi64cc : PseudoI<(outs),
                            (ins i64i32imm_pcrel:$dst, i32imm:$offset,
                             i32imm:$cond), []>;

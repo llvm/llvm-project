@@ -59,20 +59,22 @@ define signext i32 @test2(i32* nocapture readonly %buffer1, i32* nocapture reado
   ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = load i32, i32*
   ; CHECK-NEXT: [[BSWAP1:%[0-9]+]] = call i32 @llvm.bswap.i32(i32 [[LOAD1]])
   ; CHECK-NEXT: [[BSWAP2:%[0-9]+]] = call i32 @llvm.bswap.i32(i32 [[LOAD2]])
-  ; CHECK-NEXT: [[CMP1:%[0-9]+]] = icmp ne i32 [[BSWAP1]], [[BSWAP2]]
+  ; CHECK-NEXT: [[CMP1:%[0-9]+]] = icmp ugt i32 [[BSWAP1]], [[BSWAP2]]
   ; CHECK-NEXT: [[CMP2:%[0-9]+]] = icmp ult i32 [[BSWAP1]], [[BSWAP2]]
-  ; CHECK-NEXT: [[SELECT1:%[0-9]+]] = select i1 [[CMP2]], i32 -1, i32 1
-  ; CHECK-NEXT: [[SELECT2:%[0-9]+]] = select i1 [[CMP1]], i32 [[SELECT1]], i32 0
-  ; CHECK-NEXT: ret i32 [[SELECT2]]
+  ; CHECK-NEXT: [[Z1:%[0-9]+]] = zext i1 [[CMP1]] to i32
+  ; CHECK-NEXT: [[Z2:%[0-9]+]] = zext i1 [[CMP2]] to i32
+  ; CHECK-NEXT: [[SUB:%[0-9]+]] = sub i32 [[Z1]], [[Z2]]
+  ; CHECK-NEXT: ret i32 [[SUB]]
 
   ; CHECK-BE-LABEL: @test2(
   ; CHECK-BE: [[LOAD1:%[0-9]+]] = load i32, i32*
   ; CHECK-BE-NEXT: [[LOAD2:%[0-9]+]] = load i32, i32*
-  ; CHECK-BE-NEXT: [[CMP1:%[0-9]+]] = icmp ne i32 [[LOAD1]], [[LOAD2]]
+  ; CHECK-BE-NEXT: [[CMP1:%[0-9]+]] = icmp ugt i32 [[LOAD1]], [[LOAD2]]
   ; CHECK-BE-NEXT: [[CMP2:%[0-9]+]] = icmp ult i32 [[LOAD1]], [[LOAD2]]
-  ; CHECK-BE-NEXT: [[SELECT1:%[0-9]+]] = select i1 [[CMP2]], i32 -1, i32 1
-  ; CHECK-BE-NEXT: [[SELECT2:%[0-9]+]] = select i1 [[CMP1]], i32 [[SELECT1]], i32 0
-  ; CHECK-BE-NEXT: ret i32 [[SELECT2]]
+  ; CHECK-BE-NEXT: [[Z1:%[0-9]+]] = zext i1 [[CMP1]] to i32
+  ; CHECK-BE-NEXT: [[Z2:%[0-9]+]] = zext i1 [[CMP2]] to i32
+  ; CHECK-BE-NEXT: [[SUB:%[0-9]+]] = sub i32 [[Z1]], [[Z2]]
+  ; CHECK-BE-NEXT: ret i32 [[SUB]]
 
 entry:
   %0 = bitcast i32* %buffer1 to i8*

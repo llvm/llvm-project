@@ -242,6 +242,19 @@ ExprInspection checks
       clang_analyzer_printState(); // Read the stderr!
     }
 
+- ``void clang_analyzer_hashDump(int);``
+
+  The analyzer can generate a hash to identify reports. To debug what information
+  is used to calculate this hash it is possible to dump the hashed string as a
+  warning of an arbitrary expression using the function above.
+
+  Example usage::
+
+    void foo() {
+      int x = 1;
+      clang_analyzer_hashDump(x); // expected-warning{{hashed string for x}}
+    }
+
 Statistics
 ==========
 

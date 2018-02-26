@@ -81,8 +81,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}div_fixup_f16_imm_a_imm_b
-; VI:  v_mov_b32_e32 v[[AB_F16:[0-9]+]], 0x4200{{$}}
-; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
+; VI-DAG:  v_mov_b32_e32 v[[AB_F16:[0-9]+]], 0x4200{{$}}
+; GCN-DAG: buffer_load_ushort v[[C_F16:[0-9]+]]
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[AB_F16]], v[[AB_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
@@ -97,8 +97,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}div_fixup_f16_imm_b_imm_c
-; VI:  v_mov_b32_e32 v[[BC_F16:[0-9]+]], 0x4200{{$}}
-; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
+; VI-DAG:  v_mov_b32_e32 v[[BC_F16:[0-9]+]], 0x4200{{$}}
+; GCN-DAG: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[BC_F16]], v[[BC_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
@@ -113,8 +113,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}div_fixup_f16_imm_a_imm_c
-; VI:  v_mov_b32_e32 v[[AC_F16:[0-9]+]], 0x4200{{$}}
-; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
+; VI-DAG:  v_mov_b32_e32 v[[AC_F16:[0-9]+]], 0x4200{{$}}
+; GCN-DAG: buffer_load_ushort v[[B_F16:[0-9]+]]
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[AC_F16]], v[[B_F16]], v[[AC_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm

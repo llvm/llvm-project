@@ -17,6 +17,7 @@
 #if SANITIZER_POSIX
 
 #include "sanitizer_common.h"
+#include "sanitizer_file.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
@@ -294,18 +295,22 @@ bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
   return false;
 }
 
-SignalContext SignalContext::Create(void *siginfo, void *context) {
-  auto si = (siginfo_t *)siginfo;
-  uptr addr = (uptr)si->si_addr;
-  uptr pc, sp, bp;
-  GetPcSpBp(context, &pc, &sp, &bp);
-  WriteFlag write_flag = GetWriteFlag(context);
-  bool is_memory_access = si->si_signo == SIGSEGV;
-  return SignalContext(context, addr, pc, sp, bp, is_memory_access, write_flag);
+uptr SignalContext::GetAddress() const {
+  auto si = static_cast<const siginfo_t *>(siginfo);
+  return (uptr)si->si_addr;
 }
 
-const char *DescribeSignalOrException(int signo) {
-  switch (signo) {
+bool SignalContext::IsMemoryAccess() const {
+  auto si = static_cast<const siginfo_t *>(siginfo);
+  return si->si_signo == SIGSEGV;
+}
+
+int SignalContext::GetType() const {
+  return static_cast<const siginfo_t *>(siginfo)->si_signo;
+}
+
+const char *SignalContext::Describe() const {
+  switch (GetType()) {
     case SIGFPE:
       return "FPE";
     case SIGILL:

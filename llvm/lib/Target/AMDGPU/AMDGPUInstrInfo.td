@@ -35,6 +35,10 @@ def AMDGPUFPPackOp : SDTypeProfile<1, 2,
   [SDTCisFP<1>, SDTCisSameAs<1, 2>]
 >;
 
+def AMDGPUIntPackOp : SDTypeProfile<1, 2,
+  [SDTCisInt<1>, SDTCisSameAs<1, 2>]
+>;
+
 def AMDGPUDivScaleOp : SDTypeProfile<2, 3,
   [SDTCisFP<0>, SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisSameAs<0, 4>]
 >;
@@ -74,6 +78,8 @@ def AMDGPUAddeSubeOp : SDTypeProfile<2, 3,
   [SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<0, i32>, SDTCisVT<1, i1>, SDTCisVT<4, i1>]
 >;
 
+def SDT_AMDGPUTCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU DAG Nodes
 //
@@ -81,6 +87,26 @@ def AMDGPUAddeSubeOp : SDTypeProfile<2, 3,
 def AMDGPUif : SDNode<"AMDGPUISD::IF", AMDGPUIfOp, [SDNPHasChain]>;
 def AMDGPUelse : SDNode<"AMDGPUISD::ELSE", AMDGPUElseOp, [SDNPHasChain]>;
 def AMDGPUloop : SDNode<"AMDGPUISD::LOOP", AMDGPULoopOp, [SDNPHasChain]>;
+
+def callseq_start : SDNode<"ISD::CALLSEQ_START",
+  SDCallSeqStart<[ SDTCisVT<0, i32>, SDTCisVT<1, i32> ]>,
+  [SDNPHasChain, SDNPOutGlue]
+>;
+
+def callseq_end : SDNode<"ISD::CALLSEQ_END",
+ SDCallSeqEnd<[ SDTCisVT<0, i32>, SDTCisVT<1, i32> ]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
+>;
+
+def AMDGPUcall : SDNode<"AMDGPUISD::CALL",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+  SDNPVariadic]
+>;
+
+def AMDGPUtc_return: SDNode<"AMDGPUISD::TC_RETURN", SDT_AMDGPUTCRET,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
 
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
   SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
@@ -120,6 +146,10 @@ def AMDGPUrsq_clamp : SDNode<"AMDGPUISD::RSQ_CLAMP", SDTFPUnaryOp>;
 def AMDGPUldexp : SDNode<"AMDGPUISD::LDEXP", AMDGPULdExpOp>;
 
 def AMDGPUpkrtz_f16_f32 : SDNode<"AMDGPUISD::CVT_PKRTZ_F16_F32", AMDGPUFPPackOp>;
+def AMDGPUpknorm_i16_f32 : SDNode<"AMDGPUISD::CVT_PKNORM_I16_F32", AMDGPUFPPackOp>;
+def AMDGPUpknorm_u16_f32 : SDNode<"AMDGPUISD::CVT_PKNORM_U16_F32", AMDGPUFPPackOp>;
+def AMDGPUpk_i16_i32 : SDNode<"AMDGPUISD::CVT_PK_I16_I32", AMDGPUIntPackOp>;
+def AMDGPUpk_u16_u32 : SDNode<"AMDGPUISD::CVT_PK_U16_U32", AMDGPUIntPackOp>;
 def AMDGPUfp_to_f16 : SDNode<"AMDGPUISD::FP_TO_FP16" , SDTFPToIntOp>;
 def AMDGPUfp16_zext : SDNode<"AMDGPUISD::FP16_ZEXT" , SDTFPToIntOp>;
 
@@ -275,6 +305,8 @@ def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
 def AMDGPUffbh_u32 : SDNode<"AMDGPUISD::FFBH_U32", SDTIntUnaryOp>;
 def AMDGPUffbh_i32 : SDNode<"AMDGPUISD::FFBH_I32", SDTIntUnaryOp>;
+
+def AMDGPUffbl_b32 : SDNode<"AMDGPUISD::FFBL_B32", SDTIntUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
 // when performing the mulitply. The result is a 32-bit value.

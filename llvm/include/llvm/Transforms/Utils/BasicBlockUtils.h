@@ -1,4 +1,4 @@
-//===-- Transform/Utils/BasicBlockUtils.h - BasicBlock Utils ----*- C++ -*-===//
+//===- Transform/Utils/BasicBlockUtils.h - BasicBlock Utils -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -25,13 +25,17 @@
 
 namespace llvm {
 
-class MemoryDependenceResults;
+class BlockFrequencyInfo;
+class BranchProbabilityInfo;
 class DominatorTree;
-class LoopInfo;
+class Function;
 class Instruction;
+class LoopInfo;
 class MDNode;
+class MemoryDependenceResults;
 class ReturnInst;
 class TargetLibraryInfo;
+class Value;
 
 /// Delete the specified block, which must have no predecessors.
 void DeleteDeadBlock(BasicBlock *BB);
@@ -118,7 +122,6 @@ struct CriticalEdgeSplittingOptions {
 /// IndirectBrInst.  Splitting these edges will almost always create an invalid
 /// program because the address of the new block won't be the one that is jumped
 /// to.
-///
 BasicBlock *SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
                               const CriticalEdgeSplittingOptions &Options =
                                   CriticalEdgeSplittingOptions());
@@ -194,7 +197,6 @@ BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-///
 BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
                                    const char *Suffix,
                                    DominatorTree *DT = nullptr,
@@ -212,7 +214,6 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-///
 void SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                  ArrayRef<BasicBlock *> Preds,
                                  const char *Suffix, const char *Suffix2,
@@ -283,6 +284,29 @@ void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// instructions in them.
 Value *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                       BasicBlock *&IfFalse);
+
+// Split critical edges where the source of the edge is an indirectbr
+// instruction. This isn't always possible, but we can handle some easy cases.
+// This is useful because MI is unable to split such critical edges,
+// which means it will not be able to sink instructions along those edges.
+// This is especially painful for indirect branches with many successors, where
+// we end up having to prepare all outgoing values in the origin block.
+//
+// Our normal algorithm for splitting critical edges requires us to update
+// the outgoing edges of the edge origin block, but for an indirectbr this
+// is hard, since it would require finding and updating the block addresses
+// the indirect branch uses. But if a block only has a single indirectbr
+// predecessor, with the others being regular branches, we can do it in a
+// different way.
+// Say we have A -> D, B -> D, I -> D where only I -> D is an indirectbr.
+// We can split D into D0 and D1, where D0 contains only the PHIs from D,
+// and D1 is the D block body. We can then duplicate D0 as D0A and D0B, and
+// create the following structure:
+// A -> D0A, B -> D0A, I -> D0B, D0A -> D1, D0B -> D1
+// If BPI and BFI aren't non-null, BPI/BFI will be updated accordingly.
+bool SplitIndirectBrCriticalEdges(Function &F,
+                                  BranchProbabilityInfo *BPI = nullptr,
+                                  BlockFrequencyInfo *BFI = nullptr);
 
 } // end namespace llvm
 

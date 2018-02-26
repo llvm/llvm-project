@@ -47,5 +47,5 @@ b11:                                              ; preds = %b11, %b7
 
 declare i32 @llvm.hexagon.V6.extractw(<16 x i32>, i32) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

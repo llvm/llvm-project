@@ -113,6 +113,12 @@
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #cmakedefine HAVE_LIBPTHREAD ${HAVE_LIBPTHREAD}
 
+/* Define to 1 if you have the `pthread_getname_np' function. */
+#cmakedefine HAVE_PTHREAD_GETNAME_NP ${HAVE_PTHREAD_GETNAME_NP}
+
+/* Define to 1 if you have the `pthread_setname_np' function. */
+#cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
+
 /* Define to 1 if you have the `shell32' library (-lshell32). */
 #cmakedefine HAVE_LIBSHELL32 ${HAVE_LIBSHELL32}
 
@@ -184,6 +190,12 @@
 
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
+
+/* Define to 1 if you have the `sched_getaffinity' function. */
+#cmakedefine HAVE_SCHED_GETAFFINITY ${HAVE_SCHED_GETAFFINITY}
+
+/* Define to 1 if you have the `CPU_COUNT' macro. */
+#cmakedefine HAVE_CPU_COUNT ${HAVE_CPU_COUNT}
 
 /* Define to 1 if you have the `setrlimit' function. */
 #cmakedefine HAVE_SETRLIMIT ${HAVE_SETRLIMIT}
@@ -383,6 +395,9 @@
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
 
+/* Define if libxml2 is supported on this platform. */
+#cmakedefine LLVM_LIBXML2_ENABLED ${LLVM_LIBXML2_ENABLED}
+
 /* Define to the extension used for shared libraries, say, ".so". */
 #cmakedefine LTDL_SHLIB_EXT "${LTDL_SHLIB_EXT}"
 
@@ -418,5 +433,11 @@
 
 /* Define to a function implementing strdup */
 #cmakedefine strdup ${strdup}
+
+/* Whether GlobalISel rule coverage is being collected */
+#cmakedefine01 LLVM_GISEL_COV_ENABLED
+
+/* Define to the default GlobalISel coverage file prefix */
+#cmakedefine LLVM_GISEL_COV_PREFIX "${LLVM_GISEL_COV_PREFIX}"
 
 #endif

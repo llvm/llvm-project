@@ -24,7 +24,7 @@ int main() {
   // CHECK-Linux: {{    #0 0x.* in operator new\[\]}}
   // CHECK-Linux: {{    #1 0x.* in main .*use-after-delete.cc:}}[[@LINE-16]]
 
-  // CHECK: Shadow byte legend (one shadow byte represents 8 application bytes):
+  // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
   // CHECK: Global redzone:
   // CHECK: ASan internal:
 }

@@ -3,7 +3,7 @@
 
 function( get_host_triple var )
   if( MSVC )
-    if( CMAKE_CL_64 )
+    if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
       set( value "x86_64-pc-win32" )
     else()
       set( value "i686-pc-win32" )

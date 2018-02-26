@@ -255,8 +255,6 @@ namespace test15 {
   // CHECK-LABEL:    define void @_ZN6test155test2EPvi(
   // CHECK:      [[N:%.*]] = load i32, i32*
   // CHECK-NEXT: [[T0:%.*]] = sext i32 [[N]] to i64
-  // CHECK-NEXT: [[T1:%.*]] = icmp slt i64 [[T0]], 0
-  // CHECK-NEXT: [[T2:%.*]] = select i1 [[T1]], i64 -1, i64 [[T0]]
   // CHECK-NEXT: [[P:%.*]] = load i8*, i8**
   // CHECK:      [[BEGIN:%.*]] = bitcast i8* [[P]] to [[A:%.*]]*
   // CHECK-NEXT: [[ISEMPTY:%.*]] = icmp eq i64 [[T0]], 0

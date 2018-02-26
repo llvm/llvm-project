@@ -1,4 +1,4 @@
-//===- llvm/Transforms/Utils/BypassSlowDivision.h --------------*- C++ -*-===//
+//===- llvm/Transforms/Utils/BypassSlowDivision.h ---------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,9 +19,43 @@
 #define LLVM_TRANSFORMS_UTILS_BYPASSSLOWDIVISION_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/Function.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include <cstdint>
 
 namespace llvm {
+
+class BasicBlock;
+class Value;
+
+struct DivRemMapKey {
+  bool SignedOp;
+  Value *Dividend;
+  Value *Divisor;
+
+  DivRemMapKey(bool InSignedOp, Value *InDividend, Value *InDivisor)
+      : SignedOp(InSignedOp), Dividend(InDividend), Divisor(InDivisor) {}
+};
+
+template <> struct DenseMapInfo<DivRemMapKey> {
+  static bool isEqual(const DivRemMapKey &Val1, const DivRemMapKey &Val2) {
+    return Val1.SignedOp == Val2.SignedOp && Val1.Dividend == Val2.Dividend &&
+           Val1.Divisor == Val2.Divisor;
+  }
+
+  static DivRemMapKey getEmptyKey() {
+    return DivRemMapKey(false, nullptr, nullptr);
+  }
+
+  static DivRemMapKey getTombstoneKey() {
+    return DivRemMapKey(true, nullptr, nullptr);
+  }
+
+  static unsigned getHashValue(const DivRemMapKey &Val) {
+    return (unsigned)(reinterpret_cast<uintptr_t>(Val.Dividend) ^
+                      reinterpret_cast<uintptr_t>(Val.Divisor)) ^
+           (unsigned)Val.SignedOp;
+  }
+};
 
 /// This optimization identifies DIV instructions in a BB that can be
 /// profitably bypassed and carried out with a shorter, faster divide.
@@ -31,6 +65,6 @@ namespace llvm {
 bool bypassSlowDivision(
     BasicBlock *BB, const DenseMap<unsigned int, unsigned int> &BypassWidth);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_BYPASSSLOWDIVISION_H

@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=CIVI %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GFX89 -check-prefix=GCN -check-prefix=CIVI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx901 -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f16:
 ; CI: v_cvt_f32_f16_e32
@@ -26,7 +26,7 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, 
 ; GFX89-NOT: _and
 ; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{v[0-9]+}}, -|{{v[0-9]+}}|
 ; GFX89-NOT: [[MUL]]
-; GFX89: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
+; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
 define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
@@ -70,11 +70,13 @@ define amdgpu_kernel void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspa
 
 ; FIXME: single bit op
 ; GCN-LABEL: {{^}}s_fneg_fabs_v2f16:
-; CIVI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
+; CI: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, v{{[0-9]+}}
+; CI: v_or_b32_e32 [[OR:v[0-9]+]], v{{[0-9]+}}, [[SHL]]
+; CI: v_or_b32_e32 v{{[0-9]+}}, 0x80008000, [[OR]]
+; VI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
 ; VI: v_mov_b32_e32 [[VMASK:v[0-9]+]], [[MASK]]
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; CIVI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
 ; CIVI: flat_store_dword
 
 ; GFX9: s_or_b32 s{{[0-9]+}}, 0x80008000, s{{[0-9]+}}
@@ -86,11 +88,14 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_v4f16:
-; CIVI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; CI: s_mov_b32 [[MASK:s[0-9]+]], 0x80008000
+; CI: v_lshlrev_b32_e32 [[SHL0:v[0-9]+]], 16, v{{[0-9]+}}
+; CI: v_or_b32_e32 [[OR0:v[0-9]+]], v{{[0-9]+}}, [[SHL0]]
+; CI: v_lshlrev_b32_e32 [[SHL1:v[0-9]+]], 16, v{{[0-9]+}}
+; CI: v_or_b32_e32 [[OR1:v[0-9]+]], v{{[0-9]+}}, [[SHL1]]
+; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]], [[OR0]]
+; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]], [[OR1]]
+; VI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
 ; VI: v_mov_b32_e32 [[VMASK:v[0-9]+]], [[MASK]]
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
@@ -101,7 +106,7 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 
-; GCN: flat_store_dwordx2
+; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   %fsub = fsub <4 x half> <half -0.0, half -0.0, half -0.0, half -0.0>, %fabs

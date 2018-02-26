@@ -1,8 +1,8 @@
 # RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-fold-operands  %s -o - | FileCheck -check-prefix=GCN %s
 ---
 # GCN-LABEL: name: v_max_self_clamp_not_set_f32
-# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
-# GCN-NEXT: %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 0, 0, implicit %exec
+# GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21:vgpr_32 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 0, 0, implicit %exec
 
 name:            v_max_self_clamp_not_set_f32
 tracksRegLiveness: true
@@ -64,8 +64,8 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: v_clamp_omod_already_set_f32
-# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
-# GCN: %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 1, 3, implicit %exec
+# GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN: %21:vgpr_32 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 1, 3, implicit %exec
 name:            v_clamp_omod_already_set_f32
 tracksRegLiveness: true
 registers:
@@ -127,8 +127,8 @@ body:             |
 # Don't fold a mul that looks like an omod if itself has omod set
 
 # GCN-LABEL: name: v_omod_mul_omod_already_set_f32
-# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
-# GCN-NEXT: %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit %exec
+# GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21:vgpr_32 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit %exec
 name:            v_omod_mul_omod_already_set_f32
 tracksRegLiveness: true
 registers:
@@ -191,8 +191,8 @@ body:             |
 # Don't fold a mul that looks like an omod if itself has clamp set
 # This might be OK, but would require folding the clamp at the same time.
 # GCN-LABEL: name: v_omod_mul_clamp_already_set_f32
-# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
-# GCN-NEXT: %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit %exec
+# GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21:vgpr_32 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit %exec
 
 name:            v_omod_mul_clamp_already_set_f32
 tracksRegLiveness: true
@@ -269,8 +269,8 @@ body:             |
 # Don't fold a mul that looks like an omod if itself has omod set
 
 # GCN-LABEL: name: v_omod_add_omod_already_set_f32
-# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
-# GCN-NEXT: %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit %exec
+# GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21:vgpr_32 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit %exec
 name:            v_omod_add_omod_already_set_f32
 tracksRegLiveness: true
 registers:
@@ -333,8 +333,8 @@ body:             |
 # Don't fold a mul that looks like an omod if itself has clamp set
 # This might be OK, but would require folding the clamp at the same time.
 # GCN-LABEL: name: v_omod_add_clamp_already_set_f32
-# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
-# GCN-NEXT: %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit %exec
+# GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21:vgpr_32 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit %exec
 
 name:            v_omod_add_clamp_already_set_f32
 tracksRegLiveness: true

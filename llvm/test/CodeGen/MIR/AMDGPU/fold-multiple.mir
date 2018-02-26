@@ -14,8 +14,8 @@
 # being processed twice.
 
 # CHECK-LABEL: name: test
-# CHECK: %2 = V_LSHLREV_B32_e32 2, killed %0, implicit %exec
-# CHECK: %4 = V_AND_B32_e32 8, killed %2, implicit %exec
+# CHECK: %2:vgpr_32 = V_LSHLREV_B32_e32 2, killed %0, implicit %exec
+# CHECK: %4:vgpr_32 = V_AND_B32_e32 8, killed %2, implicit %exec
 
 name:            test
 tracksRegLiveness: true

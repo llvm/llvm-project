@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep call | count 43
+; RUN: llc < %s -mtriple=x86_64-- | grep call | count 43
 
 declare <4 x double> @llvm.sin.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.cos.v4f64(<4 x double> %p)

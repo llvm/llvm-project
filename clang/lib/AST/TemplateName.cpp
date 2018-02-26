@@ -1,4 +1,4 @@
-//===--- TemplateName.cpp - C++ Template Name Representation---------------===//
+//===- TemplateName.cpp - C++ Template Name Representation ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,15 +12,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <string>
+
 using namespace clang;
-using namespace llvm;
 
 TemplateArgument 
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
@@ -131,6 +140,23 @@ DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
   return Storage.dyn_cast<DependentTemplateName *>();
 }
 
+TemplateName TemplateName::getNameToSubstitute() const {
+  TemplateDecl *Decl = getAsTemplateDecl();
+
+  // Substituting a dependent template name: preserve it as written.
+  if (!Decl)
+    return *this;
+
+  // If we have a template declaration, use the most recent non-friend
+  // declaration of that template.
+  Decl = cast<TemplateDecl>(Decl->getMostRecentDecl());
+  while (Decl->getFriendObjectKind()) {
+    Decl = cast<TemplateDecl>(Decl->getPreviousDecl());
+    assert(Decl && "all declarations of template are friends");
+  }
+  return TemplateName(Decl);
+}
+
 bool TemplateName::isDependent() const {
   if (TemplateDecl *Template = getAsTemplateDecl()) {
     if (isa<TemplateTemplateParmDecl>(Template))
@@ -209,7 +235,7 @@ TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
 const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
                                            TemplateName N) {
   std::string NameStr;
-  raw_string_ostream OS(NameStr);
+  llvm::raw_string_ostream OS(NameStr);
   LangOptions LO;
   LO.CPlusPlus = true;
   LO.Bool = true;

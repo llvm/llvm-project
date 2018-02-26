@@ -1,0 +1,125 @@
+# RUN: llc -mtriple=i686-windows --run-pass="x86-cf-opt" %s -o - | FileCheck %s
+
+# PR34903
+--- |
+  target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
+  target triple = "i686--windows-msvc"
+
+  %struct.s = type { i64 }
+
+  declare void @good(i32, i32, i32, i32)
+
+  declare void @struct(%struct.s* byval, i32, i32, i32)
+
+  ; Function Attrs: optsize
+  define void @test9() #0 {
+  entry:
+    %p = alloca i32, align 4
+    %q = alloca i32, align 4
+    %s = alloca %struct.s, align 4
+    call void @good(i32 1, i32 2, i32 3, i32 4)
+    %pv = ptrtoint i32* %p to i32
+    %qv = ptrtoint i32* %q to i32
+    call void @struct(%struct.s* byval %s, i32 6, i32 %qv, i32 %pv)
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  attributes #0 = { optsize }
+  attributes #1 = { nounwind }
+
+...
+---
+# CHECK-LABEL: test9
+# CHECK:      ADJCALLSTACKDOWN32 16, 0, 16, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+# CHECK-NEXT: PUSH32i8 4, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32i8 3, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32i8 2, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32i8 1, implicit-def %esp, implicit %esp
+# CHECK-NEXT: CALLpcrel32 @good, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp
+# CHECK-NEXT: ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+# CHECK-NEXT: ADJCALLSTACKDOWN32 20, 0, 20, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+# CHECK-NEXT: %1:gr32 = MOV32rm %stack.2.s, 1, %noreg, 0, %noreg :: (load 4 from %stack.2.s, align 8)
+# CHECK-NEXT: %2:gr32 = MOV32rm %stack.2.s, 1, %noreg, 4, %noreg :: (load 4 from %stack.2.s + 4)
+# CHECK-NEXT: %4:gr32 = LEA32r %stack.0.p, 1, %noreg, 0, %noreg
+# CHECK-NEXT: %5:gr32 = LEA32r %stack.1.q, 1, %noreg, 0, %noreg
+# CHECK-NEXT: PUSH32r %4, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32r %5, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32i8 6, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32r %2, implicit-def %esp, implicit %esp
+# CHECK-NEXT: PUSH32r %1, implicit-def %esp, implicit %esp
+# CHECK-NEXT: CALLpcrel32 @struct, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp
+# CHECK-NEXT: ADJCALLSTACKUP32 20, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+# CHECK-NEXT: RET 0
+name:            test9
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: p, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      di-variable: '', di-expression: '', di-location: '' }
+  - { id: 1, name: q, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      di-variable: '', di-expression: '', di-location: '' }
+  - { id: 2, name: s, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      di-variable: '', di-expression: '', di-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    ADJCALLSTACKDOWN32 16, 0, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+    %0 = COPY %esp
+    MOV32mi %0, 1, %noreg, 12, %noreg, 4 :: (store 4 into stack + 12)
+    MOV32mi %0, 1, %noreg, 8, %noreg, 3 :: (store 4 into stack + 8)
+    MOV32mi %0, 1, %noreg, 4, %noreg, 2 :: (store 4 into stack + 4)
+    MOV32mi %0, 1, %noreg, 0, %noreg, 1 :: (store 4 into stack)
+    CALLpcrel32 @good, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp
+    ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+    ADJCALLSTACKDOWN32 20, 0, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+    %1 = MOV32rm %stack.2.s, 1, %noreg, 0, %noreg :: (load 4 from %stack.2.s, align 8)
+    %2 = MOV32rm %stack.2.s, 1, %noreg, 4, %noreg :: (load 4 from %stack.2.s + 4)
+    %3 = COPY %esp
+    MOV32mr %3, 1, %noreg, 4, %noreg, killed %2 :: (store 4)
+    MOV32mr %3, 1, %noreg, 0, %noreg, killed %1 :: (store 4)
+    %4 = LEA32r %stack.0.p, 1, %noreg, 0, %noreg
+    MOV32mr %3, 1, %noreg, 16, %noreg, killed %4 :: (store 4 into stack + 16)
+    %5 = LEA32r %stack.1.q, 1, %noreg, 0, %noreg
+    MOV32mr %3, 1, %noreg, 12, %noreg, killed %5 :: (store 4 into stack + 12)
+    MOV32mi %3, 1, %noreg, 8, %noreg, 6 :: (store 4 into stack + 8)
+    CALLpcrel32 @struct, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp,
+    ADJCALLSTACKUP32 20, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+    RET 0
+
+...

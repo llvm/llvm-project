@@ -101,8 +101,6 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
     return "i486";
   case llvm::Triple::Haiku:
     return "i586";
-  case llvm::Triple::Bitrig:
-    return "i686";
   default:
     // Fallback to p4.
     return "pentium4";

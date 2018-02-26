@@ -11,9 +11,9 @@
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: [[REG0]] += add
+; CHECK: [[REG2:r[0-9]+]] = and
 ; CHECK: = and
-; CHECK: = and
-; CHECK: [[REG0]] = and
+; CHECK: [[REG0]] = [[REG2]]
 ; CHECK: endloop
 
 ; Function Attrs: nounwind

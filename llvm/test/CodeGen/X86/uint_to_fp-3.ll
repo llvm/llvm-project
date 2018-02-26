@@ -8,25 +8,25 @@
 
 define <4 x float> @mask_ucvt_4i32_4f32(<4 x i32> %a) {
 ; X32-SSE-LABEL: mask_ucvt_4i32_4f32:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: mask_ucvt_4i32_4f32:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mask_ucvt_4i32_4f32:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mask_ucvt_4i32_4f32:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
@@ -37,7 +37,7 @@ define <4 x float> @mask_ucvt_4i32_4f32(<4 x i32> %a) {
 
 define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ; X32-SSE-LABEL: mask_ucvt_4i32_4f64:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2pd %xmm0, %xmm2
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
@@ -46,13 +46,13 @@ define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: mask_ucvt_4i32_4f64:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mask_ucvt_4i32_4f64:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    cvtdq2pd %xmm0, %xmm2
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
@@ -61,7 +61,7 @@ define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mask_ucvt_4i32_4f64:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X64-AVX-NEXT:    retq

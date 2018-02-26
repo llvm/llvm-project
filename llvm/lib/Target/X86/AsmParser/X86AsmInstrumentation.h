@@ -42,7 +42,8 @@ public:
   virtual void InstrumentAndEmitInstruction(
       const MCInst &Inst,
       SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>> &Operands,
-      MCContext &Ctx, const MCInstrInfo &MII, MCStreamer &Out);
+      MCContext &Ctx, const MCInstrInfo &MII, MCStreamer &Out,
+      bool PrintSchedInfoEnabled);
 
 protected:
   friend X86AsmInstrumentation *
@@ -54,7 +55,8 @@ protected:
 
   unsigned GetFrameRegGeneric(const MCContext &Ctx, MCStreamer &Out);
 
-  void EmitInstruction(MCStreamer &Out, const MCInst &Inst);
+  void EmitInstruction(MCStreamer &Out, const MCInst &Inst,
+                       bool PrintSchedInfoEnabled = false);
 
   const MCSubtargetInfo *&STI;
 

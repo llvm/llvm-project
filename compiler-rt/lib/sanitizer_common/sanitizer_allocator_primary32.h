@@ -41,6 +41,7 @@ template<class SizeClassAllocator> struct SizeClassAllocator32LocalCache;
 struct SizeClassAllocator32FlagMasks {  //  Bit masks.
   enum {
     kRandomShuffleChunks = 1,
+    kUseSeparateSizeClassForBatch = 2,
   };
 };
 
@@ -55,8 +56,10 @@ class SizeClassAllocator32 {
   typedef typename Params::ByteMap ByteMap;
   typedef typename Params::MapUnmapCallback MapUnmapCallback;
 
-  static const bool kRandomShuffleChunks =
-      Params::kFlags & SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
+  static const bool kRandomShuffleChunks = Params::kFlags &
+      SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
+  static const bool kUseSeparateSizeClassForBatch = Params::kFlags &
+      SizeClassAllocator32FlagMasks::kUseSeparateSizeClassForBatch;
 
   struct TransferBatch {
     static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 2;
@@ -94,11 +97,11 @@ class SizeClassAllocator32 {
 
   static const uptr kBatchSize = sizeof(TransferBatch);
   COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
-  COMPILER_CHECK(sizeof(TransferBatch) ==
-                 SizeClassMap::kMaxNumCachedHint * sizeof(uptr));
+  COMPILER_CHECK(kBatchSize == SizeClassMap::kMaxNumCachedHint * sizeof(uptr));
 
   static uptr ClassIdToSize(uptr class_id) {
-    return SizeClassMap::Size(class_id);
+    return (class_id == SizeClassMap::kBatchClassID) ?
+        kBatchSize : SizeClassMap::Size(class_id);
   }
 
   typedef SizeClassAllocator32<Params> ThisT;
@@ -115,6 +118,10 @@ class SizeClassAllocator32 {
 
   void SetReleaseToOSIntervalMs(s32 release_to_os_interval_ms) {
     // This is empty here. Currently only implemented in 64-bit allocator.
+  }
+
+  void ForceReleaseToOS() {
+    // Currently implemented in 64-bit allocator only.
   }
 
   void *MapWithCallback(uptr size) {
@@ -161,9 +168,9 @@ class SizeClassAllocator32 {
   NOINLINE void DeallocateBatch(AllocatorStats *stat, uptr class_id,
                                 TransferBatch *b) {
     CHECK_LT(class_id, kNumClasses);
+    CHECK_GT(b->Count(), 0);
     SizeClassInfo *sci = GetSizeClassInfo(class_id);
     SpinMutexLock l(&sci->mutex);
-    CHECK_GT(b->Count(), 0);
     sci->free_list.push_front(b);
   }
 
@@ -261,7 +268,8 @@ class SizeClassAllocator32 {
   struct SizeClassInfo {
     SpinMutex mutex;
     IntrusiveList<TransferBatch> free_list;
-    char padding[kCacheLineSize - sizeof(uptr) -
+    u32 rand_state;
+    char padding[kCacheLineSize - 2 * sizeof(uptr) -
                  sizeof(IntrusiveList<TransferBatch>)];
   };
   COMPILER_CHECK(sizeof(SizeClassInfo) == kCacheLineSize);
@@ -294,28 +302,61 @@ class SizeClassAllocator32 {
     return &size_class_info_array[class_id];
   }
 
+  bool PopulateBatches(AllocatorCache *c, SizeClassInfo *sci, uptr class_id,
+                       TransferBatch **current_batch, uptr max_count,
+                       uptr *pointers_array, uptr count) {
+    // If using a separate class for batches, we do not need to shuffle it.
+    if (kRandomShuffleChunks && (!kUseSeparateSizeClassForBatch ||
+        class_id != SizeClassMap::kBatchClassID))
+      RandomShuffle(pointers_array, count, &sci->rand_state);
+    TransferBatch *b = *current_batch;
+    for (uptr i = 0; i < count; i++) {
+      if (!b) {
+        b = c->CreateBatch(class_id, this, (TransferBatch*)pointers_array[i]);
+        if (UNLIKELY(!b))
+          return false;
+        b->Clear();
+      }
+      b->Add((void*)pointers_array[i]);
+      if (b->Count() == max_count) {
+        sci->free_list.push_back(b);
+        b = nullptr;
+      }
+    }
+    *current_batch = b;
+    return true;
+  }
+
   bool PopulateFreeList(AllocatorStats *stat, AllocatorCache *c,
                         SizeClassInfo *sci, uptr class_id) {
     uptr size = ClassIdToSize(class_id);
     uptr reg = AllocateRegion(stat, class_id);
     if (UNLIKELY(!reg))
       return false;
+    if (kRandomShuffleChunks)
+      if (UNLIKELY(sci->rand_state == 0))
+        // The random state is initialized from ASLR (PIE) and time.
+        sci->rand_state = reinterpret_cast<uptr>(sci) ^ NanoTime();
     uptr n_chunks = kRegionSize / (size + kMetadataSize);
     uptr max_count = TransferBatch::MaxCached(class_id);
     CHECK_GT(max_count, 0);
     TransferBatch *b = nullptr;
+    const uptr kShuffleArraySize = 48;
+    uptr shuffle_array[kShuffleArraySize];
+    uptr count = 0;
     for (uptr i = reg; i < reg + n_chunks * size; i += size) {
-      if (!b) {
-        b = c->CreateBatch(class_id, this, (TransferBatch*)i);
-        if (UNLIKELY(!b))
+      shuffle_array[count++] = i;
+      if (count == kShuffleArraySize) {
+        if (UNLIKELY(!PopulateBatches(c, sci, class_id, &b, max_count,
+                                      shuffle_array, count)))
           return false;
-        b->Clear();
+        count = 0;
       }
-      b->Add((void*)i);
-      if (b->Count() == max_count) {
-        sci->free_list.push_back(b);
-        b = nullptr;
-      }
+    }
+    if (count) {
+      if (UNLIKELY(!PopulateBatches(c, sci, class_id, &b, max_count,
+                                    shuffle_array, count)))
+        return false;
     }
     if (b) {
       CHECK_GT(b->Count(), 0);

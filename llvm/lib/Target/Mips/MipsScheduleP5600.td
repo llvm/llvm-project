@@ -18,8 +18,8 @@ def MipsP5600Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = [HasMips32r6, HasMips64r6,
                                          HasMips64, HasMips64r2, HasCnMips,
                                          InMicroMips, InMips16Mode,
-                                         HasMicroMips32r6, HasMicroMips64r6,
-                                         HasDSP, HasDSPR2, HasMT];
+                                         HasMicroMips32r6, HasDSP,
+                                         HasDSPR2, HasMT];
 
 }
 

@@ -6,9 +6,9 @@
 define void @C1(%Object addrspace(1)* %param0) gc "coreclr" {
 entry:
 
-; WIN_X64: # BB#0:
+; WIN_X64: # %bb.0:
 ; WIN_X64:	pushq	%rax
-; LINUX:   # BB#0:                                 # %entry
+; LINUX:   # %bb.0:                                 # %entry
 ; LINUX:	movq	$0, -8(%rsp)
 
   %this = alloca %Object addrspace(1)*

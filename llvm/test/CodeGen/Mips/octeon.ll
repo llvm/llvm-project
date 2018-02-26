@@ -1,5 +1,6 @@
 ; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon | FileCheck %s -check-prefixes=ALL,OCTEON
 ; RUN: llc -O1 < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefixes=ALL,MIPS64
+; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon -relocation-model=pic | FileCheck %s -check-prefixes=ALL,OCTEON-PIC
 
 define i64 @addi64(i64 %a, i64 %b) nounwind {
 entry:
@@ -88,10 +89,12 @@ entry:
   ret i64 %res2
 }
 
-define i64 @bbit0(i64 %a) nounwind {
+define i64 @bbit1(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit0:
-; OCTEON: bbit0   $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit1:
+; OCTEON: bbit1   $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: andi  $[[T0:[0-9]+]], $4, 8
 ; MIPS64: bnez  $[[T0]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 8
@@ -104,10 +107,12 @@ endif:
   ret i64 12
 }
 
-define i64 @bbit032(i64 %a) nounwind {
+define i64 @bbit132(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit032:
-; OCTEON: bbit032 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit132:
+; OCTEON: bbit132 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: daddiu  $[[T0:[0-9]+]], $zero, 1
 ; MIPS64: dsll    $[[T1:[0-9]+]], $[[T0]], 35
 ; MIPS64: and     $[[T2:[0-9]+]], $4, $[[T1]]
@@ -122,10 +127,12 @@ endif:
   ret i64 12
 }
 
-define i64 @bbit1(i64 %a) nounwind {
+define i64 @bbit0(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit1:
-; OCTEON: bbit1 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit0:
+; OCTEON: bbit0 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: andi  $[[T0:[0-9]+]], $4, 8
 ; MIPS64: beqz  $[[T0]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 8
@@ -138,10 +145,12 @@ endif:
   ret i64 12
 }
 
-define i64 @bbit132(i64 %a) nounwind {
+define i64 @bbit032(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit132:
-; OCTEON: bbit132 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit032:
+; OCTEON: bbit032 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: daddiu  $[[T0:[0-9]+]], $zero, 1
 ; MIPS64: dsll    $[[T1:[0-9]+]], $[[T0]], 35
 ; MIPS64: and     $[[T2:[0-9]+]], $4, $[[T1]]
@@ -154,4 +163,60 @@ if:
 
 endif:
   ret i64 12
+}
+
+; extern void foo(void);
+; long long var = 7;
+; void bbit0i32 () {
+;   if ((var & 0x2)) {
+;     foo();
+;   }
+; }
+;
+; void bbit1i32() {
+;   if (!(var & 0x2)) {
+;     foo();
+;   }
+; }
+
+@var = local_unnamed_addr global i64 7, align 8
+
+define void @bbit0i32() local_unnamed_addr {
+entry:
+; ALL-LABEL: bbit0i32:
+; OCTEON: bbit0 $1, 1, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
+  %0 = load i64, i64* @var, align 8
+  %and = and i64 %0, 2
+  %tobool = icmp eq i64 %and, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @foo() #2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
+declare void @foo() local_unnamed_addr
+
+define void @bbit1i32() local_unnamed_addr {
+entry:
+; ALL-LABEL: bbit1i32:
+; OCTEON: bbit1 $1, 1, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
+  %0 = load i64, i64* @var, align 8
+  %and = and i64 %0, 2
+  %tobool = icmp eq i64 %and, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void @foo() #2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
 }

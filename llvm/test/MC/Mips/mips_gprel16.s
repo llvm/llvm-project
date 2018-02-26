@@ -26,7 +26,7 @@ testvar1:                               # @testvar1
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 // CHECK: lw ${{[0-9]+}}, 0($gp)
 	lw	$1, %gp_rel(var1)($gp)
 	jr	$ra
@@ -50,7 +50,7 @@ testvar2:                               # @testvar2
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 // CHECK: lw ${{[0-9]+}}, 4($gp)
 	lw	$1, %gp_rel(var2)($gp)
 	jr	$ra

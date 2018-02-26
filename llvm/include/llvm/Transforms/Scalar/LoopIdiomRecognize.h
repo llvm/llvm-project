@@ -1,4 +1,4 @@
-//===- LoopIdiomRecognize.h - Loop Idiom Recognize Pass -------*- C++ -*-===//
+//===- LoopIdiomRecognize.h - Loop Idiom Recognize Pass ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,11 +16,13 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPIDIOMRECOGNIZE_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPIDIOMRECOGNIZE_H
 
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
+
+class Loop;
+class LPMUpdater;
 
 /// Performs Loop Idiom Recognize Pass.
 class LoopIdiomRecognizePass : public PassInfoMixin<LoopIdiomRecognizePass> {
@@ -28,6 +30,7 @@ public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPIDIOMRECOGNIZE_H

@@ -72,7 +72,7 @@ namespace llvm {
 namespace orc {
 
 // Typedef the remote-client API.
-using MyRemote = remote::OrcRemoteTargetClient<FDRPCChannel>;
+using MyRemote = remote::OrcRemoteTargetClient;
 
 class KaleidoscopeJIT {
 private:
@@ -98,13 +98,7 @@ public:
                                         "", SmallVector<std::string, 0>())),
         DL(TM->createDataLayout()),
         ObjectLayer([&Remote]() {
-            std::unique_ptr<MyRemote::RCMemoryManager> MemMgr;
-            if (auto Err = Remote.createRemoteMemoryManager(MemMgr)) {
-              logAllUnhandledErrors(std::move(Err), errs(),
-                                    "Error creating remote memory manager:");
-              exit(1);
-            }
-            return MemMgr;
+            return cantFail(Remote.createRemoteMemoryManager());
           }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
@@ -119,13 +113,7 @@ public:
       exit(1);
     }
     CompileCallbackMgr = &*CCMgrOrErr;
-    std::unique_ptr<MyRemote::RCIndirectStubsManager> ISM;
-    if (auto Err = Remote.createIndirectStubsManager(ISM)) {
-      logAllUnhandledErrors(std::move(Err), errs(),
-                            "Error creating indirect stubs manager:");
-      exit(1);
-    }
-    IndirectStubsMgr = std::move(ISM);
+    IndirectStubsMgr = cantFail(Remote.createIndirectStubsManager());
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 
@@ -164,7 +152,7 @@ public:
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {
     // Create a CompileCallback - this is the re-entry point into the compiler
     // for functions that haven't been compiled yet.
-    auto CCInfo = CompileCallbackMgr->getCompileCallback();
+    auto CCInfo = cantFail(CompileCallbackMgr->getCompileCallback());
 
     // Create an indirect stub. This serves as the functions "canonical
     // definition" - an unchanging (constant address) entry point to the

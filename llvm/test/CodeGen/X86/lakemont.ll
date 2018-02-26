@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=lakemont | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=lakemont | FileCheck %s
 
 ; Make sure -mcpu=lakemont implies soft floats.
 define float @test(float %a, float %b) nounwind readnone {

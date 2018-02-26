@@ -4,10 +4,10 @@
 # This test will provoke a subrange join (see annotations below) during simple register coalescing
 # Without a fix for PR33524 this causes an unreachable in SubRange Join
 #
-# GCN-DAG: undef %[[REG0:[0-9]+]].sub0 = COPY %sgpr5
-# GCN-DAG: undef %[[REG1:[0-9]+]].sub0 = COPY %sgpr2
-# GCN-DAG: %[[REG0]].sub1 = S_MOV_B32 1
-# GCN-DAG: %[[REG1]].sub1 = S_MOV_B32 1
+# GCN-DAG: undef %[[REG0:[0-9]+]].sub0:sgpr_64 = COPY %sgpr5
+# GCN-DAG: undef %[[REG1:[0-9]+]].sub0:sgpr_64 = COPY %sgpr2
+# GCN-DAG: %[[REG0]].sub1:sgpr_64 = S_MOV_B32 1
+# GCN-DAG: %[[REG1]].sub1:sgpr_64 = S_MOV_B32 1
 
 --- |
   define amdgpu_vs void @regcoal-subrange-join(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 inreg %arg5, i32 %arg6) local_unnamed_addr #0 {

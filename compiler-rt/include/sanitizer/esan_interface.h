@@ -37,11 +37,11 @@ extern "C" {
 // This function can be called mid-run (or at the end of a run for
 // a server process that doesn't shut down normally) to request that
 // data for that point in the run be reported from the tool.
-void COMPILER_RT_WEAK __esan_report();
+void COMPILER_RT_WEAK __esan_report(void);
 
 // This function returns the number of samples that the esan tool has collected
 // to this point.  This is useful for testing.
-unsigned int COMPILER_RT_WEAK __esan_get_sample_count();
+unsigned int COMPILER_RT_WEAK __esan_get_sample_count(void);
 
 #ifdef __cplusplus
 } // extern "C"

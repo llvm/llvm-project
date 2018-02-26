@@ -1,0 +1,43 @@
+# RUN: llvm-objcopy -extract-dwo %p/Inputs/dwarf.dwo %t
+# RUN: llvm-objcopy -strip-dwo %p/Inputs/dwarf.dwo %t2
+# RUN: llvm-objcopy -split-dwo=%t3 %p/Inputs/dwarf.dwo %t4
+# RUN: llvm-readobj -file-headers -sections %t | FileCheck %s -check-prefix=DWARF
+# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s -check-prefix=STRIP
+# RUN: diff %t %t3
+# RUN: diff %t2 %t4
+
+#DWARF:     SectionHeaderCount: 8
+
+#DWARF:     Name: .debug_loc.dwo
+#DWARF:     Name: .debug_str.dwo
+#DWARF:     Name: .debug_str_offsets.dwo
+#DWARF:     Name: .debug_info.dwo
+#DWARF:     Name: .debug_abbrev.dwo
+#DWARF:     Name: .debug_line.dwo
+#DWARF:     Name: .strtab
+
+#STRIP:     SectionHeaderCount: 24
+
+#STRIP:    Name: .text
+#STRIP:    Name: .rodata.str1.1
+#STRIP:    Name: .debug_str
+#STRIP:    Name: .debug_abbrev
+#STRIP:    Name: .debug_info
+#STRIP:    Name: .debug_ranges
+#STRIP:    Name: .debug_macinfo
+#STRIP:    Name: .debug_addr
+#STRIP:    Name: .debug_pubnames
+#STRIP:    Name: .debug_pubtypes
+#STRIP:    Name: .comment
+#STRIP:    Name: .note.GNU-stack
+#STRIP:    Name: .debug_frame
+#STRIP:    Name: .debug_line
+#STRIP:    Name: .symtab
+#STRIP:    Name: .rela.text
+#STRIP:    Name: .rela.debug_info
+#STRIP:    Name: .rela.debug_addr
+#STRIP:    Name: .rela.debug_pubnames
+#STRIP:    Name: .rela.debug_pubtypes
+#STRIP:    Name: .rela.debug_frame
+#STRIP:    Name: .rela.debug_line
+#STRIP:    Name: .strtab

@@ -15,6 +15,7 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -22,6 +23,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -31,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
@@ -48,11 +49,6 @@ DisableShifterOp("disable-shifter-op", cl::Hidden,
 /// instructions for SelectionDAG operations.
 ///
 namespace {
-
-enum AddrMode2Type {
-  AM2_BASE, // Simple AM2 (+-imm12)
-  AM2_SHOP  // Shifter-op AM2
-};
 
 class ARMDAGToDAGISel : public SelectionDAGISel {
   /// Subtarget - Keep a pointer to the ARMSubtarget around so that we can
@@ -103,26 +99,6 @@ public:
 
   bool SelectAddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectLdStSOReg(SDValue N, SDValue &Base, SDValue &Offset, SDValue &Opc);
-
-  AddrMode2Type SelectAddrMode2Worker(SDValue N, SDValue &Base,
-                                      SDValue &Offset, SDValue &Opc);
-  bool SelectAddrMode2Base(SDValue N, SDValue &Base, SDValue &Offset,
-                           SDValue &Opc) {
-    return SelectAddrMode2Worker(N, Base, Offset, Opc) == AM2_BASE;
-  }
-
-  bool SelectAddrMode2ShOp(SDValue N, SDValue &Base, SDValue &Offset,
-                           SDValue &Opc) {
-    return SelectAddrMode2Worker(N, Base, Offset, Opc) == AM2_SHOP;
-  }
-
-  bool SelectAddrMode2(SDValue N, SDValue &Base, SDValue &Offset,
-                       SDValue &Opc) {
-    SelectAddrMode2Worker(N, Base, Offset, Opc);
-//    return SelectAddrMode2ShOp(N, Base, Offset, Opc);
-    // This always matches one way or another.
-    return true;
-  }
 
   bool SelectCMOVPred(SDValue N, SDValue &Pred, SDValue &Reg) {
     const ConstantSDNode *CN = cast<ConstantSDNode>(N);
@@ -751,148 +727,6 @@ bool ARMDAGToDAGISel::SelectLdStSOReg(SDValue N, SDValue &Base, SDValue &Offset,
   Opc = CurDAG->getTargetConstant(ARM_AM::getAM2Opc(AddSub, ShAmt, ShOpcVal),
                                   SDLoc(N), MVT::i32);
   return true;
-}
-
-
-//-----
-
-AddrMode2Type ARMDAGToDAGISel::SelectAddrMode2Worker(SDValue N,
-                                                     SDValue &Base,
-                                                     SDValue &Offset,
-                                                     SDValue &Opc) {
-  if (N.getOpcode() == ISD::MUL &&
-      (!(Subtarget->isLikeA9() || Subtarget->isSwift()) || N.hasOneUse())) {
-    if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-      // X * [3,5,9] -> X + X * [2,4,8] etc.
-      int RHSC = (int)RHS->getZExtValue();
-      if (RHSC & 1) {
-        RHSC = RHSC & ~1;
-        ARM_AM::AddrOpc AddSub = ARM_AM::add;
-        if (RHSC < 0) {
-          AddSub = ARM_AM::sub;
-          RHSC = - RHSC;
-        }
-        if (isPowerOf2_32(RHSC)) {
-          unsigned ShAmt = Log2_32(RHSC);
-          Base = Offset = N.getOperand(0);
-          Opc = CurDAG->getTargetConstant(ARM_AM::getAM2Opc(AddSub, ShAmt,
-                                                            ARM_AM::lsl),
-                                          SDLoc(N), MVT::i32);
-          return AM2_SHOP;
-        }
-      }
-    }
-  }
-
-  if (N.getOpcode() != ISD::ADD && N.getOpcode() != ISD::SUB &&
-      // ISD::OR that is equivalent to an ADD.
-      !CurDAG->isBaseWithConstantOffset(N)) {
-    Base = N;
-    if (N.getOpcode() == ISD::FrameIndex) {
-      int FI = cast<FrameIndexSDNode>(N)->getIndex();
-      Base = CurDAG->getTargetFrameIndex(
-          FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-    } else if (N.getOpcode() == ARMISD::Wrapper &&
-               N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
-               N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
-               N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
-      Base = N.getOperand(0);
-    }
-    Offset = CurDAG->getRegister(0, MVT::i32);
-    Opc = CurDAG->getTargetConstant(ARM_AM::getAM2Opc(ARM_AM::add, 0,
-                                                      ARM_AM::no_shift),
-                                    SDLoc(N), MVT::i32);
-    return AM2_BASE;
-  }
-
-  // Match simple R +/- imm12 operands.
-  if (N.getOpcode() != ISD::SUB) {
-    int RHSC;
-    if (isScaledConstantInRange(N.getOperand(1), /*Scale=*/1,
-                                -0x1000+1, 0x1000, RHSC)) { // 12 bits.
-      Base = N.getOperand(0);
-      if (Base.getOpcode() == ISD::FrameIndex) {
-        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-        Base = CurDAG->getTargetFrameIndex(
-            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-      }
-      Offset = CurDAG->getRegister(0, MVT::i32);
-
-      ARM_AM::AddrOpc AddSub = ARM_AM::add;
-      if (RHSC < 0) {
-        AddSub = ARM_AM::sub;
-        RHSC = - RHSC;
-      }
-      Opc = CurDAG->getTargetConstant(ARM_AM::getAM2Opc(AddSub, RHSC,
-                                                        ARM_AM::no_shift),
-                                      SDLoc(N), MVT::i32);
-      return AM2_BASE;
-    }
-  }
-
-  if ((Subtarget->isLikeA9() || Subtarget->isSwift()) && !N.hasOneUse()) {
-    // Compute R +/- (R << N) and reuse it.
-    Base = N;
-    Offset = CurDAG->getRegister(0, MVT::i32);
-    Opc = CurDAG->getTargetConstant(ARM_AM::getAM2Opc(ARM_AM::add, 0,
-                                                      ARM_AM::no_shift),
-                                    SDLoc(N), MVT::i32);
-    return AM2_BASE;
-  }
-
-  // Otherwise this is R +/- [possibly shifted] R.
-  ARM_AM::AddrOpc AddSub = N.getOpcode() != ISD::SUB ? ARM_AM::add:ARM_AM::sub;
-  ARM_AM::ShiftOpc ShOpcVal =
-    ARM_AM::getShiftOpcForNode(N.getOperand(1).getOpcode());
-  unsigned ShAmt = 0;
-
-  Base   = N.getOperand(0);
-  Offset = N.getOperand(1);
-
-  if (ShOpcVal != ARM_AM::no_shift) {
-    // Check to see if the RHS of the shift is a constant, if not, we can't fold
-    // it.
-    if (ConstantSDNode *Sh =
-           dyn_cast<ConstantSDNode>(N.getOperand(1).getOperand(1))) {
-      ShAmt = Sh->getZExtValue();
-      if (isShifterOpProfitable(Offset, ShOpcVal, ShAmt))
-        Offset = N.getOperand(1).getOperand(0);
-      else {
-        ShAmt = 0;
-        ShOpcVal = ARM_AM::no_shift;
-      }
-    } else {
-      ShOpcVal = ARM_AM::no_shift;
-    }
-  }
-
-  // Try matching (R shl C) + (R).
-  if (N.getOpcode() != ISD::SUB && ShOpcVal == ARM_AM::no_shift &&
-      !(Subtarget->isLikeA9() || Subtarget->isSwift() ||
-        N.getOperand(0).hasOneUse())) {
-    ShOpcVal = ARM_AM::getShiftOpcForNode(N.getOperand(0).getOpcode());
-    if (ShOpcVal != ARM_AM::no_shift) {
-      // Check to see if the RHS of the shift is a constant, if not, we can't
-      // fold it.
-      if (ConstantSDNode *Sh =
-          dyn_cast<ConstantSDNode>(N.getOperand(0).getOperand(1))) {
-        ShAmt = Sh->getZExtValue();
-        if (isShifterOpProfitable(N.getOperand(0), ShOpcVal, ShAmt)) {
-          Offset = N.getOperand(0).getOperand(0);
-          Base = N.getOperand(1);
-        } else {
-          ShAmt = 0;
-          ShOpcVal = ARM_AM::no_shift;
-        }
-      } else {
-        ShOpcVal = ARM_AM::no_shift;
-      }
-    }
-  }
-
-  Opc = CurDAG->getTargetConstant(ARM_AM::getAM2Opc(AddSub, ShAmt, ShOpcVal),
-                                  SDLoc(N), MVT::i32);
-  return AM2_SHOP;
 }
 
 bool ARMDAGToDAGISel::SelectAddrMode2OffsetReg(SDNode *Op, SDValue N,
@@ -3764,66 +3598,10 @@ static void getIntOperandsFromRegisterString(StringRef RegString,
 // which mode it is to be used, e.g. usr. Returns -1 to signify that the string
 // was invalid.
 static inline int getBankedRegisterMask(StringRef RegString) {
-  return StringSwitch<int>(RegString.lower())
-          .Case("r8_usr", 0x00)
-          .Case("r9_usr", 0x01)
-          .Case("r10_usr", 0x02)
-          .Case("r11_usr", 0x03)
-          .Case("r12_usr", 0x04)
-          .Case("sp_usr", 0x05)
-          .Case("lr_usr", 0x06)
-          .Case("r8_fiq", 0x08)
-          .Case("r9_fiq", 0x09)
-          .Case("r10_fiq", 0x0a)
-          .Case("r11_fiq", 0x0b)
-          .Case("r12_fiq", 0x0c)
-          .Case("sp_fiq", 0x0d)
-          .Case("lr_fiq", 0x0e)
-          .Case("lr_irq", 0x10)
-          .Case("sp_irq", 0x11)
-          .Case("lr_svc", 0x12)
-          .Case("sp_svc", 0x13)
-          .Case("lr_abt", 0x14)
-          .Case("sp_abt", 0x15)
-          .Case("lr_und", 0x16)
-          .Case("sp_und", 0x17)
-          .Case("lr_mon", 0x1c)
-          .Case("sp_mon", 0x1d)
-          .Case("elr_hyp", 0x1e)
-          .Case("sp_hyp", 0x1f)
-          .Case("spsr_fiq", 0x2e)
-          .Case("spsr_irq", 0x30)
-          .Case("spsr_svc", 0x32)
-          .Case("spsr_abt", 0x34)
-          .Case("spsr_und", 0x36)
-          .Case("spsr_mon", 0x3c)
-          .Case("spsr_hyp", 0x3e)
-          .Default(-1);
-}
-
-// Maps a MClass special register string to its value for use in the
-// t2MRS_M / t2MSR_M instruction nodes as the SYSm value operand.
-// Returns -1 to signify that the string was invalid.
-static inline int getMClassRegisterSYSmValueMask(StringRef RegString) {
-  return StringSwitch<int>(RegString.lower())
-          .Case("apsr", 0x0)
-          .Case("iapsr", 0x1)
-          .Case("eapsr", 0x2)
-          .Case("xpsr", 0x3)
-          .Case("ipsr", 0x5)
-          .Case("epsr", 0x6)
-          .Case("iepsr", 0x7)
-          .Case("msp", 0x8)
-          .Case("psp", 0x9)
-          .Case("primask", 0x10)
-          .Case("basepri", 0x11)
-          .Case("basepri_max", 0x12)
-          .Case("faultmask", 0x13)
-          .Case("control", 0x14)
-          .Case("msplim", 0x0a)
-          .Case("psplim", 0x0b)
-          .Case("sp", 0x18)
-          .Default(-1);
+  auto TheReg = ARMBankedReg::lookupBankedRegByName(RegString.lower());
+  if (!TheReg)
+     return -1;
+  return TheReg->Encoding;
 }
 
 // The flags here are common to those allowed for apsr in the A class cores and
@@ -3839,58 +3617,15 @@ static inline int getMClassFlagsMask(StringRef Flags) {
           .Default(-1);
 }
 
-static int getMClassRegisterMask(StringRef Reg, StringRef Flags, bool IsRead,
-                                 const ARMSubtarget *Subtarget) {
-  // Ensure that the register (without flags) was a valid M Class special
-  // register.
-  int SYSmvalue = getMClassRegisterSYSmValueMask(Reg);
-  if (SYSmvalue == -1)
+// Maps MClass special registers string to its value for use in the
+// t2MRS_M/t2MSR_M instruction nodes as the SYSm value operand.
+// Returns -1 to signify that the string was invalid.
+static int getMClassRegisterMask(StringRef Reg, const ARMSubtarget *Subtarget) {
+  auto TheReg = ARMSysReg::lookupMClassSysRegByName(Reg);
+  const FeatureBitset &FeatureBits = Subtarget->getFeatureBits();
+  if (!TheReg || !TheReg->hasRequiredFeatures(FeatureBits))
     return -1;
-
-  // basepri, basepri_max and faultmask are only valid for V7m.
-  if (!Subtarget->hasV7Ops() && SYSmvalue >= 0x11 && SYSmvalue <= 0x13)
-    return -1;
-
-  if (Subtarget->has8MSecExt() && Flags.lower() == "ns") {
-    Flags = "";
-    SYSmvalue |= 0x80;
-  }
-
-  if (!Subtarget->has8MSecExt() &&
-      (SYSmvalue == 0xa || SYSmvalue == 0xb || SYSmvalue > 0x14))
-    return -1;
-
-  if (!Subtarget->hasV8MMainlineOps() &&
-      (SYSmvalue == 0x8a || SYSmvalue == 0x8b || SYSmvalue == 0x91 ||
-       SYSmvalue == 0x93))
-    return -1;
-
-  // If it was a read then we won't be expecting flags and so at this point
-  // we can return the mask.
-  if (IsRead) {
-    if (Flags.empty())
-      return SYSmvalue;
-    else
-      return -1;
-  }
-
-  // We know we are now handling a write so need to get the mask for the flags.
-  int Mask = getMClassFlagsMask(Flags);
-
-  // Only apsr, iapsr, eapsr, xpsr can have flags. The other register values
-  // shouldn't have flags present.
-  if ((SYSmvalue < 0x4 && Mask == -1) || (SYSmvalue > 0x4 && !Flags.empty()))
-    return -1;
-
-  // The _g and _nzcvqg versions are only valid if the DSP extension is
-  // available.
-  if (!Subtarget->hasDSP() && (Mask & 0x1))
-    return -1;
-
-  // The register was valid so need to put the mask in the correct place
-  // (the flags need to be in bits 11-10) and combine with the SYSmvalue to
-  // construct the operand for the instruction node.
-  return SYSmvalue | Mask << 10;
+  return (int)(TheReg->Encoding & 0xFFF); // SYSm value
 }
 
 static int getARClassRegisterMask(StringRef Reg, StringRef Flags) {
@@ -4032,13 +3767,7 @@ bool ARMDAGToDAGISel::tryReadRegister(SDNode *N){
   // is an acceptable value, so check that a mask can be constructed from the
   // string.
   if (Subtarget->isMClass()) {
-    StringRef Flags = "", Reg = SpecialReg;
-    if (Reg.endswith("_ns")) {
-      Flags = "ns";
-      Reg = Reg.drop_back(3);
-    }
-
-    int SYSmValue = getMClassRegisterMask(Reg, Flags, true, Subtarget);
+    int SYSmValue = getMClassRegisterMask(SpecialReg, Subtarget);
     if (SYSmValue == -1)
       return false;
 
@@ -4149,12 +3878,7 @@ bool ARMDAGToDAGISel::tryWriteRegister(SDNode *N){
   // If the target was M Class then need to validate the special register value
   // and retrieve the mask for use in the instruction node.
   if (Subtarget->isMClass()) {
-    // basepri_max gets split so need to correct Reg and Flags.
-    if (SpecialReg == "basepri_max") {
-      Reg = SpecialReg;
-      Flags = "";
-    }
-    int SYSmValue = getMClassRegisterMask(Reg, Flags, false, Subtarget);
+    int SYSmValue = getMClassRegisterMask(SpecialReg, Subtarget);
     if (SYSmValue == -1)
       return false;
 

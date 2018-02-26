@@ -18,5 +18,16 @@ define i32 @assume_add(i32 %a, i32 %b) {
   ret i32 %t3
 }
 
-declare void @llvm.assume(i1)
 
+define void @assume_not() {
+; CHECK-LABEL: @assume_not(
+entry-block:
+  %0 = call i1 @get_val()
+; CHECK: call void @llvm.assume
+  %1 = xor i1 %0, true
+  call void @llvm.assume(i1 %1)
+  ret void
+}
+
+declare i1 @get_val()
+declare void @llvm.assume(i1)

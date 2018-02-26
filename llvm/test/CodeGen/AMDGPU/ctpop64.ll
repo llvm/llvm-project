@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
@@ -188,7 +188,7 @@ define amdgpu_kernel void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val)
 ; GCN-DAG: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT2:v[0-9]+]], v[[VAL0]], 0
 ; GCN-DAG: v_bcnt_u32_b32{{(_e32)*(_e64)*}} [[MIDRESULT3:v[0-9]+]], v{{[0-9]+}}, [[MIDRESULT2]]
 
-; GCN: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, [[MIDRESULT1]], [[MIDRESULT2]]
+; GCN: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, [[MIDRESULT1]], [[MIDRESULT2]]
 
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm

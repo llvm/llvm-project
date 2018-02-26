@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
@@ -94,7 +94,7 @@ define amdgpu_kernel void @sextload_i1_to_i32_trunc_cmp_ne_0(i1 addrspace(1)* %o
 
 ; FUNC-LABEL: {{^}}zextload_i1_to_i32_trunc_cmp_ne_0:
 ; SI: buffer_load_ubyte [[LOAD:v[0-9]+]]
-; SI: v_and_b32_e32 [[TMP:v[0-9]+]], 1, [[LOAD]]
+; SI: v_and_b32_e32 [[RESULT:v[0-9]+]], 1, [[LOAD]]
 ; SI: buffer_store_byte [[RESULT]]
 define amdgpu_kernel void @zextload_i1_to_i32_trunc_cmp_ne_0(i1 addrspace(1)* %out, i1 addrspace(1)* %in) nounwind {
   %load = load i1, i1 addrspace(1)* %in

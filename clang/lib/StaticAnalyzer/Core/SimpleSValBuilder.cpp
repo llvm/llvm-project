@@ -360,15 +360,15 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       Loc lhsL = lhs.castAs<nonloc::LocAsInteger>().getLoc();
       switch (rhs.getSubKind()) {
         case nonloc::LocAsIntegerKind:
-          // FIXME: at the moment the implementation 
+          // FIXME: at the moment the implementation
           // of modeling "pointers as integers" is not complete.
           if (!BinaryOperator::isComparisonOp(op))
-            return UnknownVal();     
+            return UnknownVal();
           return evalBinOpLL(state, op, lhsL,
                              rhs.castAs<nonloc::LocAsInteger>().getLoc(),
                              resultTy);
         case nonloc::ConcreteIntKind: {
-          // FIXME: at the moment the implementation 
+          // FIXME: at the moment the implementation
           // of modeling "pointers as integers" is not complete.
           if (!BinaryOperator::isComparisonOp(op))
             return UnknownVal();
@@ -679,7 +679,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     if (SymbolRef rSym = rhs.getAsLocSymbol()) {
       // We can only build expressions with symbols on the left,
       // so we need a reversible operator.
-      if (!BinaryOperator::isComparisonOp(op))
+      if (!BinaryOperator::isComparisonOp(op) || op == BO_Cmp)
         return UnknownVal();
 
       const llvm::APSInt &lVal = lhs.castAs<loc::ConcreteInt>().getValue();
@@ -922,6 +922,10 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
   if (rhs.isZeroConstant())
     return lhs;
 
+  // Perserve the null pointer so that it can be found by the DerefChecker.
+  if (lhs.isZeroConstant())
+    return lhs;
+
   // We are dealing with pointer arithmetic.
 
   // Handle pointer arithmetic on constant values.
@@ -937,6 +941,8 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
       // Offset the increment by the pointer size.
       llvm::APSInt Multiplicand(rightI.getBitWidth(), /* isUnsigned */ true);
+      QualType pointeeType = resultTy->getPointeeType();
+      Multiplicand = getContext().getTypeSizeInChars(pointeeType).getQuantity();
       rightI *= Multiplicand;
 
       // Compute the adjusted pointer.
@@ -981,6 +987,12 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
       if (resultTy->isAnyPointerType())
         elementType = resultTy->getPointeeType();
     }
+
+    // Represent arithmetic on void pointers as arithmetic on char pointers.
+    // It is fine when a TypedValueRegion of char value type represents
+    // a void pointer. Note that arithmetic on void pointers is a GCC extension.
+    if (elementType->isVoidType())
+      elementType = getContext().CharTy;
 
     if (Optional<NonLoc> indexV = index.getAs<NonLoc>()) {
       return loc::MemRegionVal(MemMgr.getElementRegion(elementType, *indexV,

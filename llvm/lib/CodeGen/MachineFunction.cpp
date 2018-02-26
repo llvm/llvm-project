@@ -1,4 +1,4 @@
-//===-- MachineFunction.cpp -----------------------------------------------===//
+//===- MachineFunction.cpp ------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,45 +14,76 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
 
 static cl::opt<unsigned>
-    AlignAllFunctions("align-all-functions",
-                      cl::desc("Force the alignment of all functions."),
-                      cl::init(0), cl::Hidden);
+AlignAllFunctions("align-all-functions",
+                  cl::desc("Force the alignment of all functions."),
+                  cl::init(0), cl::Hidden);
 
 static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
-  typedef MachineFunctionProperties::Property P;
+  using P = MachineFunctionProperties::Property;
+
   switch(Prop) {
   case P::FailedISel: return "FailedISel";
   case P::IsSSA: return "IsSSA";
@@ -81,23 +112,23 @@ void MachineFunctionProperties::print(raw_ostream &OS) const {
 //===----------------------------------------------------------------------===//
 
 // Out-of-line virtual method.
-MachineFunctionInfo::~MachineFunctionInfo() {}
+MachineFunctionInfo::~MachineFunctionInfo() = default;
 
 void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->DeleteMachineBasicBlock(MBB);
 }
 
 static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
-                                           const Function *Fn) {
-  if (Fn->hasFnAttribute(Attribute::StackAlignment))
-    return Fn->getFnStackAlignment();
+                                           const Function &F) {
+  if (F.hasFnAttribute(Attribute::StackAlignment))
+    return F.getFnStackAlignment();
   return STI->getFrameLowering()->getStackAlignment();
 }
 
-MachineFunction::MachineFunction(const Function *F, const TargetMachine &TM,
+MachineFunction::MachineFunction(const Function &F, const TargetMachine &Target,
+                                 const TargetSubtargetInfo &STI,
                                  unsigned FunctionNum, MachineModuleInfo &mmi)
-    : Fn(F), Target(TM), STI(TM.getSubtargetImpl(*F)), Ctx(mmi.getContext()),
-      MMI(mmi) {
+    : F(F), Target(Target), STI(&STI), Ctx(mmi.getContext()), MMI(mmi) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -115,21 +146,21 @@ void MachineFunction::init() {
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
   bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
-                      !Fn->hasFnAttribute("no-realign-stack");
+                      !F.hasFnAttribute("no-realign-stack");
   FrameInfo = new (Allocator) MachineFrameInfo(
-      getFnStackAlignment(STI, Fn), /*StackRealignable=*/CanRealignSP,
+      getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
       /*ForceRealign=*/CanRealignSP &&
-          Fn->hasFnAttribute(Attribute::StackAlignment));
+          F.hasFnAttribute(Attribute::StackAlignment));
 
-  if (Fn->hasFnAttribute(Attribute::StackAlignment))
-    FrameInfo->ensureMaxAlignment(Fn->getFnStackAlignment());
+  if (F.hasFnAttribute(Attribute::StackAlignment))
+    FrameInfo->ensureMaxAlignment(F.getFnStackAlignment());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
   Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
 
-  // FIXME: Shouldn't use pref alignment if explicit alignment is set on Fn.
+  // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
   // FIXME: Use Function::optForSize().
-  if (!Fn->hasFnAttribute(Attribute::OptimizeForSize))
+  if (!F.hasFnAttribute(Attribute::OptimizeForSize))
     Alignment = std::max(Alignment,
                          STI->getTargetLowering()->getPrefFunctionAlignment());
 
@@ -139,7 +170,7 @@ void MachineFunction::init() {
   JumpTableInfo = nullptr;
 
   if (isFuncletEHPersonality(classifyEHPersonality(
-          Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr))) {
+          F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr))) {
     WinEHInfo = new (Allocator) WinEHFuncInfo();
   }
 
@@ -147,7 +178,9 @@ void MachineFunction::init() {
          "Can't create a MachineFunction using a Module with a "
          "Target-incompatible DataLayout attached\n");
 
-  PSVManager = llvm::make_unique<PseudoSourceValueManager>();
+  PSVManager =
+    llvm::make_unique<PseudoSourceValueManager>(*(getSubtarget().
+                                                  getInstrInfo()));
 }
 
 MachineFunction::~MachineFunction() {
@@ -166,6 +199,7 @@ void MachineFunction::clear() {
   InstructionRecycler.clear(Allocator);
   OperandRecycler.clear(Allocator);
   BasicBlockRecycler.clear(Allocator);
+  CodeViewAnnotations.clear();
   VariableDbgInfos.clear();
   if (RegInfo) {
     RegInfo->~MachineRegisterInfo();
@@ -194,7 +228,7 @@ void MachineFunction::clear() {
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
-  return Fn->getParent()->getDataLayout();
+  return F.getParent()->getDataLayout();
 }
 
 /// Get the JumpTableInfo for this function.
@@ -210,7 +244,7 @@ getOrCreateJumpTableInfo(unsigned EntryKind) {
 
 /// Should we be emitting segmented stack stuff for the function
 bool MachineFunction::shouldSplitStack() const {
-  return getFunction()->hasFnAttribute("split-stack");
+  return getFunction().hasFnAttribute("split-stack");
 }
 
 /// This discards all of the MachineBasicBlock numbers and recomputes them.
@@ -268,6 +302,26 @@ MachineInstr *
 MachineFunction::CloneMachineInstr(const MachineInstr *Orig) {
   return new (InstructionRecycler.Allocate<MachineInstr>(Allocator))
              MachineInstr(*this, *Orig);
+}
+
+MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) {
+  MachineInstr *FirstClone = nullptr;
+  MachineBasicBlock::const_instr_iterator I = Orig.getIterator();
+  while (true) {
+    MachineInstr *Cloned = CloneMachineInstr(&*I);
+    MBB.insert(InsertBefore, Cloned);
+    if (FirstClone == nullptr) {
+      FirstClone = Cloned;
+    } else {
+      Cloned->bundleWithPred();
+    }
+
+    if (!I->isBundledWithSucc())
+      break;
+    ++I;
+  }
+  return *FirstClone;
 }
 
 /// Delete the given MachineInstr.
@@ -431,8 +485,7 @@ LLVM_DUMP_METHOD void MachineFunction::dump() const {
 #endif
 
 StringRef MachineFunction::getName() const {
-  assert(getFunction() && "No function!");
-  return getFunction()->getName();
+  return getFunction().getName();
 }
 
 void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
@@ -456,17 +509,17 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
     OS << "Function Live Ins: ";
     for (MachineRegisterInfo::livein_iterator
          I = RegInfo->livein_begin(), E = RegInfo->livein_end(); I != E; ++I) {
-      OS << PrintReg(I->first, TRI);
+      OS << printReg(I->first, TRI);
       if (I->second)
-        OS << " in " << PrintReg(I->second, TRI);
+        OS << " in " << printReg(I->second, TRI);
       if (std::next(I) != E)
         OS << ", ";
     }
     OS << '\n';
   }
 
-  ModuleSlotTracker MST(getFunction()->getParent());
-  MST.incorporateFunction(*getFunction());
+  ModuleSlotTracker MST(getFunction().getParent());
+  MST.incorporateFunction(getFunction());
   for (const auto &BB : *this) {
     OS << '\n';
     BB.print(OS, MST, Indexes);
@@ -476,10 +529,10 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
 }
 
 namespace llvm {
+
   template<>
   struct DOTGraphTraits<const MachineFunction*> : public DefaultDOTGraphTraits {
-
-  DOTGraphTraits (bool isSimple=false) : DefaultDOTGraphTraits(isSimple) {}
+    DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
     static std::string getGraphName(const MachineFunction *F) {
       return ("CFG for '" + F->getName() + "' function").str();
@@ -492,7 +545,7 @@ namespace llvm {
         raw_string_ostream OSS(OutStr);
 
         if (isSimple()) {
-          OSS << "BB#" << Node->getNumber();
+          OSS << printMBBReference(*Node);
           if (const BasicBlock *BB = Node->getBasicBlock())
             OSS << ": " << BB->getName();
         } else
@@ -510,7 +563,8 @@ namespace llvm {
       return OutStr;
     }
   };
-}
+
+} // end namespace llvm
 
 void MachineFunction::viewCFG() const
 {
@@ -797,7 +851,7 @@ unsigned MachineJumpTableInfo::getEntryAlignment(const DataLayout &TD) const {
   // alignment.
   switch (getEntryKind()) {
   case MachineJumpTableInfo::EK_BlockAddress:
-    return TD.getPointerABIAlignment();
+    return TD.getPointerABIAlignment(0);
   case MachineJumpTableInfo::EK_GPRel64BlockAddress:
     return TD.getABIIntegerTypeAlignment(64);
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
@@ -851,9 +905,9 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
   OS << "Jump Tables:\n";
 
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
-    OS << "  jt#" << i << ": ";
+    OS << printJumpTableEntryReference(i) << ": ";
     for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
-      OS << " BB#" << JumpTables[i].MBBs[j]->getNumber();
+      OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
   }
 
   OS << '\n';
@@ -863,12 +917,15 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void MachineJumpTableInfo::dump() const { print(dbgs()); }
 #endif
 
+Printable llvm::printJumpTableEntryReference(unsigned Idx) {
+  return Printable([Idx](raw_ostream &OS) { OS << "%jump-table." << Idx; });
+}
 
 //===----------------------------------------------------------------------===//
 //  MachineConstantPool implementation
 //===----------------------------------------------------------------------===//
 
-void MachineConstantPoolValue::anchor() { }
+void MachineConstantPoolValue::anchor() {}
 
 Type *MachineConstantPoolEntry::getType() const {
   if (isMachineConstantPoolEntry())

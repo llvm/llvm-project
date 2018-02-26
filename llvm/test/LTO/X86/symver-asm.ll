@@ -1,7 +1,7 @@
 ; RUN: llvm-as < %s >%t1
 ; RUN: llvm-lto -exported-symbol=io_cancel_0_4 -exported-symbol=io_cancel_weak_0_4 -exported-symbol=foo -o %t2 %t1
 ; RUN: llvm-nm %t2 | FileCheck %s
-; RUN: llvm-lto2 run -r %t1,io_cancel_0_4,plx -r %t1,io_cancel_0_4,plx -r %t1,io_cancel_local_0_4,plx -r %t1,io_cancel_weak_0_4,plx -r %t1,io_cancel_weak_0_4,plx -r %t1,io_cancel@@LIBAIO_0.4,plx -r %t1,io_cancel_weak@@LIBAIO_0.4,plx -r %t1,io_cancel_weak@@LIBAIO_0.4.1,plx -r %t1,foo,plx -r %t1,foo,plx -r %t1,foo@@VER1,plx -o %t3 %t1 -save-temps
+; RUN: llvm-lto2 run -r %t1,io_cancel_0_4,plx -r %t1,io_cancel_0_4,lx -r %t1,io_cancel_local_0_4,plx -r %t1,io_cancel_weak_0_4,plx -r %t1,io_cancel_weak_0_4,lx -r %t1,io_cancel@@LIBAIO_0.4,plx -r %t1,io_cancel_weak@@LIBAIO_0.4,plx -r %t1,io_cancel_weak@@LIBAIO_0.4.1,plx -r %t1,foo,plx -r %t1,foo,lx -r %t1,foo@@VER1,plx -o %t3 %t1 -save-temps
 ; RUN: llvm-nm %t3.0 | FileCheck %s
 ; RUN: llvm-dis %t3.0.2.internalize.bc -o - | FileCheck %s --check-prefix=INTERN
 

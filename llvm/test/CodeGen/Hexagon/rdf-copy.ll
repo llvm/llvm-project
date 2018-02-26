@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; 
+;
 ; Check that
 ;     {
 ;         r1 = r0

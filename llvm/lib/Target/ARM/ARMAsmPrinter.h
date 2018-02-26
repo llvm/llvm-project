@@ -135,8 +135,7 @@ public:
     const Triple &TT = TM.getTargetTriple();
     if (!TT.isOSBinFormatMachO())
       return 0;
-    bool isThumb = TT.getArch() == Triple::thumb ||
-                   TT.getArch() == Triple::thumbeb ||
+    bool isThumb = TT.isThumb() ||
                    TT.getSubArch() == Triple::ARMSubArch_v7m ||
                    TT.getSubArch() == Triple::ARMSubArch_v6m;
     return isThumb ? ARM::DW_ISA_ARM_thumb : ARM::DW_ISA_ARM_arm;

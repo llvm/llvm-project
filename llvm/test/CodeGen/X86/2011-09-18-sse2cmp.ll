@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=x86 -mcpu=yonah -mattr=+sse2,-sse4.1 | FileCheck %s
+;RUN: llc < %s -mtriple=i686-- -mcpu=yonah -mattr=+sse2,-sse4.1 | FileCheck %s
 
 ;CHECK: @max
 ;CHECK: cmplepd

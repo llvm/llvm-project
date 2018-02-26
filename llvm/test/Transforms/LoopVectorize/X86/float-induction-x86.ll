@@ -1,4 +1,4 @@
-; RUN: opt < %s  -O3 -latesimplifycfg -mcpu=core-avx2 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix AUTO_VEC %s
+; RUN: opt < %s  -O3 -simplifycfg -keep-loops=false -mcpu=core-avx2 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix AUTO_VEC %s
 
 ; This test checks auto-vectorization with FP induction variable.
 ; The FP operation is not "fast" and requires "fast-math" function attribute.

@@ -52,13 +52,20 @@ StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
 void StringMapImpl::init(unsigned InitSize) {
   assert((InitSize & (InitSize-1)) == 0 &&
          "Init Size must be a power of 2 or zero!");
-  NumBuckets = InitSize ? InitSize : 16;
+
+  unsigned NewNumBuckets = InitSize ? InitSize : 16;
   NumItems = 0;
   NumTombstones = 0;
   
-  TheTable = (StringMapEntryBase **)calloc(NumBuckets+1,
+  TheTable = (StringMapEntryBase **)calloc(NewNumBuckets+1,
                                            sizeof(StringMapEntryBase **) +
                                            sizeof(unsigned));
+
+  if (TheTable == nullptr)
+    report_bad_alloc_error("Allocation of StringMap table failed.");
+
+  // Set the member only if TheTable was successfully allocated
+  NumBuckets = NewNumBuckets;
 
   // Allocate one extra bucket, set it to look filled so the iterators stop at
   // end.
@@ -215,6 +222,10 @@ unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
   StringMapEntryBase **NewTableArray =
     (StringMapEntryBase **)calloc(NewSize+1, sizeof(StringMapEntryBase *) +
                                              sizeof(unsigned));
+
+  if (NewTableArray == nullptr)
+    report_bad_alloc_error("Allocation of StringMap hash table failed.");
+
   unsigned *NewHashArray = (unsigned *)(NewTableArray + NewSize + 1);
   NewTableArray[NewSize] = (StringMapEntryBase*)2;
 

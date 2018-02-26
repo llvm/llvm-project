@@ -1108,26 +1108,35 @@ TEST(ConstructorDeclaration, IsExplicit) {
 }
 
 TEST(ConstructorDeclaration, Kinds) {
-  EXPECT_TRUE(matches("struct S { S(); };",
-                      cxxConstructorDecl(isDefaultConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(); };",
-                         cxxConstructorDecl(isCopyConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(); };",
-                         cxxConstructorDecl(isMoveConstructor())));
+  EXPECT_TRUE(matches(
+      "struct S { S(); };",
+      cxxConstructorDecl(isDefaultConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(); };",
+      cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(); };",
+      cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))));
 
-  EXPECT_TRUE(notMatches("struct S { S(const S&); };",
-                         cxxConstructorDecl(isDefaultConstructor())));
-  EXPECT_TRUE(matches("struct S { S(const S&); };",
-                      cxxConstructorDecl(isCopyConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(const S&); };",
-                         cxxConstructorDecl(isMoveConstructor())));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(const S&); };",
+      cxxConstructorDecl(isDefaultConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(matches(
+      "struct S { S(const S&); };",
+      cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(const S&); };",
+      cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))));
 
-  EXPECT_TRUE(notMatches("struct S { S(S&&); };",
-                         cxxConstructorDecl(isDefaultConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(S&&); };",
-                         cxxConstructorDecl(isCopyConstructor())));
-  EXPECT_TRUE(matches("struct S { S(S&&); };",
-                      cxxConstructorDecl(isMoveConstructor())));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(S&&); };",
+      cxxConstructorDecl(isDefaultConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(S&&); };",
+      cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(matches(
+      "struct S { S(S&&); };",
+      cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))));
 }
 
 TEST(ConstructorDeclaration, IsUserProvided) {
@@ -1306,6 +1315,14 @@ TEST(Matcher, IsDefinition) {
     cxxMethodDecl(hasName("a"), isDefinition());
   EXPECT_TRUE(matches("class A { void a() {} };", DefinitionOfMethodA));
   EXPECT_TRUE(notMatches("class A { void a(); };", DefinitionOfMethodA));
+
+  DeclarationMatcher DefinitionOfObjCMethodA =
+    objcMethodDecl(hasName("a"), isDefinition());
+  EXPECT_TRUE(matchesObjC("@interface A @end "
+                          "@implementation A; -(void)a {} @end",
+                          DefinitionOfObjCMethodA));
+  EXPECT_TRUE(notMatchesObjC("@interface A; - (void)a; @end",
+                             DefinitionOfObjCMethodA));
 }
 
 TEST(Matcher, HandlesNullQualTypes) {
@@ -1972,6 +1989,44 @@ TEST(HasExternalFormalLinkage, Basic) {
   // translation units.
   EXPECT_TRUE(matches("namespace { int a = 0; }",
                       namedDecl(hasExternalFormalLinkage())));
+}
+
+TEST(HasDefaultArgument, Basic) {
+  EXPECT_TRUE(matches("void x(int val = 0) {}", 
+                      parmVarDecl(hasDefaultArgument())));
+  EXPECT_TRUE(notMatches("void x(int val) {}",
+                      parmVarDecl(hasDefaultArgument())));
+}
+
+TEST(IsArray, Basic) {
+  EXPECT_TRUE(matches("struct MyClass {}; MyClass *p1 = new MyClass[10];",
+                      cxxNewExpr(isArray())));
+}
+
+TEST(HasArraySize, Basic) {
+  EXPECT_TRUE(matches("struct MyClass {}; MyClass *p1 = new MyClass[10];",
+                      cxxNewExpr(hasArraySize(integerLiteral(equals(10))))));
+}
+
+TEST(HasDefinition, MatchesStructDefinition) {
+  EXPECT_TRUE(matches("struct x {};",
+                      cxxRecordDecl(hasDefinition())));
+  EXPECT_TRUE(notMatches("struct x;",
+                      cxxRecordDecl(hasDefinition())));
+}
+
+TEST(HasDefinition, MatchesClassDefinition) {
+  EXPECT_TRUE(matches("class x {};",
+                      cxxRecordDecl(hasDefinition())));
+  EXPECT_TRUE(notMatches("class x;",
+                      cxxRecordDecl(hasDefinition())));
+}
+
+TEST(HasDefinition, MatchesUnionDefinition) {
+  EXPECT_TRUE(matches("union x {};",
+                      cxxRecordDecl(hasDefinition())));
+  EXPECT_TRUE(notMatches("union x;",
+                      cxxRecordDecl(hasDefinition())));
 }
 
 } // namespace ast_matchers

@@ -60,6 +60,7 @@
         ldr r4, [r5, r6, ror #-1]
         pld r4, [r5, r6, ror #32]
         pld r4, [r5, r6, rrx #0]
+        ldr r4, [r5, r6, not_a_shift]
 
 @ CHECK-ERRORS: error: shift amount must be an immediate
 @ CHECK-ERRORS:         str r1, [r2, r3, lsl #invalid]
@@ -89,21 +90,27 @@
 @ CHECK-ERRORS:         pld r4, [r5, r6, ror #32]
 @ CHECK-ERRORS: error: ']' expected
 @ CHECK-ERRORS:         pld r4, [r5, r6, rrx #0]
+@ CHECK-ERRORS: error: illegal shift operator
+@ CHECK-ERRORS:         ldr r4, [r5, r6, not_a_shift]
         
         @ Out of range 16-bit immediate on BKPT
         bkpt #65536
 
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,65535]
+@ CHECK-ERRORS: note: too many operands for instruction
 @ CHECK-ERRORS:         bkpt #65536
 @ CHECK-ERRORS:              ^
 
         @ Out of range immediates for v8 HLT instruction.
         hlt #65536
         hlt #-1
-@CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
+@CHECK-ERRORS-V7: error: invalid instruction
+@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #65536
-@CHECK-ERRORS:             ^
-@CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
+@CHECK-ERRORS:              ^
+@CHECK-ERRORS-V7: error: invalid instruction
+@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #-1
 @CHECK-ERRORS:             ^
 
@@ -125,21 +132,23 @@
         cdp2  p7, #2, c1, c1, c1, #8
         cdp2  p7, #1, c1, c1, c1, #8
 
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V8: error: invalid instruction
+@ CHECK-ERRORS-V8: error: invalid instruction
+@ CHECK-ERRORS-V8: error: invalid instruction
+@ CHECK-ERRORS-V8: error: invalid instruction
 
         @ Out of range immediates for DBG
         dbg #-1
         dbg #16
 
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,15]
 @  Double-check that we're synced up with the right diagnostics.
 @ CHECK-ERRORS: dbg #16
 @ CHECK-ERRORS:     ^
@@ -151,13 +160,15 @@
         mcr2  p7, #1, r5, c1, c1, #8
         mcrr  p7, #16, r5, r4, c1
         mcrr2  p7, #16, r5, r4, c1
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: too many operands for instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: invalid instruction
 
         @ p10 and p11 are reserved for NEON
         mcr p10, #2, r5, c1, c1, #4
@@ -167,19 +178,23 @@
 
         @ Out of range immediate for MOV
         movw r9, 0x10000
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
 @ CHECK-ERRORS:        movw r9, 0x10000
 @ CHECK-ERRORS:                 ^
 
         @ Invalid 's' bit usage for MOVW
         movs r6, #0xffff
         movwseq r9, #0xffff
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,255]
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS-NEXT: movs r6, #0xffff
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
 @ CHECK-ERRORS: error: instruction 'movw' can not set flags, but 's' suffix specified
+@ CHECK-ERRORS-NEXT: movwseq r9, #0xffff
 
         @ Out of range immediate for MOVT
         movt r9, 0x10000
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
 @ CHECK-ERRORS:        movt r9, 0x10000
 @ CHECK-ERRORS:                 ^
 
@@ -190,13 +205,15 @@
         mrc2  p14, #0, r1, c1, c2, #9
         mrrc  p7, #16, r5, r4, c1
         mrrc2  p7, #17, r5, r4, c1
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V8: too many operands for instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: invalid instruction
 
         @ Shifter operand validation for PKH instructions.
         pkhbt r2, r2, r3, lsl #-1
@@ -253,10 +270,10 @@
         ssat    r8, #1, r10, lsl fred
         ssat    r8, #1, r10, lsl #fred
 
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,32]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #0, r10, lsl #8
 @ CHECK-ERRORS: 	    	    ^
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,32]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #33, r10, lsl #8
 @ CHECK-ERRORS: 	    	    ^
 @ CHECK-ERRORS: error: 'lsr' shift amount must be in range [0,31]
@@ -285,10 +302,10 @@
 	ssat16	r2, #0, r7
 	ssat16	r3, #17, r5
 
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,16]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,16]
 @ CHECK-ERRORS: 	ssat16	r2, #0, r7
 @ CHECK-ERRORS: 	      	    ^
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,16]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,16]
 @ CHECK-ERRORS: 	ssat16	r3, #17, r5
 @ CHECK-ERRORS: 	      	    ^
 
@@ -303,7 +320,7 @@
 
         @ Out of range immediate on SVC
         svc #0x1000000
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,0xffffff]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffffff]
 @ CHECK-ERRORS:   svc #0x1000000
 @ CHECK-ERRORS:       ^
 
@@ -349,7 +366,7 @@
 @ CHECK-ERRORS: error: 'ror' rotate amount must be 8, 16, or 24
 @ CHECK-ERRORS:         sxtah r9, r3, r3, ror #-8
 @ CHECK-ERRORS:                                ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS:         sxtb16ge r2, r3, lsr #24
 @ CHECK-ERRORS:                          ^
 
@@ -369,16 +386,16 @@
         sbfx sp, pc, #4, #5
         ubfx pc, r0, #0, #31
         ubfx r14, pc, #1, #2
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS:         sbfx pc, r2, #1, #3
 @ CHECK-ERRORS:              ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS:         sbfx sp, pc, #4, #5
 @ CHECK-ERRORS:                  ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS:         ubfx pc, r0, #0, #31
 @ CHECK-ERRORS:              ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS:         ubfx r14, pc, #1, #2
 @ CHECK-ERRORS:                   ^
 
@@ -418,7 +435,7 @@
 
         @ Bad CPS instruction format.
         cps f,#1
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,31]
+@ CHECK-ERRORS: error: invalid operand for instruction
 @ CHECK-ERRORS:         cps f,#1
 @ CHECK-ERRORS:               ^
 
@@ -719,3 +736,9 @@ foo2:
 @ CHECK-ERRORS: error: immediate operand must an even number in the range [0, 30]
 @ CHECK-ERRORS: error: immediate operand must a number in the range [0, 255]
 @ CHECK-ERRORS: error: immediate operand must an even number in the range [0, 30]
+
+        @ Generic error for too few operands
+        adds
+        adds r0
+@ CHECK-ERRORS: error: too few operands for instruction
+@ CHECK-ERRORS: error: too few operands for instruction

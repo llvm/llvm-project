@@ -4,7 +4,7 @@
 ; cmp with single-use load, should not form branch.
 define i32 @test1(double %a, double* nocapture %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ucomisd (%rdi), %xmm0
 ; CHECK-NEXT:    cmovbel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
@@ -18,7 +18,7 @@ define i32 @test1(double %a, double* nocapture %b, i32 %x, i32 %y)  {
 ; Sanity check: no load.
 define i32 @test2(double %a, double %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    cmovbel %esi, %edi
 ; CHECK-NEXT:    movl %edi, %eax
@@ -31,7 +31,7 @@ define i32 @test2(double %a, double %b, i32 %x, i32 %y)  {
 ; Multiple uses of the load.
 define i32 @test4(i32 %a, i32* nocapture %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    cmovael %ecx, %edx
@@ -47,7 +47,7 @@ define i32 @test4(i32 %a, i32* nocapture %b, i32 %x, i32 %y)  {
 ; Multiple uses of the cmp.
 define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %edi, (%rsi)
 ; CHECK-NEXT:    cmoval %edi, %ecx
 ; CHECK-NEXT:    cmovael %edx, %ecx
@@ -61,10 +61,28 @@ define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
   ret i32 %cond5
 }
 
+; Zero-extended select.
+define void @test6(i32 %a, i32 %x, i32* %y.ptr, i64* %z.ptr) {
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def %esi killed %esi def %rsi
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl (%rdx), %esi
+; CHECK-NEXT:    movq %rsi, (%rcx)
+; CHECK-NEXT:    retq
+entry:
+  %y = load i32, i32* %y.ptr
+  %cmp = icmp slt i32 %a, 0
+  %z = select i1 %cmp, i32 %x, i32 %y
+  %z.ext = zext i32 %z to i64
+  store i64 %z.ext, i64* %z.ptr
+  ret void
+}
+
 ; If a select is not obviously predictable, don't turn it into a branch.
 define i32 @weighted_select1(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
@@ -77,12 +95,12 @@ define i32 @weighted_select1(i32 %a, i32 %b) {
 ; If a select is obviously predictable, turn it into a branch.
 define i32 @weighted_select2(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB5_2
-; CHECK-NEXT:  # BB#1: # %select.false
+; CHECK-NEXT:    jne .LBB6_2
+; CHECK-NEXT:  # %bb.1: # %select.false
 ; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:  .LBB5_2: # %select.end
+; CHECK-NEXT:  .LBB6_2: # %select.end
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
@@ -96,13 +114,13 @@ define i32 @weighted_select2(i32 %a, i32 %b) {
 ; TODO: But likely true vs. likely false should affect basic block placement?
 define i32 @weighted_select3(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB6_1
-; CHECK-NEXT:  # BB#2: # %select.end
+; CHECK-NEXT:    je .LBB7_1
+; CHECK-NEXT:  # %bb.2: # %select.end
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB6_1: # %select.false
+; CHECK-NEXT:  .LBB7_1: # %select.false
 ; CHECK-NEXT:    movl %esi, %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -114,7 +132,7 @@ define i32 @weighted_select3(i32 %a, i32 %b) {
 ; Weightlessness is no reason to die.
 define i32 @unweighted_select(i32 %a, i32 %b) {
 ; CHECK-LABEL: unweighted_select:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax

@@ -7,10 +7,12 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#include "InstrProfiling.h"
+#if defined(__linux__) || defined(__FreeBSD__) || \
+    (defined(__sun__) && defined(__svr4__))
 
-#if defined(__linux__) || defined(__FreeBSD__)
 #include <stdlib.h>
+
+#include "InstrProfiling.h"
 
 #define PROF_DATA_START INSTR_PROF_SECT_START(INSTR_PROF_DATA_SECT_NAME)
 #define PROF_DATA_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_DATA_SECT_NAME)

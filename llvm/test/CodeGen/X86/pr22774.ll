@@ -6,7 +6,7 @@
 
 define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovdqa {{.*}}(%rip), %ymm0
 ; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vmovdqa %xmm0, {{.*}}(%rip)

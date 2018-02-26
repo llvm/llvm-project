@@ -23,11 +23,14 @@
 #ifndef LLVM_ANALYSIS_INTERVALPARTITION_H
 #define LLVM_ANALYSIS_INTERVALPARTITION_H
 
-#include "llvm/Analysis/Interval.h"
 #include "llvm/Pass.h"
 #include <map>
+#include <vector>
 
 namespace llvm {
+
+class BasicBlock;
+class Interval;
 
 //===----------------------------------------------------------------------===//
 //
@@ -38,17 +41,17 @@ namespace llvm {
 // nodes following it.
 //
 class IntervalPartition : public FunctionPass {
-  typedef std::map<BasicBlock*, Interval*> IntervalMapTy;
+  using IntervalMapTy = std::map<BasicBlock *, Interval *>;
   IntervalMapTy IntervalMap;
 
-  typedef std::vector<Interval*> IntervalListTy;
-  Interval *RootInterval;
-  std::vector<Interval*> Intervals;
+  using IntervalListTy = std::vector<Interval *>;
+  Interval *RootInterval = nullptr;
+  std::vector<Interval *> Intervals;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  IntervalPartition() : FunctionPass(ID), RootInterval(nullptr) {
+  IntervalPartition() : FunctionPass(ID) {
     initializeIntervalPartitionPass(*PassRegistry::getPassRegistry());
   }
 
@@ -58,7 +61,6 @@ public:
   // IntervalPartition ctor - Build a reduced interval partition from an
   // existing interval graph.  This takes an additional boolean parameter to
   // distinguish it from a copy constructor.  Always pass in false for now.
-  //
   IntervalPartition(IntervalPartition &I, bool);
 
   // print - Show contents in human readable format...
@@ -95,17 +97,15 @@ private:
   // addIntervalToPartition - Add an interval to the internal list of intervals,
   // and then add mappings from all of the basic blocks in the interval to the
   // interval itself (in the IntervalMap).
-  //
   void addIntervalToPartition(Interval *I);
 
   // updatePredecessors - Interval generation only sets the successor fields of
   // the interval data structures.  After interval generation is complete,
   // run through all of the intervals and propagate successor info as
   // predecessor info.
-  //
   void updatePredecessors(Interval *Int);
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_INTERVALPARTITION_H

@@ -1,0 +1,77 @@
+# RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -run-pass machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
+
+# CGN-LABEL: name: flat_load_clustering
+# GCN:      FLAT_LOAD_DWORD
+# GCN-NEXT: FLAT_LOAD_DWORD
+--- |
+  define amdgpu_kernel void @flat_load_clustering(i32 addrspace(1)* nocapture %arg, i32 addrspace(2)* nocapture readonly %arg1) {
+  bb:
+    %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+    %idxprom = sext i32 %tid to i64
+    %gep1 = getelementptr inbounds i32, i32 addrspace(2)* %arg1, i64 %idxprom
+    %load1 = load i32, i32 addrspace(2)* %gep1, align 4
+    %gep2 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %idxprom
+    %gep34 = getelementptr inbounds i32, i32 addrspace(2)* %gep1, i64 4
+    %load2 = load i32, i32 addrspace(2)* %gep34, align 4
+    %gep4 = getelementptr inbounds i32, i32 addrspace(1)* %gep2, i64 4
+    store i32 %load1, i32 addrspace(1)* %gep2, align 4
+    store i32 %load2, i32 addrspace(1)* %gep4, align 4
+    ret void
+  }
+
+  declare i32 @llvm.amdgcn.workitem.id.x()
+
+...
+---
+name:            flat_load_clustering
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sreg_64_xexec }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: vgpr_32 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+  - { id: 8, class: vgpr_32 }
+  - { id: 9, class: vreg_64 }
+  - { id: 10, class: vreg_64 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vreg_64 }
+  - { id: 13, class: vreg_64 }
+liveins:
+  - { reg: '%vgpr0', virtual-reg: '%0' }
+  - { reg: '%sgpr4_sgpr5', virtual-reg: '%1' }
+body:             |
+  bb.0.bb:
+    liveins: %vgpr0, %sgpr4_sgpr5
+
+    %1 = COPY %sgpr4_sgpr5
+    %0 = COPY %vgpr0
+    %3 = S_LOAD_DWORDX2_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %1, 8, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %7 = V_LSHLREV_B32_e32 2, %0, implicit %exec
+    %2 = V_MOV_B32_e32 0, implicit %exec
+    undef %12.sub0 = V_ADD_I32_e32 %4.sub0, %7, implicit-def %vcc, implicit %exec
+    %11 = COPY %4.sub1
+    %12.sub1 = V_ADDC_U32_e32 %11, %2, implicit-def dead %vcc, implicit killed %vcc, implicit %exec
+    %5 = FLAT_LOAD_DWORD %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4 from %ir.gep1)
+    undef %9.sub0 = V_ADD_I32_e32 %3.sub0, %7, implicit-def %vcc, implicit %exec
+    %8 = COPY %3.sub1
+    %9.sub1 = V_ADDC_U32_e32 %8, %2, implicit-def dead %vcc, implicit killed %vcc, implicit %exec
+    undef %13.sub0 = V_ADD_I32_e32 16, %12.sub0, implicit-def %vcc, implicit %exec
+    %13.sub1 = V_ADDC_U32_e32 %12.sub1, %2, implicit-def dead %vcc, implicit killed %vcc, implicit %exec
+    %6 = FLAT_LOAD_DWORD %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4 from %ir.gep34)
+    undef %10.sub0 = V_ADD_I32_e32 16, %9.sub0, implicit-def %vcc, implicit %exec
+    %10.sub1 = V_ADDC_U32_e32 %9.sub1, %2, implicit-def dead %vcc, implicit killed %vcc, implicit %exec
+    FLAT_STORE_DWORD %9, %5, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4 into %ir.gep2)
+    FLAT_STORE_DWORD %10, %6, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4 into %ir.gep4)
+    S_ENDPGM
+
+...

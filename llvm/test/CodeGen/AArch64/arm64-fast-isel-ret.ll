@@ -1,4 +1,4 @@
-; RUN: llc -O0 -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
 
 ;; Test returns.
 define void @t0() nounwind ssp {

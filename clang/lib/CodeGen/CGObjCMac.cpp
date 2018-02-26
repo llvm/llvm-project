@@ -4885,10 +4885,7 @@ void CGObjCCommonMac::EmitImageInfo() {
   }
 
   // Indicate whether we're compiling this to run on a simulator.
-  const llvm::Triple &Triple = CGM.getTarget().getTriple();
-  if ((Triple.isiOS() || Triple.isWatchOS()) &&
-      (Triple.getArch() == llvm::Triple::x86 ||
-       Triple.getArch() == llvm::Triple::x86_64))
+  if (CGM.getTarget().getTriple().isSimulatorEnvironment())
     Mod.addModuleFlag(llvm::Module::Error, "Objective-C Is Simulated",
                       eImageInfo_ImageIsSimulated);
 
@@ -5084,14 +5081,14 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
 
   // Drill down into arrays.
   uint64_t numElts = 1;
+  if (auto arrayType = CGM.getContext().getAsIncompleteArrayType(fieldType)) {
+    numElts = 0;
+    fieldType = arrayType->getElementType();
+  }
+  // Unlike incomplete arrays, constant arrays can be nested.
   while (auto arrayType = CGM.getContext().getAsConstantArrayType(fieldType)) {
     numElts *= arrayType->getSize().getZExtValue();
     fieldType = arrayType->getElementType();
-  }
-
-  if (isa<IncompleteArrayType>(fieldType)) {
-    numElts = 0;
-    fieldType = fieldType->getAsArrayTypeUnsafe()->getElementType();
   }
 
   assert(!fieldType->isArrayType() && "ivar of non-constant array type?");
@@ -6620,10 +6617,14 @@ CGObjCNonFragileABIMac::ObjCIvarOffsetVariable(const ObjCInterfaceDecl *ID,
           Ivar->getAccessControl() == ObjCIvarDecl::Private ||
           Ivar->getAccessControl() == ObjCIvarDecl::Package;
 
-      if (ID->hasAttr<DLLExportAttr>() && !IsPrivateOrPackage)
-        IvarOffsetGV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-      else if (ID->hasAttr<DLLImportAttr>())
-        IvarOffsetGV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      const ObjCInterfaceDecl *ContainingID = Ivar->getContainingInterface();
+
+      if (ContainingID->hasAttr<DLLImportAttr>())
+        IvarOffsetGV
+            ->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      else if (ContainingID->hasAttr<DLLExportAttr>() && !IsPrivateOrPackage)
+        IvarOffsetGV
+            ->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
     }
   }
   return IvarOffsetGV;
@@ -7559,8 +7560,9 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
   llvm::Value *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);
-  values.add(llvm::ConstantExpr::getGetElementPtr(VTableGV->getValueType(),
-                                                  VTableGV, VTableIdx));
+  values.add(
+    llvm::ConstantExpr::getInBoundsGetElementPtr(VTableGV->getValueType(),
+                                                 VTableGV, VTableIdx));
   values.add(GetClassName(ClassName));
   values.add(GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition));
 

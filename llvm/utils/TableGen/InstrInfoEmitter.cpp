@@ -588,6 +588,14 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
     OS << "    " << Inst->TheDef->getName() << "\t= " << Num++ << ",\n";
   OS << "    INSTRUCTION_LIST_END = " << Num << "\n";
   OS << "  };\n\n";
+  OS << "} // end " << Namespace << " namespace\n";
+  OS << "} // end llvm namespace\n";
+  OS << "#endif // GET_INSTRINFO_ENUM\n\n";
+
+  OS << "#ifdef GET_INSTRINFO_SCHED_ENUM\n";
+  OS << "#undef GET_INSTRINFO_SCHED_ENUM\n";
+  OS << "namespace llvm {\n\n";
+  OS << "namespace " << Namespace << " {\n";
   OS << "namespace Sched {\n";
   OS << "  enum {\n";
   Num = 0;
@@ -599,7 +607,7 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "} // end " << Namespace << " namespace\n";
   OS << "} // end llvm namespace\n";
 
-  OS << "#endif // GET_INSTRINFO_ENUM\n\n";
+  OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
 
 namespace llvm {

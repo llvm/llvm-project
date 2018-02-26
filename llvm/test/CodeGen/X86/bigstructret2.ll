@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i686-pc-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=i686-pc-linux-gnu | FileCheck %s
 
 ; CHECK: .cfi_startproc
 ; CHECK: .cfi_def_cfa_offset 8

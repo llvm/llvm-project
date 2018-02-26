@@ -39,6 +39,62 @@
 
 /// ###########################################################################
 
+/// Check -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 is passed when compiling for the device.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-EQ-TARGET %s
+
+// CHK-FOPENMP-EQ-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target -mcpu=pwr7 is passed when compiling for the device.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr7 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET %s
+
+// CHK-FOPENMP-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+
+/// ##########################################################################
+
+/// Check -mcpu=pwr7 is passed to the same triple.
+// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -target powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MCPU-TO-SAME-TRIPLE %s
+
+// CHK-FOPENMP-MCPU-TO-SAME-TRIPLE: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+
+/// ##########################################################################
+
+/// Check -march=pwr7 is NOT passed to nvptx64-nvidia-cuda.
+// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -target powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-GPU %s
+
+// CHK-FOPENMP-MARCH-TO-GPU-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+
+/// ###########################################################################
+
+/// Check -march=pwr7 is NOT passed to x86_64-unknown-linux-gnu.
+// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu -target powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-X86 %s
+
+// CHK-FOPENMP-MARCH-TO-X86-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target triggers error when multiple triples are used.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu,powerpc64le-unknown-linux-gnu -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-AMBIGUOUS-ERROR %s
+
+// CHK-FOPENMP-TARGET-AMBIGUOUS-ERROR: clang{{.*}} error: cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target triggers error when an option requiring arguments is passed to it.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR %s
+
+// CHK-FOPENMP-TARGET-NESTED-ERROR: clang{{.*}} error: invalid -Xopenmp-target argument: '-Xopenmp-target -Xopenmp-target', options requiring arguments are unsupported
+
+/// ###########################################################################
+
 /// Check the phases graph when using a single target, different from the host.
 /// We should have an offload action joining the host compile and device
 /// preprocessor and another one joining the device linking outputs to the host

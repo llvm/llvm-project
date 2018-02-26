@@ -142,8 +142,9 @@ void shouldNotCrash() {
                       // expected-note@-1{{Passing null pointer value via 1st parameter 'x'}}
   if (getSymbol()) {  // expected-note  {{Assuming the condition is true}}
                       // expected-note@-1{{Taking true branch}}
-    X *x = Type().x; // expected-note{{'x' initialized to a null pointer value}}
-    x->f(); // expected-warning{{Called C++ object pointer is null}}
+    X *xx = Type().x; // expected-note   {{Null pointer value stored to field 'x'}}
+                      // expected-note@-1{{'xx' initialized to a null pointer value}}
+    xx->f(); // expected-warning{{Called C++ object pointer is null}}
             // expected-note@-1{{Called C++ object pointer is null}}
   }
 }

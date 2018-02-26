@@ -1,5 +1,5 @@
 ; Neither of these functions should contain algebraic right shifts
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep srawi 
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep srawi
 
 define i32 @test1(i32 %mode.0.i.0) {
         %tmp.79 = bitcast i32 %mode.0.i.0 to i32                ; <i32> [#uses=1]

@@ -7,7 +7,7 @@
 
 define void @nop() nounwind {
 ; X32-LABEL: nop:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -20,7 +20,7 @@ define void @nop() nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: nop:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    #APP
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)

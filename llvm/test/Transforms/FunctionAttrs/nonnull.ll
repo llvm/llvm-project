@@ -216,3 +216,14 @@ exc:
   unreachable
 }
 
+; CHECK: define nonnull i32* @gep1(
+define i32* @gep1(i32* %p) {
+  %q = getelementptr inbounds i32, i32* %p, i32 1
+  ret i32* %q
+}
+
+; CHECK: define i32 addrspace(3)* @gep2(
+define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
+  %q = getelementptr inbounds i32, i32 addrspace(3)* %p, i32 1
+  ret i32 addrspace(3)* %q
+}

@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Threading.h"
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif

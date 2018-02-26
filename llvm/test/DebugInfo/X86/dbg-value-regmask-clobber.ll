@@ -5,11 +5,11 @@
 ; of individual register def operands.
 
 ; ASM: main: # @main
-; ASM: #DEBUG_VALUE: main:argc <- %ECX
+; ASM: #DEBUG_VALUE: main:argc <- %ecx
 ; ASM: movl $1, x(%rip)
 ; ASM: callq clobber
 ; ASM-NEXT: [[argc_range_end:.Ltmp[0-9]+]]:
-; Previously LiveDebugValues would claim argc was still in ECX after the call.
+; Previously LiveDebugValues would claim argc was still in ecx after the call.
 ; ASM-NOT: #DEBUG_VALUE: main:argc
 
 ; argc is the first debug location.
@@ -23,7 +23,7 @@
 ; DWARF: .debug_info contents:
 ; DWARF:  DW_TAG_formal_parameter
 ; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ({{0x.*}}
-; DWARF-NEXT:      0x0000000000000000 - 0x0000000000000013: DW_OP_reg2 RCX)
+; DWARF-NEXT:      [0x0000000000000000, 0x0000000000000013): DW_OP_reg2 RCX)
 ; DWARF-NEXT:    DW_AT_name [DW_FORM_strp]     {{.*}} "argc"
 
 ; ModuleID = 't.cpp'

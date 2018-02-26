@@ -9,17 +9,17 @@
 
 define <8 x i16> @test1(<8 x i16> %a) {
 ; SSE-LABEL: test1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i16> %a, <i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11>
@@ -28,17 +28,17 @@ define <8 x i16> @test1(<8 x i16> %a) {
 
 define <8 x i16> @test2(<8 x i16> %a) {
 ; SSE-LABEL: test2:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test2:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test2:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i16> %a, <i16 0, i16 undef, i16 0, i16 0, i16 1, i16 undef, i16 -1, i16 1>
@@ -51,17 +51,17 @@ define <8 x i16> @test2(<8 x i16> %a) {
 
 define <4 x i32> @test3(<4 x i32> %a) {
 ; SSE-LABEL: test3:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pmulld {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test3:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test3:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
@@ -70,17 +70,17 @@ define <4 x i32> @test3(<4 x i32> %a) {
 
 define <4 x i32> @test4(<4 x i32> %a) {
 ; SSE-LABEL: test4:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pmulld {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
@@ -93,19 +93,19 @@ define <4 x i32> @test4(<4 x i32> %a) {
 
 define <16 x i16> @test5(<16 x i16> %a) {
 ; SSE-LABEL: test5:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,4,8,128,1,512,2048]
 ; SSE-NEXT:    pmullw %xmm2, %xmm0
 ; SSE-NEXT:    pmullw %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test5:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test5:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i16> %a, <i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11, i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11>
@@ -118,19 +118,19 @@ define <16 x i16> @test5(<16 x i16> %a) {
 
 define <8 x i32> @test6(<8 x i32> %a) {
 ; SSE-LABEL: test6:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,4,8]
 ; SSE-NEXT:    pmulld %xmm2, %xmm0
 ; SSE-NEXT:    pmulld %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test6:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllvd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test6:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i32> %a, <i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3>
@@ -143,7 +143,7 @@ define <8 x i32> @test6(<8 x i32> %a) {
 
 define <32 x i16> @test7(<32 x i16> %a) {
 ; SSE-LABEL: test7:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,4,8,128,1,512,2048]
 ; SSE-NEXT:    pmullw %xmm4, %xmm0
 ; SSE-NEXT:    pmullw %xmm4, %xmm1
@@ -152,7 +152,7 @@ define <32 x i16> @test7(<32 x i16> %a) {
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test7:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [2,2,4,8,128,1,512,2048,2,2,4,8,128,1,512,2048]
 ; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
@@ -160,7 +160,7 @@ define <32 x i16> @test7(<32 x i16> %a) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test7:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [2,2,4,8,128,1,512,2048,2,2,4,8,128,1,512,2048]
 ; AVX512-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
@@ -175,7 +175,7 @@ define <32 x i16> @test7(<32 x i16> %a) {
 
 define <16 x i32> @test8(<16 x i32> %a) {
 ; SSE-LABEL: test8:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,4,8]
 ; SSE-NEXT:    pmulld %xmm4, %xmm0
 ; SSE-NEXT:    pmulld %xmm4, %xmm1
@@ -184,7 +184,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [1,1,2,3,1,1,2,3]
 ; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
@@ -192,7 +192,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test8:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i32> %a, <i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3>
@@ -203,7 +203,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
 
 define <8 x i64> @test9(<8 x i64> %a) {
 ; SSE-LABEL: test9:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
 ; SSE-NEXT:    psllq $3, %xmm4
 ; SSE-NEXT:    psllq $2, %xmm1
@@ -217,14 +217,14 @@ define <8 x i64> @test9(<8 x i64> %a) {
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test9:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,1,2,3]
 ; AVX2-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllvq %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test9:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsllvq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 1, i64 1, i64 2, i64 3, i64 1, i64 1, i64 2, i64 3>

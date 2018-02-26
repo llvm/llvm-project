@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 | FileCheck %s
 
 ; CHECK: xorps {{.*}}{{LCPI0_0|__xmm@}}
 define void @casin({ double, double }* sret  %agg.result, double %z.0, double %z.1) nounwind  {

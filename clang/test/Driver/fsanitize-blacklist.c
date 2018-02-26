@@ -13,6 +13,7 @@
 // RUN: echo "badline" > %t.bad
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-blacklist=%t.good -fsanitize-blacklist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BLACKLIST
+// RUN: %clang -target aarch64-linux-gnu -fsanitize=hwaddress -fsanitize-blacklist=%t.good -fsanitize-blacklist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BLACKLIST
 // CHECK-BLACKLIST: -fsanitize-blacklist={{.*}}.good" "-fsanitize-blacklist={{.*}}.second
 
 // Now, check for -fdepfile-entry flags.
@@ -20,8 +21,10 @@
 // CHECK-BLACKLIST2: -fdepfile-entry={{.*}}.good" "-fdepfile-entry={{.*}}.second
 
 // Check that the default blacklist is not added as an extra dependency.
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST --implicit-check-not=fdepfile-entry
-// CHECK-DEFAULT-BLACKLIST: -fsanitize-blacklist={{.*}}asan_blacklist.txt
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-ASAN --implicit-check-not=fdepfile-entry
+// CHECK-DEFAULT-BLACKLIST-ASAN: -fsanitize-blacklist={{.*[^w]}}asan_blacklist.txt
+// RUN: %clang -target aarch64-linux-gnu -fsanitize=hwaddress -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-HWASAN --implicit-check-not=fdepfile-entry
+// CHECK-DEFAULT-BLACKLIST-HWASAN: -fsanitize-blacklist={{.*}}hwasan_blacklist.txt
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=integer -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=nullability -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Core/QualTypeNames.h"
+#include "clang/AST/QualTypeNames.h"
 #include "TestVisitor.h"
 using namespace clang;
 

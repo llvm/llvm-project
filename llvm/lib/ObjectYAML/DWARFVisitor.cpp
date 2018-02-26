@@ -34,11 +34,11 @@ void DWARFYAML::VisitorImpl<T>::onVariableSizeValue(uint64_t U, unsigned Size) {
   }
 }
 
-unsigned getOffsetSize(const DWARFYAML::Unit &Unit) {
+static unsigned getOffsetSize(const DWARFYAML::Unit &Unit) {
   return Unit.Length.isDWARF64() ? 8 : 4;
 }
 
-unsigned getRefSize(const DWARFYAML::Unit &Unit) {
+static unsigned getRefSize(const DWARFYAML::Unit &Unit) {
   if (Unit.Version == 2)
     return Unit.AddrSize;
   return getOffsetSize(Unit);
