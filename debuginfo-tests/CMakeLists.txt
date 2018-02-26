@@ -9,6 +9,7 @@ set(DEBUGINFO_TEST_DEPS
   clang
   FileCheck
   count
+  llvm-objdump
   not
   )
 
