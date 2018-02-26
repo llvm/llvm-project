@@ -456,6 +456,10 @@ unsigned Parser::ParseClangAttributeArgs(
     ParseObjCBridgeRelatedAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                     ScopeName, ScopeLoc, Syntax);
     break;
+  case AttributeList::AT_TypeTagForDatatype:
+    ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
+                                     ScopeName, ScopeLoc, Syntax);
+    break;
   }
   return Attrs.getList() ? Attrs.getList()->getNumArgs() : 0;
 }
