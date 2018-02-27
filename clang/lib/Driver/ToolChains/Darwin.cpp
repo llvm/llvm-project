@@ -452,7 +452,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // we follow suite for ease of comparison.
   AddLinkArgs(C, Args, CmdArgs, Inputs);
 
-  // For LTO, pass the name of the optimization record file.
+  // For LTO, pass the name of the optimization record file and other
+  // opt-remarks flags.
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-mllvm");
@@ -467,6 +468,14 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (getLastProfileUseArg(Args)) {
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-lto-pass-remarks-with-hotness");
+
+      if (const Arg *A =
+              Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
+        CmdArgs.push_back("-mllvm");
+        std::string Opt =
+            std::string("-lto-pass-remarks-hotness-threshold=") + A->getValue();
+        CmdArgs.push_back(Args.MakeArgString(Opt));
+      }
     }
   }
 

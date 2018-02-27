@@ -126,12 +126,12 @@ define <2 x float> @not_exact_inverse_vec_arcp(<2 x float> %x) {
 
 define float @div_with_div_numerator(float %x, float %y, float %z) {
 ; CHECK-LABEL: @div_with_div_numerator(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul ninf float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp float [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
   %div1 = fdiv ninf float %x, %y
-  %div2 = fdiv fast float %div1, %z
+  %div2 = fdiv arcp reassoc float %div1, %z
   ret float %div2
 }
 
@@ -139,12 +139,12 @@ define float @div_with_div_numerator(float %x, float %y, float %z) {
 
 define <2 x float> @div_with_div_denominator(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @div_with_div_denominator(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul nnan <2 x float> [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast <2 x float> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp <2 x float> [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp <2 x float> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV2]]
 ;
   %div1 = fdiv nnan <2 x float> %x, %y
-  %div2 = fdiv fast <2 x float> %z, %div1
+  %div2 = fdiv arcp reassoc <2 x float> %z, %div1
   ret <2 x float> %div2
 }
 
@@ -342,8 +342,8 @@ define <2 x float> @div_constant_dividend2_reassoc_only(<2 x float> %x) {
 
 define <2 x float> @div_constant_dividend3(<2 x float> %x) {
 ; CHECK-LABEL: @div_constant_dividend3(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv <2 x float> <float 3.000000e+00, float 7.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 1.500000e+01, float -7.000000e+00>, [[T1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp <2 x float> [[X:%.*]], <float 1.500000e+01, float -7.000000e+00>
+; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc arcp <2 x float> [[TMP1]], <float 0x3FD5555560000000, float 0x3FC24924A0000000>
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
   %t1 = fdiv <2 x float> <float 3.0e0, float 7.0e0>, %x

@@ -29,7 +29,7 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; CHECK:  [[VRA:%.*]]:gpr64 = LDRXui %fixed-stack.3
 ; CHECK:  [[VRB:%.*]]:gpr64 = LDRXui %fixed-stack.2
 ; CHECK:  STRXui %{{.*}}, %fixed-stack.0
-; CHECK:  STRXui [[VRB]], %fixed-stack.1
+; CHECK:  STRXui [[VRB]]{{[^,]*}}, %fixed-stack.1
 
 ; Make sure that there is an dependence edge between fi#-2 and fi#-4.
 ; Without this edge the scheduler would be free to move the store accross the load.

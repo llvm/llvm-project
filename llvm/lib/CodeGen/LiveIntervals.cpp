@@ -1291,6 +1291,36 @@ private:
           if (OldIdxIn != E && SlotIndex::isEarlierInstr(NewIdx, OldIdxIn->end))
             OldIdxIn->end = NewIdx.getRegSlot();
         }
+      } else if (OldIdxIn != E
+          && SlotIndex::isEarlierInstr(NewIdxOut->start, NewIdx)
+          && SlotIndex::isEarlierInstr(NewIdx, NewIdxOut->end)) {
+        // OldIdxVNI is a dead def that has been moved into the middle of
+        // another value in LR. That can happen when LR is a whole register,
+        // but the dead def is a write to a subreg that is dead at NewIdx.
+        // The dead def may have been moved across other values
+        // in LR, so move OldIdxOut up to NewIdxOut. Slide [NewIdxOut;OldIdxOut)
+        // down one position.
+        //    |- X0/NewIdxOut -| ... |- Xn-1 -| |- Xn/OldIdxOut -| |- next - |
+        // => |- X0/NewIdxOut -| |- X0 -| ... |- Xn-1 -| |- next -|
+        std::copy_backward(NewIdxOut, OldIdxOut, std::next(OldIdxOut));
+        // Modify the segment at NewIdxOut and the following segment to meet at
+        // the point of the dead def, with the following segment getting
+        // OldIdxVNI as its value number.
+        *NewIdxOut = LiveRange::Segment(
+            NewIdxOut->start, NewIdxDef.getRegSlot(), NewIdxOut->valno);
+        *(NewIdxOut + 1) = LiveRange::Segment(
+            NewIdxDef.getRegSlot(), (NewIdxOut + 1)->end, OldIdxVNI);
+        OldIdxVNI->def = NewIdxDef;
+        // Modify subsequent segments to be defined by the moved def OldIdxVNI.
+        for (auto Idx = NewIdxOut + 2; Idx <= OldIdxOut; ++Idx)
+          Idx->valno = OldIdxVNI;
+        // Aggressively remove all dead flags from the former dead definition.
+        // Kill/dead flags shouldn't be used while live intervals exist; they
+        // will be reinserted by VirtRegRewriter.
+        if (MachineInstr *KillMI = LIS.getInstructionFromIndex(NewIdx))
+          for (MIBundleOperands MO(*KillMI); MO.isValid(); ++MO)
+            if (MO->isReg() && !MO->isUse())
+              MO->setIsDead(false);
       } else {
         // OldIdxVNI is a dead def. It may have been moved across other values
         // in LR, so move OldIdxOut up to NewIdxOut. Slide [NewIdxOut;OldIdxOut)

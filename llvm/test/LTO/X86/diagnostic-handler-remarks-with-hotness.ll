@@ -8,6 +8,18 @@
 ; RUN:          -exported-symbol _main -o %t.o %t.bc
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
+; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
+; RUN:          -lto-pass-remarks-with-hotness \
+; RUN:          -lto-pass-remarks-hotness-threshold=400 \
+; RUN:          -exported-symbol _main -o %t.o %t.bc
+; RUN: cat %t.yaml | FileCheck -allow-empty -check-prefix=YAML_TH_HIGH %s
+
+; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
+; RUN:          -lto-pass-remarks-with-hotness \
+; RUN:          -lto-pass-remarks-hotness-threshold=200 \
+; RUN:          -exported-symbol _main -o %t.o %t.bc
+; RUN: cat %t.yaml | FileCheck -allow-empty -check-prefix=YAML %s
+
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            inline
 ; YAML-NEXT: Name:            Inlined
@@ -23,6 +35,9 @@
 ; YAML-NEXT:   - Threshold:       '337'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
+
+; YAML_TH_HIGH-NOT: Name:            Inlined
+
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-darwin"

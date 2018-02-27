@@ -74,11 +74,11 @@ int main()
     {
     std::vector<unsigned char> v(10);
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::vector<int> res;
+    std::vector<size_t> res;
     std::exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 1, std::multiplies<>());
 
     assert(res.size() == 10);
-    int j = 1;
+    size_t j = 1;
     assert(res[0] == 1);
     for (size_t i = 1; i < v.size(); ++i)
     {

@@ -33,9 +33,9 @@ class TestConflictingSymbols(TestBase):
             target, ['One', 'Two'])
 
         lldbutil.run_break_set_by_source_regexp(self, '// break here',
-                extra_options='-f One.c')
+                extra_options='-f One.c', num_expected_locations=-2)
         lldbutil.run_break_set_by_source_regexp(self, '// break here',
-                extra_options='-f Two.c')
+                extra_options='-f Two.c', num_expected_locations=-2)
         lldbutil.run_break_set_by_source_regexp(self, '// break here',
                 extra_options='-f main.c', num_expected_locations=1)
 

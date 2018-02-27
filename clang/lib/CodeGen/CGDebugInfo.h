@@ -502,6 +502,9 @@ private:
   Optional<llvm::DIFile::ChecksumKind>
   computeChecksum(FileID FID, SmallString<32> &Checksum) const;
 
+  /// Get the source of the given file ID.
+  Optional<StringRef> getSource(const SourceManager &SM, FileID FID);
+
   /// Get the file debug info descriptor for the input location.
   llvm::DIFile *getOrCreateFile(SourceLocation Loc);
 

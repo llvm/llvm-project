@@ -11,10 +11,10 @@
 
 #include "lldb/Utility/Stream.h"
 
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"            // for iterator_facade_base
 #include "llvm/Support/Allocator.h"       // for BumpPtrAllocator
+#include "llvm/Support/DJB.h"             // for djbHash
 #include "llvm/Support/FormatProviders.h" // for format_provider
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
@@ -171,7 +171,7 @@ public:
 
 protected:
   uint8_t hash(const llvm::StringRef &s) const {
-    uint32_t h = llvm::HashString(s);
+    uint32_t h = llvm::djbHash(s);
     return ((h >> 24) ^ (h >> 16) ^ (h >> 8) ^ h) & 0xff;
   }
 
