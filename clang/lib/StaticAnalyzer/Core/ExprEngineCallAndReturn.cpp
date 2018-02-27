@@ -653,7 +653,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // initializers for array fields in default move/copy constructors.
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
-    if (CallOpts.IsArrayConstructorOrDestructor)
+    if (CallOpts.IsArrayCtorOrDtor)
       return CIP_DisallowedOnce;
 
     // Inlining constructors requires including initializers in the CFG.
@@ -673,14 +673,14 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete) {
       // If we don't handle temporary destructors, we shouldn't inline
       // their constructors.
-      if (CallOpts.IsConstructorIntoTemporary &&
+      if (CallOpts.IsTemporaryCtorOrDtor &&
           !Opts.includeTemporaryDtorsInCFG())
         return CIP_DisallowedOnce;
 
-      // If we did not construct the correct this-region, it would be pointless
+      // If we did not find the correct this-region, it would be pointless
       // to inline the constructor. Instead we will simply invalidate
       // the fake temporary target.
-      if (CallOpts.IsConstructorWithImproperlyModeledTargetRegion)
+      if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
     }
 
@@ -696,9 +696,14 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     (void)ADC;
 
     // FIXME: We don't handle constructors or destructors for arrays properly.
-    if (CallOpts.IsArrayConstructorOrDestructor)
+    if (CallOpts.IsArrayCtorOrDtor)
       return CIP_DisallowedOnce;
 
+    // If we did not find the correct this-region, it would be pointless
+    // to inline the destructor. Instead we will simply invalidate
+    // the fake temporary target.
+    if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
+      return CIP_DisallowedOnce;
     break;
   }
   case CE_CXXAllocator:
@@ -846,14 +851,6 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   AnalyzerOptions &Opts = AMgr.options;
   AnalysisDeclContextManager &ADCMgr = AMgr.getAnalysisDeclContextManager();
   AnalysisDeclContext *CalleeADC = ADCMgr.getContext(D);
-
-  // Temporary object destructor processing is currently broken, so we never
-  // inline them.
-  // FIXME: Remove this once temp destructors are working.
-  if (isa<CXXDestructorCall>(Call)) {
-    if ((*currBldrCtx->getBlock())[currStmtIdx].getAs<CFGTemporaryDtor>())
-      return false;
-  }
 
   // The auto-synthesized bodies are essential to inline as they are
   // usually small and commonly used. Note: we should do this check early on to
