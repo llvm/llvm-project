@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core -mllvm -debug-only MemRegion %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core -mllvm -debug-only=MemRegion %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 int **h;
