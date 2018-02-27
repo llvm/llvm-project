@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify %s
-// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true -DTEMPORARIES -verify %s
+// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=true -DTEMPORARIES -verify %s
 
 void clang_analyzer_eval(bool);
 
@@ -39,10 +39,18 @@ void f() {
   const int &y = A().j[1]; // no-crash
   const int &z = (A().j[1], A().j[0]); // no-crash
 
-  // FIXME: All of these should be TRUE, but constructors aren't inlined.
-  clang_analyzer_eval(x == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(y == 3); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(z == 2); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(x == 1);
+  clang_analyzer_eval(y == 3);
+  clang_analyzer_eval(z == 2);
+#ifdef TEMPORARIES
+ // expected-warning@-4{{TRUE}}
+ // expected-warning@-4{{TRUE}}
+ // expected-warning@-4{{TRUE}}
+#else
+ // expected-warning@-8{{UNKNOWN}}
+ // expected-warning@-8{{UNKNOWN}}
+ // expected-warning@-8{{UNKNOWN}}
+#endif
 }
 } // end namespace pr19539_crash_on_destroying_an_integer
 
@@ -136,7 +144,12 @@ void f5() {
     const bool &x = C(true, &after, &before).x; // no-crash
   }
   // FIXME: Should be TRUE. Should not warn about garbage value.
-  clang_analyzer_eval(after == before); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(after == before);
+#ifdef TEMPORARIES
+  // expected-warning@-2{{The left operand of '==' is a garbage value}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
 }
 } // end namespace maintain_original_object_address_on_lifetime_extension
 
