@@ -106,6 +106,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -870,7 +871,7 @@ ASTSelectorLookupTrait::ReadData(Selector, const unsigned char* d,
 }
 
 unsigned ASTIdentifierLookupTraitBase::ComputeHash(const internal_key_type& a) {
-  return llvm::HashString(a);
+  return llvm::djbHash(a);
 }
 
 std::pair<unsigned, unsigned>
@@ -3226,7 +3227,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         PP.getPreprocessingRecord()->SetExternalSource(*this);
       F.BasePreprocessedSkippedRangeID = PP.getPreprocessingRecord()
           ->allocateSkippedRanges(F.NumPreprocessedSkippedRanges);
-      
+
       if (F.NumPreprocessedSkippedRanges > 0)
         GlobalSkippedRangeMap.insert(
             std::make_pair(F.BasePreprocessedSkippedRangeID, &F));

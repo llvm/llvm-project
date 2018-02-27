@@ -64,17 +64,15 @@ define void @test_volatile_load(double* %a, double* %b, double* %c) {
 ; CHECK-LABEL: @test_volatile_load(
 ; CHECK-NEXT:    [[I0:%.*]] = load volatile double, double* [[A:%.*]], align 8
 ; CHECK-NEXT:    [[I1:%.*]] = load volatile double, double* [[B:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[I0]], [[I1]]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A]], i64 1
 ; CHECK-NEXT:    [[I3:%.*]] = load double, double* [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B]], i64 1
 ; CHECK-NEXT:    [[I4:%.*]] = load double, double* [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[I0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[I3]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[I1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[I4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[C:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
+; CHECK-NEXT:    [[MUL5:%.*]] = fmul double [[I3]], [[I4]]
+; CHECK-NEXT:    store double [[MUL]], double* [[C:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[C]], i64 1
+; CHECK-NEXT:    store double [[MUL5]], double* [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %i0 = load volatile double, double* %a, align 8

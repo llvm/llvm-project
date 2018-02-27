@@ -1703,6 +1703,11 @@ def gz : Flag<["-"], "gz">, Group<g_flags_Group>,
     HelpText<"DWARF debug sections compression type">;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
     HelpText<"DWARF debug sections compression type">;
+def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>, Flags<[CC1Option]>,
+    HelpText<"Embed source text in DWARF debug sections">;
+def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
+    Flags<[DriverOption]>,
+    HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"Display available options">;

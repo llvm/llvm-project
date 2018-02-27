@@ -87,38 +87,38 @@ test()
         }
 }
 
-int triangle(int n) { return n*(n+1)/2; }
+size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
 void basic_tests()
 {
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::fill(v.begin(), v.end(), 3);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, 50);
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, size_t{50});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 50 + (int) (i + 1) * 4);
+        assert(v[i] == 50 + (i + 1) * 4);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 0);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, 30);
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, size_t{30});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 30 + triangle(i) + (int) (i + 1));
+        assert(v[i] == 30 + triangle(i) + i + 1);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 1);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, 40);
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, size_t{40});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 40 + triangle(i + 1) + (int) (i + 1));
+        assert(v[i] == 40 + triangle(i + 1) + i + 1);
     }
 
     {
-    std::vector<int> v, res;
-    std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), add_one{}, 1);
+    std::vector<size_t> v, res;
+    std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), add_one{}, size_t{1});
     assert(res.empty());
     }
 
@@ -126,11 +126,11 @@ void basic_tests()
     {
     std::vector<unsigned char> v(10);
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::vector<int> res;
-    std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::multiplies<>(), add_one{}, 1);
+    std::vector<size_t> res;
+    std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::multiplies<>(), add_one{}, size_t{1});
 
     assert(res.size() == 10);
-    int j = 2;
+    size_t j = 2;
     assert(res[0] == 2);
     for (size_t i = 1; i < res.size(); ++i)
     {

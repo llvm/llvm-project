@@ -10,10 +10,10 @@ class TestUnicodeSymbols(TestBase):
 
     def test_union_members(self):
         self.build()
-	spec = lldb.SBModuleSpec()
-	spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact("a.out")))
-	module = lldb.SBModule(spec)
-	self.assertTrue(module.IsValid())
-	mytype = module.FindFirstType("foobár")
-	self.assertTrue(mytype.IsValid())
-	self.assertTrue(mytype.IsPointerType())
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact("a.out")))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module.IsValid())
+        mytype = module.FindFirstType("foobár")
+        self.assertTrue(mytype.IsValid())
+        self.assertTrue(mytype.IsPointerType())

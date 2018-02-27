@@ -12,7 +12,7 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/DJB.h"
 #include <cstring>
 #include <map>
 #include <vector>
@@ -65,7 +65,7 @@ private:
     static StringRef getEmptyKey() { return StringRef(); }
     static StringRef getTombstoneKey() { return StringRef(" ", 1); }
     static unsigned getHashValue(StringRef const val) {
-      return llvm::HashString(val);
+      return llvm::djbHash(val, 0);
     }
     static bool isEqual(StringRef const lhs, StringRef const rhs) {
       return lhs.equals(rhs);

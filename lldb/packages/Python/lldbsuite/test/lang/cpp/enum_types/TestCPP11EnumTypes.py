@@ -14,6 +14,7 @@ class CPP11EnumTypesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_int8_t(self):
         """Test C++11 enumeration class types as int8_t types."""
         self.build(
@@ -21,6 +22,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int8_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_int16_t(self):
         """Test C++11 enumeration class types as int16_t types."""
         self.build(
@@ -28,6 +30,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int16_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_int32_t(self):
         """Test C++11 enumeration class types as int32_t types."""
         self.build(
@@ -35,6 +38,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int32_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_int64_t(self):
         """Test C++11 enumeration class types as int64_t types."""
         self.build(
@@ -42,6 +46,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=int64_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_uint8_t(self):
         """Test C++11 enumeration class types as uint8_t types."""
         self.build(
@@ -49,6 +54,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint8_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_uint16_t(self):
         """Test C++11 enumeration class types as uint16_t types."""
         self.build(
@@ -56,6 +62,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint16_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_uint32_t(self):
         """Test C++11 enumeration class types as uint32_t types."""
         self.build(
@@ -63,6 +70,7 @@ class CPP11EnumTypesTestCase(TestBase):
                 'CFLAGS_EXTRAS': '"-DTEST_BLOCK_CAPTURED_VARS=uint32_t"'})
         self.image_lookup_for_enum_type()
 
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     def test_uint64_t(self):
         """Test C++11 enumeration class types as uint64_t types."""
         self.build(

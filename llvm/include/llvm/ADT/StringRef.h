@@ -855,6 +855,10 @@ namespace llvm {
   /// constexpr StringLiteral S("test");
   ///
   class StringLiteral : public StringRef {
+  private:
+    constexpr StringLiteral(const char *Str, size_t N) : StringRef(Str, N) {
+    }
+
   public:
     template <size_t N>
     constexpr StringLiteral(const char (&Str)[N])
@@ -866,6 +870,12 @@ namespace llvm {
 #pragma clang diagnostic pop
 #endif
         : StringRef(Str, N - 1) {
+    }
+
+    // Explicit construction for strings like "foo\0bar".
+    template <size_t N>
+    static constexpr StringLiteral withInnerNUL(const char (&Str)[N]) {
+      return StringLiteral(Str, N - 1);
     }
   };
 

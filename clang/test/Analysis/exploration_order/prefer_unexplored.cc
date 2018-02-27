@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core -analyzer-config exploration_strategy=unexplored_first -analyzer-output=text -verify %s | FileCheck %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core -analyzer-config exploration_strategy=unexplored_first_queue -analyzer-output=text -verify %s | FileCheck %s
 
 extern int coin();
 

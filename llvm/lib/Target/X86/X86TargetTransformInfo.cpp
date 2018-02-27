@@ -438,6 +438,14 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i64,      8 }, // 3*pmuludq/3*shift/2*add
 
+    { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
+
+    { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
+
     // Vectorizing division is a bad idea. See the SSE2 table for more comments.
     { ISD::SDIV,    MVT::v16i32, 16*20 },
     { ISD::SDIV,    MVT::v8i64,   8*20 },
@@ -577,6 +585,13 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
     { ISD::MUL,  MVT::v4i64,      8 }, // 3*pmuludq/3*shift/2*add
 
+    { ISD::FADD, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FADD, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FSUB, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+
     { ISD::FDIV, MVT::f32,        7 }, // Haswell from http://www.agner.org/
     { ISD::FDIV, MVT::v4f32,      7 }, // Haswell from http://www.agner.org/
     { ISD::FDIV, MVT::v8f32,     14 }, // Haswell from http://www.agner.org/
@@ -637,6 +652,21 @@ int X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
 
   static const CostTblEntry SSE42CostTable[] = {
+    { ISD::FADD, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::f32,     1 }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+
+    { ISD::FSUB, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f32 ,    1 }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+
+    { ISD::FMUL, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::f32,     1 }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+
     { ISD::FDIV,  MVT::f32,   14 }, // Nehalem from http://www.agner.org/
     { ISD::FDIV,  MVT::v4f32, 14 }, // Nehalem from http://www.agner.org/
     { ISD::FDIV,  MVT::f64,   22 }, // Nehalem from http://www.agner.org/

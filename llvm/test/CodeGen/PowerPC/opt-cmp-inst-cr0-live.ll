@@ -42,7 +42,7 @@ bar:
 
 ; CHECK-LABEL: fn3
 define signext i32 @fn3(i32 %a) {
-; CHECK: ANDIo killed {{[%0-9]+}}, 10, implicit-def $cr0
+; CHECK: ANDIo killed {{[%0-9]+}}{{[^,]*}}, 10, implicit-def $cr0
 ; CHECK: [[CREG:[^, ]+]]:crrc = COPY $cr0
 ; CHECK: BCC 76, killed [[CREG]]
   %1 = and i32 %a, 10
