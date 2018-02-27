@@ -109,10 +109,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
 
   // See if we're constructing an existing region by looking at the
   // current construction context.
-  const NodeBuilderContext &CurrBldrCtx = getBuilderContext();
-  const CFGBlock *B = CurrBldrCtx.getBlock();
-  const CFGElement &E = (*B)[currStmtIdx];
-  if (auto CC = E.getAs<CFGConstructor>()) {
+  if (auto CC = getCurrentCFGElement().getAs<CFGConstructor>()) {
     if (const Stmt *TriggerStmt = CC->getTriggerStmt()) {
       if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(TriggerStmt)) {
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
