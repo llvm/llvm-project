@@ -678,6 +678,11 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       // the fake temporary target.
       if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
+
+      // If the temporary is lifetime-extended by binding a smaller object
+      // within it to a reference, automatic destructors don't work properly.
+      if (CallOpts.IsTemporaryLifetimeExtendedViaSubobject)
+        return CIP_DisallowedOnce;
     }
 
     break;
