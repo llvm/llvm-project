@@ -49,6 +49,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Driver/Driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -2640,6 +2641,15 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
       GetCompilerInvocation().getClangImporterOptions();
   if (!m_initialized_clang_importer_options) {
     m_initialized_clang_importer_options = true;
+
+    // Set the Clang module search path.
+    llvm::SmallString<128> Path;
+    // FIXME: This should be querying
+    // target.GetClangModulesCachePath(), but most of the times there
+    // is no target available when this function is called.
+    clang::driver::Driver::getDefaultModuleCachePath(Path);
+    clang_importer_options.ModuleCachePath = Path.str();
+
     FileSpec clang_dir_spec;
     if (HostInfo::GetLLDBPath(ePathTypeClangDir, clang_dir_spec))
       clang_importer_options.OverrideResourceDir =
