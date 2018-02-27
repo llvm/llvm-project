@@ -418,11 +418,13 @@ std::string MachTask::GetProfileData(DNBProfileDataScanType scanType) {
       
       profile_data_stream << "phys_footprint:" << phys_footprint << ';';
     }
+      
+    if (scanType & eProfileMemoryCap) {
+      profile_data_stream << "mem_cap:" << memory_cap << ';';
+    }
 
-// proc_pid_rusage pm_sample_task_and_pid pm_energy_impact needs to be tested
-// for weakness in Cab
 #ifdef LLDB_ENERGY
-    if ((scanType & eProfileEnergy) && (pm_sample_task_and_pid != NULL)) {
+    if (scanType & eProfileEnergy) {
       struct rusage_info_v2 info;
       int rc = proc_pid_rusage(pid, RUSAGE_INFO_V2, (rusage_info_t *)&info);
       if (rc == 0) {
