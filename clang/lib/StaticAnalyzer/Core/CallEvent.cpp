@@ -587,7 +587,15 @@ void CXXInstanceCall::getInitialStackFrameContents(
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       bool Failed;
       ThisVal = StateMgr.getStoreManager().attemptDownCast(ThisVal, Ty, Failed);
-      assert(!Failed && "Calling an incorrectly devirtualized method");
+      if (Failed) {
+        // We might have suffered some sort of placement new earlier, so
+        // we're constructing in a completely unexpected storage.
+        // Fall back to a generic pointer cast for this-value.
+        const CXXMethodDecl *StaticMD = cast<CXXMethodDecl>(getDecl());
+        const CXXRecordDecl *StaticClass = StaticMD->getParent();
+        QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
+        ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
+      }
     }
 
     if (!ThisVal.isUnknown())
