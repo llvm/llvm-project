@@ -1965,11 +1965,11 @@ static void checkForSectionOverlap(ArrayRef<OutputSection *> AllSections,
             [=](const OutputSection *A, const OutputSection *B) {
               return GetStart(A) < GetStart(B);
             });
-  for (size_t i = 0; i < Sections.size(); ++i) {
-    OutputSection *Sec = Sections[i];
+  for (size_t I = 0; I < Sections.size(); ++I) {
+    OutputSection *Sec = Sections[I];
     uint64_t Start = GetStart(Sec);
-    for (auto *Other : ArrayRef<OutputSection *>(Sections).slice(i + 1)) {
-      // Since the sections are storted by start address we only need to check
+    for (auto *Other : ArrayRef<OutputSection *>(Sections).slice(I + 1)) {
+      // Since the sections are sorted by start address we only need to check
       // whether the other sections starts before the end of Sec. If this is
       // not the case we can break out of this loop since all following sections
       // will also start after the end of Sec.

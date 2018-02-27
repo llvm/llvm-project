@@ -387,8 +387,21 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
       const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64);
       BuildMI(MBB, I, DL, GetPC64, Rsrc01);
     }
+    auto GitPtrLo = AMDGPU::SGPR0; // Low GIT address passed in
+    if (ST.hasMergedShaders()) {
+      switch (MF.getFunction().getCallingConv()) {
+        case CallingConv::AMDGPU_HS:
+        case CallingConv::AMDGPU_GS:
+          // Low GIT address is passed in s8 rather than s0 for an LS+HS or
+          // ES+GS merged shader on gfx9+.
+          GitPtrLo = AMDGPU::SGPR8;
+          break;
+        default:
+          break;
+      }
+    }
     BuildMI(MBB, I, DL, SMovB32, RsrcLo)
-      .addReg(AMDGPU::SGPR0) // Low address passed in
+      .addReg(GitPtrLo)
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
     // We now have the GIT ptr - now get the scratch descriptor from the entry
