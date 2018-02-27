@@ -1,5 +1,5 @@
+// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core -mllvm -debug-only MemRegion %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core -mllvm -debug %s 2>&1 | FileCheck %s
 
 int **h;
 int overflow_in_memregion(long j) {
@@ -9,5 +9,4 @@ int overflow_in_memregion(long j) {
   }
   return 0;
 }
-// CHECK: {{.*}}
 // CHECK: MemRegion::getAsArrayOffset: offset overflowing, returning unknown
