@@ -752,25 +752,6 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   }
 }
 
-static bool isAllSectionDescription(const OutputSection &Cmd) {
-  // We do not remove empty sections that are explicitly
-  // assigned to any segment.
-  if (!Cmd.Phdrs.empty())
-    return false;
-
-  // We do not want to remove sections that have custom address or align
-  // expressions set even if them are empty. We keep them because we
-  // want to be sure that any expressions can be evaluated and report
-  // an error otherwise.
-  if (Cmd.AddrExpr || Cmd.AlignExpr || Cmd.LMAExpr)
-    return false;
-
-  for (BaseCommand *Base : Cmd.SectionCommands)
-    if (!isa<InputSectionDescription>(*Base))
-      return false;
-  return true;
-}
-
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -803,7 +784,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       continue;
     }
 
-    if (!isAllSectionDescription(*Sec))
+    if (!Sec->isAllSectionDescription())
       Sec->Flags = Flags;
     else
       Cmd = nullptr;

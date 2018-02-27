@@ -342,6 +342,10 @@
 // RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_HOTNESS %s < %t.log
 // PASS_REMARKS_WITH_HOTNESS: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml" "-mllvm" "-lto-pass-remarks-with-hotness"
 
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -fprofile-instr-use=blah -fdiagnostics-hotness-threshold=100 -### -o foo/bar.out 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_HOTNESS_THRESHOLD %s < %t.log
+// PASS_REMARKS_WITH_HOTNESS_THRESHOLD: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml" "-mllvm" "-lto-pass-remarks-with-hotness" "-mllvm" "-lto-pass-remarks-hotness-threshold=100"
+
 // RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log

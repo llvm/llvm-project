@@ -87,38 +87,38 @@ test()
         }
 }
 
-int triangle(int n) { return n*(n+1)/2; }
+size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
 void basic_tests()
 {
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::fill(v.begin(), v.end(), 3);
-    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 50, std::plus<>(), add_one{});
+    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), size_t{50}, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 50 + (int) i * 4);
+        assert(v[i] == 50 + i * 4);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 0);
-    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 30, std::plus<>(), add_one{});
+    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), size_t{30}, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 30 + triangle(i - 1) + (int) i);
+        assert(v[i] == 30 + triangle(i - 1) + i);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 1);
-    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 40, std::plus<>(), add_one{});
+    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), size_t{40}, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 40 + triangle(i) + (int) i);
+        assert(v[i] == 40 + triangle(i) + i);
     }
 
     {
-    std::vector<int> v, res;
-    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 40, std::plus<>(), add_one{});
+    std::vector<size_t> v, res;
+    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), size_t{40}, std::plus<>(), add_one{});
     assert(res.empty());
     }
 
@@ -126,11 +126,11 @@ void basic_tests()
     {
     std::vector<unsigned char> v(10);
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::vector<int> res;
-    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 1, std::multiplies<>(), add_one{});
+    std::vector<size_t> res;
+    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), size_t{1}, std::multiplies<>(), add_one{});
 
     assert(res.size() == 10);
-    int j = 1;
+    size_t j = 1;
     assert(res[0] == 1);
     for (size_t i = 1; i < res.size(); ++i)
     {

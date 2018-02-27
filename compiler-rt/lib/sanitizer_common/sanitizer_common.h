@@ -112,7 +112,7 @@ bool MprotectReadOnly(uptr addr, uptr size);
 
 // Find an available address space.
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
-                              uptr *largest_gap_found);
+                              uptr *largest_gap_found, uptr *max_occupied_addr);
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);

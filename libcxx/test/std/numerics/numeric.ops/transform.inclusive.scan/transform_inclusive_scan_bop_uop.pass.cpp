@@ -76,39 +76,39 @@ test()
         }
 }
 
-int triangle(int n) { return n*(n+1)/2; }
+size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
 void basic_tests()
 {
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::fill(v.begin(), v.end(), 3);
     std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{});
-    std::copy(v.begin(), v.end(), std::ostream_iterator<int>(std::cout, " "));
+    std::copy(v.begin(), v.end(), std::ostream_iterator<size_t>(std::cout, " "));
     std::cout << std::endl;
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == (int)(i+1) * 4);
+        assert(v[i] == (i+1) * 4);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 0);
     std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == triangle(i) + (int)(i + 1));
+        assert(v[i] == triangle(i) + i + 1);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 1);
     std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == triangle(i + 1) + (int)(i + 1));
+        assert(v[i] == triangle(i + 1) + i + 1);
     }
 
     {
-    std::vector<int> v, res;
+    std::vector<size_t> v, res;
     std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), add_one{});
     assert(res.empty());
     }

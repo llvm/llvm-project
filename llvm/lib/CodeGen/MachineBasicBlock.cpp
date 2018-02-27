@@ -328,7 +328,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   bool HasLineAttributes = false;
 
   // Print the preds of this block according to the CFG.
-  if (!pred_empty()) {
+  if (!pred_empty() && IsStandalone) {
     if (Indexes) OS << '\t';
     // Don't indent(2), align with previous line attributes.
     OS << "; predecessors: ";
@@ -354,7 +354,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
            << format("0x%08" PRIx32, getSuccProbability(I).getNumerator())
            << ')';
     }
-    if (!Probs.empty()) {
+    if (!Probs.empty() && IsStandalone) {
       // Print human readable probabilities as comments.
       OS << "; ";
       for (auto I = succ_begin(), E = succ_end(); I != E; ++I) {
@@ -419,7 +419,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (IsInBundle)
     OS.indent(2) << "}\n";
 
-  if (IrrLoopHeaderWeight) {
+  if (IrrLoopHeaderWeight && IsStandalone) {
     if (Indexes) OS << '\t';
     OS.indent(2) << "; Irreducible loop header weight: "
                  << IrrLoopHeaderWeight.getValue() << '\n';

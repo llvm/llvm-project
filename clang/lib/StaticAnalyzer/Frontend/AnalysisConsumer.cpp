@@ -389,7 +389,10 @@ private:
 
   /// \brief Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
+  void runAnalysisOnTranslationUnit(ASTContext &C);
 
+  /// Print \p S to stderr if \c Opts->AnalyzerDisplayProgress is set.
+  void reportAnalyzerProgress(StringRef S);
 };
 } // end anonymous namespace
 
@@ -511,51 +514,72 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
   }
 }
 
+static bool isBisonFile(ASTContext &C) {
+  const SourceManager &SM = C.getSourceManager();
+  FileID FID = SM.getMainFileID();
+  StringRef Buffer = SM.getBuffer(FID)->getBuffer();
+  if (Buffer.startswith("/* A Bison parser, made by"))
+    return true;
+  return false;
+}
+
+void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
+  BugReporter BR(*Mgr);
+  TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
+
+  // Run the AST-only checks using the order in which functions are defined.
+  // If inlining is not turned on, use the simplest function order for path
+  // sensitive analyzes as well.
+  RecVisitorMode = AM_Syntax;
+  if (!Mgr->shouldInlineCall())
+    RecVisitorMode |= AM_Path;
+  RecVisitorBR = &BR;
+
+  // Process all the top level declarations.
+  //
+  // Note: TraverseDecl may modify LocalTUDecls, but only by appending more
+  // entries.  Thus we don't use an iterator, but rely on LocalTUDecls
+  // random access.  By doing so, we automatically compensate for iterators
+  // possibly being invalidated, although this is a bit slower.
+  const unsigned LocalTUDeclsSize = LocalTUDecls.size();
+  for (unsigned i = 0 ; i < LocalTUDeclsSize ; ++i) {
+    TraverseDecl(LocalTUDecls[i]);
+  }
+
+  if (Mgr->shouldInlineCall())
+    HandleDeclsCallGraph(LocalTUDeclsSize);
+
+  // After all decls handled, run checkers on the entire TranslationUnit.
+  checkerMgr->runCheckersOnEndOfTranslationUnit(TU, *Mgr, BR);
+
+  RecVisitorBR = nullptr;
+}
+
+void AnalysisConsumer::reportAnalyzerProgress(StringRef S) {
+  if (Opts->AnalyzerDisplayProgress)
+    llvm::errs() << S;
+}
+
 void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
+
   // Don't run the actions if an error has occurred with parsing the file.
   DiagnosticsEngine &Diags = PP.getDiagnostics();
   if (Diags.hasErrorOccurred() || Diags.hasFatalErrorOccurred())
     return;
 
-  // Don't analyze if the user explicitly asked for no checks to be performed
-  // on this file.
-  if (Opts->DisableAllChecks)
-    return;
+  if (TUTotalTimer) TUTotalTimer->startTimer();
 
-  {
-    if (TUTotalTimer) TUTotalTimer->startTimer();
+  if (isBisonFile(C)) {
+    reportAnalyzerProgress("Skipping bison-generated file\n");
+  } else if (Opts->DisableAllChecks) {
 
-    // Introduce a scope to destroy BR before Mgr.
-    BugReporter BR(*Mgr);
-    TranslationUnitDecl *TU = C.getTranslationUnitDecl();
-    checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
-
-    // Run the AST-only checks using the order in which functions are defined.
-    // If inlining is not turned on, use the simplest function order for path
-    // sensitive analyzes as well.
-    RecVisitorMode = AM_Syntax;
-    if (!Mgr->shouldInlineCall())
-      RecVisitorMode |= AM_Path;
-    RecVisitorBR = &BR;
-
-    // Process all the top level declarations.
-    //
-    // Note: TraverseDecl may modify LocalTUDecls, but only by appending more
-    // entries.  Thus we don't use an iterator, but rely on LocalTUDecls
-    // random access.  By doing so, we automatically compensate for iterators
-    // possibly being invalidated, although this is a bit slower.
-    const unsigned LocalTUDeclsSize = LocalTUDecls.size();
-    for (unsigned i = 0 ; i < LocalTUDeclsSize ; ++i) {
-      TraverseDecl(LocalTUDecls[i]);
-    }
-
-    if (Mgr->shouldInlineCall())
-      HandleDeclsCallGraph(LocalTUDeclsSize);
-
-    // After all decls handled, run checkers on the entire TranslationUnit.
-    checkerMgr->runCheckersOnEndOfTranslationUnit(TU, *Mgr, BR);
-
-    RecVisitorBR = nullptr;
+    // Don't analyze if the user explicitly asked for no checks to be performed
+    // on this file.
+    reportAnalyzerProgress("All checks are disabled using a supplied option\n");
+  } else {
+    // Otherwise, just run the analysis.
+    runAnalysisOnTranslationUnit(C);
   }
 
   if (TUTotalTimer) TUTotalTimer->stopTimer();

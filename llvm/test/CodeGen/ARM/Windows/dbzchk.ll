@@ -119,7 +119,7 @@ attributes #0 = { optsize }
 ; CHECK-CFG-DAG: t2B %bb.3
 
 ; CHECK-CFG-DAG: %bb.2
-; CHECK-CFG-DAG: tCMPi8 %{{[0-9]}}, 0
+; CHECK-CFG-DAG: tCMPi8 %{{[0-9]}}{{[^,]*}}, 0
 ; CHECK-CFG-DAG: t2Bcc %bb.5
 
 ; CHECK-CFG-DAG: %bb.4

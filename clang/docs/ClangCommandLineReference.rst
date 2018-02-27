@@ -2573,6 +2573,10 @@ Debug information flags
 
 .. option:: -gdwarf-aranges
 
+.. option:: -gembed-source
+
+.. option:: -gno-embed-source
+
 .. option:: -ggnu-pubnames
 
 .. option:: -grecord-gcc-switches, -gno-record-gcc-switches

@@ -1347,28 +1347,18 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
-  if (I.isFast()) {
+  if (I.hasAllowReassoc() && I.hasAllowReciprocal()) {
     Value *X, *Y;
     if (match(Op0, m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))) &&
         (!isa<Constant>(Y) || !isa<Constant>(Op1))) {
       // (X / Y) / Z => X / (Y * Z)
-      Value *YZ = Builder.CreateFMul(Y, Op1);
-      if (auto *YZInst = dyn_cast<Instruction>(YZ)) {
-        FastMathFlags FMFIntersect = I.getFastMathFlags();
-        FMFIntersect &= cast<Instruction>(Op0)->getFastMathFlags();
-        YZInst->setFastMathFlags(FMFIntersect);
-      }
+      Value *YZ = Builder.CreateFMulFMF(Y, Op1, &I);
       return BinaryOperator::CreateFDivFMF(X, YZ, &I);
     }
     if (match(Op1, m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))) &&
         (!isa<Constant>(Y) || !isa<Constant>(Op0))) {
       // Z / (X / Y) => (Y * Z) / X
-      Value *YZ = Builder.CreateFMul(Y, Op0);
-      if (auto *YZInst = dyn_cast<Instruction>(YZ)) {
-        FastMathFlags FMFIntersect = I.getFastMathFlags();
-        FMFIntersect &= cast<Instruction>(Op1)->getFastMathFlags();
-        YZInst->setFastMathFlags(FMFIntersect);
-      }
+      Value *YZ = Builder.CreateFMulFMF(Y, Op0, &I);
       return BinaryOperator::CreateFDivFMF(YZ, X, &I);
     }
   }
