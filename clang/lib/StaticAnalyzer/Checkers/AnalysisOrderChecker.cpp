@@ -33,6 +33,8 @@ class AnalysisOrderChecker
                      check::PostStmt<ArraySubscriptExpr>,
                      check::PreStmt<CXXNewExpr>,
                      check::PostStmt<CXXNewExpr>,
+                     check::PreStmt<OffsetOfExpr>,
+                     check::PostStmt<OffsetOfExpr>,
                      check::PreCall,
                      check::PostCall,
                      check::NewAllocator,
@@ -89,6 +91,16 @@ public:
   void checkPostStmt(const CXXNewExpr *NE, CheckerContext &C) const {
     if (isCallbackEnabled(C, "PostStmtCXXNewExpr"))
       llvm::errs() << "PostStmt<CXXNewExpr>\n";
+  }
+
+  void checkPreStmt(const OffsetOfExpr *OOE, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "PreStmtOffsetOfExpr"))
+      llvm::errs() << "PreStmt<OffsetOfExpr>\n";
+  }
+
+  void checkPostStmt(const OffsetOfExpr *OOE, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "PostStmtOffsetOfExpr"))
+      llvm::errs() << "PostStmt<OffsetOfExpr>\n";
   }
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
