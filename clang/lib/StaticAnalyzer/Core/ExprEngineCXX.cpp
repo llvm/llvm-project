@@ -148,6 +148,9 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         // construction context that'd give us the right temporary expression.
         CallOpts.IsTemporaryCtorOrDtor = true;
         return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(TriggerStmt)) {
+        CallOpts.IsTemporaryCtorOrDtor = true;
+        return MRMgr.getCXXTempObjectRegion(CE, LCtx);
       }
       // TODO: Consider other directly initialized elements.
     } else if (const CXXCtorInitializer *Init = CC->getTriggerInit()) {
