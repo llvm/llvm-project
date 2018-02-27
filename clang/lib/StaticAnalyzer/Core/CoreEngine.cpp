@@ -128,8 +128,8 @@ namespace {
   };
 } // end anonymous namespace
 
-std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
-  return llvm::make_unique<UnexploredFirstStack>();
+std::unique_ptr<WorkList> WorkList::makeBFSBlockDFSContents() {
+  return llvm::make_unique<BFSBlockDFSContents>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,8 +144,6 @@ static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
       return WorkList::makeBFS();
     case AnalyzerOptions::ExplorationStrategyKind::BFSBlockDFSContents:
       return WorkList::makeBFSBlockDFSContents();
-    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirst:
-      return WorkList::makeUnexploredFirst();
     default:
       llvm_unreachable("Unexpected case");
   }
