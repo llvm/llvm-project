@@ -181,7 +181,7 @@ class InlineTest(TestBase):
         parser.parse_source_files(source_files)
         parser.set_breakpoints(target)
 
-        process = target.LaunchSimple(None, None, self.getBuildDir())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         hit_breakpoints = 0
 
         while lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint):
