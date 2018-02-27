@@ -418,11 +418,7 @@ std::string MachTask::GetProfileData(DNBProfileDataScanType scanType) {
       
       profile_data_stream << "phys_footprint:" << phys_footprint << ';';
     }
-      
-    if (scanType & eProfileMemoryCap) {
-      profile_data_stream << "mem_cap:" << memory_cap << ';';
-    }
-
+    
 #ifdef LLDB_ENERGY
     if (scanType & eProfileEnergy) {
       struct rusage_info_v2 info;
