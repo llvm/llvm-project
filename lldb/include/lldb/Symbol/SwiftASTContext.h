@@ -122,9 +122,13 @@ public:
 
   static ConstString GetPluginNameStatic();
 
+  /// Create a SwiftASTContext from a Module.
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module *module, Target *target,
-                                           const char *compiler_options);
+                                           Module &module);
+  /// Create a SwiftASTContext from a Target.
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target &target,
+                                           const char *extra_options);
 
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
