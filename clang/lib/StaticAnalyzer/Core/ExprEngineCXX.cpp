@@ -123,47 +123,20 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   // See if we're constructing an existing region by looking at the
   // current construction context.
   if (CC) {
-    if (const Stmt *TriggerStmt = CC->getTriggerStmt()) {
-      if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(TriggerStmt)) {
-        if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
-          // TODO: Detect when the allocator returns a null pointer.
-          // Constructor shall not be called in this case.
-          if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
-                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
-            if (CNE->isArray()) {
-              // TODO: In fact, we need to call the constructor for every
-              // allocated element, not just the first one!
-              CallOpts.IsArrayCtorOrDtor = true;
-              return getStoreManager().GetElementZeroRegion(
-                  MR, CNE->getType()->getPointeeType());
-            }
-            return MR;
-          }
-        }
-      } else if (auto *DS = dyn_cast<DeclStmt>(TriggerStmt)) {
-        const auto *Var = cast<VarDecl>(DS->getSingleDecl());
-        SVal LValue = State->getLValue(Var, LCtx);
-        QualType Ty = Var->getType();
-        LValue = makeZeroElementRegion(State, LValue, Ty,
-                                       CallOpts.IsArrayCtorOrDtor);
-        return LValue.getAsRegion();
-      } else if (isa<ReturnStmt>(TriggerStmt)) {
-        // TODO: We should construct into a CXXBindTemporaryExpr or a
-        // MaterializeTemporaryExpr around the call-expression on the previous
-        // stack frame. Currently we re-bind the temporary to the correct region
-        // later, but that's not semantically correct. This of course does not
-        // apply when we're in the top frame. But if we are in an inlined
-        // function, we should be able to take the call-site CFG element,
-        // and it should contain (but right now it wouldn't) some sort of
-        // construction context that'd give us the right temporary expression.
-        CallOpts.IsTemporaryCtorOrDtor = true;
-        return MRMgr.getCXXTempObjectRegion(CE, LCtx);
-      } else if (isa<CXXBindTemporaryExpr>(TriggerStmt)) {
-        CallOpts.IsTemporaryCtorOrDtor = true;
-        return MRMgr.getCXXTempObjectRegion(CE, LCtx);
-      }
-      // TODO: Consider other directly initialized elements.
-    } else if (const CXXCtorInitializer *Init = CC->getTriggerInit()) {
+    switch (CC->getKind()) {
+    case ConstructionContext::SimpleVariableKind: {
+      const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
+      const auto *DS = DSCC->getDeclStmt();
+      const auto *Var = cast<VarDecl>(DS->getSingleDecl());
+      SVal LValue = State->getLValue(Var, LCtx);
+      QualType Ty = Var->getType();
+      LValue =
+          makeZeroElementRegion(State, LValue, Ty, CallOpts.IsArrayCtorOrDtor);
+      return LValue.getAsRegion();
+    }
+    case ConstructionContext::ConstructorInitializerKind: {
+      const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
+      const auto *Init = ICC->getCXXCtorInitializer();
       assert(Init->isAnyMemberInitializer());
       const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
       Loc ThisPtr =
@@ -206,18 +179,6 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       break;
     }
     case ConstructionContext::TemporaryObjectKind: {
-      const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
-      // See if we're lifetime-extended via our field. If so, take a note.
-      // Because automatic destructors aren't quite working in this case.
-      if (const auto *MTE = TOCC->getMaterializedTemporaryExpr()) {
-        if (const ValueDecl *VD = MTE->getExtendingDecl()) {
-          assert(VD->getType()->isReferenceType());
-          if (VD->getType()->getPointeeType().getCanonicalType() !=
-              MTE->GetTemporaryExpr()->getType().getCanonicalType()) {
-            CallOpts.IsTemporaryLifetimeExtendedViaSubobject = true;
-          }
-        }
-      }
       // TODO: Support temporaries lifetime-extended via static references.
       // They'd need a getCXXStaticTempObjectRegion().
       CallOpts.IsTemporaryCtorOrDtor = true;
@@ -286,6 +247,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
 
   EvalCallOptions CallOpts;
   auto C = getCurrentCFGElement().getAs<CFGConstructor>();
+  assert(C || getCurrentCFGElement().getAs<CFGStmt>());
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
   const CXXBindTemporaryExpr *BTE = nullptr;
@@ -294,15 +256,27 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
     Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
-    if (CC && AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG() &&
-        !CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion &&
-        CallOpts.IsTemporaryCtorOrDtor) {
-      MTE = CC->getMaterializedTemporary();
-      if (!MTE || MTE->getStorageDuration() == SD_FullExpression) {
-        // If the temporary is lifetime-extended, don't save the BTE,
-        // because we don't need a temporary destructor, but an automatic
-        // destructor. The cast may fail because it may as well be a ReturnStmt.
-        BTE = dyn_cast<CXXBindTemporaryExpr>(CC->getTriggerStmt());
+
+    // In case of temporary object construction, extract data necessary for
+    // destruction and lifetime extension.
+    if (const auto *TCC =
+            dyn_cast_or_null<TemporaryObjectConstructionContext>(CC)) {
+      assert(CallOpts.IsTemporaryCtorOrDtor);
+      assert(!CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion);
+      if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
+        BTE = TCC->getCXXBindTemporaryExpr();
+        MTE = TCC->getMaterializedTemporaryExpr();
+        if (!BTE) {
+          // FIXME: lifetime extension for temporaries without destructors
+          // is not implemented yet.
+          MTE = nullptr;
+        }
+        if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
+          // If the temporary is lifetime-extended, don't save the BTE,
+          // because we don't need a temporary destructor, but an automatic
+          // destructor.
+          BTE = nullptr;
+        }
       }
     }
     break;
