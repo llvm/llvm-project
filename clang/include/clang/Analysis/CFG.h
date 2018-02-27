@@ -145,32 +145,19 @@ protected:
 // necessary to express what memory is being initialized by
 // the construction.
 class ConstructionContext {
-public:
-  typedef llvm::PointerUnion<Stmt *, CXXCtorInitializer *> TriggerTy;
-
-private:
   // The construction site - the statement that triggered the construction
   // for one of its parts. For instance, stack variable declaration statement
   // triggers construction of itself or its elements if it's an array,
   // new-expression triggers construction of the newly allocated object(s).
-  TriggerTy Trigger;
+  Stmt *Trigger = nullptr;
 
 public:
   ConstructionContext() = default;
-  ConstructionContext(TriggerTy Trigger)
-      : Trigger(Trigger) {}
+  ConstructionContext(Stmt *Trigger) : Trigger(Trigger) {}
 
-  bool isNull() const { return Trigger.isNull(); }
+  bool isNull() const { return Trigger == nullptr; }
 
-  TriggerTy getTrigger() const { return Trigger; }
-
-  const Stmt *getTriggerStmt() const {
-    return Trigger.dyn_cast<Stmt *>();
-  }
-
-  const CXXCtorInitializer *getTriggerInit() const {
-    return Trigger.dyn_cast<CXXCtorInitializer *>();
-  }
+  const Stmt *getTriggerStmt() const { return Trigger; }
 
   const ConstructionContext *getPersistentCopy(BumpVectorContext &C) const {
     ConstructionContext *CC = C.getAllocator().Allocate<ConstructionContext>();
@@ -194,20 +181,8 @@ public:
     return static_cast<ConstructionContext *>(Data2.getPointer());
   }
 
-  QualType getType() const {
-    return cast<CXXConstructExpr>(getStmt())->getType();
-  }
-
-  ConstructionContext::TriggerTy getTrigger() const {
-    return getConstructionContext()->getTrigger();
-  }
-
   const Stmt *getTriggerStmt() const {
     return getConstructionContext()->getTriggerStmt();
-  }
-
-  const CXXCtorInitializer *getTriggerInit() const {
-    return getConstructionContext()->getTriggerInit();
   }
 
 private:

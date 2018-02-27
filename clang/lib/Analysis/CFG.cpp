@@ -654,8 +654,7 @@ private:
   // to the trigger statement. The construction context will be unset once
   // it is consumed when the CFG building procedure processes the
   // construct-expression and adds the respective CFGConstructor element.
-  void EnterConstructionContextIfNecessary(
-      ConstructionContext::TriggerTy Trigger, Stmt *Child);
+  void EnterConstructionContextIfNecessary(Stmt *Trigger, Stmt *Child);
   // Unset the construction context after consuming it. This is done immediately
   // after adding the CFGConstructor element, so there's no need to
   // do this manually in every Visit... function.
@@ -1148,18 +1147,16 @@ static const VariableArrayType *FindVA(const Type *t) {
   return nullptr;
 }
 
-void CFGBuilder::EnterConstructionContextIfNecessary(
-    ConstructionContext::TriggerTy Trigger, Stmt *Child) {
+void CFGBuilder::EnterConstructionContextIfNecessary(Stmt *Trigger,
+                                                     Stmt *Child) {
   if (!BuildOpts.AddRichCXXConstructors)
     return;
   if (!Child)
     return;
-  if (isa<CXXConstructExpr>(Child)) {
+  if (auto *Constructor = dyn_cast<CXXConstructExpr>(Child)) {
     assert(CurrentConstructionContext.isNull() &&
            "Already within a construction context!");
     CurrentConstructionContext = ConstructionContext(Trigger);
-  } else if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Child)) {
-    EnterConstructionContextIfNecessary(Trigger, Cleanups->getSubExpr());
   }
 }
 
@@ -4671,8 +4668,6 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
         if (const Stmt *S = CE->getTriggerStmt())
           Helper.handledStmt((const_cast<Stmt *>(S)), OS);
-        else if (const CXXCtorInitializer *I = CE->getTriggerInit())
-          print_initializer(OS, Helper, I);
         else
           llvm_unreachable("Unexpected trigger kind!");
         OS << ", ";

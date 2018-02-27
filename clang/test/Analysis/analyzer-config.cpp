@@ -45,4 +45,4 @@ public:
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 25
+// CHECK-NEXT: num-entries = 26
