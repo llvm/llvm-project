@@ -21,9 +21,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -81,7 +81,7 @@ public:
   }
 
   static hash_value_type ComputeHash(const internal_key_type& a) {
-    return llvm::HashString(a);
+    return llvm::djbHash(a);
   }
 
   static std::pair<unsigned, unsigned>
@@ -289,7 +289,7 @@ void GlobalModuleIndex::getModuleDependencies(
 
 bool GlobalModuleIndex::lookupIdentifier(StringRef Name, HitSet &Hits) {
   Hits.clear();
-  
+
   // If there's no identifier index, there is nothing we can do.
   if (!IdentifierIndex)
     return false;
@@ -413,7 +413,7 @@ namespace {
     /// \brief A mapping from all interesting identifiers to the set of module
     /// files in which those identifiers are considered interesting.
     InterestingIdentifierMap InterestingIdentifiers;
-    
+
     /// \brief Write the block-info block for the global module index file.
     void emitBlockInfoBlock(llvm::BitstreamWriter &Stream);
 
@@ -608,7 +608,7 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
         // Skip the import location
         ++Idx;
 
-        // Load stored size/modification time. 
+        // Load stored size/modification time.
         off_t StoredSize = (off_t)Record[Idx++];
         time_t StoredModTime = (time_t)Record[Idx++];
 
@@ -697,7 +697,7 @@ public:
   typedef unsigned offset_type;
 
   static hash_value_type ComputeHash(key_type_ref Key) {
-    return llvm::HashString(Key);
+    return llvm::djbHash(Key);
   }
 
   std::pair<unsigned,unsigned>
@@ -710,7 +710,7 @@ public:
     LE.write<uint16_t>(DataLen);
     return std::make_pair(KeyLen, DataLen);
   }
-  
+
   void EmitKey(raw_ostream& Out, key_type_ref Key, unsigned KeyLen) {
     Out.write(Key.data(), KeyLen);
   }
@@ -740,7 +740,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
   }
 
   using namespace llvm;
-  
+
   // Emit the file header.
   Stream.Emit((unsigned)'B', 8);
   Stream.Emit((unsigned)'C', 8);
@@ -789,7 +789,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
          I != IEnd; ++I) {
       Generator.insert(I->first(), I->second, Trait);
     }
-    
+
     // Create the on-disk hash table in a buffer.
     SmallString<4096> IdentifierTable;
     uint32_t BucketOffset;
@@ -902,7 +902,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
 
   // Rename the newly-written index file to the proper name.
   if (llvm::sys::fs::rename(IndexTmpPath, IndexPath)) {
-    // Rename failed; just remove the 
+    // Rename failed; just remove the
     llvm::sys::fs::remove(IndexTmpPath);
     return EC_IOError;
   }

@@ -60,7 +60,7 @@ AnalyzerOptions::getExplorationStrategy() {
   if (ExplorationStrategy == ExplorationStrategyKind::NotSet) {
     StringRef StratStr =
         Config
-            .insert(std::make_pair("exploration_strategy", "dfs"))
+            .insert(std::make_pair("exploration_strategy", "unexplored_first_queue"))
             .first->second;
     ExplorationStrategy =
         llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
@@ -68,6 +68,8 @@ AnalyzerOptions::getExplorationStrategy() {
             .Case("bfs", ExplorationStrategyKind::BFS)
             .Case("unexplored_first",
                   ExplorationStrategyKind::UnexploredFirst)
+            .Case("unexplored_first_queue",
+                  ExplorationStrategyKind::UnexploredFirstQueue)
             .Case("bfs_block_dfs_contents",
                   ExplorationStrategyKind::BFSBlockDFSContents)
             .Default(ExplorationStrategyKind::NotSet);

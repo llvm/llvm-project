@@ -2968,7 +2968,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   // Forward -gcodeview. EmitCodeView might have been set by CL-compatibility
   // argument parsing.
-  if (Args.hasArg(options::OPT_gcodeview) || EmitCodeView) {
+  if (EmitCodeView) {
     // DWARFVersion remains at 0 if no explicit choice was made.
     CmdArgs.push_back("-gcodeview");
   } else if (DWARFVersion == 0 &&
@@ -3023,6 +3023,18 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
                                     TC.GetDefaultStandaloneDebug());
   if (DebugInfoKind == codegenoptions::LimitedDebugInfo && NeedFullDebug)
     DebugInfoKind = codegenoptions::FullDebugInfo;
+
+  if (Args.hasFlag(options::OPT_gembed_source, options::OPT_gno_embed_source, false)) {
+    // Source embedding is a vendor extension to DWARF v5. By now we have
+    // checked if a DWARF version was stated explicitly, and have otherwise
+    // fallen back to the target default, so if this is still not at least 5 we
+    // emit an error.
+    if (DWARFVersion < 5)
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << Args.getLastArg(options::OPT_gembed_source)->getAsString(Args)
+          << "-gdwarf-5";
+    CmdArgs.push_back("-gembed-source");
+  }
 
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DWARFVersion,
                           DebuggerTuning);
@@ -3555,6 +3567,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   types::ID InputType = Input.getType();
   if (D.IsCLMode())
     AddClangCLArgs(Args, InputType, CmdArgs, &DebugInfoKind, &EmitCodeView);
+  else
+    EmitCodeView = Args.hasArg(options::OPT_gcodeview);
 
   const Arg *SplitDWARFArg = nullptr;
   RenderDebugOptions(getToolChain(), D, RawTriple, Args, EmitCodeView,
