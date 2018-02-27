@@ -1089,6 +1089,34 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
   }
 }
 
+void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
+                                           ExplodedNodeSet &PreVisit,
+                                           ExplodedNodeSet &Dst) {
+  // This is a fallback solution in case we didn't have a construction
+  // context when we were constructing the temporary. Otherwise the map should
+  // have been populated there.
+  if (!getAnalysisManager().options.includeTemporaryDtorsInCFG()) {
+    // In case we don't have temporary destructors in the CFG, do not mark
+    // the initialization - we would otherwise never clean it up.
+    Dst = PreVisit;
+    return;
+  }
+  StmtNodeBuilder StmtBldr(PreVisit, Dst, *currBldrCtx);
+  for (ExplodedNode *Node : PreVisit) {
+    ProgramStateRef State = Node->getState();
+		const auto &Key = std::make_pair(BTE, Node->getStackFrame());
+
+    if (!State->contains<InitializedTemporaries>(Key)) {
+      // FIXME: Currently the state might also already contain the marker due to
+      // incorrect handling of temporaries bound to default parameters; for
+      // those, we currently skip the CXXBindTemporaryExpr but rely on adding
+      // temporary destructor nodes.
+      State = State->set<InitializedTemporaries>(Key, nullptr);
+    }
+    StmtBldr.generateNode(BTE, Node, State);
+  }
+}
+
 namespace {
 class CollectReachableSymbolsCallback final : public SymbolVisitor {
   InvalidatedSymbols Symbols;
@@ -1251,7 +1279,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.takeNodes(Pred);
       ExplodedNodeSet PreVisit;
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-      getCheckerManager().runCheckersForPostStmt(Dst, PreVisit, S, *this);
+      ExplodedNodeSet Next;
+      VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), PreVisit, Next);
+      getCheckerManager().runCheckersForPostStmt(Dst, Next, S, *this);
       Bldr.addNodes(Dst);
       break;
     }
@@ -2194,13 +2224,13 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
                                        Pred->getLocationContext(),
                                        Pred->getStackFrame()->getParent()));
 
-  // FIXME: We currently assert that temporaries are clear, as lifetime extended
-  // temporaries are not always modelled correctly. In some cases when we
-  // materialize the temporary, we do createTemporaryRegionIfNeeded(), and
-  // the region changes, and also the respective destructor becomes automatic
-  // from temporary. So for now clean up the state manually before asserting.
-  // Ideally, the code above the assertion should go away, but the assertion
-  // should remain.
+  // FIXME: We currently cannot assert that temporaries are clear, because
+  // lifetime extended temporaries are not always modelled correctly. In some
+  // cases when we materialize the temporary, we do
+  // createTemporaryRegionIfNeeded(), and the region changes, and also the
+  // respective destructor becomes automatic from temporary. So for now clean up
+  // the state manually before asserting. Ideally, the code above the assertion
+  // should go away, but the assertion should remain.
   {
     ExplodedNodeSet CleanUpTemporaries;
     NodeBuilder Bldr(Pred, CleanUpTemporaries, BC);
@@ -2217,9 +2247,12 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
       LC = LC->getParent();
     }
     if (State != Pred->getState()) {
-      Bldr.generateNode(Pred->getLocation(), State, Pred);
-      assert(CleanUpTemporaries.size() <= 1);
-      Pred = CleanUpTemporaries.empty() ? Pred : *CleanUpTemporaries.begin();
+      Pred = Bldr.generateNode(Pred->getLocation(), State, Pred);
+      if (!Pred) {
+        // The node with clean temporaries already exists. We might have reached
+        // it on a path on which we initialize different temporaries.
+        return;
+      }
     }
   }
   assert(areInitializedTemporariesClear(Pred->getState(),
