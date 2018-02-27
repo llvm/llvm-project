@@ -58,21 +58,24 @@ AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
 AnalyzerOptions::ExplorationStrategyKind
 AnalyzerOptions::getExplorationStrategy() {
   if (ExplorationStrategy == ExplorationStrategyKind::NotSet) {
-    StringRef StratStr = Config.insert(
-            std::make_pair("exploration_strategy", "dfs")).first->second;
-    ExplorationStrategy = llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
-      .Case("dfs", ExplorationStrategyKind::DFS)
-      .Case("bfs", ExplorationStrategyKind::BFS)
-      .Case("bfs_block_dfs_contents", ExplorationStrategyKind::BFSBlockDFSContents)
-      .Default(ExplorationStrategyKind::NotSet);
-    assert(ExplorationStrategy != ExplorationStrategyKind::NotSet
-        && "User mode is invalid.");
+    StringRef StratStr =
+        Config
+            .insert(std::make_pair("exploration_strategy", "dfs"))
+            .first->second;
+    ExplorationStrategy =
+        llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
+            .Case("dfs", ExplorationStrategyKind::DFS)
+            .Case("bfs", ExplorationStrategyKind::BFS)
+            .Case("unexplored_first",
+                  ExplorationStrategyKind::UnexploredFirst)
+            .Case("bfs_block_dfs_contents",
+                  ExplorationStrategyKind::BFSBlockDFSContents)
+            .Default(ExplorationStrategyKind::NotSet);
+    assert(ExplorationStrategy != ExplorationStrategyKind::NotSet &&
+           "User mode is invalid.");
   }
   return ExplorationStrategy;
-
 }
-
-
 
 IPAKind AnalyzerOptions::getIPAMode() {
   if (IPAMode == IPAK_NotSet) {
