@@ -138,15 +138,12 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           }
         }
       } else if (auto *DS = dyn_cast<DeclStmt>(TriggerStmt)) {
-        if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
-          if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
-            SVal LValue = State->getLValue(Var, LCtx);
-            QualType Ty = Var->getType();
-            LValue = makeZeroElementRegion(
-                State, LValue, Ty, CallOpts.IsArrayConstructorOrDestructor);
-            return LValue.getAsRegion();
-          }
-        }
+        const auto *Var = cast<VarDecl>(DS->getSingleDecl());
+        SVal LValue = State->getLValue(Var, LCtx);
+        QualType Ty = Var->getType();
+        LValue = makeZeroElementRegion(State, LValue, Ty,
+                                       CallOpts.IsArrayConstructorOrDestructor);
+        return LValue.getAsRegion();
       }
       // TODO: Consider other directly initialized elements.
     } else if (const CXXCtorInitializer *Init = CC->getTriggerInit()) {
