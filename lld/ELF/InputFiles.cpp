@@ -851,7 +851,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
 
     StringRef Name = CHECK(Sym.getName(this->StringTable), this);
     if (Sym.isUndefined()) {
-      Undefs.push_back(Name);
+      this->Undefs.insert(Name);
       continue;
     }
 

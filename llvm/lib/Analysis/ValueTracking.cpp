@@ -2728,6 +2728,24 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
            (!SignBitOnly && CFP->getValueAPF().isZero());
   }
 
+  // Handle vector of constants.
+  if (auto *CV = dyn_cast<Constant>(V)) {
+    if (CV->getType()->isVectorTy()) {
+      unsigned NumElts = CV->getType()->getVectorNumElements();
+      for (unsigned i = 0; i != NumElts; ++i) {
+        auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+        if (!CFP)
+          return false;
+        if (CFP->getValueAPF().isNegative() &&
+            (SignBitOnly || !CFP->getValueAPF().isZero()))
+          return false;
+      }
+
+      // All non-negative ConstantFPs.
+      return true;
+    }
+  }
+
   if (Depth == MaxDepth)
     return false; // Limit search depth.
 

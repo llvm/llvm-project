@@ -4093,7 +4093,7 @@ namespace {
 class SCEVInitRewriter : public SCEVRewriteVisitor<SCEVInitRewriter> {
 public:
   static const SCEV *rewrite(const SCEV *S, const Loop *L, ScalarEvolution &SE,
-                             bool IgnoreOtherLoops = false) {
+                             bool IgnoreOtherLoops = true) {
     SCEVInitRewriter Rewriter(L, SE);
     const SCEV *Result = Rewriter.visit(S);
     if (Rewriter.hasSeenLoopVariantSCEVUnknown())
@@ -5020,7 +5020,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     // by one iteration:
     //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
     const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
-    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this);
+    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
     if (Shifted != getCouldNotCompute() &&
         Start != getCouldNotCompute()) {
       const SCEV *StartVal = getSCEV(StartValueV);
@@ -11649,6 +11649,12 @@ private:
     if (!PredicatedRewrite)
       return Expr;
     for (auto *P : PredicatedRewrite->second){
+      // Wrap predicates from outer loops are not supported.
+      if (auto *WP = dyn_cast<const SCEVWrapPredicate>(P)) {
+        auto *AR = cast<const SCEVAddRecExpr>(WP->getExpr());
+        if (L != AR->getLoop())
+          return Expr;
+      }
       if (!addOverflowAssumption(P))
         return Expr;
     }

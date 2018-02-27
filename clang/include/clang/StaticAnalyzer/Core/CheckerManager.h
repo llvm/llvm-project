@@ -1,4 +1,4 @@
-//===--- CheckerManager.h - Static Analyzer Checker Manager -----*- C++ -*-===//
+//===- CheckerManager.h - Static Analyzer Checker Manager -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,45 +16,56 @@
 
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include <utility>
+#include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang {
-  class Decl;
-  class Stmt;
-  class CallExpr;
+
+class AnalyzerOptions;
+class CallExpr;
+class CXXNewExpr;
+class Decl;
+class LocationContext;
+class Stmt;
+class TranslationUnitDecl;
 
 namespace ento {
-  class CheckerBase;
-  class CheckerRegistry;
-  class ExprEngine;
-  class AnalysisManager;
-  class BugReporter;
-  class CheckerContext;
-  class ObjCMethodCall;
-  class SVal;
-  class ExplodedNode;
-  class ExplodedNodeSet;
-  class ExplodedGraph;
-  class ProgramState;
-  class NodeBuilder;
-  struct NodeBuilderContext;
-  class MemRegion;
-  class SymbolReaper;
+
+class AnalysisManager;
+class BugReporter;
+class CallEvent;
+class CheckerBase;
+class CheckerContext;
+class CheckerRegistry;
+class ExplodedGraph;
+class ExplodedNode;
+class ExplodedNodeSet;
+class ExprEngine;
+class MemRegion;
+struct NodeBuilderContext;
+class ObjCMethodCall;
+class RegionAndSymbolInvalidationTraits;
+class SVal;
+class SymbolReaper;
 
 template <typename T> class CheckerFn;
 
 template <typename RET, typename... Ps>
 class CheckerFn<RET(Ps...)> {
-  typedef RET (*Func)(void *, Ps...);
+  using Func = RET (*)(void *, Ps...);
+
   Func Fn;
+
 public:
   CheckerBase *Checker;
-  CheckerFn(CheckerBase *checker, Func fn) : Fn(fn), Checker(checker) { }
+
+  CheckerFn(CheckerBase *checker, Func fn) : Fn(fn), Checker(checker) {}
+
   RET operator()(Ps... ps) const {
     return Fn(Checker, ps...);
   }
@@ -85,12 +96,15 @@ enum PointerEscapeKind {
 // name strings have a lifetime that keeps them alive at least until the path
 // diagnostics have been processed.
 class CheckName {
-  StringRef Name;
   friend class ::clang::ento::CheckerRegistry;
+
+  StringRef Name;
+
   explicit CheckName(StringRef Name) : Name(Name) {}
 
 public:
   CheckName() = default;
+
   StringRef getName() const { return Name; }
 };
 
@@ -121,9 +135,9 @@ public:
   const LangOptions &getLangOpts() const { return LangOpts; }
   AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
 
-  typedef CheckerBase *CheckerRef;
-  typedef const void *CheckerTag;
-  typedef CheckerFn<void ()> CheckerDtor;
+  using CheckerRef = CheckerBase *;
+  using CheckerTag = const void *;
+  using CheckerDtor = CheckerFn<void ()>;
 
 //===----------------------------------------------------------------------===//
 // registerChecker
@@ -237,7 +251,6 @@ public:
     runCheckersForObjCMessage(ObjCMessageVisitKind::MessageNil, Dst, Src, msg,
                               Eng);
   }
-
 
   /// \brief Run checkers for visiting obj-c messages.
   void runCheckersForObjCMessage(ObjCMessageVisitKind visitKind,
@@ -368,7 +381,7 @@ public:
                               const InvalidatedSymbols &Escaped,
                               const CallEvent *Call,
                               PointerEscapeKind Kind,
-                             RegionAndSymbolInvalidationTraits *ITraits);
+                              RegionAndSymbolInvalidationTraits *ITraits);
 
   /// \brief Run checkers for handling assumptions on symbolic values.
   ProgramStateRef runCheckersForEvalAssume(ProgramStateRef state,
@@ -404,10 +417,11 @@ public:
   // Functions used by the registration mechanism, checkers should not touch
   // these directly.
 
-  typedef CheckerFn<void (const Decl *, AnalysisManager&, BugReporter &)>
-      CheckDeclFunc;
+  using CheckDeclFunc =
+      CheckerFn<void (const Decl *, AnalysisManager&, BugReporter &)>;
 
-  typedef bool (*HandlesDeclFunc)(const Decl *D);
+  using HandlesDeclFunc = bool (*)(const Decl *D);
+
   void _registerForDecl(CheckDeclFunc checkfn, HandlesDeclFunc isForDeclFn);
 
   void _registerForBody(CheckDeclFunc checkfn);
@@ -416,70 +430,66 @@ public:
 // Internal registration functions for path-sensitive checking.
 //===----------------------------------------------------------------------===//
 
-  typedef CheckerFn<void (const Stmt *, CheckerContext &)> CheckStmtFunc;
+  using CheckStmtFunc = CheckerFn<void (const Stmt *, CheckerContext &)>;
   
-  typedef CheckerFn<void (const ObjCMethodCall &, CheckerContext &)>
-      CheckObjCMessageFunc;
+  using CheckObjCMessageFunc =
+      CheckerFn<void (const ObjCMethodCall &, CheckerContext &)>;
 
-  typedef CheckerFn<void (const CallEvent &, CheckerContext &)>
-      CheckCallFunc;
+  using CheckCallFunc =
+      CheckerFn<void (const CallEvent &, CheckerContext &)>;
   
-  typedef CheckerFn<void (const SVal &location, bool isLoad,
-                          const Stmt *S,
-                          CheckerContext &)>
-      CheckLocationFunc;
+  using CheckLocationFunc =
+      CheckerFn<void (const SVal &location, bool isLoad, const Stmt *S,
+                      CheckerContext &)>;
   
-  typedef CheckerFn<void (const SVal &location, const SVal &val, 
-                          const Stmt *S, CheckerContext &)> 
-      CheckBindFunc;
+  using CheckBindFunc =
+      CheckerFn<void (const SVal &location, const SVal &val, const Stmt *S,
+                      CheckerContext &)>;
   
-  typedef CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>
-      CheckEndAnalysisFunc;
+  using CheckEndAnalysisFunc =
+      CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>;
 
-  typedef CheckerFn<void (CheckerContext &)>
-      CheckBeginFunctionFunc;
+  using CheckBeginFunctionFunc = CheckerFn<void (CheckerContext &)>;
 
-  typedef CheckerFn<void (CheckerContext &)>
-      CheckEndFunctionFunc;
+  using CheckEndFunctionFunc = CheckerFn<void (CheckerContext &)>;
   
-  typedef CheckerFn<void (const Stmt *, CheckerContext &)>
-      CheckBranchConditionFunc;
+  using CheckBranchConditionFunc =
+      CheckerFn<void (const Stmt *, CheckerContext &)>;
 
-  typedef CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>
-      CheckNewAllocatorFunc;
+  using CheckNewAllocatorFunc =
+      CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>;
   
-  typedef CheckerFn<void (SymbolReaper &, CheckerContext &)>
-      CheckDeadSymbolsFunc;
+  using CheckDeadSymbolsFunc =
+      CheckerFn<void (SymbolReaper &, CheckerContext &)>;
   
-  typedef CheckerFn<void (ProgramStateRef,SymbolReaper &)> CheckLiveSymbolsFunc;
+  using CheckLiveSymbolsFunc = CheckerFn<void (ProgramStateRef,SymbolReaper &)>;
   
-  typedef CheckerFn<ProgramStateRef (ProgramStateRef,
-                                     const InvalidatedSymbols *symbols,
-                                     ArrayRef<const MemRegion *> ExplicitRegions,
-                                     ArrayRef<const MemRegion *> Regions,
-                                     const LocationContext *LCtx,
-                                     const CallEvent *Call)>
-      CheckRegionChangesFunc;
+  using CheckRegionChangesFunc =
+      CheckerFn<ProgramStateRef (ProgramStateRef,
+                                 const InvalidatedSymbols *symbols,
+                                 ArrayRef<const MemRegion *> ExplicitRegions,
+                                 ArrayRef<const MemRegion *> Regions,
+                                 const LocationContext *LCtx,
+                                 const CallEvent *Call)>;
   
-  typedef CheckerFn<ProgramStateRef (ProgramStateRef,
-                                     const InvalidatedSymbols &Escaped,
-                                     const CallEvent *Call,
-                                     PointerEscapeKind Kind,
-                                     RegionAndSymbolInvalidationTraits *ITraits)>
-      CheckPointerEscapeFunc;
+  using CheckPointerEscapeFunc =
+      CheckerFn<ProgramStateRef (ProgramStateRef,
+                                 const InvalidatedSymbols &Escaped,
+                                 const CallEvent *Call, PointerEscapeKind Kind,
+                                 RegionAndSymbolInvalidationTraits *ITraits)>;
   
-  typedef CheckerFn<ProgramStateRef (ProgramStateRef,
-                                          const SVal &cond, bool assumption)>
-      EvalAssumeFunc;
+  using EvalAssumeFunc =
+      CheckerFn<ProgramStateRef (ProgramStateRef, const SVal &cond,
+                                 bool assumption)>;
   
-  typedef CheckerFn<bool (const CallExpr *, CheckerContext &)>
-      EvalCallFunc;
+  using EvalCallFunc = CheckerFn<bool (const CallExpr *, CheckerContext &)>;
 
-  typedef CheckerFn<void (const TranslationUnitDecl *,
-                          AnalysisManager&, BugReporter &)>
-      CheckEndOfTranslationUnit;
+  using CheckEndOfTranslationUnit =
+      CheckerFn<void (const TranslationUnitDecl *, AnalysisManager &,
+                      BugReporter &)>;
 
-  typedef bool (*HandlesStmtFunc)(const Stmt *D);
+  using HandlesStmtFunc = bool (*)(const Stmt *D);
+
   void _registerForPreStmt(CheckStmtFunc checkfn,
                            HandlesStmtFunc isForStmtFn);
   void _registerForPostStmt(CheckStmtFunc checkfn,
@@ -526,8 +536,8 @@ public:
 // Internal registration functions for events.
 //===----------------------------------------------------------------------===//
 
-  typedef void *EventTag;
-  typedef CheckerFn<void (const void *event)> CheckEventFunc;
+  using EventTag = void *;
+  using CheckEventFunc = CheckerFn<void (const void *event)>;
 
   template <typename EVENT>
   void _registerListenerForEvent(CheckEventFunc checkfn) {
@@ -547,8 +557,8 @@ public:
     if (I == Events.end())
       return;
     const EventInfo &info = I->second;
-    for (unsigned i = 0, e = info.Checkers.size(); i != e; ++i)
-      info.Checkers[i](&event);
+    for (const auto Checker : info.Checkers)
+      Checker(&event);
   }
 
 //===----------------------------------------------------------------------===//
@@ -574,8 +584,8 @@ private:
 
   std::vector<CheckDeclFunc> BodyCheckers;
 
-  typedef SmallVector<CheckDeclFunc, 4> CachedDeclCheckers;
-  typedef llvm::DenseMap<unsigned, CachedDeclCheckers> CachedDeclCheckersMapTy;
+  using CachedDeclCheckers = SmallVector<CheckDeclFunc, 4>;
+  using CachedDeclCheckersMapTy = llvm::DenseMap<unsigned, CachedDeclCheckers>;
   CachedDeclCheckersMapTy CachedDeclCheckersMap;
 
   struct StmtCheckerInfo {
@@ -585,8 +595,8 @@ private:
   };
   std::vector<StmtCheckerInfo> StmtCheckers;
 
-  typedef SmallVector<CheckStmtFunc, 4> CachedStmtCheckers;
-  typedef llvm::DenseMap<unsigned, CachedStmtCheckers> CachedStmtCheckersMapTy;
+  using CachedStmtCheckers = SmallVector<CheckStmtFunc, 4>;
+  using CachedStmtCheckersMapTy = llvm::DenseMap<unsigned, CachedStmtCheckers>;
   CachedStmtCheckersMapTy CachedStmtCheckersMap;
 
   const CachedStmtCheckers &getCachedStmtCheckersFor(const Stmt *S,
@@ -633,16 +643,17 @@ private:
 
   struct EventInfo {
     SmallVector<CheckEventFunc, 4> Checkers;
-    bool HasDispatcher;
-    EventInfo() : HasDispatcher(false) { }
+    bool HasDispatcher = false;
+
+    EventInfo() = default;
   };
   
-  typedef llvm::DenseMap<EventTag, EventInfo> EventsTy;
+  using EventsTy = llvm::DenseMap<EventTag, EventInfo>;
   EventsTy Events;
 };
 
-} // end ento namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_STATICANALYZER_CORE_CHECKERMANAGER_H

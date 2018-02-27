@@ -1,5 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=CHECK-STRQRO %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mcpu=falkor | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NOSTRQRO %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu                          | FileCheck %s --check-prefixes=CHECK,CHECK-STRQRO
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=slow-strqro-store | FileCheck %s --check-prefixes=CHECK,CHECK-NOSTRQRO
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mcpu=falkor             | FileCheck %s --check-prefixes=CHECK,CHECK-NOSTRQRO
 
 ; CHECK-LABEL: strqrox:
 ; CHECK-STRQRO: str q{{[0-9]+}}, [x{{[0-9]+}}, x

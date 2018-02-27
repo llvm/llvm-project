@@ -2968,7 +2968,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   // Forward -gcodeview. EmitCodeView might have been set by CL-compatibility
   // argument parsing.
-  if (Args.hasArg(options::OPT_gcodeview) || EmitCodeView) {
+  if (EmitCodeView) {
     // DWARFVersion remains at 0 if no explicit choice was made.
     CmdArgs.push_back("-gcodeview");
   } else if (DWARFVersion == 0 &&
@@ -3567,6 +3567,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   types::ID InputType = Input.getType();
   if (D.IsCLMode())
     AddClangCLArgs(Args, InputType, CmdArgs, &DebugInfoKind, &EmitCodeView);
+  else
+    EmitCodeView = Args.hasArg(options::OPT_gcodeview);
 
   const Arg *SplitDWARFArg = nullptr;
   RenderDebugOptions(getToolChain(), D, RawTriple, Args, EmitCodeView,

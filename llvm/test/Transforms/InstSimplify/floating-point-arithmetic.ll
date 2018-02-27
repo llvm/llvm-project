@@ -11,6 +11,26 @@ define float @fsub_-0_-0_x(float %a) {
   ret float %ret
 }
 
+define <2 x float> @fsub_-0_-0_x_vec(<2 x float> %a) {
+; CHECK-LABEL: @fsub_-0_-0_x_vec(
+; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
+;
+  %t1 = fsub <2 x float> <float -0.0, float -0.0>, %a
+  %ret = fsub <2 x float> <float -0.0, float -0.0>, %t1
+  ret <2 x float> %ret
+}
+
+define <2 x float> @fsub_-0_-0_x_vec_undef_elts(<2 x float> %a) {
+; CHECK-LABEL: @fsub_-0_-0_x_vec_undef_elts(
+; CHECK-NEXT:    [[T1:%.*]] = fsub <2 x float> <float undef, float -0.000000e+00>, [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = fsub <2 x float> <float -0.000000e+00, float undef>, [[T1]]
+; CHECK-NEXT:    ret <2 x float> [[RET]]
+;
+  %t1 = fsub <2 x float> <float undef, float -0.0>, %a
+  %ret = fsub <2 x float> <float -0.0, float undef>, %t1
+  ret <2 x float> %ret
+}
+
 ; fsub 0.0, (fsub -0.0, X) != X
 define float @fsub_0_-0_x(float %a) {
 ; CHECK-LABEL: @fsub_0_-0_x(
@@ -51,6 +71,15 @@ define float @fadd_x_n0(float %a) {
 ;
   %ret = fadd float %a, -0.0
   ret float %ret
+}
+
+define <2 x float> @fadd_x_n0_vec_undef_elt(<2 x float> %a) {
+; CHECK-LABEL: @fadd_x_n0_vec_undef_elt(
+; CHECK-NEXT:    [[RET:%.*]] = fadd <2 x float> [[A:%.*]], <float -0.000000e+00, float undef>
+; CHECK-NEXT:    ret <2 x float> [[RET]]
+;
+  %ret = fadd <2 x float> %a, <float -0.0, float undef>
+  ret <2 x float> %ret
 }
 
 ; fmul X, 1.0 ==> X
@@ -132,8 +161,7 @@ define <2 x float> @fabs_select_positive_constants_vector(i32 %c) {
 ; CHECK-LABEL: @fabs_select_positive_constants_vector(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> <float 2.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[SELECT]])
-; CHECK-NEXT:    ret <2 x float> [[FABS]]
+; CHECK-NEXT:    ret <2 x float> [[SELECT]]
 ;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x float> <float 1.0, float 1.0>, <2 x float> <float 2.0, float 2.0>
@@ -235,8 +263,7 @@ define <2 x float> @fabs_select_nan_nan_vector(i32 %c) {
 ; CHECK-LABEL: @fabs_select_nan_nan_vector(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
-; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[SELECT]])
-; CHECK-NEXT:    ret <2 x float> [[FABS]]
+; CHECK-NEXT:    ret <2 x float> [[SELECT]]
 ;
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>

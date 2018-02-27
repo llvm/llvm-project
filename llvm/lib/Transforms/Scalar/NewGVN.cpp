@@ -2819,6 +2819,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       for (auto PHIOp : Ops)
         ValuePHI->addIncoming(PHIOp.first, PHIOp.second);
     } else {
+      TempToBlock[ValuePHI] = PHIBlock;
       unsigned int i = 0;
       for (auto PHIOp : Ops) {
         ValuePHI->setIncomingValue(i, PHIOp.first);

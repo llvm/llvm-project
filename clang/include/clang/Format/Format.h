@@ -662,7 +662,9 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterNamespace;
-    /// \brief Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
+    /// \brief Wrap ObjC definitions (interfaces, implementations...).
+    /// \note @autoreleasepool and @synchronized blocks are wrapped
+    /// according to `AfterControlStatement` flag.
     bool AfterObjCDeclaration;
     /// \brief Wrap struct definitions.
     /// \code

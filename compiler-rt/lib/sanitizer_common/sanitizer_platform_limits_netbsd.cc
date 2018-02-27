@@ -198,6 +198,7 @@
 #include <term.h>
 #include <termios.h>
 #include <time.h>
+#include <ttyent.h>
 #include <utime.h>
 #include <utmp.h>
 #include <utmpx.h>
@@ -337,6 +338,8 @@ int glob_nomatch = GLOB_NOMATCH;
 int glob_altdirfunc = GLOB_ALTDIRFUNC;
 
 unsigned path_max = PATH_MAX;
+
+int struct_ttyent_sz = sizeof(struct ttyent);
 
 // ioctl arguments
 unsigned struct_altqreq_sz = sizeof(altqreq);
