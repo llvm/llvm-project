@@ -954,13 +954,6 @@ const char *SuppressInlineDefensiveChecksVisitor::getTag() {
   return "IDCVisitor";
 }
 
-/// \return name of the macro inside the location \p Loc.
-static StringRef getMacroName(SourceLocation Loc,
-    BugReporterContext &BRC) {
-  return Lexer::getImmediateMacroName(
-      Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-}
-
 std::shared_ptr<PathDiagnosticPiece>
 SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
                                                 const ExplodedNode *Pred,
