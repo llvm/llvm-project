@@ -69,3 +69,11 @@ Array(names.lazy.reversed())
 // CHECK-NEXT:     [0] = 1
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+
+let some_int = 1
+some_int
+// CHECK: $R7: Int = 1
+
+let some_str = "Hello"
+some_str
+// CHECK: $R8: String = "Hello"
