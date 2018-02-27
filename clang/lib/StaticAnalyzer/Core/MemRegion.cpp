@@ -23,6 +23,11 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
+
+#include<functional>
+
+#define DEBUG_TYPE "MemRegion"
 
 using namespace clang;
 using namespace ento;
@@ -1149,6 +1154,36 @@ const SymbolicRegion *MemRegion::getSymbolicBase() const {
   return nullptr;
 }
 
+/// Perform a given operation on two integers, return whether it overflows.
+/// Optionally write the resulting output into \p Res.
+static bool checkedOp(
+    int64_t LHS,
+    int64_t RHS,
+    std::function<llvm::APInt(llvm::APInt *, const llvm::APInt &, bool &)> Op,
+    int64_t *Res = nullptr) {
+  llvm::APInt ALHS(/*BitSize=*/64, LHS, /*Signed=*/true);
+  llvm::APInt ARHS(/*BitSize=*/64, RHS, /*Signed=*/true);
+  bool Overflow;
+  llvm::APInt Out = Op(&ALHS, ARHS, Overflow);
+  if (!Overflow && Res)
+    *Res = Out.getSExtValue();
+  return Overflow;
+}
+
+static bool checkedAdd(
+    int64_t LHS,
+    int64_t RHS,
+    int64_t *Res=nullptr) {
+  return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov, Res);
+}
+
+static bool checkedMul(
+    int64_t LHS,
+    int64_t RHS,
+    int64_t *Res=nullptr) {
+  return checkedOp(LHS, RHS, &llvm::APInt::smul_ov, Res);
+}
+
 RegionRawOffset ElementRegion::getAsArrayOffset() const {
   CharUnits offset = CharUnits::Zero();
   const ElementRegion *ER = this;
@@ -1176,6 +1211,18 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
         }
 
         CharUnits size = C.getTypeSizeInChars(elemType);
+
+        int64_t Mult;
+        bool Overflow = checkedAdd(i, size.getQuantity(), &Mult);
+        if (!Overflow)
+          Overflow = checkedMul(Mult, offset.getQuantity());
+        if (Overflow) {
+          DEBUG(llvm::dbgs() << "MemRegion::getAsArrayOffset: "
+                             << "offset overflowing, returning unknown\n");
+
+          return nullptr;
+        }
+
         offset += (i * size);
       }
 
