@@ -900,7 +900,13 @@ int glob;
 
 class C {
 public:
-  ~C() { glob = 1; }
+  ~C() {
+    glob = 1;
+    clang_analyzer_checkInlined(true);
+#ifdef TEMPORARY_DTORS
+    // expected-warning@-2{{TRUE}}
+#endif
+  }
 };
 
 C get();
@@ -913,12 +919,11 @@ void test(int coin) {
   // temporaries: the return value of get() and the elidable copy constructor
   // of that return value into is(). According to the CFG, we need to cleanup
   // both of them depending on whether the temporary corresponding to the
-  // return value of get() was initialized. However, for now we don't track
-  // temporaries returned from functions, so we take the wrong branch.
+  // return value of get() was initialized. However, we didn't track
+  // temporaries returned from functions, so we took the wrong branch.
   coin && is(get()); // no-crash
-  // FIXME: We should have called the destructor, i.e. should be TRUE,
-  // at least when we inline temporary destructors.
-  clang_analyzer_eval(glob == 1); // expected-warning{{UNKNOWN}}
+  // FIXME: Should be true once we inline all destructors.
+  clang_analyzer_eval(glob); // expected-warning{{UNKNOWN}}
 }
 } // namespace dont_forget_destructor_around_logical_op
 
