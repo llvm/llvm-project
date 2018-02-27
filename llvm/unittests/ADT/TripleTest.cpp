@@ -117,11 +117,28 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::CNK, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("ppc-bgp-linux");
+  EXPECT_EQ(Triple::ppc, T.getArch());
+  EXPECT_EQ(Triple::BGP, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("ppc32-bgp-linux");
+  EXPECT_EQ(Triple::ppc, T.getArch());
+  EXPECT_EQ(Triple::BGP, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("powerpc64-bgq-linux");
   EXPECT_EQ(Triple::ppc64, T.getArch());
   EXPECT_EQ(Triple::BGQ, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("ppc64-bgq-linux");
+  EXPECT_EQ(Triple::ppc64, T.getArch());
+  EXPECT_EQ(Triple::BGQ, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
 
   T = Triple("powerpc-ibm-aix");
   EXPECT_EQ(Triple::ppc, T.getArch());

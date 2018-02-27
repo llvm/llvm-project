@@ -993,7 +993,8 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
         N = New.getNode();
       }
       // Now, select the machine opcode to implement this operation.
-      SelectCode(N);
+      if (!N->isMachineOpcode())
+        SelectCode(N);
       return true;
     }
   }
