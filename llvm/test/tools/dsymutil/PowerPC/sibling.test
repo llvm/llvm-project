@@ -1,0 +1,20 @@
+# Verify that we don't follow DW_AT_sibling references.
+#
+# Source:
+#   struct A { int a; } a;
+#   struct B { int b; } b;
+
+# RUN: llvm-dsymutil -arch ppc -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+
+# CHECK: DW_TAG_variable
+# CHECK-NEXT: DW_AT_name ("a")
+# CHECK-NOT: DW_AT_name	("b")
+
+---
+triple:          'ppc-apple-darwin'
+objects:
+  - filename:        sibling.o
+    timestamp:       1518197670
+    symbols:
+      - { sym: _a, objAddr: 0x00000000000000cb, binAddr: 0x0000000100000FA0, size: 0x00000010 }
+...

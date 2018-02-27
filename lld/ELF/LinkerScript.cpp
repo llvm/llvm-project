@@ -127,9 +127,13 @@ static bool shouldDefineSym(SymbolAssignment *Cmd) {
   // If a symbol was in PROVIDE(), we need to define it only
   // when it is a referenced undefined symbol.
   Symbol *B = Symtab->find(Cmd->Name);
-  if (!B || B->isDefined())
-    return false;
-  return true;
+  if (B && !B->isDefined())
+    return true;
+  // It might also be referenced by a DSO.
+  for (InputFile *F : SharedFiles)
+    if (F->getUndefinedSymbols().count(Cmd->Name))
+      return true;
+  return false;
 }
 
 // This function is called from processSectionCommands,
