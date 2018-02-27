@@ -42,17 +42,28 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
                                     const CallEvent &Call) {
   SVal ThisVal;
   bool AlwaysReturnsLValue;
+  const CXXRecordDecl *ThisRD = nullptr;
   if (const CXXConstructorCall *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
     assert(Ctor->getDecl()->isTrivial());
     assert(Ctor->getDecl()->isCopyOrMoveConstructor());
     ThisVal = Ctor->getCXXThisVal();
+    ThisRD = Ctor->getDecl()->getParent();
     AlwaysReturnsLValue = false;
   } else {
     assert(cast<CXXMethodDecl>(Call.getDecl())->isTrivial());
     assert(cast<CXXMethodDecl>(Call.getDecl())->getOverloadedOperator() ==
            OO_Equal);
     ThisVal = cast<CXXInstanceCall>(Call).getCXXThisVal();
+    ThisRD = cast<CXXMethodDecl>(Call.getDecl())->getParent();
     AlwaysReturnsLValue = true;
+  }
+
+  assert(ThisRD);
+  if (ThisRD->isEmpty()) {
+    // Do nothing for empty classes. Otherwise it'd retrieve an UnknownVal
+    // and bind it and RegionStore would think that the actual value
+    // in this region at this offset is unknown.
+    return;
   }
 
   const LocationContext *LCtx = Pred->getLocationContext();

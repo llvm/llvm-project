@@ -729,3 +729,23 @@ namespace NoCrashOnEmptyBaseOptimization {
     S s;
   }
 }
+
+namespace EmptyBaseAssign {
+struct B1 {};
+struct B2 { int x; };
+struct D: public B1, public B2 {
+const D &operator=(const D &d) {
+  *((B2 *)this) = d;
+  *((B1 *)this) = d;
+  return *this;
+}
+};
+
+void test() {
+  D d1;
+  d1.x = 1;
+  D d2;
+  d2 = d1;
+  clang_analyzer_eval(d2.x == 1); // expected-warning{{TRUE}}
+}
+}
