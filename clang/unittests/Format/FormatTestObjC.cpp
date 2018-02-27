@@ -187,7 +187,8 @@ TEST_F(FormatTestObjC, FormatObjCAutoreleasepool) {
                "@autoreleasepool {\n"
                "  f();\n"
                "}\n");
-  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = true;
   verifyFormat("@autoreleasepool\n"
                "{\n"
                "  f();\n"
@@ -207,6 +208,25 @@ TEST_F(FormatTestObjC, FormatObjCGenerics) {
                "    NSArray<aaaaaaaaaaaaaaaaaaa<\n"
                "        aaaaaaaaaaaaaaaa *> *>\n"
                "        aaaaaaaaaaaaaaaaa);\n");
+}
+
+TEST_F(FormatTestObjC, FormatObjCSynchronized) {
+  verifyFormat("@synchronized(self) {\n"
+               "  f();\n"
+               "}\n"
+               "@synchronized(self) {\n"
+               "  f();\n"
+               "}\n");
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = true;
+  verifyFormat("@synchronized(self)\n"
+               "{\n"
+               "  f();\n"
+               "}\n"
+               "@synchronized(self)\n"
+               "{\n"
+               "  f();\n"
+               "}\n");
 }
 
 TEST_F(FormatTestObjC, FormatObjCInterface) {

@@ -167,33 +167,25 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB1_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vpmovsxwd 8(%rdi,%rcx,2), %xmm2
-; AVX1-NEXT:    vpmovsxwd (%rdi,%rcx,2), %xmm3
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpmovsxwd 24(%rdi,%rcx,2), %xmm3
-; AVX1-NEXT:    vpmovsxwd 16(%rdi,%rcx,2), %xmm4
-; AVX1-NEXT:    vpackssdw %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpmovsxwd 8(%rsi,%rcx,2), %xmm4
-; AVX1-NEXT:    vpmovsxwd (%rsi,%rcx,2), %xmm5
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpmovsxwd 24(%rsi,%rcx,2), %xmm4
-; AVX1-NEXT:    vpmovsxwd 16(%rsi,%rcx,2), %xmm5
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm3
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
-; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    vmovdqu (%rdi,%rcx,2), %ymm2
+; AVX1-NEXT:    vmovdqu (%rsi,%rcx,2), %ymm3
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
+; AVX1-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
 ; AVX1-NEXT:    jne .LBB1_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
@@ -653,25 +645,25 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB4_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vpmovsxbw (%rdi,%rcx), %xmm2
-; AVX1-NEXT:    vpmovsxbw 8(%rdi,%rcx), %xmm3
+; AVX1-NEXT:    vpmovsxbw 8(%rdi,%rcx), %xmm2
+; AVX1-NEXT:    vpmovsxbw 8(%rsi,%rcx), %xmm3
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovsxbw (%rdi,%rcx), %xmm3
 ; AVX1-NEXT:    vpmovsxbw (%rsi,%rcx), %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpmovsxbw 8(%rsi,%rcx), %xmm4
 ; AVX1-NEXT:    vpmaddwd %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm3
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
-; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
 ; AVX1-NEXT:    jne .LBB4_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
