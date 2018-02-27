@@ -12,9 +12,10 @@
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>
+#include <dlfcn.h>
 #endif
 
-#ifdef __APPLE__
+#ifdef __gnu_linux__
 #include <dlfcn.h>
 #endif
 
@@ -30,6 +31,8 @@ int main() {
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
   dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
+#else
+  dlopen("libswiftCore.so", RTLD_LAZY);
 #endif
   
 #ifdef __APPLE__
