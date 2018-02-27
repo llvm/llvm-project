@@ -32,13 +32,28 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
-Major New Features
-------------------
+Non-comprehensive list of changes in this release
+-------------------------------------------------
 
--  ...
+- Bitrig OS was merged back into OpenBSD, so Bitrig support has been
+  removed from Clang/LLVM.
+
+- The default value of ``_MSC_VER`` was raised from 1800 to 1911, making it
+  compatible with the Visual Studio 2015 and 2017 C++ standard library headers.
+  Users should generally expect this to be regularly raised to match the most
+  recently released version of the Visual C++ compiler.
+
+- clang now defaults to ``.init_array`` if no gcc installation can be found.
+  If a gcc installation is found, it still prefers ``.ctors`` if the found
+  gcc is older than 4.7.0.
+
+- The new builtin preprocessor macros ``__is_target_arch``,
+  ``__is_target_vendor``, ``__is_target_os``, and ``__is_target_environment``
+  can be used to to examine the individual components of the target triple.
+
 
 Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------
 
 - ``-Wpragma-pack`` is a new warning that warns in the following cases:
 
@@ -61,7 +76,7 @@ Improvements to Clang's diagnostics
   selector which could make the message send to ``id`` ambiguous.
 
 - ``-Wtautological-compare`` now warns when comparing an unsigned integer and 0
-  regardless of whether the constant is signed or unsigned."
+  regardless of whether the constant is signed or unsigned.
 
 - ``-Wtautological-compare`` now warns about comparing a signed integer and 0
   when the signed integer is coerced to an unsigned type for the comparison.
@@ -90,37 +105,25 @@ Improvements to Clang's diagnostics
 - ``-Wunreachable-code`` can now reason about ``__try``, ``__except`` and
   ``__leave``.
 
-Non-comprehensive list of changes in this release
--------------------------------------------------
-
-- Bitrig OS was merged back into OpenBSD, so Bitrig support has been
-  removed from Clang/LLVM.
-
-- The default value of _MSC_VER was raised from 1800 to 1911, making it
-  compatible with the Visual Studio 2015 and 2017 C++ standard library headers.
-  Users should generally expect this to be regularly raised to match the most
-  recently released version of the Visual C++ compiler.
-
-- clang now defaults to ``.init_array`` if no gcc installation can be found.
-  If a gcc installation is found, it still prefers ``.ctors`` if the found
-  gcc is older than 4.7.0.
-
-- The new builtin preprocessor macros ``__is_target_arch``,
-  ``__is_target_vendor``, ``__is_target_os``, and ``__is_target_environment``
-  can be used to to examine the individual components of the target triple.
 
 New Compiler Flags
 ------------------
 
-- --autocomplete was implemented to obtain a list of flags and its arguments. This is used for shell autocompletion.
+- Clang now supports configuration files. These are collections of driver
+  options, which can be applied by specifying the configuration file, either
+  using command line option ``--config foo.cfg`` or encoding it into executable
+  name ``foo-clang``. Clang behaves as if the options from this file were inserted
+  before the options specified in command line. This feature is primary intended
+  to facilitate cross compilation. Details can be found in
+  `Clang Compiler User's Manual <UsersManual.html#configuration-files>`_.
 
 - The ``-fdouble-square-bracket-attributes`` and corresponding
   ``-fno-double-square-bracket-attributes`` flags were added to enable or
-  disable [[]] attributes in any language mode. Currently, only a limited
+  disable ``[[]]`` attributes in any language mode. Currently, only a limited
   number of attributes are supported outside of C++ mode. See the Clang
-  attribute documentation for more information about which attributes are
-  supported for each syntax.
-  
+  `attribute documentation <AttributeReference.html>`_ for more information
+  about which attributes are supported for each syntax.
+
 - Added the ``-std=c17``, ``-std=gnu17``, and ``-std=iso9899:2017`` language
   mode flags for compatibility with GCC. This enables support for the next
   version of the C standard, expected to be published by ISO in 2018. The only
@@ -135,19 +138,6 @@ New Compiler Flags
 - New ``-nostdlib++`` flag to disable linking the C++ standard library. Similar
   to using ``clang`` instead of ``clang++`` but doesn't disable ``-lm``.
 
-Deprecated Compiler Flags
--------------------------
-
-The following options are deprecated and ignored. They will be removed in
-future versions of Clang.
-
-- ...
-
-New Pragmas in Clang
------------------------
-
-Clang now supports the ...
-
 
 Attribute Changes in Clang
 --------------------------
@@ -157,25 +147,15 @@ Attribute Changes in Clang
   in the ``clang`` vendor namespace (``[[clang::name]]``). Attributes whose
   syntax is specified by some other standard (such as CUDA and OpenCL
   attributes) continue to follow their respective specification.
-  
+
 - Added the ``__has_c_attribute()`` builtin preprocessor macro which allows
   users to dynamically detect whether a double square-bracket attribute is
   supported in C mode. This attribute syntax can be enabled with the
   ``-fdouble-square-bracket-attributes`` flag.
-  
-- The presence of __attribute__((availability(...))) on a declaration no longer
-  implies default visibility for that declaration on macOS.
 
-- Clang now supports configuration files. These are collections of driver
-  options, which can be applied by specifying the configuration file, either
-  using command line option `--config foo.cfg` or encoding it into executable
-  name `foo-clang`. Clang behaves as if the options from this file were inserted
-  before the options specified in command line. This feature is primary intended
-  to facilitate cross compilation. Details can be found in
-  `Clang Compiler User's Manual
-  <http://clang.llvm.org/docs/UsersManual.html#configuration-files>`.
+- The presence of ``__attribute__((availability(...)))`` on a declaration no
+  longer implies default visibility for that declaration on macOS.
 
-- ...
 
 Windows Support
 ---------------
@@ -185,17 +165,6 @@ Windows Support
 
 - clang-cl now exposes the ``--version`` flag.
 
-C Language Changes in Clang
----------------------------
-
-- ...
-
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
 
 C++ Language Changes in Clang
 -----------------------------
@@ -205,19 +174,9 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++14 can add
   ``-std=gnu++98`` to their build settings to restore the previous behaviour.
 
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
-
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
 
 OpenCL C Language Changes in Clang
 ----------------------------------
-
 
 - Added subgroup builtins to enqueue kernel support.
 
@@ -258,77 +217,72 @@ OpenCL C Language Changes in Clang
 - Miscellaneous improvements in vector diagnostics.
 
 - Added half float load and store builtins without enabling half as a legal type
-  (``__builtin_store_half for double``, ``__builtin_store_halff`` for double,
-  ``__builtin_load_half for double``, ``__builtin_load_halff`` for float).
+  (``__builtin_store_half`` for double, ``__builtin_store_halff`` for float,
+  ``__builtin_load_half`` for double, ``__builtin_load_halff`` for float).
 
 
 OpenMP Support in Clang
 ----------------------------------
 
-- Added options `-f[no]-openmp-simd` that support code emission only for OpenMP
-  SIMD-based directives, like `#pragma omp simd`, `#pragma omp parallel for simd`
-  etc. The code is emitted only for simd-based part of the combined directives
+- Added options ``-f[no]-openmp-simd`` that support code emission only for OpenMP
+  SIMD-based directives, like ``#pragma omp simd``, ``#pragma omp parallel for simd``
+  etc. The code is emitted only for SIMD-based part of the combined directives
   and clauses.
 
 - Added support for almost all target-based directives except for
-  `#pragma omp target teams distribute parallel for [simd]`. Although, please
-  note that `depend` clauses on target-based directives are not supported yet.
+  ``#pragma omp target teams distribute parallel for [simd]``. Although, please
+  note that ``depend`` clauses on target-based directives are not supported yet.
   Clang supports offloading to X86_64, AArch64 and PPC64[LE] devices.
 
-- Added support for `reduction`-based clauses on `task`-based directives from
+- Added support for ``reduction``-based clauses on ``task``-based directives from
   upcoming OpenMP 5.0.
 
-- The LLVM OpenMP runtime `libomp` now supports the OpenMP Tools Interface (OMPT)
+- The LLVM OpenMP runtime ``libomp`` now supports the OpenMP Tools Interface (OMPT)
   on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS. If you observe
   a measurable performance impact on one of your applications without a tool
-  attached, please rebuild the runtime library with `-DLIBOMP_OMPT_SUPPORT=OFF` and
+  attached, please rebuild the runtime library with ``-DLIBOMP_OMPT_SUPPORT=OFF`` and
   file a bug at `LLVM's Bugzilla <https://bugs.llvm.org/>`_ or send a message to the
   `OpenMP development list <http://lists.llvm.org/cgi-bin/mailman/listinfo/openmp-dev>`_.
 
-Internal API Changes
---------------------
-
-These are major API changes that have happened since the 4.0.0 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
-
--  ...
 
 AST Matchers
 ------------
 
-The hasDeclaration matcher now works the same for Type and QualType and only
+The ``hasDeclaration`` matcher now works the same for ``Type`` and ``QualType`` and only
 ever looks through one level of sugaring in a limited number of cases.
 
 There are two main patterns affected by this:
 
--  qualType(hasDeclaration(recordDecl(...))): previously, we would look through
-   sugar like TypedefType to get at the underlying recordDecl; now, we need
+-  ``qualType(hasDeclaration(recordDecl(...)))``: previously, we would look through
+   sugar like ``TypedefType`` to get at the underlying ``recordDecl``; now, we need
    to explicitly remove the sugaring:
-   qualType(hasUnqualifiedDesugaredType(hasDeclaration(recordDecl(...))))
+   ``qualType(hasUnqualifiedDesugaredType(hasDeclaration(recordDecl(...))))``
 
--  hasType(recordDecl(...)): hasType internally uses hasDeclaration; previously,
-   this matcher used to match for example TypedefTypes of the RecordType, but
+-  ``hasType(recordDecl(...))``: ``hasType`` internally uses ``hasDeclaration``; previously,
+   this matcher used to match for example ``TypedefTypes`` of the ``RecordType``, but
    after the change they don't; to fix, use:
 
-::
-   hasType(hasUnqualifiedDesugaredType(
-       recordType(hasDeclaration(recordDecl(...)))))
+   .. code-block:: c
 
--  templateSpecializationType(hasDeclaration(classTemplateDecl(...))):
-   previously, we would directly match the underlying ClassTemplateDecl;
-   now, we can explicitly match the ClassTemplateSpecializationDecl, but that
-   requires to explicitly get the ClassTemplateDecl:
+      hasType(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(recordDecl(...)))))
 
-::
-   templateSpecializationType(hasDeclaration(
-       classTemplateSpecializationDecl(
-           hasSpecializedTemplate(classTemplateDecl(...)))))
+-  ``templateSpecializationType(hasDeclaration(classTemplateDecl(...)))``:
+   previously, we would directly match the underlying ``ClassTemplateDecl``;
+   now, we can explicitly match the ``ClassTemplateSpecializationDecl``, but that
+   requires to explicitly get the ``ClassTemplateDecl``:
+
+   .. code-block:: c
+
+      templateSpecializationType(hasDeclaration(
+          classTemplateSpecializationDecl(
+              hasSpecializedTemplate(classTemplateDecl(...)))))
+
 
 clang-format
 ------------
 
-* Option *IndentPPDirectives* added to indent preprocessor directives on
+* Option ``IndentPPDirectives`` added to indent preprocessor directives on
   conditionals.
 
   +----------------------+----------------------+
@@ -343,10 +297,10 @@ clang-format
   |    #endif            |   #endif             |
   +----------------------+----------------------+
 
-* Option -verbose added to the command line.
+* Option ``-verbose`` added to the command line.
   Shows the list of processed files.
 
-* Option *IncludeBlocks* added to merge and regroup multiple ``#include`` blocks during sorting.
+* Option ``IncludeBlocks`` added to merge and regroup multiple ``#include`` blocks during sorting.
 
   +-------------------------+-------------------------+-------------------------+
   | Before (Preserve)       | Merge                   | Regroup                 |
@@ -359,19 +313,13 @@ clang-format
   |   #include <lib/main.h> |                         |   #include <lib/main.h> |
   +-------------------------+-------------------------+-------------------------+
 
-libclang
---------
-
-...
-
 
 Static Analyzer
 ---------------
 
-- Static Analyzer can now properly detect and diagnose unary pre-/post-
+- The Static Analyzer can now properly detect and diagnose unary pre-/post-
   increment/decrement on an uninitialized value.
 
-...
 
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
@@ -381,25 +329,6 @@ Undefined Behavior Sanitizer (UBSan)
   issue logging and deduplication, and does not support ``-fsanitize=vptr``
   checking.
 
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
