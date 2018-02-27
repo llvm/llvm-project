@@ -378,7 +378,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(Efficiency, Address | HWAddress | Leak | Thread | Memory |
                                      KernelAddress),
       std::make_pair(Scudo, Address | HWAddress | Leak | Thread | Memory |
-                                KernelAddress | Efficiency)};
+                                KernelAddress | Efficiency),
+      std::make_pair(SafeStack, Address | HWAddress | Leak | Thread | Memory |
+                                    KernelAddress | Efficiency)};
   for (auto G : IncompatibleGroups) {
     SanitizerMask Group = G.first;
     if (Kinds & Group) {

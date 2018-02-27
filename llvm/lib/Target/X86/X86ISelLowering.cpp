@@ -16903,8 +16903,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Handle truncation of V256 to V128 using shuffles.
-  if (!VT.is128BitVector() || !InVT.is256BitVector())
-    return SDValue();
+  assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
 
   assert(Subtarget.hasFp256() && "256-bit vector without AVX!");
 
@@ -18435,7 +18434,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // are available or VBLENDV if AVX is available.
   // Otherwise FP cmovs get lowered into a less efficient branch sequence later.
   if (Cond.getOpcode() == ISD::SETCC &&
-      ((Subtarget.hasSSE2() && (VT == MVT::f32 || VT == MVT::f64)) ||
+      ((Subtarget.hasSSE2() && VT == MVT::f64) ||
        (Subtarget.hasSSE1() && VT == MVT::f32)) &&
       VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
     SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);

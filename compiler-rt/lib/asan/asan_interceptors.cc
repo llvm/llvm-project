@@ -334,7 +334,7 @@ INTERCEPTOR(void, __cxa_rethrow_primary_exception, void *a) {
 
 #if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION
 INTERCEPTOR(_Unwind_Reason_Code, _Unwind_RaiseException,
-            struct _Unwind_Exception *object) {
+            _Unwind_Exception *object) {
   CHECK(REAL(_Unwind_RaiseException));
   __asan_handle_no_return();
   return REAL(_Unwind_RaiseException)(object);
@@ -343,7 +343,7 @@ INTERCEPTOR(_Unwind_Reason_Code, _Unwind_RaiseException,
 
 #if ASAN_INTERCEPT__SJLJ_UNWIND_RAISEEXCEPTION
 INTERCEPTOR(_Unwind_Reason_Code, _Unwind_SjLj_RaiseException,
-            struct _Unwind_Exception *object) {
+            _Unwind_Exception *object) {
   CHECK(REAL(_Unwind_SjLj_RaiseException));
   __asan_handle_no_return();
   return REAL(_Unwind_SjLj_RaiseException)(object);

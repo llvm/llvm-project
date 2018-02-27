@@ -1,4 +1,4 @@
-// RUN: %clang_tsan %s -lc++ -fobjc-arc -lobjc -o %t -framework Foundation
+// RUN: %clang_tsan %s -lc++ -fobjc-arc -lobjc -o %t -framework Foundation %darwin_min_target_with_full_runtime_arc_support
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // Check that we do not report races between:
