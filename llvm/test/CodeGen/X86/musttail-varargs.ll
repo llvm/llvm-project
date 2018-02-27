@@ -209,9 +209,9 @@ define void @f_thunk(i8* %this, ...) {
 ; WINDOWS-NEXT:    movq %r8, %rdi
 ; WINDOWS-NEXT:    movq %rdx, %rbx
 ; WINDOWS-NEXT:    movq %rcx, %rbp
-; WINDOWS-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; WINDOWS-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; WINDOWS-NEXT:    movq %rbx, {{[0-9]+}}(%rsp)
+; WINDOWS-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
+; WINDOWS-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
+; WINDOWS-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; WINDOWS-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    callq get_f

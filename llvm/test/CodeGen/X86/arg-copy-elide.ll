@@ -106,7 +106,7 @@ entry:
 ; CHECK-DAG: movl %edx, %[[r1:[^ ]*]]
 ; CHECK-DAG: movl 8(%ebp), %[[r2:[^ ]*]]
 ; CHECK-DAG: movl %[[r2]], 4(%esp)
-; CHECK-DAG: movl %[[r1]], (%esp)
+; CHECK-DAG: movl %edx, (%esp)
 ; CHECK: movl %esp, %[[reg:[^ ]*]]
 ; CHECK: pushl %[[reg]]
 ; CHECK: calll _addrof_i64

@@ -2612,11 +2612,24 @@ bool LLParser::PerFunctionState::FinishFunction() {
   return false;
 }
 
+static bool isValidVariableType(Module *M, Type *Ty, Value *Val, bool IsCall) {
+  if (Val->getType() == Ty)
+    return true;
+  // For calls we also accept variables in the program address space
+  if (IsCall && isa<PointerType>(Ty)) {
+    Type *TyInProgAS = cast<PointerType>(Ty)->getElementType()->getPointerTo(
+        M->getDataLayout().getProgramAddressSpace());
+    if (Val->getType() == TyInProgAS)
+      return true;
+  }
+  return false;
+}
+
 /// GetVal - Get a value with the specified name or ID, creating a
 /// forward reference record if needed.  This can return null if the value
 /// exists but does not have the right type.
 Value *LLParser::PerFunctionState::GetVal(const std::string &Name, Type *Ty,
-                                          LocTy Loc) {
+                                          LocTy Loc, bool IsCall) {
   // Look this name up in the normal function symbol table.
   Value *Val = F.getValueSymbolTable()->lookup(Name);
 
@@ -2630,7 +2643,8 @@ Value *LLParser::PerFunctionState::GetVal(const std::string &Name, Type *Ty,
 
   // If we have the value in the symbol table or fwd-ref table, return it.
   if (Val) {
-    if (Val->getType() == Ty) return Val;
+    if (isValidVariableType(P.M, Ty, Val, IsCall))
+      return Val;
     if (Ty->isLabelTy())
       P.Error(Loc, "'%" + Name + "' is not a basic block");
     else
@@ -2657,7 +2671,8 @@ Value *LLParser::PerFunctionState::GetVal(const std::string &Name, Type *Ty,
   return FwdVal;
 }
 
-Value *LLParser::PerFunctionState::GetVal(unsigned ID, Type *Ty, LocTy Loc) {
+Value *LLParser::PerFunctionState::GetVal(unsigned ID, Type *Ty, LocTy Loc,
+                                          bool IsCall) {
   // Look this name up in the normal function symbol table.
   Value *Val = ID < NumberedVals.size() ? NumberedVals[ID] : nullptr;
 
@@ -2671,7 +2686,8 @@ Value *LLParser::PerFunctionState::GetVal(unsigned ID, Type *Ty, LocTy Loc) {
 
   // If we have the value in the symbol table or fwd-ref table, return it.
   if (Val) {
-    if (Val->getType() == Ty) return Val;
+    if (isValidVariableType(P.M, Ty, Val, IsCall))
+      return Val;
     if (Ty->isLabelTy())
       P.Error(Loc, "'%" + Twine(ID) + "' is not a basic block");
     else
@@ -2762,13 +2778,13 @@ bool LLParser::PerFunctionState::SetInstName(int NameID,
 /// forward reference record if needed.
 BasicBlock *LLParser::PerFunctionState::GetBB(const std::string &Name,
                                               LocTy Loc) {
-  return dyn_cast_or_null<BasicBlock>(GetVal(Name,
-                                      Type::getLabelTy(F.getContext()), Loc));
+  return dyn_cast_or_null<BasicBlock>(
+      GetVal(Name, Type::getLabelTy(F.getContext()), Loc, /*IsCall=*/false));
 }
 
 BasicBlock *LLParser::PerFunctionState::GetBB(unsigned ID, LocTy Loc) {
-  return dyn_cast_or_null<BasicBlock>(GetVal(ID,
-                                      Type::getLabelTy(F.getContext()), Loc));
+  return dyn_cast_or_null<BasicBlock>(
+      GetVal(ID, Type::getLabelTy(F.getContext()), Loc, /*IsCall=*/false));
 }
 
 /// DefineBB - Define the specified basic block, which is either named or
@@ -3387,7 +3403,7 @@ bool LLParser::ParseGlobalValue(Type *Ty, Constant *&C) {
   ValID ID;
   Value *V = nullptr;
   bool Parsed = ParseValID(ID) ||
-                ConvertValIDToValue(Ty, ID, V, nullptr);
+                ConvertValIDToValue(Ty, ID, V, nullptr, /*IsCall=*/false);
   if (V && !(C = dyn_cast<Constant>(V)))
     return Error(ID.Loc, "global values must be constants");
   return Parsed;
@@ -4729,18 +4745,18 @@ bool LLParser::ParseMetadata(Metadata *&MD, PerFunctionState *PFS) {
 //===----------------------------------------------------------------------===//
 
 bool LLParser::ConvertValIDToValue(Type *Ty, ValID &ID, Value *&V,
-                                   PerFunctionState *PFS) {
+                                   PerFunctionState *PFS, bool IsCall) {
   if (Ty->isFunctionTy())
     return Error(ID.Loc, "functions are not values, refer to them as pointers");
 
   switch (ID.Kind) {
   case ValID::t_LocalID:
     if (!PFS) return Error(ID.Loc, "invalid use of function-local name");
-    V = PFS->GetVal(ID.UIntVal, Ty, ID.Loc);
+    V = PFS->GetVal(ID.UIntVal, Ty, ID.Loc, IsCall);
     return V == nullptr;
   case ValID::t_LocalName:
     if (!PFS) return Error(ID.Loc, "invalid use of function-local name");
-    V = PFS->GetVal(ID.StrVal, Ty, ID.Loc);
+    V = PFS->GetVal(ID.StrVal, Ty, ID.Loc, IsCall);
     return V == nullptr;
   case ValID::t_InlineAsm: {
     if (!ID.FTy || !InlineAsm::Verify(ID.FTy, ID.StrVal2))
@@ -4856,7 +4872,7 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   case ValID::t_ConstantStruct:
   case ValID::t_PackedConstantStruct: {
     Value *V;
-    if (ConvertValIDToValue(Ty, ID, V, /*PFS=*/nullptr))
+    if (ConvertValIDToValue(Ty, ID, V, /*PFS=*/nullptr, /*IsCall=*/false))
       return true;
     assert(isa<Constant>(V) && "Expected a constant value");
     C = cast<Constant>(V);
@@ -4873,7 +4889,8 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
 bool LLParser::ParseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   V = nullptr;
   ValID ID;
-  return ParseValID(ID, PFS) || ConvertValIDToValue(Ty, ID, V, PFS);
+  return ParseValID(ID, PFS) ||
+         ConvertValIDToValue(Ty, ID, V, PFS, /*IsCall=*/false);
 }
 
 bool LLParser::ParseTypeAndValue(Value *&V, PerFunctionState *PFS) {
@@ -5626,7 +5643,8 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
 
   // Look up the callee.
   Value *Callee;
-  if (ConvertValIDToValue(PointerType::getUnqual(Ty), CalleeID, Callee, &PFS))
+  if (ConvertValIDToValue(PointerType::getUnqual(Ty), CalleeID, Callee, &PFS,
+                          /*IsCall=*/true))
     return true;
 
   // Set up the Attribute for the function.
@@ -6217,7 +6235,8 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
 
   // Look up the callee.
   Value *Callee;
-  if (ConvertValIDToValue(PointerType::getUnqual(Ty), CalleeID, Callee, &PFS))
+  if (ConvertValIDToValue(PointerType::getUnqual(Ty), CalleeID, Callee, &PFS,
+                          /*IsCall=*/true))
     return true;
 
   // Set up the Attribute for the function.

@@ -1757,7 +1757,7 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp) # 32-byte Spill
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm9[0],xmm12[0],xmm9[1],xmm12[1],xmm9[2],xmm12[2],xmm9[3],xmm12[3]
 ; AVX1-NEXT:    vmovdqa %xmm8, %xmm2
-; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm8 = xmm2[0],xmm14[0],xmm2[1],xmm14[1],xmm2[2],xmm14[2],xmm2[3],xmm14[3]
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm8 = xmm8[0],xmm14[0],xmm8[1],xmm14[1],xmm8[2],xmm14[2],xmm8[3],xmm14[3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm8, %ymm13
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm15 = xmm15[4],xmm5[4],xmm15[5],xmm5[5],xmm15[6],xmm5[6],xmm15[7],xmm5[7]
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm10 = xmm10[4],xmm0[4],xmm10[5],xmm0[5],xmm10[6],xmm0[6],xmm10[7],xmm0[7]

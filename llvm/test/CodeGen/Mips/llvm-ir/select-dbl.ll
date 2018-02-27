@@ -201,10 +201,9 @@ entry:
 define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; M2-LABEL: tst_select_fcmp_olt_double:
 ; M2:       # %bb.0: # %entry
-; M2-NEXT:    mov.d $f0, $f12
-; M2-NEXT:    c.olt.d $f0, $f14
+; M2-NEXT:    c.olt.d $f12, $f14
 ; M2-NEXT:    bc1t $BB2_2
-; M2-NEXT:    nop
+; M2-NEXT:    mov.d $f0, $f12
 ; M2-NEXT:  # %bb.1: # %entry
 ; M2-NEXT:    mov.d $f0, $f14
 ; M2-NEXT:  $BB2_2: # %entry
@@ -214,14 +213,14 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; CMOV32R1-LABEL: tst_select_fcmp_olt_double:
 ; CMOV32R1:       # %bb.0: # %entry
 ; CMOV32R1-NEXT:    mov.d $f0, $f14
-; CMOV32R1-NEXT:    c.olt.d $f12, $f0
+; CMOV32R1-NEXT:    c.olt.d $f12, $f14
 ; CMOV32R1-NEXT:    jr $ra
 ; CMOV32R1-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; CMOV32R2-LABEL: tst_select_fcmp_olt_double:
 ; CMOV32R2:       # %bb.0: # %entry
 ; CMOV32R2-NEXT:    mov.d $f0, $f14
-; CMOV32R2-NEXT:    c.olt.d $f12, $f0
+; CMOV32R2-NEXT:    c.olt.d $f12, $f14
 ; CMOV32R2-NEXT:    jr $ra
 ; CMOV32R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -235,10 +234,9 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ;
 ; M3-LABEL: tst_select_fcmp_olt_double:
 ; M3:       # %bb.0: # %entry
-; M3-NEXT:    mov.d $f0, $f12
-; M3-NEXT:    c.olt.d $f0, $f13
+; M3-NEXT:    c.olt.d $f12, $f13
 ; M3-NEXT:    bc1t .LBB2_2
-; M3-NEXT:    nop
+; M3-NEXT:    mov.d $f0, $f12
 ; M3-NEXT:  # %bb.1: # %entry
 ; M3-NEXT:    mov.d $f0, $f13
 ; M3-NEXT:  .LBB2_2: # %entry
@@ -248,7 +246,7 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; CMOV64-LABEL: tst_select_fcmp_olt_double:
 ; CMOV64:       # %bb.0: # %entry
 ; CMOV64-NEXT:    mov.d $f0, $f13
-; CMOV64-NEXT:    c.olt.d $f12, $f0
+; CMOV64-NEXT:    c.olt.d $f12, $f13
 ; CMOV64-NEXT:    jr $ra
 ; CMOV64-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -263,7 +261,7 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; MM32R3-LABEL: tst_select_fcmp_olt_double:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.olt.d $f12, $f0
+; MM32R3-NEXT:    c.olt.d $f12, $f14
 ; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -283,10 +281,9 @@ entry:
 define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; M2-LABEL: tst_select_fcmp_ole_double:
 ; M2:       # %bb.0: # %entry
-; M2-NEXT:    mov.d $f0, $f12
-; M2-NEXT:    c.ole.d $f0, $f14
+; M2-NEXT:    c.ole.d $f12, $f14
 ; M2-NEXT:    bc1t $BB3_2
-; M2-NEXT:    nop
+; M2-NEXT:    mov.d $f0, $f12
 ; M2-NEXT:  # %bb.1: # %entry
 ; M2-NEXT:    mov.d $f0, $f14
 ; M2-NEXT:  $BB3_2: # %entry
@@ -296,14 +293,14 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; CMOV32R1-LABEL: tst_select_fcmp_ole_double:
 ; CMOV32R1:       # %bb.0: # %entry
 ; CMOV32R1-NEXT:    mov.d $f0, $f14
-; CMOV32R1-NEXT:    c.ole.d $f12, $f0
+; CMOV32R1-NEXT:    c.ole.d $f12, $f14
 ; CMOV32R1-NEXT:    jr $ra
 ; CMOV32R1-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; CMOV32R2-LABEL: tst_select_fcmp_ole_double:
 ; CMOV32R2:       # %bb.0: # %entry
 ; CMOV32R2-NEXT:    mov.d $f0, $f14
-; CMOV32R2-NEXT:    c.ole.d $f12, $f0
+; CMOV32R2-NEXT:    c.ole.d $f12, $f14
 ; CMOV32R2-NEXT:    jr $ra
 ; CMOV32R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -317,10 +314,9 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ;
 ; M3-LABEL: tst_select_fcmp_ole_double:
 ; M3:       # %bb.0: # %entry
-; M3-NEXT:    mov.d $f0, $f12
-; M3-NEXT:    c.ole.d $f0, $f13
+; M3-NEXT:    c.ole.d $f12, $f13
 ; M3-NEXT:    bc1t .LBB3_2
-; M3-NEXT:    nop
+; M3-NEXT:    mov.d $f0, $f12
 ; M3-NEXT:  # %bb.1: # %entry
 ; M3-NEXT:    mov.d $f0, $f13
 ; M3-NEXT:  .LBB3_2: # %entry
@@ -330,7 +326,7 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; CMOV64-LABEL: tst_select_fcmp_ole_double:
 ; CMOV64:       # %bb.0: # %entry
 ; CMOV64-NEXT:    mov.d $f0, $f13
-; CMOV64-NEXT:    c.ole.d $f12, $f0
+; CMOV64-NEXT:    c.ole.d $f12, $f13
 ; CMOV64-NEXT:    jr $ra
 ; CMOV64-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -345,7 +341,7 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; MM32R3-LABEL: tst_select_fcmp_ole_double:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ole.d $f12, $f0
+; MM32R3-NEXT:    c.ole.d $f12, $f14
 ; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -365,10 +361,9 @@ entry:
 define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; M2-LABEL: tst_select_fcmp_ogt_double:
 ; M2:       # %bb.0: # %entry
-; M2-NEXT:    mov.d $f0, $f12
-; M2-NEXT:    c.ule.d $f0, $f14
+; M2-NEXT:    c.ule.d $f12, $f14
 ; M2-NEXT:    bc1f $BB4_2
-; M2-NEXT:    nop
+; M2-NEXT:    mov.d $f0, $f12
 ; M2-NEXT:  # %bb.1: # %entry
 ; M2-NEXT:    mov.d $f0, $f14
 ; M2-NEXT:  $BB4_2: # %entry
@@ -378,14 +373,14 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; CMOV32R1-LABEL: tst_select_fcmp_ogt_double:
 ; CMOV32R1:       # %bb.0: # %entry
 ; CMOV32R1-NEXT:    mov.d $f0, $f14
-; CMOV32R1-NEXT:    c.ule.d $f12, $f0
+; CMOV32R1-NEXT:    c.ule.d $f12, $f14
 ; CMOV32R1-NEXT:    jr $ra
 ; CMOV32R1-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; CMOV32R2-LABEL: tst_select_fcmp_ogt_double:
 ; CMOV32R2:       # %bb.0: # %entry
 ; CMOV32R2-NEXT:    mov.d $f0, $f14
-; CMOV32R2-NEXT:    c.ule.d $f12, $f0
+; CMOV32R2-NEXT:    c.ule.d $f12, $f14
 ; CMOV32R2-NEXT:    jr $ra
 ; CMOV32R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -399,10 +394,9 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ;
 ; M3-LABEL: tst_select_fcmp_ogt_double:
 ; M3:       # %bb.0: # %entry
-; M3-NEXT:    mov.d $f0, $f12
-; M3-NEXT:    c.ule.d $f0, $f13
+; M3-NEXT:    c.ule.d $f12, $f13
 ; M3-NEXT:    bc1f .LBB4_2
-; M3-NEXT:    nop
+; M3-NEXT:    mov.d $f0, $f12
 ; M3-NEXT:  # %bb.1: # %entry
 ; M3-NEXT:    mov.d $f0, $f13
 ; M3-NEXT:  .LBB4_2: # %entry
@@ -412,7 +406,7 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; CMOV64-LABEL: tst_select_fcmp_ogt_double:
 ; CMOV64:       # %bb.0: # %entry
 ; CMOV64-NEXT:    mov.d $f0, $f13
-; CMOV64-NEXT:    c.ule.d $f12, $f0
+; CMOV64-NEXT:    c.ule.d $f12, $f13
 ; CMOV64-NEXT:    jr $ra
 ; CMOV64-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -427,7 +421,7 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; MM32R3-LABEL: tst_select_fcmp_ogt_double:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ule.d $f12, $f0
+; MM32R3-NEXT:    c.ule.d $f12, $f14
 ; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -447,10 +441,9 @@ entry:
 define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; M2-LABEL: tst_select_fcmp_oge_double:
 ; M2:       # %bb.0: # %entry
-; M2-NEXT:    mov.d $f0, $f12
-; M2-NEXT:    c.ult.d $f0, $f14
+; M2-NEXT:    c.ult.d $f12, $f14
 ; M2-NEXT:    bc1f $BB5_2
-; M2-NEXT:    nop
+; M2-NEXT:    mov.d $f0, $f12
 ; M2-NEXT:  # %bb.1: # %entry
 ; M2-NEXT:    mov.d $f0, $f14
 ; M2-NEXT:  $BB5_2: # %entry
@@ -460,14 +453,14 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; CMOV32R1-LABEL: tst_select_fcmp_oge_double:
 ; CMOV32R1:       # %bb.0: # %entry
 ; CMOV32R1-NEXT:    mov.d $f0, $f14
-; CMOV32R1-NEXT:    c.ult.d $f12, $f0
+; CMOV32R1-NEXT:    c.ult.d $f12, $f14
 ; CMOV32R1-NEXT:    jr $ra
 ; CMOV32R1-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; CMOV32R2-LABEL: tst_select_fcmp_oge_double:
 ; CMOV32R2:       # %bb.0: # %entry
 ; CMOV32R2-NEXT:    mov.d $f0, $f14
-; CMOV32R2-NEXT:    c.ult.d $f12, $f0
+; CMOV32R2-NEXT:    c.ult.d $f12, $f14
 ; CMOV32R2-NEXT:    jr $ra
 ; CMOV32R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -481,10 +474,9 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ;
 ; M3-LABEL: tst_select_fcmp_oge_double:
 ; M3:       # %bb.0: # %entry
-; M3-NEXT:    mov.d $f0, $f12
-; M3-NEXT:    c.ult.d $f0, $f13
+; M3-NEXT:    c.ult.d $f12, $f13
 ; M3-NEXT:    bc1f .LBB5_2
-; M3-NEXT:    nop
+; M3-NEXT:    mov.d $f0, $f12
 ; M3-NEXT:  # %bb.1: # %entry
 ; M3-NEXT:    mov.d $f0, $f13
 ; M3-NEXT:  .LBB5_2: # %entry
@@ -494,7 +486,7 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; CMOV64-LABEL: tst_select_fcmp_oge_double:
 ; CMOV64:       # %bb.0: # %entry
 ; CMOV64-NEXT:    mov.d $f0, $f13
-; CMOV64-NEXT:    c.ult.d $f12, $f0
+; CMOV64-NEXT:    c.ult.d $f12, $f13
 ; CMOV64-NEXT:    jr $ra
 ; CMOV64-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -509,7 +501,7 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; MM32R3-LABEL: tst_select_fcmp_oge_double:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ult.d $f12, $f0
+; MM32R3-NEXT:    c.ult.d $f12, $f14
 ; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -529,10 +521,9 @@ entry:
 define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; M2-LABEL: tst_select_fcmp_oeq_double:
 ; M2:       # %bb.0: # %entry
-; M2-NEXT:    mov.d $f0, $f12
-; M2-NEXT:    c.eq.d $f0, $f14
+; M2-NEXT:    c.eq.d $f12, $f14
 ; M2-NEXT:    bc1t $BB6_2
-; M2-NEXT:    nop
+; M2-NEXT:    mov.d $f0, $f12
 ; M2-NEXT:  # %bb.1: # %entry
 ; M2-NEXT:    mov.d $f0, $f14
 ; M2-NEXT:  $BB6_2: # %entry
@@ -542,14 +533,14 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; CMOV32R1-LABEL: tst_select_fcmp_oeq_double:
 ; CMOV32R1:       # %bb.0: # %entry
 ; CMOV32R1-NEXT:    mov.d $f0, $f14
-; CMOV32R1-NEXT:    c.eq.d $f12, $f0
+; CMOV32R1-NEXT:    c.eq.d $f12, $f14
 ; CMOV32R1-NEXT:    jr $ra
 ; CMOV32R1-NEXT:    movt.d $f0, $f12, $fcc0
 ;
 ; CMOV32R2-LABEL: tst_select_fcmp_oeq_double:
 ; CMOV32R2:       # %bb.0: # %entry
 ; CMOV32R2-NEXT:    mov.d $f0, $f14
-; CMOV32R2-NEXT:    c.eq.d $f12, $f0
+; CMOV32R2-NEXT:    c.eq.d $f12, $f14
 ; CMOV32R2-NEXT:    jr $ra
 ; CMOV32R2-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -563,10 +554,9 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ;
 ; M3-LABEL: tst_select_fcmp_oeq_double:
 ; M3:       # %bb.0: # %entry
-; M3-NEXT:    mov.d $f0, $f12
-; M3-NEXT:    c.eq.d $f0, $f13
+; M3-NEXT:    c.eq.d $f12, $f13
 ; M3-NEXT:    bc1t .LBB6_2
-; M3-NEXT:    nop
+; M3-NEXT:    mov.d $f0, $f12
 ; M3-NEXT:  # %bb.1: # %entry
 ; M3-NEXT:    mov.d $f0, $f13
 ; M3-NEXT:  .LBB6_2: # %entry
@@ -576,7 +566,7 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; CMOV64-LABEL: tst_select_fcmp_oeq_double:
 ; CMOV64:       # %bb.0: # %entry
 ; CMOV64-NEXT:    mov.d $f0, $f13
-; CMOV64-NEXT:    c.eq.d $f12, $f0
+; CMOV64-NEXT:    c.eq.d $f12, $f13
 ; CMOV64-NEXT:    jr $ra
 ; CMOV64-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -591,7 +581,7 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; MM32R3-LABEL: tst_select_fcmp_oeq_double:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.eq.d $f12, $f0
+; MM32R3-NEXT:    c.eq.d $f12, $f14
 ; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0
 ;
@@ -611,10 +601,9 @@ entry:
 define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; M2-LABEL: tst_select_fcmp_one_double:
 ; M2:       # %bb.0: # %entry
-; M2-NEXT:    mov.d $f0, $f12
-; M2-NEXT:    c.ueq.d $f0, $f14
+; M2-NEXT:    c.ueq.d $f12, $f14
 ; M2-NEXT:    bc1f $BB7_2
-; M2-NEXT:    nop
+; M2-NEXT:    mov.d $f0, $f12
 ; M2-NEXT:  # %bb.1: # %entry
 ; M2-NEXT:    mov.d $f0, $f14
 ; M2-NEXT:  $BB7_2: # %entry
@@ -624,14 +613,14 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; CMOV32R1-LABEL: tst_select_fcmp_one_double:
 ; CMOV32R1:       # %bb.0: # %entry
 ; CMOV32R1-NEXT:    mov.d $f0, $f14
-; CMOV32R1-NEXT:    c.ueq.d $f12, $f0
+; CMOV32R1-NEXT:    c.ueq.d $f12, $f14
 ; CMOV32R1-NEXT:    jr $ra
 ; CMOV32R1-NEXT:    movf.d $f0, $f12, $fcc0
 ;
 ; CMOV32R2-LABEL: tst_select_fcmp_one_double:
 ; CMOV32R2:       # %bb.0: # %entry
 ; CMOV32R2-NEXT:    mov.d $f0, $f14
-; CMOV32R2-NEXT:    c.ueq.d $f12, $f0
+; CMOV32R2-NEXT:    c.ueq.d $f12, $f14
 ; CMOV32R2-NEXT:    jr $ra
 ; CMOV32R2-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -646,10 +635,9 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ;
 ; M3-LABEL: tst_select_fcmp_one_double:
 ; M3:       # %bb.0: # %entry
-; M3-NEXT:    mov.d $f0, $f12
-; M3-NEXT:    c.ueq.d $f0, $f13
+; M3-NEXT:    c.ueq.d $f12, $f13
 ; M3-NEXT:    bc1f .LBB7_2
-; M3-NEXT:    nop
+; M3-NEXT:    mov.d $f0, $f12
 ; M3-NEXT:  # %bb.1: # %entry
 ; M3-NEXT:    mov.d $f0, $f13
 ; M3-NEXT:  .LBB7_2: # %entry
@@ -659,7 +647,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; CMOV64-LABEL: tst_select_fcmp_one_double:
 ; CMOV64:       # %bb.0: # %entry
 ; CMOV64-NEXT:    mov.d $f0, $f13
-; CMOV64-NEXT:    c.ueq.d $f12, $f0
+; CMOV64-NEXT:    c.ueq.d $f12, $f13
 ; CMOV64-NEXT:    jr $ra
 ; CMOV64-NEXT:    movf.d $f0, $f12, $fcc0
 ;
@@ -675,7 +663,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; MM32R3-LABEL: tst_select_fcmp_one_double:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ueq.d $f12, $f0
+; MM32R3-NEXT:    c.ueq.d $f12, $f14
 ; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0
 ;

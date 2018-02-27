@@ -2591,7 +2591,8 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
   for (const auto &AttrSpec : Abbrev->attributes()) {
     DWARFFormValue Val(AttrSpec.Form);
 
-    if (!Val.isFormClass(DWARFFormValue::FC_Reference)) {
+    if (!Val.isFormClass(DWARFFormValue::FC_Reference) ||
+        AttrSpec.Attr == dwarf::DW_AT_sibling) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
                                 Unit.getFormParams());
       continue;
@@ -2767,7 +2768,7 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
       resolveDIEReference(Linker, CompileUnits, Val, U, InputDIE, RefUnit);
 
   // If the referenced DIE is not found,  drop the attribute.
-  if (!RefDie)
+  if (!RefDie || AttrSpec.Attr == dwarf::DW_AT_sibling)
     return 0;
 
   unsigned Idx = RefUnit->getOrigUnit().getDIEIndex(RefDie);
