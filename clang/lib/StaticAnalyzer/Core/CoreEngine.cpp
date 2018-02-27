@@ -128,64 +128,6 @@ namespace {
   };
 } // end anonymous namespace
 
-std::unique_ptr<WorkList> WorkList::makeBFSBlockDFSContents() {
-  return llvm::make_unique<BFSBlockDFSContents>();
-}
-
-class UnexploredFirstStack : public WorkList {
-
-  /// Stack of nodes known to have statements we have not traversed yet.
-  SmallVector<WorkListUnit, 20> StackUnexplored;
-
-  /// Stack of all other nodes.
-  SmallVector<WorkListUnit, 20> StackOthers;
-
-  typedef unsigned BlockID;
-  typedef std::pair<BlockID, const StackFrameContext *> LocIdentifier;
-  llvm::DenseSet<LocIdentifier> Reachable;
-
-public:
-  bool hasWork() const override {
-    return !(StackUnexplored.empty() && StackOthers.empty());
-  }
-
-  void enqueue(const WorkListUnit &U) override {
-    const ExplodedNode *N = U.getNode();
-    auto BE = N->getLocation().getAs<BlockEntrance>();
-
-    if (!BE) {
-
-      // Assume the choice of the order of the preceeding block entrance was
-      // correct.
-      StackUnexplored.push_back(U);
-    } else {
-      LocIdentifier LocId = std::make_pair(
-          BE->getBlock()->getBlockID(), N->getStackFrame());
-      auto InsertInfo = Reachable.insert(LocId);
-
-      if (InsertInfo.second) {
-        StackUnexplored.push_back(U);
-      } else {
-        StackOthers.push_back(U);
-      }
-    }
-    MaxReachableSize.updateMax(Reachable.size());
-    MaxQueueSize.updateMax(StackUnexplored.size() + StackOthers.size());
-  }
-
-  WorkListUnit dequeue() override {
-    if (!StackUnexplored.empty()) {
-      WorkListUnit &U = StackUnexplored.back();
-      StackUnexplored.pop_back();
-      return U;
-    } else {
-      WorkListUnit &U = StackOthers.back();
-      StackOthers.pop_back();
-      return U;
-    }
-  }
-};
-
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
   return llvm::make_unique<UnexploredFirstStack>();
 }
