@@ -556,6 +556,11 @@ public:
     return GetStaticBroadcasterClass();
   }
 
+  struct WriteEntry {
+    lldb::addr_t Dest;
+    llvm::ArrayRef<uint8_t> Contents;
+  };
+
 //------------------------------------------------------------------
 /// A notification structure that can be used by clients to listen
 /// for changes in a process's lifetime.
@@ -1964,6 +1969,8 @@ public:
         GetPluginName().GetCString());
     return LLDB_INVALID_ADDRESS;
   }
+
+  virtual Status WriteObjectFile(std::vector<WriteEntry> entries);
 
   //------------------------------------------------------------------
   /// The public interface to allocating memory in the process.

@@ -39,8 +39,8 @@ llvm_config.use_default_substitutions()
 llvm_config.use_lld()
 
 tool_patterns = [
-    'llc', 'llvm-as', 'llvm-mc', 'llvm-nm',
-    'llvm-objdump', 'llvm-pdbutil', 'llvm-readobj', 'obj2yaml', 'yaml2obj']
+    'llc', 'llvm-as', 'llvm-mc', 'llvm-nm', 'llvm-objdump', 'llvm-pdbutil',
+    'llvm-readelf', 'llvm-readobj', 'obj2yaml', 'yaml2obj']
 
 llvm_config.add_tool_substitutions(tool_patterns)
 

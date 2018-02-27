@@ -25,7 +25,7 @@ public:
 
   MemoryRegionInfo()
       : m_range(), m_read(eDontKnow), m_write(eDontKnow), m_execute(eDontKnow),
-        m_mapped(eDontKnow) {}
+        m_mapped(eDontKnow), m_flash(eDontKnow), m_blocksize(0) {}
 
   ~MemoryRegionInfo() {}
 
@@ -57,6 +57,14 @@ public:
   void SetMapped(OptionalBool val) { m_mapped = val; }
 
   void SetName(const char *name) { m_name = ConstString(name); }
+
+  OptionalBool GetFlash() const { return m_flash; }
+
+  void SetFlash(OptionalBool val) { m_flash = val; }
+
+  lldb::offset_t GetBlocksize() const { return m_blocksize; }
+
+  void SetBlocksize(lldb::offset_t blocksize) { m_blocksize = blocksize; }
 
   //----------------------------------------------------------------------
   // Get permissions as a uint32_t that is a mask of one or more bits from
@@ -98,6 +106,8 @@ protected:
   OptionalBool m_execute;
   OptionalBool m_mapped;
   ConstString m_name;
+  OptionalBool m_flash;
+  lldb::offset_t m_blocksize;
 };
 }
 
