@@ -2642,6 +2642,7 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
     if (HostInfo::GetLLDBPath(ePathTypeClangDir, clang_dir_spec))
       clang_importer_options.OverrideResourceDir =
           std::move(clang_dir_spec.GetPath());
+    clang_importer_options.DebuggerSupport = true;
   }
   return clang_importer_options;
 }
