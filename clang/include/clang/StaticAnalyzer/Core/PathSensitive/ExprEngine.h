@@ -65,6 +65,10 @@ public:
     bool IsArrayCtorOrDtor = false;
     /// This call is a constructor or a destructor of a temporary value.
     bool IsTemporaryCtorOrDtor = false;
+    /// This call is a constructor for a temporary that is lifetime-extended
+    /// by binding a smaller object within it to a reference, for example
+    /// 'const int &x = C().x;'.
+    bool IsTemporaryLifetimeExtendedViaSubobject = false;
 
     EvalCallOptions() {}
   };
@@ -448,6 +452,10 @@ public:
                                        ExplodedNode *Pred,
                                        ExplodedNodeSet &Dst);
 
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
+                                 ExplodedNodeSet &PreVisit,
+                                 ExplodedNodeSet &Dst);
+
   void VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
@@ -707,6 +715,19 @@ private:
   static bool areInitializedTemporariesClear(ProgramStateRef State,
                                              const LocationContext *FromLC,
                                              const LocationContext *ToLC);
+
+  /// Store the region of a C++ temporary object corresponding to a
+  /// CXXBindTemporaryExpr for later destruction.
+  static ProgramStateRef addTemporaryMaterialization(
+      ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
+      const LocationContext *LC, const CXXTempObjectRegion *R);
+
+  /// Check if all temporary materialization regions are clear for the given
+  /// context range (including FromLC, not including ToLC).
+  /// This is useful for assertions.
+  static bool areTemporaryMaterializationsClear(ProgramStateRef State,
+                                                const LocationContext *FromLC,
+                                                const LocationContext *ToLC);
 
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be

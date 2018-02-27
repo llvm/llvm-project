@@ -700,7 +700,7 @@ void test_loop_firstprivate_lastprivate() {
   S s(4);
 // expected-error@+2 {{lastprivate variable cannot be firstprivate}} expected-note@+2 {{defined as lastprivate}}
 #pragma omp target
-#pragma omp teams distribute lastprivate(s) firstprivate(s) // expected-error {{calling a private constructor of class 'S'}}
+#pragma omp teams distribute lastprivate(s) firstprivate(s) // expected-error {{calling a private constructor of class 'S'}} expected-warning {{Non-trivial type 'S' is mapped, only trivial types are guaranteed to be mapped correctly}}
   for (int i = 0; i < 16; ++i)
     ;
 }

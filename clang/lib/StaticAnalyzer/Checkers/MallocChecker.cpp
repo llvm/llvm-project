@@ -446,15 +446,24 @@ private:
     // A symbol from when the primary region should have been reallocated.
     SymbolRef FailedReallocSymbol;
 
+    // A C++ destructor stack frame in which memory was released. Used for
+    // miscellaneous false positive suppression.
+    const StackFrameContext *ReleaseDestructorLC;
+
     bool IsLeak;
 
   public:
     MallocBugVisitor(SymbolRef S, bool isLeak = false)
-       : Sym(S), Mode(Normal), FailedReallocSymbol(nullptr), IsLeak(isLeak) {}
+        : Sym(S), Mode(Normal), FailedReallocSymbol(nullptr),
+          ReleaseDestructorLC(nullptr), IsLeak(isLeak) {}
+
+    static void *getTag() {
+      static int Tag = 0;
+      return &Tag;
+    }
 
     void Profile(llvm::FoldingSetNodeID &ID) const override {
-      static int X = 0;
-      ID.AddPointer(&X);
+      ID.AddPointer(getTag());
       ID.AddPointer(Sym);
     }
 
@@ -2822,16 +2831,38 @@ static SymbolRef findFailedReallocSymbol(ProgramStateRef currState,
 std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
     const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
     BugReport &BR) {
+  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  if (!S)
+    return nullptr;
+
+  const LocationContext *CurrentLC = N->getLocationContext();
+
+  // If we find an atomic fetch_add or fetch_sub within the destructor in which
+  // the pointer was released (before the release), this is likely a destructor
+  // of a shared pointer.
+  // Because we don't model atomics, and also because we don't know that the
+  // original reference count is positive, we should not report use-after-frees
+  // on objects deleted in such destructors. This can probably be improved
+  // through better shared pointer modeling.
+  if (ReleaseDestructorLC) {
+    if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
+      AtomicExpr::AtomicOp Op = AE->getOp();
+      if (Op == AtomicExpr::AO__c11_atomic_fetch_add ||
+          Op == AtomicExpr::AO__c11_atomic_fetch_sub) {
+        if (ReleaseDestructorLC == CurrentLC ||
+            ReleaseDestructorLC->isParentOf(CurrentLC)) {
+          BR.markInvalid(getTag(), S);
+        }
+      }
+    }
+  }
+
   ProgramStateRef state = N->getState();
   ProgramStateRef statePrev = PrevN->getState();
 
   const RefState *RS = state->get<RegionState>(Sym);
   const RefState *RSPrev = statePrev->get<RegionState>(Sym);
   if (!RS)
-    return nullptr;
-
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
-  if (!S)
     return nullptr;
 
   // FIXME: We will eventually need to handle non-statement-based events
@@ -2849,6 +2880,24 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
       Msg = "Memory is released";
       StackHint = new StackHintGeneratorForSymbol(Sym,
                                              "Returning; memory was released");
+
+      // See if we're releasing memory while inlining a destructor (or one of
+      // its callees). If so, enable the atomic-related suppression within that
+      // destructor (and all of its callees), which would kick in while visiting
+      // other nodes (the visit order is from the bug to the graph root).
+      for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
+        if (isa<CXXDestructorDecl>(LC->getDecl())) {
+          assert(!ReleaseDestructorLC &&
+                 "There can be only one release point!");
+          ReleaseDestructorLC = LC->getCurrentStackFrame();
+          // It is unlikely that releasing memory is delegated to a destructor
+          // inside a destructor of a shared pointer, because it's fairly hard
+          // to pass the information that the pointer indeed needs to be
+          // released into it. So we're only interested in the innermost
+          // destructor.
+          break;
+        }
+      }
     } else if (isRelinquished(RS, RSPrev, S)) {
       Msg = "Memory ownership is transferred";
       StackHint = new StackHintGeneratorForSymbol(Sym, "");

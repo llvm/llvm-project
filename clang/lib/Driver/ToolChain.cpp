@@ -327,6 +327,8 @@ StringRef ToolChain::getOSLibName() const {
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
     return "freebsd";
+  case llvm::Triple::NetBSD:
+    return "netbsd";
   case llvm::Triple::Solaris:
     return "sunos";
   default:
