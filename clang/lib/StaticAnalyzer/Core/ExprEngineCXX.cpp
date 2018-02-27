@@ -168,6 +168,18 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       break;
     }
     case ConstructionContext::TemporaryObjectKind: {
+      const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
+      // See if we're lifetime-extended via our field. If so, take a note.
+      // Because automatic destructors aren't quite working in this case.
+      if (const auto *MTE = TOCC->getMaterializedTemporaryExpr()) {
+        if (const ValueDecl *VD = MTE->getExtendingDecl()) {
+          assert(VD->getType()->isReferenceType());
+          if (VD->getType()->getPointeeType().getCanonicalType() !=
+              MTE->GetTemporaryExpr()->getType().getCanonicalType()) {
+            CallOpts.IsTemporaryLifetimeExtendedViaSubobject = true;
+          }
+        }
+      }
       // TODO: Support temporaries lifetime-extended via static references.
       // They'd need a getCXXStaticTempObjectRegion().
       CallOpts.IsTemporaryCtorOrDtor = true;
