@@ -69,18 +69,17 @@ namespace Chunk {
   // prevent this, we work with a local copy of the header.
   static INLINE void *getBackendPtr(const void *Ptr, UnpackedHeader *Header) {
     return reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
-                                    AlignedChunkHeaderSize -
-                                    (Header->Offset << MinAlignmentLog));
+        getHeaderSize() - (Header->Offset << MinAlignmentLog));
   }
 
   static INLINE AtomicPackedHeader *getAtomicHeader(void *Ptr) {
     return reinterpret_cast<AtomicPackedHeader *>(reinterpret_cast<uptr>(Ptr) -
-                                                  AlignedChunkHeaderSize);
+        getHeaderSize());
   }
   static INLINE
   const AtomicPackedHeader *getConstAtomicHeader(const void *Ptr) {
     return reinterpret_cast<const AtomicPackedHeader *>(
-        reinterpret_cast<uptr>(Ptr) - AlignedChunkHeaderSize);
+        reinterpret_cast<uptr>(Ptr) - getHeaderSize());
   }
 
   static INLINE bool isAligned(const void *Ptr) {
@@ -92,9 +91,8 @@ namespace Chunk {
   static INLINE uptr getUsableSize(const void *Ptr, UnpackedHeader *Header) {
     const uptr Size = getBackendAllocator().getActuallyAllocatedSize(
         getBackendPtr(Ptr, Header), Header->ClassId);
-    if (Size == 0)
-      return 0;
-    return Size - AlignedChunkHeaderSize - (Header->Offset << MinAlignmentLog);
+    DCHECK_NE(Size, 0);
+    return Size - getHeaderSize() - (Header->Offset << MinAlignmentLog);
   }
 
   // Compute the checksum of the chunk pointer and its header.
@@ -251,7 +249,7 @@ struct ScudoAllocator {
     const uptr MaxPrimaryAlignment =
         1 << MostSignificantSetBitIndex(SizeClassMap::kMaxSize - MinAlignment);
     const uptr MaxOffset =
-        (MaxPrimaryAlignment - AlignedChunkHeaderSize) >> MinAlignmentLog;
+        (MaxPrimaryAlignment - Chunk::getHeaderSize()) >> MinAlignmentLog;
     Header.Offset = MaxOffset;
     if (Header.Offset != MaxOffset) {
       dieWithMessage("ERROR: the maximum possible offset doesn't fit in the "
@@ -368,9 +366,10 @@ struct ScudoAllocator {
     if (UNLIKELY(Size == 0))
       Size = 1;
 
-    uptr NeededSize = RoundUpTo(Size, MinAlignment) + AlignedChunkHeaderSize;
-    uptr AlignedSize = (Alignment > MinAlignment) ?
-        NeededSize + (Alignment - AlignedChunkHeaderSize) : NeededSize;
+    const uptr NeededSize = RoundUpTo(Size, MinAlignment) +
+        Chunk::getHeaderSize();
+    const uptr AlignedSize = (Alignment > MinAlignment) ?
+        NeededSize + (Alignment - Chunk::getHeaderSize()) : NeededSize;
     if (UNLIKELY(AlignedSize >= MaxAllowedMallocSize))
       return FailureHandler::OnBadRequest();
 
@@ -403,7 +402,7 @@ struct ScudoAllocator {
              BackendAllocator.getActuallyAllocatedSize(BackendPtr, ClassId));
 
     UnpackedHeader Header = {};
-    uptr UserPtr = reinterpret_cast<uptr>(BackendPtr) + AlignedChunkHeaderSize;
+    uptr UserPtr = reinterpret_cast<uptr>(BackendPtr) + Chunk::getHeaderSize();
     if (UNLIKELY(!IsAligned(UserPtr, Alignment))) {
       // Since the Secondary takes care of alignment, a non-aligned pointer
       // means it is from the Primary. It is also the only case where the offset
@@ -505,7 +504,7 @@ struct ScudoAllocator {
         }
       }
     }
-    uptr Size = Header.ClassId ? Header.SizeOrUnusedBytes :
+    const uptr Size = Header.ClassId ? Header.SizeOrUnusedBytes :
         Chunk::getUsableSize(Ptr, &Header) - Header.SizeOrUnusedBytes;
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size) {

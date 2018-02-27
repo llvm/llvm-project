@@ -337,24 +337,6 @@ TEST(CompletionTest, CompletionOptions) {
   }
 }
 
-// Check code completion works when the file contents are overridden.
-TEST(CompletionTest, CheckContentsOverride) {
-  MockFSProvider FS;
-  IgnoreDiagnostics DiagConsumer;
-  MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true);
-  auto File = testPath("foo.cpp");
-  Server.addDocument(File, "ignored text!");
-
-  Annotations Example("int cbc; int b = ^;");
-  auto Results =
-      runCodeComplete(Server, File, Example.point(),
-                      clangd::CodeCompleteOptions(), StringRef(Example.code()))
-          .Value;
-  EXPECT_THAT(Results.items, Contains(Named("cbc")));
-}
-
 TEST(CompletionTest, Priorities) {
   auto Internal = completions(R"cpp(
       class Foo {
