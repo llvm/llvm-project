@@ -18,14 +18,12 @@
 namespace clang {
 namespace clangd {
 
-Tagged<CompletionList>
-runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
-                clangd::CodeCompleteOptions Opts,
-                llvm::Optional<StringRef> OverridenContents = llvm::None);
+Tagged<CompletionList> runCodeComplete(ClangdServer &Server, PathRef File,
+                                       Position Pos,
+                                       clangd::CodeCompleteOptions Opts);
 
 llvm::Expected<Tagged<SignatureHelp>>
-runSignatureHelp(ClangdServer &Server, PathRef File, Position Pos,
-                 llvm::Optional<StringRef> OverridenContents = llvm::None);
+runSignatureHelp(ClangdServer &Server, PathRef File, Position Pos);
 
 llvm::Expected<Tagged<std::vector<Location>>>
 runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos);

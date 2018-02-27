@@ -141,7 +141,6 @@ void ClangdServer::forceReparse(PathRef File) {
 void ClangdServer::codeComplete(
     PathRef File, Position Pos, const clangd::CodeCompleteOptions &Opts,
     UniqueFunction<void(Tagged<CompletionList>)> Callback,
-    llvm::Optional<StringRef> OverridenContents,
     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   using CallbackType = UniqueFunction<void(Tagged<CompletionList>)>;
 
@@ -154,14 +153,9 @@ void ClangdServer::codeComplete(
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
-  std::string Contents;
-  if (OverridenContents) {
-    Contents = OverridenContents->str();
-  } else {
-    VersionedDraft Latest = DraftMgr.getDraft(File);
-    assert(Latest.Draft && "codeComplete called for non-added document");
-    Contents = *Latest.Draft;
-  }
+  VersionedDraft Latest = DraftMgr.getDraft(File);
+  // FIXME(sammccall): return error for consistency?
+  assert(Latest.Draft && "codeComplete called for non-added document");
 
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
@@ -183,34 +177,27 @@ void ClangdServer::codeComplete(
 
   WorkScheduler.runWithPreamble(
       "CodeComplete", File,
-      Bind(Task, std::move(Contents), File.str(), std::move(Callback)));
+      Bind(Task, std::move(*Latest.Draft), File.str(), std::move(Callback)));
 }
 
 void ClangdServer::signatureHelp(
     PathRef File, Position Pos,
     UniqueFunction<void(llvm::Expected<Tagged<SignatureHelp>>)> Callback,
-    llvm::Optional<StringRef> OverridenContents,
     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   if (UsedFS)
     *UsedFS = TaggedFS.Value;
 
-  std::string Contents;
-  if (OverridenContents) {
-    Contents = OverridenContents->str();
-  } else {
-    VersionedDraft Latest = DraftMgr.getDraft(File);
-    if (!Latest.Draft)
-      return Callback(llvm::make_error<llvm::StringError>(
-          "signatureHelp is called for non-added document",
-          llvm::errc::invalid_argument));
-    Contents = std::move(*Latest.Draft);
-  }
+  VersionedDraft Latest = DraftMgr.getDraft(File);
+  if (!Latest.Draft)
+    return Callback(llvm::make_error<llvm::StringError>(
+        "signatureHelp is called for non-added document",
+        llvm::errc::invalid_argument));
 
   auto PCHs = this->PCHs;
-  auto Action = [Contents, Pos, TaggedFS,
-                 PCHs](Path File, decltype(Callback) Callback,
-                       llvm::Expected<InputsAndPreamble> IP) {
+  auto Action = [Pos, TaggedFS, PCHs](std::string Contents, Path File,
+                                      decltype(Callback) Callback,
+                                      llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return Callback(IP.takeError());
 
@@ -223,8 +210,9 @@ void ClangdServer::signatureHelp(
         TaggedFS.Tag));
   };
 
-  WorkScheduler.runWithPreamble("SignatureHelp", File,
-                                Bind(Action, File.str(), std::move(Callback)));
+  WorkScheduler.runWithPreamble(
+      "SignatureHelp", File,
+      Bind(Action, std::move(*Latest.Draft), File.str(), std::move(Callback)));
 }
 
 llvm::Expected<tooling::Replacements>
