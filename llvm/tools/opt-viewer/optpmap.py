@@ -48,6 +48,8 @@ def pmap(func, iterable, processes, should_print_progress, *args, **kwargs):
                                     initargs=(_current, _total,),
                                     processes=processes)
         result = pool.map(_wrapped_func, func_and_args, *args, **kwargs)
+        pool.close()
+        pool.join()
 
     if should_print_progress:
         sys.stdout.write('\r')

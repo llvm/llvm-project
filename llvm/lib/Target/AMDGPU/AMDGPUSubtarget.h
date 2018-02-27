@@ -845,6 +845,12 @@ public:
     return getGeneration() >= GFX9;
   }
 
+  /// \returns true if the machine has merged shaders in which s0-s7 are
+  /// reserved by the hardware and user SGPRs start at s8
+  bool hasMergedShaders() const {
+    return getGeneration() >= GFX9;
+  }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(getFeatureBits());

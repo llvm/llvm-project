@@ -376,7 +376,8 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
 
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupOptimizationRemarks(
-      Mod->getContext(), C.RemarksFilename, C.RemarksWithHotness);
+      Mod->getContext(), C.RemarksFilename, C.RemarksWithHotness,
+      C.RemarksHotnessThreshold);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
   auto DiagnosticOutputFile = std::move(*DiagFileOrErr);

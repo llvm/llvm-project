@@ -122,16 +122,25 @@ define <2 x float> @not_exact_inverse_vec_arcp(<2 x float> %x) {
   ret <2 x float> %div
 }
 
+define <2 x float> @not_exact_inverse_vec_arcp_with_undef_elt(<2 x float> %x) {
+; CHECK-LABEL: @not_exact_inverse_vec_arcp_with_undef_elt(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv arcp <2 x float> [[X:%.*]], <float undef, float 3.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %div = fdiv arcp <2 x float> %x, <float undef, float 3.0>
+  ret <2 x float> %div
+}
+
 ; (X / Y) / Z --> X / (Y * Z)
 
 define float @div_with_div_numerator(float %x, float %y, float %z) {
 ; CHECK-LABEL: @div_with_div_numerator(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul ninf float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp float [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
   %div1 = fdiv ninf float %x, %y
-  %div2 = fdiv fast float %div1, %z
+  %div2 = fdiv arcp reassoc float %div1, %z
   ret float %div2
 }
 
@@ -139,12 +148,12 @@ define float @div_with_div_numerator(float %x, float %y, float %z) {
 
 define <2 x float> @div_with_div_denominator(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @div_with_div_denominator(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul nnan <2 x float> [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast <2 x float> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp <2 x float> [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp <2 x float> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV2]]
 ;
   %div1 = fdiv nnan <2 x float> %x, %y
-  %div2 = fdiv fast <2 x float> %z, %div1
+  %div2 = fdiv arcp reassoc <2 x float> %z, %div1
   ret <2 x float> %div2
 }
 
@@ -213,6 +222,19 @@ define <2 x float> @fneg_fneg_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %div
 }
 
+define <2 x float> @fneg_fneg_vec_undef_elts(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_fneg_vec_undef_elts(
+; CHECK-NEXT:    [[XNEG:%.*]] = fsub <2 x float> <float undef, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[YNEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float undef>, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[XNEG]], [[YNEG]]
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %xneg = fsub <2 x float> <float undef, float -0.0>, %x
+  %yneg = fsub <2 x float> <float -0.0, float undef>, %y
+  %div = fdiv <2 x float> %xneg, %yneg
+  ret <2 x float> %div
+}
+
 define float @fneg_dividend_constant_divisor(float %x) {
 ; CHECK-LABEL: @fneg_dividend_constant_divisor(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv nsz float [[X:%.*]], -3.000000e+00
@@ -239,6 +261,17 @@ define <2 x float> @fneg_dividend_constant_divisor_vec(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %neg = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %div = fdiv ninf <2 x float> %neg, <float 3.0, float -8.0>
+  ret <2 x float> %div
+}
+
+define <2 x float> @fneg_dividend_constant_divisor_vec_undef_elt(<2 x float> %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor_vec_undef_elt(
+; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float undef, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[NEG]], <float 3.000000e+00, float -8.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fsub <2 x float> <float undef, float -0.0>, %x
   %div = fdiv ninf <2 x float> %neg, <float 3.0, float -8.0>
   ret <2 x float> %div
 }
@@ -342,8 +375,8 @@ define <2 x float> @div_constant_dividend2_reassoc_only(<2 x float> %x) {
 
 define <2 x float> @div_constant_dividend3(<2 x float> %x) {
 ; CHECK-LABEL: @div_constant_dividend3(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv <2 x float> <float 3.000000e+00, float 7.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 1.500000e+01, float -7.000000e+00>, [[T1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp <2 x float> [[X:%.*]], <float 1.500000e+01, float -7.000000e+00>
+; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc arcp <2 x float> [[TMP1]], <float 0x3FD5555560000000, float 0x3FC24924A0000000>
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
   %t1 = fdiv <2 x float> <float 3.0e0, float 7.0e0>, %x

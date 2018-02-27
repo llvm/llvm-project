@@ -521,7 +521,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (CalleeReg && !TRI->isPhysicalRegister(CalleeReg))
       MIB->getOperand(0).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *STI.getInstrInfo(), *STI.getRegBankInfo(),
-          *MIB.getInstr(), MIB->getDesc(), CalleeReg, 0));
+          *MIB.getInstr(), MIB->getDesc(), Callee, 0));
   }
 
   SmallVector<ArgInfo, 8> ArgInfos;
