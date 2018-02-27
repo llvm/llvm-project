@@ -80,10 +80,7 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT___LONGJMP_CHK 0
 #endif
 
-// Android bug: https://code.google.com/p/android/issues/detail?id=61799
-#if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && \
-    !(SANITIZER_ANDROID && defined(__i386)) && \
-    !SANITIZER_SOLARIS
+#if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && !SANITIZER_SOLARIS
 # define ASAN_INTERCEPT___CXA_THROW 1
 # define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 1
 # if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
