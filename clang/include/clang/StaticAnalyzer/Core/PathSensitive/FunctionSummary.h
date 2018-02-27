@@ -50,6 +50,7 @@ class FunctionSummariesTy {
     FunctionSummary() :
       TotalBasicBlocks(0),
       InlineChecked(0),
+      MayInline(0),
       TimesInlined(0) {}
   };
 

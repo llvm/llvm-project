@@ -60,7 +60,7 @@ AnalyzerOptions::getExplorationStrategy() {
   if (ExplorationStrategy == ExplorationStrategyKind::NotSet) {
     StringRef StratStr =
         Config
-            .insert(std::make_pair("exploration_strategy", "dfs"))
+            .insert(std::make_pair("exploration_strategy", "unexplored_first_queue"))
             .first->second;
     ExplorationStrategy =
         llvm::StringSwitch<ExplorationStrategyKind>(StratStr)

@@ -207,8 +207,8 @@ public:
   bool hasSubscripting() const {
     switch (getKind()) {
     case FragileMacOSX: return false;
-    case MacOSX: return getVersion() >= VersionTuple(10, 8);
-    case iOS: return getVersion() >= VersionTuple(6);
+    case MacOSX: return getVersion() >= VersionTuple(10, 11);
+    case iOS: return getVersion() >= VersionTuple(9);
     case WatchOS: return true;
 
     // This is really a lie, because some implementations and versions

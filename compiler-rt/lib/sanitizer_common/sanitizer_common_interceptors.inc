@@ -6851,6 +6851,180 @@ INTERCEPTOR(void, strmode, u32 mode, char *bp) {
 #define INIT_STRMODE
 #endif
 
+#if SANITIZER_INTERCEPT_TTYENT
+INTERCEPTOR(struct __sanitizer_ttyent *, getttyent, void) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getttyent);
+  struct __sanitizer_ttyent *ttyent = REAL(getttyent)();
+  if (ttyent)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ttyent, struct_ttyent_sz);
+  return ttyent;
+}
+INTERCEPTOR(struct __sanitizer_ttyent *, getttynam, char *name) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getttynam, name);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  struct __sanitizer_ttyent *ttyent = REAL(getttynam)(name);
+  if (ttyent)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ttyent, struct_ttyent_sz);
+  return ttyent;
+}
+INTERCEPTOR(int, setttyentpath, char *path) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, setttyentpath, path);
+  if (path)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  return REAL(setttyentpath)(path);
+}
+#define INIT_TTYENT \
+  COMMON_INTERCEPT_FUNCTION(getttyent); \
+  COMMON_INTERCEPT_FUNCTION(getttynam); \
+  COMMON_INTERCEPT_FUNCTION(setttyentpath)
+#else
+#define INIT_TTYENT
+#endif
+
+#if SANITIZER_INTERCEPT_PROTOENT
+INTERCEPTOR(struct __sanitizer_protoent *, getprotoent) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotoent);
+  struct __sanitizer_protoent *p = REAL(getprotoent)();
+  if (p) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
+
+    SIZE_T pp_size = 1; // One handles the trailing \0
+
+    for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
+       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
+                                   pp_size * sizeof(char **));
+  }
+  return p;
+}
+
+INTERCEPTOR(struct __sanitizer_protoent *, getprotobyname, const char *name) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotobyname, name);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  struct __sanitizer_protoent *p = REAL(getprotobyname)(name);
+  if (p) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
+
+    SIZE_T pp_size = 1; // One handles the trailing \0
+
+    for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
+       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
+                                   pp_size * sizeof(char **));
+  }
+  return p;
+}
+
+INTERCEPTOR(struct __sanitizer_protoent *, getprotobynumber, int proto) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotobynumber, proto);
+  struct __sanitizer_protoent *p = REAL(getprotobynumber)(proto);
+  if (p) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
+
+    SIZE_T pp_size = 1; // One handles the trailing \0
+
+    for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
+       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
+                                   pp_size * sizeof(char **));
+  }
+  return p;
+}
+#define INIT_PROTOENT \
+  COMMON_INTERCEPT_FUNCTION(getprotoent); \
+  COMMON_INTERCEPT_FUNCTION(getprotobyname); \
+  COMMON_INTERCEPT_FUNCTION(getprotobynumber)
+#else
+#define INIT_PROTOENT
+#endif
+
+#if SANITIZER_INTERCEPT_NETENT
+INTERCEPTOR(struct __sanitizer_netent *, getnetent) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getnetent);
+  struct __sanitizer_netent *n = REAL(getnetent)();
+  if (n) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n, sizeof(*n));
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_name, REAL(strlen)(n->n_name) + 1);
+
+    SIZE_T nn_size = 1; // One handles the trailing \0
+
+    for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, REAL(strlen)(*nn) + 1);
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
+                                   nn_size * sizeof(char **));
+  }
+  return n;
+}
+
+INTERCEPTOR(struct __sanitizer_netent *, getnetbyname, const char *name) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getnetbyname, name);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  struct __sanitizer_netent *n = REAL(getnetbyname)(name);
+  if (n) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n, sizeof(*n));
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_name, REAL(strlen)(n->n_name) + 1);
+
+    SIZE_T nn_size = 1; // One handles the trailing \0
+
+    for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, REAL(strlen)(*nn) + 1);
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
+                                   nn_size * sizeof(char **));
+  }
+  return n;
+}
+
+INTERCEPTOR(struct __sanitizer_netent *, getnetbyaddr, u32 net, int type) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getnetbyaddr, net, type);
+  struct __sanitizer_netent *n = REAL(getnetbyaddr)(net, type);
+  if (n) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n, sizeof(*n));
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_name, REAL(strlen)(n->n_name) + 1);
+
+    SIZE_T nn_size = 1; // One handles the trailing \0
+
+    for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, REAL(strlen)(*nn) + 1);
+
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
+                                   nn_size * sizeof(char **));
+  }
+  return n;
+}
+#define INIT_NETENT \
+  COMMON_INTERCEPT_FUNCTION(getnetent); \
+  COMMON_INTERCEPT_FUNCTION(getnetbyname); \
+  COMMON_INTERCEPT_FUNCTION(getnetbyaddr)
+#else
+#define INIT_NETENT
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -7081,6 +7255,9 @@ static void InitializeCommonInterceptors() {
   INIT_DEVNAME_R;
   INIT_FGETLN;
   INIT_STRMODE;
+  INIT_TTYENT;
+  INIT_PROTOENT;
+  INIT_NETENT;
 
 #if SANITIZER_NETBSD
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);
