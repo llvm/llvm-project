@@ -22,3 +22,22 @@ a
 // CHECK-NEXT:   aFoo = 0x{{[0-9a-fA-F]+}} {...}
 // CHECK-NEXT:   x = "Hello World"
 // CHECK-NEXT: }
+
+// Also test the more basic non-recursive case.
+class Bar {
+  var bar : Int
+  var baaz : Int
+  init (a: Int, b: Int) {
+    bar = a
+    baaz = b
+  }
+  func sum() -> Int {
+    return bar + baaz
+  }
+}
+
+Bar(a: 2, b: 3)
+// CHECK: $R1: Bar = {
+// CHECK-NEXT:   bar = 2
+// CHECK-NEXT:   baaz = 3
+// CHECK-NEXT: }
