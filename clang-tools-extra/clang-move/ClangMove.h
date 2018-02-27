@@ -217,8 +217,8 @@ public:
                          DeclarationReporter *const Reporter = nullptr)
       : Context(Context), Reporter(Reporter) {}
 
-  std::unique_ptr<clang::FrontendAction> create() override {
-    return llvm::make_unique<ClangMoveAction>(Context, Reporter);
+  clang::FrontendAction *create() override {
+    return new ClangMoveAction(Context, Reporter);
   }
 
 private:

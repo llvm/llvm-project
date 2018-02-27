@@ -139,8 +139,8 @@ public:
                                std::vector<CallbackCall> &CallbackCalls)
       : Ignore(Ignore), CallbackCalls(CallbackCalls) {}
 
-  std::unique_ptr<clang::FrontendAction> create() override {
-    return llvm::make_unique<PPTraceAction>(Ignore, CallbackCalls);
+  PPTraceAction *create() override {
+    return new PPTraceAction(Ignore, CallbackCalls);
   }
 
 private:
