@@ -6,6 +6,8 @@ extern bool clang_analyzer_eval(bool);
 extern bool clang_analyzer_warnIfReached();
 void clang_analyzer_checkInlined(bool);
 
+#include "Inputs/system-header-simulator-cxx.h";
+
 struct Trivial {
   Trivial(int x) : value(x) {}
   int value;
@@ -892,3 +894,17 @@ void test_ternary_temporary_with_copy(int coin) {
   }
 }
 } // namespace test_match_constructors_and_destructors
+
+#if __cplusplus >= 201103L
+namespace temporary_list_crash {
+class C {
+public:
+  C() {}
+  ~C() {}
+};
+
+void test() {
+  std::initializer_list<C>{C(), C()}; // no-crash
+}
+} // namespace temporary_list_crash
+#endif // C++11
