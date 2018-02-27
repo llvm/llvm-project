@@ -1304,9 +1304,8 @@ void MemorySSA::buildMemorySSA() {
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
   BasicBlock &StartingPoint = F.getEntryBlock();
-  LiveOnEntryDef =
-      llvm::make_unique<MemoryDef>(F.getContext(), nullptr, nullptr,
-                                   &StartingPoint, NextID++);
+  LiveOnEntryDef.reset(new MemoryDef(F.getContext(), nullptr, nullptr,
+                                     &StartingPoint, NextID++));
   DenseMap<const BasicBlock *, unsigned int> BBNumbers;
   unsigned NextBBNum = 0;
 
