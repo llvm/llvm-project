@@ -597,7 +597,7 @@ template <class ELFT> void SymbolTable::fetchIfLazy(StringRef Name) {
 // Except this, we ignore undefined symbols in DSOs.
 template <class ELFT> void SymbolTable::scanShlibUndefined() {
   for (InputFile *F : SharedFiles) {
-    for (StringRef U : cast<SharedFile<ELFT>>(F)->getUndefinedSymbols()) {
+    for (StringRef U : F->getUndefinedSymbols()) {
       Symbol *Sym = find(U);
       if (!Sym)
         continue;

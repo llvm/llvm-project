@@ -53,7 +53,7 @@ class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:
   SymbolIndexActionFactory(tooling::ExecutionContext *Ctx) : Ctx(Ctx) {}
 
-  clang::FrontendAction *create() override {
+  std::unique_ptr<clang::FrontendAction> create() override {
     // Wraps the index action and reports collected symbols to the execution
     // context at the end of each translation unit.
     class WrappedIndexAction : public WrapperFrontendAction {
@@ -102,7 +102,8 @@ public:
     auto Includes = llvm::make_unique<CanonicalIncludes>();
     addSystemHeadersMapping(Includes.get());
     CollectorOpts.Includes = Includes.get();
-    return new WrappedIndexAction(
+
+    return llvm::make_unique<WrappedIndexAction>(
         std::make_shared<SymbolCollector>(std::move(CollectorOpts)),
         std::move(Includes), IndexOpts, Ctx);
   }

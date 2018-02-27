@@ -722,8 +722,9 @@ public:
       : Entities(Entities), PPTracker(preprocessorTracker),
         HadErrors(HadErrors) {}
 
-  CollectEntitiesAction *create() override {
-    return new CollectEntitiesAction(Entities, PPTracker, HadErrors);
+  std::unique_ptr<clang::FrontendAction> create() override {
+    return llvm::make_unique<CollectEntitiesAction>(Entities, PPTracker,
+                                                    HadErrors);
   }
 
 private:
@@ -802,8 +803,8 @@ class CompileCheckFrontendActionFactory : public FrontendActionFactory {
 public:
   CompileCheckFrontendActionFactory() {}
 
-  CompileCheckAction *create() override {
-    return new CompileCheckAction();
+  std::unique_ptr<clang::FrontendAction> create() override {
+    return llvm::make_unique<CompileCheckAction>();
   }
 };
 

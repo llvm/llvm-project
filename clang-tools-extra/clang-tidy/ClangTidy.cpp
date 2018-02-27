@@ -527,7 +527,9 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
   class ActionFactory : public FrontendActionFactory {
   public:
     ActionFactory(ClangTidyContext &Context) : ConsumerFactory(Context) {}
-    FrontendAction *create() override { return new Action(&ConsumerFactory); }
+    std::unique_ptr<clang::FrontendAction> create() override {
+      return llvm::make_unique<Action>(&ConsumerFactory);
+    }
 
   private:
     class Action : public ASTFrontendAction {

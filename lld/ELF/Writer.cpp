@@ -1056,7 +1056,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
         continue;
 
       if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
-        int &Priority = SectionOrder[Sec];
+        int &Priority = SectionOrder[cast<InputSectionBase>(Sec->Repl)];
         Priority = std::min(Priority, Ent.Priority);
       }
     }
@@ -1383,9 +1383,9 @@ static void removeUnusedSyntheticSections() {
         llvm::erase_if(ISD->Sections,
                        [=](InputSection *IS) { return IS == SS; });
 
-    // If there are no other alive input sections left, we remove output
-    // section from the output.
-    if (getInputSections(OS).empty())
+    // If there are no other alive sections or commands left in the output
+    // section description, we remove it from the output.
+    if (getInputSections(OS).empty() && OS->isAllSectionDescription())
       OS->Live = false;
   }
 }
@@ -1933,9 +1933,8 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 
 static std::string rangeToString(uint64_t Addr, uint64_t Len) {
   if (Len == 0)
-    return "<emtpy range at 0x" + utohexstr(Addr) + ">";
-  return "[0x" + utohexstr(Addr) + " -> 0x" +
-         utohexstr(Addr + Len - 1) + "]";
+    return "<empty range at 0x" + utohexstr(Addr) + ">";
+  return "[0x" + utohexstr(Addr) + " -> 0x" + utohexstr(Addr + Len - 1) + "]";
 }
 
 // Check whether sections overlap for a specific address range (file offsets,

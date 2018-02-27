@@ -69,7 +69,7 @@ public:
                            CommentHandler *PragmaHandler)
       : COpts(std::move(COpts)), PragmaHandler(PragmaHandler) {}
 
-  clang::FrontendAction *create() override {
+  std::unique_ptr<clang::FrontendAction> create() override {
     class WrappedIndexAction : public WrapperFrontendAction {
     public:
       WrappedIndexAction(std::shared_ptr<SymbolCollector> C,
@@ -95,8 +95,9 @@ public:
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
     Collector = std::make_shared<SymbolCollector>(COpts);
-    return new WrappedIndexAction(Collector, std::move(IndexOpts),
-                                  PragmaHandler);
+
+    return llvm::make_unique<WrappedIndexAction>(
+        Collector, std::move(IndexOpts), PragmaHandler);
   }
 
   std::shared_ptr<SymbolCollector> Collector;

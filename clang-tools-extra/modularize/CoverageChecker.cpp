@@ -129,8 +129,8 @@ public:
   CoverageCheckerFrontendActionFactory(CoverageChecker &Checker)
     : Checker(Checker) {}
 
-  CoverageCheckerAction *create() override {
-    return new CoverageCheckerAction(Checker);
+  std::unique_ptr<clang::FrontendAction> create() override {
+    return llvm::make_unique<CoverageCheckerAction>(Checker);
   }
 
 private:
