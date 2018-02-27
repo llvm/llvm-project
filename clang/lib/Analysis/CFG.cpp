@@ -1158,6 +1158,8 @@ void CFGBuilder::EnterConstructionContextIfNecessary(
     assert(CurrentConstructionContext.isNull() &&
            "Already within a construction context!");
     CurrentConstructionContext = ConstructionContext(Trigger);
+  } else if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Child)) {
+    EnterConstructionContextIfNecessary(Trigger, Cleanups->getSubExpr());
   }
 }
 
