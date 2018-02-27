@@ -113,6 +113,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
                                           EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
+  MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
 
   // See if we're constructing an existing region by looking at the
   // current construction context.
@@ -144,6 +145,17 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         LValue = makeZeroElementRegion(State, LValue, Ty,
                                        CallOpts.IsArrayConstructorOrDestructor);
         return LValue.getAsRegion();
+      } else if (auto *RS = dyn_cast<ReturnStmt>(TriggerStmt)) {
+        // TODO: We should construct into a CXXBindTemporaryExpr or a
+        // MaterializeTemporaryExpr around the call-expression on the previous
+        // stack frame. Currently we re-bind the temporary to the correct region
+        // later, but that's not semantically correct. This of course does not
+        // apply when we're in the top frame. But if we are in an inlined
+        // function, we should be able to take the call-site CFG element,
+        // and it should contain (but right now it wouldn't) some sort of
+        // construction context that'd give us the right temporary expression.
+        CallOpts.IsConstructorIntoTemporary = true;
+        return MRMgr.getCXXTempObjectRegion(CE, LCtx);
       }
       // TODO: Consider other directly initialized elements.
     } else if (const CXXCtorInitializer *Init = CC->getTriggerInit()) {
@@ -176,7 +188,6 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   // If we couldn't find an existing region to construct into, assume we're
   // constructing a temporary. Notify the caller of our failure.
   CallOpts.IsConstructorWithImproperlyModeledTargetRegion = true;
-  MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
   return MRMgr.getCXXTempObjectRegion(CE, LCtx);
 }
 

@@ -670,11 +670,19 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     if (!Opts.mayInlineCXXMemberFunction(CIMK_Destructors))
       return CIP_DisallowedAlways;
 
-    // FIXME: This is a hack. We don't handle temporary destructors
-    // right now, so we shouldn't inline their constructors.
-    if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete)
+    if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete) {
+      // If we don't handle temporary destructors, we shouldn't inline
+      // their constructors.
+      if (CallOpts.IsConstructorIntoTemporary &&
+          !Opts.includeTemporaryDtorsInCFG())
+        return CIP_DisallowedOnce;
+
+      // If we did not construct the correct this-region, it would be pointless
+      // to inline the constructor. Instead we will simply invalidate
+      // the fake temporary target.
       if (CallOpts.IsConstructorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
+    }
 
     break;
   }

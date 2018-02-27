@@ -1,9 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -w -std=c++03 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -w -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true %s -std=c++11
 
 extern bool clang_analyzer_eval(bool);
 extern bool clang_analyzer_warnIfReached();
+void clang_analyzer_checkInlined(bool);
 
 struct Trivial {
   Trivial(int x) : value(x) {}
@@ -422,6 +423,10 @@ namespace destructors {
   struct CtorWithNoReturnDtor {
     CtorWithNoReturnDtor() = default;
 
+    CtorWithNoReturnDtor(int x) {
+      clang_analyzer_checkInlined(false); // no-warning
+    }
+
     ~CtorWithNoReturnDtor() __attribute__((noreturn));
   };
 
@@ -438,6 +443,12 @@ namespace destructors {
     // scope.
     clang_analyzer_warnIfReached();  // no-warning
   }
+
+#if __cplusplus >= 201103L
+  CtorWithNoReturnDtor returnNoReturnDtor() {
+    return {1}; // no-crash
+  }
+#endif
 
 #endif // TEMPORARY_DTORS
 }
@@ -530,3 +541,152 @@ void run() {
   Sub(i).m();
 }
 }
+
+namespace test_return_temporary {
+class C {
+  int x, y;
+
+public:
+  C(int x, int y) : x(x), y(y) {}
+  int getX() const { return x; }
+  int getY() const { return y; }
+  ~C() {}
+};
+
+class D: public C {
+public:
+  D() : C(1, 2) {}
+  D(const D &d): C(d.getX(), d.getY()) {}
+};
+
+C returnTemporaryWithVariable() { C c(1, 2); return c; }
+C returnTemporaryWithAnotherFunctionWithVariable() {
+  return returnTemporaryWithVariable();
+}
+C returnTemporaryWithCopyConstructionWithVariable() {
+  return C(returnTemporaryWithVariable());
+}
+
+C returnTemporaryWithConstruction() { return C(1, 2); }
+C returnTemporaryWithAnotherFunctionWithConstruction() {
+  return returnTemporaryWithConstruction();
+}
+C returnTemporaryWithCopyConstructionWithConstruction() {
+  return C(returnTemporaryWithConstruction());
+}
+
+D returnTemporaryWithVariableAndNonTrivialCopy() { D d; return d; }
+D returnTemporaryWithAnotherFunctionWithVariableAndNonTrivialCopy() {
+  return returnTemporaryWithVariableAndNonTrivialCopy();
+}
+D returnTemporaryWithCopyConstructionWithVariableAndNonTrivialCopy() {
+  return D(returnTemporaryWithVariableAndNonTrivialCopy());
+}
+
+#if __cplusplus >= 201103L
+C returnTemporaryWithBraces() { return {1, 2}; }
+C returnTemporaryWithAnotherFunctionWithBraces() {
+  return returnTemporaryWithBraces();
+}
+C returnTemporaryWithCopyConstructionWithBraces() {
+  return C(returnTemporaryWithBraces());
+}
+#endif // C++11
+
+void test() {
+  C c1 = returnTemporaryWithVariable();
+  clang_analyzer_eval(c1.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c1.getY() == 2); // expected-warning{{TRUE}}
+
+  C c2 = returnTemporaryWithAnotherFunctionWithVariable();
+  clang_analyzer_eval(c2.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c2.getY() == 2); // expected-warning{{TRUE}}
+
+  C c3 = returnTemporaryWithCopyConstructionWithVariable();
+  clang_analyzer_eval(c3.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c3.getY() == 2); // expected-warning{{TRUE}}
+
+  C c4 = returnTemporaryWithConstruction();
+  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
+  // in the inlined function is supported.
+  clang_analyzer_eval(c4.getX() == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(c4.getY() == 2); // expected-warning{{UNKNOWN}}
+
+  C c5 = returnTemporaryWithAnotherFunctionWithConstruction();
+  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
+  // in the inlined function is supported.
+  clang_analyzer_eval(c5.getX() == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(c5.getY() == 2); // expected-warning{{UNKNOWN}}
+
+  C c6 = returnTemporaryWithCopyConstructionWithConstruction();
+  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
+  // in the inlined function is supported.
+  clang_analyzer_eval(c5.getX() == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(c5.getY() == 2); // expected-warning{{UNKNOWN}}
+
+#if __cplusplus >= 201103L
+
+  C c7 = returnTemporaryWithBraces();
+  clang_analyzer_eval(c7.getX() == 1);
+  clang_analyzer_eval(c7.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  C c8 = returnTemporaryWithAnotherFunctionWithBraces();
+  clang_analyzer_eval(c8.getX() == 1);
+  clang_analyzer_eval(c8.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  C c9 = returnTemporaryWithCopyConstructionWithBraces();
+  clang_analyzer_eval(c9.getX() == 1);
+  clang_analyzer_eval(c9.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+#endif // C++11
+
+  D d1 = returnTemporaryWithVariableAndNonTrivialCopy();
+  clang_analyzer_eval(d1.getX() == 1);
+  clang_analyzer_eval(d1.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  D d2 = returnTemporaryWithAnotherFunctionWithVariableAndNonTrivialCopy();
+  clang_analyzer_eval(d2.getX() == 1);
+  clang_analyzer_eval(d2.getY() == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+#else
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+#endif
+
+  // Should be TRUE under TEMPORARY_DTORS once this sort of construction
+  // in the inlined function is supported.
+  D d3 = returnTemporaryWithCopyConstructionWithVariableAndNonTrivialCopy();
+  clang_analyzer_eval(d3.getX() == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(d3.getY() == 2); // expected-warning{{UNKNOWN}}
+}
+} // namespace test_return_temporary
