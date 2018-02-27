@@ -412,7 +412,7 @@ std::string ToolChain::GetLinkerPath() const {
   if (llvm::sys::path::is_absolute(UseLinker)) {
     // If we're passed what looks like an absolute path, don't attempt to
     // second-guess that.
-    if (llvm::sys::fs::exists(UseLinker))
+    if (llvm::sys::fs::can_execute(UseLinker))
       return UseLinker;
   } else if (UseLinker.empty() || UseLinker == "ld") {
     // If we're passed -fuse-ld= with no argument, or with the argument ld,
@@ -427,7 +427,7 @@ std::string ToolChain::GetLinkerPath() const {
     LinkerName.append(UseLinker);
 
     std::string LinkerPath(GetProgramPath(LinkerName.c_str()));
-    if (llvm::sys::fs::exists(LinkerPath))
+    if (llvm::sys::fs::can_execute(LinkerPath))
       return LinkerPath;
   }
 

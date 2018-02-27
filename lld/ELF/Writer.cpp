@@ -1056,7 +1056,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
         continue;
 
       if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
-        int &Priority = SectionOrder[Sec];
+        int &Priority = SectionOrder[cast<InputSectionBase>(Sec->Repl)];
         Priority = std::min(Priority, Ent.Priority);
       }
     }
