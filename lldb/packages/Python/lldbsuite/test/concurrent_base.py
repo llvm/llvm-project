@@ -32,13 +32,12 @@ class ConcurrentEventsBase(TestBase):
         super(ConcurrentEventsBase, self).setUp()
         # Find the line number for our breakpoint.
         self.filename = 'main.cpp'
-        source_relpath = os.path.join(os.path.pardir, self.filename)
         self.thread_breakpoint_line = line_number(
-            source_relpath, '// Set breakpoint here')
+            self.filename, '// Set breakpoint here')
         self.setup_breakpoint_line = line_number(
-            source_relpath, '// Break here and adjust num')
+            self.filename, '// Break here and adjust num')
         self.finish_breakpoint_line = line_number(
-            source_relpath, '// Break here and verify one thread is active')
+            self.filename, '// Break here and verify one thread is active')
 
     def describe_threads(self):
         ret = []

@@ -21,6 +21,7 @@ namespace llvm {
 
 class MachineFunction;
 class MachineInstr;
+class MachineOperand;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
 class MachineRegisterInfo;
@@ -57,7 +58,7 @@ unsigned constrainOperandRegClass(const MachineFunction &MF,
                                   const TargetInstrInfo &TII,
                                   const RegisterBankInfo &RBI,
                                   MachineInstr &InsertPt, const MCInstrDesc &II,
-                                  unsigned Reg, unsigned OpIdx);
+                                  const MachineOperand &RegMO, unsigned OpIdx);
 
 /// Mutate the newly-selected instruction \p I to constrain its (possibly
 /// generic) virtual register operands to the instruction's register class.

@@ -21,4 +21,5 @@ void test1(int a) {
 int main() {
     test2(42);
     test1(23);
+    return 0;
 }
