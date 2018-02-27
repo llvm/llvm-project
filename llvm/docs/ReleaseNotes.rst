@@ -204,7 +204,7 @@ During this release the X86 target has:
 
 * Gained initial support recognizing variable shuffles from vector element extracts and inserts.
 
-* Improved documentation for SSE/AVX intrinsics in *intrin.h header files.
+* Improved documentation for SSE/AVX intrinsics in intrin.h header files.
 
 Changes to the AMDGPU Target
 -----------------------------
