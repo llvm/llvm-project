@@ -47,101 +47,139 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     }
   };
 
-  /// \brief The GPU profiles supported by the AMDGPU target.
-  enum GPUKind {
-    GK_NONE,
+  /// \brief GPU kinds supported by the AMDGPU target.
+  enum GPUKind : uint32_t {
+    // Not specified processor.
+    GK_NONE = 0,
+
+    // R600-based processors.
     GK_R600,
-    GK_R600_DOUBLE_OPS,
-    GK_R700,
-    GK_R700_DOUBLE_OPS,
-    GK_EVERGREEN,
-    GK_EVERGREEN_DOUBLE_OPS,
-    GK_NORTHERN_ISLANDS,
+    GK_R630,
+    GK_RS880,
+    GK_RV670,
+    GK_RV710,
+    GK_RV730,
+    GK_RV770,
+    GK_CEDAR,
+    GK_CYPRESS,
+    GK_JUNIPER,
+    GK_REDWOOD,
+    GK_SUMO,
+    GK_BARTS,
+    GK_CAICOS,
     GK_CAYMAN,
-    GK_GFX6,
-    GK_GFX7,
-    GK_GFX8,
-    GK_GFX9
+    GK_TURKS,
+
+    GK_R600_FIRST = GK_R600,
+    GK_R600_LAST = GK_TURKS,
+
+    // AMDGCN-based processors.
+    GK_GFX600,
+    GK_GFX601,
+    GK_GFX700,
+    GK_GFX701,
+    GK_GFX702,
+    GK_GFX703,
+    GK_GFX704,
+    GK_GFX801,
+    GK_GFX802,
+    GK_GFX803,
+    GK_GFX810,
+    GK_GFX900,
+    GK_GFX902,
+
+    GK_AMDGCN_FIRST = GK_GFX600,
+    GK_AMDGCN_LAST = GK_GFX902,
   };
 
   struct GPUInfo {
     llvm::StringLiteral Name;
     llvm::StringLiteral CanonicalName;
     AMDGPUTargetInfo::GPUKind Kind;
+    bool HasFMAF;
+    bool HasFastFMAF;
+    bool HasLDEXPF;
+    bool HasFP64;
+    bool HasFastFMA;
   };
 
-  GPUInfo GPU;
-
-  static constexpr GPUInfo InvalidGPU = {{""}, {""}, GK_NONE};
-  static constexpr GPUInfo R600Names[26] = {
-      {{"r600"},    {"r600"},    GK_R600},
-      {{"rv630"},   {"r600"},    GK_R600},
-      {{"rv635"},   {"r600"},    GK_R600},
-      {{"r630"},    {"r630"},    GK_R600},
-      {{"rs780"},   {"rs880"},   GK_R600},
-      {{"rs880"},   {"rs880"},   GK_R600},
-      {{"rv610"},   {"rs880"},   GK_R600},
-      {{"rv620"},   {"rs880"},   GK_R600},
-      {{"rv670"},   {"rv670"},   GK_R600_DOUBLE_OPS},
-      {{"rv710"},   {"rv710"},   GK_R700},
-      {{"rv730"},   {"rv730"},   GK_R700},
-      {{"rv740"},   {"rv770"},   GK_R700_DOUBLE_OPS},
-      {{"rv770"},   {"rv770"},   GK_R700_DOUBLE_OPS},
-      {{"cedar"},   {"cedar"},   GK_EVERGREEN},
-      {{"palm"},    {"cedar"},   GK_EVERGREEN},
-      {{"cypress"}, {"cypress"}, GK_EVERGREEN_DOUBLE_OPS},
-      {{"hemlock"}, {"cypress"}, GK_EVERGREEN_DOUBLE_OPS},
-      {{"juniper"}, {"juniper"}, GK_EVERGREEN},
-      {{"redwood"}, {"redwood"}, GK_EVERGREEN},
-      {{"sumo"},    {"sumo"},    GK_EVERGREEN},
-      {{"sumo2"},   {"sumo"},    GK_EVERGREEN},
-      {{"barts"},   {"barts"},   GK_NORTHERN_ISLANDS},
-      {{"caicos"},  {"caicos"},  GK_NORTHERN_ISLANDS},
-      {{"turks"},   {"turks"},   GK_NORTHERN_ISLANDS},
-      {{"aruba"},   {"cayman"},  GK_CAYMAN},
-      {{"cayman"},  {"cayman"},  GK_CAYMAN},
+  static constexpr GPUInfo InvalidGPU =
+    {{""}, {""}, GK_NONE, false, false, false, false, false};
+  static constexpr GPUInfo R600GPUs[26] = {
+  // Name         Canonical    Kind        Has    Has    Has    Has    Has
+  //              Name                     FMAF   Fast   LDEXPF FP64   Fast
+  //                                              FMAF                 FMA
+    {{"r600"},    {"r600"},    GK_R600,    false, false, false, false, false},
+    {{"rv630"},   {"r600"},    GK_R600,    false, false, false, false, false},
+    {{"rv635"},   {"r600"},    GK_R600,    false, false, false, false, false},
+    {{"r630"},    {"r630"},    GK_R630,    false, false, false, false, false},
+    {{"rs780"},   {"rs880"},   GK_RS880,   false, false, false, false, false},
+    {{"rs880"},   {"rs880"},   GK_RS880,   false, false, false, false, false},
+    {{"rv610"},   {"rs880"},   GK_RS880,   false, false, false, false, false},
+    {{"rv620"},   {"rs880"},   GK_RS880,   false, false, false, false, false},
+    {{"rv670"},   {"rv670"},   GK_RV670,   false, false, false, false, false},
+    {{"rv710"},   {"rv710"},   GK_RV710,   false, false, false, false, false},
+    {{"rv730"},   {"rv730"},   GK_RV730,   false, false, false, false, false},
+    {{"rv740"},   {"rv770"},   GK_RV770,   false, false, false, false, false},
+    {{"rv770"},   {"rv770"},   GK_RV770,   false, false, false, false, false},
+    {{"cedar"},   {"cedar"},   GK_CEDAR,   false, false, false, false, false},
+    {{"palm"},    {"cedar"},   GK_CEDAR,   false, false, false, false, false},
+    {{"cypress"}, {"cypress"}, GK_CYPRESS, true,  false, false, false, false},
+    {{"hemlock"}, {"cypress"}, GK_CYPRESS, true,  false, false, false, false},
+    {{"juniper"}, {"juniper"}, GK_JUNIPER, false, false, false, false, false},
+    {{"redwood"}, {"redwood"}, GK_REDWOOD, false, false, false, false, false},
+    {{"sumo"},    {"sumo"},    GK_SUMO,    false, false, false, false, false},
+    {{"sumo2"},   {"sumo"},    GK_SUMO,    false, false, false, false, false},
+    {{"barts"},   {"barts"},   GK_BARTS,   false, false, false, false, false},
+    {{"caicos"},  {"caicos"},  GK_BARTS,   false, false, false, false, false},
+    {{"aruba"},   {"cayman"},  GK_CAYMAN,  true,  false, false, false, false},
+    {{"cayman"},  {"cayman"},  GK_CAYMAN,  true,  false, false, false, false},
+    {{"turks"},   {"turks"},   GK_TURKS,   false, false, false, false, false},
   };
-  static constexpr GPUInfo AMDGCNNames[30] = {
-      {{"gfx600"},    {"gfx600"}, GK_GFX6},
-      {{"tahiti"},    {"gfx600"}, GK_GFX6},
-      {{"gfx601"},    {"gfx601"}, GK_GFX6},
-      {{"hainan"},    {"gfx601"}, GK_GFX6},
-      {{"oland"},     {"gfx601"}, GK_GFX6},
-      {{"pitcairn"},  {"gfx601"}, GK_GFX6},
-      {{"verde"},     {"gfx601"}, GK_GFX6},
-      {{"gfx700"},    {"gfx700"}, GK_GFX7},
-      {{"kaveri"},    {"gfx700"}, GK_GFX7},
-      {{"gfx701"},    {"gfx701"}, GK_GFX7},
-      {{"hawaii"},    {"gfx701"}, GK_GFX7},
-      {{"gfx702"},    {"gfx702"}, GK_GFX7},
-      {{"gfx703"},    {"gfx703"}, GK_GFX7},
-      {{"kabini"},    {"gfx703"}, GK_GFX7},
-      {{"mullins"},   {"gfx703"}, GK_GFX7},
-      {{"gfx704"},    {"gfx704"}, GK_GFX7},
-      {{"bonaire"},   {"gfx704"}, GK_GFX7},
-      {{"gfx801"},    {"gfx801"}, GK_GFX8},
-      {{"carrizo"},   {"gfx801"}, GK_GFX8},
-      {{"gfx802"},    {"gfx802"}, GK_GFX8},
-      {{"iceland"},   {"gfx802"}, GK_GFX8},
-      {{"tonga"},     {"gfx802"}, GK_GFX8},
-      {{"gfx803"},    {"gfx803"}, GK_GFX8},
-      {{"fiji"},      {"gfx803"}, GK_GFX8},
-      {{"polaris10"}, {"gfx803"}, GK_GFX8},
-      {{"polaris11"}, {"gfx803"}, GK_GFX8},
-      {{"gfx810"},    {"gfx810"}, GK_GFX8},
-      {{"stoney"},    {"gfx810"}, GK_GFX8},
-      {{"gfx900"},    {"gfx900"}, GK_GFX9},
-      {{"gfx902"},    {"gfx902"}, GK_GFX9},
+  static constexpr GPUInfo AMDGCNGPUs[30] = {
+  // Name           Canonical    Kind        Has   Has    Has    Has   Has
+  //                Name                     FMAF  Fast   LDEXPF FP64  Fast
+  //                                               FMAF                FMA
+    {{"gfx600"},    {"gfx600"},  GK_GFX600,  true, true,  true,  true, true},
+    {{"tahiti"},    {"gfx600"},  GK_GFX600,  true, true,  true,  true, true},
+    {{"gfx601"},    {"gfx601"},  GK_GFX601,  true, false, true,  true, true},
+    {{"hainan"},    {"gfx601"},  GK_GFX601,  true, false, true,  true, true},
+    {{"oland"},     {"gfx601"},  GK_GFX601,  true, false, true,  true, true},
+    {{"pitcairn"},  {"gfx601"},  GK_GFX601,  true, false, true,  true, true},
+    {{"verde"},     {"gfx601"},  GK_GFX601,  true, false, true,  true, true},
+    {{"gfx700"},    {"gfx700"},  GK_GFX700,  true, false, true,  true, true},
+    {{"kaveri"},    {"gfx700"},  GK_GFX700,  true, false, true,  true, true},
+    {{"gfx701"},    {"gfx701"},  GK_GFX701,  true, true,  true,  true, true},
+    {{"hawaii"},    {"gfx701"},  GK_GFX701,  true, true,  true,  true, true},
+    {{"gfx702"},    {"gfx702"},  GK_GFX702,  true, true,  true,  true, true},
+    {{"gfx703"},    {"gfx703"},  GK_GFX703,  true, false, true,  true, true},
+    {{"kabini"},    {"gfx703"},  GK_GFX703,  true, false, true,  true, true},
+    {{"mullins"},   {"gfx703"},  GK_GFX703,  true, false, true,  true, true},
+    {{"gfx704"},    {"gfx704"},  GK_GFX704,  true, false, true,  true, true},
+    {{"bonaire"},   {"gfx704"},  GK_GFX704,  true, false, true,  true, true},
+    {{"gfx801"},    {"gfx801"},  GK_GFX801,  true, true,  true,  true, true},
+    {{"carrizo"},   {"gfx801"},  GK_GFX801,  true, true,  true,  true, true},
+    {{"gfx802"},    {"gfx802"},  GK_GFX802,  true, false, true,  true, true},
+    {{"iceland"},   {"gfx802"},  GK_GFX802,  true, false, true,  true, true},
+    {{"tonga"},     {"gfx802"},  GK_GFX802,  true, false, true,  true, true},
+    {{"gfx803"},    {"gfx803"},  GK_GFX803,  true, false, true,  true, true},
+    {{"fiji"},      {"gfx803"},  GK_GFX803,  true, false, true,  true, true},
+    {{"polaris10"}, {"gfx803"},  GK_GFX803,  true, false, true,  true, true},
+    {{"polaris11"}, {"gfx803"},  GK_GFX803,  true, false, true,  true, true},
+    {{"gfx810"},    {"gfx810"},  GK_GFX810,  true, false, true,  true, true},
+    {{"stoney"},    {"gfx810"},  GK_GFX810,  true, false, true,  true, true},
+    {{"gfx900"},    {"gfx900"},  GK_GFX900,  true, true,  true,  true, true},
+    {{"gfx902"},    {"gfx902"},  GK_GFX900,  true, true,  true,  true, true},
   };
 
-  bool hasFP64 : 1;
-  bool hasFMAF : 1;
-  bool hasLDEXPF : 1;
+  static GPUInfo parseR600Name(StringRef Name);
+
+  static GPUInfo parseAMDGCNName(StringRef Name);
+
+  GPUInfo parseGPUName(StringRef Name) const;
+
   const AddrSpace AS;
-
-  static bool hasFullSpeedFMAF32(StringRef GPUName) {
-    return parseAMDGCNName(GPUName).Kind >= GK_GFX9;
-  }
+  GPUInfo GPU;
 
   static bool isAMDGCN(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::amdgcn;
@@ -157,12 +195,10 @@ public:
   void adjust(LangOptions &Opts) override;
 
   uint64_t getPointerWidthV(unsigned AddrSpace) const override {
-    if (GPU.Kind <= GK_CAYMAN)
+    if (GPU.Kind <= GK_R600_LAST)
       return 32;
-
-    if (AddrSpace == AS.Private || AddrSpace == AS.Local) {
+    if (AddrSpace == AS.Private || AddrSpace == AS.Local)
       return 32;
-    }
     return 64;
   }
 
@@ -278,10 +314,6 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
-  static GPUInfo parseR600Name(StringRef Name);
-
-  static GPUInfo parseAMDGCNName(StringRef Name);
-
   bool isValidCPUName(StringRef Name) const override {
     if (getTriple().getArch() == llvm::Triple::amdgcn)
       return GK_NONE != parseAMDGCNName(Name).Kind;
@@ -297,7 +329,7 @@ public:
     else
       GPU = parseR600Name(Name);
 
-    return GPU.Kind != GK_NONE;
+    return GK_NONE != GPU.Kind;
   }
 
   void setSupportedOpenCLOpts() override {
@@ -305,16 +337,16 @@ public:
     Opts.support("cl_clang_storage_class_specifiers");
     Opts.support("cl_khr_icd");
 
-    if (hasFP64)
+    if (GPU.HasFP64)
       Opts.support("cl_khr_fp64");
-    if (GPU.Kind >= GK_EVERGREEN) {
+    if (GPU.Kind >= GK_CEDAR) {
       Opts.support("cl_khr_byte_addressable_store");
       Opts.support("cl_khr_global_int32_base_atomics");
       Opts.support("cl_khr_global_int32_extended_atomics");
       Opts.support("cl_khr_local_int32_base_atomics");
       Opts.support("cl_khr_local_int32_extended_atomics");
     }
-    if (GPU.Kind >= GK_GFX6) {
+    if (GPU.Kind >= GK_AMDGCN_FIRST) {
       Opts.support("cl_khr_fp16");
       Opts.support("cl_khr_int64_base_atomics");
       Opts.support("cl_khr_int64_extended_atomics");
