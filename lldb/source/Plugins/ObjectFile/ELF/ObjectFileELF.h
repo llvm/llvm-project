@@ -383,12 +383,6 @@ private:
   RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
                               lldb_private::ArchSpec &arch_spec,
                               lldb_private::UUID &uuid);
-
-  bool AnySegmentHasPhysicalAddress();
-
-  const elf::ELFProgramHeader *GetSectionSegment(lldb::SectionSP section_sp);
-
-  lldb::addr_t GetSectionPhysicalAddress(lldb::SectionSP section_sp);
 };
 
 #endif // liblldb_ObjectFileELF_h_
