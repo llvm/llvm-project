@@ -27,12 +27,6 @@ std::string lld::toString(const InputChunk *C) {
   return (toString(C->File) + ":(" + C->getName() + ")").str();
 }
 
-uint32_t InputSegment::translateVA(uint32_t Offset) const {
-  assert(Offset <= getSize());
-  DEBUG(dbgs() << "translateVA: " << getName() << " Offset=" << Offset << "\n");
-  return OutputSeg->StartVA + OutputSegmentOffset + Offset;
-}
-
 void InputChunk::copyRelocations(const WasmSection &Section) {
   if (Section.Relocations.empty())
     return;
