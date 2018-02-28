@@ -18,6 +18,8 @@
 
 #if defined(_MSC_VER)
 #include <Windows.h>
+
+// DbgHelp.h must be included after Windows.h.
 #include <DbgHelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif

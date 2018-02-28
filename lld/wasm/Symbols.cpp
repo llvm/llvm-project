@@ -178,6 +178,8 @@ DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                    Global ? &Global->getType() : nullptr),
       Global(Global) {}
 
+void LazySymbol::fetch() { cast<ArchiveFile>(File)->addMember(&ArchiveSymbol); }
+
 std::string lld::toString(const wasm::Symbol &Sym) {
   if (Config->Demangle)
     if (Optional<std::string> S = demangleItanium(Sym.getName()))
