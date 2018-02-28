@@ -51,6 +51,9 @@ inline ProgramStateRef setDynamicTypeInfo(ProgramStateRef State,
                             DynamicTypeInfo(NewTy, CanBeSubClassed));
 }
 
+void printDynamicTypeInfo(ProgramStateRef State, raw_ostream &Out,
+                          const char *NL, const char *Sep);
+
 } // ento
 } // clang
 

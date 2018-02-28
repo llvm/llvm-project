@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/TaintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -449,6 +450,12 @@ void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
   // Print out the constraints.
   Mgr.getConstraintManager().print(this, Out, NL, Sep);
 
+  // Print out the tracked dynamic types.
+  printDynamicTypeInfo(this, Out, NL, Sep);
+
+  // Print out tainted symbols.
+  printTaint(Out, NL, Sep);
+
   // Print checker-specific data.
   Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
 }
@@ -466,7 +473,7 @@ void ProgramState::printTaint(raw_ostream &Out,
   TaintMapImpl TM = get<TaintMap>();
 
   if (!TM.isEmpty())
-    Out <<"Tainted Symbols:" << NL;
+    Out <<"Tainted symbols:" << NL;
 
   for (TaintMapImpl::iterator I = TM.begin(), E = TM.end(); I != E; ++I) {
     Out << I->first << " : " << I->second << NL;

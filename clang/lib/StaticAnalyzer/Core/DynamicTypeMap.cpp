@@ -47,5 +47,28 @@ ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *Reg,
   return NewState;
 }
 
+void printDynamicTypeInfo(ProgramStateRef State, raw_ostream &Out,
+                          const char *NL, const char *Sep) {
+  bool First = true;
+  for (const auto &I : State->get<DynamicTypeMap>()) {
+    if (First) {
+      Out << NL << "Dynamic types of regions:" << NL;
+      First = false;
+    }
+    const MemRegion *MR = I.first;
+    const DynamicTypeInfo &DTI = I.second;
+    Out << MR << " : ";
+    if (DTI.isValid()) {
+      Out << DTI.getType()->getPointeeType().getAsString();
+      if (DTI.canBeASubClass()) {
+        Out << " (or its subclass)";
+      }
+    } else {
+      Out << "Invalid type info";
+    }
+    Out << NL;
+  }
+}
+
 } // namespace ento
 } // namespace clang
