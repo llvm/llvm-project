@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-forwarding-reference-overload %t -- -- -std=c++14
+// RUN: %check_clang_tidy %s bugprone-forwarding-reference-overload %t -- -- -std=c++14
 
 namespace std {
 template <bool B, class T = void> struct enable_if { typedef T type; };
@@ -20,7 +20,7 @@ template <typename T> constexpr bool just_true = true;
 class Test1 {
 public:
   template <typename T> Test1(T &&n);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructor accepting a forwarding reference can hide the copy and move constructors [misc-forwarding-reference-overload]
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructor accepting a forwarding reference can hide the copy and move constructors [bugprone-forwarding-reference-overload]
 
   template <typename T> Test1(T &&n, int i = 5, ...);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructor accepting a forwarding reference can hide the copy and move constructors

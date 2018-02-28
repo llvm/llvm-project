@@ -542,6 +542,12 @@ else ()
         list(APPEND BUILTIN_CFLAGS -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
+      # For RISCV32, we must force enable int128 for compiling long
+      # double routines.
+      if("${arch}" STREQUAL "riscv32")
+        list(APPEND BUILTIN_CFLAGS -fforce-enable-int128)
+      endif()
+
       add_compiler_rt_runtime(clang_rt.builtins
                               STATIC
                               ARCHS ${arch}

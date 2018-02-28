@@ -1,15 +1,11 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyMiscModule
-  ForwardingReferenceOverloadCheck.cpp
-  LambdaFunctionNameCheck.cpp
   MisplacedConstCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   DefinitionsInHeadersCheck.cpp
   MacroParenthesesCheck.cpp
-  MacroRepeatedSideEffectsCheck.cpp
   MiscTidyModule.cpp
-  MisplacedWideningCastCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NonCopyableObjects.cpp
   RedundantExpressionCheck.cpp

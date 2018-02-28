@@ -33,6 +33,28 @@ static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_discarded_task"
 };
 
+static void format_task_type(int type, char *buffer) {
+  char *progress = buffer;
+  if (type & ompt_task_initial)
+    progress += sprintf(progress, "ompt_task_initial");
+  if (type & ompt_task_implicit)
+    progress += sprintf(progress, "ompt_task_implicit");
+  if (type & ompt_task_explicit)
+    progress += sprintf(progress, "ompt_task_explicit");
+  if (type & ompt_task_target)
+    progress += sprintf(progress, "ompt_task_target");
+  if (type & ompt_task_undeferred)
+    progress += sprintf(progress, "|ompt_task_undeferred");
+  if (type & ompt_task_untied)
+    progress += sprintf(progress, "|ompt_task_untied");
+  if (type & ompt_task_final)
+    progress += sprintf(progress, "|ompt_task_final");
+  if (type & ompt_task_mergeable)
+    progress += sprintf(progress, "|ompt_task_mergeable");
+  if (type & ompt_task_merged)
+    progress += sprintf(progress, "|ompt_task_merged");
+}
+
 static ompt_set_callback_t ompt_set_callback;
 static ompt_get_task_info_t ompt_get_task_info;
 static ompt_get_thread_data_t ompt_get_thread_data;
@@ -49,16 +71,22 @@ static ompt_enumerate_mutex_impls_t ompt_enumerate_mutex_impls;
 
 static void print_ids(int level)
 {
-  ompt_frame_t* frame ;
-  ompt_data_t* parallel_data;
-  ompt_data_t* task_data;
-  int exists_task = ompt_get_task_info(level, NULL, &task_data, &frame, &parallel_data, NULL);
+  int task_type, thread_num;
+  ompt_frame_t *frame;
+  ompt_data_t *task_parallel_data;
+  ompt_data_t *task_data;
+  int exists_task = ompt_get_task_info(level, &task_type, &task_data, &frame,
+                                       &task_parallel_data, &thread_num);
+  char buffer[2048];
+  format_task_type(task_type, buffer);
   if (frame)
-  {
-    printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", exit_frame=%p, reenter_frame=%p\n", ompt_get_thread_data()->value, level, exists_task ? parallel_data->value : 0, exists_task ? task_data->value : 0, frame->exit_frame, frame->enter_frame);
-  }
-  else
-    printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", frame=%p\n", ompt_get_thread_data()->value, level, exists_task ? parallel_data->value : 0, exists_task ? task_data->value : 0, frame);
+    printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64
+           ", task_id=%" PRIu64 ", exit_frame=%p, reenter_frame=%p, "
+           "task_type=%s=%d, thread_num=%d\n",
+           ompt_get_thread_data()->value, level,
+           exists_task ? task_parallel_data->value : 0,
+           exists_task ? task_data->value : 0, frame->exit_frame,
+           frame->enter_frame, buffer, task_type, thread_num);
 }
 
 #define get_frame_address(level) __builtin_frame_address(level)
@@ -153,21 +181,6 @@ ompt_label_##id:
   ompt_get_thread_data()->value, \
   ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES - 1, \
   ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES, addr)
-
-
-static void format_task_type(int type, char* buffer)
-{
-  char* progress = buffer;
-  if(type & ompt_task_initial) progress += sprintf(progress, "ompt_task_initial");
-  if(type & ompt_task_implicit) progress += sprintf(progress, "ompt_task_implicit");
-  if(type & ompt_task_explicit) progress += sprintf(progress, "ompt_task_explicit");
-  if(type & ompt_task_target) progress += sprintf(progress, "ompt_task_target");
-  if(type & ompt_task_undeferred) progress += sprintf(progress, "|ompt_task_undeferred");
-  if(type & ompt_task_untied) progress += sprintf(progress, "|ompt_task_untied");
-  if(type & ompt_task_final) progress += sprintf(progress, "|ompt_task_final");
-  if(type & ompt_task_mergeable) progress += sprintf(progress, "|ompt_task_mergeable");
-  if(type & ompt_task_merged) progress += sprintf(progress, "|ompt_task_merged");
-}
 
 static void
 on_ompt_callback_mutex_acquire(

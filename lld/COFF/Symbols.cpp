@@ -9,9 +9,9 @@
 
 #include "Symbols.h"
 #include "InputFiles.h"
-#include "Strings.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,7 +21,7 @@ using namespace llvm::object;
 
 // Returns a symbol name for an error message.
 std::string lld::toString(coff::Symbol &B) {
-  if (Optional<std::string> S = coff::demangleMSVC(B.getName()))
+  if (Optional<std::string> S = lld::demangleMSVC(B.getName()))
     return ("\"" + *S + "\" (" + B.getName() + ")").str();
   return B.getName();
 }

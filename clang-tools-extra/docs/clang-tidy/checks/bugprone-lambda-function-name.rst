@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-lambda-function-name
+.. title:: clang-tidy - bugprone-lambda-function-name
 
-misc-lambda-function-name
-=========================
+bugprone-lambda-function-name
+=============================
 
 Checks for attempts to get the name of a function from within a lambda
 expression. The name of a lambda is always something like ``operator()``, which
