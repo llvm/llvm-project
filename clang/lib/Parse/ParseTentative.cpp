@@ -1246,6 +1246,17 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       case ANK_TentativeDecl:
         return TPResult::False;
       case ANK_TemplateName:
+        // In C++17, this could be a type template for class template argument
+        // deduction. Try to form a type annotation for it. If we're in a
+        // template template argument, we'll undo this when checking the
+        // validity of the argument.
+        if (getLangOpts().CPlusPlus17) {
+          if (TryAnnotateTypeOrScopeToken())
+            return TPResult::Error;
+          if (Tok.isNot(tok::identifier))
+            break;
+        }
+
         // A bare type template-name which can't be a template template
         // argument is an error, and was probably intended to be a type.
         return GreaterThanIsOperator ? TPResult::True : TPResult::False;
@@ -1424,8 +1435,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
             *HasMissingTypename = true;
             return TPResult::Ambiguous;
           }
-
-          // FIXME: Fails to either revert or commit the tentative parse!
         } else {
           // Try to resolve the name. If it doesn't exist, assume it was
           // intended to name a type and keep disambiguating.
@@ -1435,19 +1444,33 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
           case ANK_TentativeDecl:
             return TPResult::False;
           case ANK_TemplateName:
+            // In C++17, this could be a type template for class template
+            // argument deduction.
+            if (getLangOpts().CPlusPlus17) {
+              if (TryAnnotateTypeOrScopeToken())
+                return TPResult::Error;
+              if (Tok.isNot(tok::identifier))
+                break;
+            }
+
             // A bare type template-name which can't be a template template
             // argument is an error, and was probably intended to be a type.
-            return GreaterThanIsOperator ? TPResult::True : TPResult::False;
+            // In C++17, this could be class template argument deduction.
+            return (getLangOpts().CPlusPlus17 || GreaterThanIsOperator)
+                       ? TPResult::True
+                       : TPResult::False;
           case ANK_Unresolved:
             return HasMissingTypename ? TPResult::Ambiguous
                                       : TPResult::False;
           case ANK_Success:
-            // Annotated it, check again.
-            assert(Tok.isNot(tok::annot_cxxscope) ||
-                   NextToken().isNot(tok::identifier));
-            return isCXXDeclarationSpecifier(BracedCastResult,
-                                             HasMissingTypename);
+            break;
           }
+
+          // Annotated it, check again.
+          assert(Tok.isNot(tok::annot_cxxscope) ||
+                 NextToken().isNot(tok::identifier));
+          return isCXXDeclarationSpecifier(BracedCastResult,
+                                           HasMissingTypename);
         }
       }
       return TPResult::False;

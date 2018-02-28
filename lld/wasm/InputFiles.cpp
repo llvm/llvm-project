@@ -43,10 +43,10 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
 }
 
 void ObjFile::dumpInfo() const {
-  log("info for: " + getName() + "\n" +
-      "              Symbols : " + Twine(Symbols.size()) + "\n" +
-      "     Function Imports : " + Twine(NumFunctionImports) + "\n" +
-      "       Global Imports : " + Twine(NumGlobalImports) + "\n");
+  log("info for: " + getName() +
+      "\n              Symbols : " + Twine(Symbols.size()) +
+      "\n     Function Imports : " + Twine(WasmObj->getNumImportedFunctions()) +
+      "\n       Global Imports : " + Twine(WasmObj->getNumImportedGlobals()));
 }
 
 // Relocations contain an index into the function, global or table index
@@ -117,24 +117,42 @@ void ObjFile::parse() {
   TypeMap.resize(getWasmObj()->types().size());
   TypeIsUsed.resize(getWasmObj()->types().size(), false);
 
-  initializeSymbols();
-}
+  for (StringRef Name : WasmObj->comdats())
+    Symtab->addComdat(Name, this);
 
-// Return the InputSegment in which a given symbol is defined.
-InputSegment *ObjFile::getSegment(const WasmSymbol &WasmSym) const {
-  return Segments[WasmSym.Info.DataRef.Segment];
-}
+  // Populate `Segments`.
+  for (const WasmSegment &S : WasmObj->dataSegments()) {
+    InputSegment *Seg = make<InputSegment>(S, this);
+    Seg->copyRelocations(*DataSection);
+    Segments.emplace_back(Seg);
+  }
 
-InputFunction *ObjFile::getFunction(const WasmSymbol &Sym) const {
-  assert(Sym.Info.ElementIndex >= NumFunctionImports);
-  uint32_t FunctionIndex = Sym.Info.ElementIndex - NumFunctionImports;
-  return Functions[FunctionIndex];
-}
+  // Populate `Functions`.
+  ArrayRef<WasmFunction> Funcs = WasmObj->functions();
+  ArrayRef<uint32_t> FuncTypes = WasmObj->functionTypes();
+  ArrayRef<WasmSignature> Types = WasmObj->types();
+  Functions.reserve(Funcs.size());
 
-InputGlobal *ObjFile::getGlobal(const WasmSymbol &Sym) const {
-  assert(Sym.Info.ElementIndex >= NumGlobalImports);
-  uint32_t GlobalIndex = Sym.Info.ElementIndex - NumGlobalImports;
-  return Globals[GlobalIndex];
+  for (size_t I = 0, E = Funcs.size(); I != E; ++I) {
+    InputFunction *F =
+        make<InputFunction>(Types[FuncTypes[I]], &Funcs[I], this);
+    F->copyRelocations(*CodeSection);
+    Functions.emplace_back(F);
+  }
+
+  // Populate `Globals`.
+  for (const WasmGlobal &G : WasmObj->globals())
+    Globals.emplace_back(make<InputGlobal>(G));
+
+  // Populate `Symbols` based on the WasmSymbols in the object.
+  Symbols.reserve(WasmObj->getNumberOfSymbols());
+  for (const SymbolRef &Sym : WasmObj->symbols()) {
+    const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym.getRawDataRefImpl());
+    if (Symbol *Sym = createDefined(WasmSym))
+      Symbols.push_back(Sym);
+    else
+      Symbols.push_back(createUndefined(WasmSym));
+  }
 }
 
 bool ObjFile::isExcludedByComdat(InputChunk *Chunk) const {
@@ -154,54 +172,14 @@ DataSymbol *ObjFile::getDataSymbol(uint32_t Index) const {
   return cast<DataSymbol>(Symbols[Index]);
 }
 
-void ObjFile::initializeSymbols() {
-  Symbols.reserve(WasmObj->getNumberOfSymbols());
-
-  NumFunctionImports = WasmObj->getNumImportedFunctions();
-  NumGlobalImports = WasmObj->getNumImportedGlobals();
-
-  ArrayRef<WasmFunction> Funcs = WasmObj->functions();
-  ArrayRef<uint32_t> FuncTypes = WasmObj->functionTypes();
-  ArrayRef<WasmSignature> Types = WasmObj->types();
-
-  for (StringRef Name : WasmObj->comdats())
-    Symtab->addComdat(Name, this);
-
-  for (const WasmSegment &S : WasmObj->dataSegments()) {
-    InputSegment *Seg = make<InputSegment>(S, this);
-    Seg->copyRelocations(*DataSection);
-    Segments.emplace_back(Seg);
-  }
-
-  for (const WasmGlobal &G : WasmObj->globals())
-    Globals.emplace_back(make<InputGlobal>(G));
-
-  for (size_t I = 0; I < Funcs.size(); ++I) {
-    const WasmFunction &Func = Funcs[I];
-    const WasmSignature &Sig = Types[FuncTypes[I]];
-    InputFunction *F = make<InputFunction>(Sig, &Func, this);
-    F->copyRelocations(*CodeSection);
-    Functions.emplace_back(F);
-  }
-
-  // Populate `Symbols` based on the WasmSymbols in the object
-  for (const SymbolRef &Sym : WasmObj->symbols()) {
-    const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym.getRawDataRefImpl());
-
-    if (Symbol *Sym = createDefined(WasmSym))
-      Symbols.push_back(Sym);
-    else
-      Symbols.push_back(createUndefined(WasmSym));
-  }
-}
-
 Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
   if (!Sym.isDefined())
     return nullptr;
 
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION: {
-    InputFunction *Func = getFunction(Sym);
+    InputFunction *Func =
+        Functions[Sym.Info.ElementIndex - WasmObj->getNumImportedFunctions()];
     if (isExcludedByComdat(Func)) {
       Func->Live = false;
       return nullptr;
@@ -213,7 +191,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
                                       Func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
-    InputSegment *Seg = getSegment(Sym);
+    InputSegment *Seg = Segments[Sym.Info.DataRef.Segment];
     if (isExcludedByComdat(Seg)) {
       Seg->Live = false;
       return nullptr;
@@ -229,11 +207,12 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
                                   Offset, Size);
   }
   case WASM_SYMBOL_TYPE_GLOBAL:
+    InputGlobal *Global =
+        Globals[Sym.Info.ElementIndex - WasmObj->getNumImportedGlobals()];
     if (Sym.isBindingLocal())
-      return make<DefinedGlobal>(Sym.Info.Name, Sym.Info.Flags, this,
-                                 getGlobal(Sym));
+      return make<DefinedGlobal>(Sym.Info.Name, Sym.Info.Flags, this, Global);
     return Symtab->addDefinedGlobal(Sym.Info.Name, Sym.Info.Flags, this,
-                                    getGlobal(Sym));
+                                    Global);
   }
   llvm_unreachable("unkown symbol kind");
 }

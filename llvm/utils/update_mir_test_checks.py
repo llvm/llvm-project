@@ -26,12 +26,7 @@ import re
 import subprocess
 import sys
 
-RUN_LINE_RE = re.compile('^\s*[;#]\s*RUN:\s*(.*)$')
-TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
-MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
-TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
-CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?[= ](\S+)')
-CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
+from UpdateTestChecks import common
 
 MIR_FUNC_NAME_RE = re.compile(r' *name: *(?P<func>[A-Za-z0-9_.-]+)')
 MIR_BODY_BEGIN_RE = re.compile(r' *body: *\|')
@@ -55,6 +50,7 @@ MIR_FUNC_RE = re.compile(
     r'(?P<body>.*?)\n'
     r'^\.\.\.$',
     flags=(re.M | re.S))
+
 
 class LLC:
     def __init__(self, bin):
@@ -94,7 +90,7 @@ def warn(msg, test_file=None):
 
 def find_triple_in_ir(lines, verbose=False):
     for l in lines:
-        m = TRIPLE_IR_RE.match(l)
+        m = common.TRIPLE_IR_RE.match(l)
         if m:
             return m.group(1)
     return None
@@ -102,7 +98,7 @@ def find_triple_in_ir(lines, verbose=False):
 
 def find_run_lines(test, lines, verbose=False):
     raw_lines = [m.group(1)
-                 for m in [RUN_LINE_RE.match(l) for l in lines] if m]
+                 for m in [common.RUN_LINE_RE.match(l) for l in lines] if m]
     run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
     for l in raw_lines[1:]:
         if run_lines[-1].endswith("\\"):
@@ -133,19 +129,21 @@ def build_run_list(test, run_lines, verbose=False):
             continue
 
         triple = None
-        m = TRIPLE_ARG_RE.search(llc_cmd)
+        m = common.TRIPLE_ARG_RE.search(llc_cmd)
         if m:
             triple = m.group(1)
         # If we find -march but not -mtriple, use that.
-        m = MARCH_ARG_RE.search(llc_cmd)
+        m = common.MARCH_ARG_RE.search(llc_cmd)
         if m and not triple:
             triple = '{}--'.format(m.group(1))
 
         cmd_args = llc_cmd[len('llc'):].strip()
         cmd_args = cmd_args.replace('< %s', '').replace('%s', '').strip()
 
-        check_prefixes = [item for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)
-                          for item in m.group(1).split(',')]
+        check_prefixes = [
+            item
+            for m in common.CHECK_PREFIX_RE.finditer(filecheck_cmd)
+            for item in m.group(1).split(',')]
         if not check_prefixes:
             check_prefixes = ['CHECK']
         all_prefixes += check_prefixes
@@ -286,7 +284,7 @@ def mangle_vreg(opcode, current_names):
 
 def should_add_line_to_output(input_line, prefix_set):
     # Skip any check lines that we're handling.
-    m = CHECK_RE.match(input_line)
+    m = common.CHECK_RE.match(input_line)
     if m and m.group(1) in prefix_set:
         return False
     return True

@@ -2686,7 +2686,8 @@ Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
     return DeclSpecContext::DSC_top_level;
   if (Context == DeclaratorContext::TemplateParamContext)
     return DeclSpecContext::DSC_template_param;
-  if (Context == DeclaratorContext::TemplateTypeArgContext)
+  if (Context == DeclaratorContext::TemplateArgContext ||
+      Context == DeclaratorContext::TemplateTypeArgContext)
     return DeclSpecContext::DSC_template_type_arg;
   if (Context == DeclaratorContext::TrailingReturnContext ||
       Context == DeclaratorContext::TrailingReturnVarContext)
@@ -5637,7 +5638,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // An identifier within parens is unlikely to be intended to be anything
       // other than a name being "declared".
       DiagnoseIdentifier = true;
-    else if (D.getContext() == DeclaratorContext::TemplateTypeArgContext)
+    else if (D.getContext() == DeclaratorContext::TemplateArgContext)
       // T<int N> is an accidental identifier; T<int N indicates a missing '>'.
       DiagnoseIdentifier =
           NextToken().isOneOf(tok::comma, tok::greater, tok::greatergreater);

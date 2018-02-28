@@ -1,4 +1,4 @@
-//== ConstraintManager.h - Constraints on symbolic values.-------*- C++ -*--==//
+//===- ConstraintManager.h - Constraints on symbolic values. ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,28 +14,38 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CONSTRAINTMANAGER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CONSTRAINTMANAGER_H
 
+#include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <memory>
+#include <utility>
 
 namespace llvm {
+
 class APSInt;
-}
+
+} // namespace llvm
 
 namespace clang {
 namespace ento {
 
+class ProgramStateManager;
 class SubEngine;
+class SymbolReaper;
 
 class ConditionTruthVal {
   Optional<bool> Val;
+
 public:
   /// Construct a ConditionTruthVal indicating the constraint is constrained
   /// to either true or false, depending on the boolean value provided.
   ConditionTruthVal(bool constraint) : Val(constraint) {}
 
   /// Construct a ConstraintVal indicating the constraint is underconstrained.
-  ConditionTruthVal() {}
+  ConditionTruthVal() = default;
 
   /// \return Stored value, assuming that the value is known.
   /// Crashes otherwise.
@@ -67,14 +77,14 @@ public:
 
 class ConstraintManager {
 public:
-  ConstraintManager() : NotifyAssumeClients(true) {}
-
+  ConstraintManager() = default;
   virtual ~ConstraintManager();
+
   virtual ProgramStateRef assume(ProgramStateRef state,
                                  DefinedSVal Cond,
                                  bool Assumption) = 0;
 
-  typedef std::pair<ProgramStateRef, ProgramStateRef> ProgramStatePair;
+  using ProgramStatePair = std::pair<ProgramStateRef, ProgramStateRef>;
 
   /// Returns a pair of states (StTrue, StFalse) where the given condition is
   /// assumed to be true or false, respectively.
@@ -172,7 +182,7 @@ protected:
   ///
   /// Note that this flag allows the ConstraintManager to be re-entrant,
   /// but not thread-safe.
-  bool NotifyAssumeClients;
+  bool NotifyAssumeClients = true;
 
   /// canReasonAbout - Not all ConstraintManagers can accurately reason about
   ///  all SVal values.  This method returns true if the ConstraintManager can
@@ -193,8 +203,7 @@ CreateRangeConstraintManager(ProgramStateManager &statemgr,
 std::unique_ptr<ConstraintManager>
 CreateZ3ConstraintManager(ProgramStateManager &statemgr, SubEngine *subengine);
 
-} // end GR namespace
+} // namespace ento
+} // namespace clang
 
-} // end clang namespace
-
-#endif
+#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CONSTRAINTMANAGER_H
