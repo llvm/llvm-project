@@ -685,13 +685,6 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
         return CIP_DisallowedOnce;
     }
 
-      // If we did not find the correct this-region, it would be pointless
-      // to inline the constructor. Instead we will simply invalidate
-      // the fake temporary target.
-      if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
-        return CIP_DisallowedOnce;
-    }
-
     break;
   }
   case CE_CXXDestructor: {
