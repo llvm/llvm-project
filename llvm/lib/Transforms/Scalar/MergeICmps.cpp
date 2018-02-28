@@ -71,7 +71,7 @@ struct BCEAtom {
 };
 
 // If this value is a load from a constant offset w.r.t. a base address, and
-// there are no othe rusers of the load or address, returns the base address and
+// there are no other users of the load or address, returns the base address and
 // the offset.
 BCEAtom visitICmpLoadOperand(Value *const Val) {
   BCEAtom Result;
@@ -569,6 +569,19 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
     if (LastBlock) {
       // There are several non-constant values.
       DEBUG(dbgs() << "skip: several non-constant values\n");
+      return false;
+    }
+    if (!isa<ICmpInst>(Phi.getIncomingValue(I)) ||
+        cast<ICmpInst>(Phi.getIncomingValue(I))->getParent() !=
+            Phi.getIncomingBlock(I)) {
+      // Non-constant incoming value is not from a cmp instruction or not
+      // produced by the last block. We could end up processing the value
+      // producing block more than once.
+      //
+      // This is an uncommon case, so we bail.
+      DEBUG(
+          dbgs()
+          << "skip: non-constant value not from cmp or not from last block.\n");
       return false;
     }
     LastBlock = Phi.getIncomingBlock(I);

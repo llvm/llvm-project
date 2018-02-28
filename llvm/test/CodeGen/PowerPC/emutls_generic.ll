@@ -3,6 +3,13 @@
 ; RUN: llc < %s -emulated-tls -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     | FileCheck %s
 
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=NoEMU %s
+
+; NoEMU-NOT: __emutls
+
 ; Make sure that TLS symbols are emitted in expected order.
 
 @external_x = external thread_local global i32, align 8

@@ -264,14 +264,14 @@ TEST(DominatorTree, Unreachable) {
         EXPECT_EQ(DT->getNode(BB4)->getLevel(), 1U);
 
         // Change root node
-        DT->verifyDomTree();
+        EXPECT_TRUE(DT->verify());
         BasicBlock *NewEntry =
             BasicBlock::Create(F.getContext(), "new_entry", &F, BB0);
         BranchInst::Create(BB0, NewEntry);
         EXPECT_EQ(F.begin()->getName(), NewEntry->getName());
         EXPECT_TRUE(&F.getEntryBlock() == NewEntry);
         DT->setNewRoot(NewEntry);
-        DT->verifyDomTree();
+        EXPECT_TRUE(DT->verify());
       });
 }
 

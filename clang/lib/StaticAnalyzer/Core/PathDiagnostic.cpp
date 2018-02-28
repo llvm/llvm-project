@@ -379,11 +379,25 @@ static Optional<bool> comparePath(const PathPieces &X, const PathPieces &Y) {
   return None;
 }
 
+static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
+  std::pair<FileID, unsigned> XOffs = XL.getDecomposedLoc();
+  std::pair<FileID, unsigned> YOffs = YL.getDecomposedLoc();
+  const SourceManager &SM = XL.getManager();
+  std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
+  if (InSameTU.first)
+    return XL.isBeforeInTranslationUnitThan(YL);
+  const FileEntry *XFE = SM.getFileEntryForID(XL.getFileID());
+  const FileEntry *YFE = SM.getFileEntryForID(YL.getFileID());
+  if (!XFE || !YFE)
+    return XFE && !YFE;
+  return XFE->getName() < YFE->getName();
+}
+
 static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
   FullSourceLoc XL = X.getLocation().asLocation();
   FullSourceLoc YL = Y.getLocation().asLocation();
   if (XL != YL)
-    return XL.isBeforeInTranslationUnitThan(YL);
+    return compareCrossTUSourceLocs(XL, YL);
   if (X.getBugType() != Y.getBugType())
     return X.getBugType() < Y.getBugType();
   if (X.getCategory() != Y.getCategory())
@@ -403,7 +417,8 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
     SourceLocation YDL = YD->getLocation();
     if (XDL != YDL) {
       const SourceManager &SM = XL.getManager();
-      return SM.isBeforeInTranslationUnit(XDL, YDL);
+      return compareCrossTUSourceLocs(FullSourceLoc(XDL, SM),
+                                      FullSourceLoc(YDL, SM));
     }
   }
   PathDiagnostic::meta_iterator XI = X.meta_begin(), XE = X.meta_end();

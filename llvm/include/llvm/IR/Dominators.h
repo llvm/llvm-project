@@ -174,12 +174,6 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   /// \brief Provide an overload for a Use.
   bool isReachableFromEntry(const Use &U) const;
 
-  /// \brief Verify the correctness of the domtree by re-computing it.
-  ///
-  /// This should only be used for debugging as it aborts the program if the
-  /// verification fails.
-  void verifyDomTree() const;
-
   // Pop up a GraphViz/gv window with the Dominator Tree rendered using `dot`.
   void viewGraph(const Twine &Name, const Twine &Title);
   void viewGraph();

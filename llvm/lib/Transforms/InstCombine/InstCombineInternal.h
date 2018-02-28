@@ -692,7 +692,7 @@ private:
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI);
 
   /// This is a convenience wrapper function for the above two functions.
-  Instruction *foldOpWithConstantIntoOperand(BinaryOperator &I);
+  Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
 

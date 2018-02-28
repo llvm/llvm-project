@@ -28,13 +28,13 @@ entry:
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x9
-; CHECK-NEXT:       Index: 0x3
+; CHECK-NEXT:       Index: 0x1
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x14
-; CHECK-NEXT:       Index: 0x4
+; CHECK-NEXT:       Index: 0x2
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
@@ -50,12 +50,12 @@ entry:
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 ; CHECK-NEXT:       Offset: 0x2D
-; CHECK-NEXT:       Index: 0x0
+; CHECK-NEXT:       Index: 0x3
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 ; CHECK-NEXT:       Offset: 0x34
-; CHECK-NEXT:       Index: 0x1
+; CHECK-NEXT:       Index: 0x4
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]

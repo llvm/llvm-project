@@ -1,6 +1,9 @@
 ; RUN: llc < %s -emulated-tls -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
 ; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck -check-prefix=X64 %s
 
+; RUN: llc < %s -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
+; RUN: llc < %s -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck -check-prefix=X64 %s
+
 ; Make sure that TLS symboles are emitted in expected order.
 
 @external_x = external thread_local global i32

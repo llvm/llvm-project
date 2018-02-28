@@ -13,9 +13,11 @@
 /// happen is that the MachineFunction has the FailedISel property.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
@@ -43,6 +45,12 @@ namespace {
     StringRef getPassName() const override { return "ResetMachineFunction"; }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      // No matter what happened, whether we successfully selected the function
+      // or not, nothing is going to use the vreg types after us. Make sure they
+      // disappear.
+      auto ClearVRegTypesOnReturn =
+          make_scope_exit([&MF]() { MF.getRegInfo().getVRegToType().clear(); });
+
       if (MF.getProperties().hasProperty(
               MachineFunctionProperties::Property::FailedISel)) {
         if (AbortOnFailedISel)

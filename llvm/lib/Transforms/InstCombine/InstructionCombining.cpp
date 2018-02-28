@@ -1089,8 +1089,9 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   return replaceInstUsesWith(I, NewPN);
 }
 
-Instruction *InstCombiner::foldOpWithConstantIntoOperand(BinaryOperator &I) {
-  assert(isa<Constant>(I.getOperand(1)) && "Unexpected operand type");
+Instruction *InstCombiner::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
+  if (!isa<Constant>(I.getOperand(1)))
+    return nullptr;
 
   if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
     if (Instruction *NewSel = FoldOpIntoSelect(I, Sel))

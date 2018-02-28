@@ -4,7 +4,7 @@ fuchsia-trailing-return
 =======================
 
 Functions that have trailing returns are disallowed, except for those using 
-decltype specifiers and lambda with otherwise unutterable return types.
+``decltype`` specifiers and lambda with otherwise unutterable return types.
 
 For example:
 
@@ -18,7 +18,7 @@ For example:
     return add_one;
   }
 
-Exceptions are made for lambdas and decltype specifiers:
+Exceptions are made for lambdas and ``decltype`` specifiers:
 
 .. code-block:: c++
   

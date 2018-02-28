@@ -1,5 +1,7 @@
 ; RUN: llc -emulated-tls -mtriple=aarch64-linux-android \
 ; RUN:     -relocation-model=pic -disable-fp-elim < %s | FileCheck -check-prefix=ARM64 %s
+; RUN: llc -mtriple=aarch64-linux-android \
+; RUN:     -relocation-model=pic -disable-fp-elim < %s | FileCheck -check-prefix=ARM64 %s
 
 ; Copied from X86/emutls.ll
 

@@ -166,6 +166,9 @@ def _SLASH_wd4996 : CLFlag<"wd4996">, Alias<W_Joined>,
   AliasArgs<["no-deprecated-declarations"]>;
 def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
+def _SLASH_X : CLFlag<"X">,
+  HelpText<"Don't add %INCLUDE% to the include search path">,
+  Alias<nostdlibinc>;
 def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,
   HelpText<"Enable C++14 sized global deallocation functions">,
   Alias<fsized_deallocation>;
@@ -388,7 +391,6 @@ def _SLASH_u : CLFlag<"u">;
 def _SLASH_V : CLFlag<"V">;
 def _SLASH_WL : CLFlag<"WL">;
 def _SLASH_Wp64 : CLFlag<"Wp64">;
-def _SLASH_X : CLFlag<"X">;
 def _SLASH_Yd : CLFlag<"Yd">;
 def _SLASH_Yl : CLJoined<"Yl">;
 def _SLASH_Za : CLFlag<"Za">;

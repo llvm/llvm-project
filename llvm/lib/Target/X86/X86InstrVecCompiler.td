@@ -427,6 +427,7 @@ class maskzeroupper<ValueType vt, RegisterClass RC> :
     return isMaskZeroExtended(N);
   }]>;
 
+def maskzeroupperv1i1  : maskzeroupper<v1i1,  VK1>;
 def maskzeroupperv2i1  : maskzeroupper<v2i1,  VK2>;
 def maskzeroupperv4i1  : maskzeroupper<v4i1,  VK4>;
 def maskzeroupperv8i1  : maskzeroupper<v8i1,  VK8>;
@@ -438,11 +439,18 @@ def maskzeroupperv32i1 : maskzeroupper<v32i1, VK32>;
 // zeroing.
 let Predicates = [HasBWI] in {
   def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     maskzeroupperv1i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK1:$src, VK32)>;
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
                                      maskzeroupperv8i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK8:$src, VK32)>;
   def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
                                      maskzeroupperv16i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK16:$src, VK32)>;
+
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     maskzeroupperv1i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK1:$src, VK64)>;
   def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
                                      maskzeroupperv8i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK8:$src, VK64)>;
@@ -456,8 +464,17 @@ let Predicates = [HasBWI] in {
 
 let Predicates = [HasAVX512] in {
   def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     maskzeroupperv1i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK1:$src, VK16)>;
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
                                      maskzeroupperv8i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK8:$src, VK16)>;
+}
+
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    maskzeroupperv1i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK1:$src, VK8)>;
 }
 
 let Predicates = [HasVLX, HasDQI] in {

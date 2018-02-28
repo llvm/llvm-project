@@ -77,8 +77,15 @@ public:
   /// then loads the result into DestPtr.
   void EmitAggLoadOfLValue(const Expr *E);
 
+  enum ExprValueKind {
+    EVK_RValue,
+    EVK_NonRValue
+  };
+
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
-  void EmitFinalDestCopy(QualType type, const LValue &src);
+  /// SrcIsRValue is true if source comes from an RValue.
+  void EmitFinalDestCopy(QualType type, const LValue &src,
+                         ExprValueKind SrcValueKind = EVK_NonRValue);
   void EmitFinalDestCopy(QualType type, RValue src);
   void EmitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
@@ -246,6 +253,13 @@ bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
 /// directly into the return value slot.  Otherwise, a final move
 /// will be performed.
 void AggExprEmitter::EmitMoveFromReturnSlot(const Expr *E, RValue src) {
+  // Push destructor if the result is ignored and the type is a C struct that
+  // is non-trivial to destroy.
+  QualType Ty = E->getType();
+  if (Dest.isIgnored() &&
+      Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
+    CGF.pushDestroy(Ty.isDestructedType(), src.getAggregateAddress(), Ty);
+
   if (shouldUseDestForReturnSlot()) {
     // Logically, Dest.getAddr() should equal Src.getAggregateAddr().
     // The possibility of undef rvalues complicates that a lot,
@@ -262,17 +276,40 @@ void AggExprEmitter::EmitMoveFromReturnSlot(const Expr *E, RValue src) {
 void AggExprEmitter::EmitFinalDestCopy(QualType type, RValue src) {
   assert(src.isAggregate() && "value must be aggregate value!");
   LValue srcLV = CGF.MakeAddrLValue(src.getAggregateAddress(), type);
-  EmitFinalDestCopy(type, srcLV);
+  EmitFinalDestCopy(type, srcLV, EVK_RValue);
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
-void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src) {
+void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
+                                       ExprValueKind SrcValueKind) {
   // If Dest is ignored, then we're evaluating an aggregate expression
   // in a context that doesn't care about the result.  Note that loads
   // from volatile l-values force the existence of a non-ignored
   // destination.
   if (Dest.isIgnored())
     return;
+
+  // Copy non-trivial C structs here.
+  LValue DstLV = CGF.MakeAddrLValue(
+      Dest.getAddress(), Dest.isVolatile() ? type.withVolatile() : type);
+
+  if (SrcValueKind == EVK_RValue) {
+    if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
+      if (Dest.isPotentiallyAliased())
+        CGF.callCStructMoveAssignmentOperator(DstLV, src);
+      else
+        CGF.callCStructMoveConstructor(DstLV, src);
+      return;
+    }
+  } else {
+    if (type.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct) {
+      if (Dest.isPotentiallyAliased())
+        CGF.callCStructCopyAssignmentOperator(DstLV, src);
+      else
+        CGF.callCStructCopyConstructor(DstLV, src);
+      return;
+    }
+  }
 
   AggValueSlot srcAgg =
     AggValueSlot::forLValue(src, AggValueSlot::IsDestructed,

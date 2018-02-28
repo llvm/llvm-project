@@ -1046,8 +1046,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                       Args.getAllArgValues(OPT_fsanitize_trap_EQ), Diags,
                       Opts.SanitizeTrap);
 
-  Opts.CudaGpuBinaryFileNames =
-      Args.getAllArgValues(OPT_fcuda_include_gpubinary);
+  Opts.CudaGpuBinaryFileName =
+      Args.getLastArgValue(OPT_fcuda_include_gpubinary);
 
   Opts.Backchain = Args.hasArg(OPT_mbackchain);
 
@@ -2525,6 +2525,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
           << Opts.OMPHostIRFile;
   }
+
+  // set CUDA mode for OpenMP target NVPTX if specified in options
+  Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && T.isNVPTX() &&
+                        Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
   // Record whether the __DEPRECATED define was requested.
   Opts.Deprecated = Args.hasFlag(OPT_fdeprecated_macro,

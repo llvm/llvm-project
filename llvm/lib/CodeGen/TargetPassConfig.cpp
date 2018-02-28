@@ -748,7 +748,7 @@ bool TargetPassConfig::addCoreISelPasses() {
 }
 
 bool TargetPassConfig::addISelPasses() {
-  if (TM->Options.EmulatedTLS)
+  if (TM->useEmulatedTLS())
     addPass(createLowerEmuTLSPass());
 
   addPass(createPreISelIntrinsicLoweringPass());

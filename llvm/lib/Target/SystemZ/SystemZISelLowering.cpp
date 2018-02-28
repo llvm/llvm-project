@@ -2663,7 +2663,7 @@ SDValue SystemZTargetLowering::lowerThreadPointer(const SDLoc &DL,
 
 SDValue SystemZTargetLowering::lowerGlobalTLSAddress(GlobalAddressSDNode *Node,
                                                      SelectionDAG &DAG) const {
-  if (DAG.getTarget().Options.EmulatedTLS)
+  if (DAG.getTarget().useEmulatedTLS())
     return LowerToTLSEmulatedModel(Node, DAG);
   SDLoc DL(Node);
   const GlobalValue *GV = Node->getGlobal();

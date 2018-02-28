@@ -15638,7 +15638,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
 
-  if (DAG.getTarget().Options.EmulatedTLS)
+  if (DAG.getTarget().useEmulatedTLS())
     return LowerToTLSEmulatedModel(GA, DAG);
 
   const GlobalValue *GV = GA->getGlobal();
@@ -19911,9 +19911,8 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
   case X86ISD::CMPM_RND:
   case X86ISD::CMPMU:
   case X86ISD::VPSHUFBITQMB:
-    return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
   case X86ISD::VFPCLASS:
-    return DAG.getNode(ISD::OR, dl, VT, Op, VMask);
+    return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
   case ISD::TRUNCATE:
   case X86ISD::VTRUNC:
   case X86ISD::VTRUNCS:
@@ -19949,12 +19948,12 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
+  assert(Mask.getValueType() == MVT::i8 && "Unexpect type");
   SDValue IMask = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v1i1, Mask);
   if (Op.getOpcode() == X86ISD::FSETCCM ||
-      Op.getOpcode() == X86ISD::FSETCCM_RND)
+      Op.getOpcode() == X86ISD::FSETCCM_RND ||
+      Op.getOpcode() == X86ISD::VFPCLASSS)
     return DAG.getNode(ISD::AND, dl, VT, Op, IMask);
-  if (Op.getOpcode() == X86ISD::VFPCLASSS)
-    return DAG.getNode(ISD::OR, dl, VT, Op, IMask);
 
   if (PreservedSrc.isUndef())
     PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
@@ -20419,9 +20418,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
        SDValue FPclass = DAG.getNode(IntrData->Opc0, dl, MaskVT, Src1, Imm);
        SDValue FPclassMask = getVectorMaskingNode(FPclass, Mask, SDValue(),
                                                   Subtarget, DAG);
+       // Need to fill with zeros to ensure the bitcast will produce zeroes
+       // for the upper bits in the v2i1/v4i1 case.
        SDValue Res = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, BitcastVT,
-                                 DAG.getUNDEF(BitcastVT), FPclassMask,
-                                 DAG.getIntPtrConstant(0, dl));
+                                 DAG.getConstant(0, dl, BitcastVT),
+                                 FPclassMask, DAG.getIntPtrConstant(0, dl));
        return DAG.getBitcast(Op.getValueType(), Res);
     }
     case FPCLASSS: {
@@ -20431,8 +20432,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue FPclass = DAG.getNode(IntrData->Opc0, dl, MVT::v1i1, Src1, Imm);
       SDValue FPclassMask = getScalarMaskingNode(FPclass, Mask, SDValue(),
                                                  Subtarget, DAG);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8, FPclassMask,
-                         DAG.getIntPtrConstant(0, dl));
+      // Need to fill with zeros to ensure the bitcast will produce zeroes
+      // for the upper bits. An EXTRACT_ELEMENT here wouldn't guarantee that.
+      SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
+                                DAG.getConstant(0, dl, MVT::v8i1),
+                                FPclassMask, DAG.getIntPtrConstant(0, dl));
+      return DAG.getBitcast(MVT::i8, Ins);
     }
     case CMP_MASK: {
       // Comparison intrinsics with masks.
@@ -20440,7 +20445,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // (i8 (int_x86_avx512_mask_pcmpeq_q_128
       //             (v2i64 %a), (v2i64 %b), (i8 %mask))) ->
       // (i8 (bitcast
-      //   (v8i1 (insert_subvector undef,
+      //   (v8i1 (insert_subvector zero,
       //           (v2i1 (and (PCMPEQM %a, %b),
       //                      (extract_subvector
       //                         (v8i1 (bitcast %mask)), 0))), 0))))
@@ -20453,9 +20458,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 Op.getOperand(2));
       SDValue CmpMask = getVectorMaskingNode(Cmp, Mask, SDValue(),
                                              Subtarget, DAG);
+      // Need to fill with zeros to ensure the bitcast will produce zeroes
+      // for the upper bits in the v2i1/v4i1 case.
       SDValue Res = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, BitcastVT,
-                                DAG.getUNDEF(BitcastVT), CmpMask,
-                                DAG.getIntPtrConstant(0, dl));
+                                DAG.getConstant(0, dl, BitcastVT),
+                                CmpMask, DAG.getIntPtrConstant(0, dl));
       return DAG.getBitcast(Op.getValueType(), Res);
     }
 
@@ -20499,8 +20506,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
       SDValue CmpMask = getScalarMaskingNode(Cmp, Mask, SDValue(),
                                              Subtarget, DAG);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i8, CmpMask,
-                         DAG.getIntPtrConstant(0, dl));
+      // Need to fill with zeros to ensure the bitcast will produce zeroes
+      // for the upper bits. An EXTRACT_ELEMENT here wouldn't guarantee that.
+      SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
+                                DAG.getConstant(0, dl, MVT::v8i1),
+                                CmpMask, DAG.getIntPtrConstant(0, dl));
+      return DAG.getBitcast(MVT::i8, Ins);
     }
     case COMI: { // Comparison intrinsics
       ISD::CondCode CC = (ISD::CondCode)IntrData->Opc1;
@@ -20553,8 +20564,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       else
         FCmp = DAG.getNode(X86ISD::FSETCCM_RND, dl, MVT::v1i1, LHS, RHS,
                            DAG.getConstant(CondVal, dl, MVT::i8), Sae);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, FCmp,
-                         DAG.getIntPtrConstant(0, dl));
+      // Need to fill with zeros to ensure the bitcast will produce zeroes
+      // for the upper bits. An EXTRACT_ELEMENT here wouldn't guarantee that.
+      SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
+                                DAG.getConstant(0, dl, MVT::v16i1),
+                                FCmp, DAG.getIntPtrConstant(0, dl));
+      return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32,
+                         DAG.getBitcast(MVT::i16, Ins));
     }
     case VSHIFT:
       return getTargetVShiftNode(IntrData->Opc0, dl, Op.getSimpleValueType(),
@@ -33384,9 +33400,13 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
             SDValue FSetCC =
                 DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CMP00, CMP01,
                             DAG.getConstant(x86cc, DL, MVT::i8));
-            return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                               N->getSimpleValueType(0), FSetCC,
-                               DAG.getIntPtrConstant(0, DL));
+            // Need to fill with zeros to ensure the bitcast will produce zeroes
+            // for the upper bits. An EXTRACT_ELEMENT here wouldn't guarantee that.
+            SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v16i1,
+                                      DAG.getConstant(0, DL, MVT::v16i1),
+                                      FSetCC, DAG.getIntPtrConstant(0, DL));
+            return DAG.getZExtOrTrunc(DAG.getBitcast(MVT::i16, Ins), DL,
+                                      N->getSimpleValueType(0));
           }
           SDValue OnesOrZeroesF = DAG.getNode(X86ISD::FSETCC, DL,
                                               CMP00.getValueType(), CMP00, CMP01,
@@ -34329,6 +34349,20 @@ static SDValue detectSSatPattern(SDValue In, EVT VT, bool MatchPackUS = false) {
   return SDValue();
 }
 
+/// Detect a pattern of truncation with signed saturation.
+/// The types should allow to use VPMOVSS* instruction on AVX512.
+/// Return the source value to be truncated or SDValue() if the pattern was not
+/// matched.
+static SDValue detectAVX512SSatPattern(SDValue In, EVT VT,
+                                       const X86Subtarget &Subtarget,
+                                       const TargetLowering &TLI) {
+  if (!TLI.isTypeLegal(In.getValueType()))
+    return SDValue();
+  if (!isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
+    return SDValue();
+  return detectSSatPattern(In, VT);
+}
+
 /// Detect a pattern of truncation with saturation:
 /// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
 /// The types should allow to use VPMOVUS* instruction on AVX512.
@@ -34967,6 +35001,12 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                           St->getMemOperand()->getFlags());
 
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (SDValue Val =
+        detectAVX512SSatPattern(St->getValue(), St->getMemoryVT(), Subtarget,
+                                TLI))
+      return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
+                             dl, Val, St->getBasePtr(),
+                             St->getMemoryVT(), St->getMemOperand(), DAG);
     if (SDValue Val =
         detectAVX512USatPattern(St->getValue(), St->getMemoryVT(), Subtarget,
                                 TLI))

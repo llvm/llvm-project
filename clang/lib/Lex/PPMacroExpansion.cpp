@@ -1151,6 +1151,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       // Objective-C features
       .Case("objc_arr", LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?
       .Case("objc_arc", LangOpts.ObjCAutoRefCount)
+      .Case("objc_arc_fields", true)
       .Case("objc_arc_weak", LangOpts.ObjCWeak)
       .Case("objc_default_synthesize_properties", LangOpts.ObjC2)
       .Case("objc_fixed_enum", LangOpts.ObjC2)
