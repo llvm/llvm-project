@@ -80,19 +80,19 @@ entry:
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000004
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:         Offset:          0x0000000A
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x00000013
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x0000001A
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
-; CHECK-NEXT:         Index:           8
+; CHECK-NEXT:         Index:           7
 ; CHECK-NEXT:         Offset:          0x00000026
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:         3
@@ -107,16 +107,16 @@ entry:
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           6
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000012
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x0000001B
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x00000024
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; CHECK-NEXT:         Index:           5
+; CHECK-NEXT:         Index:           12
 ; CHECK-NEXT:         Offset:          0x0000002D
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
@@ -160,74 +160,74 @@ entry:
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            puts
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        0
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            hello
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Function:        3
-; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            hello_str
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Segment:         0
 ; CHECK-NEXT:         Size:            7
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            puts
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        0
 ; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            foo_import
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        1
-; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            bar_import
-; CHECK-NEXT:         Flags:           [ BINDING_WEAK, UNDEFINED ]
-; CHECK-NEXT:         Function:        2
-; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Kind:            DATA
-; CHECK-NEXT:         Name:            data_import
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            my_func
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Function:        4
-; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            foo_import
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        1
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            bar_import
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, UNDEFINED ]
+; CHECK-NEXT:         Function:        2
+; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            func_comdat
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
 ; CHECK-NEXT:         Function:        5
-; CHECK-NEXT:       - Index:           8
+; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            data_comdat
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
 ; CHECK-NEXT:         Segment:         5
 ; CHECK-NEXT:         Size:            3
-; CHECK-NEXT:       - Index:           9
+; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            func_addr1
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Segment:         1
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           10
+; CHECK-NEXT:       - Index:           9
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            func_addr2
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Segment:         2
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           11
+; CHECK-NEXT:       - Index:           10
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            func_addr3
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Segment:         3
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           12
+; CHECK-NEXT:       - Index:           11
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            data_addr1
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Segment:         4
 ; CHECK-NEXT:         Size:            4
+; CHECK-NEXT:       - Index:           12
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            data_import
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .rodata.hello_str
