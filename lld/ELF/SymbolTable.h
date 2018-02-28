@@ -78,7 +78,6 @@ public:
                                    InputFile *File);
 
   template <class ELFT> void fetchIfLazy(StringRef Name);
-  template <class ELFT> void scanShlibUndefined();
   void scanVersionScript();
 
   Symbol *find(StringRef Name);

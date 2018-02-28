@@ -435,3 +435,17 @@ define float @fabs_sqrt_nnan_fabs(float %a) {
   %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
+
+define float @fabs_select_positive_constants_vector_extract(i32 %c) {
+; CHECK-LABEL: @fabs_select_positive_constants_vector_extract(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> <float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SELECT]], i32 0
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <2 x float> <float 1.0, float 1.0>, <2 x float> <float 2.0, float 2.0>
+  %extract = extractelement <2 x float> %select, i32 0
+  %fabs = call float @llvm.fabs.f32(float %extract)
+  ret float %fabs
+}

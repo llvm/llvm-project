@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -o - %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s -Wno-openmp-target
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s -Wno-openmp-target
 
 void foo() {
 }

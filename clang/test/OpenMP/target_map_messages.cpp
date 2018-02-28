@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 200 %s
-// RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 200 %s -Wno-openmp-target
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s -Wno-openmp-target
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 200 %s
-// RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -ferror-limit 200 -x c %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -ferror-limit 200 -x c %s -Wno-openmp-target
 #ifdef CCODE
 void foo(int arg) {
   const int n = 0;
@@ -235,9 +235,17 @@ void SAclient(int arg) {
   {}
   #pragma omp target map(r.ArrS[0].A, t.ArrS[1].A)
   {}
-  #pragma omp target map(r.PtrS[0], r.PtrS->B) // expected-error {{same pointer derreferenced in multiple different ways in map clause expressions}} expected-note {{used here}}
+  #pragma omp target map(r.PtrS[0], r.PtrS->B) // expected-error {{same pointer dereferenced in multiple different ways in map clause expressions}} expected-note {{used here}}
   {}
-  #pragma omp target map(r.RPtrS[0], r.RPtrS->B) // expected-error {{same pointer derreferenced in multiple different ways in map clause expressions}} expected-note {{used here}}
+  #pragma omp target map(r.PtrS, r.PtrS->B) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+  {}
+  #pragma omp target map(r.PtrS->A, r.PtrS->B)
+  {}
+  #pragma omp target map(r.RPtrS[0], r.RPtrS->B) // expected-error {{same pointer dereferenced in multiple different ways in map clause expressions}} expected-note {{used here}}
+  {}
+  #pragma omp target map(r.RPtrS, r.RPtrS->B) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+  {}
+  #pragma omp target map(r.RPtrS->A, r.RPtrS->B)
   {}
   #pragma omp target map(r.S.Arr[:12])
   {}

@@ -1275,9 +1275,13 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
       EVT T = Opc == ISD::SIGN_EXTEND
                 ? N.getOperand(0).getValueType()
                 : cast<VTSDNode>(N.getOperand(1))->getVT();
-      if (T.getSizeInBits() != 32)
+      unsigned SW = T.getSizeInBits();
+      if (SW == 32)
+        R = N.getOperand(0);
+      else if (SW < 32)
+        R = N;
+      else
         return false;
-      R = N.getOperand(0);
       break;
     }
     case ISD::LOAD: {
@@ -1287,6 +1291,13 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
       // All extending loads extend to i32, so even if the value in
       // memory is shorter than 32 bits, it will be i32 after the load.
       if (L->getMemoryVT().getSizeInBits() > 32)
+        return false;
+      R = N;
+      break;
+    }
+    case ISD::SRA: {
+      auto *S = dyn_cast<ConstantSDNode>(N.getOperand(1));
+      if (!S || S->getZExtValue() != 32)
         return false;
       R = N;
       break;

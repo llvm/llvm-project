@@ -2783,6 +2783,12 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     // Widening/narrowing never change sign.
     return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
                                            Depth + 1);
+  case Instruction::ExtractElement:
+    // Look through extract element. At the moment we keep this simple and skip
+    // tracking the specific element. But at least we might find information
+    // valid for all elements of the vector.
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::Call:
     const auto *CI = cast<CallInst>(I);
     Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);

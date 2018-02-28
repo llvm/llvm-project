@@ -9,7 +9,8 @@ define i16 @halfword(%struct.a* %ctx, i32 %xor72) nounwind {
 ; CHECK-LABEL: halfword:
 ; CHECK: ubfx [[REG:x[0-9]+]], x1, #9, #8
 ; CHECK: ldrh [[REG1:w[0-9]+]], [{{.*}}[[REG2:x[0-9]+]], [[REG]], lsl #1]
-; CHECK: strh [[REG1]], [{{.*}}[[REG2]], [[REG]], lsl #1]
+; CHECK: mov [[REG3:x[0-9]+]], [[REG2]]
+; CHECK: strh [[REG1]], [{{.*}}[[REG3]], [[REG]], lsl #1]
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %idxprom83 = and i64 %conv82, 255
@@ -24,7 +25,8 @@ define i32 @word(%struct.b* %ctx, i32 %xor72) nounwind {
 ; CHECK-LABEL: word:
 ; CHECK: ubfx [[REG:x[0-9]+]], x1, #9, #8
 ; CHECK: ldr [[REG1:w[0-9]+]], [{{.*}}[[REG2:x[0-9]+]], [[REG]], lsl #2]
-; CHECK: str [[REG1]], [{{.*}}[[REG2]], [[REG]], lsl #2]
+; CHECK: mov [[REG3:x[0-9]+]], [[REG2]]
+; CHECK: str [[REG1]], [{{.*}}[[REG3]], [[REG]], lsl #2]
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %idxprom83 = and i64 %conv82, 255
@@ -39,7 +41,8 @@ define i64 @doubleword(%struct.c* %ctx, i32 %xor72) nounwind {
 ; CHECK-LABEL: doubleword:
 ; CHECK: ubfx [[REG:x[0-9]+]], x1, #9, #8
 ; CHECK: ldr [[REG1:x[0-9]+]], [{{.*}}[[REG2:x[0-9]+]], [[REG]], lsl #3]
-; CHECK: str [[REG1]], [{{.*}}[[REG2]], [[REG]], lsl #3]
+; CHECK: mov [[REG3:x[0-9]+]], [[REG2]]
+; CHECK: str [[REG1]], [{{.*}}[[REG3]], [[REG]], lsl #3]
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %idxprom83 = and i64 %conv82, 255

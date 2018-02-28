@@ -139,6 +139,10 @@ option(LIBUNWIND_INSTALL_LIBRARY "Install the libunwind library." ON)
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
+    "Additional linker flags for test programs.")
+set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
+    "Additional compiler flags for test programs.")
 
 if (NOT LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_STATIC)
   message(FATAL_ERROR "libunwind must be built as either a shared or static library.")

@@ -238,7 +238,7 @@ define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
 ; PUSHF-NEXT:    .seh_setframe 5, 32
 ; PUSHF-NEXT:    .seh_endprologue
 ; PUSHF-NEXT:    movq %rdx, %rsi
-; PUSHF-NEXT:    movq %rsi, %rax
+; PUSHF-NEXT:    movq %rdx, %rax
 ; PUSHF-NEXT:    lock cmpxchgq %r8, (%rcx)
 ; PUSHF-NEXT:    pushfq
 ; PUSHF-NEXT:    popq %rdi
@@ -269,7 +269,7 @@ define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
 ; SAHF-NEXT:    .seh_setframe 5, 32
 ; SAHF-NEXT:    .seh_endprologue
 ; SAHF-NEXT:    movq %rdx, %rsi
-; SAHF-NEXT:    movq %rsi, %rax
+; SAHF-NEXT:    movq %rdx, %rax
 ; SAHF-NEXT:    lock cmpxchgq %r8, (%rcx)
 ; SAHF-NEXT:    seto %al
 ; SAHF-NEXT:    lahf

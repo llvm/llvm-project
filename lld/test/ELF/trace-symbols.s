@@ -69,7 +69,7 @@
 
 # RUN: ld.lld -y foo -y bar %t %t1.so %t2.so -o %t3 | \
 # RUN:   FileCheck -check-prefix=SHLIBRBAR %s
-# SHLIBRBAR-NOT: trace-symbols.s.tmp1.so: reference to bar
+# SHLIBRBAR: trace-symbols.s.tmp1.so: reference to bar
 
 # RUN: ld.lld -y foo -y bar %t -u bar --start-lib %t1 %t2 --end-lib -o %t3 | \
 # RUN:   FileCheck -check-prefix=STARTLIB %s

@@ -954,7 +954,7 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    pxor %xmm3, %xmm3
-; SSE41-NEXT:    psubd %xmm2, %xmm3
+; SSE41-NEXT:    psubd %xmm0, %xmm3
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm3
 ; SSE41-NEXT:    movaps %xmm3, %xmm0

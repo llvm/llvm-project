@@ -759,6 +759,9 @@ private:
         Tok->Type = TT_BinaryOperator;
       break;
     case tok::kw_operator:
+      if (Style.Language == FormatStyle::LK_TextProto ||
+          Style.Language == FormatStyle::LK_Proto)
+        break;
       while (CurrentToken &&
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))

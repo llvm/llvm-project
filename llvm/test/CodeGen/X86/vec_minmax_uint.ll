@@ -1006,7 +1006,7 @@ define <4 x i64> @min_lt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm4
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    movdqa %xmm4, %xmm6
+; SSE42-NEXT:    movdqa %xmm0, %xmm6
 ; SSE42-NEXT:    pxor %xmm5, %xmm6
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    pxor %xmm5, %xmm0
@@ -1426,7 +1426,7 @@ define <4 x i64> @min_le_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm4
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    movdqa %xmm4, %xmm6
+; SSE42-NEXT:    movdqa %xmm0, %xmm6
 ; SSE42-NEXT:    pxor %xmm5, %xmm6
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    pxor %xmm5, %xmm0

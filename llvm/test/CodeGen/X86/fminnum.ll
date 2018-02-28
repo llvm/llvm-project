@@ -18,7 +18,7 @@ declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>)
 
 ; CHECK-LABEL: @test_fminf
 ; SSE:         movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm2, %xmm2
+; SSE-NEXT:    cmpunordss %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm3
 ; SSE-NEXT:    andps %xmm1, %xmm3
 ; SSE-NEXT:    minss %xmm0, %xmm1
@@ -40,7 +40,7 @@ define float @test_fminf(float %x, float %y) {
 
 ; CHECK-LABEL: @test_fmin
 ; SSE:         movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm2, %xmm2
+; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm3
 ; SSE-NEXT:    andpd %xmm1, %xmm3
 ; SSE-NEXT:    minsd %xmm0, %xmm1
@@ -67,7 +67,7 @@ define x86_fp80 @test_fminl(x86_fp80 %x, x86_fp80 %y) {
 
 ; CHECK-LABEL: @test_intrinsic_fminf
 ; SSE:         movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm2, %xmm2
+; SSE-NEXT:    cmpunordss %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm3
 ; SSE-NEXT:    andps %xmm1, %xmm3
 ; SSE-NEXT:    minss %xmm0, %xmm1
@@ -87,7 +87,7 @@ define float @test_intrinsic_fminf(float %x, float %y) {
 
 ; CHECK-LABEL: @test_intrinsic_fmin
 ; SSE:         movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm2, %xmm2
+; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm3
 ; SSE-NEXT:    andpd %xmm1, %xmm3
 ; SSE-NEXT:    minsd %xmm0, %xmm1

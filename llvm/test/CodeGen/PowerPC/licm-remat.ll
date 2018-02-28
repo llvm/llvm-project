@@ -20,8 +20,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 define linkonce_odr void @ZN6snappyDecompressor_(%"class.snappy::SnappyDecompressor"* %this, %"class.snappy::SnappyIOVecWriter"* %writer) {
 ; CHECK-LABEL: ZN6snappyDecompressor_:
 ; CHECK:       # %bb.0: # %entry
-; CHECK:       addis 3, 2, _ZN6snappy8internalL8wordmaskE@toc@ha
-; CHECK-DAG:   addi 25, 3, _ZN6snappy8internalL8wordmaskE@toc@l
+; CHECK:       addis 23, 2, _ZN6snappy8internalL8wordmaskE@toc@ha
+; CHECK-DAG:   addi 25, 23, _ZN6snappy8internalL8wordmaskE@toc@l
 ; CHECK-DAG:   addis 5, 2, _ZN6snappy8internalL10char_tableE@toc@ha
 ; CHECK-DAG:   addi 24, 5, _ZN6snappy8internalL10char_tableE@toc@l
 ; CHECK:       b .LBB0_2
