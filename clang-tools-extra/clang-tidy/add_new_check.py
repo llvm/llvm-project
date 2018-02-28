@@ -320,14 +320,21 @@ def main():
       metavar='LANG')
   parser.add_argument(
       'module',
+      nargs='?',
       help='module directory under which to place the new tidy check (e.g., misc)')
   parser.add_argument(
       'check',
+      nargs='?',
       help='name of new tidy check to add (e.g. foo-do-the-stuff)')
   args = parser.parse_args()
 
   if args.update_docs:
     update_checks_list(os.path.dirname(sys.argv[0]))
+    return
+
+  if not args.module or not args.check:
+    print 'Module and check must be specified.'
+    parser.print_usage()
     return
 
   module = args.module
