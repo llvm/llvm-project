@@ -452,6 +452,10 @@ public:
                                        ExplodedNode *Pred,
                                        ExplodedNodeSet &Dst);
 
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
+                                 ExplodedNodeSet &PreVisit,
+                                 ExplodedNodeSet &Dst);
+
   void VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
