@@ -585,14 +585,6 @@ public:
                                   const LocationContext *LCtx,
                                   ProgramStateRef State);
 
-  struct EvalCallOptions {
-    bool IsConstructorWithImproperlyModeledTargetRegion = false;
-    bool IsArrayConstructorOrDestructor = false;
-    bool IsConstructorIntoTemporary = false;
-
-    EvalCallOptions() {}
-  };
-
   /// Evaluate a call, running pre- and post-call checks and allowing checkers
   /// to be responsible for handling the evaluation of the call itself.
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
