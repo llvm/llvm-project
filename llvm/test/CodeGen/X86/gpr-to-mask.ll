@@ -60,13 +60,11 @@ define void @test_fcmp_storei1(i1 %cond, float* %fptr, i1* %iptr, float %f1, flo
 ; X86-64-NEXT:    je .LBB1_2
 ; X86-64-NEXT:  # %bb.1: # %if
 ; X86-64-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
-; X86-64-NEXT:    jmp .LBB1_3
+; X86-64-NEXT:    kmovb %k0, (%rdx)
+; X86-64-NEXT:    retq
 ; X86-64-NEXT:  .LBB1_2: # %else
 ; X86-64-NEXT:    vcmpeqss %xmm3, %xmm2, %k0
-; X86-64-NEXT:  .LBB1_3: # %exit
-; X86-64-NEXT:    kmovd %k0, %eax
-; X86-64-NEXT:    andb $1, %al
-; X86-64-NEXT:    movb %al, (%rdx)
+; X86-64-NEXT:    kmovb %k0, (%rdx)
 ; X86-64-NEXT:    retq
 ;
 ; X86-32-LABEL: test_fcmp_storei1:
@@ -77,14 +75,12 @@ define void @test_fcmp_storei1(i1 %cond, float* %fptr, i1* %iptr, float %f1, flo
 ; X86-32-NEXT:  # %bb.1: # %if
 ; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm0, %k0
-; X86-32-NEXT:    jmp .LBB1_3
+; X86-32-NEXT:    kmovb %k0, (%eax)
+; X86-32-NEXT:    retl
 ; X86-32-NEXT:  .LBB1_2: # %else
 ; X86-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-32-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm0, %k0
-; X86-32-NEXT:  .LBB1_3: # %exit
-; X86-32-NEXT:    kmovd %k0, %ecx
-; X86-32-NEXT:    andb $1, %cl
-; X86-32-NEXT:    movb %cl, (%eax)
+; X86-32-NEXT:    kmovb %k0, (%eax)
 ; X86-32-NEXT:    retl
 entry:
   br i1 %cond, label %if, label %else

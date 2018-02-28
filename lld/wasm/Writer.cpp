@@ -17,6 +17,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -53,11 +54,10 @@ struct WasmSignatureDenseMapInfo {
     return Sig;
   }
   static unsigned getHashValue(const WasmSignature &Sig) {
-    uintptr_t Value = 0;
-    Value += DenseMapInfo<int32_t>::getHashValue(Sig.ReturnType);
+    unsigned H = hash_value(Sig.ReturnType);
     for (int32_t Param : Sig.ParamTypes)
-      Value += DenseMapInfo<int32_t>::getHashValue(Param);
-    return Value;
+      H = hash_combine(H, Param);
+    return H;
   }
   static bool isEqual(const WasmSignature &LHS, const WasmSignature &RHS) {
     return LHS == RHS;
@@ -395,8 +395,8 @@ public:
 
   void writeTo(raw_ostream &To) {
     OS.flush();
-    lld::wasm::writeUleb128(To, Type, "subsection type");
-    lld::wasm::writeUleb128(To, Body.size(), "subsection size");
+    writeUleb128(To, Type, "subsection type");
+    writeUleb128(To, Body.size(), "subsection size");
     To.write(Body.data(), Body.size());
   }
 
@@ -877,7 +877,6 @@ void Writer::createCtorFunction() {
 
   // First write the body bytes to a string.
   std::string FunctionBody;
-  const WasmSignature *Signature = WasmSym::CallCtors->getFunctionType();
   {
     raw_string_ostream OS(FunctionBody);
     writeUleb128(OS, 0, "num locals");
@@ -893,11 +892,11 @@ void Writer::createCtorFunction() {
   writeUleb128(OS, FunctionBody.size(), "function size");
   OS.flush();
   CtorFunctionBody += FunctionBody;
-  ArrayRef<uint8_t> BodyArray(
-      reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
-      CtorFunctionBody.size());
-  SyntheticFunction *F = make<SyntheticFunction>(*Signature, BodyArray,
-                                                 WasmSym::CallCtors->getName());
+
+  const WasmSignature *Sig = WasmSym::CallCtors->getFunctionType();
+  SyntheticFunction *F = make<SyntheticFunction>(
+      *Sig, toArrayRef(CtorFunctionBody), WasmSym::CallCtors->getName());
+
   F->setOutputIndex(FunctionIndex);
   F->Live = true;
   WasmSym::CallCtors->Function = F;

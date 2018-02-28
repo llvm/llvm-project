@@ -205,10 +205,9 @@ public:
   /// the summary and module symbol table (and not, e.g. any debug metadata).
   std::string ThinLinkBitcodeFile;
 
-  /// A list of file names passed with -fcuda-include-gpubinary options to
-  /// forward to CUDA runtime back-end for incorporating them into host-side
-  /// object file.
-  std::vector<std::string> CudaGpuBinaryFileNames;
+  /// Name of file passed with -fcuda-include-gpubinary option to forward to
+  /// CUDA runtime back-end for incorporating them into host-side object file.
+  std::string CudaGpuBinaryFileName;
 
   /// The name of the file to which the backend should save YAML optimization
   /// records.

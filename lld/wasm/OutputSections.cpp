@@ -55,20 +55,20 @@ static StringRef sectionTypeToString(uint32_t SectionType) {
   }
 }
 
-std::string lld::toString(const OutputSection &Section) {
-  std::string rtn = Section.getSectionName();
-  if (!Section.Name.empty())
-    rtn += "(" + Section.Name + ")";
-  return rtn;
+// Returns a string, e.g. "FUNCTION(.text)".
+std::string lld::toString(const OutputSection &Sec) {
+  if (!Sec.Name.empty())
+    return (Sec.getSectionName() + "(" + Sec.Name + ")").str();
+  return Sec.getSectionName();
 }
 
-std::string OutputSection::getSectionName() const {
+StringRef OutputSection::getSectionName() const {
   return sectionTypeToString(Type);
 }
 
 void OutputSection::createHeader(size_t BodySize) {
   raw_string_ostream OS(Header);
-  debugWrite(OS.tell(), "section type [" + Twine(getSectionName()) + "]");
+  debugWrite(OS.tell(), "section type [" + getSectionName() + "]");
   encodeULEB128(Type, OS);
   writeUleb128(OS, BodySize, "section size");
   OS.flush();

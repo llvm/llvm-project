@@ -3,9 +3,9 @@
 modernize-use-uncaught-exceptions
 ====================================
 
-This check will warn on calls to ``std::uncaught_exception`` and replace them with
-calls to ``std::uncaught_exceptions``, since ``std::uncaught_exception`` was deprecated
-in C++17.
+This check will warn on calls to ``std::uncaught_exception`` and replace them
+with calls to ``std::uncaught_exceptions``, since ``std::uncaught_exception``
+was deprecated in C++17.
 
 Below are a few examples of what kind of occurrences will be found and what
 they will be replaced with.

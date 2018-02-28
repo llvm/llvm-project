@@ -61,8 +61,6 @@ verifies the tags. Currently, the following sequence is used:
       14:	00 00 40 b9 	ldr	w0, [x0]         // original load
       18:	c0 03 5f d6 	ret             
       1c:	40 20 40 d4 	hlt	#0x102           // halt
-      20:	00 00 40 b9 	ldr	w0, [x0]         // original load
-      24:	c0 03 5f d6 	ret
 
 
 Alternatively, memory accesses are prefixed with a function call.

@@ -109,7 +109,8 @@ private:
   void emitRegistration();
 
   /// Emit the necessary plumbing to pull in the runtime initialization.
-  void emitRuntimeHook();
+  /// Returns true if a change was made.
+  bool emitRuntimeHook();
 
   /// Add uses of our data variables and runtime hook.
   void emitUses();

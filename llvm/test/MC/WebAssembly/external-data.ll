@@ -13,7 +13,7 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:         Offset:          0x00000013
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6

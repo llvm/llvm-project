@@ -359,11 +359,15 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  isFunctionRegBankSelected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::RegBankSelected);
-  isFunctionSelected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Selected);
-
+  const bool isFunctionFailedISel = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::FailedISel);
+  isFunctionRegBankSelected =
+      !isFunctionFailedISel &&
+      MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::RegBankSelected);
+  isFunctionSelected = !isFunctionFailedISel &&
+                       MF.getProperties().hasProperty(
+                           MachineFunctionProperties::Property::Selected);
   LiveVars = nullptr;
   LiveInts = nullptr;
   LiveStks = nullptr;

@@ -455,7 +455,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
         uint32_t Offset = readVaruint32(Ptr);
         uint32_t Size = readVaruint32(Ptr);
         if (Offset + Size > DataSegments[Index].Data.Content.size())
-          return make_error<GenericBinaryError>("invalid data symbol index",
+          return make_error<GenericBinaryError>("invalid data symbol offset",
                                                 object_error::parse_failed);
         Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
       }

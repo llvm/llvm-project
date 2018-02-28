@@ -35,7 +35,7 @@ public:
       : Type(Type), Name(Name) {}
   virtual ~OutputSection() = default;
 
-  std::string getSectionName() const;
+  StringRef getSectionName() const;
   void setOffset(size_t NewOffset) {
     log("setOffset: " + toString(*this) + ": " + Twine(NewOffset));
     Offset = NewOffset;

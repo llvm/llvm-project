@@ -44,7 +44,7 @@ define void @callee_with_stack() #0 {
 ; GCN-DAG: v_writelane_b32 v32, s35,
 ; GCN-DAG: s_add_u32 s32, s32, 0x300{{$}}
 ; GCN-DAG: v_mov_b32_e32 v0, 0{{$}}
-; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:4{{$}}
+; GCN-DAG: buffer_store_dword v0, off, s[0:3], s5 offset:4{{$}}
 ; GCN-DAG: s_mov_b32 s33, s5
 
 

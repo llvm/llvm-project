@@ -23,8 +23,7 @@ void test4(Test4 *p) {
 }
 
 void test5(struct Test5 *p) {
-  p->field = 0; // expected-error {{'field' is unavailable in ARC}}
-                // expected-note@arc-system-header.h:25 {{field has non-trivial ownership qualification}}
+  p->field = 0;
 }
 
 id test6() {
@@ -49,8 +48,7 @@ void test7(Test7 *p) {
 
 extern void doSomething(Test9 arg);
 void test9() {
-    Test9 foo2 = {0, 0}; // expected-error {{'field' is unavailable in ARC}}
-                         // expected-note@arc-system-header.h:56 {{field has non-trivial ownership qualification}}
+    Test9 foo2 = {0, 0};
     doSomething(foo2);
 }
 #endif

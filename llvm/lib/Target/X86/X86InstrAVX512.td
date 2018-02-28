@@ -2601,7 +2601,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                       (ins _.KRCWM:$mask, _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr##_.Suffix#
                       "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
-                      [(set _.KRC:$dst,(or _.KRCWM:$mask,
+                      [(set _.KRC:$dst,(and _.KRCWM:$mask,
                                       (OpNode (_.VT _.RC:$src1),
                                       (i32 imm:$src2))))], itins.rr>,
                       EVEX_K, Sched<[itins.Sched]>;
@@ -2617,7 +2617,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     (ins _.KRCWM:$mask, _.IntScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix##
                     "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
-                    [(set _.KRC:$dst,(or _.KRCWM:$mask,
+                    [(set _.KRC:$dst,(and _.KRCWM:$mask,
                         (OpNode _.ScalarIntMemCPat:$src1,
                             (i32 imm:$src2))))], itins.rm>,
                     EVEX_K, Sched<[itins.Sched.Folded, ReadAfterLd]>;
@@ -2641,7 +2641,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                       (ins _.KRCWM:$mask, _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr##_.Suffix#
                       "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
-                      [(set _.KRC:$dst,(or _.KRCWM:$mask,
+                      [(set _.KRC:$dst,(and _.KRCWM:$mask,
                                        (OpNode (_.VT _.RC:$src1),
                                        (i32 imm:$src2))))], itins.rr>,
                       EVEX_K, Sched<[itins.Sched]>;
@@ -2657,7 +2657,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     (ins _.KRCWM:$mask, _.MemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix##mem#
                     "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
-                    [(set _.KRC:$dst, (or _.KRCWM:$mask, (OpNode
+                    [(set _.KRC:$dst, (and _.KRCWM:$mask, (OpNode
                                   (_.VT (bitconvert (_.LdFrag addr:$src1))),
                                   (i32 imm:$src2))))], itins.rm>,
                     EVEX_K, Sched<[itins.Sched.Folded, ReadAfterLd]>;
@@ -2676,7 +2676,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     OpcodeStr##_.Suffix##broadcast##"\t{$src2, ${src1}"##
                           _.BroadcastStr##", $dst {${mask}}|$dst {${mask}}, ${src1}"##
                                                    _.BroadcastStr##", $src2}",
-                    [(set _.KRC:$dst,(or _.KRCWM:$mask, (OpNode
+                    [(set _.KRC:$dst,(and _.KRCWM:$mask, (OpNode
                                      (_.VT (X86VBroadcast
                                            (_.ScalarLdFrag addr:$src1))),
                                      (i32 imm:$src2))))], itins.rm>,

@@ -216,7 +216,7 @@ entry:
 ; GCN-DAG: v_writelane_b32 v34, s35, 2
 ; GCN-DAG: s_add_u32 s32, s32, 0x400
 
-; GCN: s_getpc_b64
+; GCN-DAG: s_getpc_b64
 ; GCN: s_swappc_b64
 
 ; GCN: s_getpc_b64 s[6:7]

@@ -12,7 +12,7 @@
 
 #include "InputFiles.h"
 #include "LTO.h"
-#include "Strings.h"
+#include "lld/Common/Strings.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 

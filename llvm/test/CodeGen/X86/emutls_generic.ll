@@ -7,6 +7,17 @@
 ; RUN: llc < %s -emulated-tls -mtriple=i386-linux-gnu -relocation-model=pic \
 ; RUN:     | FileCheck %s
 
+; RUN: llc < %s -mtriple=i686-linux-android -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=X86_32 %s
+; RUN: llc < %s -mtriple=i686-linux-android -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=X86_32 %s
+; RUN: llc < %s -mtriple=x86_64-linux-android -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=X86_64 %s
+; RUN: llc < %s -mtriple=i386-linux-gnu -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=NoEMU %s
+
+; NoEMU-NOT: __emutls
+
 ; Make sure that TLS symbols are emitted in expected order.
 
 @external_x = external thread_local global i32, align 8

@@ -2208,6 +2208,38 @@ bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
          getObjCLifetime() != Qualifiers::OCL_Weak;
 }
 
+QualType::PrimitiveDefaultInitializeKind
+QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
+  if (const auto *RT =
+          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
+    if (RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize())
+      return PDIK_Struct;
+
+  Qualifiers::ObjCLifetime Lifetime = getQualifiers().getObjCLifetime();
+  if (Lifetime == Qualifiers::OCL_Strong)
+    return PDIK_ARCStrong;
+
+  return PDIK_Trivial;
+}
+
+QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
+  if (const auto *RT =
+          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
+    if (RT->getDecl()->isNonTrivialToPrimitiveCopy())
+      return PCK_Struct;
+
+  Qualifiers Qs = getQualifiers();
+  if (Qs.getObjCLifetime() == Qualifiers::OCL_Strong)
+    return PCK_ARCStrong;
+
+  return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
+}
+
+QualType::PrimitiveCopyKind
+QualType::isNonTrivialToPrimitiveDestructiveMove() const {
+  return isNonTrivialToPrimitiveCopy();
+}
+
 bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (isDependentType())
     return false;
@@ -3896,12 +3928,20 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
     return DK_objc_weak_lifetime;
   }
 
-  /// Currently, the only destruction kind we recognize is C++ objects
-  /// with non-trivial destructors.
-  const CXXRecordDecl *record =
-    type->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
-  if (record && record->hasDefinition() && !record->hasTrivialDestructor())
-    return DK_cxx_destructor;
+  if (const auto *RT =
+          type->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      /// Check if this is a C++ object with a non-trivial destructor.
+      if (CXXRD->hasDefinition() && !CXXRD->hasTrivialDestructor())
+        return DK_cxx_destructor;
+    } else {
+      /// Check if this is a C struct that is non-trivial to destroy or an array
+      /// that contains such a struct.
+      if (RD->isNonTrivialToPrimitiveDestroy())
+        return DK_nontrivial_c_struct;
+    }
+  }
 
   return DK_none;
 }

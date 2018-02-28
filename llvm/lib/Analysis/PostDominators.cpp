@@ -21,6 +21,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "postdomtree"
 
+#ifdef EXPENSIVE_CHECKS
+static constexpr bool ExpensiveChecksEnabled = true;
+#else
+static constexpr bool ExpensiveChecksEnabled = false;
+#endif
+
 //===----------------------------------------------------------------------===//
 //  PostDominatorTree Implementation
 //===----------------------------------------------------------------------===//
@@ -42,6 +48,13 @@ bool PostDominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
 bool PostDominatorTreeWrapperPass::runOnFunction(Function &F) {
   DT.recalculate(F);
   return false;
+}
+
+void PostDominatorTreeWrapperPass::verifyAnalysis() const {
+  if (VerifyDomInfo)
+    assert(DT.verify(PostDominatorTree::VerificationLevel::Full));
+  else if (ExpensiveChecksEnabled)
+    assert(DT.verify(PostDominatorTree::VerificationLevel::Basic));
 }
 
 void PostDominatorTreeWrapperPass::print(raw_ostream &OS, const Module *) const {

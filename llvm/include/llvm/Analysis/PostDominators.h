@@ -76,6 +76,8 @@ struct PostDominatorTreeWrapperPass : public FunctionPass {
 
   bool runOnFunction(Function &F) override;
 
+  void verifyAnalysis() const override;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
