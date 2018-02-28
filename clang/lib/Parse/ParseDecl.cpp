@@ -1309,7 +1309,9 @@ void Parser::ParseObjCBridgeRelatedAttribute(IdentifierInfo &ObjCBridgeRelated,
     return;
   }
 
-  // Parse optional class method name.
+  // Parse class method name.  It's non-optional in the sense that a trailing
+  // comma is required, but it can be the empty string, and then we record a
+  // nullptr.
   IdentifierLoc *ClassMethod = nullptr;
   if (Tok.is(tok::identifier)) {
     ClassMethod = ParseIdentifierLoc();
@@ -1328,7 +1330,8 @@ void Parser::ParseObjCBridgeRelatedAttribute(IdentifierInfo &ObjCBridgeRelated,
     return;
   }
   
-  // Parse optional instance method name.
+  // Parse instance method name.  Also non-optional but empty string is
+  // permitted.
   IdentifierLoc *InstanceMethod = nullptr;
   if (Tok.is(tok::identifier))
     InstanceMethod = ParseIdentifierLoc();
@@ -2734,7 +2737,8 @@ Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
     return DeclSpecContext::DSC_top_level;
   if (Context == DeclaratorContext::TemplateParamContext)
     return DeclSpecContext::DSC_template_param;
-  if (Context == DeclaratorContext::TemplateTypeArgContext)
+  if (Context == DeclaratorContext::TemplateArgContext ||
+      Context == DeclaratorContext::TemplateTypeArgContext)
     return DeclSpecContext::DSC_template_type_arg;
   if (Context == DeclaratorContext::TrailingReturnContext ||
       Context == DeclaratorContext::TrailingReturnVarContext)
@@ -5685,7 +5689,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // An identifier within parens is unlikely to be intended to be anything
       // other than a name being "declared".
       DiagnoseIdentifier = true;
-    else if (D.getContext() == DeclaratorContext::TemplateTypeArgContext)
+    else if (D.getContext() == DeclaratorContext::TemplateArgContext)
       // T<int N> is an accidental identifier; T<int N indicates a missing '>'.
       DiagnoseIdentifier =
           NextToken().isOneOf(tok::comma, tok::greater, tok::greatergreater);

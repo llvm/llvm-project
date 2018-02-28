@@ -326,6 +326,7 @@ public:
     PQ_TypeSpecifier         = 2,
     PQ_TypeQualifier         = 4,
     PQ_FunctionSpecifier     = 8
+    // FIXME: Attributes should be included here.
   };
 
 private:
@@ -1732,7 +1733,8 @@ enum class DeclaratorContext {
     ConversionIdContext, // C++ conversion-type-id.
     TrailingReturnContext, // C++11 trailing-type-specifier.
     TrailingReturnVarContext, // C++11 trailing-type-specifier for variable.
-    TemplateTypeArgContext, // Template type argument.
+    TemplateArgContext,  // Any template argument (in template argument list).
+    TemplateTypeArgContext, // Template type argument (in default argument).
     AliasDeclContext,    // C++11 alias-declaration.
     AliasTemplateContext // C++11 alias-declaration template.
 };
@@ -1949,6 +1951,7 @@ public:
     case DeclaratorContext::BlockLiteralContext:
     case DeclaratorContext::LambdaExprContext:
     case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TemplateArgContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
@@ -1986,6 +1989,7 @@ public:
     case DeclaratorContext::BlockLiteralContext:
     case DeclaratorContext::LambdaExprContext:
     case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TemplateArgContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
@@ -2027,6 +2031,7 @@ public:
     case DeclaratorContext::BlockLiteralContext:
     case DeclaratorContext::LambdaExprContext:
     case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TemplateArgContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
@@ -2082,6 +2087,7 @@ public:
     case DeclaratorContext::BlockLiteralContext:
     case DeclaratorContext::LambdaExprContext:
     case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TemplateArgContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
       return false;
@@ -2291,6 +2297,7 @@ public:
     case DeclaratorContext::BlockLiteralContext:
     case DeclaratorContext::LambdaExprContext:
     case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TemplateArgContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
@@ -2326,13 +2333,14 @@ public:
     case DeclaratorContext::ConversionIdContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
+    case DeclaratorContext::TemplateTypeArgContext:
       return false;
 
     case DeclaratorContext::BlockContext:
     case DeclaratorContext::ForContext:
     case DeclaratorContext::InitStmtContext:
     case DeclaratorContext::ConditionContext:
-    case DeclaratorContext::TemplateTypeArgContext:
+    case DeclaratorContext::TemplateArgContext:
       return true;
     }
 

@@ -6209,6 +6209,8 @@ public:
   void translateTemplateArguments(const ASTTemplateArgsPtr &In,
                                   TemplateArgumentListInfo &Out);
 
+  ParsedTemplateArgument ActOnTemplateTypeArgument(TypeResult ParsedType);
+
   void NoteAllFoundTemplates(TemplateName Name);
 
   QualType CheckTemplateIdType(TemplateName Template,

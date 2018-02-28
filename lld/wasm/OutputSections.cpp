@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
+#include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/Twine.h"
@@ -65,10 +66,6 @@ std::string OutputSection::getSectionName() const {
   return sectionTypeToString(Type);
 }
 
-std::string SubSection::getSectionName() const {
-  return std::string("subsection <type=") + std::to_string(Type) + ">";
-}
-
 void OutputSection::createHeader(size_t BodySize) {
   raw_string_ostream OS(Header);
   debugWrite(OS.tell(), "section type [" + Twine(getSectionName()) + "]");
@@ -107,15 +104,12 @@ void CodeSection::writeTo(uint8_t *Buf) {
   memcpy(Buf, Header.data(), Header.size());
   Buf += Header.size();
 
-  uint8_t *ContentsStart = Buf;
-
   // Write code section headers
   memcpy(Buf, CodeSectionHeader.data(), CodeSectionHeader.size());
-  Buf += CodeSectionHeader.size();
 
   // Write code section bodies
-  parallelForEach(Functions, [ContentsStart](const InputChunk *Chunk) {
-    Chunk->writeTo(ContentsStart);
+  parallelForEach(Functions, [&](const InputChunk *Chunk) {
+    Chunk->writeTo(Buf);
   });
 }
 
@@ -168,19 +162,17 @@ void DataSection::writeTo(uint8_t *Buf) {
   memcpy(Buf, Header.data(), Header.size());
   Buf += Header.size();
 
-  uint8_t *ContentsStart = Buf;
-
   // Write data section headers
   memcpy(Buf, DataSectionHeader.data(), DataSectionHeader.size());
 
-  parallelForEach(Segments, [ContentsStart](const OutputSegment *Segment) {
+  parallelForEach(Segments, [&](const OutputSegment *Segment) {
     // Write data segment header
-    uint8_t *SegStart = ContentsStart + Segment->getSectionOffset();
+    uint8_t *SegStart = Buf + Segment->getSectionOffset();
     memcpy(SegStart, Segment->Header.data(), Segment->Header.size());
 
     // Write segment data payload
     for (const InputChunk *Chunk : Segment->InputSegments)
-      Chunk->writeTo(ContentsStart);
+      Chunk->writeTo(Buf);
   });
 }
 
