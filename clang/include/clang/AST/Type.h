@@ -1087,11 +1087,71 @@ public:
   // true when Type is objc's weak and weak is enabled but ARC isn't.
   bool isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const;
 
+  enum PrimitiveDefaultInitializeKind {
+    /// The type does not fall into any of the following categories. Note that
+    /// this case is zero-valued so that values of this enum can be used as a
+    /// boolean condition for non-triviality.
+    PDIK_Trivial,
+
+    /// The type is an Objective-C retainable pointer type that is qualified
+    /// with the ARC __strong qualifier.
+    PDIK_ARCStrong,
+
+    /// The type is a struct containing a field whose type is not PCK_Trivial.
+    PDIK_Struct
+  };
+
+  /// Functions to query basic properties of non-trivial C struct types.
+
+  /// Check if this is a non-trivial type that would cause a C struct
+  /// transitively containing this type to be non-trivial to default initialize
+  /// and return the kind.
+  PrimitiveDefaultInitializeKind
+  isNonTrivialToPrimitiveDefaultInitialize() const;
+
+  enum PrimitiveCopyKind {
+    /// The type does not fall into any of the following categories. Note that
+    /// this case is zero-valued so that values of this enum can be used as a
+    /// boolean condition for non-triviality.
+    PCK_Trivial,
+
+    /// The type would be trivial except that it is volatile-qualified. Types
+    /// that fall into one of the other non-trivial cases may additionally be
+    /// volatile-qualified.
+    PCK_VolatileTrivial,
+
+    /// The type is an Objective-C retainable pointer type that is qualified
+    /// with the ARC __strong qualifier.
+    PCK_ARCStrong,
+
+    /// The type is a struct containing a field whose type is neither
+    /// PCK_Trivial nor PCK_VolatileTrivial.
+    /// Note that a C++ struct type does not necessarily match this; C++ copying
+    /// semantics are too complex to express here, in part because they depend
+    /// on the exact constructor or assignment operator that is chosen by
+    /// overload resolution to do the copy.
+    PCK_Struct
+  };
+
+  /// Check if this is a non-trivial type that would cause a C struct
+  /// transitively containing this type to be non-trivial to copy and return the
+  /// kind.
+  PrimitiveCopyKind isNonTrivialToPrimitiveCopy() const;
+
+  /// Check if this is a non-trivial type that would cause a C struct
+  /// transitively containing this type to be non-trivial to destructively
+  /// move and return the kind. Destructive move in this context is a C++-style
+  /// move in which the source object is placed in a valid but unspecified state
+  /// after it is moved, as opposed to a truly destructive move in which the
+  /// source object is placed in an uninitialized state.
+  PrimitiveCopyKind isNonTrivialToPrimitiveDestructiveMove() const;
+
   enum DestructionKind {
     DK_none,
     DK_cxx_destructor,
     DK_objc_strong_lifetime,
-    DK_objc_weak_lifetime
+    DK_objc_weak_lifetime,
+    DK_nontrivial_c_struct
   };
 
   /// Returns a nonzero value if objects of this type require

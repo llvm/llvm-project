@@ -13,8 +13,16 @@ void has_objc_arc_weak_feature();
 void no_objc_arc_weak_feature();
 #endif
 
+#if __has_feature(objc_arc_fields)
+void has_objc_arc_fields();
+#else
+void no_objc_arc_fields();
+#endif
+
 // CHECK-ARC: void has_objc_arc_feature();
 // CHECK-ARC: void has_objc_arc_weak_feature();
+// CHECK-ARC: void has_objc_arc_fields();
 
 // CHECK-ARCLITE: void has_objc_arc_feature();
 // CHECK-ARCLITE: void no_objc_arc_weak_feature();
+// CHECK-ARCLITE: void has_objc_arc_fields();
