@@ -652,18 +652,8 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // initializers for array fields in default move/copy constructors.
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
-    const MemRegion *Target = Ctor.getCXXThisVal().getAsRegion();
-    if (Target && isa<ElementRegion>(Target)) {
-      if (ParentExpr)
-        if (const CXXNewExpr *NewExpr = dyn_cast<CXXNewExpr>(ParentExpr))
-          if (NewExpr->isArray())
-            return CIP_DisallowedOnce;
-
-      if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(
-              cast<SubRegion>(Target)->getSuperRegion()))
-        if (TR->getValueType()->isArrayType())
-          return CIP_DisallowedOnce;
-    }
+    if (CallOpts.IsArrayConstructorOrDestructor)
+      return CIP_DisallowedOnce;
 
     // Inlining constructors requires including initializers in the CFG.
     const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
@@ -682,7 +672,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // FIXME: This is a hack. We don't handle temporary destructors
     // right now, so we shouldn't inline their constructors.
     if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete)
-      if (!Target || isa<CXXTempObjectRegion>(Target))
+      if (CallOpts.IsConstructorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
 
       // If we did not find the correct this-region, it would be pointless
@@ -704,7 +694,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     (void)ADC;
 
     // FIXME: We don't handle constructors or destructors for arrays properly.
-    if (CallOpts.IsArrayCtorOrDtor)
+    if (CallOpts.IsArrayConstructorOrDestructor)
       return CIP_DisallowedOnce;
 
     // Allow disabling temporary destructor inlining with a separate option.
