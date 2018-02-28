@@ -174,7 +174,7 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++14 can add
   ``-std=gnu++98`` to their build settings to restore the previous behaviour.
 
-- Added support for some features from the C++ standard after C++14
+- Added support for some features from the C++ standard after C++17
   (provisionally known as C++2a but expected to be C++20). This support can be
   enabled with the ``-std=c++2a`` flag. This enables:
 
