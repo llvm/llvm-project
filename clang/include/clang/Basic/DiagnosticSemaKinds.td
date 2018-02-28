@@ -5119,12 +5119,17 @@ def note_protected_by_objc_strong_init : Note<
   "jump bypasses initialization of __strong variable">;
 def note_protected_by_objc_weak_init : Note<
   "jump bypasses initialization of __weak variable">;
+def note_protected_by_non_trivial_c_struct_init : Note<
+  "jump bypasses initialization of variable of non-trivial C struct type">;
 def note_enters_block_captures_cxx_obj : Note<
   "jump enters lifetime of block which captures a destructible C++ object">;
 def note_enters_block_captures_strong : Note<
   "jump enters lifetime of block which strongly captures a variable">;
 def note_enters_block_captures_weak : Note<
   "jump enters lifetime of block which weakly captures a variable">;
+def note_enters_block_captures_non_trivial_c_struct : Note<
+  "jump enters lifetime of block which captures a C struct that is non-trivial "
+  "to destroy">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
@@ -5165,6 +5170,9 @@ def note_exits_block_captures_strong : Note<
   "jump exits lifetime of block which strongly captures a variable">;
 def note_exits_block_captures_weak : Note<
   "jump exits lifetime of block which weakly captures a variable">;
+def note_exits_block_captures_non_trivial_c_struct : Note<
+  "jump exits lifetime of block which captures a C struct that is non-trivial "
+  "to destroy">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
@@ -7183,6 +7191,10 @@ def err_cannot_pass_objc_interface_to_vararg_format : Error<
   "cannot pass object with interface type %1 by value to variadic "
   "%select{function|block|method|constructor}2; expected type from format "
   "string was %3">;
+def err_cannot_pass_non_trivial_c_struct_to_vararg : Error<
+  "cannot pass non-trivial C object of type %0 by value to variadic "
+  "%select{function|block|method|constructor}1">;
+
 
 def err_cannot_pass_objc_interface_to_vararg : Error<
   "cannot pass object with interface type %0 by value through variadic "

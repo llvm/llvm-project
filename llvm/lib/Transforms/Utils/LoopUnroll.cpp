@@ -769,8 +769,8 @@ LoopUnrollResult llvm::UnrollLoop(
     }
   }
 
-  if (DT && UnrollVerifyDomtree)
-    DT->verifyDomTree();
+  assert(!DT || !UnrollVerifyDomtree ||
+      DT->verify(DominatorTree::VerificationLevel::Fast));
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<Loop *, 4> ForgottenLoops;

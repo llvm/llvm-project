@@ -24,10 +24,14 @@ Clang-Tidy Checks
    bugprone-dangling-handle
    bugprone-fold-init-type
    bugprone-forward-declaration-namespace
+   bugprone-forwarding-reference-overload
    bugprone-inaccurate-erase
    bugprone-incorrect-roundings
    bugprone-integer-division
+   bugprone-lambda-function-name
+   bugprone-macro-repeated-side-effects
    bugprone-misplaced-operator-in-strlen-in-alloc
+   bugprone-misplaced-widening-cast
    bugprone-move-forwarding-reference
    bugprone-multiple-statement-macro
    bugprone-string-constructor
@@ -127,12 +131,8 @@ Clang-Tidy Checks
    llvm-namespace-comment
    llvm-twine-local
    misc-definitions-in-headers
-   misc-forwarding-reference-overload
-   misc-lambda-function-name
    misc-macro-parentheses
-   misc-macro-repeated-side-effects
    misc-misplaced-const
-   misc-misplaced-widening-cast
    misc-new-delete-overloads
    misc-non-copyable-objects
    misc-redundant-expression

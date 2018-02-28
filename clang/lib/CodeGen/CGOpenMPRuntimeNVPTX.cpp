@@ -271,21 +271,10 @@ bool CGOpenMPRuntimeNVPTX::isInSpmdExecutionMode() const {
 }
 
 static CGOpenMPRuntimeNVPTX::ExecutionMode
-getExecutionModeForDirective(CodeGenModule &CGM,
-                             const OMPExecutableDirective &D) {
-  OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
-  switch (DirectiveKind) {
-  case OMPD_target:
-  case OMPD_target_teams:
-    return CGOpenMPRuntimeNVPTX::ExecutionMode::Generic;
-  case OMPD_target_parallel:
-  case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd:
-    return CGOpenMPRuntimeNVPTX::ExecutionMode::Spmd;
-  default:
-    llvm_unreachable("Unsupported directive on NVPTX device.");
-  }
-  llvm_unreachable("Unsupported directive on NVPTX device.");
+getExecutionMode(CodeGenModule &CGM) {
+  return CGM.getLangOpts().OpenMPCUDAMode
+             ? CGOpenMPRuntimeNVPTX::ExecutionMode::Spmd
+             : CGOpenMPRuntimeNVPTX::ExecutionMode::Generic;
 }
 
 void CGOpenMPRuntimeNVPTX::emitGenericKernel(const OMPExecutableDirective &D,
@@ -819,8 +808,7 @@ void CGOpenMPRuntimeNVPTX::emitTargetOutlinedFunction(
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
-  CGOpenMPRuntimeNVPTX::ExecutionMode Mode =
-      getExecutionModeForDirective(CGM, D);
+  CGOpenMPRuntimeNVPTX::ExecutionMode Mode = getExecutionMode(CGM);
   switch (Mode) {
   case CGOpenMPRuntimeNVPTX::ExecutionMode::Generic:
     emitGenericKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
@@ -1051,10 +1039,13 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
   // TODO: Do something with IfCond when support for the 'if' clause
   // is added on Spmd target directives.
   llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-  OutlinedFnArgs.push_back(
-      llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
-  OutlinedFnArgs.push_back(
-      llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
+
+  Address ZeroAddr = CGF.CreateMemTemp(
+      CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
+      ".zero.addr");
+  CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
+  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }

@@ -163,7 +163,7 @@ Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
     return nullptr;
 
   // Try to remove a gep instruction to make the pointer (actually index at this
-  // point) easier analyzable. If OrigPtr is equal to Ptr we are analzying the
+  // point) easier analyzable. If OrigPtr is equal to Ptr we are analyzing the
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 

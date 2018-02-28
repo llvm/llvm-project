@@ -974,31 +974,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   SmallVector<wasm::WasmSymbolInfo, 4> SymbolInfos;
   SmallVector<std::pair<uint16_t, uint32_t>, 2> InitFuncs;
   std::map<StringRef, std::vector<WasmComdatEntry>> Comdats;
-  unsigned NumSymbols = 0;
   uint32_t DataSize = 0;
-
-  auto AddSymbol = [&](const MCSymbolWasm &WS) {
-    uint32_t Flags = 0;
-    if (WS.isWeak())
-      Flags |= wasm::WASM_SYMBOL_BINDING_WEAK;
-    if (WS.isHidden())
-      Flags |= wasm::WASM_SYMBOL_VISIBILITY_HIDDEN;
-    if (!WS.isExternal() && WS.isDefined())
-      Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
-    if (WS.isUndefined())
-      Flags |= wasm::WASM_SYMBOL_UNDEFINED;
-
-    wasm::WasmSymbolInfo Info;
-    Info.Name = WS.getName();
-    Info.Kind = WS.getType();
-    Info.Flags = Flags;
-    if (!WS.isData())
-      Info.ElementIndex = WasmIndices[&WS];
-    else if (WS.isDefined())
-      Info.DataRef = DataLocations[&WS];
-    SymbolInfos.emplace_back(Info);
-    SymbolIndices[&WS] = NumSymbols++;
-  };
 
   // For now, always emit the memory import, since loads and stores are not
   // valid without it. In the future, we could perhaps be more clever and omit
@@ -1023,7 +999,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   TableImport.Table.ElemType = wasm::WASM_TYPE_ANYFUNC;
   Imports.push_back(TableImport);
 
-  // Populate FunctionTypeIndices and Imports.
+  // Populate FunctionTypeIndices, and Imports and WasmIndices for undefined
+  // symbols.  This must be done before populating WasmIndices for defined
+  // symbols.
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
 
@@ -1054,17 +1032,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         Imports.push_back(Import);
         WasmIndices[&WS] = NumGlobalImports++;
       }
-
-      // TODO(ncw) We shouldn't be adding the symbol to the symbol table here!
-      // Instead it should be done by removing the "if (WS.isDefined())" block
-      // in the big loop below (line ~1284).  However - that would reorder all
-      // the symbols and thus require all the tests to be updated.  I think it's
-      // better to make that change therefore in a future commit, to isolate
-      // each test update from the change that caused it.
-      AddSymbol(WS);
     }
   }
 
+  // Populate DataSegments, which must be done before populating DataLocations.
   for (MCSection &Sec : Asm) {
     auto &Section = static_cast<MCSectionWasm &>(Sec);
     if (!Section.isWasmData())
@@ -1093,7 +1064,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     }
   }
 
-  // Handle regular defined and undefined symbols.
+  // Populate WasmIndices and DataLocations for defined symbols.
   for (const MCSymbol &S : Asm.symbols()) {
     // Ignore unnamed temporary symbols, which aren't ever exported, imported,
     // or used in relocations.
@@ -1182,14 +1153,12 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       DEBUG(dbgs() << "  -> global index: " << WasmIndices.find(&WS)->second
                    << "\n");
     }
-
-    if (WS.isDefined())
-      AddSymbol(WS);
   }
 
-  // Handle weak aliases. We need to process these in a separate pass because
-  // we need to have processed the target of the alias before the alias itself
-  // and the symbols are not necessarily ordered in this way.
+  // Populate WasmIndices and DataLocations for aliased symbols.  We need to
+  // process these in a separate pass because we need to have processed the
+  // target of the alias before the alias itself and the symbols are not
+  // necessarily ordered in this way.
   for (const MCSymbol &S : Asm.symbols()) {
     if (!S.isVariable())
       continue;
@@ -1215,8 +1184,38 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     } else {
       report_fatal_error("don't yet support global aliases");
     }
+  }
 
-    AddSymbol(WS);
+  // Finally, populate the symbol table itself, in its "natural" order.
+  for (const MCSymbol &S : Asm.symbols()) {
+    const auto &WS = static_cast<const MCSymbolWasm &>(S);
+    if (WS.isTemporary() && WS.getName().empty())
+      continue;
+    if (WS.isComdat() && !WS.isDefined())
+      continue;
+    if (WS.isTemporary() && WS.isData() && !WS.getSize())
+      continue;
+
+    uint32_t Flags = 0;
+    if (WS.isWeak())
+      Flags |= wasm::WASM_SYMBOL_BINDING_WEAK;
+    if (WS.isHidden())
+      Flags |= wasm::WASM_SYMBOL_VISIBILITY_HIDDEN;
+    if (!WS.isExternal() && WS.isDefined())
+      Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
+    if (WS.isUndefined())
+      Flags |= wasm::WASM_SYMBOL_UNDEFINED;
+
+    wasm::WasmSymbolInfo Info;
+    Info.Name = WS.getName();
+    Info.Kind = WS.getType();
+    Info.Flags = Flags;
+    if (!WS.isData())
+      Info.ElementIndex = WasmIndices.find(&WS)->second;
+    else if (WS.isDefined())
+      Info.DataRef = DataLocations.find(&WS)->second;
+    SymbolIndices[&WS] = SymbolInfos.size();
+    SymbolInfos.emplace_back(Info);
   }
 
   {

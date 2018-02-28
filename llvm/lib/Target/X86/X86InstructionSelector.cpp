@@ -81,8 +81,8 @@ private:
                          MachineFunction &MF) const;
   bool selectConstant(MachineInstr &I, MachineRegisterInfo &MRI,
                       MachineFunction &MF) const;
-  bool selectTrunc(MachineInstr &I, MachineRegisterInfo &MRI,
-                   MachineFunction &MF) const;
+  bool selectTruncOrPtrToInt(MachineInstr &I, MachineRegisterInfo &MRI,
+                             MachineFunction &MF) const;
   bool selectZext(MachineInstr &I, MachineRegisterInfo &MRI,
                   MachineFunction &MF) const;
   bool selectAnyext(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -347,8 +347,11 @@ bool X86InstructionSelector::select(MachineInstr &I,
     return selectConstant(I, MRI, MF);
   case TargetOpcode::G_FCONSTANT:
     return materializeFP(I, MRI, MF);
+  case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC:
-    return selectTrunc(I, MRI, MF);
+    return selectTruncOrPtrToInt(I, MRI, MF);
+  case TargetOpcode::G_INTTOPTR:
+    return selectCopy(I, MRI);
   case TargetOpcode::G_ZEXT:
     return selectZext(I, MRI, MF);
   case TargetOpcode::G_ANYEXT:
@@ -645,7 +648,7 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
-// Helper function for selectTrunc and selectAnyext.
+// Helper function for selectTruncOrPtrToInt and selectAnyext.
 // Returns true if DstRC lives on a floating register class and
 // SrcRC lives on a 128-bit vector class.
 static bool canTurnIntoCOPY(const TargetRegisterClass *DstRC,
@@ -670,10 +673,12 @@ bool X86InstructionSelector::selectTurnIntoCOPY(
   return true;
 }
 
-bool X86InstructionSelector::selectTrunc(MachineInstr &I,
-                                         MachineRegisterInfo &MRI,
-                                         MachineFunction &MF) const {
-  assert((I.getOpcode() == TargetOpcode::G_TRUNC) && "unexpected instruction");
+bool X86InstructionSelector::selectTruncOrPtrToInt(MachineInstr &I,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineFunction &MF) const {
+  assert((I.getOpcode() == TargetOpcode::G_TRUNC ||
+          I.getOpcode() == TargetOpcode::G_PTRTOINT) &&
+         "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned SrcReg = I.getOperand(1).getReg();
@@ -685,7 +690,8 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
   const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
 
   if (DstRB.getID() != SrcRB.getID()) {
-    DEBUG(dbgs() << "G_TRUNC input/output on different banks\n");
+    DEBUG(dbgs() << TII.getName(I.getOpcode())
+                 << " input/output on different banks\n");
     return false;
   }
 
@@ -722,7 +728,8 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                 << "\n");
     return false;
   }
 

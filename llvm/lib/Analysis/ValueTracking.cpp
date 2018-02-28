@@ -530,7 +530,7 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   if (Inv->getParent() != CxtI->getParent())
     return false;
 
-  // If we have a dom tree, then we now know that the assume doens't dominate
+  // If we have a dom tree, then we now know that the assume doesn't dominate
   // the other instruction.  If we don't have a dom tree then we can check if
   // the assume is first in the BB.
   if (!DT) {
@@ -574,7 +574,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
     if (Q.isExcluded(I))
       continue;
 
-    // Warning: This loop can end up being somewhat performance sensetive.
+    // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
 
@@ -856,7 +856,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 /// Compute known bits from a shift operator, including those with a
 /// non-constant shift amount. Known is the output of this function. Known2 is a
 /// pre-allocated temporary with the same bit width as Known. KZF and KOF are
-/// operator-specific functors that, given the known-zero or known-one bits
+/// operator-specific functions that, given the known-zero or known-one bits
 /// respectively, and a shift amount, compute the implied known-zero or
 /// known-one bits of the shift operator's result respectively for that shift
 /// amount. The results from calling KZF and KOF are conservatively combined for
@@ -2192,7 +2192,7 @@ static unsigned ComputeNumSignBits(const Value *V, unsigned Depth,
 /// (itself), but other cases can give us information. For example, immediately
 /// after an "ashr X, 2", we know that the top 3 bits are all equal to each
 /// other, so we return 3. For vectors, return the number of sign bits for the
-/// vector element with the mininum number of known sign bits.
+/// vector element with the minimum number of known sign bits.
 static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
                                        const Query &Q) {
   assert(Depth <= MaxDepth && "Limit Search Depth");
@@ -3003,7 +3003,7 @@ static Value *BuildSubAggregate(Value *From, Value* To, Type *IndexedType,
   if (!V)
     return nullptr;
 
-  // Insert the value in the new (sub) aggregrate
+  // Insert the value in the new (sub) aggregate
   return InsertValueInst::Create(To, V, makeArrayRef(Idxs).slice(IdxSkip),
                                  "tmp", InsertBefore);
 }
@@ -3032,9 +3032,9 @@ static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
   return BuildSubAggregate(From, To, IndexedType, Idxs, IdxSkip, InsertBefore);
 }
 
-/// Given an aggregrate and an sequence of indices, see if
-/// the scalar value indexed is already around as a register, for example if it
-/// were inserted directly into the aggregrate.
+/// Given an aggregate and a sequence of indices, see if the scalar value
+/// indexed is already around as a register, for example if it was inserted
+/// directly into the aggregate.
 ///
 /// If InsertBefore is not null, this function will duplicate (modified)
 /// insertvalues when a part of a nested struct is extracted.

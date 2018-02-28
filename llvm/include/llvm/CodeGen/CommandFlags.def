@@ -286,6 +286,7 @@ static TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.FunctionSections = FunctionSections;
   Options.UniqueSectionNames = UniqueSectionNames;
   Options.EmulatedTLS = EmulatedTLS;
+  Options.ExplicitEmulatedTLS = EmulatedTLS.getNumOccurrences() > 0;
   Options.ExceptionModel = ExceptionModel;
   Options.EmitStackSizeSection = EnableStackSizeSection;
 

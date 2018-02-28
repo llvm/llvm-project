@@ -116,7 +116,7 @@ void test1(A *a, BOOL b, struct UnsafeS *unsafeS) {
 }
 
 struct S {
-  A* a; // expected-error {{ARC forbids Objective-C objects in struct}}
+  A* a;
 };
 
 @interface B

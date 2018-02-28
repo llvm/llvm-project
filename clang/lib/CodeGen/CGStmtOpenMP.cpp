@@ -4260,6 +4260,7 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForSimdDirective(
 static void emitTargetTeamsDistributeParallelForRegion(
     CodeGenFunction &CGF, const OMPTargetTeamsDistributeParallelForDirective &S,
     PrePostActionTy &Action) {
+  Action.Enter(CGF);
   auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitOMPDistributeLoop(S, emitInnerParallelForWhenCombined,
                               S.getDistInc());
@@ -4310,6 +4311,7 @@ static void emitTargetTeamsDistributeParallelForSimdRegion(
     CodeGenFunction &CGF,
     const OMPTargetTeamsDistributeParallelForSimdDirective &S,
     PrePostActionTy &Action) {
+  Action.Enter(CGF);
   auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitOMPDistributeLoop(S, emitInnerParallelForWhenCombined,
                               S.getDistInc());

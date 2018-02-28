@@ -11324,6 +11324,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     }
   }
 
+  if (var->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
+    getCurFunction()->setHasBranchProtectedScope();
+
   // Warn about externally-visible variables being defined without a
   // prior declaration.  We only want to do this for global
   // declarations, but we also specifically need to avoid doing it for
@@ -15214,6 +15217,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     // Get the type for the field.
     const Type *FDTy = FD->getType().getTypePtr();
+    Qualifiers QS = FD->getType().getQualifiers();
 
     if (!FD->isAnonymousStructOrUnion()) {
       // Remember all fields written by the user.
@@ -15355,7 +15359,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       FD->setType(T);
     } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
                Record && !ObjCFieldLifetimeErrReported &&
-               (!getLangOpts().CPlusPlus || Record->isUnion())) {
+               ((!getLangOpts().CPlusPlus &&
+                 QS.getObjCLifetime() == Qualifiers::OCL_Weak) ||
+                Record->isUnion())) {
       // It's an error in ARC or Weak if a field has lifetime.
       // We don't want to report this in a system header, though,
       // so we just make the field unavailable.
@@ -15391,6 +15397,18 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                Record->setHasObjectMember(true);
       }
     }
+
+    if (Record && !getLangOpts().CPlusPlus) {
+      QualType FT = FD->getType();
+      if (FT.isNonTrivialToPrimitiveDefaultInitialize())
+        Record->setNonTrivialToPrimitiveDefaultInitialize();
+      QualType::PrimitiveCopyKind PCK = FT.isNonTrivialToPrimitiveCopy();
+      if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
+        Record->setNonTrivialToPrimitiveCopy();
+      if (FT.isDestructedType())
+        Record->setNonTrivialToPrimitiveDestroy();
+    }
+
     if (Record && FD->getType().isVolatileQualified())
       Record->setHasVolatileMember(true);
     // Keep track of the number of named members.

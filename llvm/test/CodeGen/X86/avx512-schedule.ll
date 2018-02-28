@@ -1124,15 +1124,13 @@ define i32 @test3(float %a, float %b) {
 ; GENERIC-LABEL: test3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcmpeqss %xmm1, %xmm0, %k0 # sched: [3:1.00]
-; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    movzbl %al, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    kmovw %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test3:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %k0 # sched: [3:1.00]
-; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    movzbl %al, %eax # sched: [1:0.25]
+; SKX-NEXT:    kmovw %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 
   %cmp10.i = fcmp oeq float %a, %b

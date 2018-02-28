@@ -500,10 +500,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
       // the original loop body.
       if (Iter == 0)
         DT->changeImmediateDominator(Exit, cast<BasicBlock>(LVMap[Latch]));
-#ifndef NDEBUG
-      if (VerifyDomInfo)
-        DT->verifyDomTree();
-#endif
+      assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
 
     updateBranchWeights(InsertBot, cast<BranchInst>(VMap[LatchBR]), Iter,
