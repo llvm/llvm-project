@@ -86,7 +86,7 @@ def LLVM : Package<"llvm">;
 
 // The APIModeling package is for checkers that model APIs and don't perform
 // any diagnostics. These checkers are always turned on; this package is
-// intended for API modeling that is not controlled by the the target triple.
+// intended for API modeling that is not controlled by the target triple.
 def APIModeling : Package<"apiModeling">, Hidden;
 def GoogleAPIModeling : Package<"google">, InPackage<APIModeling>;
 
