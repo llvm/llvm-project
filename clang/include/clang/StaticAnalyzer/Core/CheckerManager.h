@@ -453,11 +453,11 @@ public:
 
   using CheckEndFunctionFunc = CheckerFn<void (CheckerContext &)>;
   
-  using CheckBranchConditionFunc =
-      CheckerFn<void (const Stmt *, CheckerContext &)>;
+  typedef CheckerFn<void (const Stmt *, CheckerContext &)>
+      CheckBranchConditionFunc;
 
-  using CheckNewAllocatorFunc =
-      CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>;
+  typedef CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>
+      CheckNewAllocatorFunc;
   
   using CheckDeadSymbolsFunc =
       CheckerFn<void (SymbolReaper &, CheckerContext &)>;
