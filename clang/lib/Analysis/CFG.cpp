@@ -3944,9 +3944,7 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E,
     autoCreateBlock();
     appendStmt(Block, E);
 
-    findConstructionContexts(
-        ConstructionContext::create(cfg->getBumpVectorContext(), E),
-        E->getSubExpr());
+    EnterConstructionContextIfNecessary(E, E->getSubExpr());
 
     // We do not want to propagate the AlwaysAdd property.
     asc = asc.withAlwaysAdd(false);
