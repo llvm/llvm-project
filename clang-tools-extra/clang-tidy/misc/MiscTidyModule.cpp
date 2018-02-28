@@ -11,12 +11,8 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "DefinitionsInHeadersCheck.h"
-#include "ForwardingReferenceOverloadCheck.h"
-#include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
-#include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedConstCheck.h"
-#include "MisplacedWideningCastCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NonCopyableObjects.h"
 #include "RedundantExpressionCheck.h"
@@ -46,10 +42,6 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
-        "misc-forwarding-reference-overload");
-    CheckFactories.registerCheck<LambdaFunctionNameCheck>(
-        "misc-lambda-function-name");
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
     CheckFactories.registerCheck<UnconventionalAssignOperatorCheck>(
         "misc-unconventional-assign-operator");
@@ -57,10 +49,6 @@ public:
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<MacroParenthesesCheck>(
         "misc-macro-parentheses");
-    CheckFactories.registerCheck<MacroRepeatedSideEffectsCheck>(
-        "misc-macro-repeated-side-effects");
-    CheckFactories.registerCheck<MisplacedWideningCastCheck>(
-        "misc-misplaced-widening-cast");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(

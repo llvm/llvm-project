@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_FORWARDING_REFERENCE_OVERLOAD_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_FORWARDING_REFERENCE_OVERLOAD_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FORWARDINGREFERENCEOVERLOADCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FORWARDINGREFERENCEOVERLOADCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// The checker looks for constructors that can act as copy or move constructors
 /// through their forwarding reference parameters. If a non const lvalue
@@ -26,7 +26,7 @@ namespace misc {
 /// C++ Design, item 26.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-forwarding-reference-overload.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-forwarding-reference-overload.html
 class ForwardingReferenceOverloadCheck : public ClangTidyCheck {
 public:
   ForwardingReferenceOverloadCheck(StringRef Name, ClangTidyContext *Context)
@@ -35,8 +35,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_FORWARDING_REFERENCE_OVERLOAD_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FORWARDINGREFERENCEOVERLOADCHECK_H

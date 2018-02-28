@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-misplaced-widening-cast %t -- -config="{CheckOptions: [{key: misc-misplaced-widening-cast.CheckImplicitCasts, value: 1}]}" --
+// RUN: %check_clang_tidy %s bugprone-misplaced-widening-cast %t -- -config="{CheckOptions: [{key: bugprone-misplaced-widening-cast.CheckImplicitCasts, value: 1}]}" --
 
 void func(long arg) {}
 
@@ -6,7 +6,7 @@ void assign(int a, int b) {
   long l;
 
   l = a * b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long' is ineffective, or there is loss of precision before the conversion [misc-misplaced-widening-cast]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long' is ineffective, or there is loss of precision before the conversion [bugprone-misplaced-widening-cast]
   l = (long)(a * b);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
   l = (long)a * b;

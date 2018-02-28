@@ -17,10 +17,14 @@
 #include "DanglingHandleCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
+#include "ForwardingReferenceOverloadCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "IntegerDivisionCheck.h"
+#include "LambdaFunctionNameCheck.h"
+#include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
+#include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "StringConstructorCheck.h"
@@ -51,14 +55,22 @@ public:
         "bugprone-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "bugprone-forward-declaration-namespace");
+    CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
+        "bugprone-forwarding-reference-overload");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundingsCheck>(
         "bugprone-incorrect-roundings");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
+    CheckFactories.registerCheck<LambdaFunctionNameCheck>(
+        "bugprone-lambda-function-name");
+    CheckFactories.registerCheck<MacroRepeatedSideEffectsCheck>(
+        "bugprone-macro-repeated-side-effects");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(
         "bugprone-misplaced-operator-in-strlen-in-alloc");
+    CheckFactories.registerCheck<MisplacedWideningCastCheck>(
+        "bugprone-misplaced-widening-cast");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
         "bugprone-move-forwarding-reference");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(

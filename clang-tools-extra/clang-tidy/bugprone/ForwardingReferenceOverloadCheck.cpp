@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 // Check if the given type is related to std::enable_if.
@@ -143,6 +143,6 @@ void ForwardingReferenceOverloadCheck::check(
   }
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

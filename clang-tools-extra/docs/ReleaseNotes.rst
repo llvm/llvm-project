@@ -57,6 +57,18 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-misplaced-widening-cast' check was renamed to `bugprone-misplaced-widening-cast
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-widening-cast.html>`_
+
+- The 'misc-lambda-function-name' check was renamed to `bugprone-lambda-function-name
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-lambda-function-name.html>`_
+
+- The 'misc-macro-repeated-side-effects' check was renamed to `bugprone-macro-repeated-side-effects
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-macro-repeated-side-effects.html>`_
+
+- The 'misc-forwarding-reference-overload' check was renamed to `bugprone-forwarding-reference-overload
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-forwarding-reference-overload.html>`_
+
 - The 'misc-incorrect-roundings' check was renamed to `bugprone-incorrect-roundings
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-incorrect-roundings.html>`_
 

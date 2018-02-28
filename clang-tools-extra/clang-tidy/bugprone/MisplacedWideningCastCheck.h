@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISPLACED_WIDENING_CAST_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISPLACED_WIDENING_CAST_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MISPLACEDWIDENINGCASTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MISPLACEDWIDENINGCASTCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Find casts of calculation results to bigger type. Typically from int to
 /// long. If the intention of the cast is to avoid loss of precision then
@@ -27,7 +27,7 @@ namespace misc {
 //      be the most common case. Enabled by default.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-misplaced-widening-cast.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-widening-cast.html
 class MisplacedWideningCastCheck : public ClangTidyCheck {
 public:
   MisplacedWideningCastCheck(StringRef Name, ClangTidyContext *Context);
@@ -39,7 +39,7 @@ private:
   const bool CheckImplicitCasts;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 

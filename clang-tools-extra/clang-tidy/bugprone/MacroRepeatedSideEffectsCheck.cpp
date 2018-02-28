@@ -15,7 +15,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 class MacroRepeatedPPCallbacks : public PPCallbacks {
@@ -179,6 +179,6 @@ void MacroRepeatedSideEffectsCheck::registerPPCallbacks(
           *this, Compiler.getPreprocessor()));
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

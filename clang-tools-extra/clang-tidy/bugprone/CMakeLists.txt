@@ -9,10 +9,14 @@ add_clang_library(clangTidyBugproneModule
   DanglingHandleCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
+  ForwardingReferenceOverloadCheck.cpp
   InaccurateEraseCheck.cpp
   IncorrectRoundingsCheck.cpp
   IntegerDivisionCheck.cpp
+  LambdaFunctionNameCheck.cpp
+  MacroRepeatedSideEffectsCheck.cpp
   MisplacedOperatorInStrlenInAllocCheck.cpp
+  MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
   StringConstructorCheck.cpp
