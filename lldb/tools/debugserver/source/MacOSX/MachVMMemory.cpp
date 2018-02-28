@@ -19,6 +19,12 @@
 #include <mach/shared_region.h>
 #include <sys/sysctl.h>
 
+#if defined(WITH_FBS) || defined(WITH_BKS)
+extern "C" {
+#import <sys/kern_memorystatus.h>
+}
+#endif
+
 static const vm_size_t kInvalidPageSize = ~0;
 
 MachVMMemory::MachVMMemory() : m_page_size(kInvalidPageSize), m_err(0) {}
@@ -152,7 +158,8 @@ static bool InSharedRegion(mach_vm_address_t addr, cpu_type_t type) {
 nub_bool_t MachVMMemory::GetMemoryProfile(
     DNBProfileDataScanType scanType, task_t task, struct task_basic_info ti,
     cpu_type_t cputype, nub_process_t pid, vm_statistics64_data_t &vminfo,
-    uint64_t &physical_memory, mach_vm_size_t &anonymous, mach_vm_size_t &phys_footprint)
+    uint64_t &physical_memory, uint64_t &anonymous,
+    uint64_t &phys_footprint, uint64_t &memory_cap)
 {
   if (scanType & eProfileHostMemory)
     physical_memory = GetPhysicalMemory();
@@ -177,6 +184,16 @@ nub_bool_t MachVMMemory::GetMemoryProfile(
       phys_footprint = vm_info.phys_footprint;
     }
   }
+
+#if defined(WITH_FBS) || defined(WITH_BKS)
+  if (scanType & eProfileMemoryCap) {
+    memorystatus_memlimit_properties_t memlimit_properties;
+    memset(&memlimit_properties, 0, sizeof(memlimit_properties));
+    if (memorystatus_control(MEMORYSTATUS_CMD_GET_MEMLIMIT_PROPERTIES, pid, 0, &memlimit_properties, sizeof(memlimit_properties)) == 0) {
+        memory_cap = memlimit_properties.memlimit_active;
+    }
+  }
+#endif
 
   return true;
 }
