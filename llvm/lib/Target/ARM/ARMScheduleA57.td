@@ -125,8 +125,9 @@ def : InstRW<[WriteNoop], (instregex "(t)?BKPT$", "(t2)?CDP(2)?$",
   "(t2)?CPS[123]p$", "(t2)?DBG$", "(t2)?DMB$", "(t2)?DSB$", "ERET$",
   "(t2|t)?HINT$", "(t)?HLT$", "(t2)?HVC$", "(t2)?ISB$", "ITasm$",
   "(t2)?RFE(DA|DB|IA|IB)", "(t)?SETEND", "(t2)?SETPAN", "(t2)?SMC", "SPACE",
-  "(t2)?SRS(DA|DB|IA|IB)", "SWP(B)?", "t?TRAP", "UDF$", "t2DCPS", "t2SG",
-  "t2TT", "tCPS", "CMP_SWAP", "t?SVC", "t2IT", "CompilerBarrier")>;
+  "(t2)?SRS(DA|DB|IA|IB)", "SWP(B)?", "t?TRAP", "(t2|t)?UDF$", "t2DCPS", "t2SG",
+  "t2TT", "tCPS", "CMP_SWAP", "t?SVC", "t2IT", "CompilerBarrier",
+  "t__brkdiv0")>;
 
 def : InstRW<[WriteNoop], (instregex "VMRS", "VMSR", "FMSTAT")>;
 
@@ -146,7 +147,7 @@ def : InstRW<[WriteNoop], (instregex "FLDM", "FSTM")>;
 // Pseudos
 def : InstRW<[WriteNoop], (instregex "(t2)?ABS$",
   "(t)?ADJCALLSTACKDOWN$", "(t)?ADJCALLSTACKUP$", "(t2|t)?Int_eh_sjlj",
-  "tLDRpci_pic", "t2SUBS_PC_LR",
+  "tLDRpci_pic", "(t2)?SUBS_PC_LR",
   "JUMPTABLE", "tInt_WIN_eh_sjlj_longjmp",
   "VLD(1|2)LN(d|q)(WB_fixed_|WB_register_)?Asm",
   "VLD(3|4)(DUP|LN)?(d|q)(WB_fixed_|WB_register_)?Asm",
@@ -278,6 +279,9 @@ def : ReadAdvance<ReadMUL, 0>;
 def A57WriteMLA : SchedWriteRes<[A57UnitM]> { let Latency = 3; }
 def A57WriteMLAL : SchedWriteRes<[A57UnitM]> { let Latency = 4; }
 def A57ReadMLA  : SchedReadAdvance<2, [A57WriteMLA, A57WriteMLAL]>;
+
+def : InstRW<[A57WriteMLA],
+  (instregex "t2SMLAD", "t2SMLADX", "t2SMLSD", "t2SMLSDX")>;
 
 def : SchedAlias<WriteMAC16, A57WriteMLA>;
 def : SchedAlias<WriteMAC32, A57WriteMLA>;
@@ -587,6 +591,8 @@ def : InstRW<[A57WriteLDM], (instregex "(t|t2|sys)?LDM(IA|DA|DB|IB)$")>;
 def : InstRW<[A57WriteLDM_Upd],
   (instregex "(t|t2|sys)?LDM(IA_UPD|DA_UPD|DB_UPD|IB_UPD|IA_RET)", "tPOP")>;
 
+def : InstRW<[A57Write_5cyc_1L], (instregex "VLLDM")>;
+
 // --- 3.9 Store Instructions ---
 
 // Store, immed offset
@@ -705,6 +711,8 @@ def : InstRW<[A57WriteSTM], (instregex "(t2|sys|t)?STM(IA|DA|DB|IB)$")>;
 def : InstRW<[A57WrBackOne, A57WriteSTM_Upd],
   (instregex "(t2|sys|t)?STM(IA_UPD|DA_UPD|DB_UPD|IB_UPD)", "tPUSH")>;
 
+def : InstRW<[A57Write_5cyc_1S], (instregex "VLSTM")>;
+
 // --- 3.10 FP Data Processing Instructions ---
 def : SchedAlias<WriteFPALU32, A57Write_5cyc_1V>;
 def : SchedAlias<WriteFPALU64, A57Write_5cyc_1V>;
@@ -722,8 +730,10 @@ def : InstRW<[A57WriteVcmp],
 // fp convert
 def : InstRW<[A57Write_5cyc_1V], (instregex
   "VCVT(A|N|P|M)(SH|UH|SS|US|SD|UD)", "VCVT(BDH|THD|TDH)")>;
-
+def : InstRW<[A57Write_5cyc_1V], (instregex "VTOSLS", "VTOUHS", "VTOULS")>;
 def : SchedAlias<WriteFPCVT, A57Write_5cyc_1V>;
+
+def : InstRW<[A57Write_5cyc_1V], (instregex "VJCVT")>;
 
 // FP round to integral
 def : InstRW<[A57Write_5cyc_1V], (instregex "VRINT(A|N|P|M|Z|R|X)(H|S|D)$")>;
@@ -733,6 +743,8 @@ def : SchedAlias<WriteFPDIV32, A57Write_17cyc_1W>;
 def : SchedAlias<WriteFPDIV64, A57Write_32cyc_1W>;
 def : SchedAlias<WriteFPSQRT32, A57Write_17cyc_1W>;
 def : SchedAlias<WriteFPSQRT64, A57Write_32cyc_1W>;
+
+def : InstRW<[A57Write_17cyc_1W], (instregex "VSQRTH")>;
 
 // FP max/min
 def : InstRW<[A57Write_5cyc_1V], (instregex "VMAX", "VMIN")>;
@@ -767,6 +779,13 @@ def : SchedAlias<WriteFPMAC32, A57WriteVFMA>;
 def : SchedAlias<WriteFPMAC64, A57WriteVFMA>;
 def : SchedAlias<ReadFPMAC, A57ReadVFMA5>;
 
+// VMLAH/VMLSH are not binded to scheduling classes by default, so here custom:
+def : InstRW<[A57WriteVFMA, A57ReadVFMA5, ReadFPMUL, ReadFPMUL],
+  (instregex "VMLAH", "VMLSH", "VNMLAH", "VNMLSH")>;
+
+def : InstRW<[A57WriteVMUL],
+  (instregex "VUDOTD", "VSDOTD", "VUDOTQ", "VSDOTQ")>;
+
 def : InstRW<[A57Write_3cyc_1V], (instregex "VNEG")>;
 def : InstRW<[A57Write_3cyc_1V], (instregex "VSEL")>;
 
@@ -774,6 +793,8 @@ def : InstRW<[A57Write_3cyc_1V], (instregex "VSEL")>;
 // VMOV: 3cyc "F0/F1" for imm/reg
 def : InstRW<[A57Write_3cyc_1V], (instregex "FCONST(D|S|H)")>;
 def : InstRW<[A57Write_3cyc_1V], (instregex "VMOV(D|S|H)(cc)?$")>;
+
+def : InstRW<[A57Write_3cyc_1V], (instregex "VINSH")>;
 
 // 5cyc L for FP transfer, vfp to core reg,
 // 5cyc L for FP transfer, core reg to vfp
@@ -1062,6 +1083,11 @@ def A57ReadVQDMLAL_VecInt : SchedReadVariant<[
 def : InstRW<[A57WriteVQDMLAL_VecInt, A57ReadVQDMLAL_VecInt],
   (instregex "VQDMLAL", "VQDMLSL")>;
 
+// Vector Saturating Rounding Doubling Multiply Accumulate/Subtract Long
+// Scheduling info from VQDMLAL/VQDMLSL
+def : InstRW<[A57WriteVQDMLAL_VecInt, A57ReadVQDMLAL_VecInt],
+  (instregex "VQRDMLAH", "VQRDMLSH")>;
+
 // ASIMD multiply long
 // 5cyc F0 for r0px, 4cyc F0 for r1p0 and later
 def A57WriteVMULL_VecInt : SchedWriteVariant<[
@@ -1126,6 +1152,8 @@ def : InstRW<[A57Write_3cyc_1V], (instregex "VABS(fd|fq|hd|hq)")>;
 def : InstRW<[A57Write_5cyc_1V], (instregex "VABD(fd|fq|hd|hq)",
   "VADD(fd|fq|hd|hq)", "VPADD(f|h)", "VSUB(fd|fq|hd|hq)")>;
 
+def : InstRW<[A57Write_5cyc_1V], (instregex "VCADD", "VCMLA")>;
+
 // ASIMD FP compare
 def : InstRW<[A57Write_5cyc_1V], (instregex "VAC(GE|GT|LE|LT)",
   "VC(EQ|GE|GT|LE)(fd|fq|hd|hq)")>;
@@ -1184,7 +1212,7 @@ def : InstRW<[A57Write_3cyc_1V], (instregex "VEXT(d|q)(8|16|32|64)")>;
 // ASIMD move, immed
 def : InstRW<[A57Write_3cyc_1V], (instregex
   "VMOV(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v1i64|v2i64|v2f32|v4f32)",
-  "VMOVQ0")>;
+  "VMOVD0", "VMOVQ0")>;
 
 // ASIMD move, narrowing
 def : InstRW<[A57Write_3cyc_1V], (instregex "VMOVN")>;

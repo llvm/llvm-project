@@ -274,7 +274,7 @@ private:
   void writeCodeRelocSection();
   void writeDataRelocSection();
   void writeLinkingMetaDataSection(
-      uint32_t DataSize, ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
+      ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
       ArrayRef<std::pair<uint16_t, uint32_t>> InitFuncs,
       const std::map<StringRef, std::vector<WasmComdatEntry>> &Comdats);
 
@@ -862,7 +862,7 @@ void WasmObjectWriter::writeDataRelocSection() {
 }
 
 void WasmObjectWriter::writeLinkingMetaDataSection(
-    uint32_t DataSize, ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
+    ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
     ArrayRef<std::pair<uint16_t, uint32_t>> InitFuncs,
     const std::map<StringRef, std::vector<WasmComdatEntry>> &Comdats) {
   SectionBookkeeping Section;
@@ -894,12 +894,6 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
         llvm_unreachable("unexpected kind");
       }
     }
-    endSection(SubSection);
-  }
-
-  if (DataSize > 0) {
-    startSection(SubSection, wasm::WASM_DATA_SIZE);
-    encodeULEB128(DataSize, getStream());
     endSection(SubSection);
   }
 
@@ -1316,7 +1310,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeDataSection();
   writeCodeRelocSection();
   writeDataRelocSection();
-  writeLinkingMetaDataSection(DataSize, SymbolInfos, InitFuncs, Comdats);
+  writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);
 
   // TODO: Translate the .comment section to the output.
   // TODO: Translate debug sections to the output.

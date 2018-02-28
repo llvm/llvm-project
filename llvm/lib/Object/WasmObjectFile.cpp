@@ -197,8 +197,6 @@ static Error readSection(WasmSection &Section, const uint8_t *&Ptr,
 
 WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
     : ObjectFile(Binary::ID_Wasm, Buffer) {
-  LinkingData.DataSize = 0;
-
   ErrorAsOutParameter ErrAsOutParam(&Err);
   Header.Magic = getData().substr(0, 4);
   if (Header.Magic != StringRef("\0asm", 4)) {
@@ -333,9 +331,6 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
     case wasm::WASM_SYMBOL_TABLE:
       if (Error Err = parseLinkingSectionSymtab(Ptr, SubSectionEnd))
         return Err;
-      break;
-    case wasm::WASM_DATA_SIZE:
-      LinkingData.DataSize = readVaruint32(Ptr);
       break;
     case wasm::WASM_SEGMENT_INFO: {
       uint32_t Count = readVaruint32(Ptr);

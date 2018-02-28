@@ -158,7 +158,6 @@ struct WasmFunctionName {
 };
 
 struct WasmLinkingData {
-  uint32_t DataSize;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<WasmSymbolInfo> SymbolTable;
 };
@@ -227,7 +226,6 @@ enum : unsigned {
 
 // Kind codes used in the custom "linking" section
 enum : unsigned {
-  WASM_DATA_SIZE      = 0x3,
   WASM_SEGMENT_INFO   = 0x5,
   WASM_INIT_FUNCS     = 0x6,
   WASM_COMDAT_INFO    = 0x7,

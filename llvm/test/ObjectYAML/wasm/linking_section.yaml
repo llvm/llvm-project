@@ -29,7 +29,6 @@ Sections:
         Content:         '11110000'
   - Type:            CUSTOM
     Name:            linking
-    DataSize:        999
     SymbolTable:
       - Index:           0
         Kind:            FUNCTION
@@ -51,7 +50,6 @@ Sections:
 ...
 # CHECK:       - Type:            CUSTOM
 # CHECK-NEXT:    Name:            linking
-# CHECK-NEXT:    DataSize:        999
 # CHECK-NEXT:    SymbolTable:
 # CHECK-NEXT:      - Index:           0
 # CHECK-NEXT:        Kind:            FUNCTION
