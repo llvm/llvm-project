@@ -65,8 +65,8 @@ namespace WrongScope {
   };
   template<typename T> struct Local {};
   void f() {
-    Local(int) -> Local<int>; // expected-error 2{{expected}} expected-note {{to match}}
+    Local(int) -> Local<int>; // expected-error {{expected}}
     using WrongScope::Local;
-    Local(int) -> Local<int>; // expected-error 2{{expected}} expected-note {{to match}}
+    Local(int) -> Local<int>; // expected-error {{expected}}
   }
 }

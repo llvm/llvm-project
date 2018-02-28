@@ -63,7 +63,7 @@ void wasm::writeStr(raw_ostream &OS, StringRef String, StringRef Msg) {
   OS.write(String.data(), String.size());
 }
 
-void wasm::writeU8(raw_ostream &OS, uint8_t byte, StringRef Msg) { OS << byte; }
+void wasm::writeU8(raw_ostream &OS, uint8_t Byte, StringRef Msg) { OS << Byte; }
 
 void wasm::writeU32(raw_ostream &OS, uint32_t Number, StringRef Msg) {
   debugWrite(OS.tell(), Msg + "[" + utohexstr(Number) + "]");
