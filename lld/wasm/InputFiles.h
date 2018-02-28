@@ -111,23 +111,14 @@ public:
   GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
 
 private:
-  Symbol *createDefinedData(const WasmSymbol &Sym, InputSegment *Segment,
-                            uint32_t Offset, uint32_t DataSize);
-  Symbol *createDefinedFunction(const WasmSymbol &Sym, InputFunction *Function);
-  Symbol *createDefinedGlobal(const WasmSymbol &Sym, InputGlobal *Global);
+  Symbol *createDefined(const WasmSymbol &Sym);
   Symbol *createUndefined(const WasmSymbol &Sym);
 
-  void initializeSymbols();
-  InputSegment *getSegment(const WasmSymbol &WasmSym) const;
-  InputFunction *getFunction(const WasmSymbol &Sym) const;
-  InputGlobal *getGlobal(const WasmSymbol &Sym) const;
   bool isExcludedByComdat(InputChunk *Chunk) const;
 
   // List of all symbols referenced or defined by this file.
   std::vector<Symbol *> Symbols;
 
-  uint32_t NumGlobalImports = 0;
-  uint32_t NumFunctionImports = 0;
   std::unique_ptr<WasmObjectFile> WasmObj;
 };
 

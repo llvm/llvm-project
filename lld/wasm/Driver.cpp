@@ -300,10 +300,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         "__wasm_call_ctors", &NullSignature, WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::StackPointer = Symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
-    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base");
+    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);
     WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
         "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end");
+    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
 
     if (!Config->Entry.empty())
       EntrySym = Symtab->addUndefinedFunction(Config->Entry, 0, nullptr,

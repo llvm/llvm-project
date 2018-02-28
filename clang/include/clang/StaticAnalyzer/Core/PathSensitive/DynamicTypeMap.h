@@ -1,4 +1,4 @@
-//== DynamicTypeMap.h - Dynamic type map ----------------------- -*- C++ -*--=//
+//===- DynamicTypeMap.h - Dynamic type map ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,19 +13,26 @@
 
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPEMAP_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPEMAP_H
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
+
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 namespace ento {
 
+class MemRegion;
+
 /// The GDM component containing the dynamic type info. This is a map from a
 /// symbol to its most likely type.
 struct DynamicTypeMap {};
-typedef llvm::ImmutableMap<const MemRegion *, DynamicTypeInfo>
-    DynamicTypeMapImpl;
+
+using DynamicTypeMapImpl =
+    llvm::ImmutableMap<const MemRegion *, DynamicTypeInfo>;
+
 template <>
 struct ProgramStateTrait<DynamicTypeMap>
     : public ProgramStatePartialTrait<DynamicTypeMapImpl> {
@@ -54,7 +61,7 @@ inline ProgramStateRef setDynamicTypeInfo(ProgramStateRef State,
 void printDynamicTypeInfo(ProgramStateRef State, raw_ostream &Out,
                           const char *NL, const char *Sep);
 
-} // ento
-} // clang
+} // namespace ento
+} // namespace clang
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPEMAP_H

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -verify %s
 
-template <typename T> struct A { // expected-note 35{{declared here}}
+template <typename T> struct A { // expected-note 38{{declared here}}
   constexpr A() {}
   constexpr A(int) {}
   constexpr operator int() { return 0; }
@@ -17,6 +17,12 @@ namespace template_template_arg {
   Y<A> ya; // expected-error {{requires template arguments}}
   X<::A> xcca;
   Y<::A> ycca; // expected-error {{requires template arguments}}
+  X<A*> xap; // expected-error {{requires template arguments}}
+  X<const A> xca; // expected-error {{requires template arguments}}
+  X<A const> xac; // expected-error {{requires template arguments}}
+  // FIXME: This should not parse as a template template argument due to the
+  // trailing attributes.
+  X<A [[]]> xa_attr;
 
   template<template<typename> typename = A> struct XD {};
   template<typename = A> struct YD {}; // expected-error {{requires template arguments}}
@@ -26,6 +32,23 @@ namespace template_template_arg {
   // FIXME: replacing the invalid type with 'int' here is horrible
   template <A a = A<int>()> class C { }; // expected-error {{requires template arguments}}
   template<typename T = A> struct G { }; // expected-error {{requires template arguments}}
+}
+
+namespace template_template_arg_pack {
+  template<template<typename> typename...> struct XP {};
+  template<typename...> struct YP {};
+
+  struct Z { template<typename T> struct Q {}; }; // expected-note 2{{here}}
+  
+  template<typename T> using ZId = Z;
+
+  template<typename ...Ts> struct A {
+    XP<ZId<Ts>::Q...> xe;
+    YP<ZId<Ts>::Q...> ye; // expected-error {{requires template arguments}}
+
+    XP<ZId<Ts>::Q> xp; // expected-error {{unexpanded parameter pack}}
+    YP<ZId<Ts>::Q> yp; // expected-error {{requires template arguments}}
+  };
 }
 
 namespace injected_class_name {
@@ -192,4 +215,19 @@ namespace typename_specifier {
 
   template<typename T> void g(typename T::A = 0); // expected-note {{refers to class template member}}
   void h() { g<X>(); } // expected-error {{no matching function}}
+}
+
+namespace parenthesized {
+  template<typename T> struct X { X(T); };                    
+  auto n = (X([]{}));
+}
+
+namespace within_template_arg_list {
+  template<typename T> struct X { constexpr X(T v) : v(v) {} T v; };
+  template<int N = X(1).v> struct Y {};
+  using T = Y<>;
+  using T = Y<X(1).v>;
+  using T = Y<within_template_arg_list::X(1).v>;
+
+  template<int ...N> struct Z { Y<X(N)...> y; };
 }

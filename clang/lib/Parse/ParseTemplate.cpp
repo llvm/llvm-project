@@ -1207,15 +1207,9 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   EnterExpressionEvaluationContext EnterConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   if (isCXXTypeId(TypeIdAsTemplateArgument)) {
-    SourceLocation Loc = Tok.getLocation();
     TypeResult TypeArg = ParseTypeName(
-        /*Range=*/nullptr, DeclaratorContext::TemplateTypeArgContext);
-    if (TypeArg.isInvalid())
-      return ParsedTemplateArgument();
-    
-    return ParsedTemplateArgument(ParsedTemplateArgument::Type,
-                                  TypeArg.get().getAsOpaquePtr(), 
-                                  Loc);
+        /*Range=*/nullptr, DeclaratorContext::TemplateArgContext);
+    return Actions.ActOnTemplateTypeArgument(TypeArg);
   }
   
   // Try to parse a template template argument.

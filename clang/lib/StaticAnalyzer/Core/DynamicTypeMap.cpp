@@ -1,4 +1,4 @@
-//==- DynamicTypeMap.cpp - Dynamic Type Info related APIs ----------*- C++ -*-//
+//===- DynamicTypeMap.cpp - Dynamic Type Info related APIs ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,6 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 namespace clang {
 namespace ento {
@@ -28,15 +35,15 @@ DynamicTypeInfo getDynamicTypeInfo(ProgramStateRef State,
     return *GDMType;
 
   // Otherwise, fall back to what we know about the region.
-  if (const TypedRegion *TR = dyn_cast<TypedRegion>(Reg))
+  if (const auto *TR = dyn_cast<TypedRegion>(Reg))
     return DynamicTypeInfo(TR->getLocationType(), /*CanBeSubclass=*/false);
 
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(Reg)) {
+  if (const auto *SR = dyn_cast<SymbolicRegion>(Reg)) {
     SymbolRef Sym = SR->getSymbol();
     return DynamicTypeInfo(Sym->getType());
   }
 
-  return DynamicTypeInfo();
+  return {};
 }
 
 ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *Reg,

@@ -371,6 +371,43 @@ void Writer::createRelocSections() {
   }
 }
 
+static uint32_t getWasmFlags(const Symbol *Sym) {
+  uint32_t Flags = 0;
+  if (Sym->isLocal())
+    Flags |= WASM_SYMBOL_BINDING_LOCAL;
+  if (Sym->isWeak())
+    Flags |= WASM_SYMBOL_BINDING_WEAK;
+  if (Sym->isHidden())
+    Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+  if (Sym->isUndefined())
+    Flags |= WASM_SYMBOL_UNDEFINED;
+  return Flags;
+}
+
+// Some synthetic sections (e.g. "name" and "linking") have subsections.
+// Just like the synthetic sections themselves these need to be created before
+// they can be written out (since they are preceded by their length). This
+// class is used to create subsections and then write them into the stream
+// of the parent section.
+class SubSection {
+public:
+  explicit SubSection(uint32_t Type) : Type(Type) {}
+
+  void writeTo(raw_ostream &To) {
+    OS.flush();
+    lld::wasm::writeUleb128(To, Type, "subsection type");
+    lld::wasm::writeUleb128(To, Body.size(), "subsection size");
+    To.write(Body.data(), Body.size());
+  }
+
+private:
+  uint32_t Type;
+  std::string Body;
+
+public:
+  raw_string_ostream OS{Body};
+};
+
 // Create the custom "linking" section containing linker metadata.
 // This is only created when relocatable output is requested.
 void Writer::createLinkingSection() {
@@ -382,66 +419,58 @@ void Writer::createLinkingSection() {
     return;
 
   if (!SymtabEntries.empty()) {
-    SubSection SubSection(WASM_SYMBOL_TABLE);
-    writeUleb128(SubSection.getStream(), SymtabEntries.size(), "num symbols");
+    SubSection Sub(WASM_SYMBOL_TABLE);
+    writeUleb128(Sub.OS, SymtabEntries.size(), "num symbols");
+
     for (const Symbol *Sym : SymtabEntries) {
       assert(Sym->isDefined() || Sym->isUndefined());
       WasmSymbolType Kind = Sym->getWasmType();
-      uint32_t Flags = Sym->isLocal() ? WASM_SYMBOL_BINDING_LOCAL : 0;
-      if (Sym->isWeak())
-        Flags |= WASM_SYMBOL_BINDING_WEAK;
-      if (Sym->isHidden())
-        Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
-      if (Sym->isUndefined())
-        Flags |= WASM_SYMBOL_UNDEFINED;
-      writeUleb128(SubSection.getStream(), Kind, "sym kind");
-      writeUleb128(SubSection.getStream(), Flags, "sym flags");
+      uint32_t Flags = getWasmFlags(Sym);
+
+      writeUleb128(Sub.OS, Kind, "sym kind");
+      writeUleb128(Sub.OS, Flags, "sym flags");
+
       switch (Kind) {
       case llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL:
-        writeUleb128(SubSection.getStream(), Sym->getOutputIndex(), "index");
+        writeUleb128(Sub.OS, Sym->getOutputIndex(), "index");
         if (Sym->isDefined())
-          writeStr(SubSection.getStream(), Sym->getName(), "sym name");
+          writeStr(Sub.OS, Sym->getName(), "sym name");
         break;
       case llvm::wasm::WASM_SYMBOL_TYPE_DATA:
-        writeStr(SubSection.getStream(), Sym->getName(), "sym name");
+        writeStr(Sub.OS, Sym->getName(), "sym name");
         if (auto *DataSym = dyn_cast<DefinedData>(Sym)) {
-          writeUleb128(SubSection.getStream(), DataSym->getOutputSegmentIndex(),
-                       "index");
-          writeUleb128(SubSection.getStream(),
-                       DataSym->getOutputSegmentOffset(), "data offset");
-          writeUleb128(SubSection.getStream(), DataSym->getSize(), "data size");
+          writeUleb128(Sub.OS, DataSym->getOutputSegmentIndex(), "index");
+          writeUleb128(Sub.OS, DataSym->getOutputSegmentOffset(),
+                       "data offset");
+          writeUleb128(Sub.OS, DataSym->getSize(), "data size");
         }
         break;
       }
     }
-    SubSection.finalizeContents();
-    SubSection.writeToStream(OS);
+
+    Sub.writeTo(OS);
   }
 
   if (Segments.size()) {
-    SubSection SubSection(WASM_SEGMENT_INFO);
-    writeUleb128(SubSection.getStream(), Segments.size(), "num data segments");
+    SubSection Sub(WASM_SEGMENT_INFO);
+    writeUleb128(Sub.OS, Segments.size(), "num data segments");
     for (const OutputSegment *S : Segments) {
-      writeStr(SubSection.getStream(), S->Name, "segment name");
-      writeUleb128(SubSection.getStream(), S->Alignment, "alignment");
-      writeUleb128(SubSection.getStream(), 0, "flags");
+      writeStr(Sub.OS, S->Name, "segment name");
+      writeUleb128(Sub.OS, S->Alignment, "alignment");
+      writeUleb128(Sub.OS, 0, "flags");
     }
-    SubSection.finalizeContents();
-    SubSection.writeToStream(OS);
+    Sub.writeTo(OS);
   }
 
   if (!InitFunctions.empty()) {
-    SubSection SubSection(WASM_INIT_FUNCS);
-    writeUleb128(SubSection.getStream(), InitFunctions.size(),
-                 "num init functions");
+    SubSection Sub(WASM_INIT_FUNCS);
+    writeUleb128(Sub.OS, InitFunctions.size(), "num init functions");
     for (const WasmInitEntry &F : InitFunctions) {
-      writeUleb128(SubSection.getStream(), F.Priority, "priority");
-      writeUleb128(SubSection.getStream(), F.Sym->getOutputSymbolIndex(),
-                   "function index");
+      writeUleb128(Sub.OS, F.Priority, "priority");
+      writeUleb128(Sub.OS, F.Sym->getOutputSymbolIndex(), "function index");
     }
-    SubSection.finalizeContents();
-    SubSection.writeToStream(OS);
+    Sub.writeTo(OS);
   }
 
   struct ComdatEntry { unsigned Kind; uint32_t Index; };
@@ -467,19 +496,18 @@ void Writer::createLinkingSection() {
   }
 
   if (!Comdats.empty()) {
-    SubSection SubSection(WASM_COMDAT_INFO);
-    writeUleb128(SubSection.getStream(), Comdats.size(), "num comdats");
+    SubSection Sub(WASM_COMDAT_INFO);
+    writeUleb128(Sub.OS, Comdats.size(), "num comdats");
     for (const auto &C : Comdats) {
-      writeStr(SubSection.getStream(), C.first, "comdat name");
-      writeUleb128(SubSection.getStream(), 0, "comdat flags"); // flags for future use
-      writeUleb128(SubSection.getStream(), C.second.size(), "num entries");
+      writeStr(Sub.OS, C.first, "comdat name");
+      writeUleb128(Sub.OS, 0, "comdat flags"); // flags for future use
+      writeUleb128(Sub.OS, C.second.size(), "num entries");
       for (const ComdatEntry &Entry : C.second) {
-        writeUleb128(SubSection.getStream(), Entry.Kind, "entry kind");
-        writeUleb128(SubSection.getStream(), Entry.Index, "entry index");
+        writeUleb128(Sub.OS, Entry.Kind, "entry kind");
+        writeUleb128(Sub.OS, Entry.Index, "entry index");
       }
     }
-    SubSection.finalizeContents();
-    SubSection.writeToStream(OS);
+    Sub.writeTo(OS);
   }
 }
 
@@ -495,9 +523,8 @@ void Writer::createNameSection() {
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, "name");
 
-  SubSection FunctionSubsection(WASM_NAMES_FUNCTION);
-  raw_ostream &OS = FunctionSubsection.getStream();
-  writeUleb128(OS, NumNames, "name count");
+  SubSection Sub(WASM_NAMES_FUNCTION);
+  writeUleb128(Sub.OS, NumNames, "name count");
 
   // Names must appear in function index order.  As it happens ImportedSymbols
   // and InputFunctions are numbered in order with imported functions coming
@@ -505,18 +532,17 @@ void Writer::createNameSection() {
   for (const Symbol *S : ImportedSymbols) {
     if (!isa<FunctionSymbol>(S))
       continue;
-    writeUleb128(OS, S->getOutputIndex(), "import index");
-    writeStr(OS, S->getName(), "symbol name");
+    writeUleb128(Sub.OS, S->getOutputIndex(), "import index");
+    writeStr(Sub.OS, S->getName(), "symbol name");
   }
   for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
-      writeUleb128(OS, F->getOutputIndex(), "func index");
-      writeStr(OS, F->getName(), "symbol name");
+      writeUleb128(Sub.OS, F->getOutputIndex(), "func index");
+      writeStr(Sub.OS, F->getName(), "symbol name");
     }
   }
 
-  FunctionSubsection.finalizeContents();
-  FunctionSubsection.writeToStream(Section->getStream());
+  Sub.writeTo(Section->getStream());
 }
 
 void Writer::writeHeader() {
@@ -813,16 +839,12 @@ void Writer::assignIndexes() {
 static StringRef getOutputDataSegmentName(StringRef Name) {
   if (Config->Relocatable)
     return Name;
-
-  for (StringRef V :
-       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
-        ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
-        ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."}) {
-    StringRef Prefix = V.drop_back();
-    if (Name.startswith(V) || Name == Prefix)
-      return Prefix;
-  }
-
+  if (Name.startswith(".text."))
+    return ".text";
+  if (Name.startswith(".data."))
+    return ".data";
+  if (Name.startswith(".bss."))
+    return ".bss";
   return Name;
 }
 
@@ -954,7 +976,6 @@ void Writer::run() {
 // Open a result file.
 void Writer::openFile() {
   log("writing: " + Config->OutputFile);
-  ::remove(Config->OutputFile.str().c_str());
 
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
