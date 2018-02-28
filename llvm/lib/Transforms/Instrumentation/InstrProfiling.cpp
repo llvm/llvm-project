@@ -448,14 +448,6 @@ static bool containsProfilingIntrinsics(Module &M) {
 }
 
 bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
-  // Improve compile time by avoiding linear scans when there is no work.
-  GlobalVariable *CoverageNamesVar =
-      M.getNamedGlobal(getCoverageUnusedNamesVarName());
-  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
-    return false;
-
-  bool MadeChange = false;
-
   this->M = &M;
   this->TLI = &TLI;
   NamesVar = nullptr;
@@ -465,6 +457,15 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   getMemOPSizeRangeFromOption(MemOPSizeRange, MemOPSizeRangeStart,
                               MemOPSizeRangeLast);
   TT = Triple(M.getTargetTriple());
+
+  // Emit the runtime hook even if no counters are present.
+  bool MadeChange = emitRuntimeHook();
+
+  // Improve compile time by avoiding linear scans when there is no work.
+  GlobalVariable *CoverageNamesVar =
+      M.getNamedGlobal(getCoverageUnusedNamesVarName());
+  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
+    return MadeChange;
 
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
@@ -498,7 +499,6 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   emitVNodes();
   emitNameData();
   emitRegistration();
-  emitRuntimeHook();
   emitUses();
   emitInitialization();
   return true;
@@ -914,15 +914,15 @@ void InstrProfiling::emitRegistration() {
   IRB.CreateRetVoid();
 }
 
-void InstrProfiling::emitRuntimeHook() {
+bool InstrProfiling::emitRuntimeHook() {
   // We expect the linker to be invoked with -u<hook_var> flag for linux,
   // for which case there is no need to emit the user function.
   if (Triple(M->getTargetTriple()).isOSLinux())
-    return;
+    return false;
 
   // If the module's provided its own runtime, we don't need to do anything.
   if (M->getGlobalVariable(getInstrProfRuntimeHookVarName()))
-    return;
+    return false;
 
   // Declare an external variable that will pull in the runtime initialization.
   auto *Int32Ty = Type::getInt32Ty(M->getContext());
@@ -947,6 +947,7 @@ void InstrProfiling::emitRuntimeHook() {
 
   // Mark the user variable as used so that it isn't stripped out.
   UsedVars.push_back(User);
+  return true;
 }
 
 void InstrProfiling::emitUses() {
