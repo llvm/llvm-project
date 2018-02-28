@@ -126,9 +126,6 @@ entry:
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        0
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
@@ -253,7 +250,6 @@ entry:
 ; RELOC-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            linking
-; RELOC-NEXT:     DataSize:        0
 ; RELOC-NEXT:     SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            FUNCTION

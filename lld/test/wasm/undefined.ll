@@ -1,9 +1,10 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --check-signatures --allow-undefined -o %t.wasm %t.o
 
-; Fails due to undefined 'foo'
-; RUN: not wasm-ld --check-signatures -o %t.wasm %t.o 2>&1 | FileCheck %s
+; Fails due to undefined 'foo' and also 'baz'
+; RUN: not wasm-ld --check-signatures --undefined=baz -o %t.wasm %t.o 2>&1 | FileCheck %s
 ; CHECK: error: {{.*}}.o: undefined symbol: foo
+; CHECK: error: undefined symbol: baz
 
 ; But succeeds if we pass a file containing 'foo' as --allow-undefined-file.
 ; RUN: echo 'foo' > %t.txt

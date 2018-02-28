@@ -39,23 +39,26 @@ public:
     DefinedFunctionKind,
     DefinedDataKind,
     DefinedGlobalKind,
-
-    LazyKind,
     UndefinedFunctionKind,
     UndefinedDataKind,
     UndefinedGlobalKind,
-
-    LastDefinedKind = DefinedGlobalKind,
+    LazyKind,
   };
 
   Kind kind() const { return SymbolKind; }
 
-  bool isLazy() const { return SymbolKind == LazyKind; }
-  bool isDefined() const { return SymbolKind <= LastDefinedKind; }
+  bool isDefined() const {
+    return SymbolKind == DefinedFunctionKind ||
+           SymbolKind == DefinedDataKind || SymbolKind == DefinedGlobalKind;
+  }
+
   bool isUndefined() const {
     return SymbolKind == UndefinedFunctionKind ||
            SymbolKind == UndefinedDataKind || SymbolKind == UndefinedGlobalKind;
   }
+
+  bool isLazy() const { return SymbolKind == LazyKind; }
+
   bool isLocal() const;
   bool isWeak() const;
   bool isHidden() const;
