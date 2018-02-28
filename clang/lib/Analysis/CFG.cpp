@@ -652,6 +652,10 @@ private:
     return Block;
   }
 
+  // Remember to apply \p CC when constructing the CFG element for \p CE.
+  void consumeConstructionContext(const ConstructionContext *CC,
+                                  CXXConstructExpr *CE);
+
   // Scan the child statement \p Child to find the constructor that might
   // have been directly triggered by the current node, \p Trigger. If such
   // constructor has been found, set current construction context to point
@@ -1151,6 +1155,18 @@ static const VariableArrayType *FindVA(const Type *t) {
   return nullptr;
 }
 
+void CFGBuilder::consumeConstructionContext(const ConstructionContext *CC, CXXConstructExpr *CE) {
+  if (const ConstructionContext *PreviousContext =
+          ConstructionContextMap.lookup(CE)) {
+    // We might have visited this child when we were finding construction
+    // contexts within its parents.
+    assert(PreviousContext->isStrictlyMoreSpecificThan(CC) &&
+           "Already within a different construction context!");
+  } else {
+    ConstructionContextMap[CE] = CC;
+  }
+}
+
 void CFGBuilder::findConstructionContexts(
     const ConstructionContext *ContextSoFar, Stmt *Child) {
   if (!BuildOpts.AddRichCXXConstructors)
@@ -1158,17 +1174,7 @@ void CFGBuilder::findConstructionContexts(
   if (!Child)
     return;
   if (auto *CE = dyn_cast<CXXConstructExpr>(Child)) {
-    if (const ConstructionContext *PreviousContext =
-            ConstructionContextMap.lookup(CE)) {
-      // We might have visited this child when we were finding construction
-      // contexts within its parents.
-      assert(PreviousContext->isStrictlyMoreSpecificThan(ContextSoFar) &&
-             "Already within a different construction context!");
-    } else {
-      auto Pair =
-          ConstructionContextMap.insert(std::make_pair(CE, ContextSoFar));
-      assert(Pair.second && "Already within a construction context!");
-    }
+    consumeConstructionContext(ContextSoFar, CE);
   } else if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Child)) {
     findConstructionContexts(ContextSoFar, Cleanups->getSubExpr());
   } else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Child)) {
