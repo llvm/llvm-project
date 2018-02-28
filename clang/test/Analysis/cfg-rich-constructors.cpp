@@ -155,9 +155,8 @@ void referenceVariableWithConstructor() {
   const C &c(0);
 }
 
-// TODO: Should find construction target here.
 // CHECK: void referenceVariableWithInitializer()
-// CHECK:          1: C() (CXXConstructExpr, class C)
+// CHECK:          1: C() (CXXConstructExpr, [B1.3], class C)
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class C)
 // CHECK-NEXT:     3: [B1.2]
 // CHECK-NEXT:     4: const C &c = C();
@@ -335,7 +334,7 @@ public:
 };
 
 // CHECK:  return_stmt_with_dtor::D returnTemporary()
-// CHECK:          1: return_stmt_with_dtor::D() (CXXConstructExpr, [B1.2], class return_stmt_with_dtor::D)
+// CHECK:          1: return_stmt_with_dtor::D() (CXXConstructExpr, [B1.2], [B1.4], class return_stmt_with_dtor::D)
 // CHECK-NEXT:     2: [B1.1] (BindTemporary)
 // CHECK-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class return_stmt_with_dtor::D)
 // CHECK-NEXT:     4: [B1.3]
@@ -418,7 +417,7 @@ void referenceVariableWithConstructor() {
 }
 
 // CHECK: void referenceVariableWithInitializer()
-// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B1.2], class temporary_object_expr_with_dtors::D)
+// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B1.2], [B1.4], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     2: [B1.1] (BindTemporary)
 // CHECK-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     4: [B1.3]
@@ -446,7 +445,7 @@ void referenceVariableWithInitializer() {
 // CHECK-NEXT:     8: [B5.7] (BindTemporary)
 // CHECK:        [B6]
 // CHECK-NEXT:     1: 0
-// CHECK-NEXT:     2: [B6.1] (CXXConstructExpr, [B6.3], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B6.1] (CXXConstructExpr, [B6.3], [B6.6], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     3: [B6.2] (BindTemporary)
 // CHECK-NEXT:     4: temporary_object_expr_with_dtors::D([B6.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     5: [B6.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
