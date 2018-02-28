@@ -174,6 +174,34 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++14 can add
   ``-std=gnu++98`` to their build settings to restore the previous behaviour.
 
+- Added support for some features from the C++ standard after C++14
+  (provisionally known as C++2a but expected to be C++20). This support can be
+  enabled with the ``-std=c++2a`` flag. This enables:
+
+  - Support for ``__VA_OPT__``, to allow variadic macros to easily provide
+    different expansions when they are invoked without variadic arguments.
+
+  - Recognition of the ``<=>`` token (the C++2a three-way comparison operator).
+
+  - Support for default member initializers for bit-fields.
+
+  - Lambda capture of ``*this``.
+
+  - Pointer-to-member calls using ``const &``-qualified pointers on temporary objects.
+
+  All of these features other than ``__VA_OPT__`` and ``<=>`` are made
+  available with a warning in earlier C++ language modes.
+
+- A warning has been added for a ``<=`` token followed immediately by a ``>``
+  character. Code containing such constructs will change meaning in C++2a due
+  to the addition of the ``<=>`` operator.
+
+- Clang implements the "destroying operator delete" feature described in C++
+  committee paper `P0722R1
+  <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0722r1.html>`,
+  which is targeting inclusion in C++2a but has not yet been voted into the C++
+  working draft. Support for this feature is enabled by the presence of the
+  standard library type ``std::destroying_delete_t``.
 
 OpenCL C Language Changes in Clang
 ----------------------------------
