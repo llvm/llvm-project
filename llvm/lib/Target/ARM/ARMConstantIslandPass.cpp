@@ -1485,8 +1485,12 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
     // We are adding new water.  Update NewWaterList.
     NewWaterList.insert(NewIsland);
   }
-  // Always align the new block because CP entries can be smaller than 4 bytes.
-  NewMBB->setAlignment(isThumb ? 1 : 2);
+  // Always align the new block because CP entries can be smaller than 4
+  // bytes. Be careful not to decrease the existing alignment, e.g. NewMBB may
+  // be an already aligned constant pool block.
+  const unsigned Align = isThumb ? 1 : 2;
+  if (NewMBB->getAlignment() < Align)
+    NewMBB->setAlignment(Align);
 
   // Remove the original WaterList entry; we want subsequent insertions in
   // this vicinity to go after the one we're about to insert.  This

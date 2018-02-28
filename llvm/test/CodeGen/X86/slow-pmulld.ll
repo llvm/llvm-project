@@ -614,7 +614,7 @@ define <16 x i32> @test_mul_v16i32_v16i16(<16 x i16> %A) {
 ; SLOW32-NEXT:    movdqa %xmm1, %xmm3
 ; SLOW32-NEXT:    movdqa %xmm0, %xmm1
 ; SLOW32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778,18778,18778,18778,18778]
-; SLOW32-NEXT:    movdqa %xmm1, %xmm4
+; SLOW32-NEXT:    movdqa %xmm0, %xmm4
 ; SLOW32-NEXT:    pmulhuw %xmm2, %xmm4
 ; SLOW32-NEXT:    pmullw %xmm2, %xmm1
 ; SLOW32-NEXT:    movdqa %xmm1, %xmm0
@@ -633,7 +633,7 @@ define <16 x i32> @test_mul_v16i32_v16i16(<16 x i16> %A) {
 ; SLOW64-NEXT:    movdqa %xmm1, %xmm3
 ; SLOW64-NEXT:    movdqa %xmm0, %xmm1
 ; SLOW64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778,18778,18778,18778,18778]
-; SLOW64-NEXT:    movdqa %xmm1, %xmm4
+; SLOW64-NEXT:    movdqa %xmm0, %xmm4
 ; SLOW64-NEXT:    pmulhuw %xmm2, %xmm4
 ; SLOW64-NEXT:    pmullw %xmm2, %xmm1
 ; SLOW64-NEXT:    movdqa %xmm1, %xmm0

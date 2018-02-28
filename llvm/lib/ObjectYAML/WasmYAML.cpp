@@ -57,7 +57,6 @@ static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
 static void sectionMapping(IO &IO, WasmYAML::LinkingSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
-  IO.mapRequired("DataSize", Section.DataSize);
   IO.mapOptional("SymbolTable", Section.SymbolTable);
   IO.mapOptional("SegmentInfo", Section.SegmentInfos);
   IO.mapOptional("InitFunctions", Section.InitFunctions);

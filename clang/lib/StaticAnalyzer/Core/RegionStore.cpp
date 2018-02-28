@@ -1401,8 +1401,6 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
         T = TR->getLocationType()->getPointeeType();
       else if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR))
         T = SR->getSymbol()->getType()->getPointeeType();
-      else if (isa<AllocaRegion>(MR))
-        T = Ctx.VoidTy;
     }
     assert(!T.isNull() && "Unable to auto-detect binding type!");
     assert(!T->isVoidType() && "Attempting to dereference a void pointer!");

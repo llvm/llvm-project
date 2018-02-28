@@ -153,7 +153,6 @@ void WasmDumper::printSections() {
       W.printString("Name", WasmSec.Name);
       if (WasmSec.Name == "linking") {
         const wasm::WasmLinkingData &LinkingData = Obj->linkingData();
-        W.printNumber("DataSize", LinkingData.DataSize);
         if (!LinkingData.InitFunctions.empty()) {
           ListScope Group(W, "InitFunctions");
           for (const wasm::WasmInitFunc &F: LinkingData.InitFunctions)

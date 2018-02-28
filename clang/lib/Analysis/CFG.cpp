@@ -29,6 +29,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Support/BumpVector.h"
+#include "clang/Analysis/ConstructionContext.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/LLVM.h"
@@ -475,7 +476,7 @@ class CFGBuilder {
   // Information about the currently visited C++ object construction site.
   // This is set in the construction trigger and read when the constructor
   // itself is being visited.
-  llvm::DenseMap<CXXConstructExpr *, const ConstructionContext *>
+  llvm::DenseMap<CXXConstructExpr *, const ConstructionContextLayer *>
       ConstructionContextMap;
 
   bool badCFG = false;
@@ -652,18 +653,19 @@ private:
     return Block;
   }
 
-  // Remember to apply \p CC when constructing the CFG element for \p CE.
-  void consumeConstructionContext(const ConstructionContext *CC,
+  // Remember to apply the construction context based on the current \p Layer
+  // when constructing the CFG element for \p CE.
+  void consumeConstructionContext(const ConstructionContextLayer *Layer,
                                   CXXConstructExpr *CE);
 
-  // Scan the child statement \p Child to find the constructor that might
-  // have been directly triggered by the current node, \p Trigger. If such
-  // constructor has been found, set current construction context to point
-  // to the trigger statement. The construction context will be unset once
-  // it is consumed when the CFG building procedure processes the
-  // construct-expression and adds the respective CFGConstructor element.
-  void findConstructionContexts(const ConstructionContext *ContextSoFar,
+  // Scan \p Child statement to find constructors in it, while keeping in mind
+  // that its parent statement is providing a partial construction context
+  // described by \p Layer. If a constructor is found, it would be assigned
+  // the context based on the layer. If an additional construction context layer
+  // is found, the function recurses into that.
+  void findConstructionContexts(const ConstructionContextLayer *Layer,
                                 Stmt *Child);
+
   // Unset the construction context after consuming it. This is done immediately
   // after adding the CFGConstructor element, so there's no need to
   // do this manually in every Visit... function.
@@ -710,7 +712,11 @@ private:
 
   void appendConstructor(CFGBlock *B, CXXConstructExpr *CE) {
     if (BuildOpts.AddRichCXXConstructors) {
-      if (const ConstructionContext *CC = ConstructionContextMap.lookup(CE)) {
+      if (const ConstructionContextLayer *Layer =
+              ConstructionContextMap.lookup(CE)) {
+        const ConstructionContext *CC =
+            ConstructionContext::createFromLayers(cfg->getBumpVectorContext(),
+                                                  Layer);
         B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
         cleanupConstructionContext(CE);
         return;
@@ -1155,20 +1161,21 @@ static const VariableArrayType *FindVA(const Type *t) {
   return nullptr;
 }
 
-void CFGBuilder::consumeConstructionContext(const ConstructionContext *CC, CXXConstructExpr *CE) {
-  if (const ConstructionContext *PreviousContext =
+void CFGBuilder::consumeConstructionContext(
+    const ConstructionContextLayer *Layer, CXXConstructExpr *CE) {
+  if (const ConstructionContextLayer *PreviouslyStoredLayer =
           ConstructionContextMap.lookup(CE)) {
     // We might have visited this child when we were finding construction
     // contexts within its parents.
-    assert(PreviousContext->isStrictlyMoreSpecificThan(CC) &&
+    assert(PreviouslyStoredLayer->isStrictlyMoreSpecificThan(Layer) &&
            "Already within a different construction context!");
   } else {
-    ConstructionContextMap[CE] = CC;
+    ConstructionContextMap[CE] = Layer;
   }
 }
 
 void CFGBuilder::findConstructionContexts(
-    const ConstructionContext *ContextSoFar, Stmt *Child) {
+    const ConstructionContextLayer *Layer, Stmt *Child) {
   if (!BuildOpts.AddRichCXXConstructors)
     return;
 
@@ -1178,36 +1185,36 @@ void CFGBuilder::findConstructionContexts(
   switch(Child->getStmtClass()) {
   case Stmt::CXXConstructExprClass:
   case Stmt::CXXTemporaryObjectExprClass: {
-    consumeConstructionContext(ContextSoFar, cast<CXXConstructExpr>(Child));
+    consumeConstructionContext(Layer, cast<CXXConstructExpr>(Child));
     break;
   }
   case Stmt::ExprWithCleanupsClass: {
     auto *Cleanups = cast<ExprWithCleanups>(Child);
-    findConstructionContexts(ContextSoFar, Cleanups->getSubExpr());
+    findConstructionContexts(Layer, Cleanups->getSubExpr());
     break;
   }
   case Stmt::CXXFunctionalCastExprClass: {
     auto *Cast = cast<CXXFunctionalCastExpr>(Child);
-    findConstructionContexts(ContextSoFar, Cast->getSubExpr());
+    findConstructionContexts(Layer, Cast->getSubExpr());
     break;
   }
   case Stmt::ImplicitCastExprClass: {
     auto *Cast = cast<ImplicitCastExpr>(Child);
-    findConstructionContexts(ContextSoFar, Cast->getSubExpr());
+    findConstructionContexts(Layer, Cast->getSubExpr());
     break;
   }
   case Stmt::CXXBindTemporaryExprClass: {
     auto *BTE = cast<CXXBindTemporaryExpr>(Child);
     findConstructionContexts(
-        ConstructionContext::create(cfg->getBumpVectorContext(), BTE,
-                                    ContextSoFar),
+        ConstructionContextLayer::create(cfg->getBumpVectorContext(),
+                                         BTE, Layer),
         BTE->getSubExpr());
     break;
   }
   case Stmt::ConditionalOperatorClass: {
     auto *CO = cast<ConditionalOperator>(Child);
-    findConstructionContexts(ContextSoFar, CO->getLHS());
-    findConstructionContexts(ContextSoFar, CO->getRHS());
+    findConstructionContexts(Layer, CO->getLHS());
+    findConstructionContexts(Layer, CO->getRHS());
     break;
   }
   default:
@@ -1356,7 +1363,7 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
 
   if (Init) {
     findConstructionContexts(
-        ConstructionContext::create(cfg->getBumpVectorContext(), I),
+        ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
         Init);
 
     if (HasTemporaries) {
@@ -2448,7 +2455,7 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   appendStmt(Block, DS);
 
   findConstructionContexts(
-      ConstructionContext::create(cfg->getBumpVectorContext(), DS),
+      ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
       Init);
 
   // Keep track of the last non-null block, as 'Block' can be nulled out
@@ -2642,7 +2649,7 @@ CFGBlock *CFGBuilder::VisitReturnStmt(ReturnStmt *R) {
   addAutomaticObjHandling(ScopePos, LocalScope::const_iterator(), R);
 
   findConstructionContexts(
-      ConstructionContext::create(cfg->getBumpVectorContext(), R),
+      ConstructionContextLayer::create(cfg->getBumpVectorContext(), R),
       R->getRetValue());
 
   // If the one of the destructors does not return, we already have the Exit
@@ -3015,7 +3022,7 @@ CFGBlock *
 CFGBuilder::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE,
                                           AddStmtChoice asc) {
   findConstructionContexts(
-      ConstructionContext::create(cfg->getBumpVectorContext(), MTE),
+      ConstructionContextLayer::create(cfg->getBumpVectorContext(), MTE),
       MTE->getTemporary());
 
   return VisitStmt(MTE, asc);
@@ -4002,7 +4009,7 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E,
     appendStmt(Block, E);
 
     findConstructionContexts(
-        ConstructionContext::create(cfg->getBumpVectorContext(), E),
+        ConstructionContextLayer::create(cfg->getBumpVectorContext(), E),
         E->getSubExpr());
 
     // We do not want to propagate the AlwaysAdd property.
@@ -4025,7 +4032,7 @@ CFGBlock *CFGBuilder::VisitCXXNewExpr(CXXNewExpr *NE,
   appendStmt(Block, NE);
 
   findConstructionContexts(
-      ConstructionContext::create(cfg->getBumpVectorContext(), NE),
+      ConstructionContextLayer::create(cfg->getBumpVectorContext(), NE),
       const_cast<CXXConstructExpr *>(NE->getConstructExpr()));
 
   if (NE->getInitializer())
@@ -4752,19 +4759,44 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
       OS << " (CXXConstructExpr, ";
       if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
-        // TODO: Refactor into ConstructionContext::print().
-        if (const Stmt *S = CE->getTriggerStmt())
-          Helper.handledStmt(const_cast<Stmt *>(S), OS);
-        else if (const CXXCtorInitializer *I = CE->getTriggerInit())
-          print_initializer(OS, Helper, I);
-        else
-          llvm_unreachable("Unexpected trigger kind!");
-        OS << ", ";
-        if (const Stmt *S = CE->getMaterializedTemporary()) {
-          if (S != CE->getTriggerStmt()) {
-            Helper.handledStmt(const_cast<Stmt *>(S), OS);
-            OS << ", ";
-          }
+        const ConstructionContext *CC = CE->getConstructionContext();
+        const Stmt *S1 = nullptr, *S2 = nullptr;
+        switch (CC->getKind()) {
+        case ConstructionContext::ConstructorInitializerKind: {
+          const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
+          print_initializer(OS, Helper, ICC->getCXXCtorInitializer());
+          OS << ", ";
+          break;
+        }
+        case ConstructionContext::SimpleVariableKind: {
+          const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
+          S1 = DSCC->getDeclStmt();
+          break;
+        }
+        case ConstructionContext::NewAllocatedObjectKind: {
+          const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
+          S1 = NECC->getCXXNewExpr();
+          break;
+        }
+        case ConstructionContext::ReturnedValueKind: {
+          const auto *RSCC = cast<ReturnedValueConstructionContext>(CC);
+          S1 = RSCC->getReturnStmt();
+          break;
+        }
+        case ConstructionContext::TemporaryObjectKind: {
+          const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
+          S1 = TOCC->getCXXBindTemporaryExpr();
+          S2 = TOCC->getMaterializedTemporaryExpr();
+          break;
+        }
+        }
+        if (S1) {
+          Helper.handledStmt(const_cast<Stmt *>(S1), OS);
+          OS << ", ";
+        }
+        if (S2) {
+          Helper.handledStmt(const_cast<Stmt *>(S2), OS);
+          OS << ", ";
         }
       }
       OS << CCE->getType().getAsString() << ")";

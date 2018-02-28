@@ -321,9 +321,11 @@ private:
   /// Get parameters associated with runtime definition in order
   /// to get the correct parameter name.
   ArrayRef<ParmVarDecl *> getCallParameters(CallEventRef<> Call) {
-    if (isa<FunctionDecl>(Call->getDecl()))
-      return dyn_cast<FunctionDecl>(Call->getRuntimeDefinition().getDecl())
-          ->parameters();
+    // Use runtime definition, if available.
+    RuntimeDefinition RD = Call->getRuntimeDefinition();
+    if (auto *FD = dyn_cast_or_null<FunctionDecl>(RD.getDecl()))
+      return FD->parameters();
+
     return Call->parameters();
   }
 

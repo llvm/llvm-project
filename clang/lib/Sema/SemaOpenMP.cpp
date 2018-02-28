@@ -11527,12 +11527,16 @@ OMPClause *Sema::ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
 }
 
 static bool CheckTypeMappable(SourceLocation SL, SourceRange SR, Sema &SemaRef,
-                              DSAStackTy *Stack, QualType QTy) {
+                              DSAStackTy *Stack, QualType QTy,
+                              bool FullCheck = true) {
   NamedDecl *ND;
   if (QTy->isIncompleteType(&ND)) {
     SemaRef.Diag(SL, diag::err_incomplete_type) << QTy << SR;
     return false;
   }
+  if (FullCheck && !SemaRef.CurContext->isDependentContext() &&
+      !QTy.isTrivialType(SemaRef.Context))
+    SemaRef.Diag(SL, diag::warn_omp_non_trivial_type_mapped) << QTy << SR;
   return true;
 }
 
@@ -11987,14 +11991,20 @@ static bool CheckMapConflicts(
                 DerivedLoc,
                 diag::err_omp_pointer_mapped_along_with_derived_section)
                 << DerivedLoc;
-          } else {
+            SemaRef.Diag(RE->getExprLoc(), diag::note_used_here)
+                << RE->getSourceRange();
+            return true;
+          } else if (CI->getAssociatedExpression()->getStmtClass() !=
+                         SI->getAssociatedExpression()->getStmtClass() ||
+                     CI->getAssociatedDeclaration()->getCanonicalDecl() ==
+                         SI->getAssociatedDeclaration()->getCanonicalDecl()) {
             assert(CI != CE && SI != SE);
-            SemaRef.Diag(DerivedLoc, diag::err_omp_same_pointer_derreferenced)
+            SemaRef.Diag(DerivedLoc, diag::err_omp_same_pointer_dereferenced)
                 << DerivedLoc;
+            SemaRef.Diag(RE->getExprLoc(), diag::note_used_here)
+                << RE->getSourceRange();
+            return true;
           }
-          SemaRef.Diag(RE->getExprLoc(), diag::note_used_here)
-              << RE->getSourceRange();
-          return true;
         }
 
         // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.4]
@@ -12876,7 +12886,8 @@ static bool checkValueDeclInTarget(SourceLocation SL, SourceRange SR,
                                    ValueDecl *VD) {
   if (VD->hasAttr<OMPDeclareTargetDeclAttr>())
     return true;
-  if (!CheckTypeMappable(SL, SR, SemaRef, Stack, VD->getType()))
+  if (!CheckTypeMappable(SL, SR, SemaRef, Stack, VD->getType(),
+                         /*FullCheck=*/false))
     return false;
   return true;
 }

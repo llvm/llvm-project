@@ -109,7 +109,6 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
       }
       LinkingSec->SymbolTable.emplace_back(Info);
     }
-    LinkingSec->DataSize = Obj.linkingData().DataSize;
     for (const wasm::WasmInitFunc &Func : Obj.linkingData().InitFunctions) {
       WasmYAML::InitFunction F{Func.Priority, Func.Symbol};
       LinkingSec->InitFunctions.emplace_back(F);

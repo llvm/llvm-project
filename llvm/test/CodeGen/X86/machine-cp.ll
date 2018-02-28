@@ -8,7 +8,7 @@ define i32 @t1(i32 %a, i32 %b) nounwind  {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl %esi, %edx
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_2: ## %while.body
@@ -59,7 +59,7 @@ define i32 @t3(i64 %a, i64 %b) nounwind  {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    je LBB2_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB2_2: ## %while.body

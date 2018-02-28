@@ -10,7 +10,7 @@ define void @PR36250() {
 ; X86-NEXT:    roll %ecx
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    orl %edx, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    orl %ecx, %edx
@@ -24,7 +24,7 @@ define void @PR36250() {
 ; X64-NEXT:    rolq %rcx
 ; X64-NEXT:    addq %rax, %rax
 ; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    orq %rdx, %rdx
+; X64-NEXT:    orq %rcx, %rdx
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    orq %rcx, %rdx
 ; X64-NEXT:    sete (%rax)

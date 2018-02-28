@@ -827,7 +827,7 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
         // of the sections that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (section_sp && section_sp->Test(SHF_ALLOC)) {
-          lldb::addr_t load_addr = section_sp->GetFileAddress();
+          lldb::addr_t load_addr = GetSectionPhysicalAddress(section_sp);
           // We don't want to update the load address of a section with type
           // eSectionTypeAbsoluteAddress as they already have the absolute load
           // address
@@ -3469,4 +3469,41 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   }
   section_data.SetData(buffer_sp);
   return buffer_sp->GetByteSize();
+}
+
+bool ObjectFileELF::AnySegmentHasPhysicalAddress() {
+  size_t header_count = ParseProgramHeaders();
+  for (size_t i = 1; i <= header_count; ++i) {
+    auto header = GetProgramHeaderByIndex(i);
+    if (header->p_paddr != 0)
+      return true;
+  }
+  return false;
+}
+
+const elf::ELFProgramHeader *
+ObjectFileELF::GetSectionSegment(SectionSP section_sp) {
+  auto section_size = section_sp->GetFileSize();
+  if (section_size == 0)
+    section_size = 1;
+  size_t header_count = ParseProgramHeaders();
+  for (size_t i = 1; i <= header_count; ++i) {
+    auto header = GetProgramHeaderByIndex(i);
+    if (section_sp->GetFileOffset() >= header->p_offset &&
+        section_sp->GetFileOffset() + section_size <=
+            header->p_offset + header->p_filesz)
+      return header;
+  }
+  return nullptr;
+}
+
+addr_t ObjectFileELF::GetSectionPhysicalAddress(SectionSP section_sp) {
+  auto segment = GetSectionSegment(section_sp);
+  if (segment == nullptr)
+    return section_sp->GetFileAddress();
+  if (segment->p_type != PT_LOAD)
+    return LLDB_INVALID_ADDRESS;
+  auto base_address =
+      AnySegmentHasPhysicalAddress() ? segment->p_paddr : segment->p_vaddr;
+  return base_address + (section_sp->GetFileOffset() - segment->p_offset);
 }

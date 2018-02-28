@@ -44,7 +44,6 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK-NEXT:         Content:         '06000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        28
 ; CHECK-NEXT:     SymbolTable:      
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            DATA

@@ -40,6 +40,6 @@ declare void @_Z7CapturePi(i32*)
 
 ; LINUX-I386-PA: calll __safestack_pointer_address
 ; LINUX-I386-PA: movl %eax, %[[A:.*]]
-; LINUX-I386-PA: movl (%[[A]]), %[[B:.*]]
+; LINUX-I386-PA: movl (%eax), %[[B:.*]]
 ; LINUX-I386-PA: leal -16(%[[B]]), %[[C:.*]]
 ; LINUX-I386-PA: movl %[[C]], (%[[A]])

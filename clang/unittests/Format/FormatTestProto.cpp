@@ -478,5 +478,17 @@ TEST_F(FormatTestProto, FormatsRepeatedListInitializersInOptions) {
                "};");
 }
 
+TEST_F(FormatTestProto, AcceptsOperatorAsKeyInOptions) {
+  verifyFormat("option (MyProto.options) = {\n"
+               "  bbbbbbbbb: <\n"
+               "    ccccccccccccccccccccccc: <\n"
+               "      operator: 1\n"
+               "      operator: 2\n"
+               "      operator { key: value }\n"
+               "    >\n"
+               "  >\n"
+               "};");
+}
+
 } // end namespace tooling
 } // end namespace clang

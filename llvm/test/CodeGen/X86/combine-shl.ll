@@ -188,7 +188,7 @@ define <8 x i32> @combine_vec_shl_ext_shl0(<8 x i16> %x) {
 ; SSE-LABEL: combine_vec_shl_ext_shl0:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE-NEXT:    pslld $20, %xmm1
 ; SSE-NEXT:    pslld $20, %xmm0

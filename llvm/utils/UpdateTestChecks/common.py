@@ -38,9 +38,9 @@ def invoke_tool(exe, cmd_args, ir):
 
 ##### LLVM IR parser
 
-RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
-CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
-CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
+RUN_LINE_RE = re.compile('^\s*[;#]\s*RUN:\s*(.*)$')
+CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?[= ](\S+)')
+CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
 OPT_FUNCTION_RE = re.compile(
     r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*\('
@@ -48,8 +48,9 @@ OPT_FUNCTION_RE = re.compile(
     flags=(re.M | re.S))
 
 IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
-TRIPLE_IR_RE = re.compile(r'^target\s+triple\s*=\s*"([^"]+)"$')
-TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
+TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
+TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
+MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r'^(\s+)')
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)

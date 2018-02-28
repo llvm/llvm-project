@@ -78,7 +78,7 @@ ENDIF:                                            ; preds = %LOOP
 
 ; Uses a copy intsead of an or
 ; GCN: s_mov_b64 [[COPY:s\[[0-9]+:[0-9]+\]]], [[BREAK_REG]]
-; GCN: s_or_b64 [[BREAK_REG]], exec, [[COPY]]
+; GCN: s_or_b64 [[BREAK_REG]], exec, [[BREAK_REG]]
 define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()

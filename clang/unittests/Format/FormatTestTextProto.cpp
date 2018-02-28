@@ -440,5 +440,17 @@ TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {
   Style.Cpp11BracedListStyle = true;
   verifyFormat("keys: [1]", Style);
 }
+
+TEST_F(FormatTestTextProto, AcceptsOperatorAsKey) {
+  verifyFormat("aaaaaaaaaaa: <\n"
+               "  bbbbbbbbb: <\n"
+               "    ccccccccccccccccccccccc: <\n"
+               "      operator: 1\n"
+               "      operator: 2\n"
+               "      operator { key: value }\n"
+               "    >\n"
+               "  >\n"
+               ">");
+}
 } // end namespace tooling
 } // end namespace clang

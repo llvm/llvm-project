@@ -148,9 +148,9 @@ define double @floatarg(double %a0,   ; %i0,%i1
 ; HARD-NEXT: std %o0, [%sp+96]
 ; HARD-NEXT: st %o1, [%sp+92]
 ; HARD-NEXT: mov %i0, %o2
-; HARD-NEXT: mov %o0, %o3
+; HARD-NEXT: mov %i1, %o3
 ; HARD-NEXT: mov %o1, %o4
-; HARD-NEXT: mov %o0, %o5
+; HARD-NEXT: mov %i1, %o5
 ; HARD-NEXT: call floatarg
 ; HARD: std %f0, [%i4]
 ; SOFT: st %i0, [%sp+104]

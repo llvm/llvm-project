@@ -42,7 +42,7 @@
 // R600: note: valid target CPU values are: r600, rv630, rv635, r630, rs780, 
 // R600-SAME: rs880, rv610, rv620, rv670, rv710, rv730, rv740, rv770, cedar, 
 // R600-SAME: palm, cypress, hemlock, juniper, redwood, sumo, sumo2, barts, 
-// R600-SAME: caicos, turks, aruba, cayman
+// R600-SAME: caicos, aruba, cayman, turks
 
 
 // RUN: not %clang_cc1 -triple amdgcn--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AMDGCN

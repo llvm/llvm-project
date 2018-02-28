@@ -234,7 +234,7 @@ define <4 x i64> @_mul4xi32toi64b(<4 x i32>, <4 x i32>) {
 ; SSE-LABEL: _mul4xi32toi64b:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    pmuludq %xmm1, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    pmuludq %xmm0, %xmm1

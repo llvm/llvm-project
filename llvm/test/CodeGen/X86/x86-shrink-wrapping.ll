@@ -17,7 +17,7 @@ target triple = "x86_64-apple-macosx"
 ; Compare the arguments and jump to exit.
 ; No prologue needed.
 ; ENABLE: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; ENABLE-NEXT: cmpl %esi, [[ARG0CPY]]
+; ENABLE-NEXT: cmpl %esi, %edi
 ; ENABLE-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -27,7 +27,7 @@ target triple = "x86_64-apple-macosx"
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; DISABLE: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; DISABLE-NEXT: cmpl %esi, [[ARG0CPY]]
+; DISABLE-NEXT: cmpl %esi, %edi
 ; DISABLE-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Store %a in the alloca.

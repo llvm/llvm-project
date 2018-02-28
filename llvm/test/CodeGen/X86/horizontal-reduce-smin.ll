@@ -40,7 +40,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X86-SSE42-LABEL: test_reduce_v2i64:
 ; X86-SSE42:       ## %bb.0:
 ; X86-SSE42-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; X86-SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; X86-SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
@@ -81,7 +81,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X64-SSE42-LABEL: test_reduce_v2i64:
 ; X64-SSE42:       ## %bb.0:
 ; X64-SSE42-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; X64-SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; X64-SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; X64-SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
