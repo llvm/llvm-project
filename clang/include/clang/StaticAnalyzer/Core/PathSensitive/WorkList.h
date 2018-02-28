@@ -80,11 +80,9 @@ public:
   void setBlockCounter(BlockCounter C) { CurrentCounter = C; }
   BlockCounter getBlockCounter() const { return CurrentCounter; }
 
-  static std::unique_ptr<WorkList> makeDFS();
-  static std::unique_ptr<WorkList> makeBFS();
-  static std::unique_ptr<WorkList> makeBFSBlockDFSContents();
-  static std::unique_ptr<WorkList> makeUnexploredFirst();
-  static std::unique_ptr<WorkList> makeUnexploredFirstPriorityQueue();
+  static WorkList *makeDFS();
+  static WorkList *makeBFS();
+  static WorkList *makeBFSBlockDFSContents();
 };
 
 } // end GR namespace
