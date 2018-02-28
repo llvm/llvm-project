@@ -47,9 +47,6 @@ entry:
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         '02000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        4
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:   
 ; CHECK-NEXT:       - Index:           0
@@ -84,9 +81,6 @@ entry:
 ; NO-GC-NEXT:           Opcode:          I32_CONST
 ; NO-GC-NEXT:           Value:           1024
 ; NO-GC-NEXT:         Content:         '010000000000000002000000'
-; NO-GC-NEXT:   - Type:            CUSTOM
-; NO-GC-NEXT:     Name:            linking
-; NO-GC-NEXT:     DataSize:        12
 ; NO-GC-NEXT:   - Type:            CUSTOM
 ; NO-GC-NEXT:     Name:            name
 ; NO-GC-NEXT:     FunctionNames:   

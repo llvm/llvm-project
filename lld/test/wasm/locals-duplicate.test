@@ -175,9 +175,6 @@
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         '000000000000000000000000000000000000000000000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        24
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
@@ -367,7 +364,6 @@
 ; RELOC-NEXT:         Content:         '0000000000000000'
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            linking
-; RELOC-NEXT:     DataSize:        24
 ; RELOC-NEXT:     SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            FUNCTION

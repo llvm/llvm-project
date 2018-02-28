@@ -118,9 +118,6 @@ entry:
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         '0100000002000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        8
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
