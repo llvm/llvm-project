@@ -476,7 +476,7 @@ class CFGBuilder {
   // This is set in the construction trigger and read when the constructor
   // itself is being visited.
   llvm::DenseMap<CXXConstructExpr *, const ConstructionContext *>
-      ConstructionContextMap{};
+      ConstructionContextMap;
 
   bool badCFG = false;
   const CFG::BuildOptions &BuildOpts;
@@ -1165,7 +1165,9 @@ void CFGBuilder::findConstructionContexts(
       assert(PreviousContext->isStrictlyMoreSpecificThan(ContextSoFar) &&
              "Already within a different construction context!");
     } else {
-      ConstructionContextMap[CE] = ContextSoFar;
+      auto Pair =
+          ConstructionContextMap.insert(std::make_pair(CE, ContextSoFar));
+      assert(Pair.second && "Already within a construction context!");
     }
   } else if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Child)) {
     findConstructionContexts(ContextSoFar, Cleanups->getSubExpr());
