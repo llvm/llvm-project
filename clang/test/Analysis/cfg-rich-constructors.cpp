@@ -133,11 +133,10 @@ void simpleVariableWithTernaryOperator(bool coin) {
   C c = coin ? C::get() : C(0);
 }
 
-// TODO: Should find construction target here.
 // CHECK: void referenceVariableWithConstructor()
 // CHECK:          1: 0
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NullToPointer, class C *)
-// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, const class C)
+// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], const class C)
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: const C &c(0);
 void referenceVariableWithConstructor() {
@@ -267,9 +266,8 @@ C returnBracesWithMultipleItems() {
   return {123, 456};
 }
 
-// TODO: Should find construction targets for the first constructor as well.
 // CHECK: C returnTemporary()
-// CHECK:          1: C() (CXXConstructExpr, class C)
+// CHECK:          1: C() (CXXConstructExpr, [B1.2], class C)
 // CHECK-NEXT:     2: [B1.1]
 // CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], class C)
 // CHECK-NEXT:     4: return [B1.3];
@@ -400,7 +398,7 @@ void temporaryInCondition() {
 
 // CHECK: void referenceVariableWithConstructor()
 // CHECK:          1: 0
-// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.3], const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.3], [B1.4], const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     3: [B1.2] (BindTemporary)
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: const temporary_object_expr_with_dtors::D &d(0);
