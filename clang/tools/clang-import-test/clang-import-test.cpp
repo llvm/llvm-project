@@ -327,7 +327,7 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
     CG.GetModule()->print(llvm::outs(), nullptr);
   if (CI.getDiagnosticClient().getNumErrors())
     return llvm::make_error<llvm::StringError>(
-        "Errors occured while parsing the expression.", std::error_code());
+        "Errors occurred while parsing the expression.", std::error_code());
   return std::move(CI);
 }
 
