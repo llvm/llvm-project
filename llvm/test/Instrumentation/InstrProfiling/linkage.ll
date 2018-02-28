@@ -7,6 +7,9 @@
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -instrprof -S | FileCheck %s --check-prefix=COFF
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefix=COFF
 
+; OTHER: @__llvm_profile_runtime = external global i32
+; LINUX-NOT: @__llvm_profile_runtime = external global i32
+
 @__profn_foo = hidden constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
 @"__profn_linkage.ll:foo_internal" = internal constant [23 x i8] c"linkage.ll:foo_internal"
@@ -51,9 +54,6 @@ define available_externally void @foo_extern() {
 }
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
-
-; OTHER: @__llvm_profile_runtime = external global i32
-; LINUX-NOT: @__llvm_profile_runtime = external global i32
 
 ; OTHER: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; OTHER:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
