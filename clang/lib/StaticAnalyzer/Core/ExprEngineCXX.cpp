@@ -230,6 +230,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
   const CXXBindTemporaryExpr *BTE = nullptr;
+  const MaterializeTemporaryExpr *MTE = nullptr;
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
@@ -237,8 +238,13 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     if (CC && AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG() &&
         !CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion &&
         CallOpts.IsTemporaryCtorOrDtor) {
-      // May as well be a ReturnStmt.
-      BTE = dyn_cast<CXXBindTemporaryExpr>(CC->getTriggerStmt());
+      MTE = CC->getMaterializedTemporary();
+      if (!MTE || MTE->getStorageDuration() == SD_FullExpression) {
+        // If the temporary is lifetime-extended, don't save the BTE,
+        // because we don't need a temporary destructor, but an automatic
+        // destructor. The cast may fail because it may as well be a ReturnStmt.
+        BTE = dyn_cast<CXXBindTemporaryExpr>(CC->getTriggerStmt());
+      }
     }
     break;
   }
@@ -337,6 +343,11 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       if (BTE) {
         State = addInitializedTemporary(State, BTE, LCtx,
                                         cast<CXXTempObjectRegion>(Target));
+      }
+
+      if (MTE) {
+        State = addTemporaryMaterialization(State, MTE, LCtx,
+                                            cast<CXXTempObjectRegion>(Target));
       }
 
       Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,

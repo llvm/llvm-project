@@ -708,6 +708,19 @@ private:
                                              const LocationContext *FromLC,
                                              const LocationContext *ToLC);
 
+  /// Store the region of a C++ temporary object corresponding to a
+  /// CXXBindTemporaryExpr for later destruction.
+  static ProgramStateRef addTemporaryMaterialization(
+      ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
+      const LocationContext *LC, const CXXTempObjectRegion *R);
+
+  /// Check if all temporary materialization regions are clear for the given
+  /// context range (including FromLC, not including ToLC).
+  /// This is useful for assertions.
+  static bool areTemporaryMaterializationsClear(ProgramStateRef State,
+                                                const LocationContext *FromLC,
+                                                const LocationContext *ToLC);
+
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be
   /// cleared once the respective CXXNewExpr CFGStmt element is processed.

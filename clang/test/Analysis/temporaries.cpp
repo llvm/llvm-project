@@ -895,6 +895,33 @@ void test_ternary_temporary_with_copy(int coin) {
 }
 } // namespace test_match_constructors_and_destructors
 
+namespace dont_forget_destructor_around_logical_op {
+int glob;
+
+class C {
+public:
+  ~C() { glob = 1; }
+};
+
+C get();
+
+bool is(C);
+
+
+void test(int coin) {
+  // Here temporaries are being cleaned up after && is evaluated. There are two
+  // temporaries: the return value of get() and the elidable copy constructor
+  // of that return value into is(). According to the CFG, we need to cleanup
+  // both of them depending on whether the temporary corresponding to the
+  // return value of get() was initialized. However, for now we don't track
+  // temporaries returned from functions, so we take the wrong branch.
+  coin && is(get()); // no-crash
+  // FIXME: We should have called the destructor, i.e. should be TRUE,
+  // at least when we inline temporary destructors.
+  clang_analyzer_eval(glob == 1); // expected-warning{{UNKNOWN}}
+}
+} // namespace dont_forget_destructor_around_logical_op
+
 #if __cplusplus >= 201103L
 namespace temporary_list_crash {
 class C {
