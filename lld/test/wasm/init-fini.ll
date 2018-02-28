@@ -56,9 +56,6 @@ entry:
 
 ; CHECK:              Body:            100010011007100A100D100A100F10001009100A10110B
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        0
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
@@ -106,7 +103,6 @@ entry:
 ; RUN: obj2yaml %t.reloc.wasm | FileCheck -check-prefix=RELOC %s
 
 ; RELOC:          Name:            linking
-; RELOC-NEXT:     DataSize:        0
 ; RELOC-NEXT:     SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            DATA

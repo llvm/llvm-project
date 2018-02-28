@@ -37,9 +37,6 @@ declare i32 @ret32(float) local_unnamed_addr #1
 ; CHECK-NEXT:        Locals:
 ; CHECK-NEXT:        Body:            0B
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        0
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0

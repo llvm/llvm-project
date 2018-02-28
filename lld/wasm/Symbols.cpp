@@ -30,19 +30,13 @@ DefinedData *WasmSym::HeapBase;
 DefinedGlobal *WasmSym::StackPointer;
 
 WasmSymbolType Symbol::getWasmType() const {
-  switch (SymbolKind) {
-  case Symbol::DefinedFunctionKind:
-  case Symbol::UndefinedFunctionKind:
+  if (isa<FunctionSymbol>(this))
     return llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION;
-  case Symbol::DefinedDataKind:
-  case Symbol::UndefinedDataKind:
+  if (isa<DataSymbol>(this))
     return llvm::wasm::WASM_SYMBOL_TYPE_DATA;
-  case Symbol::DefinedGlobalKind:
-  case Symbol::UndefinedGlobalKind:
+  if (isa<GlobalSymbol>(this))
     return llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL;
-  default:
-    llvm_unreachable("invalid symbol kind");
-  }
+  llvm_unreachable("invalid symbol kind");
 }
 
 bool Symbol::hasOutputIndex() const {
@@ -157,7 +151,9 @@ DefinedFunction::DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
 
 uint32_t DefinedData::getVirtualAddress() const {
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  return Segment ? Segment->translateVA(Offset) : Offset;
+  if (Segment)
+    return Segment->OutputSeg->StartVA + Segment->OutputSegmentOffset + Offset;
+  return Offset;
 }
 
 void DefinedData::setVirtualAddress(uint32_t Value) {
@@ -173,7 +169,7 @@ uint32_t DefinedData::getOutputSegmentOffset() const {
 
 uint32_t DefinedData::getOutputSegmentIndex() const {
   DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
-  return Segment->getOutputSegment()->Index;
+  return Segment->OutputSeg->Index;
 }
 
 DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
