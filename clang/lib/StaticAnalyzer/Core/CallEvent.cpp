@@ -28,6 +28,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/ProgramPoint.h"
+#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -405,7 +406,27 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     }
   }
 
-  return {};
+  SubEngine *Engine = getState()->getStateManager().getOwningEngine();
+  AnalyzerOptions &Opts = Engine->getAnalysisManager().options;
+
+  // Try to get CTU definition only if CTUDir is provided.
+  if (!Opts.naiveCTUEnabled())
+    return RuntimeDefinition();
+
+  cross_tu::CrossTranslationUnitContext &CTUCtx =
+      *Engine->getCrossTranslationUnitContext();
+  llvm::Expected<const FunctionDecl *> CTUDeclOrError =
+      CTUCtx.getCrossTUDefinition(FD, Opts.getCTUDir(), Opts.getCTUIndexName());
+
+  if (!CTUDeclOrError) {
+    handleAllErrors(CTUDeclOrError.takeError(),
+                    [&](const cross_tu::IndexError &IE) {
+                      CTUCtx.emitCrossTUDiagnostics(IE);
+                    });
+    return {};
+  }
+
+  return RuntimeDefinition(*CTUDeclOrError);
 }
 
 void AnyFunctionCall::getInitialStackFrameContents(

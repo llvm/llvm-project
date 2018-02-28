@@ -249,12 +249,6 @@ public:
            "A basic block inserted via edge splitting cannot appear twice");
     CriticalEdgesToSplit.push_back({FromBB, ToBB, NewBB});
   }
-
-  /// \brief Verify the correctness of the domtree by re-computing it.
-  ///
-  /// This should only be used for debugging as it aborts the program if the
-  /// verification fails.
-  void verifyDomTree() const;
 };
 
 //===-------------------------------------

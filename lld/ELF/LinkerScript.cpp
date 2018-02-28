@@ -165,27 +165,46 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   Cmd->Sym = cast<Defined>(Sym);
 }
 
+// This function is called from LinkerScript::declareSymbols.
+// It creates a placeholder symbol if needed.
+static void declareSymbol(SymbolAssignment *Cmd) {
+  if (!shouldDefineSym(Cmd))
+    return;
+
+  // We can't calculate final value right now.
+  Symbol *Sym;
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+                                              /*CanOmitFromDynSym*/ false,
+                                              /*File*/ nullptr);
+  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
+                         STT_NOTYPE, 0, 0, nullptr);
+  Cmd->Sym = cast<Defined>(Sym);
+  Cmd->Provide = false;
+}
+
 // Symbols defined in script should not be inlined by LTO. At the same time
 // we don't know their final values until late stages of link. Here we scan
 // over symbol assignment commands and create placeholder symbols if needed.
 void LinkerScript::declareSymbols() {
   assert(!Ctx);
   for (BaseCommand *Base : SectionCommands) {
-    auto *Cmd = dyn_cast<SymbolAssignment>(Base);
-    if (!Cmd || !shouldDefineSym(Cmd))
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+      declareSymbol(Cmd);
       continue;
-
-    // We can't calculate final value right now.
-    Symbol *Sym;
-    uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-    std::tie(Sym, std::ignore) =
-        Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
-                       /*CanOmitFromDynSym*/ false,
-                       /*File*/ nullptr);
-    replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
-                           STT_NOTYPE, 0, 0, nullptr);
-    Cmd->Sym = cast<Defined>(Sym);
-    Cmd->Provide = false;
+    }
+    auto *Sec = dyn_cast<OutputSection>(Base);
+    if (!Sec)
+      continue;
+    // If the output section directive has constraints,
+    // we can't say for sure if it is going to be included or not.
+    // Skip such sections for now. Improve the checks if we ever
+    // need symbols from that sections to be declared early.
+    if (Sec->Constraint != ConstraintKind::NoConstraint)
+      continue;
+    for (BaseCommand *Base2 : Sec->SectionCommands)
+      if (auto *Cmd = dyn_cast<SymbolAssignment>(Base2))
+        declareSymbol(Cmd);
   }
 }
 

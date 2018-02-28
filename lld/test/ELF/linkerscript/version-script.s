@@ -5,6 +5,11 @@
 # RUN: ld.lld -T %t.script -shared --no-undefined-version %t.o -o %t.so
 # RUN: llvm-readobj -V %t.so | FileCheck %s
 
+# RUN: echo "SECTIONS { .text : { bar = foo; *(.text) } }" > %t.script
+# RUN: echo "VERSION { V { global: foo; bar; local: *; }; }" >> %t.script
+# RUN: ld.lld -T %t.script -shared --no-undefined-version %t.o -o %t.so
+# RUN: llvm-readobj -V %t.so | FileCheck %s
+
 ## Check that we are able to version symbols defined in script.
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {

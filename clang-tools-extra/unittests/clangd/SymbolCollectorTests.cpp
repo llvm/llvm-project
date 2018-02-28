@@ -47,6 +47,7 @@ MATCHER_P(Snippet, S, "") {
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
+MATCHER_P(DefURI, P, "") { return arg.Definition.FileURI == P; }
 MATCHER_P(IncludeHeader, P, "") {
   return arg.Detail && arg.Detail->IncludeHeader == P;
 }
@@ -152,7 +153,6 @@ protected:
 };
 
 TEST_F(SymbolCollectorTest, CollectSymbols) {
-  CollectorOpts.IndexMainFiles = true;
   const std::string Header = R"(
     class Foo {
       void f();
@@ -161,8 +161,7 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
     inline void f2() {}
     static const int KInt = 2;
     const char* kStr = "123";
-  )";
-  const std::string Main = R"(
+
     namespace {
     void ff() {} // ignore
     }
@@ -190,7 +189,7 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
     using bar::v2;
     } // namespace foo
   )";
-  runSymbolCollector(Header, Main);
+  runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols,
               UnorderedElementsAreArray(
                   {QName("Foo"), QName("f1"), QName("f2"), QName("KInt"),
@@ -200,7 +199,6 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
 }
 
 TEST_F(SymbolCollectorTest, Locations) {
-  CollectorOpts.IndexMainFiles = true;
   Annotations Header(R"cpp(
     // Declared in header, defined in main.
     extern int $xdecl[[X]];
@@ -216,7 +214,7 @@ TEST_F(SymbolCollectorTest, Locations) {
     void $printdef[[print]]() {}
 
     // Declared/defined in main only.
-    int $y[[Y]];
+    int Y;
   )cpp");
   runSymbolCollector(Header.code(), Main.code());
   EXPECT_THAT(
@@ -228,20 +226,16 @@ TEST_F(SymbolCollectorTest, Locations) {
                 DefRange(Main.offsetRange("clsdef"))),
           AllOf(QName("print"), DeclRange(Header.offsetRange("printdecl")),
                 DefRange(Main.offsetRange("printdef"))),
-          AllOf(QName("Z"), DeclRange(Header.offsetRange("zdecl"))),
-          AllOf(QName("Y"), DeclRange(Main.offsetRange("y")),
-                DefRange(Main.offsetRange("y")))));
+          AllOf(QName("Z"), DeclRange(Header.offsetRange("zdecl")))));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeNoFallback) {
-  CollectorOpts.IndexMainFiles = false;
   runSymbolCollector("class Foo {};", /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
-  CollectorOpts.IndexMainFiles = false;
   TestHeaderName = "x.h";
   TestFileName = "x.cpp";
   TestHeaderURI = URI::createFile(testPath(TestHeaderName)).toString();
@@ -253,7 +247,6 @@ TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
 
 #ifndef LLVM_ON_WIN32
 TEST_F(SymbolCollectorTest, CustomURIScheme) {
-  CollectorOpts.IndexMainFiles = false;
   // Use test URI scheme from URITests.cpp
   CollectorOpts.URISchemes.insert(CollectorOpts.URISchemes.begin(), "unittest");
   TestHeaderName = testPath("test-root/x.h");
@@ -265,7 +258,6 @@ TEST_F(SymbolCollectorTest, CustomURIScheme) {
 #endif
 
 TEST_F(SymbolCollectorTest, InvalidURIScheme) {
-  CollectorOpts.IndexMainFiles = false;
   // Use test URI scheme from URITests.cpp
   CollectorOpts.URISchemes = {"invalid"};
   runSymbolCollector("class Foo {};", /*Main=*/"");
@@ -273,7 +265,6 @@ TEST_F(SymbolCollectorTest, InvalidURIScheme) {
 }
 
 TEST_F(SymbolCollectorTest, FallbackToFileURI) {
-  CollectorOpts.IndexMainFiles = false;
   // Use test URI scheme from URITests.cpp
   CollectorOpts.URISchemes = {"invalid", "file"};
   runSymbolCollector("class Foo {};", /*Main=*/"");
@@ -282,7 +273,6 @@ TEST_F(SymbolCollectorTest, FallbackToFileURI) {
 }
 
 TEST_F(SymbolCollectorTest, IncludeEnums) {
-  CollectorOpts.IndexMainFiles = false;
   const std::string Header = R"(
     enum {
       Red
@@ -306,7 +296,6 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
 }
 
 TEST_F(SymbolCollectorTest, IgnoreNamelessSymbols) {
-  CollectorOpts.IndexMainFiles = false;
   const std::string Header = R"(
     struct {
       int a;
@@ -318,7 +307,6 @@ TEST_F(SymbolCollectorTest, IgnoreNamelessSymbols) {
 }
 
 TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
-  CollectorOpts.IndexMainFiles = false;
 
   Annotations Header(R"(
     #define FF(name) \
@@ -342,33 +330,7 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
                 DeclURI(TestHeaderURI))));
 }
 
-TEST_F(SymbolCollectorTest, SymbolFormedFromMacroInMainFile) {
-  CollectorOpts.IndexMainFiles = true;
-
-  Annotations Main(R"(
-    #define FF(name) \
-      class name##_Test {};
-
-    $expansion[[FF]](abc);
-
-    #define FF2() \
-      class $spelling[[Test]] {};
-
-    FF2();
-  )");
-  runSymbolCollector(/*Header=*/"", Main.code());
-  EXPECT_THAT(
-      Symbols,
-      UnorderedElementsAre(
-          AllOf(QName("abc_Test"), DeclRange(Main.offsetRange("expansion")),
-                DeclURI(TestFileURI)),
-          AllOf(QName("Test"), DeclRange(Main.offsetRange("spelling")),
-                DeclURI(TestFileURI))));
-}
-
 TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
-  CollectorOpts.IndexMainFiles = false;
-
   Annotations Header(R"(
     #ifdef NAME
     class $expansion[[NAME]] {};
@@ -384,7 +346,6 @@ TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
 }
 
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {
-  CollectorOpts.IndexMainFiles = false;
   const std::string Header = R"(
     class Foo {};
     void f1();
@@ -400,25 +361,6 @@ TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {
   runSymbolCollector(Header, Main);
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(QName("Foo"), QName("f1"), QName("f2")));
-}
-
-TEST_F(SymbolCollectorTest, IncludeSymbolsInMainFile) {
-  CollectorOpts.IndexMainFiles = true;
-  const std::string Header = R"(
-    class Foo {};
-    void f1();
-    inline void f2() {}
-  )";
-  const std::string Main = R"(
-    namespace {
-    void ff() {} // ignore
-    }
-    void main_f() {}
-    void f1() {}
-  )";
-  runSymbolCollector(Header, Main);
-  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("f1"),
-                                            QName("f2"), QName("main_f")));
 }
 
 TEST_F(SymbolCollectorTest, IgnoreClassMembers) {
@@ -618,6 +560,44 @@ TEST_F(SymbolCollectorTest, IWYUPragma) {
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            AllOf(QName("Foo"), DeclURI(TestHeaderURI),
                                  IncludeHeader("\"the/good/header.h\""))));
+}
+
+TEST_F(SymbolCollectorTest, AvoidUsingFwdDeclsAsCanonicalDecls) {
+  CollectorOpts.CollectIncludePath = true;
+  Annotations Header(R"(
+    // Forward declarations of TagDecls.
+    class C;
+    struct S;
+    union U;
+
+    // Canonical declarations.
+    class $cdecl[[C]] {};
+    struct $sdecl[[S]] {};
+    union $udecl[[U]] {int x; bool y;};
+  )");
+  runSymbolCollector(Header.code(), /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("C"), DeclURI(TestHeaderURI),
+                        DeclRange(Header.offsetRange("cdecl")),
+                        IncludeHeader(TestHeaderURI), DefURI(TestHeaderURI),
+                        DefRange(Header.offsetRange("cdecl"))),
+                  AllOf(QName("S"), DeclURI(TestHeaderURI),
+                        DeclRange(Header.offsetRange("sdecl")),
+                        IncludeHeader(TestHeaderURI), DefURI(TestHeaderURI),
+                        DefRange(Header.offsetRange("sdecl"))),
+                  AllOf(QName("U"), DeclURI(TestHeaderURI),
+                        DeclRange(Header.offsetRange("udecl")),
+                        IncludeHeader(TestHeaderURI), DefURI(TestHeaderURI),
+                        DefRange(Header.offsetRange("udecl")))));
+}
+
+TEST_F(SymbolCollectorTest, ClassForwardDeclarationIsCanonical) {
+  CollectorOpts.CollectIncludePath = true;
+  runSymbolCollector(/*Header=*/"class X;", /*Main=*/"class X {};");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(
+                           QName("X"), DeclURI(TestHeaderURI),
+                           IncludeHeader(TestHeaderURI), DefURI(TestFileURI))));
 }
 
 } // namespace

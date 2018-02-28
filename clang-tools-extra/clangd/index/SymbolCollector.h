@@ -20,7 +20,11 @@ namespace clangd {
 
 /// \brief Collect top-level symbols from an AST. These are symbols defined
 /// immediately inside a namespace or a translation unit scope. For example,
-/// symbols in classes or functions are not collected.
+/// symbols in classes or functions are not collected. Note that this only
+/// collects symbols that declared in at least one file that is not a main
+/// file (i.e. the source file corresponding to a TU). These are symbols that
+/// can be imported by other files by including the file where symbols are
+/// declared.
 ///
 /// Clients (e.g. clangd) can use SymbolCollector together with
 /// index::indexTopLevelDecls to retrieve all symbols when the source file is
@@ -28,9 +32,6 @@ namespace clangd {
 class SymbolCollector : public index::IndexDataConsumer {
 public:
   struct Options {
-    /// Whether to collect symbols in main files (e.g. the source file
-    /// corresponding to a TU).
-    bool IndexMainFiles = false;
     /// When symbol paths cannot be resolved to absolute paths (e.g. files in
     /// VFS that does not have absolute path), combine the fallback directory
     /// with symbols' paths to get absolute paths. This must be an absolute

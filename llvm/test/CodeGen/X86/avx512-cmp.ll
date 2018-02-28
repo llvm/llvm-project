@@ -48,19 +48,11 @@ l2:
 }
 
 define i32 @test3(float %a, float %b) {
-; KNL-LABEL: test3:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test3:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    movzbl %al, %eax
-; SKX-NEXT:    retq
+; ALL-LABEL: test3:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; ALL-NEXT:    kmovw %k0, %eax
+; ALL-NEXT:    retq
 
   %cmp10.i = fcmp oeq float %a, %b
   %conv11.i = zext i1 %cmp10.i to i32

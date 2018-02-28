@@ -4779,7 +4779,7 @@ void InnerLoopVectorizer::updateAnalysis() {
   DT->addNewBlock(LoopScalarPreHeader, LoopBypassBlocks[0]);
   DT->changeImmediateDominator(LoopScalarBody, LoopScalarPreHeader);
   DT->changeImmediateDominator(LoopExitBlock, LoopBypassBlocks[0]);
-  DEBUG(DT->verifyDomTree());
+  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 }
 
 /// \brief Check whether it is safe to if-convert this phi node.

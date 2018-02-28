@@ -12,6 +12,7 @@ int* functionReturningPointer();
 
 struct Struct {
   int member;
+  unsigned bitfield : 1;
 };
 
 
@@ -23,6 +24,11 @@ void regularImplicitConversionIntegerToBoolIsNotIgnored() {
 }
 
 void implicitConversionIntegerToBoolInConditionalsIsAllowed() {
+  Struct s = {};
+  if (s.member) {}
+  if (!s.member) {}
+  if (s.bitfield) {}
+  if (!s.bitfield) {}
   if (functionReturningInt()) {}
   if (!functionReturningInt()) {}
   if (functionReturningInt() && functionReturningPointer()) {}

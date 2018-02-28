@@ -3533,6 +3533,11 @@ class RecordDecl : public TagDecl {
   /// when needed.
   mutable bool LoadedFieldsFromExternalStorage : 1;
 
+  /// Basic properties of non-trivial C structs.
+  bool NonTrivialToPrimitiveDefaultInitialize : 1;
+  bool NonTrivialToPrimitiveCopy : 1;
+  bool NonTrivialToPrimitiveDestroy : 1;
+
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
              SourceLocation StartLoc, SourceLocation IdLoc,
@@ -3589,6 +3594,31 @@ public:
   }
   void setHasLoadedFieldsFromExternalStorage(bool val) {
     LoadedFieldsFromExternalStorage = val;
+  }
+
+  /// Functions to query basic properties of non-trivial C structs.
+  bool isNonTrivialToPrimitiveDefaultInitialize() const {
+    return NonTrivialToPrimitiveDefaultInitialize;
+  }
+
+  void setNonTrivialToPrimitiveDefaultInitialize() {
+    NonTrivialToPrimitiveDefaultInitialize = true;
+  }
+
+  bool isNonTrivialToPrimitiveCopy() const {
+    return NonTrivialToPrimitiveCopy;
+  }
+
+  void setNonTrivialToPrimitiveCopy() {
+    NonTrivialToPrimitiveCopy = true;
+  }
+
+  bool isNonTrivialToPrimitiveDestroy() const {
+    return NonTrivialToPrimitiveDestroy;
+  }
+
+  void setNonTrivialToPrimitiveDestroy() {
+    NonTrivialToPrimitiveDestroy = true;
   }
 
   /// \brief Determines whether this declaration represents the
