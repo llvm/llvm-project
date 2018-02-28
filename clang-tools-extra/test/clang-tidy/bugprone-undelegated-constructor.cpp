@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-undelegated-constructor %t
+// RUN: %check_clang_tidy %s bugprone-undelegated-constructor %t
 
 struct Ctor;
 Ctor foo();
@@ -9,7 +9,7 @@ struct Ctor {
   Ctor(int, int);
   Ctor(Ctor *i) {
     Ctor();
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: did you intend to call a delegated constructor? A temporary object is created here instead [misc-undelegated-constructor]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: did you intend to call a delegated constructor? A temporary object is created here instead [bugprone-undelegated-constructor]
     Ctor(0);
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: did you intend to call a delegated constructor?
     Ctor(1, 2);

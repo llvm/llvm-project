@@ -19,12 +19,8 @@
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
-#include "SuspiciousSemicolonCheck.h"
-#include "SuspiciousStringCompareCheck.h"
-#include "SwappedArgumentsCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UnconventionalAssignOperatorCheck.h"
-#include "UndelegatedConstructor.h"
 #include "UniqueptrResetReleaseCheck.h"
 #include "UnusedAliasDeclsCheck.h"
 #include "UnusedParametersCheck.h"
@@ -55,16 +51,8 @@ public:
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
-    CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
-        "misc-suspicious-semicolon");
-    CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
-        "misc-suspicious-string-compare");
-    CheckFactories.registerCheck<SwappedArgumentsCheck>(
-        "misc-swapped-arguments");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(
         "misc-throw-by-value-catch-by-reference");
-    CheckFactories.registerCheck<UndelegatedConstructorCheck>(
-        "misc-undelegated-constructor");
     CheckFactories.registerCheck<UniqueptrResetReleaseCheck>(
         "misc-uniqueptr-reset-release");
     CheckFactories.registerCheck<UnusedAliasDeclsCheck>(

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-swapped-arguments %t
+// RUN: %check_clang_tidy %s bugprone-swapped-arguments %t
 
 void F(int, double);
 

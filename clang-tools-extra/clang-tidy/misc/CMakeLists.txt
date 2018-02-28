@@ -12,11 +12,7 @@ add_clang_library(clangTidyMiscModule
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   StaticAssertCheck.cpp
-  SuspiciousSemicolonCheck.cpp
-  SuspiciousStringCompareCheck.cpp
-  SwappedArgumentsCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
-  UndelegatedConstructor.cpp
   UniqueptrResetReleaseCheck.cpp
   UnusedAliasDeclsCheck.cpp
   UnusedParametersCheck.cpp

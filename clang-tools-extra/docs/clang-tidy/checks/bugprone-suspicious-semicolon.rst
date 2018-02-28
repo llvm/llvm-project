@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-suspicious-semicolon
+.. title:: clang-tidy - bugprone-suspicious-semicolon
 
-misc-suspicious-semicolon
-=========================
+bugprone-suspicious-semicolon
+=============================
 
 Finds most instances of stray semicolons that unexpectedly alter the meaning of
 the code. More specifically, it looks for ``if``, ``while``, ``for`` and

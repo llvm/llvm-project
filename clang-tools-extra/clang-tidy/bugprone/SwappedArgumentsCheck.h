@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SWAPPEDARGUMENTSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SWAPPEDARGUMENTSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SWAPPEDARGUMENTSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SWAPPEDARGUMENTSCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Finds potentially swapped arguments by looking at implicit conversions.
 class SwappedArgumentsCheck : public ClangTidyCheck {
@@ -25,8 +25,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SWAPPEDARGUMENTSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SWAPPEDARGUMENTSCHECK_H

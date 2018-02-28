@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-suspicious-string-compare
+.. title:: clang-tidy - bugprone-suspicious-string-compare
 
-misc-suspicious-string-compare
-==============================
+bugprone-suspicious-string-compare
+==================================
 
 Find suspicious usage of runtime string comparison functions.
 This check is valid in C and C++.

@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s misc-suspicious-string-compare %t -- \
+// RUN: %check_clang_tidy %s bugprone-suspicious-string-compare %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: misc-suspicious-string-compare.WarnOnImplicitComparison, value: 1}, \
-// RUN:   {key: misc-suspicious-string-compare.WarnOnLogicalNotComparison, value: 1}]}' \
+// RUN:  [{key: bugprone-suspicious-string-compare.WarnOnImplicitComparison, value: 1}, \
+// RUN:   {key: bugprone-suspicious-string-compare.WarnOnLogicalNotComparison, value: 1}]}' \
 // RUN: -- -std=c99
 
 static const char A[] = "abc";
@@ -11,7 +11,7 @@ int strcmp(const char *, const char *);
 int test_warning_patterns() {
   if (strcmp(A, "a"))
     return 0;
-  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' is called without explicitly comparing result [misc-suspicious-string-compare]
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' is called without explicitly comparing result [bugprone-suspicious-string-compare]
   // CHECK-FIXES: if (strcmp(A, "a") != 0)
 
   if (strcmp(A, "a") != 0 ||

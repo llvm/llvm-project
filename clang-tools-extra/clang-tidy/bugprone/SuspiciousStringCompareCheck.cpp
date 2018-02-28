@@ -18,7 +18,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 // Semicolon separated list of known string compare-like functions. The list
 // must ends with a semicolon.
@@ -213,6 +213,6 @@ void SuspiciousStringCompareCheck::check(
   }
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

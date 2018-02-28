@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_STRING_COMPARE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_STRING_COMPARE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSSTRINGCOMPARECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSSTRINGCOMPARECHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Find suspicious calls to string compare functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-string-compare.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-string-compare.html
 class SuspiciousStringCompareCheck : public ClangTidyCheck {
 public:
   SuspiciousStringCompareCheck(StringRef Name, ClangTidyContext *Context);
@@ -33,8 +33,8 @@ private:
   const std::string StringCompareLikeFunctions;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_STRING_COMPARE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSSTRINGCOMPARECHECK_H

@@ -1,4 +1,4 @@
-//===--- UndelegatedConstructor.h - clang-tidy ------------------*- C++ -*-===//
+//===--- UndelegatedConstructorCheck.h - clang-tidy -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Finds creation of temporary objects in constructors that look like a
 /// function call to another constructor of the same class.
@@ -29,7 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 

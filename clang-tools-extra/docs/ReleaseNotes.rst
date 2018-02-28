@@ -136,6 +136,18 @@ Improvements to clang-tidy
 - The 'misc-suspicious-missing-comma' check was renamed to `bugprone-suspicious-missing-comma
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-missing-comma.html>`_
 
+- The 'misc-suspicious-semicolon' check was renamed to `bugprone-suspicious-semicolon
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-semicolon.html>`_
+
+- The 'misc-suspicious-string-compare' check was renamed to `bugprone-suspicious-string-compare
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-string-compare.html>`_
+
+- The 'misc-swapped-arguments' check was renamed to `bugprone-swapped-arguments
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-swapped-arguments.html>`_
+
+- The 'misc-undelegated-constructor' check was renamed to `bugprone-undelegated-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-undelegated-constructor.html>`_
+
 Improvements to include-fixer
 -----------------------------
 

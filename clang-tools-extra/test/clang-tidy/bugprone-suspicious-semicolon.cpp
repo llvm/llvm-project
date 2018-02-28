@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-suspicious-semicolon %t
+// RUN: %check_clang_tidy %s bugprone-suspicious-semicolon %t
 
 int x = 5;
 
@@ -26,7 +26,7 @@ void correct3()
 void fail1()
 {
   if(x > 5); nop();
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: potentially unintended semicolon [misc-suspicious-semicolon]
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: potentially unintended semicolon [bugprone-suspicious-semicolon]
   // CHECK-FIXES: if(x > 5) nop();
 }
 
@@ -34,7 +34,7 @@ void fail2()
 {
 	if(x == 5);
 		nop();
-  // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: potentially unintended semicolon [misc-suspicious-semicolon]
+  // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: potentially unintended semicolon [bugprone-suspicious-semicolon]
   // CHECK-FIXES: if(x == 5){{$}}
 }
 

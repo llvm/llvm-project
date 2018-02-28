@@ -1,8 +1,7 @@
-.. title:: clang-tidy - misc-undelegated-constructor
+.. title:: clang-tidy - bugprone-undelegated-constructor
 
-misc-undelegated-constructor
-============================
-
+bugprone-undelegated-constructor
+================================
 
 Finds creation of temporary objects in constructors that look like a
 function call to another constructor of the same class.

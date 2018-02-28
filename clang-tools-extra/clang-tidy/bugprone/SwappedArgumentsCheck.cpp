@@ -17,7 +17,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 void SwappedArgumentsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(callExpr().bind("call"), this);
@@ -97,6 +97,6 @@ void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

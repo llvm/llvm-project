@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 void SuspiciousSemicolonCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -72,6 +72,6 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateRemoval(SourceRange(LocStart, LocEnd));
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

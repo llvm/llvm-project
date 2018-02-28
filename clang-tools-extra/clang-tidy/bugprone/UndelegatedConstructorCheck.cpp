@@ -1,4 +1,4 @@
-//===--- UndelegatedConstructor.cpp - clang-tidy --------------------------===//
+//===--- UndelegatedConstructorCheck.cpp - clang-tidy --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UndelegatedConstructor.h"
+#include "UndelegatedConstructorCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Lexer.h"
 
@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 AST_MATCHER_P(Stmt, ignoringTemporaryExpr,
@@ -79,6 +79,6 @@ void UndelegatedConstructorCheck::check(
                          "A temporary object is created here instead");
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

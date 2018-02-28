@@ -25,8 +25,12 @@ add_clang_library(clangTidyBugproneModule
   SuspiciousEnumUsageCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
   SuspiciousMissingCommaCheck.cpp
+  SuspiciousSemicolonCheck.cpp
+  SuspiciousStringCompareCheck.cpp
+  SwappedArgumentsCheck.cpp
   ThrowKeywordMissingCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
+  UndelegatedConstructorCheck.cpp
   UseAfterMoveCheck.cpp
   VirtualNearMissCheck.cpp
 

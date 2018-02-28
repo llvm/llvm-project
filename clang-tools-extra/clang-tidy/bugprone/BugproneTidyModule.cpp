@@ -33,8 +33,12 @@
 #include "SuspiciousEnumUsageCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
+#include "SuspiciousSemicolonCheck.h"
+#include "SuspiciousStringCompareCheck.h"
+#include "SwappedArgumentsCheck.h"
 #include "ThrowKeywordMissingCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
+#include "UndelegatedConstructorCheck.h"
 #include "UseAfterMoveCheck.h"
 #include "VirtualNearMissCheck.h"
 
@@ -91,10 +95,18 @@ public:
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
         "bugprone-suspicious-missing-comma");
+    CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
+        "bugprone-suspicious-semicolon");
+    CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
+        "bugprone-suspicious-string-compare");
+    CheckFactories.registerCheck<SwappedArgumentsCheck>(
+        "bugprone-swapped-arguments");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
         "bugprone-throw-keyword-missing");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
+    CheckFactories.registerCheck<UndelegatedConstructorCheck>(
+        "bugprone-undelegated-constructor");
     CheckFactories.registerCheck<UseAfterMoveCheck>(
         "bugprone-use-after-move");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
