@@ -23,12 +23,13 @@ class OutputSegment {
 public:
   OutputSegment(StringRef N, uint32_t Index) : Name(N), Index(Index) {}
 
-  void addInputSegment(InputSegment *Segment) {
-    Alignment = std::max(Alignment, Segment->getAlignment());
-    InputSegments.push_back(Segment);
-    Size = llvm::alignTo(Size, Segment->getAlignment());
-    Segment->setOutputSegment(this, Size);
-    Size += Segment->getSize();
+  void addInputSegment(InputSegment *InSeg) {
+    Alignment = std::max(Alignment, InSeg->getAlignment());
+    InputSegments.push_back(InSeg);
+    Size = llvm::alignTo(Size, InSeg->getAlignment());
+    InSeg->OutputSeg = this;
+    InSeg->OutputSegmentOffset = Size;
+    Size += InSeg->getSize();
   }
 
   uint32_t getSectionOffset() const { return SectionOffset; }

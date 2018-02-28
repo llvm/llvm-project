@@ -49,79 +49,42 @@ void ObjFile::dumpInfo() const {
       "       Global Imports : " + Twine(NumGlobalImports) + "\n");
 }
 
-uint32_t ObjFile::relocateVirtualAddress(uint32_t GlobalIndex) const {
-  if (auto *DG = dyn_cast<DefinedData>(getDataSymbol(GlobalIndex)))
-    return DG->getVirtualAddress();
-  else
-    return 0;
-}
-
-uint32_t ObjFile::relocateFunctionIndex(uint32_t Original) const {
-  const FunctionSymbol *Sym = getFunctionSymbol(Original);
-  uint32_t Index = Sym->getOutputIndex();
-  DEBUG(dbgs() << "relocateFunctionIndex: " << toString(*Sym) << ": "
-               << Original << " -> " << Index << "\n");
-  return Index;
-}
-
-uint32_t ObjFile::relocateTypeIndex(uint32_t Original) const {
-  assert(TypeIsUsed[Original]);
-  return TypeMap[Original];
-}
-
-uint32_t ObjFile::relocateTableIndex(uint32_t Original) const {
-  const FunctionSymbol *Sym = getFunctionSymbol(Original);
-  // The null case is possible, if you take the address of a weak function
-  // that's simply not supplied.
-  uint32_t Index = Sym->hasTableIndex() ? Sym->getTableIndex() : 0;
-  DEBUG(dbgs() << "relocateTableIndex: " << toString(*Sym) << ": " << Original
-               << " -> " << Index << "\n");
-  return Index;
-}
-
-uint32_t ObjFile::relocateGlobalIndex(uint32_t Original) const {
-  const Symbol *Sym = getGlobalSymbol(Original);
-  uint32_t Index = Sym->getOutputIndex();
-  DEBUG(dbgs() << "relocateGlobalIndex: " << toString(*Sym) << ": " << Original
-               << " -> " << Index << "\n");
-  return Index;
-}
-
-uint32_t ObjFile::relocateSymbolIndex(uint32_t Original) const {
-  Symbol *Sym = getSymbol(Original);
-  uint32_t Index = Sym->getOutputSymbolIndex();
-  DEBUG(dbgs() << "relocateSymbolIndex: " << toString(*Sym) << ": " << Original
-               << " -> " << Index << "\n");
-  return Index;
-}
-
 // Relocations contain an index into the function, global or table index
 // space of the input file.  This function takes a relocation and returns the
 // relocated index (i.e. translates from the input index space to the output
 // index space).
 uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
-  if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB)
-    return relocateTypeIndex(Reloc.Index);
-
-  return relocateSymbolIndex(Reloc.Index);
+  if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
+    assert(TypeIsUsed[Reloc.Index]);
+    return TypeMap[Reloc.Index];
+  }
+  return Symbols[Reloc.Index]->getOutputSymbolIndex();
 }
 
 // Translate from the relocation's index into the final linked output value.
 uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   switch (Reloc.Type) {
   case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    return relocateTableIndex(Reloc.Index);
+  case R_WEBASSEMBLY_TABLE_INDEX_SLEB: {
+    // The null case is possible, if you take the address of a weak function
+    // that's simply not supplied.
+    FunctionSymbol *Sym = getFunctionSymbol(Reloc.Index);
+    if (Sym->hasTableIndex())
+      return Sym->getTableIndex();
+    return 0;
+  }
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_I32:
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-    return relocateVirtualAddress(Reloc.Index) + Reloc.Addend;
+    if (auto *Sym = dyn_cast<DefinedData>(getDataSymbol(Reloc.Index)))
+      return Sym->getVirtualAddress() + Reloc.Addend;
+    return Reloc.Addend;
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-    return relocateTypeIndex(Reloc.Index);
+    return TypeMap[Reloc.Index];
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    return relocateFunctionIndex(Reloc.Index);
+    return getFunctionSymbol(Reloc.Index)->getOutputIndex();
   case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    return relocateGlobalIndex(Reloc.Index);
+    return getGlobalSymbol(Reloc.Index)->getOutputIndex();
   default:
     llvm_unreachable("unknown relocation type");
   }
@@ -268,9 +231,18 @@ void ObjFile::initializeSymbols() {
 }
 
 Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
-  return Symtab->addUndefined(
-      Sym.Info.Name, static_cast<WasmSymbolType>(Sym.Info.Kind), Sym.Info.Flags,
-      this, Sym.FunctionType, Sym.GlobalType);
+  StringRef Name = Sym.Info.Name;
+  uint32_t Flags = Sym.Info.Flags;
+
+  switch (Sym.Info.Kind) {
+  case WASM_SYMBOL_TYPE_FUNCTION:
+    return Symtab->addUndefinedFunction(Name, Flags, this, Sym.FunctionType);
+  case WASM_SYMBOL_TYPE_DATA:
+    return Symtab->addUndefinedData(Name, Flags, this);
+  case WASM_SYMBOL_TYPE_GLOBAL:
+    return Symtab->addUndefinedGlobal(Name, Flags, this, Sym.GlobalType);
+  }
+  llvm_unreachable("unkown symbol kind");
 }
 
 Symbol *ObjFile::createDefinedFunction(const WasmSymbol &Sym,

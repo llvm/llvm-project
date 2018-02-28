@@ -100,17 +100,11 @@ public:
   // segment.
   uint32_t translateVA(uint32_t Offset) const;
 
-  const OutputSegment *getOutputSegment() const { return OutputSeg; }
-
-  void setOutputSegment(const OutputSegment *Segment, uint32_t Offset) {
-    OutputSeg = Segment;
-    OutputSegmentOffset = Offset;
-  }
-
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   StringRef getName() const override { return Segment.Data.Name; }
   StringRef getComdat() const override { return Segment.Data.Comdat; }
 
+  const OutputSegment *OutputSeg = nullptr;
   int32_t OutputSegmentOffset = 0;
 
 protected:
@@ -120,7 +114,6 @@ protected:
   }
 
   const WasmSegment &Segment;
-  const OutputSegment *OutputSeg = nullptr;
 };
 
 // Represents a single wasm function within and input file.  These are

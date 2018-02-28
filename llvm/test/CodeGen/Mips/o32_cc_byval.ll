@@ -193,7 +193,7 @@ define void @f4(float %f, %struct.S3* nocapture byval %s3, %struct.S1* nocapture
 ; CHECK-NEXT:    move $4, $7
 ; CHECK-NEXT:    sw $5, 52($sp)
 ; CHECK-NEXT:    sw $6, 56($sp)
-; CHECK-NEXT:    sw $4, 60($sp)
+; CHECK-NEXT:    sw $7, 60($sp)
 ; CHECK-NEXT:    lw $1, 80($sp)
 ; CHECK-NEXT:    lb $2, 52($sp)
 ; CHECK-NEXT:    addiu $3, $zero, 4

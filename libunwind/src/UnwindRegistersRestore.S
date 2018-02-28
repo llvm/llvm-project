@@ -799,7 +799,8 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.jr     r9
    l.nop
 
-#elif defined(__mips__) && defined(_ABIO32) && defined(__mips_soft_float)
+#elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32 &&         \
+    defined(__mips_soft_float)
 
 //
 // void libunwind::Registers_mips_o32::jumpto()
@@ -855,7 +856,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   lw    $4, (4 * 4)($4)
   .set pop
 
-#elif defined(__mips__) && defined(_ABI64) && defined(__mips_soft_float)
+#elif defined(__mips64) && defined(__mips_soft_float)
 
 //
 // void libunwind::Registers_mips_newabi::jumpto()

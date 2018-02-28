@@ -41,7 +41,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE: mov x21, xzr
 ; CHECK-APPLE: bl {{.*}}foo
 ; CHECK-APPLE: mov x0, x21
-; CHECK-APPLE: cbnz x0
+; CHECK-APPLE: cbnz x21
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x0, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]
@@ -264,7 +264,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: mov x21, xzr
 ; CHECK-APPLE: bl {{.*}}foo_sret
 ; CHECK-APPLE: mov x0, x21
-; CHECK-APPLE: cbnz x0
+; CHECK-APPLE: cbnz x21
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x0, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]
@@ -358,7 +358,7 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-APPLE: mov x21, xzr
 ; CHECK-APPLE: bl {{.*}}foo_vararg
 ; CHECK-APPLE: mov x0, x21
-; CHECK-APPLE: cbnz x0
+; CHECK-APPLE: cbnz x21
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x0, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]

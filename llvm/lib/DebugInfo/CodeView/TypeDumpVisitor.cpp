@@ -370,6 +370,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
   W->printNumber("IsConst", Ptr.isConst());
   W->printNumber("IsVolatile", Ptr.isVolatile());
   W->printNumber("IsUnaligned", Ptr.isUnaligned());
+  W->printNumber("IsRestrict", Ptr.isRestrict());
   W->printNumber("SizeOf", Ptr.getSize());
 
   if (Ptr.isPointerToMember()) {

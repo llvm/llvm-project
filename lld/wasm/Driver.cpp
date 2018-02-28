@@ -214,11 +214,6 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
   return Arg->getValue();
 }
 
-static Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type) {
-  return Symtab->addUndefined(Name, WASM_SYMBOL_TYPE_FUNCTION, 0, nullptr,
-                              Type);
-}
-
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   WasmOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -311,11 +306,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end");
 
     if (!Config->Entry.empty())
-      EntrySym = addUndefinedFunction(Config->Entry, &NullSignature);
+      EntrySym = Symtab->addUndefinedFunction(Config->Entry, 0, nullptr,
+                                              &NullSignature);
 
     // Handle the `--undefined <sym>` options.
     for (auto* Arg : Args.filtered(OPT_undefined))
-      addUndefinedFunction(Arg->getValue(), nullptr);
+      Symtab->addUndefinedFunction(Arg->getValue(), 0, nullptr, nullptr);
   }
 
   createFiles(Args);

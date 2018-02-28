@@ -71,11 +71,15 @@
 #  define _LIBUNWIND_CURSOR_SIZE 24
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_OR1K
 # elif defined(__mips__)
-#  if defined(_ABIO32) && defined(__mips_soft_float)
+#  if defined(_ABIO32) && _MIPS_SIM == _ABIO32 && defined(__mips_soft_float)
 #    define _LIBUNWIND_TARGET_MIPS_O32 1
 #    define _LIBUNWIND_CONTEXT_SIZE 18
 #    define _LIBUNWIND_CURSOR_SIZE 24
-#  elif defined(_ABI64) && defined(__mips_soft_float)
+#  elif defined(_ABIN32) && _MIPS_SIM == _ABIN32 && defined(__mips_soft_float)
+#    define _LIBUNWIND_TARGET_MIPS_NEWABI 1
+#    define _LIBUNWIND_CONTEXT_SIZE 35
+#    define _LIBUNWIND_CURSOR_SIZE 42
+#  elif defined(_ABI64) && _MIPS_SIM == _ABI64 && defined(__mips_soft_float)
 #    define _LIBUNWIND_TARGET_MIPS_NEWABI 1
 #    define _LIBUNWIND_CONTEXT_SIZE 35
 #    define _LIBUNWIND_CURSOR_SIZE 47

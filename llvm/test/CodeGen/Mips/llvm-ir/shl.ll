@@ -857,7 +857,7 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    sw $5, 32($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    move $1, $4
 ; MMR3-NEXT:    lw $16, 76($sp)
-; MMR3-NEXT:    sllv $2, $1, $16
+; MMR3-NEXT:    sllv $2, $4, $16
 ; MMR3-NEXT:    not16 $4, $16
 ; MMR3-NEXT:    sw $4, 24($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    srl16 $3, $5, 1
@@ -945,7 +945,7 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MMR6-NEXT:    .cfi_offset 16, -8
 ; MMR6-NEXT:    move $11, $4
 ; MMR6-NEXT:    lw $3, 44($sp)
-; MMR6-NEXT:    sllv $1, $11, $3
+; MMR6-NEXT:    sllv $1, $4, $3
 ; MMR6-NEXT:    not16 $2, $3
 ; MMR6-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:    srl16 $16, $5, 1

@@ -350,6 +350,7 @@ def alias_define_common_dc: F<"dc">, Alias<define_common>;
 def alias_define_common_dp: F<"dp">, Alias<define_common>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
+def alias_dynamic_linker_eq: J<"dynamic-linker=">, Alias<dynamic_linker>;
 def alias_emit_relocs: Flag<["-"], "q">, Alias<emit_relocs>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;

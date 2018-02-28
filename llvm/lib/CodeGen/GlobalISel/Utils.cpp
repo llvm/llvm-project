@@ -168,7 +168,7 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                                     MI.getDebugLoc(), MI.getParent());
   R << Msg;
   // Printing MI is expensive;  only do it if expensive remarks are enabled.
-  if (MORE.allowExtraAnalysis(PassName))
+  if (TPC.isGlobalISelAbortEnabled() || MORE.allowExtraAnalysis(PassName))
     R << ": " << ore::MNV("Inst", MI);
   reportGISelFailure(MF, TPC, MORE, R);
 }

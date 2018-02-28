@@ -231,6 +231,7 @@ namespace {
     virtual void writePCHReadArgs(raw_ostream &OS) const = 0;
     virtual void writePCHReadDecls(raw_ostream &OS) const = 0;
     virtual void writePCHWrite(raw_ostream &OS) const = 0;
+    virtual std::string getIsOmitted() const { return "false"; }
     virtual void writeValue(raw_ostream &OS) const = 0;
     virtual void writeDump(raw_ostream &OS) const = 0;
     virtual void writeDumpChildren(raw_ostream &OS) const {}
@@ -298,23 +299,28 @@ namespace {
                                            std::string(getUpperName()) + "()");
     }
 
+    std::string getIsOmitted() const override {
+      if (type == "IdentifierInfo *")
+        return "!get" + getUpperName().str() + "()";
+      // FIXME: Do this declaratively in Attr.td.
+      if (getAttrName() == "AllocSize")
+        return "0 == get" + getUpperName().str() + "()";
+      return "false";
+    }
+
     void writeValue(raw_ostream &OS) const override {
-      if (type == "FunctionDecl *") {
+      if (type == "FunctionDecl *")
         OS << "\" << get" << getUpperName()
            << "()->getNameInfo().getAsString() << \"";
-      } else if (type == "IdentifierInfo *") {
-        OS << "\";\n";
-        if (isOptional())
-          OS << "    if (get" << getUpperName() << "()) ";
-        else
-          OS << "    ";
-        OS << "OS << get" << getUpperName() << "()->getName();\n";
-        OS << "    OS << \"";
-      } else if (type == "TypeSourceInfo *") {
+      else if (type == "IdentifierInfo *")
+        // Some non-optional (comma required) identifier arguments can be the
+        // empty string but are then recorded as a nullptr.
+        OS << "\" << (get" << getUpperName() << "() ? get" << getUpperName()
+           << "()->getName() : \"\") << \"";
+      else if (type == "TypeSourceInfo *")
         OS << "\" << get" << getUpperName() << "().getAsString() << \"";
-      } else {
+      else
         OS << "\" << get" << getUpperName() << "() << \"";
-      }
     }
 
     void writeDump(raw_ostream &OS) const override {
@@ -322,9 +328,10 @@ namespace {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n"; 
       } else if (type == "IdentifierInfo *") {
-        if (isOptional())
-          OS << "    if (SA->get" << getUpperName() << "())\n  ";
-        OS << "    OS << \" \" << SA->get" << getUpperName()
+        // Some non-optional (comma required) identifier arguments can be the
+        // empty string but are then recorded as a nullptr.
+        OS << "    if (SA->get" << getUpperName() << "())\n"
+           << "      OS << \" \" << SA->get" << getUpperName()
            << "()->getName();\n";
       } else if (type == "TypeSourceInfo *") {
         OS << "    OS << \" \" << SA->get" << getUpperName()
@@ -576,12 +583,15 @@ namespace {
          << "Type());\n";
     }
 
+    std::string getIsOmitted() const override {
+      return "!is" + getLowerName().str() + "Expr || !" + getLowerName().str()
+             + "Expr";
+    }
+
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
-      // The aligned attribute argument expression is optional.
-      OS << "    if (is" << getLowerName() << "Expr && "
-         << getLowerName() << "Expr)\n";
-      OS << "      " << getLowerName() << "Expr->printPretty(OS, nullptr, Policy);\n";
+      OS << "    " << getLowerName()
+         << "Expr->printPretty(OS, nullptr, Policy);\n";
       OS << "    OS << \"";
     }
 
@@ -1376,33 +1386,83 @@ writePrettyPrintFunction(Record &R,
       continue;
     }
 
-    // Fake arguments aren't part of the parsed form and should not be
-    // pretty-printed.
-    bool hasNonFakeArgs = llvm::any_of(
-        Args, [](const std::unique_ptr<Argument> &A) { return !A->isFake(); });
-
-    // FIXME: always printing the parenthesis isn't the correct behavior for
-    // attributes which have optional arguments that were not provided. For
-    // instance: __attribute__((aligned)) will be pretty printed as
-    // __attribute__((aligned())). The logic should check whether there is only
-    // a single argument, and if it is optional, whether it has been provided.
-    if (hasNonFakeArgs)
-      OS << "(";
     if (Spelling == "availability") {
+      OS << "(";
       writeAvailabilityValue(OS);
+      OS << ")";
     } else if (Spelling == "deprecated" || Spelling == "gnu::deprecated") {
-        writeDeprecatedAttrValue(OS, Variety);
+      OS << "(";
+      writeDeprecatedAttrValue(OS, Variety);
+      OS << ")";
     } else {
-      unsigned index = 0;
-      for (const auto &arg : Args) {
-        if (arg->isFake()) continue;
-        if (index++) OS << ", ";
-        arg->writeValue(OS);
+      // To avoid printing parentheses around an empty argument list or
+      // printing spurious commas at the end of an argument list, we need to
+      // determine where the last provided non-fake argument is.
+      unsigned NonFakeArgs = 0;
+      unsigned TrailingOptArgs = 0;
+      bool FoundNonOptArg = false;
+      for (const auto &arg : llvm::reverse(Args)) {
+        if (arg->isFake())
+          continue;
+        ++NonFakeArgs;
+        if (FoundNonOptArg)
+          continue;
+        // FIXME: arg->getIsOmitted() == "false" means we haven't implemented
+        // any way to detect whether the argument was omitted.
+        if (!arg->isOptional() || arg->getIsOmitted() == "false") {
+          FoundNonOptArg = true;
+          continue;
+        }
+        if (!TrailingOptArgs++)
+          OS << "\";\n"
+             << "    unsigned TrailingOmittedArgs = 0;\n";
+        OS << "    if (" << arg->getIsOmitted() << ")\n"
+           << "      ++TrailingOmittedArgs;\n";
       }
+      if (TrailingOptArgs)
+        OS << "    OS << \"";
+      if (TrailingOptArgs < NonFakeArgs)
+        OS << "(";
+      else if (TrailingOptArgs)
+        OS << "\";\n"
+           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
+           << "       OS << \"(\";\n"
+           << "    OS << \"";
+      unsigned ArgIndex = 0;
+      for (const auto &arg : Args) {
+        if (arg->isFake())
+          continue;
+        if (ArgIndex) {
+          if (ArgIndex >= NonFakeArgs - TrailingOptArgs)
+            OS << "\";\n"
+               << "    if (" << ArgIndex << " < " << NonFakeArgs
+               << " - TrailingOmittedArgs)\n"
+               << "      OS << \", \";\n"
+               << "    OS << \"";
+          else
+            OS << ", ";
+        }
+        std::string IsOmitted = arg->getIsOmitted();
+        if (arg->isOptional() && IsOmitted != "false")
+          OS << "\";\n"
+             << "    if (!(" << IsOmitted << ")) {\n"
+             << "      OS << \"";
+        arg->writeValue(OS);
+        if (arg->isOptional() && IsOmitted != "false")
+          OS << "\";\n"
+             << "    }\n"
+             << "    OS << \"";
+        ++ArgIndex;
+      }
+      if (TrailingOptArgs < NonFakeArgs)
+        OS << ")";
+      else if (TrailingOptArgs)
+        OS << "\";\n"
+           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
+           << "       OS << \")\";\n"
+           << "    OS << \"";
     }
 
-    if (hasNonFakeArgs)
-      OS << ")";
     OS << Suffix + "\";\n";
 
     OS <<

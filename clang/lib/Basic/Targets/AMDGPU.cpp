@@ -157,49 +157,62 @@ bool AMDGPUTargetInfo::initFeatureMap(
     const std::vector<std::string> &FeatureVec) const {
 
   // XXX - What does the member GPU mean if device name string passed here?
-  if (getTriple().getArch() == llvm::Triple::amdgcn) {
+  if (isAMDGCN(getTriple())) {
     if (CPU.empty())
-      CPU = "tahiti";
+      CPU = "gfx600";
 
     switch (parseAMDGCNName(CPU).Kind) {
-    case GK_GFX6:
-    case GK_GFX7:
-      break;
-
-    case GK_GFX9:
+    case GK_GFX902:
+    case GK_GFX900:
       Features["gfx9-insts"] = true;
       LLVM_FALLTHROUGH;
-    case GK_GFX8:
-      Features["s-memrealtime"] = true;
+    case GK_GFX810:
+    case GK_GFX803:
+    case GK_GFX802:
+    case GK_GFX801:
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
+      Features["s-memrealtime"] = true;
       break;
-
+    case GK_GFX704:
+    case GK_GFX703:
+    case GK_GFX702:
+    case GK_GFX701:
+    case GK_GFX700:
+    case GK_GFX601:
+    case GK_GFX600:
+      break;
     case GK_NONE:
       return false;
     default:
-      llvm_unreachable("unhandled subtarget");
+      llvm_unreachable("Unhandled GPU!");
     }
   } else {
     if (CPU.empty())
       CPU = "r600";
 
     switch (parseR600Name(CPU).Kind) {
-    case GK_R600:
-    case GK_R700:
-    case GK_EVERGREEN:
-    case GK_NORTHERN_ISLANDS:
-      break;
-    case GK_R600_DOUBLE_OPS:
-    case GK_R700_DOUBLE_OPS:
-    case GK_EVERGREEN_DOUBLE_OPS:
     case GK_CAYMAN:
+    case GK_CYPRESS:
+    case GK_RV770:
+    case GK_RV670:
       // TODO: Add fp64 when implemented.
       break;
-    case GK_NONE:
-      return false;
+    case GK_TURKS:
+    case GK_CAICOS:
+    case GK_BARTS:
+    case GK_SUMO:
+    case GK_REDWOOD:
+    case GK_JUNIPER:
+    case GK_CEDAR:
+    case GK_RV730:
+    case GK_RV710:
+    case GK_RS880:
+    case GK_R630:
+    case GK_R600:
+      break;
     default:
-      llvm_unreachable("unhandled subtarget");
+      llvm_unreachable("Unhandled GPU!");
     }
   }
 
@@ -210,6 +223,7 @@ void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
                                            TargetOptions &TargetOpts) const {
   bool hasFP32Denormals = false;
   bool hasFP64Denormals = false;
+  GPUInfo CGOptsGPU = parseGPUName(TargetOpts.CPU);
   for (auto &I : TargetOpts.FeaturesAsWritten) {
     if (I == "+fp32-denormals" || I == "-fp32-denormals")
       hasFP32Denormals = true;
@@ -218,46 +232,52 @@ void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
   }
   if (!hasFP32Denormals)
     TargetOpts.Features.push_back(
-        (Twine(hasFullSpeedFMAF32(TargetOpts.CPU) && !CGOpts.FlushDenorm
+        (Twine(CGOptsGPU.HasFastFMAF && !CGOpts.FlushDenorm
                    ? '+'
                    : '-') +
          Twine("fp32-denormals"))
             .str());
   // Always do not flush fp64 or fp16 denorms.
-  if (!hasFP64Denormals && hasFP64)
+  if (!hasFP64Denormals && CGOptsGPU.HasFP64)
     TargetOpts.Features.push_back("+fp64-fp16-denormals");
 }
 
 constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::InvalidGPU;
-constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::R600Names[];
-constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::AMDGCNNames[];
+constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::R600GPUs[];
+constexpr AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::AMDGCNGPUs[];
+
 AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::parseR600Name(StringRef Name) {
   const auto *Result = llvm::find_if(
-      R600Names, [Name](const GPUInfo &GPU) { return GPU.Name == Name; });
+      R600GPUs, [Name](const GPUInfo &GPU) { return GPU.Name == Name; });
 
-  if (Result == std::end(R600Names))
+  if (Result == std::end(R600GPUs))
     return InvalidGPU;
   return *Result;
 }
 
 AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::parseAMDGCNName(StringRef Name) {
-  const auto *Result =
-      llvm::find_if(AMDGCNNames, [Name](const GPUInfo &GPU) {
-        return GPU.Name == Name;
-      });
+  const auto *Result = llvm::find_if(
+      AMDGCNGPUs, [Name](const GPUInfo &GPU) { return GPU.Name == Name; });
 
-  if (Result == std::end(AMDGCNNames))
+  if (Result == std::end(AMDGCNGPUs))
     return InvalidGPU;
   return *Result;
 }
 
+AMDGPUTargetInfo::GPUInfo AMDGPUTargetInfo::parseGPUName(StringRef Name) const {
+  if (isAMDGCN(getTriple()))
+    return parseAMDGCNName(Name);
+  else
+    return parseR600Name(Name);
+}
+
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  if (getTriple().getArch() == llvm::Triple::amdgcn)
-    llvm::for_each(AMDGCNNames, [&Values](const GPUInfo &GPU) {
+  if (isAMDGCN(getTriple()))
+    llvm::for_each(AMDGCNGPUs, [&Values](const GPUInfo &GPU) {
                    Values.emplace_back(GPU.Name);});
   else
-    llvm::for_each(R600Names, [&Values](const GPUInfo &GPU) {
+    llvm::for_each(R600GPUs, [&Values](const GPUInfo &GPU) {
                    Values.emplace_back(GPU.Name);});
 }
 
@@ -273,22 +293,10 @@ void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {
 
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
-  : TargetInfo(Triple),
-    GPU(isAMDGCN(Triple) ? AMDGCNNames[0] : parseR600Name(Opts.CPU)),
-    hasFP64(false), hasFMAF(false), hasLDEXPF(false),
-    AS(isGenericZero(Triple)) {
-  if (getTriple().getArch() == llvm::Triple::amdgcn) {
-    hasFP64 = true;
-    hasFMAF = true;
-    hasLDEXPF = true;
-  }
-  if (getTriple().getArch() == llvm::Triple::r600) {
-    if (GPU.Kind == GK_EVERGREEN_DOUBLE_OPS || GPU.Kind == GK_CAYMAN) {
-      hasFMAF = true;
-    }
-  }
+  : TargetInfo(Triple), AS(isGenericZero(Triple)),
+    GPU(isAMDGCN(Triple) ? AMDGCNGPUs[0] : parseR600Name(Opts.CPU)) {
   auto IsGenericZero = isGenericZero(Triple);
-  resetDataLayout(getTriple().getArch() == llvm::Triple::amdgcn
+  resetDataLayout(isAMDGCN(getTriple())
                       ? (IsGenericZero ? DataLayoutStringSIGenericIsZero
                                        : DataLayoutStringSIPrivateIsZero)
                       : DataLayoutStringR600);
@@ -327,7 +335,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
 
-  if (getTriple().getArch() == llvm::Triple::amdgcn)
+  if (isAMDGCN(getTriple()))
     Builder.defineMacro("__AMDGCN__");
   else
     Builder.defineMacro("__R600__");
@@ -335,10 +343,16 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (GPU.Kind != GK_NONE)
     Builder.defineMacro(Twine("__") + Twine(GPU.CanonicalName) + Twine("__"));
 
-  if (hasFMAF)
+  // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
+  // removed in the near future.
+  if (GPU.HasFMAF)
     Builder.defineMacro("__HAS_FMAF__");
-  if (hasLDEXPF)
+  if (GPU.HasFastFMAF)
+    Builder.defineMacro("FP_FAST_FMAF");
+  if (GPU.HasLDEXPF)
     Builder.defineMacro("__HAS_LDEXPF__");
-  if (hasFP64)
+  if (GPU.HasFP64)
     Builder.defineMacro("__HAS_FP64__");
+  if (GPU.HasFastFMA)
+    Builder.defineMacro("FP_FAST_FMA");
 }

@@ -50,7 +50,6 @@ entry:
 ; CHECK-NEXT:         Body:            23808080800041106B1A41000B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            GLOBAL

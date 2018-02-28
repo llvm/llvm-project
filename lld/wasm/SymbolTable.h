@@ -48,17 +48,20 @@ public:
   Symbol *find(StringRef Name);
   ObjFile *findComdat(StringRef Name) const;
 
-  Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
+  Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
                              InputFunction *Function = nullptr);
-  Symbol *addDefinedData(StringRef Name, uint32_t Flags, InputFile *F,
+  Symbol *addDefinedData(StringRef Name, uint32_t Flags, InputFile *File,
                          InputSegment *Segment = nullptr, uint32_t Address = 0,
                          uint32_t Size = 0);
-  Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *F,
+  Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                            InputGlobal *G);
-  Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
-  Symbol *addUndefined(StringRef Name, WasmSymbolType Type, uint32_t Flags,
-                       InputFile *F, const WasmSignature *Signature = nullptr,
-                       const WasmGlobalType *GlobalType = nullptr);
+
+  Symbol *addUndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
+                               const WasmSignature *Signature);
+  Symbol *addUndefinedData(StringRef Name, uint32_t Flags, InputFile *File);
+  Symbol *addUndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
+                             const WasmGlobalType *Type);
+
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
   bool addComdat(StringRef Name, ObjFile *);
 

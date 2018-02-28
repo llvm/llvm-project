@@ -93,13 +93,6 @@ public:
     return Symbols;
   }
 
-  // Returns undefined symbols of a shared library.
-  // It is a runtime error to call this function on files of other types.
-  const llvm::DenseSet<StringRef> &getUndefinedSymbols() {
-    assert(FileKind == SharedKind);
-    return Undefs;
-  }
-
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
   // string for creating error messages.
@@ -121,7 +114,6 @@ protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
   std::vector<Symbol *> Symbols;
-  llvm::DenseSet<StringRef> Undefs;
 
 private:
   const Kind FileKind;

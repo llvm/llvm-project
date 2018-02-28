@@ -11,6 +11,7 @@ add_clang_library(clangAnalysis
   CallGraph.cpp
   CloneDetection.cpp
   CocoaConventions.cpp
+  ConstructionContext.cpp
   Consumed.cpp
   CodeInjector.cpp
   Dominators.cpp
