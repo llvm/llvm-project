@@ -212,6 +212,24 @@ def ApplyDecoratorsToFunction(func, decorators):
         tmp = decorators(tmp)
     return tmp
 
+def isEnabled(debug_flavor, target_platform, configuration, decorators):
+    # If the platform is unsupported, skip the test.
+    if not test_categories.is_supported_on_platform(debug_flavor,
+            target_platform, configuration.compiler):
+        return False
+
+    # If the debug flavor is skipped, skip the test.
+    if debug_flavor in configuration.skipCategories:
+        return False
+
+    # If there are any decorators, and we're in swift PR testing mode, skip the
+    # test. We do this because we cannot run x-failed or skipped tests during
+    # PR testing, and we have no other way to prevent this from happening.
+    if configuration.useCategories and 'swiftpr' in configuration.categoriesList:
+        if decorators:
+            return False
+
+    return True
 
 def MakeInlineTest(__file, __globals, decorators=None):
     # Adjust the filename if it ends in .pyc.  We want filenames to
@@ -230,20 +248,16 @@ def MakeInlineTest(__file, __globals, decorators=None):
     test.name = test_name
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    if test_categories.is_supported_on_platform(
-            "dsym", target_platform, configuration.compiler):
+    if isEnabled("dsym", target_platform, configuration, decorators):
         test.test_with_dsym = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dsym, decorators)
-    if test_categories.is_supported_on_platform(
-            "dwarf", target_platform, configuration.compiler):
+    if isEnabled("dwarf", target_platform, configuration, decorators):
         test.test_with_dwarf = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dwarf, decorators)
-    if test_categories.is_supported_on_platform(
-            "dwo", target_platform, configuration.compiler):
+    if isEnabled("dwo", target_platform, configuration, decorators):
         test.test_with_dwo = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dwo, decorators)
-    if test_categories.is_supported_on_platform(
-            "gmodules", target_platform, configuration.compiler):
+    if isEnabled("gmodules", target_platform, configuration, decorators):
         test.test_with_gmodules = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_gmodules, decorators)
 
