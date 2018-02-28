@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 
@@ -124,6 +124,6 @@ void SuspiciousMissingCommaCheck::check(
        "suspicious string literal, probably missing a comma");
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

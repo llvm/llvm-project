@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-suspicious-missing-comma %t
+// RUN: %check_clang_tidy %s bugprone-suspicious-missing-comma %t
 
 const char* Cartoons[] = {
   "Bugs Bunny",
@@ -9,7 +9,7 @@ const char* Cartoons[] = {
   "Fred Flintstone",
   "Popeye",
 };
-// CHECK-MESSAGES: :[[@LINE-4]]:3: warning: suspicious string literal, probably missing a comma [misc-suspicious-missing-comma]
+// CHECK-MESSAGES: :[[@LINE-4]]:3: warning: suspicious string literal, probably missing a comma [bugprone-suspicious-missing-comma]
 
 const wchar_t* Colors[] = {
   L"Red", L"Yellow", L"Blue", L"Green", L"Purple", L"Rose", L"White", L"Black"
@@ -68,7 +68,7 @@ const char* IncorrectlyIndentedArray[] = {
   "a", "b", "c", "d", "e", "f",
   "g", "h", "i", "j", "k", "l"
 };
-// CHECK-MESSAGES: :[[@LINE-6]]:3: warning: suspicious string literal, probably missing a comma [misc-suspicious-missing-comma]
+// CHECK-MESSAGES: :[[@LINE-6]]:3: warning: suspicious string literal, probably missing a comma [bugprone-suspicious-missing-comma]
 
 const char* TooManyConcatenatedTokensArray[] = {
   "Dummy line",

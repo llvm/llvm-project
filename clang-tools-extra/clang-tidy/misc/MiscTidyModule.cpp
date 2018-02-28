@@ -19,10 +19,6 @@
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
-#include "StringIntegerAssignmentCheck.h"
-#include "StringLiteralWithEmbeddedNulCheck.h"
-#include "SuspiciousEnumUsageCheck.h"
-#include "SuspiciousMissingCommaCheck.h"
 #include "SuspiciousSemicolonCheck.h"
 #include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
@@ -59,14 +55,6 @@ public:
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
-    CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
-        "misc-string-integer-assignment");
-    CheckFactories.registerCheck<StringLiteralWithEmbeddedNulCheck>(
-        "misc-string-literal-with-embedded-nul");
-    CheckFactories.registerCheck<SuspiciousEnumUsageCheck>(
-        "misc-suspicious-enum-usage");
-    CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
-        "misc-suspicious-missing-comma");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "misc-suspicious-semicolon");
     CheckFactories.registerCheck<SuspiciousStringCompareCheck>(

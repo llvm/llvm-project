@@ -35,7 +35,11 @@ Clang-Tidy Checks
    bugprone-move-forwarding-reference
    bugprone-multiple-statement-macro
    bugprone-string-constructor
+   bugprone-string-integer-assignment
+   bugprone-string-literal-with-embedded-nul
+   bugprone-suspicious-enum-usage
    bugprone-suspicious-memset-usage
+   bugprone-suspicious-missing-comma
    bugprone-throw-keyword-missing
    bugprone-undefined-memory-manipulation
    bugprone-use-after-move
@@ -139,10 +143,6 @@ Clang-Tidy Checks
    misc-sizeof-container
    misc-sizeof-expression
    misc-static-assert
-   misc-string-integer-assignment
-   misc-string-literal-with-embedded-nul
-   misc-suspicious-enum-usage
-   misc-suspicious-missing-comma
    misc-suspicious-semicolon
    misc-suspicious-string-compare
    misc-swapped-arguments

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-string-integer-assignment %t
+// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t
 
 namespace std {
 template<typename T>
@@ -21,7 +21,7 @@ int main() {
   int x = 5;
 
   s = 6;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an integer is interpreted as a character code when assigning {{.*}} [misc-string-integer-assignment]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an integer is interpreted as a character code when assigning {{.*}} [bugprone-string-integer-assignment]
 // CHECK-FIXES: {{^}}  s = '6';{{$}}
   s = 66;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an integer is interpreted as a chara

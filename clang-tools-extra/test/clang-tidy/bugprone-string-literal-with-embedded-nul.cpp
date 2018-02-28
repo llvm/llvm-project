@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-string-literal-with-embedded-nul %t
+// RUN: %check_clang_tidy %s bugprone-string-literal-with-embedded-nul %t
 
 namespace std {
 template <typename T>
@@ -25,7 +25,7 @@ bool operator==(const char*, const std::string&);
 
 const char Valid[] = "This is valid \x12.";
 const char Strange[] = "This is strange \0x12 and must be fixed";
-// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: suspicious embedded NUL character [misc-string-literal-with-embedded-nul]
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: suspicious embedded NUL character [bugprone-string-literal-with-embedded-nul]
 
 const char textA[] = "\0x01\0x02\0x03\0x04";
 // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious embedded NUL character

@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_MISSING_COMMA_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_MISSING_COMMA_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSMISSINGCOMMACHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSMISSINGCOMMACHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// This check finds string literals which are probably concatenated
 /// accidentally.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-missing-comma.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-missing-comma.html
 class SuspiciousMissingCommaCheck : public ClangTidyCheck {
 public:
   SuspiciousMissingCommaCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,8 +37,8 @@ private:
   const unsigned MaxConcatenatedTokens;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_MISSING_COMMA_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSMISSINGCOMMACHECK_H

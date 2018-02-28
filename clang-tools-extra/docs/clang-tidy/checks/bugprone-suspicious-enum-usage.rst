@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-suspicious-enum-usage
+.. title:: clang-tidy - bugprone-suspicious-enum-usage
 
-misc-suspicious-enum-usage
-==========================
+bugprone-suspicious-enum-usage
+==============================
 
 The checker detects various cases when an enum is probably misused (as a bitmask
 ).

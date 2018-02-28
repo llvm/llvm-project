@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-string-integer-assignment
+.. title:: clang-tidy - bugprone-string-integer-assignment
 
-misc-string-integer-assignment
-==============================
+bugprone-string-integer-assignment
+==================================
 
 The check finds assignments of an integer to ``std::basic_string<CharT>``
 (``std::string``, ``std::wstring``, etc.). The source of the problem is the

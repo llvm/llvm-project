@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_ENUM_USAGE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_ENUM_USAGE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSENUMUSAGECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSENUMUSAGECHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// The checker detects various cases when an enum is probably misused (as a
 /// bitmask).
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-enum-usage.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-enum-usage.html
 class SuspiciousEnumUsageCheck : public ClangTidyCheck {
 public:
   SuspiciousEnumUsageCheck(StringRef Name, ClangTidyContext *Context);
@@ -32,8 +32,8 @@ private:
   const bool StrictMode;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SUSPICIOUS_ENUM_USAGE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSENUMUSAGECHECK_H

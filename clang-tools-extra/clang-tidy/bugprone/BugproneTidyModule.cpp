@@ -28,7 +28,11 @@
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "StringConstructorCheck.h"
+#include "StringIntegerAssignmentCheck.h"
+#include "StringLiteralWithEmbeddedNulCheck.h"
+#include "SuspiciousEnumUsageCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
+#include "SuspiciousMissingCommaCheck.h"
 #include "ThrowKeywordMissingCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UseAfterMoveCheck.h"
@@ -77,8 +81,16 @@ public:
         "bugprone-multiple-statement-macro");
     CheckFactories.registerCheck<StringConstructorCheck>(
         "bugprone-string-constructor");
+    CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
+        "bugprone-string-integer-assignment");
+    CheckFactories.registerCheck<StringLiteralWithEmbeddedNulCheck>(
+        "bugprone-string-literal-with-embedded-nul");
+    CheckFactories.registerCheck<SuspiciousEnumUsageCheck>(
+        "bugprone-suspicious-enum-usage");
     CheckFactories.registerCheck<SuspiciousMemsetUsageCheck>(
         "bugprone-suspicious-memset-usage");
+    CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
+        "bugprone-suspicious-missing-comma");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
         "bugprone-throw-keyword-missing");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(

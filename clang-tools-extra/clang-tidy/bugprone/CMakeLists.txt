@@ -20,7 +20,11 @@ add_clang_library(clangTidyBugproneModule
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
   StringConstructorCheck.cpp
+  StringIntegerAssignmentCheck.cpp
+  StringLiteralWithEmbeddedNulCheck.cpp
+  SuspiciousEnumUsageCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
+  SuspiciousMissingCommaCheck.cpp
   ThrowKeywordMissingCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UseAfterMoveCheck.cpp

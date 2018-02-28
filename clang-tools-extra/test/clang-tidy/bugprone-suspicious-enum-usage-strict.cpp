@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-suspicious-enum-usage %t -- -config="{CheckOptions: [{key: misc-suspicious-enum-usage.StrictMode, value: 1}]}" --
+// RUN: %check_clang_tidy %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: [{key: bugprone-suspicious-enum-usage.StrictMode, value: 1}]}" --
 
 enum A {
   A = 1,
@@ -17,7 +17,7 @@ enum X {
   Y = 16,
   Z = 4,
   ZZ = 3
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: enum type seems like a bitmask (contains mostly power-of-2 literals), but this literal is not a power-of-2 [misc-suspicious-enum-usage]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: enum type seems like a bitmask (contains mostly power-of-2 literals), but this literal is not a power-of-2 [bugprone-suspicious-enum-usage]
 // CHECK-MESSAGES: :70:13: note: used here as a bitmask
 };
 // CHECK-MESSAGES: :[[@LINE+2]]:1: warning: enum type seems like a bitmask (contains mostly power-of-2 literals) but some literals are not power-of-2

@@ -100,9 +100,9 @@ Improvements to clang-tidy
 
   Warns if SIMD intrinsics are used which can be replaced by
   ``std::experimental::simd`` operations.
-    
+
 - New alias `hicpp-avoid-goto
-  <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-avoid-goto.html>`_ to 
+  <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-avoid-goto.html>`_ to
   `cppcoreguidelines-avoid-goto <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html>`_
   added.
 
@@ -123,6 +123,18 @@ Improvements to clang-tidy
 
 - The 'misc-string-compare' check was renamed to `readability-string-compare
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-string-compare.html>`_
+
+- The 'misc-string-integer-assignment' check was renamed to `bugprone-string-integer-assignment
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-integer-assignment.html>`_
+
+- The 'misc-string-literal-with-embedded-nul' check was renamed to `bugprone-string-literal-with-embedded-nul
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-literal-with-embedded-nul.html>`_
+
+- The 'misc-suspicious-enum-usage' check was renamed to `bugprone-suspicious-enum-usage
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-enum-usage.html>`_
+
+- The 'misc-suspicious-missing-comma' check was renamed to `bugprone-suspicious-missing-comma
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-missing-comma.html>`_
 
 Improvements to include-fixer
 -----------------------------

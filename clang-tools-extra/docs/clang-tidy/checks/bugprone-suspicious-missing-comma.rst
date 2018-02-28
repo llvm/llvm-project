@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-suspicious-missing-comma
+.. title:: clang-tidy - bugprone-suspicious-missing-comma
 
-misc-suspicious-missing-comma
-=============================
+bugprone-suspicious-missing-comma
+=================================
 
 String literals placed side-by-side are concatenated at translation phase 6
 (after the preprocessor). This feature is used to represent long string

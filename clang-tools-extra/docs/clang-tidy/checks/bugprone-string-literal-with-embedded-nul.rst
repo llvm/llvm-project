@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-string-literal-with-embedded-nul
+.. title:: clang-tidy - bugprone-string-literal-with-embedded-nul
 
-misc-string-literal-with-embedded-nul
-=====================================
+bugprone-string-literal-with-embedded-nul
+=========================================
 
 Finds occurrences of string literal with embedded NUL character and validates
 their usage.
