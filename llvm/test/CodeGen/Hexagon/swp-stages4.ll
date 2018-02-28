@@ -6,14 +6,14 @@
 ; CHECK: = and
 ; CHECK: = and
 ; CHECK: = and
-; CHECK: [[REG0:(r[0-9]+)]] = and([[REG1:(r[0-9]+)]],#255)
-; CHECK-NOT: [[REG0]] = and([[REG1]],#255)
+; CHECK: r[[REG0:[0-9]+]] = and(r[[REG1:[0-9]+]],#255)
+; CHECK-NOT: r[[REG0]] = and(r[[REG1]],#255)
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: [[REG0]] += add
-; CHECK: [[REG2:r[0-9]+]] = and
+; CHECK: r[[REG0]] += add
 ; CHECK: = and
-; CHECK: [[REG0]] = [[REG2]]
+; CHECK: r[[REG2:[0-9]+]] = and
+; CHECK: r[[REG0]]{{:[0-9]+}} = combine(r[[REG2]],{{r[0-9]+}})
 ; CHECK: endloop
 
 ; Function Attrs: nounwind

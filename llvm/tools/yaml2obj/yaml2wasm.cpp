@@ -136,11 +136,6 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
 
   SubSectionWriter SubSection(OS);
 
-  // DATA_SIZE subsection
-  encodeULEB128(wasm::WASM_DATA_SIZE, OS);
-  encodeULEB128(Section.DataSize, SubSection.GetStream());
-  SubSection.Done();
-
   // SYMBOL_TABLE subsection
   if (Section.SymbolTable.size()) {
     encodeULEB128(wasm::WASM_SYMBOL_TABLE, OS);

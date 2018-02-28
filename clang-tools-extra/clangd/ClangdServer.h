@@ -171,10 +171,7 @@ public:
   /// Run code completion for \p File at \p Pos.
   /// Request is processed asynchronously.
   ///
-  /// If \p OverridenContents is not None, they will used only for code
-  /// completion, i.e. no diagnostics update will be scheduled and a draft for
-  /// \p File will not be updated. If \p OverridenContents is None, contents of
-  /// the current draft for \p File will be used. If \p UsedFS is non-null, it
+  /// The current draft for \p File will be used. If \p UsedFS is non-null, it
   /// will be overwritten by vfs::FileSystem used for completion.
   ///
   /// This method should only be called for currently tracked files. However, it
@@ -185,20 +182,16 @@ public:
   void codeComplete(PathRef File, Position Pos,
                     const clangd::CodeCompleteOptions &Opts,
                     UniqueFunction<void(Tagged<CompletionList>)> Callback,
-                    llvm::Optional<StringRef> OverridenContents = llvm::None,
                     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
   /// not None, they will used only for signature help, i.e. no diagnostics
   /// update will be scheduled and a draft for \p File will not be updated. If
-  /// \p OverridenContents is None, contents of the current draft for \p File
-  /// will be used. If \p UsedFS is non-null, it will be overwritten by
-  /// vfs::FileSystem used for signature help. This method should only be called
-  /// for currently tracked files.
+  /// If \p UsedFS is non-null, it will be overwritten by vfs::FileSystem used
+  /// for signature help. This method should only be called for tracked files.
   void signatureHelp(
       PathRef File, Position Pos,
       UniqueFunction<void(llvm::Expected<Tagged<SignatureHelp>>)> Callback,
-      llvm::Optional<StringRef> OverridenContents = llvm::None,
       IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.

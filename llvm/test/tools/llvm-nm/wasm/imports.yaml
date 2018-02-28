@@ -25,7 +25,6 @@ Sections:
         GlobalMutable:   false
   - Type:            CUSTOM
     Name:            linking
-    DataSize:        3
     SymbolTable:
        - Index:           0
          Kind:            FUNCTION

@@ -17,24 +17,6 @@ define float @frem_constant_fold() {
   ret float %f
 }
 
-define double @fdiv_of_undef(double %X) {
-; CHECK-LABEL: @fdiv_of_undef(
-; CHECK-NEXT:    ret double undef
-;
-; undef / X -> undef
-  %r = fdiv double undef, %X
-  ret double %r
-}
-
-define double @fdiv_by_undef(double %X) {
-; CHECK-LABEL: @fdiv_by_undef(
-; CHECK-NEXT:    ret double undef
-;
-; X / undef -> undef
-  %r = fdiv double %X, undef
-  ret double %r
-}
-
 define double @fmul_fdiv_common_operand(double %x, double %y) {
 ; CHECK-LABEL: @fmul_fdiv_common_operand(
 ; CHECK-NEXT:    ret double %x

@@ -2222,7 +2222,7 @@ define void @not_avg_v16i8_wide_constants(<16 x i8>* %a, <16 x i8>* %b) nounwind
 ; SSE2-NEXT:    movq %rax, %xmm11
 ; SSE2-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # 8-byte Reload
 ; SSE2-NEXT:    movq %rbp, %rcx
-; SSE2-NEXT:    shrdq $1, %rcx, %rax
+; SSE2-NEXT:    shrdq $1, %rbp, %rax
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm13 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm13[0,1,2]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm15 = xmm15[0],xmm8[0]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]

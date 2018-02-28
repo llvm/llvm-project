@@ -85,22 +85,6 @@ protected:
   raw_string_ostream BodyOutputStream;
 };
 
-// Some synthetic sections (e.g. "name" and "linking") have subsections.
-// Just like the synthetic sections themselves these need to be created before
-// they can be written out (since they are preceded by their length). This
-// class is used to create subsections and then write them into the stream
-// of the parent section.
-class SubSection : public SyntheticSection {
-public:
-  explicit SubSection(uint32_t Type) : SyntheticSection(Type) {}
-
-  std::string getSectionName() const;
-  void writeToStream(raw_ostream &OS) {
-    OS.write(Header.data(), Header.size());
-    OS.write(Body.data(), Body.size());
-  }
-};
-
 class CodeSection : public OutputSection {
 public:
   explicit CodeSection(ArrayRef<InputFunction *> Functions);

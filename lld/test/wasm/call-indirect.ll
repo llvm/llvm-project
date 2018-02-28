@@ -151,9 +151,6 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         '010000000200000002000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        12
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0

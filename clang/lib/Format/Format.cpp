@@ -2295,8 +2295,8 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
 }
 
 FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
-  FormatStyle::LanguageKind result = getLanguageByFileName(FileName);
-  if (result == FormatStyle::LK_Cpp) {
+  const auto GuessedLanguage = getLanguageByFileName(FileName);
+  if (GuessedLanguage == FormatStyle::LK_Cpp) {
     auto Extension = llvm::sys::path::extension(FileName);
     // If there's no file extension (or it's .h), we need to check the contents
     // of the code to see if it contains Objective-C.
@@ -2306,12 +2306,11 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
           Environment::CreateVirtualEnvironment(Code, NonEmptyFileName, /*Ranges=*/{});
       ObjCHeaderStyleGuesser Guesser(*Env, getLLVMStyle());
       Guesser.process();
-      if (Guesser.isObjC()) {
-        result = FormatStyle::LK_ObjC;
-      }
+      if (Guesser.isObjC())
+        return FormatStyle::LK_ObjC;
     }
   }
-  return result;
+  return GuessedLanguage;
 }
 
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,

@@ -79,7 +79,6 @@ target triple = "wasm32-unknown-unknown-wasm"
 
 ; RELOC:        - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            linking
-; RELOC-NEXT:     DataSize:        35
 ; RELOC-NEXT:     SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            DATA

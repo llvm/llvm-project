@@ -148,7 +148,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    andq $-64, %rsp
 ; X64-NEXT:    subq $128, %rsp
 ; X64-NEXT:    vmovaps %zmm1, %zmm16
-; X64-NEXT:    vaddps %zmm16, %zmm0, %zmm0
+; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq _func_float16_ptr
 ; X64-NEXT:    vaddps %zmm16, %zmm0, %zmm0

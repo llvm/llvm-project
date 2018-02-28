@@ -489,7 +489,7 @@ else:
 
 ; CHECK-COMMON-LABEL: test_phi:
 ; CHECK-COMMON: mov  x[[PTR:[0-9]+]], x0
-; CHECK-COMMON: ldr  h[[AB:[0-9]+]], [x[[PTR]]]
+; CHECK-COMMON: ldr  h[[AB:[0-9]+]], [x0]
 ; CHECK-COMMON: [[LOOP:LBB[0-9_]+]]:
 ; CHECK-COMMON: mov.16b  v[[R:[0-9]+]], v[[AB]]
 ; CHECK-COMMON: ldr  h[[AB]], [x[[PTR]]]

@@ -27,9 +27,9 @@
 // RUN: %clang -### -target r600 -mcpu=sumo2 %s 2>&1 | FileCheck --check-prefix=SUMO %s
 // RUN: %clang -### -target r600 -mcpu=barts %s 2>&1 | FileCheck --check-prefix=BARTS %s
 // RUN: %clang -### -target r600 -mcpu=caicos %s 2>&1 | FileCheck --check-prefix=CAICOS %s
-// RUN: %clang -### -target r600 -mcpu=turks %s 2>&1 | FileCheck --check-prefix=TURKS %s
 // RUN: %clang -### -target r600 -mcpu=aruba %s 2>&1 | FileCheck --check-prefix=CAYMAN %s
 // RUN: %clang -### -target r600 -mcpu=cayman %s 2>&1 | FileCheck --check-prefix=CAYMAN %s
+// RUN: %clang -### -target r600 -mcpu=turks %s 2>&1 | FileCheck --check-prefix=TURKS %s
 
 // R600:    "-target-cpu" "r600"
 // R630:    "-target-cpu" "r630"
@@ -45,8 +45,8 @@
 // SUMO:    "-target-cpu" "sumo"
 // BARTS:   "-target-cpu" "barts"
 // CAICOS:  "-target-cpu" "caicos"
-// TURKS:   "-target-cpu" "turks"
 // CAYMAN:  "-target-cpu" "cayman"
+// TURKS:   "-target-cpu" "turks"
 
 //
 // AMDGCN-based processors.

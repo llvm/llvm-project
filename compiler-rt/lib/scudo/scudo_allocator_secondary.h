@@ -28,7 +28,7 @@ class ScudoLargeMmapAllocator {
   }
 
   void *Allocate(AllocatorStats *Stats, uptr Size, uptr Alignment) {
-    const uptr UserSize = Size - AlignedChunkHeaderSize;
+    const uptr UserSize = Size - Chunk::getHeaderSize();
     // The Scudo frontend prevents us from allocating more than
     // MaxAllowedMallocSize, so integer overflow checks would be superfluous.
     uptr MapSize = Size + AlignedReservedAddressRangeSize;
@@ -80,7 +80,7 @@ class ScudoLargeMmapAllocator {
     // Actually mmap the memory, preserving the guard pages on either side
     CHECK_EQ(MapBeg + PageSize,
              AddressRange.Map(MapBeg + PageSize, MapSize - 2 * PageSize));
-    const uptr Ptr = UserBeg - AlignedChunkHeaderSize;
+    const uptr Ptr = UserBeg - Chunk::getHeaderSize();
     ReservedAddressRange *StoredRange = getReservedAddressRange(Ptr);
     *StoredRange = AddressRange;
 
@@ -129,9 +129,9 @@ class ScudoLargeMmapAllocator {
   }
 
   static constexpr uptr AlignedReservedAddressRangeSize =
-      (sizeof(ReservedAddressRange) + MinAlignment - 1) & ~(MinAlignment - 1);
+      RoundUpTo(sizeof(ReservedAddressRange), MinAlignment);
   static constexpr uptr HeadersSize =
-      AlignedReservedAddressRangeSize + AlignedChunkHeaderSize;
+      AlignedReservedAddressRangeSize + Chunk::getHeaderSize();
 
   uptr PageSizeCached;
   SpinMutex StatsMutex;

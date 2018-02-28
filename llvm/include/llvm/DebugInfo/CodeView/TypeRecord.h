@@ -330,6 +330,10 @@ public:
     return !!(Attrs & uint32_t(PointerOptions::Unaligned));
   }
 
+  bool isRestrict() const {
+    return !!(Attrs & uint32_t(PointerOptions::Restrict));
+  }
+
   TypeIndex ReferentType;
   uint32_t Attrs;
   Optional<MemberPointerInfo> MemberInfo;

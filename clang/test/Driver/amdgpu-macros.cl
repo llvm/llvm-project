@@ -28,30 +28,116 @@
 // RUN: %clang -E -dM -target r600 -mcpu=sumo2 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,SUMO %s
 // RUN: %clang -E -dM -target r600 -mcpu=barts %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,BARTS %s
 // RUN: %clang -E -dM -target r600 -mcpu=caicos %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CAICOS %s
-// RUN: %clang -E -dM -target r600 -mcpu=turks %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,TURKS %s
 // RUN: %clang -E -dM -target r600 -mcpu=aruba %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CAYMAN %s
 // RUN: %clang -E -dM -target r600 -mcpu=cayman %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CAYMAN %s
+// RUN: %clang -E -dM -target r600 -mcpu=turks %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,TURKS %s
 
-// ARCH-R600-DAG: #define __AMD__ 1
+// R600-NOT:    #define FP_FAST_FMA 1
+// R630-NOT:    #define FP_FAST_FMA 1
+// RS880-NOT:   #define FP_FAST_FMA 1
+// RV670-NOT:   #define FP_FAST_FMA 1
+// RV710-NOT:   #define FP_FAST_FMA 1
+// RV730-NOT:   #define FP_FAST_FMA 1
+// RV770-NOT:   #define FP_FAST_FMA 1
+// CEDAR-NOT:   #define FP_FAST_FMA 1
+// CYPRESS-NOT: #define FP_FAST_FMA 1
+// JUNIPER-NOT: #define FP_FAST_FMA 1
+// REDWOOD-NOT: #define FP_FAST_FMA 1
+// SUMO-NOT:    #define FP_FAST_FMA 1
+// BARTS-NOT:   #define FP_FAST_FMA 1
+// CAICOS-NOT:  #define FP_FAST_FMA 1
+// CAYMAN-NOT:  #define FP_FAST_FMA 1
+// TURKS-NOT:   #define FP_FAST_FMA 1
+
+// R600-NOT:    #define FP_FAST_FMAF 1
+// R630-NOT:    #define FP_FAST_FMAF 1
+// RS880-NOT:   #define FP_FAST_FMAF 1
+// RV670-NOT:   #define FP_FAST_FMAF 1
+// RV710-NOT:   #define FP_FAST_FMAF 1
+// RV730-NOT:   #define FP_FAST_FMAF 1
+// RV770-NOT:   #define FP_FAST_FMAF 1
+// CEDAR-NOT:   #define FP_FAST_FMAF 1
+// CYPRESS-NOT: #define FP_FAST_FMAF 1
+// JUNIPER-NOT: #define FP_FAST_FMAF 1
+// REDWOOD-NOT: #define FP_FAST_FMAF 1
+// SUMO-NOT:    #define FP_FAST_FMAF 1
+// BARTS-NOT:   #define FP_FAST_FMAF 1
+// CAICOS-NOT:  #define FP_FAST_FMAF 1
+// CAYMAN-NOT:  #define FP_FAST_FMAF 1
+// TURKS-NOT:   #define FP_FAST_FMAF 1
+
 // ARCH-R600-DAG: #define __AMDGPU__ 1
+// ARCH-R600-DAG: #define __AMD__ 1
+
+// R600-NOT:    #define __HAS_FMAF__ 1
+// R630-NOT:    #define __HAS_FMAF__ 1
+// RS880-NOT:   #define __HAS_FMAF__ 1
+// RV670-NOT:   #define __HAS_FMAF__ 1
+// RV710-NOT:   #define __HAS_FMAF__ 1
+// RV730-NOT:   #define __HAS_FMAF__ 1
+// RV770-NOT:   #define __HAS_FMAF__ 1
+// CEDAR-NOT:   #define __HAS_FMAF__ 1
+// CYPRESS-DAG: #define __HAS_FMAF__ 1
+// JUNIPER-NOT: #define __HAS_FMAF__ 1
+// REDWOOD-NOT: #define __HAS_FMAF__ 1
+// SUMO-NOT:    #define __HAS_FMAF__ 1
+// BARTS-NOT:   #define __HAS_FMAF__ 1
+// CAICOS-NOT:  #define __HAS_FMAF__ 1
+// CAYMAN-DAG:  #define __HAS_FMAF__ 1
+// TURKS-NOT:   #define __HAS_FMAF__ 1
+
+// R600-NOT:    #define __HAS_FP64__ 1
+// R630-NOT:    #define __HAS_FP64__ 1
+// RS880-NOT:   #define __HAS_FP64__ 1
+// RV670-NOT:   #define __HAS_FP64__ 1
+// RV710-NOT:   #define __HAS_FP64__ 1
+// RV730-NOT:   #define __HAS_FP64__ 1
+// RV770-NOT:   #define __HAS_FP64__ 1
+// CEDAR-NOT:   #define __HAS_FP64__ 1
+// CYPRESS-NOT: #define __HAS_FP64__ 1
+// JUNIPER-NOT: #define __HAS_FP64__ 1
+// REDWOOD-NOT: #define __HAS_FP64__ 1
+// SUMO-NOT:    #define __HAS_FP64__ 1
+// BARTS-NOT:   #define __HAS_FP64__ 1
+// CAICOS-NOT:  #define __HAS_FP64__ 1
+// CAYMAN-NOT:  #define __HAS_FP64__ 1
+// TURKS-NOT:   #define __HAS_FP64__ 1
+
+// R600-NOT:    #define __HAS_LDEXPF__ 1
+// R630-NOT:    #define __HAS_LDEXPF__ 1
+// RS880-NOT:   #define __HAS_LDEXPF__ 1
+// RV670-NOT:   #define __HAS_LDEXPF__ 1
+// RV710-NOT:   #define __HAS_LDEXPF__ 1
+// RV730-NOT:   #define __HAS_LDEXPF__ 1
+// RV770-NOT:   #define __HAS_LDEXPF__ 1
+// CEDAR-NOT:   #define __HAS_LDEXPF__ 1
+// CYPRESS-NOT: #define __HAS_LDEXPF__ 1
+// JUNIPER-NOT: #define __HAS_LDEXPF__ 1
+// REDWOOD-NOT: #define __HAS_LDEXPF__ 1
+// SUMO-NOT:    #define __HAS_LDEXPF__ 1
+// BARTS-NOT:   #define __HAS_LDEXPF__ 1
+// CAICOS-NOT:  #define __HAS_LDEXPF__ 1
+// CAYMAN-NOT:  #define __HAS_LDEXPF__ 1
+// TURKS-NOT:   #define __HAS_LDEXPF__ 1
+
 // ARCH-R600-DAG: #define __R600__ 1
 
-// R600:    #define __r600__ 1
-// R630:    #define __r630__ 1
-// RS880:   #define __rs880__ 1
-// RV670:   #define __rv670__ 1
-// RV710:   #define __rv710__ 1
-// RV730:   #define __rv730__ 1
-// RV770:   #define __rv770__ 1
-// CEDAR:   #define __cedar__ 1
-// CYPRESS: #define __cypress__ 1
-// JUNIPER: #define __juniper__ 1
-// REDWOOD: #define __redwood__ 1
-// SUMO:    #define __sumo__ 1
-// BARTS:   #define __barts__ 1
-// CAICOS:  #define __caicos__ 1
-// TURKS:   #define __turks__ 1
-// CAYMAN:  #define __cayman__ 1
+// R600-DAG:    #define __r600__ 1
+// R630-DAG:    #define __r630__ 1
+// RS880-DAG:   #define __rs880__ 1
+// RV670-DAG:   #define __rv670__ 1
+// RV710-DAG:   #define __rv710__ 1
+// RV730-DAG:   #define __rv730__ 1
+// RV770-DAG:   #define __rv770__ 1
+// CEDAR-DAG:   #define __cedar__ 1
+// CYPRESS-DAG: #define __cypress__ 1
+// JUNIPER-DAG: #define __juniper__ 1
+// REDWOOD-DAG: #define __redwood__ 1
+// SUMO-DAG:    #define __sumo__ 1
+// BARTS-DAG:   #define __barts__ 1
+// CAICOS-DAG:  #define __caicos__ 1
+// CAYMAN-DAG:  #define __cayman__ 1
+// TURKS-DAG:   #define __turks__ 1
 
 //
 // AMDGCN-based processors.
@@ -88,20 +174,90 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX900 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx902 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX902 %s
 
-// ARCH-GCN-DAG: #define __AMD__ 1
-// ARCH-GCN-DAG: #define __AMDGPU__ 1
-// ARCH-GCN-DAG: #define __AMDGCN__ 1
+// GFX600-DAG: #define FP_FAST_FMA 1
+// GFX601-DAG: #define FP_FAST_FMA 1
+// GFX700-DAG: #define FP_FAST_FMA 1
+// GFX701-DAG: #define FP_FAST_FMA 1
+// GFX702-DAG: #define FP_FAST_FMA 1
+// GFX703-DAG: #define FP_FAST_FMA 1
+// GFX704-DAG: #define FP_FAST_FMA 1
+// GFX801-DAG: #define FP_FAST_FMA 1
+// GFX802-DAG: #define FP_FAST_FMA 1
+// GFX803-DAG: #define FP_FAST_FMA 1
+// GFX810-DAG: #define FP_FAST_FMA 1
+// GFX900-DAG: #define FP_FAST_FMA 1
+// GFX902-DAG: #define FP_FAST_FMA 1
 
-// GFX600: #define __gfx600__ 1
-// GFX601: #define __gfx601__ 1
-// GFX700: #define __gfx700__ 1
-// GFX701: #define __gfx701__ 1
-// GFX702: #define __gfx702__ 1
-// GFX703: #define __gfx703__ 1
-// GFX704: #define __gfx704__ 1
-// GFX801: #define __gfx801__ 1
-// GFX802: #define __gfx802__ 1
-// GFX803: #define __gfx803__ 1
-// GFX810: #define __gfx810__ 1
-// GFX900: #define __gfx900__ 1
-// GFX902: #define __gfx902__ 1
+// GFX600-DAG: #define FP_FAST_FMAF 1
+// GFX601-NOT: #define FP_FAST_FMAF 1
+// GFX700-NOT: #define FP_FAST_FMAF 1
+// GFX701-DAG: #define FP_FAST_FMAF 1
+// GFX702-DAG: #define FP_FAST_FMAF 1
+// GFX703-NOT: #define FP_FAST_FMAF 1
+// GFX704-NOT: #define FP_FAST_FMAF 1
+// GFX801-DAG: #define FP_FAST_FMAF 1
+// GFX802-NOT: #define FP_FAST_FMAF 1
+// GFX803-NOT: #define FP_FAST_FMAF 1
+// GFX810-NOT: #define FP_FAST_FMAF 1
+// GFX900-DAG: #define FP_FAST_FMAF 1
+// GFX902-DAG: #define FP_FAST_FMAF 1
+
+// ARCH-GCN-DAG: #define __AMDGCN__ 1
+// ARCH-GCN-DAG: #define __AMDGPU__ 1
+// ARCH-GCN-DAG: #define __AMD__ 1
+
+// GFX600-DAG: #define __HAS_FMAF__ 1
+// GFX601-DAG: #define __HAS_FMAF__ 1
+// GFX700-DAG: #define __HAS_FMAF__ 1
+// GFX701-DAG: #define __HAS_FMAF__ 1
+// GFX702-DAG: #define __HAS_FMAF__ 1
+// GFX703-DAG: #define __HAS_FMAF__ 1
+// GFX704-DAG: #define __HAS_FMAF__ 1
+// GFX801-DAG: #define __HAS_FMAF__ 1
+// GFX802-DAG: #define __HAS_FMAF__ 1
+// GFX803-DAG: #define __HAS_FMAF__ 1
+// GFX810-DAG: #define __HAS_FMAF__ 1
+// GFX900-DAG: #define __HAS_FMAF__ 1
+// GFX902-DAG: #define __HAS_FMAF__ 1
+
+// GFX600-DAG: #define __HAS_FP64__ 1
+// GFX601-DAG: #define __HAS_FP64__ 1
+// GFX700-DAG: #define __HAS_FP64__ 1
+// GFX701-DAG: #define __HAS_FP64__ 1
+// GFX702-DAG: #define __HAS_FP64__ 1
+// GFX703-DAG: #define __HAS_FP64__ 1
+// GFX704-DAG: #define __HAS_FP64__ 1
+// GFX801-DAG: #define __HAS_FP64__ 1
+// GFX802-DAG: #define __HAS_FP64__ 1
+// GFX803-DAG: #define __HAS_FP64__ 1
+// GFX810-DAG: #define __HAS_FP64__ 1
+// GFX900-DAG: #define __HAS_FP64__ 1
+// GFX902-DAG: #define __HAS_FP64__ 1
+
+// GFX600-DAG: #define __HAS_LDEXPF__ 1
+// GFX601-DAG: #define __HAS_LDEXPF__ 1
+// GFX700-DAG: #define __HAS_LDEXPF__ 1
+// GFX701-DAG: #define __HAS_LDEXPF__ 1
+// GFX702-DAG: #define __HAS_LDEXPF__ 1
+// GFX703-DAG: #define __HAS_LDEXPF__ 1
+// GFX704-DAG: #define __HAS_LDEXPF__ 1
+// GFX801-DAG: #define __HAS_LDEXPF__ 1
+// GFX802-DAG: #define __HAS_LDEXPF__ 1
+// GFX803-DAG: #define __HAS_LDEXPF__ 1
+// GFX810-DAG: #define __HAS_LDEXPF__ 1
+// GFX900-DAG: #define __HAS_LDEXPF__ 1
+// GFX902-DAG: #define __HAS_LDEXPF__ 1
+
+// GFX600-DAG: #define __gfx600__ 1
+// GFX601-DAG: #define __gfx601__ 1
+// GFX700-DAG: #define __gfx700__ 1
+// GFX701-DAG: #define __gfx701__ 1
+// GFX702-DAG: #define __gfx702__ 1
+// GFX703-DAG: #define __gfx703__ 1
+// GFX704-DAG: #define __gfx704__ 1
+// GFX801-DAG: #define __gfx801__ 1
+// GFX802-DAG: #define __gfx802__ 1
+// GFX803-DAG: #define __gfx803__ 1
+// GFX810-DAG: #define __gfx810__ 1
+// GFX900-DAG: #define __gfx900__ 1
+// GFX902-DAG: #define __gfx902__ 1

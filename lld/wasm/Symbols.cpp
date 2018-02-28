@@ -173,7 +173,7 @@ uint32_t DefinedData::getOutputSegmentOffset() const {
 
 uint32_t DefinedData::getOutputSegmentIndex() const {
   DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
-  return Segment->getOutputSegment()->Index;
+  return Segment->OutputSeg->Index;
 }
 
 DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,

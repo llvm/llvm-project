@@ -104,7 +104,4 @@ entry:
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B
-; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT: ...

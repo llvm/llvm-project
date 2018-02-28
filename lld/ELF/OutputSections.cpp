@@ -45,7 +45,9 @@ OutputSection *Out::FiniArray;
 std::vector<OutputSection *> elf::OutputSections;
 
 uint32_t OutputSection::getPhdrFlags() const {
-  uint32_t Ret = PF_R;
+  uint32_t Ret = 0;
+  if (Config->EMachine != EM_ARM || !(Flags & SHF_ARM_PURECODE))
+    Ret |= PF_R;
   if (Flags & SHF_WRITE)
     Ret |= PF_W;
   if (Flags & SHF_EXECINSTR)
@@ -110,10 +112,11 @@ static bool canMergeToProgbits(unsigned Type) {
 void OutputSection::addSection(InputSection *IS) {
   if (!Live) {
     // If IS is the first section to be added to this section,
-    // initialize Type and Entsize from IS.
+    // initialize Type, Entsize and flags from IS.
     Live = true;
     Type = IS->Type;
     Entsize = IS->Entsize;
+    Flags = IS->Flags;
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((Flags & (SHF_ALLOC | SHF_TLS)) != (IS->Flags & (SHF_ALLOC | SHF_TLS)))
@@ -133,7 +136,13 @@ void OutputSection::addSection(InputSection *IS) {
   }
 
   IS->Parent = this;
-  Flags |= IS->Flags;
+  uint64_t AndMask =
+      Config->EMachine == EM_ARM ? (uint64_t)SHF_ARM_PURECODE : 0;
+  uint64_t OrMask = ~AndMask;
+  uint64_t AndFlags = (Flags & IS->Flags) & AndMask;
+  uint64_t OrFlags = (Flags | IS->Flags) & OrMask;
+  Flags = AndFlags | OrFlags;
+
   Alignment = std::max(Alignment, IS->Alignment);
   IS->OutSecOff = Size++;
 
