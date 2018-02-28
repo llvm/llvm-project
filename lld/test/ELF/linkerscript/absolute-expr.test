@@ -1,21 +1,19 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: echo "SECTIONS { \
-# RUN:                  .text : { \
-# RUN:                    bar1 = ALIGNOF(.text); \
-# RUN:                    bar2 = CONSTANT (MAXPAGESIZE); \
-# RUN:                    bar3 = SIZEOF (.text); \
-# RUN:                    bar4 = SIZEOF_HEADERS; \
-# RUN:                    bar5 = 0x42; \
-# RUN:                    bar6 = foo + 1; \
-# RUN:                    *(.text) \
-# RUN:                  } \
-# RUN:                };" > %t.script
-# RUN: ld.lld -o %t.so --script %t.script %t.o -shared
+# RUN: echo ".global foo; foo = 0x123" | llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %t.o
+# RUN: ld.lld -o %t.so --script %s %t.o -shared
 # RUN: llvm-readobj -t %t.so | FileCheck %s
 
-.global foo
-foo = 0x123
+SECTIONS {
+  .text : {
+    bar1 = ALIGNOF(.text);
+    bar2 = CONSTANT (MAXPAGESIZE);
+    bar3 = SIZEOF (.text);
+    bar4 = SIZEOF_HEADERS;
+    bar5 = 0x42;
+    bar6 = foo + 1;
+    *(.text)
+  }
+}
 
 # CHECK:      Symbol {
 # CHECK:        Name: foo
