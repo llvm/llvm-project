@@ -1,9 +1,9 @@
-// RUN: %check_clang_tidy %s misc-macro-repeated-side-effects %t
+// RUN: %check_clang_tidy %s bugprone-macro-repeated-side-effects %t
 
 #define badA(x,y)  ((x)+((x)+(y))+(y))
 void bad(int ret, int a, int b) {
   ret = badA(a++, b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x' are repeated in macro expansion [misc-macro-repeated-side-effects]
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x' are repeated in macro expansion [bugprone-macro-repeated-side-effects]
   ret = badA(++a, b);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
   ret = badA(a--, b);

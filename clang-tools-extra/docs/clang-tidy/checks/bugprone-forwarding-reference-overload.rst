@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-forwarding-reference-overload
+.. title:: clang-tidy - bugprone-forwarding-reference-overload
 
-misc-forwarding-reference-overload
-==================================
+bugprone-forwarding-reference-overload
+======================================
 
 The check looks for perfect forwarding constructors that can hide copy or move
 constructors. If a non const lvalue reference is passed to the constructor, the

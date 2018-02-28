@@ -79,16 +79,16 @@ entry:
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000009
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:         Index:           8
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000012
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_LEB
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x0000001E
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000024
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_LEB
-; CHECK-NEXT:         Index:           6
+; CHECK-NEXT:         Index:           7
 ; CHECK-NEXT:         Offset:          0x00000031
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
@@ -115,7 +115,7 @@ entry:
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x0000000F
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
-; CHECK-NEXT:         Index:           8
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000018
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - SectionOffset:   6
@@ -156,37 +156,37 @@ entry:
 ; CHECK-NEXT:         Function:        2
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            foo_alias
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
+; CHECK-NEXT:         Function:        0
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            call_direct_ptr
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Function:        3
-; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            direct_address
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Segment:         1
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            call_alias_ptr
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Function:        4
-; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            alias_address
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Segment:         2
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            bar
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Segment:         0
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           8
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            foo_alias
-; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
-; CHECK-NEXT:         Function:        0
 ; CHECK-NEXT:       - Index:           9
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            bar_alias
@@ -212,10 +212,10 @@ entry:
 ; CHECK-SYMS-NEXT: 00000000 g     F CODE	.hidden foo
 ; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden call_direct
 ; CHECK-SYMS-NEXT: 00000002 g     F CODE	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000000 gw    F CODE	.hidden foo_alias
 ; CHECK-SYMS-NEXT: 00000003 g     F CODE	.hidden call_direct_ptr
 ; CHECK-SYMS-NEXT: 00000008 g       DATA	direct_address
 ; CHECK-SYMS-NEXT: 00000004 g     F CODE	.hidden call_alias_ptr
 ; CHECK-SYMS-NEXT: 00000010 g       DATA	alias_address
 ; CHECK-SYMS-NEXT: 00000000 g       DATA	bar
-; CHECK-SYMS-NEXT: 00000000 gw    F CODE	.hidden foo_alias
 ; CHECK-SYMS-NEXT: 00000000 gw      DATA	.hidden bar_alias

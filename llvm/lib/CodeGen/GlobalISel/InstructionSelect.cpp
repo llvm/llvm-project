@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -61,13 +60,6 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  // No matter what happens, whether we successfully select the function or not,
-  // nothing is going to use the vreg types after us.  Make sure they disappear.
-  auto ClearVRegTypesOnReturn =
-      make_scope_exit([&]() { MRI.getVRegToType().clear(); });
-
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
@@ -85,6 +77,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: There are many other MF/MFI fields we need to initialize.
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 #ifndef NDEBUG
   // Check that our input is fully legal: we require the function to have the
   // Legalized property, so it should be.
@@ -237,6 +230,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                         ->getTargetMachine()
                         .getTarget()
                         .getBackendName());
+
+  // If we successfully selected the function nothing is going to use the vreg
+  // types after us (otherwise MIRPrinter would need them). Make sure the types
+  // disappear.
+  MRI.getVRegToType().clear();
 
   // FIXME: Should we accurately track changes?
   return true;

@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 MisplacedWideningCastCheck::MisplacedWideningCastCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -228,6 +228,6 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
       << CalcType << CastType;
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

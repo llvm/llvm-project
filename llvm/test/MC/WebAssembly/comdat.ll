@@ -53,7 +53,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:  - Type:            CODE
 ; CHECK-NEXT:    Relocations:
 ; CHECK-NEXT:      - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
-; CHECK-NEXT:        Index:           0
+; CHECK-NEXT:        Index:           1
 ; CHECK-NEXT:        Offset:          0x00000004
 ; CHECK-NEXT:    Functions:
 ; CHECK-NEXT:      - Index:           1
@@ -78,14 +78,14 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:    SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Name:            funcImport
-; CHECK-NEXT:         Flags:           [ UNDEFINED ]
-; CHECK-NEXT:         Function:        0
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            callImport
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Function:        1
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Name:            funcImport
+; CHECK-NEXT:         Flags:           [ UNDEFINED ]
+; CHECK-NEXT:         Function:        0
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            basicInlineFn

@@ -73,11 +73,10 @@
 // and that all results are included on the host side.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 -c %s 2>&1 \
-// RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
-// RUN:    -check-prefix DEVICE2 -check-prefix DEVICE-SM30 \
-// RUN:    -check-prefix DEVICE2-SM35 -check-prefix HOST \
-// RUN:    -check-prefix HOST-NOSAVE -check-prefix INCLUDES-DEVICE \
-// RUN:    -check-prefix NOLINK %s
+// RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,DEVICE2 \
+// RUN:             -check-prefixes DEVICE-SM30,DEVICE2-SM35 \
+// RUN:             -check-prefixes INCLUDES-DEVICE,INCLUDES-DEVICE2 \
+// RUN:             -check-prefixes HOST,HOST-NOSAVE,NOLINK %s
 
 // Verify that device-side results are passed to the correct tool when
 // -save-temps is used.
@@ -182,8 +181,14 @@
 // DEVICE2-SAME: "-aux-triple" "x86_64--linux-gnu"
 // DEVICE2-SAME: "-fcuda-is-device"
 // DEVICE2-SM35-SAME: "-target-cpu" "sm_35"
-// DEVICE2-SAME: "-o" "[[GPUBINARY2:[^"]*]]"
+// DEVICE2-SAME: "-o" "[[PTXFILE2:[^"]*]]"
 // DEVICE2-SAME: "-x" "cuda"
+
+// Match another call to ptxas.
+// DEVICE2: ptxas
+// DEVICE2-SM35-DAG: "--gpu-name" "sm_35"
+// DEVICE2-DAG: "--output-file" "[[CUBINFILE2:[^"]*]]"
+// DEVICE2-DAG: "[[PTXFILE2]]"
 
 // Match no device-side compilation.
 // NODEVICE-NOT: "-cc1" "-triple" "nvptx64-nvidia-cuda"
@@ -193,6 +198,8 @@
 // INCLUDES-DEVICE-DAG: "--create" "[[FATBINARY:[^"]*]]"
 // INCLUDES-DEVICE-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE]]"
 // INCLUDES-DEVICE-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE]]"
+// INCLUDES-DEVICE2-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE2]]"
+// INCLUDES-DEVICE2-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE2]]"
 
 // Match host-side preprocessor job with -save-temps.
 // HOST-SAVE: "-cc1" "-triple" "x86_64--linux-gnu"
@@ -207,7 +214,11 @@
 // HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
 // HOST-NOSAVE-SAME: "-x" "cuda"
 // HOST-SAVE-SAME: "-x" "cuda-cpp-output"
+// There is only one GPU binary after combining it with fatbinary!
+// INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
 // INCLUDES-DEVICE-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
+// There is only one GPU binary after combining it with fatbinary.
+// INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
 
 // Match external assembler that uses compilation output.
 // HOST-AS: "-o" "{{.*}}.o" "[[HOSTOUTPUT]]"

@@ -13,8 +13,13 @@ elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBDL )
     set(system_libs ${system_libs} ${CMAKE_DL_LIBS})
   endif()
-  if( HAVE_BACKTRACE )
-    set(system_libs ${system_libs} ${Backtrace_LIBRARIES})
+  if( HAVE_BACKTRACE AND NOT "${Backtrace_LIBRARIES}" STREQUAL "" )
+    # On BSDs, CMake returns a fully qualified path to the backtrace library.
+    # We need to remove the path and the 'lib' prefix, to make it look like a
+    # regular short library name, suitable for appending to a -l link flag.
+    get_filename_component(Backtrace_LIBFILE ${Backtrace_LIBRARIES} NAME_WE)
+    STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
+    set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
   if(LLVM_ENABLE_TERMINFO)
     if(HAVE_TERMINFO)

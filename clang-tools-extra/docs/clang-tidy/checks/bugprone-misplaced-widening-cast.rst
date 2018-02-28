@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-misplaced-widening-cast
+.. title:: clang-tidy - bugprone-misplaced-widening-cast
 
-misc-misplaced-widening-cast
-============================
+bugprone-misplaced-widening-cast
+================================
 
 This check will warn when there is a cast of a calculation result to a bigger
 type. If the intention of the cast is to avoid loss of precision then the cast

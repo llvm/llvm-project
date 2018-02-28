@@ -171,6 +171,9 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::C8);
   Reserved.set(Hexagon::USR_OVF);
 
+  if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
+    Reserved.set(Hexagon::R19);
+
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
     markSuperRegs(Reserved, x);
 

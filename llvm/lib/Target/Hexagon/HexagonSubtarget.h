@@ -52,6 +52,8 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
 
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
+  bool ReservedR19 = false;
+
 public:
   Hexagon::ArchEnum HexagonArchVersion;
   Hexagon::ArchEnum HexagonHVXVersion = Hexagon::ArchEnum::V4;
@@ -152,6 +154,7 @@ public:
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
   bool hasMemNoShuf() const { return HasMemNoShuf; }
+  bool hasReservedR19() const { return ReservedR19; }
   bool useLongCalls() const { return UseLongCalls; }
   bool usePredicatedCalls() const;
 

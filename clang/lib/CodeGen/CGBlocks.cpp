@@ -1595,6 +1595,7 @@ computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
     return std::make_pair(BlockCaptureEntityKind::None, BlockFieldFlags());
   }
   }
+  llvm_unreachable("after exhaustive PrimitiveCopyKind switch");
 }
 
 /// Find the set of block captures that need to be explicitly copied or destroy.
@@ -1797,6 +1798,7 @@ computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
     return std::make_pair(BlockCaptureEntityKind::None, BlockFieldFlags());
   }
   }
+  llvm_unreachable("after exhaustive DestructionKind switch");
 }
 
 /// Generate the destroy-helper function for a block closure object:

@@ -32,7 +32,7 @@
 
 using namespace llvm;
 
-// Explicit template instantiations and specialization defininitions for core
+// Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
 
@@ -96,7 +96,7 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // ...getContext().yield();
   }
 
-  // Invaliadtion was handled after each pass in the above loop for the current
+  // Invalidation was handled after each pass in the above loop for the current
   // SCC. Therefore, the remaining analysis results in the AnalysisManager are
   // preserved. We mark this with a set so that we don't need to inspect each
   // one individually.
@@ -372,7 +372,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   // We need to propagate an invalidation call to all but the newly current SCC
   // because the outer pass manager won't do that for us after splitting them.
   // FIXME: We should accept a PreservedAnalysis from the CG updater so that if
-  // there are preserved ananalyses we can avoid invalidating them here for
+  // there are preserved analysis we can avoid invalidating them here for
   // split-off SCCs.
   // We know however that this will preserve any FAM proxy so go ahead and mark
   // that.
@@ -635,7 +635,7 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
 
       // If one of the invalidated SCCs had a cached proxy to a function
       // analysis manager, we need to create a proxy in the new current SCC as
-      // the invaliadted SCCs had their functions moved.
+      // the invalidated SCCs had their functions moved.
       if (HasFunctionAnalysisProxy)
         AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, G);
 

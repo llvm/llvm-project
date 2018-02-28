@@ -7,21 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_LAMBDA_FUNCTION_NAME_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_LAMBDA_FUNCTION_NAME_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_LAMBDAFUNCTIONNAMECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_LAMBDAFUNCTIONNAMECHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Detect when __func__ or __FUNCTION__ is being used from within a lambda. In
 /// that context, those expressions expand to the name of the call operator
 /// (i.e., `operator()`).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-lambda-function-name.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-lambda-function-name.html
 class LambdaFunctionNameCheck : public ClangTidyCheck {
 public:
   struct SourceRangeLessThan {
@@ -44,8 +44,8 @@ private:
   SourceRangeSet SuppressMacroExpansions;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_LAMBDA_FUNCTION_NAME_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_LAMBDAFUNCTIONNAMECHECK_H

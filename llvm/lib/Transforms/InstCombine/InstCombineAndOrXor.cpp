@@ -1359,9 +1359,8 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Instruction *Z = narrowMaskedBinOp(I))
     return Z;
 
-  if (isa<Constant>(Op1))
-    if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
-      return FoldedLogic;
+  if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
+    return FoldedLogic;
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
     return DeMorgan;
@@ -1850,9 +1849,8 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
-  if (isa<Constant>(Op1))
-    if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
-      return FoldedLogic;
+  if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
+    return FoldedLogic;
 
   // Given an OR instruction, check to see if this is a bswap.
   if (Instruction *BSwap = MatchBSwap(I))
@@ -2377,9 +2375,8 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  if (isa<Constant>(Op1))
-    if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
-      return FoldedLogic;
+  if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
+    return FoldedLogic;
 
   {
     Value *A, *B;

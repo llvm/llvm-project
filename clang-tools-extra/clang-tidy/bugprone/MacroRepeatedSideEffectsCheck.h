@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MACRO_REPEATED_SIDE_EFFECTS_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MACRO_REPEATED_SIDE_EFFECTS_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROREPEATEDSIDEEFFECTSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROREPEATEDSIDEEFFECTSCHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Checks for repeated argument with side effects in macros.
 class MacroRepeatedSideEffectsCheck : public ClangTidyCheck {
@@ -24,8 +24,8 @@ public:
   void registerPPCallbacks(CompilerInstance &Compiler) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MACRO_REPEATED_SIDE_EFFECTS_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROREPEATEDSIDEEFFECTSCHECK_H

@@ -396,6 +396,9 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
     if (parallel_data) {
       *parallel_data = team_info ? &(team_info->parallel_data) : NULL;
     }
+    if (thread_num) {
+      *thread_num = __kmp_get_gtid();
+    }
     return info ? 2 : 0;
   }
   return 0;

@@ -1,0 +1,18 @@
+# REQUIRES: x86
+# RUN: echo '.section foo, "a"; .byte 0' \
+# RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t.o
+
+# RUN: ld.lld -o %t1 --script %s %t.o -shared
+# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  abc : {}
+  . = ALIGN(0x1000);
+  foo : { *(foo) }
+}
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name          Size      Address
+# CHECK-NEXT:   0               00000000 0000000000000000
+# CHECK-NEXT:   1 foo           00000001 0000000000001000
