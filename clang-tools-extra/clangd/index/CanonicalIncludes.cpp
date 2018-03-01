@@ -35,11 +35,9 @@ void CanonicalIncludes::addSymbolMapping(llvm::StringRef QualifiedName,
 llvm::StringRef
 CanonicalIncludes::mapHeader(llvm::StringRef Header,
                              llvm::StringRef QualifiedName) const {
-  if (!QualifiedName.empty()) {
-    auto SE = SymbolMapping.find(QualifiedName);
-    if (SE != SymbolMapping.end())
-      return SE->second;
-  }
+  auto SE = SymbolMapping.find(QualifiedName);
+  if (SE != SymbolMapping.end())
+    return SE->second;
   std::lock_guard<std::mutex> Lock(RegexMutex);
   for (auto &Entry : RegexHeaderMappingTable) {
 #ifndef NDEBUG

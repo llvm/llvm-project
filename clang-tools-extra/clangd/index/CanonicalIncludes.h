@@ -48,12 +48,10 @@ public:
   void addSymbolMapping(llvm::StringRef QualifiedName,
                         llvm::StringRef CanonicalPath);
 
-  /// \return \p Header itself if there is no mapping for it; otherwise, return
-  /// a canonical header name.
-  /// \p QualifiedName of a symbol declared in \p Header can be provided to
-  /// check against the symbol mapping.
+  /// Returns the canonical include for symbol with \p QualifiedName, which is
+  /// declared in \p Header
   llvm::StringRef mapHeader(llvm::StringRef Header,
-                            llvm::StringRef QualifiedName = "") const;
+                            llvm::StringRef QualifiedName) const;
 
 private:
   // A map from header patterns to header names. This needs to be mutable so
