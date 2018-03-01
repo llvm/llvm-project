@@ -193,7 +193,7 @@ bool AnalyzerOptions::getBooleanOption(Optional<bool> &V, StringRef Name,
 bool AnalyzerOptions::includeTemporaryDtorsInCFG() {
   return getBooleanOption(IncludeTemporaryDtorsInCFG,
                           "cfg-temporary-dtors",
-                          /* Default = */ false);
+                          /* Default = */ true);
 }
 
 bool AnalyzerOptions::includeImplicitDtorsInCFG() {
@@ -251,7 +251,7 @@ bool AnalyzerOptions::mayInlineCXXSharedPtrDtor() {
 bool AnalyzerOptions::mayInlineCXXTemporaryDtors() {
   return getBooleanOption(InlineCXXTemporaryDtors,
                           "c++-temp-dtor-inlining",
-                          /*Default=*/true);
+                          /*Default=*/false);
 }
 
 bool AnalyzerOptions::mayInlineObjCMethod() {

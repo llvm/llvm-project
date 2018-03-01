@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -verify %s
-// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=true -DTEMPORARIES -verify %s
+// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify %s
+// RUN: %clang_analyze_cc1 -Wno-unused -std=c++11 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true -DTEMPORARIES -verify %s
 
 void clang_analyzer_eval(bool);
 
